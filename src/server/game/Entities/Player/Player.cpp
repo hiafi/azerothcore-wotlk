@@ -11084,6 +11084,9 @@ uint32 Player::GetMaxPersonalArenaRatingRequirement(uint32 minarenaslot) const
     return max_personal_rating;
 }
 
+// Custom: Cooldown Reduction stat only affects abilities whose baseline cooldown is longer than this.
+static constexpr int32 CUSTOM_COOLDOWN_REDUCTION_MIN_BASE_COOLDOWN_MS = 30 * IN_MILLISECONDS;
+
 void Player::AddSpellAndCategoryCooldowns(SpellInfo const* spellInfo, uint32 itemId, Spell* spell, bool infinityCooldown)
 {
     // init cooldown values
@@ -11160,8 +11163,8 @@ void Player::AddSpellAndCategoryCooldowns(SpellInfo const* spellInfo, uint32 ite
         }
 
         // Custom: Cooldown Reduction stat - only affects abilities whose baseline (unmodified)
-        // cooldown is longer than 30 seconds.
-        if (rec > 30000 && spellInfo->RecoveryTime > 30000)
+        // cooldown is longer than CUSTOM_COOLDOWN_REDUCTION_MIN_BASE_COOLDOWN_MS.
+        if (rec > CUSTOM_COOLDOWN_REDUCTION_MIN_BASE_COOLDOWN_MS && spellInfo->RecoveryTime > CUSTOM_COOLDOWN_REDUCTION_MIN_BASE_COOLDOWN_MS)
             rec = int32(rec * (1.0f - GetCooldownReductionPercentage() / 100.0f));
 
         // replace negative cooldowns by 0

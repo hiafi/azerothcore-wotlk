@@ -3339,16 +3339,20 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo
 
     uint32 roll = urand (0, 10000);
 
-    // Custom: Hit is no longer a meaningful player stat - players always land melee-classed
-    // spells against non-player targets (PvE only; dodge/parry/block/resist below are untouched).
-    uint32 missChance = (IsPlayer() && !victim->IsPlayer()) ? 0 : uint32(MeleeSpellMissChance(victim, attType, skillDiff, spellInfo->Id) * 100.0f);
+    // Custom: Hit/Expertise are no longer meaningful player stats - players always land
+    // melee-classed spells against non-player targets and can't be dodged/parried doing so
+    // (PvE only; block/resist below are untouched - block is governed by the victim's block
+    // stat, not expertise).
+    bool const pveAlwaysHit = IsPlayer() && !victim->IsPlayer();
+
+    uint32 missChance = pveAlwaysHit ? 0 : uint32(MeleeSpellMissChance(victim, attType, skillDiff, spellInfo->Id) * 100.0f);
     // Roll miss
     uint32 tmp = missChance;
     if (roll < tmp)
         return SPELL_MISS_MISS;
 
-    bool canDodge = !spellInfo->HasAttribute(SPELL_ATTR7_NO_ATTACK_DODGE);
-    bool canParry = !spellInfo->HasAttribute(SPELL_ATTR7_NO_ATTACK_PARRY);
+    bool canDodge = !pveAlwaysHit && !spellInfo->HasAttribute(SPELL_ATTR7_NO_ATTACK_DODGE);
+    bool canParry = !pveAlwaysHit && !spellInfo->HasAttribute(SPELL_ATTR7_NO_ATTACK_PARRY);
     bool canBlock = spellInfo->HasAttribute(SPELL_ATTR3_COMPLETELY_BLOCKED) && !spellInfo->HasAttribute(SPELL_ATTR0_CU_DIRECT_DAMAGE);
 
     // Same spells cannot be parry/dodge
