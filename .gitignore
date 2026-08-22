@@ -20,6 +20,7 @@
 /env/user/*
 /.env*
 /apps/joiner
+/client/*
 /deps/deno
 /data/sql/custom/*
 !/src/server/scripts/Custom/README.md
@@ -126,3 +127,4 @@ __pycache__/
 # ==================
 .cache
 compile_commands.json
+/.buildx/

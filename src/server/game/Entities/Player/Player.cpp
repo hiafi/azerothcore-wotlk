@@ -150,6 +150,9 @@ enum CharacterCustomizeFlags
 
 static uint32 copseReclaimDelay[MAX_DEATH_COUNT] = { 30, 60, 120 };
 
+// Custom: Cooldown Reduction stat only affects abilities whose baseline cooldown is longer than this.
+static constexpr int32 CUSTOM_COOLDOWN_REDUCTION_MIN_BASE_COOLDOWN_MS = 30 * IN_MILLISECONDS;
+
 // we can disable this warning for this since it only
 // causes undefined behavior when passed to the base class constructor
 #ifdef _MSC_VER
@@ -11084,8 +11087,6 @@ uint32 Player::GetMaxPersonalArenaRatingRequirement(uint32 minarenaslot) const
     return max_personal_rating;
 }
 
-// Custom: Cooldown Reduction stat only affects abilities whose baseline cooldown is longer than this.
-static constexpr int32 CUSTOM_COOLDOWN_REDUCTION_MIN_BASE_COOLDOWN_MS = 30 * IN_MILLISECONDS;
 
 void Player::AddSpellAndCategoryCooldowns(SpellInfo const* spellInfo, uint32 itemId, Spell* spell, bool infinityCooldown)
 {
