@@ -3339,7 +3339,9 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo
 
     uint32 roll = urand (0, 10000);
 
-    uint32 missChance = uint32(MeleeSpellMissChance(victim, attType, skillDiff, spellInfo->Id) * 100.0f);
+    // Custom: Hit is no longer a meaningful player stat - players always land melee-classed
+    // spells against non-player targets (PvE only; dodge/parry/block/resist below are untouched).
+    uint32 missChance = (IsPlayer() && !victim->IsPlayer()) ? 0 : uint32(MeleeSpellMissChance(victim, attType, skillDiff, spellInfo->Id) * 100.0f);
     // Roll miss
     uint32 tmp = missChance;
     if (roll < tmp)
@@ -3567,6 +3569,11 @@ SpellMissInfo Unit::MagicSpellHitResult(Unit* victim, SpellInfo const* spellInfo
     if (HitChance < 100)
         HitChance = 100;
     else if (HitChance > 10000)
+        HitChance = 10000;
+
+    // Custom: Hit is no longer a meaningful player stat - players always land spells against
+    // non-player targets (PvE only; resist/deflect rolls below are untouched).
+    if (IsPlayer() && !victim->IsPlayer())
         HitChance = 10000;
 
     int32 tmp = 10000 - HitChance;
@@ -3961,21 +3968,11 @@ uint32 Unit::GetWeaponSkillValue (WeaponAttackType attType, Unit const* target) 
                 ? player->GetMaxSkillValue(skill)
                 : player->GetSkillValue(skill);
         // Modify value from ratings
+        // Custom: per-attack-type weapon skill ratings (CR_WEAPON_SKILL_MAINHAND/OFFHAND/RANGED)
+        // were never written by any item/aura and have been repurposed into CR_MASTERY/
+        // CR_VERSATILITY/CR_COOLDOWN_REDUCTION - see Unit.h. Only the flat CR_WEAPON_SKILL
+        // (id 0) still applies here.
         value += uint32(player->GetRatingBonusValue(CR_WEAPON_SKILL));
-        switch (attType)
-        {
-            case BASE_ATTACK:
-                value += uint32(player->GetRatingBonusValue(CR_WEAPON_SKILL_MAINHAND));
-                break;
-            case OFF_ATTACK:
-                value += uint32(player->GetRatingBonusValue(CR_WEAPON_SKILL_OFFHAND));
-                break;
-            case RANGED_ATTACK:
-                value += uint32(player->GetRatingBonusValue(CR_WEAPON_SKILL_RANGED));
-                break;
-            default:
-                break;
-        }
     }
     else
         value = GetUnitMeleeSkill(target);
@@ -8470,6 +8467,10 @@ float Unit::SpellPctDamageModsDone(Unit* victim, SpellInfo const* spellProto, Da
     // Done total percent damage auras
     float DoneTotalMod = 1.0f;
 
+    // Custom: Versatility increases damage done
+    if (IsPlayer())
+        DoneTotalMod *= 1.0f + ToPlayer()->GetVersatilityPercentage() / 100.0f;
+
     DoneTotalMod *= GetTotalAuraMultiplier(SPELL_AURA_MOD_DAMAGE_PERCENT_DONE, [spellProto, this, damagetype](AuraEffect const* aurEff)
     {
         // prevent apply mods from weapon specific case to non weapon specific spells (Example: thunder clap and two-handed weapon specialization)
@@ -8956,6 +8957,10 @@ uint32 Unit::SpellDamageBonusTaken(Unit* caster, SpellInfo const* spellProto, ui
     // multiplicative bonus, for example Dispersion + Shadowform (0.10*0.85=0.085)
     TakenTotalMod *= GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, spellProto->GetSchoolMask());
 
+    // Custom: Versatility reduces damage taken at half rate
+    if (IsPlayer())
+        TakenTotalMod *= 1.0f - ToPlayer()->GetVersatilityPercentage() / 200.0f;
+
     TakenTotalMod = processDummyAuras(TakenTotalMod);
 
     // From caster spells
@@ -9097,6 +9102,9 @@ int32 Unit::SpellBaseDamageBonusDone(SpellSchoolMask schoolMask)
         // Base value
         DoneAdvertisedBenefit += ToPlayer()->GetBaseSpellPowerBonus();
         DoneAdvertisedBenefit += ToPlayer()->GetBaseSpellDamageBonus();
+
+        // Custom: 1 point of spellpower per point of Intellect and Spirit
+        DoneAdvertisedBenefit += int32(GetStat(STAT_INTELLECT)) + int32(GetStat(STAT_SPIRIT));
 
         // Damage bonus from stats
         AuraEffectList const& mDamageDoneOfStatPercent = GetAuraEffectsByType(SPELL_AURA_MOD_SPELL_DAMAGE_OF_STAT_PERCENT);
@@ -9523,6 +9531,10 @@ float Unit::SpellPctHealingModsDone(Unit* victim, SpellInfo const* spellProto, D
 
     float DoneTotalMod = 1.0f;
 
+    // Custom: Versatility increases healing done
+    if (IsPlayer())
+        DoneTotalMod *= 1.0f + ToPlayer()->GetVersatilityPercentage() / 100.0f;
+
     // Healing done percent
     if (includeHealingDonePct)
         DoneTotalMod *= GetTotalAuraMultiplier(SPELL_AURA_MOD_HEALING_DONE_PERCENT);
@@ -9853,6 +9865,9 @@ int32 Unit::SpellBaseHealingBonusDone(SpellSchoolMask schoolMask)
         // Base value
         AdvertisedBenefit += ToPlayer()->GetBaseSpellPowerBonus();
         AdvertisedBenefit += ToPlayer()->GetBaseSpellHealingBonus();
+
+        // Custom: 1 point of spellpower per point of Intellect and Spirit
+        AdvertisedBenefit += int32(GetStat(STAT_INTELLECT)) + int32(GetStat(STAT_SPIRIT));
 
         // Healing bonus from stats
         AuraEffectList const& mHealingDoneOfStatPercent = GetAuraEffectsByType(SPELL_AURA_MOD_SPELL_HEALING_OF_STAT_PERCENT);
@@ -10240,6 +10255,10 @@ uint32 Unit::MeleeDamageBonusDone(Unit* victim, uint32 pdamage, WeaponAttackType
     // Done total percent damage auras
     float DoneTotalMod = 1.0f;
 
+    // Custom: Versatility increases damage done
+    if (IsPlayer())
+        DoneTotalMod *= 1.0f + ToPlayer()->GetVersatilityPercentage() / 100.0f;
+
     // mods for SPELL_SCHOOL_MASK_NORMAL are already factored in base melee damage calculation
     if (!(damageSchoolMask & SPELL_SCHOOL_MASK_NORMAL))
     {
@@ -10387,6 +10406,10 @@ uint32 Unit::MeleeDamageBonusTaken(Unit* attacker, uint32 pdamage, WeaponAttackT
 
     // Taken total percent damage auras
     float TakenTotalMod = 1.0f;
+
+    // Custom: Versatility reduces damage taken at half rate
+    if (IsPlayer())
+        TakenTotalMod *= 1.0f - ToPlayer()->GetVersatilityPercentage() / 200.0f;
 
     TakenTotalMod *= GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, damageSchoolMask);
 

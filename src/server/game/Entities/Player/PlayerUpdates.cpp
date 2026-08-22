@@ -670,7 +670,8 @@ void Player::UpdateRating(CombatRating cr)
         if (affectStats)
             UpdateAllSpellCritChances();
         break;
-    case CR_HIT_TAKEN_MELEE: // Implemented in Unit::MeleeMissChanceCalc
+    case CR_PROC_CHANCE: // Custom: was CR_HIT_TAKEN_MELEE - read live wherever procs are rolled
+        break;
     case CR_HIT_TAKEN_RANGED:
         break;
     case CR_HIT_TAKEN_SPELL: // Implemented in Unit::MagicSpellHitResult
@@ -686,10 +687,9 @@ void Player::UpdateRating(CombatRating cr)
     case CR_HASTE_RANGED:
     case CR_HASTE_SPELL:
         break;
-    case CR_WEAPON_SKILL_MAINHAND: // Implemented in
-                                   // Unit::RollMeleeOutcomeAgainst
-    case CR_WEAPON_SKILL_OFFHAND:
-    case CR_WEAPON_SKILL_RANGED:
+    case CR_MASTERY: // Custom: was CR_WEAPON_SKILL_MAINHAND - read live via GetMasteryPercentage()
+    case CR_VERSATILITY: // Custom: was CR_WEAPON_SKILL_OFFHAND - read live via GetVersatilityPercentage()
+    case CR_COOLDOWN_REDUCTION: // Custom: was CR_WEAPON_SKILL_RANGED - read live via GetCooldownReductionPercentage()
         break;
     case CR_EXPERTISE:
         if (affectStats)

@@ -41,9 +41,9 @@ enum ItemModType
     ITEM_MOD_CRIT_MELEE_RATING        = 19,
     ITEM_MOD_CRIT_RANGED_RATING       = 20,
     ITEM_MOD_CRIT_SPELL_RATING        = 21,
-    ITEM_MOD_HIT_TAKEN_MELEE_RATING   = 22,
-    ITEM_MOD_HIT_TAKEN_RANGED_RATING  = 23,
-    ITEM_MOD_HIT_TAKEN_SPELL_RATING   = 24,
+    ITEM_MOD_MASTERY_RATING           = 22, // Custom: was ITEM_MOD_HIT_TAKEN_MELEE_RATING (unused in this fork's item_template)
+    ITEM_MOD_VERSATILITY_RATING       = 23, // Custom: was ITEM_MOD_HIT_TAKEN_RANGED_RATING (unused in this fork's item_template)
+    ITEM_MOD_COOLDOWN_RATING          = 24, // Custom: was ITEM_MOD_HIT_TAKEN_SPELL_RATING (unused in this fork's item_template)
     ITEM_MOD_CRIT_TAKEN_MELEE_RATING  = 25,
     ITEM_MOD_CRIT_TAKEN_RANGED_RATING = 26,
     ITEM_MOD_CRIT_TAKEN_SPELL_RATING  = 27,
@@ -52,7 +52,7 @@ enum ItemModType
     ITEM_MOD_HASTE_SPELL_RATING       = 30,
     ITEM_MOD_HIT_RATING               = 31,
     ITEM_MOD_CRIT_RATING              = 32,
-    ITEM_MOD_HIT_TAKEN_RATING         = 33,
+    ITEM_MOD_PROC_RATING              = 33, // Custom: was ITEM_MOD_HIT_TAKEN_RATING (unused in this fork's item_template)
     ITEM_MOD_CRIT_TAKEN_RATING        = 34,
     ITEM_MOD_RESILIENCE_RATING        = 35,
     ITEM_MOD_HASTE_RATING             = 36,

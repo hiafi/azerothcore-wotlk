@@ -2303,6 +2303,11 @@ float Aura::CalcProcChance(SpellProcEntry const& procEntry, ProcEventInfo& event
     if ((procEntry.AttributesMask & PROC_ATTR_REDUCE_PROC_60) && eventInfo.GetActor()->GetLevel() > 60)
         chance = std::max(0.f, (1.f - ((eventInfo.GetActor()->GetLevel() - 60) * 1.f / 30.f)) * chance);
 
+    // Custom: Proc Chance stat increases the chance of any aura-driven proc (talents, item procs, ...)
+    if (Unit* caster = GetCaster())
+        if (caster->IsPlayer())
+            chance *= 1.0f + caster->ToPlayer()->GetProcChancePercentage() / 100.0f;
+
     return chance;
 }
 
