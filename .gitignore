@@ -3,8 +3,11 @@
 #
 
 .cache
+.claude
 /conf/*
 !/conf/dist
+/docs/*
+/apps/dbc-tools/source/
 /modules/*
 !/modules/*.md
 !/modules/*.sh
