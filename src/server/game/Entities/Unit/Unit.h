@@ -232,7 +232,7 @@ enum CombatRating : uint8
     CR_CRIT_MELEE               = 8,
     CR_CRIT_RANGED              = 9,
     CR_CRIT_SPELL               = 10,
-    CR_HIT_TAKEN_MELEE          = 11,
+    CR_PROC_CHANCE              = 11, // Custom: was CR_HIT_TAKEN_MELEE (unused - never written by any item/aura)
     CR_HIT_TAKEN_RANGED         = 12,
     CR_HIT_TAKEN_SPELL          = 13,
     CR_CRIT_TAKEN_MELEE         = 14,
@@ -241,9 +241,9 @@ enum CombatRating : uint8
     CR_HASTE_MELEE              = 17,
     CR_HASTE_RANGED             = 18,
     CR_HASTE_SPELL              = 19,
-    CR_WEAPON_SKILL_MAINHAND    = 20,
-    CR_WEAPON_SKILL_OFFHAND     = 21,
-    CR_WEAPON_SKILL_RANGED      = 22,
+    CR_MASTERY                  = 20, // Custom: was CR_WEAPON_SKILL_MAINHAND (unused - never written by any item/aura)
+    CR_VERSATILITY              = 21, // Custom: was CR_WEAPON_SKILL_OFFHAND (unused - never written by any item/aura)
+    CR_COOLDOWN_REDUCTION       = 22, // Custom: was CR_WEAPON_SKILL_RANGED (unused - never written by any item/aura)
     CR_EXPERTISE                = 23,
     CR_ARMOR_PENETRATION        = 24
 };

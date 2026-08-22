@@ -1998,6 +1998,11 @@ public:
     float OCTRegenMPPerSpirit();
     [[nodiscard]] float GetRatingMultiplier(CombatRating cr) const;
     [[nodiscard]] float GetRatingBonusValue(CombatRating cr) const;
+    // Custom stats: percentage value derived from the corresponding CombatRating.
+    [[nodiscard]] float GetMasteryPercentage() const { return GetRatingBonusValue(CR_MASTERY); }
+    [[nodiscard]] float GetVersatilityPercentage() const { return GetRatingBonusValue(CR_VERSATILITY); }
+    [[nodiscard]] float GetCooldownReductionPercentage() const { return GetRatingBonusValue(CR_COOLDOWN_REDUCTION); }
+    [[nodiscard]] float GetProcChancePercentage() const { return GetRatingBonusValue(CR_PROC_CHANCE); }
     uint32 GetBaseSpellPowerBonus() { return m_baseSpellPower; }
     uint32 GetBaseSpellDamageBonus() { return m_baseSpellDamage; }
     uint32 GetBaseSpellHealingBonus() { return m_baseSpellHealing; }

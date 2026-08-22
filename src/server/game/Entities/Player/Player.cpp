@@ -150,6 +150,9 @@ enum CharacterCustomizeFlags
 
 static uint32 copseReclaimDelay[MAX_DEATH_COUNT] = { 30, 60, 120 };
 
+// Custom: Cooldown Reduction stat only affects abilities whose baseline cooldown is longer than this.
+static constexpr int32 CUSTOM_COOLDOWN_REDUCTION_MIN_BASE_COOLDOWN_MS = 30 * IN_MILLISECONDS;
+
 // we can disable this warning for this since it only
 // causes undefined behavior when passed to the base class constructor
 #ifdef _MSC_VER
@@ -6896,14 +6899,14 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
             case ITEM_MOD_CRIT_SPELL_RATING:
                 ApplyRatingMod(CR_CRIT_SPELL, int32(val), apply);
                 break;
-            case ITEM_MOD_HIT_TAKEN_MELEE_RATING:
-                ApplyRatingMod(CR_HIT_TAKEN_MELEE, int32(val), apply);
+            case ITEM_MOD_MASTERY_RATING: // Custom stat
+                ApplyRatingMod(CR_MASTERY, int32(val), apply);
                 break;
-            case ITEM_MOD_HIT_TAKEN_RANGED_RATING:
-                ApplyRatingMod(CR_HIT_TAKEN_RANGED, int32(val), apply);
+            case ITEM_MOD_VERSATILITY_RATING: // Custom stat
+                ApplyRatingMod(CR_VERSATILITY, int32(val), apply);
                 break;
-            case ITEM_MOD_HIT_TAKEN_SPELL_RATING:
-                ApplyRatingMod(CR_HIT_TAKEN_SPELL, int32(val), apply);
+            case ITEM_MOD_COOLDOWN_RATING: // Custom stat
+                ApplyRatingMod(CR_COOLDOWN_REDUCTION, int32(val), apply);
                 break;
             case ITEM_MOD_CRIT_TAKEN_MELEE_RATING:
                 ApplyRatingMod(CR_CRIT_TAKEN_MELEE, int32(val), apply);
@@ -6933,10 +6936,8 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
                 ApplyRatingMod(CR_CRIT_RANGED, int32(val), apply);
                 ApplyRatingMod(CR_CRIT_SPELL, int32(val), apply);
                 break;
-            case ITEM_MOD_HIT_TAKEN_RATING:
-                ApplyRatingMod(CR_HIT_TAKEN_MELEE, int32(val), apply);
-                ApplyRatingMod(CR_HIT_TAKEN_RANGED, int32(val), apply);
-                ApplyRatingMod(CR_HIT_TAKEN_SPELL, int32(val), apply);
+            case ITEM_MOD_PROC_RATING: // Custom stat
+                ApplyRatingMod(CR_PROC_CHANCE, int32(val), apply);
                 break;
             case ITEM_MOD_CRIT_TAKEN_RATING:
             case ITEM_MOD_RESILIENCE_RATING:
@@ -11086,6 +11087,7 @@ uint32 Player::GetMaxPersonalArenaRatingRequirement(uint32 minarenaslot) const
     return max_personal_rating;
 }
 
+
 void Player::AddSpellAndCategoryCooldowns(SpellInfo const* spellInfo, uint32 itemId, Spell* spell, bool infinityCooldown)
 {
     // init cooldown values
@@ -11160,6 +11162,11 @@ void Player::AddSpellAndCategoryCooldowns(SpellInfo const* spellInfo, uint32 ite
                 rec += cooldownMod * IN_MILLISECONDS;   // SPELL_AURA_MOD_COOLDOWN does not affect category cooldows, verified with shaman shocks
             }
         }
+
+        // Custom: Cooldown Reduction stat - only affects abilities whose baseline (unmodified)
+        // cooldown is longer than CUSTOM_COOLDOWN_REDUCTION_MIN_BASE_COOLDOWN_MS.
+        if (rec > CUSTOM_COOLDOWN_REDUCTION_MIN_BASE_COOLDOWN_MS && spellInfo->RecoveryTime > CUSTOM_COOLDOWN_REDUCTION_MIN_BASE_COOLDOWN_MS)
+            rec = int32(rec * (1.0f - GetCooldownReductionPercentage() / 100.0f));
 
         // replace negative cooldowns by 0
         if (rec < 0) rec = 0;

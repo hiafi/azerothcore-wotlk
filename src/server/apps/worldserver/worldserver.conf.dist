@@ -2513,10 +2513,14 @@ MaxGroupXPDistance = 74
 #                     1 - (Rate.XP.Quest.DF) - Dungeon Finder/LFG quests only.
 #                     1 - (Rate.XP.Explore)
 #                     1 - (Rate.XP.Pet)
+#        Note:        Quest XP is boosted 10x on this server. Regular (non-boss) creature kill XP
+#                     is intentionally left alone; dungeon boss kills get their own 10x bonus via
+#                     Custom.XP.DungeonBoss.Rate below (see CUSTOM section), since Rate.XP.Kill
+#                     applies to every creature kill, not just bosses.
 
 Rate.XP.Kill      = 1
-Rate.XP.Quest     = 1
-Rate.XP.Quest.DF  = 1
+Rate.XP.Quest     = 10
+Rate.XP.Quest.DF  = 10
 Rate.XP.Explore   = 1
 Rate.XP.Pet       = 1
 
@@ -4808,6 +4812,15 @@ Daze.Enabled = 1
 #        Default:     0 - (Blizzlike)
 
 InfiniteAmmo.Enabled = 0
+
+#
+#    Custom.XP.DungeonBoss.Rate
+#        Description: Extra experience multiplier applied on top of Rate.XP.Kill when the slain
+#                     creature is a dungeon boss (Creature::IsDungeonBoss(), i.e. registered as
+#                     instance boss data). Implemented by src/server/scripts/Custom/custom_xp_rates.cpp.
+#        Default:     10
+
+Custom.XP.DungeonBoss.Rate = 10
 
 #
 ###################################################################################################
