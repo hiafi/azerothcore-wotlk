@@ -24,14 +24,14 @@ import yaml
 SPELL_CSV_FIELDNAMES = (
     "id", "name", "school", "dispel", "mechanic", "attributes", "category",
     "cast_time_ms", "cooldown_ms", "category_cooldown_ms", "power_type",
-    "mana_cost", "range_yards", "radius_yards", "duration_ms",
+    "mana_cost", "mana_cost_pct", "range_yards", "radius_yards", "duration_ms",
     "effect1", "effect2", "effect3", "spell_icon_id", "spell_weight",
     "coeff_weight", "raw_overrides", "notes",
 )
 SPELL_CSV_INT_FIELDS = (
     "id", "school", "dispel", "mechanic", "attributes", "category",
     "cast_time_ms", "cooldown_ms", "category_cooldown_ms", "power_type",
-    "mana_cost", "duration_ms", "spell_icon_id",
+    "mana_cost", "mana_cost_pct", "duration_ms", "spell_icon_id",
 )
 SPELL_CSV_FLOAT_FIELDS = ("range_yards", "radius_yards", "spell_weight", "coeff_weight")
 SPELL_CSV_JSON_FIELDS = ("effect1", "effect2", "effect3", "raw_overrides")

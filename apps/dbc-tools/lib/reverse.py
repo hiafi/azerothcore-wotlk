@@ -43,6 +43,7 @@ def reverse_spell_row(row: dict, secondary_rows: dict[str, dict[int, dict]]) -> 
         "category_cooldown_ms": row["CategoryRecoveryTime"],
         "power_type": row["PowerType"],
         "mana_cost": row["ManaCost"],
+        "mana_cost_pct": row["ManaCostPct"],
         "range_yards": rng["RangeMax_1"] if rng else None,
         "duration_ms": duration["Duration"] if duration else None,
         "spell_icon_id": row["SpellIconID"],

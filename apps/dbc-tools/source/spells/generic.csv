@@ -1,0 +1,2 @@
+id,name,school,dispel,mechanic,attributes,category,cast_time_ms,cooldown_ms,category_cooldown_ms,power_type,mana_cost,mana_cost_pct,range_yards,radius_yards,duration_ms,effect1,effect2,effect3,spell_icon_id,spell_weight,coeff_weight,raw_overrides,notes
+200000,DBC Pipeline Smoke Test,64,,,,,0,0,,0,0,,30,,,"{""type"": 3, ""implicit_target_a"": 1, ""base_points"": 0}",,,,,,,smoke test - remove once a real ticket (single-rank-spell-system / Frost Mage) adds real spells here; proves generate.py end to end (id from source/ids.yaml's spell block)

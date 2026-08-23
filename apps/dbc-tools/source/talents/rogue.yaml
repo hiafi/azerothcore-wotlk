@@ -1,0 +1,5 @@
+# New/changed Talent.dbc + TalentTab.dbc rows for the Rogue class.
+# Schema/example: see apps/dbc-tools/source/talents/mage.yaml.
+
+tabs: []
+talents: []
