@@ -1481,23 +1481,21 @@ void Aura::HandleAuraSpecificMods(AuraApplication const* aurApp, Unit* caster, b
                         uint32 spellId = 0;
                         switch (aurEff->GetId())
                         {
-                            // Ebon Plague
+                            // Ebon Plague - single-rank spell system: every talent rank now casts
+                            // the one surviving (rank 1) spell ID, which scales by caster level
+                            // instead of by which talent rank was known (see
+                            // docs/single-rank-spell-system.md). Ranks 51160/51161 used to point at
+                            // the now-superseded ranks 2/3 (51734/51735), which are no longer
+                            // reachable via trainer/spell_ranks and don't carry the new scaling.
                             case 51161:
-                                spellId = 51735;
-                                break;
                             case 51160:
-                                spellId = 51734;
-                                break;
                             case 51099:
                                 spellId = 51726;
                                 break;
-                            // Crypt Fever
+                            // Crypt Fever - same reasoning; 49631/49632 used to point at the
+                            // now-superseded ranks 2/3 (50509/50510).
                             case 49632:
-                                spellId = 50510;
-                                break;
                             case 49631:
-                                spellId = 50509;
-                                break;
                             case 49032:
                                 spellId = 50508;
                                 break;
