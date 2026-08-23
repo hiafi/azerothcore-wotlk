@@ -187,7 +187,12 @@ def pick_anchor(rank_rows: list[dict], rank1: dict) -> tuple[dict, int, str]:
         slope60 = (anchor_v - r1v) / (60 - r1_learn)
         predicted_top = r1v + slope60 * (top_level - r1_learn)
         ratio = predicted_top / top_actual if top_actual else None
-        if ratio is None or ratio < 0.75 or ratio > 1.33:
+        # Tightened from an initial 0.75/1.33 (25%/33%) after Paladin's Exorcism slipped through
+        # at a real ~23% undershoot (ratio 0.77) - growth commonly keeps accelerating in the later
+        # ranks (Blizzard's WotLK-era extension ranks), so a shallow early-window slope is rarely
+        # a faithful predictor of the top rank's real value once it diverges at all. 10% is a much
+        # tighter bar for trusting the covers-60 candidate over the top rank.
+        if ratio is None or ratio < 0.90 or ratio > 1.11:
             return top, top_level, "covers-60-overridden(undershoot-vs-top-rank)"
 
     return anchor, 60, "covers-60"
