@@ -55,6 +55,17 @@ ENCHANT_ITEM_TYPES = {53, 54, 156}
 NONSCALING_TYPES = CREATE_ITEM_TYPES | ENCHANT_ITEM_TYPES
 EMBEDDED_ID_THRESHOLD = 5000
 SPELL_AURA_DUMMY = 4
+SPELL_EFFECT_DUMMY = 3
+
+
+def _is_dummy_trigger_effect(eff: dict) -> bool:
+    """True for the two effect shapes known to sometimes carry an embedded
+    spell ID in base_points instead of a real scaling quantity: a plain
+    SPELL_EFFECT_DUMMY (type 3, e.g. Druid Starfall's HandleDummy ->
+    CastSpell(GetHitUnit(), uint32(GetEffectValue())) - confirmed by reading
+    spell_dru_starfall_dummy in spell_druid.cpp) or an APPLY_AURA effect
+    whose aura type is SPELL_AURA_DUMMY (4, e.g. mage's Living Bomb)."""
+    return eff.get("type") == SPELL_EFFECT_DUMMY or eff.get("apply_aura") == SPELL_AURA_DUMMY
 SYSTEM_MAX_LEVEL = 80
 
 
@@ -139,7 +150,14 @@ def pick_anchor(rank_rows: list[dict], rank1: dict) -> tuple[dict, int, str]:
     rank if it would undershoot/overshoot by more than 25%."""
     top = max(rank_rows, key=lambda r: r["_rank"])
     top_max = ov(top, "MaxLevel", 0)
-    top_level = top_max if top_max else SYSTEM_MAX_LEVEL
+    # Cap at the system ceiling even when the top rank's own MaxLevel is a real,
+    # nonzero value above 80 - a common Blizzard padding pattern (top rank's
+    # BaseLevel=80, MaxLevel=84, "room to grow" that never shipped). Anchoring
+    # there instead of at 80 derives a shallower slope than intended, silently
+    # undershooting the value a real level-80 (this server's actual cap)
+    # character gets - first hit on Druid (Tranquility, Moonfire, Regrowth,
+    # Cower, ...), not just the already-known "MaxLevel == 0 (uncapped)" case.
+    top_level = min(top_max, SYSTEM_MAX_LEVEL) if top_max else SYSTEM_MAX_LEVEL
     fallback = (top, top_level, "top-rank-fallback")
 
     r1_learn = learn_level(rank1)
@@ -230,10 +248,10 @@ def bootstrap_chain(chain_id: int, ranks: list[tuple[int, int]], rows_by_id: dic
         for r in rank_rows:
             eff = r.get(f"effect{i}")
             if eff and abs(eff.get("base_points", 0) or 0) > EMBEDDED_ID_THRESHOLD:
-                dummy = eff.get("apply_aura") == SPELL_AURA_DUMMY
+                dummy = _is_dummy_trigger_effect(eff)
                 warnings.append(f"chain {chain_id} ({name}) effect{i} rank {r['_rank']}: "
                                  f"base_points={eff.get('base_points')} exceeds "
-                                 f"{EMBEDDED_ID_THRESHOLD}{' (SPELL_AURA_DUMMY - SKIPPED, resolve by name)' if dummy else ' (not SPELL_AURA_DUMMY - computed normally, but double-check by name)'}")
+                                 f"{EMBEDDED_ID_THRESHOLD}{' (dummy-trigger effect shape - SKIPPED, resolve by name)' if dummy else ' (not a dummy-trigger shape - computed normally, but double-check by name)'}")
 
         rank1_eff = rank1.get(f"effect{i}")
         anchor_eff = anchor.get(f"effect{i}")
@@ -259,7 +277,7 @@ def bootstrap_chain(chain_id: int, ranks: list[tuple[int, int]], rows_by_id: dic
         eff_type = rank1_eff.get("type")
         if eff_type in NONSCALING_TYPES:
             continue
-        if rank1_eff.get("apply_aura") == SPELL_AURA_DUMMY and (
+        if _is_dummy_trigger_effect(rank1_eff) and (
                 abs(rank1_eff.get("base_points", 0) or 0) > EMBEDDED_ID_THRESHOLD
                 or abs(anchor_eff.get("base_points", 0) or 0) > EMBEDDED_ID_THRESHOLD):
             continue
