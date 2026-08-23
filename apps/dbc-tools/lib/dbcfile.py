@@ -8,7 +8,9 @@ Implements exactly the layout in `src/common/DataStores/DBCFileLoader.cpp`:
     strings: a string pool, offset 0 is always the empty string
 
 Only the field types actually used by the tables in `dbcfmt.py` are
-implemented: 'n'/'i'/'x' (uint32), 'f' (float32), 's' (string offset).
+implemented: 'n'/'i'/'x' (uint32), 'f' (float32), 's' (string offset) — plus
+any column listed in a table's `read_as_string`, decoded as a string
+regardless of its fmt char (see dbcfmt.py's module docstring for why).
 """
 
 from __future__ import annotations
@@ -53,7 +55,7 @@ def read_dbc(path: Path, table: DbcTable) -> list[dict]:
             if ch == "f":
                 (val,) = struct.unpack_from("<f", data, base + offset)
                 offset += 4
-            elif ch == "s":
+            elif ch == "s" or col in table.read_as_string:
                 (strref,) = struct.unpack_from("<I", data, base + offset)
                 val = read_string(strref)
                 offset += 4
@@ -79,7 +81,7 @@ def _pack_string_pool(rows: list[dict], table: DbcTable):
     offsets: dict[str, int] = {"": 0}
     for row in rows:
         for ch, col in zip(table.fmt, table.columns):
-            if ch != "s":
+            if ch != "s" and col not in table.read_as_string:
                 continue
             val = row.get(col) or ""
             if val not in offsets:
@@ -100,7 +102,7 @@ def pack_dbc_bytes(table: DbcTable, rows: list[dict]) -> bytes:
             val = row.get(col, 0)
             if ch == "f":
                 body += struct.pack("<f", float(val or 0.0))
-            elif ch == "s":
+            elif ch == "s" or col in table.read_as_string:
                 body += struct.pack("<I", string_offsets[val or ""])
             elif ch in ("n", "i", "x"):
                 body += struct.pack("<I", int(val or 0) & 0xFFFFFFFF)
@@ -124,5 +126,5 @@ def empty_row(table: DbcTable) -> dict:
     """A full-width row with every column defaulted (0 / 0.0 / "")."""
     row = {}
     for ch, col in zip(table.fmt, table.columns):
-        row[col] = "" if ch == "s" else 0
+        row[col] = "" if (ch == "s" or col in table.read_as_string) else 0
     return row

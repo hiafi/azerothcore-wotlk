@@ -1,11 +1,15 @@
 """
-Emits a pending world-DB SQL migration for the rows this run produced —
-`DELETE ... WHERE ID BETWEEN <reserved block>` followed by a sorted
-`INSERT`, one pair per touched table. Mirrors the idiom already used by
-`data/sql/updates/pending_db_world/rev_1787377390451498201.sql` (the custom
-stat system's own migration): delete-then-insert over a fixed reserved
-range makes reruns idempotent, since the DELETE always clears exactly the
-block this tool owns before reinserting the current rows.
+Emits a pending world-DB SQL migration for the rows this run produced.
+
+Two DELETE shapes, per touched table, both idempotent on rerun:
+  - `WHERE ID BETWEEN <reserved block>` for our reserved range — mirrors the
+    idiom already used by `rev_1787377390451498201.sql` (the custom stat
+    system's own migration).
+  - `WHERE ID IN (...)` for specific existing IDs this run is *editing*
+    (see lib/resolve.py) — scattered, not contiguous, so a range delete
+    would either miss them or (worse) sweep up unrelated rows.
+Then one sorted INSERT per table covering everything (new content and
+edits alike).
 """
 
 from __future__ import annotations
@@ -24,11 +28,16 @@ def _sql_literal(value) -> str:
     return f"'{escaped}'"
 
 
-def _table_block(table: DbcTable, id_range: dict, rows: list[dict]) -> str:
+def _table_block(table: DbcTable, id_range: dict, rows: list[dict], edited_ids: list[int]) -> str:
     lines = [
         f"DELETE FROM `{table.sql_table}` WHERE `{table.index_column}` "
         f"BETWEEN {id_range['start']} AND {id_range['end']};"
     ]
+    if edited_ids:
+        id_list = ", ".join(str(i) for i in sorted(edited_ids))
+        lines.append(
+            f"DELETE FROM `{table.sql_table}` WHERE `{table.index_column}` IN ({id_list});"
+        )
     if rows:
         rows = sorted(rows, key=lambda r: r[table.index_column])
         cols = ", ".join(f"`{c}`" for c in table.columns)
@@ -40,14 +49,15 @@ def _table_block(table: DbcTable, id_range: dict, rows: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def emit_pending_sql(output_path, blocks: list[tuple[DbcTable, dict, list[dict]]], header: str) -> bool:
-    """`blocks` is a list of (table, id_range, rows). Writes nothing and
-    returns False if every block is empty (nothing new/changed to emit)."""
-    if not any(rows for _, _, rows in blocks):
+def emit_pending_sql(output_path, blocks: list[tuple[DbcTable, dict, list[dict], list[int]]], header: str) -> bool:
+    """`blocks` is a list of (table, id_range, rows, edited_ids). Writes
+    nothing and returns False if every block is empty (nothing new/changed
+    to emit)."""
+    if not any(rows for _, _, rows, _ in blocks):
         return False
     parts = [header.rstrip() + "\n"]
-    for table, id_range, rows in blocks:
-        parts.append(_table_block(table, id_range, rows))
+    for table, id_range, rows, edited_ids in blocks:
+        parts.append(_table_block(table, id_range, rows, edited_ids))
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text("\n\n".join(parts) + "\n", encoding="utf-8")
     return True

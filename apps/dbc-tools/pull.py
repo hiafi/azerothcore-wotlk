@@ -17,6 +17,9 @@ Usage:
   python3 apps/dbc-tools/pull.py --spell 116,120,10
   python3 apps/dbc-tools/pull.py --spell 100-200        # inclusive range
   python3 apps/dbc-tools/pull.py --spell 100 --dest npc # force destination
+  python3 apps/dbc-tools/pull.py --class mage           # every spell whose
+                                                         # SpellClassSet is
+                                                         # that class
   python3 apps/dbc-tools/pull.py --all                  # every spell_dbc
                                                          # overlay row: the
                                                          # tool's own
@@ -47,6 +50,7 @@ SPELLFAMILY_TO_FILE = {
     3: "mage", 4: "warrior", 5: "warlock", 6: "priest", 7: "druid",
     8: "rogue", 9: "hunter", 10: "paladin", 11: "shaman", 15: "deathknight",
 }
+FILE_TO_SPELLFAMILY = {v: k for k, v in SPELLFAMILY_TO_FILE.items()}
 
 
 def parse_id_spec(spec: str) -> list[int]:
@@ -88,6 +92,10 @@ def main() -> int:
     group = ap.add_mutually_exclusive_group(required=True)
     group.add_argument("--spell", help="comma-separated IDs and/or ranges, e.g. 116,120,10-15")
     group.add_argument(
+        "--class", dest="klass", choices=sorted(FILE_TO_SPELLFAMILY),
+        help="pull every existing spell whose SpellClassSet matches this class",
+    )
+    group.add_argument(
         "--all", action="store_true",
         help="pull every row currently in the spell_dbc overlay (round-trip self-test)",
     )
@@ -101,6 +109,11 @@ def main() -> int:
     existing_spells = state.load_existing_rows(dbcfmt.SPELL)
     if args.all:
         wanted_ids = sorted(existing_spells)
+    elif args.klass:
+        family = FILE_TO_SPELLFAMILY[args.klass]
+        wanted_ids = sorted(
+            i for i, row in existing_spells.items() if row.get("SpellClassSet") == family
+        )
     else:
         wanted_ids = parse_id_spec(args.spell)
 

@@ -28,6 +28,17 @@ below lists exactly which ones, transcribed from the `int32`-typed fields in
 `src/server/shared/DataStores/DBCStructure.h`. This only matters for reading
 (both `dbcfile.read_dbc` and the SQL row values need the correct sign); the
 2's-complement bit pattern round-trips correctly either way on write.
+
+Separately, a few 'x' columns are genuinely *string* data in the real file
+— AC's own C++ struct just never bothers exposing them (its comment says
+"unused"), but the client still stores and can display them (e.g.
+TalentTab's tab name — "Frost", "Fire", "Arcane" — which nothing server-side
+reads but which a human very much wants to see when reversing a tab back to
+source). `read_as_string` lists exactly those, so `dbcfile.py` decodes them
+via the string table instead of exposing a meaningless raw offset. Same
+byte layout either way (both are one 4-byte string-table offset), so this
+changes nothing about what's written to the file — only how this tool reads
+it back.
 """
 
 from __future__ import annotations
@@ -43,6 +54,7 @@ class DbcTable:
     fmt: str                 # DBCfmt.h format string
     columns: tuple           # column names, same order/length as fmt
     signed: frozenset = field(default_factory=frozenset)  # see module docstring
+    read_as_string: frozenset = field(default_factory=frozenset)  # see module docstring
 
     def __post_init__(self):
         if len(self.fmt) != len(self.columns):
@@ -157,6 +169,7 @@ TALENTTAB = DbcTable(
         "ID", _locale_cols("Name"), "SpellIconID", "RaceMask", "ClassMask",
         "PetTalentMask", "OrderIndex", "BackgroundFile",
     ),
+    read_as_string=frozenset(f"Name_Lang_{loc}" for loc in LOCALE_SUFFIXES),
 )
 
 SPELLCASTTIMES = DbcTable(

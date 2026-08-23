@@ -50,6 +50,26 @@ def load_ids(path: Path) -> dict:
         return yaml.safe_load(f) or {}
 
 
+def in_range(entry_id: int, id_range: dict) -> bool:
+    return id_range["start"] <= entry_id <= id_range["end"]
+
+
+def partition_by_range(entries: list[dict], id_range: dict) -> tuple[list[dict], list[dict]]:
+    """Split entries into (in the reserved block, outside it).
+
+    Only the first list should ever be built/emitted — see generate.py's
+    "reference-only" filtering and the "Corollary" in
+    docs/dbc-build-pipeline.md: pulling an existing stock row into source/
+    (via pull.py/pull_talents.py) is for reading/editing convenience, not an
+    invitation to re-emit it at its original ID. A pulled row only starts
+    being generated once its `id` is changed to a fresh one from
+    source/ids.yaml."""
+    inside, outside = [], []
+    for entry in entries:
+        (inside if in_range(entry["id"], id_range) else outside).append(entry)
+    return inside, outside
+
+
 def _parse_spell_csv_file(path: Path) -> list[dict]:
     entries = []
     with open(path, newline="", encoding="utf-8") as f:
@@ -89,9 +109,24 @@ def load_spells_csv(dir_path: Path) -> list[dict]:
     return entries
 
 
-def _load_talents_yaml_file(path: Path) -> dict:
+def split_leading_comments(text: str) -> tuple[str, str]:
+    """Split off a file's leading `#`-comment/blank-line block (the
+    hand-written schema/example doc at the top of each talents/*.yaml) from
+    the actual YAML content after it. Returns (header, remainder) — header
+    includes its trailing blank line(s) verbatim, remainder is what
+    `yaml.safe_load` should see. Used so pulling new rows into a file can
+    rewrite just the data half without clobbering the human-written part."""
+    lines = text.splitlines(keepends=True)
+    i = 0
+    while i < len(lines) and (lines[i].startswith("#") or lines[i].strip() == ""):
+        i += 1
+    return "".join(lines[:i]), "".join(lines[i:])
+
+
+def load_talents_yaml_file(path: Path) -> dict:
     with open(path, encoding="utf-8") as f:
-        data = yaml.safe_load(f) or {}
+        _, remainder = split_leading_comments(f.read())
+    data = yaml.safe_load(remainder) or {}
     data.setdefault("tabs", [])
     data.setdefault("talents", [])
     return data
@@ -103,7 +138,7 @@ def load_talents_yaml(dir_path: Path) -> dict:
     merged = {"tabs": [], "talents": []}
     seen: dict[str, dict[int, str]] = {"tabs": {}, "talents": {}}
     for path in sorted(Path(dir_path).glob("*.yaml")):
-        data = _load_talents_yaml_file(path)
+        data = load_talents_yaml_file(path)
         for key in ("tabs", "talents"):
             for entry in data[key]:
                 if entry["id"] in seen[key]:

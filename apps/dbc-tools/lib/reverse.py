@@ -1,22 +1,24 @@
 """
-Inverse of build.py: given a full merged Spell.dbc row (base ⊕ overlay),
-produce the friendly source/spells.csv fields plus a `raw_overrides` dict —
-used by pull.py to seed source rows from existing data.
+Inverse of build.py: given a full merged Spell.dbc / Talent.dbc /
+TalentTab.dbc row (base ⊕ overlay), produce the friendly source fields plus
+a `raw_overrides` dict — used by pull.py / pull_talents.py to seed source
+rows from existing data.
 
 Losslessness works by construction rather than by hand-listing every
 column: reverse a row into friendly fields, rebuild it with `build.py`
-(reusing the *same* secondary-table rows, so CastingTimeIndex/DurationIndex/
-RangeIndex/EffectRadiusIndex land on the same IDs instead of minting new
-ones), then diff column-by-column against the original. Anything that
-doesn't come back identical — whether this module simply doesn't model it,
-or a friendly field's simplifying assumptions don't fit this particular row
-— goes into `raw_overrides`, so the round trip is exact either way.
+(for spells, reusing the *same* secondary-table rows, so CastingTimeIndex/
+DurationIndex/RangeIndex/EffectRadiusIndex land on the same IDs instead of
+minting new ones), then diff column-by-column against the original.
+Anything that doesn't come back identical — whether this module simply
+doesn't model it, or a friendly field's simplifying assumptions don't fit
+this particular row — goes into `raw_overrides`, so the round trip is exact
+either way.
 """
 
 from __future__ import annotations
 
 from . import build
-from .dbcfmt import SPELL
+from .dbcfmt import SPELL, TALENT, TALENTTAB
 from .reuse import ReuseContext
 
 
@@ -76,6 +78,42 @@ def reverse_spell_row(row: dict, secondary_rows: dict[str, dict[int, dict]]) -> 
     rebuilt = build.build_spell_row(entry, reuse)
 
     overrides = {c: row[c] for c in SPELL.columns if rebuilt.get(c) != row.get(c)}
+    entry["raw_overrides"] = overrides or None
+    return entry
+
+
+def reverse_talenttab_row(row: dict) -> dict:
+    """No secondary-table lookups involved, so this one's a direct
+    build-and-diff — no ReuseContext needed."""
+    entry = {
+        "id": row["ID"],
+        "name": row.get("Name_Lang_enUS") or "",
+        "class_mask": row["ClassMask"],
+        "pet_talent_mask": row["PetTalentMask"],
+        "order_index": row["OrderIndex"],
+        "spell_icon_id": row["SpellIconID"],
+    }
+    rebuilt = build.build_talenttab_row(entry)
+    overrides = {c: row[c] for c in TALENTTAB.columns if rebuilt.get(c) != row.get(c)}
+    entry["raw_overrides"] = overrides or None
+    return entry
+
+
+def reverse_talent_row(row: dict) -> dict:
+    rank_ids = [row[f"SpellRank_{i}"] for i in range(1, 10)]
+    while rank_ids and rank_ids[-1] == 0:
+        rank_ids.pop()
+    entry = {
+        "id": row["ID"],
+        "tab_id": row["TabID"],
+        "tier": row["TierID"],
+        "column": row["ColumnIndex"],
+        "rank_spell_ids": rank_ids,
+        "depends_on": {"talent_id": row["PrereqTalent_1"], "rank": row["PrereqRank_1"]},
+        "flags": row["Flags"],
+    }
+    rebuilt = build.build_talent_row(entry)
+    overrides = {c: row[c] for c in TALENT.columns if rebuilt.get(c) != row.get(c)}
     entry["raw_overrides"] = overrides or None
     return entry
 

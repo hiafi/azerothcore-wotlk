@@ -59,50 +59,79 @@ Running it twice with unchanged source produces byte-identical output
 (diff the pending SQL / patch files to confirm) — that's what makes this a
 generator rather than a one-off script.
 
-## Pulling existing data in
+## Pulling existing data in — and editing it
 
 ```
 python3 apps/dbc-tools/pull.py --spell 116,133          # explicit IDs
 python3 apps/dbc-tools/pull.py --spell 100-200           # inclusive range
 python3 apps/dbc-tools/pull.py --spell 100 --dest npc    # force a destination file
+python3 apps/dbc-tools/pull.py --class mage              # every spell whose
+                                                          # SpellClassSet is
+                                                          # that class
 python3 apps/dbc-tools/pull.py --all                     # every existing
                                                           # spell_dbc row —
                                                           # also the tool's
                                                           # own round-trip
                                                           # self-test
+
+python3 apps/dbc-tools/pull_talents.py --class mage       # every talent tab
+                                                           # (by ClassMask)
+                                                           # and talent in it
+python3 apps/dbc-tools/pull_talents.py --tab 8,9 --dest mage
+python3 apps/dbc-tools/pull_talents.py --talent 23,24 --dest mage
 ```
 
-Appends rows to the matching file under `source/spells/` for IDs not
-already present anywhere in that directory. The destination file is
-auto-detected from the spell's `SpellClassSet` (`SPELLFAMILY_*` in
-`src/server/shared/SharedDefines.h` — see `SPELLFAMILY_TO_FILE` in
-`pull.py`) unless `--dest` overrides it; anything with no player class
-(generic/potion/pet effects, or an unrecognized value) falls back to
+Appends rows to the matching file under `source/spells/` (or
+`source/talents/` for tabs/talents) for IDs not already present anywhere in
+that directory. `pull.py`'s destination file is auto-detected from the
+spell's `SpellClassSet` (`SPELLFAMILY_*` in
+`src/server/shared/SharedDefines.h` — see `SPELLFAMILY_TO_FILE`) unless
+`--dest` overrides it; anything with no player class falls back to
 `generic.csv`. Override with `--dest` when auto-detect isn't what you want —
 e.g. a boss ability that happens to share a player class's `SpellClassSet`
 usually belongs in `npc.csv`, not that class's file.
 
-Useful for two things: seeding a real spell (e.g. Frostbolt, which
-auto-routes to `mage.csv`) as an editable starting point before reworking
-it, and validating the pipeline itself (`--all` reverses every existing
-row, rebuilds it, and — if you add that check back in, see
-`lib/reverse.py`'s docstring — diffs it against the original; this was run
-once over all ~54k merged base+overlay spell rows during development with
-zero mismatches).
+**Pulling a row doesn't make `generate.py` touch it.** `generate.py`
+reconciles every source entry against what's actually live (base client DBC
+⊕ current SQL overlay — see `lib/resolve.py`) and only ever does one of
+three things with it:
+
+1. **New content** — `id` is inside `source/ids.yaml`'s reserved block:
+   always built and emitted (the normal "minting a new spell" case).
+2. **Editing an existing spell/talent** — `id` is outside the reserved
+   block, but you changed something after pulling it in: emitted, with an
+   explicit `DELETE ... WHERE ID IN (...)` (not a range delete, since edited
+   existing IDs are scattered) so the migration only ever touches the exact
+   rows you actually changed. This is the answer to "I pulled Frostbolt, now
+   I want to retune its damage" — edit the row in `mage.csv`, run
+   `generate.py`, done. `generate.py` prints exactly which IDs it's editing.
+3. **Untouched reference copy** — `id` is outside the block *and* identical
+   to what's live: silently skipped, no SQL, no patch. This is what lets you
+   pull an entire class's worth of spells (or `--all`, ~54k rows) in for
+   reading/context without every regen trying to rewrite all of them.
+
+Also useful for validating the pipeline itself: `pull.py --all` reverses
+every existing row, and (1) is exactly what runs the "unchanged → skip"
+path at scale, and (2) — if you add the check back in, see
+`lib/reverse.py`'s docstring — rebuilding and diffing against the original
+was run once over all ~54k merged base+overlay spell rows during
+development with zero mismatches.
 
 ## Source files
 
 - `source/ids.yaml` — reserved ID blocks. Draw new IDs from here, don't
   pick numbers ad hoc.
-- `source/spells/*.csv` — one row per new/changed spell, one file per class
+- `source/spells/*.csv` — one row per spell, one file per class
   (`mage.csv`, `warrior.csv`, ...) plus `npc.csv` (creature-only abilities)
   and `generic.csv` (no player class — trinket procs, test content, etc.).
-  Split purely so no single file grows huge; every file shares the same
-  header and they're all merged into one list before `build.py`/`reuse.py`
-  ever sees them (`lib/source.py::load_spells_csv`), so it makes no
-  functional difference which file a row lives in beyond human
-  organization. Duplicate IDs across files are a load-time error, naming
-  both files.
+  A row is either new content, an active edit to something existing, or a
+  pulled-in-for-reference copy nothing has touched yet — see "Pulling
+  existing data in" above for how `generate.py` tells those apart. Split
+  purely so no single file grows huge; every file shares the same header
+  and they're all merged into one list before `build.py`/`reuse.py` ever
+  sees them (`lib/source.py::load_spells_csv`), so it makes no functional
+  difference which file a row lives in beyond human organization. Duplicate
+  IDs across files are a load-time error, naming both files.
 
   A friendly subset of `Spell.dbc`'s 234 columns (id, name, school, cast
   time, cooldown, mana cost, range, radius, duration, up to 3 effects,
@@ -124,11 +153,13 @@ zero mismatches).
   `npc.csv` (or add a `notes` entry explaining what still needs it) rather
   than leaving it in the class file, so the class file only ever holds the
   one live rank per ability.
-- `source/talents/*.yaml` — new/changed `Talent.dbc` + `TalentTab.dbc` rows,
-  one file per class (same merge-by-directory mechanism, same duplicate-ID
-  check, as `source/spells/`). UI-agnostic per `docs/talent-ui-decision.md`.
-  Empty until a real ticket (Frost Mage) needs it; `mage.yaml` carries the
-  full schema/example comment, the other class files just point back to it.
+- `source/talents/*.yaml` — `Talent.dbc` + `TalentTab.dbc` rows, one file
+  per class (same merge-by-directory mechanism, same duplicate-ID check,
+  new/edit/reference-copy distinction, as `source/spells/`). UI-agnostic per
+  `docs/talent-ui-decision.md`. `mage.yaml` carries the full schema/example
+  comment (and, as of the Frost Mage rework starting, the real pulled-in
+  Fire/Frost/Arcane trees); the other class files are still empty
+  placeholders that just point back to it.
 
 `spell_weight` / `coeff_weight` columns are captured as passthrough
 metadata only — turning them into `BasePoints`/`RealPointsPerLevel` is
