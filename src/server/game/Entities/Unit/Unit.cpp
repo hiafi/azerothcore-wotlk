@@ -10426,6 +10426,16 @@ uint32 Unit::MeleeDamageBonusTaken(Unit* attacker, uint32 pdamage, WeaponAttackT
 
     TakenTotalMod *= GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, damageSchoolMask);
 
+    // Frost Warding (Frost Mage rework, docs/frost-mage-redesign.md sec 4 Row 2) - capstone:
+    // -20% physical damage taken while Frost Armor (168) or Ice Armor (7302) is active. A
+    // rank-2-only SPELL_AURA_DUMMY (EFFECT_2, SpellIconID 501) rather than a plain
+    // SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, so it's checked live here instead of going stale
+    // between armor swaps - same idiom as Biting Cold's SPELLFAMILY_MAGE dummy read above.
+    if (IsPlayer() && getClass() == CLASS_MAGE && (damageSchoolMask & SPELL_SCHOOL_MASK_NORMAL))
+        if (HasAura(168) || HasAura(7302))
+            if (AuraEffect* aurEff = GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_MAGE, 501, EFFECT_2))
+                AddPct(TakenTotalMod, aurEff->GetAmount());
+
     // .. taken pct (special attacks)
     if (spellProto)
     {

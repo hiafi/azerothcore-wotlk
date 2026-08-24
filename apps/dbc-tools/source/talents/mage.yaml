@@ -234,9 +234,6 @@ talents:
   rank_spell_ids:
   - 11070
   - 12473
-  - 16763
-  - 16765
-  - 16766
   depends_on:
     talent_id: 0
     rank: 0
@@ -795,8 +792,6 @@ talents:
   - 31674
   - 31675
   - 31676
-  - 31677
-  - 31678
   depends_on:
     talent_id: 0
     rank: 0
@@ -991,8 +986,6 @@ talents:
   - 44566
   - 44567
   - 44568
-  - 44570
-  - 44571
   depends_on:
     talent_id: 0
     rank: 0
