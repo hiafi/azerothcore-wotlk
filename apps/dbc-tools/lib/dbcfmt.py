@@ -146,6 +146,19 @@ SPELL = DbcTable(
         "EquippedItemSubclass", "EquippedItemInvTypes", ("EffectMiscValue", 3),
         ("EffectMiscValueB", 3), "PowerType", "RequiredAreasID", "PowerDisplayID",
     )),
+    # Description/AuraDescription are 'x' in DBCfmt.h (AC's SpellEntry struct
+    # never reads them), but the client does: this is the actual tooltip body
+    # text. Without this, dbcfile.py treats them as plain uint32s — reading
+    # the *old* string-table offset as a bare int and writing it back
+    # unresolved, now pointing at an unrelated byte in the freshly-rebuilt
+    # (much smaller) pool. Confirmed as the cause of the garbled/truncated
+    # tooltips reported after a patch regenerate — see
+    # docs/single-rank-spell-system.md's tooltip-corruption note.
+    read_as_string=frozenset(
+        f"{base}_Lang_{loc}"
+        for base in ("Description", "AuraDescription")
+        for loc in LOCALE_SUFFIXES
+    ),
 )
 
 TALENT = DbcTable(
