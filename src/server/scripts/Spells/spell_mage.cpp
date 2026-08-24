@@ -15,6 +15,7 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "CreatureAI.h"
 #include "Pet.h"
 #include "Player.h"
 #include "PlayerScript.h"
@@ -80,9 +81,18 @@ enum MageSpells
     SPELL_MAGE_GLACIAL_SPIKE                     = 200002,
     SPELL_MAGE_SHATTERING_COLD                   = 200003,
     SPELL_MAGE_FLURRY                            = 200004,
+    SPELL_MAGE_REFRESHMENT                       = 200006,
+    SPELL_MAGE_FROZEN_ORB                        = 200007,
+    SPELL_MAGE_FROZEN_ORB_PULSE                  = 200008,
+    SPELL_MAGE_FROZEN_ORB_PERIODIC               = 200009,
     // Not a new spell - naming the existing "Fingers of Frost" charge buff (already scripted
     // below as spell_mage_fingers_of_frost) for use by the frozen-state helpers.
     SPELL_MAGE_FINGERS_OF_FROST_CHARGES          = 74396
+};
+
+enum FrostMageReworkCreatures
+{
+    NPC_MAGE_FROZEN_ORB = 300001
 };
 
 enum MageSpellIcons
@@ -329,6 +339,201 @@ class spell_mage_flurry : public SpellScript
     void Register() override
     {
         OnHit += SpellHitFn(spell_mage_flurry::ApplyShatteringCold);
+    }
+};
+
+// 200006 - Refreshment (Conjure Refreshment's item, 43518 "Conjured Mana Pie")
+// docs/frost-mage-redesign.md sec 2: "Restores 100% of max health and 100% of max mana over
+// 30 sec." Built on the real native Food/Drink mechanism (SPELL_AURA_MOD_REGEN/MOD_POWER_REGEN,
+// the same aura types the pulled 61829/61830 use) rather than a dedicated periodic heal/energize
+// aura - this gets the real "eating/drinking" emote for free (Player.cpp's food-emote code
+// specifically looks for these two aura types) at the cost of precision: MOD_REGEN's health
+// contribution only applies on the player's global 2-sec regen tick, whose phase isn't reset on
+// aura apply, so the number of ticks across a fixed 30s window isn't exactly 15 every time.
+// Deliberately not chasing exactness here - CalcAmount below targets 105% instead of 100%, and
+// both RegenerateHealth() and Regenerate(POWER_MANA) already clamp at max (see their `curValue ==
+// maxValue` early-outs), so overshooting the math just means "reliably reaches full before the
+// duration runs out" rather than any real overheal.
+class spell_mage_refreshment : public AuraScript
+{
+    PrepareAuraScript(spell_mage_refreshment);
+
+    // MOD_REGEN's own formula (Player::RegenerateHealth()) adds `modifier * 0.4` on each 2-sec
+    // regen tick while out of combat - 15 nominal ticks over this aura's 30-sec duration, so
+    // total = modifier * 6. Solving `modifier * 6 = maxStat * TARGET_PCT` gives the divisor below.
+    // (MOD_POWER_REGEN's mana math works out to the same "* 6" shape - see
+    // Player::UpdateManaRegen()/Regenerate(POWER_MANA) - and mana regen isn't tick-quantized the
+    // way health is, so it's the more reliable of the two either way.)
+    static constexpr float TARGET_PCT = 1.05f;
+    static constexpr float NOMINAL_TICKS_TIMES_POINT_FOUR = 6.0f;
+
+    void CalcHeal(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
+    {
+        if (Unit* target = GetUnitOwner())
+            amount = int32(target->GetMaxHealth() * TARGET_PCT / NOMINAL_TICKS_TIMES_POINT_FOUR);
+    }
+
+    void CalcMana(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
+    {
+        if (Unit* target = GetUnitOwner())
+            amount = int32(target->GetMaxPower(POWER_MANA) * TARGET_PCT / NOMINAL_TICKS_TIMES_POINT_FOUR);
+    }
+
+    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_mage_refreshment::CalcHeal, EFFECT_0, SPELL_AURA_MOD_REGEN);
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_mage_refreshment::CalcMana, EFFECT_1, SPELL_AURA_MOD_POWER_REGEN);
+    }
+};
+
+/*
+ * Frozen Orb (docs/frost-mage-redesign.md sec 1; full design/gotchas in
+ * docs/frost-mage-implementation-plan.md's dedicated "Frozen Orb Implementation" section).
+ * 200007 is a SPELL_EFFECT_SCRIPT_EFFECT that summons the trigger creature (npc_mage_frozen_orb,
+ * NPC_MAGE_FROZEN_ORB) at the caster's position; the creature's own AI drives everything else -
+ * movement, the self-cast periodic pulse (200009, triggering the actual damage/slow in 200008),
+ * and the Fingers of Frost grant chain. No spell-row work ties these three together beyond
+ * 200009's EffectTriggerSpell pointing at 200008 and the AI's own me->CastSpell(me, 200009, ...).
+ */
+namespace
+{
+    constexpr uint32 POINT_FROZEN_ORB_END = 1;
+    constexpr uint32 EVENT_FROZEN_ORB_GRANT_FOF = 1;
+    // Matches both the orb's TEMPSUMMON_TIMED_DESPAWN lifetime and 200009's own duration, so its
+    // 10th and final pulse (one per second) lands right as it expires.
+    constexpr uint32 FROZEN_ORB_DURATION = 10000;
+    // Travel distance, yards - not yet modified by Arctic Reach (that talent isn't built; see the
+    // Frost talent tree item in docs/frost-mage-handoff.md).
+    constexpr float FROZEN_ORB_TRAVEL_DISTANCE = 30.0f;
+    constexpr float FROZEN_ORB_SPEED_RATE = 0.55f;
+}
+
+// 300001 - Frozen Orb (the projectile itself). Display left as the stock invisible-stalker model
+// (1126) pending an art pass - picking a real "glowing orb" model is an interactive, in-game task
+// (.morph browsing a reference client) per the implementation plan's notes, not something to guess
+// here; see any of this session's other "SpellVisualID unset" spells for the same deferral.
+class npc_mage_frozen_orb : public CreatureAI
+{
+public:
+    explicit npc_mage_frozen_orb(Creature* creature) : CreatureAI(creature) { }
+
+    // The faction-35 trap (implementation plan): a trigger left on its default friendly-to-
+    // everyone faction finds zero targets for its own TARGET_UNIT_SRC_AREA_ENEMY pulse cast.
+    void IsSummonedBy(WorldObject* summoner) override
+    {
+        Unit* owner = summoner->ToUnit();
+        if (!owner)
+            return;
+
+        _ownerGUID = owner->GetGUID();
+        me->SetFaction(owner->GetFaction());
+
+        me->SetDisableGravity(true);
+        me->SetHover(true);
+        me->SetSpeedRate(MOVE_RUN, FROZEN_ORB_SPEED_RATE);
+
+        // Walks the line from the owner's position along their facing, clamped at the first wall
+        // or terrain collision - called on the owner (not `me`) because that's whose facing at
+        // cast time determines the orb's direction.
+        Position dest = owner->GetFirstCollisionPosition(FROZEN_ORB_TRAVEL_DISTANCE, 0.0f);
+        // generatePath=false: with pathfinding on, the orb curves around obstacles like a mob
+        // giving chase, which looks wrong for a projectile. Issued once - re-issuing every tick
+        // would resend SMSG_MONSTER_MOVE every tick and make the client visibly stutter.
+        me->GetMotionMaster()->MovePoint(POINT_FROZEN_ORB_END, dest, FORCED_MOVEMENT_NONE, 0.0f, false);
+
+        me->CastSpell(me, SPELL_MAGE_FROZEN_ORB_PERIODIC, true);
+    }
+
+    // Called from spell_mage_frozen_orb_pulse::NotifyOrb (OnEffectHitTarget on 200008) whenever a
+    // pulse actually connects with an enemy. Both the "slows down significantly after dealing
+    // damage" travel change and the Fingers of Frost grant chain start here -
+    // docs/frost-mage-redesign.md sec 1: "Grants 1 charge when the orb first strikes any enemy,
+    // then 1 additional charge every 3 sec while active."
+    void NotifyPulseHit()
+    {
+        if (_halted)
+            return;
+        _halted = true;
+
+        // Not Kill() (fires death events/loot/combat log noise for a trigger) and not setting
+        // speed to 0 (divide-by-zero paths in movement code, desyncs the client) - see the
+        // implementation plan's notes.
+        me->GetMotionMaster()->Clear();
+        me->GetMotionMaster()->MoveIdle();
+        me->StopMoving();
+
+        GrantFingersOfFrost();
+        _events.ScheduleEvent(EVENT_FROZEN_ORB_GRANT_FOF, 3s);
+    }
+
+    void UpdateAI(uint32 diff) override
+    {
+        _events.Update(diff);
+
+        while (uint32 eventId = _events.ExecuteEvent())
+        {
+            if (eventId == EVENT_FROZEN_ORB_GRANT_FOF)
+            {
+                GrantFingersOfFrost();
+                _events.ScheduleEvent(EVENT_FROZEN_ORB_GRANT_FOF, 3s);
+            }
+        }
+    }
+
+private:
+    void GrantFingersOfFrost()
+    {
+        if (Unit* owner = ObjectAccessor::GetUnit(*me, _ownerGUID))
+            owner->CastSpell(owner, SPELL_MAGE_FINGERS_OF_FROST_CHARGES, true);
+    }
+
+    ObjectGuid _ownerGUID;
+    EventMap _events;
+    bool _halted = false;
+};
+
+// 200007 - Frozen Orb
+class spell_mage_frozen_orb : public SpellScript
+{
+    PrepareSpellScript(spell_mage_frozen_orb);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_FROZEN_ORB_PERIODIC });
+    }
+
+    void SummonOrb(SpellEffIndex /*effIndex*/)
+    {
+        if (Unit* caster = GetCaster())
+            caster->SummonCreature(NPC_MAGE_FROZEN_ORB, *caster, TEMPSUMMON_TIMED_DESPAWN, FROZEN_ORB_DURATION);
+    }
+
+    void Register() override
+    {
+        OnEffectHit += SpellEffectFn(spell_mage_frozen_orb::SummonOrb, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+    }
+};
+
+// 200008 - Frozen Orb Pulse. Damage/slow is native DBC data (see mage.csv's notes on this ID) -
+// this script only exists to tell the orb's AI a pulse actually landed.
+class spell_mage_frozen_orb_pulse : public SpellScript
+{
+    PrepareSpellScript(spell_mage_frozen_orb_pulse);
+
+    void NotifyOrb(SpellEffIndex /*effIndex*/)
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+
+        if (Creature* orb = caster->ToCreature())
+            if (npc_mage_frozen_orb* ai = dynamic_cast<npc_mage_frozen_orb*>(orb->AI()))
+                ai->NotifyPulseHit();
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_mage_frozen_orb_pulse::NotifyOrb, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
     }
 };
 
@@ -1921,5 +2126,9 @@ void AddSC_mage_spell_scripts()
     RegisterSpellScript(spell_mage_blizzard_icicles);
     RegisterSpellScript(spell_mage_glacial_spike);
     RegisterSpellScript(spell_mage_flurry);
+    RegisterSpellScript(spell_mage_refreshment);
+    RegisterSpellScript(spell_mage_frozen_orb);
+    RegisterSpellScript(spell_mage_frozen_orb_pulse);
+    RegisterCreatureAI(npc_mage_frozen_orb);
     new FrostMageIcicleCombatReset();
 }
