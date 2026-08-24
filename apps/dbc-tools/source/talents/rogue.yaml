@@ -1,5 +1,1006 @@
 # New/changed Talent.dbc + TalentTab.dbc rows for the Rogue class.
 # Schema/example: see apps/dbc-tools/source/talents/mage.yaml.
 
-tabs: []
-talents: []
+tabs:
+- id: 181
+  name: Combat
+  class_mask: 8
+  pet_talent_mask: 0
+  order_index: 1
+  spell_icon_id: 243
+  raw_overrides:
+    Name_Lang_Mask: 16712190
+    RaceMask: 2047
+    BackgroundFile: 365
+- id: 182
+  name: Assassination
+  class_mask: 8
+  pet_talent_mask: 0
+  order_index: 0
+  spell_icon_id: 514
+  raw_overrides:
+    Name_Lang_Mask: 16712190
+    RaceMask: 2047
+    BackgroundFile: 50
+- id: 183
+  name: Subtlety
+  class_mask: 8
+  pet_talent_mask: 0
+  order_index: 2
+  spell_icon_id: 250
+  raw_overrides:
+    Name_Lang_Mask: 16712190
+    RaceMask: 2047
+    BackgroundFile: 597
+talents:
+- id: 181
+  tab_id: 181
+  tier: 1
+  column: 3
+  rank_spell_ids:
+  - 13705
+  - 13832
+  - 13843
+  - 13844
+  - 13845
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 182
+  tab_id: 181
+  tier: 2
+  column: 2
+  rank_spell_ids:
+  - 13706
+  - 13804
+  - 13805
+  - 13806
+  - 13807
+  depends_on:
+    talent_id: 221
+    rank: 4
+  flags: 0
+- id: 184
+  tab_id: 181
+  tier: 4
+  column: 0
+  rank_spell_ids:
+  - 13709
+  - 13800
+  - 13801
+  - 13802
+  - 13803
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 186
+  tab_id: 181
+  tier: 3
+  column: 2
+  rank_spell_ids:
+  - 13712
+  - 13788
+  - 13789
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 187
+  tab_id: 181
+  tier: 1
+  column: 1
+  rank_spell_ids:
+  - 13713
+  - 13853
+  - 13854
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 201
+  tab_id: 181
+  tier: 0
+  column: 1
+  rank_spell_ids:
+  - 13732
+  - 13863
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 203
+  tab_id: 181
+  tier: 0
+  column: 0
+  rank_spell_ids:
+  - 13741
+  - 13793
+  - 13792
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 204
+  tab_id: 181
+  tier: 2
+  column: 0
+  rank_spell_ids:
+  - 13742
+  - 13872
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 205
+  tab_id: 181
+  tier: 6
+  column: 1
+  rank_spell_ids:
+  - 13750
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 1
+- id: 206
+  tab_id: 181
+  tier: 3
+  column: 0
+  rank_spell_ids:
+  - 13754
+  - 13867
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 221
+  tab_id: 181
+  tier: 0
+  column: 2
+  rank_spell_ids:
+  - 13715
+  - 13848
+  - 13849
+  - 13851
+  - 13852
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 222
+  tab_id: 181
+  tier: 3
+  column: 1
+  rank_spell_ids:
+  - 13743
+  - 13875
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 223
+  tab_id: 181
+  tier: 4
+  column: 1
+  rank_spell_ids:
+  - 13877
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 1
+- id: 241
+  tab_id: 183
+  tier: 0
+  column: 1
+  rank_spell_ids:
+  - 13958
+  - 13970
+  - 13971
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 242
+  tab_id: 181
+  tier: 4
+  column: 2
+  rank_spell_ids:
+  - 13960
+  - 13961
+  - 13962
+  - 13963
+  - 13964
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 244
+  tab_id: 183
+  tier: 1
+  column: 2
+  rank_spell_ids:
+  - 13975
+  - 14062
+  - 14063
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 245
+  tab_id: 183
+  tier: 3
+  column: 1
+  rank_spell_ids:
+  - 13976
+  - 13979
+  - 13980
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 246
+  tab_id: 183
+  tier: 3
+  column: 0
+  rank_spell_ids:
+  - 13983
+  - 14070
+  - 14071
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 247
+  tab_id: 183
+  tier: 2
+  column: 0
+  rank_spell_ids:
+  - 13981
+  - 14066
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 261
+  tab_id: 183
+  tier: 0
+  column: 2
+  rank_spell_ids:
+  - 14057
+  - 14072
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 262
+  tab_id: 183
+  tier: 1
+  column: 1
+  rank_spell_ids:
+  - 14076
+  - 14094
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 263
+  tab_id: 183
+  tier: 3
+  column: 2
+  rank_spell_ids:
+  - 14079
+  - 14080
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 265
+  tab_id: 183
+  tier: 4
+  column: 2
+  rank_spell_ids:
+  - 14082
+  - 14083
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 268
+  tab_id: 182
+  tier: 3
+  column: 2
+  rank_spell_ids:
+  - 14113
+  - 14114
+  - 14115
+  - 14116
+  - 14117
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 269
+  tab_id: 182
+  tier: 2
+  column: 2
+  rank_spell_ids:
+  - 14128
+  - 14132
+  - 14135
+  - 14136
+  - 14137
+  depends_on:
+    talent_id: 270
+    rank: 4
+  flags: 0
+- id: 270
+  tab_id: 182
+  tier: 0
+  column: 2
+  rank_spell_ids:
+  - 14138
+  - 14139
+  - 14140
+  - 14141
+  - 14142
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 272
+  tab_id: 182
+  tier: 0
+  column: 1
+  rank_spell_ids:
+  - 14144
+  - 14148
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 273
+  tab_id: 182
+  tier: 1
+  column: 0
+  rank_spell_ids:
+  - 14156
+  - 14160
+  - 14161
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 274
+  tab_id: 182
+  tier: 5
+  column: 2
+  rank_spell_ids:
+  - 14158
+  - 14159
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 276
+  tab_id: 182
+  tier: 0
+  column: 0
+  rank_spell_ids:
+  - 14162
+  - 14163
+  - 14164
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 277
+  tab_id: 182
+  tier: 1
+  column: 3
+  rank_spell_ids:
+  - 13733
+  - 13865
+  - 13866
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 278
+  tab_id: 182
+  tier: 2
+  column: 1
+  rank_spell_ids:
+  - 14168
+  - 14169
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 279
+  tab_id: 182
+  tier: 4
+  column: 2
+  rank_spell_ids:
+  - 14174
+  - 14175
+  - 14176
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 280
+  tab_id: 182
+  tier: 4
+  column: 1
+  rank_spell_ids:
+  - 14177
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 1
+- id: 281
+  tab_id: 182
+  tier: 6
+  column: 1
+  rank_spell_ids:
+  - 58426
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 1
+- id: 283
+  tab_id: 182
+  tier: 5
+  column: 1
+  rank_spell_ids:
+  - 14186
+  - 14190
+  - 14193
+  - 14194
+  - 14195
+  depends_on:
+    talent_id: 280
+    rank: 0
+  flags: 0
+- id: 284
+  tab_id: 183
+  tier: 4
+  column: 1
+  rank_spell_ids:
+  - 14185
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 1
+- id: 301
+  tab_id: 181
+  tier: 2
+  column: 1
+  rank_spell_ids:
+  - 14251
+  depends_on:
+    talent_id: 187
+    rank: 2
+  flags: 1
+- id: 303
+  tab_id: 183
+  tier: 2
+  column: 1
+  rank_spell_ids:
+  - 14278
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 1
+- id: 381
+  tab_id: 183
+  tier: 6
+  column: 1
+  rank_spell_ids:
+  - 14183
+  depends_on:
+    talent_id: 284
+    rank: 0
+  flags: 1
+- id: 382
+  tab_id: 182
+  tier: 2
+  column: 0
+  rank_spell_ids:
+  - 14983
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 681
+  tab_id: 183
+  tier: 4
+  column: 3
+  rank_spell_ids:
+  - 16511
+  depends_on:
+    talent_id: 1123
+    rank: 2
+  flags: 1
+- id: 682
+  tab_id: 182
+  tier: 3
+  column: 1
+  rank_spell_ids:
+  - 16513
+  - 16514
+  - 16515
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 1122
+  tab_id: 181
+  tier: 3
+  column: 3
+  rank_spell_ids:
+  - 18427
+  - 18428
+  - 18429
+  - 61330
+  - 61331
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 1123
+  tab_id: 183
+  tier: 2
+  column: 2
+  rank_spell_ids:
+  - 14171
+  - 14172
+  - 14173
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 1700
+  tab_id: 183
+  tier: 1
+  column: 0
+  rank_spell_ids:
+  - 30892
+  - 30893
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 1701
+  tab_id: 183
+  tier: 4
+  column: 0
+  rank_spell_ids:
+  - 30894
+  - 30895
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 1702
+  tab_id: 183
+  tier: 5
+  column: 2
+  rank_spell_ids:
+  - 30902
+  - 30903
+  - 30904
+  - 30905
+  - 30906
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 1703
+  tab_id: 181
+  tier: 5
+  column: 1
+  rank_spell_ids:
+  - 30919
+  - 30920
+  depends_on:
+    talent_id: 223
+    rank: 0
+  flags: 0
+- id: 1705
+  tab_id: 181
+  tier: 6
+  column: 0
+  rank_spell_ids:
+  - 31122
+  - 31123
+  - 61329
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 1706
+  tab_id: 181
+  tier: 5
+  column: 2
+  rank_spell_ids:
+  - 31124
+  - 31126
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 1707
+  tab_id: 181
+  tier: 6
+  column: 2
+  rank_spell_ids:
+  - 31130
+  - 31131
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 1709
+  tab_id: 181
+  tier: 8
+  column: 1
+  rank_spell_ids:
+  - 32601
+  depends_on:
+    talent_id: 205
+    rank: 0
+  flags: 1
+- id: 1711
+  tab_id: 183
+  tier: 6
+  column: 0
+  rank_spell_ids:
+  - 31211
+  - 31212
+  - 31213
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 1712
+  tab_id: 183
+  tier: 7
+  column: 1
+  rank_spell_ids:
+  - 31216
+  - 31217
+  - 31218
+  - 31219
+  - 31220
+  depends_on:
+    talent_id: 381
+    rank: 0
+  flags: 0
+- id: 1713
+  tab_id: 183
+  tier: 5
+  column: 0
+  rank_spell_ids:
+  - 31221
+  - 31222
+  - 31223
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 1714
+  tab_id: 183
+  tier: 8
+  column: 1
+  rank_spell_ids:
+  - 36554
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 1
+- id: 1715
+  tab_id: 182
+  tier: 8
+  column: 0
+  rank_spell_ids:
+  - 31226
+  - 31227
+  - 58410
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 1718
+  tab_id: 182
+  tier: 7
+  column: 2
+  rank_spell_ids:
+  - 31234
+  - 31235
+  - 31236
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 1719
+  tab_id: 182
+  tier: 8
+  column: 1
+  rank_spell_ids:
+  - 1329
+  depends_on:
+    talent_id: 281
+    rank: 0
+  flags: 1
+- id: 1721
+  tab_id: 182
+  tier: 4
+  column: 0
+  rank_spell_ids:
+  - 31208
+  - 31209
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 1722
+  tab_id: 183
+  tier: 6
+  column: 2
+  rank_spell_ids:
+  - 31228
+  - 31229
+  - 31230
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 1723
+  tab_id: 182
+  tier: 6
+  column: 2
+  rank_spell_ids:
+  - 31380
+  - 31382
+  - 31383
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 1762
+  tab_id: 182
+  tier: 4
+  column: 3
+  rank_spell_ids:
+  - 31244
+  - 31245
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 1825
+  tab_id: 181
+  tier: 7
+  column: 2
+  rank_spell_ids:
+  - 35541
+  - 35550
+  - 35551
+  - 35552
+  - 35553
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 1827
+  tab_id: 181
+  tier: 1
+  column: 0
+  rank_spell_ids:
+  - 14165
+  - 14166
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 2065
+  tab_id: 182
+  tier: 6
+  column: 0
+  rank_spell_ids:
+  - 51625
+  - 51626
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 2066
+  tab_id: 182
+  tier: 8
+  column: 2
+  rank_spell_ids:
+  - 51627
+  - 51628
+  - 51629
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 2068
+  tab_id: 182
+  tier: 1
+  column: 1
+  rank_spell_ids:
+  - 51632
+  - 51633
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 2069
+  tab_id: 182
+  tier: 7
+  column: 0
+  rank_spell_ids:
+  - 51634
+  - 51635
+  - 51636
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 2070
+  tab_id: 182
+  tier: 9
+  column: 1
+  rank_spell_ids:
+  - 51664
+  - 51665
+  - 51667
+  - 51668
+  - 51669
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 2071
+  tab_id: 182
+  tier: 10
+  column: 1
+  rank_spell_ids:
+  - 51662
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 1
+- id: 2072
+  tab_id: 181
+  tier: 7
+  column: 0
+  rank_spell_ids:
+  - 5952
+  - 51679
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 2073
+  tab_id: 181
+  tier: 8
+  column: 0
+  rank_spell_ids:
+  - 51672
+  - 51674
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 2074
+  tab_id: 181
+  tier: 8
+  column: 2
+  rank_spell_ids:
+  - 51682
+  - 58413
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 2075
+  tab_id: 181
+  tier: 9
+  column: 1
+  rank_spell_ids:
+  - 51685
+  - 51686
+  - 51687
+  - 51688
+  - 51689
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 2076
+  tab_id: 181
+  tier: 10
+  column: 1
+  rank_spell_ids:
+  - 51690
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 1
+- id: 2077
+  tab_id: 183
+  tier: 7
+  column: 2
+  rank_spell_ids:
+  - 51692
+  - 51696
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 2078
+  tab_id: 183
+  tier: 8
+  column: 0
+  rank_spell_ids:
+  - 51698
+  - 51700
+  - 51701
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 2079
+  tab_id: 183
+  tier: 8
+  column: 2
+  rank_spell_ids:
+  - 58414
+  - 58415
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 2080
+  tab_id: 183
+  tier: 9
+  column: 1
+  rank_spell_ids:
+  - 51708
+  - 51709
+  - 51710
+  - 51711
+  - 51712
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
+- id: 2081
+  tab_id: 183
+  tier: 10
+  column: 1
+  rank_spell_ids:
+  - 51713
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 1
+- id: 2244
+  tab_id: 183
+  tier: 0
+  column: 0
+  rank_spell_ids:
+  - 14179
+  - 58422
+  - 58423
+  - 58424
+  - 58425
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
