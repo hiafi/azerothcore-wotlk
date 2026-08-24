@@ -88,12 +88,15 @@ spell's `SpellClassSet` (`SPELLFAMILY_*` in
 `src/server/shared/SharedDefines.h` — see `SPELLFAMILY_TO_FILE`) unless
 `--dest` overrides it; anything with no player class falls back to
 `generic.csv`. A class-family match gets one more check before landing in
-that class's file: is the ID taught by a trainer (`trainer_spell`) or a
+that class's file: is the ID taught by a trainer (`trainer_spell`), a
 member of a rank chain (`spell_ranks`, which carries a row for every real
-player ability, single-rank ones included)? If neither, it's a
-boss/creature clone that merely shares the class's `SpellClassSet` — routed
-to `npc.csv` instead, automatically. Override with `--dest` for anything
-auto-detect still gets wrong.
+player ability, single-rank ones included), or granted by spending a talent
+point (`Talent.dbc`'s `SpellRank_1..9` columns)? If none of the three, it's
+a boss/creature clone that merely shares the class's `SpellClassSet` —
+routed to `npc.csv` instead, automatically. Talent-granted spells land in
+`<class>_talents.csv` rather than `<class>.csv` — see "Source files" below —
+so a class's plain file only ever holds spells learned outright. Override
+with `--dest` for anything auto-detect still gets wrong.
 
 **Pulling a row doesn't make `generate.py` touch it.** `generate.py`
 reconciles every source entry against what's actually live (base client DBC
@@ -125,11 +128,19 @@ development with zero mismatches.
 
 - `source/ids.yaml` — reserved ID blocks. Draw new IDs from here, don't
   pick numbers ad hoc.
-- `source/spells/*.csv` — one row per spell, one file per class
-  (`mage.csv`, `warrior.csv`, ...) plus `npc.csv` (creature-only abilities)
-  and `generic.csv` (no player class — trinket procs, test content, etc.).
-  A row is either new content, an active edit to something existing, or a
-  pulled-in-for-reference copy nothing has touched yet — see "Pulling
+- `source/spells/*.csv` — one row per spell, two files per class
+  (`mage.csv` / `mage_talents.csv`, `warrior.csv` / `warrior_talents.csv`,
+  ...) plus `npc.csv` (creature-only abilities) and `generic.csv` (no player
+  class — trinket procs, test content, etc.). `<class>.csv` holds spells
+  learned outright (trainer-taught or a `spell_ranks` chain member);
+  `<class>_talents.csv` holds spells granted by spending a talent point
+  (`Talent.dbc`'s `SpellRank_1..9`) — `pull.py`'s `detect_dest` sorts new
+  pulls between the two automatically (see "Pulling existing data in"
+  above). This mirrors `source/talents/*.yaml` holding the talent tree
+  *shape* (tabs, tiers, rank chains) while `<class>_talents.csv` holds the
+  actual `Spell.dbc` row each rank grants — different tables, same class
+  split. A row is either new content, an active edit to something existing,
+  or a pulled-in-for-reference copy nothing has touched yet — see "Pulling
   existing data in" above for how `generate.py` tells those apart. Split
   purely so no single file grows huge; every file shares the same header
   and they're all merged into one list before `build.py`/`reuse.py` ever
