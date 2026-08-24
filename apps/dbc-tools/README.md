@@ -87,9 +87,13 @@ that directory. `pull.py`'s destination file is auto-detected from the
 spell's `SpellClassSet` (`SPELLFAMILY_*` in
 `src/server/shared/SharedDefines.h` — see `SPELLFAMILY_TO_FILE`) unless
 `--dest` overrides it; anything with no player class falls back to
-`generic.csv`. Override with `--dest` when auto-detect isn't what you want —
-e.g. a boss ability that happens to share a player class's `SpellClassSet`
-usually belongs in `npc.csv`, not that class's file.
+`generic.csv`. A class-family match gets one more check before landing in
+that class's file: is the ID taught by a trainer (`trainer_spell`) or a
+member of a rank chain (`spell_ranks`, which carries a row for every real
+player ability, single-rank ones included)? If neither, it's a
+boss/creature clone that merely shares the class's `SpellClassSet` — routed
+to `npc.csv` instead, automatically. Override with `--dest` for anything
+auto-detect still gets wrong.
 
 **Pulling a row doesn't make `generate.py` touch it.** `generate.py`
 reconciles every source entry against what's actually live (base client DBC
@@ -134,8 +138,8 @@ development with zero mismatches.
   IDs across files are a load-time error, naming both files.
 
   A friendly subset of `Spell.dbc`'s 234 columns (id, name, school, cast
-  time, cooldown, mana cost, range, radius, duration, up to 3 effects,
-  icon). Two JSON columns: `effectN`
+  time, cooldown, mana cost, mana cost %, range, radius, duration, up to 3
+  effects, icon). Two JSON columns: `effectN`
   (type/base_points/points_per_level/die_sides/mechanic/implicit_target_a/b/
   apply_aura/amplitude/misc_value/trigger_spell/chain_targets/radius_yards)
   and `raw_overrides` (any column name → value, applied last — the escape

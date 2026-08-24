@@ -55,7 +55,10 @@ def emit_pending_sql(output_path, blocks: list[tuple[DbcTable, dict, list[dict],
     to emit)."""
     if not any(rows for _, _, rows, _ in blocks):
         return False
-    parts = [header.rstrip() + "\n"]
+    # Note: no extra "\n" here — the "\n\n".join below already inserts one
+    # blank line between the header and the first block; adding another
+    # would leave two (codestyle-sql.py's "no multiple blank lines" rule).
+    parts = [header.rstrip()]
     for table, id_range, rows, edited_ids in blocks:
         parts.append(_table_block(table, id_range, rows, edited_ids))
     output_path.parent.mkdir(parents=True, exist_ok=True)

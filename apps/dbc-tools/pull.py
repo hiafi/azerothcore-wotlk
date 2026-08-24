@@ -8,10 +8,12 @@ Reads the merged base-DBC ⊕ current-overlay view (same one generate.py
 reads) for the requested IDs, reverses each row through lib/reverse.py, and
 appends the results to the matching per-class file — ready to hand-edit and
 regenerate. The destination file is auto-detected from the spell's
-`SpellClassSet` (SPELLFAMILY_* in src/server/shared/SharedDefines.h) unless
-`--dest` is given explicitly — see apps/dbc-tools/README.md for the mapping
-and when to override it (e.g. a boss-only ability with a class family still
-usually belongs in npc.csv, not that class's file).
+`SpellClassSet` (SPELLFAMILY_* in src/server/shared/SharedDefines.h), unless
+`--dest` is given explicitly — see apps/dbc-tools/README.md for the mapping.
+A class-family match with no `trainer_spell`/`spell_ranks` evidence of being
+real player content (a boss/creature clone that merely shares the class's
+SpellClassSet) is routed to `npc.csv` instead, regardless of `SpellClassSet`
+— see `detect_dest`/`_load_player_spell_ids` below.
 
 Usage:
   python3 apps/dbc-tools/pull.py --spell 116,120,10
@@ -37,11 +39,46 @@ from pathlib import Path
 TOOL_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOL_ROOT))
 
-from lib import dbcfmt, reverse, source, state  # noqa: E402
+from lib import dbcfmt, reverse, source, sql_dump, state  # noqa: E402
 from lib.source import SPELL_CSV_FIELDNAMES, SPELL_CSV_JSON_FIELDS  # noqa: E402
 
 SOURCE_DIR = TOOL_ROOT / "source"
 SPELLS_DIR = SOURCE_DIR / "spells"
+
+# Column orders transcribed verbatim from the `CREATE TABLE` in
+# data/sql/base/db_world/{trainer_spell,spell_ranks}.sql — needed because
+# neither file's INSERT statements list column names explicitly, unlike the
+# `spell_dbc`-style dumps lib/dbcfmt.py already models via DbcTable.
+_TRAINER_SPELL_COLUMNS = (
+    "TrainerId", "SpellId", "MoneyCost", "ReqSkillLine", "ReqSkillRank",
+    "ReqAbility1", "ReqAbility2", "ReqAbility3", "ReqLevel", "VerifiedBuild",
+)
+_SPELL_RANKS_COLUMNS = ("first_spell_id", "spell_id", "rank")
+
+
+def _load_player_spell_ids() -> set[int]:
+    """Every spell ID with real player-facing evidence: taught by a trainer,
+    or a member of a rank chain (spell_ranks carries a row — rank 1 included
+    — for every genuine player ability, not just multi-rank ones). Used to
+    keep `detect_dest` from routing a boss/creature-only clone that merely
+    shares a player class's SpellClassSet into that class's file — see
+    README.md's "a boss ability that happens to share a player class's
+    SpellClassSet usually belongs in npc.csv" note, now automated instead of
+    relying on a human to catch it during pull/review."""
+    ids: set[int] = set()
+    trainer_path = state.BASE_SQL_DIR / "trainer_spell.sql"
+    if trainer_path.is_file():
+        ids.update(
+            row["SpellId"]
+            for row in sql_dump.read_table_rows(trainer_path, "trainer_spell", _TRAINER_SPELL_COLUMNS)
+        )
+    ranks_path = state.BASE_SQL_DIR / "spell_ranks.sql"
+    if ranks_path.is_file():
+        ids.update(
+            row["spell_id"]
+            for row in sql_dump.read_table_rows(ranks_path, "spell_ranks", _SPELL_RANKS_COLUMNS)
+        )
+    return ids
 
 # SPELLFAMILY_* values, from src/server/shared/SharedDefines.h. Anything not
 # listed here (0 generic, 1 events/holidays, 12/13 potion-ish, 17 pet, or a
@@ -67,8 +104,17 @@ def parse_id_spec(spec: str) -> list[int]:
     return ids
 
 
-def detect_dest(row: dict) -> str:
-    return SPELLFAMILY_TO_FILE.get(row.get("SpellClassSet"), "generic")
+def detect_dest(row: dict, player_spell_ids: set[int]) -> str:
+    dest = SPELLFAMILY_TO_FILE.get(row.get("SpellClassSet"), "generic")
+    # A class-family match with no trainer/rank-chain evidence is a
+    # boss/creature clone that happens to share the class's SpellClassSet
+    # (school/mechanic tagging), not real player content — send it to
+    # npc.csv instead. Leave the "generic" fallback alone: that's already
+    # its own bucket (trinket procs, test content) for a different reason
+    # (no player class at all), not something this check should touch.
+    if dest != "generic" and row["ID"] not in player_spell_ids:
+        return "npc"
+    return dest
 
 
 def entry_to_csv_row(entry: dict) -> dict:
@@ -126,6 +172,7 @@ def main() -> int:
     }
 
     already = {e["id"] for e in source.load_spells_csv(SPELLS_DIR)} if SPELLS_DIR.is_dir() else set()
+    player_spell_ids = _load_player_spell_ids()
 
     new_rows_by_dest: dict[str, list[dict]] = {}
     missing = []
@@ -138,7 +185,7 @@ def main() -> int:
             print(f"skip {spell_id}: already present in source/spells/")
             continue
         entry = reverse.reverse_spell_row(row, secondary_rows)
-        dest = args.dest or detect_dest(row)
+        dest = args.dest or detect_dest(row, player_spell_ids)
         new_rows_by_dest.setdefault(dest, []).append(entry_to_csv_row(entry))
 
     if missing:

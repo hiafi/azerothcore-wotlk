@@ -5955,15 +5955,16 @@ void AuraEffect::HandlePeriodicDummyAuraTick(Unit* target, Unit* caster) const
                 }
                 switch (GetSpellInfo()->Id)
                 {
-                    // Feeding Frenzy Rank 1
+                    // Feeding Frenzy (talent ranks 1/2) - single-rank spell system: both talent
+                    // ranks now cast the one surviving (rank 1) buff spell (60096), which scales
+                    // by caster level instead of by talent rank (see
+                    // docs/single-rank-spell-system.md). 53512 used to point at the now-superseded
+                    // rank 2 (60097), no longer reachable via trainer/spell_ranks and not carrying
+                    // the new scaling.
                     case 53511:
-                        if (target->GetVictim() && target->GetVictim()->HealthBelowPct(35))
-                            target->CastSpell(target, 60096, true, 0, this);
-                        return;
-                    // Feeding Frenzy Rank 2
                     case 53512:
                         if (target->GetVictim() && target->GetVictim()->HealthBelowPct(35))
-                            target->CastSpell(target, 60097, true, 0, this);
+                            target->CastSpell(target, 60096, true, 0, this);
                         return;
                     default:
                         break;

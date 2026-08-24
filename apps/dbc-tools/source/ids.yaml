@@ -1,0 +1,49 @@
+# Reserved ID blocks for everything this pipeline mints.
+#
+# Every future ticket (single-rank spells, Frost Mage, ...) draws new IDs from
+# these ranges instead of picking numbers ad hoc, so nothing ever collides
+# with stock client data or with another ticket's IDs. See
+# docs/dbc-build-pipeline.md, work item 3.
+#
+# How the bounds were picked (checked at the time this file was written):
+#   - spell:      highest ID anywhere in spell_dbc (base + pending) was
+#                 100102, so 200000+ leaves a large, clearly-separate gap.
+#   - talent / talenttab: talent_dbc/talenttab_dbc are currently completely
+#                 empty (nothing overlaid yet), but the client's own
+#                 Talent.dbc ships real IDs up in the low 20000s, so this
+#                 block stays clear of those too.
+#   - spellcasttimes / spellduration / spellrange / spellradius: also
+#                 currently empty overlay tables; stock client data for these
+#                 is small (a few dozen to ~100 rows), so 30000+ is a wide
+#                 margin without needing to inspect the client files directly.
+#
+# `reuse.py` only mints a new ID from these blocks when nothing existing
+# (base DBC or current overlay) already matches what's being asked for.
+
+spell:
+  start: 200000
+  end: 209999
+
+talent:
+  start: 60000
+  end: 60799
+
+talenttab:
+  start: 60800
+  end: 60999
+
+spellcasttimes:
+  start: 30000
+  end: 30099
+
+spellduration:
+  start: 30100
+  end: 30199
+
+spellrange:
+  start: 30200
+  end: 30299
+
+spellradius:
+  start: 30300
+  end: 30399

@@ -46,6 +46,7 @@ def build_spell_row(entry: dict, reuse: ReuseContext) -> dict:
     row["CategoryRecoveryTime"] = entry.get("category_cooldown_ms", 0) or 0
     row["PowerType"] = entry.get("power_type", 0) or 0
     row["ManaCost"] = entry.get("mana_cost", 0) or 0
+    row["ManaCostPct"] = entry.get("mana_cost_pct", 0) or 0
     row["RangeIndex"] = reuse.range_index(entry.get("range_yards"))
     row["DurationIndex"] = reuse.duration_index(entry.get("duration_ms"))
     row["SpellIconID"] = entry.get("spell_icon_id", 0) or 0

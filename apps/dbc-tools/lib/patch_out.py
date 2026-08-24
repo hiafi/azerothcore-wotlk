@@ -10,10 +10,19 @@ from pathlib import Path
 
 from .mpq_writer import write_mpq
 
-PATCH_ROOT = Path("var/dbc-patch")
+# Anchored to the repo root (matching state.py's REPO_ROOT), not left as a bare
+# relative path: a bare "var/dbc-patch" resolves against the *current working
+# directory* generate.py happens to be invoked from, not the repo — running it
+# via `python3 apps/dbc-tools/generate.py` from the repo root vs. `cd
+# apps/dbc-tools && python3 generate.py` silently wrote to two different
+# directories (apps/dbc-tools/var/dbc-patch/ vs. var/dbc-patch/), and a stale
+# copy in the former sat undetected as the one actually getting deployed to a
+# client. See docs/single-rank-spell-system.md's tooltip-corruption note.
+REPO_ROOT = Path(__file__).resolve().parents[3]
+PATCH_ROOT = REPO_ROOT / "var" / "dbc-patch"
 LOOSE_DIR = PATCH_ROOT / "DBFilesClient"
 MPQ_PATH = PATCH_ROOT / "patch-Z.mpq"
-ENV_DBC_DIR = Path("env/dist/data/dbc")
+ENV_DBC_DIR = REPO_ROOT / "env" / "dist" / "data" / "dbc"
 
 
 def write_patch(dbc_files: dict[str, bytes]) -> dict:

@@ -4,6 +4,11 @@ statements mysqldump produces (the shape of every `data/sql/base/db_world/
 *_dbc.sql` file). Not a general SQL parser — just enough to reconstruct
 `{ID: {column: value}}` for one table, which is what `pull.py` needs to
 reverse-import existing rows into source form.
+
+`read_table_rows` is the same parser for plain (non-DBC-backed) world-DB
+tables that have no single-column primary key — e.g. `trainer_spell`
+(keyed on `TrainerId, SpellId`) — so it returns every row as a plain list
+instead of collapsing them into a dict keyed by one column.
 """
 
 from __future__ import annotations
@@ -114,3 +119,33 @@ def read_table_dump(path: Path, table: DbcTable) -> dict[int, dict]:
                 row.setdefault(col, "" if table.fmt[table.columns.index(col)] == "s" else 0)
             rows[row[table.index_column]] = row
     return rows
+
+
+def read_table_rows(path: Path, table_name: str, columns: tuple[str, ...]) -> list[dict]:
+    """Like `read_table_dump`, but for a table with no single-column primary
+    key (a composite key, or none at all) — every row is returned as-is in a
+    plain list rather than being collapsed into a dict keyed by one column,
+    which would silently drop rows that share whatever column got picked."""
+    text = Path(path).read_text(encoding="utf-8")
+    out: list[dict] = []
+    pos = 0
+    while True:
+        m = _INSERT_HEAD_RE.search(text, pos)
+        if not m:
+            break
+        if m.group("table") != table_name:
+            pos = m.end()
+            continue
+        explicit_cols = (
+            [c.strip(" `") for c in m.group("cols").split(",")] if m.group("cols") else None
+        )
+        cols = explicit_cols or list(columns)
+        tuples, pos = _read_tuples(text, m.end())
+        for values in tuples:
+            if len(values) != len(cols):
+                raise ValueError(
+                    f"{path}: row has {len(values)} values but {len(cols)} columns "
+                    f"({cols[:3]}...)"
+                )
+            out.append(dict(zip(cols, values)))
+    return out

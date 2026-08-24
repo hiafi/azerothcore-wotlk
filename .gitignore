@@ -7,7 +7,6 @@
 /conf/*
 !/conf/dist
 /docs/*
-/apps/dbc-tools/source/
 /modules/*
 !/modules/*.md
 !/modules/*.sh
@@ -23,6 +22,7 @@
 /env/user/*
 /.env*
 /apps/joiner
+/apps/dbc-tools/var/
 /client/*
 /deps/deno
 /data/sql/custom/*
