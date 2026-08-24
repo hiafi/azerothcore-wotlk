@@ -15,7 +15,11 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "Cell.h"
+#include "CellImpl.h"
 #include "CreatureAI.h"
+#include "GridNotifiers.h"
+#include "GridNotifiersImpl.h"
 #include "Pet.h"
 #include "Player.h"
 #include "PlayerScript.h"
@@ -85,6 +89,8 @@ enum MageSpells
     SPELL_MAGE_FROZEN_ORB                        = 200007,
     SPELL_MAGE_FROZEN_ORB_PULSE                  = 200008,
     SPELL_MAGE_FROZEN_ORB_PERIODIC               = 200009,
+    SPELL_MAGE_BITING_COLD_R3                    = 200012,
+    SPELL_MAGE_BITING_COLD_BITE                  = 200013,
     // Not a new spell - naming the existing "Fingers of Frost" charge buff (already scripted
     // below as spell_mage_fingers_of_frost) for use by the frozen-state helpers.
     SPELL_MAGE_FINGERS_OF_FROST_CHARGES          = 74396
@@ -340,6 +346,67 @@ class spell_mage_flurry : public SpellScript
     {
         OnHit += SpellHitFn(spell_mage_flurry::ApplyShatteringCold);
     }
+};
+
+// 200012 - Biting Cold (rank 3 capstone only; ranks 1-2 are a plain SPELL_AURA_DUMMY read
+// straight out of Unit::SpellDamageBonusDone, no script needed for those).
+// docs/frost-mage-redesign.md sec 4 Row 2: "Dealing direct Frost damage to a chilled enemy has a
+// 15% chance to bite into a nearby enemy within 8 yards, dealing Frost damage and chilling them.
+// Cannot occur more than once every 6 sec."
+class spell_mage_biting_cold : public AuraScript
+{
+    PrepareAuraScript(spell_mage_biting_cold);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_BITING_COLD_BITE });
+    }
+
+    // The native ProcChance/ProcTypeMask/AttributesEx3 (copied from Brain Freeze, see
+    // mage_talents.csv notes on 200012) already gate this to direct Frost/spell damage the mage
+    // deals; the only thing left to check here is "was the struck target already chilled".
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        Unit* target = eventInfo.GetProcTarget();
+        return target && target->HasAuraWithMechanic(1ULL << MECHANIC_SNARE);
+    }
+
+    void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
+    {
+        PreventDefaultAction();
+
+        std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+        if (_cooldownEnd > now)
+            return;
+
+        Unit* caster = GetTarget();
+        Unit* target = eventInfo.GetProcTarget();
+        if (!caster || !target)
+            return;
+
+        // Search near the struck target (not the caster) for another enemy within 8 yards.
+        std::list<Unit*> nearby;
+        Acore::AnyUnfriendlyUnitInObjectRangeCheck check(target, caster, 8.0f);
+        Acore::UnitListSearcher<Acore::AnyUnfriendlyUnitInObjectRangeCheck> searcher(target, nearby, check);
+        Cell::VisitObjects(target, searcher, 8.0f);
+        nearby.remove(target);
+        if (nearby.empty())
+            return;
+
+        _cooldownEnd = now + std::chrono::seconds(6);
+
+        Unit* biteTarget = Acore::Containers::SelectRandomContainerElement(nearby);
+        caster->CastSpell(biteTarget, SPELL_MAGE_BITING_COLD_BITE, true, nullptr, aurEff);
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_mage_biting_cold::CheckProc);
+        OnEffectProc += AuraEffectProcFn(spell_mage_biting_cold::HandleProc, EFFECT_1, SPELL_AURA_PROC_TRIGGER_SPELL);
+    }
+
+private:
+    std::chrono::steady_clock::time_point _cooldownEnd = std::chrono::steady_clock::time_point::min();
 };
 
 // 200006 - Refreshment (Conjure Refreshment's item, 43518 "Conjured Mana Pie")
@@ -2055,25 +2122,6 @@ class spell_mage_missile_barrage_proc : public AuraScript
     }
 };
 
-// 71761 - Deep Freeze Immunity State
-class spell_mage_deep_freeze_immunity_state : public AuraScript
-{
-    PrepareAuraScript(spell_mage_deep_freeze_immunity_state);
-
-    bool CheckEffectProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
-    {
-        if (!eventInfo.GetProcTarget() || !eventInfo.GetProcTarget()->IsCreature())
-            return false;
-
-        return eventInfo.GetProcTarget()->ToCreature()->HasMechanicTemplateImmunity(1ULL << MECHANIC_STUN);
-    }
-
-    void Register() override
-    {
-        DoCheckEffectProc += AuraCheckEffectProcFn(spell_mage_deep_freeze_immunity_state::CheckEffectProc, EFFECT_0, SPELL_AURA_PROC_TRIGGER_SPELL);
-    }
-};
-
 void AddSC_mage_spell_scripts()
 {
     RegisterSpellScript(spell_mage_arcane_blast);
@@ -2118,7 +2166,6 @@ void AddSC_mage_spell_scripts()
     RegisterSpellScript(spell_mage_summon_water_elemental);
     RegisterSpellScript(spell_mage_fingers_of_frost);
     RegisterSpellScript(spell_mage_magic_absorption);
-    RegisterSpellScript(spell_mage_deep_freeze_immunity_state);
 
     // Frost Mage rework (docs/frost-mage-redesign.md) - see the block above spell_mage_arcane_blast.
     RegisterSpellScript(spell_mage_frostbolt_icicles);
@@ -2126,6 +2173,7 @@ void AddSC_mage_spell_scripts()
     RegisterSpellScript(spell_mage_blizzard_icicles);
     RegisterSpellScript(spell_mage_glacial_spike);
     RegisterSpellScript(spell_mage_flurry);
+    RegisterSpellScript(spell_mage_biting_cold);
     RegisterSpellScript(spell_mage_refreshment);
     RegisterSpellScript(spell_mage_frozen_orb);
     RegisterSpellScript(spell_mage_frozen_orb_pulse);

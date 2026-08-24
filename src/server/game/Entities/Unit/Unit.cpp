@@ -8667,6 +8667,15 @@ float Unit::SpellPctDamageModsDone(Unit* victim, SpellInfo const* spellProto, Da
                 if (victim->HasAuraWithMechanic((1ULL << MECHANIC_SNARE) | (1ULL << MECHANIC_SLOW_ATTACK)))
                     if (AuraEffect* aurEff = GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_GENERIC, 3263, EFFECT_0))
                         AddPct(DoneTotalMod, aurEff->GetAmount());
+
+            // Biting Cold (Frost Mage rework, docs/frost-mage-redesign.md sec 4 Row 2) - +2/4/6%
+            // Frost damage against targets affected by a chill effect. Same "any chill on the
+            // target, not caster-scoped" check as Torment the Weak above, for consistency with
+            // this function's existing idiom rather than a new caster-scoped check.
+            if (spellProto->GetSchoolMask() & SPELL_SCHOOL_MASK_FROST)
+                if (victim->HasAuraWithMechanic(1ULL << MECHANIC_SNARE))
+                    if (AuraEffect* aurEff = GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_MAGE, 189, EFFECT_0))
+                        AddPct(DoneTotalMod, aurEff->GetAmount());
             break;
         case SPELLFAMILY_PRIEST:
             // Mind Flay

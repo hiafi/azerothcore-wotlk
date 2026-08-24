@@ -279,8 +279,8 @@ talents:
   flags: 0
 - id: 63
   tab_id: 61
-  tier: 2
-  column: 2
+  tier: 3
+  column: 0
   rank_spell_ids:
   - 11185
   - 12487
@@ -291,8 +291,8 @@ talents:
   flags: 0
 - id: 64
   tab_id: 61
-  tier: 4
-  column: 2
+  tier: 5
+  column: 1
   rank_spell_ids:
   - 11190
   - 12489
@@ -315,7 +315,7 @@ talents:
   flags: 0
 - id: 66
   tab_id: 61
-  tier: 3
+  tier: 2
   column: 1
   rank_spell_ids:
   - 11160
@@ -352,7 +352,7 @@ talents:
 - id: 69
   tab_id: 61
   tier: 2
-  column: 1
+  column: 2
   rank_spell_ids:
   - 12472
   depends_on:
@@ -377,7 +377,7 @@ talents:
   rank_spell_ids:
   - 11426
   depends_on:
-    talent_id: 72
+    talent_id: 0
     rank: 0
   flags: 1
 - id: 72
@@ -392,7 +392,7 @@ talents:
   flags: 1
 - id: 73
   tab_id: 61
-  tier: 1
+  tier: 4
   column: 0
   rank_spell_ids:
   - 11207
@@ -559,7 +559,7 @@ talents:
 - id: 741
   tab_id: 61
   tier: 3
-  column: 0
+  column: 1
   rank_spell_ids:
   - 16757
   - 16758
@@ -767,7 +767,7 @@ talents:
 - id: 1736
   tab_id: 61
   tier: 4
-  column: 3
+  column: 2
   rank_spell_ids:
   - 31667
   - 31668
@@ -784,13 +784,13 @@ talents:
   - 55091
   - 55092
   depends_on:
-    talent_id: 72
+    talent_id: 0
     rank: 0
   flags: 0
 - id: 1738
   tab_id: 61
-  tier: 6
-  column: 2
+  tier: 8
+  column: 0
   rank_spell_ids:
   - 31674
   - 31675
@@ -804,7 +804,7 @@ talents:
 - id: 1740
   tab_id: 61
   tier: 7
-  column: 1
+  column: 2
   rank_spell_ids:
   - 31682
   - 31683
@@ -950,8 +950,8 @@ talents:
   flags: 1
 - id: 1853
   tab_id: 61
-  tier: 7
-  column: 2
+  tier: 2
+  column: 3
   rank_spell_ids:
   - 44543
   - 44545
@@ -961,8 +961,8 @@ talents:
   flags: 0
 - id: 1854
   tab_id: 61
-  tier: 8
-  column: 0
+  tier: 6
+  column: 2
   rank_spell_ids:
   - 44546
   - 44548
@@ -980,7 +980,7 @@ talents:
   - 44560
   - 44561
   depends_on:
-    talent_id: 1741
+    talent_id: 1741            # Summon Water Elemental, max rank (single-rank talent)
     rank: 0
   flags: 0
 - id: 1856
@@ -1002,11 +1002,43 @@ talents:
   tier: 10
   column: 1
   rank_spell_ids:
-  - 44572
+  - 200002
   depends_on:
     talent_id: 0
     rank: 0
   flags: 1
+- id: 60001                # minted, source/ids.yaml talent block (60000-60799) - Flurry
+  tab_id: 61
+  tier: 4
+  column: 3
+  rank_spell_ids:
+  - 200004
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 1
+- id: 60002                # minted, source/ids.yaml talent block (60000-60799) - Frozen Orb
+  tab_id: 61
+  tier: 7
+  column: 1
+  rank_spell_ids:
+  - 200007
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 1
+- id: 60000                # minted, source/ids.yaml talent block (60000-60799) - Biting Cold
+  tab_id: 61
+  tier: 1
+  column: 0
+  rank_spell_ids:
+  - 200010
+  - 200011
+  - 200012
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
 - id: 2209
   tab_id: 81
   tier: 8
