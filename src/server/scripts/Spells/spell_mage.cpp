@@ -17,6 +17,7 @@
 
 #include "Pet.h"
 #include "Player.h"
+#include "PlayerScript.h"
 #include "SpellAuraEffects.h"
 #include "SpellMgr.h"
 #include "SpellScript.h"
@@ -71,7 +72,17 @@ enum MageSpells
     SPELL_MAGE_MANA_SURGE                        = 37445,
     SPELL_MAGE_FROST_NOVA                        = 122,
     SPELL_MAGE_LIVING_BOMB_R1                    = 44457,
-    SPELL_MAGE_MISSILE_BARRAGE_PROC              = 44401
+    SPELL_MAGE_MISSILE_BARRAGE_PROC              = 44401,
+
+    // Frost Mage rework (docs/frost-mage-redesign.md) - new spells, reserved block 200000-209999
+    // (apps/dbc-tools/source/ids.yaml). See docs/frost-mage-implementation-plan.md.
+    SPELL_MAGE_ICICLES                           = 200001,
+    SPELL_MAGE_GLACIAL_SPIKE                     = 200002,
+    SPELL_MAGE_SHATTERING_COLD                   = 200003,
+    SPELL_MAGE_FLURRY                            = 200004,
+    // Not a new spell - naming the existing "Fingers of Frost" charge buff (already scripted
+    // below as spell_mage_fingers_of_frost) for use by the frozen-state helpers.
+    SPELL_MAGE_FINGERS_OF_FROST_CHARGES          = 74396
 };
 
 enum MageSpellIcons
@@ -80,6 +91,245 @@ enum MageSpellIcons
     MAGE_ICON_CLEARCASTING                       = 212,
     MAGE_ICON_PRESENCE_OF_MIND                   = 139,
     MAGE_ICON_LIVING_BOMB                        = 3000
+};
+
+/*
+ * Frost Mage rework (docs/frost-mage-redesign.md, docs/frost-mage-implementation-plan.md).
+ * Phase 1, first slice: the shared frozen-state check, Icicles, Glacial Spike, and Flurry.
+ * Frozen Orb, Deep Freeze's conversion, the talent-row auras, and the rest of Phase 1 are not
+ * part of this slice - see the implementation plan's "Suggested starting order".
+ */
+
+namespace FrostMageRework
+{
+    // A real freeze/root/stun Frost effect (Frost Nova, Deep Freeze's stun, Water Elemental's
+    // Freeze) sets AURA_STATE_FROZEN globally: SharedDefines.h's PER_CASTER_AURA_STATE_MASK does
+    // *not* include AURA_STATE_FROZEN (only AURA_STATE_CONFLAGRATE / AURA_STATE_DEADLY_POISON
+    // are per-caster), so it benefits any caster once present - correct here, since anyone can
+    // Shatter a target someone else froze.
+    bool HasRealFreeze(Unit const* target)
+    {
+        return target && target->HasAuraState(AURA_STATE_FROZEN);
+    }
+
+    // Shattering Cold is caster-scoped by design ("Only the caster who applied it benefits"), so
+    // - unlike the real-freeze case above - it's checked by caster GUID rather than the global
+    // aura-state flag.
+    bool HasShatteringCold(Unit const* target, ObjectGuid casterGuid)
+    {
+        return target && target->HasAura(SPELL_MAGE_SHATTERING_COLD, casterGuid);
+    }
+
+    // Fingers of Frost ("Your spells and abilities treat the target as if it were Frozen") is a
+    // personal charge buff: it's the *caster* who needs the charge, not the target.
+    bool HasFingersOfFrostCharge(Unit const* caster)
+    {
+        return caster && caster->HasAura(SPELL_MAGE_FINGERS_OF_FROST_CHARGES);
+    }
+
+    // The unified "frozen" check from the redesign's Interaction Rules section: a real freeze, a
+    // Fingers of Frost charge, or Shattering Cold. Ice Lance's triple damage and Shatter's crit
+    // bonus already get the real-freeze case for free from engine code (Unit.cpp's
+    // SPELLFAMILY_MAGE "Custom scripted damage" block and SpellTakenCritChance's Shatter case),
+    // but neither of those goes through this helper, so anything that also needs to recognize
+    // Fingers of Frost / Shattering Cold (Deep Freeze's usability gate, Frostbite's Mastery
+    // capstone) has to call this explicitly.
+    bool IsFrozenFor(Unit const* target, Unit const* caster)
+    {
+        if (HasRealFreeze(target))
+            return true;
+
+        if (caster)
+        {
+            if (HasShatteringCold(target, caster->GetGUID()))
+                return true;
+            if (HasFingersOfFrostCharge(caster))
+                return true;
+        }
+
+        return false;
+    }
+
+    // Consumes one Fingers of Frost charge from `caster`, but only if Fingers of Frost was the
+    // *sole* reason the target counted as frozen - docs/frost-mage-redesign.md: Glacial Spike
+    // "Consumes a Fingers of Frost charge if one is available and the target is not otherwise
+    // frozen"; Fingers of Frost's own entry has the same "Shattering Cold guard".
+    void ConsumeFingersOfFrostIfSoleSource(Unit* caster, Unit const* target)
+    {
+        if (!caster || HasRealFreeze(target) || HasShatteringCold(target, caster->GetGUID()))
+            return;
+
+        if (Aura* fof = caster->GetAura(SPELL_MAGE_FINGERS_OF_FROST_CHARGES))
+            fof->DropCharge();
+    }
+}
+
+namespace
+{
+    // Shared by the three Icicle-granting scripts below (Frostbolt/Frostfire Bolt casts,
+    // every 4th Blizzard pulse) - docs/frost-mage-redesign.md sec 1 (Icicles): "Generation is
+    // enabled only when the Glacial Spike talent is learned."
+    void GrantIcicleIfGlacialSpikeKnown(Unit* caster)
+    {
+        Player* player = caster ? caster->ToPlayer() : nullptr;
+        if (player && player->HasSpell(SPELL_MAGE_GLACIAL_SPIKE))
+            player->CastSpell(player, SPELL_MAGE_ICICLES, true);
+    }
+}
+
+// 116 - Frostbolt
+class spell_mage_frostbolt_icicles : public SpellScript
+{
+    PrepareSpellScript(spell_mage_frostbolt_icicles);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_ICICLES, SPELL_MAGE_GLACIAL_SPIKE });
+    }
+
+    void GrantIcicle()
+    {
+        GrantIcicleIfGlacialSpikeKnown(GetCaster());
+    }
+
+    void Register() override
+    {
+        AfterCast += SpellCastFn(spell_mage_frostbolt_icicles::GrantIcicle);
+    }
+};
+
+// 44614 - Frostfire Bolt
+class spell_mage_frostfire_bolt_icicles : public SpellScript
+{
+    PrepareSpellScript(spell_mage_frostfire_bolt_icicles);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_ICICLES, SPELL_MAGE_GLACIAL_SPIKE });
+    }
+
+    void GrantIcicle()
+    {
+        GrantIcicleIfGlacialSpikeKnown(GetCaster());
+    }
+
+    void Register() override
+    {
+        AfterCast += SpellCastFn(spell_mage_frostfire_bolt_icicles::GrantIcicle);
+    }
+};
+
+// 10 - Blizzard
+class spell_mage_blizzard_icicles : public AuraScript
+{
+    PrepareAuraScript(spell_mage_blizzard_icicles);
+
+    uint8 _pulseCount = 0;
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_ICICLES, SPELL_MAGE_GLACIAL_SPIKE });
+    }
+
+    void CountPulse(AuraEffect const* /*aurEff*/)
+    {
+        if (++_pulseCount < 4)
+            return;
+
+        _pulseCount = 0;
+        GrantIcicleIfGlacialSpikeKnown(GetCaster());
+    }
+
+    void Register() override
+    {
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_mage_blizzard_icicles::CountPulse, EFFECT_1, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+    }
+};
+
+// 200002 - Glacial Spike
+class spell_mage_glacial_spike : public SpellScript
+{
+    PrepareSpellScript(spell_mage_glacial_spike);
+
+    static constexpr uint8 REQUIRED_ICICLES = 5;
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_ICICLES, SPELL_MAGE_SHATTERING_COLD, SPELL_MAGE_FINGERS_OF_FROST_CHARGES });
+    }
+
+    SpellCastResult CheckIcicles()
+    {
+        Aura* icicles = GetCaster()->GetAura(SPELL_MAGE_ICICLES);
+        if (!icicles || icicles->GetStackAmount() < REQUIRED_ICICLES)
+            return SPELL_FAILED_NO_COMBO_POINTS;
+
+        return SPELL_CAST_OK;
+    }
+
+    void ConsumeIciclesAndFrostCharge()
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetHitUnit();
+        if (!target)
+            return;
+
+        caster->RemoveAurasDueToSpell(SPELL_MAGE_ICICLES);
+        FrostMageRework::ConsumeFingersOfFrostIfSoleSource(caster, target);
+
+        // TODO(Arctic Winds R3, docs/frost-mage-redesign.md sec 4 Row 9 / sec 1 Glacial Spike):
+        // once Arctic Winds is authored, its rank-3 entry should make this cleave - "the spike
+        // shatters on impact, striking up to 5 additional enemies within 8 yards." Not
+        // implemented here: it needs the Row 9 talent, which this slice doesn't build - see
+        // docs/frost-mage-implementation-plan.md's "Suggested starting order".
+    }
+
+    void Register() override
+    {
+        OnCheckCast += SpellCheckCastFn(spell_mage_glacial_spike::CheckIcicles);
+        OnHit += SpellHitFn(spell_mage_glacial_spike::ConsumeIciclesAndFrostCharge);
+    }
+};
+
+// 200001 - Icicles
+// No fixed duration (see the CSV row's notes) - cleared here on combat-leave; consumption on
+// Glacial Spike cast is handled above in spell_mage_glacial_spike.
+class FrostMageIcicleCombatReset : public PlayerScript
+{
+public:
+    FrostMageIcicleCombatReset() : PlayerScript("FrostMageIcicleCombatReset", { PLAYERHOOK_ON_PLAYER_LEAVE_COMBAT }) { }
+
+    void OnPlayerLeaveCombat(Player* player) override
+    {
+        player->RemoveAurasDueToSpell(SPELL_MAGE_ICICLES);
+    }
+};
+
+// 200004 - Flurry
+class spell_mage_flurry : public SpellScript
+{
+    PrepareSpellScript(spell_mage_flurry);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_SHATTERING_COLD });
+    }
+
+    // Applied once here, after Flurry's own three SCHOOL_DAMAGE effects (the CSV row's
+    // effect1-3) have already resolved for this hit - that ordering is what makes
+    // "Flurry's own bolts do not benefit from Shattering Cold" true with no extra guard.
+    void ApplyShatteringCold()
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetHitUnit();
+        if (caster && target)
+            caster->CastSpell(target, SPELL_MAGE_SHATTERING_COLD, true);
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_mage_flurry::ApplyShatteringCold);
+    }
 };
 
 class spell_mage_arcane_blast : public SpellScript
@@ -1664,4 +1914,12 @@ void AddSC_mage_spell_scripts()
     RegisterSpellScript(spell_mage_fingers_of_frost);
     RegisterSpellScript(spell_mage_magic_absorption);
     RegisterSpellScript(spell_mage_deep_freeze_immunity_state);
+
+    // Frost Mage rework (docs/frost-mage-redesign.md) - see the block above spell_mage_arcane_blast.
+    RegisterSpellScript(spell_mage_frostbolt_icicles);
+    RegisterSpellScript(spell_mage_frostfire_bolt_icicles);
+    RegisterSpellScript(spell_mage_blizzard_icicles);
+    RegisterSpellScript(spell_mage_glacial_spike);
+    RegisterSpellScript(spell_mage_flurry);
+    new FrostMageIcicleCombatReset();
 }
