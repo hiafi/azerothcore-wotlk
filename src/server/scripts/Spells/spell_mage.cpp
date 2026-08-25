@@ -17,9 +17,11 @@
 
 #include "Cell.h"
 #include "CellImpl.h"
+#include "Containers.h"
 #include "CreatureAI.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
+#include "MageMechanics.h"
 #include "Pet.h"
 #include "Player.h"
 #include "PlayerScript.h"
@@ -91,6 +93,23 @@ enum MageSpells
     SPELL_MAGE_FROZEN_ORB_PERIODIC               = 200009,
     SPELL_MAGE_BITING_COLD_R3                    = 200012,
     SPELL_MAGE_BITING_COLD_BITE                  = 200013,
+    SPELL_MAGE_GLACIAL_SPIKE_SHATTER             = 200014,
+    // Cluster C (docs/frost-mage-talent-tree-content-handoff.md) - Permafrost, Frozen Core,
+    // Improved Cone of Cold, Shattered Barrier, Empowering Frostbolt capstones/support spells.
+    SPELL_MAGE_PERMAFROST_STACK                  = 200015,
+    SPELL_MAGE_FROZEN_CORE_BUFF_R1                = 200016,
+    SPELL_MAGE_FROZEN_CORE_BUFF_R2                = 200017,
+    SPELL_MAGE_FROZEN_CORE_BUFF_R3                = 200018,
+    SPELL_MAGE_FROZEN_CORE_PIERCE                 = 200019,
+    SPELL_MAGE_IMPROVED_CONE_OF_COLD_BUFF         = 200020,
+    SPELL_MAGE_SHATTERED_BARRIER_SLOW             = 200021,
+    SPELL_MAGE_SHATTERED_BARRIER_HASTE            = 200022,
+    SPELL_MAGE_EMPOWERING_FROSTBOLT_R1             = 200023,
+    SPELL_MAGE_EMPOWERING_FROSTBOLT_R2             = 200024,
+    // Not new spells - naming existing stock IDs this pass's scripts need by name.
+    SPELL_MAGE_ICE_LANCE                          = 30455,
+    SPELL_MAGE_ICE_BARRIER                        = 11426,
+    SPELL_MAGE_FROZEN_CORE_R3                     = 31669,
     // Not a new spell - naming the existing "Fingers of Frost" charge buff (already scripted
     // below as spell_mage_fingers_of_frost) for use by the frozen-state helpers.
     SPELL_MAGE_FINGERS_OF_FROST_CHARGES          = 74396
@@ -149,21 +168,13 @@ namespace FrostMageRework
     // SPELLFAMILY_MAGE "Custom scripted damage" block and SpellTakenCritChance's Shatter case),
     // but neither of those goes through this helper, so anything that also needs to recognize
     // Fingers of Frost / Shattering Cold (Deep Freeze's usability gate, Frostbite's Mastery
-    // capstone) has to call this explicitly.
+    // capstone) has to call this explicitly. Delegates to Mage::IsFrozenTarget (MageMechanics.h,
+    // core) rather than reimplementing - that's the canonical copy now; kept as a thin wrapper
+    // here (rather than switching every caller in this file to Mage::IsFrozenTarget directly) so
+    // this namespace's existing call sites don't need to change.
     bool IsFrozenFor(Unit const* target, Unit const* caster)
     {
-        if (HasRealFreeze(target))
-            return true;
-
-        if (caster)
-        {
-            if (HasShatteringCold(target, caster->GetGUID()))
-                return true;
-            if (HasFingersOfFrostCharge(caster))
-                return true;
-        }
-
-        return false;
+        return Mage::IsFrozenTarget(caster, target);
     }
 
     // Consumes one Fingers of Frost charge from `caster`, but only if Fingers of Frost was the
@@ -269,9 +280,12 @@ class spell_mage_glacial_spike : public SpellScript
 
     static constexpr uint8 REQUIRED_ICICLES = 5;
 
+    static constexpr uint8 MAX_SHATTER_TARGETS = 5;
+    static constexpr float SHATTER_RADIUS = 8.0f;
+
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_MAGE_ICICLES, SPELL_MAGE_SHATTERING_COLD, SPELL_MAGE_FINGERS_OF_FROST_CHARGES });
+        return ValidateSpellInfo({ SPELL_MAGE_ICICLES, SPELL_MAGE_SHATTERING_COLD, SPELL_MAGE_FINGERS_OF_FROST_CHARGES, SPELL_MAGE_GLACIAL_SPIKE_SHATTER });
     }
 
     SpellCastResult CheckIcicles()
@@ -293,11 +307,28 @@ class spell_mage_glacial_spike : public SpellScript
         caster->RemoveAurasDueToSpell(SPELL_MAGE_ICICLES);
         FrostMageRework::ConsumeFingersOfFrostIfSoleSource(caster, target);
 
-        // TODO(Arctic Winds R3, docs/frost-mage-redesign.md sec 4 Row 9 / sec 1 Glacial Spike):
-        // once Arctic Winds is authored, its rank-3 entry should make this cleave - "the spike
-        // shatters on impact, striking up to 5 additional enemies within 8 yards." Not
-        // implemented here: it needs the Row 9 talent, which this slice doesn't build - see
-        // docs/frost-mage-implementation-plan.md's "Suggested starting order".
+        // Arctic Winds capstone (docs/frost-mage-redesign.md sec 4 Row 9 / sec 1 Glacial Spike,
+        // rank 3 only) - "the spike shatters on impact, striking up to 5 additional enemies within
+        // 8 yards." Icon 2131 is Arctic Winds' own (mage_talents.csv), EFFECT_2 only present on its
+        // rank-3 spell - same "top-rank-only dummy marker" idiom as Frostbite/Ice Shards. The
+        // shattered hit deals its own independent damage (SPELL_MAGE_GLACIAL_SPIKE_SHATTER, same
+        // 1500 base + 1.2 SP coeff as Glacial Spike itself) rather than re-triggering Glacial Spike
+        // proper, which would re-run icicle/Fingers-of-Frost consumption per additional target.
+        if (!caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_MAGE, 2131, EFFECT_2))
+            return;
+
+        std::list<Unit*> nearby;
+        Acore::AnyUnfriendlyUnitInObjectRangeCheck check(target, caster, SHATTER_RADIUS);
+        Acore::UnitListSearcher<Acore::AnyUnfriendlyUnitInObjectRangeCheck> searcher(target, nearby, check);
+        Cell::VisitObjects(target, searcher, SHATTER_RADIUS);
+        nearby.remove(target);
+        if (nearby.empty())
+            return;
+
+        Acore::Containers::RandomResize(nearby, MAX_SHATTER_TARGETS);
+
+        for (Unit* shatterTarget : nearby)
+            caster->CastSpell(shatterTarget, SPELL_MAGE_GLACIAL_SPIKE_SHATTER, true);
     }
 
     void Register() override
@@ -409,6 +440,37 @@ private:
     std::chrono::steady_clock::time_point _cooldownEnd = std::chrono::steady_clock::time_point::min();
 };
 
+// 11071, 12496, 12497 - Frostbite (docs/frost-mage-redesign.md sec 4 Row 1)
+// "Dealing direct Frost damage has a 5/10/15% chance to freeze the target for 5 sec. The freeze
+// breaks on damage." Freezing and breaking on damage both come for free from native data on the
+// triggered spell (12494): its Frost-school MOD_ROOT effect already satisfies
+// SpellInfo::GetAuraState's generic "Frost school + stun/root effect -> AURA_STATE_FROZEN" check
+// (SpellInfo.cpp), the same mechanism Frost Nova's own root relies on, so Shatter/Ice Lance/Deep
+// Freeze's usability gate all recognize it with no extra wiring; its AuraInterruptFlags now
+// includes AURA_INTERRUPT_FLAG_TAKE_DAMAGE (same flag Polymorph uses), so it breaks on any damage
+// natively too. The only thing left to check here is that the damage which procced this was
+// actually Frost school - the pulled data's EffectSpellClassMask scoped the old ADD_TARGET_TRIGGER
+// version to a handful of named "chill" spells (and, being a classmask, could never reach a
+// no-SpellFamilyFlags scripted trigger spell like Frozen Orb - same reachability hole as Chilled to
+// the Bone's), so the effect was converted to a plain SPELL_AURA_PROC_TRIGGER_SPELL (no classmask)
+// and the school check moved here, matching Biting Cold/Brain Freeze's existing "school check in
+// CheckProc" idiom instead.
+class spell_mage_frostbite : public AuraScript
+{
+    PrepareAuraScript(spell_mage_frostbite);
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        SpellInfo const* spellInfo = eventInfo.GetSpellInfo();
+        return spellInfo && (spellInfo->GetSchoolMask() & SPELL_SCHOOL_MASK_FROST) != 0;
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_mage_frostbite::CheckProc);
+    }
+};
+
 // 200006 - Refreshment (Conjure Refreshment's item, 43518 "Conjured Mana Pie")
 // docs/frost-mage-redesign.md sec 2: "Restores 100% of max health and 100% of max mana over
 // 30 sec." Built on the real native Food/Drink mechanism (SPELL_AURA_MOD_REGEN/MOD_POWER_REGEN,
@@ -483,6 +545,19 @@ class npc_mage_frozen_orb : public CreatureAI
 {
 public:
     explicit npc_mage_frozen_orb(Creature* creature) : CreatureAI(creature) { }
+
+    // Frozen Orb's damage/threat/combat-log attribution isn't actually routed through the caster
+    // chain to the owning player (traced for Chilled to the Bone's capstone: the periodic aura
+    // 200009's own EffectTriggerSpell dispatch to 200008, AuraEffect::HandlePeriodicTriggerSpellAuraTick
+    // in SpellAuraEffects.cpp, re-derives its trigger caster from either the tick's caster or its
+    // target depending on SpellInfo::NeedsToBeTriggeredByCaster - for a plain AoE-from-source spell
+    // like 200008 that resolves false, so the trigger is always cast "as the orb" regardless of what
+    // 200009 itself was cast with; a fix would mean rearchitecting away from the native periodic-aura
+    // dispatch, out of scope here and risky to the already-working orb behavior). Flagged, not fixed -
+    // see docs/frost-mage-talent-tree-content-handoff.md. This getter exists so scripts that only
+    // need to *look up* the owning player (not fix that deeper routing) - like the pulse script's
+    // Chilled to the Bone check - can do so the same way GrantFingersOfFrost() below already does.
+    ObjectGuid GetOwnerGUID() const { return _ownerGUID; }
 
     // The faction-35 trap (implementation plan): a trigger left on its default friendly-to-
     // everyone faction finds zero targets for its own TARGET_UNIT_SRC_AREA_ENEMY pulse cast.
@@ -587,6 +662,26 @@ class spell_mage_frozen_orb_pulse : public SpellScript
 {
     PrepareSpellScript(spell_mage_frozen_orb_pulse);
 
+    // The owning mage, not GetCaster() (the orb itself) - see npc_mage_frozen_orb::GetOwnerGUID's
+    // comment for why GetOriginalCaster() can't be used here instead.
+    Player* GetOwningMage() const
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return nullptr;
+
+        Creature* orb = caster->ToCreature();
+        if (!orb)
+            return nullptr;
+
+        npc_mage_frozen_orb* ai = dynamic_cast<npc_mage_frozen_orb*>(orb->AI());
+        if (!ai)
+            return nullptr;
+
+        Unit* owner = ObjectAccessor::GetUnit(*orb, ai->GetOwnerGUID());
+        return owner ? owner->ToPlayer() : nullptr;
+    }
+
     void NotifyOrb(SpellEffIndex /*effIndex*/)
     {
         Unit* caster = GetCaster();
@@ -598,9 +693,278 @@ class spell_mage_frozen_orb_pulse : public SpellScript
                 ai->NotifyPulseHit();
     }
 
+    // Chilled to the Bone base effect (docs/frost-mage-redesign.md sec 4 Row 10) - "Reduces the
+    // movement speed of targets affected by Frostbolt, Cone of Cold and Frozen Orb by an
+    // additional 4/7/10%." The talent's own slow boost is a classmask-scoped SpellMod
+    // (EffectSpellClassMaskA_2: 544 on 44566-44568) that can never reach this spell - 200008 has no
+    // SpellFamilyFlags of its own to match against, same reachability hole flagged on the talent's
+    // own CSV row. Applied by hand instead: read the owning mage's own copy of that effect (icon
+    // 2965, EFFECT_1 - present on every rank) and fold its amount into this pulse's slow before it
+    // applies, same "boost a live effect value" idiom as spell_warr_vigilance_redirect_threat.
+    void BoostChillEffect(SpellEffIndex /*effIndex*/)
+    {
+        Player* mage = GetOwningMage();
+        if (!mage)
+            return;
+
+        if (AuraEffect const* chilledToTheBone = mage->GetAuraEffect(SPELL_AURA_ADD_FLAT_MODIFIER, SPELLFAMILY_MAGE, 2965, EFFECT_1))
+            SetEffectValue(GetEffectValue() + chilledToTheBone->GetAmount());
+    }
+
     void Register() override
     {
         OnEffectHitTarget += SpellEffectFn(spell_mage_frozen_orb_pulse::NotifyOrb, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
+        OnEffectLaunchTarget += SpellEffectFn(spell_mage_frozen_orb_pulse::BoostChillEffect, EFFECT_1, SPELL_EFFECT_APPLY_AURA);
+    }
+};
+
+// 44566, 44567, 44568 - Chilled to the Bone capstone (rank 3 only, EFFECT_2)
+// docs/frost-mage-redesign.md sec 4 Row 10: "Your Frostbolt and Ice Lance casts versus monsters
+// reduce the cooldown of your Frozen Orb by 1 sec, and your Blizzard reduces it by 1 sec every 3
+// ticks." Frostbolt/Ice Lance are identified by their own SpellFamilyFlags bits (32 | 131072 -
+// matches Improved Frostbolt's own classmask this session), Blizzard by its (524416 - matches
+// Improved Blizzard's own classmask). "Versus monsters" excludes players and player-controlled
+// pets/guardians (PvP), not just non-hostile targets. Frozen Orb has no cooldown of its own to
+// reduce until it's actually been cast, so Player::ModifySpellCooldown's no-op-if-not-cooling-down
+// behavior is exactly right here - nothing to guard for.
+class spell_mage_chilled_to_the_bone : public AuraScript
+{
+    PrepareAuraScript(spell_mage_chilled_to_the_bone);
+
+    static constexpr uint32 FROSTBOLT_ICE_LANCE_MASK = 131104; // Frostbolt (32) | Ice Lance (131072)
+    static constexpr uint32 BLIZZARD_MASK = 524416;
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_FROZEN_ORB });
+    }
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        Unit* target = eventInfo.GetProcTarget();
+        if (!target || !target->IsCreature() || target->IsControlledByPlayer())
+            return false;
+
+        SpellInfo const* spellInfo = eventInfo.GetSpellInfo();
+        return spellInfo && spellInfo->SpellFamilyName == SPELLFAMILY_MAGE
+            && (spellInfo->SpellFamilyFlags[0] & (FROSTBOLT_ICE_LANCE_MASK | BLIZZARD_MASK)) != 0;
+    }
+
+    void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
+    {
+        Player* caster = GetTarget()->ToPlayer();
+        if (!caster)
+            return;
+
+        SpellInfo const* spellInfo = eventInfo.GetSpellInfo();
+        bool reduce;
+        if (spellInfo->SpellFamilyFlags[0] & FROSTBOLT_ICE_LANCE_MASK)
+            reduce = true;
+        else // Blizzard - only every 3rd tick
+            reduce = (++_blizzardTicks % 3) == 0;
+
+        if (reduce)
+            caster->ModifySpellCooldown(SPELL_MAGE_FROZEN_ORB, -1000);
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_mage_chilled_to_the_bone::CheckProc);
+        OnEffectProc += AuraEffectProcFn(spell_mage_chilled_to_the_bone::HandleProc, EFFECT_2, SPELL_AURA_DUMMY);
+    }
+
+private:
+    uint32 _blizzardTicks = 0;
+};
+
+/*
+ * Talent Tree Step 3, Cluster C (docs/frost-mage-talent-tree-content-handoff.md) - Permafrost,
+ * Frozen Core, Enduring Winter's capstone. Improved Cone of Cold's capstone (200020) and
+ * Empowering Frostbolt's buff (200023/200024) are pure native data (ProcCharges/proc-trigger,
+ * no script) and Shattered Barrier's capstone lives on the existing spell_mage_ice_barrier_aura
+ * class below rather than a new one, since it needs that class's own AfterEffectAbsorb hook.
+ */
+
+// 12571 - Permafrost (rank 3 capstone only; ranks 1-2's duration+slow bonus on Frostbolt/Cone of
+// Cold are pure classmask SpellMods, no script - see mage_talents.csv's notes on this row).
+// docs/frost-mage-redesign.md sec 4 Row 2: "Each 1 sec you spend moving grants Permafrost,
+// increasing the damage of your next Ice Lance by 20%. Stacks up to 5 times." Ticks every 1 sec
+// (EFFECT_2, SPELL_AURA_PERIODIC_DUMMY) and only grants a stack on a tick where the caster was
+// actually moving - not a stock aura shape, so tracked here instead of as a plain periodic proc.
+class spell_mage_permafrost : public AuraScript
+{
+    PrepareAuraScript(spell_mage_permafrost);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_PERMAFROST_STACK });
+    }
+
+    void OnPeriodic(AuraEffect const* /*aurEff*/)
+    {
+        Unit* caster = GetTarget();
+        if (caster && caster->isMoving())
+            caster->CastSpell(caster, SPELL_MAGE_PERMAFROST_STACK, true);
+    }
+
+    void Register() override
+    {
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_mage_permafrost::OnPeriodic, EFFECT_2, SPELL_AURA_PERIODIC_DUMMY);
+    }
+};
+
+// 30455 - Ice Lance. Consumes 1 stack of the Permafrost buff (200015) per cast - the +20% damage
+// bonus itself is read in Mage::ApplyDoneDamagePctMods (MageMechanics.cpp) *before* this fires
+// (damage calc happens ahead of OnHit's post-processing, same relative ordering Biting Cold and
+// Flurry already rely on), so reading-then-consuming here is safe. "Stacks up to 5" is read as
+// banked charges (each Ice Lance cast spends exactly one for a flat +20%), not a multiplicative
+// per-stack bonus - the redesign text doesn't fully disambiguate this, flagged for playtest.
+class spell_mage_ice_lance : public SpellScript
+{
+    PrepareSpellScript(spell_mage_ice_lance);
+
+    void ConsumePermafrost()
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+
+        if (Aura* permafrost = caster->GetAura(SPELL_MAGE_PERMAFROST_STACK))
+            permafrost->ModStackAmount(-1);
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_mage_ice_lance::ConsumePermafrost);
+    }
+};
+
+// 6136 (Frost Armor) / 7321 (Ice Armor) - "Chilled", the melee-reactive slow both armors proc
+// onto whoever hits the mage. Permafrost's duration+slow bonus (talent 65, 11175/12569/12571)
+// can't reach these via classmask - like Frozen Orb before it, they're npc.csv trigger-only
+// spells with no SpellFamilyFlags of their own to match against. Boosted by hand instead: read
+// the mage's own Permafrost SpellMod amounts (icon 143) live and fold them into this cast before
+// it applies - same "boost a live effect value" idiom as spell_mage_frozen_orb_pulse's Chilled to
+// the Bone fix. GetCaster() here is the mage (the defender self-casts this reactive proc onto the
+// attacker), not the attacker.
+class spell_mage_chilled : public SpellScript
+{
+    PrepareSpellScript(spell_mage_chilled);
+
+    void BoostSlow(SpellEffIndex /*effIndex*/)
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+
+        if (AuraEffect const* slowMod = caster->GetAuraEffect(SPELL_AURA_ADD_FLAT_MODIFIER, SPELLFAMILY_MAGE, 143, EFFECT_1))
+            SetEffectValue(GetEffectValue() + slowMod->GetAmount());
+    }
+
+    void ExtendDuration()
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+
+        AuraEffect const* durationMod = caster->GetAuraEffect(SPELL_AURA_ADD_FLAT_MODIFIER, SPELLFAMILY_MAGE, 143, EFFECT_0);
+        if (!durationMod)
+            return;
+
+        if (Aura* hitAura = GetHitAura())
+            hitAura->SetDuration(hitAura->GetDuration() + durationMod->GetAmount());
+    }
+
+    void Register() override
+    {
+        OnEffectLaunchTarget += SpellEffectFn(spell_mage_chilled::BoostSlow, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
+        OnHit += SpellHitFn(spell_mage_chilled::ExtendDuration);
+    }
+};
+
+// 31667/31668/31669 - Frozen Core (docs/frost-mage-redesign.md sec 4 Row 5). effect1 (magic
+// damage taken -2/4/6%) and effect2 (taking magic damage grants a Frost-damage buff, all 3 ranks)
+// are both pure native data, no script. This class exists only for rank 3's capstone (effect3):
+// "Your Ice Lance critical strikes against frozen targets pierce to the target's core, dealing
+// Frost damage over 8 sec." effect2 and effect3 share this spell's one spell-wide ProcFlags
+// (confirmed by reading Aura::GetProcEffectMask/AuraEffect::CheckEffectProc/
+// SpellMgr::CanSpellTriggerProcOnEvent directly - native PROC_TRIGGER_SPELL effects on the same
+// entry can't have independently-scoped ProcTypeMask/HitMask/SpellFamilyMask), so both handlers
+// discriminate their own event manually instead of relying on the native default action for
+// either.
+class spell_mage_frozen_core : public AuraScript
+{
+    PrepareAuraScript(spell_mage_frozen_core);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_FROZEN_CORE_PIERCE });
+    }
+
+    // effect2 (buff grant) - this spell's shared ProcFlags also admits DONE-direction events
+    // (needed for effect3 below), so a plain Ice Lance cast would otherwise also fire this
+    // effect's native default action. Gate it here instead.
+    void HandleBuffProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
+    {
+        if (!(eventInfo.GetTypeMask() & (PROC_FLAG_TAKEN_SPELL_MAGIC_DMG_CLASS_NEG | PROC_FLAG_TAKEN_PERIODIC)))
+            PreventDefaultAction();
+    }
+
+    void HandleCapstoneProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
+    {
+        PreventDefaultAction();
+
+        SpellInfo const* spellInfo = eventInfo.GetSpellInfo();
+        if (!spellInfo || spellInfo->SpellFamilyName != SPELLFAMILY_MAGE
+            || !(spellInfo->SpellFamilyFlags[0] & 0x20000)) // Ice Lance
+            return;
+
+        if (!(eventInfo.GetHitMask() & PROC_HIT_CRITICAL))
+            return;
+
+        Unit* caster = GetTarget();
+        Unit* target = eventInfo.GetProcTarget();
+        if (!caster || !target || !Mage::IsFrozenTarget(caster, target))
+            return;
+
+        caster->CastSpell(target, SPELL_MAGE_FROZEN_CORE_PIERCE, true, nullptr, aurEff);
+    }
+
+    void Register() override
+    {
+        OnEffectProc += AuraEffectProcFn(spell_mage_frozen_core::HandleBuffProc, EFFECT_1, SPELL_AURA_PROC_TRIGGER_SPELL);
+        OnEffectProc += AuraEffectProcFn(spell_mage_frozen_core::HandleCapstoneProc, EFFECT_2, SPELL_AURA_PROC_TRIGGER_SPELL);
+    }
+};
+
+// 44561 - Enduring Winter (rank 3 capstone only; effect1's duration bonus and effect2's
+// Replenishment proc, all 3 ranks, are unchanged native data). docs/frost-mage-redesign.md sec 4
+// Row 9: "While your Water Elemental is active, each Frostbolt you cast extends its duration by
+// 2 sec." effect3 is a plain SPELL_AURA_DUMMY sharing effect2's existing scope (this spell's base
+// spell_proc row, -44557, already Frostbolt-only - confirmed in data/sql/base/db_world/
+// spell_proc.sql, not something this migration touches), so no new spell_proc row is needed.
+// Pet inherits TempSummon's timer API directly (Pet -> Guardian -> Minion -> TempSummon); no-ops
+// for the permanent (Glyph of Eternal Water) variant, which has nothing to extend.
+class spell_mage_enduring_winter : public AuraScript
+{
+    PrepareAuraScript(spell_mage_enduring_winter);
+
+    void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& /*eventInfo*/)
+    {
+        Player* caster = GetTarget()->ToPlayer();
+        if (!caster)
+            return;
+
+        Pet* pet = caster->GetPet();
+        if (!pet || pet->GetEntry() != NPC_WATER_ELEMENTAL_TEMP)
+            return;
+
+        pet->SetTimer(pet->GetTimer() + 2000);
+    }
+
+    void Register() override
+    {
+        OnEffectProc += AuraEffectProcFn(spell_mage_enduring_winter::HandleProc, EFFECT_2, SPELL_AURA_DUMMY);
     }
 };
 
@@ -1137,18 +1501,22 @@ private:
     Unit* _procTarget;
 };
 
-// -11426 - Ice Barrier
-class spell_mage_ice_barrier_aura : public spell_mage_incanters_absorbtion_base_AuraScript
+namespace
 {
-    PrepareAuraScript(spell_mage_ice_barrier_aura);
-
-    /// @todo: Rework
-    static int32 CalculateSpellAmount(Unit* caster, int32 amount, SpellInfo const* spellInfo, AuraEffect const* aurEff)
+    // Frost Mage rework (docs/frost-mage-redesign.md sec 2, Ice Barrier): "Flat absorb value
+    // replaced with a scaling formula: 2000 base plus 1.0 spell power coefficient." Used to carry
+    // a separate hand-rolled 0.8068 coefficient (a pre-rework, pre-single-rank-spell-system relic
+    // - SCHOOL_ABSORB auras get no automatic spell_bonus_data/SpellDamageBonusDone scaling
+    // anywhere in this engine, confirmed by reading AuraEffect::CalculateAmount's SCHOOL_ABSORB
+    // case and every SpellBonusEntry consumer in Unit.cpp, so a manual bonus here has always been
+    // the *only* source of Ice Barrier's spell power scaling, not a second one stacked on top of
+    // spell_bonus_data as the last handoff worried - that entry is simply inert for this aura
+    // type). Retuned to the spec's plain 1.0 coefficient and factored out of its two previously
+    // duplicated copies (spell_mage_ice_barrier_aura and spell_mage_ice_barrier both had their own
+    // identical copy) into this one shared helper.
+    int32 ApplyIceBarrierSpellPowerBonus(Unit* caster, int32 amount, SpellInfo const* spellInfo, AuraEffect const* aurEff)
     {
-        // +80.68% from sp bonus
-        float bonus = 0.8068f;
-
-        bonus *= caster->SpellBaseDamageBonusDone(spellInfo->GetSchoolMask());
+        float bonus = 1.0f * caster->SpellBaseDamageBonusDone(spellInfo->GetSchoolMask());
 
         // Glyph of Ice Barrier: its weird having a SPELLMOD_ALL_EFFECTS here but its blizzards doing :)
         // Glyph of Ice Barrier is only applied at the spell damage bonus because it was already applied to the base value in CalculateSpellDamage
@@ -1159,42 +1527,53 @@ class spell_mage_ice_barrier_aura : public spell_mage_incanters_absorbtion_base_
         amount += int32(bonus);
         return amount;
     }
+}
+
+// -11426 - Ice Barrier
+class spell_mage_ice_barrier_aura : public spell_mage_incanters_absorbtion_base_AuraScript
+{
+    PrepareAuraScript(spell_mage_ice_barrier_aura);
 
     void CalculateAmount(AuraEffect const* aurEff, int32& amount, bool& canBeRecalculated)
     {
         canBeRecalculated = false;
         if (Unit* caster = GetCaster())
-            amount = CalculateSpellAmount(caster, amount, GetSpellInfo(), aurEff);
+            amount = ApplyIceBarrierSpellPowerBonus(caster, amount, GetSpellInfo(), aurEff);
+    }
+
+    // Shattered Barrier capstone (Frost Mage rework, docs/frost-mage-redesign.md sec 4 Row 7,
+    // rank 2) - "Your Ice Barrier shatters when destroyed, slowing all enemies within 10 yards by
+    // 70% for 4 sec and granting you 8% haste for 8 sec." Fires only when this hit's absorb
+    // (absorbAmount, already clamped/finalized by the caller - Unit::CalcAbsorbResist) consumes
+    // the shield's entire remaining amount, not when the shield simply expires on its own -
+    // gated on a rank-2-only dummy marker (talent 2214's own icon 2945, EFFECT_1).
+    void HandleShatter(AuraEffect* aurEff, DamageInfo& /*dmgInfo*/, uint32& absorbAmount)
+    {
+        if (absorbAmount < aurEff->GetAmount())
+            return; // shield still has amount left - not actually destroyed by this hit
+
+        Unit* caster = GetTarget();
+        if (!caster)
+            return;
+
+        if (!caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_MAGE, 2945, EFFECT_1))
+            return;
+
+        caster->CastSpell(caster, SPELL_MAGE_SHATTERED_BARRIER_SLOW, true);
+        caster->CastSpell(caster, SPELL_MAGE_SHATTERED_BARRIER_HASTE, true);
     }
 
     void Register() override
     {
         DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_mage_ice_barrier_aura::CalculateAmount, EFFECT_0, SPELL_AURA_SCHOOL_ABSORB);
         AfterEffectAbsorb += AuraEffectAbsorbFn(spell_mage_ice_barrier_aura::Trigger, EFFECT_0);
+        AfterEffectAbsorb += AuraEffectAbsorbFn(spell_mage_ice_barrier_aura::HandleShatter, EFFECT_0);
     }
 };
 
 class spell_mage_ice_barrier : public SpellScript
 {
     PrepareSpellScript(spell_mage_ice_barrier);
-
-    /// @todo: Rework
-    static int32 CalculateSpellAmount(Unit* caster, int32 amount, SpellInfo const* spellInfo, AuraEffect const* aurEff)
-    {
-        // +80.68% from sp bonus
-        float bonus = 0.8068f;
-
-        bonus *= caster->SpellBaseDamageBonusDone(spellInfo->GetSchoolMask());
-
-        // Glyph of Ice Barrier: its weird having a SPELLMOD_ALL_EFFECTS here but its blizzards doing :)
-        // Glyph of Ice Barrier is only applied at the spell damage bonus because it was already applied to the base value in CalculateSpellDamage
-        bonus = caster->ApplyEffectModifiers(spellInfo, aurEff->GetEffIndex(), bonus);
-
-        bonus *= caster->CalculateLevelPenalty(spellInfo);
-
-        amount += int32(bonus);
-        return amount;
-    }
 
     SpellCastResult CheckCast()
     {
@@ -1203,7 +1582,7 @@ class spell_mage_ice_barrier : public SpellScript
         if (AuraEffect* aurEff = caster->GetAuraEffect(SPELL_AURA_SCHOOL_ABSORB, (SpellFamilyNames)GetSpellInfo()->SpellFamilyName, GetSpellInfo()->SpellIconID, EFFECT_0))
         {
             int32 newAmount = GetSpellInfo()->Effects[EFFECT_0].CalcValue(caster, nullptr, nullptr);
-            newAmount = CalculateSpellAmount(caster, newAmount, GetSpellInfo(), aurEff);
+            newAmount = ApplyIceBarrierSpellPowerBonus(caster, newAmount, GetSpellInfo(), aurEff);
 
             if (aurEff->GetAmount() > newAmount)
                 return SPELL_FAILED_AURA_BOUNCED;
@@ -2174,9 +2553,16 @@ void AddSC_mage_spell_scripts()
     RegisterSpellScript(spell_mage_glacial_spike);
     RegisterSpellScript(spell_mage_flurry);
     RegisterSpellScript(spell_mage_biting_cold);
+    RegisterSpellScript(spell_mage_frostbite);
     RegisterSpellScript(spell_mage_refreshment);
     RegisterSpellScript(spell_mage_frozen_orb);
     RegisterSpellScript(spell_mage_frozen_orb_pulse);
+    RegisterSpellScript(spell_mage_chilled_to_the_bone);
+    RegisterSpellScript(spell_mage_permafrost);
+    RegisterSpellScript(spell_mage_ice_lance);
+    RegisterSpellScript(spell_mage_chilled);
+    RegisterSpellScript(spell_mage_frozen_core);
+    RegisterSpellScript(spell_mage_enduring_winter);
     RegisterCreatureAI(npc_mage_frozen_orb);
     new FrostMageIcicleCombatReset();
 }
