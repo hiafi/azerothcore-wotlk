@@ -30,6 +30,17 @@
 #     rank_spell_ids: [200001] # one real Spell.dbc ID per rank, low to high
 #     depends_on: {talent_id: 0, rank: 0}   # 0 = no prerequisite
 #     flags: 0
+#
+# skill_line_abilities:
+#   - id: 30400                # from source/ids.yaml's skilllineability block
+#     skill_line: 6             # SkillLine.dbc ID, e.g. Frost = 6 (Fire = 8, Arcane = 237)
+#     spell_id: 200002          # the castable spell this buckets into a Spellbook tab
+#     class_mask: 128           # Mage; see docs/dbc-build-pipeline.md's ClassMask note
+#     min_skill_line_rank: 1    # matches every stock Frost/Fire/Arcane row
+#     # only needed for a brand-new (custom) spell ID: every stock Blizzard
+#     # spell already has its own SkillLineAbility row, so reused IDs
+#     # (Ice Barrier, Ice Lance, ...) don't need one here. See
+#     # docs/skilllineability-handoff.md for why this table exists at all.
 
 tabs:
 - id: 41
@@ -1090,3 +1101,25 @@ talents:
     talent_id: 0
     rank: 0
   flags: 0
+skill_line_abilities:
+# Buckets each fully-custom Frost spell ID into the Frost Spellbook tab —
+# see docs/skilllineability-handoff.md. Not needed for any spell ID that
+# reuses a stock Blizzard spell (Ice Barrier, Ice Lance, ...): those already
+# have their own stock SkillLineAbility row. Icicles (200001) is deliberately
+# omitted — it's only ever granted as a triggered buff, never player-cast
+# from the spellbook.
+- id: 30400                # minted, source/ids.yaml skilllineability block (30400-30499)
+  skill_line: 6             # Frost
+  spell_id: 200002          # Glacial Spike
+  class_mask: 128
+  min_skill_line_rank: 1
+- id: 30401                # minted, source/ids.yaml skilllineability block (30400-30499)
+  skill_line: 6             # Frost
+  spell_id: 200004          # Flurry
+  class_mask: 128
+  min_skill_line_rank: 1
+- id: 30402                # minted, source/ids.yaml skilllineability block (30400-30499)
+  skill_line: 6             # Frost
+  spell_id: 200007          # Frozen Orb
+  class_mask: 128
+  min_skill_line_rank: 1

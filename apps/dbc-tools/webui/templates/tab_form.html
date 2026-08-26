@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ 'New tab' if not original_id else 'Edit tab ' ~ original_id }} – dbc-tools{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('talent_list', file=file) }}">&larr; {{ file }}.yaml</a></p>
+<h1>{{ 'New tab' if not original_id else 'Edit tab ' ~ original_id }}</h1>
+
+<form method="post" action="{{ url_for('tab_save', file=file) }}">
+  <input type="hidden" name="original_id" value="{{ original_id }}">
+  <div class="field-grid">
+    <label>id<input type="text" name="id" value="{{ ctx.id }}" required></label>
+    <label>name<input type="text" name="name" value="{{ ctx.name }}" required></label>
+    <label>class_mask<input type="text" name="class_mask" value="{{ ctx.class_mask }}"></label>
+    <label>pet_talent_mask<input type="text" name="pet_talent_mask" value="{{ ctx.pet_talent_mask }}"></label>
+    <label>order_index<input type="text" name="order_index" value="{{ ctx.order_index }}"></label>
+    <label>spell_icon_id<input type="text" name="spell_icon_id" value="{{ ctx.spell_icon_id }}"></label>
+  </div>
+
+  <fieldset>
+    <legend>Raw overrides <span class="hint">(any TalentTab.dbc column name &rarr; value)</span></legend>
+    <div id="overrides-rows">
+    {% for k, v in ctx.overrides %}
+      <div class="kv-row">
+        <input type="text" name="override_key" value="{{ k }}" placeholder="Column name">
+        <input type="text" name="override_value" value="{{ v }}" placeholder="Value">
+        <button type="button" class="link-button" onclick="this.parentElement.remove()">remove</button>
+      </div>
+    {% endfor %}
+    </div>
+    <button type="button" onclick="addRow('overrides-rows', 'kv-row-template')">+ add override</button>
+  </fieldset>
+
+  <button type="submit" class="primary">Save</button>
+</form>
+
+<template id="kv-row-template">
+  <div class="kv-row">
+    <input type="text" name="override_key" placeholder="Column name">
+    <input type="text" name="override_value" placeholder="Value">
+    <button type="button" class="link-button" onclick="this.parentElement.remove()">remove</button>
+  </div>
+</template>
+
+<script src="{{ url_for('static', filename='rows.js') }}"></script>
+{% endblock %}

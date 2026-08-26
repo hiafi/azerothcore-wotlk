@@ -28,7 +28,12 @@ collides with stock data or with another ticket's IDs.
 
 ```
 pip install -r apps/dbc-tools/requirements.txt
+sudo apt-get install smpq
 ```
+
+`smpq` (StormLib's CLI archiving tool) packs the client-patch MPQ — see `lib/mpq_writer.py`'s
+module docstring for why this is a real system dependency now rather than a pure-Python writer,
+and for a no-root fallback if `sudo` isn't available.
 
 Optional but needed for real client-patch output: extract `Spell.dbc`,
 `Talent.dbc`, `TalentTab.dbc`, `SpellCastTimes.dbc`, `SpellDuration.dbc`,
@@ -123,6 +128,45 @@ path at scale, and (2) — if you add the check back in, see
 `lib/reverse.py`'s docstring — rebuilding and diffing against the original
 was run once over all ~54k merged base+overlay spell rows during
 development with zero mismatches.
+
+## Web UI
+
+`source/spells/*.csv`'s two JSON-blob columns (`effectN`, `raw_overrides`) and
+`source/ids.yaml`'s reserved-ID bookkeeping get old fast by hand. `webui/` is
+a small local Flask app that edits the exact same CSV/YAML files as a form
+instead — CSV/YAML stay the source of truth (same as everything else in this
+tool), it just makes hand-editing them less tedious. No database, no build
+step, no auth.
+
+```
+pip install -r apps/dbc-tools/requirements.txt   # adds Flask, ruamel.yaml
+python3 apps/dbc-tools/webui/app.py
+```
+
+Open `http://localhost:8600/`, or `http://<this machine's LAN IP>:8600/` from
+any other device on the same network — it binds `0.0.0.0` on purpose. There's
+no login, so anyone who can reach that port can edit these files; keep it on
+a trusted home network, not port-forwarded to the internet.
+
+What it does: browse/add/edit/delete rows in any `source/spells/*.csv` or
+`source/talents/*.yaml` file, with a structured form for each `effectN` slot
+and a key/value editor for `raw_overrides` instead of hand-typed JSON, an
+"allocate ID" suggestion drawn from `source/ids.yaml`'s reserved blocks for
+new rows, and a "Run generate.py" button on the dashboard. Saving a spell row
+rewrites only that row's line in its CSV file — every other row's exact text
+is preserved byte-for-byte, deliberately, so an edit doesn't turn into a
+whole-file diff. Saving a talent tab/talent/ability does the same for its
+YAML file via `ruamel.yaml`'s round-trip mode, which also means an untouched
+entry's inline comments survive; a comment sitting on the specific line you
+just edited is the one thing that doesn't survive that edit.
+
+What it doesn't do: no enum-name dropdowns for raw DBC integer columns
+(school/mechanic/dispel/`SpellClassSet`/...) — plain numeric inputs, same as
+the CSV itself; no in-browser diff preview before running `generate.py` (its
+own stdout already lists exactly what it's about to touch); no reclassifying
+a row into a different class file from the edit form (delete + re-add
+instead); no concurrent-edit locking (single-user tool — git is still the
+safety net if two edits collide).
 
 ## Source files
 

@@ -222,9 +222,22 @@ SPELLRADIUS = DbcTable(
     columns=("ID", "Radius", "RadiusPerLevel", "RadiusMax"),
 )
 
+SKILLLINEABILITY = DbcTable(
+    name="SkillLineAbility",
+    dbc_filename="SkillLineAbility.dbc",
+    sql_table="skilllineability_dbc",
+    fmt="niiiixxiiiiixx",
+    columns=_cols(
+        "ID", "SkillLine", "Spell", "RaceMask", "ClassMask", "ExcludeRace",
+        "ExcludeClass", "MinSkillLineRank", "SupercededBySpell", "AcquireMethod",
+        "TrivialSkillLineRankHigh", "TrivialSkillLineRankLow",
+        ("CharacterPoints", 2),
+    ),
+)
+
 ALL_TABLES = (
     SPELL, TALENT, TALENTTAB, SPELLCASTTIMES, SPELLDURATION, SPELLRANGE,
-    SPELLRADIUS,
+    SPELLRADIUS, SKILLLINEABILITY,
 )
 TABLES_BY_NAME = {t.name: t for t in ALL_TABLES}
 

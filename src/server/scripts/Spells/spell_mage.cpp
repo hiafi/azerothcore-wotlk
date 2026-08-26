@@ -94,6 +94,12 @@ enum MageSpells
     SPELL_MAGE_BITING_COLD_R3                    = 200012,
     SPELL_MAGE_BITING_COLD_BITE                  = 200013,
     SPELL_MAGE_GLACIAL_SPIKE_SHATTER             = 200014,
+    // Glacial Spike's 3-stage acceleration ramp (docs/frost-mage-handoff.md's art-pass
+    // discussion) - two cosmetic wind-up hops, then the real damage-dealing impact. See
+    // spell_mage_glacial_spike/spell_mage_glacial_spike_impact below.
+    SPELL_MAGE_GLACIAL_SPIKE_WINDUP_1            = 200025,
+    SPELL_MAGE_GLACIAL_SPIKE_WINDUP_2            = 200026,
+    SPELL_MAGE_GLACIAL_SPIKE_IMPACT              = 200027,
     // Cluster C (docs/frost-mage-talent-tree-content-handoff.md) - Permafrost, Frozen Core,
     // Improved Cone of Cold, Shattered Barrier, Empowering Frostbolt capstones/support spells.
     SPELL_MAGE_PERMAFROST_STACK                  = 200015,
@@ -110,6 +116,7 @@ enum MageSpells
     SPELL_MAGE_ICE_LANCE                          = 30455,
     SPELL_MAGE_ICE_BARRIER                        = 11426,
     SPELL_MAGE_FROZEN_CORE_R3                     = 31669,
+    SPELL_MAGE_WATER_ELEMENTAL_FREEZE             = 33395,
     // Not a new spell - naming the existing "Fingers of Frost" charge buff (already scripted
     // below as spell_mage_fingers_of_frost) for use by the frozen-state helpers.
     SPELL_MAGE_FINGERS_OF_FROST_CHARGES          = 74396
@@ -274,18 +281,46 @@ class spell_mage_blizzard_icicles : public AuraScript
 };
 
 // 200002 - Glacial Spike
+// Redesigned as a 3-stage "ramp-up" missile chain to fake mid-flight acceleration - Spell.dbc
+// only exposes one constant Speed per spell and the engine has no acceleration field at all (see
+// docs/frost-mage-handoff.md's art-pass discussion). This spell (200002, the real button/cast-bar
+// spell) no longer deals damage or travels itself (effect1 is a no-op DUMMY, Speed removed - see
+// its CSV row's notes) - it only gates the cast (CheckIcicles) and, on hit (instant, since it no
+// longer travels), kicks off the chain via BeginRamp:
+//   1. Two short, dest-targeted (TARGET_DEST_DEST) cosmetic hops toward the real target -
+//      SPELL_MAGE_GLACIAL_SPIKE_WINDUP_1 (Speed 1, ~0.5yd, ~0.5s) then _WINDUP_2 (Speed 5, ~1.5yd,
+//      ~0.3s), fired ~0ms and ~500ms after the cast completes. Each hop's destination is computed
+//      fresh (caster may have turned/moved) via GetFirstCollisionPosition - these spells are
+//      purely visual and don't themselves know the real target.
+//   2. The real hit, SPELL_MAGE_GLACIAL_SPIKE_IMPACT (Speed 30), cast at the real target ~800ms
+//      after the button-press completes - see spell_mage_glacial_spike_impact below for icicle/
+//      Fingers-of-Frost consumption and the Arctic Winds shatter-cleave, both moved there since
+//      that's the stage that now represents the spell actually landing.
+//
+// This deliberately does *not* use the engine's native SPELL_EFFECT_TRIGGER_MISSILE_SPELL DBC
+// chaining: for a unit-targeted trigger effect, EffectTriggerMissileSpell (SpellEffects.cpp)
+// always re-casts the triggered spell from the caster's *current* position to the *same real*
+// unit target - i.e. every leg re-flies the entire real cast distance, not a fraction of it.
+// There's no way to get a short, controlled hop distance while keeping a real enemy unit as the
+// target through that mechanism, so the whole chain is driven by hand instead: the real target is
+// carried across the ~800ms ramp by GUID + ObjectAccessor (re-resolved and alive-checked at each
+// stage) rather than by DBC-level target propagation, since a raw Unit* pointer captured into a
+// delayed event isn't safe to hold across that much real time (the target could die/despawn).
 class spell_mage_glacial_spike : public SpellScript
 {
     PrepareSpellScript(spell_mage_glacial_spike);
 
     static constexpr uint8 REQUIRED_ICICLES = 5;
 
-    static constexpr uint8 MAX_SHATTER_TARGETS = 5;
-    static constexpr float SHATTER_RADIUS = 8.0f;
+    // Ramp timing/distances - see the class comment above for why the chain is hand-driven.
+    static constexpr float WINDUP_1_DISTANCE = 0.5f;
+    static constexpr float WINDUP_2_DISTANCE = 1.5f;
+    static constexpr uint32 WINDUP_2_DELAY_MS = 500;
+    static constexpr uint32 IMPACT_DELAY_MS = 800;
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_MAGE_ICICLES, SPELL_MAGE_SHATTERING_COLD, SPELL_MAGE_FINGERS_OF_FROST_CHARGES, SPELL_MAGE_GLACIAL_SPIKE_SHATTER });
+        return ValidateSpellInfo({ SPELL_MAGE_ICICLES, SPELL_MAGE_GLACIAL_SPIKE_WINDUP_1, SPELL_MAGE_GLACIAL_SPIKE_WINDUP_2, SPELL_MAGE_GLACIAL_SPIKE_IMPACT });
     }
 
     SpellCastResult CheckIcicles()
@@ -295,6 +330,66 @@ class spell_mage_glacial_spike : public SpellScript
             return SPELL_FAILED_NO_COMBO_POINTS;
 
         return SPELL_CAST_OK;
+    }
+
+    // Short, collision-safe hop toward (not all the way to) the real target, from the caster's
+    // *current* position at fire time. angle is relative to the caster's own facing (matching
+    // GetFirstCollisionPosition's convention), so this points at the target regardless of which
+    // way the caster happens to be facing.
+    static void FireCosmeticHop(Unit* caster, Unit* target, float distance, uint32 spellId)
+    {
+        float const relativeAngle = caster->GetAngle(target) - caster->GetOrientation();
+        Position const hop = caster->GetFirstCollisionPosition(distance, relativeAngle);
+        caster->CastSpell(hop.GetPositionX(), hop.GetPositionY(), hop.GetPositionZ(), spellId, true);
+    }
+
+    void BeginRamp()
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetHitUnit();
+        if (!caster || !target)
+            return;
+
+        ObjectGuid const targetGuid = target->GetGUID();
+        FireCosmeticHop(caster, target, WINDUP_1_DISTANCE, SPELL_MAGE_GLACIAL_SPIKE_WINDUP_1);
+
+        caster->m_Events.AddEventAtOffset([caster, targetGuid]()
+        {
+            Unit* target = ObjectAccessor::GetUnit(*caster, targetGuid);
+            if (target && target->IsAlive())
+                FireCosmeticHop(caster, target, WINDUP_2_DISTANCE, SPELL_MAGE_GLACIAL_SPIKE_WINDUP_2);
+        }, Milliseconds(WINDUP_2_DELAY_MS));
+
+        caster->m_Events.AddEventAtOffset([caster, targetGuid]()
+        {
+            Unit* target = ObjectAccessor::GetUnit(*caster, targetGuid);
+            if (target && target->IsAlive())
+                caster->CastSpell(target, SPELL_MAGE_GLACIAL_SPIKE_IMPACT, true);
+        }, Milliseconds(IMPACT_DELAY_MS));
+    }
+
+    void Register() override
+    {
+        OnCheckCast += SpellCheckCastFn(spell_mage_glacial_spike::CheckIcicles);
+        OnHit += SpellHitFn(spell_mage_glacial_spike::BeginRamp);
+    }
+};
+
+// 200027 - Glacial Spike (Impact)
+// The real damage-dealing leg of the 3-stage ramp above - a plain single-target Frost nuke at the
+// real target, the same shape 200002 itself used to have before the ramp redesign. Icicle/
+// Fingers-of-Frost consumption and the Arctic Winds shatter-cleave both moved here, since this is
+// the stage that represents the spell actually landing.
+class spell_mage_glacial_spike_impact : public SpellScript
+{
+    PrepareSpellScript(spell_mage_glacial_spike_impact);
+
+    static constexpr uint8 MAX_SHATTER_TARGETS = 5;
+    static constexpr float SHATTER_RADIUS = 8.0f;
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_ICICLES, SPELL_MAGE_SHATTERING_COLD, SPELL_MAGE_FINGERS_OF_FROST_CHARGES, SPELL_MAGE_GLACIAL_SPIKE_SHATTER });
     }
 
     void ConsumeIciclesAndFrostCharge()
@@ -333,14 +428,13 @@ class spell_mage_glacial_spike : public SpellScript
 
     void Register() override
     {
-        OnCheckCast += SpellCheckCastFn(spell_mage_glacial_spike::CheckIcicles);
-        OnHit += SpellHitFn(spell_mage_glacial_spike::ConsumeIciclesAndFrostCharge);
+        OnHit += SpellHitFn(spell_mage_glacial_spike_impact::ConsumeIciclesAndFrostCharge);
     }
 };
 
 // 200001 - Icicles
 // No fixed duration (see the CSV row's notes) - cleared here on combat-leave; consumption on
-// Glacial Spike cast is handled above in spell_mage_glacial_spike.
+// Glacial Spike impact is handled above in spell_mage_glacial_spike_impact.
 class FrostMageIcicleCombatReset : public PlayerScript
 {
 public:
@@ -664,7 +758,7 @@ class spell_mage_frozen_orb_pulse : public SpellScript
 
     // The owning mage, not GetCaster() (the orb itself) - see npc_mage_frozen_orb::GetOwnerGUID's
     // comment for why GetOriginalCaster() can't be used here instead.
-    Player* GetOwningMage() const
+    Player* GetOwningMage()
     {
         Unit* caster = GetCaster();
         if (!caster)
@@ -1852,6 +1946,49 @@ class spell_mage_summon_water_elemental : public SpellScript
     }
 };
 
+// 33395 - Water Elemental: Freeze
+// docs/frost-mage-redesign.md sec 2 ("Water Elemental: Freeze"): "Against targets immune to
+// freeze effects, grants the owner 1 Fingers of Frost charge instead of applying the freeze."
+// "Autocast: Removed" needed no code or data change here - 33395's pulled AttributesEx (see
+// npc.csv's raw_overrides on this row) already carries SPELL_ATTR1_NO_AUTOCAST_AI, so
+// SpellInfo::IsAutocastable() is already false and CharmInfo::InitCharmCreateSpells never calls
+// ToggleCreatureAutocast for this spell - the pet already can't self-cast it. This script is only
+// the immune-target half of the item.
+class spell_mage_water_elemental_freeze : public SpellScript
+{
+    PrepareSpellScript(spell_mage_water_elemental_freeze);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_FINGERS_OF_FROST_CHARGES });
+    }
+
+    void GrantFingersOfFrostOnImmune()
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetHitUnit();
+        if (!caster || !target)
+            return;
+
+        // Effect 1 is the SPELL_AURA_MOD_ROOT ("frozen in place") effect - Effect 0's damage
+        // always lands regardless of freeze immunity, matching the live spell description ("Damage
+        // caused may interrupt the effect").
+        if (!target->IsImmunedToSpellEffect(GetSpellInfo(), EFFECT_1, caster))
+            return;
+
+        Unit* owner = caster->GetOwner();
+        if (!owner)
+            return;
+
+        owner->CastSpell(owner, SPELL_MAGE_FINGERS_OF_FROST_CHARGES, true);
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_mage_water_elemental_freeze::GrantFingersOfFrostOnImmune);
+    }
+};
+
 // 74396 - Fingers of Frost
 class spell_mage_fingers_of_frost : public AuraScript
 {
@@ -2543,6 +2680,7 @@ void AddSC_mage_spell_scripts()
     RegisterSpellScript(spell_mage_master_of_elements);
     RegisterSpellScript(spell_mage_polymorph_cast_visual);
     RegisterSpellScript(spell_mage_summon_water_elemental);
+    RegisterSpellScript(spell_mage_water_elemental_freeze);
     RegisterSpellScript(spell_mage_fingers_of_frost);
     RegisterSpellScript(spell_mage_magic_absorption);
 
@@ -2551,6 +2689,7 @@ void AddSC_mage_spell_scripts()
     RegisterSpellScript(spell_mage_frostfire_bolt_icicles);
     RegisterSpellScript(spell_mage_blizzard_icicles);
     RegisterSpellScript(spell_mage_glacial_spike);
+    RegisterSpellScript(spell_mage_glacial_spike_impact);
     RegisterSpellScript(spell_mage_flurry);
     RegisterSpellScript(spell_mage_biting_cold);
     RegisterSpellScript(spell_mage_frostbite);

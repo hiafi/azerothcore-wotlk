@@ -36,7 +36,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import json
 import sys
 from pathlib import Path
 
@@ -44,7 +43,7 @@ TOOL_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOL_ROOT))
 
 from lib import dbcfmt, reverse, source, sql_dump, state  # noqa: E402
-from lib.source import SPELL_CSV_FIELDNAMES, SPELL_CSV_JSON_FIELDS  # noqa: E402
+from lib.source import SPELL_CSV_FIELDNAMES  # noqa: E402
 
 SOURCE_DIR = TOOL_ROOT / "source"
 SPELLS_DIR = SOURCE_DIR / "spells"
@@ -144,22 +143,6 @@ def detect_dest(row: dict, trainer_and_rank_spell_ids: set[int], talent_spell_id
     return dest
 
 
-def entry_to_csv_row(entry: dict) -> dict:
-    row = {}
-    for field in SPELL_CSV_FIELDNAMES:
-        if field == "notes":
-            row[field] = "pulled from existing data"
-            continue
-        value = entry.get(field)
-        if field in SPELL_CSV_JSON_FIELDS:
-            row[field] = "" if value is None else json.dumps(value, sort_keys=True)
-        elif value is None:
-            row[field] = ""
-        else:
-            row[field] = value
-    return row
-
-
 def main() -> int:
     ap = argparse.ArgumentParser()
     group = ap.add_mutually_exclusive_group(required=True)
@@ -213,8 +196,9 @@ def main() -> int:
             print(f"skip {spell_id}: already present in source/spells/")
             continue
         entry = reverse.reverse_spell_row(row, secondary_rows)
+        entry["notes"] = "pulled from existing data"
         dest = args.dest or detect_dest(row, trainer_and_rank_spell_ids, talent_spell_ids)
-        new_rows_by_dest.setdefault(dest, []).append(entry_to_csv_row(entry))
+        new_rows_by_dest.setdefault(dest, []).append(source.spell_entry_to_csv_row(entry))
 
     if missing:
         print(f"not found in spell_dbc (base DBC + overlay): {missing}")
@@ -227,7 +211,10 @@ def main() -> int:
         out_path = SPELLS_DIR / f"{dest}.csv"
         file_exists = out_path.is_file()
         with open(out_path, "a", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=SPELL_CSV_FIELDNAMES)
+            # lineterminator="\n": match .gitattributes' "* text eol=lf" —
+            # csv's default dialect writes "\r\n", which would otherwise mix
+            # line endings within a file across repeated pull.py runs.
+            writer = csv.DictWriter(f, fieldnames=SPELL_CSV_FIELDNAMES, lineterminator="\n")
             if not file_exists:
                 writer.writeheader()
             writer.writerows(rows)

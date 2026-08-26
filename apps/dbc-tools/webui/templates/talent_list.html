@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{{ file }}.yaml – dbc-tools{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('index') }}">&larr; all files</a></p>
+<h1>{{ file }}.yaml</h1>
+
+<section>
+  <h2>Tabs</h2>
+  <p><a href="{{ url_for('tab_new', file=file) }}" class="button">+ New tab</a></p>
+  <table>
+    <thead><tr><th>ID</th><th>Name</th><th>Class mask</th><th>Order</th><th></th></tr></thead>
+    <tbody>
+    {% for e in tabs %}
+      <tr>
+        <td>{{ e.id }}</td><td>{{ e.name }}</td><td>{{ e.class_mask }}</td><td>{{ e.order_index }}</td>
+        <td class="actions">
+          <a href="{{ url_for('tab_edit', file=file, tab_id=e.id) }}">edit</a>
+          <form method="post" action="{{ url_for('tab_delete', file=file, tab_id=e.id) }}"
+                onsubmit="return confirm('Delete tab {{ e.id }} ({{ e.name }})?');">
+            <button type="submit" class="link-button">delete</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>Talents</h2>
+  <p><a href="{{ url_for('talent_new', file=file) }}" class="button">+ New talent</a></p>
+  <table>
+    <thead><tr><th>ID</th><th>Name</th><th>Tab</th><th>Tier</th><th>Col</th><th>Ranks</th><th></th></tr></thead>
+    <tbody>
+    {% for e in talents %}
+      <tr>
+        <td>{{ e.id }}</td><td>{{ e.name }}</td><td>{{ e.tab_id }}</td><td>{{ e.tier }}</td><td>{{ e.column }}</td>
+        <td>{{ e.rank_spell_ids | join(', ') }}</td>
+        <td class="actions">
+          <a href="{{ url_for('talent_edit', file=file, talent_id=e.id) }}">edit</a>
+          <form method="post" action="{{ url_for('talent_delete', file=file, talent_id=e.id) }}"
+                onsubmit="return confirm('Delete talent {{ e.id }}?');">
+            <button type="submit" class="link-button">delete</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>Skill line abilities</h2>
+  <p><a href="{{ url_for('ability_new', file=file) }}" class="button">+ New ability</a></p>
+  <table>
+    <thead><tr><th>ID</th><th>Skill line</th><th>Spell</th><th>Class mask</th><th></th></tr></thead>
+    <tbody>
+    {% for e in abilities %}
+      <tr>
+        <td>{{ e.id }}</td><td>{{ e.skill_line }}</td><td>{{ e.spell_id }}</td><td>{{ e.class_mask }}</td>
+        <td class="actions">
+          <a href="{{ url_for('ability_edit', file=file, ability_id=e.id) }}">edit</a>
+          <form method="post" action="{{ url_for('ability_delete', file=file, ability_id=e.id) }}"
+                onsubmit="return confirm('Delete skill line ability {{ e.id }}?');">
+            <button type="submit" class="link-button">delete</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

@@ -104,3 +104,15 @@ def build_talenttab_row(entry: dict) -> dict:
     row["OrderIndex"] = entry.get("order_index", 0) or 0
     row.update(entry.get("raw_overrides") or {})
     return row
+
+
+def build_skilllineability_row(entry: dict) -> dict:
+    row = dbcfile.empty_row(dbcfmt.SKILLLINEABILITY)
+    row["ID"] = entry["id"]
+    row["SkillLine"] = entry["skill_line"]
+    row["Spell"] = entry["spell_id"]
+    row["ClassMask"] = entry.get("class_mask", 0) or 0
+    row["RaceMask"] = entry.get("race_mask", 0) or 0
+    row["MinSkillLineRank"] = entry.get("min_skill_line_rank", 1) or 0
+    row.update(entry.get("raw_overrides") or {})
+    return row

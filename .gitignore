@@ -23,6 +23,7 @@
 /.env*
 /apps/joiner
 /apps/dbc-tools/var/
+/apps/dbc-tools/.venv/
 /client/*
 /deps/deno
 /data/sql/custom/*

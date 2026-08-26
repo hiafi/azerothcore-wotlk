@@ -17,9 +17,20 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 from pathlib import Path
 
 import yaml
+from ruamel.yaml import YAML
+
+# Round-trip (not safe_load/safe_dump) so a talents/*.yaml file's inline
+# comments — "# minted, source/ids.yaml talent block ... - Flurry" and the
+# like — survive a load+dump unmodified, instead of PyYAML's safe_* pair
+# silently discarding every comment on the next write. Confirmed
+# byte-identical against every source/talents/*.yaml file with these
+# defaults (no explicit width/indent tuning needed) before relying on it here.
+_talents_yaml = YAML()
+_talents_yaml.preserve_quotes = True
 
 SPELL_CSV_FIELDNAMES = (
     "id", "name", "school", "dispel", "mechanic", "attributes", "category",
@@ -91,6 +102,34 @@ def _parse_spell_csv_file(path: Path) -> list[dict]:
     return entries
 
 
+def load_one_spell_file(path: Path) -> list[dict]:
+    """Parse a single source/spells/*.csv file on its own, with no
+    cross-file duplicate-ID check — for callers (the webui) that want just
+    one file's rows and shouldn't blow up over a duplicate that lives
+    entirely in some other file. Use load_spells_csv for anything that needs
+    the whole merged, validated picture (generate.py, ID allocation, ...)."""
+    return _parse_spell_csv_file(path)
+
+
+def load_one_spell_file_raw(path: Path) -> list[dict]:
+    """Like load_one_spell_file, but with no int/float/JSON type conversion —
+    every field stays exactly the string it was on disk. Used by the webui to
+    patch a single row: reload the file this way, replace/append just the one
+    row that actually changed (as a spell_entry_to_csv_row(...) dict, which is
+    already string-valued), and rewrite via write_spells_csv_rows_file. Every
+    *other* row's text survives byte-for-byte — round-tripping it through
+    load_one_spell_file's int/float parsing would quietly renormalize things
+    like a hand-typed "40" in a float column into "40.0", turning an edit to
+    one row into a diff across the whole file."""
+    rows = []
+    with open(path, newline="", encoding="utf-8") as f:
+        for raw in csv.DictReader(f):
+            if not raw.get("id") or raw["id"].strip().startswith("#"):
+                continue
+            rows.append(dict(raw))
+    return rows
+
+
 def load_spells_csv(dir_path: Path) -> list[dict]:
     """Merge every source/spells/*.csv file into one list, in sorted
     filename order (so merge order — and therefore any error message about
@@ -123,27 +162,106 @@ def split_leading_comments(text: str) -> tuple[str, str]:
     return "".join(lines[:i]), "".join(lines[i:])
 
 
+TALENTS_YAML_KEYS = ("tabs", "talents", "skill_line_abilities")
+
+
 def load_talents_yaml_file(path: Path) -> dict:
+    """Returns a ruamel.yaml round-trip object (CommentedMap, behaves like a
+    plain dict for every read this codebase does) rather than a plain dict —
+    load_talents_yaml_file/write_talents_yaml_file is the pair a caller
+    should use together when it intends to write the file back, so per-entry
+    comments survive; see write_talents_yaml_file."""
     with open(path, encoding="utf-8") as f:
         _, remainder = split_leading_comments(f.read())
-    data = yaml.safe_load(remainder) or {}
-    data.setdefault("tabs", [])
-    data.setdefault("talents", [])
+    data = _talents_yaml.load(remainder)
+    if data is None:
+        data = {}
+    for key in TALENTS_YAML_KEYS:
+        data.setdefault(key, [])
     return data
 
 
+def spell_entry_to_csv_row(entry: dict) -> dict:
+    """Serialize a spell entry (the dict shape load_spells_csv/_parse_spell_csv_file
+    produce) back into a flat dict of strings ready for csv.DictWriter — the
+    save-side counterpart to _parse_spell_csv_file. None round-trips to ""; each
+    SPELL_CSV_JSON_FIELDS value goes through json.dumps(sort_keys=True), matching
+    the alphabetical key order already committed throughout source/spells/*.csv."""
+    row = {}
+    for field in SPELL_CSV_FIELDNAMES:
+        value = entry.get(field)
+        if field in SPELL_CSV_JSON_FIELDS:
+            row[field] = "" if value is None else json.dumps(value, sort_keys=True)
+        else:
+            row[field] = "" if value is None else value
+    return row
+
+
+def write_spells_csv_rows_file(path: Path, rows: list[dict]) -> None:
+    """Rewrite one source/spells/*.csv file from already string-valued row
+    dicts (load_one_spell_file_raw's shape, or spell_entry_to_csv_row's) — the
+    low-level half of write_spells_csv_file, split out so a caller that only
+    changed one row (the webui) can pass every other row through verbatim
+    instead of round-tripping it through int/float/JSON parsing again. Writes
+    to a sibling .tmp file first and os.replace()s it into place, so a crash
+    mid-write can't leave a truncated CSV behind."""
+    tmp_path = path.with_suffix(path.suffix + ".tmp")
+    with open(tmp_path, "w", newline="", encoding="utf-8") as f:
+        # lineterminator="\n": csv's default dialect writes "\r\n", but the
+        # repo's .gitattributes forces "* text eol=lf" — without this override
+        # a full-file rewrite would flip every existing LF-ending row to CRLF,
+        # turning a one-row edit into a whole-file diff.
+        writer = csv.DictWriter(f, fieldnames=SPELL_CSV_FIELDNAMES, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+    os.replace(tmp_path, path)
+
+
+def write_spells_csv_file(path: Path, entries: list[dict]) -> None:
+    """Rewrite one source/spells/*.csv file from scratch with `entries` (each
+    already in load_spells_csv's dict shape) — e.g. pull.py appending a fresh
+    batch it just built from live DBC data, where there's no "other rows"
+    formatting to preserve. See write_spells_csv_rows_file's docstring for why
+    the webui uses that lower-level entry point instead."""
+    write_spells_csv_rows_file(path, [spell_entry_to_csv_row(e) for e in entries])
+
+
+def talent_entry_to_yaml_safe(entry: dict) -> dict:
+    """Drop None-valued optional fields so the YAML stays terse — the
+    save-side counterpart to load_talents_yaml_file. raw_overrides of None
+    means "no overrides", so it's fine to omit entirely."""
+    return {k: v for k, v in entry.items() if v is not None}
+
+
+def write_talents_yaml_file(path: Path, header: str, data: dict) -> None:
+    """Rewrite one source/talents/*.yaml file: `header` verbatim (the
+    hand-written schema/example comment block split_leading_comments peeled
+    off), then `data`'s tabs/talents/skill_line_abilities lists as YAML via
+    the ruamel round-trip dumper. Pass the same object load_talents_yaml_file
+    gave you (only mutated in place — e.g. one list item replaced or
+    appended, not the whole dict rebuilt) so every untouched entry's inline
+    comments round-trip unchanged; dumping a plain dict built from scratch
+    would lose them same as PyYAML's safe_dump did. Atomic, same as
+    write_spells_csv_rows_file."""
+    tmp_path = path.with_suffix(path.suffix + ".tmp")
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        f.write(header)
+        _talents_yaml.dump(data, f)
+    os.replace(tmp_path, path)
+
+
 def load_talents_yaml(dir_path: Path) -> dict:
-    """Merge every source/talents/*.yaml file's tabs/talents lists into one
-    dict, in sorted filename order."""
-    merged = {"tabs": [], "talents": []}
-    seen: dict[str, dict[int, str]] = {"tabs": {}, "talents": {}}
+    """Merge every source/talents/*.yaml file's tabs/talents/skill_line_abilities
+    lists into one dict, in sorted filename order."""
+    merged = {key: [] for key in TALENTS_YAML_KEYS}
+    seen: dict[str, dict[int, str]] = {key: {} for key in TALENTS_YAML_KEYS}
     for path in sorted(Path(dir_path).glob("*.yaml")):
         data = load_talents_yaml_file(path)
-        for key in ("tabs", "talents"):
+        for key in TALENTS_YAML_KEYS:
             for entry in data[key]:
                 if entry["id"] in seen[key]:
                     raise DuplicateIdError(
-                        f"{key[:-1]} ID {entry['id']} appears in both "
+                        f"{key} entry ID {entry['id']} appears in both "
                         f"{seen[key][entry['id']]!r} and {path.name!r}"
                     )
                 seen[key][entry["id"]] = path.name

@@ -49,6 +49,7 @@ def main() -> int:
     existing_spells = state.load_existing_rows(dbcfmt.SPELL)
     existing_talents = state.load_existing_rows(dbcfmt.TALENT)
     existing_talenttabs = state.load_existing_rows(dbcfmt.TALENTTAB)
+    existing_skilllineabilities = state.load_existing_rows(dbcfmt.SKILLLINEABILITY)
     existing_secondary = {
         name: list(state.load_existing_rows(table).values())
         for name, table in SECONDARY_TABLES.items()
@@ -73,21 +74,34 @@ def main() -> int:
     talenttab_resolved = resolve.resolve_rows(
         talents["tabs"], ids_cfg["talenttab"], existing_talenttabs, build.build_talenttab_row,
     )
-    n_unchanged = spell_resolved.unchanged + talent_resolved.unchanged + talenttab_resolved.unchanged
+    skilllineability_resolved = resolve.resolve_rows(
+        talents["skill_line_abilities"], ids_cfg["skilllineability"],
+        existing_skilllineabilities, build.build_skilllineability_row,
+    )
+    n_unchanged = (
+        spell_resolved.unchanged + talent_resolved.unchanged + talenttab_resolved.unchanged
+        + skilllineability_resolved.unchanged
+    )
     if n_unchanged:
         print(
             f"note: {n_unchanged} row(s) in source/ are unchanged copies of existing data "
             f"(pulled in for reference — see apps/dbc-tools/README.md) and were not "
             f"generated: {spell_resolved.unchanged} spell(s), {talent_resolved.unchanged} "
-            f"talent(s), {talenttab_resolved.unchanged} talent tab(s)"
+            f"talent(s), {talenttab_resolved.unchanged} talent tab(s), "
+            f"{skilllineability_resolved.unchanged} skill line abilitie(s)"
         )
-    n_edited = len(spell_resolved.edited_ids) + len(talent_resolved.edited_ids) + len(talenttab_resolved.edited_ids)
+    n_edited = (
+        len(spell_resolved.edited_ids) + len(talent_resolved.edited_ids)
+        + len(talenttab_resolved.edited_ids) + len(skilllineability_resolved.edited_ids)
+    )
     if n_edited:
         print(
             f"editing {len(spell_resolved.edited_ids)} existing spell(s) "
             f"{spell_resolved.edited_ids}, {len(talent_resolved.edited_ids)} talent(s) "
             f"{talent_resolved.edited_ids}, {len(talenttab_resolved.edited_ids)} talent "
-            f"tab(s) {talenttab_resolved.edited_ids}"
+            f"tab(s) {talenttab_resolved.edited_ids}, "
+            f"{len(skilllineability_resolved.edited_ids)} skill line abilitie(s) "
+            f"{skilllineability_resolved.edited_ids}"
         )
 
     # Real build pass (real ReuseContext this time) over just what survived
@@ -96,12 +110,19 @@ def main() -> int:
     spell_rows = [build.build_spell_row(e, reuse) for e in spell_resolved.entries]
     talent_rows = [build.build_talent_row(e) for e in talent_resolved.entries]
     talenttab_rows = [build.build_talenttab_row(e) for e in talenttab_resolved.entries]
+    skilllineability_rows = [
+        build.build_skilllineability_row(e) for e in skilllineability_resolved.entries
+    ]
 
     # -- pending SQL: reserved range + explicit edited IDs, per table --
     blocks = [
         (dbcfmt.SPELL, ids_cfg["spell"], spell_rows, spell_resolved.edited_ids),
         (dbcfmt.TALENT, ids_cfg["talent"], talent_rows, talent_resolved.edited_ids),
         (dbcfmt.TALENTTAB, ids_cfg["talenttab"], talenttab_rows, talenttab_resolved.edited_ids),
+        (
+            dbcfmt.SKILLLINEABILITY, ids_cfg["skilllineability"], skilllineability_rows,
+            skilllineability_resolved.edited_ids,
+        ),
     ]
     for name, table in SECONDARY_TABLES.items():
         blocks.append((table, ids_cfg[name], reuse.minted.get(name, []), []))
@@ -123,6 +144,7 @@ def main() -> int:
         dbcfmt.SPELL: {r["ID"]: r for r in spell_rows},
         dbcfmt.TALENT: {r["ID"]: r for r in talent_rows},
         dbcfmt.TALENTTAB: {r["ID"]: r for r in talenttab_rows},
+        dbcfmt.SKILLLINEABILITY: {r["ID"]: r for r in skilllineability_rows},
     }
     for name, table in SECONDARY_TABLES.items():
         minted = reuse.minted.get(name, [])
@@ -142,9 +164,17 @@ def main() -> int:
                 f"layer (see docs/dbc-build-pipeline.md)."
             )
             continue
-        merged = {row[table.index_column]: row for row in dbcfile.read_dbc(dbc_path, table)}
+        base_rows = dbcfile.read_dbc(dbc_path, table)
+        merged = {row[table.index_column]: row for row in base_rows}
         merged.update(new_rows)
-        dbc_files[table.dbc_filename] = dbcfile.pack_dbc_bytes(table, list(merged.values()))
+        all_rows = list(merged.values())
+        if table is dbcfmt.TALENT:
+            # Talent.dbc's physical row order is load-bearing to the client - see
+            # dbcfile.order_talent_rows's docstring.
+            all_rows = dbcfile.order_talent_rows(all_rows, base_rows)
+            dbc_files[table.dbc_filename] = dbcfile.pack_dbc_bytes(table, all_rows, sort=False)
+        else:
+            dbc_files[table.dbc_filename] = dbcfile.pack_dbc_bytes(table, all_rows)
 
     if dbc_files:
         report = patch_out.write_patch(dbc_files)

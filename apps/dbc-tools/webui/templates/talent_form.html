@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ 'New talent' if not original_id else 'Edit talent ' ~ original_id }} – dbc-tools{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('talent_list', file=file) }}">&larr; {{ file }}.yaml</a></p>
+<h1>{{ 'New talent' if not original_id else 'Edit talent ' ~ original_id }}</h1>
+
+<form method="post" action="{{ url_for('talent_save', file=file) }}">
+  <input type="hidden" name="original_id" value="{{ original_id }}">
+  <div class="field-grid">
+    <label>id<input type="text" name="id" value="{{ ctx.id }}" required></label>
+    <label>tab_id<input type="text" name="tab_id" value="{{ ctx.tab_id }}" required></label>
+    <label>tier <span class="hint">(row, 0-indexed)</span><input type="text" name="tier" value="{{ ctx.tier }}" required></label>
+    <label>column<input type="text" name="column" value="{{ ctx.column }}" required></label>
+    <label>flags<input type="text" name="flags" value="{{ ctx.flags }}"></label>
+  </div>
+
+  <fieldset>
+    <legend>Rank spell IDs <span class="hint">(one Spell.dbc ID per rank, low to high)</span></legend>
+    <div id="rank-rows">
+    {% for v in ctx.rank_spell_ids %}
+      <div class="kv-row">
+        <input type="text" name="rank_spell_id" value="{{ v }}">
+        <button type="button" class="link-button" onclick="this.parentElement.remove(); updateRankPreview()">remove</button>
+      </div>
+    {% endfor %}
+    </div>
+    <button type="button" onclick="addRow('rank-rows', 'rank-row-template'); updateRankPreview()">+ add rank</button>
+  </fieldset>
+
+  <fieldset>
+    <legend>Preview <span class="hint">(from the highest rank's spell — read-only, edit that spell to change it)</span></legend>
+    <div class="field-grid">
+      <label>name<input type="text" id="preview-name" value="{{ (last_rank_info or {}).name or '' }}" readonly></label>
+    </div>
+    <label>description
+      <textarea id="preview-description" rows="3" readonly>{{ (last_rank_info or {}).description or '' }}</textarea>
+    </label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Depends on <span class="hint">(0 / 0 = no prerequisite)</span></legend>
+    <div class="field-grid">
+      <label>talent_id<input type="text" name="depends_on_talent_id" value="{{ ctx.depends_on_talent_id }}"></label>
+      <label>rank<input type="text" name="depends_on_rank" value="{{ ctx.depends_on_rank }}"></label>
+    </div>
+  </fieldset>
+
+  <button type="submit" class="primary">Save</button>
+</form>
+
+<template id="rank-row-template">
+  <div class="kv-row">
+    <input type="text" name="rank_spell_id">
+    <button type="button" class="link-button" onclick="this.parentElement.remove(); updateRankPreview()">remove</button>
+  </div>
+</template>
+
+<script src="{{ url_for('static', filename='rows.js') }}"></script>
+<script>
+async function updateRankPreview() {
+  const inputs = document.querySelectorAll('#rank-rows input[name="rank_spell_id"]');
+  const values = Array.from(inputs).map(i => i.value.trim()).filter(v => v !== '');
+  const nameField = document.getElementById('preview-name');
+  const descField = document.getElementById('preview-description');
+  if (values.length === 0) {
+    nameField.value = '';
+    descField.value = '';
+    return;
+  }
+  const lastId = values[values.length - 1];
+  try {
+    const r = await fetch(`/api/spell-info/${encodeURIComponent(lastId)}`);
+    if (!r.ok) {
+      nameField.value = '(spell not found in source/spells/)';
+      descField.value = '';
+      return;
+    }
+    const data = await r.json();
+    nameField.value = data.name;
+    descField.value = data.description;
+  } catch (e) {
+    // leave whatever was there on a network hiccup
+  }
+}
+document.getElementById('rank-rows').addEventListener('input', updateRankPreview);
+</script>
+{% endblock %}
