@@ -925,9 +925,20 @@ class spell_mage_ice_lance : public SpellScript
             caster->RemoveAurasDueToSpell(SPELL_MAGE_PERMAFROST_STACK);
     }
 
+    // Diagnostic for the Frost Mage rework talent-application investigation (2026-08-27): checks
+    // whether the Frozen Core rank-3 aura is actually present on the caster at the moment an Ice
+    // Lance lands, independent of whether its proc handlers ever fire. Remove once the frozen_core
+    // aura gap is root-caused.
+    void LogFrozenCoreState()
+    {
+        if (Unit* caster = GetCaster())
+            LOG_ERROR("spells", "spell_mage_ice_lance: on hit, caster HasAura(SPELL_MAGE_FROZEN_CORE_R3)={}.", caster->HasAura(SPELL_MAGE_FROZEN_CORE_R3));
+    }
+
     void Register() override
     {
         OnHit += SpellHitFn(spell_mage_ice_lance::ConsumePermafrost);
+        OnHit += SpellHitFn(spell_mage_ice_lance::LogFrozenCoreState);
     }
 };
 
@@ -998,6 +1009,11 @@ class spell_mage_frozen_core : public AuraScript
     // effect's native default action. Gate it here instead.
     void HandleBuffProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
     {
+        // Diagnostic for the Frost Mage rework talent-application investigation (2026-08-27):
+        // confirms whether the native proc system reaches this handler at all when the caster
+        // takes magic damage. Remove once the frozen_core aura gap is root-caused.
+        LOG_ERROR("spells", "spell_mage_frozen_core::HandleBuffProc: called, typeMask={}.", eventInfo.GetTypeMask());
+
         if (!(eventInfo.GetTypeMask() & (PROC_FLAG_TAKEN_SPELL_MAGIC_DMG_CLASS_NEG | PROC_FLAG_TAKEN_PERIODIC)))
             PreventDefaultAction();
     }
@@ -1006,19 +1022,34 @@ class spell_mage_frozen_core : public AuraScript
     {
         PreventDefaultAction();
 
+        // Diagnostic for the Frost Mage rework talent-application investigation (2026-08-27):
+        // confirms whether the native proc system reaches this handler at all, and traces which
+        // gate below is bailing out. Remove once the frozen_core aura gap is root-caused.
+        LOG_ERROR("spells", "spell_mage_frozen_core::HandleCapstoneProc: called, typeMask={}, hitMask={}.", eventInfo.GetTypeMask(), eventInfo.GetHitMask());
+
         SpellInfo const* spellInfo = eventInfo.GetSpellInfo();
         if (!spellInfo || spellInfo->SpellFamilyName != SPELLFAMILY_MAGE
             || !(spellInfo->SpellFamilyFlags[0] & 0x20000)) // Ice Lance
+        {
+            LOG_ERROR("spells", "spell_mage_frozen_core::HandleCapstoneProc: bailed - not an Ice Lance cast (spellInfo={}, id={}).", (void*)spellInfo, spellInfo ? spellInfo->Id : 0);
             return;
+        }
 
         if (!(eventInfo.GetHitMask() & PROC_HIT_CRITICAL))
+        {
+            LOG_ERROR("spells", "spell_mage_frozen_core::HandleCapstoneProc: bailed - not a critical hit.");
             return;
+        }
 
         Unit* caster = GetTarget();
         Unit* target = eventInfo.GetProcTarget();
         if (!caster || !target || !Mage::IsFrozenTarget(caster, target))
+        {
+            LOG_ERROR("spells", "spell_mage_frozen_core::HandleCapstoneProc: bailed - target not frozen (caster={}, target={}).", (void*)caster, (void*)target);
             return;
+        }
 
+        LOG_ERROR("spells", "spell_mage_frozen_core::HandleCapstoneProc: all gates passed, casting Piercing Cold.");
         caster->CastSpell(target, SPELL_MAGE_FROZEN_CORE_PIERCE, true, nullptr, aurEff);
     }
 

@@ -18,7 +18,11 @@
     {% if results %}
       <table>
         <thead>
-          <tr>{% for col in columns %}<th>{{ col }}</th>{% endfor %}</tr>
+          <tr>
+            {% for col in columns %}
+              <th>{{ 'Type' if col == 'subclass' else col }}</th>
+            {% endfor %}
+          </tr>
         </thead>
         <tbody>
           {% for row in results %}
@@ -27,6 +31,10 @@
                 <td>
                   {% if loop.first %}
                     <a href="{{ url_for('item_edit', entry=row[col]) }}">{{ row[col] }}</a>
+                  {% elif col == 'subclass' %}
+                    {% if row['class'] in weapon_armor_classes %}
+                      {{ item_subclass_names.get(row['class'], {}).get(row[col], row[col]) }}
+                    {% endif %}
                   {% else %}
                     {{ row[col] }}
                   {% endif %}

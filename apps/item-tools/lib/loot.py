@@ -1,12 +1,13 @@
 """
 Read-only "what drops where": `instance_template` (map -> dungeon/raid),
-`creature` (spawns) + `creature_template` (name/rank/lootid), and
-`creature_loot_template` + `reference_loot_template` (lootid -> items),
+`creature` (spawns) + `creature_template` (name/rank/lootid),
+`creature_loot_template` + `reference_loot_template` (lootid -> items), and
+`instance_encounters` (which creature entries are a real encounter boss),
 joined against `item_template`'s already-overlay-aware rows from
 `lib.overlay.get_rows()` so an edit made through this tool shows up here
 immediately.
 
-Base-dump only for the four tables above (no pending-SQL overlay replay
+Base-dump only for the five tables above (no pending-SQL overlay replay
 the way `lib/overlay.py` does for `item_template`) - this repo's history
 hasn't added custom loot yet, and these tables are large enough
 (`creature.sql` alone is ~150k rows) that extending the replay machinery
@@ -17,9 +18,9 @@ through `lib.overlay.get_rows()`, not read again here.
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
+from .item_enums import ITEM_MOD_NAMES
 from .overlay import REPO_ROOT, get_rows
 from .sql_dump import parse_create_table_columns, read_table_dump, read_table_rows
 
@@ -29,29 +30,7 @@ CREATURE = BASE_DIR / "creature.sql"
 CREATURE_TEMPLATE = BASE_DIR / "creature_template.sql"
 CREATURE_LOOT_TEMPLATE = BASE_DIR / "creature_loot_template.sql"
 REFERENCE_LOOT_TEMPLATE = BASE_DIR / "reference_loot_template.sql"
-
-# ItemModType (apps/item-tools' own reading of the enum this fork actually
-# ships, not the stock one) - src/server/game/Entities/Item/ItemTemplate.h,
-# "enum ItemModType". Re-check that file if this list looks stale; slots
-# 22/23/24 are this fork's custom repurposing (see the enum's own comments
-# there), not stock ITEM_MOD_HIT_TAKEN_*.
-ITEM_MOD_NAMES = {
-    0: "Mana", 1: "Health", 3: "Agility", 4: "Strength", 5: "Intellect",
-    6: "Spirit", 7: "Stamina", 12: "Defense Rating", 13: "Dodge Rating",
-    14: "Parry Rating", 15: "Block Rating", 16: "Melee Hit Rating",
-    17: "Ranged Hit Rating", 18: "Spell Hit Rating", 19: "Melee Crit Rating",
-    20: "Ranged Crit Rating", 21: "Spell Crit Rating", 22: "Mastery Rating",
-    23: "Versatility Rating", 24: "Cooldown Rating",
-    25: "Crit Taken Melee Rating", 26: "Crit Taken Ranged Rating",
-    27: "Crit Taken Spell Rating", 28: "Melee Haste Rating",
-    29: "Ranged Haste Rating", 30: "Spell Haste Rating", 31: "Hit Rating",
-    32: "Crit Rating", 33: "Proc Rating", 34: "Crit Taken Rating",
-    35: "Resilience Rating", 36: "Haste Rating", 37: "Expertise Rating",
-    38: "Attack Power", 39: "Ranged Attack Power",
-    41: "Spell Healing Done", 42: "Spell Damage Done", 43: "Mana Regen",
-    44: "Armor Penetration Rating", 45: "Spell Power", 46: "Health Regen",
-    47: "Spell Penetration", 48: "Block Value",
-}
+INSTANCE_ENCOUNTERS = BASE_DIR / "instance_encounters.sql"
 
 # SharedDefines.h ITEM_QUALITY_* (0-7, standard client values, unmodified by
 # this fork). Also the .item-quality-N CSS classes in style.css.
@@ -60,8 +39,17 @@ QUALITY_NAMES = {
     4: "Epic", 5: "Legendary", 6: "Artifact", 7: "Heirloom",
 }
 
-# CreatureEliteType (SharedDefines.h).
+# CreatureEliteType (SharedDefines.h). Not what dungeon_summary uses to
+# decide "Boss" vs "Trash Drops" (see _boss_creature_entries below) - every
+# dungeon boss is also just rank Elite, same as a dungeon's trash, so rank
+# alone can't tell them apart. It's still shown next to a creature's name.
 RANK_NAMES = {0: "", 1: "Elite", 2: "Rare Elite", 3: "Boss", 4: "Rare"}
+CREATURE_ELITE_WORLDBOSS = 3  # SharedDefines.h - a second, rank-based boss signal; see below
+
+# Map.h EncounterCreditType - instance_encounters.creditType. Only KILL_
+# CREATURE rows point at a creature_template entry (CAST_SPELL rows'
+# creditEntry is a spell ID instead, and are skipped).
+ENCOUNTER_CREDIT_KILL_CREATURE = 0
 
 _NAME_OVERRIDES = {
     "instance_the_stockade": "The Stockade",
@@ -156,6 +144,34 @@ def _reference_loot() -> dict[int, list[dict]]:
     return _loot_table(REFERENCE_LOOT_TEMPLATE, "reference_loot_template")
 
 
+def _boss_creature_entries() -> set[int]:
+    """creature_template entries that are a real encounter boss - built
+    from `instance_encounters` (`data/sql/base/db_world/
+    instance_encounters.sql`, achievement/kill-credit tracking data), not
+    `rank`: a dungeon's own boss is rank Elite, identical to its trash, so
+    rank can't tell them apart the way it can for a raid's rank-WORLDBOSS
+    bosses (still folded in too, via CREATURE_ELITE_WORLDBOSS in
+    dungeon_summary - belt and suspenders, since some world-boss-style
+    encounters have no instance_encounters row at all).
+
+    Coverage gap worth knowing: this only lists what's actually in that
+    table - a boss encounter with no instance_encounters row, or one whose
+    row is creditType CAST_SPELL rather than KILL_CREATURE (no creature
+    entry to point at), won't be flagged. It also can't catch a boss
+    that's summoned dynamically by a script rather than placed as a static
+    `creature` table spawn (e.g. ICC's Sindragosa) - creatures_on_map()
+    itself never sees those rows either way, so they're missing from the
+    dungeon browser entirely, not just misclassified."""
+    def build():
+        cols = parse_create_table_columns(INSTANCE_ENCOUNTERS, "instance_encounters")
+        rows = read_table_rows(INSTANCE_ENCOUNTERS, "instance_encounters", tuple(cols))
+        return {
+            row["creditEntry"] for row in rows
+            if row["creditType"] == ENCOUNTER_CREDIT_KILL_CREATURE
+        }
+    return _cached("boss_creature_entries", INSTANCE_ENCOUNTERS, build)
+
+
 def creatures_on_map(map_id: int) -> list[dict]:
     """creature_template rows for every distinct creature spawned on
     `map_id`, sorted by name."""
@@ -217,20 +233,51 @@ def summarize_stats(item_row: dict) -> list[str]:
     return out
 
 
-def dungeon_summary(map_id: int, min_quality: int = 2) -> list[dict]:
-    """One entry per creature on `map_id` that drops at least one item at
-    or above `min_quality`, each with its qualifying loot resolved against
-    the live (overlay-aware) item_template rows."""
+def dungeon_summary(map_id: int, min_quality: int = 2) -> dict:
+    """`{"bosses": [...], "trash": [...]}` for every creature on `map_id`
+    that drops at least one item at or above `min_quality`, resolved
+    against the live (overlay-aware) item_template rows.
+
+    A creature counts as a boss - keeping its own per-creature entry under
+    "bosses" - if it's in `_boss_creature_entries()` (real encounter data,
+    not rank: see that function's docstring for why rank alone can't tell
+    a dungeon's boss from its trash) or is rank CREATURE_ELITE_WORLDBOSS.
+    Everything else (normal/elite/rare elite/rare trash) is pooled by item
+    into "trash", one row per unique item regardless of how many different
+    trash creatures drop it (a dungeon's trash list is usually large and
+    overlapping; per-creature trash blocks the way bosses get them just
+    isn't "at a glance")."""
     items = get_rows()
-    summary = []
+    boss_entries = _boss_creature_entries()
+    bosses = []
+    trash_by_item: dict[int, dict] = {}
     for creature in creatures_on_map(map_id):
         drops = []
-        for loot in loot_for_creature(creature):
-            item = items.get(loot["item"])
+        for one_drop in loot_for_creature(creature):
+            item = items.get(one_drop["item"])
             if item is None or item["Quality"] < min_quality:
                 continue
-            drops.append({**loot, "item_row": item})
-        if drops:
+            drops.append({**one_drop, "item_row": item})
+        if not drops:
+            continue
+        if creature["entry"] in boss_entries or creature["rank"] == CREATURE_ELITE_WORLDBOSS:
             drops.sort(key=lambda d: -d["item_row"]["Quality"])
-            summary.append({"creature": creature, "drops": drops})
-    return summary
+            bosses.append({"creature": creature, "drops": drops})
+        else:
+            for drop in drops:
+                bucket = trash_by_item.setdefault(drop["item"], {
+                    "item_row": drop["item_row"], "chance": drop["chance"],
+                    "quest_required": False, "creatures": set(),
+                })
+                bucket["chance"] = max(bucket["chance"], drop["chance"])
+                bucket["quest_required"] = bucket["quest_required"] or drop["quest_required"]
+                bucket["creatures"].add(creature["name"])
+
+    trash = sorted(
+        (
+            {**bucket, "creatures": sorted(bucket["creatures"])}
+            for bucket in trash_by_item.values()
+        ),
+        key=lambda b: (-b["item_row"]["Quality"], b["item_row"]["name"]),
+    )
+    return {"bosses": bosses, "trash": trash}

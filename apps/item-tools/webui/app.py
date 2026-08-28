@@ -29,13 +29,31 @@ sys.path.insert(0, str(TOOL_ROOT))
 
 from flask import Flask, abort, flash, redirect, render_template, request, url_for  # noqa: E402
 
-from lib import emit, ids, loot, schema  # noqa: E402
+from lib import emit, ids, item_enums, loot, schema  # noqa: E402
 from lib.overlay import REPO_ROOT, get_rows  # noqa: E402
 
 app = Flask(__name__)
 app.secret_key = "item-tools-local-only"  # no auth, no cookies leave this machine's browser
 
 MAX_SEARCH_RESULTS = 300
+
+# (class id, subclass id, "Class: Subclass" label), sorted for the item
+# form's subclass <select> - one flat list covering every class, filtered
+# down client-side (webui/static/item-form.js) when the class field
+# changes. See lib/item_enums.py for where these names come from.
+SUBCLASS_OPTIONS = [
+    (class_id, subclass_id, f"{item_enums.ITEM_CLASS_NAMES[class_id]}: {label}")
+    for class_id, subclasses in sorted(item_enums.ITEM_SUBCLASS_NAMES.items())
+    for subclass_id, label in sorted(subclasses.items())
+]
+# A handful of real item_template rows use a (class, subclass) combination
+# outside lib/item_enums.py's per-class table (verified against this repo's
+# actual data - e.g. some class-12 "Quest" items use subclass 3 or 8, which
+# isn't one of the values ItemSubclassQuest defines). item_form.html adds a
+# fallback option for those so the field renders "(unrecognized)" and stays
+# selected, rather than silently snapping to whatever option happens to be
+# first in the list - which would corrupt the row on any unrelated save.
+SUBCLASS_PAIRS = {(class_id, subclass_id) for class_id, subclass_id, _ in SUBCLASS_OPTIONS}
 
 
 def _display_path(path: Path) -> str:
@@ -64,6 +82,20 @@ def _row_from_form(form, columns: list[str], reference_row: dict) -> dict:
         raw = form.get(col, "")
         row[col] = _coerce(raw, reference_row.get(col, ""))
     return row
+
+
+def _form_enum_context() -> dict:
+    """Kwargs shared by both item_form.html renders (new/edit) for its
+    class/subclass/stat-type <select>s - see lib/item_enums.py."""
+    return {
+        "item_class_names": item_enums.ITEM_CLASS_NAMES,
+        "subclass_options": SUBCLASS_OPTIONS,
+        "subclass_pairs": SUBCLASS_PAIRS,
+        "item_mod_names": item_enums.ITEM_MOD_NAMES,
+        "item_mod_custom": item_enums.ITEM_MOD_CUSTOM,
+        "item_mod_deprecated": item_enums.ITEM_MOD_DEPRECATED,
+        "inventory_type_names": item_enums.INVENTORY_TYPE_NAMES,
+    }
 
 
 def _describe_changes(changes: dict, original: dict) -> str:
@@ -109,6 +141,8 @@ def item_list():
         truncated=truncated,
         total_matches=len(results),
         columns=schema.LIST_COLUMNS,
+        item_subclass_names=item_enums.ITEM_SUBCLASS_NAMES,
+        weapon_armor_classes=item_enums.WEAPON_ARMOR_CLASSES,
     )
 
 
@@ -149,6 +183,7 @@ def item_new():
         sections=schema.sections(),
         is_new=True,
         custom_range=ids.item_range(),
+        **_form_enum_context(),
     )
 
 
@@ -187,6 +222,7 @@ def item_edit(entry: int):
         sections=schema.sections(),
         is_new=False,
         custom_range=ids.item_range(),
+        **_form_enum_context(),
     )
 
 
@@ -200,10 +236,11 @@ def dungeon_list():
     rows = []
     for map_id, name in sorted(maps.items(), key=lambda kv: kv[1]):
         summary = loot.dungeon_summary(map_id, min_quality=min_quality)
-        item_count = sum(len(entry["drops"]) for entry in summary)
+        trash_creatures = {c for item in summary["trash"] for c in item["creatures"]}
         rows.append({
             "map_id": map_id, "name": name,
-            "creature_count": len(summary), "item_count": item_count,
+            "creature_count": len(summary["bosses"]) + len(trash_creatures),
+            "item_count": sum(len(b["drops"]) for b in summary["bosses"]) + len(summary["trash"]),
         })
     rows.sort(key=lambda r: (-r["item_count"], r["name"]))
     return render_template(

@@ -72,9 +72,18 @@ dbc-tools/webui.
   e.g. `instance_icecrown_citadel` &rarr; "Icecrown Citadel" - not
   hand-typed, so it can't drift from what the DB actually has), each
   showing how many creatures on it drop an item at or above a quality
-  filter. Click through to a map (`/dungeons/<id>`) for the per-creature
-  drop list - name, quality badge, ilvl, stat summary, and a link straight
-  into that item's edit form. `lib/loot.py` resolves `creature` (spawns)
+  filter. Click through to a map (`/dungeons/<id>`) for the drop list - name,
+  quality badge, ilvl, stat summary, and a link straight into that item's
+  edit form. A creature is classified as a boss - keeping its own block -
+  if it's a real tracked encounter in `instance_encounters` (achievement/
+  kill-credit data - not `rank`: a dungeon's own boss is rank Elite,
+  identical to its trash, so rank alone can't tell them apart the way it
+  can for a raid's rank-WORLDBOSS bosses, which count too as a second
+  signal). Everything else is pooled into one "Trash Drops" list per
+  unique item (with which creatures drop it), rather than one block per
+  trash creature - a dungeon's trash list is usually large and
+  overlapping, and per-creature blocks for it aren't "at a glance".
+  `lib/loot.py` resolves `creature` (spawns)
   &rarr; `creature_template` (lootid) &rarr; `creature_loot_template` (+ one
   level of `Reference` expansion through `reference_loot_template`)
   &rarr; `item_template`, joining that last step against the *same*
@@ -83,7 +92,11 @@ dbc-tools/webui.
   after starting the app parses all of `creature.sql` (~150k rows) plus
   both loot tables and is slow (several seconds); everything after that is
   served from an in-memory cache.
-- **Browse** (`/items`) - search by entry ID or a name substring.
+- **Browse** (`/items`) - search by entry ID or a name substring. The
+  `subclass` column reads as "Type" and only shows a name (weapon type for
+  class Weapon, armor type for class Armor) for those two classes - a
+  subclass number doesn't mean "type" for anything else, so it's left
+  blank there rather than shown as a number that isn't a type.
 - **Edit** (`/items/<entry>`) - every friendly-grouped field from
   `lib/schema.py`'s sections, plus a required change note. Saving diffs
   your edits against the row as loaded and writes one guarded `UPDATE`
@@ -101,10 +114,19 @@ dbc-tools/webui.
 
 ## Known limitations
 
-- No enum-name dropdowns for raw integer columns (`class`/`subclass`/
-  `Quality`/`bonding`/inventory type/.../...) - plain numeric inputs, same
-  posture as dbc-tools' spell form for the columns it doesn't model
-  specially.
+- `class`, `subclass`, `InventoryType`, and the 10 `stat_typeN` slots are
+  dropdowns with real names (`lib/item_enums.py`, read from this repo's own
+  `ItemTemplate.h` - including the stat types this fork has repurposed,
+  22/23/24/33, labeled "(custom)"). Picking a class filters the subclass
+  list client-side, but only in response to actually changing the class
+  field - on page load an existing row's value is never touched, even if
+  it's a (class, subclass) combination, stat type, or inventory type
+  outside the known table (a handful of real rows are - shows as
+  "(unrecognized)", stays selected, saves back unchanged unless you
+  deliberately edit it). Every other raw integer column (`Quality`,
+  `bonding`, ...) is still a plain numeric input, same posture as
+  dbc-tools' spell form
+  for the columns it doesn't model specially.
 - `item_template_locale` (localized name/description) isn't read or
   written - only the base `item_template` row.
 - The base-file WHERE-clause replay in `lib/overlay.py` understands
@@ -116,14 +138,24 @@ dbc-tools/webui.
 - No concurrent-edit locking (single-user tool, same as dbc-tools/webui) -
   git is the safety net if two edits collide.
 - The dungeon/raid browser (`lib/loot.py`) reads `creature`,
-  `creature_template`, `creature_loot_template`, and
-  `reference_loot_template` from their **base dumps only** - unlike
+  `creature_template`, `creature_loot_template`, `reference_loot_template`,
+  and `instance_encounters` from their **base dumps only** - unlike
   `item_template`, it doesn't replay `pending_db_world`/`updates/db_world`
-  changes to those four tables. Not an issue yet (no custom loot exists in
+  changes to those five tables. Not an issue yet (no custom loot exists in
   this repo's history), but a pending change to one of them won't show up
   in the dungeon view until it's merged. `item_template` itself is always
   current either way, since the dungeon view joins against
   `lib.overlay.get_rows()`, not a fresh base-only read.
+- Boss detection (`lib/loot._boss_creature_entries`) only knows what
+  `instance_encounters` (achievement/kill-credit data) and
+  `CREATURE_ELITE_WORLDBOSS` rank actually cover. A boss with no
+  `instance_encounters` row, a `CAST_SPELL`-credited one (no creature
+  entry to point at), or one summoned dynamically by a script rather than
+  placed as a static `creature` spawn (ICC's Sindragosa and Valithria
+  Dreamwalker, for example - `creatures_on_map()` never sees those rows
+  either way) won't show up under "Bosses"; a handful of real encounters
+  fall into one of these and are simply missing from the dungeon view
+  entirely, not misclassified as trash.
 - Loot-group entries (several items competing for one drop slot via
   `creature_loot_template.GroupId`) often show a raw 0% chance - that
   column isn't a plain per-item percentage for grouped drops, and this

@@ -36,7 +36,17 @@ shouldn't need to hand-write either if you're going through the webui.
 `/dungeons` and `/dungeons/<map_id>` (`lib/loot.py`) join `creature` +
 `creature_template` + `creature_loot_template`/`reference_loot_template`
 against `item_template` to show what drops where, with a link into each
-item's edit form. Those four non-item tables are read from their **base
-dumps only** (no pending-SQL replay) - see the README's "Known
-limitations" before assuming a change to creature loot shows up there
-immediately.
+item's edit form. Those tables (plus `instance_encounters`, used for boss
+detection - see the next paragraph) are read from their **base dumps
+only** (no pending-SQL replay) - see the README's "Known limitations"
+before assuming a change to creature loot shows up there immediately.
+
+**Boss vs "Trash Drops" isn't `rank`.** A dungeon's own boss is `rank ==
+CREATURE_ELITE_ELITE`, identical to its trash - only a raid's bosses are
+reliably `rank == CREATURE_ELITE_WORLDBOSS`. So boss detection is instead
+built from `instance_encounters` (real achievement/kill-credit data,
+`creditType == ENCOUNTER_CREDIT_KILL_CREATURE` rows give a creature_template
+entry), unioned with the WORLDBOSS-rank signal as a fallback. See
+`lib.loot._boss_creature_entries`'s docstring for the coverage gaps (a
+boss with no instance_encounters row, or one summoned dynamically rather
+than statically spawned, won't be flagged and simply won't appear).
