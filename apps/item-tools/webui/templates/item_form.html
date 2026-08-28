@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}{{ 'New item' if is_new else row.name }} - item-tools{% endblock %}
+{% block content %}
+  {% if is_new %}
+    <h1>New item</h1>
+    <p class="hint">Entry defaults to the next free ID in this tool's reserved block
+      ({{ custom_range.start }}&ndash;{{ custom_range.end }}, see <code>source/ids.yaml</code>) -
+      change it only if you have a specific ID in mind and know it's free.</p>
+  {% else %}
+    <h1>{{ row.name }} <span class="hint">(entry {{ entry }})</span></h1>
+  {% endif %}
+
+  <form method="post">
+    {% for title, cols in sections %}
+      <fieldset>
+        <legend>{{ title }}</legend>
+        <div class="field-grid">
+          {% for col in cols %}
+            <label>
+              {{ col }}
+              {% if col == 'entry' and not is_new %}
+                <input type="text" name="entry" value="{{ row[col] }}" readonly>
+              {% elif row[col] is string %}
+                <input type="text" name="{{ col }}" value="{{ row[col] }}">
+              {% else %}
+                <input type="number" step="any" name="{{ col }}" value="{{ row[col] }}">
+              {% endif %}
+            </label>
+          {% endfor %}
+        </div>
+      </fieldset>
+    {% endfor %}
+
+    <fieldset>
+      <legend>Change note <span class="hint">(required - becomes the pending SQL file's comment)</span></legend>
+      <textarea name="note" rows="3" required
+        placeholder="Why is this change happening? e.g. &quot;retuning drop from Naxx per playtest feedback&quot;"></textarea>
+    </fieldset>
+
+    <button type="submit" class="button primary">{{ 'Create item' if is_new else 'Save changes' }}</button>
+  </form>
+{% endblock %}

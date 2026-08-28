@@ -7,6 +7,8 @@ Nothing here talks to the filesystem — that's app.py's job, via lib/source.py.
 
 from __future__ import annotations
 
+import re
+
 import gamedata
 from lib.source import SPELL_CSV_FIELDNAMES, SPELL_CSV_FLOAT_FIELDS, SPELL_CSV_INT_FIELDS
 
@@ -46,13 +48,34 @@ def _blank(s: str | None) -> bool:
     return s is None or s.strip() == ""
 
 
+# Backslash escapes recognized in a raw_overrides text value, so a
+# Description_Lang_enUS-style string can carry a real newline through the
+# single-line <input> the webui edits it in. Matches the convention already
+# used when hand-authoring source/spells/*.csv JSON directly: a lone \n in
+# the source text is what json.loads() turns into an actual newline byte —
+# see docs on Description_Lang_enUS multi-line tooltips (e.g. Frostbite,
+# spell 11071). Before this, the webui stored \n literally (as backslash-n
+# text) and json.dumps escaped that backslash again on save, so a value
+# typed in the CMS could never come out as a real newline in-game.
+_TEXT_ESCAPES = {"n": "\n", "t": "\t", "\\": "\\"}
+
+
+def _unescape_text(text: str) -> str:
+    return re.sub(r"\\(.)", lambda m: _TEXT_ESCAPES.get(m.group(1), m.group(0)), text)
+
+
+def _escape_text(text: str) -> str:
+    return text.replace("\\", "\\\\").replace("\n", "\\n").replace("\t", "\\t")
+
+
 def parse_scalar(text: str):
     """Best-effort typed parse for one raw_overrides value: int, then float,
-    then true/false/null, else the literal string. Matches the kinds of
-    values raw_overrides actually holds (mostly ints/floats, a handful of
-    text strings like a Description_Lang_enUS — some of those legitimately
-    empty, e.g. "NameSubtext_Lang_enUS": "" — so a blank box means empty
-    string, not null; type the literal word "null" for that."""
+    then true/false/null, else the literal string (with \\n/\\t/\\\\ unescaped
+    — see _unescape_text). Matches the kinds of values raw_overrides actually
+    holds (mostly ints/floats, a handful of text strings like a
+    Description_Lang_enUS — some of those legitimately empty, e.g.
+    "NameSubtext_Lang_enUS": "" — so a blank box means empty string, not
+    null; type the literal word "null" for that."""
     text = text.strip()
     if text == "":
         return ""
@@ -71,7 +94,7 @@ def parse_scalar(text: str):
         return False
     if low == "null":
         return None
-    return text
+    return _unescape_text(text)
 
 
 def format_scalar(value) -> str:
@@ -79,6 +102,8 @@ def format_scalar(value) -> str:
         return ""
     if isinstance(value, bool):
         return "true" if value else "false"
+    if isinstance(value, str):
+        return _escape_text(value)
     return str(value)
 
 

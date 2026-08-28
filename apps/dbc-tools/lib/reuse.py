@@ -2,9 +2,11 @@
 Reuse-or-mint matching for the small "lookup" DBCs referenced by spell
 effects (SpellCastTimes, SpellDuration, SpellRange, SpellRadius).
 
-Index 0 is treated as the stock "none/instant/no radius" sentinel in all
-four tables (standard WotLK DBC convention), so a spell that doesn't need
-one of these just gets index 0 rather than a matched or minted row.
+Index 0 is treated as the stock "none/instant/no radius" sentinel in
+SpellCastTimes/SpellRange/SpellRadius (standard WotLK DBC convention), so a
+spell that doesn't need one of these just gets index 0 rather than a matched
+or minted row. SpellDuration is the one exception - see duration_index below,
+this is NOT "index 0 means permanent" the way the other three tables work.
 
 Otherwise: given a wanted set of field values, look for an existing row
 (base client DBC ⊕ current SQL overlay, passed in by the caller) whose
@@ -84,8 +86,24 @@ class ReuseContext:
         )
 
     def duration_index(self, duration_ms: int | None) -> int:
+        # Bugfix (2026-08-26, "Icicles never stacks" playtest report): a falsy duration_ms means
+        # "this aura shouldn't naturally expire", but index 0 does NOT mean that here - unlike
+        # SpellCastTimes/SpellRange/SpellRadius, the real client's SpellDuration.dbc has no row at
+        # all for ID 0 (confirmed by direct extraction of the shipped file), so
+        # SpellInfo::GetDuration() (SpellInfo.cpp) falls through its `if (!DurationEntry) return 0`
+        # branch - a literal, immediately-expiring 0ms duration, not permanent. Aura::CalcMaxDuration
+        # (SpellAuras.cpp) papers over this with a `IsPassive() && !DurationEntry -> -1` special case,
+        # which is why this was invisible for passive-marked rows (e.g. Biting Cold, 200010-200012)
+        # but broke Icicles (200001, not passive - it's a script-managed stacking buff, not a known
+        # ability) outright: every recast synced to a fresh 0-duration aura instead of adding a stack
+        # to the existing one. Reuse the real permanent row (Duration/MaxDuration both -1) instead.
         if not duration_ms:
-            return 0
+            return self._tables["spellduration"].find_or_mint(
+                {"Duration": -1, "DurationPerLevel": 0, "MaxDuration": -1},
+                lambda new_id: {
+                    "ID": new_id, "Duration": -1, "DurationPerLevel": 0, "MaxDuration": -1,
+                },
+            )
         return self._tables["spellduration"].find_or_mint(
             {"Duration": duration_ms, "DurationPerLevel": 0, "MaxDuration": duration_ms},
             lambda new_id: {

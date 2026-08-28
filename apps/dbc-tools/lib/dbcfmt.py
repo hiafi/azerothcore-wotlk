@@ -127,6 +127,18 @@ SPELL = DbcTable(
         ("EffectMultipleValue", 3), ("EffectChainTargets", 3),
         ("EffectItemType", 3), ("EffectMiscValue", 3), ("EffectMiscValueB", 3),
         ("EffectTriggerSpell", 3), ("EffectPointsPerCombo", 3),
+        # GOTCHA (found 2026-08-27, see docs/dbc-build-pipeline.md "Bug 3"): unlike every other
+        # per-effect field above, the letter here is the effect index (A=Effect_1, B=Effect_2,
+        # C=Effect_3 - zero-based Effects[0..2] in the engine) and the _1/_2/_3 suffix is which of
+        # that effect's 3 SpellFamilyFlags dwords - the reverse of what "_N = effect index" would
+        # suggest by analogy with EffectBasePoints_1/2/3 etc. To scope Effect_2's own SpellMod (or
+        # any per-effect classmask) to specific spells, the columns are EffectSpellClassMaskB_1/2/3
+        # - NOT EffectSpellClassMaskA_2, which is Effect_1's second dword and leaves Effect_2's
+        # actual classmask all-zero (SpellInfo::IsAffected treats all-zero as "matches every spell
+        # in the family"). Got this backwards for Permafrost/Chilled to the Bone
+        # (apps/dbc-tools/source/spells/mage_talents.csv) - fixed there; audit any other
+        # hand-authored (non-"pulled from existing data") EffectSpellClassMask override before
+        # trusting it.
         ("EffectSpellClassMaskA", 3), ("EffectSpellClassMaskB", 3),
         ("EffectSpellClassMaskC", 3), ("SpellVisualID", 2), "SpellIconID",
         "ActiveIconID", "SpellPriority",

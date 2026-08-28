@@ -170,13 +170,13 @@ namespace FrostMageRework
     }
 
     // The unified "frozen" check from the redesign's Interaction Rules section: a real freeze, a
-    // Fingers of Frost charge, or Shattering Cold. Ice Lance's triple damage and Shatter's crit
-    // bonus already get the real-freeze case for free from engine code (Unit.cpp's
-    // SPELLFAMILY_MAGE "Custom scripted damage" block and SpellTakenCritChance's Shatter case),
-    // but neither of those goes through this helper, so anything that also needs to recognize
-    // Fingers of Frost / Shattering Cold (Deep Freeze's usability gate, Frostbite's Mastery
-    // capstone) has to call this explicitly. Delegates to Mage::IsFrozenTarget (MageMechanics.h,
-    // core) rather than reimplementing - that's the canonical copy now; kept as a thin wrapper
+    // Fingers of Frost charge, or Shattering Cold - the *only* thing "frozen" ever means in this
+    // rework. Every frozen-state check in the codebase goes through this definition, either via
+    // this wrapper or by calling Mage::IsFrozenTarget directly (Ice Lance's triple damage and
+    // Permafrost in MageMechanics.cpp, Shatter's crit bonus in Unit.cpp, Frozen Core's capstone
+    // below) - none of them fall back to the engine's native AURA_STATE_FROZEN alone. Delegates to
+    // Mage::IsFrozenTarget (MageMechanics.h, core) rather than reimplementing - that's the
+    // canonical copy now; kept as a thin wrapper
     // here (rather than switching every caller in this file to Mage::IsFrozenTarget directly) so
     // this namespace's existing call sites don't need to change.
     bool IsFrozenFor(Unit const* target, Unit const* caster)
@@ -907,24 +907,22 @@ class spell_mage_permafrost : public AuraScript
     }
 };
 
-// 30455 - Ice Lance. Consumes 1 stack of the Permafrost buff (200015) per cast - the +20% damage
-// bonus itself is read in Mage::ApplyDoneDamagePctMods (MageMechanics.cpp) *before* this fires
-// (damage calc happens ahead of OnHit's post-processing, same relative ordering Biting Cold and
-// Flurry already rely on), so reading-then-consuming here is safe. "Stacks up to 5" is read as
-// banked charges (each Ice Lance cast spends exactly one for a flat +20%), not a multiplicative
-// per-stack bonus - the redesign text doesn't fully disambiguate this, flagged for playtest.
+// 30455 - Ice Lance. Consumes the *entire* Permafrost buff (200015) in one cast, however many
+// stacks are banked - the damage bonus itself is read in Mage::ApplyDoneDamagePctMods
+// (MageMechanics.cpp) *before* this fires (damage calc happens ahead of OnHit's post-processing,
+// same relative ordering Biting Cold and Flurry already rely on), so reading-then-consuming here
+// is safe. Playtest bugfix (2026-08-26, user call): originally consumed 1 stack per cast for a
+// flat +20% regardless of banked count - changed to clear-all-at-once so banking up multiple
+// stacks before casting is actually worth doing (the damage bonus now scales with stack count to
+// match, see MageMechanics.cpp).
 class spell_mage_ice_lance : public SpellScript
 {
     PrepareSpellScript(spell_mage_ice_lance);
 
     void ConsumePermafrost()
     {
-        Unit* caster = GetCaster();
-        if (!caster)
-            return;
-
-        if (Aura* permafrost = caster->GetAura(SPELL_MAGE_PERMAFROST_STACK))
-            permafrost->ModStackAmount(-1);
+        if (Unit* caster = GetCaster())
+            caster->RemoveAurasDueToSpell(SPELL_MAGE_PERMAFROST_STACK);
     }
 
     void Register() override

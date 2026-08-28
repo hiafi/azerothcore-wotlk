@@ -66,10 +66,13 @@ namespace Mage
     {
         Unit* owner = caster->GetOwner() ? caster->GetOwner() : caster;
 
-        // Ice Lance
+        // Ice Lance. "Frozen" here is the redesign's unified definition (docs/frost-mage-
+        // redesign.md sec 3 "Frozen state") - real freeze, Fingers of Frost, or Shattering Cold -
+        // same as Shatter's crit bonus (Unit.cpp) and Frozen Core's capstone (spell_mage.cpp), not
+        // just the engine's native AURA_STATE_FROZEN.
         if (spellProto->SpellIconID == 186)
         {
-            if (victim->HasAuraState(AURA_STATE_FROZEN, spellProto, caster))
+            if (IsFrozenTarget(caster, victim))
             {
                 // Glyph of Ice Lance
                 if (owner->HasAura(56377) && victim->GetLevel() > owner->GetLevel())
@@ -80,9 +83,18 @@ namespace Mage
 
             // Permafrost capstone (Frost Mage rework, docs/frost-mage-redesign.md sec 4 Row 2,
             // rank 3) - "increasing the damage of your next Ice Lance by 20%." The stack buff
-            // (200015, icon 143 - reused from the talent's own icon) is consumed 1-per-cast by
+            // (200015, icon 143 - reused from the talent's own icon) is consumed entirely by
             // spell_mage_ice_lance (spell_mage.cpp) after this damage calc runs; read here rather
-            // than a static aura since the bonus only applies while a stack is actually banked.
+            // than a static aura since the bonus only applies while stacks are actually banked.
+            // Playtest bugfix (2026-08-26, user call): scales with stack count (20% * stacks, up
+            // to 100% at 5) rather than a flat 20% regardless of how many were banked, now that
+            // Ice Lance clears the whole stack in one cast instead of spending 1 at a time -
+            // otherwise banking past 1 stack would have no payoff.
+            // Playtest bugfix (2026-08-27, user call): GetAmount() already factors in the current
+            // stack count (AuraEffect::CalculateAmount() does `amount *= GetBase()->GetStackAmount()`
+            // before returning - see SpellAuraEffects.cpp), so multiplying by GetStackAmount() again
+            // here double-counted it (20% * stacks^2 instead of 20% * stacks - e.g. 5 stacks read as
+            // +500% instead of the intended +100%).
             if (AuraEffect* aurEff = caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_MAGE, 143, EFFECT_0))
                 AddPct(doneTotalMod, aurEff->GetAmount());
         }

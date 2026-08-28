@@ -4,27 +4,6 @@
   --muted: #666;
   --error: #b00020;
   --ok: #0a7a2f;
-  /* Damage-per-level chart: one hue (blue), monotone lightness steps for the
-     4 power amounts (0/500/1000/2000) — an ordinal ramp, not categorical,
-     since the lines are an ordered progression rather than unrelated
-     series. Validated with dataviz's validate_palette.js --ordinal. */
-  --chart-power-0: #86b6ef;
-  --chart-power-500: #5598e7;
-  --chart-power-1000: #2a78d6;
-  --chart-power-2000: #184f95;
-  --chart-grid: #e1e0d9;
-  --chart-axis: #c3c2b7;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --chart-power-0: #b7d3f6;
-    --chart-power-500: #6da7ec;
-    --chart-power-1000: #2a78d6;
-    --chart-power-2000: #184f95;
-    --chart-grid: #2c2c2a;
-    --chart-axis: #383835;
-  }
 }
 
 * { box-sizing: border-box; }
@@ -36,6 +15,9 @@ body {
 }
 
 header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
   padding: 0.75rem 1.5rem;
   border-bottom: 1px solid var(--border);
 }
@@ -45,6 +27,10 @@ header {
   text-decoration: none;
   font-size: 1.1rem;
 }
+
+header nav { display: flex; gap: 1rem; }
+header nav a { text-decoration: none; color: inherit; }
+header nav a:hover { text-decoration: underline; }
 
 main {
   max-width: 60rem;
@@ -67,10 +53,6 @@ th, td {
   vertical-align: top;
 }
 
-td.notes { color: var(--muted); max-width: 22rem; }
-td.actions { white-space: nowrap; }
-td.actions form { display: inline; }
-
 .button, button {
   font: inherit;
 }
@@ -81,15 +63,6 @@ td.actions form { display: inline; }
   border: 1px solid var(--border);
   border-radius: 4px;
   text-decoration: none;
-}
-
-.link-button {
-  background: none;
-  border: none;
-  padding: 0;
-  color: inherit;
-  text-decoration: underline;
-  cursor: pointer;
 }
 
 button.primary {
@@ -121,7 +94,7 @@ legend { padding: 0 0.4rem; }
   gap: 0.2rem;
 }
 
-input[type="text"], textarea {
+input[type="text"], input[type="number"], textarea {
   font: inherit;
   padding: 0.3rem;
   border: 1px solid var(--border);
@@ -133,36 +106,12 @@ input[type="text"], textarea {
   display: flex;
   gap: 0.5rem;
   align-items: center;
-  margin-bottom: 0.4rem;
+  margin-bottom: 1rem;
 }
 
 .kv-row input { flex: 1; }
 
-.icon-field {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.icon-field input { flex: 1; }
-
-.icon-preview {
-  width: 32px;
-  height: 32px;
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  flex-shrink: 0;
-}
-
-select {
-  font: inherit;
-  padding: 0.3rem;
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  width: 100%;
-}
-
-textarea[readonly], input[readonly] {
+input[readonly] {
   background: color-mix(in srgb, currentColor 6%, transparent);
   color: var(--muted);
 }
@@ -175,22 +124,30 @@ textarea[readonly], input[readonly] {
 .flash-error { background: color-mix(in srgb, var(--error) 15%, transparent); }
 .flash-success { background: color-mix(in srgb, var(--ok) 15%, transparent); }
 
-pre {
-  background: color-mix(in srgb, currentColor 6%, transparent);
-  padding: 0.8rem;
-  overflow-x: auto;
-  border-radius: 4px;
+/* Standard WoW item-quality colors (client-fixed, not this fork's to change).
+   Rendered as filled badges (own foreground/background pair) rather than
+   plain text color, so quality 0/1 (grey/white) stay legible against either
+   a light or a dark page background. */
+.quality-badge {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.8em;
+  font-weight: 600;
+  white-space: nowrap;
 }
+.quality-0 { background: #9d9d9d; color: #111; }
+.quality-1 { background: #ffffff; color: #111; border: 1px solid var(--border); }
+.quality-2 { background: #1eff00; color: #0a3d00; }
+.quality-3 { background: #0070dd; color: #fff; }
+.quality-4 { background: #a335ee; color: #fff; }
+.quality-5 { background: #ff8000; color: #3a1e00; }
+.quality-6 { background: #e6cc80; color: #3a2f00; }
+.quality-7 { background: #00ccff; color: #00303d; }
 
-.damage-chart {
-  margin-bottom: 1.25rem;
-}
-
-.damage-chart h3 {
-  margin: 0 0 0.4rem;
-  font-size: 0.95em;
-}
-
-.damage-chart canvas {
-  max-width: 100%;
-}
+.drop-list { list-style: none; padding: 0; margin: 0.3rem 0 0; }
+.drop-list li { padding: 0.3rem 0; border-bottom: 1px solid var(--border); }
+.drop-list li:last-child { border-bottom: none; }
+.drop-stats { color: var(--muted); font-size: 0.85em; }
+.creature-block { margin-bottom: 1.5rem; }
+.creature-block h3 { margin-bottom: 0.2rem; }

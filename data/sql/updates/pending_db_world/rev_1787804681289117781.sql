@@ -1,0 +1,14 @@
+-- Icicles (200001) - root cause of "Frostbolt never gains Icicle stacks" (confirmed via live debug
+-- logging: every cast successfully applied the aura, but always reported stack 1, never higher).
+--
+-- DurationIndex 0 does NOT mean "permanent" for SpellDuration.dbc specifically - unlike SpellCastTimes
+-- /SpellRange/SpellRadius, the real client data has no row at all for SpellDuration ID 0, so
+-- SpellInfo::GetDuration() (SpellInfo.cpp) falls through to a literal 0ms duration instead of -1.
+-- Aura::CalcMaxDuration (SpellAuras.cpp) papers over this for PASSIVE auras only (forces -1 when
+-- DurationEntry is null), which is why sibling rows like Biting Cold (200010-200012, also
+-- DurationIndex 0) were unaffected - they're passive. Icicles isn't passive (it's a script-managed
+-- stacking buff, not a known ability), so every recast synced to a fresh, already-expired 0-duration
+-- aura instead of adding a stack to the one from the previous cast. Repointed to DurationIndex 21,
+-- the real stock "permanent" row (Duration/MaxDuration both -1). See apps/dbc-tools/lib/reuse.py's
+-- duration_index() for the matching pipeline-level fix so future spells don't hit this same bug.
+UPDATE `spell_dbc` SET `DurationIndex` = 21 WHERE `ID` = 200001 AND `DurationIndex` = 0;

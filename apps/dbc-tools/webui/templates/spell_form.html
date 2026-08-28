@@ -5,7 +5,7 @@
 <p><a href="{{ url_for('spell_list', file=file) }}">&larr; {{ file }}.csv</a></p>
 <h1>{{ 'New spell' if not original_id else 'Edit spell ' ~ original_id }}</h1>
 
-<form method="post" action="{{ url_for('spell_save', file=file) }}">
+<form id="spell-form" method="post" action="{{ url_for('spell_save', file=file) }}">
   <input type="hidden" name="original_id" value="{{ original_id }}">
 
   <fieldset>
@@ -51,6 +51,21 @@
   {% endfor %}
 
   <fieldset>
+    <legend>Damage per level
+      <span class="hint">(effect 1-3, whichever look like a damage effect — school damage or a periodic-damage aura)</span>
+    </legend>
+    <div id="damage-charts"></div>
+    <p id="damage-charts-empty" class="hint">No school-damage or periodic-damage effect found in effects 1-3.</p>
+    <p class="hint">
+      The +power lines use the engine's <em>default</em> spell-power/attack-power coefficient
+      (cast time and duration based, see <code>Unit::CalculateDefaultCoefficient</code>) applied to
+      both spell power and attack power alike. A spell with its own row in the <code>spell_bonus_data</code>
+      DB table — which this tool doesn't see — will do different damage in-game than shown here.
+      AoE, multi-effect, leech, and channeled-spell coefficient adjustments aren't modeled either.
+    </p>
+  </fieldset>
+
+  <fieldset>
     <legend>Raw overrides <span class="hint">(any Spell.dbc column name &rarr; value)</span></legend>
     <div id="overrides-rows">
     {% for k, v in ctx.overrides %}
@@ -81,6 +96,8 @@
 </template>
 
 <script src="{{ url_for('static', filename='rows.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='damage_chart.js') }}"></script>
 <script>
 async function updateIconPreview() {
   const id = document.getElementById('spell_icon_id').value.trim();

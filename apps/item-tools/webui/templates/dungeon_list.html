@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Dungeons & raids - item-tools{% endblock %}
+{% block content %}
+  <h1>Dungeons &amp; raids</h1>
+  <p class="hint">Every map in <code>instance_template</code>, with how many creatures on it drop an
+    item at or above the quality filter below. First load parses ~300k rows of spawn/loot data and
+    is slow (several seconds) - it's cached in memory after that.</p>
+
+  <form method="get" class="kv-row">
+    <label for="min_quality" class="hint">Minimum quality</label>
+    <select name="min_quality" id="min_quality" onchange="this.form.submit()">
+      {% for q, qname in quality_names.items() %}
+        <option value="{{ q }}" {{ 'selected' if q == min_quality else '' }}>{{ qname }}</option>
+      {% endfor %}
+    </select>
+  </form>
+
+  <table>
+    <thead><tr><th>Dungeon / Raid</th><th>Map ID</th><th>Creatures with drops</th><th>Items</th></tr></thead>
+    <tbody>
+      {% for row in rows %}
+        <tr>
+          <td><a href="{{ url_for('dungeon_detail', map_id=row.map_id, min_quality=min_quality) }}">{{ row.name }}</a></td>
+          <td>{{ row.map_id }}</td>
+          <td>{{ row.creature_count }}</td>
+          <td>{{ row.item_count }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

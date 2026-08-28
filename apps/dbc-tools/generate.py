@@ -26,7 +26,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 TOOL_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOL_ROOT))
 
-from lib import build, dbcfile, dbcfmt, patch_out, resolve, source, sql_out, state  # noqa: E402
+from lib import build, dbcfile, dbcfmt, lint, patch_out, resolve, source, sql_out, state  # noqa: E402
 from lib.reuse import ReuseContext  # noqa: E402
 
 SOURCE_DIR = TOOL_ROOT / "source"
@@ -108,6 +108,8 @@ def main() -> int:
     # reconciliation — this is what actually gets emitted.
     reuse = ReuseContext(existing_secondary, ids_cfg)
     spell_rows = [build.build_spell_row(e, reuse) for e in spell_resolved.entries]
+    for warning in lint.check_classmask_scoping(spell_resolved.entries, spell_rows):
+        print(f"WARNING: {warning}")
     talent_rows = [build.build_talent_row(e) for e in talent_resolved.entries]
     talenttab_rows = [build.build_talenttab_row(e) for e in talenttab_resolved.entries]
     skilllineability_rows = [

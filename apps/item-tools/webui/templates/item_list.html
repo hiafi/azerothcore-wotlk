@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Browse items - item-tools{% endblock %}
+{% block content %}
+  <h1>Browse items</h1>
+
+  <form action="{{ url_for('item_list') }}" method="get" class="kv-row">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search by entry or name&hellip;" autofocus>
+    <button type="submit" class="button">Search</button>
+  </form>
+
+  {% if q %}
+    {% if truncated %}
+      <p class="hint">Showing {{ results|length }} of {{ total_matches }} matches - refine your
+        search to see the rest.</p>
+    {% else %}
+      <p class="hint">{{ total_matches }} match{{ '' if total_matches == 1 else 'es' }}.</p>
+    {% endif %}
+    {% if results %}
+      <table>
+        <thead>
+          <tr>{% for col in columns %}<th>{{ col }}</th>{% endfor %}</tr>
+        </thead>
+        <tbody>
+          {% for row in results %}
+            <tr>
+              {% for col in columns %}
+                <td>
+                  {% if loop.first %}
+                    <a href="{{ url_for('item_edit', entry=row[col]) }}">{{ row[col] }}</a>
+                  {% else %}
+                    {{ row[col] }}
+                  {% endif %}
+                </td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No matches.</p>
+    {% endif %}
+  {% else %}
+    <p class="hint">Enter an item entry ID or a name substring.</p>
+  {% endif %}
+{% endblock %}

@@ -129,6 +129,30 @@ path at scale, and (2) — if you add the check back in, see
 was run once over all ~54k merged base+overlay spell rows during
 development with zero mismatches.
 
+**Gotcha: `EffectSpellClassMaskA/B/C_1/2/3` in `raw_overrides`.** Every other
+per-effect column in `spell_dbc` uses `_1/_2/_3` as the effect index
+(`EffectBasePoints_2` is Effect_2's base points, etc.) — this is the one
+exception. Here the **letter** is the effect index (A=Effect_1, B=Effect_2,
+C=Effect_3) and the **number** is which of that effect's 3
+`SpellFamilyFlags` dwords holds the bit (see `lib/dbcfmt.py`'s comment on
+the `SPELL` table for the full mechanics). If you're adding a classmask
+override to scope a `SPELLMOD_EFFECT2`/duration/etc. modifier that lives on
+Effect_2, the key is `EffectSpellClassMaskB_1` (or `_2`/`_3`), **not**
+`EffectSpellClassMaskA_2` — the latter silently scopes Effect_1 instead and
+leaves Effect_2's real classmask all-zero, which the engine
+(`SpellInfo::IsAffected`) reads as "matches every spell in the family," not
+"matches nothing." This exact mistake shipped for two frost-mage talents
+(Permafrost, Chilled to the Bone — see `docs/dbc-build-pipeline.md`'s "Bug
+3") and made their movement-slow modifiers apply to every mage spell
+instead of just Frostbolt/Cone of Cold. When adding any hand-authored
+`EffectSpellClassMask*` override, double check which effect index you
+actually mean before picking the letter. This mistake shipped twice in one day even with this
+callout already written (see `docs/dbc-build-pipeline.md`'s "Bug 3" for the second one, Empowered
+Frostbolt) — so don't rely on reading this. `generate.py` also runs an automated check
+(`lib/lint.py`) after every spell build and prints a `WARNING:` line if a SpellMod effect that
+needs a classmask ends up with an all-zero one. Take that warning seriously; it's almost always
+this exact mistake.
+
 ## Web UI
 
 `source/spells/*.csv`'s two JSON-blob columns (`effectN`, `raw_overrides`) and

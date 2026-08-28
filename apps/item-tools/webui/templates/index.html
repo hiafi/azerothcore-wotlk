@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}item-tools{% endblock %}
+{% block content %}
+  <h1>item-tools</h1>
+  <p class="hint">Editing <code>item_template</code> directly - no live database connection,
+    reads base + merged + pending SQL off disk (see the README). {{ total }} rows total.</p>
+
+  <form action="{{ url_for('item_list') }}" method="get" class="kv-row">
+    <input type="text" name="q" placeholder="Search by entry or name&hellip;" autofocus>
+    <button type="submit" class="button">Search</button>
+  </form>
+
+  <h2>Custom items ({{ custom_range.start }}&ndash;{{ custom_range.end }})</h2>
+  {% if custom_entries %}
+    <table>
+      <thead><tr><th>Entry</th><th>Name</th><th>Class</th><th>ItemLevel</th></tr></thead>
+      <tbody>
+        {% for row in custom_entries %}
+          <tr>
+            <td><a href="{{ url_for('item_edit', entry=row.entry) }}">{{ row.entry }}</a></td>
+            <td>{{ row.name }}</td>
+            <td>{{ row['class'] }}</td>
+            <td>{{ row.ItemLevel }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="hint">None yet - <a href="{{ url_for('item_new') }}">create one</a>.</p>
+  {% endif %}
+{% endblock %}

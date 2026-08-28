@@ -9093,8 +9093,8 @@ int32 Unit::SpellBaseDamageBonusDone(SpellSchoolMask schoolMask)
         DoneAdvertisedBenefit += ToPlayer()->GetBaseSpellPowerBonus();
         DoneAdvertisedBenefit += ToPlayer()->GetBaseSpellDamageBonus();
 
-        // Custom: 1 point of spellpower per point of Intellect and Spirit
-        DoneAdvertisedBenefit += int32(GetStat(STAT_INTELLECT)) + int32(GetStat(STAT_SPIRIT));
+        // Custom: 0.5 point of spellpower per point of Intellect and Spirit
+        DoneAdvertisedBenefit += int32(GetStat(STAT_INTELLECT) / 2) + int32(GetStat(STAT_SPIRIT) / 2);
 
         // Damage bonus from stats
         AuraEffectList const& mDamageDoneOfStatPercent = GetAuraEffectsByType(SPELL_AURA_MOD_SPELL_DAMAGE_OF_STAT_PERCENT);
@@ -9252,7 +9252,13 @@ float Unit::SpellTakenCritChance(Unit const* caster, SpellInfo const* spellProto
                         int32 modChance = 0;
                         switch ((*i)->GetMiscValue())
                         {
-                            // Shatter
+                            // Shatter. Frost Mage rework: also counts Fingers of Frost charges and
+                            // Shattering Cold as "frozen" (docs/frost-mage-redesign.md sec 4), not
+                            // just a real freeze/root - AURA_STATE_FROZEN alone missed both, since
+                            // Fingers of Frost is a caster-side charge buff that never sets that
+                            // state on the target. Mage::IsFrozenTarget (MageMechanics.h) is the
+                            // canonical check already used for Ice Lance's bonus damage and
+                            // Frostbite's Mastery bonus.
                             case 911:
                                 modChance += 16;
                                 [[fallthrough]];
@@ -9261,7 +9267,7 @@ float Unit::SpellTakenCritChance(Unit const* caster, SpellInfo const* spellProto
                                 [[fallthrough]];
                             case 849:
                                 modChance += 17;
-                                if (!HasAuraState(AURA_STATE_FROZEN, spellProto, caster))
+                                if (!Mage::IsFrozenTarget(caster, this))
                                     break;
                                 crit_chance += modChance;
                                 break;
@@ -9856,8 +9862,8 @@ int32 Unit::SpellBaseHealingBonusDone(SpellSchoolMask schoolMask)
         AdvertisedBenefit += ToPlayer()->GetBaseSpellPowerBonus();
         AdvertisedBenefit += ToPlayer()->GetBaseSpellHealingBonus();
 
-        // Custom: 1 point of spellpower per point of Intellect and Spirit
-        AdvertisedBenefit += int32(GetStat(STAT_INTELLECT)) + int32(GetStat(STAT_SPIRIT));
+        // Custom: 0.5 point of spellpower per point of Intellect and Spirit
+        AdvertisedBenefit += int32(GetStat(STAT_INTELLECT) / 2) + int32(GetStat(STAT_SPIRIT) / 2);
 
         // Healing bonus from stats
         AuraEffectList const& mHealingDoneOfStatPercent = GetAuraEffectsByType(SPELL_AURA_MOD_SPELL_HEALING_OF_STAT_PERCENT);
