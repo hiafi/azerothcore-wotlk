@@ -4,6 +4,8 @@
 
 .cache
 .claude
+/apps/patch-service/*
+/apps/dbc-tools/lib/output/*
 /conf/*
 !/conf/dist
 /docs/*

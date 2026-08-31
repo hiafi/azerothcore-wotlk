@@ -3002,15 +3002,7 @@ bool Player::addTalent(uint32 spellId, uint8 addSpecMask, uint8 oldTalentRank)
 
     TalentSpellPos const* talentPos = GetTalentSpellPos(spellId);
     if (!talentPos)
-    {
-        // Diagnostic for the Frost Mage rework talent-application investigation (2026-08-27):
-        // this is a previously-silent failure path - character_talent still records the point as
-        // spent (the caller writes that regardless of this function's return value), but the
-        // talent's own aura/spell never gets applied since _addTalentAurasAndSpells() is never
-        // reached below. Remove once the frozen_core/talent_dbc gap is root-caused.
-        LOG_ERROR("spells", "Player::addTalent: GetTalentSpellPos found no talent position for spell #{} - talent will be recorded as spent but its aura/spell will not be applied.", spellId);
         return false;
-    }
 
     TalentEntry const* talentInfo = sTalentStore.LookupEntry(talentPos->talent_id);
     if (!talentInfo)
@@ -3131,20 +3123,8 @@ void Player::_addTalentAurasAndSpells(uint32 spellId)
     }
     else if (spellInfo->IsPassive() || (spellInfo->HasAttribute(SPELL_ATTR0_DO_NOT_DISPLAY) && spellInfo->Stances))
     {
-        // Diagnostic for the Frost Mage rework talent-application investigation (2026-08-27):
-        // GetTalentSpellPos resolves fine for these spells (addTalent's own diagnostic never
-        // fires), so this is the next point that could silently fail to actually apply the aura.
-        // Remove once the frozen_core/talent aura gap is root-caused.
         if (IsNeedCastPassiveSpellAtLearn(spellInfo))
-        {
-            SpellCastResult result = CastSpell(this, spellId, true);
-            if (result != SPELL_CAST_OK)
-                LOG_ERROR("spells", "Player::_addTalentAurasAndSpells: CastSpell of talent spell #{} on self failed with result {}.", spellId, uint32(result));
-            else if (!HasAura(spellId))
-                LOG_ERROR("spells", "Player::_addTalentAurasAndSpells: CastSpell of talent spell #{} on self returned OK, but the aura is not present on self immediately afterward.", spellId);
-        }
-        else
-            LOG_ERROR("spells", "Player::_addTalentAurasAndSpells: IsNeedCastPassiveSpellAtLearn declined to cast talent spell #{}.", spellId);
+            CastSpell(this, spellId, true);
     }
 }
 
