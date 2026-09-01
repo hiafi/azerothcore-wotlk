@@ -21,6 +21,8 @@ Read the matching doc(s) BEFORE starting the task:
   - Editing `apps/dbc-tools` spell/talent source data or its generated SQL → also
     `.agents/docs/systems/dbc-tools.md`
 - Capturing a lesson or adding/updating agent docs → `.agents/docs/README.md`
+- Debugging a mysterious/recurring bug → check `docs/bugs-and-fixes.md` first; add an entry there
+  once root-caused so it isn't re-diagnosed later
 
 ## Repository layout
 

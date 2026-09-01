@@ -689,7 +689,7 @@ void Player::UpdateRating(CombatRating cr)
         break;
     case CR_MASTERY: // Custom: was CR_WEAPON_SKILL_MAINHAND - read live via GetMasteryPercentage()
     case CR_VERSATILITY: // Custom: was CR_WEAPON_SKILL_OFFHAND - read live via GetVersatilityPercentage()
-    case CR_COOLDOWN_REDUCTION: // Custom: was CR_WEAPON_SKILL_RANGED - read live via GetCooldownReductionPercentage()
+    case CR_COOLDOWN_HASTE: // Custom: was CR_WEAPON_SKILL_RANGED - read live via GetCooldownHastePercentage()
         break;
     case CR_EXPERTISE:
         if (affectStats)

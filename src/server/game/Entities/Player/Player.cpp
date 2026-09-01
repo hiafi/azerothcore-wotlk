@@ -150,8 +150,8 @@ enum CharacterCustomizeFlags
 
 static uint32 copseReclaimDelay[MAX_DEATH_COUNT] = { 30, 60, 120 };
 
-// Custom: Cooldown Reduction stat only affects abilities whose baseline cooldown is longer than this.
-static constexpr int32 CUSTOM_COOLDOWN_REDUCTION_MIN_BASE_COOLDOWN_MS = 30 * IN_MILLISECONDS;
+// Custom: Cooldown Haste stat only affects abilities whose baseline cooldown is longer than this.
+static constexpr int32 CUSTOM_COOLDOWN_HASTE_MIN_BASE_COOLDOWN_MS = 30 * IN_MILLISECONDS;
 
 // we can disable this warning for this since it only
 // causes undefined behavior when passed to the base class constructor
@@ -6906,7 +6906,7 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
                 ApplyRatingMod(CR_VERSATILITY, int32(val), apply);
                 break;
             case ITEM_MOD_COOLDOWN_RATING: // Custom stat
-                ApplyRatingMod(CR_COOLDOWN_REDUCTION, int32(val), apply);
+                ApplyRatingMod(CR_COOLDOWN_HASTE, int32(val), apply);
                 break;
             case ITEM_MOD_CRIT_TAKEN_MELEE_RATING:
                 ApplyRatingMod(CR_CRIT_TAKEN_MELEE, int32(val), apply);
@@ -11129,6 +11129,11 @@ void Player::AddSpellAndCategoryCooldowns(SpellInfo const* spellInfo, uint32 ite
 
     bool needsCooldownPacket = false;
 
+    // Custom: Cooldown Haste stat's adjustment to this cast's own (spellInfo->Id) cooldown, in
+    // ms, applied via ModifySpellCooldown() after the native cooldown is stored - see the block
+    // below for why it can't just divide rec/catrec in place like a normal spellmod would.
+    int32 cooldownHasteDeltaMs = 0;
+
     // overwrite time for selected category
     if (infinityCooldown)
     {
@@ -11163,11 +11168,6 @@ void Player::AddSpellAndCategoryCooldowns(SpellInfo const* spellInfo, uint32 ite
             }
         }
 
-        // Custom: Cooldown Reduction stat - only affects abilities whose baseline (unmodified)
-        // cooldown is longer than CUSTOM_COOLDOWN_REDUCTION_MIN_BASE_COOLDOWN_MS.
-        if (rec > CUSTOM_COOLDOWN_REDUCTION_MIN_BASE_COOLDOWN_MS && spellInfo->RecoveryTime > CUSTOM_COOLDOWN_REDUCTION_MIN_BASE_COOLDOWN_MS)
-            rec = int32(rec * (1.0f - GetCooldownReductionPercentage() / 100.0f));
-
         // replace negative cooldowns by 0
         if (rec < 0) rec = 0;
         if (catrec < 0) catrec = 0;
@@ -11178,6 +11178,55 @@ void Player::AddSpellAndCategoryCooldowns(SpellInfo const* spellInfo, uint32 ite
 
         catrecTime = catrec ? catrec : 0;
         recTime    = rec ? rec : catrecTime;
+
+        // Custom: Cooldown Haste stat - only affects abilities whose baseline (unmodified)
+        // cooldown is at or above CUSTOM_COOLDOWN_HASTE_MIN_BASE_COOLDOWN_MS (>=, not > - a
+        // spell whose base cooldown lands exactly on the floor, e.g. Ice Barrier's flat 30 sec,
+        // would otherwise be silently excluded). Named "haste", not "reduction", because it
+        // works like one: divided by (1 + CDH%/100), not multiplied by (1 - CDH%/100), so 100%
+        // CDH only halves the cooldown, 200% only takes it to a third, etc. - full
+        // 100%-reduction-to-zero degeneracy is mathematically impossible at any finite rating.
+        // gtcombatratings_dbc's CR_COOLDOWN_HASTE curve (id 22) is tuned at 2x Crit Rating's
+        // percent-per-point (same x0.5 multiplier as CR_PROC_CHANCE) to compensate for the
+        // diminishing-returns curve costing more rating per effective % at high stacks.
+        //
+        // Deliberately NOT applied by dividing rec/catrec in place before they're stored, the
+        // way a normal spellmod (e.g. Ice Floes' SPELLMOD_COOLDOWN, applied above) would be:
+        // confirmed live that the client starts its OWN cooldown swipe for the spell it just
+        // cast off its own local Spell.dbc data the instant the cast succeeds, before any
+        // server packet can reach it, and a same-spell SMSG_SPELL_COOLDOWN "set" packet arriving
+        // an instant later does not retroactively shrink that already-running swipe (unlike
+        // SPELLMOD_COOLDOWN reductions, which the client can already see for itself via the
+        // modifying aura and so independently arrives at the same shorter number - Cooldown
+        // Haste has no client-visible aura to mirror, being a raw rating with a server-only
+        // formula). So instead: let the FULL native cooldown get stored and sent below exactly
+        // as the client already expects, then shave the difference off via ModifySpellCooldown
+        // (SMSG_MODIFY_COOLDOWN) once it's already an active, tracked cooldown - the same
+        // "adjust an in-flight cooldown by a delta" mechanism Frozen Orb's own pulse already
+        // uses on itself (see SPELL_MAGE_FROZEN_ORB in spell_mage.cpp) and which does correctly
+        // shrink the client's swipe, unlike the "set" packet.
+        //
+        // Ordering fix (2026-08-31): this function is invoked from Spell::SendSpellCooldown(),
+        // which Spell::cast() calls BEFORE Spell::SendSpellGo() - both synchronous, same tick.
+        // A ModifySpellCooldown() called inline right here would race SMSG_SPELL_GO to the
+        // client and lose: the client's own local-prediction cooldown start (driven by
+        // SMSG_SPELL_GO, off its local Spell.dbc) clobbers whatever SMSG_MODIFY_COOLDOWN just
+        // told it, because that correction arrived for a spell the client wasn't tracking yet.
+        // Frozen Orb's pulse-based ModifySpellCooldown works precisely because it fires ~1s
+        // after the initiating cast, i.e. comfortably after SMSG_SPELL_GO. So instead of calling
+        // ModifySpellCooldown() inline below, it's deferred one world tick via m_Events so it
+        // always lands after SendSpellGo() has already gone out - see the two call sites below.
+        if (float const cdh = GetCooldownHastePercentage(); cdh > 0.0f)
+        {
+            float const cooldownHasteDivisor = 1.0f + cdh / 100.0f;
+            int32 hastedRec = (rec >= CUSTOM_COOLDOWN_HASTE_MIN_BASE_COOLDOWN_MS && spellInfo->RecoveryTime >= CUSTOM_COOLDOWN_HASTE_MIN_BASE_COOLDOWN_MS)
+                ? int32(rec / cooldownHasteDivisor) : rec;
+            int32 hastedCatrec = (catrec >= CUSTOM_COOLDOWN_HASTE_MIN_BASE_COOLDOWN_MS && spellInfo->CategoryRecoveryTime >= CUSTOM_COOLDOWN_HASTE_MIN_BASE_COOLDOWN_MS)
+                ? int32(catrec / cooldownHasteDivisor) : catrec;
+            int32 const hastedCatrecTime = hastedCatrec ? hastedCatrec : 0;
+            int32 const hastedRecTime    = hastedRec ? hastedRec : hastedCatrecTime;
+            cooldownHasteDeltaMs = hastedRecTime - int32(recTime); // <= 0
+        }
     }
 
     // category spells
@@ -11189,6 +11238,19 @@ void Player::AddSpellAndCategoryCooldowns(SpellInfo const* spellInfo, uint32 ite
             WorldPacket data;
             BuildCooldownPacket(data, SPELL_COOLDOWN_FLAG_NONE, spellInfo->Id, recTime);
             SendDirectMessage(&data);
+        }
+        // Cooldown Haste: shrink the just-stored cooldown via clear-then-set instead of baking
+        // it into recTime above - see the comment where cooldownHasteDeltaMs is computed, and
+        // the clear-then-set comment on the deferred lambda itself.
+        if (cooldownHasteDeltaMs)
+        {
+            uint32 const deferredSpellId = spellInfo->Id;
+            uint32 const deferredItemId = itemId;
+            uint32 const correctedRecMs = uint32(std::max<int32>(0, int32(recTime) + cooldownHasteDeltaMs));
+            m_Events.AddEventAtOffset([this, deferredSpellId, deferredItemId, correctedRecMs]()
+            {
+                ApplyCooldownHasteCorrection(deferredSpellId, deferredItemId, correctedRecMs);
+            }, 1ms);
         }
 
         PacketCooldowns forcedCategoryCooldowns;
@@ -11245,6 +11307,19 @@ void Player::AddSpellAndCategoryCooldowns(SpellInfo const* spellInfo, uint32 ite
                 BuildCooldownPacket(data, SPELL_COOLDOWN_FLAG_NONE, spellInfo->Id, rec);
                 SendDirectMessage(&data);
             }
+            // Cooldown Haste: shrink the just-stored cooldown via clear-then-set instead of
+            // baking it into rec above - see cooldownHasteDeltaMs's own comment, and the
+            // clear-then-set comment on the deferred lambda itself.
+            if (cooldownHasteDeltaMs)
+            {
+                uint32 const deferredSpellId = spellInfo->Id;
+                uint32 const deferredItemId = itemId;
+                uint32 const correctedRecMs = uint32(std::max<int32>(0, int32(recTime) + cooldownHasteDeltaMs));
+                m_Events.AddEventAtOffset([this, deferredSpellId, deferredItemId, correctedRecMs]()
+                {
+                    ApplyCooldownHasteCorrection(deferredSpellId, deferredItemId, correctedRecMs);
+                }, 1ms);
+            }
         }
     }
 }
@@ -11288,6 +11363,38 @@ void Player::ModifySpellCooldown(uint32 spellId, int32 cooldown)
     data << uint32(spellId);            // Spell ID
     data << GetGUID();                  // Player GUID
     data << int32(cooldown);            // Cooldown mod in milliseconds
+    SendDirectMessage(&data);
+}
+
+void Player::ApplyCooldownHasteCorrection(uint32 spellId, uint32 itemId, uint32 correctedRecMs)
+{
+    // Custom: Cooldown Haste's client-visibility fix, take 2 (2026-08-31). The delta-based
+    // ModifySpellCooldown()/SMSG_MODIFY_COOLDOWN approach (see the comment above
+    // cooldownHasteDeltaMs's computation in AddSpellAndCategoryCooldowns) was confirmed, via
+    // live logging, to be correctly deferred until after SendSpellGo() - the ordering bug that
+    // was the leading hypothesis - and STILL had no client-side effect (GetSpellCooldown() kept
+    // returning the full, un-corrected duration). That rules out packet ordering and points at
+    // SMSG_MODIFY_COOLDOWN itself: either the stock 3.3.5a client has no live handler for that
+    // opcode, or it's a "delta" concept the client doesn't apply as expected.
+    //
+    // This is the doc's fallback: clear-then-set. A same-spell "set" SMSG_SPELL_COOLDOWN is
+    // already confirmed to work correctly for a spell the client ISN'T already tracking (that's
+    // exactly how category siblings, e.g. Shaman shocks, receive their reduced cooldown - see
+    // the comment above cooldownHasteDeltaMs). By the time this runs (already deferred to after
+    // SendSpellGo()), the client has started tracking the just-cast spell at its full duration -
+    // so clear that tracked entry first (SMSG_CLEAR_COOLDOWN, the same packet `.cooldown` and
+    // Cold Snap use, and definitely honored client-side), then re-add and re-announce it fresh
+    // with the already-corrected duration, landing in the same "untracked spell" case that's
+    // proven to work.
+    RemoveSpellCooldown(spellId, true); // erases m_spellCooldowns entry + sends SMSG_CLEAR_COOLDOWN
+
+    if (!correctedRecMs)
+        return;
+
+    _AddSpellCooldown(spellId, 0, itemId, correctedRecMs, true, true);
+
+    WorldPacket data;
+    BuildCooldownPacket(data, SPELL_COOLDOWN_FLAG_NONE, spellId, correctedRecMs);
     SendDirectMessage(&data);
 }
 

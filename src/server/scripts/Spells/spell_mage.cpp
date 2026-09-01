@@ -90,6 +90,8 @@ enum MageSpells
     SPELL_MAGE_REFRESHMENT                       = 200006,
     SPELL_MAGE_FROZEN_ORB                        = 200007,
     SPELL_MAGE_FROZEN_ORB_PULSE                  = 200008,
+    // No longer cast by anything (see the Frozen Orb header comment near npc_mage_frozen_orb) -
+    // kept only because the row itself is still present in spell_dbc.
     SPELL_MAGE_FROZEN_ORB_PERIODIC               = 200009,
     SPELL_MAGE_BITING_COLD_R3                    = 200012,
     SPELL_MAGE_BITING_COLD_BITE                  = 200013,
@@ -614,16 +616,23 @@ class spell_mage_refreshment : public AuraScript
  * docs/frost-mage-implementation-plan.md's dedicated "Frozen Orb Implementation" section).
  * 200007 is a SPELL_EFFECT_SCRIPT_EFFECT that summons the trigger creature (npc_mage_frozen_orb,
  * NPC_MAGE_FROZEN_ORB) at the caster's position; the creature's own AI drives everything else -
- * movement, the self-cast periodic pulse (200009, triggering the actual damage/slow in 200008),
- * and the Fingers of Frost grant chain. No spell-row work ties these three together beyond
- * 200009's EffectTriggerSpell pointing at 200008 and the AI's own me->CastSpell(me, 200009, ...).
+ * movement, the once-a-second pulse (the OWNING PLAYER casting 200008 at an explicit dest = the
+ * orb's live position - see IsSummonedBy/UpdateAI's EVENT_FROZEN_ORB_PULSE), and the Fingers of
+ * Frost grant chain. The pulse used to be a self-cast periodic aura on the orb (200009), which
+ * silently attributed all damage/threat/combat-log entries to the orb instead of the player -
+ * root-caused via live playtest (FoF procced, the pulse showed in the combat log, but never in
+ * the player's own damage meter) and fixed by having the AI drive the cast itself instead of
+ * relying on AuraEffect::HandlePeriodicTriggerSpellAuraTick's native dispatch, which has no way to
+ * attribute a self-cast aura's trigger to anyone but the aura's own caster. 200009 is no longer
+ * cast by anything; left as an orphaned spell_dbc row rather than deleted.
  */
 namespace
 {
     constexpr uint32 POINT_FROZEN_ORB_END = 1;
     constexpr uint32 EVENT_FROZEN_ORB_GRANT_FOF = 1;
-    // Matches both the orb's TEMPSUMMON_TIMED_DESPAWN lifetime and 200009's own duration, so its
-    // 10th and final pulse (one per second) lands right as it expires.
+    constexpr uint32 EVENT_FROZEN_ORB_PULSE = 2;
+    // Matches the orb's TEMPSUMMON_TIMED_DESPAWN lifetime, so its 10th and final pulse (one per
+    // second, first at 1s) lands right as it expires.
     constexpr uint32 FROZEN_ORB_DURATION = 10000;
     // Travel distance, yards - not yet modified by Arctic Reach (that talent isn't built; see the
     // Frost talent tree item in docs/frost-mage-handoff.md).
@@ -631,26 +640,25 @@ namespace
     constexpr float FROZEN_ORB_SPEED_RATE = 0.55f;
 }
 
-// 300001 - Frozen Orb (the projectile itself). Display left as the stock invisible-stalker model
-// (1126) pending an art pass - picking a real "glowing orb" model is an interactive, in-game task
-// (.morph browsing a reference client) per the implementation plan's notes, not something to guess
-// here; see any of this session's other "SpellVisualID unset" spells for the same deferral.
+// 300001 - Frozen Orb (the projectile itself). Display is CreatureDisplayID 26753, Ulduar's
+// "Charged Sphere" - a real, already-in-use stock display, reverted back to from a custom "Ice
+// Nuke Missile" pairing (90001) whose DBC row and client patch were confirmed correct and
+// confirmed delivered, but which still rendered invisible after a full client restart - pointing
+// at the underlying .mdx asset itself not existing in this project's actual client build. See
+// git history on this comment for the full chain (stock invisible-stalker 1126 first, then each
+// of the above).
 class npc_mage_frozen_orb : public CreatureAI
 {
 public:
     explicit npc_mage_frozen_orb(Creature* creature) : CreatureAI(creature) { }
 
-    // Frozen Orb's damage/threat/combat-log attribution isn't actually routed through the caster
-    // chain to the owning player (traced for Chilled to the Bone's capstone: the periodic aura
-    // 200009's own EffectTriggerSpell dispatch to 200008, AuraEffect::HandlePeriodicTriggerSpellAuraTick
-    // in SpellAuraEffects.cpp, re-derives its trigger caster from either the tick's caster or its
-    // target depending on SpellInfo::NeedsToBeTriggeredByCaster - for a plain AoE-from-source spell
-    // like 200008 that resolves false, so the trigger is always cast "as the orb" regardless of what
-    // 200009 itself was cast with; a fix would mean rearchitecting away from the native periodic-aura
-    // dispatch, out of scope here and risky to the already-working orb behavior). Flagged, not fixed -
-    // see docs/frost-mage-talent-tree-content-handoff.md. This getter exists so scripts that only
-    // need to *look up* the owning player (not fix that deeper routing) - like the pulse script's
-    // Chilled to the Bone check - can do so the same way GrantFingersOfFrost() below already does.
+    // Used by spell_mage_frozen_orb_pulse to (a) find the owning player's own aura state for the
+    // Chilled to the Bone check, same way GrantFingersOfFrost() below does, and (b) confirm a
+    // nearby orb found via a grid search actually belongs to the player who just cast 200008 -
+    // 200008 is now cast by the player directly (see this file's Frozen Orb header comment for
+    // why), so GetCaster() inside that script is the player, not this orb, and there's no other
+    // cheap way to get back from "player who just cast a pulse" to "which of their orbs" without
+    // this.
     ObjectGuid GetOwnerGUID() const { return _ownerGUID; }
 
     // The faction-35 trap (implementation plan): a trigger left on its default friendly-to-
@@ -663,6 +671,38 @@ public:
 
         _ownerGUID = owner->GetGUID();
         me->SetFaction(owner->GetFaction());
+        // Without this, Unit::_IsValidAttackTarget takes the CvC branch (neither side has
+        // UNIT_FLAG_PLAYER_CONTROLLED) and requires the two factions to be genuinely *hostile*
+        // (GetReactionTo <= REP_HOSTILE) - practice-dummy-style targets (e.g. this project's own
+        // 900001-900003 "Training Dummy", faction template 31) are deliberately faction-*neutral*
+        // instead, precisely so real players of either faction can already hit them via the more
+        // permissive PvC path below (a neutral target is attackable unless explicitly at-war
+        // reputation says otherwise). The orb is a plain Creature, not a Guardian/Totem, so it
+        // never gets that flag automatically the way a real pet does. Setting it here makes the
+        // orb resolve attackability exactly like the owning player would - both against neutral
+        // training dummies and real hostile mobs (already-hostile reactions are unaffected, see
+        // the PvC branch's own REP_HOSTILE short-circuit). Root-caused via targeted logging that
+        // found the AoE search returning 0 targets even with the orb standing right on top of the
+        // dummy - see this session's Frozen Orb debugging notes.
+        // Ablation-tested (2026-08-31): temporarily removed this line to check whether it was
+        // causing the orb's model to render invisible (it was suspected because a plain,
+        // unrelated creature using the same display ID rendered fine). Confirmed NOT the cause -
+        // the model stayed invisible with this flag removed too - so it's restored here; the
+        // rendering bug is still open and being investigated elsewhere.
+        me->SetUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED);
+        // Left at the creature_template's default level 1 otherwise: Unit::MagicSpellHitResult
+        // special-cases IsTrigger() creatures to floor their effective level at the triggered
+        // spell's own SpellLevel (200008's is 0, so that does nothing), not at the owner's level,
+        // and the resulting ~79-level gap against any real target pushes 200008's hit chance down
+        // to the hard 1% floor - the pulse "hits" mechanically but almost always resists, which
+        // reads in-game as "no damage" even though targeting/faction/summon are all fine. Same
+        // fix pet_priest.cpp's Lightwell applies in its own IsSummonedBy-equivalent.
+        // showLevelChange=false: true (the default) marks UNIT_FIELD_LEVEL dirty for the next
+        // update packet, which nearby clients render as a level-up flash/sound on the orb - a
+        // purely cosmetic side effect of a level correction that has nothing to do with leveling
+        // up, since the orb was never visibly at level 1 to begin with (this runs at summon,
+        // before the client has rendered anything).
+        me->SetLevel(owner->GetLevel(), false);
 
         me->SetDisableGravity(true);
         me->SetHover(true);
@@ -677,7 +717,10 @@ public:
         // would resend SMSG_MONSTER_MOVE every tick and make the client visibly stutter.
         me->GetMotionMaster()->MovePoint(POINT_FROZEN_ORB_END, dest, FORCED_MOVEMENT_NONE, 0.0f, false);
 
-        me->CastSpell(me, SPELL_MAGE_FROZEN_ORB_PERIODIC, true);
+        // First pulse at 1s, matching a SPELL_AURA_PERIODIC_TRIGGER_SPELL's own amplitude timing
+        // (which this replaces - see this file's Frozen Orb header comment) - ticks don't start
+        // immediately at cast.
+        _events.ScheduleEvent(EVENT_FROZEN_ORB_PULSE, 1s);
     }
 
     // Called from spell_mage_frozen_orb_pulse::NotifyOrb (OnEffectHitTarget on 200008) whenever a
@@ -713,6 +756,14 @@ public:
                 GrantFingersOfFrost();
                 _events.ScheduleEvent(EVENT_FROZEN_ORB_GRANT_FOF, 3s);
             }
+            else if (eventId == EVENT_FROZEN_ORB_PULSE)
+            {
+                DoPulse();
+                // Rescheduled unconditionally - TEMPSUMMON_TIMED_DESPAWN removes `me` at the
+                // 10s mark regardless, so this naturally stops ticking rather than needing its
+                // own countdown to match FROZEN_ORB_DURATION.
+                _events.ScheduleEvent(EVENT_FROZEN_ORB_PULSE, 1s);
+            }
         }
     }
 
@@ -721,6 +772,17 @@ private:
     {
         if (Unit* owner = ObjectAccessor::GetUnit(*me, _ownerGUID))
             owner->CastSpell(owner, SPELL_MAGE_FINGERS_OF_FROST_CHARGES, true);
+    }
+
+    // The owning player casts 200008 directly, targeted at an explicit dest = the orb's own live
+    // position, instead of the orb self-casting a periodic aura - see this file's Frozen Orb
+    // header comment for why (damage/threat/combat-log attribution). 200008's own implicit
+    // targets are TARGET_UNIT_DEST_AREA_ENEMY (not SRC) specifically so this works: SRC would
+    // resolve relative to the player's own (stationary, far-away) position instead of the orb's.
+    void DoPulse()
+    {
+        if (Unit* owner = ObjectAccessor::GetUnit(*me, _ownerGUID))
+            owner->CastSpell(me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), SPELL_MAGE_FROZEN_ORB_PULSE, true);
     }
 
     ObjectGuid _ownerGUID;
@@ -735,7 +797,7 @@ class spell_mage_frozen_orb : public SpellScript
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_MAGE_FROZEN_ORB_PERIODIC });
+        return ValidateSpellInfo({ SPELL_MAGE_FROZEN_ORB_PULSE });
     }
 
     void SummonOrb(SpellEffIndex /*effIndex*/)
@@ -750,41 +812,39 @@ class spell_mage_frozen_orb : public SpellScript
     }
 };
 
-// 200008 - Frozen Orb Pulse. Damage/slow is native DBC data (see mage.csv's notes on this ID) -
-// this script only exists to tell the orb's AI a pulse actually landed.
+// 200008 - Frozen Orb Pulse. Damage/slow is native DBC data (see mage.csv's notes on this ID).
+// Cast by the owning mage directly (not the orb - see this file's Frozen Orb header comment for
+// why), so this script's two jobs are (a) tell the orb's AI a pulse actually landed, and (b) fold
+// Chilled to the Bone's slow boost in, same as before.
 class spell_mage_frozen_orb_pulse : public SpellScript
 {
     PrepareSpellScript(spell_mage_frozen_orb_pulse);
 
-    // The owning mage, not GetCaster() (the orb itself) - see npc_mage_frozen_orb::GetOwnerGUID's
-    // comment for why GetOriginalCaster() can't be used here instead.
+    // GetCaster() is already the player casting this pulse - no indirection needed.
     Player* GetOwningMage()
     {
         Unit* caster = GetCaster();
-        if (!caster)
-            return nullptr;
-
-        Creature* orb = caster->ToCreature();
-        if (!orb)
-            return nullptr;
-
-        npc_mage_frozen_orb* ai = dynamic_cast<npc_mage_frozen_orb*>(orb->AI());
-        if (!ai)
-            return nullptr;
-
-        Unit* owner = ObjectAccessor::GetUnit(*orb, ai->GetOwnerGUID());
-        return owner ? owner->ToPlayer() : nullptr;
+        return caster ? caster->ToPlayer() : nullptr;
     }
 
+    // GetCaster() is the player, not an orb, so the orb that actually needs to know about this
+    // hit (to halt movement and start the FoF grant chain) has to be found separately. It must be
+    // within 200008's own 10-yard pulse radius of whatever got hit, so search a bit wider than
+    // that around the hit target and match by owner GUID, in case another mage's orb happens to
+    // be pulsing nearby too.
     void NotifyOrb(SpellEffIndex /*effIndex*/)
     {
-        Unit* caster = GetCaster();
-        if (!caster)
+        Player* mage = GetOwningMage();
+        Unit* hitUnit = GetHitUnit();
+        if (!mage || !hitUnit)
             return;
 
-        if (Creature* orb = caster->ToCreature())
+        std::list<Creature*> orbs;
+        hitUnit->GetCreatureListWithEntryInGrid(orbs, NPC_MAGE_FROZEN_ORB, 15.0f);
+        for (Creature* orb : orbs)
             if (npc_mage_frozen_orb* ai = dynamic_cast<npc_mage_frozen_orb*>(orb->AI()))
-                ai->NotifyPulseHit();
+                if (ai->GetOwnerGUID() == mage->GetGUID())
+                    ai->NotifyPulseHit();
     }
 
     // Chilled to the Bone base effect (docs/frost-mage-redesign.md sec 4 Row 10) - "Reduces the
@@ -2012,6 +2072,17 @@ class spell_mage_fingers_of_frost : public AuraScript
                 prevent = true;
             else if (!isCastPhase)
                 prevent = true;
+
+            // Shattering Cold guard (docs/frost-mage-redesign.md: "Not consumed while Shattering
+            // Cold is active on the target") - same guard FrostMageRework::
+            // ConsumeFingersOfFrostIfSoleSource applies for Glacial Spike's explicit consumption
+            // path, mirrored here for the generic spell_proc-driven consumption every other Frost
+            // spell goes through. GetTarget() is this aura's owner, i.e. the caster holding the
+            // charge - Shattering Cold is caster-scoped, so it's checked by that caster's GUID.
+            if (!prevent)
+                if (Unit* target = eventInfo.GetProcTarget())
+                    if (FrostMageRework::HasShatteringCold(target, GetTarget()->GetGUID()))
+                        prevent = true;
 
             if (prevent)
                 PreventDefaultAction();

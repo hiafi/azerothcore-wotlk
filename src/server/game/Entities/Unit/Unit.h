@@ -243,7 +243,7 @@ enum CombatRating : uint8
     CR_HASTE_SPELL              = 19,
     CR_MASTERY                  = 20, // Custom: was CR_WEAPON_SKILL_MAINHAND (unused - never written by any item/aura)
     CR_VERSATILITY              = 21, // Custom: was CR_WEAPON_SKILL_OFFHAND (unused - never written by any item/aura)
-    CR_COOLDOWN_REDUCTION       = 22, // Custom: was CR_WEAPON_SKILL_RANGED (unused - never written by any item/aura)
+    CR_COOLDOWN_HASTE           = 22, // Custom: was CR_WEAPON_SKILL_RANGED (unused - never written by any item/aura)
     CR_EXPERTISE                = 23,
     CR_ARMOR_PENETRATION        = 24
 };

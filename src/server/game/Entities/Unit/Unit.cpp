@@ -3975,7 +3975,7 @@ uint32 Unit::GetWeaponSkillValue (WeaponAttackType attType, Unit const* target) 
         // Modify value from ratings
         // Custom: per-attack-type weapon skill ratings (CR_WEAPON_SKILL_MAINHAND/OFFHAND/RANGED)
         // were never written by any item/aura and have been repurposed into CR_MASTERY/
-        // CR_VERSATILITY/CR_COOLDOWN_REDUCTION - see Unit.h. Only the flat CR_WEAPON_SKILL
+        // CR_VERSATILITY/CR_COOLDOWN_HASTE - see Unit.h. Only the flat CR_WEAPON_SKILL
         // (id 0) still applies here.
         value += uint32(player->GetRatingBonusValue(CR_WEAPON_SKILL));
     }

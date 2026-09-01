@@ -247,6 +247,44 @@ SKILLLINEABILITY = DbcTable(
     ),
 )
 
+# Not part of ALL_TABLES / the generate.py pipeline: these two have no source/*.csv convention or
+# reserved ID block (ids.yaml) of their own - a single custom row is patched directly by
+# patch_frozen_orb_model.py instead, reusing read_dbc/write_dbc off these definitions. ModelName
+# (CreatureModelData) and the 4 texture/portrait columns (CreatureDisplayInfo) are 'x' in
+# DBCfmt.h (AC's own struct never reads them) but are genuine string-table offsets in the real
+# file - see dbcfile.py's read_as_string handling and this module's docstring.
+CREATUREMODELDATA = DbcTable(
+    name="CreatureModelData",
+    dbc_filename="CreatureModelData.dbc",
+    sql_table="creaturemodeldata_dbc",
+    fmt="nixxfxxxxxxxxxfffxxxxxxxxxxx",
+    columns=_cols(
+        "ID", "Flags", "ModelName", "SizeClass", "ModelScale", "BloodID",
+        "FootprintTextureID", "FootprintTextureLength", "FootprintTextureWidth",
+        "FootprintParticleScale", "FoleyMaterialID", "FootstepShakeSize",
+        "DeathThudShakeSize", "SoundID", "CollisionWidth", "CollisionHeight",
+        "MountHeight", "GeoBoxMinX", "GeoBoxMinY", "GeoBoxMinZ", "GeoBoxMaxX",
+        "GeoBoxMaxY", "GeoBoxMaxZ", "WorldEffectScale", "AttachedEffectScale",
+        "MissileCollisionRadius", "MissileCollisionPush", "MissileCollisionRaise",
+    ),
+    read_as_string=frozenset({"ModelName"}),
+)
+
+CREATUREDISPLAYINFO = DbcTable(
+    name="CreatureDisplayInfo",
+    dbc_filename="CreatureDisplayInfo.dbc",
+    sql_table="creaturedisplayinfo_dbc",
+    fmt="nixifxxxxxxxxxxx",
+    columns=_cols(
+        "ID", "ModelID", "SoundID", "ExtendedDisplayInfoID", "CreatureModelScale",
+        "CreatureModelAlpha", ("TextureVariation", 3), "PortraitTextureName",
+        "BloodLevel", "BloodID", "NPCSoundID", "ParticleColorID",
+        "CreatureGeosetData", "ObjectEffectPackageID",
+    ),
+    read_as_string=frozenset({"TextureVariation_1", "TextureVariation_2", "TextureVariation_3",
+                               "PortraitTextureName"}),
+)
+
 ALL_TABLES = (
     SPELL, TALENT, TALENTTAB, SPELLCASTTIMES, SPELLDURATION, SPELLRANGE,
     SPELLRADIUS, SKILLLINEABILITY,
