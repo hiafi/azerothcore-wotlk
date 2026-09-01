@@ -1,3 +1,4 @@
+-- DB update 2026_09_01_25 -> 2026_09_01_26
 -- ==================================================================
 -- Merged migration: Single-rank spell system rollout (per-class world-DB migrations + training dummies)
 -- Consolidates 15 pending_db_world revisions into one file, kept in

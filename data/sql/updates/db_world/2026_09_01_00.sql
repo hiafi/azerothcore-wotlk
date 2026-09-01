@@ -1,3 +1,4 @@
+-- DB update 2026_08_21_01 -> 2026_09_01_00
 -- ==================================================================
 -- Merged migration: Custom secondary-stat system (Mastery/Versatility/CDR/Proc combat ratings)
 -- Consolidates 13 pending_db_world revisions into one file, kept in

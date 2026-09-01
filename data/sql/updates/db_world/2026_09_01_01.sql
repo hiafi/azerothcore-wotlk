@@ -1,3 +1,4 @@
+-- DB update 2026_09_01_00 -> 2026_09_01_01
 -- ==================================================================
 -- Merged migration: Frost Mage rework (talent tree, new spells, playtest bugfixes)
 -- Consolidates 29 pending_db_world revisions into one file, kept in
