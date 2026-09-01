@@ -1,3 +1,725 @@
+-- ==================================================================
+-- Merged migration: Single-rank spell system rollout (per-class world-DB migrations + training dummies)
+-- Consolidates 15 pending_db_world revisions into one file, kept in
+-- original chronological order with no content changes. Each section below is
+-- reproduced verbatim from its original rev_*.sql file for traceability.
+-- ==================================================================
+
+-- ---------------------------------------------------------------
+-- originally rev_1787476300307207751.sql
+-- ---------------------------------------------------------------
+-- Single-rank spell system (docs/single-rank-spell-system.md), mage pilot, work item 3:
+-- world-DB migration for the 46 bootstrapped mage abilities. The Spell.dbc side (BasePoints,
+-- RealPointsPerLevel, coefficients, MaxLevel, ManaCostPct) is handled by apps/dbc-tools/generate.py
+-- (see the sibling rev_*.sql it produced). This file handles the two tables that pipeline doesn't
+-- touch: spell_ranks (the collapsed rank chains no longer exist as chains) and trainer_spell
+-- (only the surviving rank-1 spell should still be trainer-taught).
+
+-- Every rank of each of the 46 collapsed chains (46 survivors + 257 superseded ranks) loses its
+-- spell_ranks entry. GetRank() defaults to 1 with no chain entry, so this is safe -- matches what a
+-- never-ranked spell already looks like.
+DELETE FROM `spell_ranks` WHERE `first_spell_id` IN (
+    10, 116, 118, 120, 122, 133, 168, 491, 543, 587, 604, 700, 759, 1008, 1449, 1459, 1463, 2120, 2136,
+    2948, 5143, 5405, 5504, 6117, 6143, 7268, 7302, 11113, 11366, 11426, 12484, 18469, 23028, 30451,
+    30455, 30482, 31661, 34913, 42208, 42955, 43987, 44425, 44440, 44457, 44461, 44614
+);
+
+-- Only the 257 superseded ranks lose their trainer_spell row; the 46 survivors' rows are
+-- unchanged (same SpellId, same ReqLevel as before -- the collapse didn't move learn levels).
+DELETE FROM `trainer_spell` WHERE `SpellId` IN (
+    143, 145, 205, 597, 837, 857, 865, 990, 1090, 1460, 1461, 2121, 2137, 2138, 3140, 3552, 5144, 5145,
+    5505, 5506, 6127, 6129, 6131, 6141, 7269, 7270, 7300, 7301, 7320, 7322, 8400, 8401, 8402, 8406,
+    8407, 8408, 8412, 8413, 8416, 8417, 8418, 8419, 8422, 8423, 8427, 8437, 8438, 8439, 8444, 8445,
+    8446, 8450, 8451, 8455, 8457, 8458, 8461, 8462, 8492, 8494, 8495, 10052, 10053, 10054, 10057, 10058,
+    10138, 10139, 10140, 10144, 10145, 10148, 10149, 10150, 10151, 10156, 10157, 10159, 10160, 10161,
+    10165, 10166, 10169, 10170, 10173, 10174, 10177, 10179, 10180, 10181, 10185, 10186, 10187, 10191,
+    10192, 10193, 10197, 10199, 10201, 10202, 10205, 10206, 10207, 10211, 10212, 10215, 10216, 10219,
+    10220, 10223, 10225, 10230, 10273, 10274, 12485, 12486, 12505, 12522, 12523, 12524, 12525, 12526,
+    12824, 12825, 12826, 13018, 13019, 13020, 13021, 13031, 13032, 13033, 18809, 22782, 22783, 25304,
+    25306, 25345, 25346, 27070, 27071, 27072, 27073, 27074, 27075, 27076, 27078, 27079, 27080, 27082,
+    27085, 27086, 27087, 27088, 27090, 27101, 27103, 27124, 27125, 27126, 27127, 27128, 27130, 27131,
+    27132, 27133, 27134, 28609, 28612, 32796, 33041, 33042, 33043, 33405, 33717, 33933, 33938, 33944,
+    33946, 37420, 38692, 38697, 38699, 38700, 38703, 38704, 42198, 42209, 42210, 42211, 42212, 42213,
+    42832, 42833, 42841, 42842, 42843, 42844, 42845, 42846, 42858, 42859, 42872, 42873, 42890, 42891,
+    42894, 42896, 42897, 42913, 42914, 42917, 42920, 42921, 42925, 42926, 42930, 42931, 42937, 42938,
+    42939, 42940, 42944, 42945, 42949, 42950, 42956, 42985, 42987, 42988, 42995, 43002, 43008, 43010,
+    43012, 43015, 43017, 43019, 43020, 43023, 43024, 43038, 43039, 43043, 43044, 43045, 43046, 44441,
+    44780, 44781, 47610, 55021, 55359, 55360, 55361, 55362, 58659
+);
+
+-- 19 of the 46 survivors already had a spell_bonus_data override, and it's stale: it holds the
+-- OLD rank-1 coefficient (e.g. Frostbolt's direct_bonus was 0.172, the pre-bootstrap rank-1 value),
+-- which Unit::SpellBaseDamageBonusDone (Unit.cpp:8895-8897) prefers over Spell.dbc's
+-- EffectBonusMultiplier whenever a row exists here -- silently overriding the corrected coefficient
+-- the DBC-side migration just wrote. None of the 19 carry a nonzero ap_bonus/ap_dot_bonus (checked),
+-- so deleting is lossless: it just lets EffectBonusMultiplier (already correct) take over, same as
+-- the other 27 survivors that never had an override row.
+DELETE FROM `spell_bonus_data` WHERE `entry` IN (
+    116, 120, 122, 133, 1449, 2120, 2136, 2948, 7268, 11113, 11366, 30451, 30455, 31661, 42208, 44425,
+    44457, 44461, 44614
+);
+
+-- ---------------------------------------------------------------
+-- originally rev_1787509142211391884.sql
+-- ---------------------------------------------------------------
+-- Single-rank spell system (docs/single-rank-spell-system.md), priest pass, work item 3:
+-- world-DB migration for the 49 bootstrapped priest abilities. The Spell.dbc side (BasePoints,
+-- RealPointsPerLevel, coefficients, MaxLevel, ManaCostPct) is handled by apps/dbc-tools/generate.py
+-- (see the sibling rev_*.sql it produced). This file handles the tables that pipeline doesn't
+-- touch: spell_ranks (the collapsed rank chains no longer exist as chains), trainer_spell (only
+-- the surviving rank-1 spell should still be trainer-taught), and spell_bonus_data (stale
+-- pre-bootstrap coefficient overrides that would otherwise silently shadow the corrected
+-- EffectBonusMultiplier the DBC-side migration just wrote).
+
+-- Every rank of each of the 49 collapsed chains (49 survivors + 239 superseded ranks) loses its
+-- spell_ranks entry. GetRank() defaults to 1 with no chain entry, so this is safe -- matches what a
+-- never-ranked spell already looks like.
+DELETE FROM `spell_ranks` WHERE `first_spell_id` IN (
+    17, 139, 527, 585, 588, 589, 596, 724, 976, 1243, 2006, 2050, 2054, 2060, 2061, 2096, 2944,
+    7001, 8092, 8122, 9484, 14743, 14752, 14893, 14914, 15237, 15407, 19236, 21562, 23455, 27681,
+    27683, 27813, 32379, 32546, 33076, 33196, 34861, 34914, 41635, 45237, 47540, 47666, 47750,
+    47757, 47758, 48045, 49694, 49821
+);
+
+-- Only the 239 superseded ranks lose their trainer_spell row; the 49 survivors' rows are
+-- unchanged (same SpellId, same ReqLevel as before -- the collapse didn't move learn levels).
+DELETE FROM `trainer_spell` WHERE `SpellId` IN (
+    591, 592, 594, 598, 600, 602, 970, 984, 988, 992, 996, 1004, 1006, 1244, 1245, 2010, 2052,
+    2053, 2055, 2767, 2791, 3747, 6060, 6063, 6064, 6065, 6066, 6074, 6075, 6076, 6077, 6078, 7128,
+    8102, 8103, 8104, 8105, 8106, 8124, 9472, 9473, 9474, 9485, 10880, 10881, 10888, 10890, 10892,
+    10893, 10894, 10898, 10899, 10900, 10901, 10909, 10915, 10916, 10917, 10927, 10928, 10929,
+    10933, 10934, 10937, 10938, 10945, 10946, 10947, 10951, 10952, 10955, 10957, 10958, 10960,
+    10961, 10963, 10964, 10965, 14818, 14819, 15261, 15262, 15263, 15264, 15265, 15266, 15267,
+    15357, 15359, 15430, 15431, 17311, 17312, 17313, 17314, 18807, 19238, 19240, 19241, 19242,
+    19243, 19276, 19277, 19278, 19279, 19280, 20770, 21564, 23458, 23459, 25210, 25213, 25217,
+    25218, 25221, 25222, 25233, 25235, 25308, 25312, 25314, 25315, 25316, 25329, 25331, 25363,
+    25364, 25367, 25368, 25372, 25375, 25384, 25387, 25389, 25392, 25431, 25433, 25435, 25437,
+    25467, 27799, 27800, 27801, 27803, 27804, 27805, 27817, 27818, 27828, 27841, 27870, 27871,
+    27873, 27874, 28275, 28276, 32996, 32999, 33197, 33198, 34863, 34864, 34865, 34866, 34916,
+    34917, 39374, 45241, 45242, 48040, 48062, 48063, 48065, 48066, 48067, 48068, 48070, 48071,
+    48072, 48073, 48074, 48075, 48076, 48077, 48078, 48084, 48085, 48086, 48087, 48088, 48089,
+    48110, 48111, 48112, 48113, 48119, 48120, 48122, 48123, 48124, 48125, 48126, 48127, 48134,
+    48135, 48155, 48156, 48157, 48158, 48159, 48160, 48161, 48162, 48168, 48169, 48170, 48171,
+    48172, 48173, 48299, 48300, 52983, 52984, 52985, 52986, 52987, 52988, 52998, 52999, 53000,
+    53001, 53002, 53003, 53005, 53006, 53007, 53022, 53023, 59000
+);
+
+-- 23 of the 49 survivors already had a spell_bonus_data override; only 20 of those are stale
+-- (hold an old rank-era direct_bonus/dot_bonus -- e.g. Renew's was 0.207, the pre-bootstrap
+-- rank-1 value, vs. the corrected 0.376 -- or are simply redundant with a coefficient the DBC-side
+-- migration already set correctly). The other 3 (589 Shadow Word: Pain, 7001 Lightwell Renew,
+-- 34433 Shadowfiend) are NOT included here: their EffectBonusMultiplier is 0 in Spell.dbc across
+-- every rank, meaning spell_bonus_data is the *sole* source of their scaling, not a stale mirror
+-- of it -- deleting those would silently zero out real, live spellpower scaling. All 20 below have
+-- an ap_bonus/ap_dot_bonus of 0 (checked), so deleting is lossless: it just lets
+-- EffectBonusMultiplier (already correct) take over, same as the other 26 survivors that never
+-- had an override row.
+DELETE FROM `spell_bonus_data` WHERE `entry` IN (
+    139, 585, 596, 2050, 2054, 2060, 2061, 2944, 8092, 14914, 15237, 19236, 23455, 32379, 32546,
+    34861, 34914, 47666, 47750, 49821
+);
+
+-- ---------------------------------------------------------------
+-- originally rev_1787513439054325483.sql
+-- ---------------------------------------------------------------
+-- Single-rank spell system (docs/single-rank-spell-system.md), rogue pass, work item 3:
+-- world-DB migration for the 30 bootstrapped rogue abilities. The Spell.dbc side (BasePoints,
+-- RealPointsPerLevel, coefficients, MaxLevel, ManaCostPct) is handled by apps/dbc-tools/generate.py
+-- (see the sibling rev_*.sql it produced). This file handles the tables that pipeline doesn't
+-- touch: spell_ranks (the collapsed rank chains no longer exist as chains) and trainer_spell (only
+-- the surviving rank-1 spell should still be trainer-taught).
+--
+-- No spell_bonus_data deletes this pass: step 5's check found every existing ap_bonus/ap_dot_bonus
+-- row (Garrote, Gouge, Instant/Wound/Deadly Poison) already correct, already flat across every rank,
+-- and already keyed to the surviving rank-1 ID -- nothing stale to remove.
+
+-- Every rank of each of the 30 collapsed chains (30 survivors + 150 superseded ranks) loses its
+-- spell_ranks entry. GetRank() defaults to 1 with no chain entry, so this is safe -- matches what a
+-- never-ranked spell already looks like.
+DELETE FROM `spell_ranks` WHERE `first_spell_id` IN (
+    53, 408, 703, 1329, 1752, 1856, 1943, 1966, 2098, 2818, 2823, 2983, 5171, 5277, 5374, 6770,
+    8676, 8679, 8680, 11327, 13218, 13219, 14143, 16511, 26679, 26688, 26785, 27576, 32645, 51630
+);
+
+-- Only the 150 superseded ranks lose their trainer_spell row; the 30 survivors' rows are
+-- unchanged (same SpellId, same ReqLevel as before -- the collapse didn't move learn levels).
+-- Applies regardless of which step-7 bucket a superseded ID landed in (dropped from source /
+-- moved to npc.csv / kept in rogue.csv as item-referenced) -- none of those are trainer-taught
+-- any more even if still reachable through an item or NPC.
+DELETE FROM `trainer_spell` WHERE `SpellId` IN (
+    1757, 1758, 1759, 1760, 1857, 2070, 2589, 2590, 2591, 2819, 2824, 6760, 6761, 6762, 6768, 6774,
+    8621, 8623, 8624, 8631, 8632, 8633, 8637, 8639, 8640, 8643, 8685, 8686, 8688, 8689, 8696, 8721,
+    8724, 8725, 11267, 11268, 11269, 11273, 11274, 11275, 11279, 11280, 11281, 11289, 11290, 11293,
+    11294, 11297, 11299, 11300, 11303, 11305, 11329, 11335, 11336, 11337, 11338, 11339, 11340,
+    11353, 11354, 11355, 11356, 13222, 13223, 13224, 13225, 13226, 13227, 14149, 17347, 17348,
+    25300, 25302, 25349, 25351, 26669, 26839, 26861, 26862, 26863, 26864, 26865, 26867, 26884,
+    26888, 26889, 26890, 26891, 26967, 26968, 27186, 27187, 27188, 27189, 27441, 27448, 31016,
+    32684, 34411, 34412, 34413, 34414, 34415, 34416, 34417, 34418, 34419, 48637, 48638, 48656,
+    48657, 48658, 48659, 48660, 48661, 48662, 48663, 48664, 48665, 48666, 48667, 48668, 48671,
+    48672, 48673, 48674, 48675, 48676, 48689, 48690, 48691, 51631, 51724, 57964, 57965, 57967,
+    57968, 57969, 57970, 57972, 57973, 57974, 57975, 57977, 57978, 57981, 57982, 57992, 57993
+);
+
+-- ---------------------------------------------------------------
+-- originally rev_1787516204988624062.sql
+-- ---------------------------------------------------------------
+-- Single-rank spell system (docs/single-rank-spell-system.md), Death Knight pass, work item 3:
+-- world-DB migration for the 30 bootstrapped Death Knight abilities. The Spell.dbc side
+-- (BasePoints, RealPointsPerLevel, coefficients, MaxLevel, ManaCostPct) is handled by
+-- apps/dbc-tools/generate.py (see the sibling rev_*.sql it produced). This file handles the
+-- tables that pipeline doesn't touch: spell_ranks (the collapsed rank chains no longer exist as
+-- chains) and trainer_spell (only the surviving rank-1 spell should still be trainer-taught).
+--
+-- No spell_bonus_data deletes this pass: step 5's check found only three survivors with a row
+-- (Icy Touch, Blood Boil, Howling Blast), all ap_bonus-only (0 direct_bonus/dot_bonus), already
+-- flat across every rank of their chain, and already keyed to the surviving rank-1 ID -- nothing
+-- stale to remove (same finding as rogue's AP-scaling check).
+--
+-- Also fixed in this pass (not part of this migration): src/server/game/Spells/Auras/
+-- SpellAuras.cpp's disease-spread proc handler hardcoded the superseded ranks 51734/51735
+-- (Ebon Plague) and 50509/50510 (Crypt Fever) by talent rank; remapped to always cast the
+-- surviving rank-1 ID (51726/50508), since the debuff now scales by caster level instead of by
+-- which talent rank was known.
+
+-- Every rank of each of the 30 collapsed chains (30 survivors + 101 superseded ranks) loses its
+-- spell_ranks entry. GetRank() defaults to 1 with no chain entry, so this is safe -- matches what
+-- a never-ranked spell already looks like.
+DELETE FROM `spell_ranks` WHERE `first_spell_id` IN (
+    43265, 45462, 45477, 45902, 47541, 48721, 49020, 49038, 49143, 49158, 49184, 49601, 49998,
+    50096, 50508, 51726, 51789, 51969, 51983, 52284, 55050, 55090, 57330, 59133, 61274, 62900,
+    66188, 66196, 66198, 66215
+);
+
+-- Only the 101 superseded ranks lose their trainer_spell row; the 30 survivors' rows are
+-- unchanged (same SpellId, same ReqLevel as before -- the collapse didn't move learn levels).
+-- Applies regardless of which step-7 bucket a superseded ID landed in -- step 3's NPC audit and
+-- the item/quest/glyph checks all came back clean for every one of these 101 IDs (no reference
+-- anywhere), so all were dropped from source/spells/deathknight.csv entirely, not moved to
+-- npc.csv.
+DELETE FROM `trainer_spell` WHERE `SpellId` IN (
+    45463, 49595, 49596, 49602, 49892, 49893, 49894, 49895, 49896, 49903, 49904, 49909, 49917,
+    49918, 49919, 49920, 49921, 49923, 49924, 49926, 49927, 49928, 49929, 49930, 49936, 49937,
+    49938, 49939, 49940, 49941, 49999, 50108, 50109, 50110, 50111, 50509, 50510, 51325, 51326,
+    51327, 51328, 51409, 51410, 51411, 51416, 51417, 51418, 51419, 51423, 51424, 51425, 51734,
+    51735, 51970, 51986, 52285, 52286, 55258, 55259, 55260, 55261, 55262, 55265, 55268, 55270,
+    55271, 57623, 61275, 61276, 61277, 61278, 62901, 62902, 62903, 62904, 64855, 64856, 64858,
+    64859, 66950, 66951, 66952, 66953, 66958, 66959, 66960, 66961, 66962, 66972, 66973, 66974,
+    66975, 66976, 66977, 66978, 66979, 66988, 66989, 66990, 66991, 66992
+);
+
+-- ---------------------------------------------------------------
+-- originally rev_1787516945068711499.sql
+-- ---------------------------------------------------------------
+-- Single-rank spell system (docs/single-rank-spell-system.md), Druid pass, work item 3:
+-- world-DB migration for the 56 bootstrapped Druid abilities. The Spell.dbc side (BasePoints,
+-- RealPointsPerLevel, coefficients, MaxLevel, ManaCostPct) is handled by apps/dbc-tools/generate.py
+-- (see the sibling rev_*.sql it produced). This file handles the tables that pipeline doesn't
+-- touch: spell_ranks (the collapsed rank chains no longer exist as chains), trainer_spell (only
+-- the surviving rank-1 spell should still be trainer-taught), and spell_bonus_data (stale
+-- coefficient overrides confirmed redundant against the now-correct EffectBonusMultiplier).
+--
+-- Step 3's NPC/item/quest audit on the 287 superseded ranks found:
+--   - 7 referenced by item_template (spellid_2 - proc/on-use trinkets: Idol-type items) and 3 by
+--     quest_template (RewardSpell/RewardDisplaySpell) - kept in source/spells/druid.csv, annotated.
+--   - 15 referenced only by smart_scripts/creature_template_spell (NPC casters, all well below the
+--     level-20-50 risk band or using an unaffected superseded ID whose spell_dbc row we never
+--     touch) - moved to source/spells/npc.csv.
+--   - The remaining 262 have no reference anywhere - dropped from source entirely.
+-- Step 5 found 20 survivors with a spell_bonus_data row: 16 have EffectBonusMultiplier populated
+-- (nonzero) at both rank 1 and the max rank on the relevant effect - safe, redundant, deleted
+-- below. Thorns (467) has EffectBonusMultiplier == 0 at every rank for its self-buff effect -
+-- spell_bonus_data is the sole source of its scaling, left untouched. 4 more survivors
+-- (Swipe (Bear) 779, Rake 1822, Pounce 9005, Lacerate 33745) have only ap_bonus/ap_dot_bonus rows
+-- (the AP-scaling gotcha), confirmed flat across every rank - no write needed, same finding as
+-- rogue/DK.
+
+-- Every rank of each of the 56 collapsed chains (56 survivors + 287 superseded ranks) loses its
+-- spell_ranks entry. GetRank() defaults to 1 with no chain entry, so this is safe -- matches what
+-- a never-ranked spell already looks like.
+DELETE FROM `spell_ranks` WHERE `first_spell_id` IN (
+    99, 339, 467, 740, 774, 779, 1079, 1082, 1126, 1822, 1850, 2637, 2908, 2912, 5176, 5185, 5211,
+    5217, 5221, 5487, 5570, 6785, 6807, 8921, 8936, 8998, 9005, 16689, 16914, 16952, 19975, 20484,
+    21849, 22568, 22570, 33745, 33763, 33876, 33878, 33943, 42231, 44203, 45281, 47179, 48435,
+    48438, 48505, 50170, 50286, 50288, 50294, 50516, 50769, 58179, 60431, 61391
+);
+
+-- Only the 287 superseded ranks lose their trainer_spell row; the 56 survivors' rows are
+-- unchanged (same SpellId, same ReqLevel as before -- the collapse didn't move learn levels).
+-- Applies regardless of which step-7 bucket a superseded ID landed in -- an item- or
+-- quest-referenced rank still isn't trainer-taught any more, it's just still reachable through
+-- that other mechanism, which doesn't touch trainer_spell at all.
+DELETE FROM `trainer_spell` WHERE `SpellId` IN (
+    769, 780, 782, 1058, 1062, 1075, 1430, 1735, 1823, 1824, 2090, 2091, 3029, 3627, 5177, 5178,
+    5179, 5180, 5186, 5187, 5188, 5189, 5195, 5196, 5201, 5232, 5234, 6756, 6778, 6780, 6787, 6793,
+    6798, 6800, 6808, 6809, 8903, 8905, 8907, 8910, 8914, 8918, 8924, 8925, 8926, 8927, 8928, 8929,
+    8938, 8939, 8940, 8941, 8949, 8950, 8951, 8955, 8972, 8983, 8992, 9000, 9490, 9492, 9493, 9634,
+    9745, 9747, 9750, 9752, 9754, 9756, 9758, 9821, 9823, 9827, 9829, 9830, 9833, 9834, 9835, 9839,
+    9840, 9841, 9845, 9846, 9849, 9850, 9852, 9853, 9856, 9857, 9858, 9862, 9863, 9866, 9867, 9875,
+    9876, 9880, 9881, 9884, 9885, 9888, 9889, 9892, 9894, 9896, 9898, 9901, 9904, 9908, 9910, 9912,
+    16810, 16811, 16812, 16813, 16954, 17329, 17401, 17402, 18657, 18658, 19970, 19971, 19972,
+    19973, 19974, 20739, 20742, 20747, 20748, 21850, 22827, 22828, 22829, 24248, 24974, 24975,
+    24976, 24977, 25297, 25298, 25299, 26978, 26979, 26980, 26981, 26982, 26983, 26984, 26985,
+    26986, 26987, 26988, 26989, 26990, 26991, 26992, 26994, 26995, 26996, 26997, 26998, 27000,
+    27001, 27002, 27003, 27004, 27005, 27006, 27008, 27009, 27010, 27012, 27013, 31018, 31709,
+    33357, 33982, 33983, 33986, 33987, 40120, 42230, 42232, 42233, 44205, 44206, 44207, 44208,
+    45282, 45283, 47180, 48377, 48378, 48436, 48437, 48440, 48441, 48442, 48443, 48444, 48445,
+    48446, 48447, 48450, 48451, 48459, 48461, 48462, 48463, 48464, 48465, 48466, 48467, 48468,
+    48469, 48470, 48477, 48479, 48480, 48559, 48560, 48561, 48562, 48563, 48564, 48565, 48566,
+    48567, 48568, 48569, 48570, 48571, 48572, 48573, 48574, 48575, 48576, 48577, 48578, 48579,
+    49799, 49800, 49802, 49803, 50171, 50172, 50212, 50213, 50763, 50764, 50765, 50766, 50767,
+    50768, 53188, 53189, 53190, 53191, 53194, 53195, 53196, 53197, 53198, 53199, 53200, 53201,
+    53223, 53225, 53226, 53227, 53248, 53249, 53251, 53307, 53308, 53312, 53313, 58180, 58181,
+    60432, 60433, 61384, 61387, 61388, 61390
+);
+
+-- The 16 confirmed-stale spell_bonus_data rows (see comment above) -- not every survivor with a
+-- row, only the ones where EffectBonusMultiplier is already correct at both rank 1 and max rank.
+DELETE FROM `spell_bonus_data` WHERE `entry` IN (
+    339, 774, 2912, 5176, 5185, 5570, 8921, 8936, 19975, 33763, 42231, 44203, 48438, 50288, 50294,
+    61391
+);
+
+-- ---------------------------------------------------------------
+-- originally rev_1787517331291286907.sql
+-- ---------------------------------------------------------------
+-- Single-rank spell system (docs/single-rank-spell-system.md), Hunter pass, work item 3:
+-- world-DB migration for the 69 bootstrapped Hunter abilities. The Spell.dbc side (BasePoints,
+-- RealPointsPerLevel, coefficients, MaxLevel, ManaCostPct) is handled by apps/dbc-tools/generate.py
+-- (see the sibling rev_*.sql it produced). This file handles the tables that pipeline doesn't
+-- touch: spell_ranks (the collapsed rank chains no longer exist as chains), trainer_spell (only
+-- the surviving rank-1 spell should still be trainer-taught), and spell_bonus_data (stale
+-- coefficient overrides confirmed redundant against the now-correct EffectBonusMultiplier).
+--
+-- Also fixed in this pass (not part of this migration, see SpellAuraEffects.cpp):
+-- HandlePeriodicDummyAuraTick's Feeding Frenzy talent-rank dispatcher hardcoded the now-superseded
+-- rank 2 (60097); remapped both talent ranks to cast the surviving rank-1 ID (60096).
+--
+-- Step 3's NPC/item/quest audit on the 339 superseded ranks found:
+--   - 3 referenced by item_template (spellid_2 - Aspect of the Hawk ranks via an Idol-type item) -
+--     kept in source/spells/hunter.csv, annotated. No quest_template/glyph hits.
+--   - 12 referenced only by smart_scripts/creature_template_spell (NPC casters) - moved to
+--     source/spells/npc.csv.
+--   - The remaining 324 have no reference anywhere - dropped from source entirely.
+-- Step 5 found 34 survivors with a spell_bonus_data row. 6 (Claw, Bite, Demoralizing Screech,
+-- Lightning Breath, Pin, Acid Spit) have EffectBonusMultiplier populated (nonzero) at both rank 1
+-- and the max rank on the relevant effect - safe, redundant, deleted below. The other 28 either
+-- have EffectBonusMultiplier == 0 at every rank (spell_bonus_data is the sole source of their
+-- direct_bonus/dot_bonus scaling - most of the "Pet Skills"-family abilities) or are pure
+-- ap_bonus/ap_dot_bonus rows (the AP-scaling gotcha) confirmed flat across every rank - no write
+-- needed for either, same finding as rogue/DK/Druid.
+
+-- Every rank of each of the 69 collapsed chains (69 survivors + 339 superseded ranks) loses its
+-- spell_ranks entry. GetRank() defaults to 1 with no chain entry, so this is safe -- matches what
+-- a never-ranked spell already looks like.
+DELETE FROM `spell_ranks` WHERE `first_spell_id` IN (
+    136, 1130, 1495, 1499, 1510, 1513, 1978, 2643, 2649, 2973, 3044, 3355, 3674, 13165, 13795,
+    13797, 13812, 13813, 16827, 17253, 19306, 19386, 19434, 19491, 19557, 19603, 20043, 24131,
+    24423, 24450, 24604, 24640, 24844, 34472, 34478, 34833, 34889, 35098, 35290, 35387, 42243,
+    49966, 50245, 50256, 50271, 50274, 50318, 50433, 50479, 50498, 50518, 50519, 50541, 53301,
+    53351, 54644, 54680, 54706, 55749, 56626, 56641, 57386, 58604, 59881, 60096, 61193, 61846,
+    64418, 75593
+);
+
+-- Only the 339 superseded ranks lose their trainer_spell row; the 69 survivors' rows are
+-- unchanged (same SpellId, same ReqLevel as before -- the collapse didn't move learn levels).
+DELETE FROM `trainer_spell` WHERE `SpellId` IN (
+    3009, 3010, 3111, 3661, 3662, 13542, 13543, 13544, 13549, 13550, 13551, 13552, 13553, 13554,
+    13555, 14260, 14261, 14262, 14263, 14264, 14265, 14266, 14269, 14270, 14271, 14281, 14282,
+    14283, 14284, 14285, 14286, 14287, 14288, 14289, 14290, 14294, 14295, 14298, 14299, 14300,
+    14301, 14302, 14303, 14304, 14305, 14308, 14309, 14310, 14311, 14314, 14315, 14316, 14317,
+    14318, 14319, 14320, 14321, 14322, 14323, 14324, 14325, 14326, 14327, 14916, 14917, 14918,
+    14919, 14920, 14921, 16828, 16829, 16830, 16831, 16832, 17255, 17256, 17257, 17258, 17259,
+    17260, 17261, 19493, 19494, 19558, 19605, 19606, 19607, 19608, 20190, 20900, 20901, 20902,
+    20903, 20904, 20909, 20910, 24132, 24133, 24134, 24135, 24452, 24453, 24577, 24578, 24579,
+    24583, 24586, 24587, 25008, 25009, 25010, 25011, 25012, 25294, 25295, 25296, 27014, 27016,
+    27019, 27021, 27022, 27023, 27024, 27025, 27026, 27044, 27045, 27046, 27047, 27049, 27050,
+    27051, 27060, 27065, 27067, 27068, 27069, 34120, 34473, 34474, 34479, 34481, 34834, 34835,
+    34836, 34837, 35099, 35291, 35292, 35293, 35294, 35295, 35323, 35389, 35392, 36916, 42234,
+    42244, 42245, 48989, 48990, 48995, 48996, 48998, 48999, 49000, 49001, 49009, 49010, 49011,
+    49012, 49044, 49045, 49047, 49048, 49049, 49050, 49051, 49052, 49053, 49054, 49055, 49056,
+    49064, 49065, 49066, 49067, 49071, 49967, 49968, 49969, 49970, 49971, 49972, 49973, 49974,
+    52012, 52013, 52014, 52015, 52016, 52395, 52396, 52397, 52398, 52399, 52471, 52472, 52473,
+    52474, 52475, 52476, 53338, 53339, 53526, 53528, 53529, 53532, 53533, 53537, 53538, 53540,
+    53542, 53543, 53544, 53545, 53546, 53547, 53548, 53558, 53559, 53560, 53561, 53562, 53564,
+    53565, 53566, 53567, 53568, 53571, 53572, 53573, 53574, 53575, 53578, 53579, 53580, 53581,
+    53582, 53584, 53586, 53587, 53588, 53589, 53593, 53594, 53596, 53597, 53598, 55482, 55483,
+    55484, 55485, 55487, 55488, 55489, 55490, 55491, 55492, 55495, 55496, 55497, 55498, 55499,
+    55505, 55506, 55507, 55508, 55509, 55555, 55556, 55557, 55728, 55750, 55751, 55752, 55753,
+    55754, 56627, 56628, 56629, 56630, 56631, 57389, 57390, 57391, 57392, 57393, 58431, 58432,
+    58433, 58434, 58607, 58608, 58609, 58610, 58611, 59882, 59883, 59884, 59885, 59886, 60051,
+    60052, 60053, 60097, 61005, 61006, 61194, 61195, 61196, 61197, 61198, 61676, 61847, 63668,
+    63669, 63670, 63671, 63672, 64419, 64420, 64491, 64492, 64493, 64494, 64495, 75446, 75447
+);
+
+-- The 6 confirmed-stale spell_bonus_data rows (see comment above) -- not every survivor with a
+-- row, only the ones where EffectBonusMultiplier is already correct at both rank 1 and max rank.
+DELETE FROM `spell_bonus_data` WHERE `entry` IN (
+    16827, 17253, 24423, 24844, 50245, 55749
+);
+
+-- ---------------------------------------------------------------
+-- originally rev_1787517751894347328.sql
+-- ---------------------------------------------------------------
+-- Corrective fix for a bug in the Hunter pass's step 5 (spell_bonus_data cleanup, see
+-- rev_1787517331291286907.sql). That migration deleted 6 "stale" spell_bonus_data rows because
+-- their direct_bonus was confirmed redundant against a correct, nonzero EffectBonusMultiplier at
+-- both rank 1 and the max rank -- but the staleness check only looked at direct_bonus/dot_bonus,
+-- not at whether the SAME row also carried a real, sole-source ap_bonus/ap_dot_bonus value (no
+-- Spell.dbc equivalent exists for those -- see the playbook's AP-scaling gotcha). 3 of the 6
+-- deleted rows (Claw, Bite, Demoralizing Screech -- all "Pet Skills" family) had exactly that:
+-- direct_bonus 0.119658 (genuinely redundant, safe to drop) alongside ap_bonus 0.07 (NOT
+-- redundant, no other source of that scaling). Deleting the whole row silently zeroed pet AP
+-- scaling on these three abilities. Restoring the row with direct_bonus zeroed but ap_bonus
+-- intact -- an UPDATE-in-place would work too, but INSERT after the prior DELETE keeps this file
+-- self-contained and correct even if replayed against a DB that still has the stale row deleted.
+-- The other 3 of the original 6 (Lightning Breath, Pin, Acid Spit) had ap_bonus/ap_dot_bonus == 0
+-- already, so deleting those rows outright was correct and is not touched here.
+INSERT INTO `spell_bonus_data` (`entry`, `direct_bonus`, `dot_bonus`, `ap_bonus`, `ap_dot_bonus`, `comments`) VALUES
+(16827, 0, 0, 0.07, 0, 'Pet Skills - Claw'),
+(17253, 0, 0, 0.07, 0, 'Pet Skills - Bite'),
+(24423, 0, 0, 0.07, 0, 'Pet Skills - Demoralizing Screech');
+
+-- ---------------------------------------------------------------
+-- originally rev_1787517801278235558.sql
+-- ---------------------------------------------------------------
+-- Single-rank spell system (docs/single-rank-spell-system.md), Paladin pass, work item 3:
+-- world-DB migration for the 30 bootstrapped Paladin abilities. The Spell.dbc side (BasePoints,
+-- RealPointsPerLevel, coefficients, MaxLevel, ManaCostPct) is handled by apps/dbc-tools/generate.py
+-- (see the sibling rev_*.sql it produced). This file handles the tables that pipeline doesn't
+-- touch: spell_ranks (the collapsed rank chains no longer exist as chains), trainer_spell (only
+-- the surviving rank-1 spell should still be trainer-taught), and spell_bonus_data (stale
+-- coefficient overrides confirmed redundant against the now-correct EffectBonusMultiplier).
+--
+-- Step 3's NPC/item/quest audit on the 144 superseded ranks found:
+--   - 3 referenced by item_template (spellid_2 - Holy Light ranks via a Libram-type item) - kept
+--     in source/spells/paladin.csv, annotated. No quest_template/glyph hits.
+--   - 13 referenced only by smart_scripts/creature_template_spell (NPC casters) - moved to
+--     source/spells/npc.csv.
+--   - The rest have no reference anywhere - dropped from source entirely.
+--
+-- Step 5 found 11 survivors with a spell_bonus_data row. This pass caught a bug from the
+-- immediately-preceding Hunter pass (see rev_1787517751894347328.sql): a row can carry BOTH a
+-- redundant direct_bonus/dot_bonus (safe once EffectBonusMultiplier is confirmed correct at rank 1
+-- and max rank) AND a real, sole-source ap_bonus/ap_dot_bonus (no Spell.dbc equivalent) at the
+-- same time - deleting the whole row would destroy the AP part. Checked every row for this before
+-- deciding delete vs. update:
+--   - 5 pure direct/dot, confirmed redundant, deleted outright: Holy Light (635), Retribution Aura
+--     (7294), Flash of Light (19750), both Holy Shock triggered spells (25912, 25914).
+--   - 6 mixed rows (Exorcism 879, Holy Wrath 2812, Holy Shield 20925, Hammer of Wrath 24275,
+--     Consecration 26573, Avenger's Shield 31935) - direct_bonus (or dot_bonus for Consecration)
+--     zeroed via UPDATE, ap_bonus/ap_dot_bonus left untouched.
+-- All of this was already applied directly against the dev DB during the pass; the statements
+-- below make the same state reproducible from a clean DB.
+
+-- Every rank of each of the 30 collapsed chains (30 survivors + 144
+-- superseded ranks) loses its spell_ranks entry. GetRank() defaults to 1 with no chain entry, so
+-- this is safe -- matches what a never-ranked spell already looks like.
+DELETE FROM `spell_ranks` WHERE `first_spell_id` IN (
+    67, 465, 633, 635, 853, 879, 1022, 2812, 7294, 19740, 19742, 19750, 19876, 19888, 19891, 20194,
+    20233, 20249, 20473, 20925, 21183, 24275, 25782, 25894, 25912, 25914, 26573, 31935, 53600, 53655
+);
+
+-- Only the superseded ranks lose their trainer_spell row; the survivors' rows are unchanged (same
+-- SpellId, same ReqLevel as before -- the collapse didn't move learn levels).
+DELETE FROM `trainer_spell` WHERE `SpellId` IN (
+    639, 643, 647, 1026, 1032, 1042, 2800, 3472, 5588, 5589, 5599, 5614, 5615, 10278, 10290, 10291,
+    10292, 10293, 10298, 10299, 10300, 10301, 10308, 10310, 10312, 10313, 10314, 10318, 10328,
+    10329, 19834, 19835, 19836, 19837, 19838, 19850, 19852, 19853, 19854, 19895, 19896, 19897,
+    19898, 19899, 19900, 19939, 19940, 19941, 19942, 19943, 20116, 20195, 20236, 20250, 20251,
+    20922, 20923, 20924, 20927, 20928, 20929, 20930, 24239, 24274, 25290, 25291, 25292, 25902,
+    25903, 25911, 25913, 25916, 25918, 26017, 27135, 27136, 27137, 27138, 27139, 27140, 27141,
+    27142, 27143, 27149, 27150, 27151, 27152, 27153, 27154, 27173, 27174, 27175, 27176, 27179,
+    27180, 32699, 32700, 33072, 33073, 33074, 48781, 48782, 48784, 48785, 48788, 48800, 48801,
+    48805, 48806, 48816, 48817, 48818, 48819, 48820, 48821, 48822, 48823, 48824, 48825, 48826,
+    48827, 48931, 48932, 48933, 48934, 48935, 48936, 48937, 48938, 48941, 48942, 48943, 48945,
+    48947, 48951, 48952, 53656, 53657, 54043, 54152, 54153, 54498, 54499, 61411
+);
+
+-- The 5 confirmed pure-redundant spell_bonus_data rows (see comment above).
+DELETE FROM `spell_bonus_data` WHERE `entry` IN (635, 7294, 19750, 25912, 25914);
+
+-- The 6 mixed rows -- zero the now-redundant Spell.dbc-mirroring column, keep the sole-source
+-- AP column(s) untouched.
+UPDATE `spell_bonus_data` SET `direct_bonus` = 0 WHERE `entry` IN (879, 2812, 20925, 24275, 31935);
+UPDATE `spell_bonus_data` SET `dot_bonus` = 0 WHERE `entry` = 26573;
+
+-- ---------------------------------------------------------------
+-- originally rev_1787518279401646587.sql
+-- ---------------------------------------------------------------
+-- Single-rank spell system (docs/single-rank-spell-system.md), Shaman pass, work item 3:
+-- world-DB migration for the 60 bootstrapped Shaman abilities. The Spell.dbc side (BasePoints,
+-- RealPointsPerLevel, coefficients, MaxLevel, ManaCostPct) is handled by apps/dbc-tools/generate.py
+-- (see the sibling rev_*.sql it produced). This file handles the tables that pipeline doesn't
+-- touch: spell_ranks (the collapsed rank chains no longer exist as chains), trainer_spell (only
+-- the surviving rank-1 spell should still be trainer-taught), and spell_bonus_data (stale
+-- coefficient overrides confirmed redundant against the now-correct EffectBonusMultiplier).
+--
+-- Two chains (2075 "Searing Totem", 8073 "Stoneskin Totem") turned out to pair a real player
+-- shaman spell (rank 2: 38116/38115, SpellClassSet=11) with a rank-1 entry that's actually
+-- SpellClassSet=0 (generic) with BaseLevel=0 -- an internal/engine plumbing spell, not real player
+-- content, and never pulled into shaman.csv at all. Left both untouched (single, unscaled, exactly
+-- as pulled) rather than guess at a bootstrap using a fake rank 1 -- see the playbook's Gotchas.
+--
+-- Step 3's NPC/item/quest audit on the 387 superseded ranks found:
+--   - 3 referenced by item_template (spellid_2) - kept in source/spells/shaman.csv, annotated.
+--   - 95 referenced by smart_scripts/creature_template_spell OR (3 of them: 10405, 10461, 11307)
+--     only by a hardcoded C++ hit in boss_nefarian.cpp -- the SPELL_*-constant grep in step 3 only
+--     covers src/server/scripts/ by convention, but a same-repo full-text grep for the raw IDs
+--     still catches this; moved to source/spells/npc.csv.
+--   - The rest have no reference anywhere - dropped from source entirely.
+--
+-- Step 5 found 17 survivors with a spell_bonus_data row where EffectBonusMultiplier is confirmed
+-- correct at both rank 1 and the max rank on the relevant effect (matched by aura type, not just
+-- effect index -- Earthliving's dot_bonus maps to effect 1 itself, a periodic-heal aura, not a
+-- separate effect 2) - safe, redundant, deleted below. Flametongue Weapon Proc (8026) is left
+-- untouched: its only effect is the dummy-trigger embedded-spell-ID pattern (skipped from scaling
+-- entirely, so its own EffectBonusMultiplier is 0 at every rank) and its direct_bonus has no other
+-- confirmed source, so it's kept as a possible sole source rather than guessed away. No survivor
+-- had a nonzero ap_bonus/ap_dot_bonus this pass (no mixed-row risk, unlike Paladin/Hunter).
+
+-- Every rank of each of the 60 collapsed chains (60 survivors + 387
+-- superseded ranks) loses its spell_ranks entry. GetRank() defaults to 1 with no chain entry, so
+-- this is safe -- matches what a never-ranked spell already looks like.
+DELETE FROM `spell_ranks` WHERE `first_spell_id` IN (
+    324, 331, 370, 403, 421, 974, 1064, 1535, 2008, 3599, 3606, 5394, 5672, 5675, 5677, 5730, 8004,
+    8017, 8024, 8026, 8033, 8034, 8042, 8050, 8056, 8071, 8072, 8075, 8076, 8181, 8182, 8184, 8185,
+    8187, 8190, 8227, 8232, 8349, 10400, 10595, 10596, 16177, 16257, 26364, 30165, 30669, 30701,
+    30706, 45284, 45297, 51490, 51505, 51730, 51940, 51945, 52109, 52127, 57658, 61295, 64694
+);
+
+-- Only the superseded ranks lose their trainer_spell row; the survivors' rows are unchanged (same
+-- SpellId, same ReqLevel as before -- the collapse didn't move learn levels).
+DELETE FROM `trainer_spell` WHERE `SpellId` IN (
+    325, 332, 529, 547, 548, 905, 913, 915, 930, 939, 943, 945, 959, 2860, 6041, 6350, 6351, 6352,
+    6363, 6364, 6365, 6371, 6372, 6375, 6377, 6390, 6391, 6392, 8005, 8008, 8010, 8012, 8018, 8019,
+    8027, 8028, 8029, 8030, 8037, 8038, 8044, 8045, 8046, 8052, 8053, 8058, 8134, 8154, 8155, 8156,
+    8157, 8160, 8161, 8162, 8163, 8235, 8249, 8498, 8499, 8502, 8503, 10391, 10392, 10395, 10396,
+    10399, 10403, 10404, 10405, 10406, 10407, 10408, 10412, 10413, 10414, 10427, 10428, 10431,
+    10432, 10435, 10436, 10437, 10438, 10441, 10442, 10445, 10447, 10448, 10456, 10458, 10460,
+    10461, 10462, 10463, 10466, 10467, 10468, 10472, 10473, 10476, 10477, 10478, 10479, 10486,
+    10491, 10493, 10494, 10495, 10496, 10497, 10526, 10534, 10535, 10537, 10538, 10579, 10580,
+    10581, 10585, 10586, 10587, 10598, 10599, 10600, 10601, 10605, 10622, 10623, 11306, 11307,
+    11314, 11315, 15207, 15208, 15567, 15568, 15569, 16236, 16237, 16277, 16278, 16279, 16280,
+    16311, 16312, 16313, 16339, 16341, 16342, 16343, 16344, 16352, 16353, 16355, 16356, 16362,
+    16387, 20609, 20610, 20776, 20777, 24398, 25357, 25361, 25362, 25391, 25396, 25420, 25422,
+    25423, 25439, 25442, 25448, 25449, 25454, 25457, 25464, 25469, 25472, 25488, 25489, 25500,
+    25501, 25505, 25506, 25507, 25508, 25509, 25525, 25527, 25528, 25530, 25533, 25535, 25537,
+    25546, 25547, 25550, 25552, 25557, 25559, 25560, 25562, 25563, 25566, 25567, 25569, 25570,
+    25573, 25574, 25590, 26363, 26365, 26366, 26367, 26369, 26370, 26371, 26372, 29177, 29178,
+    29228, 30670, 30671, 30702, 30703, 30704, 30705, 32593, 32594, 33736, 45286, 45287, 45288,
+    45289, 45290, 45291, 45292, 45293, 45294, 45295, 45296, 45298, 45299, 45300, 45301, 45302,
+    49230, 49231, 49232, 49233, 49235, 49236, 49237, 49238, 49239, 49240, 49268, 49269, 49270,
+    49271, 49272, 49273, 49275, 49276, 49277, 49278, 49279, 49280, 49281, 49283, 49284, 51988,
+    51989, 51990, 51991, 51992, 51993, 51994, 51997, 51998, 51999, 52000, 52004, 52005, 52007,
+    52008, 52110, 52111, 52112, 52113, 52129, 52131, 52134, 52136, 52138, 55458, 55459, 57621,
+    57622, 57660, 57662, 57663, 57720, 57721, 57722, 57960, 58580, 58581, 58582, 58643, 58646,
+    58649, 58651, 58652, 58654, 58655, 58656, 58699, 58700, 58701, 58702, 58703, 58704, 58731,
+    58732, 58734, 58735, 58737, 58738, 58739, 58740, 58741, 58742, 58744, 58745, 58746, 58748,
+    58749, 58750, 58751, 58752, 58753, 58754, 58755, 58756, 58757, 58763, 58764, 58765, 58771,
+    58773, 58774, 58775, 58776, 58777, 58784, 58785, 58786, 58787, 58788, 58789, 58790, 58791,
+    58792, 58794, 58795, 58796, 58797, 58798, 58799, 58801, 58803, 58804, 59156, 59158, 59159,
+    60043, 61299, 61300, 61301, 61649, 61650, 61654, 61657, 65263, 65264
+);
+
+-- The 17 confirmed-stale spell_bonus_data rows (see comment above).
+DELETE FROM `spell_bonus_data` WHERE `entry` IN (
+    331, 403, 421, 974, 1064, 3606, 8004, 8034, 8042, 8050, 8056, 8187, 8349, 26364, 51505, 51945,
+    61295
+);
+
+-- ---------------------------------------------------------------
+-- originally rev_1787518611698562893.sql
+-- ---------------------------------------------------------------
+-- Single-rank spell system (docs/single-rank-spell-system.md), Warlock pass, work item 3:
+-- world-DB migration for the 62 bootstrapped Warlock abilities. The Spell.dbc side (BasePoints,
+-- RealPointsPerLevel, coefficients, MaxLevel, ManaCostPct) is handled by apps/dbc-tools/generate.py
+-- (see the sibling rev_*.sql it produced). This file handles the tables that pipeline doesn't
+-- touch: spell_ranks (the collapsed rank chains no longer exist as chains), trainer_spell (only
+-- the surviving rank-1 spell should still be trainer-taught), and spell_bonus_data (stale
+-- coefficient overrides confirmed redundant against the now-correct EffectBonusMultiplier).
+--
+-- Pure caster class (no AP-scaling gotcha, per step 0) - confirmed empty ap_bonus/ap_dot_bonus on
+-- every survivor's spell_bonus_data row, so no mixed-row risk like Paladin/Hunter this pass.
+--
+-- Step 3's NPC/item/quest audit on the 295 superseded ranks found:
+--   - 5 referenced by item_template (spellid_2) - kept in source/spells/warlock.csv, annotated.
+--     No quest_template/glyph hits.
+--   - 23 referenced only by smart_scripts/creature_template_spell (NPC casters) - moved to
+--     source/spells/npc.csv.
+--   - The rest have no reference anywhere - dropped from source entirely.
+--
+-- Step 5 found 27 survivors with a spell_bonus_data row:
+--   - 24 confirmed redundant (EffectBonusMultiplier nonzero at both rank 1 and max rank on the
+--     relevant effect) - deleted below.
+--   - Corruption (172) is a new case: EffectBonusMultiplier_1 was nonzero at rank 1 (0.0624) but
+--     bootstrap set the survivor's coefficient to the max rank's own value, which is 0 -- so
+--     post-collapse the DBC coefficient is 0 and spell_bonus_data.dot_bonus (0.0624) is now the
+--     SOLE source. The "nonzero at both ends" check must use the coefficient the survivor will
+--     actually ship with (max rank's value), not just rank 1's -- kept, not deleted.
+--   - Dark Pact (18220) and Haunt (48181): EffectBonusMultiplier == 0 at every real (populated)
+--     effect on both ends - sole source, kept.
+
+-- Every rank of each of the 62 collapsed chains (62 survivors + 295
+-- superseded ranks) loses its spell_ranks entry. GetRank() defaults to 1 with no chain entry, so
+-- this is safe -- matches what a never-ranked spell already looks like.
+DELETE FROM `spell_ranks` WHERE `first_spell_id` IN (
+    172, 348, 603, 686, 687, 689, 693, 702, 706, 710, 755, 980, 1098, 1120, 1454, 1490, 1714, 1949,
+    2362, 2947, 3110, 3716, 5484, 5676, 5740, 5782, 5857, 6201, 6229, 6307, 6353, 6360, 6366, 6789,
+    7812, 7814, 17735, 17767, 17877, 18220, 19244, 19505, 27243, 27285, 28176, 29722, 29893, 30049,
+    30108, 30151, 30251, 30283, 33698, 42223, 43991, 47261, 47263, 47897, 48181, 50796, 54049, 54424
+);
+
+-- Only the superseded ranks lose their trainer_spell row; the survivors' rows are unchanged (same
+-- SpellId, same ReqLevel as before -- the collapse didn't move learn levels).
+DELETE FROM `trainer_spell` WHERE `SpellId` IN (
+    695, 696, 699, 705, 707, 709, 1014, 1086, 1088, 1094, 1106, 1108, 1455, 1456, 2941, 3698, 3699,
+    3700, 5699, 6202, 6205, 6213, 6215, 6217, 6219, 6222, 6223, 7641, 7646, 7648, 7651, 7799, 7800,
+    7801, 7802, 7804, 7805, 7809, 7810, 7811, 7813, 7815, 7816, 8288, 8289, 8316, 8317, 11659,
+    11660, 11661, 11665, 11667, 11668, 11671, 11672, 11675, 11677, 11678, 11681, 11682, 11683,
+    11684, 11687, 11688, 11689, 11693, 11694, 11695, 11699, 11700, 11707, 11708, 11711, 11712,
+    11713, 11719, 11721, 11722, 11725, 11726, 11729, 11730, 11733, 11734, 11735, 11739, 11740,
+    11762, 11763, 11766, 11767, 11770, 11771, 11774, 11775, 11778, 11779, 11780, 11784, 11785,
+    17727, 17728, 17750, 17751, 17752, 17850, 17851, 17852, 17853, 17854, 17919, 17920, 17921,
+    17922, 17923, 17924, 17925, 17926, 17928, 17951, 17952, 17953, 18647, 18867, 18868, 18869,
+    18870, 18871, 18937, 18938, 19438, 19440, 19441, 19442, 19443, 19647, 19731, 19734, 19736,
+    20752, 20755, 20756, 20757, 25307, 25309, 25311, 27209, 27210, 27211, 27212, 27213, 27214,
+    27215, 27216, 27217, 27218, 27219, 27220, 27222, 27223, 27224, 27228, 27230, 27238, 27250,
+    27259, 27260, 27263, 27265, 27267, 27268, 27269, 27270, 27271, 27272, 27273, 27274, 27275,
+    27276, 27277, 28172, 28189, 28610, 30051, 30052, 30194, 30198, 30256, 30404, 30405, 30413,
+    30414, 30459, 30545, 30546, 30909, 30910, 32231, 33699, 33700, 33701, 42218, 42224, 42225,
+    42226, 47262, 47264, 47265, 47793, 47808, 47809, 47810, 47811, 47812, 47813, 47814, 47815,
+    47817, 47818, 47819, 47820, 47822, 47823, 47824, 47825, 47826, 47827, 47831, 47832, 47833,
+    47834, 47835, 47836, 47837, 47838, 47841, 47843, 47846, 47847, 47855, 47856, 47857, 47859,
+    47860, 47863, 47864, 47865, 47867, 47871, 47878, 47884, 47886, 47888, 47889, 47890, 47891,
+    47892, 47893, 47964, 47982, 47983, 47984, 47985, 47986, 47987, 47988, 47989, 47990, 47991,
+    47992, 47993, 47996, 48011, 50511, 54050, 54051, 54052, 54053, 57564, 57565, 57566, 57567,
+    57946, 58887, 59092, 59161, 59163, 59164, 59170, 59171, 59172, 60219, 60220, 61191, 61290
+);
+
+-- The 24 confirmed-stale spell_bonus_data rows (see comment above).
+DELETE FROM `spell_bonus_data` WHERE `entry` IN (
+    348, 603, 686, 689, 755, 980, 1120, 1949, 3110, 5676, 5857, 6353, 6789, 7814, 17877, 27243,
+    27285, 29722, 30108, 30283, 42223, 47897, 50796, 54049
+);
+
+-- ---------------------------------------------------------------
+-- originally rev_1787518878413996500.sql
+-- ---------------------------------------------------------------
+-- Single-rank spell system (docs/single-rank-spell-system.md), Warrior pass, work item 3:
+-- world-DB migration for the 23 bootstrapped Warrior abilities -- the last class in this
+-- conversion (mage, priest, rogue, Death Knight, Druid, Hunter, Paladin, Shaman, Warlock, Warrior
+-- all done). The Spell.dbc side (BasePoints, RealPointsPerLevel, coefficients, MaxLevel,
+-- ManaCostPct) is handled by apps/dbc-tools/generate.py (see the sibling rev_*.sql it produced).
+-- This file handles the tables that pipeline doesn't touch: spell_ranks (the collapsed rank chains
+-- no longer exist as chains) and trainer_spell (only the surviving rank-1 spell should still be
+-- trainer-taught).
+--
+-- No spell_bonus_data deletes this pass: all 3 survivors with a row (Thunder Clap, Revenge,
+-- Cleave) are pure ap_bonus (the AP-scaling gotcha, expected for a 100% melee/AP class per step 0)
+-- with direct_bonus/dot_bonus == 0, confirmed flat across every rank of each chain -- same finding
+-- as rogue/DK.
+--
+-- Step 3's NPC/item/quest audit on the 116 superseded ranks found:
+--   - 3 referenced by item_template (spellid_2) - kept in source/spells/warrior.csv, annotated.
+--     No quest_template/glyph hits.
+--   - 11 referenced only by smart_scripts/creature_template_spell (NPC casters) - moved to
+--     source/spells/npc.csv.
+--   - The remaining 102 have no reference anywhere - dropped from source entirely.
+
+-- Every rank of each of the 23 collapsed chains (23 survivors + 116
+-- superseded ranks) loses its spell_ranks entry. GetRank() defaults to 1 with no chain entry, so
+-- this is safe -- matches what a never-ranked spell already looks like.
+DELETE FROM `spell_ranks` WHERE `first_spell_id` IN (
+    78, 100, 469, 772, 845, 1160, 1464, 5308, 6343, 6572, 6673, 12294, 12303, 12325, 12327, 12966,
+    13491, 19870, 20243, 23922, 29559, 29841, 30213
+);
+
+-- Only the superseded ranks lose their trainer_spell row; the survivors' rows are unchanged (same
+-- SpellId, same ReqLevel as before -- the collapse didn't move learn levels).
+DELETE FROM `trainer_spell` WHERE `SpellId` IN (
+    284, 285, 1608, 2048, 5242, 6178, 6190, 6192, 6546, 6547, 6548, 6554, 6555, 6574, 7369, 7379,
+    8198, 8204, 8205, 8820, 11549, 11550, 11551, 11554, 11555, 11556, 11564, 11565, 11566, 11567,
+    11572, 11573, 11574, 11578, 11580, 11581, 11600, 11601, 11604, 11605, 11608, 11609, 12788,
+    12789, 12863, 12864, 12865, 12866, 12886, 12967, 12968, 12969, 12970, 19871, 20569, 20658,
+    20660, 20661, 20662, 21551, 21552, 21553, 23923, 23924, 23925, 25202, 25203, 25208, 25231,
+    25234, 25236, 25241, 25242, 25248, 25258, 25264, 25269, 25286, 25288, 25289, 29588, 29589,
+    29707, 29842, 30016, 30022, 30219, 30223, 30324, 30330, 30356, 30357, 46845, 47436, 47437,
+    47439, 47440, 47449, 47450, 47465, 47470, 47471, 47474, 47475, 47485, 47486, 47487, 47488,
+    47497, 47498, 47501, 47502, 47519, 47520, 47994, 57823
+);
+
+-- ---------------------------------------------------------------
+-- originally rev_1787529689976088420.sql
+-- ---------------------------------------------------------------
+-- Custom hostile training dummy for spell-damage testing (docs/single-rank-spell-system.md).
+--
+-- Base entry 30527 ("Training Dummy", npc_training_dummy AI) has faction = 35 (friendly), which
+-- makes it un-attackable with harmful spells -- it shows up as an allied unit instead of a hostile
+-- one. Rather than patch the base entry, clone it into a new custom entry (900000) with
+-- faction = 31 -- the "Critter" faction used by Chicken/Rabbit/Squirrel (creature_template).
+-- Reaction to players is exactly Neutral, which is the trick: Unit::_IsValidAttackTarget only
+-- blocks a harmful-spell target when the reaction is *above* Neutral, so it stays fully
+-- attackable -- while city guards (which only aggro what's hostile to their own faction) leave it
+-- alone. faction = 14 (Monster, hostile to both factions) was tried first and works for spell
+-- targeting too, but guards in Stormwind treat it as a hostile intruder and attack it on sight.
+-- Everything else is copied verbatim from 30527: rank 3 (worldboss, so
+-- boss-only trinket/proc rules apply like a real dummy), HealthModifier left absurdly high, and
+-- the npc_training_dummy AI, which zeroes the actual HP loss in DamageTaken() *after* the damage
+-- number is already computed/logged (see Unit.cpp DealDamage, Xinef's comment) -- so it never
+-- dies but real spell-damage numbers still show in the combat log.
+--
+-- Spawned once, permanently, in Stormwind (zone/area 1519) at the reporter's chosen spot.
+-- Guid 5300682 is a fixed value one past the live DB's MAX(guid) at the time this was written.
+-- NOTE: creature spawn guids are capped at 0xFFFFFF (ObjectMgr::GenerateCreatureSpawnId,
+-- _creatureSpawnId >= 0xFFFFFF) -- a guid above that (e.g. an "obviously out of range" value like
+-- 90000000) makes worldserver refuse to start at all ("Creature spawn id overflow") the moment it
+-- computes MAX(guid)+1 on boot. Learned the hard way; keep any future custom spawn guid well under
+-- 16,777,215 and clear of whatever MAX(guid) actually is at apply time.
+
+REPLACE INTO `creature_template`
+    (`entry`, `difficulty_entry_1`, `difficulty_entry_2`, `difficulty_entry_3`, `KillCredit1`, `KillCredit2`,
+     `name`, `subname`, `IconName`, `gossip_menu_id`, `minlevel`, `maxlevel`, `exp`, `faction`, `npcflag`,
+     `speed_walk`, `speed_run`, `speed_swim`, `speed_flight`, `detection_range`, `rank`, `dmgschool`,
+     `DamageModifier`, `BaseAttackTime`, `RangeAttackTime`, `BaseVariance`, `RangeVariance`, `unit_class`,
+     `unit_flags`, `unit_flags2`, `dynamicflags`, `family`, `type`, `type_flags`, `lootid`, `pickpocketloot`,
+     `skinloot`, `PetSpellDataId`, `VehicleId`, `mingold`, `maxgold`, `AIName`, `MovementType`, `HoverHeight`,
+     `HealthModifier`, `ManaModifier`, `ArmorModifier`, `ExperienceModifier`, `RacialLeader`, `movementId`,
+     `RegenHealth`, `CreatureImmunitiesId`, `flags_extra`, `ScriptName`, `VerifiedBuild`)
+VALUES
+    (900000, 0, 0, 0, 0, 0,
+     'Training Dummy', '', '', 0, 83, 83, 0, 31, 0,
+     1, 1.14286, 1, 1, 20, 3, 0,
+     35, 2000, 2000, 1, 1, 1,
+     0, 2048, 0, 0, 9, 4, 0, 0,
+     0, 0, 0, 0, 0, '', 0, 1,
+     23809.5, 1, 1, 1, 0, 0,
+     1, -26, 262144, 'npc_training_dummy', NULL);
+
+-- Model is a separate table from creature_template in this schema (creature_template_model) --
+-- missing this entirely means Creature::Create() can't resolve a display model and silently
+-- fails (blocks both .npc add and the DB spawn from ever rendering). Reuse 30527's own model
+-- (CreatureDisplayID 3019) verbatim.
+DELETE FROM `creature_template_model` WHERE `CreatureID` = 900000;
+INSERT INTO `creature_template_model`
+    (`CreatureID`, `Idx`, `CreatureDisplayID`, `DisplayScale`, `Probability`, `VerifiedBuild`)
+VALUES
+    (900000, 0, 3019, 1, 1, NULL);
+
+DELETE FROM `creature` WHERE `guid` = 5300682;
+INSERT INTO `creature`
+    (`guid`, `id`, `map`, `zoneId`, `areaId`, `spawnMask`, `phaseMask`, `equipment_id`,
+     `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `wander_distance`,
+     `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`,
+     `ScriptName`, `VerifiedBuild`, `CreateObject`, `Comment`)
+VALUES
+    (5300682, 900000, 0, 1519, 1519, 1, 1, 0,
+     -8904, 500, 93.86, 0, 120, 0,
+     0, 1, 0, 0, 0, 0, 0,
+     '', NULL, 0, 'Custom hostile training dummy for spell-damage testing');
+
+-- ---------------------------------------------------------------
+-- originally rev_1787534611021262336.sql
+-- ---------------------------------------------------------------
 -- Data-repair: a crashed apps/dbc-tools/generate.py run (before the Description/AuraDescription string-vs-int dbcfmt.py fix landed) auto-applied
 -- via rev_1787531761332523520.sql (never committed, deleted from pending_db_world/ after the fact) and wrote the stale raw string-table offset
 -- integer into these two text columns for every spell it built a fresh row for. These IDs are untouched by the corrected single-rank-conversion migrations,
@@ -6788,3 +7510,99 @@ UPDATE `spell_dbc` SET `Description_Lang_enUS` = 'Deals $s1 Fire damage and caus
 UPDATE `spell_dbc` SET `Description_Lang_enUS` = 'Deals $s1 Fire damage and causes an additional $s2 Fire damage every $t2 sec to targets that remain within the explosion area.', `AuraDescription_Lang_enUS` = 'Suffering $s2 Fire damage every $t2 sec.' WHERE `ID` = 75884;
 UPDATE `spell_dbc` SET `Description_Lang_enUS` = 'Increases the periodic damage done by your Devouring Plague, and when you cast Devouring Plague you instantly deal damage equal to a portion of its total periodic effect.', `AuraDescription_Lang_enUS` = NULL WHERE `ID` = 75999;
 UPDATE `spell_dbc` SET `Description_Lang_enUS` = NULL, `AuraDescription_Lang_enUS` = 'Invisible.' WHERE `ID` = 76027;
+
+-- ---------------------------------------------------------------
+-- originally rev_1787545308095684126.sql
+-- ---------------------------------------------------------------
+-- Three level-bracket training dummies for spell-damage testing (docs/single-rank-spell-system.md),
+-- alongside the existing entry 900000 (level 83) -- see rev_1787529689976088420.sql for the original
+-- "how does an attackable dummy even work" writeup (faction 31 Critter trick, npc_training_dummy AI
+-- zeroing HP loss after the damage number is logged, etc.); this migration just clones that same
+-- pattern at three more levels.
+--
+-- Content is locked at level 60 for a while, so testing against the level-83 dummy alone puts every
+-- cast through the level-gap partial-resist penalty in Unit::GetEffectiveResistChance (Unit.cpp) --
+-- real damage numbers come out well under tooltip and are not representative of live play. These
+-- three sit at 60/70/80 so damage can be checked at-level (no artificial resist from the gap) at
+-- today's cap and at the two future brackets.
+--
+-- Guids 5300683-5300685: next three after the existing dummy's 5300682 (MAX(guid) in the live DB at
+-- write time). Same 0xFFFFFF cap note applies (ObjectMgr::GenerateCreatureSpawnId) -- keep well
+-- under 16,777,215.
+
+REPLACE INTO `creature_template`
+    (`entry`, `difficulty_entry_1`, `difficulty_entry_2`, `difficulty_entry_3`, `KillCredit1`, `KillCredit2`,
+     `name`, `subname`, `IconName`, `gossip_menu_id`, `minlevel`, `maxlevel`, `exp`, `faction`, `npcflag`,
+     `speed_walk`, `speed_run`, `speed_swim`, `speed_flight`, `detection_range`, `rank`, `dmgschool`,
+     `DamageModifier`, `BaseAttackTime`, `RangeAttackTime`, `BaseVariance`, `RangeVariance`, `unit_class`,
+     `unit_flags`, `unit_flags2`, `dynamicflags`, `family`, `type`, `type_flags`, `lootid`, `pickpocketloot`,
+     `skinloot`, `PetSpellDataId`, `VehicleId`, `mingold`, `maxgold`, `AIName`, `MovementType`, `HoverHeight`,
+     `HealthModifier`, `ManaModifier`, `ArmorModifier`, `ExperienceModifier`, `RacialLeader`, `movementId`,
+     `RegenHealth`, `CreatureImmunitiesId`, `flags_extra`, `ScriptName`, `VerifiedBuild`)
+VALUES
+    (900001, 0, 0, 0, 0, 0,
+     'Training Dummy', 'Level 60', '', 0, 60, 60, 0, 31, 0,
+     1, 1.14286, 1, 1, 20, 3, 0,
+     35, 2000, 2000, 1, 1, 1,
+     0, 2048, 0, 0, 9, 4, 0, 0,
+     0, 0, 0, 0, 0, '', 0, 1,
+     23809.5, 1, 1, 1, 0, 0,
+     1, -26, 262144, 'npc_training_dummy', NULL),
+    (900002, 0, 0, 0, 0, 0,
+     'Training Dummy', 'Level 70', '', 0, 70, 70, 0, 31, 0,
+     1, 1.14286, 1, 1, 20, 3, 0,
+     35, 2000, 2000, 1, 1, 1,
+     0, 2048, 0, 0, 9, 4, 0, 0,
+     0, 0, 0, 0, 0, '', 0, 1,
+     23809.5, 1, 1, 1, 0, 0,
+     1, -26, 262144, 'npc_training_dummy', NULL),
+    (900003, 0, 0, 0, 0, 0,
+     'Training Dummy', 'Level 80', '', 0, 80, 80, 0, 31, 0,
+     1, 1.14286, 1, 1, 20, 3, 0,
+     35, 2000, 2000, 1, 1, 1,
+     0, 2048, 0, 0, 9, 4, 0, 0,
+     0, 0, 0, 0, 0, '', 0, 1,
+     23809.5, 1, 1, 1, 0, 0,
+     1, -26, 262144, 'npc_training_dummy', NULL);
+
+DELETE FROM `creature_template_model` WHERE `CreatureID` IN (900001, 900002, 900003);
+INSERT INTO `creature_template_model`
+    (`CreatureID`, `Idx`, `CreatureDisplayID`, `DisplayScale`, `Probability`, `VerifiedBuild`)
+VALUES
+    (900001, 0, 3019, 1, 1, NULL),
+    (900002, 0, 3019, 1, 1, NULL),
+    (900003, 0, 3019, 1, 1, NULL);
+
+-- Spread out around the same Stormwind spot (no longer lined up 3 yards apart -- each one has its
+-- own hand-picked position so they don't overlap).
+DELETE FROM `creature` WHERE `guid` IN (5300683, 5300684, 5300685);
+INSERT INTO `creature`
+    (`guid`, `id`, `map`, `zoneId`, `areaId`, `spawnMask`, `phaseMask`, `equipment_id`,
+     `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `wander_distance`,
+     `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`,
+     `ScriptName`, `VerifiedBuild`, `CreateObject`, `Comment`)
+VALUES
+    (5300683, 900001, 0, 1519, 1519, 1, 1, 0,
+     -8904, 503, 93.8, 0, 120, 0,
+     0, 1, 0, 0, 0, 0, 0,
+     '', NULL, 0, 'Level 60 training dummy for spell-damage testing'),
+    (5300684, 900002, 0, 1519, 1519, 1, 1, 0,
+     -8914, 490, 93.8, 0, 120, 0,
+     0, 1, 0, 0, 0, 0, 0,
+     '', NULL, 0, 'Level 70 training dummy for spell-damage testing'),
+    (5300685, 900003, 0, 1519, 1519, 1, 1, 0,
+     -8932, 485, 93.8, 0, 120, 0,
+     0, 1, 0, 0, 0, 0, 0,
+     '', NULL, 0, 'Level 80 training dummy for spell-damage testing');
+
+-- ---------------------------------------------------------------
+-- originally rev_1787550861525018560.sql
+-- ---------------------------------------------------------------
+-- Remove the level-83 training dummy (entry 900000, guid 5300682) added in
+-- rev_1787529689976088420.sql -- no longer needed now that the level-bracket dummies
+-- (900001/900002/900003, rev_1787545308095684126.sql) cover at-level testing.
+
+DELETE FROM `creature` WHERE `guid` = 5300682;
+DELETE FROM `creature_template_model` WHERE `CreatureID` = 900000;
+DELETE FROM `creature_template` WHERE `entry` = 900000;
+

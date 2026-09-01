@@ -2,8 +2,11 @@
 Writes an edit to `item_template` as a new `data/sql/updates/pending_db_world/
 rev_<ns>.sql` file, following the two conventions already established by hand
 in this repo's history for tables on `apps/codestyle/codestyle-sql.py`'s
-`not_delete` list (`item_template` among them - see rev_1787824212353499531.sql
-and rev_1787563173168071680.sql):
+`not_delete` list (`item_template` among them - see the Conjure Refreshment
+item-level edit and the `npc_mage_frozen_orb` upsert inside
+data/sql/updates/pending_db_world/frost_mage_rework.sql, the merged
+Frost Mage rework migration - originally rev_1787824212353499531.sql and
+rev_1787563173168071680.sql respectively):
 
   - **Editing an existing row**: a plain `UPDATE` per save, guarded by the old
     value of every column being changed (WHERE entry = N AND col = <old value>
@@ -11,8 +14,9 @@ and rev_1787563173168071680.sql):
     instead of an error.
   - **A brand-new row**: an INSERT with an ON DUPLICATE KEY UPDATE clause -
     an upsert, which is both idempotent and never needs a `DELETE` (the
-    `creature_template`/`npc_mage_frozen_orb` precedent in
-    rev_1787563173168071680.sql).
+    `creature_template`/`npc_mage_frozen_orb` precedent, originally
+    rev_1787563173168071680.sql, now inside the merged Frost Mage rework
+    migration frost_mage_rework.sql).
 """
 
 from __future__ import annotations

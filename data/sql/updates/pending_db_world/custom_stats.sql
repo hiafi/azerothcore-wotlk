@@ -1,3 +1,97 @@
+-- ==================================================================
+-- Merged migration: Custom secondary-stat system (Mastery/Versatility/CDR/Proc combat ratings)
+-- Consolidates 13 pending_db_world revisions into one file, kept in
+-- original chronological order with no content changes. Each section below is
+-- reproduced verbatim from its original rev_*.sql file for traceability.
+-- ==================================================================
+
+-- ---------------------------------------------------------------
+-- originally rev_1787377390451498201.sql
+-- ---------------------------------------------------------------
+-- Custom: repurpose the (previously-unused) CR_WEAPON_SKILL_MAINHAND/OFFHAND/RANGED combat rating
+-- slots (ids 20/21/22) into CR_MASTERY/CR_VERSATILITY/CR_COOLDOWN_REDUCTION - see Unit.h.
+-- Their old `gtcombatratings_dbc` curves are shaped for converting rating into weapon-skill points,
+-- not a percent, so they are overwritten here with a copy of the CR_CRIT_MELEE (id 8) percentage
+-- curve, giving the 3 new stats a sane, already level-tuned percent-per-rating baseline. Balance can
+-- be retuned later by editing `Data` directly - no code change needed.
+-- `gtoctclasscombatratingscalar_dbc` needs no change: its rows for ids 20/21/22 are already a flat
+-- `1` scalar per class, identical to CR_CRIT_MELEE's own scalar rows.
+DELETE FROM `gtcombatratings_dbc` WHERE `ID` BETWEEN 2000 AND 2099;
+INSERT INTO `gtcombatratings_dbc` (`ID`, `Data`) SELECT `ID` + 1200, `Data` FROM `gtcombatratings_dbc` WHERE `ID` BETWEEN 800 AND 899;
+DELETE FROM `gtcombatratings_dbc` WHERE `ID` BETWEEN 2100 AND 2199;
+INSERT INTO `gtcombatratings_dbc` (`ID`, `Data`) SELECT `ID` + 1300, `Data` FROM `gtcombatratings_dbc` WHERE `ID` BETWEEN 800 AND 899;
+DELETE FROM `gtcombatratings_dbc` WHERE `ID` BETWEEN 2200 AND 2299;
+INSERT INTO `gtcombatratings_dbc` (`ID`, `Data`) SELECT `ID` + 1400, `Data` FROM `gtcombatratings_dbc` WHERE `ID` BETWEEN 800 AND 899;
+
+-- ---------------------------------------------------------------
+-- originally rev_1787897259858855912.sql
+-- ---------------------------------------------------------------
+-- item-tools: "Betrayer's Boots" (19897). Adding Mastery Changed columns: stat_type4 (0 -> 22), stat_value4 (0 -> 20).
+UPDATE `item_template` SET `stat_type4` = 22, `stat_value4` = 20 WHERE `entry` = 19897 AND `stat_type4` = 0 AND `stat_value4` = 0;
+
+-- ---------------------------------------------------------------
+-- originally rev_1787897446305627526.sql
+-- ---------------------------------------------------------------
+-- item-tools: 'Band of Servitude' (22721). Adding Versatility Changed columns: stat_type3 (0 -> 23), stat_value3 (0 ->
+-- 20).
+UPDATE `item_template` SET `stat_type3` = 23, `stat_value3` = 20 WHERE `entry` = 22721 AND `stat_type3` = 0 AND `stat_value3` = 0;
+
+-- ---------------------------------------------------------------
+-- originally rev_1787897487869873604.sql
+-- ---------------------------------------------------------------
+-- item-tools: 'Cloak of the Hakkari Worshippers' (22711). Adding CDR Changed columns: stat_type3 (0 -> 24), stat_value3
+-- (0 -> 20).
+UPDATE `item_template` SET `stat_type3` = 24, `stat_value3` = 20 WHERE `entry` = 22711 AND `stat_type3` = 0 AND `stat_value3` = 0;
+
+-- ---------------------------------------------------------------
+-- originally rev_1787897526828359633.sql
+-- ---------------------------------------------------------------
+-- item-tools: 'Seal of the Gurubashi Berserker' (22722). Adding Proc Chance Changed columns: stat_type2 (0 -> 33),
+-- stat_value2 (0 -> 20).
+UPDATE `item_template` SET `stat_type2` = 33, `stat_value2` = 20 WHERE `entry` = 22722 AND `stat_type2` = 0 AND `stat_value2` = 0;
+
+-- ---------------------------------------------------------------
+-- originally rev_1787897871776266721.sql
+-- ---------------------------------------------------------------
+-- Custom QA vendor in Stormwind (Trade District) selling the custom-stat test items:
+-- Betrayer's Boots (19897), Seal of the Gurubashi Berserker (22722),
+-- Band of Servitude (22721), Cloak of the Hakkari Worshippers (22711).
+REPLACE INTO `creature_template` (`entry`, `difficulty_entry_1`, `difficulty_entry_2`, `difficulty_entry_3`,
+    `KillCredit1`, `KillCredit2`, `name`, `subname`, `IconName`, `gossip_menu_id`, `minlevel`, `maxlevel`, `exp`,
+    `faction`, `npcflag`, `speed_walk`, `speed_run`, `speed_swim`, `speed_flight`, `detection_range`, `rank`,
+    `dmgschool`, `DamageModifier`, `BaseAttackTime`, `RangeAttackTime`, `BaseVariance`, `RangeVariance`,
+    `unit_class`, `unit_flags`, `unit_flags2`, `dynamicflags`, `family`, `type`, `type_flags`, `lootid`,
+    `pickpocketloot`, `skinloot`, `PetSpellDataId`, `VehicleId`, `mingold`, `maxgold`, `AIName`, `MovementType`,
+    `HoverHeight`, `HealthModifier`, `ManaModifier`, `ArmorModifier`, `ExperienceModifier`, `RacialLeader`,
+    `movementId`, `RegenHealth`, `CreatureImmunitiesId`, `flags_extra`, `ScriptName`, `VerifiedBuild`)
+VALUES (900010, 0, 0, 0, 0, 0, 'Quinn Testbury', '<QA Item Vendor>', NULL, 0, 1, 1, 0, 12, 128, 1, 1.14286, 1, 1,
+    20, 0, 0, 1, 2000, 2000, 1, 1, 1, 512, 2048, 0, 0, 7, 134217728, 0, 0, 0, 0, 0, 0, 0, '', 0, 1, 1, 1, 1, 1, 0,
+    0, 1, 0, 2, '', NULL);
+
+DELETE FROM `creature_template_model` WHERE `CreatureID` = 900010;
+INSERT INTO `creature_template_model` (`CreatureID`, `Idx`, `CreatureDisplayID`, `DisplayScale`, `Probability`,
+    `VerifiedBuild`)
+VALUES (900010, 0, 1520, 1, 1, NULL);
+
+DELETE FROM `creature` WHERE `guid` = 900010;
+INSERT INTO `creature` (`guid`, `id`, `map`, `zoneId`, `areaId`, `spawnMask`, `phaseMask`, `equipment_id`,
+    `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `wander_distance`, `currentwaypoint`,
+    `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`, `ScriptName`, `VerifiedBuild`,
+    `CreateObject`, `Comment`)
+VALUES (900010, 900010, 0, 0, 0, 1, 1, 0, -8718.03, 480.42, 98.81, 0.9, 300, 0, 0, 100, 0, 0, 0, 0, 0, '', 0, 0,
+    'QA vendor for custom item stat testing');
+
+DELETE FROM `npc_vendor` WHERE `entry` = 900010;
+INSERT INTO `npc_vendor` (`entry`, `slot`, `item`, `maxcount`, `incrtime`, `ExtendedCost`, `VerifiedBuild`)
+VALUES
+(900010, 1, 19897, 0, 0, 0, 0),
+(900010, 2, 22722, 0, 0, 0, 0),
+(900010, 3, 22721, 0, 0, 0, 0),
+(900010, 4, 22711, 0, 0, 0, 0);
+
+-- ---------------------------------------------------------------
+-- originally rev_1787946043819236756.sql
+-- ---------------------------------------------------------------
 -- Rework the custom secondary-stat rating curves (Mastery, Versatility, Cooldown
 -- Reduction, Proc Chance) in gtcombatratings_dbc to intentionally-designed values
 -- instead of the inherited weapon-skill/hit-taken-melee curves they came with from
@@ -422,3 +516,153 @@ UPDATE `gtcombatratings_dbc` SET `Data` = 79.675 WHERE `ID` = 1196;
 UPDATE `gtcombatratings_dbc` SET `Data` = 85.7265 WHERE `ID` = 1197;
 UPDATE `gtcombatratings_dbc` SET `Data` = 92.2375 WHERE `ID` = 1198;
 UPDATE `gtcombatratings_dbc` SET `Data` = 99.243 WHERE `ID` = 1199;
+
+-- ---------------------------------------------------------------
+-- originally rev_1788156116888309569.sql
+-- ---------------------------------------------------------------
+-- item-tools: "Betrayer's Boots" (19897). Upping to 100% mastery for testing Changed columns: stat_value4 (20 -> 1400).
+UPDATE `item_template` SET `stat_value4` = 1400 WHERE `entry` = 19897 AND `stat_value4` = 20;
+
+-- ---------------------------------------------------------------
+-- originally rev_1788156193646087050.sql
+-- ---------------------------------------------------------------
+-- item-tools: 'Band of Servitude' (22721). Testing Changed columns: stat_value3 (20 -> 1400).
+UPDATE `item_template` SET `stat_value3` = 1400 WHERE `entry` = 22721 AND `stat_value3` = 20;
+
+-- ---------------------------------------------------------------
+-- originally rev_1788156235356043756.sql
+-- ---------------------------------------------------------------
+-- item-tools: 'Seal of the Gurubashi Berserker' (22722). Testing Changed columns: stat_value2 (20 -> 1400).
+UPDATE `item_template` SET `stat_value2` = 1400 WHERE `entry` = 22722 AND `stat_value2` = 20;
+
+-- ---------------------------------------------------------------
+-- originally rev_1788156276423963642.sql
+-- ---------------------------------------------------------------
+-- item-tools: 'Cloak of the Hakkari Worshippers' (22711). Test Changed columns: stat_value3 (20 -> 1400).
+UPDATE `item_template` SET `stat_value3` = 1400 WHERE `entry` = 22711 AND `stat_value3` = 20;
+
+-- ---------------------------------------------------------------
+-- originally rev_1788166879105224370.sql
+-- ---------------------------------------------------------------
+-- item-tools: 'Cloak of the Hakkari Worshippers' (22711). Testing Changed columns: stat_value3 (1400 -> 700).
+UPDATE `item_template` SET `stat_value3` = 700 WHERE `entry` = 22711 AND `stat_value3` = 1400;
+
+-- ---------------------------------------------------------------
+-- originally rev_1788195067344804929.sql
+-- ---------------------------------------------------------------
+-- Cooldown Reduction stat rework (see Player::AddSpellAndCategoryCooldowns, Player.cpp): the
+-- stat is now applied as a "cooldown haste" (rec / (1 + CDR%/100)) instead of a flat percentage
+-- cut (rec * (1 - CDR%/100)), so 100% CDR only halves a cooldown, 200% takes it to a third, and
+-- so on - no finite amount of rating can reduce a cooldown to zero. To keep that curve feeling
+-- worthwhile per point (diminishing returns bite immediately once you're doing division instead
+-- of subtraction), CR_COOLDOWN_REDUCTION's `gtcombatratings_dbc` curve (id 22, rows 2200-2299) is
+-- retuned from x1.0 of Crit Rating (CR_CRIT_SPELL) down to x0.5 - twice the percent per point,
+-- same multiplier CR_PROC_CHANCE already uses (see rev_1787946043819236756.sql) - which is why
+-- these values are identical to that migration's Proc Chance block (ids 1100-1199), just shifted
+-- to the Cooldown Reduction id range.
+-- `gtoctclasscombatratingscalar_dbc` needs no change: id 22's per-class scalar is already a flat
+-- `1` for every class, same as every other custom stat slot.
+-- Remember to also regenerate the client-facing patch-Y.mpq via
+-- apps/dbc-tools/patch_gt_tables.py once this is applied (its tooltip math reads a copy of these
+-- same two DBCs - see that script's docstring for why).
+UPDATE `gtcombatratings_dbc` SET `Data` = 0.269231 WHERE `ID` = 2200;
+UPDATE `gtcombatratings_dbc` SET `Data` = 0.269231 WHERE `ID` = 2201;
+UPDATE `gtcombatratings_dbc` SET `Data` = 0.269231 WHERE `ID` = 2202;
+UPDATE `gtcombatratings_dbc` SET `Data` = 0.269231 WHERE `ID` = 2203;
+UPDATE `gtcombatratings_dbc` SET `Data` = 0.269231 WHERE `ID` = 2204;
+UPDATE `gtcombatratings_dbc` SET `Data` = 0.269231 WHERE `ID` = 2205;
+UPDATE `gtcombatratings_dbc` SET `Data` = 0.269231 WHERE `ID` = 2206;
+UPDATE `gtcombatratings_dbc` SET `Data` = 0.269231 WHERE `ID` = 2207;
+UPDATE `gtcombatratings_dbc` SET `Data` = 0.269231 WHERE `ID` = 2208;
+UPDATE `gtcombatratings_dbc` SET `Data` = 0.269231 WHERE `ID` = 2209;
+UPDATE `gtcombatratings_dbc` SET `Data` = 0.403846 WHERE `ID` = 2210;
+UPDATE `gtcombatratings_dbc` SET `Data` = 0.53846 WHERE `ID` = 2211;
+UPDATE `gtcombatratings_dbc` SET `Data` = 0.673075 WHERE `ID` = 2212;
+UPDATE `gtcombatratings_dbc` SET `Data` = 0.807695 WHERE `ID` = 2213;
+UPDATE `gtcombatratings_dbc` SET `Data` = 0.942305 WHERE `ID` = 2214;
+UPDATE `gtcombatratings_dbc` SET `Data` = 1.07692 WHERE `ID` = 2215;
+UPDATE `gtcombatratings_dbc` SET `Data` = 1.21154 WHERE `ID` = 2216;
+UPDATE `gtcombatratings_dbc` SET `Data` = 1.34615 WHERE `ID` = 2217;
+UPDATE `gtcombatratings_dbc` SET `Data` = 1.48077 WHERE `ID` = 2218;
+UPDATE `gtcombatratings_dbc` SET `Data` = 1.61539 WHERE `ID` = 2219;
+UPDATE `gtcombatratings_dbc` SET `Data` = 1.75 WHERE `ID` = 2220;
+UPDATE `gtcombatratings_dbc` SET `Data` = 1.88461 WHERE `ID` = 2221;
+UPDATE `gtcombatratings_dbc` SET `Data` = 2.01923 WHERE `ID` = 2222;
+UPDATE `gtcombatratings_dbc` SET `Data` = 2.15385 WHERE `ID` = 2223;
+UPDATE `gtcombatratings_dbc` SET `Data` = 2.28846 WHERE `ID` = 2224;
+UPDATE `gtcombatratings_dbc` SET `Data` = 2.42307 WHERE `ID` = 2225;
+UPDATE `gtcombatratings_dbc` SET `Data` = 2.55769 WHERE `ID` = 2226;
+UPDATE `gtcombatratings_dbc` SET `Data` = 2.69231 WHERE `ID` = 2227;
+UPDATE `gtcombatratings_dbc` SET `Data` = 2.82693 WHERE `ID` = 2228;
+UPDATE `gtcombatratings_dbc` SET `Data` = 2.96154 WHERE `ID` = 2229;
+UPDATE `gtcombatratings_dbc` SET `Data` = 3.09615 WHERE `ID` = 2230;
+UPDATE `gtcombatratings_dbc` SET `Data` = 3.23077 WHERE `ID` = 2231;
+UPDATE `gtcombatratings_dbc` SET `Data` = 3.36538 WHERE `ID` = 2232;
+UPDATE `gtcombatratings_dbc` SET `Data` = 3.5 WHERE `ID` = 2233;
+UPDATE `gtcombatratings_dbc` SET `Data` = 3.63462 WHERE `ID` = 2234;
+UPDATE `gtcombatratings_dbc` SET `Data` = 3.76923 WHERE `ID` = 2235;
+UPDATE `gtcombatratings_dbc` SET `Data` = 3.90385 WHERE `ID` = 2236;
+UPDATE `gtcombatratings_dbc` SET `Data` = 4.03846 WHERE `ID` = 2237;
+UPDATE `gtcombatratings_dbc` SET `Data` = 4.17307 WHERE `ID` = 2238;
+UPDATE `gtcombatratings_dbc` SET `Data` = 4.30769 WHERE `ID` = 2239;
+UPDATE `gtcombatratings_dbc` SET `Data` = 4.44231 WHERE `ID` = 2240;
+UPDATE `gtcombatratings_dbc` SET `Data` = 4.57693 WHERE `ID` = 2241;
+UPDATE `gtcombatratings_dbc` SET `Data` = 4.71154 WHERE `ID` = 2242;
+UPDATE `gtcombatratings_dbc` SET `Data` = 4.84616 WHERE `ID` = 2243;
+UPDATE `gtcombatratings_dbc` SET `Data` = 4.98077 WHERE `ID` = 2244;
+UPDATE `gtcombatratings_dbc` SET `Data` = 5.1154 WHERE `ID` = 2245;
+UPDATE `gtcombatratings_dbc` SET `Data` = 5.25 WHERE `ID` = 2246;
+UPDATE `gtcombatratings_dbc` SET `Data` = 5.3846 WHERE `ID` = 2247;
+UPDATE `gtcombatratings_dbc` SET `Data` = 5.51925 WHERE `ID` = 2248;
+UPDATE `gtcombatratings_dbc` SET `Data` = 5.65385 WHERE `ID` = 2249;
+UPDATE `gtcombatratings_dbc` SET `Data` = 5.78845 WHERE `ID` = 2250;
+UPDATE `gtcombatratings_dbc` SET `Data` = 5.9231 WHERE `ID` = 2251;
+UPDATE `gtcombatratings_dbc` SET `Data` = 6.0577 WHERE `ID` = 2252;
+UPDATE `gtcombatratings_dbc` SET `Data` = 6.1923 WHERE `ID` = 2253;
+UPDATE `gtcombatratings_dbc` SET `Data` = 6.3269 WHERE `ID` = 2254;
+UPDATE `gtcombatratings_dbc` SET `Data` = 6.46155 WHERE `ID` = 2255;
+UPDATE `gtcombatratings_dbc` SET `Data` = 6.59615 WHERE `ID` = 2256;
+UPDATE `gtcombatratings_dbc` SET `Data` = 6.73075 WHERE `ID` = 2257;
+UPDATE `gtcombatratings_dbc` SET `Data` = 6.8654 WHERE `ID` = 2258;
+UPDATE `gtcombatratings_dbc` SET `Data` = 7 WHERE `ID` = 2259;
+UPDATE `gtcombatratings_dbc` SET `Data` = 7.2658 WHERE `ID` = 2260;
+UPDATE `gtcombatratings_dbc` SET `Data` = 7.55265 WHERE `ID` = 2261;
+UPDATE `gtcombatratings_dbc` SET `Data` = 7.863 WHERE `ID` = 2262;
+UPDATE `gtcombatratings_dbc` SET `Data` = 8.2 WHERE `ID` = 2263;
+UPDATE `gtcombatratings_dbc` SET `Data` = 8.56715 WHERE `ID` = 2264;
+UPDATE `gtcombatratings_dbc` SET `Data` = 8.96875 WHERE `ID` = 2265;
+UPDATE `gtcombatratings_dbc` SET `Data` = 9.40985 WHERE `ID` = 2266;
+UPDATE `gtcombatratings_dbc` SET `Data` = 9.89655 WHERE `ID` = 2267;
+UPDATE `gtcombatratings_dbc` SET `Data` = 10.4363 WHERE `ID` = 2268;
+UPDATE `gtcombatratings_dbc` SET `Data` = 11.0384 WHERE `ID` = 2269;
+UPDATE `gtcombatratings_dbc` SET `Data` = 11.8768 WHERE `ID` = 2270;
+UPDATE `gtcombatratings_dbc` SET `Data` = 12.779 WHERE `ID` = 2271;
+UPDATE `gtcombatratings_dbc` SET `Data` = 13.7495 WHERE `ID` = 2272;
+UPDATE `gtcombatratings_dbc` SET `Data` = 14.7939 WHERE `ID` = 2273;
+UPDATE `gtcombatratings_dbc` SET `Data` = 15.9175 WHERE `ID` = 2274;
+UPDATE `gtcombatratings_dbc` SET `Data` = 17.1264 WHERE `ID` = 2275;
+UPDATE `gtcombatratings_dbc` SET `Data` = 18.4273 WHERE `ID` = 2276;
+UPDATE `gtcombatratings_dbc` SET `Data` = 19.8268 WHERE `ID` = 2277;
+UPDATE `gtcombatratings_dbc` SET `Data` = 21.3327 WHERE `ID` = 2278;
+UPDATE `gtcombatratings_dbc` SET `Data` = 22.953 WHERE `ID` = 2279;
+UPDATE `gtcombatratings_dbc` SET `Data` = 24.6963 WHERE `ID` = 2280;
+UPDATE `gtcombatratings_dbc` SET `Data` = 26.5721 WHERE `ID` = 2281;
+UPDATE `gtcombatratings_dbc` SET `Data` = 28.5903 WHERE `ID` = 2282;
+UPDATE `gtcombatratings_dbc` SET `Data` = 30.7618 WHERE `ID` = 2283;
+UPDATE `gtcombatratings_dbc` SET `Data` = 33.0982 WHERE `ID` = 2284;
+UPDATE `gtcombatratings_dbc` SET `Data` = 35.6121 WHERE `ID` = 2285;
+UPDATE `gtcombatratings_dbc` SET `Data` = 38.3169 WHERE `ID` = 2286;
+UPDATE `gtcombatratings_dbc` SET `Data` = 41.2272 WHERE `ID` = 2287;
+UPDATE `gtcombatratings_dbc` SET `Data` = 44.3585 WHERE `ID` = 2288;
+UPDATE `gtcombatratings_dbc` SET `Data` = 47.7276 WHERE `ID` = 2289;
+UPDATE `gtcombatratings_dbc` SET `Data` = 51.3525 WHERE `ID` = 2290;
+UPDATE `gtcombatratings_dbc` SET `Data` = 55.253 WHERE `ID` = 2291;
+UPDATE `gtcombatratings_dbc` SET `Data` = 59.4495 WHERE `ID` = 2292;
+UPDATE `gtcombatratings_dbc` SET `Data` = 63.965 WHERE `ID` = 2293;
+UPDATE `gtcombatratings_dbc` SET `Data` = 68.8235 WHERE `ID` = 2294;
+UPDATE `gtcombatratings_dbc` SET `Data` = 74.0505 WHERE `ID` = 2295;
+UPDATE `gtcombatratings_dbc` SET `Data` = 79.675 WHERE `ID` = 2296;
+UPDATE `gtcombatratings_dbc` SET `Data` = 85.7265 WHERE `ID` = 2297;
+UPDATE `gtcombatratings_dbc` SET `Data` = 92.2375 WHERE `ID` = 2298;
+UPDATE `gtcombatratings_dbc` SET `Data` = 99.243 WHERE `ID` = 2299;
+
