@@ -1,3 +1,4 @@
+-- DB update 2026_09_01_23 -> 2026_09_01_24
 -- Tanks crit immune baseline: bind the new AuraScript classes that apply/remove the shared
 -- "Critical Strike Immunity" aura (spell 200000, see apps/dbc-tools/source/spells/generic.csv)
 -- when Defensive Stance / Righteous Fury / Bear Form / Dire Bear Form are (de)activated.
