@@ -3,8 +3,9 @@ Emits a pending world-DB SQL migration for the rows this run produced.
 
 Two DELETE shapes, per touched table, both idempotent on rerun:
   - `WHERE ID BETWEEN <reserved block>` for our reserved range — mirrors the
-    idiom already used by `rev_1787377390451498201.sql` (the custom stat
-    system's own migration).
+    idiom already used by the custom stat system's own migration, originally
+    `rev_1787377390451498201.sql`, now folded into the merged custom-stat
+    migration `custom_stats.sql`.
   - `WHERE ID IN (...)` for specific existing IDs this run is *editing*
     (see lib/resolve.py) — scattered, not contiguous, so a range delete
     would either miss them or (worse) sweep up unrelated rows.

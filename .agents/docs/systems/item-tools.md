@@ -19,14 +19,15 @@ history:
 - **Editing an existing row**: a plain `UPDATE ... SET <changed cols> WHERE
   \`entry\` = N AND <changed cols> = <old values>` - guarded on the old
   value of every column you're changing, so re-running an already-applied
-  file is a no-op instead of an error. See
-  `data/sql/updates/pending_db_world/rev_1787824212353499531.sql` for a
-  real example.
+  file is a no-op instead of an error. See the Conjure Refreshment item-level
+  edit (originally `rev_1787824212353499531.sql`) inside
+  `data/sql/updates/pending_db_world/frost_mage_rework.sql` (the merged
+  Frost Mage rework migration) for a real example.
 - **A brand-new row**: `INSERT INTO item_template (...) VALUES (...) ON
   DUPLICATE KEY UPDATE col = VALUES(col), ...` - an upsert, both idempotent
   and never needs a `DELETE`. See the `creature_template` precedent this
-  was modeled on in
-  `data/sql/updates/pending_db_world/rev_1787563173168071680.sql`.
+  was modeled on (originally `rev_1787563173168071680.sql`), also inside
+  `data/sql/updates/pending_db_world/frost_mage_rework.sql`.
 
 `apps/item-tools/lib/emit.py` generates exactly these two shapes; you
 shouldn't need to hand-write either if you're going through the webui.
