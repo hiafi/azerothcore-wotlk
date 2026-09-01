@@ -85,6 +85,37 @@ enum MiscSpells
     SPELL_PALADIN_GREATER_BLESSING_OF_SANCTUARY     = 25899,
     SPELL_PRIEST_RENEWED_HOPE                       = 63944,
     SPELL_GEN_DAMAGE_REDUCTION_AURA                 = 68066,
+    // custom (200000-209999 reserved block, apps/dbc-tools/source/spells/generic.csv):
+    // grants baseline immunity to melee/ranged critical strikes; also applied by
+    // Righteous Fury, Bear Form/Dire Bear Form, and Frost Presence
+    SPELL_GEN_CRIT_IMMUNITY                         = 200000,
+};
+
+// 71 - Defensive Stance
+class spell_warr_defensive_stance : public AuraScript
+{
+    PrepareAuraScript(spell_warr_defensive_stance);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_GEN_CRIT_IMMUNITY });
+    }
+
+    void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        GetTarget()->CastSpell(GetTarget(), SPELL_GEN_CRIT_IMMUNITY, true);
+    }
+
+    void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        GetTarget()->RemoveAurasDueToSpell(SPELL_GEN_CRIT_IMMUNITY);
+    }
+
+    void Register() override
+    {
+        AfterEffectApply += AuraEffectApplyFn(spell_warr_defensive_stance::HandleApply, EFFECT_0, SPELL_AURA_ANY, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectRemove += AuraEffectRemoveFn(spell_warr_defensive_stance::HandleRemove, EFFECT_0, SPELL_AURA_ANY, AURA_EFFECT_HANDLE_REAL);
+    }
 };
 
 class spell_warr_mocking_blow : public SpellScript
@@ -1272,4 +1303,5 @@ void AddSC_warrior_spell_scripts()
     RegisterSpellScript(spell_warr_sword_and_board);
     RegisterSpellScript(spell_warr_glyph_of_blocking);
     RegisterSpellScript(spell_warr_item_t10_prot_4p_bonus);
+    RegisterSpellScript(spell_warr_defensive_stance);
 }

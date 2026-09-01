@@ -57,6 +57,10 @@ enum DruidSpells
     SPELL_DRUID_TIGER_S_FURY_ENERGIZE       = 51178,
     SPELL_DRUID_BEAR_FORM_PASSIVE           = 1178,
     SPELL_DRUID_DIRE_BEAR_FORM_PASSIVE      = 9635,
+    // custom (200000-209999 reserved block, apps/dbc-tools/source/spells/generic.csv):
+    // grants baseline immunity to melee/ranged critical strikes; also applied by
+    // Defensive Stance, Righteous Fury, and Frost Presence
+    SPELL_GEN_CRIT_IMMUNITY                 = 200000,
     SPELL_DRUID_ENRAGE                      = 5229,
     SPELL_DRUID_ENRAGED_DEFENSE             = 70725,
     SPELL_DRUID_ITEM_T10_FERAL_4P_BONUS     = 70726,
@@ -227,6 +231,34 @@ class spell_dru_feral_swiftness : public AuraScript
     {
         AfterEffectApply += AuraEffectApplyFn(spell_dru_feral_swiftness::AfterApply, EFFECT_0, SPELL_AURA_ANY, AURA_EFFECT_HANDLE_REAL);
         AfterEffectRemove += AuraEffectRemoveFn(spell_dru_feral_swiftness::AfterRemove, EFFECT_0, SPELL_AURA_ANY, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+/* 5487 - Bear Form
+   9634 - Dire Bear Form */
+class spell_dru_bear_form_crit_immunity : public AuraScript
+{
+    PrepareAuraScript(spell_dru_bear_form_crit_immunity);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_GEN_CRIT_IMMUNITY });
+    }
+
+    void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        GetTarget()->CastSpell(GetTarget(), SPELL_GEN_CRIT_IMMUNITY, true);
+    }
+
+    void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        GetTarget()->RemoveAurasDueToSpell(SPELL_GEN_CRIT_IMMUNITY);
+    }
+
+    void Register() override
+    {
+        AfterEffectApply += AuraEffectApplyFn(spell_dru_bear_form_crit_immunity::HandleApply, EFFECT_0, SPELL_AURA_ANY, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectRemove += AuraEffectRemoveFn(spell_dru_bear_form_crit_immunity::HandleRemove, EFFECT_0, SPELL_AURA_ANY, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
@@ -2101,6 +2133,7 @@ void AddSC_druid_spell_scripts()
     RegisterSpellScript(spell_dru_t10_balance_4p_bonus);
     RegisterSpellScript(spell_dru_nurturing_instinct);
     RegisterSpellScript(spell_dru_feral_swiftness);
+    RegisterSpellScript(spell_dru_bear_form_crit_immunity);
     RegisterSpellScript(spell_dru_omen_of_clarity);
     RegisterSpellScript(spell_dru_brambles_treant);
     RegisterSpellScript(spell_dru_barkskin);

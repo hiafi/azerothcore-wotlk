@@ -104,7 +104,40 @@ enum PaladinSpells
     SPELL_PALADIN_SEAL_OF_VENGEANCE_EFFECT       = 42463,
     SPELL_PALADIN_SEAL_OF_CORRUPTION_EFFECT      = 53739,
 
-    SPELL_PALADIN_SEAL_OF_COMMAND                = 20375
+    SPELL_PALADIN_SEAL_OF_COMMAND                = 20375,
+
+    SPELL_PALADIN_RIGHTEOUS_FURY                 = 25780,
+    // custom (200000-209999 reserved block, apps/dbc-tools/source/spells/generic.csv):
+    // grants baseline immunity to melee/ranged critical strikes; also applied by
+    // Defensive Stance, Bear Form/Dire Bear Form, and Frost Presence
+    SPELL_GEN_CRIT_IMMUNITY                      = 200000,
+};
+
+// 25780 - Righteous Fury
+class spell_pal_righteous_fury : public AuraScript
+{
+    PrepareAuraScript(spell_pal_righteous_fury);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_GEN_CRIT_IMMUNITY });
+    }
+
+    void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        GetTarget()->CastSpell(GetTarget(), SPELL_GEN_CRIT_IMMUNITY, true);
+    }
+
+    void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        GetTarget()->RemoveAurasDueToSpell(SPELL_GEN_CRIT_IMMUNITY);
+    }
+
+    void Register() override
+    {
+        AfterEffectApply += AuraEffectApplyFn(spell_pal_righteous_fury::HandleApply, EFFECT_0, SPELL_AURA_ANY, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectRemove += AuraEffectRemoveFn(spell_pal_righteous_fury::HandleRemove, EFFECT_0, SPELL_AURA_ANY, AURA_EFFECT_HANDLE_REAL);
+    }
 };
 
 enum PaladinSpellIcons
@@ -2330,4 +2363,5 @@ void AddSC_paladin_spell_scripts()
     RegisterSpellScriptWithArgs(spell_pal_improved_aura_effect, "spell_pal_improved_devotion_aura_effect", SPELL_PALADIN_DEVOTION_AURA_R1);
     RegisterSpellScript(spell_pal_sanctified_retribution_effect);
     RegisterSpellScript(spell_pal_light_s_beacon);
+    RegisterSpellScript(spell_pal_righteous_fury);
 }

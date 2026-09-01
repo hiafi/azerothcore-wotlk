@@ -53,6 +53,10 @@ enum DeathKnightSpells
     SPELL_DK_FROST_FEVER                        = 55095,
     SPELL_DK_FROST_PRESENCE                     = 48263,
     SPELL_DK_FROST_PRESENCE_TRIGGERED           = 61261,
+    // custom (200000-209999 reserved block, apps/dbc-tools/source/spells/generic.csv):
+    // grants baseline immunity to melee/ranged critical strikes; also applied by
+    // Defensive Stance, Righteous Fury, and Bear Form/Dire Bear Form
+    SPELL_GEN_CRIT_IMMUNITY                     = 200000,
     SPELL_DK_GHOUL_EXPLODE                      = 47496,
     SPELL_DK_GLYPH_OF_DISEASE                   = 63334,
     SPELL_DK_GLYPH_OF_ICEBOUND_FORTITUDE        = 58625,
@@ -1983,8 +1987,15 @@ class spell_dk_presence : public AuraScript
                 SPELL_DK_IMPROVED_BLOOD_PRESENCE_TRIGGERED,
                 SPELL_DK_IMPROVED_UNHOLY_PRESENCE_TRIGGERED,
                 SPELL_DK_FROST_PRESENCE_TRIGGERED,
-                SPELL_DK_UNHOLY_PRESENCE_TRIGGERED
+                SPELL_DK_UNHOLY_PRESENCE_TRIGGERED,
+                SPELL_GEN_CRIT_IMMUNITY
             });
+    }
+
+    void HandleCritImmunity(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        if (GetId() == SPELL_DK_FROST_PRESENCE)
+            GetTarget()->CastSpell(GetTarget(), SPELL_GEN_CRIT_IMMUNITY, true);
     }
 
     void HandleImprovedBloodPresence(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
@@ -2036,12 +2047,14 @@ class spell_dk_presence : public AuraScript
         target->RemoveAura(SPELL_DK_IMPROVED_UNHOLY_PRESENCE_TRIGGERED);
         target->RemoveAura(SPELL_DK_FROST_PRESENCE_TRIGGERED);
         target->RemoveAura(SPELL_DK_UNHOLY_PRESENCE_TRIGGERED);
+        target->RemoveAura(SPELL_GEN_CRIT_IMMUNITY);
     }
 
     void Register() override
     {
         AfterEffectApply += AuraEffectApplyFn(spell_dk_presence::HandleImprovedBloodPresence, EFFECT_0, SPELL_AURA_ANY, AURA_EFFECT_HANDLE_REAL);
         AfterEffectApply += AuraEffectApplyFn(spell_dk_presence::HandleImprovedFrostPresence, EFFECT_0, SPELL_AURA_ANY, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectApply += AuraEffectApplyFn(spell_dk_presence::HandleCritImmunity, EFFECT_0, SPELL_AURA_ANY, AURA_EFFECT_HANDLE_REAL);
         AfterEffectApply += AuraEffectApplyFn(spell_dk_presence::HandleImprovedUnholyPresence, EFFECT_0, SPELL_AURA_ANY, AURA_EFFECT_HANDLE_REAL);
         AfterEffectRemove += AuraEffectRemoveFn(spell_dk_presence::HandleEffectRemove, EFFECT_0, SPELL_AURA_ANY, AURA_EFFECT_HANDLE_REAL);
     }
