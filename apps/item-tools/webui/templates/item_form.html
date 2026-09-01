@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}{{ 'New item' if is_new else row.name }} - item-tools{% endblock %}
+{% block content %}
+  <script src="{{ url_for('static', filename='item-form.js') }}" defer></script>
+  {% if is_new %}
+    <h1>New item</h1>
+    <p class="hint">Entry defaults to the next free ID in this tool's reserved block
+      ({{ custom_range.start }}&ndash;{{ custom_range.end }}, see <code>source/ids.yaml</code>) -
+      change it only if you have a specific ID in mind and know it's free.</p>
+  {% else %}
+    <h1>{{ row.name }} <span class="hint">(entry {{ entry }})</span></h1>
+  {% endif %}
+
+  <form method="post">
+    {% for title, cols in sections %}
+      <fieldset>
+        <legend>{{ title }}</legend>
+        <div class="field-grid">
+          {% for col in cols %}
+            <label>
+              {{ col }}
+              {% if col == 'entry' and not is_new %}
+                <input type="text" name="entry" value="{{ row[col] }}" readonly>
+              {% elif col == 'class' %}
+                <select name="class" id="field-class">
+                  {% if row[col] not in item_class_names %}
+                    <option value="{{ row[col] }}" selected>{{ row[col] }} - (unrecognized)</option>
+                  {% endif %}
+                  {% for class_id, class_name in item_class_names.items() %}
+                    <option value="{{ class_id }}" {{ 'selected' if class_id == row[col] else '' }}>
+                      {{ class_id }} - {{ class_name }}
+                    </option>
+                  {% endfor %}
+                </select>
+              {% elif col == 'subclass' %}
+                <select name="subclass" id="field-subclass">
+                  {% if (row['class'], row[col]) not in subclass_pairs %}
+                    <option value="{{ row[col] }}" data-class="{{ row['class'] }}" selected>
+                      {{ row[col] }} - (unrecognized for this class)
+                    </option>
+                  {% endif %}
+                  {% for class_id, subclass_id, label in subclass_options %}
+                    <option value="{{ subclass_id }}" data-class="{{ class_id }}"
+                      {{ 'selected' if subclass_id == row[col] and class_id == row['class'] else '' }}>
+                      {{ subclass_id }} - {{ label }}
+                    </option>
+                  {% endfor %}
+                </select>
+              {% elif col.startswith('stat_type') %}
+                <select name="{{ col }}">
+                  {% if row[col] not in item_mod_names %}
+                    <option value="{{ row[col] }}" selected>{{ row[col] }} - (unrecognized)</option>
+                  {% endif %}
+                  {% for mod_id, mod_name in item_mod_names.items() %}
+                    <option value="{{ mod_id }}" {{ 'selected' if mod_id == row[col] else '' }}>
+                      {{ mod_id }} - {{ mod_name }}{{ ' (custom)' if mod_id in item_mod_custom else '' }}{{ ' (deprecated)' if mod_id in item_mod_deprecated else '' }}
+                    </option>
+                  {% endfor %}
+                </select>
+              {% elif col == 'InventoryType' %}
+                <select name="InventoryType">
+                  {% if row[col] not in inventory_type_names %}
+                    <option value="{{ row[col] }}" selected>{{ row[col] }} - (unrecognized)</option>
+                  {% endif %}
+                  {% for inv_id, inv_name in inventory_type_names.items() %}
+                    <option value="{{ inv_id }}" {{ 'selected' if inv_id == row[col] else '' }}>
+                      {{ inv_id }} - {{ inv_name }}
+                    </option>
+                  {% endfor %}
+                </select>
+              {% elif row[col] is string %}
+                <input type="text" name="{{ col }}" value="{{ row[col] }}">
+              {% else %}
+                <input type="number" step="any" name="{{ col }}" value="{{ row[col] }}">
+              {% endif %}
+            </label>
+          {% endfor %}
+        </div>
+      </fieldset>
+    {% endfor %}
+
+    <fieldset>
+      <legend>Change note <span class="hint">(required - becomes the pending SQL file's comment)</span></legend>
+      <textarea name="note" rows="3" required
+        placeholder="Why is this change happening? e.g. &quot;retuning drop from Naxx per playtest feedback&quot;"></textarea>
+    </fieldset>
+
+    <button type="submit" class="button primary">{{ 'Create item' if is_new else 'Save changes' }}</button>
+  </form>
+{% endblock %}

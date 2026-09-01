@@ -1366,25 +1366,14 @@ void Aura::HandleAuraSpecificMods(AuraApplication const* aurApp, Unit* caster, b
                                 target->AddAura(74396, target);
                         }
                         break;
-                    case 12494: // Frostbite, synchronise with Fingers of Frost
-                    {
-                        // Find Fingers of Frost
-                        if (AuraEffect* aurEff = caster->GetAuraEffect(SPELL_AURA_PROC_TRIGGER_SPELL, SPELLFAMILY_MAGE, 2947, EFFECT_0))
-                        {
-                            if (SpellInfo const* triggeringSpellInfo = GetTriggeredByAuraSpellInfo())
-                            {
-                                uint8 fbRank = sSpellMgr->GetSpellRank(triggeringSpellInfo->Id);
-                                uint8 fofRank = sSpellMgr->GetSpellRank(aurEff->GetId());
-                                uint8 chance = uint8(std::ceil(fofRank * fbRank * 16.6f));
-
-                                if (roll_chance_i(chance))
-                                {
-                                    caster->CastSpell(caster, aurEff->GetSpellInfo()->Effects[EFFECT_0].TriggerSpell, true);
-                                }
-                            }
-                        }
-                        break;
-                    }
+                    // The old `case 12494` (Frostbite/Fingers of Frost proc-chance sync) that used
+                    // to live here is dead code, removed as part of the Frost Mage rework: it
+                    // synced Fingers of Frost's proc chance to whichever Frostbite rank the caster
+                    // had, a coupling specific to the *old* talent design. The redesign's Fingers
+                    // of Frost carries its own proc chance directly (44543/44545, 7/15%, no
+                    // Frostbite dependency - docs/frost-mage-redesign.md sec 4 Row 1 vs Row 3) and
+                    // fires via its own native SPELL_AURA_PROC_TRIGGER_SPELL effect, independent of
+                    // this switch entirely.
                     default:
                         break;
                 }

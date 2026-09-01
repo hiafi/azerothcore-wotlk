@@ -20,8 +20,6 @@ import argparse
 import sys
 from pathlib import Path
 
-import yaml
-
 TOOL_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOL_ROOT))
 
@@ -51,12 +49,6 @@ def parse_id_spec(spec: str) -> list[int]:
         else:
             ids.append(int(part))
     return ids
-
-
-def entry_to_yaml_safe(entry: dict) -> dict:
-    # drop None-valued optional fields so the YAML stays terse; raw_overrides
-    # of None means "no overrides", so it's fine to omit entirely.
-    return {k: v for k, v in entry.items() if v is not None}
 
 
 def main() -> int:
@@ -111,7 +103,9 @@ def main() -> int:
         if tab_id in already["tabs"]:
             print(f"skip tab {tab_id}: already present in source/talents/")
             continue
-        new_tabs.append(entry_to_yaml_safe(reverse.reverse_talenttab_row(existing_tabs[tab_id])))
+        new_tabs.append(
+            source.talent_entry_to_yaml_safe(reverse.reverse_talenttab_row(existing_tabs[tab_id]))
+        )
     for talent_id in wanted_talent_ids:
         row = existing_talents.get(talent_id)
         if not row:
@@ -120,7 +114,7 @@ def main() -> int:
         if talent_id in already["talents"]:
             print(f"skip talent {talent_id}: already present in source/talents/")
             continue
-        new_talents.append(entry_to_yaml_safe(reverse.reverse_talent_row(row)))
+        new_talents.append(source.talent_entry_to_yaml_safe(reverse.reverse_talent_row(row)))
 
     if not new_tabs and not new_talents:
         print("nothing new to pull")
@@ -134,9 +128,7 @@ def main() -> int:
         header, data = "", {"tabs": [], "talents": []}
     data["tabs"].extend(new_tabs)
     data["talents"].extend(new_talents)
-    with open(out_path, "w", encoding="utf-8") as f:
-        f.write(header)
-        yaml.safe_dump(data, f, sort_keys=False, allow_unicode=True)
+    source.write_talents_yaml_file(out_path, header, data)
 
     print(f"pulled {len(new_tabs)} tab(s), {len(new_talents)} talent(s) into "
           f"{out_path.relative_to(TOOL_ROOT.parent.parent)}")

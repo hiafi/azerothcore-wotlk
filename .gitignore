@@ -4,6 +4,8 @@
 
 .cache
 .claude
+/apps/patch-service/*
+/apps/dbc-tools/lib/output/*
 /conf/*
 !/conf/dist
 /docs/*
@@ -23,6 +25,7 @@
 /.env*
 /apps/joiner
 /apps/dbc-tools/var/
+/apps/dbc-tools/.venv/
 /client/*
 /deps/deno
 /data/sql/custom/*

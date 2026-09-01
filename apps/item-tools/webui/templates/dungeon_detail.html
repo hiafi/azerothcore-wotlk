@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}{{ name }} - item-tools{% endblock %}
+{% block content %}
+  <p><a href="{{ url_for('dungeon_list') }}">&larr; Dungeons &amp; raids</a></p>
+  <h1>{{ name }} <span class="hint">(map {{ map_id }})</span></h1>
+
+  <form method="get" class="kv-row">
+    <label for="min_quality" class="hint">Minimum quality</label>
+    <select name="min_quality" id="min_quality" onchange="this.form.submit()">
+      {% for q, qname in quality_names.items() %}
+        <option value="{{ q }}" {{ 'selected' if q == min_quality else '' }}>{{ qname }}</option>
+      {% endfor %}
+    </select>
+  </form>
+
+  {% if not summary.bosses and not summary.trash %}
+    <p>No creatures on this map drop anything at or above that quality.</p>
+  {% else %}
+    <p class="hint">Chance is the raw <code>creature_loot_template</code> value - loot-group entries
+      (several items competing for one drop slot) often show 0% here since the group's real odds
+      aren't a plain per-item percentage; treat 0% as "grouped", not "never drops".</p>
+
+    {% macro item_line(item, chance, quest_required) %}
+      <a href="{{ url_for('item_edit', entry=item.entry) }}">{{ item.name }}</a>
+      <span class="quality-badge quality-{{ item.Quality }}">{{ quality_name(item.Quality) }}</span>
+      <span class="drop-stats">
+        ilvl {{ item.ItemLevel }}, req {{ item.RequiredLevel }}
+        {% set stats = summarize_stats(item) %}
+        {% if stats %} &middot; {{ stats|join(', ') }}{% endif %}
+        {% if item.armor %} &middot; {{ item.armor }} armor{% endif %}
+        {% if item.dmg_min1 or item.dmg_max1 %} &middot; {{ item.dmg_min1 }}-{{ item.dmg_max1 }} dmg{% endif %}
+        &middot; {{ '%.1f'|format(chance) }}%
+        {% if quest_required %} &middot; quest{% endif %}
+      </span>
+    {% endmacro %}
+
+    {% for entry in summary.bosses %}
+      <div class="creature-block">
+        <h3>{{ entry.creature.name }}
+          <span class="hint">({{ rank_name(entry.creature.rank) }})</span>
+        </h3>
+        <ul class="drop-list">
+          {% for drop in entry.drops %}
+            <li>{{ item_line(drop.item_row, drop.chance, drop.quest_required) }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endfor %}
+
+    {% if summary.trash %}
+      <div class="creature-block">
+        <h3>Trash Drops <span class="hint">(every non-boss creature on this map, pooled by item)</span></h3>
+        <ul class="drop-list">
+          {% for bucket in summary.trash %}
+            <li>
+              {{ item_line(bucket.item_row, bucket.chance, bucket.quest_required) }}
+              <div class="drop-stats">dropped by: {{ bucket.creatures|join(', ') }}</div>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+  {% endif %}
+{% endblock %}

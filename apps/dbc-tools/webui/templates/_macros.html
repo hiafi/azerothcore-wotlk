@@ -1,0 +1,14 @@
+{% macro enum_select(name, current, options, none_label='(none)') %}
+<select name="{{ name }}">
+  <option value="" {{ 'selected' if not current else '' }}>{{ none_label }}</option>
+  {% set ns = namespace(found=false) %}
+  {% for value, label in options %}
+    {% set is_selected = current == value|string %}
+    {% if is_selected %}{% set ns.found = true %}{% endif %}
+    <option value="{{ value }}" {{ 'selected' if is_selected else '' }}>{{ value }} — {{ label }}</option>
+  {% endfor %}
+  {% if current and not ns.found %}
+    <option value="{{ current }}" selected>{{ current }} (not in the known list)</option>
+  {% endif %}
+</select>
+{% endmacro %}

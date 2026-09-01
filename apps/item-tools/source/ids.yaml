@@ -1,0 +1,18 @@
+# Reserved entry-ID block for custom item_template rows minted by this tool,
+# same idea as apps/dbc-tools/source/ids.yaml (a different ID namespace -
+# item_template.entry - so there's no collision risk between the two files;
+# they're kept separate rather than merged since each tool owns its own
+# namespace end to end).
+#
+# How the bounds were picked (checked at the time this file was written):
+# highest `entry` anywhere in item_template (base dump + merged updates) was
+# 56806, so 900000+ leaves a wide, clearly-separate gap that also won't
+# collide with a future upstream AzerothCore item_template import (which has
+# historically stayed well under 100000).
+#
+# `lib/ids.py` only suggests a new ID from this block when nothing existing
+# (base dump or current overlay) already has it.
+
+item:
+  start: 900000
+  end: 909999

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ 'New skill line ability' if not original_id else 'Edit skill line ability ' ~ original_id }} – dbc-tools{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('talent_list', file=file) }}">&larr; {{ file }}.yaml</a></p>
+<h1>{{ 'New skill line ability' if not original_id else 'Edit skill line ability ' ~ original_id }}</h1>
+
+<form method="post" action="{{ url_for('ability_save', file=file) }}">
+  <input type="hidden" name="original_id" value="{{ original_id }}">
+  <div class="field-grid">
+    <label>id<input type="text" name="id" value="{{ ctx.id }}" required></label>
+    <label>skill_line <span class="hint">(SkillLine.dbc ID)</span><input type="text" name="skill_line" value="{{ ctx.skill_line }}" required></label>
+    <label>spell_id<input type="text" name="spell_id" value="{{ ctx.spell_id }}" required></label>
+    <label>class_mask<input type="text" name="class_mask" value="{{ ctx.class_mask }}" required></label>
+    <label>min_skill_line_rank<input type="text" name="min_skill_line_rank" value="{{ ctx.min_skill_line_rank }}" required></label>
+  </div>
+  <button type="submit" class="primary">Save</button>
+</form>
+{% endblock %}

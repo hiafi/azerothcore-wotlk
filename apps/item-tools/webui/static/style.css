@@ -1,0 +1,153 @@
+:root {
+  color-scheme: light dark;
+  --border: #ccc;
+  --muted: #666;
+  --error: #b00020;
+  --ok: #0a7a2f;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: system-ui, sans-serif;
+  margin: 0;
+  line-height: 1.4;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  font-weight: bold;
+  text-decoration: none;
+  font-size: 1.1rem;
+}
+
+header nav { display: flex; gap: 1rem; }
+header nav a { text-decoration: none; color: inherit; }
+header nav a:hover { text-decoration: underline; }
+
+main {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+h1 { margin-top: 0; }
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 1.5rem;
+}
+
+th, td {
+  border-bottom: 1px solid var(--border);
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.button, button {
+  font: inherit;
+}
+
+.button {
+  display: inline-block;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  text-decoration: none;
+}
+
+button.primary {
+  padding: 0.5rem 1.2rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+fieldset {
+  margin-bottom: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+legend { padding: 0 0.4rem; }
+
+.hint { color: var(--muted); font-weight: normal; font-size: 0.85em; }
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 0.6rem 1rem;
+}
+
+.field-grid label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85em;
+  gap: 0.2rem;
+}
+
+input[type="text"], input[type="number"], textarea {
+  font: inherit;
+  padding: 0.3rem;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  width: 100%;
+}
+
+.kv-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.kv-row input { flex: 1; }
+
+input[readonly] {
+  background: color-mix(in srgb, currentColor 6%, transparent);
+  color: var(--muted);
+}
+
+.error { color: var(--error); }
+.ok { color: var(--ok); }
+
+.flashes { list-style: none; padding: 0; margin: 0 0 1rem; }
+.flash { padding: 0.5rem 0.8rem; border-radius: 4px; margin-bottom: 0.4rem; }
+.flash-error { background: color-mix(in srgb, var(--error) 15%, transparent); }
+.flash-success { background: color-mix(in srgb, var(--ok) 15%, transparent); }
+
+/* Standard WoW item-quality colors (client-fixed, not this fork's to change).
+   Rendered as filled badges (own foreground/background pair) rather than
+   plain text color, so quality 0/1 (grey/white) stay legible against either
+   a light or a dark page background. */
+.quality-badge {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.8em;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.quality-0 { background: #9d9d9d; color: #111; }
+.quality-1 { background: #ffffff; color: #111; border: 1px solid var(--border); }
+.quality-2 { background: #1eff00; color: #0a3d00; }
+.quality-3 { background: #0070dd; color: #fff; }
+.quality-4 { background: #a335ee; color: #fff; }
+.quality-5 { background: #ff8000; color: #3a1e00; }
+.quality-6 { background: #e6cc80; color: #3a2f00; }
+.quality-7 { background: #00ccff; color: #00303d; }
+
+.drop-list { list-style: none; padding: 0; margin: 0.3rem 0 0; }
+.drop-list li { padding: 0.3rem 0; border-bottom: 1px solid var(--border); }
+.drop-list li:last-child { border-bottom: none; }
+.drop-stats { color: var(--muted); font-size: 0.85em; }
+.creature-block { margin-bottom: 1.5rem; }
+.creature-block h3 { margin-bottom: 0.2rem; }

@@ -1,0 +1,18 @@
+-- Frozen Orb's projectile (300001, npc_mage_frozen_orb - spell_mage.cpp) was flagged
+-- CREATURE_FLAG_EXTRA_TRIGGER (128, part of flags_extra = 194 = TRIGGER|NO_XP_AT_KILL|CIVILIAN) -
+-- this is the actual root cause of the "model never renders for regular players" bug chased across
+-- this session (ruled out: display ID 26753 vs 90001, and UNIT_FLAG_PLAYER_CONTROLLED, both
+-- confirmed via live ablation testing to make no difference).
+--
+-- Unit::BuildValuesUpdateForPlayerWithFlag (Unit.cpp, UNIT_FIELD_DISPLAYID handling) special-cases
+-- any creature with CREATURE_FLAG_EXTRA_TRIGGER: for every non-GM observer it force-overrides the
+-- sent display ID to CreatureTemplate::GetFirstInvisibleModel() - which, since none of the orb's
+-- creature_template_model rows are themselves marked is_trigger in creaturemodelinfo, falls through
+-- to CreatureModel::DefaultInvisibleModel (the invisible stalker model), completely ignoring
+-- whatever creature_template_model actually says. This is by design - CREATURE_FLAG_EXTRA_TRIGGER
+-- marks a creature as a pure spell-effect helper NPC that's *supposed* to always be invisible to
+-- real players (only a GM account sees the real model, for debugging) - it was never appropriate
+-- for Frozen Orb's projectile, which needs to be visible to everyone. Clearing just that bit
+-- (194 -> 66, keeping NO_XP_AT_KILL and CIVILIAN) lets the real creature_template_model display
+-- (26753, "Charged Sphere") reach normal clients.
+UPDATE `creature_template` SET `flags_extra` = 66 WHERE `entry` = 300001 AND `flags_extra` = 194;

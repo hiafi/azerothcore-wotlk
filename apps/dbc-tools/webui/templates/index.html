@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}dbc-tools{% endblock %}
+{% block content %}
+<h1>dbc-tools</h1>
+
+<form method="post" action="{{ url_for('run_generate') }}">
+  <button type="submit">Run generate.py</button>
+</form>
+
+<h2>Spells</h2>
+<table>
+  <thead><tr><th>File</th><th>Rows</th><th></th></tr></thead>
+  <tbody>
+  {% for f in spell_files %}
+    <tr>
+      <td>{{ f.stem }}.csv</td>
+      <td>{% if f.error %}&mdash;{% else %}{{ f.count }}{% endif %}</td>
+      <td>
+        {% if f.error %}<span class="error">{{ f.error }}</span>
+        {% else %}<a href="{{ url_for('spell_list', file=f.stem) }}">open</a>{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<h2>Talents</h2>
+<table>
+  <thead><tr><th>File</th><th>Tabs</th><th>Talents</th><th>Abilities</th><th></th></tr></thead>
+  <tbody>
+  {% for f in talent_files %}
+    <tr>
+      <td>{{ f.stem }}.yaml</td>
+      {% if f.error %}
+      <td colspan="3"><span class="error">{{ f.error }}</span></td>
+      <td></td>
+      {% else %}
+      <td>{{ f.counts.tabs }}</td>
+      <td>{{ f.counts.talents }}</td>
+      <td>{{ f.counts.skill_line_abilities }}</td>
+      <td><a href="{{ url_for('talent_list', file=f.stem) }}">open</a></td>
+      {% endif %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

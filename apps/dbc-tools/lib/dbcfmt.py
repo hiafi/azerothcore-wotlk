@@ -127,6 +127,18 @@ SPELL = DbcTable(
         ("EffectMultipleValue", 3), ("EffectChainTargets", 3),
         ("EffectItemType", 3), ("EffectMiscValue", 3), ("EffectMiscValueB", 3),
         ("EffectTriggerSpell", 3), ("EffectPointsPerCombo", 3),
+        # GOTCHA (found 2026-08-27, see docs/dbc-build-pipeline.md "Bug 3"): unlike every other
+        # per-effect field above, the letter here is the effect index (A=Effect_1, B=Effect_2,
+        # C=Effect_3 - zero-based Effects[0..2] in the engine) and the _1/_2/_3 suffix is which of
+        # that effect's 3 SpellFamilyFlags dwords - the reverse of what "_N = effect index" would
+        # suggest by analogy with EffectBasePoints_1/2/3 etc. To scope Effect_2's own SpellMod (or
+        # any per-effect classmask) to specific spells, the columns are EffectSpellClassMaskB_1/2/3
+        # - NOT EffectSpellClassMaskA_2, which is Effect_1's second dword and leaves Effect_2's
+        # actual classmask all-zero (SpellInfo::IsAffected treats all-zero as "matches every spell
+        # in the family"). Got this backwards for Permafrost/Chilled to the Bone
+        # (apps/dbc-tools/source/spells/mage_talents.csv) - fixed there; audit any other
+        # hand-authored (non-"pulled from existing data") EffectSpellClassMask override before
+        # trusting it.
         ("EffectSpellClassMaskA", 3), ("EffectSpellClassMaskB", 3),
         ("EffectSpellClassMaskC", 3), ("SpellVisualID", 2), "SpellIconID",
         "ActiveIconID", "SpellPriority",
@@ -222,9 +234,60 @@ SPELLRADIUS = DbcTable(
     columns=("ID", "Radius", "RadiusPerLevel", "RadiusMax"),
 )
 
+SKILLLINEABILITY = DbcTable(
+    name="SkillLineAbility",
+    dbc_filename="SkillLineAbility.dbc",
+    sql_table="skilllineability_dbc",
+    fmt="niiiixxiiiiixx",
+    columns=_cols(
+        "ID", "SkillLine", "Spell", "RaceMask", "ClassMask", "ExcludeRace",
+        "ExcludeClass", "MinSkillLineRank", "SupercededBySpell", "AcquireMethod",
+        "TrivialSkillLineRankHigh", "TrivialSkillLineRankLow",
+        ("CharacterPoints", 2),
+    ),
+)
+
+# Not part of ALL_TABLES / the generate.py pipeline: these two have no source/*.csv convention or
+# reserved ID block (ids.yaml) of their own - a single custom row is patched directly by
+# patch_frozen_orb_model.py instead, reusing read_dbc/write_dbc off these definitions. ModelName
+# (CreatureModelData) and the 4 texture/portrait columns (CreatureDisplayInfo) are 'x' in
+# DBCfmt.h (AC's own struct never reads them) but are genuine string-table offsets in the real
+# file - see dbcfile.py's read_as_string handling and this module's docstring.
+CREATUREMODELDATA = DbcTable(
+    name="CreatureModelData",
+    dbc_filename="CreatureModelData.dbc",
+    sql_table="creaturemodeldata_dbc",
+    fmt="nixxfxxxxxxxxxfffxxxxxxxxxxx",
+    columns=_cols(
+        "ID", "Flags", "ModelName", "SizeClass", "ModelScale", "BloodID",
+        "FootprintTextureID", "FootprintTextureLength", "FootprintTextureWidth",
+        "FootprintParticleScale", "FoleyMaterialID", "FootstepShakeSize",
+        "DeathThudShakeSize", "SoundID", "CollisionWidth", "CollisionHeight",
+        "MountHeight", "GeoBoxMinX", "GeoBoxMinY", "GeoBoxMinZ", "GeoBoxMaxX",
+        "GeoBoxMaxY", "GeoBoxMaxZ", "WorldEffectScale", "AttachedEffectScale",
+        "MissileCollisionRadius", "MissileCollisionPush", "MissileCollisionRaise",
+    ),
+    read_as_string=frozenset({"ModelName"}),
+)
+
+CREATUREDISPLAYINFO = DbcTable(
+    name="CreatureDisplayInfo",
+    dbc_filename="CreatureDisplayInfo.dbc",
+    sql_table="creaturedisplayinfo_dbc",
+    fmt="nixifxxxxxxxxxxx",
+    columns=_cols(
+        "ID", "ModelID", "SoundID", "ExtendedDisplayInfoID", "CreatureModelScale",
+        "CreatureModelAlpha", ("TextureVariation", 3), "PortraitTextureName",
+        "BloodLevel", "BloodID", "NPCSoundID", "ParticleColorID",
+        "CreatureGeosetData", "ObjectEffectPackageID",
+    ),
+    read_as_string=frozenset({"TextureVariation_1", "TextureVariation_2", "TextureVariation_3",
+                               "PortraitTextureName"}),
+)
+
 ALL_TABLES = (
     SPELL, TALENT, TALENTTAB, SPELLCASTTIMES, SPELLDURATION, SPELLRANGE,
-    SPELLRADIUS,
+    SPELLRADIUS, SKILLLINEABILITY,
 )
 TABLES_BY_NAME = {t.name: t for t in ALL_TABLES}
 

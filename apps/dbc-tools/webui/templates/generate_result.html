@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}generate.py – dbc-tools{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('index') }}">&larr; all files</a></p>
+<h1>
+  generate.py
+  {% if result.returncode == 0 %}<span class="ok">succeeded</span>
+  {% else %}<span class="error">failed (exit {{ result.returncode }})</span>{% endif %}
+</h1>
+<h2>stdout</h2>
+<pre>{{ result.stdout }}</pre>
+<h2>stderr</h2>
+<pre>{{ result.stderr }}</pre>
+{% endblock %}

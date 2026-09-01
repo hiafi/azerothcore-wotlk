@@ -28,7 +28,12 @@ collides with stock data or with another ticket's IDs.
 
 ```
 pip install -r apps/dbc-tools/requirements.txt
+sudo apt-get install smpq
 ```
+
+`smpq` (StormLib's CLI archiving tool) packs the client-patch MPQ — see `lib/mpq_writer.py`'s
+module docstring for why this is a real system dependency now rather than a pure-Python writer,
+and for a no-root fallback if `sudo` isn't available.
 
 Optional but needed for real client-patch output: extract `Spell.dbc`,
 `Talent.dbc`, `TalentTab.dbc`, `SpellCastTimes.dbc`, `SpellDuration.dbc`,
@@ -88,12 +93,15 @@ spell's `SpellClassSet` (`SPELLFAMILY_*` in
 `src/server/shared/SharedDefines.h` — see `SPELLFAMILY_TO_FILE`) unless
 `--dest` overrides it; anything with no player class falls back to
 `generic.csv`. A class-family match gets one more check before landing in
-that class's file: is the ID taught by a trainer (`trainer_spell`) or a
+that class's file: is the ID taught by a trainer (`trainer_spell`), a
 member of a rank chain (`spell_ranks`, which carries a row for every real
-player ability, single-rank ones included)? If neither, it's a
-boss/creature clone that merely shares the class's `SpellClassSet` — routed
-to `npc.csv` instead, automatically. Override with `--dest` for anything
-auto-detect still gets wrong.
+player ability, single-rank ones included), or granted by spending a talent
+point (`Talent.dbc`'s `SpellRank_1..9` columns)? If none of the three, it's
+a boss/creature clone that merely shares the class's `SpellClassSet` —
+routed to `npc.csv` instead, automatically. Talent-granted spells land in
+`<class>_talents.csv` rather than `<class>.csv` — see "Source files" below —
+so a class's plain file only ever holds spells learned outright. Override
+with `--dest` for anything auto-detect still gets wrong.
 
 **Pulling a row doesn't make `generate.py` touch it.** `generate.py`
 reconciles every source entry against what's actually live (base client DBC
@@ -121,15 +129,86 @@ path at scale, and (2) — if you add the check back in, see
 was run once over all ~54k merged base+overlay spell rows during
 development with zero mismatches.
 
+**Gotcha: `EffectSpellClassMaskA/B/C_1/2/3` in `raw_overrides`.** Every other
+per-effect column in `spell_dbc` uses `_1/_2/_3` as the effect index
+(`EffectBasePoints_2` is Effect_2's base points, etc.) — this is the one
+exception. Here the **letter** is the effect index (A=Effect_1, B=Effect_2,
+C=Effect_3) and the **number** is which of that effect's 3
+`SpellFamilyFlags` dwords holds the bit (see `lib/dbcfmt.py`'s comment on
+the `SPELL` table for the full mechanics). If you're adding a classmask
+override to scope a `SPELLMOD_EFFECT2`/duration/etc. modifier that lives on
+Effect_2, the key is `EffectSpellClassMaskB_1` (or `_2`/`_3`), **not**
+`EffectSpellClassMaskA_2` — the latter silently scopes Effect_1 instead and
+leaves Effect_2's real classmask all-zero, which the engine
+(`SpellInfo::IsAffected`) reads as "matches every spell in the family," not
+"matches nothing." This exact mistake shipped for two frost-mage talents
+(Permafrost, Chilled to the Bone — see `docs/dbc-build-pipeline.md`'s "Bug
+3") and made their movement-slow modifiers apply to every mage spell
+instead of just Frostbolt/Cone of Cold. When adding any hand-authored
+`EffectSpellClassMask*` override, double check which effect index you
+actually mean before picking the letter. This mistake shipped twice in one day even with this
+callout already written (see `docs/dbc-build-pipeline.md`'s "Bug 3" for the second one, Empowered
+Frostbolt) — so don't rely on reading this. `generate.py` also runs an automated check
+(`lib/lint.py`) after every spell build and prints a `WARNING:` line if a SpellMod effect that
+needs a classmask ends up with an all-zero one. Take that warning seriously; it's almost always
+this exact mistake.
+
+## Web UI
+
+`source/spells/*.csv`'s two JSON-blob columns (`effectN`, `raw_overrides`) and
+`source/ids.yaml`'s reserved-ID bookkeeping get old fast by hand. `webui/` is
+a small local Flask app that edits the exact same CSV/YAML files as a form
+instead — CSV/YAML stay the source of truth (same as everything else in this
+tool), it just makes hand-editing them less tedious. No database, no build
+step, no auth.
+
+```
+pip install -r apps/dbc-tools/requirements.txt   # adds Flask, ruamel.yaml
+python3 apps/dbc-tools/webui/app.py
+```
+
+Open `http://localhost:8600/`, or `http://<this machine's LAN IP>:8600/` from
+any other device on the same network — it binds `0.0.0.0` on purpose. There's
+no login, so anyone who can reach that port can edit these files; keep it on
+a trusted home network, not port-forwarded to the internet.
+
+What it does: browse/add/edit/delete rows in any `source/spells/*.csv` or
+`source/talents/*.yaml` file, with a structured form for each `effectN` slot
+and a key/value editor for `raw_overrides` instead of hand-typed JSON, an
+"allocate ID" suggestion drawn from `source/ids.yaml`'s reserved blocks for
+new rows, and a "Run generate.py" button on the dashboard. Saving a spell row
+rewrites only that row's line in its CSV file — every other row's exact text
+is preserved byte-for-byte, deliberately, so an edit doesn't turn into a
+whole-file diff. Saving a talent tab/talent/ability does the same for its
+YAML file via `ruamel.yaml`'s round-trip mode, which also means an untouched
+entry's inline comments survive; a comment sitting on the specific line you
+just edited is the one thing that doesn't survive that edit.
+
+What it doesn't do: no enum-name dropdowns for raw DBC integer columns
+(school/mechanic/dispel/`SpellClassSet`/...) — plain numeric inputs, same as
+the CSV itself; no in-browser diff preview before running `generate.py` (its
+own stdout already lists exactly what it's about to touch); no reclassifying
+a row into a different class file from the edit form (delete + re-add
+instead); no concurrent-edit locking (single-user tool — git is still the
+safety net if two edits collide).
+
 ## Source files
 
 - `source/ids.yaml` — reserved ID blocks. Draw new IDs from here, don't
   pick numbers ad hoc.
-- `source/spells/*.csv` — one row per spell, one file per class
-  (`mage.csv`, `warrior.csv`, ...) plus `npc.csv` (creature-only abilities)
-  and `generic.csv` (no player class — trinket procs, test content, etc.).
-  A row is either new content, an active edit to something existing, or a
-  pulled-in-for-reference copy nothing has touched yet — see "Pulling
+- `source/spells/*.csv` — one row per spell, two files per class
+  (`mage.csv` / `mage_talents.csv`, `warrior.csv` / `warrior_talents.csv`,
+  ...) plus `npc.csv` (creature-only abilities) and `generic.csv` (no player
+  class — trinket procs, test content, etc.). `<class>.csv` holds spells
+  learned outright (trainer-taught or a `spell_ranks` chain member);
+  `<class>_talents.csv` holds spells granted by spending a talent point
+  (`Talent.dbc`'s `SpellRank_1..9`) — `pull.py`'s `detect_dest` sorts new
+  pulls between the two automatically (see "Pulling existing data in"
+  above). This mirrors `source/talents/*.yaml` holding the talent tree
+  *shape* (tabs, tiers, rank chains) while `<class>_talents.csv` holds the
+  actual `Spell.dbc` row each rank grants — different tables, same class
+  split. A row is either new content, an active edit to something existing,
+  or a pulled-in-for-reference copy nothing has touched yet — see "Pulling
   existing data in" above for how `generate.py` tells those apart. Split
   purely so no single file grows huge; every file shares the same header
   and they're all merged into one list before `build.py`/`reuse.py` ever

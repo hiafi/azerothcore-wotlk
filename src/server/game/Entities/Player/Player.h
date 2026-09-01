@@ -1824,6 +1824,9 @@ public:
     void AddSpellCooldown(uint32 spell_id, uint32 itemid, uint32 end_time, bool needSendToClient = false, bool forceSendToSpectator = false) override;
     void _AddSpellCooldown(uint32 spell_id, uint16 categoryId, uint32 itemid, uint32 end_time, bool needSendToClient = false, bool forceSendToSpectator = false);
     void ModifySpellCooldown(uint32 spellId, int32 cooldown);
+    // Custom: Cooldown Haste's clear-then-set client-visibility fix - see the definition in
+    // Player.cpp for why this exists instead of just calling ModifySpellCooldown() directly.
+    void ApplyCooldownHasteCorrection(uint32 spellId, uint32 itemId, uint32 correctedRecMs);
     void SendCooldownEvent(SpellInfo const* spellInfo, uint32 itemId = 0, Spell* spell = nullptr, bool setCooldown = true);
     void ProhibitSpellSchool(SpellSchoolMask idSchoolMask, uint32 unTimeMs) override;
     void RemoveSpellCooldown(uint32 spell_id, bool update = false);
@@ -2001,7 +2004,7 @@ public:
     // Custom stats: percentage value derived from the corresponding CombatRating.
     [[nodiscard]] float GetMasteryPercentage() const { return GetRatingBonusValue(CR_MASTERY); }
     [[nodiscard]] float GetVersatilityPercentage() const { return GetRatingBonusValue(CR_VERSATILITY); }
-    [[nodiscard]] float GetCooldownReductionPercentage() const { return GetRatingBonusValue(CR_COOLDOWN_REDUCTION); }
+    [[nodiscard]] float GetCooldownHastePercentage() const { return GetRatingBonusValue(CR_COOLDOWN_HASTE); }
     [[nodiscard]] float GetProcChancePercentage() const { return GetRatingBonusValue(CR_PROC_CHANCE); }
     uint32 GetBaseSpellPowerBonus() { return m_baseSpellPower; }
     uint32 GetBaseSpellDamageBonus() { return m_baseSpellDamage; }

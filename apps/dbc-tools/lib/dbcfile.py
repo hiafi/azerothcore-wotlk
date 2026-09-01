@@ -90,9 +90,73 @@ def _pack_string_pool(rows: list[dict], table: DbcTable):
     return bytes(pool), offsets
 
 
-def pack_dbc_bytes(table: DbcTable, rows: list[dict]) -> bytes:
-    """Pack rows (sorted by index column) into a binary WDBC file's bytes."""
-    rows = sorted(rows, key=lambda r: r[table.index_column])
+def order_talent_rows(rows: list[dict], base_rows: list[dict]) -> list[dict]:
+    """Physical row order for Talent.dbc — NOT a flat ID sort.
+
+    Confirmed via live-client testing (docs/dbc-build-pipeline.md's "Talent.dbc row order"
+    finding): the 3.3.5a client's talent frame assigns each button slot by physical *encounter
+    order* within a contiguous per-TabID block in the file, not by ID and not independently of
+    file position. A flat global ID sort (pack_dbc_bytes's default) scatters every tab's rows
+    across the whole file — IDs from different classes interleave — which breaks every tab that
+    renders at all, not just ones this pipeline touched. Ordering instead has to:
+
+      1. Keep each tab's rows physically contiguous, in the tab-block order the base/stock file
+         already uses — so a tab this pipeline never touches stays byte-for-byte where the
+         client already expects it (verified live: Arcane/Fire/other classes' tabs all broke
+         under a flat ID sort and were fixed by this alone).
+      2. Within each tab's block, order rows by (TierID, ColumnIndex) — physical order has to
+         match the logical grid. Verified live: a block left in its *old* physical sub-order
+         after a tier/column redesign rendered nothing for that tab, even though every
+         individual row's own data (TierID/ColumnIndex included) was already correct.
+      3. A brand-new talent ID (not in the base file at all) gets inserted into its own TabID's
+         block via rule 2 — never appended past the file's old contiguous tab boundaries.
+
+    `base_rows`: the base/extracted client DBC's rows, in original file order — the source of
+    tab-block boundaries and their relative order in the file.
+    """
+    by_id = {r["ID"]: r for r in rows}
+
+    tab_order: list[int] = []
+    tab_ids: dict[int, list[int]] = {}
+    for r in base_rows:
+        tab = r["TabID"]
+        if tab not in tab_ids:
+            tab_order.append(tab)
+            tab_ids[tab] = []
+        tab_ids[tab].append(r["ID"])
+
+    base_id_set = {r["ID"] for r in base_rows}
+    for new_id, row in by_id.items():
+        if new_id in base_id_set:
+            continue
+        tab = row["TabID"]
+        if tab not in tab_ids:
+            tab_order.append(tab)
+            tab_ids[tab] = []
+        tab_ids[tab].append(new_id)
+
+    ordered: list[dict] = []
+    for tab in tab_order:
+        block = [by_id[i] for i in tab_ids[tab] if i in by_id]
+        block.sort(key=lambda r: (r["TierID"], r["ColumnIndex"]))
+        ordered.extend(block)
+
+    if len(ordered) != len(rows):
+        missing = {r["ID"] for r in rows} - {r["ID"] for r in ordered}
+        raise ValueError(f"order_talent_rows: dropped row(s) {missing} — base_rows out of sync?")
+    return ordered
+
+
+def pack_dbc_bytes(table: DbcTable, rows: list[dict], *, sort: bool = True) -> bytes:
+    """Pack rows into a binary WDBC file's bytes.
+
+    By default, rows are sorted by the table's index column — reproducible and correct for
+    every table this pipeline touches except Talent.dbc, whose physical row order is
+    load-bearing to the client (see order_talent_rows). Pass `sort=False` with `rows` already in
+    the exact desired physical order to skip the default sort.
+    """
+    if sort:
+        rows = sorted(rows, key=lambda r: r[table.index_column])
     record_size = 4 * len(table.fmt)  # every field here is exactly 4 bytes
     string_pool, string_offsets = _pack_string_pool(rows, table)
 

@@ -1,0 +1,48 @@
+-- Root cause of the live playtest bug reported as "Deep Freeze/Glacial Spike fires on every spell
+-- cast, any school" (docs/frost-mage-handoff.md) - found via live debug logging
+-- (Spell::GetTriggeredByAuraSpellInfo()) plus reading the actual stock Spell.dbc binary the
+-- server loads (env/dist/data/dbc/Spell.dbc), not just this repo's `spell_dbc` SQL overlay table.
+--
+-- 71761 ("Deep Freeze Immunity State") and 71757 ("Deep Freeze", the "deals damage to
+-- stun-immune targets" fallback) are real, stock Blizzard spells that ship in the base client
+-- Spell.dbc - they were never touched by this project's dbc-tools pipeline, so they don't have a
+-- row in the `spell_dbc` SQL overlay table, which is exactly why rev_1787598885664009306.sql's
+-- Gap A2 investigation concluded "spell ID 71761 has NO spell_dbc row anywhere in this repo -
+-- base or overlay... a from-scratch ID with no real spell behind it." That conclusion was wrong -
+-- it only checked the SQL overlay, not the merged/effective data the server actually loads
+-- (DBCDatabaseLoader overlays `spell_dbc` SQL rows onto the base binary DBC; spells this project
+-- never touches just fall through to the base file's own stock data, silently).
+--
+-- 71761 is a real, always-known Mage ability (SkillLineAbility.dbc: SkillLine 6 "Mage",
+-- AcquireMethod 2 = auto-learned, re-cast on every login alongside every other known passive -
+-- confirmed live, it's why it isn't a persisted `character_spell`/`character_aura` row and why it
+-- fires for every Mage character regardless of talents). By itself that's harmless - Blizzard's
+-- own intent (data/sql/updates/db_world/2026_02_18_01.sql, an official upstream AC update
+-- unrelated to this branch) scopes its proc via `spell_proc.SpellFamilyMask1 = 0x00100000`, which
+-- is Deep Freeze's (44572) own SpellClassMask_2 bit - i.e. it's only ever supposed to fire
+-- alongside an actual Deep Freeze cast. rev_1787598885664009306.sql deleted that scoping row
+-- believing it was orphaned dead data. It wasn't: AzerothCore auto-generates a *fallback* spell_proc
+-- definition for any aura type flagged `isTriggerAura` (SpellMgr.cpp) when no explicit row exists,
+-- built from nothing but the spell's own raw ProcChance/ProcTypeMask (65536 = "done negative spell,
+-- magic damage class") - completely unscoped by SpellFamilyMask. Removing the explicit row didn't
+-- silence 71761, it removed the only thing keeping it quiet, so it started firing on every
+-- negative-magic-damage cast in the game (Frostbolt, Arcane Missiles, everything) - live-attributed
+-- in the DPS meter as "Deep Freeze" and misread as a mysterious Glacial Spike cast at first (a
+-- Glacial Spike-family talent happened to be up on the same casts, which is what made it look
+-- related to this rework at all - it isn't).
+--
+-- Fix: restore the exact stock row (values transcribed from data/sql/base/db_world/spell_proc.sql
+-- and reconfirmed against data/sql/updates/db_world/2026_02_18_01.sql, both agreeing). Leaves the
+-- rest of rev_1787598885664009306.sql's cleanup alone (the deleted spell_script_names row's C++
+-- class genuinely doesn't exist any more, and spell_proc_event is unused dead weight - grep of
+-- src/server/game/ confirms zero references - so neither of those needs restoring).
+--
+-- DELETE added 2026-08-26: this INSERT had already been run directly against the live
+-- acore_world DB (matching this project's established "live-debug now, land the migration later"
+-- practice), but the migration file itself was never made idempotent afterward - the first real
+-- ac-db-import replay against this DB hit ERROR 1062 (duplicate PK) on this exact row and refused
+-- to apply anything after it in the queue, including unrelated later migrations. Row content
+-- verified identical (SELECT against the live table) before adding this guard.
+DELETE FROM `spell_proc` WHERE `SpellId` = 71761;
+INSERT INTO `spell_proc` (`SpellId`, `SchoolMask`, `SpellFamilyName`, `SpellFamilyMask0`, `SpellFamilyMask1`, `SpellFamilyMask2`, `ProcFlags`, `SpellTypeMask`, `SpellPhaseMask`, `HitMask`, `AttributesMask`, `DisableEffectsMask`, `ProcsPerMinute`, `Chance`, `Cooldown`, `Charges`)
+VALUES (71761, 0, 3, 0, 1048576, 0, 0, 5, 2, 256, 0, 0, 0, 0, 0, 0);

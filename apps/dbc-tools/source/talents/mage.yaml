@@ -30,6 +30,17 @@
 #     rank_spell_ids: [200001] # one real Spell.dbc ID per rank, low to high
 #     depends_on: {talent_id: 0, rank: 0}   # 0 = no prerequisite
 #     flags: 0
+#
+# skill_line_abilities:
+#   - id: 30400                # from source/ids.yaml's skilllineability block
+#     skill_line: 6             # SkillLine.dbc ID, e.g. Frost = 6 (Fire = 8, Arcane = 237)
+#     spell_id: 200002          # the castable spell this buckets into a Spellbook tab
+#     class_mask: 128           # Mage; see docs/dbc-build-pipeline.md's ClassMask note
+#     min_skill_line_rank: 1    # matches every stock Frost/Fire/Arcane row
+#     # only needed for a brand-new (custom) spell ID: every stock Blizzard
+#     # spell already has its own SkillLineAbility row, so reused IDs
+#     # (Ice Barrier, Ice Lance, ...) don't need one here. See
+#     # docs/skilllineability-handoff.md for why this table exists at all.
 
 tabs:
 - id: 41
@@ -234,9 +245,6 @@ talents:
   rank_spell_ids:
   - 11070
   - 12473
-  - 16763
-  - 16765
-  - 16766
   depends_on:
     talent_id: 0
     rank: 0
@@ -279,8 +287,8 @@ talents:
   flags: 0
 - id: 63
   tab_id: 61
-  tier: 2
-  column: 2
+  tier: 3
+  column: 0
   rank_spell_ids:
   - 11185
   - 12487
@@ -291,8 +299,8 @@ talents:
   flags: 0
 - id: 64
   tab_id: 61
-  tier: 4
-  column: 2
+  tier: 5
+  column: 1
   rank_spell_ids:
   - 11190
   - 12489
@@ -315,7 +323,7 @@ talents:
   flags: 0
 - id: 66
   tab_id: 61
-  tier: 3
+  tier: 2
   column: 1
   rank_spell_ids:
   - 11160
@@ -352,7 +360,7 @@ talents:
 - id: 69
   tab_id: 61
   tier: 2
-  column: 1
+  column: 2
   rank_spell_ids:
   - 12472
   depends_on:
@@ -377,7 +385,7 @@ talents:
   rank_spell_ids:
   - 11426
   depends_on:
-    talent_id: 72
+    talent_id: 0
     rank: 0
   flags: 1
 - id: 72
@@ -392,7 +400,7 @@ talents:
   flags: 1
 - id: 73
   tab_id: 61
-  tier: 1
+  tier: 4
   column: 0
   rank_spell_ids:
   - 11207
@@ -559,7 +567,7 @@ talents:
 - id: 741
   tab_id: 61
   tier: 3
-  column: 0
+  column: 1
   rank_spell_ids:
   - 16757
   - 16758
@@ -767,7 +775,7 @@ talents:
 - id: 1736
   tab_id: 61
   tier: 4
-  column: 3
+  column: 2
   rank_spell_ids:
   - 31667
   - 31668
@@ -784,19 +792,17 @@ talents:
   - 55091
   - 55092
   depends_on:
-    talent_id: 72
+    talent_id: 0
     rank: 0
   flags: 0
 - id: 1738
   tab_id: 61
-  tier: 6
-  column: 2
+  tier: 8
+  column: 0
   rank_spell_ids:
   - 31674
   - 31675
   - 31676
-  - 31677
-  - 31678
   depends_on:
     talent_id: 0
     rank: 0
@@ -804,7 +810,7 @@ talents:
 - id: 1740
   tab_id: 61
   tier: 7
-  column: 1
+  column: 2
   rank_spell_ids:
   - 31682
   - 31683
@@ -950,8 +956,8 @@ talents:
   flags: 1
 - id: 1853
   tab_id: 61
-  tier: 7
-  column: 2
+  tier: 2
+  column: 3
   rank_spell_ids:
   - 44543
   - 44545
@@ -961,8 +967,8 @@ talents:
   flags: 0
 - id: 1854
   tab_id: 61
-  tier: 8
-  column: 0
+  tier: 6
+  column: 2
   rank_spell_ids:
   - 44546
   - 44548
@@ -980,7 +986,7 @@ talents:
   - 44560
   - 44561
   depends_on:
-    talent_id: 1741
+    talent_id: 1741            # Summon Water Elemental, max rank (single-rank talent)
     rank: 0
   flags: 0
 - id: 1856
@@ -991,8 +997,6 @@ talents:
   - 44566
   - 44567
   - 44568
-  - 44570
-  - 44571
   depends_on:
     talent_id: 0
     rank: 0
@@ -1002,11 +1006,43 @@ talents:
   tier: 10
   column: 1
   rank_spell_ids:
-  - 44572
+  - 200002
   depends_on:
     talent_id: 0
     rank: 0
   flags: 1
+- id: 60001                # minted, source/ids.yaml talent block (60000-60799) - Flurry
+  tab_id: 61
+  tier: 4
+  column: 3
+  rank_spell_ids:
+  - 200004
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 1
+- id: 60002                # minted, source/ids.yaml talent block (60000-60799) - Frozen Orb
+  tab_id: 61
+  tier: 7
+  column: 1
+  rank_spell_ids:
+  - 200007
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 1
+- id: 60000                # minted, source/ids.yaml talent block (60000-60799) - Biting Cold
+  tab_id: 61
+  tier: 1
+  column: 0
+  rank_spell_ids:
+  - 200010
+  - 200011
+  - 200012
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
 - id: 2209
   tab_id: 81
   tier: 8
@@ -1065,3 +1101,25 @@ talents:
     talent_id: 0
     rank: 0
   flags: 0
+skill_line_abilities:
+# Buckets each fully-custom Frost spell ID into the Frost Spellbook tab —
+# see docs/skilllineability-handoff.md. Not needed for any spell ID that
+# reuses a stock Blizzard spell (Ice Barrier, Ice Lance, ...): those already
+# have their own stock SkillLineAbility row. Icicles (200001) is deliberately
+# omitted — it's only ever granted as a triggered buff, never player-cast
+# from the spellbook.
+- id: 30400                # minted, source/ids.yaml skilllineability block (30400-30499)
+  skill_line: 6             # Frost
+  spell_id: 200002          # Glacial Spike
+  class_mask: 128
+  min_skill_line_rank: 1
+- id: 30401                # minted, source/ids.yaml skilllineability block (30400-30499)
+  skill_line: 6             # Frost
+  spell_id: 200004          # Flurry
+  class_mask: 128
+  min_skill_line_rank: 1
+- id: 30402                # minted, source/ids.yaml skilllineability block (30400-30499)
+  skill_line: 6             # Frost
+  spell_id: 200007          # Frozen Orb
+  class_mask: 128
+  min_skill_line_rank: 1

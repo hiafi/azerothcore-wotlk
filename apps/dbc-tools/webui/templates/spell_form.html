@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% import "_macros.html" as macros %}
+{% block title %}{{ 'New spell' if not original_id else 'Edit spell ' ~ original_id }} – dbc-tools{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('spell_list', file=file) }}">&larr; {{ file }}.csv</a></p>
+<h1>{{ 'New spell' if not original_id else 'Edit spell ' ~ original_id }}</h1>
+
+<form id="spell-form" method="post" action="{{ url_for('spell_save', file=file) }}">
+  <input type="hidden" name="original_id" value="{{ original_id }}">
+
+  <fieldset>
+    <legend>Spell</legend>
+    <div class="field-grid">
+    {% for field in plain_fields %}
+      <label>{{ field }}
+        {% if field == 'school' %}
+          {{ macros.enum_select('school', ctx.school, school_options) }}
+        {% elif field == 'power_type' %}
+          {{ macros.enum_select('power_type', ctx.power_type, power_type_options, none_label='0 — Mana') }}
+        {% elif field == 'spell_icon_id' %}
+          <span class="icon-field">
+            <input type="text" id="spell_icon_id" name="spell_icon_id" value="{{ ctx.spell_icon_id }}"
+                   oninput="updateIconPreview()">
+            <img id="icon-preview" class="icon-preview" src="{{ icon_url or '' }}"
+                 style="{{ '' if icon_url else 'display:none' }}" alt="">
+          </span>
+        {% else %}
+          <input type="text" name="{{ field }}" value="{{ ctx[field] }}" {{ 'required' if field in ('id', 'name') else '' }}>
+        {% endif %}
+      </label>
+    {% endfor %}
+    </div>
+  </fieldset>
+
+  {% for i in (1, 2, 3) %}
+  {% set effect = ctx['effect' ~ i] %}
+  <fieldset>
+    <legend>Effect {{ i }} <span class="hint">(leave "type" blank for no effect in this slot)</span></legend>
+    <div class="field-grid">
+    {% for field in effect_fields %}
+      <label>{{ field }}
+        {% if field == 'type' %}
+          {{ macros.enum_select('effect' ~ i ~ '_type', effect.type, effect_type_options) }}
+        {% else %}
+          <input type="text" name="effect{{ i }}_{{ field }}" value="{{ effect[field] }}">
+        {% endif %}
+      </label>
+    {% endfor %}
+    </div>
+  </fieldset>
+  {% endfor %}
+
+  <fieldset>
+    <legend>Damage per level
+      <span class="hint">(effect 1-3, whichever look like a damage effect — school damage or a periodic-damage aura)</span>
+    </legend>
+    <div id="damage-charts"></div>
+    <p id="damage-charts-empty" class="hint">No school-damage or periodic-damage effect found in effects 1-3.</p>
+    <p class="hint">
+      The +power lines use the engine's <em>default</em> spell-power/attack-power coefficient
+      (cast time and duration based, see <code>Unit::CalculateDefaultCoefficient</code>) applied to
+      both spell power and attack power alike. A spell with its own row in the <code>spell_bonus_data</code>
+      DB table — which this tool doesn't see — will do different damage in-game than shown here.
+      AoE, multi-effect, leech, and channeled-spell coefficient adjustments aren't modeled either.
+    </p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Raw overrides <span class="hint">(any Spell.dbc column name &rarr; value)</span></legend>
+    <div id="overrides-rows">
+    {% for k, v in ctx.overrides %}
+      <div class="kv-row">
+        <input type="text" name="override_key" value="{{ k }}" placeholder="Column name">
+        <input type="text" name="override_value" value="{{ v }}" placeholder="Value">
+        <button type="button" class="link-button" onclick="this.parentElement.remove()">remove</button>
+      </div>
+    {% endfor %}
+    </div>
+    <button type="button" onclick="addRow('overrides-rows', 'kv-row-template')">+ add override</button>
+  </fieldset>
+
+  <fieldset>
+    <legend>Notes</legend>
+    <textarea name="notes" rows="3">{{ ctx.notes }}</textarea>
+  </fieldset>
+
+  <button type="submit" class="primary">Save</button>
+</form>
+
+<template id="kv-row-template">
+  <div class="kv-row">
+    <input type="text" name="override_key" placeholder="Column name">
+    <input type="text" name="override_value" placeholder="Value">
+    <button type="button" class="link-button" onclick="this.parentElement.remove()">remove</button>
+  </div>
+</template>
+
+<script src="{{ url_for('static', filename='rows.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='damage_chart.js') }}"></script>
+<script>
+async function updateIconPreview() {
+  const id = document.getElementById('spell_icon_id').value.trim();
+  const img = document.getElementById('icon-preview');
+  if (!id) { img.style.display = 'none'; return; }
+  try {
+    const r = await fetch(`/api/icon-url/${encodeURIComponent(id)}`);
+    if (!r.ok) { img.style.display = 'none'; return; }
+    const data = await r.json();
+    img.src = data.url;
+    img.style.display = '';
+  } catch (e) {
+    img.style.display = 'none';
+  }
+}
+</script>
+{% endblock %}

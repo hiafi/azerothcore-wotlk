@@ -18,7 +18,11 @@ Read the matching doc(s) BEFORE starting the task:
 - Creating or modifying SQL → `.agents/docs/sql-guidelines.md`
   - SmartAI work (`smart_scripts` data) → also `.agents/docs/cpp-scripts.md`
 - Touching a subsystem that has a doc in `.agents/docs/systems/` → read that doc too
+  - Editing `apps/dbc-tools` spell/talent source data or its generated SQL → also
+    `.agents/docs/systems/dbc-tools.md`
 - Capturing a lesson or adding/updating agent docs → `.agents/docs/README.md`
+- Debugging a mysterious/recurring bug → check `docs/bugs-and-fixes.md` first; add an entry there
+  once root-caused so it isn't re-diagnosed later
 
 ## Repository layout
 

@@ -42,6 +42,7 @@
 #include "GridNotifiersImpl.h"
 #include "Group.h"
 #include "Log.h"
+#include "MageMechanics.h"
 #include "MapMgr.h"
 #include "MoveSpline.h"
 #include "MoveSplineInit.h"
@@ -3974,7 +3975,7 @@ uint32 Unit::GetWeaponSkillValue (WeaponAttackType attType, Unit const* target) 
         // Modify value from ratings
         // Custom: per-attack-type weapon skill ratings (CR_WEAPON_SKILL_MAINHAND/OFFHAND/RANGED)
         // were never written by any item/aura and have been repurposed into CR_MASTERY/
-        // CR_VERSATILITY/CR_COOLDOWN_REDUCTION - see Unit.h. Only the flat CR_WEAPON_SKILL
+        // CR_VERSATILITY/CR_COOLDOWN_HASTE - see Unit.h. Only the flat CR_WEAPON_SKILL
         // (id 0) still applies here.
         value += uint32(player->GetRatingBonusValue(CR_WEAPON_SKILL));
     }
@@ -8649,24 +8650,9 @@ float Unit::SpellPctDamageModsDone(Unit* victim, SpellInfo const* spellProto, Da
     switch (spellProto->SpellFamilyName)
     {
         case SPELLFAMILY_MAGE:
-            // Ice Lance
-            if (spellProto->SpellIconID == 186)
-            {
-                if (victim->HasAuraState(AURA_STATE_FROZEN, spellProto, this))
-                {
-                    // Glyph of Ice Lance
-                    if (owner->HasAura(56377) && victim->GetLevel() > owner->GetLevel())
-                        DoneTotalMod *= 4.0f;
-                    else
-                        DoneTotalMod *= 3.0f;
-                }
-            }
-
-            // Torment the weak
-            if (spellProto->SpellFamilyFlags[0] & 0x20600021 || spellProto->SpellFamilyFlags[1] & 0x9000)
-                if (victim->HasAuraWithMechanic((1ULL << MECHANIC_SNARE) | (1ULL << MECHANIC_SLOW_ATTACK)))
-                    if (AuraEffect* aurEff = GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_GENERIC, 3263, EFFECT_0))
-                        AddPct(DoneTotalMod, aurEff->GetAmount());
+            // Ice Lance, Torment the Weak, and every Frost Mage rework damage-done capstone -
+            // see MageMechanics.cpp for the full set; consolidated there instead of inline here.
+            Mage::ApplyDoneDamagePctMods(this, victim, spellProto, DoneTotalMod);
             break;
         case SPELLFAMILY_PRIEST:
             // Mind Flay
@@ -9107,8 +9093,8 @@ int32 Unit::SpellBaseDamageBonusDone(SpellSchoolMask schoolMask)
         DoneAdvertisedBenefit += ToPlayer()->GetBaseSpellPowerBonus();
         DoneAdvertisedBenefit += ToPlayer()->GetBaseSpellDamageBonus();
 
-        // Custom: 1 point of spellpower per point of Intellect and Spirit
-        DoneAdvertisedBenefit += int32(GetStat(STAT_INTELLECT)) + int32(GetStat(STAT_SPIRIT));
+        // Custom: 0.5 point of spellpower per point of Intellect and Spirit
+        DoneAdvertisedBenefit += int32(GetStat(STAT_INTELLECT) / 2) + int32(GetStat(STAT_SPIRIT) / 2);
 
         // Damage bonus from stats
         AuraEffectList const& mDamageDoneOfStatPercent = GetAuraEffectsByType(SPELL_AURA_MOD_SPELL_DAMAGE_OF_STAT_PERCENT);
@@ -9266,7 +9252,13 @@ float Unit::SpellTakenCritChance(Unit const* caster, SpellInfo const* spellProto
                         int32 modChance = 0;
                         switch ((*i)->GetMiscValue())
                         {
-                            // Shatter
+                            // Shatter. Frost Mage rework: also counts Fingers of Frost charges and
+                            // Shattering Cold as "frozen" (docs/frost-mage-redesign.md sec 4), not
+                            // just a real freeze/root - AURA_STATE_FROZEN alone missed both, since
+                            // Fingers of Frost is a caster-side charge buff that never sets that
+                            // state on the target. Mage::IsFrozenTarget (MageMechanics.h) is the
+                            // canonical check already used for Ice Lance's bonus damage and
+                            // Frostbite's Mastery bonus.
                             case 911:
                                 modChance += 16;
                                 [[fallthrough]];
@@ -9275,7 +9267,7 @@ float Unit::SpellTakenCritChance(Unit const* caster, SpellInfo const* spellProto
                                 [[fallthrough]];
                             case 849:
                                 modChance += 17;
-                                if (!HasAuraState(AURA_STATE_FROZEN, spellProto, caster))
+                                if (!Mage::IsFrozenTarget(caster, this))
                                     break;
                                 crit_chance += modChance;
                                 break;
@@ -9870,8 +9862,8 @@ int32 Unit::SpellBaseHealingBonusDone(SpellSchoolMask schoolMask)
         AdvertisedBenefit += ToPlayer()->GetBaseSpellPowerBonus();
         AdvertisedBenefit += ToPlayer()->GetBaseSpellHealingBonus();
 
-        // Custom: 1 point of spellpower per point of Intellect and Spirit
-        AdvertisedBenefit += int32(GetStat(STAT_INTELLECT)) + int32(GetStat(STAT_SPIRIT));
+        // Custom: 0.5 point of spellpower per point of Intellect and Spirit
+        AdvertisedBenefit += int32(GetStat(STAT_INTELLECT) / 2) + int32(GetStat(STAT_SPIRIT) / 2);
 
         // Healing bonus from stats
         AuraEffectList const& mHealingDoneOfStatPercent = GetAuraEffectsByType(SPELL_AURA_MOD_SPELL_HEALING_OF_STAT_PERCENT);
@@ -10416,6 +10408,10 @@ uint32 Unit::MeleeDamageBonusTaken(Unit* attacker, uint32 pdamage, WeaponAttackT
         TakenTotalMod *= 1.0f - ToPlayer()->GetVersatilityPercentage() / 200.0f;
 
     TakenTotalMod *= GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, damageSchoolMask);
+
+    // Frost Warding's capstone - see MageMechanics.cpp for the full set of Mage-specific hooks
+    // that don't fit a SpellScript/AuraScript.
+    Mage::ApplyMeleeDamageTakenPctMods(this, attacker, damageSchoolMask, TakenTotalMod);
 
     // .. taken pct (special attacks)
     if (spellProto)
@@ -14010,7 +14006,7 @@ bool Unit::HandleAuraRaidProcFromCharge(AuraEffect* triggeredByAura)
     return true;
 }
 
-void Unit::Kill(Unit* killer, Unit* victim, bool durabilityLoss, WeaponAttackType attackType, SpellInfo const* /*spellProto*/, Spell const* /*spell*/ /*= nullptr*/)
+void Unit::Kill(Unit* killer, Unit* victim, bool durabilityLoss, WeaponAttackType attackType, SpellInfo const* spellProto, Spell const* /*spell*/ /*= nullptr*/)
 {
     // Prevent killing unit twice (and giving reward from kill twice)
     if (!victim->GetHealth())
@@ -14338,6 +14334,10 @@ void Unit::Kill(Unit* killer, Unit* victim, bool durabilityLoss, WeaponAttackTyp
                 sScriptMgr->OnPlayerKilledByCreature(killerCre, killed);
         }
     }
+
+    // Frost Channeling's capstone - see MageMechanics.cpp for the full set of Mage-specific hooks
+    // that don't fit a SpellScript/AuraScript.
+    Mage::OnKill(killer, victim, spellProto);
 
     sScriptMgr->OnUnitDeath(victim, killer);
 }

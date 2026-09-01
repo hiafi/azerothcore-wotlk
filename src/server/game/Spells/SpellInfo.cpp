@@ -20,6 +20,7 @@
 #include "ConditionMgr.h"
 #include "Corpse.h"
 #include "DBCStores.h"
+#include "Log.h"
 #include "LootMgr.h"
 #include "Player.h"
 #include "ScriptMgr.h"

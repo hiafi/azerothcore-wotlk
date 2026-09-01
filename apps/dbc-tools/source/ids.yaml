@@ -16,6 +16,9 @@
 #                 currently empty overlay tables; stock client data for these
 #                 is small (a few dozen to ~100 rows), so 30000+ is a wide
 #                 margin without needing to inspect the client files directly.
+#   - skilllineability: also a currently-empty overlay table; the live base
+#                 file's own IDs top out at 21980 (verified this session —
+#                 see docs/skilllineability-handoff.md), so 30400+ stays clear.
 #
 # `reuse.py` only mints a new ID from these blocks when nothing existing
 # (base DBC or current overlay) already matches what's being asked for.
@@ -47,3 +50,7 @@ spellrange:
 spellradius:
   start: 30300
   end: 30399
+
+skilllineability:
+  start: 30400
+  end: 30499
