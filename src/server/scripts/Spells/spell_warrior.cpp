@@ -71,6 +71,11 @@ enum WarriorSpells
     SPELL_WARRIOR_SLAM_GCD_REDUCED                  = 71072,
     SPELL_WARRIOR_EXECUTE_GCD_REDUCED               = 71069,
     SPELL_WARRIOR_WARRIORS_WRATH                    = 21887,
+    // Protection Warrior rework (docs/prot_warrior_rework.md, New Spells/Auras), custom
+    // (200000-209999 reserved block, apps/dbc-tools/source/spells/warrior.csv):
+    SPELL_WARRIOR_STORMS_BULWARK                    = 200028,
+    SPELL_WARRIOR_CONCUSSED                         = 200029,
+    SPELL_WARRIOR_BLOODSTORM                        = 200030,
 };
 
 enum WarriorSpellIcons
@@ -90,6 +95,28 @@ enum MiscSpells
     // Righteous Fury, Bear Form/Dire Bear Form, and Frost Presence
     SPELL_GEN_CRIT_IMMUNITY                         = 200000,
 };
+
+// Storm's Bulwark (docs/prot_warrior_rework.md, New Spells/Auras): every source stacks
+// additively into one absorb pool capped at 50% of max HP, refreshing duration by default.
+// Callers are expected to have already applied their own mastery scaling to `amount` - which
+// talents grant Storm's Bulwark (Incite, Reprisal, the Storm's Bulwark talent, Shockwave) is
+// phase 2/3 work.
+void GrantStormsBulwark(Unit* caster, int32 amount, bool refreshDuration = true)
+{
+    int32 const cap = caster->CountPctFromMaxHealth(50);
+    if (Aura* aura = caster->GetAura(SPELL_WARRIOR_STORMS_BULWARK))
+    {
+        if (AuraEffect* effect = aura->GetEffect(EFFECT_0))
+            effect->SetAmount(std::min(effect->GetAmount() + amount, cap));
+        if (refreshDuration)
+            aura->RefreshDuration();
+    }
+    else
+    {
+        int32 basepoints = std::min(amount, cap);
+        caster->CastCustomSpell(caster, SPELL_WARRIOR_STORMS_BULWARK, &basepoints, nullptr, nullptr, true);
+    }
+}
 
 // 71 - Defensive Stance
 class spell_warr_defensive_stance : public AuraScript
