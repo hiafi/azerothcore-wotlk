@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Budget templates - item-tools{% endblock %}
+{% block content %}
+  <h1>Budget templates</h1>
+  <p class="hint">Reusable allocation shapes for the percentage-allocation itemization system
+    (<code>item_budget_template</code>, see <code>docs/itemization-changes.md</code> &sect;9.1). Each one
+    describes how a template splits an item's budget across stats, as percentages that sum to 100% -
+    the actual point values come from an item's own item level, slot, and quality when it's assigned
+    and regenerated.</p>
+
+  <p><a href="{{ url_for('template_new') }}" class="button primary">New template</a></p>
+
+  {% if rows %}
+    <table>
+      <thead><tr><th>ID</th><th>Name</th><th>Shape</th><th>Items using it</th></tr></thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            <td><a href="{{ url_for('template_edit', template_id=row.template_id) }}">{{ row.template_id }}</a></td>
+            <td>{{ row.name }}</td>
+            <td>{{ row.shape }}</td>
+            <td>{{ row.item_count }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No templates yet - <a href="{{ url_for('template_new') }}">create one</a>.</p>
+  {% endif %}
+{% endblock %}

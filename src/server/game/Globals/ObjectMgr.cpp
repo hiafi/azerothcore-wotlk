@@ -33,6 +33,7 @@
 #include "GossipDef.h"
 #include "GroupMgr.h"
 #include "GuildMgr.h"
+#include "ItemBudget.h"
 #include "LFGMgr.h"
 #include "Log.h"
 #include "MapMgr.h"
@@ -3929,6 +3930,14 @@ void ObjectMgr::LoadItemTemplates()
 
     LOG_INFO("server.loading", ">> Loaded {} Item Templates in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
     LOG_INFO("server.loading", " ");
+
+    // Percentage-allocation itemization system. See docs/itemization-changes.md.
+    // Must run after _itemTemplateStore is fully populated so there's
+    // something to overwrite; must run before the world accepts
+    // connections so no client ever queries a pre-materialization stat
+    // line (item query packets are built on demand, not pre-baked here --
+    // see docs/itemization-changes.md §6.1).
+    ItemBudget::LoadAndApply(_itemTemplateStore);
 }
 
 ItemTemplate const* ObjectMgr::GetItemTemplate(uint32 entry)
