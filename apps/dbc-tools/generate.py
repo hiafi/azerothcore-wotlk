@@ -105,7 +105,7 @@ def main() -> int:
         )
 
     # Real build pass (real ReuseContext this time) over just what survived
-    # reconciliation — this is what actually gets emitted.
+    # reconciliation — this is what actually gets emitted to SQL.
     reuse = ReuseContext(existing_secondary, ids_cfg)
     spell_rows = [build.build_spell_row(e, reuse) for e in spell_resolved.entries]
     for warning in lint.check_classmask_scoping(spell_resolved.entries, spell_rows):
@@ -114,6 +114,39 @@ def main() -> int:
     talenttab_rows = [build.build_talenttab_row(e) for e in talenttab_resolved.entries]
     skilllineability_rows = [
         build.build_skilllineability_row(e) for e in skilllineability_resolved.entries
+    ]
+
+    # Second reconciliation pass, against pure-vanilla state instead of
+    # state.load_existing_rows's db_world-promoted-aware state, purely to
+    # decide what the *client patch* needs to carry — see state.py's "Two
+    # baselines, two purposes" note. Reuses the same `reuse` (idempotent
+    # find_or_mint, see reuse.py) so this can't mint a duplicate secondary row
+    # for something the SQL-emission pass above already minted one for.
+    stock_spells = state.load_stock_rows(dbcfmt.SPELL)
+    stock_talents = state.load_stock_rows(dbcfmt.TALENT)
+    stock_talenttabs = state.load_stock_rows(dbcfmt.TALENTTAB)
+    stock_skilllineabilities = state.load_stock_rows(dbcfmt.SKILLLINEABILITY)
+    client_spell_resolved = resolve.resolve_rows(
+        spell_entries, ids_cfg["spell"], stock_spells,
+        lambda e: build.build_spell_row(e, scratch_reuse),
+    )
+    client_talent_resolved = resolve.resolve_rows(
+        talents["talents"], ids_cfg["talent"], stock_talents, build.build_talent_row,
+    )
+    client_talenttab_resolved = resolve.resolve_rows(
+        talents["tabs"], ids_cfg["talenttab"], stock_talenttabs, build.build_talenttab_row,
+    )
+    client_skilllineability_resolved = resolve.resolve_rows(
+        talents["skill_line_abilities"], ids_cfg["skilllineability"],
+        stock_skilllineabilities, build.build_skilllineability_row,
+    )
+    client_spell_rows = [build.build_spell_row(e, reuse) for e in client_spell_resolved.entries]
+    client_talent_rows = [build.build_talent_row(e) for e in client_talent_resolved.entries]
+    client_talenttab_rows = [
+        build.build_talenttab_row(e) for e in client_talenttab_resolved.entries
+    ]
+    client_skilllineability_rows = [
+        build.build_skilllineability_row(e) for e in client_skilllineability_resolved.entries
     ]
 
     # -- pending SQL: reserved range + explicit edited IDs, per table --
@@ -141,12 +174,14 @@ def main() -> int:
 
     # -- client patch: needs a complete file (base + new), so any table with
     # new/changed rows but no extracted base file gets skipped, not
-    # half-written --
+    # half-written. Uses the *_client_rows sets (diffed against pure vanilla)
+    # so already-promoted content keeps getting baked into every patch build,
+    # not just the first one after it was promoted — see state.py.
     new_rows_by_table = {
-        dbcfmt.SPELL: {r["ID"]: r for r in spell_rows},
-        dbcfmt.TALENT: {r["ID"]: r for r in talent_rows},
-        dbcfmt.TALENTTAB: {r["ID"]: r for r in talenttab_rows},
-        dbcfmt.SKILLLINEABILITY: {r["ID"]: r for r in skilllineability_rows},
+        dbcfmt.SPELL: {r["ID"]: r for r in client_spell_rows},
+        dbcfmt.TALENT: {r["ID"]: r for r in client_talent_rows},
+        dbcfmt.TALENTTAB: {r["ID"]: r for r in client_talenttab_rows},
+        dbcfmt.SKILLLINEABILITY: {r["ID"]: r for r in client_skilllineability_rows},
     }
     for name, table in SECONDARY_TABLES.items():
         minted = reuse.minted.get(name, [])
@@ -184,6 +219,10 @@ def main() -> int:
         print(f"patch: mpq -> {report['mpq']}")
         if report["env_dbc"]:
             print(f"patch: also copied into {patch_out.ENV_DBC_DIR}")
+        if report["deploy_mpq"]:
+            print(f"patch: deployed -> {report['deploy_mpq']} (patch-service's manifest-gen "
+                  f"picks this up on its next timer tick; run apps/patch-service/manifest_gen.py "
+                  f"by hand for an immediate manifest.txt refresh)")
     else:
         print("patch: nothing to write (no base DBCs available yet)")
 

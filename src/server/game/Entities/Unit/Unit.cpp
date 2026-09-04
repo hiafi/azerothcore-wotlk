@@ -72,6 +72,7 @@
 #include "UpdateFields.h"
 #include "Util.h"
 #include "Vehicle.h"
+#include "WarriorMechanics.h"
 #include "World.h"
 #include "WorldPacket.h"
 #include <algorithm>
@@ -1902,6 +1903,13 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
                 damageInfo->TargetState = VICTIMSTATE_BLOCKS;
                 damageInfo->blocked_amount -= remainingBlock;
             }
+
+            // Critical Block (Protection Warrior rework, docs/prot_warrior_rework.md Row 7) -
+            // guaranteed extra %-reduction on the damage that got past the block-value
+            // subtraction above; see WarriorMechanics.h for why this lives here instead of a
+            // spell script.
+            for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
+                Warrior::ApplyBlockDamageReduction(damageInfo->target, damageInfo->damages[i].damage);
             break;
         }
         case MELEE_HIT_GLANCING:

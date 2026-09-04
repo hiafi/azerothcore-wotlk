@@ -76,12 +76,45 @@ enum WarriorSpells
     SPELL_WARRIOR_STORMS_BULWARK                    = 200028,
     SPELL_WARRIOR_CONCUSSED                         = 200029,
     SPELL_WARRIOR_BLOODSTORM                        = 200030,
+    // Protection Warrior rework phase 3 (docs/prot_warrior_rework.md) - real abilities these
+    // talents hook into:
+    SPELL_WARRIOR_THUNDER_CLAP                      = 6343,
+    SPELL_WARRIOR_DEVASTATE                         = 20243,
+    SPELL_WARRIOR_SHIELD_SLAM                       = 23922,
+    SPELL_WARRIOR_SHIELD_BLOCK                      = 2565,
+    SPELL_WARRIOR_REVENGE_R1                        = 6572,
+    SPELL_WARRIOR_REVENGE_R6                        = 25288,
+    SPELL_WARRIOR_LAST_STAND_ABILITY                = 12975,
+    // 2236 is Unrelenting's *talent* id (talent_dbc), not a spell - the actual learned passive
+    // aura HasAura() needs to check against is its single rank's real spell id, 200049.
+    SPELL_WARRIOR_UNRELENTING                       = 200049,
+    SPELL_WARRIOR_FOCUSED_RAGE_R3                   = 29792,
+    SPELL_WARRIOR_INCITE_R3                         = 50687,
+    SPELL_WARRIOR_SHOCKWAVE                         = 46968,
+    SPELL_WARRIOR_SHIELD_COVER_R3                   = 200043,
+    // Protection Warrior rework phase 3, new (200000-209999 reserved block,
+    // apps/dbc-tools/source/spells/warrior_talents.csv):
+    SPELL_WARRIOR_SHIELD_COVER_MAGIC_WARD           = 200061,
+    SPELL_WARRIOR_SHIELD_DISCIPLINE_TC_BOOST        = 200064,
+    SPELL_WARRIOR_THUNDER_CLAP_ECHO                 = 200065,
+    SPELL_WARRIOR_THUNDERSTRUCK_ECHO_TRIGGER        = 200066,
+    SPELL_WARRIOR_THUNDERSTRUCK_R3                  = 200053,
 };
 
 enum WarriorSpellIcons
 {
     WARRIOR_ICON_ID_SUDDEN_DEATH                    = 1989,
-    WARRIOR_ICON_ID_SECOND_WIND                     = 1697
+    WARRIOR_ICON_ID_SECOND_WIND                     = 1697,
+    // Protection Warrior rework phase 3: icons used to read a talent's passive marker aura live
+    // (GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_WARRIOR, icon, effIndex)), same idiom as
+    // MageMechanics.cpp. Each is unique among this file's DUMMY-marker lookups by construction
+    // (apps/dbc-tools/source/spells/warrior_talents.csv has no other SPELL_AURA_DUMMY effect to
+    // collide with as of this rework).
+    WARRIOR_ICON_ID_BLOOD_AND_THUNDER               = 245,
+    WARRIOR_ICON_ID_REPRISAL                        = 1508,
+    WARRIOR_ICON_ID_STORMS_BULWARK_TALENT           = 1941,
+    WARRIOR_ICON_ID_SHIELD_DISCIPLINE               = 28,
+    WARRIOR_ICON_ID_CRITICAL_BLOCK                  = 2778,
 };
 
 enum MiscSpells
@@ -497,14 +530,32 @@ class spell_warr_concussion_blow : public SpellScript
 {
     PrepareSpellScript(spell_warr_concussion_blow);
 
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_WARRIOR_CONCUSSED });
+    }
+
     void HandleDummy(SpellEffIndex /*effIndex*/)
     {
         SetHitDamage(CalculatePct(GetCaster()->GetTotalAttackPowerValue(BASE_ATTACK), GetEffectValue()));
     }
 
+    // Protection Warrior rework phase 3: "Targets that cannot be stunned are instead Concussed"
+    // (docs/prot_warrior_rework.md Row 5) - same IsImmunedToSpellEffect idiom as
+    // spell_warr_mocking_blow. EFFECT_0 is the stun (SPELL_AURA_MOD_STUN); the engine already
+    // silently skips applying it to an immune target, so this only needs to add the substitute.
+    void HandleConcussed()
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetHitUnit();
+        if (target && target->IsImmunedToSpellEffect(GetSpellInfo(), EFFECT_0))
+            caster->CastSpell(target, SPELL_WARRIOR_CONCUSSED, true);
+    }
+
     void Register() override
     {
         OnEffectHitTarget += SpellEffectFn(spell_warr_concussion_blow::HandleDummy, EFFECT_2, SPELL_EFFECT_DUMMY);
+        OnHit += SpellHitFn(spell_warr_concussion_blow::HandleConcussed);
     }
 };
 
@@ -782,7 +833,8 @@ class spell_warr_vigilance : public AuraScript
                 SPELL_GEN_DAMAGE_REDUCTION_AURA,
                 SPELL_PALADIN_BLESSING_OF_SANCTUARY,
                 SPELL_PALADIN_GREATER_BLESSING_OF_SANCTUARY,
-                SPELL_PRIEST_RENEWED_HOPE
+                SPELL_PRIEST_RENEWED_HOPE,
+                SPELL_WARRIOR_FOCUSED_RAGE_R3
             });
     }
 
@@ -833,6 +885,20 @@ class spell_warr_vigilance : public AuraScript
             return;
 
         GetTarget()->CastSpell(procTarget, SPELL_WARRIOR_VIGILANCE_PROC, true, nullptr, aurEff);
+
+        // Focused Rage capstone (Protection Warrior rework phase 3, docs/prot_warrior_rework.md
+        // Row 7): "You gain 5 rage every time the target of your Vigilance takes damage. This
+        // effect can only occur once every second." procTarget is already the warrior here (see
+        // CheckProc: _procTargetGUID is set to the aura's *caster*, i.e. the warrior who cast
+        // Vigilance) - reuse it instead of a second GetCaster() lookup. The 1s internal cooldown
+        // reuses SPELL_WARRIOR_FOCUSED_RAGE_R3's own id purely as a gate key (it's a passive-only
+        // marker, never actually cast), same HasSpellCooldown-as-gate idiom as
+        // spell_warr_sweeping_strikes.
+        if (procTarget->HasAura(SPELL_WARRIOR_FOCUSED_RAGE_R3) && !procTarget->HasSpellCooldown(SPELL_WARRIOR_FOCUSED_RAGE_R3))
+        {
+            procTarget->EnergizeBySpell(procTarget, SPELL_WARRIOR_FOCUSED_RAGE_R3, 5, POWER_RAGE);
+            procTarget->AddSpellCooldown(SPELL_WARRIOR_FOCUSED_RAGE_R3, 0, 1000);
+        }
     }
 
     void Register() override
@@ -1294,6 +1360,317 @@ class spell_warr_warriors_wrath : public SpellScript
     }
 };
 
+// 50687 - Incite (rank 3 capstone: critical strikes with Revenge grant Storm's Bulwark)
+class spell_warr_incite : public AuraScript
+{
+    PrepareAuraScript(spell_warr_incite);
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        SpellInfo const* spellInfo = eventInfo.GetSpellInfo();
+        // Revenge's own classmask (SpellFamilyFlags[0] & 0x400) rather than a literal spell id
+        // list, so this keeps working across every Revenge rank without needing to enumerate
+        // them here. ProcTypeMask (16, PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS - set on this spell's
+        // own row) already narrows procs to melee-class ability damage the caster deals; this
+        // narrows further to Revenge specifically and to a critical hit.
+        return spellInfo && spellInfo->SpellFamilyName == SPELLFAMILY_WARRIOR
+            && (spellInfo->SpellFamilyFlags[0] & 0x400)
+            && (eventInfo.GetHitMask() & PROC_HIT_CRITICAL);
+    }
+
+    void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& /*eventInfo*/)
+    {
+        PreventDefaultAction();
+        Player* player = GetTarget()->ToPlayer();
+        if (!player)
+            return;
+
+        // "add an amount equal to 1.5% of your maximum health ... increased by your mastery, up
+        // to its maximum" - GrantStormsBulwark itself enforces the 50%-max-HP cap.
+        // "This does not extend the shield's duration" -> refreshDuration=false.
+        int32 amount = int32(CalculatePct(player->GetMaxHealth(), 1.5f));
+        AddPct(amount, player->GetMasteryPercentage());
+        GrantStormsBulwark(player, amount, false);
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_warr_incite::CheckProc);
+        OnEffectProc += AuraEffectProcFn(spell_warr_incite::HandleProc, EFFECT_1, SPELL_AURA_DUMMY);
+    }
+};
+
+// 6343 - Thunder Clap: Blood and Thunder, the Storm's Bulwark talent, Shield Discipline's
+// consumption, and Thunderstruck's delayed echo all hook the caster's own real Thunder Clap cast.
+class spell_warr_thunder_clap : public SpellScript
+{
+    PrepareSpellScript(spell_warr_thunder_clap);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_WARRIOR_BLOODSTORM, SPELL_WARRIOR_THUNDERSTRUCK_ECHO_TRIGGER,
+                                    SPELL_WARRIOR_SHIELD_DISCIPLINE_TC_BOOST });
+    }
+
+    bool Load() override
+    {
+        _targetsHit = 0;
+        return true;
+    }
+
+    // EFFECT_0 is Thunder Clap's real damage effect (SPELL_EFFECT_SCHOOL_DAMAGE); EFFECT_1 is its
+    // separate attack-speed-slow debuff, untouched here.
+    void HandleDamageEffect(SpellEffIndex /*effIndex*/)
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetHitUnit();
+        if (!target)
+            return;
+
+        ++_targetsHit;
+
+        // Blood and Thunder (docs/prot_warrior_rework.md Row 2): "Your Thunder Clap causes
+        // targets to bleed for 15/30% of the damage dealt over 9 sec" - Bloodstorm (200030,
+        // Phase 1) ticks every 3s over 9s, so split the total 3 ways; per-tick amount goes
+        // through CastCustomSpell's own "+1" convention like every other custom-cast amount.
+        if (AuraEffect const* aurEff = caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_WARRIOR, WARRIOR_ICON_ID_BLOOD_AND_THUNDER, EFFECT_0))
+        {
+            int32 total = CalculatePct(GetHitDamage(), aurEff->GetAmount());
+            int32 perTick = total / 3 - 1;
+            caster->CastCustomSpell(target, SPELL_WARRIOR_BLOODSTORM, &perTick, nullptr, nullptr, true);
+        }
+    }
+
+    void HandleAfterCast()
+    {
+        Player* player = GetCaster()->ToPlayer();
+        if (!player)
+            return;
+
+        // Storm's Bulwark talent (Row 6): "absorb shield equal to 2/4/6% of your maximum health
+        // increased by your mastery, plus an additional 1% for each target struck." Percentages
+        // combine before converting to a health value, then mastery multiplies the combined total
+        // (confirmed by the user - see docs/prot_warrior_rework.md phase 3 plan).
+        if (AuraEffect const* aurEff = player->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_WARRIOR, WARRIOR_ICON_ID_STORMS_BULWARK_TALENT, EFFECT_0))
+        {
+            int32 totalPct = aurEff->GetAmount() + _targetsHit;
+            int32 amount = int32(CalculatePct(player->GetMaxHealth(), totalPct));
+
+            // Shield Discipline (Row 9): "Your Shield Slam increases the absorb granted by your
+            // next Thunder Clap by 25/50%" - charge applied by spell_warr_shield_slam, consumed
+            // here regardless of which Thunder Clap effect fed the base amount.
+            if (Aura* boost = player->GetAura(SPELL_WARRIOR_SHIELD_DISCIPLINE_TC_BOOST))
+            {
+                if (AuraEffect* boostEff = boost->GetEffect(EFFECT_0))
+                    AddPct(amount, boostEff->GetAmount());
+                boost->Remove();
+            }
+
+            AddPct(amount, player->GetMasteryPercentage());
+            GrantStormsBulwark(player, amount, true);
+        }
+
+        // Thunderstruck capstone (Row 10): schedule the 50%-effectiveness echo 3s later. 200066
+        // is a pure data-driven PERIODIC_TRIGGER_SPELL holder (no script) that fires 200065 once;
+        // re-casting it on repeated Thunder Claps within 3s just refreshes rather than stacking.
+        if (player->HasAura(SPELL_WARRIOR_THUNDERSTRUCK_R3))
+            player->CastSpell(player, SPELL_WARRIOR_THUNDERSTRUCK_ECHO_TRIGGER, true);
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_warr_thunder_clap::HandleDamageEffect, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
+        AfterCast += SpellCastFn(spell_warr_thunder_clap::HandleAfterCast);
+    }
+
+private:
+    int32 _targetsHit = 0;
+};
+
+// 20243 - Devastate: Reprisal (Row 4)
+class spell_warr_devastate : public SpellScript
+{
+    PrepareSpellScript(spell_warr_devastate);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_WARRIOR_SUNDER_ARMOR });
+    }
+
+    void HandleOnHit()
+    {
+        Player* caster = GetCaster()->ToPlayer();
+        Unit* target = GetHitUnit();
+        if (!caster || !target)
+            return;
+
+        // "adds an amount equal to 0.5/1% of your maximum health ... increased by your mastery.
+        // This amount is increased by 20% for each application of Sunder Armor on the target."
+        // Marker stores tenths of a percent (see apps/dbc-tools/source/spells/warrior_talents.csv).
+        AuraEffect const* aurEff = caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_WARRIOR, WARRIOR_ICON_ID_REPRISAL, EFFECT_0);
+        if (!aurEff)
+            return;
+
+        float pct = aurEff->GetAmount() / 10.0f;
+        int32 amount = int32(CalculatePct(caster->GetMaxHealth(), pct));
+
+        // Devastate always (re)applies Sunder Armor before this OnHit runs (native
+        // SPELLFAMILY_WARRIOR handling in SpellEffects.cpp), so there's always >=1 stack -
+        // confirmed multiplicative by the user: at 5 stacks, 0.5%/1% becomes 1%/2%.
+        int32 stacks = 1;
+        if (Aura const* sunder = target->GetAura(SPELL_WARRIOR_SUNDER_ARMOR, caster->GetGUID()))
+            stacks = sunder->GetStackAmount();
+        amount = int32(amount * (1.0f + 0.2f * stacks));
+
+        AddPct(amount, caster->GetMasteryPercentage());
+        GrantStormsBulwark(caster, amount, true);
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_warr_devastate::HandleOnHit);
+    }
+};
+
+// 46968 - Shockwave (Row 11): real base-game ability, already correctly scoped/tuned in the DBC
+// data (0.75*AP via effect3's carried value, 4s stun, 10yd frontal cone) - just needs the
+// AP-based damage calc, the stun-immunity double-damage fallback, and its own Storm's Bulwark
+// grant (unconditional - not gated by the separate Storm's Bulwark talent, it's baked into the
+// ability itself per docs/prot_warrior_rework.md Row 11).
+class spell_warr_shockwave : public SpellScript
+{
+    PrepareSpellScript(spell_warr_shockwave);
+
+    bool Load() override
+    {
+        _targetsHit = 0;
+        return true;
+    }
+
+    // EFFECT_0 is the stun (SPELL_AURA_MOD_STUN); EFFECT_1 is the school-damage effect this
+    // computes. EFFECT_2 just carries the 74 (->0.75) coefficient value referenced by the DBC
+    // tooltip's $m3 - not itself an active effect.
+    void HandleDamage(SpellEffIndex /*effIndex*/)
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetHitUnit();
+        if (!target)
+            return;
+
+        ++_targetsHit;
+
+        int32 damage = CalculatePct(caster->GetTotalAttackPowerValue(BASE_ATTACK), 75);
+        // "Targets that cannot be stunned take double damage instead."
+        if (target->IsImmunedToSpellEffect(GetSpellInfo(), EFFECT_0))
+            damage *= 2;
+        SetHitDamage(damage);
+    }
+
+    void HandleAfterCast()
+    {
+        Player* player = GetCaster()->ToPlayer();
+        if (!player || !_targetsHit)
+            return;
+
+        // "adds an amount equal to 20% of your maximum health ... plus an additional 1% for each
+        // target struck increased by your mastery."
+        int32 totalPct = 20 + _targetsHit;
+        int32 amount = int32(CalculatePct(player->GetMaxHealth(), totalPct));
+        AddPct(amount, player->GetMasteryPercentage());
+        GrantStormsBulwark(player, amount, true);
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_warr_shockwave::HandleDamage, EFFECT_1, SPELL_EFFECT_SCHOOL_DAMAGE);
+        AfterCast += SpellCastFn(spell_warr_shockwave::HandleAfterCast);
+    }
+
+private:
+    int32 _targetsHit = 0;
+};
+
+// Shield Cover capstone (Row 4): bound to both Spell Reflection (23920) and Shield Block (2565)
+// via spell_script_names - "Using Spell Reflection or Shield Block also reduces all Magic damage
+// taken by 30% for 3 sec" when Shield Cover rank 3 (200043) is talented.
+class spell_warr_shield_cover_capstone : public SpellScript
+{
+    PrepareSpellScript(spell_warr_shield_cover_capstone);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_WARRIOR_SHIELD_COVER_MAGIC_WARD });
+    }
+
+    void HandleCast()
+    {
+        Unit* caster = GetCaster();
+        if (caster->HasAura(SPELL_WARRIOR_SHIELD_COVER_R3))
+            caster->CastSpell(caster, SPELL_WARRIOR_SHIELD_COVER_MAGIC_WARD, true);
+    }
+
+    void Register() override
+    {
+        OnCast += SpellCastFn(spell_warr_shield_cover_capstone::HandleCast);
+    }
+};
+
+// Revenge (6572, 25288): Unrelenting's cooldown clause - "Each cast of Revenge reduces the
+// remaining cooldown of your Last Stand by 1 sec."
+class spell_warr_revenge : public SpellScript
+{
+    PrepareSpellScript(spell_warr_revenge);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_WARRIOR_LAST_STAND_ABILITY, SPELL_WARRIOR_UNRELENTING });
+    }
+
+    void HandleCast()
+    {
+        Player* player = GetCaster()->ToPlayer();
+        if (player && player->HasAura(SPELL_WARRIOR_UNRELENTING))
+            player->ModifySpellCooldown(SPELL_WARRIOR_LAST_STAND_ABILITY, -1000);
+    }
+
+    void Register() override
+    {
+        OnCast += SpellCastFn(spell_warr_revenge::HandleCast);
+    }
+};
+
+// 23922 - Shield Slam: Shield Discipline (Row 9) applies its "next Thunder Clap" charge,
+// consumed by spell_warr_thunder_clap's AfterCast.
+class spell_warr_shield_slam : public SpellScript
+{
+    PrepareSpellScript(spell_warr_shield_slam);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_WARRIOR_SHIELD_DISCIPLINE_TC_BOOST });
+    }
+
+    void HandleOnHit()
+    {
+        Player* caster = GetCaster()->ToPlayer();
+        if (!caster)
+            return;
+
+        if (AuraEffect const* aurEff = caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_WARRIOR, WARRIOR_ICON_ID_SHIELD_DISCIPLINE, EFFECT_0))
+        {
+            // aurEff->GetAmount() is already "+1"-adjusted (25 or 50); subtract 1 back out since
+            // this custom cast will apply that same convention again when the charge buff is read.
+            int32 bp = aurEff->GetAmount() - 1;
+            caster->CastCustomSpell(caster, SPELL_WARRIOR_SHIELD_DISCIPLINE_TC_BOOST, &bp, nullptr, nullptr, true, nullptr);
+        }
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_warr_shield_slam::HandleOnHit);
+    }
+};
+
 void AddSC_warrior_spell_scripts()
 {
     RegisterSpellScript(spell_warr_mocking_blow);
@@ -1331,4 +1708,12 @@ void AddSC_warrior_spell_scripts()
     RegisterSpellScript(spell_warr_glyph_of_blocking);
     RegisterSpellScript(spell_warr_item_t10_prot_4p_bonus);
     RegisterSpellScript(spell_warr_defensive_stance);
+    // Protection Warrior rework phase 3 (docs/prot_warrior_rework.md):
+    RegisterSpellScript(spell_warr_incite);
+    RegisterSpellScript(spell_warr_thunder_clap);
+    RegisterSpellScript(spell_warr_devastate);
+    RegisterSpellScript(spell_warr_shockwave);
+    RegisterSpellScript(spell_warr_shield_cover_capstone);
+    RegisterSpellScript(spell_warr_revenge);
+    RegisterSpellScript(spell_warr_shield_slam);
 }
