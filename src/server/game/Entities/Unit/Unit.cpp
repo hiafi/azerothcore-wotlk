@@ -1872,6 +1872,18 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
         {
             damageInfo->TargetState = VICTIMSTATE_HIT;
             damageInfo->HitInfo |= HITINFO_BLOCK;
+
+            // Block rework (docs/.master-todo-list.md "Block needs to be 20% damage reduction +
+            // reduction from block value..."): a block first grants a flat 20% reduction, then
+            // the existing block-value subtraction below applies to what remains - still able to
+            // fully negate the hit (VICTIMSTATE_BLOCKS) exactly as before if block value covers it.
+            for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
+            {
+                uint32 flatReduced = CalculatePct(damageInfo->damages[i].damage, 20);
+                damageInfo->cleanDamage += flatReduced;
+                damageInfo->damages[i].damage -= flatReduced;
+            }
+
             damageInfo->blocked_amount = damageInfo->target->GetShieldBlockValue();
             // double blocked amount if block is critical
             if (damageInfo->target->isBlockCritical())
