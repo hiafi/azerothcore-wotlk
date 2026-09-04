@@ -5350,6 +5350,18 @@ float Player::GetSpellCritFromIntellect()
 
 float Player::GetRatingMultiplier(CombatRating cr) const
 {
+    // Custom: CR_MASTERY/CR_VERSATILITY/CR_COOLDOWN_HASTE repurpose the (stock-unused)
+    // mainhand/offhand/ranged weapon skill rating slots as flat, level-independent percentage
+    // stats - talents grant them via SPELL_AURA_MOD_RATING same as any other rating, but going
+    // through GtCombatRatings/GtOCTClassCombatRatingScalar here would make them follow those
+    // slots' real (and wildly different) per-level curves, so the same talent gives a different
+    // % at every level and gets objectively worse as you level up through 60/70/80 content
+    // instead of granting a stable, tuning-doc-accurate percentage throughout. Keep the
+    // conversion at a flat 1 rating = 1% regardless of level so the granted amount is exactly
+    // what the tooltip says at every level.
+    if (cr == CR_MASTERY || cr == CR_VERSATILITY || cr == CR_COOLDOWN_HASTE)
+        return 1.0f;
+
     uint8 level = GetLevel();
 
     if (level > GT_MAX_LEVEL)
