@@ -1,3 +1,4 @@
+-- DB update 2026_09_04_02 -> 2026_09_04_03
 --
 -- Protection Warrior rework phase 3 (docs/prot_warrior_rework.md): spell_script_names bindings
 -- for this pass's new/extended classes in spell_warrior.cpp. spell_script_names supports multiple

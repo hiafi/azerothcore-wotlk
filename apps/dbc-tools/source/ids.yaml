@@ -19,6 +19,11 @@
 #   - skilllineability: also a currently-empty overlay table; the live base
 #                 file's own IDs top out at 21980 (verified this session —
 #                 see docs/skilllineability-handoff.md), so 30400+ stays clear.
+#   - item:       the real client Item.dbc (var/extractors/dbc/Item.dbc, pulled
+#                 from patch-enUS-3.MPQ) tops out at 56806 (asserted in
+#                 DBCStores.cpp as "last client known item added in 3.3.5a") -
+#                 70000+ starts at the one pre-existing custom entry (70001)
+#                 rather than a fresh gap, since moving it wasn't worth it.
 #
 # `reuse.py` only mints a new ID from these blocks when nothing existing
 # (base DBC or current overlay) already matches what's being asked for.
@@ -54,3 +59,12 @@ spellradius:
 skilllineability:
   start: 30400
   end: 30499
+
+# item_dbc rows for custom item_template entries above 56806 (the last real
+# client item - see DBCStores.cpp's own assert). Unlike every block above,
+# this one wasn't picked in a vacuum: entry 70001 (Mythic Plus Keystone)
+# already existed at this ID before this pipeline touched Item.dbc, so the
+# range starts there instead of at a fresh gap, to avoid moving it.
+item:
+  start: 70000
+  end: 79999

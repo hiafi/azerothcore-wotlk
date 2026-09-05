@@ -45,11 +45,13 @@ def main() -> int:
     ids_cfg = source.load_ids(SOURCE_DIR / "ids.yaml")
     spell_entries = source.load_spells_csv(SOURCE_DIR / "spells")
     talents = source.load_talents_yaml(SOURCE_DIR / "talents")
+    item_entries = source.load_items_csv(SOURCE_DIR / "items.csv")
 
     existing_spells = state.load_existing_rows(dbcfmt.SPELL)
     existing_talents = state.load_existing_rows(dbcfmt.TALENT)
     existing_talenttabs = state.load_existing_rows(dbcfmt.TALENTTAB)
     existing_skilllineabilities = state.load_existing_rows(dbcfmt.SKILLLINEABILITY)
+    existing_items = state.load_existing_rows(dbcfmt.ITEM)
     existing_secondary = {
         name: list(state.load_existing_rows(table).values())
         for name, table in SECONDARY_TABLES.items()
@@ -78,9 +80,12 @@ def main() -> int:
         talents["skill_line_abilities"], ids_cfg["skilllineability"],
         existing_skilllineabilities, build.build_skilllineability_row,
     )
+    item_resolved = resolve.resolve_rows(
+        item_entries, ids_cfg["item"], existing_items, build.build_item_row,
+    )
     n_unchanged = (
         spell_resolved.unchanged + talent_resolved.unchanged + talenttab_resolved.unchanged
-        + skilllineability_resolved.unchanged
+        + skilllineability_resolved.unchanged + item_resolved.unchanged
     )
     if n_unchanged:
         print(
@@ -88,11 +93,13 @@ def main() -> int:
             f"(pulled in for reference — see apps/dbc-tools/README.md) and were not "
             f"generated: {spell_resolved.unchanged} spell(s), {talent_resolved.unchanged} "
             f"talent(s), {talenttab_resolved.unchanged} talent tab(s), "
-            f"{skilllineability_resolved.unchanged} skill line abilitie(s)"
+            f"{skilllineability_resolved.unchanged} skill line abilitie(s), "
+            f"{item_resolved.unchanged} item(s)"
         )
     n_edited = (
         len(spell_resolved.edited_ids) + len(talent_resolved.edited_ids)
         + len(talenttab_resolved.edited_ids) + len(skilllineability_resolved.edited_ids)
+        + len(item_resolved.edited_ids)
     )
     if n_edited:
         print(
@@ -101,7 +108,8 @@ def main() -> int:
             f"{talent_resolved.edited_ids}, {len(talenttab_resolved.edited_ids)} talent "
             f"tab(s) {talenttab_resolved.edited_ids}, "
             f"{len(skilllineability_resolved.edited_ids)} skill line abilitie(s) "
-            f"{skilllineability_resolved.edited_ids}"
+            f"{skilllineability_resolved.edited_ids}, {len(item_resolved.edited_ids)} "
+            f"item(s) {item_resolved.edited_ids}"
         )
 
     # Real build pass (real ReuseContext this time) over just what survived
@@ -115,6 +123,7 @@ def main() -> int:
     skilllineability_rows = [
         build.build_skilllineability_row(e) for e in skilllineability_resolved.entries
     ]
+    item_rows = [build.build_item_row(e) for e in item_resolved.entries]
 
     # Second reconciliation pass, against pure-vanilla state instead of
     # state.load_existing_rows's db_world-promoted-aware state, purely to
@@ -126,6 +135,7 @@ def main() -> int:
     stock_talents = state.load_stock_rows(dbcfmt.TALENT)
     stock_talenttabs = state.load_stock_rows(dbcfmt.TALENTTAB)
     stock_skilllineabilities = state.load_stock_rows(dbcfmt.SKILLLINEABILITY)
+    stock_items = state.load_stock_rows(dbcfmt.ITEM)
     client_spell_resolved = resolve.resolve_rows(
         spell_entries, ids_cfg["spell"], stock_spells,
         lambda e: build.build_spell_row(e, scratch_reuse),
@@ -140,6 +150,9 @@ def main() -> int:
         talents["skill_line_abilities"], ids_cfg["skilllineability"],
         stock_skilllineabilities, build.build_skilllineability_row,
     )
+    client_item_resolved = resolve.resolve_rows(
+        item_entries, ids_cfg["item"], stock_items, build.build_item_row,
+    )
     client_spell_rows = [build.build_spell_row(e, reuse) for e in client_spell_resolved.entries]
     client_talent_rows = [build.build_talent_row(e) for e in client_talent_resolved.entries]
     client_talenttab_rows = [
@@ -148,6 +161,7 @@ def main() -> int:
     client_skilllineability_rows = [
         build.build_skilllineability_row(e) for e in client_skilllineability_resolved.entries
     ]
+    client_item_rows = [build.build_item_row(e) for e in client_item_resolved.entries]
 
     # -- pending SQL: reserved range + explicit edited IDs, per table --
     blocks = [
@@ -158,6 +172,7 @@ def main() -> int:
             dbcfmt.SKILLLINEABILITY, ids_cfg["skilllineability"], skilllineability_rows,
             skilllineability_resolved.edited_ids,
         ),
+        (dbcfmt.ITEM, ids_cfg["item"], item_rows, item_resolved.edited_ids),
     ]
     for name, table in SECONDARY_TABLES.items():
         blocks.append((table, ids_cfg[name], reuse.minted.get(name, []), []))
@@ -182,6 +197,7 @@ def main() -> int:
         dbcfmt.TALENT: {r["ID"]: r for r in client_talent_rows},
         dbcfmt.TALENTTAB: {r["ID"]: r for r in client_talenttab_rows},
         dbcfmt.SKILLLINEABILITY: {r["ID"]: r for r in client_skilllineability_rows},
+        dbcfmt.ITEM: {r["ID"]: r for r in client_item_rows},
     }
     for name, table in SECONDARY_TABLES.items():
         minted = reuse.minted.get(name, [])

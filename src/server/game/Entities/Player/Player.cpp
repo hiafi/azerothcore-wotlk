@@ -5351,17 +5351,20 @@ float Player::GetSpellCritFromIntellect()
 float Player::GetRatingMultiplier(CombatRating cr) const
 {
     // Custom: CR_MASTERY/CR_VERSATILITY/CR_COOLDOWN_HASTE repurpose the (stock-unused)
-    // mainhand/offhand/ranged weapon skill rating slots as flat, level-independent percentage
-    // stats - talents grant them via SPELL_AURA_MOD_RATING same as any other rating, but going
-    // through GtCombatRatings/GtOCTClassCombatRatingScalar here would make them follow those
-    // slots' real (and wildly different) per-level curves, so the same talent gives a different
-    // % at every level and gets objectively worse as you level up through 60/70/80 content
-    // instead of granting a stable, tuning-doc-accurate percentage throughout. Keep the
-    // conversion at a flat 1 rating = 1% regardless of level so the granted amount is exactly
-    // what the tooltip says at every level.
-    if (cr == CR_MASTERY || cr == CR_VERSATILITY || cr == CR_COOLDOWN_HASTE)
-        return 1.0f;
-
+    // mainhand/offhand/ranged weapon skill rating slots as custom percentage stats, converted
+    // through the same GtCombatRatings/GtOCTClassCombatRatingScalar curve as every other
+    // rating below - DO NOT special-case them to a flat multiplier here. item_stat_cost prices
+    // gear-granted points on these stats "weighted equal to Crit" (see
+    // docs/itemization-changes.md), i.e. every existing item's rating values were chosen
+    // assuming this exact per-level curve; a flat override was tried here for one session
+    // (fixing a warrior talent that wanted a level-independent %) and it silently multiplied
+    // every already-itemized piece of gear carrying these stats by ~14x at level 60 (confirmed
+    // live: a 700-rating Versatility ring read as +358% instead of +25%, quadrupling Devastate
+    // damage) - the rating pool is a single shared total with no way to tell gear-sourced points
+    // from talent-sourced ones apart, so there is no way to special-case just one source without
+    // breaking the other. A talent that wants a flat, level-independent % (e.g. Resolve/Resolved)
+    // has to compensate by choosing its own base_points for the current level cap instead - see
+    // that spell's notes in apps/dbc-tools/source/spells/warrior_talents.csv.
     uint8 level = GetLevel();
 
     if (level > GT_MAX_LEVEL)

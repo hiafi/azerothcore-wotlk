@@ -1,3 +1,4 @@
+-- DB update 2026_09_04_04 -> 2026_09_04_05
 --
 -- De-gate class abilities from quest-only rewards: make them purchasable from the class
 -- trainer directly. Every trainer_spell row below teaches a spell that, on this server, was

@@ -2002,11 +2002,16 @@ public:
     float OCTRegenMPPerSpirit();
     [[nodiscard]] float GetRatingMultiplier(CombatRating cr) const;
     [[nodiscard]] float GetRatingBonusValue(CombatRating cr) const;
-    // Custom stats: percentage value derived from the corresponding CombatRating.
-    [[nodiscard]] float GetMasteryPercentage() const { return GetRatingBonusValue(CR_MASTERY); }
-    [[nodiscard]] float GetVersatilityPercentage() const { return GetRatingBonusValue(CR_VERSATILITY); }
-    [[nodiscard]] float GetCooldownHastePercentage() const { return GetRatingBonusValue(CR_COOLDOWN_HASTE); }
-    [[nodiscard]] float GetProcChancePercentage() const { return GetRatingBonusValue(CR_PROC_CHANCE); }
+    // Custom stats: percentage value derived from the corresponding CombatRating (gear, mostly -
+    // priced in item_stat_cost against real level-scaled GtCombatRatings math, see
+    // Player::GetRatingMultiplier), PLUS any flat SPELL_AURA_MOD_CUSTOM_STAT_PCT bonus (talents
+    // that want a fixed, level-independent, gear-independent grant - see that aura's own comment
+    // in SpellAuraDefines.h for why it's a separate, non-rating mechanism; same pattern as real
+    // crit chance summing SPELL_AURA_MOD_CRIT_PCT alongside CR_CRIT_* rating in StatSystem.cpp).
+    [[nodiscard]] float GetMasteryPercentage() const { return GetRatingBonusValue(CR_MASTERY) + GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_CUSTOM_STAT_PCT, 1 << CR_MASTERY); }
+    [[nodiscard]] float GetVersatilityPercentage() const { return GetRatingBonusValue(CR_VERSATILITY) + GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_CUSTOM_STAT_PCT, 1 << CR_VERSATILITY); }
+    [[nodiscard]] float GetCooldownHastePercentage() const { return GetRatingBonusValue(CR_COOLDOWN_HASTE) + GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_CUSTOM_STAT_PCT, 1 << CR_COOLDOWN_HASTE); }
+    [[nodiscard]] float GetProcChancePercentage() const { return GetRatingBonusValue(CR_PROC_CHANCE) + GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_CUSTOM_STAT_PCT, 1 << CR_PROC_CHANCE); }
     uint32 GetBaseSpellPowerBonus() { return m_baseSpellPower; }
     uint32 GetBaseSpellDamageBonus() { return m_baseSpellDamage; }
     uint32 GetBaseSpellHealingBonus() { return m_baseSpellHealing; }
