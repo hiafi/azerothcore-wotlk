@@ -44,8 +44,10 @@ jobs:
         with:
           # Fork carrying patches for this repo's custom core changes (see docs/bugs-and-fixes.md)
           repository: hiafi/mod-playerbots
-          # Map AC branch → PB branch
-          ref: ${{ github.ref_name == 'Playerbot' && 'master' || 'test-staging' }}
+          # Fork only tracks master (no test-staging split like upstream); also, github.ref_name
+          # is the PR merge ref (e.g. "42/merge") on pull_request events, never the branch name,
+          # so a ref_name == 'Playerbot' check here would never match on PR builds anyway.
+          ref: master
           path: modules/mod-playerbots
 
       - name: Install Requirements
