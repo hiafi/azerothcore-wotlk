@@ -366,7 +366,19 @@ enum AuraType
     SPELL_AURA_MOD_DAMAGE_DONE_VERSUS_AURASTATE             = 303,
     SPELL_AURA_MOD_FAKE_INEBRIATE                           = 304,
     SPELL_AURA_MOD_MINIMUM_SPEED                            = 305,
-    SPELL_AURA_306                                          = 306,
+    SPELL_AURA_MOD_CUSTOM_STAT_PCT                          = 306, // Custom: was SPELL_AURA_306 (0 spells in 3.3.5, genuinely unused).
+                                                                     // Flat percentage bonus to one of the four custom gear stats (Mastery/
+                                                                     // Versatility/Cooldown Haste/Proc Chance) - GetMiscValue() selects which
+                                                                     // one via the same CR_* bit (1 << CR_MASTERY etc.) that SPELL_AURA_MOD_RATING
+                                                                     // already uses for these stats. Unlike MOD_RATING, this NEVER touches
+                                                                     // PLAYER_FIELD_COMBAT_RATING, so it can't collide with gear-granted rating
+                                                                     // on the same stat (see Player::GetRatingMultiplier's comment for why that
+                                                                     // collision is a real, previously-shipped bug) - summed in on top of the
+                                                                     // rating-derived value by Player::Get{Mastery,Versatility,CooldownHaste,
+                                                                     // ProcChance}Percentage(), same pattern as SPELL_AURA_MOD_CRIT_PCT summing
+                                                                     // in alongside CR_CRIT_* rating for real crit chance. Use this (not
+                                                                     // MOD_RATING) for any talent that wants a flat, level-independent,
+                                                                     // gear-independent grant.
     SPELL_AURA_HEAL_ABSORB_TEST                             = 307,
     SPELL_AURA_MOD_CRIT_CHANCE_FOR_CASTER                   = 308,
     SPELL_AURA_309                                          = 309,

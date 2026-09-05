@@ -234,6 +234,23 @@ SPELLRADIUS = DbcTable(
     columns=("ID", "Radius", "RadiusPerLevel", "RadiusMax"),
 )
 
+ITEM = DbcTable(
+    name="Item",
+    dbc_filename="Item.dbc",
+    sql_table="item_dbc",
+    # Itemfmt in DBCfmt.h - the *class/subclass/display* index Item.dbc, not the
+    # item_template overlay ItemHandler.cpp sends live (see docs/bugs-and-fixes.md,
+    # "blank bag icon" entry, for why a custom item_template entry above 56806 needs
+    # a row here too - ObjectMgr::LoadItemTemplates() looks every entry up against
+    # this table's server-side overlay before the rest of that item's fields load).
+    fmt="niiiiiii",
+    columns=(
+        "ID", "ClassID", "SubclassID", "Sound_Override_Subclassid", "Material",
+        "DisplayInfoID", "InventoryType", "SheatheType",
+    ),
+    signed=frozenset(("Sound_Override_Subclassid", "Material")),
+)
+
 SKILLLINEABILITY = DbcTable(
     name="SkillLineAbility",
     dbc_filename="SkillLineAbility.dbc",
@@ -287,7 +304,7 @@ CREATUREDISPLAYINFO = DbcTable(
 
 ALL_TABLES = (
     SPELL, TALENT, TALENTTAB, SPELLCASTTIMES, SPELLDURATION, SPELLRANGE,
-    SPELLRADIUS, SKILLLINEABILITY,
+    SPELLRADIUS, SKILLLINEABILITY, ITEM,
 )
 TABLES_BY_NAME = {t.name: t for t in ALL_TABLES}
 

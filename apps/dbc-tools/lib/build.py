@@ -106,6 +106,19 @@ def build_talenttab_row(entry: dict) -> dict:
     return row
 
 
+def build_item_row(entry: dict) -> dict:
+    row = dbcfile.empty_row(dbcfmt.ITEM)
+    row["ID"] = entry["id"]
+    row["ClassID"] = entry.get("class_id", 0) or 0
+    row["SubclassID"] = entry.get("subclass_id", 0) or 0
+    row["Sound_Override_Subclassid"] = entry.get("sound_override_subclass_id", 0) or 0
+    row["Material"] = entry.get("material", 0) or 0
+    row["DisplayInfoID"] = entry.get("display_info_id", 0) or 0
+    row["InventoryType"] = entry.get("inventory_type", 0) or 0
+    row["SheatheType"] = entry.get("sheathe_type", 0) or 0
+    return row
+
+
 def build_skilllineability_row(entry: dict) -> dict:
     row = dbcfile.empty_row(dbcfmt.SKILLLINEABILITY)
     row["ID"] = entry["id"]

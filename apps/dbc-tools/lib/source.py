@@ -47,6 +47,19 @@ SPELL_CSV_INT_FIELDS = (
 SPELL_CSV_FLOAT_FIELDS = ("range_yards", "radius_yards", "spell_weight", "coeff_weight")
 SPELL_CSV_JSON_FIELDS = ("effect1", "effect2", "effect3", "raw_overrides")
 
+# Item.dbc rows for custom item_template entries above 56806 - see
+# docs/bugs-and-fixes.md's "blank bag icon" entry for why these are needed at
+# all. One flat file (no per-class split like spells/) since nothing here is
+# class-specific and the row count is expected to stay small.
+ITEM_CSV_FIELDNAMES = (
+    "id", "class_id", "subclass_id", "sound_override_subclass_id", "material",
+    "display_info_id", "inventory_type", "sheathe_type", "notes",
+)
+ITEM_CSV_INT_FIELDS = (
+    "id", "class_id", "subclass_id", "sound_override_subclass_id", "material",
+    "display_info_id", "inventory_type", "sheathe_type",
+)
+
 
 class DuplicateIdError(ValueError):
     pass
@@ -144,6 +157,22 @@ def load_spells_csv(dir_path: Path) -> list[dict]:
                     f"{seen[entry['id']]!r} and {path.name!r}"
                 )
             seen[entry["id"]] = path.name
+            entries.append(entry)
+    return entries
+
+
+def load_items_csv(path: Path) -> list[dict]:
+    """Parse source/items.csv - a single flat file (see ITEM_CSV_FIELDNAMES's
+    docstring for why there's no per-class split like spells/)."""
+    entries = []
+    with open(path, newline="", encoding="utf-8") as f:
+        for raw in csv.DictReader(f):
+            if not raw.get("id") or raw["id"].strip().startswith("#"):
+                continue  # blank/comment row
+            entry = dict(raw)
+            for field in ITEM_CSV_INT_FIELDS:
+                v = entry.get(field)
+                entry[field] = None if _blank(v) else int(v)
             entries.append(entry)
     return entries
 

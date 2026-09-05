@@ -368,7 +368,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS] =
     &AuraEffect::HandleNoImmediateEffect,                         //303 SPELL_AURA_MOD_DAMAGE_DONE_VERSUS_AURASTATE implemented in Unit::SpellDamageBonus, Unit::MeleeDamageBonus
     &AuraEffect::HandleAuraModFakeInebriation,                    //304 SPELL_AURA_MOD_FAKE_INEBRIATE
     &AuraEffect::HandleAuraModIncreaseSpeed,                      //305 SPELL_AURA_MOD_MINIMUM_SPEED
-    &AuraEffect::HandleNULL,                                      //306 0 spells in 3.3.5
+    &AuraEffect::HandleNoImmediateEffect,                         //306 SPELL_AURA_MOD_CUSTOM_STAT_PCT (Custom) implemented in Player::Get{Mastery,Versatility,CooldownHaste,ProcChance}Percentage
     &AuraEffect::HandleNULL,                                      //307 0 spells in 3.3.5
     &AuraEffect::HandleNoImmediateEffect,                         //308 SPELL_AURA_MOD_CRIT_CHANCE_FOR_CASTER implemented in Unit::isSpellCrit, ObjectAccessor::GetUnitCriticalChance
     &AuraEffect::HandleNULL,                                      //309 0 spells in 3.3.5

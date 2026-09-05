@@ -72,6 +72,7 @@
 #include "UpdateFields.h"
 #include "Util.h"
 #include "Vehicle.h"
+#include "WarriorMechanics.h"
 #include "World.h"
 #include "WorldPacket.h"
 #include <algorithm>
@@ -1871,6 +1872,18 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
         {
             damageInfo->TargetState = VICTIMSTATE_HIT;
             damageInfo->HitInfo |= HITINFO_BLOCK;
+
+            // Block rework (docs/.master-todo-list.md "Block needs to be 20% damage reduction +
+            // reduction from block value..."): a block first grants a flat 20% reduction, then
+            // the existing block-value subtraction below applies to what remains - still able to
+            // fully negate the hit (VICTIMSTATE_BLOCKS) exactly as before if block value covers it.
+            for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
+            {
+                uint32 flatReduced = CalculatePct(damageInfo->damages[i].damage, 20);
+                damageInfo->cleanDamage += flatReduced;
+                damageInfo->damages[i].damage -= flatReduced;
+            }
+
             damageInfo->blocked_amount = damageInfo->target->GetShieldBlockValue();
             // double blocked amount if block is critical
             if (damageInfo->target->isBlockCritical())
@@ -1902,6 +1915,13 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
                 damageInfo->TargetState = VICTIMSTATE_BLOCKS;
                 damageInfo->blocked_amount -= remainingBlock;
             }
+
+            // Critical Block (Protection Warrior rework, docs/prot_warrior_rework.md Row 7) -
+            // guaranteed extra %-reduction on the damage that got past the block-value
+            // subtraction above; see WarriorMechanics.h for why this lives here instead of a
+            // spell script.
+            for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
+                Warrior::ApplyBlockDamageReduction(damageInfo->target, damageInfo->damages[i].damage);
             break;
         }
         case MELEE_HIT_GLANCING:
