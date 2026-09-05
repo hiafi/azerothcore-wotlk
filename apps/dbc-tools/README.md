@@ -37,8 +37,10 @@ and for a no-root fallback if `sudo` isn't available.
 
 Optional but needed for real client-patch output: extract `Spell.dbc`,
 `Talent.dbc`, `TalentTab.dbc`, `SpellCastTimes.dbc`, `SpellDuration.dbc`,
-`SpellRange.dbc`, `SpellRadius.dbc` from your client's `DBFilesClient\`
-(inside the locale MPQs, e.g. `Data/enUS/patch-enUS-3.MPQ`) into
+`SpellRange.dbc`, `SpellRadius.dbc`, `Item.dbc` from your client's
+`DBFilesClient\` (inside the locale MPQs — specifically the highest-numbered
+patch, e.g. `Data/enUS/patch-enUS-3.MPQ`; earlier patches in the same
+directory also contain these files but are shadowed/stale) into
 `var/extractors/dbc/`. Without these, `generate.py` still produces correct
 SQL (the server doesn't need them), it just skips producing a client patch
 for whichever files aren't there, and `reuse.py` mints fresh IDs from the
