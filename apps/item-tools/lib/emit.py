@@ -42,6 +42,32 @@ def _quote_value(value) -> str:
     return f"'{escaped}'"
 
 
+# Generous against FLOAT(32)'s rounding noise (relative precision ~1e-7, so
+# for any value item_template actually stores - single/double-digit-to-low-
+# thousands damage numbers - the true rounding error is many orders of
+# magnitude below this), tight against any real content edit, which always
+# moves a damage/rate value by far more than a rounding hair.
+_FLOAT_GUARD_EPSILON = 0.01
+
+
+def _guard_term(col: str, value) -> str:
+    """One `WHERE`-clause term guarding `col`'s old value ahead of a write.
+    Exact equality for everything except `float` values, which get a small-
+    tolerance comparison instead: MySQL's `FLOAT` columns (`dmg_min1`/
+    `dmg_max1`/`spellppmRate_N`/etc.) are 32-bit, and round-tripping a
+    *computed* float through Python's full-precision `repr()` and back does
+    not reliably reproduce the exact stored bit pattern - confirmed live: a
+    `dmg_min1` guard built this way affected 0 rows against a value that
+    printed identically (docs/itemization-changes.md's Bucket 1 "DPS trade"
+    note has the incident). An exact-equality guard on a float column that
+    already holds a previously-computed value is silently unreliable, not
+    just occasionally imprecise - use this for every float guard, not only
+    ones a caller suspects might be affected."""
+    if isinstance(value, float):
+        return f"ABS(`{col}` - {_quote_value(value)}) < {_FLOAT_GUARD_EPSILON}"
+    return f"`{col}` = {_quote_value(value)}"
+
+
 def _wrap_comment(text: str) -> list[str]:
     """Wrap `text` into `-- `-prefixed lines at `_MAX_COMMENT_WIDTH`, the
     same 120-col limit `.editorconfig` sets for the rest of the repo."""
@@ -83,9 +109,7 @@ def write_update(entry: int, changes: dict, original: dict, comment: str) -> Pat
     if not changes:
         raise ValueError("no changed columns to write")
     set_clause = ", ".join(f"`{col}` = {_quote_value(val)}" for col, val in changes.items())
-    guard_clause = " AND ".join(
-        f"`{col}` = {_quote_value(original[col])}" for col in changes
-    )
+    guard_clause = " AND ".join(_guard_term(col, original[col]) for col in changes)
     stmt = (
         f"UPDATE `item_template` SET {set_clause} "
         f"WHERE `entry` = {entry} AND {guard_clause};"

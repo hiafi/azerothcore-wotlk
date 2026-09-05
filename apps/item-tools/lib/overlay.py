@@ -33,6 +33,22 @@ BASE_FILE = REPO_ROOT / "data/sql/base/db_world/item_template.sql"
 MERGED_DIR = REPO_ROOT / "data/sql/updates/db_world"
 PENDING_DIR = REPO_ROOT / "data/sql/updates/pending_db_world"
 
+
+def _contributing_files() -> list[Path]:
+    # Recursive glob + sort-by-bare-filename (not full path): pending
+    # migrations may live in a topic subdirectory (e.g. `item_weight_system/`)
+    # rather than flat in PENDING_DIR, and filename order is what actually
+    # matters here - it's what the real AzerothCore DBUpdater keys off of too
+    # (`UpdateFetcher::Update`'s `applied.find(filePath.filename()...)`), not
+    # directory placement. Same helper/rationale as `budget_overlay.py`'s.
+    files = []
+    if MERGED_DIR.is_dir():
+        files.extend(MERGED_DIR.glob("**/*.sql"))
+    if PENDING_DIR.is_dir():
+        files.extend(PENDING_DIR.glob("**/*.sql"))
+    return sorted(files, key=lambda p: p.name)
+
+
 _UPDATE_RE = re.compile(
     r"UPDATE\s+`item_template`\s+SET\s+(?P<sets>.+?)\s+WHERE\s+(?P<where>.+?);",
     re.IGNORECASE | re.DOTALL,
@@ -226,11 +242,7 @@ def resolve_current_rows() -> dict[int, dict]:
     columns = parse_create_table_columns(BASE_FILE, "item_template")
     rows = read_table_dump(BASE_FILE, "item_template", columns, "entry")
 
-    files = []
-    if MERGED_DIR.is_dir():
-        files.extend(sorted(MERGED_DIR.glob("*.sql")))
-    if PENDING_DIR.is_dir():
-        files.extend(sorted(PENDING_DIR.glob("*.sql")))
+    files = _contributing_files()
 
     for path in files:
         text = path.read_text(encoding="utf-8")
@@ -254,11 +266,7 @@ def _cache_key() -> tuple:
     manual edit to any of these invalidates the cache automatically -
     cheaper than re-parsing ~46k base rows on every request when nothing
     has changed."""
-    paths = [BASE_FILE]
-    if MERGED_DIR.is_dir():
-        paths.extend(sorted(MERGED_DIR.glob("*.sql")))
-    if PENDING_DIR.is_dir():
-        paths.extend(sorted(PENDING_DIR.glob("*.sql")))
+    paths = [BASE_FILE] + _contributing_files()
     return tuple((str(p), p.stat().st_mtime_ns) for p in paths)
 
 

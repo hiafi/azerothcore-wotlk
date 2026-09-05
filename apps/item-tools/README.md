@@ -67,6 +67,34 @@ dbc-tools/webui.
 
 ## Using it
 
+- **Budget templates** (`/templates`) - hand-author the percentage-allocation
+  itemization system's templates (`item_budget_template`, see
+  `docs/itemization-changes.md` &sect;9.1/&sect;9.8) - a shape's name and
+  stat/percentage rows, editable at `/templates/<id>`. Reads every reference
+  table the formula needs (`item_budget_curve`, `item_stat_cost`,
+  `item_armor_curve`, ...) the same no-live-DB way `item_template` is read -
+  see `lib/budget_overlay.py` - so this stays a pure local file-editing tool,
+  no MySQL connection anywhere. Saving a template lists every item currently
+  assigned to it with a **regenerate** checkbox (checked by default): the
+  save recomputes and writes each checked item's real materialized stats in
+  the same pending file, so a shared template's edit doesn't leave other
+  items using it stale.
+  - An item's edit page (`/items/<entry>`) gets a **Budget** section below
+    the regular fields: which template it's assigned, `budget_mult`/
+    `stamina_delta`/`dps_delta`/`armor_delta`, and a checkbox per on-equip
+    spell to fold into the stat block (`absorbed_spell_slots` - see
+    &sect;9.8). **Preview** computes and shows the resulting stat/stamina/
+    armor line without writing anything; **Save & regenerate** writes the
+    assignment plus a guarded `item_template` UPDATE for the real computed
+    stats - the same math `src/server/game/Globals/ItemBudget.cpp`'s
+    `ResolveBudget()` runs at server startup, ported to Python in
+    `lib/budget.py` (kept in sync with the C++ by hand - see that file's
+    docstring) and verified bit-exact against the live worldserver for a
+    real item (Arcanist Boots, entry 16800) while building it.
+  - The reference/curve tables themselves (`item_budget_curve`,
+    `item_stat_cost`, `item_slot_mult`, ...) are read-only here - they're
+    edited by hand-written regression-derived migrations, not through this
+    tool.
 - **Dungeons & raids** (`/dungeons`) - every map in `instance_template`
   (dungeon/raid names are derived from that table's own `script` column,
   e.g. `instance_icecrown_citadel` &rarr; "Icecrown Citadel" - not

@@ -32,6 +32,52 @@ history:
 `apps/item-tools/lib/emit.py` generates exactly these two shapes; you
 shouldn't need to hand-write either if you're going through the webui.
 
+**Pending migrations live under `item_weight_system/`.** Every pending
+migration this system has produced (reference-table population,
+`item_budget_*` templates/assignments, and the materialized
+`item_template` regenerates that follow from them) lives under
+`data/sql/updates/pending_db_world/item_weight_system/`, kept apart from
+this fork's other, unrelated pending SQL so the whole system's history is
+browsable in one place. Purely organizational: both the real
+`DBUpdater` (`UpdateFetcher::Update` in
+`src/server/database/Updater/UpdateFetcher.cpp`) and this app's own
+base-⊕-overlay readers (`lib/overlay.py`'s and `lib/budget_overlay.py`'s
+`_contributing_files()`) key applied/replayed migrations off bare
+filename, not directory path — confirmed live, moving Buckets 1-2's ~20
+files into that subdirectory changed nothing about which rows either one
+computes. Don't add a non-`.sql` file (a `README`, etc.) inside it, though
+— `apps/codestyle/codestyle-sql.py`'s file walk isn't extension-filtered
+and would try to lint it as SQL.
+
+**Guarding a `FLOAT` column** (`dmg_min1`/`dmg_max1`/`spellppmRate_N`) needs a
+small-tolerance comparison, not exact `=`, whenever the old value is itself a
+*previously computed* float rather than clean original data - MySQL's 32-bit
+storage doesn't reliably round-trip a Python `repr()`'d value back to exact
+equality even when both print identically. `lib/emit._guard_term()` handles
+this automatically (used by both `write_update` and `budget_emit`'s
+`_update_statement`) - see `docs/bugs-and-fixes.md`'s entry on this for the
+live incident that found it. Don't hand-roll a guard clause on a float
+column without it.
+
+## Budget templates (`/templates`)
+
+Hand-authors the percentage-allocation itemization system's
+`item_budget_template`/`item_budget_assign` (`docs/itemization-changes.md`
+§9.1/§9.8), and regenerates an item's real `item_template` stats from them.
+Two new modules carry this, both still no-live-DB:
+
+- `lib/budget_overlay.py` - a generic DELETE+INSERT replay reader (this
+  table family's actual convention, unlike `item_template`'s guarded UPDATE
+  - see `lib/overlay.py`'s module docstring and this file's "Load-bearing
+  gotcha" above) for every budget-system table, reference tables included.
+- `lib/budget.py` - a Python port of `ItemBudget.cpp`'s `ResolveBudget()`.
+  A **separate implementation of the same formula**, not a call into the
+  C++ - if that formula ever changes (the deferred custom-stat-ID fix
+  mentioned in `docs/itemization-changes.md` §5, for instance), this needs
+  a matching hand-edit or item-tools' previews/writes will silently drift
+  from what the live worldserver actually materializes. Both files carry a
+  comment pointing at the other for exactly this reason.
+
 ## Dungeon/raid loot browser
 
 `/dungeons` and `/dungeons/<map_id>` (`lib/loot.py`) join `creature` +

@@ -19,6 +19,7 @@
 #include "CommandScript.h"
 #include "DBCStores.h"
 #include "DatabaseEnv.h"
+#include "ItemBudget.h"
 #include "Language.h"
 #include "ObjectMgr.h"
 #include "Player.h"
@@ -43,6 +44,7 @@ public:
             { "restore",   HandleItemRestoreCommandTable },
             { "move",      HandleItemMoveCommand,               rbac::RBAC_PERM_COMMAND_ITEMMOVE,          Console::Yes },
             { "refund",    HandleItemRefundCommand,             rbac::RBAC_PERM_COMMAND_ITEM_REFUND,       Console::Yes },
+            { "budget",    HandleItemBudgetCommand,              rbac::RBAC_PERM_COMMAND_ITEM_BUDGET,       Console::Yes },
         };
         static ChatCommandTable commandTable =
         {
@@ -355,6 +357,57 @@ public:
                 handler->SendErrorMessage(LANG_CMD_ITEM_REFUND_NOT_FOUND, itemId);
                 return false;
             }
+        }
+
+        return true;
+    }
+
+    // Percentage-allocation itemization system debug tool. See
+    // docs/itemization-changes.md §6.4.
+    static bool HandleItemBudgetCommand(ChatHandler* handler, uint32 itemEntry)
+    {
+        ItemBudget::Breakdown b = ItemBudget::ComputeBreakdown(itemEntry);
+
+        if (!b.Found)
+        {
+            handler->PSendSysMessage("Item {} does not exist.", itemEntry);
+            return false;
+        }
+
+        if (!b.Assigned)
+        {
+            handler->PSendSysMessage("Item {} has no item_budget_assign row -- it is not a budget item.", itemEntry);
+            return false;
+        }
+
+        handler->PSendSysMessage("Item budget breakdown for entry {}", b.Entry);
+        handler->PSendSysMessage("  ItemLevel {} | Quality {} (x{:.3f}) | InventoryType {} (slot x{:.4f}) | template {}",
+            b.ItemLevel, b.Quality, b.QualityMult, b.InventoryType, b.SlotMult, b.TemplateId);
+        handler->PSendSysMessage("  budget_mult {:.3f} | sockets {} (x{:.4f}) | set piece {} (x{:.3f}) | effective_mult {:.4f}",
+            b.BudgetMult, b.SocketCount, b.SocketDiscount, b.IsSetPiece ? "yes" : "no", b.SetDiscount, b.EffectiveMult);
+        handler->PSendSysMessage("  budget {} -> effective_budget {} (after stamina/dps deltas)", b.Budget, b.EffectiveBudget);
+        handler->PSendSysMessage("  stamina: baseline {} + delta {} = final {}", b.BaselineStamina, b.StaminaDelta, b.FinalStamina);
+
+        if (b.HasArmorCurve)
+            handler->PSendSysMessage("  armor: class {} baseline {} + delta {} = final {}", b.ArmorClass, b.BaselineArmor, b.ArmorDelta, b.FinalArmor);
+
+        if (b.IsWeapon)
+            handler->PSendSysMessage("  weapon dps: baseline {:.2f} + delta {:.2f} = final {:.2f} -> dmg {:.1f}-{:.1f}",
+                b.BaselineDps, b.DpsDelta, b.FinalDps, b.DmgMin, b.DmgMax);
+
+        for (ItemBudget::AllocationDetail const& alloc : b.Allocations)
+            handler->PSendSysMessage("    stat {} ({}) alloc {} -> raw {:.3f} -> rounded {}",
+                alloc.StatType, alloc.IsPrimary ? "primary" : "secondary", alloc.Alloc, alloc.RawValue, alloc.RoundedValue);
+
+        handler->PSendSysMessage("  rounding remainder distributed: {} point(s)", b.RoundingRemainderPoints);
+
+        if (b.AbsorbedSpellSlots)
+        {
+            std::string slots;
+            for (uint8 i = 0; i < MAX_ITEM_PROTO_SPELLS; ++i)
+                if (b.AbsorbedSpellSlots & (1u << i))
+                    slots += (slots.empty() ? "" : ", ") + std::to_string(i);
+            handler->PSendSysMessage("  absorbed spell slot(s) [{}]: cleared, folded into the stat block above", slots);
         }
 
         return true;
