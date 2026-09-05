@@ -19,6 +19,7 @@
 #include "CellImpl.h"
 #include "Containers.h"
 #include "CreatureAI.h"
+#include "CreatureScript.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
 #include "MageMechanics.h"
