@@ -35,7 +35,8 @@ jobs:
       - name: Checkout Playerbot Module
         uses: actions/checkout@v7
         with:
-          repository: mod-playerbots/mod-playerbots
+          # Fork carrying patches for this repo's custom core changes (see docs/bugs-and-fixes.md)
+          repository: hiafi/mod-playerbots
           ref: ${{ github.ref_name == 'Playerbot' && 'master' || 'test-staging' }}
           path: modules/mod-playerbots
 
