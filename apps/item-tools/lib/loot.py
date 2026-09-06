@@ -20,6 +20,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from . import budget, shapes as shape_lib
+from .budget_overlay import get_all as get_budget_tables
 from .item_enums import ITEM_MOD_NAMES
 from .overlay import REPO_ROOT, get_rows
 from .sql_dump import parse_create_table_columns, read_table_dump, read_table_rows
@@ -246,8 +248,23 @@ def dungeon_summary(map_id: int, min_quality: int = 2) -> dict:
     into "trash", one row per unique item regardless of how many different
     trash creatures drop it (a dungeon's trash list is usually large and
     overlapping; per-creature trash blocks the way bosses get them just
-    isn't "at a glance")."""
+    isn't "at a glance").
+
+    Each drop's `item_row` is the shape-based *display* row (`lib.budget.
+    display_row()`) for anything with an `item_itemization` row, not the
+    literal database columns - materialization is in-memory only, so a
+    shape-assigned item's stored stat_typeN/armor/etc. are stale by design
+    and would otherwise show the wrong tooltip here."""
     items = get_rows()
+    budget_tables = get_budget_tables()
+    shape_catalog = shape_lib.catalog(budget_tables)
+    display_cache: dict[int, dict] = {}
+
+    def _display(entry: int, item: dict) -> dict:
+        if entry not in display_cache:
+            display_cache[entry] = budget.display_row(entry, item, budget_tables, shape_catalog)
+        return display_cache[entry]
+
     boss_entries = _boss_creature_entries()
     bosses = []
     trash_by_item: dict[int, dict] = {}
@@ -257,7 +274,7 @@ def dungeon_summary(map_id: int, min_quality: int = 2) -> dict:
             item = items.get(one_drop["item"])
             if item is None or item["Quality"] < min_quality:
                 continue
-            drops.append({**one_drop, "item_row": item})
+            drops.append({**one_drop, "item_row": _display(one_drop["item"], item)})
         if not drops:
             continue
         if creature["entry"] in boss_entries or creature["rank"] == CREATURE_ELITE_WORLDBOSS:

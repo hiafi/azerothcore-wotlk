@@ -48,7 +48,14 @@ function import() {
     # Get latest SQL file applied to this database, today. This could be empty.
     LATEST_UPDATE_TODAY="$(find "$UPDATES_DIR" -iname "$TODAY*.sql" | sort -h | tail -n 1)"
 
-    for entry in "$PENDING_PATH"/*.sql; do
+    # Recursive, not "$PENDING_PATH"/*.sql: a topic subdirectory (e.g.
+    # pending_db_world/itemization_templates_v2/, keeping one system's whole pending history
+    # browsable in one place) holds real pending files too, and both the real DBUpdater and this
+    # repo's own tooling (apps/item-tools/lib/*_overlay.py) already treat migrations as ordered by
+    # bare filename, not directory path -- sorted on `-printf '%f\t%p\n' | sort -k1,1` (filename
+    # only) for exactly that reason, so a file's position in this merge matches its
+    # rev_<timestamp> order globally, regardless of which subdirectory (if any) it started in.
+    while IFS= read -r entry; do
         if [[ -f "$entry" ]]; then
             INDEX="$(get_next_index "$LATEST_UPDATE_TODAY")"
             OUTPUT_FILE="${UPDATES_DIR}/${TODAY}_${INDEX}.sql"
@@ -63,7 +70,7 @@ function import() {
             LATEST_UPDATE_TODAY="$OUTPUT_FILE"
             LATEST_UPDATE="$OUTPUT_FILE"
         fi
-    done
+    done < <(find "$PENDING_PATH" -type f -iname "*.sql" -printf '%f\t%p\n' | sort -k1,1 | cut -f2-)
 
 }
 

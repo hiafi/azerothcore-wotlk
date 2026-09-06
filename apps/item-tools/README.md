@@ -67,30 +67,38 @@ dbc-tools/webui.
 
 ## Using it
 
-- **Budget templates** (`/templates`) - hand-author the percentage-allocation
-  itemization system's templates (`item_budget_template`, see
-  `docs/itemization-changes.md` &sect;9.1/&sect;9.8) - a shape's name and
-  stat/percentage rows, editable at `/templates/<id>`. Reads every reference
-  table the formula needs (`item_budget_curve`, `item_stat_cost`,
-  `item_armor_curve`, ...) the same no-live-DB way `item_template` is read -
-  see `lib/budget_overlay.py` - so this stays a pure local file-editing tool,
-  no MySQL connection anywhere. Saving a template lists every item currently
-  assigned to it with a **regenerate** checkbox (checked by default): the
-  save recomputes and writes each checked item's real materialized stats in
-  the same pending file, so a shared template's edit doesn't leave other
-  items using it stale.
-  - An item's edit page (`/items/<entry>`) gets a **Budget** section below
-    the regular fields: which template it's assigned, `budget_mult`/
-    `stamina_delta`/`dps_delta`/`armor_delta`, and a checkbox per on-equip
-    spell to fold into the stat block (`absorbed_spell_slots` - see
-    &sect;9.8). **Preview** computes and shows the resulting stat/stamina/
-    armor line without writing anything; **Save & regenerate** writes the
-    assignment plus a guarded `item_template` UPDATE for the real computed
-    stats - the same math `src/server/game/Globals/ItemBudget.cpp`'s
-    `ResolveBudget()` runs at server startup, ported to Python in
-    `lib/budget.py` (kept in sync with the C++ by hand - see that file's
-    docstring) and verified bit-exact against the live worldserver for a
-    real item (Arcanist Boots, entry 16800) while building it.
+- **Shapes** (`/shapes`) - read-only browse of the shape-based itemization
+  system's fixed catalog (`item_shape`/`item_shape_stat`/`item_shape_rule`/
+  `item_alloc_dist`, see `docs/itemization-phase-2.md` &sect;3-&sect;6):
+  every primary shape (role-lock stats - Str/Agi/Int/Spirit/SpellPower/AP)
+  and secondary shape (universal stats - Crit/Haste/Mastery/Versatility/
+  CDH/Proc/MP5/ArmorPen/Dodge/Parry/Block), its distribution, stat/percentage
+  breakdown, and any eligibility rule. Not editable here - unlike the old
+  percentage-allocation system's hand-authored templates, shapes are a fixed
+  catalog edited by hand-written regression-backed migrations, same posture
+  as the reference/curve tables below.
+  - An item's edit page (`/items/<entry>`) gets an **Itemization** section
+    right after its basic identity fields (name/type): which primary shape,
+    secondary shape, and primary/secondary split (`primary_share`) it uses,
+    plus `budget_mult`/`stamina_delta`/`dps_delta`/`armor_delta`/
+    `block_value_delta` and a checkbox per on-equip spell to fold into the
+    stat block (`absorbed_spell_slots`). The secondary-shape dropdown
+    client-side filters to whatever the selected primary shape's rules
+    actually allow (`webui/static/item-form.js`), same pattern as the
+    class/subclass filter above it - the server re-validates the actual
+    choice on save regardless. **Preview** computes and shows the resulting
+    stat/stamina/armor/block/DPS line without writing anything; **Save &
+    regenerate** writes the itemization row plus a guarded `item_template`
+    UPDATE for the real computed stats - the same math
+    `src/server/game/Globals/ItemBudget.cpp`'s `ResolveBudget()` runs at
+    server startup, ported to Python in `lib/budget.py` (kept in sync with
+    the C++ by hand - see that file's docstring) and cross-checked against
+    an independent reference computation for every one of the 13,455 real
+    assigned items with zero mismatches (materialization itself is in-memory
+    only - `item_template` rows in the database are never overwritten by it -
+    so this couldn't be a literal diff against a live DB dump; the live
+    worldserver boot separately confirmed all 13,455 items materialize with
+    zero validation errors against the same shape/delta data this tool reads).
   - The reference/curve tables themselves (`item_budget_curve`,
     `item_stat_cost`, `item_slot_mult`, ...) are read-only here - they're
     edited by hand-written regression-derived migrations, not through this

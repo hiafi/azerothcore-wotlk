@@ -362,7 +362,7 @@ public:
         return true;
     }
 
-    // Percentage-allocation itemization system debug tool. See
+    // Shape-based itemization system debug tool. See docs/itemization-phase-2.md and
     // docs/itemization-changes.md §6.4.
     static bool HandleItemBudgetCommand(ChatHandler* handler, uint32 itemEntry)
     {
@@ -376,20 +376,26 @@ public:
 
         if (!b.Assigned)
         {
-            handler->PSendSysMessage("Item {} has no item_budget_assign row -- it is not a budget item.", itemEntry);
+            handler->PSendSysMessage("Item {} has no item_itemization row -- it is not a budget item.", itemEntry);
             return false;
         }
 
         handler->PSendSysMessage("Item budget breakdown for entry {}", b.Entry);
-        handler->PSendSysMessage("  ItemLevel {} | Quality {} (x{:.3f}) | InventoryType {} (slot x{:.4f}) | template {}",
-            b.ItemLevel, b.Quality, b.QualityMult, b.InventoryType, b.SlotMult, b.TemplateId);
-        handler->PSendSysMessage("  budget_mult {:.3f} | sockets {} (x{:.4f}) | set piece {} (x{:.3f}) | effective_mult {:.4f}",
-            b.BudgetMult, b.SocketCount, b.SocketDiscount, b.IsSetPiece ? "yes" : "no", b.SetDiscount, b.EffectiveMult);
+        handler->PSendSysMessage("  ItemLevel {} | Quality {} (x{:.3f}) | InventoryType {} (slot x{:.4f})",
+            b.ItemLevel, b.Quality, b.QualityMult, b.InventoryType, b.SlotMult);
+        handler->PSendSysMessage("  primary_shape {} | secondary_shape {} | primary_share {} ({:.1f}%)",
+            b.PrimaryShapeId, b.SecondaryShapeId, b.PrimaryShare, b.PrimaryShare / 100.0f);
+        handler->PSendSysMessage("  budget_mult {:.3f} | sockets {} (cost {:.2f}) | set piece {} (x{:.3f})",
+            b.BudgetMult, b.SocketCount, b.SocketBudgetCost, b.IsSetPiece ? "yes" : "no", b.SetDiscount);
         handler->PSendSysMessage("  budget {} -> effective_budget {} (after stamina/dps deltas)", b.Budget, b.EffectiveBudget);
+        handler->PSendSysMessage("  primary_budget {:.2f} | secondary_budget {:.2f}", b.PrimaryBudget, b.SecondaryBudget);
         handler->PSendSysMessage("  stamina: baseline {} + delta {} = final {}", b.BaselineStamina, b.StaminaDelta, b.FinalStamina);
 
         if (b.HasArmorCurve)
             handler->PSendSysMessage("  armor: class {} baseline {} + delta {} = final {}", b.ArmorClass, b.BaselineArmor, b.ArmorDelta, b.FinalArmor);
+
+        if (b.HasBlockValueCurve)
+            handler->PSendSysMessage("  block value: baseline {} + delta {} = final {}", b.BaselineBlockValue, b.BlockValueDelta, b.FinalBlockValue);
 
         if (b.IsWeapon)
             handler->PSendSysMessage("  weapon dps: baseline {:.2f} + delta {:.2f} = final {:.2f} -> dmg {:.1f}-{:.1f}",
