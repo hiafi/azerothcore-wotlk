@@ -1,0 +1,32 @@
+-- DB update 2026_09_05_31 -> 2026_09_05_32
+--
+-- Shape-based itemization (docs/itemization-phase-2.md), implementation order step 9: fit
+-- item_weapon_dps_cost. Was the Phase-1 placeholder (1.0), explicitly unvalidated -- "no
+-- converted item uses dps_delta yet, so there's no data to fit it against" per
+-- itemization-changes.md §9.4's own note. That's now stale: Phase 5's catalog conversion gave
+-- 1,764 real items a nonzero dps_delta (confirmed against acore_world directly), but none of
+-- them are real Blizzard weapons with an independently-known "correct" DPS/stat split to
+-- regress against either -- dps_delta is a wholly custom knob this server invented (§7.7), so
+-- this still isn't an MP5-style regression. Fit from this server's own combat formula instead.
+--
+-- src/server/game/Entities/Unit/StatSystem.cpp computes weapon bonus damage as
+-- `AttackPower / 14.0f * attackSpeedMod` for main-hand, off-hand, AND ranged alike (same divisor,
+-- same code path) -- the attackSpeedMod term cancels when converting bonus damage to bonus DPS,
+-- so this server's own math says 14 Attack Power = 1 DPS, exactly and deterministically, not
+-- simulation- or spec-dependent. Attack Power is already priced at item_stat_cost cost 0.5 (2 AP
+-- per budget unit), so 14 AP costs 14 * 0.5 = 7.0 budget units -- item_weapon_dps_cost = 7.0.
+--
+-- This is DERIVED FROM Attack Power's own cost, not an independent constant: if AP's cost is
+-- ever re-tuned, this should be recomputed as 14 * AP_cost, not left stranded at 7.0.
+--
+-- Unlike the item_itemization rename (see the other pending files in this directory), this is
+-- schema-safe to apply on its own -- item_weapon_dps_cost already exists and is already read by
+-- the CURRENT (pre-rewrite) ItemBudget.cpp. But because 1,764 items already carry a nonzero
+-- dps_delta, changing this value WILL retune their materialized stat/DPS split the next time the
+-- DB update actually runs, under whichever ItemBudget.cpp is live at that point (old or new) --
+-- expected, and the entire point of this table being independently tunable, but worth knowing
+-- going in rather than being surprised by a stat-line change on unrelated existing items.
+--
+DELETE FROM `item_weapon_dps_cost` WHERE `id` = 1;
+INSERT INTO `item_weapon_dps_cost` (`id`, `cost`) VALUES
+(1, 7.0);

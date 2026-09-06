@@ -32,22 +32,33 @@ history:
 `apps/item-tools/lib/emit.py` generates exactly these two shapes; you
 shouldn't need to hand-write either if you're going through the webui.
 
-**Pending migrations live under `item_weight_system/`.** Every pending
+**This system's migrations live under `itemization_templates_v2/`.** Every
 migration this system has produced (reference-table population,
-`item_budget_*` templates/assignments, and the materialized
-`item_template` regenerates that follow from them) lives under
-`data/sql/updates/pending_db_world/item_weight_system/`, kept apart from
-this fork's other, unrelated pending SQL so the whole system's history is
-browsable in one place. Purely organizational: both the real
-`DBUpdater` (`UpdateFetcher::Update` in
-`src/server/database/Updater/UpdateFetcher.cpp`) and this app's own
-base-⊕-overlay readers (`lib/overlay.py`'s and `lib/budget_overlay.py`'s
-`_contributing_files()`) key applied/replayed migrations off bare
-filename, not directory path — confirmed live, moving Buckets 1-2's ~20
-files into that subdirectory changed nothing about which rows either one
-computes. Don't add a non-`.sql` file (a `README`, etc.) inside it, though
-— `apps/codestyle/codestyle-sql.py`'s file walk isn't extension-filtered
-and would try to lint it as SQL.
+`item_budget_*`/`item_itemization`/`item_shape*` templates/assignments, and
+the materialized `item_template` regenerates that follow from them) lives
+under an `itemization_templates_v2/` subdirectory, kept apart from this
+fork's other, unrelated SQL so the whole system's history is browsable in
+one place (renamed from this directory's original `item_weight_system/` once
+the shape-based rewrite, docs/itemization-phase-2.md, made that name stale).
+Still-pending work goes in `data/sql/updates/pending_db_world/itemization_templates_v2/`;
+once `apps/ci/ci-pending-sql.sh` merges a batch, those files land in
+`data/sql/updates/db_world/itemization_templates_v2/` instead (that script
+recurses into subdirectories under both `pending_db_*` roots — see its own
+comment — precisely so a topic subdirectory like this one doesn't have to
+flatten back out just to get merged). Purely organizational either way: both
+the real `DBUpdater` (`UpdateFetcher::Update` in
+`src/server/database/Updater/UpdateFetcher.cpp`, itself walking
+subdirectories up to depth 10 via `FillFileListRecursively()`) and this
+app's own base-⊕-overlay readers (`lib/overlay.py`'s and
+`lib/budget_overlay.py`'s `_contributing_files()`) key applied/replayed
+migrations off bare filename, not directory path — confirmed live, moving
+Buckets 1-2's ~20 files into that subdirectory (and, later, renaming the
+subdirectory itself, and moving its merged files a second time into
+`db_world/itemization_templates_v2/`) changed nothing about which rows
+either reader computes. Don't add a non-`.sql` file (a `README`, etc.)
+inside it, though — `apps/codestyle/codestyle-sql.py`'s file walk isn't
+extension-filtered and
+would try to lint it as SQL.
 
 **Guarding a `FLOAT` column** (`dmg_min1`/`dmg_max1`/`spellppmRate_N`) needs a
 small-tolerance comparison, not exact `=`, whenever the old value is itself a

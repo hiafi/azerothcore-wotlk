@@ -1,0 +1,34 @@
+-- DB update 2026_09_05_36 -> 2026_09_05_37
+--
+-- Shape-based itemization (docs/itemization-phase-2.md), implementation order step 12: retire
+-- `item_budget_template` and `item_budget_template_name` -- the percentage-allocation system's
+-- reusable "template" concept, made obsolete by the shape catalog (`item_shape`/`item_shape_stat`/
+-- `item_alloc_dist`, steps 3-4/10). Confirmed dead in the new code: `grep -r item_budget_template
+-- src/` and the same for `item_budget_template_name` both return nothing -- the rewritten
+-- `ItemBudget.cpp` (step 7) never queries either table, having replaced `item_budget_assign.
+-- template_id` with `item_itemization.primary_shape_id`/`secondary_shape_id` back in step 5.
+--
+-- Also drops `item_budget_socket_cost` (the OLD multiplicative per-socket discount), same
+-- justification -- already flagged as dead when `item_gem_value_curve` replaced it (step 6,
+-- rev_1788602621364618840.sql's own trailing comment: "deliberately NOT dropped here even though
+-- it's retired... lands together with step 7's rewrite") and confirmed the same way (no reference
+-- anywhere in `src/`). That comment's "together with step 7" moment is this file.
+--
+-- *** DO NOT let this file reach a live worldserver restart / DB update on its own. *** All three
+-- tables are still read by the CURRENTLY LIVE (pre-rewrite) `ItemBudget.cpp` at every boot
+-- (`LoadItemBudgetData()`, per docs/itemization-changes.md's own comment: "curves, slot mults,
+-- stat costs, templates, assignments") -- dropping them before step 7's rewrite is actually
+-- running would break the live budget materializer's boot-time load exactly like dropping
+-- `item_budget_assign` early would (rev_1788602621364618840.sql's own warning). Bundle with the
+-- rest of this batch: steps 5, 6 (RENAME/column-drop half), 7, 9's weapon fix, and 11.
+--
+-- Known collateral, accepted rather than addressed here: `apps/item-tools/webui`'s "Budget
+-- templates" pages (`lib/budget.py`, `lib/budget_overlay.py`, `lib/budget_emit.py`,
+-- `webui/templates/template_*.html`) hand-author `item_budget_template` rows and read
+-- `item_budget_socket_cost` as part of previewing an item's materialized stats under the OLD
+-- system. None of that has been touched -- those pages will fail against a live DB once these
+-- tables are actually gone. Left as a separate follow-up, not silently patched around here.
+--
+DROP TABLE `item_budget_template`;
+DROP TABLE `item_budget_template_name`;
+DROP TABLE `item_budget_socket_cost`;

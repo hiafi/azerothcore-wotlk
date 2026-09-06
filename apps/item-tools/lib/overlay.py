@@ -36,7 +36,7 @@ PENDING_DIR = REPO_ROOT / "data/sql/updates/pending_db_world"
 
 def _contributing_files() -> list[Path]:
     # Recursive glob + sort-by-bare-filename (not full path): pending
-    # migrations may live in a topic subdirectory (e.g. `item_weight_system/`)
+    # migrations may live in a topic subdirectory (e.g. `itemization_templates_v2/`)
     # rather than flat in PENDING_DIR, and filename order is what actually
     # matters here - it's what the real AzerothCore DBUpdater keys off of too
     # (`UpdateFetcher::Update`'s `applied.find(filePath.filename()...)`), not
@@ -173,7 +173,11 @@ def _apply_inserts(text: str, rows: dict[int, dict], source: str) -> None:
         m = _INSERT_RE.search(text, pos)
         if not m:
             break
-        cols = [c.strip(" `") for c in m.group("cols").split(",")]
+        # .strip().strip("`"), not .strip(" `") -- a column list wrapped across multiple lines
+        # leaves a literal newline at the front of every column after the first on its line,
+        # which .strip(" `") can't remove (see lib/budget_overlay.py's resolve_table_rows for
+        # where this actually bit).
+        cols = [c.strip().strip("`") for c in m.group("cols").split(",")]
         values, pos = _read_single_tuple_then_skip_to_semicolon(text, m.end())
         if len(values) != len(cols):
             print(f"WARNING: {source}: item_template INSERT has {len(values)} values for "

@@ -152,8 +152,12 @@ def read_table_dump(path: Path, table: str, columns: list[str], index_column: st
         if m.group("table") != table:
             pos = m.end()
             continue
+        # .strip().strip("`"), not .strip(" `") -- a column list wrapped across multiple lines
+        # leaves a literal newline at the front of every column after the first on its line,
+        # which .strip(" `") can't remove (see lib/budget_overlay.py's resolve_table_rows for
+        # where this actually bit -- item_itemization's real INSERT header wraps this way).
         explicit_cols = (
-            [c.strip(" `") for c in m.group("cols").split(",")] if m.group("cols") else None
+            [c.strip().strip("`") for c in m.group("cols").split(",")] if m.group("cols") else None
         )
         cols = explicit_cols or columns
         tuples, pos = _read_tuples(text, m.end())
@@ -185,7 +189,7 @@ def read_table_rows(path: Path, table: str, columns: tuple[str, ...]) -> list[di
             pos = m.end()
             continue
         explicit_cols = (
-            [c.strip(" `") for c in m.group("cols").split(",")] if m.group("cols") else None
+            [c.strip().strip("`") for c in m.group("cols").split(",")] if m.group("cols") else None
         )
         cols = explicit_cols or list(columns)
         tuples, pos = _read_tuples(text, m.end())

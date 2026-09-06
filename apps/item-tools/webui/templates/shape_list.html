@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Shapes - item-tools{% endblock %}
+{% block content %}
+  <h1>Shapes</h1>
+  <p class="hint">The shape-based itemization system's fixed catalog (<code>item_shape</code>/
+    <code>item_shape_stat</code>/<code>item_shape_rule</code>/<code>item_alloc_dist</code>, see
+    <code>docs/itemization-phase-2.md</code> &sect;3-&sect;6). Read-only here - shapes are authored
+    by hand-written regression-backed migrations, not edited through this tool (same posture as
+    <code>item_budget_curve</code> and the other reference/curve tables). Look one up while filling
+    in an item's Itemization section below.</p>
+
+  <h2>Primary shapes <span class="hint">(role-lock stats - Str/Agi/Int/Spirit/SpellPower/AP)</span></h2>
+  <table>
+    <thead><tr><th>ID</th><th>Name</th><th>Distribution</th><th>Stats</th><th>Items using it</th></tr></thead>
+    <tbody>
+      {% for row in primary_rows %}
+        <tr>
+          <td>{{ row.shape_id }}</td>
+          <td>{{ row.name }}</td>
+          <td>{{ row.dist_name }}</td>
+          <td>{{ row.stats }}</td>
+          <td>{{ row.item_count }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Secondary shapes <span class="hint">(universal stats - Crit/Haste/Mastery/Versatility/CDH/Proc/MP5/ArmorPen/Dodge/Parry/Block)</span></h2>
+  <table>
+    <thead><tr><th>ID</th><th>Name</th><th>Distribution</th><th>Stats</th><th>Rules</th><th>Items using it</th></tr></thead>
+    <tbody>
+      {% for row in secondary_rows %}
+        <tr>
+          <td>{{ row.shape_id }}</td>
+          <td>{{ row.name }}</td>
+          <td>{{ row.dist_name }}</td>
+          <td>{{ row.stats }}</td>
+          <td>{{ row.rules }}</td>
+          <td>{{ row.item_count }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
