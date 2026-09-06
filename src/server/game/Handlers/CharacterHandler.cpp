@@ -314,7 +314,12 @@ void WorldSession::HandleCharCreateOpcode(WorldPacket& recvData)
     }
 
     // prevent character creating Expansion class without Expansion account
-    if (classEntry->expansion > Expansion())
+    // Death Knight is exempted: this server phases CONFIG_EXPANSION with mod-progression, and
+    // that clamps every session's effective Expansion() down to the live phase regardless of the
+    // account's own expansion column (see WorldSocket.cpp's auth handshake) -- DK is meant to be
+    // creatable/playable at any phase per docs/bugs-and-fixes.md's Death Knight trainer entry, so
+    // it skips this gate on purpose while every other expansion-gated race/class stays as-is.
+    if (classEntry->expansion > Expansion() && createInfo->Class != CLASS_DEATH_KNIGHT)
     {
         SendCharCreate(CHAR_CREATE_EXPANSION_CLASS);
         LOG_ERROR("network.opcode", "Expansion {} account:[{}] tried to Create character with expansion {} class ({})", Expansion(), GetAccountId(), classEntry->expansion, createInfo->Class);

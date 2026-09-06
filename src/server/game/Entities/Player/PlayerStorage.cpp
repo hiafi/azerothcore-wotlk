@@ -5348,9 +5348,12 @@ bool Player::LoadFromDB(ObjectGuid playerGuid, CharacterDatabaseQueryHolder cons
     // Map could be changed before
     mapEntry = sMapStore.LookupEntry(mapId);
     // client without expansion support
+    // Death Knight is exempted -- see the matching carve-out in Player::TeleportTo and
+    // CharacterHandler.cpp -- so logging out in Ebon Hold (map 609) doesn't bounce a DK to
+    // homebind on their next login while the server is phased below Wrath.
     if (mapEntry)
     {
-        if (GetSession()->Expansion() < mapEntry->Expansion())
+        if (GetSession()->Expansion() < mapEntry->Expansion() && !IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_TELEPORT))
         {
             LOG_DEBUG("entities.player.loading", "Player {} using client without required expansion tried login at non accessible map {}", GetName(), mapId);
             RelocateToHomebind();
