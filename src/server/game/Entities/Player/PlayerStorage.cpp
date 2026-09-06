@@ -6917,65 +6917,69 @@ bool Player::Satisfy(DungeonProgressionRequirements const* ar, uint32 target_map
         //Check all items
         std::vector<ProgressionRequirement const*> missingPlayerItems;
         std::vector<ProgressionRequirement const*> missingLeaderItems;
-        for (ProgressionRequirement const* itemRequirement : ar->items)
-        {
-            Player* checkPlayer = this;
-            std::vector<ProgressionRequirement const*>* missingItems = &missingPlayerItems;
-            if (itemRequirement->checkLeaderOnly)
-            {
-                checkPlayer = partyLeader;
-                missingItems = &missingLeaderItems;
-            }
-
-            if (itemRequirement->faction == TEAM_NEUTRAL || itemRequirement->faction == checkPlayer->GetTeamId(true))
-            {
-                if (!checkPlayer->HasItemCount(itemRequirement->id, 1))
-                {
-                    missingItems->push_back(itemRequirement);
-                }
-            }
-        }
-
         //Check all achievements
         std::vector<ProgressionRequirement const*> missingPlayerAchievements;
         std::vector<ProgressionRequirement const*> missingLeaderAchievements;
-        for (ProgressionRequirement const* achievementRequirement : ar->achievements)
-        {
-            Player* checkPlayer = this;
-            std::vector<ProgressionRequirement const*>* missingAchievements = &missingPlayerAchievements;
-            if (achievementRequirement->checkLeaderOnly)
-            {
-                checkPlayer = partyLeader;
-                missingAchievements = &missingLeaderAchievements;
-            }
-
-            if (achievementRequirement->faction == TEAM_NEUTRAL || achievementRequirement->faction == GetTeamId(true))
-            {
-                if (!checkPlayer || !checkPlayer->HasAchieved(achievementRequirement->id))
-                {
-                    missingAchievements->push_back(achievementRequirement);
-                }
-            }
-        }
-
         //Check all quests
         std::vector<ProgressionRequirement const*> missingPlayerQuests;
         std::vector<ProgressionRequirement const*> missingLeaderQuests;
-        for (ProgressionRequirement const* questRequirement : ar->quests)
+
+        if (!sWorld->getBoolConfig(CONFIG_INSTANCE_IGNORE_ATTUNEMENTS))
         {
-            Player* checkPlayer = this;
-            std::vector<ProgressionRequirement const*>* missingQuests = &missingPlayerQuests;
-            if (questRequirement->checkLeaderOnly)
+            for (ProgressionRequirement const* itemRequirement : ar->items)
             {
-                checkPlayer = partyLeader;
-                missingQuests = &missingLeaderQuests;
+                Player* checkPlayer = this;
+                std::vector<ProgressionRequirement const*>* missingItems = &missingPlayerItems;
+                if (itemRequirement->checkLeaderOnly)
+                {
+                    checkPlayer = partyLeader;
+                    missingItems = &missingLeaderItems;
+                }
+
+                if (itemRequirement->faction == TEAM_NEUTRAL || itemRequirement->faction == checkPlayer->GetTeamId(true))
+                {
+                    if (!checkPlayer->HasItemCount(itemRequirement->id, 1))
+                    {
+                        missingItems->push_back(itemRequirement);
+                    }
+                }
             }
 
-            if (questRequirement->faction == TEAM_NEUTRAL || questRequirement->faction == checkPlayer->GetTeamId(true))
+            for (ProgressionRequirement const* achievementRequirement : ar->achievements)
             {
-                if (!checkPlayer->GetQuestRewardStatus(questRequirement->id))
+                Player* checkPlayer = this;
+                std::vector<ProgressionRequirement const*>* missingAchievements = &missingPlayerAchievements;
+                if (achievementRequirement->checkLeaderOnly)
                 {
-                    missingQuests->push_back(questRequirement);
+                    checkPlayer = partyLeader;
+                    missingAchievements = &missingLeaderAchievements;
+                }
+
+                if (achievementRequirement->faction == TEAM_NEUTRAL || achievementRequirement->faction == GetTeamId(true))
+                {
+                    if (!checkPlayer || !checkPlayer->HasAchieved(achievementRequirement->id))
+                    {
+                        missingAchievements->push_back(achievementRequirement);
+                    }
+                }
+            }
+
+            for (ProgressionRequirement const* questRequirement : ar->quests)
+            {
+                Player* checkPlayer = this;
+                std::vector<ProgressionRequirement const*>* missingQuests = &missingPlayerQuests;
+                if (questRequirement->checkLeaderOnly)
+                {
+                    checkPlayer = partyLeader;
+                    missingQuests = &missingLeaderQuests;
+                }
+
+                if (questRequirement->faction == TEAM_NEUTRAL || questRequirement->faction == checkPlayer->GetTeamId(true))
+                {
+                    if (!checkPlayer->GetQuestRewardStatus(questRequirement->id))
+                    {
+                        missingQuests->push_back(questRequirement);
+                    }
                 }
             }
         }
