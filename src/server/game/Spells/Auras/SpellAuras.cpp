@@ -833,10 +833,11 @@ void Aura::RefreshDuration(bool withMods)
 
     if (withMods && caster)
     {
+        // Haste no longer shrinks a periodic aura's duration -- it only shortens
+        // AuraEffect::CalculatePeriodic's tick amplitude, so a hasted DoT/HoT fits more
+        // ticks into the same duration instead of finishing sooner. See
+        // AuraEffect::GetFinalTickBonusMultiplier for how the leftover fraction is spent.
         int32 duration = m_spellInfo->GetMaxDuration();
-        // Calculate duration of periodics affected by haste.
-        if (caster->HasAuraTypeWithAffectMask(SPELL_AURA_PERIODIC_HASTE, m_spellInfo) || m_spellInfo->HasAttribute(SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC) || m_spellInfo->HasPeriodicDamageOrHealEffect())
-            duration = int32(duration * caster->GetFloatValue(UNIT_MOD_CAST_SPEED));
         SetMaxDuration(duration);
 
         SetDuration(duration);
@@ -879,10 +880,7 @@ void Aura::RefreshTimersWithMods()
 {
     Unit* caster = GetCaster();
     m_maxDuration = CalcMaxDuration();
-    if ((caster && caster->HasAuraTypeWithAffectMask(SPELL_AURA_PERIODIC_HASTE, m_spellInfo)) || m_spellInfo->HasAttribute(SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC) || (caster && m_spellInfo->HasPeriodicDamageOrHealEffect()))
-    {
-        m_maxDuration = int32(m_maxDuration * caster->GetFloatValue(UNIT_MOD_CAST_SPEED));
-    }
+    // Haste no longer shrinks duration here either -- see RefreshDuration.
 
     // xinef: we should take ModSpellDuration into account, but none of the spells using this function is affected by contents of ModSpellDuration
     RefreshDuration();

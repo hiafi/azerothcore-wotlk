@@ -6316,6 +6316,10 @@ void AuraEffect::HandlePeriodicDamageAurasTick(Unit* target, Unit* caster) const
         damage = uint32(std::ceil(CalculatePct<float, float>(target->GetMaxHealth(), damage)));
     }
 
+    // Leftover time from haste-shortened ticks that didn't fit a full extra tick — see
+    // GetFinalTickBonusMultiplier.
+    damage = uint32(damage * GetFinalTickBonusMultiplier());
+
     // Script Hook For HandlePeriodicDamageAurasTick -- Allow scripts to change the Damage pre class mitigation calculations
     sScriptMgr->ModifyPeriodicDamageAurasTick(target, caster, damage, GetSpellInfo());
 
@@ -6428,6 +6432,9 @@ void AuraEffect::HandlePeriodicHealthLeechAuraTick(Unit* target, Unit* caster) c
     CleanDamage cleanDamage = CleanDamage(0, 0, BASE_ATTACK, MELEE_HIT_NORMAL);
 
     uint32 damage = std::max(GetAmount(), 0);
+    // Leftover time from haste-shortened ticks that didn't fit a full extra tick — see
+    // GetFinalTickBonusMultiplier.
+    damage = uint32(damage * GetFinalTickBonusMultiplier());
 
     // Script Hook For HandlePeriodicHealthLeechAurasTick -- Allow scripts to change the Damage pre class mitigation calculations
     sScriptMgr->ModifyPeriodicDamageAurasTick(target, caster, damage, GetSpellInfo());
@@ -6624,6 +6631,10 @@ void AuraEffect::HandlePeriodicHealAurasTick(Unit* target, Unit* caster) const
 
         damage = target->SpellHealingBonusTaken(caster, GetSpellInfo(), damage, DOT, GetBase()->GetStackAmount());
     }
+
+    // Leftover time from haste-shortened ticks that didn't fit a full extra tick — see
+    // GetFinalTickBonusMultiplier.
+    damage = int32(damage * GetFinalTickBonusMultiplier());
 
     bool crit = false;
     if ((crit = roll_chance_f(GetCritChance())))
@@ -7059,4 +7070,18 @@ int32 AuraEffect::GetTotalTicks() const
     }
 
     return totalTicks;
+}
+
+// Haste shortens tick amplitude but no longer shortens duration (see Aura::RefreshDuration),
+// so GetTotalTicks() (MaxDuration / amplitude) usually leaves a leftover fraction of a tick's
+// worth of time that doesn't fit evenly -- rather than firing a short extra tick for it, that
+// fraction is folded into extra damage/healing on the last regular tick. 1.0 on every other tick.
+float AuraEffect::GetFinalTickBonusMultiplier() const
+{
+    int32 totalTicks = GetTotalTicks();
+    if (totalTicks <= 0 || (int32)GetTickNumber() != totalTicks || m_amplitude <= 0)
+        return 1.0f;
+
+    int32 leftover = GetBase()->GetMaxDuration() - totalTicks * m_amplitude;
+    return leftover > 0 ? 1.0f + float(leftover) / float(m_amplitude) : 1.0f;
 }
