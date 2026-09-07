@@ -630,7 +630,12 @@ bool Player::Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo
         addActionButton(action_itr->button, action_itr->action, action_itr->type);
 
     // original items
-    if (CharStartOutfitEntry const* oEntry = GetCharStartOutfitEntry(createInfo->Race, createInfo->Class, createInfo->Gender))
+    // Death Knight has no CharStartOutfit.dbc entry of its own suited to a level 1 start (it's
+    // tuned for the old level 55 Ebon Hold kit) -- borrow Warrior's outfit for the race/gender
+    // instead of standing up a whole new DBC patch pipeline for one class. See
+    // docs/bugs-and-fixes.md's Death Knight trainer entry.
+    uint8 const outfitClass = createInfo->Class == CLASS_DEATH_KNIGHT ? CLASS_WARRIOR : createInfo->Class;
+    if (CharStartOutfitEntry const* oEntry = GetCharStartOutfitEntry(createInfo->Race, outfitClass, createInfo->Gender))
     {
         for (int j = 0; j < MAX_OUTFIT_ITEMS; ++j)
         {
@@ -1434,7 +1439,10 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
     }
 
     // client without expansion support
-    if (GetSession()->Expansion() < mEntry->Expansion())
+    // Death Knight is exempted -- see the matching carve-out in CharacterHandler.cpp -- so Death
+    // Gate can still take a DK to Ebon Hold (map 609, a WotLK-tagged map) while the server is
+    // phased below Wrath.
+    if (GetSession()->Expansion() < mEntry->Expansion() && !IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_TELEPORT))
     {
         LOG_DEBUG("maps", "Player {} using client without required expansion tried teleport to non accessible map {}", GetName(), mapid);
 

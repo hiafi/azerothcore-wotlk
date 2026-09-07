@@ -391,9 +391,14 @@ struct AccountInfo
         IsBanned = fields[13].Get<uint64>() != 0;
         IsRectuiter = fields[14].Get<uint32>() != 0;
 
-        uint32 world_expansion = sWorld->getIntConfig(CONFIG_EXPANSION);
-        if (Expansion > world_expansion)
-            Expansion = world_expansion;
+        // Deliberately NOT clamped to CONFIG_EXPANSION (mod-progression's live phase) -- an
+        // account's own `expansion` column is meant to be the authoritative, manually-set value
+        // for what that account's client sees (per SendAuthResponse's own comment, AuthHandler.cpp),
+        // and this clamp silently overrode it, hiding Death Knight/Draenei/Blood Elf in the
+        // character creation screen client-side even for an account explicitly elevated above the
+        // live phase. World content gating (zones, instances, mechanics) is untouched -- those all
+        // read CONFIG_EXPANSION directly, not this per-session value. See docs/bugs-and-fixes.md's
+        // Death Knight trainer entry.
 
         if (Locale >= TOTAL_LOCALES)
             Locale = LOCALE_enUS;
