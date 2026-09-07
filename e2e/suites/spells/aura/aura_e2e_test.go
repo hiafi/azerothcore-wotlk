@@ -226,6 +226,96 @@ func TestAura_BreakableCCRemovedByDamage(t *testing.T) {
 		hits, elapsed.Round(time.Millisecond), hpBefore, hpAfter, maxHP)
 }
 
+// DOT-01: DoT ticks are now baseline-affected by haste (used to require a talent/glyph,
+// e.g. real Corruption needed Glyph of Quick Decay). Oracle: casting Corruption (172, a
+// SPELL_AURA_PERIODIC_DAMAGE effect, 12s duration / 3s tick / 4 ticks per spell_dbc) while
+// hasted must make the DoT expire measurably earlier than its unhasted 12s duration.
+//
+// Bloodlust (2825) grants SPELL_AURA_MOD_CASTING_SPEED_NOT_STACK 30%, which is exactly the
+// UNIT_MOD_CAST_SPEED path AuraEffect::CalculatePeriodic / Aura::RefreshDuration scale a DoT's
+// amplitude+duration by (SpellInfo::HasPeriodicDamageOrHealEffect). 30% haste shrinks 12000ms
+// to ~9231ms. checkAt=10.5s sits strictly between the hasted (~9.23s) and unhasted (12s) ends,
+// so the same checkpoint must observe "still up" unhasted and "already gone" hasted.
+// Paths: AuraEffect::CalculatePeriodic, Aura::RefreshDuration, SpellInfo::HasPeriodicDamageOrHealEffect.
+func TestDoT_HasteShortensCorruptionDuration(t *testing.T) {
+	meta.Begin(t, meta.TestMeta{
+		Tags:     []string{"med", "spells", "combat"},
+		Runtime:  "med",
+		Category: "spells/aura",
+	})
+
+	const (
+		spellCorruption = uint32(172)  // Rank 1 Corruption: 12000ms duration, 3000ms tick (spell_dbc).
+		spellBloodlust  = uint32(2825) // 30% haste incl. SPELL_AURA_MOD_CASTING_SPEED_NOT_STACK.
+		checkAt         = 10500 * time.Millisecond
+		repollWindow    = 300 * time.Millisecond
+		repollEvery     = 40 * time.Millisecond
+	)
+
+	bot := e2eharness.NewSolo(t, e2eharness.ScenarioOpts{
+		Prefix: "DotHst",
+		Race:   e2eharness.RaceOrc,
+		Class:  e2eharness.ClassWarlock,
+		Level:  80,
+	})
+	bot.TeleportPad(t, e2eharness.PackagePad(t))
+	bot.Learn(t, spellCorruption)
+	// ApplyAura's GM `.cast self` (for Bloodlust) burns the GCD like a real cast;
+	// without this, the immediately-following Corruption cast races NOT_READY.
+	bot.GM(t, ".cheat cooldown on")
+
+	// unitAuraGoneAt reports whether the unit has lost spellID by `checkAt` measured from
+	// castAt (not from now — landing confirmation below already burns a little of that
+	// window). A brief re-poll tolerates one delayed SMSG_AURA_UPDATE, mirroring
+	// AssertAuraRemains's own tolerance.
+	unitAuraGoneAt := func(guid uint64, spellID uint32, castAt time.Time) bool {
+		if remaining := checkAt - time.Since(castAt); remaining > 0 {
+			time.Sleep(remaining)
+		}
+		if !bot.UnitHasAura(guid, spellID) {
+			return true
+		}
+		deadline := time.Now().Add(repollWindow)
+		for time.Now().Before(deadline) {
+			time.Sleep(repollEvery)
+			if !bot.UnitHasAura(guid, spellID) {
+				return true
+			}
+		}
+		return false
+	}
+
+	// Unhasted baseline: dummy must still carry Corruption at checkAt (< 12s natural duration).
+	dummy := bot.Spawn(t, e2eharness.CreatureHeroicTrainingDummy, 15*time.Second)
+	bot.Face(t, dummy)
+	castAt := time.Now()
+	bot.CastMust(t, spellCorruption, dummy, 10*time.Second)
+	bot.WaitUnitAura(t, dummy, spellCorruption, 3*time.Second) // fatals if it never lands
+	if unitAuraGoneAt(dummy, spellCorruption, castAt) {
+		e2eharness.Preconditionf(t, "Corruption %d already gone at %s unhasted (expected ~12s duration) — cannot judge haste effect",
+			spellCorruption, checkAt)
+	}
+	t.Logf("unhasted: Corruption still up at %s (expected, ~12s duration)", checkAt)
+
+	// Let the unhasted DoT fully expire before reusing the same dummy.
+	time.Sleep(3 * time.Second)
+
+	// Hasted: same DoT, same dummy, same checkpoint — must already be gone.
+	bot.ApplyAura(t, spellBloodlust)
+	if !bot.HasAura(spellBloodlust) {
+		e2eharness.Preconditionf(t, "Bloodlust %d did not apply to caster", spellBloodlust)
+	}
+	bot.Face(t, dummy)
+	castAt = time.Now()
+	bot.CastMust(t, spellCorruption, dummy, 10*time.Second)
+	bot.WaitUnitAura(t, dummy, spellCorruption, 3*time.Second) // fatals if it never lands
+	if !unitAuraGoneAt(dummy, spellCorruption, castAt) {
+		e2eharness.Assertf(t, "Corruption %d still up at %s with 30%% haste (want already expired ~9.2s in) — haste is not shortening DoT duration",
+			spellCorruption, checkAt)
+	}
+	t.Logf("PASS 30%% haste shortens Corruption duration: gone by %s (unhasted stayed up at same checkpoint)", checkAt)
+}
+
 // AURA-01: exclusive / replace — apply stronger after weaker (soft observational).
 func TestAura_ApplyMultipleDistinctAuras(t *testing.T) {
 	meta.Begin(t, meta.TestMeta{Tags: []string{"short", "spells"}, Runtime: "short", Category: "spells/aura"})

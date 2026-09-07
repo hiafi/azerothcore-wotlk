@@ -435,6 +435,7 @@ public:
     bool HasEffectMechanic(Mechanics mechanic) const;
     bool HasAura(AuraType aura) const;
     bool HasAnyAura() const;
+    bool HasPeriodicDamageOrHealEffect() const;
     bool HasAreaAuraEffect() const;
     bool HasOnlyDamageEffects() const;
 

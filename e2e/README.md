@@ -142,7 +142,7 @@ If the scenario should stay as a regression, **move** it into `suites/` next to 
 | combat/pets | summon / GUID / attack / dismiss | P1 | covered; dungeon Raise Dead `blocked-harness` (ready-check / instance summon) | #27081 |
 | combat/threat | engage / taunt switch / kill clears combat | P1 | covered | — |
 | combat/vehicles | spellclick steed enter/exit | P2 | covered | — |
-| spells/aura | apply/query; CC broken by damage; mount persist | P1 | covered (`TestAC_26130_*`) | #26130 |
+| spells/aura | apply/query; CC broken by damage; mount persist; DoT haste-shortened duration | P1 | covered (`TestAC_26130_*`, `TestDoT_HasteShortensCorruptionDuration`); DoT periodic-crit `blocked-harness` (no SMSG_PERIODIC_AURA_LOG crit-flag parsing, no GM crit-rating setter — can't force/observe a tick crit deterministically) | #26130 |
 | spells/cast | Charge on dummy; fail path; stance; Raise Dead + ghoul | P1 | covered (`TestAC_27061_*`) | #27061 |
 | spells/effects | Charge / grounding totem / Sweeping Strikes Execute | P1 | covered (`TestAC_26997_*`); dummy-summon `blocked-harness` (engineering dummy lifetime) | #26774 #26997 |
 | social/group | form / leave / leader / loot method / disband | P2 | covered | — |

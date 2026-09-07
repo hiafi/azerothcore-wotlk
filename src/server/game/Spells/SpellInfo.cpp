@@ -916,6 +916,17 @@ bool SpellInfo::HasAnyAura() const
     return false;
 }
 
+// Baseline: damage-over-time and heal-over-time auras always benefit from haste-scaled tick rate
+// (used to require talents/glyphs such as Pandemic or Glyph of Quick Decay; now unconditional).
+bool SpellInfo::HasPeriodicDamageOrHealEffect() const
+{
+    return HasAura(SPELL_AURA_PERIODIC_DAMAGE)
+        || HasAura(SPELL_AURA_PERIODIC_DAMAGE_PERCENT)
+        || HasAura(SPELL_AURA_PERIODIC_LEECH)
+        || HasAura(SPELL_AURA_PERIODIC_HEAL)
+        || HasAura(SPELL_AURA_OBS_MOD_HEALTH);
+}
+
 bool SpellInfo::HasAreaAuraEffect() const
 {
     for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)

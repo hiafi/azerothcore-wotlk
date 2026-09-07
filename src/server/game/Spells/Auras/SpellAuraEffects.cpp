@@ -647,7 +647,7 @@ void AuraEffect::CalculatePeriodic(Unit* caster, bool create, bool load)
 
         if (caster)
         {
-            if (caster->HasAuraTypeWithAffectMask(SPELL_AURA_PERIODIC_HASTE, m_spellInfo) || m_spellInfo->HasAttribute(SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC))
+            if (caster->HasAuraTypeWithAffectMask(SPELL_AURA_PERIODIC_HASTE, m_spellInfo) || m_spellInfo->HasAttribute(SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC) || m_spellInfo->HasPeriodicDamageOrHealEffect())
                 m_amplitude = int32(m_amplitude * caster->GetFloatValue(UNIT_MOD_CAST_SPEED));
         }
     }
@@ -1072,31 +1072,14 @@ void AuraEffect::UpdatePeriodic(Unit* caster)
 
 float AuraEffect::CalcPeriodicCritChance(Unit const* caster, Unit const* target) const
 {
-    float critChance = 0.0f;
-    if (caster)
-    {
-        if (Player* modOwner = caster->GetSpellModOwner())
-        {
-            Unit::AuraEffectList const& mPeriodicCritAuras = modOwner->GetAuraEffectsByType(SPELL_AURA_ABILITY_PERIODIC_CRIT);
-            for (Unit::AuraEffectList::const_iterator itr = mPeriodicCritAuras.begin(); itr != mPeriodicCritAuras.end(); ++itr)
-            {
-                if ((*itr)->IsAffectedOnSpell(GetSpellInfo()))
-                {
-                    critChance = modOwner->SpellDoneCritChance(nullptr, GetSpellInfo(), GetSpellInfo()->GetSchoolMask(), (GetSpellInfo()->DmgClass == SPELL_DAMAGE_CLASS_RANGED ? RANGED_ATTACK : BASE_ATTACK), true);
-                    break;
-                }
-            }
+    // Baseline: periodic ticks (DoTs/HoTs) can always crit like a direct hit would.
+    // Used to require a special aura/talent (e.g. Pandemic) or a hardcoded exception (Rupture); now unconditional.
+    if (!caster)
+        return 0.0f;
 
-            switch (GetSpellInfo()->SpellFamilyName)
-            {
-                // Rupture - since 3.3.3 can crit
-                case SPELLFAMILY_ROGUE:
-                    if (GetSpellInfo()->SpellFamilyFlags[0] & 0x100000)
-                        critChance = modOwner->SpellDoneCritChance(nullptr, GetSpellInfo(), GetSpellInfo()->GetSchoolMask(), BASE_ATTACK, true);
-                    break;
-            }
-        }
-    }
+    WeaponAttackType attackType = GetSpellInfo()->DmgClass == SPELL_DAMAGE_CLASS_RANGED ? RANGED_ATTACK : BASE_ATTACK;
+    float critChance = caster->SpellDoneCritChance(target, GetSpellInfo(), GetSpellInfo()->GetSchoolMask(), attackType, true);
+
     if (target && critChance > 0.0f)
         critChance = target->SpellTakenCritChance(caster, GetSpellInfo(), GetSpellInfo()->GetSchoolMask(), critChance, BASE_ATTACK, true);
 
