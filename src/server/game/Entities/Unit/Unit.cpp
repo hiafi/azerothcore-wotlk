@@ -1345,6 +1345,25 @@ uint32 Unit::DealDamage(Unit* attacker, Unit* victim, uint32 damage, CleanDamage
         }
     }
 
+    // Leech: heal the attacker for a percentage of the damage they just dealt (direct or
+    // periodic only - see SPELL_AURA_MOD_LEECH_PCT). Uses Unit::DealHeal, not HealBySpell, so it
+    // can't crit and isn't affected by healing-received modifiers. Attributed to spellProto in
+    // the combat log when there is one (melee auto-attacks have none, so they leech silently).
+    if (attacker && attacker->IsAlive() &&
+        (damagetype == DIRECT_DAMAGE || damagetype == SPELL_DIRECT_DAMAGE || damagetype == DOT))
+    {
+        if (float leechPct = attacker->GetLeechPercentage())
+        {
+            if (uint32 leechHeal = CalculatePct(damage, leechPct))
+            {
+                HealInfo leechHealInfo(attacker, attacker, leechHeal, spellProto, damageSchoolMask);
+                leechHealInfo.SetEffectiveHeal(Unit::DealHeal(attacker, attacker, leechHeal));
+                if (spellProto)
+                    attacker->SendHealSpellLog(leechHealInfo, false);
+            }
+        }
+    }
+
     LOG_DEBUG("entities.unit", "DealDamageEnd returned {} damage", damage);
 
     return damage;

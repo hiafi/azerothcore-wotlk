@@ -355,7 +355,16 @@ enum AuraType
     SPELL_AURA_OPEN_STABLE                                  = 292,
     SPELL_AURA_OVERRIDE_SPELLS                              = 293,
     SPELL_AURA_PREVENT_REGENERATE_POWER                     = 294,
-    SPELL_AURA_295                                          = 295,
+    SPELL_AURA_MOD_LEECH_PCT                                = 295, // Custom: was SPELL_AURA_295 (0 spells in 3.3.5, genuinely unused).
+                                                                     // Flat percentage of the damage this unit deals (direct and periodic,
+                                                                     // via Unit::DealDamage) returned to it as health - see Unit::
+                                                                     // GetLeechPercentage(). Summed additively across all sources with
+                                                                     // GetTotalAuraModifier, the same aggregation SPELL_AURA_MOD_CRIT_PCT
+                                                                     // uses, so a passive 1-5% baseline and a short ~40% defensive-cooldown
+                                                                     // buff just add together. Never itemized - granted only by talents/
+                                                                     // abilities. The heal bypasses the normal heal pipeline entirely
+                                                                     // (Unit::DealHeal, not HealBySpell/CalcHealAbsorb) so it can't crit and
+                                                                     // isn't affected by healing-received modifiers.
     SPELL_AURA_SET_VEHICLE_ID                               = 296,
     SPELL_AURA_BLOCK_SPELL_FAMILY                           = 297,
     SPELL_AURA_STRANGULATE                                  = 298,

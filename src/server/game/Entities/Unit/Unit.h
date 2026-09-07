@@ -1122,6 +1122,11 @@ public:
     [[nodiscard]] uint32 CountPctFromMaxHealth(int32 pct) const { return CalculatePct(GetMaxHealth(), pct); }
     [[nodiscard]] uint32 CountPctFromCurHealth(int32 pct) const { return CalculatePct(GetHealth(), pct); }
 
+    // Leech: percentage of damage dealt (direct + periodic) returned to this unit as health; see
+    // SPELL_AURA_MOD_LEECH_PCT and Unit::DealDamage. Clamped at 0 so a hypothetical negative
+    // modifier can't turn the heal into unexplained self-damage.
+    [[nodiscard]] float GetLeechPercentage() const { return std::max(0.0f, float(GetTotalAuraModifier(SPELL_AURA_MOD_LEECH_PCT))); }
+
     void SetHealth(uint32 val);
     void SetMaxHealth(uint32 val);
     inline void SetFullHealth() { SetHealth(GetMaxHealth()); }
