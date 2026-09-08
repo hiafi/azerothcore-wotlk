@@ -647,7 +647,7 @@ void AuraEffect::CalculatePeriodic(Unit* caster, bool create, bool load)
 
         if (caster)
         {
-            if (caster->HasAuraTypeWithAffectMask(SPELL_AURA_PERIODIC_HASTE, m_spellInfo) || m_spellInfo->HasAttribute(SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC))
+            if (caster->HasAuraTypeWithAffectMask(SPELL_AURA_PERIODIC_HASTE, m_spellInfo) || m_spellInfo->HasAttribute(SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC) || m_spellInfo->HasPeriodicDamageOrHealEffect())
                 m_amplitude = int32(m_amplitude * caster->GetFloatValue(UNIT_MOD_CAST_SPEED));
         }
     }
@@ -1072,31 +1072,14 @@ void AuraEffect::UpdatePeriodic(Unit* caster)
 
 float AuraEffect::CalcPeriodicCritChance(Unit const* caster, Unit const* target) const
 {
-    float critChance = 0.0f;
-    if (caster)
-    {
-        if (Player* modOwner = caster->GetSpellModOwner())
-        {
-            Unit::AuraEffectList const& mPeriodicCritAuras = modOwner->GetAuraEffectsByType(SPELL_AURA_ABILITY_PERIODIC_CRIT);
-            for (Unit::AuraEffectList::const_iterator itr = mPeriodicCritAuras.begin(); itr != mPeriodicCritAuras.end(); ++itr)
-            {
-                if ((*itr)->IsAffectedOnSpell(GetSpellInfo()))
-                {
-                    critChance = modOwner->SpellDoneCritChance(nullptr, GetSpellInfo(), GetSpellInfo()->GetSchoolMask(), (GetSpellInfo()->DmgClass == SPELL_DAMAGE_CLASS_RANGED ? RANGED_ATTACK : BASE_ATTACK), true);
-                    break;
-                }
-            }
+    // Baseline: periodic ticks (DoTs/HoTs) can always crit like a direct hit would.
+    // Used to require a special aura/talent (e.g. Pandemic) or a hardcoded exception (Rupture); now unconditional.
+    if (!caster)
+        return 0.0f;
 
-            switch (GetSpellInfo()->SpellFamilyName)
-            {
-                // Rupture - since 3.3.3 can crit
-                case SPELLFAMILY_ROGUE:
-                    if (GetSpellInfo()->SpellFamilyFlags[0] & 0x100000)
-                        critChance = modOwner->SpellDoneCritChance(nullptr, GetSpellInfo(), GetSpellInfo()->GetSchoolMask(), BASE_ATTACK, true);
-                    break;
-            }
-        }
-    }
+    WeaponAttackType attackType = GetSpellInfo()->DmgClass == SPELL_DAMAGE_CLASS_RANGED ? RANGED_ATTACK : BASE_ATTACK;
+    float critChance = caster->SpellDoneCritChance(target, GetSpellInfo(), GetSpellInfo()->GetSchoolMask(), attackType, true);
+
     if (target && critChance > 0.0f)
         critChance = target->SpellTakenCritChance(caster, GetSpellInfo(), GetSpellInfo()->GetSchoolMask(), critChance, BASE_ATTACK, true);
 
@@ -6333,6 +6316,10 @@ void AuraEffect::HandlePeriodicDamageAurasTick(Unit* target, Unit* caster) const
         damage = uint32(std::ceil(CalculatePct<float, float>(target->GetMaxHealth(), damage)));
     }
 
+    // Leftover time from haste-shortened ticks that didn't fit a full extra tick — see
+    // GetFinalTickBonusMultiplier.
+    damage = uint32(damage * GetFinalTickBonusMultiplier());
+
     // Script Hook For HandlePeriodicDamageAurasTick -- Allow scripts to change the Damage pre class mitigation calculations
     sScriptMgr->ModifyPeriodicDamageAurasTick(target, caster, damage, GetSpellInfo());
 
@@ -6445,6 +6432,9 @@ void AuraEffect::HandlePeriodicHealthLeechAuraTick(Unit* target, Unit* caster) c
     CleanDamage cleanDamage = CleanDamage(0, 0, BASE_ATTACK, MELEE_HIT_NORMAL);
 
     uint32 damage = std::max(GetAmount(), 0);
+    // Leftover time from haste-shortened ticks that didn't fit a full extra tick — see
+    // GetFinalTickBonusMultiplier.
+    damage = uint32(damage * GetFinalTickBonusMultiplier());
 
     // Script Hook For HandlePeriodicHealthLeechAurasTick -- Allow scripts to change the Damage pre class mitigation calculations
     sScriptMgr->ModifyPeriodicDamageAurasTick(target, caster, damage, GetSpellInfo());
@@ -6641,6 +6631,10 @@ void AuraEffect::HandlePeriodicHealAurasTick(Unit* target, Unit* caster) const
 
         damage = target->SpellHealingBonusTaken(caster, GetSpellInfo(), damage, DOT, GetBase()->GetStackAmount());
     }
+
+    // Leftover time from haste-shortened ticks that didn't fit a full extra tick — see
+    // GetFinalTickBonusMultiplier.
+    damage = int32(damage * GetFinalTickBonusMultiplier());
 
     bool crit = false;
     if ((crit = roll_chance_f(GetCritChance())))
@@ -7076,4 +7070,18 @@ int32 AuraEffect::GetTotalTicks() const
     }
 
     return totalTicks;
+}
+
+// Haste shortens tick amplitude but no longer shortens duration (see Aura::RefreshDuration),
+// so GetTotalTicks() (MaxDuration / amplitude) usually leaves a leftover fraction of a tick's
+// worth of time that doesn't fit evenly -- rather than firing a short extra tick for it, that
+// fraction is folded into extra damage/healing on the last regular tick. 1.0 on every other tick.
+float AuraEffect::GetFinalTickBonusMultiplier() const
+{
+    int32 totalTicks = GetTotalTicks();
+    if (totalTicks <= 0 || (int32)GetTickNumber() != totalTicks || m_amplitude <= 0)
+        return 1.0f;
+
+    int32 leftover = GetBase()->GetMaxDuration() - totalTicks * m_amplitude;
+    return leftover > 0 ? 1.0f + float(leftover) / float(m_amplitude) : 1.0f;
 }
