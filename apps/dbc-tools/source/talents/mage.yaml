@@ -1123,3 +1123,27 @@ skill_line_abilities:
   spell_id: 200007          # Frozen Orb
   class_mask: 128
   min_skill_line_rank: 1
+# Arcane Mage rework (docs/arcane-mage-rework-design.md) - buckets the 4 fully-custom Arcane
+# spell IDs into the Arcane Spellbook tab. Presence of Mind (12043) and Slow (31589) don't need
+# rows here even though they also moved to baseline this phase - both are real pulled Blizzard
+# spell IDs that already carry their own stock SkillLineAbility row.
+- id: 30403                # minted, source/ids.yaml skilllineability block (30400-30499)
+  skill_line: 237           # Arcane
+  spell_id: 200067          # Brilliance Aura
+  class_mask: 128
+  min_skill_line_rank: 1
+- id: 30404                # minted, source/ids.yaml skilllineability block (30400-30499)
+  skill_line: 237           # Arcane
+  spell_id: 200068          # Arcane Ward
+  class_mask: 128
+  min_skill_line_rank: 1
+- id: 30405                # minted, source/ids.yaml skilllineability block (30400-30499)
+  skill_line: 237           # Arcane
+  spell_id: 200069          # Mass Invisibility
+  class_mask: 128
+  min_skill_line_rank: 1
+- id: 30406                # minted, source/ids.yaml skilllineability block (30400-30499)
+  skill_line: 237           # Arcane
+  spell_id: 200070          # Time Warp
+  class_mask: 128
+  min_skill_line_rank: 1

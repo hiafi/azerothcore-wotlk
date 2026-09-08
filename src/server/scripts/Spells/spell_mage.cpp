@@ -122,7 +122,23 @@ enum MageSpells
     SPELL_MAGE_WATER_ELEMENTAL_FREEZE             = 33395,
     // Not a new spell - naming the existing "Fingers of Frost" charge buff (already scripted
     // below as spell_mage_fingers_of_frost) for use by the frozen-state helpers.
-    SPELL_MAGE_FINGERS_OF_FROST_CHARGES          = 74396
+    SPELL_MAGE_FINGERS_OF_FROST_CHARGES          = 74396,
+
+    // Arcane Mage rework (docs/arcane-mage-rework-design.md) - new spells, reserved block
+    // 200000-209999 (apps/dbc-tools/source/ids.yaml).
+    SPELL_MAGE_BRILLIANCE_AURA                   = 200067,
+    SPELL_MAGE_ARCANE_WARD                       = 200068,
+    SPELL_MAGE_MASS_INVISIBILITY                 = 200069,
+    SPELL_MAGE_TIME_WARP                         = 200070,
+    // Not new spells - naming existing stock IDs this pass's scripts need by name. Plain
+    // Invisibility, cast on each ally by spell_mage_mass_invisibility below.
+    SPELL_MAGE_INVISIBILITY                      = 66,
+    // Bloodlust/Heroism's own lockout debuffs (spell_shaman.cpp: SPELL_SHAMAN_SATED /
+    // SPELL_SHAMAN_EXHAUSTION) - reused as-is rather than minting Time Warp its own pair, so
+    // Time Warp and Bloodlust/Heroism share one shared lockout automatically (see
+    // spell_mage_time_warp's own comment).
+    SPELL_MAGE_TIME_WARP_SATED                   = 57724,
+    SPELL_MAGE_TIME_WARP_EXHAUSTION              = 57723
 };
 
 enum FrostMageReworkCreatures
@@ -2717,6 +2733,113 @@ class spell_mage_missile_barrage_proc : public AuraScript
     }
 };
 
+/*
+ * Arcane Mage rework (docs/arcane-mage-rework-design.md) - the new baseline spells' scripts.
+ * The talent tree itself (Phase 2/3 of .claude/skills/class-rework/SKILL.md) is not part of this
+ * slice.
+ */
+
+// 200067 - Brilliance Aura
+class spell_mage_brilliance_aura : public AuraScript
+{
+    PrepareAuraScript(spell_mage_brilliance_aura);
+
+    // "Restores 2% of missing mana every 1 second" - not stock aura math (SPELL_AURA_PERIODIC_
+    // ENERGIZE only ever pays a flat amount), so the tick reads live missing mana here instead of
+    // a DBC-expressible constant, same idiom as spell_mage_refreshment's OnEffectCalcAmount
+    // (Frost Mage rework) reading GetMaxHealth()/GetMaxPower() live. Applied per target (each
+    // raid member gets their own aura instance via the native TARGET_UNIT_CASTER_AREA_RAID
+    // targeting on effect1), so this naturally computes each target's own missing mana rather
+    // than the caster's.
+    static constexpr float MISSING_MANA_PCT = 0.02f;
+
+    void OnPeriodic(AuraEffect const* /*aurEff*/)
+    {
+        Unit* target = GetTarget();
+        if (!target || target->GetPowerType() != POWER_MANA)
+            return;
+
+        int32 missing = int32(target->GetMaxPower(POWER_MANA)) - int32(target->GetPower(POWER_MANA));
+        if (missing > 0)
+            target->EnergizeBySpell(target, GetId(), int32(missing * MISSING_MANA_PCT), POWER_MANA);
+    }
+
+    void Register() override
+    {
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_mage_brilliance_aura::OnPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+    }
+};
+
+// 200069 - Mass Invisibility
+class spell_mage_mass_invisibility : public SpellScript
+{
+    PrepareSpellScript(spell_mage_mass_invisibility);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_INVISIBILITY });
+    }
+
+    // "Does not affect allies in combat." Filtered here (target select) rather than inside the
+    // per-target hit handler, same shape as spell_sha_bloodlust's RemoveInvalidTargets.
+    void RemoveInCombatTargets(std::list<WorldObject*>& targets)
+    {
+        targets.remove_if([](WorldObject* obj)
+        {
+            Unit* unit = obj->ToUnit();
+            return !unit || unit->IsInCombat();
+        });
+    }
+
+    // Casts the real Invisibility (66) on each surviving target instead of expressing invisibility
+    // as this spell's own aura - reuses 66's existing fade-on-any-action behavior rather than
+    // reimplementing it.
+    void CastInvisibility(SpellEffIndex /*effIndex*/)
+    {
+        if (Unit* target = GetHitUnit())
+            target->CastSpell(target, SPELL_MAGE_INVISIBILITY, true);
+    }
+
+    void Register() override
+    {
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_mage_mass_invisibility::RemoveInCombatTargets, EFFECT_0, TARGET_UNIT_CASTER_AREA_RAID);
+        OnEffectHitTarget += SpellEffectFn(spell_mage_mass_invisibility::CastInvisibility, EFFECT_0, SPELL_EFFECT_DUMMY);
+    }
+};
+
+// 200070 - Time Warp
+class spell_mage_time_warp : public SpellScript
+{
+    PrepareSpellScript(spell_mage_time_warp);
+
+    // "[Same as Bloodlust]" - shares Bloodlust/Heroism's own lockout debuffs (57724 Sated / 57723
+    // Exhaustion, spell_shaman.cpp) instead of minting Time Warp its own pair, so all three
+    // abilities lock each other out with zero changes to spell_shaman.cpp. Mirrors
+    // spell_sha_bloodlust exactly (RemoveInvalidTargets checks both, ApplyDebuff applies one).
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_TIME_WARP_SATED, SPELL_MAGE_TIME_WARP_EXHAUSTION });
+    }
+
+    void RemoveInvalidTargets(std::list<WorldObject*>& targets)
+    {
+        targets.remove_if(Acore::UnitAuraCheck(true, SPELL_MAGE_TIME_WARP_SATED));
+        targets.remove_if(Acore::UnitAuraCheck(true, SPELL_MAGE_TIME_WARP_EXHAUSTION));
+    }
+
+    void ApplyDebuff()
+    {
+        if (Unit* target = GetHitUnit())
+            target->CastSpell(target, SPELL_MAGE_TIME_WARP_SATED, true);
+    }
+
+    void Register() override
+    {
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_mage_time_warp::RemoveInvalidTargets, EFFECT_ALL, TARGET_UNIT_CASTER_AREA_RAID);
+        AfterHit += SpellHitFn(spell_mage_time_warp::ApplyDebuff);
+    }
+};
+
 void AddSC_mage_spell_scripts()
 {
     RegisterSpellScript(spell_mage_arcane_blast);
@@ -2783,4 +2906,10 @@ void AddSC_mage_spell_scripts()
     RegisterSpellScript(spell_mage_enduring_winter);
     RegisterCreatureAI(npc_mage_frozen_orb);
     new FrostMageIcicleCombatReset();
+
+    // Arcane Mage rework (docs/arcane-mage-rework-design.md) - see the block above
+    // spell_mage_brilliance_aura.
+    RegisterSpellScript(spell_mage_brilliance_aura);
+    RegisterSpellScript(spell_mage_mass_invisibility);
+    RegisterSpellScript(spell_mage_time_warp);
 }
