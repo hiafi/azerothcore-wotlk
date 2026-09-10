@@ -34,6 +34,14 @@ namespace Mage
         constexpr uint32 SPELL_FINGERS_OF_FROST_CHARGES = 74396;
         constexpr uint32 SPELL_SHATTERING_COLD = 200003;
         constexpr uint32 SPELL_ICE_BARRIER = 11426;
+
+        // Arcane Mage rework (docs/arcane-mage-rework-design.md) - real stock spell ids this file's
+        // Arcane blocks need by number. Keep in sync with spell_mage.cpp's own MageSpells enum if
+        // either changes; spell_mage.cpp's SPELL_MAGE_ARCANE_BLAST_STACKS / SPELL_MAGE_ARCANE_POWER.
+        constexpr uint32 SPELL_ARCANE_BLAST_STACKS = 36032;
+        constexpr uint32 SPELL_ARCANE_POWER = 12042;
+        // Phase 3 Batch C - keep in sync with spell_mage.cpp's own SPELL_MAGE_ARCANE_MASTERY.
+        constexpr uint32 SPELL_ARCANE_MASTERY = 200085;
     }
 
     bool IsFrozenTarget(Unit const* caster, Unit const* victim)
@@ -154,6 +162,55 @@ namespace Mage
                 float bonusPct = std::min(distance / 30.0f, 1.0f) * 10.0f;
                 AddPct(doneTotalMod, bonusPct);
             }
+
+        // Arcane Resonance (Arcane Mage rework, docs/arcane-mage-rework-design.md Row 3, all 3
+        // ranks) - "While you have 4 stacks of Arcane Blast, your Arcane damage is increased by
+        // 3/6/9%." Real stock "Arcane Blast" stacking buff (36032, apps/dbc-tools
+        // source/spells/mage.csv) caps at exactly 4 stacks (raw_overrides.CumulativeAura /
+        // SpellInfo::StackAmount) - read live rather than a static aura since stacks rise and fall
+        // mid-fight. Design also says "spells that consume your Arcane Blast stacks benefit from
+        // this bonus" (Arcane Missiles, Arcane Overload) - not yet covered, since nothing in this
+        // rework actually drops the caster's Arcane Blast stacks on cast yet (that mechanic itself
+        // isn't built anywhere - see design doc's Progress notes). Once it is, that consuming cast's
+        // own script needs to read this stack count *before* dropping it, same ordering concern as
+        // Missile Barrage's Mastery clause.
+        if (spellProto->GetSchoolMask() & SPELL_SCHOOL_MASK_ARCANE)
+            if (Aura const* arcaneBlastStacks = caster->GetAura(SPELL_ARCANE_BLAST_STACKS))
+                if (arcaneBlastStacks->GetStackAmount() >= arcaneBlastStacks->GetSpellInfo()->StackAmount)
+                    if (AuraEffect* aurEff = caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_MAGE, 3007, EFFECT_0))
+                        AddPct(doneTotalMod, aurEff->GetAmount());
+
+        // Arcane Mind (Arcane Mage rework, Row 4, all 3 ranks) - "Your magic damage is increased by
+        // up to 4/8/12%, scaling with your current mana percentage." Scales *up* with mana%, not
+        // down - confirmed with the user (2026-09-08), matches the Rotation Model section's "Arcane
+        // Mind's high-mana scaling means the player weaves mana stones... to hold mana high while
+        // draining" framing. Player-only (mana% is meaningless for a non-mana guardian).
+        if (Player* player = caster->ToPlayer())
+            if (AuraEffect* aurEff = caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_MAGE, 71, EFFECT_1))
+                if (uint32 maxMana = player->GetMaxPower(POWER_MANA))
+                {
+                    float manaPct = float(player->GetPower(POWER_MANA)) / float(maxMana);
+                    AddPct(doneTotalMod, aurEff->GetAmount() * manaPct);
+                }
+
+        // Arcane Flows capstone (Arcane Mage rework, Row 7, rank 2 only - granted at max rank per
+        // System Rulings) - "Your Arcane Power increases your magic damage dealt by an additional
+        // 5%." Same live HasAura idiom as Shattered Barrier's capstone above (Ice Barrier check).
+        if (caster->HasAura(SPELL_ARCANE_POWER))
+            if (AuraEffect* aurEff = caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_MAGE, 2940, EFFECT_2))
+                AddPct(doneTotalMod, aurEff->GetAmount());
+
+        // Arcane Concentration (Row 2) / Missile Barrage (Row 5) shared Mastery clause, Phase 3
+        // Batch C - see spell_mage.cpp's GrantArcaneMasteryMarker (granted right before Clearcasting
+        // or Missile Barrage's own buff is consumed, not read live off either of those - both can
+        // empower a channeled Arcane Missiles cast, whose consumption happens before any tick's
+        // damage calc runs). Consumed immediately on read, not left to expire naturally, so it only
+        // ever applies to the one cast it was granted for.
+        if (AuraEffect* aurEff = caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_MAGE, 1976, EFFECT_0))
+        {
+            AddPct(doneTotalMod, aurEff->GetAmount());
+            caster->RemoveAurasDueToSpell(SPELL_ARCANE_MASTERY);
+        }
     }
 
     void ApplyMeleeDamageTakenPctMods(Unit* defender, Unit* /*attacker*/, SpellSchoolMask damageSchoolMask, float& takenTotalMod)

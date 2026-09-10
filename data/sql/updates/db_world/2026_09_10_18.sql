@@ -1,0 +1,14 @@
+-- DB update 2026_09_10_17 -> 2026_09_10_18
+-- Arcane Mage rework (docs/arcane-mage-rework-design.md) - "Arcane Missiles still consumes the
+-- Arcane Blast debuff" bugfix. Root-caused to a real, unmodified Blizzard `spell_linked_spell` row
+-- (comment: "Arcane Missiles Rank 1") implementing stock WotLK's "Arcane Missiles consumes Arcane
+-- Blast stacks on cast" behavior via the native "remove linked aura on removal" mechanism
+-- (Aura::HandleAuraSpecificMods, SpellAuras.cpp ~line 1300, triggered from Unit::_UnapplyAura
+-- whenever Arcane Missiles' own channel aura (5143) is removed/completes). This rework's design
+-- explicitly changed that: "Only Arcane Barrage and Temporal Convergence drop Arcane Blast stacks
+-- on cast. Arcane Overload and Arcane Missiles both benefit from Arcane Resonance's stack damage
+-- bonus like any other Arcane spell, but neither one consumes the stacks themselves." The row was
+-- never scrubbed when the rework's design changed this - same "pulled from existing data, never
+-- re-tuned for this rework's changed design" pattern as the Missile Barrage duration bug. See
+-- docs/bugs-and-fixes.md.
+DELETE FROM `spell_linked_spell` WHERE `spell_trigger` = -5143 AND `spell_effect` = -36032 AND `type` = 0;

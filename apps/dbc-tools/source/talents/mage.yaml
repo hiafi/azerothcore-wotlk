@@ -74,6 +74,20 @@ tabs:
     RaceMask: 2047
     BackgroundFile: 8
 talents:
+# Arcane Mage rework (docs/arcane-mage-rework-design.md) - new talent ids from source/ids.yaml's
+# talent block (60000-60799). 60007 Spellblade (0,3) - a new slot, no stock talent occupied it.
+- id: 60007
+  tab_id: 81
+  tier: 0
+  column: 3
+  rank_spell_ids:
+  - 200072
+  - 200073
+  - 200074
+  depends_on:
+    talent_id: 0
+    rank: 0
+  flags: 0
 - id: 23
   tab_id: 41
   tier: 2
@@ -414,23 +428,27 @@ talents:
   tab_id: 81
   tier: 0
   column: 0
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 0) - repointed from Arcane
+  # Subtlety to Alacrity, same slot. Rank 3 (200071) is newly-minted since the stock talent
+  # only had 2 ranks.
   rank_spell_ids:
   - 11210
   - 12592
+  - 200071
   depends_on:
     talent_id: 0
     rank: 0
   flags: 0
 - id: 75
   tab_id: 81
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 1) - repointed to (1,1) Arcane
+  # Subtlety (was Arcane Concentration at 1,2). Trimmed to 3 ranks (12576/12577 orphaned).
   tier: 1
-  column: 2
+  column: 1
   rank_spell_ids:
   - 11213
   - 12574
   - 12575
-  - 12576
-  - 12577
   depends_on:
     talent_id: 0
     rank: 0
@@ -439,6 +457,8 @@ talents:
   tab_id: 81
   tier: 0
   column: 1
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 0) - repointed from Arcane Focus
+  # to Arcane Meditation, same slot, same rank count.
   rank_spell_ids:
   - 11222
   - 12839
@@ -449,14 +469,17 @@ talents:
   flags: 0
 - id: 77
   tab_id: 81
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 4) - (4,3) Arcane Mind, same slot,
+  # content replaced. Real pulled data (was in source/spells/generic.csv, moved into
+  # mage_talents.csv this batch). Trimmed from 5 ranks to 3 (12502/12503 orphaned, matches the
+  # Arcane Stability precedent); rank 3 retuned 9%->10% to hit the design's 3/6/10% curve, ranks
+  # 1-2 already matched as pulled. Mana%-scaling damage bonus deferred to Phase 3.
   tier: 4
   column: 3
   rank_spell_ids:
   - 11232
   - 12500
   - 12501
-  - 12502
-  - 12503
   depends_on:
     talent_id: 0
     rank: 0
@@ -465,20 +488,24 @@ talents:
   tab_id: 81
   tier: 0
   column: 2
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 0) - Arcane Stability retuned in
+  # place, same slot, trimmed from 5 ranks to 3. Ranks 4/5's spell rows (16769, 16770) are left
+  # orphaned/unedited rather than deleted - see apps/dbc-tools/README.md on why an unreferenced
+  # row is harmless to leave in place.
   rank_spell_ids:
   - 11237
   - 12463
   - 12464
-  - 16769
-  - 16770
   depends_on:
     talent_id: 0
     rank: 0
   flags: 0
 - id: 81
   tab_id: 81
-  tier: 2
-  column: 1
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 1) - repointed to (1,2) Spell
+  # Impact (was 2,1), retuned in place.
+  tier: 1
+  column: 2
   rank_spell_ids:
   - 11242
   - 12467
@@ -489,17 +516,22 @@ talents:
   flags: 0
 - id: 82
   tab_id: 81
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 2) - (2,0) Arcane Concentration,
+  # same slot, content replaced (real Clearcasting proc, rank 3 newly-minted - see mage_talents.csv).
   tier: 2
   column: 0
   rank_spell_ids:
   - 11247
   - 12606
+  - 200076
   depends_on:
     talent_id: 0
     rank: 0
   flags: 0
 - id: 83
   tab_id: 81
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 3) - (3,0) Arcane Shielding, same
+  # slot, content replaced (ward absorb% boost; absorb-proc damage buff deferred to Phase 3).
   tier: 3
   column: 0
   rank_spell_ids:
@@ -511,38 +543,50 @@ talents:
   flags: 0
 - id: 85
   tab_id: 81
-  tier: 1
-  column: 0
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 2) - repointed to (2,1) Magic
+  # Attunement (was tier1,col0). Trimmed to 2 ranks (54659 orphaned).
+  tier: 2
+  column: 1
   rank_spell_ids:
   - 28574
   - 54658
-  - 54659
   depends_on:
     talent_id: 0
     rank: 0
   flags: 0
 - id: 86
   tab_id: 81
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 4) - (4,1) Arcane Barrage, same
+  # slot (was Presence of Mind, which moved to baseline in Phase 1). Repointed to the real stock
+  # Arcane Barrage spell (44425, already pulled and left untouched - its base damage/cost/cooldown
+  # already match the design's "500 Arcane damage" flavor at this codebase's level curve). Per-stack
+  # target/refund clauses deferred to Phase 3.
   tier: 4
   column: 1
   rank_spell_ids:
-  - 12043
+  - 44425
   depends_on:
     talent_id: 0
     rank: 0
   flags: 1
 - id: 87
   tab_id: 81
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 6) - (6,1) Arcane Power, same slot,
+  # numbers retuned to design's flat 15%/15% (was 20%/20% as pulled). depends_on zeroed: pointed at
+  # id 421 (old-tree same-column prerequisite chain), which this point-buy tree doesn't use -
+  # matches the precedent already set on id 421 itself in Phase 1.
   tier: 6
   column: 1
   rank_spell_ids:
   - 12042
   depends_on:
-    talent_id: 421
-    rank: 2
+    talent_id: 0
+    rank: 0
   flags: 1
 - id: 88
   tab_id: 81
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 3) - (3,1) Improved Counterspell,
+  # same slot, content replaced (CD reduction; silence capstone deferred to Phase 3).
   tier: 3
   column: 1
   rank_spell_ids:
@@ -554,6 +598,11 @@ talents:
   flags: 0
 - id: 421
   tab_id: 81
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 5) - (5,1) Arcane Instability,
+  # same slot. depends_on zeroed: it pointed at talent id 86 (Presence of Mind), which left the
+  # tree entirely this rework (moved to baseline) - stale prerequisite, not yet replaced with a
+  # real one. Matches the Frost Mage rework's own precedent of zeroing dependencies pending the
+  # user specifying the real prerequisite chain, rather than guessing at one.
   tier: 5
   column: 1
   rank_spell_ids:
@@ -561,7 +610,7 @@ talents:
   - 15059
   - 15060
   depends_on:
-    talent_id: 86
+    talent_id: 0
     rank: 0
   flags: 0
 - id: 741
@@ -589,6 +638,8 @@ talents:
   flags: 0
 - id: 1142
   tab_id: 81
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 3) - (3,2) Arcane Resonance, same
+  # slot. Shell only (SPELL_AURA_DUMMY marker) - whole talent deferred to Phase 3.
   tier: 3
   column: 2
   rank_spell_ids:
@@ -625,19 +676,27 @@ talents:
   flags: 0
 - id: 1650
   tab_id: 81
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 1) - repointed to (1,0) Magic
+  # Absorption (was 1,1), content replaced. Rank 3 (200075) newly-minted.
   tier: 1
-  column: 1
+  column: 0
   rank_spell_ids:
   - 29441
   - 29444
+  - 200075
   depends_on:
     talent_id: 0
     rank: 0
   flags: 0
 - id: 1724
   tab_id: 81
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 4) - repointed to (4,2) Improved
+  # Blink (was 4,0), retuned in place: cost reduction doubled to -50%/-100% and a real cooldown-
+  # reduction effect added (-2.5s/-5s) in the previously-unused effect2 slot, replacing the old
+  # "chance to be hit" proc effect that isn't part of this design. No Shimmer (doesn't exist in
+  # this codebase). Capstone (post-Blink damage reduction) deferred to Phase 3.
   tier: 4
-  column: 0
+  column: 2
   rank_spell_ids:
   - 31569
   - 31570
@@ -647,29 +706,45 @@ talents:
   flags: 0
 - id: 1725
   tab_id: 81
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 5) - (5,2) Arcane Potency, same
+  # slot, values already matched the design doc as pulled (15%/30%) - no content edit needed.
+  # depends_on zeroed: pointed at id 86 rank 0 (old-tree cross-column artifact), doesn't fit this
+  # point-buy tree - same cleanup as id 421/87.
   tier: 5
   column: 2
   rank_spell_ids:
   - 31571
   - 31572
   depends_on:
-    talent_id: 86
+    talent_id: 0
     rank: 0
   flags: 0
 - id: 1726
   tab_id: 81
-  tier: 5
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 8) - (8,0) Prismatic Cloak, repointed
+  # here from (5,0) in the Row 4-6 batch (position-only then, content untouched). Now retuned in
+  # place: trimmed 3 ranks -> 2, values 2/4/6% dmg reduction + 1/2/3s Invisibility fade-time
+  # reduction -> design's 1/2% + 1.5/3s. Row 8 prose-vs-slot-mapping-table discrepancy resolved this
+  # batch in favor of the prose section (matches the Phase 1 plan's own "(8,0) Prismatic Cloak"
+  # framing) - slot mapping table corrected to match, see Progress notes.
+  tier: 8
   column: 0
   rank_spell_ids:
   - 31574
   - 31575
-  - 54354
   depends_on:
     talent_id: 0
     rank: 0
   flags: 0
 - id: 1727
   tab_id: 81
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 6) - (6,0) Arcane Empowerment, same
+  # slot, content replaced. Effect1 rebuilt as a plain classmask-scoped damage% SpellMod on Arcane
+  # Blast + Arcane Barrage (5/10/15%, was an obscure bonus-multiplier SpellMod scoped to Blast only
+  # with a "*5" tooltip macro driving Missiles' number) - replaced rather than reverse-engineered,
+  # see the design doc's Progress notes. Effect3 (previously unused) now carries Arcane Missiles'
+  # own damage% bonus (10/20/30%) as a separate, independent SpellMod. Effect2 (party/raid damage,
+  # native area aura) already matched the design's 1/2/3% as pulled - untouched.
   tier: 6
   column: 0
   rank_spell_ids:
@@ -682,24 +757,32 @@ talents:
   flags: 0
 - id: 1728
   tab_id: 81
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 7) - (7,2) Mind Mastery, same slot,
+  # content retuned. Trimmed 5 ranks -> 3 (real ranks 1-3 already hit the design's 3/6/9% INT% spell
+  # power exactly as pulled - effect1 untouched). Added effect2 (mana cost -2/-4/-6% of all magic
+  # schools, MOD_POWER_COST_SCHOOL_PCT/misc 126) and effect3 (Brilliance Aura duration +2/+4/+6s,
+  # ADD_FLAT_MODIFIER/SPELLMOD_DURATION scoped to Brilliance Aura's new identity classmask dword3=1
+  # - see mage.csv's 200067 row) for the design's other two clauses.
   tier: 7
   column: 2
   rank_spell_ids:
   - 31584
   - 31585
   - 31586
-  - 31587
-  - 31588
   depends_on:
     talent_id: 0
     rank: 0
   flags: 0
 - id: 1729
   tab_id: 81
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 8) - (8,1) Temporal Convergence,
+  # repointed from its old "Slow" grant (31589, superseded in Phase 1 - Slow is baseline now) onto
+  # a new shell spell (200078). Shell only (icon/cost/cooldown) - the stack-consume + variable CD
+  # reduction logic is Phase 3, see deferred list. No position change needed, already tier8/col1.
   tier: 8
   column: 1
   rank_spell_ids:
-  - 31589
+  - 200078
   depends_on:
     talent_id: 0
     rank: 0
@@ -830,17 +913,32 @@ talents:
   flags: 1
 - id: 1826
   tab_id: 81
-  tier: 9
-  column: 2
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 4) - repointed to (4,0) Spell Power
+  # (was 9,2), retuned in place: all 3 ranks rewritten to hit the design's 50/75/100% crit-damage
+  # curve (was 25%/50% as pulled - matching the design's "150/175/200% total" phrasing needed a
+  # full retune, not just a bolted-on 3rd rank). Rank 3 is new spell 200077. Capstone (below-50%-
+  # mana proc) deferred to Phase 3.
+  tier: 4
+  column: 0
   rank_spell_ids:
   - 35578
   - 35581
+  - 200077
   depends_on:
     talent_id: 0
     rank: 0
   flags: 0
 - id: 1843
   tab_id: 81
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 7) - (7,1) Arcane Flows, same slot,
+  # retuned in place. Real pulled data already covered Presence of Mind/Arcane Power/Invisibility CD
+  # -15/-30% (effect1) almost exactly as designed - added Arcane Overload's new identity classmask
+  # (dword3=2) to that same effect's scope. Evocation's flat CD reduction (effect2) was -1min/-2min
+  # in the pulled data, retuned to the design's -15/-30 sec. Arcane Orb and Alter Time (also named in
+  # the design's CD-reduction list) don't exist in this WotLK 3.3.5a ruleset - they're Cataclysm-era
+  # spells; omitted rather than faked. depends_on (talent 87 = Arcane Power at 6,1, directly below)
+  # kept - structurally correct column dependency, not a stale cross-column artifact. Capstone
+  # deferred to Phase 3.
   tier: 7
   column: 1
   rank_spell_ids:
@@ -852,6 +950,14 @@ talents:
   flags: 0
 - id: 1844
   tab_id: 81
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 6) - (6,2) Incanter's Absorption,
+  # same slot, content added to (not replacing) the real pulled data. Real 44394-44396 already
+  # carry a working base-game proc (spell_mage_incanters_absorbtion_base_AuraScript, triggers off
+  # Wards/Ice Barrier/Mana Shield absorbs, grants a spell-damage buff) via effect1 - left untouched
+  # so that script keeps working. Added a new effect2 (Spellsteal cooldown -1/-2/-3s, previously
+  # unused slot) for the design's "reduces the cooldown of Spellsteal" clause. The design's "100%
+  # chance to grant a shield" reimagining of this talent and its capstone are a wholly separate
+  # mechanic from the existing ward-proc script - deferred to Phase 3 (see design doc).
   tier: 6
   column: 2
   rank_spell_ids:
@@ -864,6 +970,8 @@ talents:
   flags: 0
 - id: 1845
   tab_id: 81
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 2) - (2,2) Student of the Mind,
+  # same slot, content replaced. Fully data-only - see the design doc's Phase 2/3 notes.
   tier: 2
   column: 2
   rank_spell_ids:
@@ -876,6 +984,13 @@ talents:
   flags: 0
 - id: 1846
   tab_id: 81
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 9) - (9,1) Netherwind Presence, same
+  # slot, retuned in place. Real stock data was a flat always-on passive haste bonus (2/4/6%, no
+  # duration/stack/proc scaffolding at all) - retuned to the design's 1/2/3%. The actual "haste stacks
+  # up to 3x for 10s on casting [spell list]" proc mechanism needs a wholly new AuraScript, not just
+  # its capstone - the design's trigger list also spans Druid spells (Moonfire/Starfire/Starsurge),
+  # which a single spell's classmask can't scope across families at all. Deferred whole to Phase 3 -
+  # see deferred list (previously only the capstone was listed there, corrected this batch).
   tier: 9
   column: 1
   rank_spell_ids:
@@ -888,10 +1003,15 @@ talents:
   flags: 0
 - id: 1847
   tab_id: 81
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 10) - (10,1) Arcane Overload,
+  # repointed here from its old redundant "Arcane Barrage" capstone grant (44425, already also
+  # granted by id 86 at 4,1) onto a new shell spell (200079). Already sitting at tier10/col1 exactly
+  # matching the design's target slot - no position move needed, content-only swap. Shell only
+  # (icon/cost/cooldown) - the mana-spend/AoE damage/regen/buff mechanic is Phase 3, see deferred list.
   tier: 10
   column: 1
   rank_spell_ids:
-  - 44425
+  - 200079
   depends_on:
     talent_id: 0
     rank: 0
@@ -1045,20 +1165,31 @@ talents:
   flags: 0
 - id: 2209
   tab_id: 81
-  tier: 8
-  column: 2
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 5) - repointed to (5,0) Missile
+  # Barrage (was 8,2; that slot's real occupant, id 1726/Prismatic Cloak, was deleted - its spell
+  # ids 31574/31575/54354 are currently unhosted, to be reassigned when Row 7-8 lands). Trimmed
+  # from 5 ranks to 3, ProcChance retuned 8/16/24 -> 12/23/35 (matches the design's 12/23/35%
+  # headline numbers exactly for the Arcane Blast trigger; the existing hardcoded 50%-of-ProcChance
+  # roll for "any other successful cast", in spell_mage_missile_barrage::CheckProc, happens to land
+  # within a point of the design's 6/12/18% secondary numbers too). The design's actual two-tier
+  # *spell list* (Starfire/Starsurge as full-chance triggers, Arcane Barrage/Fireball/Frostbolt/
+  # Slow/Moonfire at half chance, some of them cross-family) isn't expressible as DBC classmask -
+  # this proc is entirely hardcoded in that CheckProc, with no per-spell classmask on the row at
+  # all - deferred to Phase 3 (see design doc, newly added to the deferred list this batch).
+  tier: 5
+  column: 0
   rank_spell_ids:
   - 44404
   - 54486
   - 54488
-  - 54489
-  - 54490
   depends_on:
     talent_id: 0
     rank: 0
   flags: 0
 - id: 2211
   tab_id: 81
+  # Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 2) - (2,3) Focus Magic, same
+  # slot, values already matched the design doc as pulled - cosmetic retune only.
   tier: 2
   column: 3
   rank_spell_ids:
@@ -1121,5 +1252,44 @@ skill_line_abilities:
 - id: 30402                # minted, source/ids.yaml skilllineability block (30400-30499)
   skill_line: 6             # Frost
   spell_id: 200007          # Frozen Orb
+  class_mask: 128
+  min_skill_line_rank: 1
+# Arcane Mage rework (docs/arcane-mage-rework-design.md) - buckets the fully-custom Arcane
+# spell IDs into the Arcane Spellbook tab. Presence of Mind (12043) and Slow (31589) don't need
+# rows here even though they also moved to baseline this phase - both are real pulled Blizzard
+# spell IDs that already carry their own stock SkillLineAbility row.
+- id: 30403                # minted, source/ids.yaml skilllineability block (30400-30499)
+  skill_line: 237           # Arcane
+  spell_id: 200067          # Brilliance Aura
+  class_mask: 128
+  min_skill_line_rank: 1
+- id: 30404                # minted, source/ids.yaml skilllineability block (30400-30499)
+  skill_line: 237           # Arcane
+  spell_id: 200068          # Arcane Ward
+  class_mask: 128
+  min_skill_line_rank: 1
+- id: 30405                # minted, source/ids.yaml skilllineability block (30400-30499)
+  skill_line: 237           # Arcane
+  spell_id: 200069          # Mass Invisibility
+  class_mask: 128
+  min_skill_line_rank: 1
+- id: 30406                # minted, source/ids.yaml skilllineability block (30400-30499)
+  skill_line: 237           # Arcane
+  spell_id: 200070          # Time Warp
+  class_mask: 128
+  min_skill_line_rank: 1
+# Same bug class as Frost's Flurry/Glacial Spike/Frozen Orb (docs/skilllineability-handoff.md):
+# these two talents (8,1 Temporal Convergence and 10,1 Arcane Overload) were repointed from a
+# stock Blizzard spell ID onto a brand-new custom "shell" spell ID (200078/200079) this rework -
+# both are real player-cast active abilities (own cooldown, not passive), so without a row here
+# they'd fall back to the default General spellbook tab instead of Arcane.
+- id: 30407                # minted, source/ids.yaml skilllineability block (30400-30499)
+  skill_line: 237           # Arcane
+  spell_id: 200078          # Temporal Convergence
+  class_mask: 128
+  min_skill_line_rank: 1
+- id: 30408                # minted, source/ids.yaml skilllineability block (30400-30499)
+  skill_line: 237           # Arcane
+  spell_id: 200079          # Arcane Overload
   class_mask: 128
   min_skill_line_rank: 1
