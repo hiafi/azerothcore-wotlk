@@ -135,6 +135,10 @@ __pycache__/
 #
 # ==================
 
+# mod-dpssim: first-party DPS sim daemon, bespoke to this server's custom stat system and core
+# patches (see .agents/plans/dps-sim-module/) — tracked in this repo, not a separate module repo.
+!modules/mod-dpssim
+
 # Live-stack e2e private / local tooling (scratch tests stay uncommitted)
 e2e/local/**
 !e2e/local/README.md

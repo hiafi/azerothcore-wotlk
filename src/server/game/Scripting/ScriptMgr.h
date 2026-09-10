@@ -195,6 +195,7 @@ public: /* WorldScript */
     void OnShutdown();
     void OnBeforeWorldInitialized();
     void OnAfterUnloadAllMaps();
+    void OnDpsSimRun();
 
 public: /* FormulaScript */
     void OnHonorCalculation(float& honor, uint8 level, float multiplier);

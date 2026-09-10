@@ -53,6 +53,16 @@ AC_COMMON_API double rand_chance();
 /* Return a random number in the range 0..count (exclusive) with each value having a different chance of happening */
 AC_COMMON_API uint32 urandweighted(std::size_t count, double const* chances);
 
+/* For modules/mod-dpssim's seeded RNG mode only (see .agents/plans/dps-sim-module/
+ * dps-sim-module.PLAN.md, core patch 1): replaces the calling thread's RNG state with a freshly,
+ * deterministically seeded one, so every urand()/irand()/frand()/rand_chance()/rand32()/... call
+ * on this thread from this point on is reproducible from `seed` alone. All of the above route
+ * through the single thread_local SFMTRand instance in Random.cpp, so this one call reseeds every
+ * one of them at once - there is no second RNG source to separately seed.
+ * Must be called from the thread that will actually perform the sim's rolls (thread_local state);
+ * the normal server never calls this. */
+AC_COMMON_API void SetRandomSeed(uint32 seed);
+
 /* Return true if a random roll fits in the specified chance (range 0-100). */
 inline bool roll_chance_f(float chance)
 {

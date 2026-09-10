@@ -20,6 +20,7 @@
 
 #include "Common.h"
 #include "Duration.h"
+#include <atomic>
 
 enum class TimeFormat : uint8
 {
@@ -81,9 +82,46 @@ inline TimePoint GetApplicationStartTime()
     return ApplicationStartTime;
 }
 
+namespace Acore::Time
+{
+    // Sim-clock override for modules/mod-dpssim (see .agents/plans/dps-sim-module/
+    // dps-sim-module.PLAN.md, "Critical finding: getMSTime() is a second, unfakeable wall-clock
+    // dependency"). Normally GetTimeMS()/getMSTime() read steady_clock::now() live, on every
+    // call, with no injection point - fine for a real-time server, fatal for a sim daemon that
+    // drives Map::Update() with its own (possibly accelerated) diff instead of running
+    // World::Update() at real pace: spell cooldown/GCD *storage* goes through
+    // GameTime::GetGameTimeMS() (itself refreshed from GetTimeMS() below, see GameTime.cpp), but
+    // *expiry checks* read getMSTime() directly (Player::HasSpellCooldown and friends) - without
+    // this override the two decorrelate within seconds of an accelerated sim run and every
+    // cooldown/the GCD reads as already-expired. Inactive (`< 0`) by default: zero behavior
+    // change for the normal server. Only the sim daemon's own tick loop should ever call
+    // SetSimClockOverride(); nothing else in the codebase should touch this.
+    inline std::atomic<int64> SimClockOverrideMs{-1};
+
+    inline void SetSimClockOverride(Milliseconds ms)
+    {
+        SimClockOverrideMs.store(ms.count(), std::memory_order_relaxed);
+    }
+
+    inline void ClearSimClockOverride()
+    {
+        SimClockOverrideMs.store(-1, std::memory_order_relaxed);
+    }
+
+    inline bool IsSimClockOverrideActive()
+    {
+        return SimClockOverrideMs.load(std::memory_order_relaxed) >= 0;
+    }
+}
+
 inline Milliseconds GetTimeMS()
 {
     using namespace std::chrono;
+
+    if (int64 const simOverride = Acore::Time::SimClockOverrideMs.load(std::memory_order_relaxed); simOverride >= 0)
+    {
+        return Milliseconds(simOverride);
+    }
 
     return duration_cast<milliseconds>(steady_clock::now() - GetApplicationStartTime());
 }
@@ -102,9 +140,10 @@ inline Milliseconds GetMSTimeDiff(Milliseconds oldMSTime, Milliseconds newMSTime
 
 inline uint32 getMSTime()
 {
-    using namespace std::chrono;
-
-    return uint32(duration_cast<milliseconds>(steady_clock::now() - GetApplicationStartTime()).count());
+    // Delegates to GetTimeMS() (rather than reading steady_clock::now() independently, as this
+    // used to) so the two can never drift apart - and so the sim-clock override above covers
+    // both with one patch.
+    return uint32(GetTimeMS().count());
 }
 
 inline uint32 getMSTimeDiff(uint32 oldMSTime, uint32 newMSTime)

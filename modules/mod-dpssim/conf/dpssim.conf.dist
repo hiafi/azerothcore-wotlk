@@ -1,0 +1,36 @@
+#
+# This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
+#
+# This file is free software; as a special exception the author gives
+# unlimited permission to copy and/or distribute it, with or without
+# modifications, as long as this notice is preserved.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY, to the extent permitted by law; without even the
+# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#
+
+########################################
+# DPS Simulator module configuration
+########################################
+#
+#    DpsSim.Enabled
+#        Description: Boot this worldserver process as a DPS sim daemon instead of a normal
+#                      server. Skips the auth/world socket listeners (never a connectable realm)
+#                      and the freeze detector, and replaces the real-time tick loop with the
+#                      sim daemon's own loop (see WorldScript::OnDpsSimRun() and
+#                      .agents/plans/dps-sim-module/dps-sim-module.PLAN.md). Never enable this on
+#                      a config also meant to serve real players.
+#        Default:     0 - (Disabled - normal worldserver behavior)
+#                     1 - (Enabled - sim daemon mode)
+#
+
+DpsSim.Enabled = 0
+
+#
+# Also set, in this process's worldserver.conf (not a mod-dpssim setting - it's the core
+# map-updater thread pool size): MapUpdate.Threads = 0
+#
+# Recommended for sim runs so map updates stay synchronous and deterministic on the sim's own
+# thread rather than reasoning about the async map-updater thread pool - see the "Open
+# architecture decision" section of .agents/plans/dps-sim-module/dps-sim-module.PLAN.md.

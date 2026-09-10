@@ -29,6 +29,7 @@ class SFMTRand
 {
 public:
     SFMTRand();
+    explicit SFMTRand(uint32 seed); // deterministic seed - see Random.h's SetRandomSeed()
     uint32 RandomUInt32(); // Output random bits
     void* operator new(std::size_t size, std::nothrow_t const&);
     void operator delete(void* ptr, std::nothrow_t const&);
