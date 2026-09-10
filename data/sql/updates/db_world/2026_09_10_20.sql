@@ -1,3 +1,4 @@
+-- DB update 2026_09_05_38 -> 2026_09_10_20
 --
 -- Death Knights start at level 1 on this server (StartHeroicPlayerLevel = 1), but
 -- `player_class_stats` only ever had DK (Class 6) rows from stock's level 55 onward, since
