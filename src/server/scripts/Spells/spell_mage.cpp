@@ -20,6 +20,7 @@
 #include "Containers.h"
 #include "CreatureAI.h"
 #include "CreatureScript.h"
+#include "GameTime.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
 #include "MageMechanics.h"
@@ -138,7 +139,42 @@ enum MageSpells
     // Time Warp and Bloodlust/Heroism share one shared lockout automatically (see
     // spell_mage_time_warp's own comment).
     SPELL_MAGE_TIME_WARP_SATED                   = 57724,
-    SPELL_MAGE_TIME_WARP_EXHAUSTION              = 57723
+    SPELL_MAGE_TIME_WARP_EXHAUSTION              = 57723,
+
+    // Phase 3 (Deferred to Phase 3 list) - real stock IDs the new talent-clause scripts below need
+    // by name. Keep in sync with MageMechanics.cpp's own SPELL_ARCANE_BLAST_STACKS /
+    // SPELL_ARCANE_POWER if either changes.
+    SPELL_MAGE_ARCANE_BLAST_STACKS               = 36032,
+    SPELL_MAGE_ARCANE_POWER                      = 12042,
+    SPELL_MAGE_BLINK                             = 1953,
+    SPELL_MAGE_COUNTERSPELL                      = 2139,
+
+    // Phase 3 Batch B - new spells, reserved block 200000-209999.
+    SPELL_MAGE_SPELL_POWER_SURGE                 = 200080,
+    SPELL_MAGE_IMPROVED_BLINK_BUFF               = 200081,
+    SPELL_MAGE_ARCANE_SHIELDING_BUFF_R1          = 200082,
+    SPELL_MAGE_ARCANE_SHIELDING_BUFF_R2          = 200083,
+    SPELL_MAGE_IMPROVED_COUNTERSPELL_SILENCE     = 200084,
+
+    // Phase 3 Batch C - real stock IDs the new scripts need by name, plus new spells (reserved
+    // block 200000-209999).
+    SPELL_MAGE_SPELLSTEAL                        = 30449,
+    SPELL_MAGE_REPLENISHMENT                     = 57669,
+    SPELL_MAGE_ARCANE_MASTERY                    = 200085,
+    SPELL_MAGE_INCANTERS_ABSORPTION_SHIELD       = 200086,
+    SPELL_MAGE_SPELLBLADE_MANA                   = 200087,
+
+    // Phase 3 Batch D - real stock IDs the new scripts need by name, plus new spells (reserved
+    // block 200000-209999).
+    SPELL_MAGE_SLOW                              = 31589,
+    SPELL_MAGE_EVOCATION                         = 12051,
+    SPELL_MAGE_NETHERWIND_PRESENCE_R1            = 200088,
+    SPELL_MAGE_NETHERWIND_PRESENCE_R2            = 200089,
+    SPELL_MAGE_NETHERWIND_PRESENCE_R3            = 200090,
+    SPELL_MAGE_NETHERWIND_PRESENCE_ICD           = 200091,
+    SPELL_MAGE_ARCANE_OVERLOAD_DAMAGE            = 200092,
+    SPELL_MAGE_ARCANE_OVERLOAD_BUFF              = 200093,
+    SPELL_MAGE_NETHERWIND_PRESENCE_CAPSTONE      = 200094
 };
 
 enum FrostMageReworkCreatures
@@ -151,7 +187,20 @@ enum MageSpellIcons
     MAGE_ICON_MAGIC_ABSORPTION                   = 459,
     MAGE_ICON_CLEARCASTING                       = 212,
     MAGE_ICON_PRESENCE_OF_MIND                   = 139,
-    MAGE_ICON_LIVING_BOMB                        = 3000
+    MAGE_ICON_LIVING_BOMB                        = 3000,
+
+    // Arcane Mage rework, Phase 3 Batch B - marker-aura-by-icon idiom, each icon reused from the
+    // talent's own real SpellIconID (apps/dbc-tools/source/spells/mage_talents.csv).
+    MAGE_ICON_SPELL_POWER                        = 2281,
+    MAGE_ICON_IMPROVED_BLINK                     = 1499,
+    MAGE_ICON_IMPROVED_COUNTERSPELL              = 17,
+    MAGE_ICON_ARCANE_SHIELDING                   = 209,
+
+    // Phase 3 Batch C.
+    MAGE_ICON_INCANTERS_ABSORPTION                = 2941,
+
+    // Phase 3 Batch D.
+    MAGE_ICON_NETHERWIND_PRESENCE                 = 2943
 };
 
 /*
@@ -1143,6 +1192,24 @@ class spell_mage_arcane_blast : public SpellScript
 
     bool Load() override { _triggerSpellId = 0; return true; }
 
+    // Root cause of the "Arcane Blast grants 2 stacks of Netherwind Presence" bug (playtest
+    // reports, 2026-09-09/10; confirmed live via debug instrumentation - see
+    // docs/bugs-and-fixes.md): EFFECT_1's own DBC data (30451) implicit-targets TARGET_UNIT_CASTER
+    // (self), same as any normal self-buff effect. Even though HandleTriggerSpell below prevents
+    // that effect's own default action, target *resolution* happens earlier, before any script
+    // hook runs - so the caster still lands in the spell's own m_UniqueTargetInfo as a second,
+    // separate target alongside the real enemy target. Engine confirmed (debug logging on
+    // Spell::DoAllEffectOnTarget) to run its full per-target hit/proc pipeline for *both* targets
+    // on a single real (non-triggered) Arcane Blast cast - once for the enemy, once for the
+    // caster - each one independently satisfying any aura's classmask-based CheckProc that
+    // listens for Arcane Blast (Netherwind Presence, Missile Barrage), doubling their procs.
+    // Clearing the target here (before it's ever added) is the fix - EFFECT_1's real work is
+    // entirely manual already (HandleAfterCast, below), so it never needed a real unit target.
+    void ClearSelfTarget(WorldObject*& target)
+    {
+        target = nullptr;
+    }
+
     void HandleTriggerSpell(SpellEffIndex effIndex)
     {
         _triggerSpellId = GetSpellInfo()->Effects[effIndex].TriggerSpell;
@@ -1156,8 +1223,8 @@ class spell_mage_arcane_blast : public SpellScript
 
     void Register() override
     {
+        OnObjectTargetSelect += SpellObjectTargetSelectFn(spell_mage_arcane_blast::ClearSelfTarget, EFFECT_1, TARGET_UNIT_CASTER);
         OnEffectLaunch += SpellEffectFn(spell_mage_arcane_blast::HandleTriggerSpell, EFFECT_1, SPELL_EFFECT_TRIGGER_SPELL);
-        OnEffectLaunchTarget += SpellEffectFn(spell_mage_arcane_blast::HandleTriggerSpell, EFFECT_1, SPELL_EFFECT_TRIGGER_SPELL);
         AfterCast += SpellCastFn(spell_mage_arcane_blast::HandleAfterCast);
     }
 
@@ -2483,24 +2550,86 @@ class spell_mage_imp_mana_gems : public AuraScript
     }
 };
 
+namespace
+{
+    // Arcane Mage rework (docs/arcane-mage-rework-design.md), Phase 3 Batch C - shared by
+    // spell_mage_clearcasting and spell_mage_missile_barrage_proc below (System Rulings: "Mastery
+    // for Arcane scales Missile Barrage's empowered Arcane Missiles and Clearcasting-buffed spells"
+    // - one shared hook, "roughly half the coefficient of Fire's/Frost's single hook" - Frost's own
+    // Frostbite capstone applies GetMasteryPercentage() unscaled, MageMechanics.cpp). Granted right
+    // before each buff's native charge is consumed (inside CheckProc, which still has the casting
+    // spell's context), not via a live MageMechanics.cpp read at damage-calc time - both buffs can
+    // empower a *channeled* spell (Arcane Missiles), whose consumption happens at channel start,
+    // well before any tick's own damage calc runs (see Phase 3 Batch A's Progress notes on this
+    // exact ordering risk). The marker (200085, "Arcane Mastery") is read broadly in
+    // MageMechanics.cpp, not scoped to Arcane Missiles specifically - matches "Clearcasting-buffed
+    // spells" (plural, unscoped) in System Rulings.
+    void GrantArcaneMasteryMarker(Unit* caster)
+    {
+        Player* player = caster->ToPlayer();
+        if (!player)
+            return;
+
+        int32 bonus = int32(player->GetMasteryPercentage() * 0.5f);
+        if (bonus > 0)
+            caster->CastCustomSpell(SPELL_MAGE_ARCANE_MASTERY, SPELLVALUE_BASE_POINT0, bonus, caster, true);
+    }
+}
+
 // -44404 - Missile Barrage
 class spell_mage_missile_barrage : public AuraScript
 {
     PrepareAuraScript(spell_mage_missile_barrage);
 
+    // Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 5) - "Arcane Blast, Starfire and
+    // Starsurge have a 12/23/35% chance to empower your next Arcane Missiles... Arcane Barrage,
+    // Fireball, Frostbolt, Slow and Moonfire have a 6/12/18% chance." Starsurge doesn't exist in
+    // this WotLK 3.3.5a ruleset (Cata-era spell) - omitted, same treatment as Arcane Flows' Arcane
+    // Orb/Alter Time. Real classmask bits verified live via the DB overlay (see design doc's
+    // Progress notes): Arcane Blast dword1 0x20000000, Arcane Barrage dword2 0x8000, Fireball
+    // dword1 0x1, Frostbolt dword1 0x20, Slow dword1 0x80000000, Starfire (Druid) dword1 0x4,
+    // Moonfire (Druid) dword1 0x2. Replaces the previous "Arcane Blast full chance, any other cast
+    // 50%" placeholder (no classmask on the row at all) with the design's actual named list.
     bool CheckProc(ProcEventInfo& eventInfo)
     {
         SpellInfo const* spellInfo = eventInfo.GetSpellInfo();
         if (!spellInfo)
             return false;
 
-        // Arcane Blast - full proc chance (100%)
-        // Arcane Blast spell family flags: 0x20000000
-        if (spellInfo->SpellFamilyFlags[0] & 0x20000000)
-            return true;
+        // Guard against Arcane Blast's internal Arcane Blast Stacks self-cast (36032, triggered
+        // by spell_mage_arcane_blast::HandleAfterCast) double-satisfying this same classmask
+        // check - see the identical guard/comment on spell_mage_netherwind_presence::CheckProc.
+        Spell const* procSpell = eventInfo.GetProcSpell();
+        if (procSpell && procSpell->IsTriggered())
+            return false;
 
-        // Other spells - 50% proc chance
-        return roll_chance_i(50);
+        if (spellInfo->SpellFamilyName == SPELLFAMILY_MAGE)
+        {
+            // Arcane Blast - full proc chance (100%)
+            if (spellInfo->SpellFamilyFlags[0] & 0x20000000)
+                return true;
+
+            // Arcane Barrage, Fireball, Frostbolt, Slow - half proc chance
+            if ((spellInfo->SpellFamilyFlags[0] & (0x1 | 0x20 | 0x80000000)) || (spellInfo->SpellFamilyFlags[1] & 0x8000))
+                return roll_chance_i(50);
+
+            return false;
+        }
+
+        if (spellInfo->SpellFamilyName == SPELLFAMILY_DRUID)
+        {
+            // Starfire - full proc chance (100%)
+            if (spellInfo->SpellFamilyFlags[0] & 0x4)
+                return true;
+
+            // Moonfire - half proc chance
+            if (spellInfo->SpellFamilyFlags[0] & 0x2)
+                return roll_chance_i(50);
+
+            return false;
+        }
+
+        return false;
     }
 
     void Register() override
@@ -2677,6 +2806,11 @@ class spell_mage_clearcasting : public AuraScript
             if (GetTarget()->HasAura(SPELL_MAGE_MISSILE_BARRAGE_PROC))
                 return false;
 
+        // Arcane Concentration (docs/arcane-mage-rework-design.md, Row 2) - "increases its damage
+        // by your Mastery." Same shared marker as Missile Barrage's own Mastery clause below
+        // (System Rulings frames both as one mechanism).
+        GrantArcaneMasteryMarker(GetTarget());
+
         return true;
     }
 
@@ -2704,6 +2838,12 @@ class spell_mage_missile_barrage_proc : public AuraScript
         if (caster == eventInfo.GetActionTarget())
             return false;
 
+        // Missile Barrage (docs/arcane-mage-rework-design.md, Row 5) - "increasing its damage by
+        // your Mastery." Granted here (this cast is genuinely being empowered) regardless of
+        // whether the T8 4P roll below preserves the charge - that roll only decides whether the
+        // buff is *consumed*, not whether this cast is empowered.
+        GrantArcaneMasteryMarker(caster);
+
         // T8 4P bonus: chance to not consume the proc
         if (AuraEffect const* aurEff = caster->GetAuraEffect(SPELL_MAGE_T8_4P_BONUS, EFFECT_0))
             if (roll_chance_i(aurEff->GetAmount()))
@@ -2729,7 +2869,11 @@ class spell_mage_missile_barrage_proc : public AuraScript
     void Register() override
     {
         DoCheckProc += AuraCheckProcFn(spell_mage_missile_barrage_proc::CheckProc);
-        AfterEffectRemove += AuraEffectRemoveFn(spell_mage_missile_barrage_proc::OnRemove, EFFECT_0, SPELL_AURA_ADD_FLAT_MODIFIER, AURA_EFFECT_HANDLE_REAL);
+        // EFFECT_0 is the channel-duration SpellMod - switched from a flat ms reduction to a -50%
+        // PCT modifier (docs/bugs-and-fixes.md, "A flat-duration SpellMod copied from real Blizzard
+        // data..."), so this hook's aura-type gate has to match ADD_PCT_MODIFIER now or it silently
+        // never fires.
+        AfterEffectRemove += AuraEffectRemoveFn(spell_mage_missile_barrage_proc::OnRemove, EFFECT_0, SPELL_AURA_ADD_PCT_MODIFIER, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
@@ -2756,7 +2900,7 @@ class spell_mage_brilliance_aura : public AuraScript
     void OnPeriodic(AuraEffect const* /*aurEff*/)
     {
         Unit* target = GetTarget();
-        if (!target || target->GetPowerType() != POWER_MANA)
+        if (!target || target->getPowerType() != POWER_MANA)
             return;
 
         int32 missing = int32(target->GetMaxPower(POWER_MANA)) - int32(target->GetPower(POWER_MANA));
@@ -2840,6 +2984,574 @@ class spell_mage_time_warp : public SpellScript
     }
 };
 
+/*
+ * Arcane Mage rework (docs/arcane-mage-rework-design.md), Phase 3 Batch B - Spell Power's,
+ * Improved Blink's, and Improved Counterspell's capstones, plus Arcane Shielding's absorb proc. See
+ * the "Deferred to Phase 3" list and ~/.claude/plans/twinkling-strolling-lagoon.md.
+ */
+
+// 200077 - Spell Power (rank 3, capstone marker on EFFECT_1)
+class spell_mage_spell_power_capstone : public AuraScript
+{
+    PrepareAuraScript(spell_mage_spell_power_capstone);
+
+    // 30 second internal cooldown - "can only occur once every 30 seconds" (System Rulings: this
+    // must be a one-shot trigger, not a live condition check, or it would fall off the moment the
+    // player uses a mana stone). Same member-variable ICD idiom as spell_druid.cpp's Eclipse procs.
+    uint32 _icdEnd = 0;
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_SPELL_POWER_SURGE });
+    }
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        if (!(eventInfo.GetHitMask() & PROC_HIT_CRITICAL))
+            return false;
+
+        Unit* caster = GetTarget();
+        if (!caster->IsPlayer())
+            return false;
+
+        // "while your mana is below 50%"
+        uint32 maxMana = caster->GetMaxPower(POWER_MANA);
+        if (!maxMana || caster->GetPower(POWER_MANA) * 2 >= maxMana)
+            return false;
+
+        uint32 now = GameTime::GetGameTimeMS().count();
+        if (_icdEnd > now)
+            return false;
+
+        return true;
+    }
+
+    void HandleProc(AuraEffect const* aurEff, ProcEventInfo& /*eventInfo*/)
+    {
+        Unit* caster = GetTarget();
+        _icdEnd = GameTime::GetGameTimeMS().count() + 30000;
+
+        // "restoring 1% of your total mana each second" - snapshotted from current max mana at
+        // proc time (not a live per-tick read) and injected via SPELLVALUE_BASE_POINT0, same
+        // CastCustomSpell idiom as spell_mage_magic_absorption. 200080's effect1 has die_sides=0,
+        // so this value is used exactly as passed.
+        int32 manaPerTick = CalculatePct(int32(caster->GetMaxPower(POWER_MANA)), 1);
+        caster->CastCustomSpell(SPELL_MAGE_SPELL_POWER_SURGE, SPELLVALUE_BASE_POINT0, manaPerTick, caster, true, nullptr, aurEff);
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_mage_spell_power_capstone::CheckProc);
+        OnEffectProc += AuraEffectProcFn(spell_mage_spell_power_capstone::HandleProc, EFFECT_1, SPELL_AURA_DUMMY);
+    }
+};
+
+// 1953 - Blink
+class spell_mage_blink : public SpellScript
+{
+    PrepareSpellScript(spell_mage_blink);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_IMPROVED_BLINK_BUFF });
+    }
+
+    // Improved Blink capstone (rank 2 only) - "After casting Blink all damage taken is reduced by
+    // 20% for 3 sec." No native "grant a temp buff after this specific cast" aura type, so this is
+    // a plain AfterCast hook gated on the rank 2 marker.
+    void HandleAfterCast()
+    {
+        Unit* caster = GetCaster();
+        if (caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_MAGE, MAGE_ICON_IMPROVED_BLINK, EFFECT_2))
+            caster->CastSpell(caster, SPELL_MAGE_IMPROVED_BLINK_BUFF, true);
+    }
+
+    void Register() override
+    {
+        AfterCast += SpellCastFn(spell_mage_blink::HandleAfterCast);
+    }
+};
+
+// 2139 - Counterspell
+class spell_mage_counterspell : public SpellScript
+{
+    PrepareSpellScript(spell_mage_counterspell);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_IMPROVED_COUNTERSPELL_SILENCE });
+    }
+
+    // Improved Counterspell capstone (rank 2 only) - "Your Counterspell ability now silences the
+    // target for 2 sec." Adds a wholly new debuff rather than editing Counterspell's own DBC row,
+    // so players without the talent aren't silenced.
+    void HandleAfterHit()
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetHitUnit();
+        if (!target)
+            return;
+
+        if (caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_MAGE, MAGE_ICON_IMPROVED_COUNTERSPELL, EFFECT_1))
+            caster->CastSpell(target, SPELL_MAGE_IMPROVED_COUNTERSPELL_SILENCE, true);
+    }
+
+    void Register() override
+    {
+        AfterHit += SpellHitFn(spell_mage_counterspell::HandleAfterHit);
+    }
+};
+
+// Arcane Shielding (3,0) - "Increases the amount absorbed by your Fire Ward, Frost Ward and Arcane
+// Ward by 15/30%. Each time one of these effects absorbs damage, your damage dealt is increased by
+// 5/10% for 10 sec." Shares the AfterEffectAbsorb hook Incanter's Absorption's own base script
+// (spell_mage_incanters_absorbtion_base_AuraScript) already registers Fire/Frost Ward against, but
+// as an independent script rather than extending that base class - Arcane Shielding's scope is
+// narrower (just the 3 Wards, not Ice Barrier/Mana Shield too) and Arcane Ward (200068, Phase 1)
+// has no script bound to it at all yet, so this is one new class bound to all 3 Wards via separate
+// spell_script_names rows rather than growing the existing Incanter's Absorption chain.
+//
+// Bugfix (2026-09-09, docs/bugs-and-fixes.md "Missile Barrage's -50% still computed to -65%..."):
+// the "+15/30% absorbed" clause originally lived as a classmask-scoped SPELLMOD_EFFECT1 on Arcane
+// Shielding's own talent row (11252/12605), matching the one classmask dword Fire/Frost/Arcane Ward
+// all three genuinely share. That bit, real Blizzard data, happens to also be part of Missile
+// Barrage's (44401) own unrelated real family flags, so the modifier collided with it - not a
+// wrong-slot mistake, an unavoidable consequence of matching "all three Wards" via a single 96-bit
+// classmask when some other real spell in the family reuses one of the same bits. Reimplemented
+// here instead: EFFECT_0 on 11252/12605 is now a plain SPELL_AURA_DUMMY marker (same idiom as
+// EFFECT_1's own rank marker below), read directly by CalculateAmount - no classmask involved at
+// all, so no collision is possible.
+class spell_mage_arcane_shielding_proc : public AuraScript
+{
+    PrepareAuraScript(spell_mage_arcane_shielding_proc);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_ARCANE_SHIELDING_BUFF_R1, SPELL_MAGE_ARCANE_SHIELDING_BUFF_R2 });
+    }
+
+    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
+    {
+        if (AuraEffect* talentAurEff = GetTarget()->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_MAGE, MAGE_ICON_ARCANE_SHIELDING, EFFECT_0))
+            AddPct(amount, talentAurEff->GetAmount());
+    }
+
+    void Trigger(AuraEffect* aurEff, DamageInfo& /*dmgInfo*/, uint32& /*absorbAmount*/)
+    {
+        Unit* caster = GetTarget();
+        if (AuraEffect* talentAurEff = caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_MAGE, MAGE_ICON_ARCANE_SHIELDING, EFFECT_1))
+        {
+            uint32 buffSpell = talentAurEff->GetSpellInfo()->GetRank() == 1 ? SPELL_MAGE_ARCANE_SHIELDING_BUFF_R1 : SPELL_MAGE_ARCANE_SHIELDING_BUFF_R2;
+            caster->CastSpell(caster, buffSpell, true, nullptr, aurEff);
+        }
+    }
+
+    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_mage_arcane_shielding_proc::CalculateAmount, EFFECT_0, SPELL_AURA_SCHOOL_ABSORB);
+        AfterEffectAbsorb += AuraEffectAbsorbFn(spell_mage_arcane_shielding_proc::Trigger, EFFECT_0);
+    }
+};
+
+/*
+ * Arcane Mage rework (docs/arcane-mage-rework-design.md), Phase 3 Batch C - Arcane Barrage's
+ * per-stack target/refund, Incanter's Absorption's shield proc and capstone, and Spellblade's
+ * mana restore. See the "Deferred to Phase 3" list and
+ * ~/.claude/plans/twinkling-strolling-lagoon.md.
+ */
+
+// 44425 - Arcane Barrage
+class spell_mage_arcane_barrage : public SpellScript
+{
+    PrepareSpellScript(spell_mage_arcane_barrage);
+
+    // "Each stack of Arcane Blast causes Arcane Barrage to hit an additional target." DBC
+    // chain_targets is a static max (5 = 1 primary + 4 possible stacks, apps/dbc-tools
+    // source/spells/mage_talents.csv) - trims the natively chain-selected bounce-target list (the
+    // primary target is added separately by the engine, not included here) down to the live stack
+    // count at cast time.
+    void TrimChainTargets(std::list<WorldObject*>& targets)
+    {
+        Unit* caster = GetCaster();
+        uint8 stacks = 0;
+        if (Aura const* aura = caster->GetAura(SPELL_MAGE_ARCANE_BLAST_STACKS))
+            stacks = aura->GetStackAmount();
+
+        size_t maxExtra = std::min<size_t>(stacks, 4);
+        if (targets.size() > maxExtra)
+        {
+            targets.sort(Acore::ObjectDistanceOrderPred(caster));
+            targets.resize(maxExtra);
+        }
+    }
+
+    // "After casting Arcane Barrage, all stacks of Arcane Blast are lost and you restore 2.5% of
+    // your maximum mana per stack consumed." Deferred to AfterCast (not OnCast/target-select) so
+    // this cast's own damage calc - and Arcane Resonance's live 4-stack check
+    // (MageMechanics.cpp) - still see the stacks that were present at cast time.
+    void HandleAfterCast()
+    {
+        Unit* caster = GetCaster();
+        Aura* aura = caster->GetAura(SPELL_MAGE_ARCANE_BLAST_STACKS);
+        if (!aura)
+            return;
+
+        uint8 stacks = aura->GetStackAmount();
+        caster->RemoveOwnedAura(aura);
+
+        int32 manaRefund = CalculatePct(int32(caster->GetMaxPower(POWER_MANA)), 2.5f * stacks);
+        if (manaRefund > 0)
+            caster->EnergizeBySpell(caster, GetSpellInfo()->Id, manaRefund, POWER_MANA);
+    }
+
+    void Register() override
+    {
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_mage_arcane_barrage::TrimChainTargets, EFFECT_0, TARGET_UNIT_TARGET_ENEMY);
+        AfterCast += SpellCastFn(spell_mage_arcane_barrage::HandleAfterCast);
+    }
+};
+
+// 44394/44395/44396 - Incanter's Absorption
+class spell_mage_incanters_absorption_shield : public AuraScript
+{
+    PrepareAuraScript(spell_mage_incanters_absorption_shield);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_INCANTERS_ABSORPTION_SHIELD });
+    }
+
+    // "Using a direct damaging Arcane spell with a cast time or Arcane Missiles while Missile
+    // Barrage is active has a 100% chance to grant you a shield" - "cast-time-bearing" reads as
+    // non-channeled with a nonzero cast time (excludes instant Arcane Barrage, which doesn't need
+    // the help); Arcane Missiles (channeled, no traditional cast time) is named separately because
+    // it wouldn't otherwise qualify.
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        SpellInfo const* spellInfo = eventInfo.GetSpellInfo();
+        if (!spellInfo || !(spellInfo->GetSchoolMask() & SPELL_SCHOOL_MASK_ARCANE))
+            return false;
+
+        bool isArcaneMissiles = spellInfo->SpellFamilyName == SPELLFAMILY_MAGE && (spellInfo->SpellFamilyFlags[0] & 0x800);
+        if (isArcaneMissiles)
+            return GetTarget()->HasAura(SPELL_MAGE_MISSILE_BARRAGE_PROC);
+
+        return !spellInfo->IsChanneled() && spellInfo->CalcCastTime() > 0;
+    }
+
+    void HandleProc(AuraEffect const* aurEff, ProcEventInfo& /*eventInfo*/)
+    {
+        Unit* caster = GetTarget();
+        // "a small amount of damage" - placeholder coefficient off spell power, same shape as
+        // spell_mage_fire_frost_ward::CalculateAmount but scaled down; flagged for Phase 4 playtest
+        // tuning like Arcane Overload's own coefficient.
+        int32 absorbAmount = int32(caster->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_ARCANE) * 0.15f);
+        if (absorbAmount > 0)
+            caster->CastCustomSpell(SPELL_MAGE_INCANTERS_ABSORPTION_SHIELD, SPELLVALUE_BASE_POINT0, absorbAmount, caster, true, nullptr, aurEff);
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_mage_incanters_absorption_shield::CheckProc);
+        OnEffectProc += AuraEffectProcFn(spell_mage_incanters_absorption_shield::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+    }
+};
+
+// 30449 - Spellsteal
+class spell_mage_spellsteal : public SpellScript
+{
+    PrepareSpellScript(spell_mage_spellsteal);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_SPELLSTEAL });
+    }
+
+    // Incanter's Absorption capstone (rank 3 only) - "Your Spellsteal steals an additional spell
+    // from the target." SPELL_EFFECT_STEAL_BENEFICIAL_BUFF's steal count is a hardcoded native
+    // EffectMiscValue, not scaled by any classmask SpellMod - re-casts Spellsteal once more instead,
+    // reusing 100% native steal logic rather than reimplementing it. GetSpell()->IsTriggered()
+    // guards the triggered re-cast against recursing into itself.
+    void HandleAfterCast()
+    {
+        if (GetSpell()->IsTriggered())
+            return;
+
+        Unit* caster = GetCaster();
+        Unit* target = GetExplTargetUnit();
+        if (!target)
+            return;
+
+        if (caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_MAGE, MAGE_ICON_INCANTERS_ABSORPTION, EFFECT_2))
+            caster->CastSpell(target, SPELL_MAGE_SPELLSTEAL, true);
+    }
+
+    void Register() override
+    {
+        AfterCast += SpellCastFn(spell_mage_spellsteal::HandleAfterCast);
+    }
+};
+
+// 200072/200073/200074 - Spellblade
+class spell_mage_spellblade : public AuraScript
+{
+    PrepareAuraScript(spell_mage_spellblade);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_SPELLBLADE_MANA, SPELL_MAGE_REPLENISHMENT });
+    }
+
+    // "Your melee attacks have a 4/8/12% chance to restore 20% of your base mana and grant
+    // Replenishment." Melee-only and the rank-scaled chance are both native (ProcTypeMask 4 /
+    // ProcChance, apps/dbc-tools source/spells/mage_talents.csv) - no rank branching needed here,
+    // all 3 ranks grant the same mana amount/Replenishment.
+    void HandleProc(AuraEffect const* aurEff, ProcEventInfo& /*eventInfo*/)
+    {
+        Unit* caster = GetTarget();
+        // "20% of your base mana" - GetCreateMana() (UNIT_FIELD_BASE_MANA), the class/level base
+        // pool before Intellect scaling, distinct from max/missing mana used elsewhere in this
+        // rework.
+        int32 manaRestore = CalculatePct(int32(caster->GetCreateMana()), 20);
+        caster->CastCustomSpell(SPELL_MAGE_SPELLBLADE_MANA, SPELLVALUE_BASE_POINT0, manaRestore, caster, true, nullptr, aurEff);
+        caster->CastSpell(caster, SPELL_MAGE_REPLENISHMENT, true, nullptr, aurEff);
+    }
+
+    void Register() override
+    {
+        OnEffectProc += AuraEffectProcFn(spell_mage_spellblade::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+    }
+};
+
+/*
+ * Arcane Mage rework (docs/arcane-mage-rework-design.md), Phase 3 Batch D - the last batch.
+ * Netherwind Presence's trigger list/stacking buff/capstone, Temporal Convergence, and Arcane
+ * Overload. See the "Deferred to Phase 3" list and
+ * ~/.claude/plans/twinkling-strolling-lagoon.md.
+ */
+
+// 44400/44402/44403 - Netherwind Presence
+class spell_mage_netherwind_presence : public AuraScript
+{
+    PrepareAuraScript(spell_mage_netherwind_presence);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_NETHERWIND_PRESENCE_R1, SPELL_MAGE_NETHERWIND_PRESENCE_R2, SPELL_MAGE_NETHERWIND_PRESENCE_R3 });
+    }
+
+    // "Your Arcane Missiles, Arcane Barrage, Arcane Blast, Arcane Orb, Moonfire, Starfire and
+    // Starsurge spells increase your haste..." Arcane Orb/Starsurge omitted - don't exist in this
+    // WotLK 3.3.5a ruleset, same treatment as Missile Barrage's own trigger-list rewrite (Batch C).
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        SpellInfo const* spellInfo = eventInfo.GetSpellInfo();
+        if (!spellInfo)
+            return false;
+
+        // Arcane Blast's own AfterCast (spell_mage_arcane_blast) self-casts the Arcane Blast
+        // Stacks debuff (36032) as a triggered spell. That debuff shares Arcane Blast's classmask
+        // and its "mana cost increased" effect makes the engine classify the self-cast as a
+        // negative magic-class hit, so without this guard it satisfies this same classmask check
+        // a second time - one real Arcane Blast cast granting 2 stacks instead of 1 (playtest
+        // report, 2026-09-09). Triggered spells aren't real player casts, so exclude them.
+        Spell const* procSpell = eventInfo.GetProcSpell();
+        if (procSpell && procSpell->IsTriggered())
+            return false;
+
+        if (spellInfo->SpellFamilyName == SPELLFAMILY_MAGE)
+            return (spellInfo->SpellFamilyFlags[0] & 0x20000000)  // Arcane Blast
+                || (spellInfo->SpellFamilyFlags[0] & 0x800)       // Arcane Missiles
+                || (spellInfo->SpellFamilyFlags[1] & 0x8000);     // Arcane Barrage
+
+        if (spellInfo->SpellFamilyName == SPELLFAMILY_DRUID)
+            return (spellInfo->SpellFamilyFlags[0] & 0x4)   // Starfire
+                || (spellInfo->SpellFamilyFlags[0] & 0x2);  // Moonfire
+
+        return false;
+    }
+
+    // Grants/refreshes the rank-specific stacking buff - native stacking (AuraEffect::
+    // CalculateAmount multiplies by current stack count) handles "up to 3 times" on its own.
+    void HandleProc(AuraEffect const* aurEff, ProcEventInfo& /*eventInfo*/)
+    {
+        uint32 buffSpell = SPELL_MAGE_NETHERWIND_PRESENCE_R1;
+        switch (GetSpellInfo()->GetRank())
+        {
+            case 2: buffSpell = SPELL_MAGE_NETHERWIND_PRESENCE_R2; break;
+            case 3: buffSpell = SPELL_MAGE_NETHERWIND_PRESENCE_R3; break;
+            default: break;
+        }
+        GetTarget()->CastSpell(GetTarget(), buffSpell, true, nullptr, aurEff);
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_mage_netherwind_presence::CheckProc);
+        OnEffectProc += AuraEffectProcFn(spell_mage_netherwind_presence::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+    }
+};
+
+// 31589 - Slow
+class spell_mage_slow : public SpellScript
+{
+    PrepareSpellScript(spell_mage_slow);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_NETHERWIND_PRESENCE_R3, SPELL_MAGE_NETHERWIND_PRESENCE_ICD, SPELL_MAGE_NETHERWIND_PRESENCE_CAPSTONE });
+    }
+
+    // Netherwind Presence capstone (rank 3 only) - "Casting Slow while Netherwind Presence is
+    // fully stacked increases your movement speed by 50% for 5 sec. This effect cannot occur more
+    // than once every 30 sec." The ICD is a hidden self-buff (200091, checked via HasAura) rather
+    // than a member-variable timer - this SpellScript instance is recreated fresh on every cast of
+    // Slow, unlike an AuraScript hosted on a permanently-known passive (e.g. Spell Power's
+    // capstone), so a member variable wouldn't persist between casts.
+    void HandleAfterCast()
+    {
+        Unit* caster = GetCaster();
+        if (!caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_MAGE, MAGE_ICON_NETHERWIND_PRESENCE, EFFECT_1))
+            return;
+
+        Aura const* stacks = caster->GetAura(SPELL_MAGE_NETHERWIND_PRESENCE_R3);
+        if (!stacks || stacks->GetStackAmount() < stacks->GetSpellInfo()->StackAmount)
+            return;
+
+        if (caster->HasAura(SPELL_MAGE_NETHERWIND_PRESENCE_ICD))
+            return;
+
+        caster->CastSpell(caster, SPELL_MAGE_NETHERWIND_PRESENCE_ICD, true);
+        caster->CastSpell(caster, SPELL_MAGE_NETHERWIND_PRESENCE_CAPSTONE, true);
+    }
+
+    void Register() override
+    {
+        AfterCast += SpellCastFn(spell_mage_slow::HandleAfterCast);
+    }
+};
+
+// 200078 - Temporal Convergence
+class spell_mage_temporal_convergence : public SpellScript
+{
+    PrepareSpellScript(spell_mage_temporal_convergence);
+
+    void ReduceCooldown(Player* player, uint32 spellId, uint32 reductionMs)
+    {
+        uint32 remaining = player->GetSpellCooldownDelay(spellId);
+        if (!remaining)
+            return;
+
+        uint32 newRemaining = remaining > reductionMs ? remaining - reductionMs : 0;
+        // SMSG_MODIFY_COOLDOWN's delta approach has no client-side effect on this client
+        // (confirmed - see Player::ApplyCooldownHasteCorrection's own comment, Player.cpp) - reuse
+        // that method's proven clear-then-reset fix instead of reimplementing it by hand.
+        player->ApplyCooldownHasteCorrection(spellId, 0, newRemaining);
+    }
+
+    // "Consumes all stacks of Arcane Blast. Reduces the remaining cooldown of Evocation and Arcane
+    // Power by 5 seconds per stack consumed."
+    void HandleAfterCast()
+    {
+        Unit* caster = GetCaster();
+        Player* player = caster->ToPlayer();
+        if (!player)
+            return;
+
+        Aura* aura = caster->GetAura(SPELL_MAGE_ARCANE_BLAST_STACKS);
+        if (!aura)
+            return;
+
+        uint8 stacks = aura->GetStackAmount();
+        caster->RemoveOwnedAura(aura);
+
+        uint32 reductionMs = 5000 * stacks;
+        ReduceCooldown(player, SPELL_MAGE_EVOCATION, reductionMs);
+        ReduceCooldown(player, SPELL_MAGE_ARCANE_POWER, reductionMs);
+    }
+
+    void Register() override
+    {
+        AfterCast += SpellCastFn(spell_mage_temporal_convergence::HandleAfterCast);
+    }
+};
+
+// 200079 - Arcane Overload
+class spell_mage_arcane_overload : public SpellScript
+{
+    PrepareSpellScript(spell_mage_arcane_overload);
+
+    int32 _manaSpent = 0;
+    uint32 _targetIndex = 0;
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_ARCANE_OVERLOAD_DAMAGE, SPELL_MAGE_ARCANE_OVERLOAD_BUFF });
+    }
+
+    // "Expend up to 30% of your maximum mana" - spent once up front, shared by every target hit.
+    void HandleCast()
+    {
+        Unit* caster = GetCaster();
+        _manaSpent = CalculatePct(int32(caster->GetMaxPower(POWER_MANA)), 30);
+        if (_manaSpent > 0)
+            caster->ModifyPower(POWER_MANA, -_manaSpent);
+    }
+
+    // "...and nearby enemies" - a simplification from "around the target" to "around the caster"
+    // (apps/dbc-tools' 200079 effect2, TARGET_UNIT_SRC_AREA_ENEMY/10yd - flagged for Phase 4
+    // playtest). The primary target is excluded here so it isn't hit twice.
+    void RemovePrimaryTarget(std::list<WorldObject*>& targets)
+    {
+        if (Unit* primary = GetExplTargetUnit())
+            targets.remove(primary);
+    }
+
+    // "...for damage equal to the mana spent plus a spell power coefficient. Deals reduced damage
+    // beyond 5 targets." Placeholder coefficient (0.5) and falloff shape (-10%/target past the
+    // 5th, floor 50%) - same "ship reasonable value, flag for playtest" precedent as Arcane
+    // Barrage's base damage and Incanter's Absorption's shield size. Damage is dealt through a
+    // dedicated sub-spell via CastCustomSpell so it still rolls crit and picks up Versatility like
+    // any other spell damage ("Can critically strike. Affected by Versatility"), rather than
+    // hand-rolling the damage pipeline.
+    void HandleHit(SpellEffIndex /*effIndex*/)
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetHitUnit();
+        if (!target)
+            return;
+
+        int32 spellPower = caster->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_ARCANE);
+        int32 damage = _manaSpent + int32(spellPower * 0.5f);
+
+        if (_targetIndex >= 5)
+            damage = int32(damage * std::max(0.5f, 1.0f - 0.1f * float(_targetIndex - 4)));
+        ++_targetIndex;
+
+        if (damage > 0)
+            caster->CastCustomSpell(SPELL_MAGE_ARCANE_OVERLOAD_DAMAGE, SPELLVALUE_BASE_POINT0, damage, target, true);
+    }
+
+    // "For the next 15 sec, you restore 3% of your maximum mana every 1 sec and your spell damage
+    // is increased by 10%." Mana-per-tick snapshotted at grant time via CastCustomSpell, same
+    // idiom as Spell Power's own buff (200080).
+    void HandleAfterCast()
+    {
+        Unit* caster = GetCaster();
+        int32 manaPerTick = CalculatePct(int32(caster->GetMaxPower(POWER_MANA)), 3);
+        caster->CastCustomSpell(SPELL_MAGE_ARCANE_OVERLOAD_BUFF, SPELLVALUE_BASE_POINT0, manaPerTick, caster, true);
+    }
+
+    void Register() override
+    {
+        BeforeCast += SpellCastFn(spell_mage_arcane_overload::HandleCast);
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_mage_arcane_overload::RemovePrimaryTarget, EFFECT_1, TARGET_UNIT_SRC_AREA_ENEMY);
+        OnEffectHitTarget += SpellEffectFn(spell_mage_arcane_overload::HandleHit, EFFECT_0, SPELL_EFFECT_DUMMY);
+        OnEffectHitTarget += SpellEffectFn(spell_mage_arcane_overload::HandleHit, EFFECT_1, SPELL_EFFECT_DUMMY);
+        AfterCast += SpellCastFn(spell_mage_arcane_overload::HandleAfterCast);
+    }
+};
+
 void AddSC_mage_spell_scripts()
 {
     RegisterSpellScript(spell_mage_arcane_blast);
@@ -2912,4 +3624,22 @@ void AddSC_mage_spell_scripts()
     RegisterSpellScript(spell_mage_brilliance_aura);
     RegisterSpellScript(spell_mage_mass_invisibility);
     RegisterSpellScript(spell_mage_time_warp);
+
+    // Arcane Mage rework, Phase 3 Batch B - see the block above spell_mage_spell_power_capstone.
+    RegisterSpellScript(spell_mage_spell_power_capstone);
+    RegisterSpellScript(spell_mage_blink);
+    RegisterSpellScript(spell_mage_counterspell);
+    RegisterSpellScript(spell_mage_arcane_shielding_proc);
+
+    // Arcane Mage rework, Phase 3 Batch C - see the block above spell_mage_arcane_barrage.
+    RegisterSpellScript(spell_mage_arcane_barrage);
+    RegisterSpellScript(spell_mage_incanters_absorption_shield);
+    RegisterSpellScript(spell_mage_spellsteal);
+    RegisterSpellScript(spell_mage_spellblade);
+
+    // Arcane Mage rework, Phase 3 Batch D - see the block above spell_mage_netherwind_presence.
+    RegisterSpellScript(spell_mage_netherwind_presence);
+    RegisterSpellScript(spell_mage_slow);
+    RegisterSpellScript(spell_mage_temporal_convergence);
+    RegisterSpellScript(spell_mage_arcane_overload);
 }

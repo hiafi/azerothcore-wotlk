@@ -48,6 +48,15 @@ def check_classmask_scoping(entries: list[dict], rows: list[dict]) -> list[str]:
         notes = entry.get("notes") or ""
         if notes.strip() == "pulled from existing data":
             continue
+        # NOTE (2026-09-09): letter = effect index (A=Effect_1, B=Effect_2, C=Effect_3), number =
+        # which of that effect's 3 SpellFamilyFlags dwords - see apps/dbc-tools/README.md's
+        # "Gotcha" callout. So `masks[i]` below (i indexed 0/1/2 against _LETTERS "A"/"B"/"C") is
+        # already "effect i's 3 dwords" - do NOT transpose this to index by number instead; that
+        # was tried and briefly shipped as a "fix" here, but it's actually the same mixup mirrored
+        # onto the other axis (checked "is *any* effect's dword N scoped" instead of "is *this*
+        # effect scoped at all"), which misdiagnosed several already-correct rows (Arcane
+        # Shielding, Magic Attunement, Firestarter, Burning Determination) as bugs. See
+        # docs/bugs-and-fixes.md for the incident.
         masks = [
             tuple(row.get(f"EffectSpellClassMask{letter}_{n}", 0) or 0 for n in (1, 2, 3))
             for letter in _LETTERS
@@ -61,9 +70,10 @@ def check_classmask_scoping(entries: list[dict], rows: list[dict]) -> list[str]:
                 warnings.append(
                     f"spell {row['ID']} ({entry.get('name', '?')}): effect {i + 1}'s "
                     f"SpellMod (EffectAura_{i + 1}={aura}, EffectMiscValue_{i + 1}={misc}) has an "
-                    f"all-zero classmask (letter {_LETTERS[i]}) even though this row sets a "
-                    f"classmask elsewhere ({masks}) - probably EffectSpellClassMask{_LETTERS[i]}_* "
-                    f"needs the value that's on the wrong letter. All-zero here means the engine "
-                    f"applies it to every matching spell in the family, not just the intended one."
+                    f"all-zero classmask (letter {_LETTERS[i]}: {masks[i]}) even though this row "
+                    f"sets a classmask elsewhere ({masks}) - probably "
+                    f"EffectSpellClassMask{_LETTERS[i]}_* needs the value that's on a different "
+                    f"letter. All-zero here means the engine applies it to every matching spell in "
+                    f"the family, not just the intended one."
                 )
     return warnings

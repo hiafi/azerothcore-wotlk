@@ -1,3 +1,4 @@
+-- DB update 2026_09_10_00 -> 2026_09_10_01
 -- Death Knight starting position: spawn in the normal racial starting zone instead of Ebon Hold
 -- (map 609), matching the level-1 DK starting experience (see docs/bugs-and-fixes.md and the
 -- trainer work in rev_1788687658359759602.sql / rev_1788689427900916967.sql).

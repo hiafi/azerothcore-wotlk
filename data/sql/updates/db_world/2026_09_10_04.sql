@@ -1,3 +1,4 @@
+-- DB update 2026_09_10_03 -> 2026_09_10_04
 -- Arcane Mage rework, Phase 2 (docs/arcane-mage-rework-design.md), Rows 4-6.
 --
 -- Data-only talents per .claude/skills/class-rework/SKILL.md Phase 2: Spell Power, Arcane

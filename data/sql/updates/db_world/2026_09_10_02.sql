@@ -1,3 +1,4 @@
+-- DB update 2026_09_10_01 -> 2026_09_10_02
 -- Arcane Mage rework, Phase 1 (docs/arcane-mage-rework-design.md; see
 -- .agents/skills/class-rework/SKILL.md for the phase breakdown).
 --

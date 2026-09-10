@@ -1,3 +1,4 @@
+-- DB update 2026_09_10_04 -> 2026_09_10_05
 -- Arcane Mage rework (docs/arcane-mage-rework-design.md) - Rows 7-10, Phase 2 (data-only talents).
 -- .claude/skills/class-rework/SKILL.md batch-and-checkpoint cadence, 4th and final Phase 2 batch.
 --
