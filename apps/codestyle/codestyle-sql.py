@@ -42,11 +42,11 @@ def collect_files_from_directories(directories: list) -> list:
                     all_files.append(os.path.join(root, file))
     return all_files
 
-# Used to find changed or added files compared to master.
+# Used to find changed or added files compared to Playerbot (this fork's default branch).
 def get_changed_files() -> list:
-    subprocess.run(["git", "fetch", "origin", "master"], check=True)
+    subprocess.run(["git", "fetch", "origin", "Playerbot"], check=True)
     result = subprocess.run(
-        ["git", "diff", "--name-status", "origin/master"],
+        ["git", "diff", "--name-status", "origin/Playerbot"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
