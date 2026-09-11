@@ -15,10 +15,13 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "Config.h"
 #include "DpsSim.h"
 #include "GameTime.h"
 #include "Log.h"
 #include "Random.h"
+#include "SimDaemon.h"
+#include "SimTests.h"
 #include "Timer.h"
 
 DpsSimWorldScript::DpsSimWorldScript() : WorldScript(MODULE_STRING, {WORLDHOOK_ON_DPS_SIM_RUN}) { }
@@ -50,7 +53,26 @@ void DpsSimWorldScript::OnDpsSimRun()
     }
 
     Acore::Time::ClearSimClockOverride();
-    LOG_INFO("server.dpssim", "mod-dpssim: M1 skeleton smoke test complete, exiting.");
+    LOG_INFO("server.dpssim", "mod-dpssim: M1 skeleton smoke test complete.");
+
+    // DpsSim.RunTests=1 runs Phase 1's four required tests (SimTests::RunAll()); DpsSim.RunPlayerbot=1
+    // runs the Phase 2 (M2a) harness instead (SimDaemon::RunPlayerbot() - a real mod-playerbots
+    // Engine/Strategy selector driving the actor, see SimBot.h); neither set runs the Phase 1
+    // hardcoded-Frostbolt smoke-test job (SimDaemon::Run()) by default. See dpssim.conf.dist,
+    // SimTests.h, SimDaemon.h. Read once here rather than cached at LoadConfigSettings() time like
+    // a normal hot-path config value would be (per .agents/docs/cpp-guidelines.md) - this only ever
+    // runs once per process, at the very end of a one-shot sim-mode boot, so there's no hot path to
+    // worry about.
+    if (sConfigMgr->GetOption<bool>("DpsSim.RunTests", false))
+        SimTests::RunAll();
+    else if (sConfigMgr->GetOption<bool>("DpsSim.RunPlayerbot", false))
+        SimDaemon::RunPlayerbot();
+    else if (sConfigMgr->GetOption<bool>("DpsSim.RunLevelCheck", false))
+        SimDaemon::RunLevelScalingCheck();
+    else
+        SimDaemon::Run();
+
+    LOG_INFO("server.dpssim", "mod-dpssim: OnDpsSimRun() complete, exiting.");
 }
 
 void AddSC_DpsSim()

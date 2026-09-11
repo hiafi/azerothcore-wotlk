@@ -1525,7 +1525,7 @@ void Unit::CalculateSpellDamageTaken(SpellNonMeleeDamage* damageInfo, int32 dama
     uint32 crTypeMask = victim->GetCreatureTypeMask();
 
      // Script Hook For CalculateSpellDamageTaken -- Allow scripts to change the Damage post class mitigation calculations
-    sScriptMgr->ModifySpellDamageTaken(damageInfo->target, damageInfo->attacker, damage, spellInfo);
+    sScriptMgr->ModifySpellDamageTaken(damageInfo->target, damageInfo->attacker, damage, spellInfo, crit);
 
     if (victim->GetAI())
     {
@@ -2110,7 +2110,7 @@ void Unit::DealMeleeDamage(CalcDamageInfo* damageInfo, bool durabilityLoss)
 
         // Call default DealDamage
         CleanDamage cleanDamage(damageInfo->cleanDamage, damageInfo->damages[i].absorb, damageInfo->attackType, damageInfo->hitOutCome);
-        Unit::DealDamage(this, victim, damageInfo->damages[i].damage, &cleanDamage, DIRECT_DAMAGE, SpellSchoolMask(damageInfo->damages[i].damageSchoolMask), nullptr, durabilityLoss);
+        Unit::DealDamage(this, victim, damageInfo->damages[i].damage, &cleanDamage, DIRECT_DAMAGE, SpellSchoolMask(damageInfo->damages[i].damageSchoolMask), nullptr, durabilityLoss, false, nullptr);
     }
 
     // gain rage if attack is fully blocked, dodged or parried

@@ -414,12 +414,16 @@ int main(int argc, char** argv)
 
     sScriptMgr->OnStartup();
 
-    // Launch CliRunnable thread
+    // Launch CliRunnable thread. Skipped in sim mode: there's no attached TTY when the sim
+    // daemon runs (typically headless/scripted), and CliThread's blocking stdin read spins
+    // instead of blocking on an unattached stream, which left the process pegged at 100% CPU
+    // and unable to exit on its own after OnDpsSimRun() returned - see the "Session handoff"
+    // notes in dps-sim-module.PLAN.md for how this was found.
     std::shared_ptr<std::thread> cliThread;
 #if AC_PLATFORM == AC_PLATFORM_WINDOWS
-    if (sConfigMgr->GetOption<bool>("Console.Enable", true) && (m_ServiceStatus == -1)/* need disable console in service mode*/)
+    if (!simMode && sConfigMgr->GetOption<bool>("Console.Enable", true) && (m_ServiceStatus == -1)/* need disable console in service mode*/)
 #else
-    if (sConfigMgr->GetOption<bool>("Console.Enable", true))
+    if (!simMode && sConfigMgr->GetOption<bool>("Console.Enable", true))
 #endif
     {
         cliThread.reset(new std::thread(CliThread), &ShutdownCLIThread);

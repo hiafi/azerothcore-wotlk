@@ -219,6 +219,16 @@ void World::LoadConfigSettings(bool reload)
         LOG_INFO("server.loading", "Client cache version set to: {}", _dbClientCacheVersion);
     }
 
+    // DPS-sim mode forces synchronous, single-threaded map updates regardless of the configured
+    // value - the sim daemon's own loop (see modules/mod-dpssim) calls map->Update(diff) directly
+    // and was never designed to reason about the async map-updater thread pool. See the "Open
+    // architecture decision" section of .agents/plans/dps-sim-module/dps-sim-module.PLAN.md.
+    if (sConfigMgr->GetOption<bool>("DpsSim.Enabled", false) && getIntConfig(CONFIG_NUMTHREADS) != 0)
+    {
+        _worldConfig.OverwriteConfigValue<uint32>(CONFIG_NUMTHREADS, 0);
+        LOG_INFO("server.loading", "DpsSim.Enabled is set - forcing MapUpdate.Threads to 0 for synchronous, deterministic map updates.");
+    }
+
     //visibility on continents
     _maxVisibleDistanceOnContinents = sConfigMgr->GetOption<float>("Visibility.Distance.Continents", DEFAULT_VISIBILITY_DISTANCE);
     if (_maxVisibleDistanceOnContinents < 45 * getRate(RATE_CREATURE_AGGRO))
