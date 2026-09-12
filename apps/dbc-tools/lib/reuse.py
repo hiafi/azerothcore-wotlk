@@ -59,6 +59,17 @@ class ReuseTable:
         self.minted_rows.append(row)
         return new_id
 
+    def reserved_rows(self) -> list[dict]:
+        """Every row this table currently needs inside its OWN reserved id block — reused
+        (`existing_rows`) plus freshly minted (`minted_rows`) — restricted to `[_start, _end]`
+        since that's exactly what `sql_out`'s `DELETE ... WHERE ID BETWEEN` for this table
+        removes. See `ReuseContext.reserved_rows` for why this must be the SQL-emission input
+        instead of `minted_rows` alone."""
+        return [
+            row for row in self.existing_rows + self.minted_rows
+            if self._start <= row["ID"] <= self._end
+        ]
+
 
 class ReuseContext:
     """Bundles a ReuseTable per lookup table and exposes friendly-unit
@@ -74,6 +85,33 @@ class ReuseContext:
     def minted(self) -> dict:
         """{table_name: [new full rows]} — feed straight to sql_out/patch_out."""
         return {name: t.minted_rows for name, t in self._tables.items() if t.minted_rows}
+
+    @property
+    def reserved_rows(self) -> dict:
+        """{table_name: [every row this run needs inside the reserved block]} — reused rows
+        included, not just freshly minted ones.
+
+        Bugfix (2026-09-12, "Frostbolt/Fireball/Glacial Spike casting instantly" recurring - see
+        docs/dbc-build-pipeline.md and docs/.master-todo-list.md): `generate.py` used to feed
+        `sql_out.emit_pending_sql` only `.minted` for these 4 secondary tables, while the emitted
+        SQL's own `DELETE FROM x WHERE ID BETWEEN <reserved block>` unconditionally wipes the
+        *whole* reserved range. Any run that doesn't happen to re-mint a value some other,
+        untouched spell still depends on (e.g. a run that only adds one new spell's cast time)
+        deleted every previously-reused row in that table and never reinserted it - dropping that
+        spell's cast time/duration/range/radius out from under it with no warning. This exact
+        failure mode already happened at least twice live (`2026_09_06_02.sql`'s own header
+        documents the first recurrence; the live DB was found to have regressed to it again,
+        emptied, on 2026-09-12 - almost certainly one of the Arcane Mage rework's own Phase 2-4
+        migrations repeating it a second time). Use this instead of `.minted` for both the SQL
+        emission and the client-patch merge (`generate.py`'s `new_rows_by_table`) so a full
+        reserved-range delete is always paired with a full reinsert of everything that block
+        still needs, not just this run's own deltas. This does NOT by itself fix a case where
+        `state.py`'s own "existing" view is already stale (e.g. content applied live but never
+        promoted into `data/sql/updates/db_world/`) - it only stops a *correctly-informed* run
+        from discarding rows other spells still depend on."""
+        return {
+            name: t.reserved_rows() for name, t in self._tables.items() if t.reserved_rows()
+        }
 
     def cast_time_index(self, cast_time_ms: int | None) -> int:
         if not cast_time_ms:
