@@ -60,6 +60,134 @@ DpsSim.RunTests = 0
 DpsSim.RunPlayerbot = 0
 
 #
+#    DpsSim.PlayerbotLevel
+#        Description: Only meaningful alongside DpsSim.RunPlayerbot = 1. Sets both the sim actor's
+#                      and the target dummy's level (SimTarget::EntryForLevel() picks the matching
+#                      dedicated dummy entry - 900001/900002/900003 for 60/70/80; only those three
+#                      brackets have a dedicated entry, see its own doc comment for the fallback
+#                      behavior on anything else). Lets the real Engine/Strategy-driven rotation be
+#                      exercised at a specific bracket instead of only level 80.
+#        Default:     80
+#
+
+DpsSim.PlayerbotLevel = 80
+
+#
+#    DpsSim.PlayerbotRace
+#        Description: Only meaningful alongside DpsSim.RunPlayerbot = 1. Sim actor's race, as a
+#                      RACE_* value from SharedDefines.h (1=Human, 2=Orc, 3=Dwarf, 4=Night Elf,
+#                      5=Undead, 6=Tauren, 7=Gnome, 8=Troll, 10=Blood Elf, 11=Draenei). Matters for
+#                      more than flavor: every race has an always-on racial ability, and some are
+#                      real combat passives that show up in the rotation and in EventRecorder's
+#                      aura-event stream right alongside talent procs - e.g. Troll's Berserking
+#                      (spell 26297) is a haste-on-low-health/self-cast proc, not a rotation event.
+#                      Confirmed live (2026-09-11): this harness had silently defaulted to
+#                      RACE_TROLL since Phase 1's original smoke-test job, and Berserking's 10s
+#                      window was the actual explanation for a cast-cadence shift an earlier report
+#                      flagged as an unidentified buff (#26297) before this key existed. Defaults
+#                      to Human - no racial that touches damage/haste/spellpower, so it's the
+#                      choice that changes the rotation the least versus "no race at all."
+#        Default:     1 (Human)
+#
+
+DpsSim.PlayerbotRace = 1
+
+#
+#    DpsSim.Profile
+#        Description: Only meaningful alongside DpsSim.RunPlayerbot = 1. Full path to a named sim
+#                      profile file (SimProfile.h/.cpp) - e.g.
+#                      "modules/mod-dpssim/conf/profiles/FrostMageSim.conf" - bundling together
+#                      "what to test" (class, talents, gear, synthetic stats) so a deployment can
+#                      keep a library of builds (FrostMageSim, ArcaneMageSim, ...) and switch
+#                      between them with this one key instead of hand-editing
+#                      DpsSim.PlayerbotTalents/juggling which class it implies every time. See
+#                      modules/mod-dpssim/conf/profiles/ for the checked-in examples and their own
+#                      comments for the file format (Class, PlayerbotTalents, Gear, SpellPower,
+#                      AttackPower, the named combat-rating keys - HitRating, CritRating,
+#                      HasteRating, ExpertiseRating, ArmorPenetrationRating, MasteryRating,
+#                      VersatilityRating, CooldownHasteRating, ProcChanceRating - and the named
+#                      core-stat keys - Strength, Agility, Stamina, Intellect, Spirit).
+#
+#                      When set, this OWNS DpsSim.PlayerbotTalents below and SimDaemon::RunConfig::
+#                      ActorClass/GearItemIds/SpellPower/CombatRatings/Stats/AttackPower outright -
+#                      all are ignored (gear/stats have no flat conf-key equivalent at all - they
+#                      only exist via a profile), and a profile that fails to load (missing file,
+#                      malformed line, missing required key) aborts the run entirely rather than falling
+#                      back to them - a typo'd path should never quietly rerun a different build
+#                      than the one you asked for. Leave this empty to use DpsSim.PlayerbotTalents
+#                      directly instead, with no gear/stats applied (a naked caster, unchanged from
+#                      before profiles existed).
+#
+#                      Use an absolute path in practice: the sim daemon's working directory is
+#                      whatever it was launched from (not necessarily this repo's checkout), so a
+#                      relative path here is fragile across environments.
+#        Default:     "" - (Disabled - use DpsSim.PlayerbotTalents directly)
+#
+
+DpsSim.Profile =
+
+#
+#    DpsSim.PlayerbotTalents
+#        Description: Only meaningful alongside DpsSim.RunPlayerbot = 1 AND DpsSim.Profile empty
+#                      (a set DpsSim.Profile owns this key's value outright - see its own doc
+#                      comment). Talent build SimBot spends on the sim actor, in mod-playerbots' own
+#                      talent-string format - the same
+#                      format as AiPlayerbot.PremadeSpecLink.<cls>.<spec>.<level> in playerbots.conf:
+#                      up to 3 dash-separated segments ("<arcane>-<fire>-<frost>" for a mage), each
+#                      character a 0-9 point count for that tree's talents in row-then-column order,
+#                      a leading/doubled "-" meaning 0 points spent in that tree at all. Applied via
+#                      PlayerbotAIConfig::ParseTempTalentsOrder() + PlayerbotFactory::
+#                      InitTalentsByParsedSpecLink() - deliberately NOT PlayerbotFactory::
+#                      InitTalentsBySpecNo() (mod-playerbots' own level-indexed premade-spec lookup),
+#                      which has a real bug where it applies talent entries from levels ABOVE the
+#                      bot's own level too - confirmed live: it turned a "frost pve" build into 18
+#                      Arcane / 3 Frost points on a level-60 bot, flipping the whole rotation over to
+#                      Arcane Blast. This key sidesteps that by owning one explicit, level-independent
+#                      string instead of an indirect, level-indexed lookup. Empty string = no talents
+#                      spent at all (matches this module's original, pre-2026-09-11 behavior).
+#
+#                      A position string is only as good as the tree it was authored against - this
+#                      deployment's custom, expanded talent trees (confirmed live 2026-09-11: the
+#                      Frost tab alone carries 31 entries against a stock WotLK Frost tree's ~20,
+#                      plus extra columns/tiers) mean a string authored against the stock tree, like
+#                      an unmodified copy of AiPlayerbot.PremadeSpecLink.8.2.60, lands its points on
+#                      different talents than whoever wrote it intended. Don't hand-author or reuse
+#                      an old string against this deployment's trees - build the intended spec on a
+#                      live bot instead (whisper it "talents apply <link>" iteratively, or let
+#                      PlayerbotFactory::InitTalentsTree() auto-pick one) and read the resulting,
+#                      guaranteed-correct-for-the-live-tree string back with "talents link"
+#                      (Ai/Base/Actions/ChangeTalentsAction.cpp's SpecLink(), added 2026-09-11 -
+#                      wraps mod-playerbots' own, previously-unused TalentSpec::GetTalentLink()).
+#                      Paste that string in here.
+#
+#                      Default value below is this deployment's own
+#                      AiPlayerbot.PremadeSpecLink.8.2.60 ("frost pve" at level 60) copied verbatim -
+#                      confirmed to contain only Frost-tree points (the "--" prefix means 0 in both
+#                      Arcane and Fire) - kept only as a non-empty placeholder so the rotation isn't
+#                      untalented by default. Per the above, this was authored against the stock
+#                      tree and is NOT confirmed correct against this deployment's actual custom
+#                      Frost tree - replace it with a real "talents link" export once you've built
+#                      the intended spec on a live bot.
+#        Default:     --0533030313203100030152231151
+#
+
+DpsSim.PlayerbotTalents = --0533030313203100030152231151
+
+#
+#    DpsSim.ReportPath
+#        Description: Only meaningful alongside DpsSim.RunPlayerbot = 1. When set, writes the run's
+#                      full result (config, summary, per-spell aggregates, per-hit timeline, aura
+#                      events) as a JSON file at this path (created/overwritten each run; the
+#                      directory itself is not created if missing). No spell names are resolved
+#                      here - see SimReport.h's doc comment for why that's deliberately left to
+#                      whatever builds the human-readable report from this file. See
+#                      SimReport::WriteJson()'s doc comment for the exact schema.
+#        Default:     "" - (Disabled - no JSON file written)
+#
+
+DpsSim.ReportPath =
+
+#
 #    DpsSim.RunLevelCheck
 #        Description: Only meaningful alongside DpsSim.Enabled = 1 (RunTests then RunPlayerbot take
 #                      priority if either is also set). One-off diagnostic, not a Phase 1/2

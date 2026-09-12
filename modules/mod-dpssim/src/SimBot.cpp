@@ -24,11 +24,17 @@
 
 namespace
 {
-    // Reuses Phase 1's own pilot spell (Frostbolt Rank 11 - see SimDaemon.h's doc comment on
-    // FROSTBOLT_SPELL_ID) purely to bootstrap combat state - see SimBot::Create()'s doc comment
-    // for why a manual cast is needed at all. Not load-bearing which spell this is: cast at most
-    // once per SimBot, before the real Engine ever runs, just to get `target->IsInCombat()` true.
-    constexpr uint32 PULL_SPELL_ID = SimDaemon::FROSTBOLT_SPELL_ID;
+    // Bootstraps combat state - see SimBot::Create()'s doc comment for why a manual cast is needed
+    // at all. Which spell this is doesn't matter for that purpose (cast at most once per SimBot,
+    // before the real Engine ever runs, just to get `target->IsInCombat()` true) - but it does
+    // matter for EventRecorder's per-hit output: this lands as hit #0 of every run, and
+    // EventRecorder tracks it like any other hit (see SimDaemon.cpp's rotationSpellId=0 comment).
+    // Using SimDaemon::SINGLE_RANK_FROSTBOLT_SPELL_ID (116) rather than the old, no-longer-taught
+    // FROSTBOLT_SPELL_ID (25304, Rank 11) keeps that first data point on the same scaling as every
+    // other hit the real rotation lands afterward, instead of mixing in a stale-formula outlier
+    // (confirmed live: 25304 hit for ~647 damage at level 80 while every real 116 hit landed at
+    // ~597-599 - not the same formula).
+    constexpr uint32 PULL_SPELL_ID = SimDaemon::SINGLE_RANK_FROSTBOLT_SPELL_ID;
 }
 
 SimBot::~SimBot()
@@ -36,7 +42,7 @@ SimBot::~SimBot()
     delete _ai;
 }
 
-bool SimBot::Create(Player* bot, Unit* target)
+bool SimBot::Create(Player* bot, Unit* target, std::string const& playerbotTalents)
 {
     if (!bot || !target)
         return false;
@@ -49,6 +55,53 @@ bool SimBot::Create(Player* bot, Unit* target)
     // instead of one hardcoded id, since FrostMageStrategy's actions reference several spells
     // (Frostbolt, Ice Lance, Fire Blast, Frost Nova, ...).
     PlayerbotFactory factory(bot, bot->GetLevel());
+    factory.InitAvailableSpells();
+
+    // Spends the talent build passed in as `playerbotTalents` - either DpsSim.PlayerbotTalents
+    // directly, or a loaded DpsSim.Profile's own PlayerbotTalents value (see DpsSim.cpp and
+    // SimProfile.h) - a talent string in mod-playerbots' own dash-separated tab format
+    // (AiPlayerbot.PremadeSpecLink.<cls>.<spec>.<level>'s format: "<arcane><-fire><-frost>", each
+    // character a 0-9 point count for that tree's talents in row/col order), parsed via
+    // PlayerbotAIConfig::ParseTempTalentsOrder() and applied via
+    // PlayerbotFactory::InitTalentsByParsedSpecLink() - both public, reused, unmodified
+    // mod-playerbots utilities. Deliberately NOT PlayerbotFactory::InitTalentsBySpecNo(): that
+    // function looks up a level-indexed premade slot (AiPlayerbot.PremadeSpecLink.<cls>.<spec>.<lvl>)
+    // and has a real, live bug (confirmed 2026-09-11, reported upstream - not fixed here) where its
+    // level loop walks from the bot's own level up to a hardcoded 80 rather than stopping at the
+    // bot's level, so a level-60 bot ends up with additional, higher-level entries applied on top -
+    // observed live turning a "frost pve" build into 18 Arcane / 3 Frost points, which flipped
+    // AiFactory::GetPlayerSpecTab() to Arcane and made the "rotation" spam Arcane Blast instead of
+    // Frostbolt. Owning our own talent string here (independent of level/spec-slot indexing
+    // entirely) sidesteps that bug completely rather than working around it, and is also the
+    // "talent config" the plan doc's M3 section asked for - see DpsSim.PlayerbotTalents' own conf
+    // doc comment for the format and how to test a different build.
+    //
+    // This position string is only as good as the tree it was authored against - this
+    // deployment's custom, expanded talent trees (confirmed live 2026-09-11: the Frost tab alone
+    // carries 31 entries against a stock WotLK Frost tree's ~20, plus extra columns/tiers) mean a
+    // string authored against the stock tree lands its points on different talents than intended.
+    // To get a string that's guaranteed correct for THIS tree, build the intended spec on a live
+    // bot (via this same mechanism, "talents apply <link>" whispered to the bot in-game, or
+    // PlayerbotFactory::InitTalentsTree()'s auto-pick) and read it back with "talents link"
+    // (Ai/Base/Actions/ChangeTalentsAction.cpp's new SpecLink(), added 2026-09-11) rather than
+    // hand-authoring or reusing an old string - that command serializes whatever points the bot
+    // actually has spent, in the tree's current live shape, via mod-playerbots' own (previously
+    // unused) TalentSpec::GetTalentLink().
+    //
+    // Not optional for seeing "a proper rotation with conditionals and priorities" in the first
+    // place: FrostMageStrategy's proc-based triggers (Fingers of Frost, Brain Freeze) and its pet
+    // triggers (no/has/new pet -> Water Elemental) all gate on talents an untalented bot simply
+    // doesn't have, so without spending real points the rotation can only ever be "spam Frostbolt" -
+    // which is exactly and only what a zero-talent bot showed in earlier testing.
+    if (!playerbotTalents.empty())
+    {
+        std::vector<std::vector<uint32>> const parsed = PlayerbotAIConfig::ParseTempTalentsOrder(bot->getClass(), playerbotTalents);
+        PlayerbotFactory::InitTalentsByParsedSpecLink(bot, parsed, false);
+    }
+
+    // Re-teach after spending talents, same order PlayerbotFactory::Randomize() uses for a real
+    // bot (InitAvailableSpells() -> InitTalentsTree() -> InitAvailableSpells() again) - some
+    // talent-unlocked spells only show up as "available" on this second pass.
     factory.InitAvailableSpells();
 
     // Build the PlayerbotAI through PlayerbotsMgr::AddPlayerbotData() - the same entry point a

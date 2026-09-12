@@ -21,6 +21,7 @@
 #include "Log.h"
 #include "Random.h"
 #include "SimDaemon.h"
+#include "SimProfile.h"
 #include "SimTests.h"
 #include "Timer.h"
 
@@ -66,7 +67,62 @@ void DpsSimWorldScript::OnDpsSimRun()
     if (sConfigMgr->GetOption<bool>("DpsSim.RunTests", false))
         SimTests::RunAll();
     else if (sConfigMgr->GetOption<bool>("DpsSim.RunPlayerbot", false))
-        SimDaemon::RunPlayerbot();
+    {
+        // DpsSim.PlayerbotLevel drives both actor and target level (the common case: exercise a
+        // bracket's own rotation against that bracket's own dummy - see
+        // SimTarget::EntryForLevel()). Defaults to 80, matching RunConfig{}'s own default, so
+        // leaving this unset changes nothing about existing behavior.
+        SimDaemon::RunConfig config;
+        uint32 const level = sConfigMgr->GetOption<uint32>("DpsSim.PlayerbotLevel", 80);
+        config.ActorLevel = level;
+        config.TargetLevel = level;
+        // DpsSim.PlayerbotRace - see RunConfig::ActorRace's own doc comment for why this exists
+        // at all (a real, previously-hardcoded RACE_TROLL was firing Berserking mid-run and
+        // showing up as an unidentified haste buff in reports before this was found, 2026-09-11).
+        config.ActorRace = uint8(sConfigMgr->GetOption<uint32>("DpsSim.PlayerbotRace", 1 /* RACE_HUMAN */));
+
+        // DpsSim.Profile - see SimProfile.h and dpssim.conf.dist's own doc comment. When set, it
+        // owns ActorClass/PlayerbotTalents/GearItemIds/SpellPower/CombatRatings/Stats/AttackPower outright (a bad
+        // profile aborts the job rather than silently falling back to the flat keys below, so a
+        // typo'd profile path never quietly reruns whatever the flat keys happen to say instead).
+        // When unset, behavior is unchanged from before profiles existed: DpsSim.PlayerbotTalents
+        // directly, ActorClass/GearItemIds/SpellPower/CombatRatings/Stats/AttackPower all at their RunConfig{}
+        // defaults (CLASS_MAGE, no gear, no stats - a naked caster) - gear/stats have no flat
+        // conf-key equivalent, they only exist via a profile.
+        bool ready = true;
+        std::string const profilePath = sConfigMgr->GetOption<std::string>("DpsSim.Profile", "");
+        if (!profilePath.empty())
+        {
+            SimProfile::Profile profile;
+            if (!SimProfile::Load(profilePath, profile))
+            {
+                LOG_ERROR("server.dpssim",
+                    "mod-dpssim: DpsSim.Profile '{}' failed to load - aborting DpsSim.RunPlayerbot job "
+                    "(see SimProfile::Load()'s own error above for why).", profilePath);
+                ready = false;
+            }
+            else
+            {
+                config.ActorClass = profile.Class;
+                config.PlayerbotTalents = profile.PlayerbotTalents;
+                config.GearItemIds = profile.GearItemIds;
+                config.SpellPower = profile.SpellPower;
+                config.CombatRatings = profile.CombatRatings;
+                config.Stats = profile.Stats;
+                config.AttackPower = profile.AttackPower;
+                LOG_INFO("server.dpssim",
+                    "mod-dpssim: loaded DpsSim.Profile '{}' (class {}, {} gear item(s), spellPower {}, attackPower {}, "
+                    "{} synthetic rating(s), {} synthetic stat(s)).",
+                    profilePath, profile.Class, profile.GearItemIds.size(), profile.SpellPower, profile.AttackPower,
+                    profile.CombatRatings.size(), profile.Stats.size());
+            }
+        }
+        else
+            config.PlayerbotTalents = sConfigMgr->GetOption<std::string>("DpsSim.PlayerbotTalents", "");
+
+        if (ready)
+            SimDaemon::RunPlayerbot(config);
+    }
     else if (sConfigMgr->GetOption<bool>("DpsSim.RunLevelCheck", false))
         SimDaemon::RunLevelScalingCheck();
     else

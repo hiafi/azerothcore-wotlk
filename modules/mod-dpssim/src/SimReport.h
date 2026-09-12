@@ -1,0 +1,53 @@
+/*
+ * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef MODULE_DPSSIM_SIMREPORT_H
+#define MODULE_DPSSIM_SIMREPORT_H
+
+#include "SimDaemon.h"
+#include <string>
+
+// Serializes one RunResult (plus the RunConfig that produced it) to a JSON file, for later
+// rendering into the M3 HTML DPS-breakdown report - see the plan doc's Forward-look section.
+// Deliberately does NOT resolve spell names, build HTML, or do anything presentation-layer here:
+// per the user's own direction (2026-09-11), spell-id-to-name lookups happen when the report is
+// built (outside this process, against the DB directly), not inside the sim. This keeps the C++
+// side simple (no DB-query plumbing, no HTML templating, no new third-party JSON library - this
+// repo has none vendored, so output is hand-written, not parsed - see SimReport.cpp) and keeps
+// the JSON schema stable regardless of how spell names end up getting looked up later.
+namespace SimReport
+{
+    // Writes `result` (and the `config` that produced it) as a JSON file at `path`. Returns false
+    // (logging why) on failure to open/write the file - most likely `path`'s directory not
+    // existing (this does not create directories).
+    //
+    // Schema (top-level object):
+    //   "config":  {actorLevel, targetLevel, spellPower, durationMs, randomSeed}
+    //   "summary": {elapsedMs, totalDamage, dps, castCount, critCount, critRatePct}
+    //   "spells":  [{spellId, hitCount, critCount, totalDamage, pctOfTotal}, ...] - aggregated from
+    //              HitSpellIds/HitDamages/HitCrits, one entry per distinct spell id, sorted by
+    //              totalDamage descending. hitCount doubles as "cast count" for now - this sim has
+    //              no separate per-spell attempt-vs-landed tracking yet (see RunResult's own
+    //              CastAttempts comment), and no DoT-tick spells yet either (so hit count and tick
+    //              count are the same number for every spell so far).
+    //   "hits":    [{timestampMs, spellId, damage, crit}, ...] in landing order.
+    //   "auraEvents": [{timestampMs, unit ("actor"|"target"), spellId, stackAmount, positive,
+    //                  applied}, ...] - see RunResult::AuraEvent's doc comment for field meanings.
+    bool WriteJson(std::string const& path, SimDaemon::RunConfig const& config, SimDaemon::RunResult const& result);
+}
+
+#endif

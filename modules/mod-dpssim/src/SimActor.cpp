@@ -88,13 +88,60 @@ bool SimActor::Create(Config const& config)
     _player->GiveLevel(config.Level);
     _player->InitTalentForLevel();
 
+    // Gear first, then synthetic stat top-ups, then bake everything in with one final
+    // UpdateAllStats() - see SimProfile.h's Profile::GearItemIds/SpellPower/CombatRatings for why
+    // this ordering (gear before synthetic top-ups, so a profile can layer a top-up on top of a
+    // real gear baseline rather than one silently overwriting the other's contribution).
+    for (uint32 const itemId : config.GearItemIds)
+    {
+        if (!_player->StoreNewItemInBestSlots(itemId, 1))
+            LOG_ERROR("server.dpssim",
+                "mod-dpssim: SimActor::Create() - could not equip item {} (bad item id, or its slot is "
+                "already filled by an earlier item in GearItemIds).", itemId);
+    }
+
+    for (auto const& [combatRating, value] : config.CombatRatings)
+    {
+        if (value != 0)
+            _player->ApplyRatingMod(CombatRating(combatRating), value, true);
+    }
+
+    for (auto const& [stat, value] : config.Stats)
+    {
+        if (value != 0.0f)
+        {
+            // Same two-call sequence a real item's ITEM_MOD_STRENGTH/AGILITY/STAMINA/INTELLECT/
+            // SPIRIT stat uses (Player::_ApplyItemBonuses()) - HandleStatFlatModifier() bumps the
+            // base value the UpdateAllStats() call below rebuilds from; UpdateStatBuffMod()
+            // refreshes the buff-mod field HandleStatFlatModifier() doesn't touch itself.
+            // UNIT_MOD_STAT_STRENGTH..SPIRIT are contiguous in Stats enum order (Unit.h's own
+            // comment on the enum says as much), so offsetting from UNIT_MOD_STAT_STRENGTH by the
+            // Stats index reaches the right UnitMods without a second lookup table.
+            _player->HandleStatFlatModifier(UnitMods(UNIT_MOD_STAT_STRENGTH + stat), BASE_VALUE, value, true);
+            _player->UpdateStatBuffMod(Stats(stat));
+        }
+    }
+
+    if (config.AttackPower != 0)
+    {
+        // A real item's single ITEM_MOD_ATTACK_POWER stat bumps both at once
+        // (Player::_ApplyItemBonuses()'s own case) - mirrored here rather than picking one.
+        _player->HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER, TOTAL_VALUE, float(config.AttackPower), true);
+        _player->HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, float(config.AttackPower), true);
+    }
+
     if (config.SpellPower != 0)
     {
-        // Order matters: ApplySpellPowerBonus() only bumps the internal m_baseSpellPower
-        // accumulator: the UpdateAllStats() call below is what actually bakes it into the damage
-        // formula (Unit::SpellBaseDamageBonusDone() reads m_baseSpellPower fresh each time it's
-        // called from UpdateSpellDamageAndHealingBonus()).
+        // ApplySpellPowerBonus() only bumps the internal m_baseSpellPower accumulator - the
+        // UpdateAllStats() call below is what actually bakes it into the damage formula
+        // (Unit::SpellBaseDamageBonusDone() reads m_baseSpellPower fresh each time it's called
+        // from UpdateSpellDamageAndHealingBonus()).
         _player->ApplySpellPowerBonus(config.SpellPower, true);
+    }
+
+    if (config.SpellPower != 0 || config.AttackPower != 0 || !config.GearItemIds.empty()
+        || !config.CombatRatings.empty() || !config.Stats.empty())
+    {
         _player->UpdateAllStats();
         _player->SetFullHealth();
         _player->SetPower(POWER_MANA, _player->GetMaxPower(POWER_MANA));
@@ -107,7 +154,11 @@ bool SimActor::Create(Config const& config)
         return false;
     }
 
-    LOG_INFO("server.dpssim", "mod-dpssim: SimActor created - '{}' (race {}, class {}, level {}), map {}, spellPower {}.",
-        config.Name, config.Race, config.Class, config.Level, _player->GetMapId(), config.SpellPower);
+    LOG_INFO("server.dpssim",
+        "mod-dpssim: SimActor created - '{}' (race {}, class {}, level {}), map {}, spellPower {}, attackPower {}, "
+        "{} gear item(s), {} synthetic rating(s), {} synthetic stat(s).",
+        config.Name, config.Race, config.Class, config.Level, _player->GetMapId(),
+        config.SpellPower, config.AttackPower, config.GearItemIds.size(),
+        config.CombatRatings.size(), config.Stats.size());
     return true;
 }

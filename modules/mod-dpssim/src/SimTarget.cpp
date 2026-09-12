@@ -32,12 +32,29 @@ SimTarget::~SimTarget()
         _summon->UnSummon();
 }
 
+uint32 SimTarget::EntryForLevel(uint8 level)
+{
+    if (level == 60)
+        return DUMMY_ENTRY_LEVEL_60;
+    if (level == 70)
+        return DUMMY_ENTRY_LEVEL_70;
+    if (level == 80)
+        return DUMMY_ENTRY_LEVEL_80;
+
+    uint32 const fallback = level < 60 ? DUMMY_ENTRY_LEVEL_60 : (level < 70 ? DUMMY_ENTRY_LEVEL_70 : DUMMY_ENTRY_LEVEL_80);
+    LOG_WARN("server.dpssim", "mod-dpssim: SimTarget::EntryForLevel() - no dedicated dummy entry for level {} (only 60/70/80 exist) - falling back to entry {}.",
+        level, fallback);
+    return fallback;
+}
+
 bool SimTarget::Create(Map* map, Position const& pos, Config const& config)
 {
-    TempSummon* summon = map->SummonCreature(TARGET_DUMMY_ENTRY, pos);
+    uint32 const entry = EntryForLevel(config.Level);
+
+    TempSummon* summon = map->SummonCreature(entry, pos);
     if (!summon)
     {
-        LOG_ERROR("server.dpssim", "mod-dpssim: SimTarget::Create() - SummonCreature(entry {}) failed - check that base creature_template data is present in this DB.", TARGET_DUMMY_ENTRY);
+        LOG_ERROR("server.dpssim", "mod-dpssim: SimTarget::Create() - SummonCreature(entry {}) failed - check that base creature_template data is present in this DB.", entry);
         return false;
     }
 
@@ -54,7 +71,7 @@ bool SimTarget::Create(Map* map, Position const& pos, Config const& config)
     _summon->SetResistance(SPELL_SCHOOL_NORMAL, int32(config.Armor));
 
     LOG_INFO("server.dpssim", "mod-dpssim: SimTarget created - entry {}, level {}, armor {}, maxHealth {}.",
-        TARGET_DUMMY_ENTRY, config.Level, config.Armor, config.MaxHealth);
+        entry, config.Level, config.Armor, config.MaxHealth);
     return true;
 }
 

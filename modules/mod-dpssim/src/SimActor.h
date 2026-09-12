@@ -19,7 +19,9 @@
 #define MODULE_DPSSIM_SIMACTOR_H
 
 #include "Define.h"
+#include <map>
 #include <string>
+#include <vector>
 
 class Player;
 class WorldSession;
@@ -45,6 +47,27 @@ public:
         // contribute automatically - see Unit::SpellBaseDamageBonusDone's "Custom: 0.5 point of
         // spellpower per point of Intellect and Spirit"). 0 models an unbuffed, ungeared actor.
         int32 SpellPower = 0;
+
+        // Real item ids to equip, in listed order, via Player::StoreNewItemInBestSlots() - see
+        // SimProfile.h's Profile::GearItemIds for the full doc comment (this struct just carries
+        // whatever RunConfig::GearItemIds already holds). Applied before CombatRatings below.
+        std::vector<uint32> GearItemIds;
+
+        // Synthetic combat-rating top-ups, keyed by CombatRating (Unit.h) - see SimProfile.h's
+        // Profile::CombatRatings for the full doc comment. Applied via Player::ApplyRatingMod()
+        // after GearItemIds, so these layer on top of whatever gear already contributed rather
+        // than replacing it.
+        std::map<uint8, int32> CombatRatings;
+
+        // Synthetic core-stat top-ups (Strength/Agility/Stamina/Intellect/Spirit), keyed by Stats
+        // (SharedDefines.h) - see SimProfile.h's Profile::Stats for the full doc comment. Applied
+        // via Player::HandleStatFlatModifier()/UpdateStatBuffMod().
+        std::map<uint8, float> Stats;
+
+        // Flat attack power on top of gear/level/race - see SimProfile.h's Profile::AttackPower
+        // for the full doc comment. Applied via Player::HandleStatFlatModifier() against both the
+        // melee and ranged attack-power UnitMods.
+        int32 AttackPower = 0;
     };
 
     ~SimActor();

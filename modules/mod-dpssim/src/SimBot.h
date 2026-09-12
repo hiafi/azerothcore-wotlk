@@ -19,6 +19,7 @@
 #define MODULE_DPSSIM_SIMBOT_H
 
 #include "Define.h"
+#include <string>
 
 class Player;
 class PlayerbotAI;
@@ -64,7 +65,13 @@ public:
     // automatic engage/pull action for an unconfigured mage by default. Once that first hit lands,
     // control passes entirely to the real Engine from the next UpdateAI() tick onward. Returns
     // false (logging why) on failure.
-    bool Create(Player* bot, Unit* target);
+    //
+    // `playerbotTalents` is the same positional talent string DpsSim.PlayerbotTalents takes (see
+    // its conf doc comment for the format) - passed in explicitly (from RunConfig::
+    // PlayerbotTalents, itself either the flat conf key or a loaded SimProfile's value) rather
+    // than read from sConfigMgr directly in here, so this class has no opinion on where the
+    // string came from. Empty = no talents spent.
+    bool Create(Player* bot, Unit* target, std::string const& playerbotTalents);
 
     // Drives the real Engine/Strategy selector for one tick - call this from the SimClock loop
     // instead of a hardcoded RotationTick(). `diff` is not a wall-clock read: PlayerbotAIBase's

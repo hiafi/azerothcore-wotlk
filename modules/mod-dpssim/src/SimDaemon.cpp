@@ -16,6 +16,7 @@
  */
 
 #include "SimDaemon.h"
+#include "Config.h"
 #include "EventRecorder.h"
 #include "Log.h"
 #include "Map.h"
@@ -25,10 +26,14 @@
 #include "SimActor.h"
 #include "SimBot.h"
 #include "SimClock.h"
+#include "SimReport.h"
 #include "SimTarget.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
+#include "StringFormat.h"
+#include <algorithm>
 #include <chrono>
+#include <string>
 #include <thread>
 
 namespace
@@ -57,6 +62,17 @@ namespace
 
         return true;
     }
+
+    // Copies EventRecorder's own AuraEvent vector into RunResult's decoupled equivalent - see
+    // SimDaemon.h's doc comment on RunResult::AuraEvent for why the two types aren't shared.
+    std::vector<SimDaemon::RunResult::AuraEvent> ToRunResultAuraEvents(std::vector<EventRecorder::AuraEvent> const& events)
+    {
+        std::vector<SimDaemon::RunResult::AuraEvent> result;
+        result.reserve(events.size());
+        for (EventRecorder::AuraEvent const& e : events)
+            result.push_back({e.TimestampMs, e.UnitGuid, e.IsActor, e.SpellId, e.StackAmount, e.Positive, e.Applied});
+        return result;
+    }
 }
 
 bool SimDaemon::RunOnce(RunConfig const& config, RunResult& result)
@@ -73,11 +89,15 @@ bool SimDaemon::RunOnce(RunConfig const& config, RunResult& result)
     SimActor actor;
     SimActor::Config actorConfig;
     actorConfig.Name = "SimActor";
-    actorConfig.Race = RACE_TROLL;
+    actorConfig.Race = config.ActorRace;
     actorConfig.Class = CLASS_MAGE;
     actorConfig.Gender = GENDER_MALE;
     actorConfig.Level = config.ActorLevel;
     actorConfig.SpellPower = config.SpellPower;
+    actorConfig.GearItemIds = config.GearItemIds;
+    actorConfig.CombatRatings = config.CombatRatings;
+    actorConfig.Stats = config.Stats;
+    actorConfig.AttackPower = config.AttackPower;
     if (!actor.Create(actorConfig))
     {
         LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunOnce() - SimActor::Create() failed - aborting.");
@@ -98,7 +118,7 @@ bool SimDaemon::RunOnce(RunConfig const& config, RunResult& result)
 
     SimTarget target;
     SimTarget::Config targetConfig;
-    targetConfig.Level = 80;
+    targetConfig.Level = uint8(config.TargetLevel);
     targetConfig.Armor = config.TargetArmor;
     if (!target.Create(map, player->GetNearPosition(8.0f, 0.0f), targetConfig))
     {
@@ -149,6 +169,8 @@ bool SimDaemon::RunOnce(RunConfig const& config, RunResult& result)
     result.HitDamages = recorder->GetHitDamages();
     result.HitCrits = recorder->GetHitCrits();
     result.HitSpellIds = recorder->GetHitSpellIds();
+    result.HitTimestamps = recorder->GetHitTimestamps();
+    result.AuraEvents = ToRunResultAuraEvents(recorder->GetAuraEvents());
     return true;
 }
 
@@ -159,11 +181,15 @@ bool SimDaemon::RunPlayerbotOnce(RunConfig const& config, RunResult& result)
     SimActor actor;
     SimActor::Config actorConfig;
     actorConfig.Name = "SimBot";
-    actorConfig.Race = RACE_TROLL;
-    actorConfig.Class = CLASS_MAGE;
+    actorConfig.Race = config.ActorRace;
+    actorConfig.Class = config.ActorClass;
     actorConfig.Gender = GENDER_MALE;
-    actorConfig.Level = 80;
+    actorConfig.Level = uint8(config.ActorLevel);
     actorConfig.SpellPower = config.SpellPower;
+    actorConfig.GearItemIds = config.GearItemIds;
+    actorConfig.CombatRatings = config.CombatRatings;
+    actorConfig.Stats = config.Stats;
+    actorConfig.AttackPower = config.AttackPower;
     if (!actor.Create(actorConfig))
     {
         LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbotOnce() - SimActor::Create() failed - aborting.");
@@ -175,7 +201,7 @@ bool SimDaemon::RunPlayerbotOnce(RunConfig const& config, RunResult& result)
 
     SimTarget target;
     SimTarget::Config targetConfig;
-    targetConfig.Level = 80;
+    targetConfig.Level = uint8(config.TargetLevel);
     targetConfig.Armor = config.TargetArmor;
     if (!target.Create(map, player->GetNearPosition(8.0f, 0.0f), targetConfig))
     {
@@ -194,7 +220,7 @@ bool SimDaemon::RunPlayerbotOnce(RunConfig const& config, RunResult& result)
     // SetRandomSeed() below on purpose, same reasoning as RunOnce()'s own reseed placement: keeps
     // the seeded window covering only what the real Engine/Strategy does each tick.
     SimBot bot;
-    if (!bot.Create(player, dummy))
+    if (!bot.Create(player, dummy, config.PlayerbotTalents))
     {
         LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbotOnce() - SimBot::Create() failed - aborting.");
         return false;
@@ -225,6 +251,8 @@ bool SimDaemon::RunPlayerbotOnce(RunConfig const& config, RunResult& result)
     result.HitDamages = recorder->GetHitDamages();
     result.HitCrits = recorder->GetHitCrits();
     result.HitSpellIds = recorder->GetHitSpellIds();
+    result.HitTimestamps = recorder->GetHitTimestamps();
+    result.AuraEvents = ToRunResultAuraEvents(recorder->GetAuraEvents());
     return true;
 }
 
@@ -254,12 +282,13 @@ void SimDaemon::Run()
         result.ElapsedMs, result.CastAttempts, result.CastCount, result.CritCount, critRate, result.TotalDamage, dps);
 }
 
-void SimDaemon::RunPlayerbot()
+void SimDaemon::RunPlayerbot(RunConfig const& config)
 {
-    LOG_INFO("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbot() - M2a harness, real mod-playerbots Engine/Strategy selector.");
+    LOG_INFO("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbot() - M2a harness, real mod-playerbots Engine/Strategy selector, actor level {} vs. target level {}.",
+        config.ActorLevel, config.TargetLevel);
 
     RunResult result;
-    if (!RunPlayerbotOnce(RunConfig{}, result))
+    if (!RunPlayerbotOnce(config, result))
     {
         LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbot() - RunPlayerbotOnce() failed - aborting.");
         return;
@@ -274,23 +303,44 @@ void SimDaemon::RunPlayerbot()
     LOG_INFO("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbot() complete - {}ms sim time, {} landed hits ({} crit, {:.1f}% crit rate), {} total damage, {:.1f} DPS.",
         result.ElapsedMs, result.CastCount, result.CritCount, critRate, result.TotalDamage, dps);
 
-    // Per-hit breakdown - the actual point of this run: proving the real rotation casts a variety
-    // of spells on its own, not just repeating one hardcoded id.
+    LOG_INFO("server.dpssim", "mod-dpssim:   {} aura events (buffs/debuffs gained or lost by the actor or target).",
+        result.AuraEvents.size());
+
+    // Merged, timestamp-sorted timeline of every hit and aura event - added 2026-09-11 to directly
+    // observe whether talent-gated procs (Fingers of Frost, Brain Freeze, Arcane Blast stacks, ...)
+    // actually fire, rather than inferring it from which spells get cast. A first step toward M3's
+    // full timeline report, not that report itself (no HTML, no per-spell aggregation yet).
+    struct TimelineEntry
+    {
+        uint32 TimestampMs;
+        std::string Text;
+    };
+    std::vector<TimelineEntry> timeline;
+    timeline.reserve(result.HitDamages.size() + result.AuraEvents.size());
     for (size_t i = 0; i < result.HitDamages.size(); ++i)
     {
-        LOG_INFO("server.dpssim", "mod-dpssim:   hit #{} - spell {} - {} damage{}",
-            i, result.HitSpellIds[i], result.HitDamages[i], result.HitCrits[i] ? " (crit)" : "");
+        timeline.push_back({result.HitTimestamps[i], Acore::StringFormat(
+            "hit - spell {} - {} damage{}", result.HitSpellIds[i], result.HitDamages[i],
+            result.HitCrits[i] ? " (crit)" : "")});
     }
-}
+    for (RunResult::AuraEvent const& e : result.AuraEvents)
+    {
+        timeline.push_back({e.TimestampMs, Acore::StringFormat(
+            "aura {} - spell {} on {} (stack {}){}", e.Applied ? "gained" : "lost", e.SpellId,
+            e.IsActor ? "actor" : "target", e.StackAmount, e.Positive ? "" : " (debuff)")});
+    }
+    std::stable_sort(timeline.begin(), timeline.end(),
+        [](TimelineEntry const& a, TimelineEntry const& b) { return a.TimestampMs < b.TimestampMs; });
 
-namespace
-{
-    // Spell 116 - "Frostbolt", no rank suffix, SpellLevel/BaseLevel 4, MaxLevel 80 - this
-    // deployment's sole surviving Frostbolt rank after the migration to a single-rank spell
-    // system (see RunConfig::SpellId's doc comment). Deliberately not FROSTBOLT_SPELL_ID (25304,
-    // Rank 11): that spell still exists in spell_dbc but is no longer taught, so it's not what a
-    // real character actually casts anymore.
-    constexpr uint32 SINGLE_RANK_FROSTBOLT_SPELL_ID = 116;
+    for (TimelineEntry const& entry : timeline)
+        LOG_INFO("server.dpssim", "mod-dpssim:   t={}ms {}", entry.TimestampMs, entry.Text);
+
+    // Opt-in JSON export for the M3 HTML report - off by default like every other DpsSim.* flag in
+    // this module. Deliberately no spell-name resolution here - see SimReport.h's doc comment for
+    // why that happens outside this process, against the DB directly, when the report is built.
+    std::string const reportPath = sConfigMgr->GetOption<std::string>("DpsSim.ReportPath", "");
+    if (!reportPath.empty())
+        SimReport::WriteJson(reportPath, config, result);
 }
 
 void SimDaemon::RunLevelScalingCheck()

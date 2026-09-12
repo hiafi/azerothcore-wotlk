@@ -85,6 +85,17 @@ public:
 
     void ModifySpellDamageTaken(Unit* target, Unit* attacker, int32& damage, SpellInfo const* spellInfo, bool isCrit) override;
 
+    // Aura tracking - added 2026-09-11 to directly observe whether talent-gated procs (Fingers of
+    // Frost, Brain Freeze, Arcane Blast stacks, ...) actually fire, rather than inferring it from
+    // which spells get cast. Both hooks already exist, unmodified, in core (UnitScript.h) and are
+    // already wired up from Unit.cpp - no core widening needed, unlike ModifySpellDamageTaken back
+    // in Phase 1. OnAuraApply only gets a bare Aura* (not a per-target AuraApplication*), so
+    // positivity here comes from SpellInfo::IsPositive() (a spell-level classification) rather than
+    // AuraApplication::IsPositive() (a per-application one) - fine for this sim's single-actor,
+    // single-target scope, where the two should never disagree.
+    void OnAuraApply(Unit* unit, Aura* aura) override;
+    void OnAuraRemove(Unit* unit, AuraApplication* aurApp, AuraRemoveMode mode) override;
+
     [[nodiscard]] uint64 GetTotalDamage() const { return _totalDamage; }
     [[nodiscard]] uint32 GetCastCount() const { return _castCount; }
     [[nodiscard]] uint32 GetCritCount() const { return _critCount; }
@@ -105,6 +116,32 @@ public:
     // breakdown (which would aggregate by spell rather than just list them per hit).
     [[nodiscard]] std::vector<uint32> const& GetHitSpellIds() const { return _hitSpellIds; }
 
+    // Per-hit sim-clock timestamps (getMSTime() at the moment ModifySpellDamageTaken fired),
+    // parallel to GetHitDamages()/GetHitCrits()/GetHitSpellIds() - safe to use directly as a
+    // timeline value under the sim clock override (Timer.h), same as every other timestamp this
+    // module logs. Added alongside aura tracking for the same reason: M3's timeline report needs
+    // "when", not just "what".
+    [[nodiscard]] std::vector<uint32> const& GetHitTimestamps() const { return _hitTimestamps; }
+
+    // One entry per aura gained or lost by the actor or the target while this recorder is alive.
+    // `Applied == false` is a removal (SpellId/Positive/StackAmount describe the aura that was
+    // removed, not a new one). Not filtered to any particular spell - unlike the rotationSpellId
+    // filter on damage hits, there's no equivalent "aura I care about" concept yet; a human (or the
+    // eventual M3 report) filters by SpellId/UnitGuid themselves. `IsActor` is a convenience
+    // (UnitGuid == _actorGuid) computed at capture time, since this recorder already knows both
+    // GUIDs and every caller so far only ever wants "was this on the actor or the target".
+    struct AuraEvent
+    {
+        uint32 TimestampMs;
+        ObjectGuid UnitGuid;
+        bool IsActor;
+        uint32 SpellId;
+        uint8 StackAmount;
+        bool Positive;
+        bool Applied;
+    };
+    [[nodiscard]] std::vector<AuraEvent> const& GetAuraEvents() const { return _auraEvents; }
+
 private:
     ObjectGuid _actorGuid;
     ObjectGuid _targetGuid;
@@ -116,6 +153,8 @@ private:
     std::vector<uint32> _hitDamages;
     std::vector<bool> _hitCrits;
     std::vector<uint32> _hitSpellIds;
+    std::vector<uint32> _hitTimestamps;
+    std::vector<AuraEvent> _auraEvents;
 };
 
 #endif

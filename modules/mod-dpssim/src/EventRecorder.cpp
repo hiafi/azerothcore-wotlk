@@ -16,11 +16,14 @@
  */
 
 #include "EventRecorder.h"
+#include "SpellAuras.h"
 #include "SpellInfo.h"
+#include "Timer.h"
 #include "Unit.h"
 
 EventRecorder::EventRecorder(ObjectGuid actorGuid, ObjectGuid targetGuid, uint32 rotationSpellId)
-    : UnitScript("mod_dpssim_event_recorder", true, {UNITHOOK_MODIFY_SPELL_DAMAGE_TAKEN}),
+    : UnitScript("mod_dpssim_event_recorder", true,
+                 {UNITHOOK_MODIFY_SPELL_DAMAGE_TAKEN, UNITHOOK_ON_AURA_APPLY, UNITHOOK_ON_AURA_REMOVE}),
       _actorGuid(actorGuid), _targetGuid(targetGuid), _rotationSpellId(rotationSpellId)
 {
 }
@@ -41,9 +44,41 @@ void EventRecorder::ModifySpellDamageTaken(Unit* target, Unit* attacker, int32& 
     _totalDamage += uint64(damage);
     _hitDamages.push_back(uint32(damage));
     _hitSpellIds.push_back(spellInfo->Id);
+    _hitTimestamps.push_back(getMSTime());
 
     ++_castCount;
     _hitCrits.push_back(isCrit);
     if (isCrit)
         ++_critCount;
+}
+
+void EventRecorder::OnAuraApply(Unit* unit, Aura* aura)
+{
+    if (!unit || !aura)
+        return;
+
+    ObjectGuid const guid = unit->GetGUID();
+    if (guid != _actorGuid && guid != _targetGuid)
+        return;
+
+    SpellInfo const* spellInfo = aura->GetSpellInfo();
+    _auraEvents.push_back(AuraEvent{
+        getMSTime(), guid, guid == _actorGuid, aura->GetId(), aura->GetStackAmount(),
+        spellInfo && spellInfo->IsPositive(), true});
+}
+
+void EventRecorder::OnAuraRemove(Unit* unit, AuraApplication* aurApp, AuraRemoveMode /*mode*/)
+{
+    if (!unit || !aurApp || !aurApp->GetBase())
+        return;
+
+    ObjectGuid const guid = unit->GetGUID();
+    if (guid != _actorGuid && guid != _targetGuid)
+        return;
+
+    Aura const* aura = aurApp->GetBase();
+    SpellInfo const* spellInfo = aura->GetSpellInfo();
+    _auraEvents.push_back(AuraEvent{
+        getMSTime(), guid, guid == _actorGuid, aura->GetId(), aura->GetStackAmount(),
+        spellInfo && spellInfo->IsPositive(), false});
 }
