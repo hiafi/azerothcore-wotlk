@@ -1648,6 +1648,12 @@ void Unit::CalculateSpellDamageTaken(SpellNonMeleeDamage* damageInfo, int32 dama
     damageInfo->cleanDamage = std::max(0, cleanDamage);
     damageInfo->damage = std::max(0, damage);
 
+    // Script Hook For CalculateSpellDamageTaken -- observational, fires with the fully mitigated
+    // (armor/crit/block/resilience applied) hit, unlike the ModifySpellDamageTaken hook above which
+    // fires before any of that. See OnSpellDamageTakenFinal's own doc comment (UnitScript.h) for why
+    // this exists as a separate hook rather than widening/moving the one above.
+    sScriptMgr->OnSpellDamageTakenFinal(damageInfo->target, damageInfo->attacker, damageInfo->damage, spellInfo, crit);
+
     // Calculate absorb resist
     if (damageInfo->damage > 0)
     {

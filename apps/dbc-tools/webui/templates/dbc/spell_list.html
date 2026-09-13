@@ -1,9 +1,9 @@
-{% extends "base.html" %}
+{% extends "dbc/base.html" %}
 {% block title %}{{ file }}.csv – dbc-tools{% endblock %}
 {% block content %}
-<p><a href="{{ url_for('index') }}">&larr; all files</a></p>
+<p><a href="{{ url_for('.index') }}">&larr; all files</a></p>
 <h1>{{ file }}.csv</h1>
-<p><a href="{{ url_for('spell_new', file=file) }}" class="button">+ New spell</a></p>
+<p><a href="{{ url_for('.spell_new', file=file) }}" class="button">+ New spell</a></p>
 <table>
   <thead>
     <tr><th>ID</th><th>Name</th><th>School</th><th>Cast</th><th>Cooldown</th><th>Mana</th><th>Notes</th><th></th></tr>
@@ -19,8 +19,8 @@
       <td>{{ e.mana_cost }}</td>
       <td class="notes">{{ e.notes }}</td>
       <td class="actions">
-        <a href="{{ url_for('spell_edit', file=file, spell_id=e.id) }}">edit</a>
-        <form method="post" action="{{ url_for('spell_delete', file=file, spell_id=e.id) }}"
+        <a href="{{ url_for('.spell_edit', file=file, spell_id=e.id) }}">edit</a>
+        <form method="post" action="{{ url_for('.spell_delete', file=file, spell_id=e.id) }}"
               onsubmit="return confirm('Delete spell {{ e.id }} ({{ e.name }})?');">
           <button type="submit" class="link-button">delete</button>
         </form>

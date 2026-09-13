@@ -4,8 +4,8 @@ A local web UI for browsing/editing `item_template` directly - see
 `apps/item-tools/README.md` for the full design rationale. Sibling of
 `apps/dbc-tools` but deliberately simpler: items have no client-side DBC to
 rebuild, so there's no `generate.py`/MPQ pipeline, just a read of
-base-dump-⊕-migrations (`lib/overlay.py`) and a write of one guarded SQL
-statement per save (`lib/emit.py`).
+base-dump-⊕-migrations (`item_lib/overlay.py`) and a write of one guarded SQL
+statement per save (`item_lib/emit.py`).
 
 ## Load-bearing gotcha: `item_template` can't be DELETE+INSERTed
 
@@ -29,7 +29,7 @@ history:
   was modeled on (originally `rev_1787563173168071680.sql`), also inside
   `data/sql/updates/pending_db_world/frost_mage_rework.sql`.
 
-`apps/item-tools/lib/emit.py` generates exactly these two shapes; you
+`apps/item-tools/item_lib/emit.py` generates exactly these two shapes; you
 shouldn't need to hand-write either if you're going through the webui.
 
 **This system's migrations live under `itemization_templates_v2/`.** Every
@@ -49,8 +49,8 @@ flatten back out just to get merged). Purely organizational either way: both
 the real `DBUpdater` (`UpdateFetcher::Update` in
 `src/server/database/Updater/UpdateFetcher.cpp`, itself walking
 subdirectories up to depth 10 via `FillFileListRecursively()`) and this
-app's own base-⊕-overlay readers (`lib/overlay.py`'s and
-`lib/budget_overlay.py`'s `_contributing_files()`) key applied/replayed
+app's own base-⊕-overlay readers (`item_lib/overlay.py`'s and
+`item_lib/budget_overlay.py`'s `_contributing_files()`) key applied/replayed
 migrations off bare filename, not directory path — confirmed live, moving
 Buckets 1-2's ~20 files into that subdirectory (and, later, renaming the
 subdirectory itself, and moving its merged files a second time into
@@ -64,7 +64,7 @@ would try to lint it as SQL.
 small-tolerance comparison, not exact `=`, whenever the old value is itself a
 *previously computed* float rather than clean original data - MySQL's 32-bit
 storage doesn't reliably round-trip a Python `repr()`'d value back to exact
-equality even when both print identically. `lib/emit._guard_term()` handles
+equality even when both print identically. `item_lib/emit._guard_term()` handles
 this automatically (used by both `write_update` and `budget_emit`'s
 `_update_statement`) - see `docs/bugs-and-fixes.md`'s entry on this for the
 live incident that found it. Don't hand-roll a guard clause on a float
@@ -77,11 +77,11 @@ Hand-authors the percentage-allocation itemization system's
 §9.1/§9.8), and regenerates an item's real `item_template` stats from them.
 Two new modules carry this, both still no-live-DB:
 
-- `lib/budget_overlay.py` - a generic DELETE+INSERT replay reader (this
+- `item_lib/budget_overlay.py` - a generic DELETE+INSERT replay reader (this
   table family's actual convention, unlike `item_template`'s guarded UPDATE
-  - see `lib/overlay.py`'s module docstring and this file's "Load-bearing
+  - see `item_lib/overlay.py`'s module docstring and this file's "Load-bearing
   gotcha" above) for every budget-system table, reference tables included.
-- `lib/budget.py` - a Python port of `ItemBudget.cpp`'s `ResolveBudget()`.
+- `item_lib/budget.py` - a Python port of `ItemBudget.cpp`'s `ResolveBudget()`.
   A **separate implementation of the same formula**, not a call into the
   C++ - if that formula ever changes (the deferred custom-stat-ID fix
   mentioned in `docs/itemization-changes.md` §5, for instance), this needs
@@ -91,7 +91,7 @@ Two new modules carry this, both still no-live-DB:
 
 ## Dungeon/raid loot browser
 
-`/dungeons` and `/dungeons/<map_id>` (`lib/loot.py`) join `creature` +
+`/dungeons` and `/dungeons/<map_id>` (`item_lib/loot.py`) join `creature` +
 `creature_template` + `creature_loot_template`/`reference_loot_template`
 against `item_template` to show what drops where, with a link into each
 item's edit form. Those tables (plus `instance_encounters`, used for boss
@@ -105,6 +105,6 @@ reliably `rank == CREATURE_ELITE_WORLDBOSS`. So boss detection is instead
 built from `instance_encounters` (real achievement/kill-credit data,
 `creditType == ENCOUNTER_CREDIT_KILL_CREATURE` rows give a creature_template
 entry), unioned with the WORLDBOSS-rank signal as a fallback. See
-`lib.loot._boss_creature_entries`'s docstring for the coverage gaps (a
+`item_lib.loot._boss_creature_entries`'s docstring for the coverage gaps (a
 boss with no instance_encounters row, or one summoned dynamically rather
 than statically spawned, won't be flagged and simply won't appear).

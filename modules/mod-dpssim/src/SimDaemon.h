@@ -174,6 +174,31 @@ namespace SimDaemon
             bool Applied = false;
         };
         std::vector<AuraEvent> AuraEvents;
+
+        // Actor's mana, sampled periodically (MANA_SAMPLE_INTERVAL_MS, see SimDaemon.cpp) rather
+        // than every StepMs tick - a 180s run at the default 10ms step would otherwise produce
+        // 18000 points for a value that only meaningfully moves a handful of times a second.
+        // Sampled directly in RunOnce()/RunPlayerbotOnce()'s own loop (Unit::GetPowerPct(POWER_MANA))
+        // rather than via an EventRecorder hook - there's no natural "mana changed" event to hang a
+        // UnitScript override off of, unlike the hit/aura hooks EventRecorder already has.
+        struct ManaSample
+        {
+            uint32 TimestampMs = 0;
+            float ManaPct = 0.0f;
+        };
+        std::vector<ManaSample> ManaSamples;
+
+        // One entry per spell the actor actually cast, in cast order - a "cast log" alongside the
+        // hit log above, so non-damage abilities (Evocation, self-buffs, ...) show up too, not just
+        // landed direct-damage hits. See CastRecorder's own doc comment for why this comes from a
+        // separate class/hook (AllSpellScript::OnSpellCast) rather than EventRecorder, and for why
+        // there's no per-spell filter the way EventRecorder's rotationSpellId is - every cast counts.
+        struct CastEvent
+        {
+            uint32 TimestampMs = 0;
+            uint32 SpellId = 0;
+        };
+        std::vector<CastEvent> CastEvents;
     };
 
     // Runs one sim job per `config` and fills `result`. Returns false (result.Success also false)

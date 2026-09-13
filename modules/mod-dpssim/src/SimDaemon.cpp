@@ -16,6 +16,7 @@
  */
 
 #include "SimDaemon.h"
+#include "CastRecorder.h"
 #include "Config.h"
 #include "EventRecorder.h"
 #include "Log.h"
@@ -38,6 +39,24 @@
 
 namespace
 {
+    // See SimDaemon.h's RunResult::ManaSamples doc comment for why this is a periodic sample
+    // rather than a per-tick or per-event capture.
+    constexpr uint32 MANA_SAMPLE_INTERVAL_MS = 500;
+
+    // Appends a sample if at least MANA_SAMPLE_INTERVAL_MS has passed since the last one (or this
+    // is the very first tick) - called once per sim-loop iteration from both RunOnce() and
+    // RunPlayerbotOnce() rather than duplicated inline.
+    void MaybeSampleMana(Player* actor, uint32 nowMs, uint32& lastSampleMs, bool& sampledOnce,
+        std::vector<SimDaemon::RunResult::ManaSample>& samples)
+    {
+        if (sampledOnce && nowMs - lastSampleMs < MANA_SAMPLE_INTERVAL_MS)
+            return;
+
+        samples.push_back({nowMs, actor->GetPowerPct(POWER_MANA)});
+        lastSampleMs = nowMs;
+        sampledOnce = true;
+    }
+
     // Hardcoded rotation: cast Frostbolt whenever the actor isn't already casting/channeling and
     // both the GCD and Frostbolt's own cooldown (it doesn't have one, but check anyway - Phase 2's
     // rotation engine will need a real cooldown check and this is the pattern it'll follow) are
@@ -71,6 +90,16 @@ namespace
         result.reserve(events.size());
         for (EventRecorder::AuraEvent const& e : events)
             result.push_back({e.TimestampMs, e.UnitGuid, e.IsActor, e.SpellId, e.StackAmount, e.Positive, e.Applied});
+        return result;
+    }
+
+    // Same decoupling reasoning as ToRunResultAuraEvents() above, for CastRecorder::CastEvent.
+    std::vector<SimDaemon::RunResult::CastEvent> ToRunResultCastEvents(std::vector<CastRecorder::CastEvent> const& events)
+    {
+        std::vector<SimDaemon::RunResult::CastEvent> result;
+        result.reserve(events.size());
+        for (CastRecorder::CastEvent const& e : events)
+            result.push_back({e.TimestampMs, e.SpellId});
         return result;
     }
 }
@@ -134,6 +163,12 @@ bool SimDaemon::RunOnce(RunConfig const& config, RunResult& result)
     // call for the process's remaining lifetime - documented, known, harmless. See EventRecorder.h.
     EventRecorder* recorder = new EventRecorder(player->GetGUID(), dummy->GetGUID(), config.SpellId);
 
+    // Same heap-allocation/never-deleted rules as `recorder` above - see CastRecorder.h's doc
+    // comment. Unfiltered by spell id on purpose (a cast log tracks every ability, not just the
+    // rotation's one damage spell) - RunOnce()'s hardcoded RotationTick() only ever casts Frostbolt
+    // anyway, so this mostly matters for RunPlayerbotOnce() below, but is added here too for symmetry.
+    CastRecorder* castRecorder = new CastRecorder(player->GetGUID());
+
     // Seeded here, immediately before the combat loop, rather than at the top of this function -
     // deliberately isolates the seeded window from actor/target construction above. This was a
     // real diagnostic step, not just tidiness: the plan doc's determinism test found that two
@@ -147,11 +182,15 @@ bool SimDaemon::RunOnce(RunConfig const& config, RunResult& result)
 
     SimClock clock(config.StepMs);
     uint32 castAttempts = 0;
+    uint32 lastManaSampleMs = 0;
+    bool sampledManaOnce = false;
+    std::vector<SimDaemon::RunResult::ManaSample> manaSamples;
     while (clock.GetElapsedMs() < config.DurationMs)
     {
         clock.Tick(map);
         if (RotationTick(player, dummy, frostbolt))
             ++castAttempts;
+        MaybeSampleMana(player, clock.GetElapsedMs(), lastManaSampleMs, sampledManaOnce, manaSamples);
 
         // Only for the accelerated-clock test (SimDaemon.h's RunConfig::RealTimePaced doc
         // comment) - paces the loop to real wall-clock time instead of running flat-out, so a
@@ -171,6 +210,8 @@ bool SimDaemon::RunOnce(RunConfig const& config, RunResult& result)
     result.HitSpellIds = recorder->GetHitSpellIds();
     result.HitTimestamps = recorder->GetHitTimestamps();
     result.AuraEvents = ToRunResultAuraEvents(recorder->GetAuraEvents());
+    result.ManaSamples = std::move(manaSamples);
+    result.CastEvents = ToRunResultCastEvents(castRecorder->GetCastEvents());
     return true;
 }
 
@@ -215,6 +256,12 @@ bool SimDaemon::RunPlayerbotOnce(RunConfig const& config, RunResult& result)
     // a real Engine/Strategy casts a whole rotation, not Phase 1's one hardcoded Frostbolt.
     EventRecorder* recorder = new EventRecorder(player->GetGUID(), dummy->GetGUID());
 
+    // Same heap-allocation/never-deleted rules as `recorder` above - see CastRecorder.h's doc
+    // comment. This is the recorder that actually matters: a real Engine/Strategy casts a whole
+    // rotation, including non-damage abilities (Evocation, self-buffs, ...) EventRecorder has no
+    // way to see at all.
+    CastRecorder* castRecorder = new CastRecorder(player->GetGUID());
+
     // SimBot::Create() teaches the bot's class spells and "pulls" `dummy` with one manual cast to
     // bootstrap combat state - see its own doc comment for why that's needed. This happens before
     // SetRandomSeed() below on purpose, same reasoning as RunOnce()'s own reseed placement: keeps
@@ -229,10 +276,14 @@ bool SimDaemon::RunPlayerbotOnce(RunConfig const& config, RunResult& result)
     SetRandomSeed(config.RandomSeed);
 
     SimClock clock(config.StepMs);
+    uint32 lastManaSampleMs = 0;
+    bool sampledManaOnce = false;
+    std::vector<SimDaemon::RunResult::ManaSample> manaSamples;
     while (clock.GetElapsedMs() < config.DurationMs)
     {
         clock.Tick(map);
         bot.UpdateAI(config.StepMs);
+        MaybeSampleMana(player, clock.GetElapsedMs(), lastManaSampleMs, sampledManaOnce, manaSamples);
 
         // Only for the accelerated-clock test - see RunConfig::RealTimePaced's doc comment.
         if (config.RealTimePaced)
@@ -253,6 +304,8 @@ bool SimDaemon::RunPlayerbotOnce(RunConfig const& config, RunResult& result)
     result.HitSpellIds = recorder->GetHitSpellIds();
     result.HitTimestamps = recorder->GetHitTimestamps();
     result.AuraEvents = ToRunResultAuraEvents(recorder->GetAuraEvents());
+    result.ManaSamples = std::move(manaSamples);
+    result.CastEvents = ToRunResultCastEvents(castRecorder->GetCastEvents());
     return true;
 }
 

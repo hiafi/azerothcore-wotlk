@@ -1,9 +1,9 @@
-{% extends "base.html" %}
+{% extends "dbc/base.html" %}
 {% block title %}dbc-tools{% endblock %}
 {% block content %}
 <h1>dbc-tools</h1>
 
-<form method="post" action="{{ url_for('run_generate') }}">
+<form method="post" action="{{ url_for('.run_generate') }}">
   <button type="submit">Run generate.py</button>
 </form>
 
@@ -17,7 +17,7 @@
       <td>{% if f.error %}&mdash;{% else %}{{ f.count }}{% endif %}</td>
       <td>
         {% if f.error %}<span class="error">{{ f.error }}</span>
-        {% else %}<a href="{{ url_for('spell_list', file=f.stem) }}">open</a>{% endif %}
+        {% else %}<a href="{{ url_for('.spell_list', file=f.stem) }}">open</a>{% endif %}
       </td>
     </tr>
   {% endfor %}
@@ -38,7 +38,7 @@
       <td>{{ f.counts.tabs }}</td>
       <td>{{ f.counts.talents }}</td>
       <td>{{ f.counts.skill_line_abilities }}</td>
-      <td><a href="{{ url_for('talent_list', file=f.stem) }}">open</a></td>
+      <td><a href="{{ url_for('.talent_list', file=f.stem) }}">open</a></td>
       {% endif %}
     </tr>
   {% endfor %}

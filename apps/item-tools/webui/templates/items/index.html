@@ -1,11 +1,11 @@
-{% extends "base.html" %}
+{% extends "items/base.html" %}
 {% block title %}item-tools{% endblock %}
 {% block content %}
   <h1>item-tools</h1>
   <p class="hint">Editing <code>item_template</code> directly - no live database connection,
     reads base + merged + pending SQL off disk (see the README). {{ total }} rows total.</p>
 
-  <form action="{{ url_for('item_list') }}" method="get" class="kv-row">
+  <form action="{{ url_for('.item_list') }}" method="get" class="kv-row">
     <input type="text" name="q" placeholder="Search by entry or name&hellip;" autofocus>
     <button type="submit" class="button">Search</button>
   </form>
@@ -17,7 +17,7 @@
       <tbody>
         {% for row in custom_entries %}
           <tr>
-            <td><a href="{{ url_for('item_edit', entry=row.entry) }}">{{ row.entry }}</a></td>
+            <td><a href="{{ url_for('.item_edit', entry=row.entry) }}">{{ row.entry }}</a></td>
             <td>{{ row.name }}</td>
             <td>{{ row['class'] }}</td>
             <td>{{ row.ItemLevel }}</td>
@@ -26,6 +26,6 @@
       </tbody>
     </table>
   {% else %}
-    <p class="hint">None yet - <a href="{{ url_for('item_new') }}">create one</a>.</p>
+    <p class="hint">None yet - <a href="{{ url_for('.item_new') }}">create one</a>.</p>
   {% endif %}
 {% endblock %}

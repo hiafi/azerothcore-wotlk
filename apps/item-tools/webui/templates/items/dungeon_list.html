@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "items/base.html" %}
 {% block title %}Dungeons & raids - item-tools{% endblock %}
 {% block content %}
   <h1>Dungeons &amp; raids</h1>
@@ -20,7 +20,7 @@
     <tbody>
       {% for row in rows %}
         <tr>
-          <td><a href="{{ url_for('dungeon_detail', map_id=row.map_id, min_quality=min_quality) }}">{{ row.name }}</a></td>
+          <td><a href="{{ url_for('.dungeon_detail', map_id=row.map_id, min_quality=min_quality) }}">{{ row.name }}</a></td>
           <td>{{ row.map_id }}</td>
           <td>{{ row.creature_count }}</td>
           <td>{{ row.item_count }}</td>

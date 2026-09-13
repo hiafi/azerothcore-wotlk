@@ -28,6 +28,7 @@ enum UnitHook
     UNITHOOK_MODIFY_PERIODIC_DAMAGE_AURAS_TICK,
     UNITHOOK_MODIFY_MELEE_DAMAGE,
     UNITHOOK_MODIFY_SPELL_DAMAGE_TAKEN,
+    UNITHOOK_ON_SPELL_DAMAGE_TAKEN_FINAL,
     UNITHOOK_MODIFY_HEAL_RECEIVED,
     UNITHOOK_ON_BEFORE_ROLL_MELEE_OUTCOME_AGAINST,
     UNITHOOK_ON_AURA_APPLY,
@@ -77,6 +78,16 @@ public:
     // DamageTaken() AI hook has run, which for some target types - e.g. training dummies - already
     // zeroed `damage` by then; this hook fires upstream of that, from Unit::CalculateSpellDamageTaken).
     virtual void ModifySpellDamageTaken(Unit* /*target*/, Unit* /*attacker*/, int32& /*damage*/, SpellInfo const* /*spellInfo*/, bool /*isCrit*/) { }
+
+    // Called from Unit::CalculateSpellDamageTaken() once `damage` has its final, landed value -
+    // after per-class mitigation (armor reduction, crit bonus, block/resilience) but before
+    // absorb/resist accounting. Unlike ModifySpellDamageTaken above (which fires *before* that
+    // mitigation, so scripts can influence it), `damage` here is not by-reference: this hook is
+    // purely observational, not a modification point. Added so a crit-aware damage observer (e.g.
+    // mod-dpssim's EventRecorder) can read a hit's true, multiplier-applied value - fires upstream
+    // of Unit::DealDamage, so unlike OnDamage it isn't affected by a target's own DamageTaken() AI
+    // potentially zeroing `damage` first (see SimTarget's class comment for a concrete example).
+    virtual void OnSpellDamageTakenFinal(Unit* /*target*/, Unit* /*attacker*/, int32 /*damage*/, SpellInfo const* /*spellInfo*/, bool /*isCrit*/) { }
 
     // Called when Heal is Recieved
     virtual void ModifyHealReceived(Unit* /*target*/, Unit* /*healer*/, uint32& /*heal*/, SpellInfo const* /*spellInfo*/) { }

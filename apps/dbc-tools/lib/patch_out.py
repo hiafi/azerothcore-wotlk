@@ -28,14 +28,20 @@ ENV_DBC_DIR = REPO_ROOT / "env" / "dist" / "data" / "dbc"
 # This machine's patch-distribution root (see apps/patch-service/README.md) - not a repo path,
 # just this box's deploy target so testers' patch-client.bat picks up a fresh patch-Z.mpq via
 # patch-service's timer-driven manifest_gen.py, without anyone manually copying the file over.
-# Same DEFAULT_DEPLOY_ROOT convention apps/dbc-tools/build_patch_m.py and patch_gt_tables.py
-# already use for their own patch-M.mpq/patch-Y.mpq in the same Data/ directory - patch-Z is the
-# one this pipeline (generate.py) owns, so it deploys unconditionally here rather than needing a
+# Same DEPLOY_ROOT convention apps/dbc-tools/build_patch_m.py and patch_gt_tables.py already use
+# for their own patch-M.mpq/patch-Y.mpq in the same Data/ directory - patch-Z is the one this
+# pipeline (generate.py) owns, so it deploys unconditionally here rather than needing a
 # --deploy-root flag like those two standalone scripts (generate.py takes no CLI args at all).
-# Guarded by an existence check, not created if missing, so a checkout on a machine without this
-# host's patch-service setup doesn't fail or scatter a stray directory.
-DEPLOY_ROOT = Path("/home/plex/wow_server/patch-root")
-DEPLOY_MPQ = DEPLOY_ROOT / "Data" / "patch-Z.mpq"
+# The actual path is operator-specific (and this repo is public on GitHub), so it lives in
+# lib/local_config.py (gitignored, see local_config.py.example) rather than here. Guarded by an
+# existence check either way, not created if missing, so a checkout on a machine without a
+# local_config.py or without this host's patch-service setup doesn't fail or scatter a stray
+# directory.
+try:
+    from .local_config import DEPLOY_ROOT
+except ImportError:
+    DEPLOY_ROOT = None
+DEPLOY_MPQ = DEPLOY_ROOT / "Data" / "patch-Z.mpq" if DEPLOY_ROOT else None
 
 
 def write_patch(dbc_files: dict[str, bytes]) -> dict:
@@ -58,7 +64,7 @@ def write_patch(dbc_files: dict[str, bytes]) -> dict:
             out.write_bytes(blob)
             report["env_dbc"].append(str(out))
 
-    if DEPLOY_ROOT.is_dir():
+    if DEPLOY_ROOT and DEPLOY_ROOT.is_dir():
         DEPLOY_MPQ.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(MPQ_PATH, DEPLOY_MPQ)
         report["deploy_mpq"] = str(DEPLOY_MPQ)

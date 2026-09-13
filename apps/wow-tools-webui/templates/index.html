@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>wow-tools</title>
+  <style>
+    :root { color-scheme: light dark; --border: #ccc; --muted: #666; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; margin: 0; line-height: 1.4; }
+    header { padding: 0.75rem 1.5rem; border-bottom: 1px solid var(--border); }
+    main { padding: 1.5rem; max-width: 40rem; }
+    .tool-list { list-style: none; padding: 0; margin: 0; }
+    .tool-list li { margin-bottom: 1.25rem; }
+    .tool-list a { font-size: 1.1rem; font-weight: 600; text-decoration: none; }
+    .tool-list a:hover { text-decoration: underline; }
+    .tool-list p { margin: 0.25rem 0 0; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header><strong>wow-tools</strong></header>
+  <main>
+    <ul class="tool-list">
+      <li>
+        <a href="{{ url_for('dbc.index') }}">dbc-tools</a>
+        <p>Edit source/spells/*.csv and source/talents/*.yaml (spells, talents, DBC generation).</p>
+      </li>
+      <li>
+        <a href="{{ url_for('items.index') }}">item-tools</a>
+        <p>Browse/edit item_template, itemization shapes, and dungeon/raid loot.</p>
+      </li>
+      <li>
+        <a href="{{ url_for('reports.index') }}">sim-reports</a>
+        <p>Browse mod-dpssim's DPS-sim report runs (run-sim.sh output) without hunting through the reports folder by hand.</p>
+      </li>
+    </ul>
+  </main>
+</body>
+</html>

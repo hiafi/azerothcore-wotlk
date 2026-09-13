@@ -51,7 +51,7 @@ function import() {
     # Recursive, not "$PENDING_PATH"/*.sql: a topic subdirectory (e.g.
     # pending_db_world/itemization_templates_v2/, keeping one system's whole pending history
     # browsable in one place) holds real pending files too, and both the real DBUpdater and this
-    # repo's own tooling (apps/item-tools/lib/*_overlay.py) already treat migrations as ordered by
+    # repo's own tooling (apps/item-tools/item_lib/*_overlay.py) already treat migrations as ordered by
     # bare filename, not directory path -- sorted on `-printf '%f\t%p\n' | sort -k1,1` (filename
     # only) for exactly that reason, so a file's position in this merge matches its
     # rev_<timestamp> order globally, regardless of which subdirectory (if any) it started in.

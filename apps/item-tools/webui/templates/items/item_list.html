@@ -1,9 +1,9 @@
-{% extends "base.html" %}
+{% extends "items/base.html" %}
 {% block title %}Browse items - item-tools{% endblock %}
 {% block content %}
   <h1>Browse items</h1>
 
-  <form action="{{ url_for('item_list') }}" method="get" class="kv-row">
+  <form action="{{ url_for('.item_list') }}" method="get" class="kv-row">
     <input type="text" name="q" value="{{ q }}" placeholder="Search by entry or name&hellip;" autofocus>
     <button type="submit" class="button">Search</button>
   </form>
@@ -30,7 +30,7 @@
               {% for col in columns %}
                 <td>
                   {% if loop.first %}
-                    <a href="{{ url_for('item_edit', entry=row[col]) }}">{{ row[col] }}</a>
+                    <a href="{{ url_for('.item_edit', entry=row[col]) }}">{{ row[col] }}</a>
                   {% elif col == 'subclass' %}
                     {% if row['class'] in weapon_armor_classes %}
                       {{ item_subclass_names.get(row['class'], {}).get(row[col], row[col]) }}

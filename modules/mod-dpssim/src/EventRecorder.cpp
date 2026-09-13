@@ -23,20 +23,22 @@
 
 EventRecorder::EventRecorder(ObjectGuid actorGuid, ObjectGuid targetGuid, uint32 rotationSpellId)
     : UnitScript("mod_dpssim_event_recorder", true,
-                 {UNITHOOK_MODIFY_SPELL_DAMAGE_TAKEN, UNITHOOK_ON_AURA_APPLY, UNITHOOK_ON_AURA_REMOVE}),
+                 {UNITHOOK_ON_SPELL_DAMAGE_TAKEN_FINAL, UNITHOOK_ON_AURA_APPLY, UNITHOOK_ON_AURA_REMOVE}),
       _actorGuid(actorGuid), _targetGuid(targetGuid), _rotationSpellId(rotationSpellId)
 {
 }
 
-void EventRecorder::ModifySpellDamageTaken(Unit* target, Unit* attacker, int32& damage, SpellInfo const* spellInfo, bool isCrit)
+void EventRecorder::OnSpellDamageTakenFinal(Unit* target, Unit* attacker, int32 damage, SpellInfo const* spellInfo, bool isCrit)
 {
     if (!attacker || !target || attacker->GetGUID() != _actorGuid || target->GetGUID() != _targetGuid)
         return;
 
     // Fires from Unit::CalculateSpellDamageTaken, upstream of Unit::DealDamage - `damage` here is
-    // the real, un-zeroed hit (already crit-adjusted upstream; CalculateSpellDamageTaken's own
-    // caller guarantees damage >= 0 before this hook runs), and this hook structurally only fires
-    // for direct spell hits, never periodic DoT ticks - see this class's doc comment.
+    // the real, un-zeroed, fully mitigated hit (armor reduction and crit multiplier both already
+    // applied - see OnSpellDamageTakenFinal's doc comment in UnitScript.h, and the 2026-09-12
+    // root-cause note on this class's doc comment for why this hook replaced ModifySpellDamageTaken
+    // here), and this hook structurally only fires for direct spell hits, never periodic DoT ticks -
+    // see this class's doc comment.
     // _rotationSpellId == 0 means "any spell" - see the constructor's doc comment.
     if (!spellInfo || (_rotationSpellId != 0 && spellInfo->Id != _rotationSpellId) || damage <= 0)
         return;

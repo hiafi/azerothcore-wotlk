@@ -93,6 +93,18 @@ DpsSim.PlayerbotLevel = 80
 DpsSim.PlayerbotRace = 1
 
 #
+#    DpsSim.DurationSeconds
+#        Description: Only meaningful alongside DpsSim.RunPlayerbot = 1. How long (in simulated
+#                      time, not real time - the sim clock runs decoupled from the wall clock, see
+#                      Timer.h's sim-clock override) the rotation runs for. Independent of
+#                      DpsSim.Profile - a profile owns class/talents/gear/stats, never run length,
+#                      so the same profile can be run at different durations without editing it.
+#        Default:     30
+#
+
+DpsSim.DurationSeconds = 30
+
+#
 #    DpsSim.Profile
 #        Description: Only meaningful alongside DpsSim.RunPlayerbot = 1. Full path to a named sim
 #                      profile file (SimProfile.h/.cpp) - e.g.

@@ -1,7 +1,7 @@
-{% extends "base.html" %}
+{% extends "items/base.html" %}
 {% block title %}{{ 'New item' if is_new else row.name }} - item-tools{% endblock %}
 {% block content %}
-  <script src="{{ url_for('static', filename='item-form.js') }}" defer></script>
+  <script src="{{ url_for('.static', filename='item-form.js') }}" defer></script>
   {% if is_new %}
     <h1>New item</h1>
     <p class="hint">Entry defaults to the next free ID in this tool's reserved block
@@ -14,14 +14,14 @@
   {% endif %}
 
   {% if not is_new %}
-    <form method="post" action="{{ url_for('item_itemization_save', entry=entry) }}">
+    <form method="post" action="{{ url_for('.item_itemization_save', entry=entry) }}">
       <fieldset>
         <legend>Itemization <span class="hint">(shape-based - docs/itemization-phase-2.md)</span></legend>
         <p class="hint">This item's <code>stat_typeN</code>/<code>stat_valueN</code>/<code>armor</code>/
           <code>block</code>/<code>dmg_min1</code>/<code>dmg_max1</code> columns below are materialized
           from the primary/secondary shapes here, not hand-authored - edit them (or the deltas below)
           and Save &amp; regenerate instead of the plain Stats/Damage/Resistances sections further down.
-          Look up a shape's stats at <a href="{{ url_for('shape_list') }}">Shapes</a> first if you're
+          Look up a shape's stats at <a href="{{ url_for('.shape_list') }}">Shapes</a> first if you're
           not sure which one you want.</p>
 
         <div class="field-grid">

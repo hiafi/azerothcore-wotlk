@@ -49,9 +49,10 @@ class TempSummon;
 // *before* ScriptMgr::OnDamage() inside Unit::DealDamage (see the "its rare to modify damage in
 // hooks, however training dummy's sets damage to 0" comment at the top of Unit::DealDamage) - by
 // the time OnDamage fires, `damage` has already been zeroed for any hit against this dummy.
-// EventRecorder reads the real, pre-zero damage (and isCrit) from the earlier
-// ModifySpellDamageTaken hook instead, which fires upstream of DamageTaken - see its own doc
-// comment for why OnDamage isn't used at all here.
+// EventRecorder reads the real, pre-zero, fully mitigated (crit multiplier included) damage (and
+// isCrit) from the earlier OnSpellDamageTakenFinal hook instead, which fires from
+// CalculateSpellDamageTaken, upstream of DamageTaken - see its own doc comment for why OnDamage
+// isn't used at all here.
 //
 // This fork's PvE-always-hit override (Unit.cpp, "Custom: Hit/Expertise are no longer meaningful
 // player stats") already makes any non-player victim of a player's spell-cast damage un-missable

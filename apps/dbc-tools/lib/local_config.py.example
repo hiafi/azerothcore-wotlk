@@ -1,0 +1,17 @@
+"""
+Machine-local override for the patch-distribution root that lib/patch_out.py,
+build_patch_m.py, and patch_gt_tables.py auto-deploy their MPQs into (see
+apps/patch-service/README.md for what this directory is).
+
+Copy this file to local_config.py (gitignored - this repo is published on
+GitHub and the path below is specific to one operator's box, not something
+to bake into tracked source) and edit DEPLOY_ROOT for your own machine. If
+local_config.py doesn't exist, the three scripts above just skip
+auto-deploy; each still writes its normal local var/dbc-patch/ output
+either way, and build_patch_m.py/patch_gt_tables.py also take a --deploy-root
+/--deploy flag to override this at the command line instead.
+"""
+
+from pathlib import Path
+
+DEPLOY_ROOT = Path("/path/to/your/patch-root")

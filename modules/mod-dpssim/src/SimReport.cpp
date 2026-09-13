@@ -131,6 +131,24 @@ bool SimReport::WriteJson(std::string const& path, SimDaemon::RunConfig const& c
              << ", \"positive\": " << (e.Positive ? "true" : "false") << ", \"applied\": " << (e.Applied ? "true" : "false")
              << "}" << (i + 1 < result.AuraEvents.size() ? ",\n" : "\n");
     }
+    file << "  ],\n";
+
+    file << "  \"manaSamples\": [\n";
+    for (size_t i = 0; i < result.ManaSamples.size(); ++i)
+    {
+        SimDaemon::RunResult::ManaSample const& m = result.ManaSamples[i];
+        file << "    {\"timestampMs\": " << m.TimestampMs << ", \"manaPct\": " << m.ManaPct
+             << "}" << (i + 1 < result.ManaSamples.size() ? ",\n" : "\n");
+    }
+    file << "  ],\n";
+
+    file << "  \"casts\": [\n";
+    for (size_t i = 0; i < result.CastEvents.size(); ++i)
+    {
+        SimDaemon::RunResult::CastEvent const& c = result.CastEvents[i];
+        file << "    {\"timestampMs\": " << c.TimestampMs << ", \"spellId\": " << c.SpellId
+             << "}" << (i + 1 < result.CastEvents.size() ? ",\n" : "\n");
+    }
     file << "  ]\n";
     file << "}\n";
 

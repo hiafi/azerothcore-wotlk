@@ -133,7 +133,7 @@ namespace
         if (result.HitDamages.size() != result.HitCrits.size())
         {
             LogVerdict("known-value test", false, Acore::StringFormat(
-                "HitDamages ({}) and HitCrits ({}) sizes disagree - EventRecorder's two-hook per-hit correlation (see its class doc comment) is broken.",
+                "HitDamages ({}) and HitCrits ({}) sizes disagree - EventRecorder's per-hit vectors (see its class doc comment) are out of sync.",
                 result.HitDamages.size(), result.HitCrits.size()));
             return false;
         }

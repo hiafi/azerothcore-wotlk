@@ -81,6 +81,10 @@ void DpsSimWorldScript::OnDpsSimRun()
         // showing up as an unidentified haste buff in reports before this was found, 2026-09-11).
         config.ActorRace = uint8(sConfigMgr->GetOption<uint32>("DpsSim.PlayerbotRace", 1 /* RACE_HUMAN */));
 
+        // DpsSim.DurationSeconds - overrides RunConfig{}'s own 30s (30000ms) default. Independent
+        // of DpsSim.Profile (a profile owns class/talents/gear/stats, never run length).
+        config.DurationMs = sConfigMgr->GetOption<uint32>("DpsSim.DurationSeconds", 30) * 1000;
+
         // DpsSim.Profile - see SimProfile.h and dpssim.conf.dist's own doc comment. When set, it
         // owns ActorClass/PlayerbotTalents/GearItemIds/SpellPower/CombatRatings/Stats/AttackPower outright (a bad
         // profile aborts the job rather than silently falling back to the flat keys below, so a

@@ -1,10 +1,10 @@
-{% extends "base.html" %}
+{% extends "dbc/base.html" %}
 {% block title %}{{ 'New talent' if not original_id else 'Edit talent ' ~ original_id }} – dbc-tools{% endblock %}
 {% block content %}
-<p><a href="{{ url_for('talent_list', file=file) }}">&larr; {{ file }}.yaml</a></p>
+<p><a href="{{ url_for('.talent_list', file=file) }}">&larr; {{ file }}.yaml</a></p>
 <h1>{{ 'New talent' if not original_id else 'Edit talent ' ~ original_id }}</h1>
 
-<form method="post" action="{{ url_for('talent_save', file=file) }}">
+<form method="post" action="{{ url_for('.talent_save', file=file) }}">
   <input type="hidden" name="original_id" value="{{ original_id }}">
   <div class="field-grid">
     <label>id<input type="text" name="id" value="{{ ctx.id }}" required></label>
@@ -55,8 +55,13 @@
   </div>
 </template>
 
-<script src="{{ url_for('static', filename='rows.js') }}"></script>
+<script src="{{ url_for('.static', filename='rows.js') }}"></script>
 <script>
+// A rendered spell-info URL for id 0, with the trailing "/0" swapped out per call
+// below - avoids hardcoding "/api/spell-info/" here, which would break once this
+// Blueprint is mounted under a path prefix (see apps/wow-tools-webui).
+const SPELL_INFO_URL_TEMPLATE = "{{ url_for('.api_spell_info', spell_id=0) }}";
+
 async function updateRankPreview() {
   const inputs = document.querySelectorAll('#rank-rows input[name="rank_spell_id"]');
   const values = Array.from(inputs).map(i => i.value.trim()).filter(v => v !== '');
@@ -69,7 +74,7 @@ async function updateRankPreview() {
   }
   const lastId = values[values.length - 1];
   try {
-    const r = await fetch(`/api/spell-info/${encodeURIComponent(lastId)}`);
+    const r = await fetch(SPELL_INFO_URL_TEMPLATE.replace(/\/0$/, '/' + encodeURIComponent(lastId)));
     if (!r.ok) {
       nameField.value = '(spell not found in source/spells/)';
       descField.value = '';

@@ -1,7 +1,7 @@
-{% extends "base.html" %}
+{% extends "items/base.html" %}
 {% block title %}{{ name }} - item-tools{% endblock %}
 {% block content %}
-  <p><a href="{{ url_for('dungeon_list') }}">&larr; Dungeons &amp; raids</a></p>
+  <p><a href="{{ url_for('.dungeon_list') }}">&larr; Dungeons &amp; raids</a></p>
   <h1>{{ name }} <span class="hint">(map {{ map_id }})</span></h1>
 
   <form method="get" class="kv-row">
@@ -21,7 +21,7 @@
       aren't a plain per-item percentage; treat 0% as "grouped", not "never drops".</p>
 
     {% macro item_line(item, chance, quest_required) %}
-      <a href="{{ url_for('item_edit', entry=item.entry) }}">{{ item.name }}</a>
+      <a href="{{ url_for('.item_edit', entry=item.entry) }}">{{ item.name }}</a>
       <span class="quality-badge quality-{{ item.Quality }}">{{ quality_name(item.Quality) }}</span>
       <span class="drop-stats">
         ilvl {{ item.ItemLevel }}, req {{ item.RequiredLevel }}

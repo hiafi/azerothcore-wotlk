@@ -1,11 +1,11 @@
-{% extends "base.html" %}
-{% import "_macros.html" as macros %}
+{% extends "dbc/base.html" %}
+{% import "dbc/_macros.html" as macros %}
 {% block title %}{{ 'New spell' if not original_id else 'Edit spell ' ~ original_id }} – dbc-tools{% endblock %}
 {% block content %}
-<p><a href="{{ url_for('spell_list', file=file) }}">&larr; {{ file }}.csv</a></p>
+<p><a href="{{ url_for('.spell_list', file=file) }}">&larr; {{ file }}.csv</a></p>
 <h1>{{ 'New spell' if not original_id else 'Edit spell ' ~ original_id }}</h1>
 
-<form id="spell-form" method="post" action="{{ url_for('spell_save', file=file) }}">
+<form id="spell-form" method="post" action="{{ url_for('.spell_save', file=file) }}">
   <input type="hidden" name="original_id" value="{{ original_id }}">
 
   <fieldset>
@@ -95,16 +95,21 @@
   </div>
 </template>
 
-<script src="{{ url_for('static', filename='rows.js') }}"></script>
+<script src="{{ url_for('.static', filename='rows.js') }}"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-<script src="{{ url_for('static', filename='damage_chart.js') }}"></script>
+<script src="{{ url_for('.static', filename='damage_chart.js') }}"></script>
 <script>
+// A rendered icon-url for id 0, with the trailing "/0" swapped out per call below -
+// avoids hardcoding "/api/icon-url/" here, which would break once this Blueprint
+// is mounted under a path prefix (see apps/wow-tools-webui).
+const ICON_URL_TEMPLATE = "{{ url_for('.api_icon_url', icon_id=0) }}";
+
 async function updateIconPreview() {
   const id = document.getElementById('spell_icon_id').value.trim();
   const img = document.getElementById('icon-preview');
   if (!id) { img.style.display = 'none'; return; }
   try {
-    const r = await fetch(`/api/icon-url/${encodeURIComponent(id)}`);
+    const r = await fetch(ICON_URL_TEMPLATE.replace(/\/0$/, '/' + encodeURIComponent(id)));
     if (!r.ok) { img.style.display = 'none'; return; }
     const data = await r.json();
     img.src = data.url;

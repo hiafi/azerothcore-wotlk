@@ -77,7 +77,15 @@ GT_LOOSE_DIR = GT_OUT_DIR / "DBFilesClient"
 # just this box's deploy target. Named -Y, not -Z, specifically so it doesn't collide with
 # dbc-tools' own patch-Z.mpq sitting in the same directory. Override with --deploy if you're
 # running this somewhere else, or want a different free letter.
-DEFAULT_DEPLOY_MPQ = Path("/home/plex/wow_server/patch-root/Data/patch-Y.mpq")
+# The root itself is operator-specific (and this repo is public on GitHub), so it lives in
+# lib/local_config.py (gitignored, see local_config.py.example) rather than here; if that file
+# doesn't exist, --deploy has no default and must be passed explicitly to produce this MPQ.
+try:
+    from lib.local_config import DEPLOY_ROOT
+
+    DEFAULT_DEPLOY_MPQ = DEPLOY_ROOT / "Data" / "patch-Y.mpq"
+except ImportError:
+    DEFAULT_DEPLOY_MPQ = None
 
 TABLE_COMBAT_RATINGS = "gtcombatratings_dbc"
 TABLE_CLASS_SCALAR = "gtoctclasscombatratingscalar_dbc"
@@ -158,7 +166,7 @@ def main() -> int:
                          help="TSV export of gtcombatratings_dbc/gtoctclasscombatratingscalar_dbc - see module docstring")
     parser.add_argument("--client-dbc", type=Path, default=DEFAULT_CLIENT_DBC_DIR,
                          help=f"Directory with the stock client's Gt*.dbc files (default: {DEFAULT_CLIENT_DBC_DIR})")
-    parser.add_argument("--deploy", type=str, default=str(DEFAULT_DEPLOY_MPQ),
+    parser.add_argument("--deploy", type=str, default=str(DEFAULT_DEPLOY_MPQ) if DEFAULT_DEPLOY_MPQ else "",
                          help=f"This patch's own MPQ output path, or \"\" to skip it (default: {DEFAULT_DEPLOY_MPQ})")
     parser.add_argument("--check", action="store_true", help="Report changes without writing any output")
     args = parser.parse_args()
