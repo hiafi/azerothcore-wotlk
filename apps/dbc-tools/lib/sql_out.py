@@ -50,11 +50,47 @@ def _table_block(table: DbcTable, id_range: dict, rows: list[dict], edited_ids: 
     return "\n".join(lines)
 
 
-def emit_pending_sql(output_path, blocks: list[tuple[DbcTable, dict, list[dict], list[int]]], header: str) -> bool:
-    """`blocks` is a list of (table, id_range, rows, edited_ids). Writes
-    nothing and returns False if every block is empty (nothing new/changed
-    to emit)."""
-    if not any(rows for _, _, rows, _ in blocks):
+def render_generic_table_block(
+    table_name: str, columns: tuple[str, ...], key_columns: tuple[str, ...], rows: list[dict]
+) -> str:
+    """Same idempotent-on-rerun DELETE-then-INSERT shape as `_table_block`,
+    but for a plain world-DB table with no single-int reserved-ID range to
+    range-delete — e.g. `trainer_spell`, keyed on `(TrainerId, SpellId)`
+    (Phase 3 of `.agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md`,
+    `lib/dsl/registry.py`'s `trained_by()`). Deletes exactly `rows`' own key
+    tuples — never a range, since a `TrainerId` isn't a reserved block the
+    way a minted spell/talent ID is; it names one already-existing class
+    trainer. Returns `""` for an empty `rows` (nothing to emit)."""
+    if not rows:
+        return ""
+    rows = sorted(rows, key=lambda r: tuple(r[c] for c in key_columns))
+    key_cols_sql = ", ".join(f"`{c}`" for c in key_columns)
+    key_tuples = ", ".join(
+        "(" + ", ".join(_sql_literal(row[c]) for c in key_columns) + ")" for row in rows
+    )
+    cols_sql = ", ".join(f"`{c}`" for c in columns)
+    tuples = ",\n".join(
+        "(" + ", ".join(_sql_literal(row.get(c)) for c in columns) + ")" for row in rows
+    )
+    return (
+        f"DELETE FROM `{table_name}` WHERE ({key_cols_sql}) IN ({key_tuples});\n"
+        f"INSERT INTO `{table_name}` ({cols_sql}) VALUES\n{tuples};"
+    )
+
+
+def emit_pending_sql(
+    output_path,
+    blocks: list[tuple[DbcTable, dict, list[dict], list[int]]],
+    header: str,
+    extra_blocks: list[str] | None = None,
+) -> bool:
+    """`blocks` is a list of (table, id_range, rows, edited_ids). `extra_blocks`
+    is pre-rendered SQL text (e.g. from `render_generic_table_block`) for
+    tables that don't fit that shape — appended after the per-table blocks,
+    in the order given. Writes nothing and returns False if everything is
+    empty (nothing new/changed to emit)."""
+    extra_blocks = [b for b in (extra_blocks or []) if b]
+    if not any(rows for _, _, rows, _ in blocks) and not extra_blocks:
         return False
     # Note: no extra "\n" here — the "\n\n".join below already inserts one
     # blank line between the header and the first block; adding another
@@ -62,6 +98,7 @@ def emit_pending_sql(output_path, blocks: list[tuple[DbcTable, dict, list[dict],
     parts = [header.rstrip()]
     for table, id_range, rows, edited_ids in blocks:
         parts.append(_table_block(table, id_range, rows, edited_ids))
+    parts.extend(extra_blocks)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text("\n\n".join(parts) + "\n", encoding="utf-8")
     return True

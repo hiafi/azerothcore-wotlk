@@ -2,9 +2,12 @@
 """
 DBC build pipeline — forward generator.
 
-Reads source/ids.yaml plus every file under source/spells/*.csv and
-source/talents/*.yaml (split by class purely for human-editability — see
-apps/dbc-tools/README.md), builds full-width DBC rows, and produces:
+Reads source/ids.yaml plus every file under source/spells/*.csv,
+source/talents/*.yaml, and source/classes/*.py (split by class purely for
+human-editability — see apps/dbc-tools/README.md; source/classes/*.py is the
+new DSL from .agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md, still
+empty — no class has migrated to it yet), builds full-width DBC rows, and
+produces:
   1. A pending world-DB SQL migration (data/sql/updates/pending_db_world/) —
      load-bearing: this alone is enough for the server (see
      docs/dbc-build-pipeline.md's "Key finding").
@@ -27,6 +30,8 @@ TOOL_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOL_ROOT))
 
 from lib import build, dbcfile, dbcfmt, lint, patch_out, resolve, source, sql_out, state  # noqa: E402
+from lib import trainer_state  # noqa: E402
+from lib.dsl import registry as dsl_registry  # noqa: E402
 from lib.reuse import ReuseContext  # noqa: E402
 
 SOURCE_DIR = TOOL_ROOT / "source"
@@ -40,12 +45,85 @@ SECONDARY_TABLES = {
     "spellradius": dbcfmt.SPELLRADIUS,
 }
 
+# trainer_spell's real columns (data/sql/base/db_world/trainer_spell.sql),
+# minus the synthetic "id" lib.dsl.registry.trained_by() adds only for its
+# own duplicate-declaration bookkeeping - see Registry's docstring.
+TRAINER_SPELL_COLUMNS = (
+    "TrainerId", "SpellId", "MoneyCost", "ReqSkillLine", "ReqSkillRank",
+    "ReqAbility1", "ReqAbility2", "ReqAbility3", "ReqLevel", "VerifiedBuild",
+)
+
+
+def _trainer_spells_to_emit(dsl_rows: list[dict], trainer_index: trainer_state.TrainerIndex) -> list[dict]:
+    """Drops any declared trainer_spell row that's already live with
+    identical values — same "no-op rerun stays a no-op" property the DBC
+    tables get from lib/resolve.py's new/edited/unchanged split, just
+    reimplemented here since trainer_spell has no reserved-ID-range concept
+    for resolve.resolve_rows to key off."""
+    to_emit = []
+    for row in dsl_rows:
+        key = (row["TrainerId"], row["SpellId"])
+        existing = trainer_index.existing_trainer_spells.get(key)
+        if existing and all(existing.get(c) == row.get(c) for c in TRAINER_SPELL_COLUMNS):
+            continue
+        to_emit.append(row)
+    return to_emit
+
+
+def _merge_dsl_sources(spell_entries: list[dict], talents: dict, dsl_classes: dict) -> None:
+    """Append source/classes/*.py's DSL-declared spells/talents/tabs/
+    skill_line_abilities into the CSV/YAML-loaded lists, in place — the
+    dual-support transition period from spell-source-dsl.PLAN.md's Phase 1.
+    Each source format already checked for duplicate IDs *within* itself
+    (load_spells_csv, load_talents_yaml, load_classes_dir all raise their
+    own DuplicateIdError for that); this only needs to catch an ID declared
+    in *both* formats, which none of those individually-scoped checks can
+    see."""
+    seen_spell_ids = {e["id"]: e.get("_source_file", "<csv>") for e in spell_entries}
+    for entry in dsl_classes["spells"]:
+        if entry["id"] in seen_spell_ids:
+            raise source.DuplicateIdError(
+                f"spell ID {entry['id']} appears in both {seen_spell_ids[entry['id']]!r} "
+                f"(source/spells/*.csv) and a source/classes/*.py DSL file"
+            )
+        spell_entries.append(entry)
+    for key in ("tabs", "talents", "skill_line_abilities"):
+        seen_ids = {e["id"] for e in talents[key]}
+        for entry in dsl_classes[key]:
+            if entry["id"] in seen_ids:
+                raise source.DuplicateIdError(
+                    f"{key} entry ID {entry['id']} appears in both source/talents/*.yaml "
+                    f"and a source/classes/*.py DSL file"
+                )
+            talents[key].append(entry)
+
 
 def main() -> int:
     ids_cfg = source.load_ids(SOURCE_DIR / "ids.yaml")
     spell_entries = source.load_spells_csv(SOURCE_DIR / "spells")
     talents = source.load_talents_yaml(SOURCE_DIR / "talents")
     item_entries = source.load_items_csv(SOURCE_DIR / "items.csv")
+
+    # Static scan of creature_default_trainer/creature_template/creature (base +
+    # updates/pending_db_world) - lib/dsl/registry.py's trained_by() validates
+    # every TrainerId against this before registering a trainer_spell row. See
+    # lib/trainer_state.py's docstring for why this needs no live DB connection
+    # and for its "union of INSERTs, no DELETE/UPDATE replay" limitation.
+    trainer_index = trainer_state.load_trainer_index()
+
+    dsl_classes = dsl_registry.load_classes_dir(
+        SOURCE_DIR / "classes", ids_cfg=ids_cfg, trainer_index=trainer_index,
+    )
+    n_dsl = sum(len(v) for v in dsl_classes.values())
+    _merge_dsl_sources(spell_entries, talents, dsl_classes)
+    if n_dsl:
+        print(
+            f"note: source/classes/*.py (DSL) contributed {len(dsl_classes['spells'])} "
+            f"spell(s), {len(dsl_classes['talents'])} talent(s), {len(dsl_classes['tabs'])} "
+            f"talent tab(s), {len(dsl_classes['skill_line_abilities'])} skill line "
+            f"abilitie(s), {len(dsl_classes['trainer_spells'])} trainer spell grant(s)"
+        )
+    trainer_spell_rows = _trainer_spells_to_emit(dsl_classes["trainer_spells"], trainer_index)
 
     existing_spells = state.load_existing_rows(dbcfmt.SPELL)
     existing_talents = state.load_existing_rows(dbcfmt.TALENT)
@@ -184,9 +262,13 @@ def main() -> int:
         "-- Source of truth: apps/dbc-tools/source/{spells,talents}/*.\n"
         "-- Regenerate with: python3 apps/dbc-tools/generate.py"
     )
+    trainer_spell_block = sql_out.render_generic_table_block(
+        "trainer_spell", TRAINER_SPELL_COLUMNS, ("TrainerId", "SpellId"), trainer_spell_rows,
+    )
+
     rev = int(time.time() * 1_000_000_000)
     out_path = PENDING_SQL_DIR / f"rev_{rev}.sql"
-    wrote_sql = sql_out.emit_pending_sql(out_path, blocks, header)
+    wrote_sql = sql_out.emit_pending_sql(out_path, blocks, header, extra_blocks=[trainer_spell_block])
     print(f"SQL: wrote {out_path.relative_to(REPO_ROOT)}" if wrote_sql else "SQL: nothing to emit")
 
     # -- client patch: needs a complete file (base + new), so any table with
