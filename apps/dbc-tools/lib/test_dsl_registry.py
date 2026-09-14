@@ -81,6 +81,18 @@ frostbolt = spell(id=116, name="Frostbolt", school=16, cast_time_ms=2000)
 granted_by_talent(id=60000, tab=frost_tab, tier=0, column=0, ranks=[frostbolt])
 '''
 
+# A bare-int rank (no Spell() declaration at all) mixed with a real one -
+# the Phase 4 real-data case (some old stock talent ranks were never pulled
+# into source). Must not crash, and must not need a decision for the bare
+# int (only the real Spell still might, depending on its own shape).
+GRANTED_BARE_INT_RANK_MIXED_WITH_SPELL = '''
+from lib.dsl.registry import spell, tab, granted_by_talent
+
+frost_tab = tab(id=60800, name="Frost", class_mask=128, skill_line=6)
+frostbolt = spell(id=116, name="Frostbolt", school=16, cast_time_ms=2000)
+granted_by_talent(id=60000, tab=frost_tab, tier=0, column=0, ranks=[29447, frostbolt])
+'''
+
 # A custom, castable-looking spell ID with player_castable left unset - the
 # exact ambiguity that must hard-fail rather than silently default.
 GRANTED_CUSTOM_AMBIGUOUS = '''
@@ -132,6 +144,11 @@ class GrantedByTalentTest(unittest.TestCase):
 
     def test_stock_id_needs_no_decision(self):
         reg = self._load(GRANTED_STOCK_ID_NO_DECISION_NEEDED)
+        self.assertEqual(reg.skill_line_abilities, [])
+
+    def test_bare_int_rank_mixed_with_spell_does_not_crash(self):
+        reg = self._load(GRANTED_BARE_INT_RANK_MIXED_WITH_SPELL)
+        self.assertEqual(reg.talents[0]["rank_spell_ids"], [29447, 116])
         self.assertEqual(reg.skill_line_abilities, [])
 
     def test_custom_castable_ambiguous_raises(self):

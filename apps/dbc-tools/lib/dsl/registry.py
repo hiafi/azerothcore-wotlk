@@ -274,7 +274,7 @@ def granted_by_talent(
     tab: model.TalentTab,
     tier: int,
     column: int,
-    ranks: list[model.Spell],
+    ranks: list[model.Spell | int],
     player_castable: bool | None = None,
     skill_line_ability_ids: list[int | None] | None = None,
     depends_on: dict | None = None,
@@ -290,11 +290,19 @@ def granted_by_talent(
     silently defaults that spell to the Spellbook's "General" tab instead of
     the class's own).
 
-    `ranks` is the real `Spell` objects returned by `spell(...)` (not bare
-    IDs) - one per rank, low to high - so this can inspect each rank's own
+    `ranks` is normally the real `Spell` objects returned by `spell(...)` -
+    one per rank, low to high - so this can inspect each rank's own
     `cast_time_ms`/`cooldown_ms`/`attributes` to tell "hidden triggered
     effect" (e.g. Icicles) from "a player casts this from their Spellbook"
-    apart.
+    apart. **A bare `int` is also accepted**, for a rank that's a pre-
+    existing stock spell ID with no `Spell()` declaration of its own in this
+    file (real example found migrating Mage's talents in Phase 4: a handful
+    of low-rank stock IDs used only as an old talent rank, never pulled into
+    source at all) - safe by construction, since a *custom* ID can only ever
+    exist via a `Spell()` call somewhere in this pipeline (that's the only
+    way a `spell_dbc` row gets emitted), so a bare int can never secretly be
+    one; bundling is skipped for it entirely, the same as a stock `Spell`
+    object would get from `_is_custom_spell_id`.
 
     `player_castable`: `True` derives a `SkillLineAbility` row for every
     rank that's a brand-new custom ID (a reused stock ID already has a real
@@ -311,12 +319,13 @@ def granted_by_talent(
     questions"), so pick the next one from `source/ids.yaml`'s
     `skilllineability` block same as today.
     """
+    rank_ids = [r.id if isinstance(r, model.Spell) else r for r in ranks]
     t = talent(
         id=id,
         tab_id=tab.id,
         tier=tier,
         column=column,
-        rank_spell_ids=[r.id for r in ranks],
+        rank_spell_ids=rank_ids,
         depends_on=depends_on,
         flags=flags,
         raw_overrides=raw_overrides,
@@ -329,7 +338,10 @@ def granted_by_talent(
             f"(None for a rank that doesn't need one)."
         )
     for rank, sla_id in zip(ranks, sla_ids):
-        _bundle_skill_line_ability(rank, tab, player_castable, sla_id)
+        if isinstance(rank, model.Spell):
+            _bundle_skill_line_ability(rank, tab, player_castable, sla_id)
+        # else: a bare-int rank is always a pre-existing stock ID - see the docstring above for
+        # why that's safe to skip outright, with no _is_custom_spell_id check even needed.
     return t
 
 

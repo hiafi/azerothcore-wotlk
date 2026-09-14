@@ -52,7 +52,7 @@ class Effect:
     radius_yards: float | None = None
 
     def to_dict(self) -> dict:
-        return {
+        d = {
             "type": _int(self.type),
             "base_points": self.base_points,
             "points_per_level": self.points_per_level,
@@ -65,8 +65,18 @@ class Effect:
             "misc_value": self.misc_value,
             "trigger_spell": self.trigger_spell,
             "chain_targets": self.chain_targets,
-            "radius_yards": self.radius_yards,
         }
+        # `radius_yards` is deliberately OMITTED (not set to None) when unset - lib/build.py's
+        # build_spell_row does `effect.get("radius_yards", default_radius)`, which only falls
+        # back to the spell-level radius when the key is *absent*, not when it's present-but-
+        # None (that means "explicitly no radius", a real distinct case). Found via Phase 4's
+        # real-data verification (spell 200008, Frozen Orb Pulse) - shipping this as
+        # `"radius_yards": self.radius_yards` unconditionally silently broke radius inheritance
+        # for every effect that relies on it, dropping EffectRadiusIndex to 0. See
+        # `apps/dbc-tools/lib/test_dsl.py`'s regression test for this exact case.
+        if self.radius_yards is not None:
+            d["radius_yards"] = self.radius_yards
+        return d
 
 
 def ApplyAura(aura: int, base_points: int = 0, **kwargs) -> Effect:
@@ -101,8 +111,13 @@ class Spell:
 
     `effects` replaces the CSV's positional `effect1`/`effect2`/`effect3`
     columns with an ordered list (at most 3) - index 0 is Effect_1, etc.
-    `raw_overrides` is unchanged: the exact same any-column-name escape
-    hatch, applied last, that already makes `pull.py` lossless."""
+    An element can be `None` for a genuinely-empty slot that precedes a
+    populated one (e.g. Effect_1 empty, Effect_2 real) - don't compact those
+    away; `EffectSpellClassMask{A,B,C}_{1,2,3}`'s letter=effect-index
+    convention (see `apps/dbc-tools/README.md`'s gotcha) means which literal
+    slot an effect lands in can matter to a *different* spell's classmask
+    override. `raw_overrides` is unchanged: the exact same any-column-name
+    escape hatch, applied last, that already makes `pull.py` lossless."""
 
     id: int
     name: str
@@ -120,7 +135,7 @@ class Spell:
     range_yards: float | None = None
     radius_yards: float | None = None
     duration_ms: int | None = None
-    effects: list[Effect] = field(default_factory=list)
+    effects: list[Effect | None] = field(default_factory=list)
     spell_icon_id: int | None = None
     spell_weight: float | None = None
     coeff_weight: float | None = None
@@ -133,7 +148,8 @@ class Spell:
                 f"spell {self.id} ({self.name}): a spell has at most 3 effects, got "
                 f"{len(self.effects)}"
             )
-        effect_dicts = [e.to_dict() for e in self.effects] + [None, None, None]
+        effect_dicts = [(e.to_dict() if e is not None else None) for e in self.effects]
+        effect_dicts += [None, None, None]
         return {
             "id": self.id,
             "name": self.name,

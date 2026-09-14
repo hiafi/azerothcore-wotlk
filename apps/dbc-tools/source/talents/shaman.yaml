@@ -1,5 +1,5 @@
 # New/changed Talent.dbc + TalentTab.dbc rows for the Shaman class.
-# Schema/example: see apps/dbc-tools/source/talents/mage.yaml.
+# Schema/example: see apps/dbc-tools/source/classes/README.md (mage.yaml itself was retired once Mage migrated to source/classes/mage.py - spell-source-dsl.PLAN.md Phase 4).
 
 tabs:
 - id: 261
