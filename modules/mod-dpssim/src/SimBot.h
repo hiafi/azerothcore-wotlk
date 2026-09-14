@@ -81,6 +81,16 @@ public:
     // reading its implementation, not assumed.
     void UpdateAI(uint32 diff);
 
+    // Re-establishes combat state between iterations of SimDaemon::RunPlayerbotBatch() - added
+    // 2026-09-13 after a real, reproduced failure: a batch's very first iteration would land real
+    // hits, then every iteration after it would land zero casts for the rest of the batch, forever.
+    // Root-caused and fixed the same day - see this method's own .cpp doc comment for the full
+    // three-attempt history (two earlier ones that didn't work, one of which made things
+    // measurably worse and was reverted) and the confirmed mechanism (Unit::IsInCombat() itself
+    // going false for real - most likely npc_training_dummy's own no-damage combat timeout ending
+    // combat between iterations - not anything PlayerbotAI caches on its own side).
+    void ReestablishCombatState(Unit* target);
+
 private:
     PlayerbotAI* _ai = nullptr;
 };

@@ -142,6 +142,7 @@ __pycache__/
 # patches (see .agents/plans/dps-sim-module/) — tracked in this repo, not a separate module repo.
 !modules/mod-dpssim
 modules/mod-dpssim/reports/*
+modules/mod-dpssim/conf/profiles/.stat-weights-scratch/
 
 # Live-stack e2e private / local tooling (scratch tests stay uncommitted)
 e2e/local/**

@@ -29,6 +29,7 @@
 #include "SimClock.h"
 #include "SimReport.h"
 #include "SimTarget.h"
+#include "SpellAuras.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
 #include "StringFormat.h"
@@ -99,8 +100,87 @@ namespace
         std::vector<SimDaemon::RunResult::CastEvent> result;
         result.reserve(events.size());
         for (CastRecorder::CastEvent const& e : events)
-            result.push_back({e.TimestampMs, e.SpellId});
+            result.push_back({e.TimestampMs, e.SpellId, e.IsTriggered});
         return result;
+    }
+
+    // The tick loop + result population shared by RunPlayerbotOnce() (one call) and
+    // RunPlayerbotBatch() (one call per iteration, same actor/target/bot/recorders reused every
+    // time - see that function's own doc comment). Assumes `recorder`/`castRecorder` are already
+    // rewound (a fresh EventRecorder/CastRecorder for RunPlayerbotOnce(), an explicit ->Reset() call
+    // for every iteration but the first in RunPlayerbotBatch()) - this function itself never resets
+    // anything, it only reads whatever they've accumulated once the loop below ends.
+    void RunPlayerbotIteration(SimDaemon::RunConfig const& config, Player* player, Map* map, SimBot& bot,
+        EventRecorder* recorder, CastRecorder* castRecorder, SimDaemon::RunResult& result)
+    {
+        SimClock clock(config.StepMs);
+        uint32 lastManaSampleMs = 0;
+        bool sampledManaOnce = false;
+        std::vector<SimDaemon::RunResult::ManaSample> manaSamples;
+        while (clock.GetElapsedMs() < config.DurationMs)
+        {
+            clock.Tick(map);
+            bot.UpdateAI(config.StepMs);
+            MaybeSampleMana(player, clock.GetElapsedMs(), lastManaSampleMs, sampledManaOnce, manaSamples);
+
+            // Only for the accelerated-clock test - see RunConfig::RealTimePaced's doc comment.
+            if (config.RealTimePaced)
+                std::this_thread::sleep_for(std::chrono::milliseconds(config.StepMs));
+        }
+
+        result.Success = true;
+        result.ElapsedMs = clock.GetElapsedMs();
+        // No separate "cast attempts" counter here, unlike RunOnce()'s hardcoded rotation: the real
+        // Engine decides what to cast and when internally, with no equivalent hook exposed for
+        // "attempted but didn't land" bookkeeping. CastCount (landed hits) is the meaningful number.
+        result.CastAttempts = recorder->GetCastCount();
+        result.TotalDamage = recorder->GetTotalDamage();
+        result.CastCount = recorder->GetCastCount();
+        result.CritCount = recorder->GetCritCount();
+        result.HitDamages = recorder->GetHitDamages();
+        result.HitCrits = recorder->GetHitCrits();
+        result.HitSpellIds = recorder->GetHitSpellIds();
+        result.HitTimestamps = recorder->GetHitTimestamps();
+        result.AuraEvents = ToRunResultAuraEvents(recorder->GetAuraEvents());
+        result.ManaSamples = std::move(manaSamples);
+        result.CastEvents = ToRunResultCastEvents(castRecorder->GetCastEvents());
+    }
+
+    // Between-iteration reset for RunPlayerbotBatch() - see that function's doc comment (SimDaemon.h)
+    // for the full reasoning, especially the passive-aura carve-out and SimBot::ReestablishCombatState()'s
+    // own doc comment for the real failure this also guards against (a batch's first iteration
+    // landing real hits, then every iteration after it landing zero, forever). Never touches the
+    // target dummy's health (SimTarget's own class comment: its AI zeroes all damage taken, so it
+    // never actually drops - nothing to reset there) or the global cooldown (max ~1.5s, always long
+    // since expired by the time a 100+ second iteration ends - nothing to reset there either).
+    void ResetForNextIteration(Player* player, Creature* dummy, SimBot& bot, EventRecorder* recorder, CastRecorder* castRecorder)
+    {
+        // Defensive extra, not the confirmed fix (that's ReestablishCombatState() below - see its
+        // own doc comment for the real, confirmed root cause: npc_training_dummy's own no-damage
+        // combat timeout expiring across an iteration boundary, not a death). Kept anyway since
+        // PlayerbotAI::DoNextAction() does have a real "not alive -> clear target, engine to
+        // BOT_STATE_DEAD, nothing ever reverses either" branch - cheap, and a no-op in the
+        // overwhelmingly common case of the actor never actually dying against a target dummy that
+        // never retaliates (SimTarget's own class comment).
+        if (!player->IsAlive())
+            player->ResurrectPlayer(1.0f);
+
+        auto removeNonPassive = [](AuraApplication const* aurApp)
+        {
+            SpellInfo const* info = aurApp->GetBase()->GetSpellInfo();
+            return !info || !info->IsPassive();
+        };
+        player->RemoveAppliedAuras(removeNonPassive);
+        dummy->RemoveAppliedAuras(removeNonPassive);
+
+        player->RemoveAllSpellCooldown();
+        player->SetFullHealth();
+        player->SetPower(POWER_MANA, player->GetMaxPower(POWER_MANA));
+
+        bot.ReestablishCombatState(dummy);
+
+        recorder->Reset();
+        castRecorder->Reset();
     }
 }
 
@@ -274,38 +354,78 @@ bool SimDaemon::RunPlayerbotOnce(RunConfig const& config, RunResult& result)
     }
 
     SetRandomSeed(config.RandomSeed);
+    RunPlayerbotIteration(config, player, map, bot, recorder, castRecorder, result);
+    return true;
+}
 
-    SimClock clock(config.StepMs);
-    uint32 lastManaSampleMs = 0;
-    bool sampledManaOnce = false;
-    std::vector<SimDaemon::RunResult::ManaSample> manaSamples;
-    while (clock.GetElapsedMs() < config.DurationMs)
+bool SimDaemon::RunPlayerbotBatch(RunConfig const& config, uint32 iterations, std::vector<RunResult>& results)
+{
+    results.clear();
+    if (iterations == 0)
+        return true;
+    results.reserve(iterations);
+
+    // Identical setup to RunPlayerbotOnce() above - see its own inline comments for what each step
+    // does. Done once here rather than once per iteration - see this function's own doc comment
+    // (SimDaemon.h) for why that's the entire point of this function existing.
+    SimActor actor;
+    SimActor::Config actorConfig;
+    actorConfig.Name = "SimBot";
+    actorConfig.Race = config.ActorRace;
+    actorConfig.Class = config.ActorClass;
+    actorConfig.Gender = GENDER_MALE;
+    actorConfig.Level = uint8(config.ActorLevel);
+    actorConfig.SpellPower = config.SpellPower;
+    actorConfig.GearItemIds = config.GearItemIds;
+    actorConfig.CombatRatings = config.CombatRatings;
+    actorConfig.Stats = config.Stats;
+    actorConfig.AttackPower = config.AttackPower;
+    if (!actor.Create(actorConfig))
     {
-        clock.Tick(map);
-        bot.UpdateAI(config.StepMs);
-        MaybeSampleMana(player, clock.GetElapsedMs(), lastManaSampleMs, sampledManaOnce, manaSamples);
-
-        // Only for the accelerated-clock test - see RunConfig::RealTimePaced's doc comment.
-        if (config.RealTimePaced)
-            std::this_thread::sleep_for(std::chrono::milliseconds(config.StepMs));
+        LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbotBatch() - SimActor::Create() failed - aborting.");
+        return false;
     }
 
-    result.Success = true;
-    result.ElapsedMs = clock.GetElapsedMs();
-    // No separate "cast attempts" counter here, unlike RunOnce()'s hardcoded rotation: the real
-    // Engine decides what to cast and when internally, with no equivalent hook exposed for
-    // "attempted but didn't land" bookkeeping. CastCount (landed hits) is the meaningful number.
-    result.CastAttempts = recorder->GetCastCount();
-    result.TotalDamage = recorder->GetTotalDamage();
-    result.CastCount = recorder->GetCastCount();
-    result.CritCount = recorder->GetCritCount();
-    result.HitDamages = recorder->GetHitDamages();
-    result.HitCrits = recorder->GetHitCrits();
-    result.HitSpellIds = recorder->GetHitSpellIds();
-    result.HitTimestamps = recorder->GetHitTimestamps();
-    result.AuraEvents = ToRunResultAuraEvents(recorder->GetAuraEvents());
-    result.ManaSamples = std::move(manaSamples);
-    result.CastEvents = ToRunResultCastEvents(castRecorder->GetCastEvents());
+    Player* player = actor.GetPlayer();
+    Map* map = player->GetMap();
+
+    SimTarget target;
+    SimTarget::Config targetConfig;
+    targetConfig.Level = uint8(config.TargetLevel);
+    targetConfig.Armor = config.TargetArmor;
+    if (!target.Create(map, player->GetNearPosition(8.0f, 0.0f), targetConfig))
+    {
+        LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbotBatch() - SimTarget::Create() failed - aborting.");
+        return false;
+    }
+
+    Creature* dummy = target.GetCreature();
+
+    EventRecorder* recorder = new EventRecorder(player->GetGUID(), dummy->GetGUID());
+    CastRecorder* castRecorder = new CastRecorder(player->GetGUID());
+
+    SimBot bot;
+    if (!bot.Create(player, dummy, config.PlayerbotTalents))
+    {
+        LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbotBatch() - SimBot::Create() failed - aborting.");
+        return false;
+    }
+
+    for (uint32 i = 0; i < iterations; ++i)
+    {
+        // Reseed per iteration (config.RandomSeed + i), not once for the whole batch - see this
+        // function's own doc comment (SimDaemon.h) for why.
+        SetRandomSeed(config.RandomSeed + i);
+
+        if (i > 0)
+            ResetForNextIteration(player, dummy, bot, recorder, castRecorder);
+
+        RunResult result;
+        RunPlayerbotIteration(config, player, map, bot, recorder, castRecorder, result);
+
+        results.push_back(std::move(result));
+    }
+
     return true;
 }
 

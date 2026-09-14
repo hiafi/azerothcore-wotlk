@@ -49,12 +49,16 @@ namespace SimReport
     //                  applied}, ...] - see RunResult::AuraEvent's doc comment for field meanings.
     //   "manaSamples": [{timestampMs, manaPct}, ...] - actor's mana, sampled periodically rather
     //                  than every tick, see RunResult::ManaSamples's doc comment.
-    //   "casts": [{timestampMs, spellId}, ...] - every spell the actor cast, in cast order,
-    //             damage or not (Evocation, self-buffs, ...) - see RunResult::CastEvents's doc
-    //             comment. Distinct from "hits" above: a cast here is logged the moment it fires
-    //             (Spell::cast() completing), a hit in "hits" is logged when a direct-damage effect
-    //             actually lands, so a travel-time spell's cast and hit timestamps differ, and a
-    //             non-damage cast (Evocation) appears only here, never in "hits".
+    //   "casts": [{timestampMs, spellId, triggered}, ...] - every spell the actor cast, in cast
+    //             order, damage or not (Evocation, self-buffs, ...) - see RunResult::CastEvents's
+    //             doc comment. Distinct from "hits" above: a cast here is logged the moment it
+    //             fires (Spell::cast() completing), a hit in "hits" is logged when a direct-damage
+    //             effect actually lands, so a travel-time spell's cast and hit timestamps differ,
+    //             and a non-damage cast (Evocation) appears only here, never in "hits". `triggered`
+    //             is Spell::IsTriggered() - false for a deliberate cast ("requires a button press"),
+    //             true for a proc/internal trigger (a talent's passive effect being granted, a free
+    //             proc-triggered cast, ...) - the report groups on this to separate real ability
+    //             usage from buffs that just showed up on their own.
     bool WriteJson(std::string const& path, SimDaemon::RunConfig const& config, SimDaemon::RunResult const& result);
 }
 

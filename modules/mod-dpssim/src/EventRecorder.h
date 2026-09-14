@@ -102,6 +102,15 @@ public:
     void OnAuraApply(Unit* unit, Aura* aura) override;
     void OnAuraRemove(Unit* unit, AuraApplication* aurApp, AuraRemoveMode mode) override;
 
+    // Clears every accumulated counter/vector back to a freshly-constructed instance's state,
+    // without re-registering with ScriptRegistry<UnitScript> or changing actorGuid/targetGuid/
+    // rotationSpellId. Added 2026-09-13 for SimDaemon::RunPlayerbotBatch() - running many
+    // iterations in one process reuses the same actor/target Player/Creature (see that function's
+    // own doc comment for why), so this recorder has to be explicitly rewound between iterations
+    // instead of one fresh instance per run like RunPlayerbotOnce() still does. Never call this
+    // mid-run - only between one iteration's result collection and the next iteration's first tick.
+    void Reset();
+
     [[nodiscard]] uint64 GetTotalDamage() const { return _totalDamage; }
     [[nodiscard]] uint32 GetCastCount() const { return _castCount; }
     [[nodiscard]] uint32 GetCritCount() const { return _critCount; }

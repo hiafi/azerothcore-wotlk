@@ -54,6 +54,18 @@ void EventRecorder::OnSpellDamageTakenFinal(Unit* target, Unit* attacker, int32 
         ++_critCount;
 }
 
+void EventRecorder::Reset()
+{
+    _totalDamage = 0;
+    _castCount = 0;
+    _critCount = 0;
+    _hitDamages.clear();
+    _hitCrits.clear();
+    _hitSpellIds.clear();
+    _hitTimestamps.clear();
+    _auraEvents.clear();
+}
+
 void EventRecorder::OnAuraApply(Unit* unit, Aura* aura)
 {
     if (!unit || !aura)

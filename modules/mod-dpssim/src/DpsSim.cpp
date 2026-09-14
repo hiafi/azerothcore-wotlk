@@ -22,8 +22,26 @@
 #include "Random.h"
 #include "SimDaemon.h"
 #include "SimProfile.h"
+#include "SimReport.h"
 #include "SimTests.h"
 #include "Timer.h"
+
+namespace
+{
+    // Derives iteration i's own report path from the single DpsSim.ReportPath the conf gives -
+    // "<base>.json" -> "<base>.iter<i>.json" (or "<base>.iter<i>" if ReportPath didn't end in
+    // ".json" to begin with, though by convention it always does - see that key's own conf doc
+    // comment). modules/mod-dpssim/tools/run-sim.sh globs for exactly this pattern after a
+    // DpsSim.Iterations > 1 run to collect every iteration's file - see its own comment on that.
+    std::string IterationReportPath(std::string const& basePath, uint32 iteration)
+    {
+        std::string const suffix = ".json";
+        std::string const iterTag = ".iter" + std::to_string(iteration);
+        if (basePath.size() >= suffix.size() && basePath.compare(basePath.size() - suffix.size(), suffix.size(), suffix) == 0)
+            return basePath.substr(0, basePath.size() - suffix.size()) + iterTag + suffix;
+        return basePath + iterTag;
+    }
+}
 
 DpsSimWorldScript::DpsSimWorldScript() : WorldScript(MODULE_STRING, {WORLDHOOK_ON_DPS_SIM_RUN}) { }
 
@@ -85,6 +103,16 @@ void DpsSimWorldScript::OnDpsSimRun()
         // of DpsSim.Profile (a profile owns class/talents/gear/stats, never run length).
         config.DurationMs = sConfigMgr->GetOption<uint32>("DpsSim.DurationSeconds", 30) * 1000;
 
+        // DpsSim.StepMs - overrides RunConfig{}'s own 10ms default fixed-timestep size (see
+        // SimClock.h). Added 2026-09-13 to make a batch of many iterations (run-sim.sh's
+        // [iterations]/stat_weights.py) cheaper to run: fewer, larger Map::Update() calls for the
+        // same simulated duration. SimTests::RunTimestepTest() already found 10ms/50ms/1ms agree
+        // (exact cast counts, damage within 5%) - but only for Phase 1's hardcoded-Frostbolt
+        // RunOnce() rotation, never for the real Engine/Strategy-driven RunPlayerbotOnce() path
+        // this key actually affects, so treat a non-default value here as unverified for accuracy
+        // until checked against a matching 10ms run.
+        config.StepMs = sConfigMgr->GetOption<uint32>("DpsSim.StepMs", 10);
+
         // DpsSim.Profile - see SimProfile.h and dpssim.conf.dist's own doc comment. When set, it
         // owns ActorClass/PlayerbotTalents/GearItemIds/SpellPower/CombatRatings/Stats/AttackPower outright (a bad
         // profile aborts the job rather than silently falling back to the flat keys below, so a
@@ -124,8 +152,47 @@ void DpsSimWorldScript::OnDpsSimRun()
         else
             config.PlayerbotTalents = sConfigMgr->GetOption<std::string>("DpsSim.PlayerbotTalents", "");
 
-        if (ready)
+        // DpsSim.Iterations - added 2026-09-13 alongside SimDaemon::RunPlayerbotBatch(). 1 (the
+        // default) keeps today's exact single-run behavior (SimDaemon::RunPlayerbot(), unchanged,
+        // including its own detailed timeline log and single DpsSim.ReportPath write). >1 runs the
+        // whole batch in this one process (see RunPlayerbotBatch()'s own doc comment for why that's
+        // dramatically cheaper than modules/mod-dpssim/tools/run-sim.sh's old per-iteration
+        // container approach) and writes one report per iteration via IterationReportPath() above,
+        // logging only a one-line summary per iteration rather than RunPlayerbot()'s full per-hit
+        // timeline - that much log detail times a real iteration count would be unreadable.
+        uint32 const iterations = sConfigMgr->GetOption<uint32>("DpsSim.Iterations", 1);
+
+        if (ready && iterations <= 1)
             SimDaemon::RunPlayerbot(config);
+        else if (ready)
+        {
+            LOG_INFO("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbotBatch() - running {} iterations in-process, "
+                "actor level {} vs. target level {}.", iterations, config.ActorLevel, config.TargetLevel);
+
+            std::vector<SimDaemon::RunResult> results;
+            if (!SimDaemon::RunPlayerbotBatch(config, iterations, results))
+            {
+                LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbotBatch() failed - aborting DpsSim.RunPlayerbot job.");
+                return;
+            }
+
+            std::string const reportPath = sConfigMgr->GetOption<std::string>("DpsSim.ReportPath", "");
+            for (size_t i = 0; i < results.size(); ++i)
+            {
+                SimDaemon::RunResult const& result = results[i];
+                double const durationSeconds = double(result.ElapsedMs) / 1000.0;
+                double const dps = durationSeconds > 0.0 ? double(result.TotalDamage) / durationSeconds : 0.0;
+                double const critRate = result.CastCount > 0
+                    ? 100.0 * double(result.CritCount) / double(result.CastCount)
+                    : 0.0;
+                LOG_INFO("server.dpssim", "mod-dpssim:   iteration {}/{} - {} landed hits ({} crit, {:.1f}% crit rate), "
+                    "{} total damage, {:.1f} DPS.", i + 1, results.size(), result.CastCount, result.CritCount, critRate,
+                    result.TotalDamage, dps);
+
+                if (!reportPath.empty())
+                    SimReport::WriteJson(IterationReportPath(reportPath, uint32(i + 1)), config, result);
+            }
+        }
     }
     else if (sConfigMgr->GetOption<bool>("DpsSim.RunLevelCheck", false))
         SimDaemon::RunLevelScalingCheck();

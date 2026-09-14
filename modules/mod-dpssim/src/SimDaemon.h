@@ -197,6 +197,9 @@ namespace SimDaemon
         {
             uint32 TimestampMs = 0;
             uint32 SpellId = 0;
+            // See CastRecorder::CastEvent::IsTriggered's doc comment - false means a deliberate,
+            // non-triggered cast ("requires a button press"), true means a proc/internal cast.
+            bool Triggered = false;
         };
         std::vector<CastEvent> CastEvents;
     };
@@ -212,6 +215,54 @@ namespace SimDaemon
     // Frostbolt-specific in it. See SimBot.h for what strategy ends up driving the actor (an
     // untalented mage defaults to Frost) and why a manual "pull" cast is needed to bootstrap combat.
     bool RunPlayerbotOnce(RunConfig const& config, RunResult& result);
+
+    // Runs `iterations` independent samples of the same `config` in one process, one actor/target/
+    // bot setup shared across all of them - added 2026-09-13 because a fresh RunPlayerbotOnce()
+    // call per sample (what modules/mod-dpssim/tools/run-sim.sh's [iterations] argument used to do,
+    // one throwaway `docker run` per sample) spends most of its wall-clock time on container
+    // boot/teardown, not on the sim itself (confirmed empirically: ~27-34s per sample end to end,
+    // most of it fixed overhead, regardless of DpsSim.StepMs). Between iterations, resets the
+    // actor's health/mana to full, clears all spell cooldowns, and strips every *non-passive* aura
+    // from both actor and target (SpellInfo::IsPassive() - a talent's permanent self-buff, applied
+    // once by SimBot::Create()'s bootstrap, is never reapplied between iterations, so removing it
+    // would silently run every iteration after the first without that talent) - see
+    // ResetForNextIteration() in SimDaemon.cpp for the exact call sequence. Each iteration also
+    // reseeds with `config.RandomSeed + i` rather than reusing the same seed for all of them,
+    // deliberately: this makes the whole batch reproducible from one starting seed while still
+    // guaranteeing genuinely different draws per iteration, rather than depending on the
+    // still-unexplained non-determinism (docs/bugs-and-fixes.md) to supply that variance on its own.
+    //
+    // **Failure found, root-caused, and fixed 2026-09-13**: a batch had been observed landing real
+    // hits on iteration 1, then zero casts on every iteration after it, forever - three separate
+    // times, surviving two earlier fix attempts. Temporary diagnostic logging (this function's own
+    // loop, in SimDaemon.cpp - pending removal once this fix is validated clean across a few more
+    // batches) settled it: a caught reproduction showed
+    // `actor alive=true inCombat=false engine=combat` on every affected iteration - ruling out
+    // death and confirming PlayerbotAI's own cached engine state was never actually the problem
+    // (it correctly still said BOT_STATE_COMBAT) - Unit::IsInCombat() itself was reading false, for
+    // real. See SimBot::ReestablishCombatState()'s own doc comment for the confirmed mechanism
+    // (npc_training_dummy's own no-damage combat timeout, tracked with zero awareness that sim
+    // iterations exist, ending combat for real between one iteration's cutoff and the next
+    // iteration's first new hit) and the fix (Unit::SetInCombatWith() - the real CombatManager
+    // primitive combat entry itself uses, not a spell cast or other AI-visible action).
+    //
+    // Validate any future change here the same way this was confirmed: run a same-config batch a
+    // few times and check aggregate.perIteration's cast counts for a long tail of zeros before
+    // trusting it - the earlier caveat about aggregate_reports.py's trim only surviving ~10% of a
+    // batch being bad (this failure, when it happened, took out 90%+ of one) still applies to any
+    // *new* failure mode, even though this specific one is now fixed.
+    //
+    // Separately, still-open caveat regardless of the above: mod-playerbots' own Strategy/Trigger/
+    // Value classes may keep other internal state (e.g. a "don't reconsider this for N seconds"
+    // cache) unrelated to combat entry/auras/cooldowns/resources that wouldn't be cleared by any of
+    // this - if a batch run this way ever shows a systematic drift from separate-process runs of the
+    // same config (the same check that caught the StepMs=100 accuracy issue), this is the first
+    // place to look.
+    //
+    // `results` is cleared and filled with exactly `iterations` entries in order on success; left
+    // however many entries had already been produced before a failure on partial failure (check
+    // its size against `iterations`, not just the return value, if that matters to a caller).
+    bool RunPlayerbotBatch(RunConfig const& config, uint32 iterations, std::vector<RunResult>& results);
 
     // Runs the M1 smoke-test job (RunConfig{} defaults) and logs a human-readable summary. This is
     // what DpsSimWorldScript::OnDpsSimRun() calls by default (DpsSim.Enabled=1 alone) - see

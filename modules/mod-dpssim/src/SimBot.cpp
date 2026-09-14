@@ -170,3 +170,47 @@ void SimBot::UpdateAI(uint32 diff)
     if (_ai)
         _ai->UpdateAI(diff);
 }
+
+void SimBot::ReestablishCombatState(Unit* target)
+{
+    if (!_ai || !target)
+        return;
+
+    // **Root cause confirmed 2026-09-13** via temporary diagnostic logging (SimDaemon.cpp's
+    // RunPlayerbotBatch() loop) added specifically to catch this: a reproduction showed
+    // `actor alive=true inCombat=false engine=combat, target alive=true inWorld=true` on every
+    // iteration once the failure started - i.e. neither a death nor a despawn (both ruled out
+    // directly), and the AI's own *cached* engine state genuinely was BOT_STATE_COMBAT (so the
+    // very first fix attempt below, which only reasserted that, could never have worked - it was
+    // already true). The actual problem is Unit::IsInCombat() itself reading false: real combat
+    // entry/exit is tracked by CombatManager, entirely separate from PlayerbotAI's own currentState
+    // cache, and something (most likely npc_training_dummy's own no-damage combat timeout -
+    // src/server/scripts/World/npcs_special.cpp - tracked purely in real per-attacker Milliseconds
+    // ticked down every Map::Update() call with zero awareness that sim iterations exist, so
+    // whatever time was left on it when one iteration's DurationMs cutoff hit runs out early into
+    // the next iteration) is calling CombatManager::EndCombat() on the actor for real between
+    // iterations - and since nothing else ever re-engages combat for a masterless bot outside of
+    // Create()'s own one-time pull (see its doc comment), it never recovers on its own.
+    //
+    // The fix: Unit::SetInCombatWith() - the actual CombatManager primitive real combat entry
+    // itself uses (confirmed by reading CombatManager::SetInCombatWith(), not assumed) - creates a
+    // real combat reference on both sides, sets Unit::IsInCombat() true for real, and notifies each
+    // side's AI via UnitAI::JustEnteredCombat() (CombatManager::NotifyAICombat()), which for the
+    // target dummy IS npc_training_dummy::JustEnteredCombat() - refreshing its internal timer to a
+    // full fresh 5 seconds as a direct side effect, with no spell cast, GCD, or other AI-visible
+    // action involved. This is deliberately NOT the same thing an earlier, reverted attempt tried
+    // (re-casting Create()'s pull spell here to force a similar refresh) - that approach also
+    // refreshed the dummy's timer, but injecting an externally-driven CastSpell() into an
+    // already-running PlayerbotAI turned the original *rare* failure into a *near-100%-reproducible*
+    // one instead, almost certainly by confusing the AI's own action-selection state with a cast it
+    // never decided to make itself. SetInCombatWith() is pure state manipulation, not an action, so
+    // it doesn't have that failure mode.
+    if (Player* bot = _ai->GetBot())
+        bot->SetInCombatWith(target);
+
+    // Same two calls Create() makes once at startup - cheap, harmless no-ops if neither was
+    // actually disturbed (which, per the above, the engine state usually wasn't - only
+    // Unit::IsInCombat() was).
+    _ai->GetAiObjectContext()->GetValue<Unit*>("current target")->Set(target);
+    _ai->ChangeEngine(BOT_STATE_COMBAT);
+}

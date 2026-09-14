@@ -15,21 +15,11 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "CastRecorder.h"
-#include "Spell.h"
-#include "SpellInfo.h"
-#include "Timer.h"
-#include "Unit.h"
+#ifndef MODULE_DPSSIM_SIMDUMMYAI_H
+#define MODULE_DPSSIM_SIMDUMMYAI_H
 
-CastRecorder::CastRecorder(ObjectGuid actorGuid)
-    : AllSpellScript("mod_dpssim_cast_recorder", {ALLSPELLHOOK_ON_CAST}), _actorGuid(actorGuid)
-{
-}
+// Registers npc_dpssim_training_dummy (SimDummyAI.cpp) - called once from Addmod_dpssimScripts()
+// (dpssim_loader.cpp), same as every other script this module registers.
+void AddSC_SimDummyAI();
 
-void CastRecorder::OnSpellCast(Spell* spell, Unit* caster, SpellInfo const* spellInfo, bool /*skipCheck*/)
-{
-    if (!caster || caster->GetGUID() != _actorGuid || !spellInfo || !spell)
-        return;
-
-    _castEvents.push_back({getMSTime(), spellInfo->Id, spell->IsTriggered()});
-}
+#endif

@@ -101,6 +101,32 @@ namespace SimProfile
         // ITEM_MOD_ATTACK_POWER stat applies to both at once (Player::_ApplyItemBonuses()'s own
         // case).
         int32 AttackPower = 0;
+
+        // Master switch for modules/mod-dpssim/tools/stat_weights.py, added 2026-09-13: "false"
+        // makes that tool refuse to run any batch at all for this profile, regardless of how many
+        // TestX flags below are true - a single kill switch for "don't run stat weights against
+        // this profile" without having to flip every TestX flag individually (or delete them and
+        // lose the record of which stats were meant to be tested). Defaults true (absent = stat
+        // weights allowed) so existing profiles that predate this key are unaffected. Same "nothing
+        // in this C++ module reads it, parsed anyway to avoid unknown-key log spam" reasoning as
+        // StatWeightTests below.
+        bool StatWeightsEnabled = true;
+
+        // Stat-weight testing toggles, added 2026-09-13 for modules/mod-dpssim/tools/
+        // stat_weights.py: "TestStrength = true/false", one per stat/rating key this profile
+        // format understands (STAT_KEYS/RATING_KEYS in SimProfile.cpp, plus "TestSpellPower"/
+        // "TestAttackPower" for those two flat fields) - true means that tool includes this stat
+        // in its per-stat-point DPS weight pass for this profile, false or absent means it skips
+        // it. Only consulted at all when StatWeightsEnabled above is true. Nothing in this C++
+        // module reads this map itself - DpsSim.cpp's normal RunPlayerbot() path ignores it
+        // entirely, same as it ignores any key it has no field for. It's parsed and stored here
+        // anyway (rather than left to fail as an "unknown key" LOG_ERROR - see SimProfile.cpp's
+        // Load()) purely so a stat-weight profile's TestX lines don't spam the worldserver log with
+        // "unknown key" errors on every ordinary DpsSim.RunPlayerbot run that happens to load the
+        // same profile file. Keyed by conf key name (not by CombatRating/Stats enum, unlike
+        // CombatRatings/Stats above) since some tested "stats" - SpellPower, AttackPower - aren't
+        // CombatRatings or Stats at all.
+        std::map<std::string, bool> StatWeightTests;
     };
 
     // Loads `path` (a full file path - see dpssim.conf.dist's DpsSim.Profile doc comment for why

@@ -37,10 +37,16 @@
 // subclasses; multiply inheriting both into one class isn't an established pattern anywhere in
 // this codebase, so this stays its own small class instead of risking being the first.
 //
-// Fires for triggered/proc spells too (e.g. Missile Barrage's free Arcane Missiles cast), not just
-// player-initiated ones - Spell::cast() has no "was this triggered" branch around the hook call.
-// That's intentional here: a proc actually firing is exactly the kind of rotation detail a cast
-// log exists to show, not noise to filter out.
+// Fires for triggered/proc spells too (e.g. Missile Barrage's free Arcane Missiles cast, or a
+// talent's passive effect being granted via an internal CastSpell(..., true) when learned), not
+// just player/bot-initiated ones - Spell::cast() has no "was this triggered" branch around the
+// hook call. Recorded here regardless (Spell::IsTriggered() is captured per-event as `IsTriggered`
+// below) rather than filtered out at the source: the 2026-09-13 follow-up request ("differentiate
+// cast spells from buffs") needs to tell the two apart, not lose one of them - see
+// report-template.html's cast-log rendering for how `IsTriggered` splits a cast between the visible
+// "cast" column (false - required a deliberate CastSpell(..., triggered=false), i.e. "requires a
+// button press" in the user's own words) and the "buffs applied" column of the preceding real cast
+// (true - fired on its own, no button press).
 //
 // No rotationSpellId filter (unlike EventRecorder) - a cast log's whole point per the 2026-09-13
 // request is to show every ability the actor uses, DPS or not, so there is nothing to filter by
@@ -63,8 +69,18 @@ public:
     {
         uint32 TimestampMs;
         uint32 SpellId;
+        // Spell::IsTriggered() at cast time - true for a proc/internal CastSpell(..., true) (a
+        // Missile Barrage free cast, a talent's passive effect being granted, a spell-linked
+        // trigger, ...), false for a deliberate CastSpell(..., triggered=false) - what the user
+        // that requested this field called "requires a button press". See this class's own doc
+        // comment for how the report uses it.
+        bool IsTriggered;
     };
     [[nodiscard]] std::vector<CastEvent> const& GetCastEvents() const { return _castEvents; }
+
+    // See EventRecorder::Reset()'s doc comment - same reasoning, same "only between iterations"
+    // caveat, for SimDaemon::RunPlayerbotBatch().
+    void Reset() { _castEvents.clear(); }
 
 private:
     ObjectGuid _actorGuid;

@@ -131,6 +131,8 @@ details.aura-details[open] > summary .chev { transform: rotate(90deg); }
 details.aura-details > summary:hover { background: var(--surface-2); }
 
 .empty-note { color: var(--text-faint); font-size: 13px; text-align: center; padding: 40px 20px; }
+.aggregate-note { color: var(--text-dim); font-size: 12.5px; line-height: 1.6; background: var(--surface-2); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 6px; padding: 10px 14px; }
+.aggregate-note .mono { color: var(--text-faint); }
 .pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-dim); background: var(--surface-2); border-radius: 999px; padding: 2px 9px; }
 footer.note { color: var(--text-faint); font-size: 12px; margin-top: 8px; line-height: 1.6; }
 
@@ -166,6 +168,17 @@ table.uptime td.num { text-align: right; font-family: "IBM Plex Mono", monospace
   <section>
     <h2>Summary</h2>
     <div id="summary-card"></div>
+  </section>
+
+  <section id="stat-weights-section" hidden>
+    <h2>Stat weights</h2>
+    <div class="spell-block">
+      <table class="spells" id="stat-weights-table">
+        <thead><tr><th>Stat</th><th class="num">+Points tested</th><th class="num">Baseline DPS</th><th class="num">Variant DPS</th><th class="num">&Delta; DPS</th><th class="num">DPS / point</th></tr></thead>
+        <tbody id="stat-weights-body"></tbody>
+      </table>
+    </div>
+    <footer class="note" id="stat-weights-note"></footer>
   </section>
 
   <section>
@@ -208,11 +221,12 @@ table.uptime td.num { text-align: right; font-family: "IBM Plex Mono", monospace
     <div class="log-card">
       <div class="log-scroll">
         <table class="log">
-          <thead><tr><th>Time</th><th>Spell</th></tr></thead>
+          <thead><tr><th>Time</th><th>Spell</th><th>Buffs applied</th></tr></thead>
           <tbody id="cast-log-body"></tbody>
         </table>
       </div>
     </div>
+    <footer class="note">Only casts that required a deliberate action (<span class="mono">!triggered</span>) get their own row here &mdash; a proc firing on its own or a talent's passive effect being granted (<span class="mono">triggered: true</span>) shows up instead as a buff in the row for whichever real cast preceded it.</footer>
   </section>
 
   <section>
@@ -279,6 +293,7 @@ table.uptime td.num { text-align: right; font-family: "IBM Plex Mono", monospace
     document.title = report.label;
     renderMeta();
     renderSummary();
+    renderStatWeights();
     renderSpells();
     renderChart();
     renderManaChart();
@@ -300,15 +315,31 @@ table.uptime td.num { text-align: right; font-family: "IBM Plex Mono", monospace
       el.innerHTML = '<div class="summary-card"><div class="empty-note">Click &ldquo;Load a different report&rdquo; above and pick a DpsSim report JSON file.</div></div>';
       return;
     }
-    var s = d.summary, cfg = d.config;
+    var s = d.summary, cfg = d.config, agg = d.aggregate, trim = agg ? agg.trim : null;
+    var dpsSpread = "";
+    if (agg) {
+      var dpsValues = agg.perIteration.dps;
+      dpsSpread = '<div class="card-sub">' + fmtNum(Math.min.apply(null, dpsValues), 1) + '&ndash;' +
+        fmtNum(Math.max.apply(null, dpsValues), 1) + ' across ' + agg.iterations + ' runs' +
+        (trim ? ' (' + fmtNum(trim.rawMean.dps, 1) + ' untrimmed)' : '') + '</div>';
+    }
+    var badgeRuns = agg ? (trim ? trim.keptCount + '/' + agg.iterations : agg.iterations) : null;
     el.innerHTML =
       '<div class="summary-card">' +
         '<div class="card-head">' +
           '<div><div class="card-title">' + report.label + '</div><div class="card-sub">Level ' + cfg.actorLevel + ' vs Level ' + cfg.targetLevel + ' target &middot; seed ' + cfg.randomSeed + '</div></div>' +
-          '<span class="badge">' + fmtSeconds(s.elapsedMs) + ' sim</span>' +
+          '<span class="badge">' + fmtSeconds(s.elapsedMs) + ' sim' + (agg ? ' &middot; avg of ' + badgeRuns + ' runs' : '') + '</span>' +
         '</div>' +
+        (agg ? '<div class="aggregate-note" style="margin-bottom:16px">DPS, total damage, casts, and crit rate below are averaged over ' +
+          (trim ? 'the middle ' + trim.keptCount + ' of ' + agg.iterations + ' back-to-back runs - the ' + trim.droppedLowCount +
+            ' lowest (' + trim.droppedLowDps.map(function (v) { return fmtNum(v, 0); }).join(', ') + ' DPS) and ' + trim.droppedHighCount +
+            ' highest (' + trim.droppedHighDps.map(function (v) { return fmtNum(v, 0); }).join(', ') + ' DPS) were trimmed as outliers before averaging' +
+            ' (untrimmed mean was ' + fmtNum(trim.rawMean.dps, 1) + ' DPS)'
+            : agg.iterations + ' back-to-back runs') +
+          ' of this same profile (SimDaemon::RunPlayerbot() is not fully deterministic - see docs/bugs-and-fixes.md - so one run alone is a noisy sample). ' +
+          'Everything else on this page (spell breakdown %, charts, cast/hit/aura logs) reflects whichever kept run landed closest to the median DPS (' + fmtNum(agg.representativeDps, 1) + ') - not necessarily run 1, and never a trimmed-away outlier.</div>' : "") +
         '<div class="stat-row">' +
-          '<div class="stat"><div class="label">DPS</div><div class="value dps">' + fmtNum(s.dps, 1) + '</div></div>' +
+          '<div class="stat"><div class="label">DPS</div><div class="value dps">' + fmtNum(s.dps, 1) + '</div>' + dpsSpread + '</div>' +
           '<div class="stat"><div class="label">Total damage</div><div class="value">' + fmtNum(s.totalDamage) + '</div></div>' +
           '<div class="stat"><div class="label">Casts landed</div><div class="value">' + fmtNum(s.castCount) + '</div></div>' +
           '<div class="stat"><div class="label">Crit rate</div><div class="value">' + fmtNum(s.critRatePct, 1) + '<small>%</small></div><div class="card-sub">' + fmtNum(s.critCount) + ' crits</div></div>' +
@@ -318,6 +349,41 @@ table.uptime td.num { text-align: right; font-family: "IBM Plex Mono", monospace
           '<div class="stat"><div class="label">Attack power</div><div class="value" style="font-size:17px">' + fmtNum(cfg.attackPower || 0) + '</div></div>' +
         '</div>' +
       '</div>';
+  }
+
+  // Conf key (SimProfile.cpp's STAT_KEYS/RATING_KEYS spelling) -> display label. Only covers the
+  // 13 keys stat_weights.py can ever put in a "stat" field - anything else falls back to the raw
+  // key name unchanged, which would only happen if that tool's own stat list and this map drift
+  // apart.
+  var STAT_LABELS = {
+    Strength: "Strength", Agility: "Agility", Stamina: "Stamina", Intellect: "Intellect",
+    Spirit: "Spirit", SpellPower: "Spell power", AttackPower: "Attack power",
+    CritRating: "Critical strike rating", HasteRating: "Haste rating", MasteryRating: "Mastery",
+    VersatilityRating: "Versatility", CooldownHasteRating: "Cooldown haste",
+    ProcChanceRating: "Proc chance",
+  };
+
+  function renderStatWeights() {
+    var section = document.getElementById("stat-weights-section");
+    var d = report.data;
+    var sw = d ? d.statWeights : null;
+    if (!sw || !sw.weights || !sw.weights.length) { section.hidden = true; return; }
+    section.hidden = false;
+
+    document.getElementById("stat-weights-body").innerHTML = sw.weights.map(function (w) {
+      var deltaClass = w.deltaDps > 0 ? "good" : (w.deltaDps < 0 ? "bad" : "");
+      return '<tr><td>' + (STAT_LABELS[w.stat] || w.stat) + '</td>' +
+        '<td class="num">+' + fmtNum(w.delta) + '</td>' +
+        '<td class="num">' + fmtNum(w.baselineDps, 1) + '</td>' +
+        '<td class="num">' + fmtNum(w.variantDps, 1) + '</td>' +
+        '<td class="num" style="color:var(--' + (deltaClass || "text-dim") + ')">' + (w.deltaDps >= 0 ? "+" : "") + fmtNum(w.deltaDps, 1) + '</td>' +
+        '<td class="num" style="font-weight:600">' + (w.dpsPerPoint >= 0 ? "+" : "") + fmtNum(w.dpsPerPoint, 3) + '</td></tr>';
+    }).join("");
+
+    document.getElementById("stat-weights-note").textContent =
+      "Each row bumps that one stat by +" + sw.delta + " (level " + sw.level + ") on top of this profile's own values and re-runs " +
+      sw.variantIterations + " time(s), vs. the baseline's " + sw.baselineIterations + " unmodified run(s) - see stat_weights.py's own " +
+      "doc comment for why a weight much smaller than this report's own DPS spread (see Summary above) shouldn't be trusted as precise.";
   }
 
   function renderSpells() {
@@ -500,14 +566,40 @@ table.uptime td.num { text-align: right; font-family: "IBM Plex Mono", monospace
   // Every cast the actor made, damage or not - see SimReport.h's "casts" schema doc comment for
   // how this differs from the hit log below (cast-fired time vs. landed-hit time, and this
   // includes non-damage abilities like Evocation that never appear in "hits" at all).
+  //
+  // Only non-triggered casts ("requires a button press", per the 2026-09-13 request) get their own
+  // row - a triggered cast (proc, talent-passive grant, spell-linked trigger, ...) never gets a row
+  // of its own; instead every positive buff it (or anything else) applied to the actor between one
+  // real cast and the next shows up in that real cast's own "Buffs applied" column. This is driven
+  // entirely off auraEvents, not off the triggered casts themselves - a triggered cast that never
+  // produced a visible buff (no matching aura event) just disappears, which is intentional: there's
+  // nothing to show for it either way.
+  function buffsBetween(data, startMs, endMs) {
+    var events = (data.auraEvents || []).filter(function (e) {
+      return e.unit === "actor" && e.positive && e.applied && e.timestampMs >= startMs && e.timestampMs < endMs;
+    });
+    var counts = {};
+    var order = [];
+    events.forEach(function (e) {
+      if (!counts[e.spellId]) { counts[e.spellId] = 0; order.push(e.spellId); }
+      counts[e.spellId]++;
+    });
+    return order.map(function (id) { return spellName(id) + (counts[id] > 1 ? ' ×' + counts[id] : ''); });
+  }
+
   function renderCastLog() {
     var body = document.getElementById("cast-log-body");
     var d = report.data;
-    var casts = d ? (d.casts || []).slice().sort(function (a, b) { return a.timestampMs - b.timestampMs; }) : [];
-    if (!casts.length) { body.innerHTML = '<tr><td colspan="2" class="t" style="padding:20px;text-align:center">No casts &mdash; load a report above.</td></tr>'; return; }
-    body.innerHTML = casts.map(function (c) {
+    var allCasts = d ? (d.casts || []).slice().sort(function (a, b) { return a.timestampMs - b.timestampMs; }) : [];
+    var realCasts = allCasts.filter(function (c) { return !c.triggered; });
+    if (!realCasts.length) { body.innerHTML = '<tr><td colspan="3" class="t" style="padding:20px;text-align:center">No casts &mdash; load a report above.</td></tr>'; return; }
+    var elapsed = d.summary.elapsedMs;
+    body.innerHTML = realCasts.map(function (c, i) {
+      var windowEnd = i + 1 < realCasts.length ? realCasts[i + 1].timestampMs : elapsed;
+      var buffs = buffsBetween(d, c.timestampMs, windowEnd);
       return '<tr><td class="t mono">' + (c.timestampMs / 1000).toFixed(2) + 's</td>' +
-        '<td>' + spellName(c.spellId) + '</td></tr>';
+        '<td>' + spellName(c.spellId) + '</td>' +
+        '<td>' + (buffs.length ? buffs.map(function (b) { return '<span class="pill">' + b + '</span>'; }).join(' ') : '<span class="t" style="color:var(--text-faint)">&mdash;</span>') + '</td></tr>';
     }).join("");
   }
 

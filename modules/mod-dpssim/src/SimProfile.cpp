@@ -18,6 +18,7 @@
 #include "SimProfile.h"
 #include "Log.h"
 #include "Unit.h"
+#include <algorithm>
 #include <fstream>
 #include <sstream>
 
@@ -30,6 +31,22 @@ namespace
             return "";
         size_t const end = s.find_last_not_of(" \t\r\n");
         return s.substr(start, end - start + 1);
+    }
+
+    // Accepts "true"/"false" (any case) or "1"/"0" - mirrors ConfigMgr::GetOption<bool>'s own
+    // accepted spellings closely enough that a "TestX = true" line reads the same way any other
+    // boolean conf key in this repo does. Returns false (via `ok`) rather than throwing on
+    // anything else, so the caller can log a proper line/key-specific error the same way every
+    // other malformed-value case here does.
+    bool ParseBool(std::string const& value, bool& ok)
+    {
+        ok = true;
+        if (value == "true" || value == "True" || value == "1")
+            return true;
+        if (value == "false" || value == "False" || value == "0")
+            return false;
+        ok = false;
+        return false;
     }
 
     // Conf key name -> CombatRating(s) (Unit.h) it fans out to. Hit/Crit/Haste each cover all
@@ -59,6 +76,21 @@ namespace
         {"Stamina", STAT_STAMINA},
         {"Intellect", STAT_INTELLECT},
         {"Spirit", STAT_SPIRIT},
+    };
+
+    // "Test<key>" flag names modules/mod-dpssim/tools/stat_weights.py reads - exactly the 13
+    // stats that tool's stat-weight pass considers (2026-09-13 request), each name matching a
+    // STAT_KEYS/RATING_KEYS entry above or one of the two flat fields (SpellPower/AttackPower)
+    // that aren't in either map. Deliberately not "every RATING_KEYS entry" - e.g. no
+    // TestHitRating/TestExpertiseRating/TestArmorPenetrationRating, since those weren't asked for
+    // and hit/expertise are meaningless on this deployment's always-hit-vs-PvE custom rule anyway.
+    // See Profile::StatWeightTests' own doc comment (SimProfile.h) for why this C++ module parses
+    // and stores these at all despite never reading them itself.
+    std::vector<std::string> const TEST_FLAG_KEYS = {
+        "TestStrength", "TestAgility", "TestStamina", "TestIntellect", "TestSpirit",
+        "TestSpellPower", "TestAttackPower",
+        "TestCritRating", "TestHasteRating", "TestMasteryRating", "TestVersatilityRating",
+        "TestCooldownHasteRating", "TestProcChanceRating",
     };
 }
 
@@ -161,6 +193,20 @@ bool SimProfile::Load(std::string const& path, Profile& out)
                 return false;
             }
         }
+        else if (key == "StatWeightsEnabled")
+        {
+            bool ok = false;
+            bool const flagValue = ParseBool(value, ok);
+            if (!ok)
+            {
+                LOG_ERROR("server.dpssim",
+                    "mod-dpssim: SimProfile::Load() - '{}' line {}: 'StatWeightsEnabled' value '{}' is not true/false.",
+                    path, lineNo, value);
+                return false;
+            }
+
+            parsed.StatWeightsEnabled = flagValue;
+        }
         else if (auto const it = RATING_KEYS.find(key); it != RATING_KEYS.end())
         {
             int32 ratingValue = 0;
@@ -195,6 +241,20 @@ bool SimProfile::Load(std::string const& path, Profile& out)
             }
 
             parsed.Stats[it->second] = statValue;
+        }
+        else if (std::find(TEST_FLAG_KEYS.begin(), TEST_FLAG_KEYS.end(), key) != TEST_FLAG_KEYS.end())
+        {
+            bool ok = false;
+            bool const flagValue = ParseBool(value, ok);
+            if (!ok)
+            {
+                LOG_ERROR("server.dpssim",
+                    "mod-dpssim: SimProfile::Load() - '{}' line {}: '{}' value '{}' is not true/false.",
+                    path, lineNo, key, value);
+                return false;
+            }
+
+            parsed.StatWeightTests[key] = flagValue;
         }
         else
             LOG_ERROR("server.dpssim",

@@ -105,6 +105,62 @@ DpsSim.PlayerbotRace = 1
 DpsSim.DurationSeconds = 30
 
 #
+#    DpsSim.StepMs
+#        Description: Only meaningful alongside DpsSim.RunPlayerbot = 1. Fixed-timestep size
+#                      (SimClock.h) - how much simulated time each loop iteration advances by
+#                      (Map::Update(StepMs, StepMs) + the bot's own UpdateAI(StepMs)) before
+#                      moving on to the next. Lower = more, smaller steps for the same
+#                      DurationSeconds (more precise, more real wall-clock cost per run); higher =
+#                      fewer, larger steps (cheaper, coarser).
+#
+#                      SimTests::RunTimestepTest() found 10ms/50ms/1ms agree for Phase 1's
+#                      hardcoded-Frostbolt rotation (RunOnce()), but that was never checked against
+#                      the real Engine/Strategy-driven rotation this key actually controls
+#                      (RunPlayerbotOnce()) - a proper sweep against that path (2026-09-13,
+#                      SimDaemon::RunPlayerbotBatch() in-process batching, 100 iterations per step
+#                      size, 120s @ level 60) found:
+#                        10ms   - ground truth (baseline for the comparisons below)
+#                        50ms   - measurably off (-3.1 sigma vs 10ms) *and* slower than 100ms -
+#                                 no reason to use it
+#                        100ms  - no accuracy cost distinguishable from run-to-run noise across two
+#                                 independent 100-run batches (-0.8, -1.8 sigma), ~4.6x faster than
+#                                 10ms - the sweet spot, now the default
+#                        200ms  - -8.7 sigma
+#                        300ms  - -5.7 sigma
+#                        500ms  - -10.5 sigma
+#                        1000ms - -23.8 sigma (undercounts casts by ~24%, DPS by ~26% - the step
+#                                 is approaching the scale of a GCD/cast time, so the sim starts
+#                                 visibly missing rotation windows)
+#                      Bias grows severely and roughly monotonically past 100ms (not perfectly -
+#                      200ms read worse than 300ms in that sweep, unexplained) - treat anything
+#                      above 100ms as a fast-but-unreliable rough-direction check only, never as a
+#                      trustworthy number.
+#        Default:     100
+#
+
+DpsSim.StepMs = 100
+
+#
+#    DpsSim.Iterations
+#        Description: Only meaningful alongside DpsSim.RunPlayerbot = 1. Runs this many
+#                      independent samples of the same job in this one process
+#                      (SimDaemon::RunPlayerbotBatch()) instead of the single run
+#                      DpsSim.RunPlayerbot has always done - one actor/target/bot setup shared
+#                      across all of them, with health/mana/cooldowns/non-passive-auras reset
+#                      between iterations, rather than one throwaway `docker run` per iteration
+#                      (modules/mod-dpssim/tools/run-sim.sh's old approach) - see that function's
+#                      own doc comment for the full reasoning and its "not fully verified against
+#                      mod-playerbots' own internal AI state" caveat. Writes one report per
+#                      iteration when DpsSim.ReportPath is set (path.json -> path.iterN.json) and
+#                      logs a one-line summary per iteration rather than the single-run path's full
+#                      per-hit timeline. 1 (the default) is exactly today's original single-run
+#                      behavior, unchanged.
+#        Default:     1
+#
+
+DpsSim.Iterations = 1
+
+#
 #    DpsSim.Profile
 #        Description: Only meaningful alongside DpsSim.RunPlayerbot = 1. Full path to a named sim
 #                      profile file (SimProfile.h/.cpp) - e.g.

@@ -147,6 +147,7 @@ bool SimReport::WriteJson(std::string const& path, SimDaemon::RunConfig const& c
     {
         SimDaemon::RunResult::CastEvent const& c = result.CastEvents[i];
         file << "    {\"timestampMs\": " << c.TimestampMs << ", \"spellId\": " << c.SpellId
+             << ", \"triggered\": " << (c.Triggered ? "true" : "false")
              << "}" << (i + 1 < result.CastEvents.size() ? ",\n" : "\n");
     }
     file << "  ]\n";

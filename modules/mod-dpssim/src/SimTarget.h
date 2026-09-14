@@ -28,22 +28,31 @@ class TempSummon;
 // Passive target dummy for the sim to cast at. Built on this fork's own training dummies
 // (creature_template entries 900001/900002/900003, added by
 // data/sql/updates/db_world/2026_09_01_26.sql for exactly this purpose - "Training Dummy" at level
-// 60/70/80 respectively, `AIName = npc_training_dummy`) rather than the base game's plain "Target
+// 60/70/80 respectively, `ScriptName = npc_training_dummy`) rather than the base game's plain "Target
 // Dummy" (entry 2673). That base entry was tried first and rejected: its faction (14) fails
 // Unit::_IsValidAttackTarget's friendly-target check, so every hostile spell cast at it returns
 // SPELL_FAILED_BAD_TARGETS - entries 900001/900002/900003 use faction 31 (Critter) instead, the
 // same "always attackable, never retaliates" trick real non-combat critters use, specifically so
 // players (and now this sim) can cast damage at them at all. See npc_training_dummy
 // (src/server/scripts/World/npcs_special.cpp) for the AI: it zeroes `damage` in its DamageTaken()
-// hook so the dummy never dies, and runs its own 5s combat-timeout bookkeeping - SimTarget doesn't
-// need to reimplement any of that.
+// hook so the dummy never dies, and runs its own 5s combat-timeout bookkeeping.
+//
+// **2026-09-13**: all three brackets now spawn sim-exclusive entries (900004/900005/900006) running
+// npc_dpssim_training_dummy (modules/mod-dpssim/src/SimDummyAI.cpp) instead of the player-facing
+// 900001/900002/900003 (real npc_training_dummy) - the same AI minus a 5s no-damage combat timeout,
+// added specifically because that timeout turned out to be the root cause of a real
+// RunPlayerbotBatch() failure (see docs/bugs-and-fixes.md). 900004 (level 60) was validated alone
+// first - a full stat-weights batch, 10 container boots, 0 zero-cast failures - before 900005/900006
+// were added to extend the same fix to 70/80.
 //
 // Create() picks the sibling entry matching `config.Level` (see EntryForLevel()) rather than always
-// spawning one and overriding its level - the three rows are otherwise identical
-// (creature_template's faction/unit_flags/AIName/ScriptName all match, confirmed against this
-// deployment's own DB, not assumed), so this is about matching the deployment's own per-bracket
-// convention rather than a functional necessity. Level/armor are still applied programmatically
-// after spawn (SetLevel/SetResistance) regardless of which entry was picked.
+// spawning one and overriding its level - the three original rows were otherwise identical
+// (creature_template's faction/unit_flags/AIName/ScriptName all matched, confirmed against this
+// deployment's own DB, not assumed), so this was about matching the deployment's own per-bracket
+// convention rather than a functional necessity - 900004/900005/900006 keep everything but
+// ScriptName identical to their 900001/900002/900003 counterparts for exactly that reason.
+// Level/armor are still applied programmatically after spawn (SetLevel/SetResistance) regardless of
+// which entry was picked.
 //
 // **Load-bearing gotcha, matters to EventRecorder, not just this class**: DamageTaken() runs
 // *before* ScriptMgr::OnDamage() inside Unit::DealDamage (see the "its rare to modify damage in
@@ -76,9 +85,17 @@ public:
     // a dedicated entry (the brackets that actually matter for this fork's balance work); anything
     // else falls back to the nearest bracket at or below it in EntryForLevel(), logging a warning,
     // rather than failing outright.
-    static constexpr uint32 DUMMY_ENTRY_LEVEL_60 = 900001;
-    static constexpr uint32 DUMMY_ENTRY_LEVEL_70 = 900002;
-    static constexpr uint32 DUMMY_ENTRY_LEVEL_80 = 900003;
+    //
+    // **2026-09-13**: all three point at the sim-exclusive npc_dpssim_training_dummy entries
+    // (900004/900005/900006, see data/sql/updates/pending_db_world's two migrations and
+    // modules/mod-dpssim/src/SimDummyAI.cpp) rather than the original player-facing
+    // 900001/900002/900003 - dropping npc_training_dummy's 5-second no-damage combat timeout fixed
+    // RunPlayerbotBatch()'s "iteration 1 lands hits, every iteration after it doesn't" failure
+    // (docs/bugs-and-fixes.md) at its source. 900004 was validated alone first (a full stat-weights
+    // batch, 0/10 zero-cast failures) before 900005/900006 were added to match.
+    static constexpr uint32 DUMMY_ENTRY_LEVEL_60 = 900004;
+    static constexpr uint32 DUMMY_ENTRY_LEVEL_70 = 900005;
+    static constexpr uint32 DUMMY_ENTRY_LEVEL_80 = 900006;
 
     // Maps a target level to the matching dummy entry above. Exact matches for 60/70/80; anything
     // else logs a warning and falls back to the nearest bracket at or below `level` (60 for
