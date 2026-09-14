@@ -19,7 +19,6 @@
 #include "DpsSim.h"
 #include "GameTime.h"
 #include "Log.h"
-#include "Random.h"
 #include "SimDaemon.h"
 #include "SimProfile.h"
 #include "SimReport.h"
@@ -51,15 +50,10 @@ void DpsSimWorldScript::OnDpsSimRun()
     // follow-up work on this same module, once this foundation is confirmed to boot, build, and
     // link correctly). What this smoke-tests, end to end, in one run:
     //   - the Main.cpp sim-mode branch actually reaches this hook (core patch 4);
-    //   - core patch 1 (RNG seed setter) produces a reproducible roll sequence;
     //   - core patch 2 (Timer.h sim-clock override) decouples GameTime/getMSTime() from the real
     //     wall clock, which is the load-bearing fix the "Critical finding" section of the plan
     //     doc is about.
     LOG_INFO("server.dpssim", "mod-dpssim: OnDpsSimRun() reached - sim-mode boot branch is working.");
-
-    SetRandomSeed(12345);
-    LOG_INFO("server.dpssim", "mod-dpssim: seeded urand(1,100) x5 = {}, {}, {}, {}, {}",
-        urand(1, 100), urand(1, 100), urand(1, 100), urand(1, 100), urand(1, 100));
 
     // Advance the sim clock in large (accelerated) steps and confirm GameTime/getMSTime() track
     // the override rather than real elapsed wall time - the actual point of core patch 2.

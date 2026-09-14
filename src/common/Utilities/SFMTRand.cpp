@@ -73,14 +73,6 @@ SFMTRand::SFMTRand()
     }
 }
 
-SFMTRand::SFMTRand(uint32 seed)
-{
-    // Deterministic path for modules/mod-dpssim's seeded RNG mode (see Random.h's
-    // SetRandomSeed()) - bypasses the entropy-source path above entirely so the same seed always
-    // produces the same roll sequence, which the normal server never needs and never gets.
-    sfmt_init_gen_rand(&_state, seed);
-}
-
 uint32 SFMTRand::RandomUInt32()                            // Output random bits
 {
     return sfmt_genrand_uint32(&_state);

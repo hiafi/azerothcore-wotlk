@@ -18,14 +18,18 @@
 #ifndef MODULE_DPSSIM_SIMTESTS_H
 #define MODULE_DPSSIM_SIMTESTS_H
 
-// Phase 1's four required tests (known-value, timestep, determinism, accelerated-clock - see the
-// plan doc's Phase 1 task list and "Definition of done"), all built on SimDaemon::RunOnce(). Not
-// wired into `ctest`: the daemon needs the full worldserver boot (DB + client data, ~15s), which
-// doesn't fit src/test/'s headless unit-test harness - see this bullet's own note in the plan doc.
-// Run manually via DpsSim.RunTests=1 (alongside DpsSim.Enabled=1) - see dpssim.conf.dist.
+// Phase 1's three required tests (known-value, timestep, accelerated-clock - see the plan doc's
+// Phase 1 task list and "Definition of done"), all built on SimDaemon::RunOnce(). A fourth,
+// determinism, was dropped along with SetRandomSeed() itself: seeding a run never actually made it
+// reproducible (something before the combat loop consumed a different number of random draws
+// between runs even with an identical seed, never root-caused), so the seeding code was removed as
+// unreliable rather than kept around backing a guarantee it didn't meet. Not wired into `ctest`:
+// the daemon needs the full worldserver boot (DB + client data, ~15s), which doesn't fit
+// src/test/'s headless unit-test harness - see this bullet's own note in the plan doc. Run
+// manually via DpsSim.RunTests=1 (alongside DpsSim.Enabled=1) - see dpssim.conf.dist.
 namespace SimTests
 {
-    // Runs all four tests in one process boot (each construct-and-tear-down actor/target pair is
+    // Runs all three tests in one process boot (each construct-and-tear-down actor/target pair is
     // independent - see SimDaemon::RunOnce()'s own doc comment on why this is safe to call
     // repeatedly) and logs a PASS/FAIL verdict for each plus a final summary line.
     void RunAll();

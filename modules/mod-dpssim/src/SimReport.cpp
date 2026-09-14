@@ -84,8 +84,7 @@ bool SimReport::WriteJson(std::string const& path, SimDaemon::RunConfig const& c
     file << "    \"actorLevel\": " << config.ActorLevel << ",\n";
     file << "    \"targetLevel\": " << config.TargetLevel << ",\n";
     file << "    \"spellPower\": " << config.SpellPower << ",\n";
-    file << "    \"durationMs\": " << config.DurationMs << ",\n";
-    file << "    \"randomSeed\": " << config.RandomSeed << "\n";
+    file << "    \"durationMs\": " << config.DurationMs << "\n";
     file << "  },\n";
 
     file << "  \"summary\": {\n";

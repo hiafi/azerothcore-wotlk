@@ -71,13 +71,8 @@ public:
     // Called when Melee Damage is being Dealt
     virtual void ModifyMeleeDamage(Unit* /*target*/, Unit* /*attacker*/, uint32& /*damage*/) { }
 
-    // Called when Spell Damage is being Dealt. isCrit reflects whether this hit crit - sourced
-    // from Unit::CalculateSpellDamageTaken's own `crit` parameter, which is already computed by
-    // the time this hook fires (see mod-dpssim's EventRecorder for why this is the hook to use for
-    // crit-aware damage capture rather than OnDamage: OnDamage fires *after* a target's own
-    // DamageTaken() AI hook has run, which for some target types - e.g. training dummies - already
-    // zeroed `damage` by then; this hook fires upstream of that, from Unit::CalculateSpellDamageTaken).
-    virtual void ModifySpellDamageTaken(Unit* /*target*/, Unit* /*attacker*/, int32& /*damage*/, SpellInfo const* /*spellInfo*/, bool /*isCrit*/) { }
+    // Called when Spell Damage is being Dealt
+    virtual void ModifySpellDamageTaken(Unit* /*target*/, Unit* /*attacker*/, int32& /*damage*/, SpellInfo const* /*spellInfo*/) { }
 
     // Called from Unit::CalculateSpellDamageTaken() once `damage` has its final, landed value -
     // after per-class mitigation (armor reduction, crit bonus, block/resilience) but before

@@ -57,7 +57,6 @@ namespace SimDaemon
     // SimTests.cpp for the other parameter combinations the four Phase 1 tests actually run.
     struct RunConfig
     {
-        uint32 RandomSeed = 12345;
         uint32 StepMs = 10;
         uint32 DurationMs = 30000;
         // Flat spell power added on top of the level/race/gear baseline - see
@@ -226,11 +225,7 @@ namespace SimDaemon
     // from both actor and target (SpellInfo::IsPassive() - a talent's permanent self-buff, applied
     // once by SimBot::Create()'s bootstrap, is never reapplied between iterations, so removing it
     // would silently run every iteration after the first without that talent) - see
-    // ResetForNextIteration() in SimDaemon.cpp for the exact call sequence. Each iteration also
-    // reseeds with `config.RandomSeed + i` rather than reusing the same seed for all of them,
-    // deliberately: this makes the whole batch reproducible from one starting seed while still
-    // guaranteeing genuinely different draws per iteration, rather than depending on the
-    // still-unexplained non-determinism (docs/bugs-and-fixes.md) to supply that variance on its own.
+    // ResetForNextIteration() in SimDaemon.cpp for the exact call sequence.
     //
     // **Failure found, root-caused, and fixed 2026-09-13**: a batch had been observed landing real
     // hits on iteration 1, then zero casts on every iteration after it, forever - three separate

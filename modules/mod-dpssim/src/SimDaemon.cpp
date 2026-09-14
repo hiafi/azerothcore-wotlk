@@ -23,7 +23,6 @@
 #include "Map.h"
 #include "Player.h"
 #include "Playerbots.h"
-#include "Random.h"
 #include "SimActor.h"
 #include "SimBot.h"
 #include "SimClock.h"
@@ -108,11 +107,21 @@ namespace
     // RunPlayerbotBatch() (one call per iteration, same actor/target/bot/recorders reused every
     // time - see that function's own doc comment). Assumes `recorder`/`castRecorder` are already
     // rewound (a fresh EventRecorder/CastRecorder for RunPlayerbotOnce(), an explicit ->Reset() call
-    // for every iteration but the first in RunPlayerbotBatch()) - this function itself never resets
-    // anything, it only reads whatever they've accumulated once the loop below ends.
+    // for every iteration but the first in RunPlayerbotBatch()) - result population aside, the one
+    // thing this function does reset itself is spell cooldowns (see below), since that has to
+    // happen on every call, including RunPlayerbotBatch()'s first iteration which ResetForNextIteration()
+    // never reaches.
     void RunPlayerbotIteration(SimDaemon::RunConfig const& config, Player* player, Map* map, SimBot& bot,
         EventRecorder* recorder, CastRecorder* castRecorder, SimDaemon::RunResult& result)
     {
+        // SimBot::Create()'s pull cast (and any other pre-loop cast) sets a cooldown end-timestamp
+        // in real wall-clock time (getMSTime() before the sim clock override exists yet). The
+        // first clock.Tick() below jumps the override backward to ~0, so that stored end-timestamp
+        // becomes unreachably large and Player::HasSpellCooldown() would read that ability as
+        // permanently on cooldown for the rest of the run. Clearing cooldowns here, right before
+        // the sim clock starts, discards that stale real-time bookkeeping so the run starts clean.
+        player->RemoveAllSpellCooldown();
+
         SimClock clock(config.StepMs);
         uint32 lastManaSampleMs = 0;
         bool sampledManaOnce = false;
@@ -173,7 +182,8 @@ namespace
         player->RemoveAppliedAuras(removeNonPassive);
         dummy->RemoveAppliedAuras(removeNonPassive);
 
-        player->RemoveAllSpellCooldown();
+        // Not resetting cooldowns here - RunPlayerbotIteration() itself now does that
+        // unconditionally at the start of every call, including this one.
         player->SetFullHealth();
         player->SetPower(POWER_MANA, player->GetMaxPower(POWER_MANA));
 
@@ -248,17 +258,6 @@ bool SimDaemon::RunOnce(RunConfig const& config, RunResult& result)
     // rotation's one damage spell) - RunOnce()'s hardcoded RotationTick() only ever casts Frostbolt
     // anyway, so this mostly matters for RunPlayerbotOnce() below, but is added here too for symmetry.
     CastRecorder* castRecorder = new CastRecorder(player->GetGUID());
-
-    // Seeded here, immediately before the combat loop, rather than at the top of this function -
-    // deliberately isolates the seeded window from actor/target construction above. This was a
-    // real diagnostic step, not just tidiness: the plan doc's determinism test found that two
-    // back-to-back RunOnce() calls with the same seed produce identical cast/crit counts but
-    // different total damage, meaning something consumes a *different number* of random draws
-    // between runs somewhere before this point - narrowing the seeded window to exclude
-    // construction is the cheapest way to test whether construction is that something, without
-    // needing to instrument every call construction makes. See the plan doc's non-determinism
-    // section for what this did and didn't resolve.
-    SetRandomSeed(config.RandomSeed);
 
     SimClock clock(config.StepMs);
     uint32 castAttempts = 0;
@@ -343,9 +342,7 @@ bool SimDaemon::RunPlayerbotOnce(RunConfig const& config, RunResult& result)
     CastRecorder* castRecorder = new CastRecorder(player->GetGUID());
 
     // SimBot::Create() teaches the bot's class spells and "pulls" `dummy` with one manual cast to
-    // bootstrap combat state - see its own doc comment for why that's needed. This happens before
-    // SetRandomSeed() below on purpose, same reasoning as RunOnce()'s own reseed placement: keeps
-    // the seeded window covering only what the real Engine/Strategy does each tick.
+    // bootstrap combat state - see its own doc comment for why that's needed.
     SimBot bot;
     if (!bot.Create(player, dummy, config.PlayerbotTalents))
     {
@@ -353,7 +350,6 @@ bool SimDaemon::RunPlayerbotOnce(RunConfig const& config, RunResult& result)
         return false;
     }
 
-    SetRandomSeed(config.RandomSeed);
     RunPlayerbotIteration(config, player, map, bot, recorder, castRecorder, result);
     return true;
 }
@@ -413,10 +409,6 @@ bool SimDaemon::RunPlayerbotBatch(RunConfig const& config, uint32 iterations, st
 
     for (uint32 i = 0; i < iterations; ++i)
     {
-        // Reseed per iteration (config.RandomSeed + i), not once for the whole batch - see this
-        // function's own doc comment (SimDaemon.h) for why.
-        SetRandomSeed(config.RandomSeed + i);
-
         if (i > 0)
             ResetForNextIteration(player, dummy, bot, recorder, castRecorder);
 

@@ -104,8 +104,3 @@ RandomEngine& RandomEngine::Instance()
 {
     return engine;
 }
-
-void SetRandomSeed(uint32 seed)
-{
-    sfmtRand = std::make_unique<SFMTRand>(seed);
-}

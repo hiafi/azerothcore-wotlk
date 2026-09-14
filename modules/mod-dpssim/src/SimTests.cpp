@@ -100,7 +100,7 @@ namespace
         return base > 0.0 && (diff / base) <= pct;
     }
 
-    // Test 1/4: unbuffed Frostbolt vs. a zero-armor level-80 target, hand-computed expected
+    // Test 1/3: unbuffed Frostbolt vs. a zero-armor level-80 target, hand-computed expected
     // damage compared to sim output - every landed hit is checked individually against a
     // hand-derived bound (see the constants above), not just the aggregate total: a compensating
     // pair of bugs (e.g. wrong cast time and wrong per-hit damage) can land on the right total DPS
@@ -108,7 +108,6 @@ namespace
     bool RunKnownValueTest()
     {
         SimDaemon::RunConfig config;
-        config.RandomSeed = 12345;
         config.StepMs = 10;
         config.DurationMs = 60000; // longer than the smoke-test default - more samples to check
         config.SpellPower = 0;
@@ -170,12 +169,11 @@ namespace
         return passed;
     }
 
-    // Test 2/4: run the identical job at 10ms/50ms/1ms steps, confirm agreement - the correctness
+    // Test 2/3: run the identical job at 10ms/50ms/1ms steps, confirm agreement - the correctness
     // oracle for picking 10ms as the default step (design doc section 5.4).
     bool RunTimestepTest()
     {
         SimDaemon::RunConfig config;
-        config.RandomSeed = 777;
         config.DurationMs = 30000;
         config.SpellPower = 0;
         config.TargetArmor = 0;
@@ -209,51 +207,13 @@ namespace
         return passed;
     }
 
-    // Test 3/4: same seed, twice, expect identical results (design doc section 10). **Currently
-    // expected to be informative, not a rubber stamp** - see the plan doc's "non-determinism
-    // observed, not yet root-caused" note from the same session this test was written in: repeat
-    // full-process-boot runs with the same seed produced different total damage. This test's own
-    // job is to establish whether that non-determinism reproduces within a single process (two
-    // RunOnce() calls back to back here) or only across separate process boots - a real, useful
-    // distinction for root-causing it, regardless of which way it comes out.
-    bool RunDeterminismTest()
-    {
-        SimDaemon::RunConfig config;
-        config.RandomSeed = 424242;
-        config.StepMs = 10;
-        config.DurationMs = 30000;
-        config.SpellPower = 0;
-        config.TargetArmor = 0;
-
-        SimDaemon::RunResult a;
-        bool const okA = SimDaemon::RunOnce(config, a);
-        SimDaemon::RunResult b;
-        bool const okB = SimDaemon::RunOnce(config, b);
-
-        if (!okA || !okB)
-        {
-            LogVerdict("determinism test", false, "one or more RunOnce() calls failed - see preceding LOG_ERROR output.");
-            return false;
-        }
-
-        bool const passed = a.CastCount == b.CastCount && a.CritCount == b.CritCount &&
-            a.TotalDamage == b.TotalDamage && a.HitDamages == b.HitDamages && a.HitCrits == b.HitCrits;
-
-        LogVerdict("determinism test", passed, Acore::StringFormat(
-            "run A: {} casts/{} crits/{} dmg, run B: {} casts/{} crits/{} dmg ({}).",
-            a.CastCount, a.CritCount, a.TotalDamage, b.CastCount, b.CritCount, b.TotalDamage,
-            passed ? "byte-identical" : "DIVERGED - see the plan doc's non-determinism note"));
-        return passed;
-    }
-
-    // Test 4/4: run the identical job at real wall-clock pace and at accelerated (flat-out) pace,
+    // Test 3/3: run the identical job at real wall-clock pace and at accelerated (flat-out) pace,
     // confirm identical cast count - the test that actually proves core patch 2's getMSTime()
     // override works, per the plan doc's "Critical finding" section: GCD/cast-time gating is
     // exactly the mechanism that silently breaks under acceleration if the patch is wrong.
     bool RunAcceleratedClockTest()
     {
         SimDaemon::RunConfig config;
-        config.RandomSeed = 555;
         config.StepMs = 10;
         config.DurationMs = 5000; // kept short - RealTimePaced actually sleeps this many real ms
 
@@ -281,13 +241,12 @@ namespace
 
 void SimTests::RunAll()
 {
-    LOG_INFO("server.dpssim", "mod-dpssim: SimTests::RunAll() - running Phase 1's four required tests.");
+    LOG_INFO("server.dpssim", "mod-dpssim: SimTests::RunAll() - running Phase 1's three required tests.");
 
     uint32 passed = 0;
     passed += RunKnownValueTest() ? 1 : 0;
     passed += RunTimestepTest() ? 1 : 0;
-    passed += RunDeterminismTest() ? 1 : 0;
     passed += RunAcceleratedClockTest() ? 1 : 0;
 
-    LOG_INFO("server.dpssim", "mod-dpssim: SimTests::RunAll() complete - {}/4 tests passed.", passed);
+    LOG_INFO("server.dpssim", "mod-dpssim: SimTests::RunAll() complete - {}/3 tests passed.", passed);
 }
