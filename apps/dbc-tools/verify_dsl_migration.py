@@ -85,9 +85,18 @@ def verify(class_name: str) -> list[str]:
     old_tabs = {e["id"]: e for e in old_talent_data["tabs"]}
     old_slas_by_spell_id = {e["spell_id"]: e for e in old_talent_data["skill_line_abilities"]}
 
-    new_registry = dsl_registry.load_class_file(
-        SOURCE_DIR / "classes" / f"{class_name}.py", ids_cfg=ids_cfg, trainer_index=FakeTrainerIndex(),
-    )
+    # A migrated class is either a single `<class>.py` file or a `<class>/` directory (split via
+    # split_class_file.py) - try the directory layout first since that's what a class ends up in
+    # once split; both loaders return the same `Registry` shape either way.
+    class_dir = SOURCE_DIR / "classes" / class_name
+    if class_dir.is_dir():
+        new_registry = dsl_registry.load_class_package(
+            class_dir, ids_cfg=ids_cfg, trainer_index=FakeTrainerIndex(),
+        )
+    else:
+        new_registry = dsl_registry.load_class_file(
+            SOURCE_DIR / "classes" / f"{class_name}.py", ids_cfg=ids_cfg, trainer_index=FakeTrainerIndex(),
+        )
     new_spells = {e["id"]: e for e in new_registry.spells}
     new_talents = {e["id"]: e for e in new_registry.talents}
     new_tabs = {e["id"]: e for e in new_registry.tabs}

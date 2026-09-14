@@ -37,7 +37,9 @@ from .registry import (
     MissingSkillLineAbilityError,
     Registry,
     load_class_file,
+    load_class_package,
     load_classes_dir,
+    looks_player_castable,
 )
 
 __all__ = [
@@ -59,5 +61,7 @@ __all__ = [
     "MissingSkillLineAbilityError",
     "DeadTrainerError",
     "load_class_file",
+    "load_class_package",
     "load_classes_dir",
+    "looks_player_castable",
 ]

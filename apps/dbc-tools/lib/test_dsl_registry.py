@@ -19,7 +19,7 @@ from pathlib import Path
 TOOL_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TOOL_ROOT))
 
-from lib.dsl import registry  # noqa: E402
+from lib.dsl import model, registry  # noqa: E402
 
 MAGE_FILE = '''
 from lib.dsl.registry import spell, tab, talent
@@ -115,6 +115,19 @@ granted_by_talent(id=60000, tab=frost_tab, tier=0, column=0,
                    ranks=[icicles], player_castable=False)
 '''
 
+# A custom, instant/free/no-cooldown spell (cast_time_ms=cooldown_ms=0) that
+# nonetheless has a real mana_cost_pct - the exact shape `looks_player_castable`
+# used to miss (see its docstring: Frost Nova/Blink/Arcane Intellect/... all
+# have this shape for real). Must still be treated as ambiguous/castable-
+# looking, not silently passed through as "doesn't look castable".
+GRANTED_CUSTOM_FREE_INSTANT_WITH_MANA_COST = '''
+from lib.dsl.registry import spell, tab, granted_by_talent
+
+frost_tab = tab(id=60800, name="Frost", class_mask=128, skill_line=6)
+buff = spell(id=200005, name="Custom Armor", school=16, mana_cost_pct=25)
+granted_by_talent(id=60000, tab=frost_tab, tier=0, column=0, ranks=[buff])
+'''
+
 # player_castable=True but no skill_line_ability_ids entry for the rank.
 GRANTED_CUSTOM_MISSING_SLA_ID = '''
 from lib.dsl.registry import spell, tab, granted_by_talent
@@ -154,6 +167,10 @@ class GrantedByTalentTest(unittest.TestCase):
     def test_custom_castable_ambiguous_raises(self):
         with self.assertRaises(registry.MissingSkillLineAbilityError):
             self._load(GRANTED_CUSTOM_AMBIGUOUS)
+
+    def test_custom_free_instant_with_mana_cost_is_ambiguous_raises(self):
+        with self.assertRaises(registry.MissingSkillLineAbilityError):
+            self._load(GRANTED_CUSTOM_FREE_INSTANT_WITH_MANA_COST)
 
     def test_custom_marked_not_castable_is_skipped(self):
         reg = self._load(GRANTED_CUSTOM_NOT_CASTABLE)
@@ -226,6 +243,46 @@ class TrainedByTest(unittest.TestCase):
                 registry.load_class_file(path)  # no trainer_index passed
 
 
+class LooksPlayerCastableTest(unittest.TestCase):
+    """Real shapes found via split_class_file.py misfiling ~40 real Mage
+    spells into the trigger-only bucket - see looks_player_castable's
+    docstring."""
+
+    def test_real_cast_time_is_castable(self):
+        self.assertTrue(registry.looks_player_castable(model.Spell(id=1, name="x", cast_time_ms=2000)))
+
+    def test_plain_cooldown_is_castable(self):
+        self.assertTrue(registry.looks_player_castable(model.Spell(id=1, name="x", cooldown_ms=120000)))
+
+    def test_category_cooldown_only_is_castable(self):
+        # Frost Nova's real shape: cast_time_ms=cooldown_ms=0, cooldown lives in
+        # category_cooldown_ms instead.
+        self.assertTrue(
+            registry.looks_player_castable(model.Spell(id=122, name="Frost Nova", category_cooldown_ms=25000))
+        )
+
+    def test_mana_cost_pct_only_is_castable(self):
+        # Arcane Intellect's real shape: instant, no cooldown at all, only a mana cost.
+        self.assertTrue(
+            registry.looks_player_castable(model.Spell(id=1459, name="Arcane Intellect", mana_cost_pct=31))
+        )
+
+    def test_mana_cost_only_is_castable(self):
+        self.assertTrue(registry.looks_player_castable(model.Spell(id=1, name="x", mana_cost=15)))
+
+    def test_all_zero_is_not_castable(self):
+        # Arcane Blast's own debuff (36032): instant, free, no cooldown of any kind - a real
+        # trigger-only spell, not a missed castable one.
+        self.assertFalse(registry.looks_player_castable(model.Spell(id=36032, name="Arcane Blast")))
+
+    def test_passive_overrides_everything_else(self):
+        self.assertFalse(
+            registry.looks_player_castable(
+                model.Spell(id=1, name="x", cast_time_ms=2000, mana_cost_pct=10, attributes=0x40)
+            )
+        )
+
+
 class RegistryTest(unittest.TestCase):
     def test_spell_call_outside_load_raises(self):
         with self.assertRaises(RuntimeError):
@@ -271,6 +328,115 @@ class RegistryTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             (Path(d) / "mage.py").write_text(MAGE_FILE)
             (Path(d) / "zzz_conflict.py").write_text(DUPLICATE_FILE)
+            with self.assertRaises(registry.DuplicateIdError):
+                registry.load_classes_dir(Path(d))
+
+
+# Multi-file (directory-per-class) layout fixtures - "backward" reference
+# (talents.py imports from spells.py, which is loaded first alphabetically)
+# and "forward" (spells.py's own trigger_spell references a spell declared in
+# trigger_spells.py, which sorts *after* it) both need to resolve, which is
+# the entire point of `load_class_package` using real Python imports instead
+# of the single-file loader's "must be defined earlier in this file" rule.
+PACKAGE_SPELLS_FILE = '''
+from lib.dsl import Effect, EffectType
+from lib.dsl.registry import spell
+from .mage_trigger_spells import arcane_blast_debuff
+
+arcane_blast = spell(
+    id=30451, name="Arcane Blast", school=16, cast_time_ms=2500,
+    effects=[Effect(type=EffectType.TRIGGER_SPELL, trigger_spell=arcane_blast_debuff.id)],
+)
+'''
+
+PACKAGE_TRIGGER_SPELLS_FILE = '''
+from lib.dsl.registry import spell
+
+arcane_blast_debuff = spell(id=36032, name="Arcane Blast", school=16)
+'''
+
+PACKAGE_TALENTS_FILE = '''
+from lib.dsl.registry import tab, talent
+from .mage_spells import arcane_blast
+
+arcane_tab = tab(id=81, name="Arcane", class_mask=128)
+t = talent(id=60000, tab_id=arcane_tab.id, tier=0, column=0, rank_spell_ids=[arcane_blast.id])
+'''
+
+
+class LoadClassPackageTest(unittest.TestCase):
+    def _write_mage_package(self, d: str) -> Path:
+        pkg = Path(d) / "mage"
+        pkg.mkdir()
+        (pkg / "mage_spells.py").write_text(PACKAGE_SPELLS_FILE)
+        (pkg / "mage_trigger_spells.py").write_text(PACKAGE_TRIGGER_SPELLS_FILE)
+        (pkg / "mage_talents.py").write_text(PACKAGE_TALENTS_FILE)
+        return pkg
+
+    def test_cross_file_references_resolve_both_directions(self):
+        with tempfile.TemporaryDirectory() as d:
+            pkg = self._write_mage_package(d)
+            reg = registry.load_class_package(pkg)
+        ids = sorted(e["id"] for e in reg.spells)
+        self.assertEqual(ids, [30451, 36032])
+        arcane_blast = next(e for e in reg.spells if e["id"] == 30451)
+        self.assertEqual(arcane_blast["effect1"]["trigger_spell"], 36032)
+        self.assertEqual([e["id"] for e in reg.talents], [60000])
+        self.assertEqual(reg.talents[0]["rank_spell_ids"], [30451])
+
+    def test_active_registry_cleared_after_load(self):
+        with tempfile.TemporaryDirectory() as d:
+            pkg = self._write_mage_package(d)
+            registry.load_class_package(pkg)
+        self.assertIsNone(registry._active)
+
+    def test_sys_modules_has_no_leftover_entries(self):
+        with tempfile.TemporaryDirectory() as d:
+            pkg = self._write_mage_package(d)
+            before = set(sys.modules)
+            registry.load_class_package(pkg)
+            after = set(sys.modules)
+        self.assertEqual(before, after)
+
+    def test_repeated_load_in_same_process_is_fresh(self):
+        # Two loads of the same directory in one process must not silently
+        # reuse a cached module (a stale `arcane_blast_debuff` object from
+        # the first load would still work by accident; a *changed* file
+        # between loads must actually take effect).
+        with tempfile.TemporaryDirectory() as d:
+            pkg = self._write_mage_package(d)
+            reg1 = registry.load_class_package(pkg)
+            (pkg / "mage_trigger_spells.py").write_text(
+                PACKAGE_TRIGGER_SPELLS_FILE.replace("36032", "99999")
+            )
+            reg2 = registry.load_class_package(pkg)
+        self.assertEqual(
+            next(e for e in reg1.spells if e["name"] == "Arcane Blast" and e["id"] == 30451)[
+                "effect1"
+            ]["trigger_spell"],
+            36032,
+        )
+        self.assertEqual(
+            next(e for e in reg2.spells if e["name"] == "Arcane Blast" and e["id"] == 30451)[
+                "effect1"
+            ]["trigger_spell"],
+            99999,
+        )
+
+    def test_load_classes_dir_supports_directory_and_file_side_by_side(self):
+        with tempfile.TemporaryDirectory() as d:
+            self._write_mage_package(d)
+            (Path(d) / "warrior.py").write_text(WARRIOR_FILE)
+            merged = registry.load_classes_dir(Path(d))
+        self.assertEqual(sorted(e["id"] for e in merged["spells"]), [100, 30451, 36032])
+        self.assertEqual([e["id"] for e in merged["talents"]], [60000])
+
+    def test_duplicate_id_across_package_and_file_raises(self):
+        with tempfile.TemporaryDirectory() as d:
+            self._write_mage_package(d)
+            (Path(d) / "zzz_conflict.py").write_text(
+                'from lib.dsl.registry import spell\nspell(id=30451, name="Impostor", school=1)\n'
+            )
             with self.assertRaises(registry.DuplicateIdError):
                 registry.load_classes_dir(Path(d))
 

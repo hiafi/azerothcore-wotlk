@@ -27,10 +27,18 @@ also shows `granted_by_talent()`, Phase 2's bundling helper:
 from __future__ import annotations
 
 import importlib.util
+import itertools
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import model
+
+# Unique-ifies the synthetic package name `load_class_package` registers in
+# `sys.modules` per call, so two loads of the same class directory in one
+# process (repeated CLI invocations within a test run, `verify_dsl_migration.py`
+# comparing before/after, ...) never collide with a stale cached entry.
+_package_load_counter = itertools.count()
 
 
 class DuplicateIdError(ValueError):
@@ -41,7 +49,7 @@ class DuplicateIdError(ValueError):
 
 class MissingSkillLineAbilityError(ValueError):
     """Raised by `granted_by_talent()` when a talent grants a brand-new
-    custom spell ID that looks player-castable (see `_looks_player_castable`)
+    custom spell ID that looks player-castable (see `looks_player_castable`)
     but the declaration never said whether it needs a `SkillLineAbility`
     row. This is Phase 2's actual point - see
     `docs/bugs-and-fixes.md`'s "New custom spell IDs granted by a talent
@@ -206,14 +214,38 @@ def trained_by(
 _SPELL_ATTR0_PASSIVE = 0x00000040
 
 
-def _looks_player_castable(rank: model.Spell) -> bool:
-    """Heuristic for "would a player ever see this in their Spellbook":
-    a real cast time or cooldown, and not marked passive. Matches
-    `apps/dbc-tools/README.md`'s own manual check ("has real cast_time/
-    cooldown, Attributes isn't the passive bit")."""
+def looks_player_castable(rank: model.Spell) -> bool:
+    """Heuristic for "would a player ever see this in their Spellbook": not
+    marked passive, and has *some* real sign of being actively cast - a real
+    cast time, cooldown (plain or category), or mana cost. Public (not
+    `_`-prefixed) because `split_class_file.py` reuses it as the same
+    castable/trigger-only split rule `granted_by_talent()` already uses for
+    its own player_castable validation - one heuristic, not two
+    independently-maintained ones.
+
+    Originally checked only `cast_time_ms`/`cooldown_ms` - wrong for a
+    surprisingly large, common class of real player spells: an instant,
+    off-GCD-cooldown or free-cast active spell legitimately has both at 0
+    (e.g. Frost Nova's actual cooldown lives in `category_cooldown_ms`, not
+    `cooldown_ms`; Arcane Intellect/Frost Armor/Mage Armor/... are instant,
+    no-cooldown buffs whose only "this is really cast, not a passive/proc"
+    signal is a real `mana_cost_pct`). Found via `split_class_file.py`
+    misfiling ~40 real Mage spells (Blizzard, Frost Nova, Blink, Counterspell,
+    Arcane Missiles, the armor buffs, ...) into `mage_trigger_spells.py` -
+    every one had `cast_time_ms=cooldown_ms=0` but a real `mana_cost_pct` or
+    `category_cooldown_ms`. Checking all of `cast_time_ms`/`cooldown_ms`/
+    `category_cooldown_ms`/`mana_cost`/`mana_cost_pct` fixes every one of
+    those with no observed false positive (every genuinely trigger-only
+    spell checked - e.g. Arcane Blast's own debuff, 36032 - has all five at
+    0), but a truly free *and* off-any-cooldown-category active spell (rare)
+    could still slip through undetected as "doesn't look castable" - same
+    "heuristic, not proof" caveat this function always had."""
     if (rank.attributes or 0) & _SPELL_ATTR0_PASSIVE:
         return False
-    return bool(rank.cast_time_ms) or bool(rank.cooldown_ms)
+    return bool(
+        rank.cast_time_ms or rank.cooldown_ms or rank.category_cooldown_ms
+        or rank.mana_cost or rank.mana_cost_pct
+    )
 
 
 def _is_custom_spell_id(spell_id: int) -> int:
@@ -239,7 +271,7 @@ def _bundle_skill_line_ability(
         # regardless of player_castable's value.
         return
     if player_castable is None:
-        if _looks_player_castable(rank):
+        if looks_player_castable(rank):
             raise MissingSkillLineAbilityError(
                 f"talent rank {rank.id} ({rank.name!r}) has a real cast_time_ms/cooldown_ms and "
                 f"isn't marked passive, but the granted_by_talent() call that grants it never "
@@ -345,6 +377,33 @@ def granted_by_talent(
     return t
 
 
+def _exec_fresh_module(mod_name: str, path: Path, package: str | None = None):
+    """Builds and executes a module from `path` under `mod_name`, always
+    compiling the current on-disk source - deliberately bypassing
+    `spec.loader.exec_module()`'s normal `__pycache__/*.pyc` staleness check
+    (mtime+size), which only invalidates the cache when either changed. Two
+    loads of the *same path* within one process with an edit that happens to
+    keep both identical (same second, same byte length - a real way to hit
+    this: a test, or any tool, rewriting a class file and immediately
+    reloading it) would otherwise silently serve the previous run's stale
+    compiled code. `sys.modules[mod_name]` is set before exec'ing (as
+    `importlib` itself always does) so a relative import from within this
+    module's own source can find it, and so a *nested* relative import that
+    pulls in a sibling module before we get to it in our own loop still ends
+    up registered the same way."""
+    spec = importlib.util.spec_from_file_location(mod_name, path)
+    if spec is None:
+        raise ImportError(f"could not load DSL class file: {path}")
+    module = importlib.util.module_from_spec(spec)
+    if package is not None:
+        module.__package__ = package
+    sys.modules[mod_name] = module
+    source = path.read_text(encoding="utf-8")
+    code = compile(source, str(path), "exec")
+    exec(code, module.__dict__)
+    return module
+
+
 def load_class_file(path: Path, ids_cfg: dict | None = None, trainer_index=None) -> Registry:
     """Imports one `source/classes/<class>.py` file fresh and returns
     everything it registered via `spell()`/`talent()`/`tab()`/
@@ -364,30 +423,99 @@ def load_class_file(path: Path, ids_cfg: dict | None = None, trainer_index=None)
     _active = registry
     _active_ids_cfg = ids_cfg
     _active_trainer_index = trainer_index
+    mod_name = f"dsl_class_{path.stem}"
     try:
-        spec = importlib.util.spec_from_file_location(f"dsl_class_{path.stem}", path)
-        if spec is None or spec.loader is None:
-            raise ImportError(f"could not load DSL class file: {path}")
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        _exec_fresh_module(mod_name, path)
     finally:
         _active = None
         _active_ids_cfg = None
         _active_trainer_index = None
+        sys.modules.pop(mod_name, None)
+    return registry
+
+
+def load_class_package(dir_path: Path, ids_cfg: dict | None = None, trainer_index=None) -> Registry:
+    """Imports every `*.py` file inside `dir_path` (a `source/classes/<class>/`
+    directory - the multi-file layout, one class split across e.g.
+    `<class>_spells.py`/`<class>_trigger_spells.py`/`<class>_talents.py`
+    instead of one `<class>.py`) as a single real Python package, so a file
+    can `from .sibling_module import some_var` to reference a spell/tab
+    declared in a different file of the same class - standard Python import
+    resolution (not a custom reordering pass) is what lets
+    `<class>_talents.py` reference a spell from `<class>_spells.py`
+    regardless of which file happens to be read first, and lets a spell in
+    `<class>_spells.py` reference a `trigger_spell` target declared in
+    `<class>_trigger_spells.py` even though (unlike a same-file reference)
+    there's no "must be declared earlier" ordering constraint at all - the
+    import statement itself pulls the target module in and runs it first.
+
+    The package is synthetic (its name isn't meaningful, doesn't need to
+    match anything on `sys.path`) and always registered under a fresh,
+    counter-suffixed name so calling this twice in one process (tests,
+    `verify_dsl_migration.py`'s dual load, ...) never hits a stale cached
+    module - `sys.modules` entries this call adds are removed again in
+    `finally`, same "always fresh" contract `load_class_file` already has for
+    the single-file case. Files starting with `_` are skipped, same
+    convention as `load_classes_dir`."""
+    global _active, _active_ids_cfg, _active_trainer_index
+    pkg_name = f"dsl_classpkg_{dir_path.name}_{next(_package_load_counter)}"
+    pkg_spec = importlib.util.spec_from_loader(pkg_name, loader=None, is_package=True)
+    pkg_module = importlib.util.module_from_spec(pkg_spec)
+    pkg_module.__path__ = [str(dir_path)]
+    registry = Registry()
+    _active = registry
+    _active_ids_cfg = ids_cfg
+    _active_trainer_index = trainer_index
+    sys.modules[pkg_name] = pkg_module
+    # A sibling's own `from .other import x` is resolved by Python's *standard* import
+    # machinery (not our `_exec_fresh_module`, which only covers the files this loop reaches
+    # directly) - it goes through the normal `.pyc`-caching `SourceFileLoader`, so it needs the
+    # same "always fresh" guarantee applied at the interpreter level for this call's duration,
+    # not just per-file. See `_exec_fresh_module`'s docstring for the exact staleness scenario
+    # this closes (same mtime + same byte length between two loads in one process).
+    dont_write_bytecode, sys.dont_write_bytecode = sys.dont_write_bytecode, True
+    try:
+        for path in sorted(dir_path.glob("*.py")):
+            if path.name.startswith("_"):
+                continue
+            mod_name = f"{pkg_name}.{path.stem}"
+            if mod_name in sys.modules:
+                continue  # a sibling file's own relative import already pulled this one in
+            _exec_fresh_module(mod_name, path, package=pkg_name)
+    finally:
+        sys.dont_write_bytecode = dont_write_bytecode
+        _active = None
+        _active_ids_cfg = None
+        _active_trainer_index = None
+        # Remove every module this call put in sys.modules - not just the ones our own loop
+        # inserted directly, but also any sibling pulled in by another file's own relative
+        # import (that insertion happens inside `exec`, via Python's normal import machinery,
+        # not through a line of ours we could have tracked in a list) - a prefix sweep catches
+        # both uniformly, and is safe because `pkg_name` is fresh-per-call (see docstring).
+        for name in [n for n in sys.modules if n == pkg_name or n.startswith(pkg_name + ".")]:
+            sys.modules.pop(name, None)
     return registry
 
 
 def load_classes_dir(
     dir_path: Path, ids_cfg: dict | None = None, trainer_index=None
 ) -> dict[str, list[dict]]:
-    """Merge every `source/classes/*.py` file's registered spells/talents/
-    tabs/skill_line_abilities/trainer_spells into one dict, in sorted
-    filename order - same shape and merge-order convention as
+    """Merge every `source/classes/*` entry's registered spells/talents/
+    tabs/skill_line_abilities/trainer_spells into one dict, in sorted-name
+    order - same shape and merge-order convention as
     `lib.source.load_spells_csv`/`load_talents_yaml`, so `generate.py` can
     concatenate this output with theirs. A missing directory (no class has
     been migrated to the DSL yet) returns all-empty lists rather than
     erroring - this is a dual-support transition, not a hard requirement
-    that the directory exist. Files whose name starts with `_` are skipped
+    that the directory exist.
+
+    Each entry is either a single `<class>.py` file (loaded via
+    `load_class_file` - the original, one-file-per-class layout) or a
+    `<class>/` subdirectory (loaded via `load_class_package` - the
+    multi-file layout, one class split across several files). Both are
+    supported side by side so a class can be split into a directory whenever
+    that's next worth doing, same incremental-migration philosophy as the
+    plan's Phase 4/5. Entries whose name starts with `_` are skipped
     (reserved for future shared helpers/examples, not class declarations -
     `Registry.spells` etc. would otherwise pick them up as a fifth
     "class")."""
@@ -395,10 +523,13 @@ def load_classes_dir(
     if not dir_path.is_dir():
         return merged
     seen: dict[str, dict[int, str]] = {key: {} for key in MERGE_KEYS}
-    for path in sorted(dir_path.glob("*.py")):
-        if path.name.startswith("_"):
-            continue
-        registry = load_class_file(path, ids_cfg=ids_cfg, trainer_index=trainer_index)
+    entries = [p for p in dir_path.iterdir() if not p.name.startswith("_")]
+    entries = [p for p in entries if p.is_dir() or p.suffix == ".py"]
+    for path in sorted(entries, key=lambda p: p.name):
+        if path.is_dir():
+            registry = load_class_package(path, ids_cfg=ids_cfg, trainer_index=trainer_index)
+        else:
+            registry = load_class_file(path, ids_cfg=ids_cfg, trainer_index=trainer_index)
         for key in MERGE_KEYS:
             for entry in getattr(registry, key):
                 if entry["id"] in seen[key]:
