@@ -1,6 +1,6 @@
-# `source/classes/` — DSL spell/talent source (Phase 1 infra, no classes migrated yet)
+# `source/classes/` — DSL spell/talent source (all 9 classes migrated)
 
-One `<class>.py` file per class will land here, replacing that class's
+One `<class>.py` file per class lives here, replacing that class's
 `source/spells/<class>.csv` + `source/spells/<class>_talents.csv` +
 `source/talents/<class>.yaml` — talents and abilities declared together, in
 real Python instead of CSV rows with embedded JSON blobs. See
@@ -8,13 +8,16 @@ real Python instead of CSV rows with embedded JSON blobs. See
 and phased rollout, and `apps/dbc-tools/lib/dsl/registry.py`'s module
 docstring for the exact API a class file uses.
 
-**Nothing has migrated yet.** `generate.py` already reads this directory
-(empty directory or no files here at all → contributes nothing, no error —
-see `lib/dsl/registry.py`'s `load_classes_dir`), so a class can be migrated
-here one at a time, whenever it's next touched for a rework (the plan's
-Phase 4/5), without a flag-day rewrite of every class at once. Until a class
-migrates, its `source/spells/<class>*.csv` / `source/talents/<class>.yaml`
-stay authoritative — don't hand-add a `.py` file here speculatively.
+**All 9 classes have migrated**: `mage.py` (Phase 4), then `warlock.py`,
+`paladin.py`, `priest.py`, `shaman.py`, `hunter.py`, `druid.py`, `rogue.py`,
+`warrior.py`, `deathknight.py` (Phase 5). `source/spells/<class>.csv`,
+`source/spells/<class>_talents.csv`, and `source/talents/` no longer exist —
+`source/spells/` now holds only `generic.csv`/`npc.csv` (non-class content,
+out of scope for this DSL). To convert a *new* class file from scratch (e.g.
+after a `pull.py` run against a class not yet touched by this migration) or
+to redo one: run `csv_to_dsl.py <class>` → `backfill_constants.py <class>` →
+`verify_dsl_migration.py <class>` (re-verify after each step), then delete
+the old CSV/YAML once `verify_dsl_migration.py` reports `MATCH`.
 
 Quick shape, once a real one exists:
 
