@@ -1,0 +1,11 @@
+-- DB update 2026_09_11_02 -> 2026_09_11_03
+-- ==================================================================
+-- Merged from upstream (mod-playerbots/azerothcore-wotlk, Playerbot branch).
+-- Originally db_world/2026_09_04_02.sql upstream; renamed here to resolve a filename
+-- collision with our own db_world/2026_09_04_02.sql during the merge-upstream branch
+-- merge (both sequences independently landed a file with that name).
+-- Content below is upstream's, reproduced verbatim after its own header line.
+-- ==================================================================
+-- DB update 2026_09_04_01 -> 2026_09_04_02
+-- Thunder Orb never enters combat; its charged zap and player AoE must not leave combat refs behind
+UPDATE `creature_template` SET `flags_extra` = `flags_extra`|8192 WHERE `entry` = 33378;
