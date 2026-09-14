@@ -28,9 +28,11 @@ Usage:
 
     --dbfilesclient  Working-copy directory to package (default:
                       apps/dbc-tools/var/model-visual-dbc/DBFilesClient).
-    --deploy-root    patch-service PATCH_ROOT to copy patch-M.mpq's Data/ into (default:
-                      /home/plex/wow_server/patch-root). Pass --deploy-root '' to skip deployment
-                      and only (re)build apps/dbc-tools/var/dbc-patch/patch-M.mpq locally.
+    --deploy-root    patch-service PATCH_ROOT to copy patch-M.mpq's Data/ into (default: this
+                      box's DEPLOY_ROOT from lib/local_config.py, or no deployment if that file
+                      doesn't exist - see lib/local_config.py.example). Pass --deploy-root '' to
+                      skip deployment and only (re)build apps/dbc-tools/var/dbc-patch/patch-M.mpq
+                      locally.
 """
 
 from __future__ import annotations
@@ -43,13 +45,19 @@ from lib.mpq_writer import write_mpq
 
 DEFAULT_DBFILESCLIENT = Path(__file__).resolve().parent / "var" / "model-visual-dbc" / "DBFilesClient"
 LOCAL_OUT = Path(__file__).resolve().parent / "var" / "dbc-patch" / "patch-M.mpq"
-DEFAULT_DEPLOY_ROOT = Path("/home/plex/wow_server/patch-root")
+
+# Operator-specific and this repo is public on GitHub, so it lives in lib/local_config.py
+# (gitignored) rather than here - see that file's docstring / local_config.py.example.
+try:
+    from lib.local_config import DEPLOY_ROOT as DEFAULT_DEPLOY_ROOT
+except ImportError:
+    DEFAULT_DEPLOY_ROOT = None
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dbfilesclient", type=Path, default=DEFAULT_DBFILESCLIENT)
-    parser.add_argument("--deploy-root", type=str, default=str(DEFAULT_DEPLOY_ROOT))
+    parser.add_argument("--deploy-root", type=str, default=str(DEFAULT_DEPLOY_ROOT) if DEFAULT_DEPLOY_ROOT else "")
     args = parser.parse_args()
 
     dbc_files = sorted(p for p in args.dbfilesclient.iterdir() if p.suffix.lower() == ".dbc")

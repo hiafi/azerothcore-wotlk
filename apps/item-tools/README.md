@@ -24,14 +24,14 @@ It also can't reuse dbc-tools' DELETE+INSERT-per-row edit pattern:
 `item_template` is on `apps/codestyle/codestyle-sql.py`'s `not_delete`
 list (along with `creature_template`, `gameobject_template`,
 `quest_template`), so every edit here is a guarded `UPDATE` and every new
-row an upsert `INSERT ... ON DUPLICATE KEY UPDATE` - see `lib/emit.py`'s
+row an upsert `INSERT ... ON DUPLICATE KEY UPDATE` - see `item_lib/emit.py`'s
 docstring for the exact shapes, both already established by hand elsewhere
 in this repo's `pending_db_world` history before this tool existed.
 
 ## How "current state" is computed
 
 No live database connection, no auth, no build step - same LAN-tool shape
-as dbc-tools/webui. `lib/overlay.py` reads:
+as dbc-tools/webui. `item_lib/overlay.py` reads:
 
 1. `data/sql/base/db_world/item_template.sql` - the full stock dump;
 2. every `data/sql/updates/db_world/*.sql` that touches `item_template`
@@ -53,6 +53,12 @@ stderr rather than guessed at - if you see one, check that migration by
 hand.
 
 ## Setup
+
+`webui/app.py` defines this as the `items` Flask Blueprint; in production
+it's served alongside dbc-tools' webui by **apps/wow-tools-webui**
+(`../wow-tools-webui/README.md`), at `/items/` on that combined app's port.
+For quick dev/debugging it can still run standalone, unprefixed, on its own
+port:
 
 ```
 pip install -r apps/item-tools/requirements.txt
@@ -91,7 +97,7 @@ dbc-tools/webui.
     regenerate** writes the itemization row plus a guarded `item_template`
     UPDATE for the real computed stats - the same math
     `src/server/game/Globals/ItemBudget.cpp`'s `ResolveBudget()` runs at
-    server startup, ported to Python in `lib/budget.py` (kept in sync with
+    server startup, ported to Python in `item_lib/budget.py` (kept in sync with
     the C++ by hand - see that file's docstring) and cross-checked against
     an independent reference computation for every one of the 13,455 real
     assigned items with zero mismatches (materialization itself is in-memory
@@ -119,7 +125,7 @@ dbc-tools/webui.
   unique item (with which creatures drop it), rather than one block per
   trash creature - a dungeon's trash list is usually large and
   overlapping, and per-creature blocks for it aren't "at a glance".
-  `lib/loot.py` resolves `creature` (spawns)
+  `item_lib/loot.py` resolves `creature` (spawns)
   &rarr; `creature_template` (lootid) &rarr; `creature_loot_template` (+ one
   level of `Reference` expansion through `reference_loot_template`)
   &rarr; `item_template`, joining that last step against the *same*
@@ -134,7 +140,7 @@ dbc-tools/webui.
   subclass number doesn't mean "type" for anything else, so it's left
   blank there rather than shown as a number that isn't a type.
 - **Edit** (`/items/<entry>`) - every friendly-grouped field from
-  `lib/schema.py`'s sections, plus a required change note. Saving diffs
+  `item_lib/schema.py`'s sections, plus a required change note. Saving diffs
   your edits against the row as loaded and writes one guarded `UPDATE`
   covering just the columns that actually changed into a new
   `data/sql/updates/pending_db_world/rev_*.sql` - untouched columns never
@@ -151,7 +157,7 @@ dbc-tools/webui.
 ## Known limitations
 
 - `class`, `subclass`, `InventoryType`, and the 10 `stat_typeN` slots are
-  dropdowns with real names (`lib/item_enums.py`, read from this repo's own
+  dropdowns with real names (`item_lib/item_enums.py`, read from this repo's own
   `ItemTemplate.h` - including the stat types this fork has repurposed,
   22/23/24/33, labeled "(custom)"). Picking a class filters the subclass
   list client-side, but only in response to actually changing the class
@@ -165,7 +171,7 @@ dbc-tools/webui.
   for the columns it doesn't model specially.
 - `item_template_locale` (localized name/description) isn't read or
   written - only the base `item_template` row.
-- The base-file WHERE-clause replay in `lib/overlay.py` understands
+- The base-file WHERE-clause replay in `item_lib/overlay.py` understands
   `` `entry` = N `` and `` `entry` IN (...) ``  only; anything more exotic
   (a join, a subquery, `BETWEEN`) in a hand-written migration is skipped
   with a warning rather than applied. None of this tool's own output ever
@@ -173,7 +179,7 @@ dbc-tools/webui.
   hand-written migrations.
 - No concurrent-edit locking (single-user tool, same as dbc-tools/webui) -
   git is the safety net if two edits collide.
-- The dungeon/raid browser (`lib/loot.py`) reads `creature`,
+- The dungeon/raid browser (`item_lib/loot.py`) reads `creature`,
   `creature_template`, `creature_loot_template`, `reference_loot_template`,
   and `instance_encounters` from their **base dumps only** - unlike
   `item_template`, it doesn't replay `pending_db_world`/`updates/db_world`
@@ -181,8 +187,8 @@ dbc-tools/webui.
   this repo's history), but a pending change to one of them won't show up
   in the dungeon view until it's merged. `item_template` itself is always
   current either way, since the dungeon view joins against
-  `lib.overlay.get_rows()`, not a fresh base-only read.
-- Boss detection (`lib/loot._boss_creature_entries`) only knows what
+  `item_lib.overlay.get_rows()`, not a fresh base-only read.
+- Boss detection (`item_lib/loot._boss_creature_entries`) only knows what
   `instance_encounters` (achievement/kill-credit data) and
   `CREATURE_ELITE_WORLDBOSS` rank actually cover. A boss with no
   `instance_encounters` row, a `CAST_SPELL`-credited one (no creature

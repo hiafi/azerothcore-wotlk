@@ -1,0 +1,263 @@
+{% extends "items/base.html" %}
+{% block title %}{{ 'New item' if is_new else row.name }} - item-tools{% endblock %}
+{% block content %}
+  <script src="{{ url_for('.static', filename='item-form.js') }}" defer></script>
+  {% if is_new %}
+    <h1>New item</h1>
+    <p class="hint">Entry defaults to the next free ID in this tool's reserved block
+      ({{ custom_range.start }}&ndash;{{ custom_range.end }}, see <code>source/ids.yaml</code>) -
+      change it only if you have a specific ID in mind and know it's free.</p>
+  {% else %}
+    <h1>{{ row.name }} <span class="hint">(entry {{ entry }})</span></h1>
+    <p class="hint">{{ item_class_names.get(row['class'], row['class']) }} &middot; Quality {{ row.Quality }}
+      &middot; ilvl {{ row.ItemLevel }} &middot; InventoryType {{ row.InventoryType }}</p>
+  {% endif %}
+
+  {% if not is_new %}
+    <form method="post" action="{{ url_for('.item_itemization_save', entry=entry) }}">
+      <fieldset>
+        <legend>Itemization <span class="hint">(shape-based - docs/itemization-phase-2.md)</span></legend>
+        <p class="hint">This item's <code>stat_typeN</code>/<code>stat_valueN</code>/<code>armor</code>/
+          <code>block</code>/<code>dmg_min1</code>/<code>dmg_max1</code> columns below are materialized
+          from the primary/secondary shapes here, not hand-authored - edit them (or the deltas below)
+          and Save &amp; regenerate instead of the plain Stats/Damage/Resistances sections further down.
+          Look up a shape's stats at <a href="{{ url_for('.shape_list') }}">Shapes</a> first if you're
+          not sure which one you want.</p>
+
+        <div class="field-grid">
+          <label>
+            Primary shape <span class="hint">(role-lock stat)</span>
+            <select name="primary_shape_id" id="field-primary-shape">
+              {% for shape in primary_options %}
+                <option value="{{ shape.shape_id }}" data-stats="{{ shape.stats|join(',') }}"
+                  {{ 'selected' if shape.shape_id == itemization_fields.primary_shape_id else '' }}>
+                  {{ shape.shape_id }} - {{ shape.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            Primary share
+            <select name="primary_share">
+              {% for pct, label in [(0, '0%'), (4000, '40%'), (6000, '60%'), (8000, '80%'), (10000, '100%')] %}
+                <option value="{{ pct }}" {{ 'selected' if pct == itemization_fields.primary_share else '' }}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            Secondary shape <span class="hint">(universal stat)</span>
+            <select name="secondary_shape_id" id="field-secondary-shape">
+              {% for shape in secondary_options %}
+                <option value="{{ shape.shape_id }}"
+                  data-requires="{{ secondary_rules[shape.shape_id].requires|join(',') }}"
+                  data-forbids="{{ secondary_rules[shape.shape_id].forbids|join(',') }}"
+                  {{ 'selected' if shape.shape_id == itemization_fields.secondary_shape_id else '' }}>
+                  {{ shape.shape_id }} - {{ shape.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </label>
+        </div>
+
+        <div class="field-grid" style="margin-top:0.5rem">
+          <div>
+            <p class="hint"><strong>{{ primary_display.name }}</strong> ({{ primary_display.dist_name }})</p>
+            {% if primary_display.stats %}
+              <p class="hint">{% for s in primary_display.stats %}{{ s.name }} {{ '%.2f'|format(s.pct) }}%{{ ', ' if not loop.last else '' }}{% endfor %}</p>
+            {% endif %}
+          </div>
+          <div>
+            <p class="hint"><strong>{{ secondary_display.name }}</strong> ({{ secondary_display.dist_name }})</p>
+            {% if secondary_display.stats %}
+              <p class="hint">{% for s in secondary_display.stats %}{{ s.name }} {{ '%.2f'|format(s.pct) }}%{{ ', ' if not loop.last else '' }}{% endfor %}</p>
+            {% endif %}
+            {% if secondary_display.rules %}
+              <p class="hint">Rule: {{ secondary_display.rules }}</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="field-grid" style="margin-top:0.75rem">
+          <label>
+            Budget mult
+            <input type="number" step="0.01" name="budget_mult" value="{{ itemization_fields.budget_mult }}">
+          </label>
+          <label>
+            Stamina delta
+            <input type="number" name="stamina_delta" value="{{ itemization_fields.stamina_delta }}">
+          </label>
+          <label>
+            DPS delta <span class="hint">(weapons only)</span>
+            <input type="number" step="0.01" name="dps_delta" value="{{ itemization_fields.dps_delta }}">
+          </label>
+          <label>
+            Armor delta
+            <input type="number" name="armor_delta" value="{{ itemization_fields.armor_delta }}">
+          </label>
+          <label>
+            Block value delta <span class="hint">(shields only)</span>
+            <input type="number" name="block_value_delta" value="{{ itemization_fields.block_value_delta }}">
+          </label>
+        </div>
+
+        {% if itemization_spell_slots %}
+          <p class="hint" style="margin-top:0.75rem">On-equip spells to absorb into the stat block above
+            (clears the slot so it isn't granted twice):</p>
+          {% for slot in itemization_spell_slots %}
+            <label style="display:inline-flex; align-items:center; gap:0.3rem; margin-right:1rem">
+              <input type="checkbox" name="absorb_{{ slot.index }}" {{ 'checked' if slot.absorbed else '' }}>
+              spellid_{{ slot.index }} ({{ slot.spellid }})
+            </label>
+          {% endfor %}
+        {% endif %}
+
+        {% if itemization_breakdown %}
+          {% set b = itemization_breakdown %}
+          <div style="margin-top:1rem">
+            <h3>Preview</h3>
+            <p class="hint">
+              budget {{ b.budget }} (curve &times; {{ '%.4f'|format(b.slot_mult) }} slot &times;
+              {{ '%.2f'|format(b.quality_mult) }} quality &times; {{ '%.2f'|format(b.budget_mult) }} mult
+              {{ '&times; %.2f set discount'|format(b.set_discount) if b.is_set_piece else '' }}
+              {{ '- %d socket cost'|format(b.socket_budget_cost|round|int) if b.socket_count else '' }})
+              &rarr; effective_budget {{ b.effective_budget }}
+              = primary {{ '%.1f'|format(b.primary_budget) }} ({{ b.primary_share / 100 }}%)
+              + secondary {{ '%.1f'|format(b.secondary_budget) }}
+              {% if b.rounding_remainder_points %}({{ b.rounding_remainder_points }} point(s) largest-remainder){% endif %}
+            </p>
+            <table>
+              <thead><tr><th>Side</th><th>Stat</th><th>Alloc</th><th>Raw</th><th>Rounded</th></tr></thead>
+              <tbody>
+                {% for a in b.allocations %}
+                  <tr>
+                    <td>{{ 'Primary' if a.is_primary else 'Secondary' }}</td>
+                    <td>{{ item_mod_names.get(a.stat_type, a.stat_type) }}</td>
+                    <td>{{ '%.2f'|format(a.alloc / 100) }}%</td>
+                    <td>{{ '%.3f'|format(a.raw) }}</td>
+                    <td>{{ a.rounded }}</td>
+                  </tr>
+                {% endfor %}
+                <tr>
+                  <td colspan="2">Stamina</td>
+                  <td class="hint">off-budget</td>
+                  <td class="hint">baseline {{ b.baseline_stamina }} + delta {{ b.stamina_delta }}</td>
+                  <td>{{ b.final_stamina }}</td>
+                </tr>
+                {% if b.has_armor_curve %}
+                  <tr>
+                    <td colspan="2">Armor</td>
+                    <td class="hint">off-budget</td>
+                    <td class="hint">baseline {{ b.baseline_armor }} + delta {{ b.armor_delta }}</td>
+                    <td>{{ b.final_armor }}</td>
+                  </tr>
+                {% endif %}
+                {% if b.has_block_value_curve %}
+                  <tr>
+                    <td colspan="2">Block value</td>
+                    <td class="hint">off-budget</td>
+                    <td class="hint">baseline {{ b.baseline_block_value }} + delta {{ b.block_value_delta }}</td>
+                    <td>{{ b.final_block_value }}</td>
+                  </tr>
+                {% endif %}
+                {% if b.is_weapon and b.baseline_dps %}
+                  <tr>
+                    <td colspan="2">Weapon DPS</td>
+                    <td class="hint">off-budget</td>
+                    <td class="hint">baseline {{ '%.2f'|format(b.baseline_dps) }} + delta {{ '%.2f'|format(b.dps_delta) }}</td>
+                    <td>{{ '%.2f'|format(b.final_dps) }} ({{ '%.1f'|format(b.dmg_min) }}&ndash;{{ '%.1f'|format(b.dmg_max) }} dmg)</td>
+                  </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+
+        <fieldset>
+          <legend>Change note <span class="hint">(required to save - not needed just to preview)</span></legend>
+          <textarea name="note" rows="2"
+            placeholder="Why is this change happening? e.g. &quot;assign Arcanist Boots its real shapes&quot;"></textarea>
+        </fieldset>
+
+        <button type="submit" name="action" value="preview" class="button">Preview</button>
+        <button type="submit" name="action" value="save" class="button primary">Save &amp; regenerate</button>
+      </fieldset>
+    </form>
+  {% endif %}
+
+  <form method="post">
+    {% for title, cols in sections %}
+      <fieldset>
+        <legend>{{ title }}</legend>
+        <div class="field-grid">
+          {% for col in cols %}
+            <label>
+              {{ col }}
+              {% if col == 'entry' and not is_new %}
+                <input type="text" name="entry" value="{{ row[col] }}" readonly>
+              {% elif col == 'class' %}
+                <select name="class" id="field-class">
+                  {% if row[col] not in item_class_names %}
+                    <option value="{{ row[col] }}" selected>{{ row[col] }} - (unrecognized)</option>
+                  {% endif %}
+                  {% for class_id, class_name in item_class_names.items() %}
+                    <option value="{{ class_id }}" {{ 'selected' if class_id == row[col] else '' }}>
+                      {{ class_id }} - {{ class_name }}
+                    </option>
+                  {% endfor %}
+                </select>
+              {% elif col == 'subclass' %}
+                <select name="subclass" id="field-subclass">
+                  {% if (row['class'], row[col]) not in subclass_pairs %}
+                    <option value="{{ row[col] }}" data-class="{{ row['class'] }}" selected>
+                      {{ row[col] }} - (unrecognized for this class)
+                    </option>
+                  {% endif %}
+                  {% for class_id, subclass_id, label in subclass_options %}
+                    <option value="{{ subclass_id }}" data-class="{{ class_id }}"
+                      {{ 'selected' if subclass_id == row[col] and class_id == row['class'] else '' }}>
+                      {{ subclass_id }} - {{ label }}
+                    </option>
+                  {% endfor %}
+                </select>
+              {% elif col.startswith('stat_type') %}
+                <select name="{{ col }}">
+                  {% if row[col] not in item_mod_names %}
+                    <option value="{{ row[col] }}" selected>{{ row[col] }} - (unrecognized)</option>
+                  {% endif %}
+                  {% for mod_id, mod_name in item_mod_names.items() %}
+                    <option value="{{ mod_id }}" {{ 'selected' if mod_id == row[col] else '' }}>
+                      {{ mod_id }} - {{ mod_name }}{{ ' (custom)' if mod_id in item_mod_custom else '' }}{{ ' (deprecated)' if mod_id in item_mod_deprecated else '' }}
+                    </option>
+                  {% endfor %}
+                </select>
+              {% elif col == 'InventoryType' %}
+                <select name="InventoryType">
+                  {% if row[col] not in inventory_type_names %}
+                    <option value="{{ row[col] }}" selected>{{ row[col] }} - (unrecognized)</option>
+                  {% endif %}
+                  {% for inv_id, inv_name in inventory_type_names.items() %}
+                    <option value="{{ inv_id }}" {{ 'selected' if inv_id == row[col] else '' }}>
+                      {{ inv_id }} - {{ inv_name }}
+                    </option>
+                  {% endfor %}
+                </select>
+              {% elif row[col] is string %}
+                <input type="text" name="{{ col }}" value="{{ row[col] }}">
+              {% else %}
+                <input type="number" step="any" name="{{ col }}" value="{{ row[col] }}">
+              {% endif %}
+            </label>
+          {% endfor %}
+        </div>
+      </fieldset>
+    {% endfor %}
+
+    <fieldset>
+      <legend>Change note <span class="hint">(required - becomes the pending SQL file's comment)</span></legend>
+      <textarea name="note" rows="3" required
+        placeholder="Why is this change happening? e.g. &quot;retuning drop from Naxx per playtest feedback&quot;"></textarea>
+    </fieldset>
+
+    <button type="submit" class="button primary">{{ 'Create item' if is_new else 'Save changes' }}</button>
+  </form>
+{% endblock %}

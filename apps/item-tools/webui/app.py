@@ -5,18 +5,22 @@ item-tools web editor - a small local Flask app for browsing and editing
 (plus every migration layered on top of it) already defines. Unlike
 apps/dbc-tools, there's no separate source-file format and no client patch
 to build: `item_template` rows are read live off disk (base dump + merged +
-pending SQL, see lib/overlay.py) and a save writes a new guarded UPDATE (or,
+pending SQL, see item_lib/overlay.py) and a save writes a new guarded UPDATE (or,
 for a new item, an upsert INSERT) straight into
 data/sql/updates/pending_db_world/ - see apps/item-tools/README.md for the
 full design rationale.
 
 Single-user LAN tool: no auth, no live database connection, no JS build
-step. Run with:
+step. Normally served as part of apps/wow-tools-webui (this module only
+defines the `items` Blueprint; see that app's app.py for how it's mounted and
+run) at /items/ on whatever host serves that combined app - see the README
+before exposing this beyond a trusted home network; there's no login, so
+anyone who can reach it can edit these files.
+
+Can still be run standalone for quick dev/debugging:
   python3 apps/item-tools/webui/app.py
-and reach it from any machine on the same network at
-http://<this machine's LAN IP>:8601/ - see the README before exposing this
-beyond a trusted home network; there's no login, so anyone who can reach the
-port can edit these files.
+reachable at http://<this machine's LAN IP>:8601/ (unprefixed, since nothing
+else is mounted alongside it).
 """
 
 from __future__ import annotations
@@ -27,28 +31,27 @@ from pathlib import Path
 TOOL_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TOOL_ROOT))
 
-from flask import Flask, abort, flash, redirect, render_template, request, url_for  # noqa: E402
+from flask import Blueprint, Flask, abort, flash, redirect, render_template, request, url_for  # noqa: E402
 
-from lib import budget, budget_emit, emit, ids, item_enums, loot, schema, shapes as shape_lib  # noqa: E402
-from lib.budget_overlay import get_all as get_budget_tables  # noqa: E402
-from lib.overlay import REPO_ROOT, get_rows  # noqa: E402
+from item_lib import budget, budget_emit, emit, ids, item_enums, loot, schema, shapes as shape_lib  # noqa: E402
+from item_lib.budget_overlay import get_all as get_budget_tables  # noqa: E402
+from item_lib.overlay import REPO_ROOT, get_rows  # noqa: E402
 
-app = Flask(__name__)
-app.secret_key = "item-tools-local-only"  # no auth, no cookies leave this machine's browser
+bp = Blueprint("items", __name__, template_folder="templates", static_folder="static")
 
 MAX_SEARCH_RESULTS = 300
 
 # (class id, subclass id, "Class: Subclass" label), sorted for the item
 # form's subclass <select> - one flat list covering every class, filtered
 # down client-side (webui/static/item-form.js) when the class field
-# changes. See lib/item_enums.py for where these names come from.
+# changes. See item_lib/item_enums.py for where these names come from.
 SUBCLASS_OPTIONS = [
     (class_id, subclass_id, f"{item_enums.ITEM_CLASS_NAMES[class_id]}: {label}")
     for class_id, subclasses in sorted(item_enums.ITEM_SUBCLASS_NAMES.items())
     for subclass_id, label in sorted(subclasses.items())
 ]
 # A handful of real item_template rows use a (class, subclass) combination
-# outside lib/item_enums.py's per-class table (verified against this repo's
+# outside item_lib/item_enums.py's per-class table (verified against this repo's
 # actual data - e.g. some class-12 "Quest" items use subclass 3 or 8, which
 # isn't one of the values ItemSubclassQuest defines). item_form.html adds a
 # fallback option for those so the field renders "(unrecognized)" and stays
@@ -67,7 +70,7 @@ def _display_path(path: Path) -> str:
 def _coerce(raw: str, reference):
     """Parse a form field back to the same python type as `reference`
     (the column's current value, which is how types are known here - see
-    lib/overlay.py's read_table_dump, which already turns unquoted numeric
+    item_lib/overlay.py's read_table_dump, which already turns unquoted numeric
     literals into int/float and quoted ones into str)."""
     raw = raw.strip()
     if isinstance(reference, float):
@@ -87,7 +90,7 @@ def _row_from_form(form, columns: list[str], reference_row: dict) -> dict:
 
 def _form_enum_context() -> dict:
     """Kwargs shared by both item_form.html renders (new/edit) for its
-    class/subclass/stat-type <select>s - see lib/item_enums.py."""
+    class/subclass/stat-type <select>s - see item_lib/item_enums.py."""
     return {
         "item_class_names": item_enums.ITEM_CLASS_NAMES,
         "subclass_options": SUBCLASS_OPTIONS,
@@ -180,13 +183,13 @@ def _itemization_form_context(entry: int, item_row: dict, tables: dict,
     }
 
 
-@app.route("/shapes")
+@bp.route("/shapes")
 def shape_list():
     """Read-only browse of the fixed shape catalog - primary shapes (role-lock
     stats) and secondary shapes (universal stats), for reference while filling
     in an item's Itemization section. Not editable here: shapes are authored
     by hand-written regression-backed migrations, same as item_budget_curve -
-    see lib/shapes.py's module docstring."""
+    see item_lib/shapes.py's module docstring."""
     tables = get_budget_tables()
     catalog = shape_lib.catalog(tables)
     counts: dict[int, int] = {"primary": {}, "secondary": {}}
@@ -211,10 +214,10 @@ def shape_list():
 
     primary_rows = [_row(s) for s in sorted(catalog.values(), key=lambda s: s["shape_id"]) if s["kind"] == shape_lib.KIND_PRIMARY]
     secondary_rows = [_row(s) for s in sorted(catalog.values(), key=lambda s: s["shape_id"]) if s["kind"] == shape_lib.KIND_SECONDARY]
-    return render_template("shape_list.html", primary_rows=primary_rows, secondary_rows=secondary_rows)
+    return render_template("items/shape_list.html", primary_rows=primary_rows, secondary_rows=secondary_rows)
 
 
-@app.route("/items/<int:entry>/itemization", methods=["POST"])
+@bp.route("/items/<int:entry>/itemization", methods=["POST"])
 def item_itemization_save(entry: int):
     items = get_rows()
     item_row = items.get(entry)
@@ -240,15 +243,15 @@ def item_itemization_save(entry: int):
     secondary_shape = shape_catalog.get(secondary_shape_id)
     if primary_shape is None or primary_shape["kind"] != shape_lib.KIND_PRIMARY:
         flash(f"{primary_shape_id} isn't a real primary shape - pick one from the list.", "error")
-        return redirect(url_for("item_edit", entry=entry))
+        return redirect(url_for(".item_edit", entry=entry))
     if secondary_shape is None or secondary_shape["kind"] != shape_lib.KIND_SECONDARY:
         flash(f"{secondary_shape_id} isn't a real secondary shape - pick one from the list.", "error")
-        return redirect(url_for("item_edit", entry=entry))
+        return redirect(url_for(".item_edit", entry=entry))
     if not shape_lib.rules_satisfied(secondary_shape, set(primary_shape["stats"])):
         flash(f"{secondary_shape['name']!r} isn't eligible for primary shape {primary_shape['name']!r} "
               f"({shape_lib.rule_summary(secondary_shape, item_enums.ITEM_MOD_NAMES)}) - pick a different one.",
               "error")
-        return redirect(url_for("item_edit", entry=entry))
+        return redirect(url_for(".item_edit", entry=entry))
 
     itemization_fields = {
         "entry": entry,
@@ -267,11 +270,11 @@ def item_itemization_save(entry: int):
         breakdown = budget.compute_breakdown(item_row, itemization_fields, tables, shape_catalog)
     except budget.BudgetError as e:
         flash(f"Can't compute this item's budget: {e}", "error")
-        return redirect(url_for("item_edit", entry=entry))
+        return redirect(url_for(".item_edit", entry=entry))
 
     if action == "preview":
         return render_template(
-            "item_form.html", entry=entry, row=item_row, sections=schema.sections(),
+            "items/item_form.html", entry=entry, row=item_row, sections=schema.sections(),
             is_new=False, custom_range=ids.item_range(), **_form_enum_context(),
             **_itemization_form_context(entry, item_row, tables, itemization_fields, breakdown),
         )
@@ -279,7 +282,7 @@ def item_itemization_save(entry: int):
     note = request.form.get("note", "").strip()
     if not note:
         flash("A change note is required (it becomes the pending SQL file's comment).", "error")
-        return redirect(url_for("item_edit", entry=entry))
+        return redirect(url_for(".item_edit", entry=entry))
 
     changes = budget.materialized_item_fields(breakdown)
     changes.update(budget.absorb_spell_fields(absorbed))
@@ -293,10 +296,10 @@ def item_itemization_save(entry: int):
     get_rows(force=True)
     flash(f"Wrote {_display_path(path)}. Run .reload item_template in-game (or restart worldserver) to see it live.",
           "success")
-    return redirect(url_for("item_edit", entry=entry))
+    return redirect(url_for(".item_edit", entry=entry))
 
 
-@app.route("/")
+@bp.route("/")
 def index():
     rows = get_rows()
     custom_range = ids.item_range()
@@ -304,14 +307,14 @@ def index():
         e for e in rows if custom_range["start"] <= e <= custom_range["end"]
     )
     return render_template(
-        "index.html",
+        "items/index.html",
         total=len(rows),
         custom_entries=[rows[e] for e in custom_entries],
         custom_range=custom_range,
     )
 
 
-@app.route("/items")
+@bp.route("/items")
 def item_list():
     q = request.args.get("q", "").strip()
     rows = get_rows()
@@ -328,7 +331,7 @@ def item_list():
         results.sort(key=lambda r: (r["entry"] != q_int, r["name"]))
     truncated = len(results) > MAX_SEARCH_RESULTS
     return render_template(
-        "item_list.html",
+        "items/item_list.html",
         q=q,
         results=results[:MAX_SEARCH_RESULTS],
         truncated=truncated,
@@ -339,7 +342,7 @@ def item_list():
     )
 
 
-@app.route("/items/new", methods=["GET", "POST"])
+@bp.route("/items/new", methods=["GET", "POST"])
 def item_new():
     rows = get_rows()
     columns = [c for _, cols in schema.sections() for c in cols]
@@ -350,14 +353,14 @@ def item_new():
             entry = int(request.form["entry"])
         except (KeyError, ValueError):
             flash("Entry must be a number.", "error")
-            return redirect(url_for("item_new"))
+            return redirect(url_for(".item_new"))
         if entry in rows:
             flash(f"Entry {entry} already exists - edit it instead of creating it.", "error")
-            return redirect(url_for("item_edit", entry=entry))
+            return redirect(url_for(".item_edit", entry=entry))
         note = request.form.get("note", "").strip()
         if not note:
             flash("A change note is required (it becomes the pending SQL file's comment).", "error")
-            return redirect(url_for("item_new"))
+            return redirect(url_for(".item_new"))
         row = _row_from_form(request.form, columns, sample)
         row["entry"] = entry
         name = row.get("name") or f"entry {entry}"
@@ -365,12 +368,12 @@ def item_new():
         path = emit.write_insert(entry, row, comment)
         get_rows(force=True)
         flash(f"Wrote {_display_path(path)}.", "success")
-        return redirect(url_for("item_edit", entry=entry))
+        return redirect(url_for(".item_edit", entry=entry))
 
     blank = {col: ("" if isinstance(sample.get(col), str) else 0) for col in columns}
     blank["entry"] = ids.suggest_new_id(rows.keys())
     return render_template(
-        "item_form.html",
+        "items/item_form.html",
         entry=None,
         row=blank,
         sections=schema.sections(),
@@ -380,7 +383,7 @@ def item_new():
     )
 
 
-@app.route("/items/<int:entry>", methods=["GET", "POST"])
+@bp.route("/items/<int:entry>", methods=["GET", "POST"])
 def item_edit(entry: int):
     rows = get_rows()
     original = rows.get(entry)
@@ -394,11 +397,11 @@ def item_edit(entry: int):
         changes.pop("entry", None)
         if not changes:
             flash("No changes to save.", "success")
-            return redirect(url_for("item_edit", entry=entry))
+            return redirect(url_for(".item_edit", entry=entry))
         note = request.form.get("note", "").strip()
         if not note:
             flash("A change note is required (it becomes the pending SQL file's comment).", "error")
-            return redirect(url_for("item_edit", entry=entry))
+            return redirect(url_for(".item_edit", entry=entry))
         name = original.get("name") or f"entry {entry}"
         comment = f"item-tools: {name!r} ({entry}). {note} {_describe_changes(changes, original)}"
         path = emit.write_update(entry, changes, original, comment)
@@ -406,10 +409,10 @@ def item_edit(entry: int):
         flash(f"Wrote {_display_path(path)} ({len(changes)} column(s) changed). "
               "Run .reload item_template in-game (or restart worldserver) to see it live.",
               "success")
-        return redirect(url_for("item_edit", entry=entry))
+        return redirect(url_for(".item_edit", entry=entry))
 
     return render_template(
-        "item_form.html",
+        "items/item_form.html",
         entry=entry,
         row=original,
         sections=schema.sections(),
@@ -420,10 +423,10 @@ def item_edit(entry: int):
     )
 
 
-DEFAULT_MIN_QUALITY = 2  # Uncommon (green) and up - see lib/loot.QUALITY_NAMES
+DEFAULT_MIN_QUALITY = 2  # Uncommon (green) and up - see item_lib/loot.QUALITY_NAMES
 
 
-@app.route("/dungeons")
+@bp.route("/dungeons")
 def dungeon_list():
     min_quality = request.args.get("min_quality", DEFAULT_MIN_QUALITY, type=int)
     maps = loot.dungeon_maps()
@@ -438,12 +441,12 @@ def dungeon_list():
         })
     rows.sort(key=lambda r: (-r["item_count"], r["name"]))
     return render_template(
-        "dungeon_list.html", rows=rows, min_quality=min_quality,
+        "items/dungeon_list.html", rows=rows, min_quality=min_quality,
         quality_names=loot.QUALITY_NAMES,
     )
 
 
-@app.route("/dungeons/<int:map_id>")
+@bp.route("/dungeons/<int:map_id>")
 def dungeon_detail(map_id: int):
     maps = loot.dungeon_maps()
     if map_id not in maps:
@@ -451,7 +454,7 @@ def dungeon_detail(map_id: int):
     min_quality = request.args.get("min_quality", DEFAULT_MIN_QUALITY, type=int)
     summary = loot.dungeon_summary(map_id, min_quality=min_quality)
     return render_template(
-        "dungeon_detail.html",
+        "items/dungeon_detail.html",
         map_id=map_id, name=maps[map_id], summary=summary, min_quality=min_quality,
         quality_names=loot.QUALITY_NAMES, rank_name=loot.rank_name,
         quality_name=loot.quality_name, summarize_stats=loot.summarize_stats,
@@ -459,4 +462,7 @@ def dungeon_detail(map_id: int):
 
 
 if __name__ == "__main__":
+    app = Flask(__name__)
+    app.secret_key = "item-tools-local-only"  # no auth, no cookies leave this machine's browser
+    app.register_blueprint(bp)
     app.run(host="0.0.0.0", port=8601, debug=False)

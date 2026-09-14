@@ -310,6 +310,13 @@ int main(int argc, char** argv)
 
     Acore::Module::SetEnableModulesList(AC_MODULES_LIST);
 
+    // DPS sim daemon mode (see modules/mod-dpssim, .agents/plans/dps-sim-module/
+    // dps-sim-module.PLAN.md): boots the real worldserver binary through the normal data-loading
+    // path below, then skips ever becoming a connectable realm and hands control to
+    // ScriptMgr::OnDpsSimRun() instead of the normal real-time WorldUpdateLoop(). Read once,
+    // here, before any of the gated sections below.
+    bool const simMode = sConfigMgr->GetOption<bool>("DpsSim.Enabled", false);
+
     ///- Initialize the World
     sSecretMgr->Initialize();
     sWorld->SetInitialWorldSettings();
@@ -357,49 +364,66 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    if (!sWorldSocketMgr.StartWorldNetwork(*ioContext, worldListener, worldPort, networkThreads))
+    // Sim mode: no listener, never a connectable realm, no "set online" write - the socket-start
+    // call, its shutdown-handle registration, and the online-flag write are one unit (see
+    // dps-sim-module.PLAN.md's Phase 0 spike finding), gated together rather than just the call.
+    std::shared_ptr<void> sWorldSocketMgrHandle;
+    if (!simMode)
     {
-        LOG_ERROR("server.worldserver", "Failed to initialize network");
-        World::StopNow(ERROR_EXIT_CODE);
-        return 1;
+        if (!sWorldSocketMgr.StartWorldNetwork(*ioContext, worldListener, worldPort, networkThreads))
+        {
+            LOG_ERROR("server.worldserver", "Failed to initialize network");
+            World::StopNow(ERROR_EXIT_CODE);
+            return 1;
+        }
+
+        sWorldSocketMgrHandle = std::shared_ptr<void>(nullptr, [](void*)
+        {
+            sWorldSessionMgr->KickAll();         // save and kick all players
+            sWorldSessionMgr->UpdateSessions(1); // real players unload required UpdateSessions call
+
+            sWorldSocketMgr.StopNetwork();
+
+            ///- Clean database before leaving
+            if (!sToCloud9Sidecar->ClusterModeEnabled())
+                ClearOnlineAccounts();
+        });
+
+        // Set server online (allow connecting now)
+        LoginDatabase.DirectExecute("UPDATE realmlist SET flag = flag & ~{}, population = 0 WHERE id = '{}'", REALM_FLAG_VERSION_MISMATCH, realm.Id.Realm);
+        realm.PopulationLevel = 0.0f;
+        realm.Flags = RealmFlags(realm.Flags & ~uint32(REALM_FLAG_VERSION_MISMATCH));
     }
 
-    std::shared_ptr<void> sWorldSocketMgrHandle(nullptr, [](void*)
-    {
-        sWorldSessionMgr->KickAll();         // save and kick all players
-        sWorldSessionMgr->UpdateSessions(1); // real players unload required UpdateSessions call
-
-        sWorldSocketMgr.StopNetwork();
-
-        ///- Clean database before leaving
-        if (!sToCloud9Sidecar->ClusterModeEnabled())
-            ClearOnlineAccounts();
-    });
-
-    // Set server online (allow connecting now)
-    LoginDatabase.DirectExecute("UPDATE realmlist SET flag = flag & ~{}, population = 0 WHERE id = '{}'", REALM_FLAG_VERSION_MISMATCH, realm.Id.Realm);
-    realm.PopulationLevel = 0.0f;
-    realm.Flags = RealmFlags(realm.Flags & ~uint32(REALM_FLAG_VERSION_MISMATCH));
-
-    // Start the freeze check callback cycle in 5 seconds (cycle itself is 1 sec)
+    // Start the freeze check callback cycle in 5 seconds (cycle itself is 1 sec). Skipped in sim
+    // mode: the sim's own loop doesn't tick World::m_worldLoopCounter (it doesn't run
+    // World::Update() at all), and there's no reason to reason about this detector's interaction
+    // with the sim-clock override in Timer.h - simplest and safest is to not run it here.
     std::shared_ptr<FreezeDetector> freezeDetector;
-    if (int32 coreStuckTime = sConfigMgr->GetOption<int32>("MaxCoreStuckTime", 60))
+    if (!simMode)
     {
-        freezeDetector = std::make_shared<FreezeDetector>(*ioContext, coreStuckTime * 1000);
-        FreezeDetector::Start(freezeDetector);
-        LOG_INFO("server.worldserver", "Starting up anti-freeze thread ({} seconds max stuck time)...", coreStuckTime);
+        if (int32 coreStuckTime = sConfigMgr->GetOption<int32>("MaxCoreStuckTime", 60))
+        {
+            freezeDetector = std::make_shared<FreezeDetector>(*ioContext, coreStuckTime * 1000);
+            FreezeDetector::Start(freezeDetector);
+            LOG_INFO("server.worldserver", "Starting up anti-freeze thread ({} seconds max stuck time)...", coreStuckTime);
+        }
     }
 
     LOG_INFO("server.worldserver", "{} (worldserver-daemon) ready...", GitRevision::GetFullVersion());
 
     sScriptMgr->OnStartup();
 
-    // Launch CliRunnable thread
+    // Launch CliRunnable thread. Skipped in sim mode: there's no attached TTY when the sim
+    // daemon runs (typically headless/scripted), and CliThread's blocking stdin read spins
+    // instead of blocking on an unattached stream, which left the process pegged at 100% CPU
+    // and unable to exit on its own after OnDpsSimRun() returned - see the "Session handoff"
+    // notes in dps-sim-module.PLAN.md for how this was found.
     std::shared_ptr<std::thread> cliThread;
 #if AC_PLATFORM == AC_PLATFORM_WINDOWS
-    if (sConfigMgr->GetOption<bool>("Console.Enable", true) && (m_ServiceStatus == -1)/* need disable console in service mode*/)
+    if (!simMode && sConfigMgr->GetOption<bool>("Console.Enable", true) && (m_ServiceStatus == -1)/* need disable console in service mode*/)
 #else
-    if (sConfigMgr->GetOption<bool>("Console.Enable", true))
+    if (!simMode && sConfigMgr->GetOption<bool>("Console.Enable", true))
 #endif
     {
         cliThread.reset(new std::thread(CliThread), &ShutdownCLIThread);
@@ -407,7 +431,13 @@ int main(int argc, char** argv)
 
     sToCloud9Sidecar->Init(worldPort, realm.Id.Realm);
 
-    WorldUpdateLoop();
+    // Sim mode hands control to whichever WorldScript overrides OnDpsSimRun() (mod-dpssim, when
+    // present and enabled) instead of running the normal real-time loop. No dependency on
+    // mod-dpssim by name here - see WorldScript::OnDpsSimRun()'s doc comment.
+    if (simMode)
+        sScriptMgr->OnDpsSimRun();
+    else
+        WorldUpdateLoop();
 
     // Shutdown starts here
     threadPool.reset();

@@ -37,6 +37,7 @@ enum WorldHook
     WORLDHOOK_ON_AFTER_UNLOAD_ALL_MAPS,
     WORLDHOOK_ON_BEFORE_FINALIZE_PLAYER_WORLD_SESSION,
     WORLDHOOK_ON_BEFORE_WORLD_INITIALIZED,
+    WORLDHOOK_ON_DPS_SIM_RUN,
     WORLDHOOK_END
 };
 
@@ -92,6 +93,17 @@ public:
      * @brief This hook runs after all scripts loading and before itialized
      */
     virtual void OnBeforeWorldInitialized() { }
+
+    /**
+     * @brief Called instead of the normal real-time WorldUpdateLoop() when the server was booted
+     * with DpsSim.Enabled = 1 (see modules/mod-dpssim). Static game data is already loaded and
+     * StartWorldNetwork() was skipped - no listeners, no connectable realm - by the time this
+     * fires. A script overriding this is expected to run its own tick loop and block here for
+     * the sim run's duration; the worldserver process exits once every registered script's
+     * OnDpsSimRun() returns. No-op by default, so every other WorldScript in the codebase is
+     * unaffected.
+     */
+    virtual void OnDpsSimRun() { }
 };
 
 #endif

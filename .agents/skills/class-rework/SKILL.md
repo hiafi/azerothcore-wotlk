@@ -135,8 +135,10 @@ membership).
   `Validated N scripts`** — this is the cheapest way to catch a silently-dropped script (see
   Phase 3's talent-id/spell-id pitfall) before it wastes a playtest session.
 - `apps/dbc-tools/generate.py`'s client patch (`patch-Z.mpq`) auto-deploys to
-  `/home/plex/wow_server/patch-root/Data/patch-Z.mpq` (guarded by that directory existing, so it's
-  a no-op on a checkout without this host's `apps/patch-service` setup) — testers' `patch-client.bat`
+  `<DEPLOY_ROOT>/Data/patch-Z.mpq`, where `DEPLOY_ROOT` is this box's patch-root from
+  `apps/dbc-tools/lib/local_config.py` (gitignored — see `local_config.py.example`; guarded by
+  that directory existing, so it's a no-op on a checkout without a `local_config.py` or without
+  this host's `apps/patch-service` setup) — testers' `patch-client.bat`
   picks it up once `manifest.txt` is refreshed. `patch-manifest-gen`'s files are root-owned inside
   its container, so force an immediate refresh with `docker restart patch-manifest-gen` rather than
   running `manifest_gen.py` directly as a normal user (it'll hit a `PermissionError`).

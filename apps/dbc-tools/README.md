@@ -60,7 +60,15 @@ they're split), and produces:
 - `var/dbc-patch/DBFilesClient/*.dbc` (loose files, for dev iteration) and
   `var/dbc-patch/patch-Z.mpq` (an MPQ, for release-style distribution) —
   both, always, for whichever tables had a base file to patch;
-- the same bytes into `env/dist/data/dbc/` if that directory exists.
+- the same bytes into `env/dist/data/dbc/` if that directory exists;
+- a copy of `patch-Z.mpq` deployed to this box's patch-distribution root
+  (see `apps/patch-service/README.md`), if one is configured. That root is
+  operator-specific, so it isn't hardcoded here — copy
+  `lib/local_config.py.example` to `lib/local_config.py` (gitignored) and
+  set `DEPLOY_ROOT` to your own path. `build_patch_m.py` and
+  `patch_gt_tables.py` read the same `DEPLOY_ROOT` for their own
+  patch-M.mpq/patch-Y.mpq (overridable per-run with `--deploy-root`/
+  `--deploy`); without a `local_config.py`, all three just skip deployment.
 
 Running it twice with unchanged source produces byte-identical output
 (diff the pending SQL / patch files to confirm) — that's what makes this a
@@ -163,6 +171,11 @@ a small local Flask app that edits the exact same CSV/YAML files as a form
 instead — CSV/YAML stay the source of truth (same as everything else in this
 tool), it just makes hand-editing them less tedious. No database, no build
 step, no auth.
+
+`webui/app.py` defines this as the `dbc` Flask Blueprint; in production it's
+served alongside item-tools' webui by **apps/wow-tools-webui**
+(`../wow-tools-webui/README.md`), at `/dbc/` on that combined app's port. For
+quick dev/debugging it can still run standalone, unprefixed, on its own port:
 
 ```
 pip install -r apps/dbc-tools/requirements.txt   # adds Flask, ruamel.yaml
