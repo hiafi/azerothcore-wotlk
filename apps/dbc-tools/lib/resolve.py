@@ -58,3 +58,39 @@ def resolve_rows(entries: list[dict], id_range: dict, existing_rows: dict[int, d
         kept.append(entry)
         edited_ids.append(entry["id"])
     return Resolved(entries=kept, edited_ids=edited_ids, unchanged=unchanged)
+
+
+def reserved_range_changed(
+    rows: list[dict], index_column: str, id_range: dict, edited_ids: list[int],
+    existing_rows: dict[int, dict],
+) -> bool:
+    """True if emitting this table's DELETE+INSERT block (see `sql_out.py`)
+    would actually change anything live - either there's a genuine edit
+    outside the reserved block (`edited_ids` non-empty - by construction
+    from `resolve_rows` above, that can only happen when the built row
+    already differs from what's live), or the reserved-block content this
+    run would (re)insert differs - a row added, removed, or with a changed
+    field - from what's already live in that exact ID range.
+
+    `rows` is *always* built and kept for every in-range ID regardless of
+    whether it changed (see this module's own docstring - "new content" is
+    unconditionally built/emitted) - this function is what lets a caller
+    still tell "genuinely nothing to do here" apart from that, without
+    weakening the always-full-reinsert behavior `reuse.py`'s
+    `ReuseContext.reserved_rows` itself depends on (see its docstring for
+    the wipe-the-whole-range bug that guarantees). False means the block
+    would be a pure no-op - re-deleting and re-inserting exactly what's
+    already there - so `generate.py` can skip emitting it, instead of every
+    run re-emitting a fresh, identically-content'd, differently-timestamped
+    migration for every table regardless of whether *this* run touched it."""
+    if edited_ids:
+        return True
+    reserved_new = {
+        row[index_column]: row for row in rows
+        if id_range["start"] <= row[index_column] <= id_range["end"]
+    }
+    reserved_existing = {
+        id_: row for id_, row in existing_rows.items()
+        if id_range["start"] <= id_ <= id_range["end"]
+    }
+    return reserved_new != reserved_existing

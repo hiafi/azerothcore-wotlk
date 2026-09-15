@@ -277,7 +277,9 @@ _DELETE_WHERE_RANGE_RE = re.compile(
     r"WHERE\s+`\w+`\s+BETWEEN\s+(?P<start>-?\d+)\s+AND\s+(?P<end>-?\d+)\s*;",
     re.IGNORECASE,
 )
-_DELETE_WHERE_IN_RE = re.compile(
+# Shared by DELETE and UPDATE - "WHERE `col` IN (id1, id2, ...);" means the same thing for both
+# (delete/touch every listed row), just with a different statement in front of it.
+_WHERE_IN_RE = re.compile(
     r"WHERE\s+`\w+`\s+IN\s*\((?P<ids>[^)]*)\)\s*;",
     re.IGNORECASE,
 )
@@ -326,7 +328,7 @@ def _apply_delete(rows: dict[int, dict], text: str, pos: int) -> int:
         for key in [k for k in rows if start <= k <= end]:
             del rows[key]
         return m.end()
-    m = _DELETE_WHERE_IN_RE.match(text, pos)
+    m = _WHERE_IN_RE.match(text, pos)
     if m:
         for token in m.group("ids").split(","):
             rows.pop(int(token.strip()), None)
@@ -339,17 +341,38 @@ def _apply_delete(rows: dict[int, dict], text: str, pos: int) -> int:
 
 
 def _apply_update(rows: dict[int, dict], table: DbcTable, text: str, pos: int) -> int:
+    """`UPDATE ... SET col = val, ... WHERE \\`col\\` = n` (one row) or
+    `WHERE \\`col\\` IN (n, m, ...)` (several rows, same assignments applied
+    to each) - the second shape is a real one, not hypothetical: the
+    Glacial Spike/Fireball cast-time fix (`rev_1789232500000000000.sql`,
+    promoted as `2026_09_14_01.sql`) uses exactly this to repoint both
+    spells' `CastingTimeIndex` in one statement. Before this handled it,
+    that statement fell through to `_skip_statement` silently (per this
+    module's "degrade safely" contract) - safe (never wrote wrong data,
+    per `apply_statements`'s own docstring) but left `state.py`'s
+    reconstruction of "what's live" stale for every ID past the first,
+    surfacing as a spurious drift report from `generate.py`."""
     assignments, pos = _read_set_assignments(text, pos)
+    if not assignments:
+        return _skip_statement(text, pos)
     m = _WHERE_EQ_RE.match(text, pos)
-    if m and assignments:
-        row = rows.get(int(m.group("id")))
-        if row is not None:
-            for col, value in assignments.items():
-                if value is None and col in table.columns and _is_string_column(table, col):
-                    value = ""
-                row[col] = value
-        return m.end()
-    return _skip_statement(text, pos)
+    if m:
+        ids, end = [int(m.group("id"))], m.end()
+    else:
+        m = _WHERE_IN_RE.match(text, pos)
+        if not m:
+            return _skip_statement(text, pos)
+        ids = [int(token.strip()) for token in m.group("ids").split(",")]
+        end = m.end()
+    for id_ in ids:
+        row = rows.get(id_)
+        if row is None:
+            continue
+        for col, value in assignments.items():
+            if value is None and col in table.columns and _is_string_column(table, col):
+                value = ""
+            row[col] = value
+    return end
 
 
 def apply_statements(rows: dict[int, dict], table: DbcTable, sql_text: str) -> None:

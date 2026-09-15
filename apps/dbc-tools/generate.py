@@ -2,15 +2,21 @@
 """
 DBC build pipeline — forward generator.
 
-Reads source/ids.yaml plus every file under source/spells/*.csv,
-source/talents/*.yaml, and source/classes/*.py (split by class purely for
-human-editability — see apps/dbc-tools/README.md; source/classes/*.py is the
-new DSL from .agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md, still
-empty — no class has migrated to it yet), builds full-width DBC rows, and
-produces:
+Reads source/ids.yaml, every file under source/spells/*.csv and
+source/talents/*.yaml (legacy per-table format, still used by classes not
+yet migrated), and source/classes/* (the DSL from .agents/plans/
+spell-source-dsl/spell-source-dsl.PLAN.md — one file or a directory of a few
+per class; all 9 classes have migrated and split as of that plan's Phase 5 —
+see apps/dbc-tools/source/classes/README.md), builds full-width DBC rows,
+and produces:
   1. A pending world-DB SQL migration (data/sql/updates/pending_db_world/) —
      load-bearing: this alone is enough for the server (see
-     docs/dbc-build-pipeline.md's "Key finding").
+     docs/dbc-build-pipeline.md's "Key finding"). Only written if at least
+     one table's reserved-block content, or an explicit existing-row edit,
+     actually differs from what's already live — see
+     lib/resolve.py's `reserved_range_changed` — so a run touching nothing
+     of substance (a pure source reorganization, e.g.) prints "nothing to
+     emit" instead of a fresh no-op migration every time.
   2. A client patch: loose files under var/dbc-patch/DBFilesClient/ *and* an
      MPQ at var/dbc-patch/patch-Z.mpq — cosmetic-but-necessary, what the
      client actually renders (name, icon, tooltip, talent frame).
@@ -68,6 +74,38 @@ def _trainer_spells_to_emit(dsl_rows: list[dict], trainer_index: trainer_state.T
             continue
         to_emit.append(row)
     return to_emit
+
+
+def _drop_unchanged_blocks(
+    blocks: list[tuple],
+) -> tuple[list[tuple[object, dict, list[dict], list[int]]], int]:
+    """Filters a `(table, id_range, rows, edited_ids, existing_rows)` list
+    (the 5-tuple shape - one extra element, `existing_rows`, over what
+    `sql_out.emit_pending_sql` itself wants) down to the 4-tuple shape it
+    does want, dropping any table whose block would be a pure no-op -
+    re-deleting and re-reinserting exactly what's already live - per
+    `lib.resolve.reserved_range_changed`. Returns `(filtered_blocks,
+    n_dropped)`.
+
+    Without this, `generate.py` used to emit a fresh, differently-timestamped
+    migration touching every table with *any* reserved-block content on
+    every single run, regardless of whether that run's source data changed
+    it at all - real content is always non-empty for these tables (there's
+    always some custom spell/talent/etc.), so in practice a run was close to
+    never a true no-op even when nothing had actually changed, making it
+    hard to tell "this run has real content changes" apart from "this run
+    only reorganized/relabeled source with zero build-output effect" (see
+    .agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md's readability
+    work, which hit exactly this while confirming a pure file-split changed
+    nothing)."""
+    filtered = []
+    n_dropped = 0
+    for table, id_range, rows, edited_ids, existing_rows in blocks:
+        if resolve.reserved_range_changed(rows, table.index_column, id_range, edited_ids, existing_rows):
+            filtered.append((table, id_range, rows, edited_ids))
+        else:
+            n_dropped += 1
+    return filtered, n_dropped
 
 
 def _merge_dsl_sources(spell_entries: list[dict], talents: dict, dsl_classes: dict) -> None:
@@ -130,10 +168,10 @@ def main() -> int:
     existing_talenttabs = state.load_existing_rows(dbcfmt.TALENTTAB)
     existing_skilllineabilities = state.load_existing_rows(dbcfmt.SKILLLINEABILITY)
     existing_items = state.load_existing_rows(dbcfmt.ITEM)
-    existing_secondary = {
-        name: list(state.load_existing_rows(table).values())
-        for name, table in SECONDARY_TABLES.items()
+    existing_secondary_by_id = {
+        name: state.load_existing_rows(table) for name, table in SECONDARY_TABLES.items()
     }
+    existing_secondary = {name: list(rows.values()) for name, rows in existing_secondary_by_id.items()}
 
     # Reconcile source/ against what's actually live: an entry is either new
     # (id inside the reserved block), a deliberate edit to something that
@@ -243,19 +281,31 @@ def main() -> int:
 
     # -- pending SQL: reserved range + explicit edited IDs, per table --
     blocks = [
-        (dbcfmt.SPELL, ids_cfg["spell"], spell_rows, spell_resolved.edited_ids),
-        (dbcfmt.TALENT, ids_cfg["talent"], talent_rows, talent_resolved.edited_ids),
-        (dbcfmt.TALENTTAB, ids_cfg["talenttab"], talenttab_rows, talenttab_resolved.edited_ids),
+        (dbcfmt.SPELL, ids_cfg["spell"], spell_rows, spell_resolved.edited_ids, existing_spells),
+        (dbcfmt.TALENT, ids_cfg["talent"], talent_rows, talent_resolved.edited_ids, existing_talents),
+        (
+            dbcfmt.TALENTTAB, ids_cfg["talenttab"], talenttab_rows, talenttab_resolved.edited_ids,
+            existing_talenttabs,
+        ),
         (
             dbcfmt.SKILLLINEABILITY, ids_cfg["skilllineability"], skilllineability_rows,
-            skilllineability_resolved.edited_ids,
+            skilllineability_resolved.edited_ids, existing_skilllineabilities,
         ),
-        (dbcfmt.ITEM, ids_cfg["item"], item_rows, item_resolved.edited_ids),
+        (dbcfmt.ITEM, ids_cfg["item"], item_rows, item_resolved.edited_ids, existing_items),
     ]
     for name, table in SECONDARY_TABLES.items():
         # reserved_rows (reused ∪ minted), not .minted alone - see ReuseContext.reserved_rows's
         # own docstring for the "wiped a range it wasn't fully reinserting" bug this avoids.
-        blocks.append((table, ids_cfg[name], reuse.reserved_rows.get(name, []), []))
+        blocks.append(
+            (table, ids_cfg[name], reuse.reserved_rows.get(name, []), [], existing_secondary_by_id[name])
+        )
+
+    blocks, n_skipped_unchanged_tables = _drop_unchanged_blocks(blocks)
+    if n_skipped_unchanged_tables:
+        print(
+            f"note: {n_skipped_unchanged_tables} table(s) reserved-block content is already "
+            f"live and unchanged - not re-emitted"
+        )
 
     header = (
         "-- Generated by apps/dbc-tools/generate.py — DO NOT hand-edit.\n"

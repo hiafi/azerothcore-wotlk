@@ -1,3 +1,4 @@
+-- DB update 2026_09_14_01 -> 2026_09_14_02
 --
 -- mod-dpssim: a new, sim-exclusive level-60 training dummy (entry 900004), copied from the
 -- existing player-facing dummy (900001, data/sql/updates/db_world/2026_09_01_26.sql) except for

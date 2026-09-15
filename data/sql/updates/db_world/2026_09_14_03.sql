@@ -1,3 +1,4 @@
+-- DB update 2026_09_14_02 -> 2026_09_14_03
 --
 -- mod-dpssim: extends the sim-exclusive, no-combat-timeout training dummy (see
 -- rev_1789352973840118160.sql's entry 900004 for the level-60 bracket and its own doc comment for

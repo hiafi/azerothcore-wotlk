@@ -79,6 +79,27 @@ class ApplyStatementsTest(unittest.TestCase):
         sql_dump.apply_statements(rows, TABLE, "UPDATE `widget_dbc` SET `Name` = NULL WHERE (`ID` = 1);")
         self.assertEqual(rows[1], {"ID": 1, "Name": "", "Value": 10})
 
+    def test_update_where_id_in_list_patches_every_row(self):
+        # Real shape from data/sql/updates/db_world/2026_09_14_01.sql (the Glacial Spike/
+        # Fireball cast-time fix): one UPDATE repointing several IDs to the same new value.
+        # Before _apply_update understood `WHERE \`ID\` IN (...)`, this fell through to
+        # _skip_statement entirely - every row here would have stayed at Value=10.
+        rows = {133: {"ID": 133, "Value": 10}, 200002: {"ID": 200002, "Value": 10}, 999: {"ID": 999, "Value": 10}}
+        sql_dump.apply_statements(
+            rows, TABLE, "UPDATE `widget_dbc` SET `Value` = 30002 WHERE `ID` IN (133, 200002);"
+        )
+        self.assertEqual(rows[133]["Value"], 30002)
+        self.assertEqual(rows[200002]["Value"], 30002)
+        self.assertEqual(rows[999]["Value"], 10)  # not in the list - untouched
+
+    def test_update_where_id_in_list_skips_unknown_ids(self):
+        rows = {133: {"ID": 133, "Value": 10}}
+        sql_dump.apply_statements(
+            rows, TABLE, "UPDATE `widget_dbc` SET `Value` = 99 WHERE `ID` IN (133, 404);"
+        )
+        self.assertEqual(rows[133]["Value"], 99)
+        self.assertNotIn(404, rows)
+
     def test_update_on_unknown_id_is_skipped_not_raised(self):
         rows: dict = {}
         sql_dump.apply_statements(rows, TABLE, "UPDATE `widget_dbc` SET `Value` = 99 WHERE (`ID` = 404);")

@@ -1,3 +1,4 @@
+-- DB update 2026_09_11_03 -> 2026_09_14_00
 -- Hand-written migration (not apps/dbc-tools/generate.py output).
 -- Fixes: 10 Arcane Mage rework talent slots that were authored correctly in
 -- apps/dbc-tools/source/talents/mage.yaml and visible in the client's talent UI, but were

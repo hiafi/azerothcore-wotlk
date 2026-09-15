@@ -74,6 +74,63 @@ class MergeDslSourcesTest(unittest.TestCase):
             generate._merge_dsl_sources(spell_entries, talents, dsl_classes)
 
 
+class _FakeTable:
+    """Duck-typed stand-in for a `lib.dbcfmt.DbcTable` - `_drop_unchanged_blocks`
+    only ever reads `.index_column`."""
+
+    def __init__(self, index_column: str = "ID"):
+        self.index_column = index_column
+
+
+ID_RANGE = {"start": 200000, "end": 200099}
+
+
+class DropUnchangedBlocksTest(unittest.TestCase):
+    def test_unchanged_table_is_dropped(self):
+        table = _FakeTable()
+        rows = [{"ID": 200000, "v": 1}]
+        existing = {200000: {"ID": 200000, "v": 1}}
+        filtered, n_dropped = generate._drop_unchanged_blocks(
+            [(table, ID_RANGE, rows, [], existing)]
+        )
+        self.assertEqual(filtered, [])
+        self.assertEqual(n_dropped, 1)
+
+    def test_changed_table_is_kept(self):
+        table = _FakeTable()
+        rows = [{"ID": 200000, "v": 99}]
+        existing = {200000: {"ID": 200000, "v": 1}}
+        filtered, n_dropped = generate._drop_unchanged_blocks(
+            [(table, ID_RANGE, rows, [], existing)]
+        )
+        self.assertEqual(filtered, [(table, ID_RANGE, rows, [])])
+        self.assertEqual(n_dropped, 0)
+
+    def test_edited_ids_keeps_the_table_even_if_reserved_content_matches(self):
+        table = _FakeTable()
+        rows = [{"ID": 200000, "v": 1}]
+        existing = {200000: {"ID": 200000, "v": 1}}
+        filtered, n_dropped = generate._drop_unchanged_blocks(
+            [(table, ID_RANGE, rows, [116], existing)]
+        )
+        self.assertEqual(filtered, [(table, ID_RANGE, rows, [116])])
+        self.assertEqual(n_dropped, 0)
+
+    def test_mixed_list_keeps_only_the_changed_tables(self):
+        # Two different tables (own ID space each, even though this synthetic test happens to
+        # reuse the same numeric ID_RANGE for both) - each must be judged against its own
+        # existing-rows dict, not a shared one.
+        unchanged_table, changed_table = _FakeTable(), _FakeTable()
+        unchanged_rows = [{"ID": 200000, "v": 1}]
+        changed_rows = [{"ID": 200001, "v": 2}]
+        filtered, n_dropped = generate._drop_unchanged_blocks([
+            (unchanged_table, ID_RANGE, unchanged_rows, [], {200000: {"ID": 200000, "v": 1}}),
+            (changed_table, ID_RANGE, changed_rows, [], {200001: {"ID": 200001, "v": 1}}),
+        ])
+        self.assertEqual(filtered, [(changed_table, ID_RANGE, changed_rows, [])])
+        self.assertEqual(n_dropped, 1)
+
+
 class _FakeTrainerIndex:
     def __init__(self, existing: dict):
         self.existing_trainer_spells = existing

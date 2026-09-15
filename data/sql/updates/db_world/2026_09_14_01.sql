@@ -1,3 +1,4 @@
+-- DB update 2026_09_14_00 -> 2026_09_14_01
 -- Hand-written migration (not full apps/dbc-tools/generate.py output).
 --
 -- Fixes: Frostbolt (116), Fireball (133) and Glacial Spike (200002) casting instantly, because
