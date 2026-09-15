@@ -12,6 +12,7 @@ stdlib `unittest` module. Run directly:
 from __future__ import annotations
 
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -78,6 +79,27 @@ class ApplyStatementsTest(unittest.TestCase):
         sql_dump.apply_statements(rows, TABLE, "UPDATE `widget_dbc` SET `Name` = NULL WHERE (`ID` = 1);")
         self.assertEqual(rows[1], {"ID": 1, "Name": "", "Value": 10})
 
+    def test_update_where_id_in_list_patches_every_row(self):
+        # Real shape from data/sql/updates/db_world/2026_09_14_01.sql (the Glacial Spike/
+        # Fireball cast-time fix): one UPDATE repointing several IDs to the same new value.
+        # Before _apply_update understood `WHERE \`ID\` IN (...)`, this fell through to
+        # _skip_statement entirely - every row here would have stayed at Value=10.
+        rows = {133: {"ID": 133, "Value": 10}, 200002: {"ID": 200002, "Value": 10}, 999: {"ID": 999, "Value": 10}}
+        sql_dump.apply_statements(
+            rows, TABLE, "UPDATE `widget_dbc` SET `Value` = 30002 WHERE `ID` IN (133, 200002);"
+        )
+        self.assertEqual(rows[133]["Value"], 30002)
+        self.assertEqual(rows[200002]["Value"], 30002)
+        self.assertEqual(rows[999]["Value"], 10)  # not in the list - untouched
+
+    def test_update_where_id_in_list_skips_unknown_ids(self):
+        rows = {133: {"ID": 133, "Value": 10}}
+        sql_dump.apply_statements(
+            rows, TABLE, "UPDATE `widget_dbc` SET `Value` = 99 WHERE `ID` IN (133, 404);"
+        )
+        self.assertEqual(rows[133]["Value"], 99)
+        self.assertNotIn(404, rows)
+
     def test_update_on_unknown_id_is_skipped_not_raised(self):
         rows: dict = {}
         sql_dump.apply_statements(rows, TABLE, "UPDATE `widget_dbc` SET `Value` = 99 WHERE (`ID` = 404);")
@@ -106,6 +128,81 @@ class ApplyStatementsTest(unittest.TestCase):
         sql = "UPDATE `widget_dbc` SET `Value` = 99 WHERE `ID` = 1 AND `Name` = 'x';"
         sql_dump.apply_statements(rows, TABLE, sql)  # must not raise
         self.assertEqual(rows[1], {"ID": 1, "Value": 10})
+
+
+class ReadTableRowsTest(unittest.TestCase):
+    """`lib.trainer_state`'s Phase 3 use case: `trainer_spell`/`creature`
+    are hand-written enough that this needs to survive shapes
+    `apply_statements`'s own tests above don't exercise."""
+
+    def test_skips_trailing_line_comment_between_tuples(self):
+        # The exact shape that broke this - data/sql/updates/db_world/
+        # 2026_09_06_04.sql's trainer_spell inserts, one comment per row.
+        sql = (
+            "INSERT INTO `trainer_spell` (`TrainerId`, `SpellId`) VALUES\n"
+            "(13, 48266),    -- Blood Presence\n"
+            "(13, 45462);    -- Plague Strike\n"
+        )
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "x.sql"
+            path.write_text(sql)
+            rows = sql_dump.read_table_rows(path, "trainer_spell", ())
+        self.assertEqual(
+            rows,
+            [{"TrainerId": 13, "SpellId": 48266}, {"TrainerId": 13, "SpellId": 45462}],
+        )
+
+    def test_skips_leading_and_mid_tuple_comments_too(self):
+        sql = (
+            "INSERT INTO `t` (`A`, `B`) VALUES\n"
+            "-- a leading comment\n"
+            "(1, -- inline comment before a value\n2);\n"
+        )
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "x.sql"
+            path.write_text(sql)
+            rows = sql_dump.read_table_rows(path, "t", ())
+        self.assertEqual(rows, [{"A": 1, "B": 2}])
+
+
+class ParseCreateTableColumnsTest(unittest.TestCase):
+    def test_extracts_columns_in_order(self):
+        sql = (
+            "CREATE TABLE `creature` (\n"
+            "  `guid` int unsigned NOT NULL AUTO_INCREMENT,\n"
+            "  `id1` int unsigned NOT NULL DEFAULT '0',\n"
+            "  `map` smallint unsigned NOT NULL DEFAULT '0',\n"
+            "  PRIMARY KEY (`guid`)\n"
+            ") ENGINE=InnoDB;\n"
+        )
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "creature.sql"
+            path.write_text(sql)
+            columns = sql_dump.parse_create_table_columns(path, "creature")
+        self.assertEqual(columns, ("guid", "id1", "map"))
+
+    def test_ignores_other_tables_and_constraint_lines(self):
+        sql = (
+            "CREATE TABLE `other` (`x` int);\n"
+            "CREATE TABLE `trainer_spell` (\n"
+            "  `TrainerId` int unsigned NOT NULL,\n"
+            "  `SpellId` int unsigned NOT NULL,\n"
+            "  PRIMARY KEY (`TrainerId`,`SpellId`),\n"
+            "  KEY `idx_spell` (`SpellId`)\n"
+            ") ENGINE=InnoDB;\n"
+        )
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "x.sql"
+            path.write_text(sql)
+            columns = sql_dump.parse_create_table_columns(path, "trainer_spell")
+        self.assertEqual(columns, ("TrainerId", "SpellId"))
+
+    def test_missing_table_raises(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "x.sql"
+            path.write_text("CREATE TABLE `other` (`x` int);\n")
+            with self.assertRaises(ValueError):
+                sql_dump.parse_create_table_columns(path, "nonexistent")
 
 
 if __name__ == "__main__":

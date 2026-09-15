@@ -2,12 +2,21 @@
 """
 DBC build pipeline — forward generator.
 
-Reads source/ids.yaml plus every file under source/spells/*.csv and
-source/talents/*.yaml (split by class purely for human-editability — see
-apps/dbc-tools/README.md), builds full-width DBC rows, and produces:
+Reads source/ids.yaml, every file under source/spells/*.csv and
+source/talents/*.yaml (legacy per-table format, still used by classes not
+yet migrated), and source/classes/* (the DSL from .agents/plans/
+spell-source-dsl/spell-source-dsl.PLAN.md — one file or a directory of a few
+per class; all 9 classes have migrated and split as of that plan's Phase 5 —
+see apps/dbc-tools/source/classes/README.md), builds full-width DBC rows,
+and produces:
   1. A pending world-DB SQL migration (data/sql/updates/pending_db_world/) —
      load-bearing: this alone is enough for the server (see
-     docs/dbc-build-pipeline.md's "Key finding").
+     docs/dbc-build-pipeline.md's "Key finding"). Only written if at least
+     one table's reserved-block content, or an explicit existing-row edit,
+     actually differs from what's already live — see
+     lib/resolve.py's `reserved_range_changed` — so a run touching nothing
+     of substance (a pure source reorganization, e.g.) prints "nothing to
+     emit" instead of a fresh no-op migration every time.
   2. A client patch: loose files under var/dbc-patch/DBFilesClient/ *and* an
      MPQ at var/dbc-patch/patch-Z.mpq — cosmetic-but-necessary, what the
      client actually renders (name, icon, tooltip, talent frame).
@@ -27,6 +36,8 @@ TOOL_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOL_ROOT))
 
 from lib import build, dbcfile, dbcfmt, lint, patch_out, resolve, source, sql_out, state  # noqa: E402
+from lib import trainer_state  # noqa: E402
+from lib.dsl import registry as dsl_registry  # noqa: E402
 from lib.reuse import ReuseContext  # noqa: E402
 
 SOURCE_DIR = TOOL_ROOT / "source"
@@ -40,6 +51,90 @@ SECONDARY_TABLES = {
     "spellradius": dbcfmt.SPELLRADIUS,
 }
 
+# trainer_spell's real columns (data/sql/base/db_world/trainer_spell.sql),
+# minus the synthetic "id" lib.dsl.registry.trained_by() adds only for its
+# own duplicate-declaration bookkeeping - see Registry's docstring.
+TRAINER_SPELL_COLUMNS = (
+    "TrainerId", "SpellId", "MoneyCost", "ReqSkillLine", "ReqSkillRank",
+    "ReqAbility1", "ReqAbility2", "ReqAbility3", "ReqLevel", "VerifiedBuild",
+)
+
+
+def _trainer_spells_to_emit(dsl_rows: list[dict], trainer_index: trainer_state.TrainerIndex) -> list[dict]:
+    """Drops any declared trainer_spell row that's already live with
+    identical values — same "no-op rerun stays a no-op" property the DBC
+    tables get from lib/resolve.py's new/edited/unchanged split, just
+    reimplemented here since trainer_spell has no reserved-ID-range concept
+    for resolve.resolve_rows to key off."""
+    to_emit = []
+    for row in dsl_rows:
+        key = (row["TrainerId"], row["SpellId"])
+        existing = trainer_index.existing_trainer_spells.get(key)
+        if existing and all(existing.get(c) == row.get(c) for c in TRAINER_SPELL_COLUMNS):
+            continue
+        to_emit.append(row)
+    return to_emit
+
+
+def _drop_unchanged_blocks(
+    blocks: list[tuple],
+) -> tuple[list[tuple[object, dict, list[dict], list[int]]], int]:
+    """Filters a `(table, id_range, rows, edited_ids, existing_rows)` list
+    (the 5-tuple shape - one extra element, `existing_rows`, over what
+    `sql_out.emit_pending_sql` itself wants) down to the 4-tuple shape it
+    does want, dropping any table whose block would be a pure no-op -
+    re-deleting and re-reinserting exactly what's already live - per
+    `lib.resolve.reserved_range_changed`. Returns `(filtered_blocks,
+    n_dropped)`.
+
+    Without this, `generate.py` used to emit a fresh, differently-timestamped
+    migration touching every table with *any* reserved-block content on
+    every single run, regardless of whether that run's source data changed
+    it at all - real content is always non-empty for these tables (there's
+    always some custom spell/talent/etc.), so in practice a run was close to
+    never a true no-op even when nothing had actually changed, making it
+    hard to tell "this run has real content changes" apart from "this run
+    only reorganized/relabeled source with zero build-output effect" (see
+    .agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md's readability
+    work, which hit exactly this while confirming a pure file-split changed
+    nothing)."""
+    filtered = []
+    n_dropped = 0
+    for table, id_range, rows, edited_ids, existing_rows in blocks:
+        if resolve.reserved_range_changed(rows, table.index_column, id_range, edited_ids, existing_rows):
+            filtered.append((table, id_range, rows, edited_ids))
+        else:
+            n_dropped += 1
+    return filtered, n_dropped
+
+
+def _merge_dsl_sources(spell_entries: list[dict], talents: dict, dsl_classes: dict) -> None:
+    """Append source/classes/*.py's DSL-declared spells/talents/tabs/
+    skill_line_abilities into the CSV/YAML-loaded lists, in place — the
+    dual-support transition period from spell-source-dsl.PLAN.md's Phase 1.
+    Each source format already checked for duplicate IDs *within* itself
+    (load_spells_csv, load_talents_yaml, load_classes_dir all raise their
+    own DuplicateIdError for that); this only needs to catch an ID declared
+    in *both* formats, which none of those individually-scoped checks can
+    see."""
+    seen_spell_ids = {e["id"]: e.get("_source_file", "<csv>") for e in spell_entries}
+    for entry in dsl_classes["spells"]:
+        if entry["id"] in seen_spell_ids:
+            raise source.DuplicateIdError(
+                f"spell ID {entry['id']} appears in both {seen_spell_ids[entry['id']]!r} "
+                f"(source/spells/*.csv) and a source/classes/*.py DSL file"
+            )
+        spell_entries.append(entry)
+    for key in ("tabs", "talents", "skill_line_abilities"):
+        seen_ids = {e["id"] for e in talents[key]}
+        for entry in dsl_classes[key]:
+            if entry["id"] in seen_ids:
+                raise source.DuplicateIdError(
+                    f"{key} entry ID {entry['id']} appears in both source/talents/*.yaml "
+                    f"and a source/classes/*.py DSL file"
+                )
+            talents[key].append(entry)
+
 
 def main() -> int:
     ids_cfg = source.load_ids(SOURCE_DIR / "ids.yaml")
@@ -47,15 +142,36 @@ def main() -> int:
     talents = source.load_talents_yaml(SOURCE_DIR / "talents")
     item_entries = source.load_items_csv(SOURCE_DIR / "items.csv")
 
+    # Static scan of creature_default_trainer/creature_template/creature (base +
+    # updates/pending_db_world) - lib/dsl/registry.py's trained_by() validates
+    # every TrainerId against this before registering a trainer_spell row. See
+    # lib/trainer_state.py's docstring for why this needs no live DB connection
+    # and for its "union of INSERTs, no DELETE/UPDATE replay" limitation.
+    trainer_index = trainer_state.load_trainer_index()
+
+    dsl_classes = dsl_registry.load_classes_dir(
+        SOURCE_DIR / "classes", ids_cfg=ids_cfg, trainer_index=trainer_index,
+    )
+    n_dsl = sum(len(v) for v in dsl_classes.values())
+    _merge_dsl_sources(spell_entries, talents, dsl_classes)
+    if n_dsl:
+        print(
+            f"note: source/classes/*.py (DSL) contributed {len(dsl_classes['spells'])} "
+            f"spell(s), {len(dsl_classes['talents'])} talent(s), {len(dsl_classes['tabs'])} "
+            f"talent tab(s), {len(dsl_classes['skill_line_abilities'])} skill line "
+            f"abilitie(s), {len(dsl_classes['trainer_spells'])} trainer spell grant(s)"
+        )
+    trainer_spell_rows = _trainer_spells_to_emit(dsl_classes["trainer_spells"], trainer_index)
+
     existing_spells = state.load_existing_rows(dbcfmt.SPELL)
     existing_talents = state.load_existing_rows(dbcfmt.TALENT)
     existing_talenttabs = state.load_existing_rows(dbcfmt.TALENTTAB)
     existing_skilllineabilities = state.load_existing_rows(dbcfmt.SKILLLINEABILITY)
     existing_items = state.load_existing_rows(dbcfmt.ITEM)
-    existing_secondary = {
-        name: list(state.load_existing_rows(table).values())
-        for name, table in SECONDARY_TABLES.items()
+    existing_secondary_by_id = {
+        name: state.load_existing_rows(table) for name, table in SECONDARY_TABLES.items()
     }
+    existing_secondary = {name: list(rows.values()) for name, rows in existing_secondary_by_id.items()}
 
     # Reconcile source/ against what's actually live: an entry is either new
     # (id inside the reserved block), a deliberate edit to something that
@@ -165,28 +281,44 @@ def main() -> int:
 
     # -- pending SQL: reserved range + explicit edited IDs, per table --
     blocks = [
-        (dbcfmt.SPELL, ids_cfg["spell"], spell_rows, spell_resolved.edited_ids),
-        (dbcfmt.TALENT, ids_cfg["talent"], talent_rows, talent_resolved.edited_ids),
-        (dbcfmt.TALENTTAB, ids_cfg["talenttab"], talenttab_rows, talenttab_resolved.edited_ids),
+        (dbcfmt.SPELL, ids_cfg["spell"], spell_rows, spell_resolved.edited_ids, existing_spells),
+        (dbcfmt.TALENT, ids_cfg["talent"], talent_rows, talent_resolved.edited_ids, existing_talents),
+        (
+            dbcfmt.TALENTTAB, ids_cfg["talenttab"], talenttab_rows, talenttab_resolved.edited_ids,
+            existing_talenttabs,
+        ),
         (
             dbcfmt.SKILLLINEABILITY, ids_cfg["skilllineability"], skilllineability_rows,
-            skilllineability_resolved.edited_ids,
+            skilllineability_resolved.edited_ids, existing_skilllineabilities,
         ),
-        (dbcfmt.ITEM, ids_cfg["item"], item_rows, item_resolved.edited_ids),
+        (dbcfmt.ITEM, ids_cfg["item"], item_rows, item_resolved.edited_ids, existing_items),
     ]
     for name, table in SECONDARY_TABLES.items():
         # reserved_rows (reused ∪ minted), not .minted alone - see ReuseContext.reserved_rows's
         # own docstring for the "wiped a range it wasn't fully reinserting" bug this avoids.
-        blocks.append((table, ids_cfg[name], reuse.reserved_rows.get(name, []), []))
+        blocks.append(
+            (table, ids_cfg[name], reuse.reserved_rows.get(name, []), [], existing_secondary_by_id[name])
+        )
+
+    blocks, n_skipped_unchanged_tables = _drop_unchanged_blocks(blocks)
+    if n_skipped_unchanged_tables:
+        print(
+            f"note: {n_skipped_unchanged_tables} table(s) reserved-block content is already "
+            f"live and unchanged - not re-emitted"
+        )
 
     header = (
         "-- Generated by apps/dbc-tools/generate.py — DO NOT hand-edit.\n"
         "-- Source of truth: apps/dbc-tools/source/{spells,talents}/*.\n"
         "-- Regenerate with: python3 apps/dbc-tools/generate.py"
     )
+    trainer_spell_block = sql_out.render_generic_table_block(
+        "trainer_spell", TRAINER_SPELL_COLUMNS, ("TrainerId", "SpellId"), trainer_spell_rows,
+    )
+
     rev = int(time.time() * 1_000_000_000)
     out_path = PENDING_SQL_DIR / f"rev_{rev}.sql"
-    wrote_sql = sql_out.emit_pending_sql(out_path, blocks, header)
+    wrote_sql = sql_out.emit_pending_sql(out_path, blocks, header, extra_blocks=[trainer_spell_block])
     print(f"SQL: wrote {out_path.relative_to(REPO_ROOT)}" if wrote_sql else "SQL: nothing to emit")
 
     # -- client patch: needs a complete file (base + new), so any table with

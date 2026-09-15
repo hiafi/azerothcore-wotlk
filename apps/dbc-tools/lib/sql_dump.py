@@ -67,6 +67,25 @@ def _read_value(text: str, i: int, terminators: str = ",)") -> tuple[object, int
     return (float(token) if "." in token or "e" in token.lower() else int(token)), j
 
 
+def _skip_ws_and_comments(text: str, i: int) -> int:
+    """Advances past whitespace and `-- ...`-style line comments (to end of
+    line). Real hand-written migrations in this repo sometimes annotate
+    each VALUES tuple with a trailing comment - e.g. trainer_spell inserts
+    like `(13, 48266, ...),    -- Blood Presence` - which plain whitespace
+    skipping doesn't account for."""
+    n = len(text)
+    while i < n:
+        if text[i] in " \t\r\n":
+            i += 1
+            continue
+        if text[i : i + 2] == "--":
+            j = text.find("\n", i)
+            i = n if j == -1 else j + 1
+            continue
+        break
+    return i
+
+
 def _read_tuples(text: str, start: int) -> tuple[list[list], int]:
     """Parse a comma-separated list of parenthesized value-tuples starting at
     `text[start]` (which must be '('), stopping at the terminating ';'.
@@ -75,8 +94,7 @@ def _read_tuples(text: str, start: int) -> tuple[list[list], int]:
     i = start
     n = len(text)
     while i < n:
-        while text[i] in " \t\r\n":
-            i += 1
+        i = _skip_ws_and_comments(text, i)
         if text[i] == ";":
             return tuples, i + 1
         if text[i] != "(":
@@ -84,12 +102,10 @@ def _read_tuples(text: str, start: int) -> tuple[list[list], int]:
         i += 1
         values = []
         while True:
-            while text[i] in " \t\r\n":
-                i += 1
+            i = _skip_ws_and_comments(text, i)
             value, i = _read_value(text, i)
             values.append(value)
-            while text[i] in " \t\r\n":
-                i += 1
+            i = _skip_ws_and_comments(text, i)
             if text[i] == ",":
                 i += 1
                 continue
@@ -97,8 +113,7 @@ def _read_tuples(text: str, start: int) -> tuple[list[list], int]:
                 i += 1
                 break
         tuples.append(values)
-        while text[i] in " \t\r\n":
-            i += 1
+        i = _skip_ws_and_comments(text, i)
         if text[i] == ",":
             i += 1
             continue
@@ -190,6 +205,42 @@ def read_table_dump(path: Path, table: DbcTable) -> dict[int, dict]:
     return rows
 
 
+_CREATE_TABLE_RE_TEMPLATE = r"CREATE TABLE\s+`{table}`\s*\("
+_COLUMN_LINE_RE = re.compile(r"^\s*`(?P<name>\w+)`\s+\w")
+
+
+def parse_create_table_columns(path: Path, table_name: str) -> tuple[str, ...]:
+    """Extracts a table's column names, in file-column order, straight from
+    its own `CREATE TABLE` statement - for a wide table (creature_template
+    is ~70 columns) whose base dump uses a bare `INSERT INTO x VALUES (...)`
+    with no explicit column list (see read_table_rows), so parsing it
+    correctly at all needs the complete, exactly-ordered column list as the
+    fallback - and hand-transcribing that (the way lib/dbcfmt.py does for
+    DBC tables, which are a curated *subset* of a much narrower table) would
+    be its own source of transcription bugs for a table this wide. Skips
+    non-column lines (`PRIMARY KEY (...)`, `KEY ...`, `CONSTRAINT ...`) since
+    none of them start with a backtick-quoted-name-then-type pattern."""
+    text = Path(path).read_text(encoding="utf-8")
+    m = re.search(_CREATE_TABLE_RE_TEMPLATE.format(table=re.escape(table_name)), text, re.IGNORECASE)
+    if not m:
+        raise ValueError(f"{path}: no CREATE TABLE `{table_name}` found")
+    depth = 1
+    i = m.end()
+    while depth > 0:
+        if text[i] == "(":
+            depth += 1
+        elif text[i] == ")":
+            depth -= 1
+        i += 1
+    body = text[m.end():i - 1]
+    columns = []
+    for line in body.splitlines():
+        cm = _COLUMN_LINE_RE.match(line)
+        if cm:
+            columns.append(cm.group("name"))
+    return tuple(columns)
+
+
 def read_table_rows(path: Path, table_name: str, columns: tuple[str, ...]) -> list[dict]:
     """Like `read_table_dump`, but for a table with no single-column primary
     key (a composite key, or none at all) — every row is returned as-is in a
@@ -226,7 +277,9 @@ _DELETE_WHERE_RANGE_RE = re.compile(
     r"WHERE\s+`\w+`\s+BETWEEN\s+(?P<start>-?\d+)\s+AND\s+(?P<end>-?\d+)\s*;",
     re.IGNORECASE,
 )
-_DELETE_WHERE_IN_RE = re.compile(
+# Shared by DELETE and UPDATE - "WHERE `col` IN (id1, id2, ...);" means the same thing for both
+# (delete/touch every listed row), just with a different statement in front of it.
+_WHERE_IN_RE = re.compile(
     r"WHERE\s+`\w+`\s+IN\s*\((?P<ids>[^)]*)\)\s*;",
     re.IGNORECASE,
 )
@@ -275,7 +328,7 @@ def _apply_delete(rows: dict[int, dict], text: str, pos: int) -> int:
         for key in [k for k in rows if start <= k <= end]:
             del rows[key]
         return m.end()
-    m = _DELETE_WHERE_IN_RE.match(text, pos)
+    m = _WHERE_IN_RE.match(text, pos)
     if m:
         for token in m.group("ids").split(","):
             rows.pop(int(token.strip()), None)
@@ -288,17 +341,38 @@ def _apply_delete(rows: dict[int, dict], text: str, pos: int) -> int:
 
 
 def _apply_update(rows: dict[int, dict], table: DbcTable, text: str, pos: int) -> int:
+    """`UPDATE ... SET col = val, ... WHERE \\`col\\` = n` (one row) or
+    `WHERE \\`col\\` IN (n, m, ...)` (several rows, same assignments applied
+    to each) - the second shape is a real one, not hypothetical: the
+    Glacial Spike/Fireball cast-time fix (`rev_1789232500000000000.sql`,
+    promoted as `2026_09_14_01.sql`) uses exactly this to repoint both
+    spells' `CastingTimeIndex` in one statement. Before this handled it,
+    that statement fell through to `_skip_statement` silently (per this
+    module's "degrade safely" contract) - safe (never wrote wrong data,
+    per `apply_statements`'s own docstring) but left `state.py`'s
+    reconstruction of "what's live" stale for every ID past the first,
+    surfacing as a spurious drift report from `generate.py`."""
     assignments, pos = _read_set_assignments(text, pos)
+    if not assignments:
+        return _skip_statement(text, pos)
     m = _WHERE_EQ_RE.match(text, pos)
-    if m and assignments:
-        row = rows.get(int(m.group("id")))
-        if row is not None:
-            for col, value in assignments.items():
-                if value is None and col in table.columns and _is_string_column(table, col):
-                    value = ""
-                row[col] = value
-        return m.end()
-    return _skip_statement(text, pos)
+    if m:
+        ids, end = [int(m.group("id"))], m.end()
+    else:
+        m = _WHERE_IN_RE.match(text, pos)
+        if not m:
+            return _skip_statement(text, pos)
+        ids = [int(token.strip()) for token in m.group("ids").split(",")]
+        end = m.end()
+    for id_ in ids:
+        row = rows.get(id_)
+        if row is None:
+            continue
+        for col, value in assignments.items():
+            if value is None and col in table.columns and _is_string_column(table, col):
+                value = ""
+            row[col] = value
+    return end
 
 
 def apply_statements(rows: dict[int, dict], table: DbcTable, sql_text: str) -> None:
