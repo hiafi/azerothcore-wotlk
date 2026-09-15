@@ -45,6 +45,31 @@ class ResolveRowsTest(unittest.TestCase):
         self.assertEqual(r.entries, entries)
         self.assertEqual(r.edited_ids, [116])
 
+    def test_none_vs_empty_string_is_not_a_change(self):
+        # build_spell_row writes None for an unset locale field; the base DBC's string block has
+        # no NULL concept, so the same "no override" value reads back as '' - not a real edit.
+        entries = [{"id": 116, "v": None}]
+        existing = {116: {"id": 116, "v": ""}}
+        r = resolve.resolve_rows(entries, ID_RANGE, existing, lambda e: e)
+        self.assertEqual(r.entries, [])
+        self.assertEqual(r.unchanged, 1)
+
+    def test_crlf_vs_lf_is_not_a_change(self):
+        # A chunk of source/spells/*.csv's raw_overrides text has literal \r\n baked into the
+        # JSON string (Windows-authored copy/paste); live data only ever has bare \n.
+        entries = [{"id": 116, "v": "line one\r\nline two"}]
+        existing = {116: {"id": 116, "v": "line one\nline two"}}
+        r = resolve.resolve_rows(entries, ID_RANGE, existing, lambda e: e)
+        self.assertEqual(r.entries, [])
+        self.assertEqual(r.unchanged, 1)
+
+    def test_a_real_value_change_alongside_a_none_vs_empty_field_is_still_an_edit(self):
+        entries = [{"id": 116, "v": None, "w": 2}]
+        existing = {116: {"id": 116, "v": "", "w": 1}}
+        r = resolve.resolve_rows(entries, ID_RANGE, existing, lambda e: e)
+        self.assertEqual(r.entries, entries)
+        self.assertEqual(r.edited_ids, [116])
+
 
 class ReservedRangeChangedTest(unittest.TestCase):
     def test_no_edits_and_identical_reserved_content_is_unchanged(self):
@@ -84,6 +109,16 @@ class ReservedRangeChangedTest(unittest.TestCase):
 
     def test_empty_reserved_content_matching_empty_existing_is_unchanged(self):
         self.assertFalse(resolve.reserved_range_changed([], "ID", ID_RANGE, [], {}))
+
+    def test_none_vs_empty_string_in_reserved_block_is_not_a_change(self):
+        rows = [{"ID": 200000, "v": None}]
+        existing = {200000: {"ID": 200000, "v": ""}}
+        self.assertFalse(resolve.reserved_range_changed(rows, "ID", ID_RANGE, [], existing))
+
+    def test_crlf_vs_lf_in_reserved_block_is_not_a_change(self):
+        rows = [{"ID": 200000, "v": "line one\r\nline two"}]
+        existing = {200000: {"ID": 200000, "v": "line one\nline two"}}
+        self.assertFalse(resolve.reserved_range_changed(rows, "ID", ID_RANGE, [], existing))
 
 
 if __name__ == "__main__":

@@ -43,6 +43,46 @@ class Resolved:
     unchanged: int              # count of untouched reference rows, skipped
 
 
+def _normalize_for_compare(value):
+    """Collapses two representation-only differences that otherwise make an
+    untouched, pulled-in-for-reference row compare unequal to itself forever:
+
+      - `None` vs `''` for an unset locale string. The base client DBC's
+        string block has no NULL concept — an unset localized name/
+        description reads back as `''` (see `dbcfile.read_dbc`) — while
+        `build_spell_row` (and friends) write `None` for the same "no
+        override" case. Same field, same real-world value, two Python
+        representations depending on which side of the pipeline produced it.
+      - `\\r\\n` vs `\\n` inside a multi-line text field. A chunk of
+        source/spells/*.csv's `raw_overrides` description/aura-description
+        text was pulled in with literal CRLF line breaks baked into the
+        JSON string (Windows-authored copy/paste, most likely); the live
+        data — extracted straight from the base DBC/SQL — only ever has
+        bare `\\n`. Confirmed (2026-09-15, see docs/bugs-and-fixes.md)
+        that these two artifacts alone fully explain a 374-spell "needs
+        re-editing" block that never actually changed: every single one
+        was a pulled-in-for-reference copy whose only "difference" from
+        live was one of these two non-differences, not a real edit —
+        directly violating this module's own docstring guarantee that
+        pulling a spell in for reading must never by itself cause a write.
+        Only used for the reconcile-against-live *comparison* — the actual
+        built row (what gets emitted for a genuine new/edited entry) is
+        untouched, so a real edit still ships whatever source/ actually
+        contains."""
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value.replace("\r\n", "\n")
+    return value
+
+
+def _rows_equal(a: dict, b: dict) -> bool:
+    return all(
+        _normalize_for_compare(a.get(key)) == _normalize_for_compare(b.get(key))
+        for key in a.keys() | b.keys()
+    )
+
+
 def resolve_rows(entries: list[dict], id_range: dict, existing_rows: dict[int, dict], build_one) -> Resolved:
     kept, edited_ids = [], []
     unchanged = 0
@@ -52,7 +92,7 @@ def resolve_rows(entries: list[dict], id_range: dict, existing_rows: dict[int, d
             continue
         existing = existing_rows.get(entry["id"])
         row = build_one(entry)
-        if existing is not None and row == existing:
+        if existing is not None and _rows_equal(row, existing):
             unchanged += 1
             continue
         kept.append(entry)
@@ -93,4 +133,12 @@ def reserved_range_changed(
         id_: row for id_, row in existing_rows.items()
         if id_range["start"] <= id_ <= id_range["end"]
     }
-    return reserved_new != reserved_existing
+    if reserved_new.keys() != reserved_existing.keys():
+        return True
+    # Dict `!=` would inherit the same None-vs-'' / CRLF false-positive
+    # _normalize_for_compare exists for (see its docstring) - same fix,
+    # applied row-by-row since these are keyed by ID, not a single row.
+    return any(
+        not _rows_equal(reserved_new[id_], reserved_existing[id_])
+        for id_ in reserved_new
+    )
