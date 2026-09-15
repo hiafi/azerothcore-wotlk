@@ -893,7 +893,6 @@ deadly_throw_26679 = spell(
     name='Deadly Throw',
     school=School.NORMAL,
     attributes=4259858,
-    cast_time_ms=-1000000,
     cooldown_ms=0,
     category_cooldown_ms=0,
     power_type=PowerType.ENERGY,
