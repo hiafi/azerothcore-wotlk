@@ -2414,3 +2414,30 @@ flashpoint_200111 = spell(
     notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (10,1): new talent on repurposed stock talent id 1848 (Fiery Payback) - the tree's single 50-point capstone ability. Shell only: instant, 45 sec RecoveryTime (Cooldown Haste applies), 10% base mana (spec gives no cost - user-adjustable), Effect_1 DUMMY on the enemy target. Phase 3's spell_mage_flashpoint consumes the target's whole Ignite bank (Mage::ConsumeIgnite) and deals 5x it, half that to enemies within 8 yd, neither able to crit. Custom dword-2 bit 0x80. Icon 1197 (Cataclysm). Player-castable and talent-granted -> SkillLineAbility 30409 in mage_talents.py.",
     raw_overrides={'BaseLevel': 60, 'SpellLevel': 60, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'DefenseType': 1, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 8, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 3, 'SpellClassMask_3': 128, 'SpellPriority': 50, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Detonates your Ignite on the target, dealing 5 times its remaining damage instantly and half that amount to all enemies within 8 yards. This damage cannot be a critical strike.', 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
+
+
+flashpoint_damage_200119 = spell(
+    id=200119,
+    name='Flashpoint',
+    school=School.FIRE,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    range_yards=50000.0,
+    radius_yards=8.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
+    ],
+    spell_icon_id=1197,
+    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 3 (10,1) - the actual detonation, cast by spell_mage_flashpoint (200111's SpellScript). EFFECT_0 = 5x the consumed Ignite bank on the explicit target (SPELLVALUE_BASE_POINT0); EFFECT_1 = half that (2.5x) to enemies within 8 yd of the target (SPELLVALUE_BASE_POINT1), same target-centered AoE pair as Living Bomb's explosion (44461) and this rework's own Burnout explosion (200116) - naturally also hits the primary target at 0 yards, matching 'dealing 5x...and half that amount to all enemies within 8 yards' read as inclusive. 'This damage cannot be a critical strike' (sec 10,1) -> CANT_CRIT; damage is the already-fully-modified banked amount -> IGNORE_CASTER_MODIFIERS + ALWAYS_HIT, same reasoning as the Ignite tick vehicle (200098).",
+    raw_overrides={'AttributesEx2': 536870912, 'AttributesEx3': 537133056, 'BaseLevel': 1, 'SpellLevel': 1, 'CastingTimeIndex': 1, 'DefenseType': 1, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Detonates Ignite.', 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+bonus_coefficients(flashpoint_damage_200119, direct=0.0, comment='Mage - Flashpoint detonation (fire-mage-rework.md sec 6, (10,1)): pure multiplier of the already-scaled Ignite bank, no independent SP scaling')
+
+
+scripted_by(fireball_133, 'spell_mage_fireball')
+scripted_by(scorch_2948, 'spell_mage_scorch')
+scripted_by(flamestrike_2120, 'spell_mage_flamestrike')
+scripted_by(flashpoint_200111, 'spell_mage_flashpoint')
+scripted_by(pyroblast_11366, 'spell_mage_pyroblast')

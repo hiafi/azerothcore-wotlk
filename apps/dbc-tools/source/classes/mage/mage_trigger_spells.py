@@ -5,7 +5,7 @@ Split from a single source/classes/mage.py via split_class_file.py (.agents/plan
 """
 
 from lib.dsl import AuraType, CombatRating, DispelType, Effect, EffectType, Mechanic, PowerType, School, SpellModOp
-from lib.dsl.registry import scripted_by, spell
+from lib.dsl.registry import bonus_coefficients, procs_on, scripted_by, spell
 
 
 arcane_missile_7268 = spell(
@@ -1206,10 +1206,11 @@ flame_throwing_12353 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.RANGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=-19, die_sides=0, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CASTING_TIME),
     ],
     spell_icon_id=136,
-    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (2,0) rank 2: 6 yards at both ranks per the spec's tooltip (stock was 3/6). Rank 2's capstone (one 20%-faster Fireball per 12 sec, user call 2026-09-15) is a Phase 3 script keyed on HasAura(12353).",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of all Fire spells except Frostfire Bolt by 6 yards.\n\n|cFF9D9D9DCapstone Bonus: The cast time of your Fireball is reduced by 20%. This effect becomes inactive for 12 sec after use.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194327, 'EffectSpellClassMaskA_2': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="Fire Mage rework Phase 3 (2,0) rank 2: EFFECT_1 is the capstone's live cast-time reduction, scoped to Fireball alone (EffectSpellClassMaskB_1=1, letter B = effect index 1). base_points -19 -> real value -20% (die_sides=1 convention). spell_mage_flame_throwing_capstone's DoEffectCalcAmount overrides this to 0 while the 12s lockout (200112) is up, via AuraEffect::RecalculateAmount() triggered by spell_mage_fireball whenever the lockout applies/expires - see that script's own comment for why a cached SpellModifier value needs an explicit recalculation trigger, unlike a live-read DUMMY marker.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of all Fire spells except Frostfire Bolt by 6 yards.\n\n|cFF9D9D9DCapstone Bonus: The cast time of your Fireball is reduced by 20%. This effect becomes inactive for 12 sec after use.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194327, 'EffectSpellClassMaskA_2': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'EffectSpellClassMaskB_1': 1},
 )
 
 
@@ -2844,8 +2845,8 @@ playing_with_fire_31638 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=1, die_sides=0, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=126),
     ],
     spell_icon_id=2130,
-    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (4,0) rank 1: damage-done now every school (misc 127, was magic-only 126). The Dragon's Breath cooldown-reduction clause is a Phase 3 script (once per cast, not per target).",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases all damage done by 1% and all magic damage taken by 1%.\n\nEach spell you cast that deals direct magic damage reduces the cooldown of your Dragon's Breath by 1 sec, doubled when dealing a critical strike. Dragon's Breath cannot reduce its own cooldown.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 3 (4,0): ProcTypeMask = PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS|_NEG (0x14000) - any direct spell-damage-class-magic hit done (periodic excluded at that flag level already; spell_mage_playing_with_fire also explicitly rejects PROC_FLAG_DONE_PERIODIC and Dragon's Breath itself). CD reduction is a flat 1 sec (2 sec on crit) at every rank - this clause doesn't scale with rank, only the damage-mod percentages do.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases all damage done by 1% and all magic damage taken by 1%.\n\nEach spell you cast that deals direct magic damage reduces the cooldown of your Dragon's Breath by 1 sec, doubled when dealing a critical strike. Dragon's Breath cannot reduce its own cooldown.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'ProcTypeMask': 81920},
 )
 
 
@@ -2866,8 +2867,8 @@ playing_with_fire_31639 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=2, die_sides=0, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=126),
     ],
     spell_icon_id=2130,
-    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (4,0) rank 2: damage-done now every school (misc 127, was magic-only 126). The Dragon's Breath cooldown-reduction clause is a Phase 3 script (once per cast, not per target).",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases all damage done by 2% and all magic damage taken by 2%.\n\nEach spell you cast that deals direct magic damage reduces the cooldown of your Dragon's Breath by 1 sec, doubled when dealing a critical strike. Dragon's Breath cannot reduce its own cooldown.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 3 (4,0): ProcTypeMask = PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS|_NEG (0x14000) - any direct spell-damage-class-magic hit done (periodic excluded at that flag level already; spell_mage_playing_with_fire also explicitly rejects PROC_FLAG_DONE_PERIODIC and Dragon's Breath itself). CD reduction is a flat 1 sec (2 sec on crit) at every rank - this clause doesn't scale with rank, only the damage-mod percentages do.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases all damage done by 2% and all magic damage taken by 2%.\n\nEach spell you cast that deals direct magic damage reduces the cooldown of your Dragon's Breath by 1 sec, doubled when dealing a critical strike. Dragon's Breath cannot reduce its own cooldown.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'ProcTypeMask': 81920},
 )
 
 
@@ -2888,8 +2889,8 @@ playing_with_fire_31640 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=3, die_sides=0, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=126),
     ],
     spell_icon_id=2130,
-    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (4,0) rank 3: damage-done now every school (misc 127, was magic-only 126). The Dragon's Breath cooldown-reduction clause is a Phase 3 script (once per cast, not per target).",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases all damage done by 3% and all magic damage taken by 3%.\n\nEach spell you cast that deals direct magic damage reduces the cooldown of your Dragon's Breath by 1 sec, doubled when dealing a critical strike. Dragon's Breath cannot reduce its own cooldown.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 3 (4,0): ProcTypeMask = PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS|_NEG (0x14000) - any direct spell-damage-class-magic hit done (periodic excluded at that flag level already; spell_mage_playing_with_fire also explicitly rejects PROC_FLAG_DONE_PERIODIC and Dragon's Breath itself). CD reduction is a flat 1 sec (2 sec on crit) at every rank - this clause doesn't scale with rank, only the damage-mod percentages do.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases all damage done by 3% and all magic damage taken by 3%.\n\nEach spell you cast that deals direct magic damage reduces the cooldown of your Dragon's Breath by 1 sec, doubled when dealing a critical strike. Dragon's Breath cannot reduce its own cooldown.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'ProcTypeMask': 81920},
 )
 
 
@@ -3664,7 +3665,7 @@ burnout_44449 = spell(
     ],
     spell_icon_id=2998,
     notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (6,0) rank 1: 3 ranks (was 5). SPELLMOD_CRIT_DAMAGE_BONUS +40% on the crit bonus half: 1.5 -> 1.70x. EFFECT_1 DUMMY is the capstone marker (1 on rank 3 only) for Phase 3's Burnout scripts. Ranks 4-5 (44471/44472) are no longer granted.",
-    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 170% damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 551686903, 'EffectSpellClassMaskA_2': 233544, 'EffectSpellClassMaskC_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 327680, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 170% damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 551686903, 'EffectSpellClassMaskA_2': 233544, 'EffectSpellClassMaskC_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 81920, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3685,7 +3686,7 @@ burnout_44469 = spell(
     ],
     spell_icon_id=2998,
     notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (6,0) rank 2: 3 ranks (was 5). SPELLMOD_CRIT_DAMAGE_BONUS +70% on the crit bonus half: 1.5 -> 1.85x. EFFECT_1 DUMMY is the capstone marker (1 on rank 3 only) for Phase 3's Burnout scripts. Ranks 4-5 (44471/44472) are no longer granted.",
-    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 185% damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 551686903, 'EffectSpellClassMaskA_2': 233544, 'EffectSpellClassMaskC_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 327680, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 185% damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 551686903, 'EffectSpellClassMaskA_2': 233544, 'EffectSpellClassMaskC_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 81920, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3706,7 +3707,7 @@ burnout_44470 = spell(
     ],
     spell_icon_id=2998,
     notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (6,0) rank 3: 3 ranks (was 5). SPELLMOD_CRIT_DAMAGE_BONUS +100% on the crit bonus half: 1.5 -> 2.00x. EFFECT_1 DUMMY is the capstone marker (1 on rank 3 only) for Phase 3's Burnout scripts. Ranks 4-5 (44471/44472) are no longer granted.",
-    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 200% damage.\n\n|cFF9D9D9DCapstone Bonus: Dealing direct Fire damage to targets afflicted by your Ignite increases your spell damage by 6% for 8 sec. Dealing direct magic non-Fire damage to targets affected by your Ignite causes an explosion, dealing damage to all nearby enemies. Both effects require the final rank of Ignite.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 551686903, 'EffectSpellClassMaskA_2': 233544, 'EffectSpellClassMaskC_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 327680, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 200% damage.\n\n|cFF9D9D9DCapstone Bonus: Dealing direct Fire damage to targets afflicted by your Ignite increases your spell damage by 6% for 8 sec. Dealing direct magic non-Fire damage to targets affected by your Ignite causes an explosion, dealing damage to all nearby enemies. Both effects require the final rank of Ignite.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 551686903, 'EffectSpellClassMaskA_2': 233544, 'EffectSpellClassMaskC_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 81920, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -5577,8 +5578,8 @@ blazing_speed_200107 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=1, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2127,
-    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (7,0) rank 3: new third rank. Effect_3 DUMMY is the capstone marker for Phase 3's health-gated escape script (icon 2127, shared with ranks 1-2 which carry no DUMMY - so the icon read only ever finds this rank).",
-    raw_overrides={'BaseLevel': 1, 'SpellLevel': 1, 'CastingTimeIndex': 1, 'EquippedItemClass': -1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'NameSubtext_Lang_enUS': 'Rank 3', 'Description_Lang_enUS': 'Increases your spell haste by 3% and causes your damage to heal you for 3% of the damage dealt.\n\n|cFF9D9D9DCapstone Bonus: Taking direct damage while below 35% health dispels all movement impairing effects and increases your movement speed by 50% and your haste by 20% for 6 sec. While active, you can cast non-channeled Fire spells while moving. This effect can only occur every 30 sec.|r'},
+    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 3 (7,0) rank 3: ProcTypeMask 1114112 = PROC_FLAG_TAKEN_MELEE_AUTO_ATTACK(0x8)|TAKEN_SPELL_MELEE_DMG_CLASS(0x20)|TAKEN_SPELL_RANGED_DMG_CLASS(0x200)|TAKEN_DAMAGE(0x100000) - 'taking direct damage' broadly, filtered further (health <35%, capstone marker present, 30s ICD) by spell_mage_blazing_speed_capstone. EFFECT_2 DUMMY (amount=1) is still the capstone-presence marker read by that same script's icon lookup (2127) - kept so ranks 1-2 (which have no EFFECT_2) can't accidentally proc.",
+    raw_overrides={'BaseLevel': 1, 'SpellLevel': 1, 'CastingTimeIndex': 1, 'EquippedItemClass': -1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'NameSubtext_Lang_enUS': 'Rank 3', 'Description_Lang_enUS': 'Increases your spell haste by 3% and causes your damage to heal you for 3% of the damage dealt.\n\n|cFF9D9D9DCapstone Bonus: Taking direct damage while below 35% health dispels all movement impairing effects and increases your movement speed by 50% and your haste by 20% for 6 sec. While active, you can cast non-channeled Fire spells while moving. This effect can only occur every 30 sec.|r', 'ProcTypeMask': 1114112},
 )
 
 
@@ -5662,3 +5663,168 @@ firestarter_54741 = spell(
     notes='Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (8,0) capstone buff: stock instant + free, plus a new +30% SPELLMOD_DAMAGE (direct only - the DoT half is SPELLMOD_DOT) on Effect_3, scoped to Flamestrike (EffectSpellClassMaskC_1 = 4). Consumed by the Flamestrike cast as before.',
     raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 4, 'EffectSpellClassMaskB_1': 4, 'SpellVisualID_1': 12021, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': "Your damaging Blast Wave, Dragon's Breath and Meteor spells make your next Flamestrike spell instant cast, cost no mana, and deal 30% more direct damage.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Flamestrike spell is instant cast, costs no mana and deals 30% more direct damage.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 3, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_1': 4},
 )
+
+
+# ---- Phase 3: hidden buffs/markers for the C++ talent scripts (200112-200119) ---------------
+
+flame_throwing_lockout_200112 = spell(
+    id=200112,
+    name='Flame Throwing',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    duration_ms=12000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=136,
+    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 3 (2,0) capstone - hidden 12s lockout marker (spec: 'inactive for 12 sec after use', consumed by a Fireball that actually benefited - user call 2026-09-15). Pure presence-check by spell_mage_flame_throwing_capstone/spell_mage_fireball; no real gameplay effect of its own. Icon 136 = Flame Throwing's own.",
+    raw_overrides={'AttributesEx': 128, 'CastingTimeIndex': 1, 'ProcChance': 101, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Recharging', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': '', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Fireball cast time reduction is recharging.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+blazing_speed_escape_200113 = spell(
+    id=200113,
+    name='Blazing Speed',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    duration_ms=6000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=50, implicit_target_a=1, apply_aura=AuraType.MOD_INCREASE_SPEED),
+        Effect(type=EffectType.APPLY_AURA, base_points=20, die_sides=0, implicit_target_a=1, apply_aura=AuraType.MOD_CASTING_SPEED_NOT_STACK),
+    ],
+    spell_icon_id=2127,
+    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 3 (7,0) capstone escape - 6s +50% move speed / +20% spell haste. The 'cast non-channeled Fire spells while moving' clause is Mage::CanCastWhileMoving (Spell.cpp hook, checks HasAura(this)), not DBC-expressible. Movement-impair dispel (RemoveMovementImpairingAuras) and the 30s ICD (200114) are applied by the triggering script, not this aura itself.",
+    raw_overrides={'AttributesEx': 128, 'CastingTimeIndex': 1, 'ProcChance': 101, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': '', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement speed and spell haste increased. Can cast non-channeled Fire spells while moving.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+blazing_speed_escape_icd_200114 = spell(
+    id=200114,
+    name='Blazing Speed',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    duration_ms=30000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2127,
+    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 3 (7,0) capstone - hidden 30s internal-cooldown marker ('This effect can only occur every 30 sec'). Applied alongside 200113, outlives it (30s > 6s) so its own presence is the gate.",
+    raw_overrides={'AttributesEx': 128, 'CastingTimeIndex': 1, 'ProcChance': 101, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Recharging', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': '', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Blazing Speed is recharging.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+burnout_damage_buff_200115 = spell(
+    id=200115,
+    name='Burnout',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    duration_ms=8000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=6, die_sides=0, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=127),
+    ],
+    spell_icon_id=2998,
+    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 3 (6,0) capstone - 'Dealing direct Fire damage to targets afflicted by your Ignite increases your spell damage by 6% for 8 sec.' MOD_DAMAGE_PERCENT_DONE (misc 127 = every school) is a native aura the engine already reads generically - no read-side script needed, only the grant (spell_mage_burnout). Refreshes on each qualifying hit rather than stacking (CumulativeAura unset).",
+    raw_overrides={'AttributesEx': 128, 'CastingTimeIndex': 1, 'ProcChance': 101, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': '', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spell damage increased by 6%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+burnout_explosion_200116 = spell(
+    id=200116,
+    name='Burnout',
+    school=School.FIRE,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    range_yards=50000.0,
+    radius_yards=8.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
+    ],
+    spell_icon_id=2998,
+    notes="Fire Mage rework Phase 3 (6,0) capstone - 'Dealing direct magic non-Fire damage to targets affected by your Ignite causes an explosion.' User call 2026-09-15: 50% of the target's remaining Ignite bank (Mage::GetIgniteRemaining), bank NOT consumed. CANT_CRIT + IGNORE_CASTER_MODIFIERS + ALWAYS_HIT, same reasoning as Flashpoint (200119)/the Ignite tick vehicle (200098): the bank already prices in crit rate/damage once, letting the explosion crit (and feed Ignite again) would double it. Target-centered AoE (A=53 TARGET_DEST_TARGET_ENEMY, B=16 TARGET_UNIT_DEST_AREA_ENEMY), same pair as Living Bomb's own explosion (44461). 6 sec ICD is the caster-side marker 200117, not on this spell.",
+    raw_overrides={'BaseLevel': 1, 'SpellLevel': 1, 'CastingTimeIndex': 1, 'DefenseType': 1, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Explodes for Fire damage.', 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'AttributesEx2': 536870912, 'AttributesEx3': 537133056},
+)
+bonus_coefficients(burnout_explosion_200116, direct=0.0, comment='Mage - Burnout explosion (fire-mage-rework.md sec 6, Burnout capstone): flat % of the Ignite bank, no independent SP scaling')
+
+
+burnout_explosion_icd_200117 = spell(
+    id=200117,
+    name='Burnout',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    duration_ms=6000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2998,
+    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 3 (6,0) capstone - hidden 6s ICD marker for the Ignite explosion (user call 2026-09-15).",
+    raw_overrides={'AttributesEx': 128, 'CastingTimeIndex': 1, 'ProcChance': 101, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Recharging', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': '', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Ignite Explosion is recharging.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+fanned_flames_ready_200118 = spell(
+    id=200118,
+    name='Fanned Flames',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CASTING_TIME),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+    ],
+    spell_icon_id=3173,
+    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 3 (7,1) - 'next Scorch instant cast and deal 100% increased damage.' Same non-charge-consumption shape as the stock Firestarter buff (54741, ProcCharges=0) - explicitly removed by spell_mage_scorch's AfterCast, not the engine's charge system, matching this codebase's existing precedent (spell_mage_missile_barrage_proc is consumed by spell_mage_arcane_missiles the same way). Both effects scoped to Scorch alone (EffectSpellClassMaskA_1/B_1 = 16). 15s safety-net duration so it can't linger forever if the mage never casts Scorch (spec gives no expiry; a persistent 45/45%-uptime buff with no cap would be a bug, not a feature).",
+    raw_overrides={'AttributesEx': 128, 'CastingTimeIndex': 1, 'ProcChance': 101, 'EffectSpellClassMaskA_1': 16, 'EffectSpellClassMaskB_1': 16, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': '', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Next Scorch is instant cast and deals 100% increased damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+# ---- Phase 3: spell_script_names bindings for the new/modified scripts below ---------------
+scripted_by(flame_throwing_12353, 'spell_mage_flame_throwing_capstone')
+scripted_by(-burnout_44449.id, 'spell_mage_burnout_capstone')
+scripted_by(-playing_with_fire_31638.id, 'spell_mage_playing_with_fire')
+scripted_by(blazing_speed_200107, 'spell_mage_blazing_speed_capstone')
+scripted_by(meteor_impact_200096, 'spell_mage_meteor_impact')
+
+
+# Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 3 - Hot Streak's own spell_proc row corrected: stock data's dword-1 mask (0x11000) has the
+# right Frostfire Bolt bit (0x1000) but the wrong second bit (0x10000, not Living Bomb's real
+# 0x20000) - explicitly re-declared here with the exact 5 trigger spells sec 8.2/6 names
+# (Fireball/Fire Blast/Scorch/Living Bomb/Frostfire Bolt), Pyroblast excluded by construction
+# (its own family bit, 0x400000, is in neither mask - see (2,2)'s implementation note).
+# HitMask left at 0 (no crit-only filter here) - spell_mage_hot_streak's own
+# eventInfo.GetHitMask() & PROC_EX_CRITICAL_HIT check is what enforces "2 non-periodic criticals",
+# same as the pre-existing stock row.
+procs_on(-44445, proc_flags=0, school_mask=0, family_name=3,
+         family_mask=(19, 135168, 0),  # dword0: Fireball(1)|Fire Blast(2)|Scorch(16); dword1: Living Bomb(131072)|Frostfire Bolt(4096)
+         spell_type_mask=1, spell_phase_mask=2, hit_mask=0, chance=0)
+
+
+fanned_flames_icd_200120 = spell(
+    id=200120,
+    name='Fanned Flames',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    duration_ms=2500,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=3173,
+    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 3 (7,1) - hidden 2.5s ICD marker for the Living Bomb tick roll (sec 6 (7,1): 'deliberately below Living Bomb's 3 sec tick interval'). Same HasAura idiom as Netherwind Presence's own ICD marker (200091).",
+    raw_overrides={'AttributesEx': 128, 'CastingTimeIndex': 1, 'ProcChance': 101, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Recharging', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': '', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Fanned Flames is recharging.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+scripted_by(flame_throwing_lockout_200112, 'spell_mage_flame_throwing_lockout')

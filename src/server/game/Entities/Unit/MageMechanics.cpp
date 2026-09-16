@@ -51,6 +51,13 @@ namespace Mage
         constexpr uint32 SPELL_IGNITE_DOT = 12654;
         constexpr uint32 SPELL_IGNITE_TICK = 200098;
         constexpr uint32 SPELL_KINDLING = 200097;
+        constexpr uint32 SPELL_FIRE_BLAST = 2136;
+        constexpr uint32 SPELL_BLAZING_SPEED_ESCAPE = 200113;
+        // Phase 3 - keep in sync with spell_mage.cpp's own SPELL_MAGE_PYROBLAST /
+        // SPELL_MAGE_HOT_STREAK_PROC / MAGE_ICON_HOT_STREAK.
+        constexpr uint32 SPELL_PYROBLAST = 11366;
+        constexpr uint32 SPELL_HOT_STREAK_PROC = 48108;
+        constexpr uint32 MAGE_ICON_HOT_STREAK = 2999;
         // Sec 3.3: 4 sec, 1 sec tick interval, 4 ticks. Kept as the count rather than derived from
         // the aura's duration/amplitude so a refresh mid-cadence still means "4 more payouts".
         constexpr uint8 IGNITE_TICKS = 4;
@@ -378,5 +385,34 @@ namespace Mage
         }
         if (stacks)
             kindling->ModStackAmount(int32(stacks));
+    }
+
+    bool ApplySpellCritChanceMods(Unit const* caster, SpellInfo const* spellProto, float& critChance)
+    {
+        if (spellProto->Id == SPELL_FIRE_BLAST)
+        {
+            critChance = 100.0f;
+            return true;
+        }
+        // Hot Streak (sec 5 (8,2)) - "This Pyroblast always critically strikes." Same HasAura gate
+        // ApplyDoneDamagePctMods' Mastery bonus uses; spell_mage_pyroblast consumes the buff after
+        // this cast either way.
+        if (spellProto->Id == SPELL_PYROBLAST && caster && caster->HasAura(SPELL_HOT_STREAK_PROC))
+        {
+            critChance = 100.0f;
+            return true;
+        }
+        return false;
+    }
+
+    bool CanCastWhileMoving(Unit const* caster, SpellInfo const* spellInfo)
+    {
+        if (!caster || !spellInfo || spellInfo->SpellFamilyName != SPELLFAMILY_MAGE)
+            return false;
+        if (spellInfo->IsChanneled())
+            return false;
+        if (!(spellInfo->GetSchoolMask() & SPELL_SCHOOL_MASK_FIRE))
+            return false;
+        return caster->HasAura(SPELL_BLAZING_SPEED_ESCAPE);
     }
 }

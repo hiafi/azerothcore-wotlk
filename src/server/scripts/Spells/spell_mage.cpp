@@ -41,7 +41,6 @@
 enum MageSpells
 {
     SPELL_MAGE_ARCANE_MISSILES_R1                = 5143,
-    SPELL_MAGE_BLAZING_SPEED                     = 31643,
     SPELL_MAGE_MAGIC_ABSORPTION_MANA             = 29442,
     SPELL_MAGE_BURNOUT_TRIGGER                   = 44450,
     SPELL_MAGE_IMPROVED_BLIZZARD_CHILLED         = 12486,
@@ -181,7 +180,28 @@ enum MageSpells
     SPELL_MAGE_METEOR                            = 200095,
     SPELL_MAGE_METEOR_IMPACT                     = 200096,
     SPELL_MAGE_KINDLING                          = 200097,
-    SPELL_MAGE_IGNITE_TICK                       = 200098
+    SPELL_MAGE_IGNITE_TICK                       = 200098,
+
+    // Phase 3 - new spells, reserved block 200000-209999.
+    SPELL_MAGE_FLAME_THROWING_LOCKOUT            = 200112,
+    SPELL_MAGE_BLAZING_SPEED_ESCAPE              = 200113,
+    SPELL_MAGE_BLAZING_SPEED_ESCAPE_ICD          = 200114,
+    SPELL_MAGE_BURNOUT_DAMAGE_BUFF               = 200115,
+    SPELL_MAGE_BURNOUT_EXPLOSION                 = 200116,
+    SPELL_MAGE_BURNOUT_EXPLOSION_ICD             = 200117,
+    SPELL_MAGE_FANNED_FLAMES_READY               = 200118,
+    SPELL_MAGE_FANNED_FLAMES_ICD                 = 200120,
+    SPELL_MAGE_FLASHPOINT_DAMAGE                 = 200119,
+
+    // Phase 3 - real stock/talent-rank IDs the new scripts need by name.
+    SPELL_MAGE_SCORCH                            = 2948,
+    SPELL_MAGE_FLAMESTRIKE                       = 2120,
+    SPELL_MAGE_FIREBALL                          = 133,
+    SPELL_MAGE_FLAME_THROWING_R2                 = 12353,
+    SPELL_MAGE_FLASHPOINT                        = 200111,
+    SPELL_MAGE_PYROBLAST                          = 11366,
+    SPELL_MAGE_DRAGONS_BREATH                    = 31661,
+    SPELL_MAGE_FIRESTARTER_BUFF                  = 54741
 };
 
 // Fire Mage rework sec 2 - Meteor "lands at the target location after 3 sec".
@@ -210,7 +230,18 @@ enum MageSpellIcons
     MAGE_ICON_INCANTERS_ABSORPTION                = 2941,
 
     // Phase 3 Batch D.
-    MAGE_ICON_NETHERWIND_PRESENCE                 = 2943
+    MAGE_ICON_NETHERWIND_PRESENCE                 = 2943,
+
+    // Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 3 - marker-aura-by-icon idiom,
+    // each icon reused from the talent's own real SpellIconID (apps/dbc-tools mage_trigger_spells.py).
+    MAGE_ICON_IMPACT_CRATER                       = 1137,
+    MAGE_ICON_TINDERBOX                           = 3170,
+    MAGE_ICON_FANNED_FLAMES                       = 3173,
+    MAGE_ICON_PYROMANIAC                          = 2128,
+    MAGE_ICON_EMPOWERED_FIRE                      = 185,
+    MAGE_ICON_BURNOUT                             = 2998,
+    MAGE_ICON_BLAZING_SPEED                       = 2127,
+    MAGE_ICON_HOT_STREAK                           = 2999
 };
 
 /*
@@ -1543,25 +1574,9 @@ class spell_mage_glyph_of_eternal_water : public AuraScript
     }
 };
 
-    class spell_mage_combustion_proc : public AuraScript
-    {
-        PrepareAuraScript(spell_mage_combustion_proc);
-
-    bool Validate(SpellInfo const* /*spellInfo*/) override
-    {
-        return ValidateSpellInfo({ SPELL_MAGE_COMBUSTION });
-    }
-
-        void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
-        {
-            GetTarget()->RemoveAurasDueToSpell(SPELL_MAGE_COMBUSTION);
-        }
-
-        void Register() override
-        {
-            AfterEffectRemove += AuraEffectRemoveFn(spell_mage_combustion_proc::OnRemove, EFFECT_0, SPELL_AURA_ADD_FLAT_MODIFIER, AURA_EFFECT_HANDLE_REAL);
-        }
-    };
+// Fire Mage rework sec 5 (6,1) Combustion - spell_mage_combustion_proc (bound to the old
+// 3-charge stack buff, 28682) removed alongside spell_mage_combustion for the same reason; its
+// spell_script_names row ships in the same hand-written DELETE.
 
 // Incanter's Absorbtion
 class spell_mage_incanters_absorbtion_base_AuraScript : public AuraScript
@@ -1899,6 +1914,13 @@ class spell_mage_ignite : public AuraScript
         if (spellInfo->Id == SPELL_MAGE_IGNITE_TICK)
             return false;
 
+        // Fanned Flames (7,1) - a buffed Scorch banks 100% of its damage itself
+        // (spell_mage_scorch), regardless of crit. Excluded here so a crit on that same cast
+        // doesn't ALSO bank the normal 17/33/50% share on top - sec 6 (7,1): "the rate is
+        // unconditional, not the amount."
+        if (spellInfo->Id == SPELL_MAGE_SCORCH && eventInfo.GetActor()->HasAura(SPELL_MAGE_FANNED_FLAMES_READY))
+            return false;
+
         return true;
     }
 
@@ -1906,6 +1928,16 @@ class spell_mage_ignite : public AuraScript
     {
         PreventDefaultAction();
         uint32 amount = CalculatePct(eventInfo.GetDamageInfo()->GetDamage(), aurEff->GetAmount());
+
+        // Fire Mage rework sec 5 (9,1) Pyromaniac - "Your Fireball critical strikes contribute an
+        // additional 25/50/75% to your Ignite." Multiplies the share this Fireball crit just
+        // banked; doesn't change Ignite's own duration/tick count (sec 6, (9,1) as originally
+        // filed under "Burnout" heading - content matched by talent name, see sec 5 vs 6 note).
+        SpellInfo const* triggerSpell = eventInfo.GetDamageInfo()->GetSpellInfo();
+        if (triggerSpell->SpellFamilyFlags[0] & 0x1) // Fireball
+            if (AuraEffect const* pyromaniac = eventInfo.GetActor()->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_MAGE, MAGE_ICON_PYROMANIAC, EFFECT_1))
+                amount += CalculatePct(amount, pyromaniac->GetAmount());
+
         Mage::AddIgniteDamage(eventInfo.GetActor(), eventInfo.GetProcTarget(), amount);
     }
 
@@ -1938,7 +1970,16 @@ class spell_mage_ignite_dot : public AuraScript
 
         int32 damage = int32(Mage::TakeIgniteTick(caster, target, GetAura()));
         if (damage > 0)
+        {
             caster->CastCustomSpell(SPELL_MAGE_IGNITE_TICK, SPELLVALUE_BASE_POINT0, damage, target, true, nullptr, aurEff);
+
+            // Fire Mage rework sec 5 (5,0) Tinderbox - "Each time your Ignite deals damage, it has
+            // a 5/10% chance to grant Kindling," rolled per Ignite instance (i.e. per target,
+            // sec 4.2's "multi-dotted targets each roll independently").
+            if (AuraEffect const* tinderbox = caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_MAGE, MAGE_ICON_TINDERBOX, EFFECT_2))
+                if (roll_chance_i(tinderbox->GetAmount()))
+                    Mage::GrantKindling(caster, 1);
+        }
     }
 
     void AfterRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
@@ -1987,6 +2028,422 @@ class spell_mage_meteor : public SpellScript
     }
 };
 
+// 200096 - Meteor Impact
+// Fire Mage rework sec 5 (2,1) Impact Crater - "Your Meteor grants 1 Kindling for each enemy it
+// strikes, up to 5/10... Stacks are granted on impact only, not on the ground burn" (sec 6, (2,1)).
+// Counts real hits on the SCHOOL_DAMAGE impact effect (EFFECT_0) during this one cast, then grants
+// min(hits, cap) once the cast is fully resolved - not per-target-as-hit, so a cap of 5 against 8
+// targets grants exactly 5, not 8 capped-per-call (which GrantKindling's own signature already
+// supports directly, but counting first keeps this cast's grant a single, atomic call).
+class spell_mage_meteor_impact : public SpellScript
+{
+    PrepareSpellScript(spell_mage_meteor_impact);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_KINDLING });
+    }
+
+    void CountHit(SpellEffIndex /*effIndex*/)
+    {
+        ++_hits;
+    }
+
+    void GrantKindlingOnCast()
+    {
+        if (!_hits)
+            return;
+
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+
+        AuraEffect const* marker = caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_MAGE, MAGE_ICON_IMPACT_CRATER, EFFECT_1);
+        if (!marker)
+            return;
+
+        Mage::GrantKindling(caster, std::min<uint32>(_hits, uint32(marker->GetAmount())));
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_mage_meteor_impact::CountHit, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
+        AfterCast += SpellCastFn(spell_mage_meteor_impact::GrantKindlingOnCast);
+    }
+
+private:
+    uint32 _hits = 0;
+};
+
+// 12353 - Flame Throwing (rank 2)
+// Fire Mage rework sec 5 (2,0) Flame Throwing capstone - "The cast time of your Fireball is
+// reduced by 20%. This effect becomes inactive for 12 sec after use" (user call 2026-09-15:
+// consumed by a Fireball that actually benefited, not any Fireball cast). EFFECT_1's -20%
+// SPELLMOD_CASTING_TIME (Phase 2 data) is a normal aura effect, but Player::ApplySpellMod reads a
+// *cached* SpellModifier::value (set by AuraEffect::CalculateSpellMod, itself only re-run when
+// ChangeAmount()/RecalculateAmount() actually fires) rather than live-reading GetAmount() per cast
+// - unlike the read-only DUMMY-marker idiom used everywhere else in this file. This script's
+// DoEffectCalcAmount makes that cached value track the lockout live; spell_mage_fireball (below)
+// is what actually triggers the two recalculations (lockout applied / lockout expired).
+class spell_mage_flame_throwing_capstone : public AuraScript
+{
+    PrepareAuraScript(spell_mage_flame_throwing_capstone);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_FLAME_THROWING_LOCKOUT });
+    }
+
+    void CalcCastTimeReduction(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
+    {
+        if (Unit* target = GetUnitOwner())
+            if (target->HasAura(SPELL_MAGE_FLAME_THROWING_LOCKOUT))
+                amount = 0;
+    }
+
+    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_mage_flame_throwing_capstone::CalcCastTimeReduction, EFFECT_1, SPELL_AURA_ADD_PCT_MODIFIER);
+    }
+};
+
+// 133 - Fireball
+class spell_mage_fireball : public SpellScript
+{
+    PrepareSpellScript(spell_mage_fireball);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_FLAME_THROWING_R2, SPELL_MAGE_FLAME_THROWING_LOCKOUT });
+    }
+
+    // AfterCast (not OnCast/before-cast) - m_casttime for THIS cast was already fixed at
+    // Spell::prepare() using whatever the rank 2 aura's cached SpellModifier said at that moment.
+    // If the lockout wasn't up then (and still isn't now, since only this hook ever applies it),
+    // this cast must have benefited from the -20% - apply the lockout and force the rank 2 aura's
+    // cached value to recalculate to 0 for the *next* cast attempt.
+    void ApplyFlameThrowingLockout()
+    {
+        Unit* caster = GetCaster();
+        if (!caster || !caster->HasAura(SPELL_MAGE_FLAME_THROWING_R2) || caster->HasAura(SPELL_MAGE_FLAME_THROWING_LOCKOUT))
+            return;
+
+        caster->CastSpell(caster, SPELL_MAGE_FLAME_THROWING_LOCKOUT, true);
+        if (Aura* rank2 = caster->GetAura(SPELL_MAGE_FLAME_THROWING_R2))
+            if (AuraEffect* castTimeEffect = rank2->GetEffect(EFFECT_1))
+                castTimeEffect->RecalculateAmount();
+    }
+
+    void Register() override
+    {
+        AfterCast += SpellCastFn(spell_mage_fireball::ApplyFlameThrowingLockout);
+    }
+};
+
+// 200112 - Flame Throwing Lockout
+// The other half of spell_mage_flame_throwing_capstone's live recalculation: when the 12s lockout
+// naturally expires, force rank 2's cast-time effect to recalculate back to -20% for the mage's
+// next Fireball. Nothing else watches for this aura's expiry.
+class spell_mage_flame_throwing_lockout : public AuraScript
+{
+    PrepareAuraScript(spell_mage_flame_throwing_lockout);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_FLAME_THROWING_R2 });
+    }
+
+    void OnExpire(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        Unit* target = GetTarget();
+        if (!target)
+            return;
+        if (Aura* rank2 = target->GetAura(SPELL_MAGE_FLAME_THROWING_R2))
+            if (AuraEffect* castTimeEffect = rank2->GetEffect(EFFECT_1))
+                castTimeEffect->RecalculateAmount();
+    }
+
+    void Register() override
+    {
+        AfterEffectRemove += AuraEffectRemoveFn(spell_mage_flame_throwing_lockout::OnExpire, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+// -31638 - Playing with Fire
+// Fire Mage rework sec 5 (4,0) Playing with Fire - "Each spell you cast that deals direct magic
+// damage reduces the cooldown of your Dragon's Breath by 1 sec, doubled when dealing a critical
+// strike. Dragon's Breath cannot reduce its own cooldown" (also sec 6, (4,0): "once per cast, not
+// once per target hit"). Bound to the whole 3-rank chain (any rank grants this, magnitude doesn't
+// scale with rank) via -31638; anchored on EFFECT_0 (MOD_DAMAGE_PERCENT_DONE) purely as a dispatch
+// point, same "any real effect on the spell works as the anchor" idiom this file already uses for
+// Master of Elements/Empowered Fire.
+class spell_mage_playing_with_fire : public AuraScript
+{
+    PrepareAuraScript(spell_mage_playing_with_fire);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_DRAGONS_BREATH });
+    }
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        DamageInfo* damageInfo = eventInfo.GetDamageInfo();
+        if (!damageInfo || !damageInfo->GetSpellInfo() || !damageInfo->GetDamage())
+            return false;
+        if (eventInfo.GetTypeMask() & PROC_FLAG_DONE_PERIODIC)
+            return false;
+
+        SpellInfo const* spellInfo = damageInfo->GetSpellInfo();
+        if (spellInfo->DmgClass != SPELL_DAMAGE_CLASS_MAGIC)
+            return false;
+        // Dragon's Breath cannot reduce its own cooldown.
+        if (spellInfo->Id == SPELL_MAGE_DRAGONS_BREATH)
+            return false;
+
+        return true;
+    }
+
+    // "once per cast, not once per target hit" - OnProc (once per Spell::cast(), regardless of how
+    // many targets the ProcEventInfo's own damageInfo covers) rather than OnEffectProc, which would
+    // fire once per matching effect per target for a multi-target spell like Flamestrike.
+    void HandleProc(ProcEventInfo& eventInfo)
+    {
+        Player* caster = eventInfo.GetActor()->ToPlayer();
+        if (!caster)
+            return;
+
+        int32 reduction = (eventInfo.GetHitMask() & PROC_HIT_CRITICAL) ? -2000 : -1000;
+        caster->ModifySpellCooldown(SPELL_MAGE_DRAGONS_BREATH, reduction);
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_mage_playing_with_fire::CheckProc);
+        OnProc += AuraProcFn(spell_mage_playing_with_fire::HandleProc);
+    }
+};
+
+// -44449 - Burnout
+// Fire Mage rework sec 5 (6,0) Burnout capstone (rank 3 only - EFFECT_1's DUMMY marker on THIS
+// SAME aura instance is 0 on ranks 1/2, 1 on rank 3, so CheckProc rejects ranks 1/2 without an
+// icon lookup) - "Dealing direct Fire damage to targets afflicted by your Ignite increases your
+// spell damage by 6% for 8 sec. Dealing direct magic non-Fire damage to targets affected by your
+// Ignite causes an explosion, dealing damage to all nearby enemies."
+class spell_mage_burnout_capstone : public AuraScript
+{
+    PrepareAuraScript(spell_mage_burnout_capstone);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_BURNOUT_DAMAGE_BUFF, SPELL_MAGE_BURNOUT_EXPLOSION, SPELL_MAGE_BURNOUT_EXPLOSION_ICD });
+    }
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        AuraEffect const* capstone = GetEffect(EFFECT_1);
+        if (!capstone || !capstone->GetAmount())
+            return false;
+
+        DamageInfo* damageInfo = eventInfo.GetDamageInfo();
+        if (!damageInfo || !damageInfo->GetSpellInfo() || !damageInfo->GetDamage())
+            return false;
+        if (eventInfo.GetTypeMask() & PROC_FLAG_DONE_PERIODIC)
+            return false;
+
+        return damageInfo->GetSpellInfo()->DmgClass == SPELL_DAMAGE_CLASS_MAGIC;
+    }
+
+    void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
+    {
+        PreventDefaultAction();
+
+        Unit* caster = eventInfo.GetActor();
+        Unit* target = eventInfo.GetProcTarget();
+        if (!caster || !target)
+            return;
+
+        // Both clauses require the target to actually be afflicted by the caster's own Ignite.
+        if (!Mage::GetIgniteRemaining(caster, target))
+            return;
+
+        SpellInfo const* spellInfo = eventInfo.GetDamageInfo()->GetSpellInfo();
+        if (spellInfo->GetSchoolMask() & SPELL_SCHOOL_MASK_FIRE)
+        {
+            caster->CastSpell(caster, SPELL_MAGE_BURNOUT_DAMAGE_BUFF, true);
+            return;
+        }
+
+        // Non-Fire magic damage - the explosion, 6 sec ICD (user call 2026-09-15), 50% of the
+        // bank, bank not consumed.
+        if (caster->HasAura(SPELL_MAGE_BURNOUT_EXPLOSION_ICD))
+            return;
+
+        uint32 damage = CalculatePct(Mage::GetIgniteRemaining(caster, target), 50);
+        if (!damage)
+            return;
+
+        caster->CastSpell(caster, SPELL_MAGE_BURNOUT_EXPLOSION_ICD, true);
+        caster->CastCustomSpell(SPELL_MAGE_BURNOUT_EXPLOSION, SPELLVALUE_BASE_POINT0, int32(damage), target, true);
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_mage_burnout_capstone::CheckProc);
+        OnEffectProc += AuraEffectProcFn(spell_mage_burnout_capstone::HandleProc, EFFECT_0, SPELL_AURA_ADD_PCT_MODIFIER);
+    }
+};
+
+// 200107 - Blazing Speed (rank 3)
+// Fire Mage rework sec 5 (7,0) Blazing Speed capstone - "Taking direct damage while below 35%
+// health dispels all movement impairing effects and increases your movement speed by 50% and your
+// haste by 20% for 6 sec. While active, you can cast non-channeled Fire spells while moving. This
+// effect can only occur every 30 sec." Bound to rank 3 alone (200107 is the only rank with proc
+// fields set - Phase 3 data). The cast-while-moving half is Mage::CanCastWhileMoving (Spell.cpp
+// hook), not this script.
+class spell_mage_blazing_speed_capstone : public AuraScript
+{
+    PrepareAuraScript(spell_mage_blazing_speed_capstone);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_BLAZING_SPEED_ESCAPE, SPELL_MAGE_BLAZING_SPEED_ESCAPE_ICD });
+    }
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        DamageInfo* damageInfo = eventInfo.GetDamageInfo();
+        if (!damageInfo || !damageInfo->GetDamage())
+            return false;
+        if (eventInfo.GetTypeMask() & PROC_FLAG_DONE_PERIODIC)
+            return false;
+
+        Unit* target = GetTarget();
+        if (!target->HealthBelowPct(35))
+            return false;
+
+        return !target->HasAura(SPELL_MAGE_BLAZING_SPEED_ESCAPE_ICD);
+    }
+
+    void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& /*eventInfo*/)
+    {
+        PreventDefaultAction();
+
+        Unit* target = GetTarget();
+        target->RemoveMovementImpairingAuras(true);
+        target->CastSpell(target, SPELL_MAGE_BLAZING_SPEED_ESCAPE, true);
+        target->CastSpell(target, SPELL_MAGE_BLAZING_SPEED_ESCAPE_ICD, true);
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_mage_blazing_speed_capstone::CheckProc);
+        OnEffectProc += AuraEffectProcFn(spell_mage_blazing_speed_capstone::HandleProc, EFFECT_2, SPELL_AURA_DUMMY);
+    }
+};
+
+// 2948 - Scorch
+// Fire Mage rework sec 5 (7,1) Fanned Flames - "This Scorch adds 100% of its damage to your
+// Ignite even if it does not critically strike." Instant cast + 100% increased damage themselves
+// are plain SpellMods on the buff (200118); this script only handles what SpellMods can't: the
+// non-crit-conditional Ignite banking, and consuming the buff (ProcCharges=0, same as Firestarter/
+// Hot Streak's Pyroblast - see those scripts' own comments).
+class spell_mage_scorch : public SpellScript
+{
+    PrepareSpellScript(spell_mage_scorch);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_FANNED_FLAMES_READY });
+    }
+
+    void HandleFannedFlamesBanking(SpellEffIndex /*effIndex*/)
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetHitUnit();
+        if (!caster || !target || !caster->HasAura(SPELL_MAGE_FANNED_FLAMES_READY))
+            return;
+
+        int32 damage = GetHitDamage();
+        if (damage > 0)
+            Mage::AddIgniteDamage(caster, target, uint32(damage));
+    }
+
+    void ConsumeFannedFlames()
+    {
+        Unit* caster = GetCaster();
+        if (caster && caster->HasAura(SPELL_MAGE_FANNED_FLAMES_READY))
+            caster->RemoveAurasDueToSpell(SPELL_MAGE_FANNED_FLAMES_READY);
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_mage_scorch::HandleFannedFlamesBanking, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
+        AfterCast += SpellCastFn(spell_mage_scorch::ConsumeFannedFlames);
+    }
+};
+
+// 2120 - Flamestrike
+// Fire Mage rework sec 5 (8,0) Firestarter capstone - the instant/free/+30% damage buff (54741) is
+// plain SpellMods (ProcCharges=0), so this script's only job is consuming it after the cast it
+// empowered - same pattern as spell_mage_scorch/spell_mage_pyroblast above.
+class spell_mage_flamestrike : public SpellScript
+{
+    PrepareSpellScript(spell_mage_flamestrike);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_FIRESTARTER_BUFF });
+    }
+
+    void ConsumeFirestarter()
+    {
+        Unit* caster = GetCaster();
+        if (caster && caster->HasAura(SPELL_MAGE_FIRESTARTER_BUFF))
+            caster->RemoveAurasDueToSpell(SPELL_MAGE_FIRESTARTER_BUFF);
+    }
+
+    void Register() override
+    {
+        AfterCast += SpellCastFn(spell_mage_flamestrike::ConsumeFirestarter);
+    }
+};
+
+// 200111 - Flashpoint
+// Fire Mage rework sec 5 (10,1) Flashpoint - "Detonates your Ignite on the target, dealing 5 times
+// its remaining damage instantly and half that amount to all enemies within 8 yards. This damage
+// cannot be a critical strike... Consumes the Ignite entirely."
+class spell_mage_flashpoint : public SpellScript
+{
+    PrepareSpellScript(spell_mage_flashpoint);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_FLASHPOINT_DAMAGE });
+    }
+
+    void HandleDetonate(SpellEffIndex /*effIndex*/)
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetHitUnit();
+        if (!caster || !target)
+            return;
+
+        uint32 bank = Mage::ConsumeIgnite(caster, target);
+        if (!bank)
+            return;
+
+        int32 primary = int32(bank * 5);
+        int32 splash = primary / 2;
+        caster->CastCustomSpell(target, SPELL_MAGE_FLASHPOINT_DAMAGE, &primary, &splash, nullptr, true);
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_mage_flashpoint::HandleDetonate, EFFECT_0, SPELL_EFFECT_DUMMY);
+    }
+};
+
 // -44457 - Living Bomb
 class spell_mage_living_bomb : public AuraScript
 {
@@ -1996,7 +2453,7 @@ class spell_mage_living_bomb : public AuraScript
     {
         if (!sSpellMgr->GetSpellInfo(uint32(spell->Effects[EFFECT_1].CalcValue())))
             return false;
-        return true;
+        return ValidateSpellInfo({ SPELL_MAGE_FANNED_FLAMES_READY, SPELL_MAGE_FANNED_FLAMES_ICD });
     }
 
     void AfterRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
@@ -2009,9 +2466,38 @@ class spell_mage_living_bomb : public AuraScript
             caster->CastSpell(GetTarget(), uint32(aurEff->GetAmount()), true, nullptr, aurEff);
     }
 
+    // Fire Mage rework sec 5 (7,1) Fanned Flames - "Your Living Bomb periodic damage has a
+    // 15/30/45% chance to make your next Scorch instant cast and deal 100% increased damage."
+    // Icon 3173, 2.5 sec ICD (deliberately below Living Bomb's 3 sec tick interval - sec 6 (7,1) -
+    // so consecutive ticks on the same target don't collide on one ICD window). Living Bomb has no
+    // target cap, so per-target-per-tick rolling is itself the AoE throttle.
+    void HandleFannedFlames(AuraEffect const* /*aurEff*/)
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+
+        AuraEffect const* marker = caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_MAGE, MAGE_ICON_FANNED_FLAMES, EFFECT_0);
+        if (!marker || !marker->GetAmount())
+            return;
+
+        // Hidden self-buff ICD (200120, checked via HasAura), same idiom as Netherwind Presence's
+        // own 30s marker (200091) - not a plain cooldown-check because this needs a *duration*
+        // shorter than Living Bomb's own tick interval, not a per-spell-id cooldown.
+        if (caster->HasAura(SPELL_MAGE_FANNED_FLAMES_ICD))
+            return;
+
+        if (!roll_chance_i(marker->GetAmount()))
+            return;
+
+        caster->CastSpell(caster, SPELL_MAGE_FANNED_FLAMES_ICD, true);
+        caster->CastSpell(caster, SPELL_MAGE_FANNED_FLAMES_READY, true);
+    }
+
     void Register() override
     {
         AfterEffectRemove += AuraEffectRemoveFn(spell_mage_living_bomb::AfterRemove, EFFECT_1, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_mage_living_bomb::HandleFannedFlames, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE);
     }
 };
 
@@ -2325,40 +2811,13 @@ class spell_mage_arcane_potency : public AuraScript
     }
 };
 
-// 11129 - Combustion
-class spell_mage_combustion : public AuraScript
-{
-    PrepareAuraScript(spell_mage_combustion);
-
-    bool Validate(SpellInfo const* /*spellInfo*/) override
-    {
-        return ValidateSpellInfo({ SPELL_MAGE_COMBUSTION_PROC });
-    }
-
-    bool CheckProc(ProcEventInfo& eventInfo)
-    {
-        // Do not take charges, add a stack of crit buff
-        if (!(eventInfo.GetHitMask() & PROC_HIT_CRITICAL))
-        {
-            // Applying the stack mutates the actor's aura map while the proc engine iterates
-            // it (this hook runs from Aura::GetProcEffectMask); defer it so the insert can't
-            // invalidate the live iterator (aura containers are flat_multimaps).
-            Unit* actor = eventInfo.GetActor();
-            actor->m_Events.AddEventAtOffset([actor]()
-            {
-                actor->CastSpell(static_cast<Unit*>(nullptr), SPELL_MAGE_COMBUSTION_PROC, true);
-            }, 1ms);
-            return false;
-        }
-
-        return true;
-    }
-
-    void Register() override
-    {
-        DoCheckProc += AuraCheckProcFn(spell_mage_combustion::CheckProc);
-    }
-};
+// Fire Mage rework sec 5 (6,1) Combustion - "fully replaces the original charge-based version...
+// the old 'lasts until 3 non-periodic critical strikes' behavior is removed" (sec 6, (6,1)).
+// Combustion is now a fixed 10 sec buff (crit chance + crit damage bonus, both plain SpellMods on
+// its own aura, Phase 2 data) with no stacking/consumption logic left to script - the old
+// spell_mage_combustion class (and its dependency on SPELL_MAGE_COMBUSTION_PROC, 28682) is removed
+// outright rather than left dead. Its spell_script_names row is base client data (not owned by the
+// DSL); a hand-written DELETE for it ships in the same pending migration as this change.
 
 // -31656 - Empowered Fire
 class spell_mage_empowered_fire : public AuraScript
@@ -2388,9 +2847,18 @@ class spell_mage_empowered_fire : public AuraScript
         PreventDefaultAction();
 
         Unit* target = GetTarget();
-        // Calculate mana restored: 2% of base mana (percent value comes from spell 67545 effect 0)
-        uint32 percent = sSpellMgr->GetSpellInfo(SPELL_MAGE_EMPOWERED_FIRE_PROC)->Effects[EFFECT_0].CalcValue();
-        int32 mana = int32(CalculatePct(target->GetCreateMana(), percent));
+
+        // Fire Mage rework sec 5 (7,2) Empowered Fire - "Each time your Ignite talent causes
+        // damage, you have a 33/66/100% chance to regain 1% of your base mana." Chance is
+        // EFFECT_1's DUMMY marker (Phase 2 data) on THIS SAME aura (whichever rank is actually
+        // talented - GetEffect, not a separate icon lookup, since aurEff already IS that rank's
+        // instance); 1% is fixed regardless of rank (sec 6 (7,2): "reduced from 2% to 1% of base
+        // mana... because Ignite's tick rate doubled").
+        AuraEffect const* chanceMarker = GetEffect(EFFECT_1);
+        if (!chanceMarker || !roll_chance_i(chanceMarker->GetAmount()))
+            return;
+
+        int32 mana = int32(CalculatePct(target->GetCreateMana(), 1));
         target->CastCustomSpell(SPELL_MAGE_EMPOWERED_FIRE_PROC, SPELLVALUE_BASE_POINT0, mana, target, true, nullptr, aurEff);
     }
 
@@ -2558,12 +3026,15 @@ class spell_mage_hot_streak : public AuraScript
         // Crit - increment counter
         ++_critStreak;
 
-        // Two crits in a row - proc Hot Streak if chance succeeds
+        // Fire Mage rework sec 5 (8,2) Hot Streak - "Any time you score 2 non-periodic spell
+        // criticals in a row..." is now unconditional (sec 6, (9,1)/Burnout note aside, this
+        // talent's own aurEff->GetAmount() is repurposed as the Mastery-scaling % consumed by
+        // Pyroblast - Mage::ApplyDoneDamagePctMods/ApplySpellCritChanceMods - not a proc-chance
+        // roll any more).
         if (_critStreak >= 2)
         {
             _critStreak = 0;
-            if (roll_chance_i(aurEff->GetAmount()))
-                GetTarget()->CastSpell(GetTarget(), SPELL_MAGE_HOT_STREAK_PROC, true, nullptr, aurEff);
+            GetTarget()->CastSpell(GetTarget(), SPELL_MAGE_HOT_STREAK_PROC, true, nullptr, aurEff);
         }
     }
 
@@ -2574,6 +3045,35 @@ class spell_mage_hot_streak : public AuraScript
 
 private:
     uint8 _critStreak = 0;
+};
+
+// 11366 - Pyroblast
+// Fire Mage rework sec 5 (8,2) Hot Streak - the free Pyroblast's always-crit (Mage::
+// ApplySpellCritChanceMods) and Mastery-scaled bonus damage (Mage::ApplyDoneDamagePctMods) are
+// both live reads of HasAura(SPELL_MAGE_HOT_STREAK_PROC) from Unit.cpp/StatSystem hooks - this
+// script's only job is consuming that buff after the cast it empowered, same non-charge-consumed
+// pattern as Firestarter (54741) and Fanned Flames (200118): the buff's own ProcCharges is 0, so
+// nothing removes it automatically.
+class spell_mage_pyroblast : public SpellScript
+{
+    PrepareSpellScript(spell_mage_pyroblast);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_HOT_STREAK_PROC });
+    }
+
+    void ConsumeHotStreak()
+    {
+        Unit* caster = GetCaster();
+        if (caster && caster->HasAura(SPELL_MAGE_HOT_STREAK_PROC))
+            caster->RemoveAurasDueToSpell(SPELL_MAGE_HOT_STREAK_PROC);
+    }
+
+    void Register() override
+    {
+        AfterCast += SpellCastFn(spell_mage_pyroblast::ConsumeHotStreak);
+    }
 };
 
 // -11185 - Improved Blizzard
@@ -2761,28 +3261,12 @@ class spell_mage_magic_absorption : public AuraScript
     }
 };
 
-// -31641 - Blazing Speed
-class spell_mage_blazing_speed : public AuraScript
-{
-    PrepareAuraScript(spell_mage_blazing_speed);
-
-    bool Validate(SpellInfo const* /*spellInfo*/) override
-    {
-        return ValidateSpellInfo({ SPELL_MAGE_BLAZING_SPEED });
-    }
-
-    void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
-    {
-        PreventDefaultAction();
-        if (Unit* target = eventInfo.GetActionTarget())
-            target->CastSpell(target, SPELL_MAGE_BLAZING_SPEED, true, nullptr, aurEff);
-    }
-
-    void Register() override
-    {
-        OnEffectProc += AuraEffectProcFn(spell_mage_blazing_speed::HandleProc, EFFECT_0, SPELL_AURA_PROC_TRIGGER_SPELL);
-    }
-};
+// Fire Mage rework sec 5 (7,0) Blazing Speed - the old proc-trigger escape (stock spell 31643,
+// bound to SPELL_AURA_PROC_TRIGGER_SPELL) is gone from every rank's data as of Phase 2 (now plain
+// passive haste + leech, with the capstone a separate rank-3-only script - see
+// spell_mage_blazing_speed_capstone above). spell_mage_blazing_speed removed outright rather than
+// left dead; its spell_script_names row (base client data, "-31641") is retracted by hand in the
+// same pending migration.
 
 // -5143 - Arcane Missiles
 class spell_mage_arcane_missiles : public AuraScript
@@ -3651,10 +4135,22 @@ void AddSC_mage_spell_scripts()
     RegisterSpellScript(spell_mage_ignite_dot);
     RegisterSpellScript(spell_mage_meteor);
 
+    // Fire Mage rework Phase 3.
+    RegisterSpellScript(spell_mage_meteor_impact);
+    RegisterSpellScript(spell_mage_flame_throwing_capstone);
+    RegisterSpellScript(spell_mage_fireball);
+    RegisterSpellScript(spell_mage_flame_throwing_lockout);
+    RegisterSpellScript(spell_mage_playing_with_fire);
+    RegisterSpellScript(spell_mage_burnout_capstone);
+    RegisterSpellScript(spell_mage_blazing_speed_capstone);
+    RegisterSpellScript(spell_mage_scorch);
+    RegisterSpellScript(spell_mage_flamestrike);
+    RegisterSpellScript(spell_mage_flashpoint);
+    RegisterSpellScript(spell_mage_pyroblast);
+
     RegisterSpellScript(spell_mage_arcane_blast);
     RegisterSpellScript(spell_mage_arcane_missiles);
     RegisterSpellScript(spell_mage_arcane_potency);
-    RegisterSpellScript(spell_mage_blazing_speed);
     RegisterSpellScript(spell_mage_burning_determination);
     RegisterSpellScript(spell_mage_molten_armor);
     RegisterSpellScript(spell_mage_mirror_image);
@@ -3662,9 +4158,7 @@ void AddSC_mage_spell_scripts()
     RegisterSpellScript(spell_mage_burnout_trigger);
     RegisterSpellScript(spell_mage_pet_scaling);
     RegisterSpellScript(spell_mage_brain_freeze);
-    RegisterSpellScript(spell_mage_combustion);
     RegisterSpellScript(spell_mage_glyph_of_eternal_water);
-    RegisterSpellScript(spell_mage_combustion_proc);
     RegisterSpellScript(spell_mage_dragon_breath);
     RegisterSpellScript(spell_mage_empowered_fire);
     RegisterSpellScript(spell_mage_gen_extra_effects);

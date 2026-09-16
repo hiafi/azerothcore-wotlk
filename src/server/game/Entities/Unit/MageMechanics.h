@@ -91,6 +91,17 @@ namespace Mage
     // Kindling (sec 4.2) - grants `stacks` stacks of the Kindling buff (200097) to the mage, capped
     // at the aura's own max stack count. Tinderbox and Impact Crater both feed this one pool.
     void GrantKindling(Unit* caster, uint32 stacks);
+
+    // Fire Blast (sec 3.1) "Always critically strikes" - Unit::SpellDoneCritChance's one Mage-only
+    // special case. Returns true and sets critChance=100 for Fire Blast; leaves critChance
+    // untouched (false) for everything else, so the caller's own computed value survives.
+    bool ApplySpellCritChanceMods(Unit const* caster, SpellInfo const* spellProto, float& critChance);
+
+    // Blazing Speed (7,0) capstone (sec 6, Blazing Speed) "cast non-channeled Fire spells while
+    // moving" - Spell.cpp's two movement-interrupt checks call this instead of hardcoding one
+    // spell/aura pair inline. True only for a non-channeled SPELLFAMILY_MAGE Fire spell while the
+    // escape buff (200113) is up.
+    bool CanCastWhileMoving(Unit const* caster, SpellInfo const* spellInfo);
 }
 
 #endif
