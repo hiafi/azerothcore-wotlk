@@ -4,7 +4,7 @@ Mage - player-castable spells (real cast_time_ms/cooldown_ms, not marked passive
 Split from a single source/classes/mage.py via split_class_file.py (.agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md) - see source/classes/README.md for the multi-file layout and lib/dsl/registry.py's load_class_package for how cross-file references (`from .mage_...` below) resolve.
 """
 
-from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, School
+from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, School, SpellModOp
 from lib.dsl.registry import bonus_coefficients, scripted_by, spell, trained_by
 from .mage_trigger_spells import arcane_blast_debuff, arcane_missile_7268, blizzard_42208, meteor_impact_200096, molten_armor_34913
 
@@ -553,7 +553,7 @@ fire_blast_2136 = spell(
     category=19,
     cast_time_ms=0,
     cooldown_ms=0,
-    category_cooldown_ms=8000,
+    category_cooldown_ms=12000,
     mana_cost=0,
     mana_cost_pct=21,
     range_yards=20.0,
@@ -561,8 +561,8 @@ fire_blast_2136 = spell(
         Effect(type=EffectType.SCHOOL_DAMAGE, base_points=23, points_per_level=16.6852, die_sides=9, implicit_target_a=6),
     ],
     spell_icon_id=12,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 6); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 6, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the enemy for $s1 Fire damage.', 'EffectBonusMultiplier_1': 0.42899999022483826, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2, 'SpellClassSet': 3, 'SpellLevel': 6, 'SpellPriority': 50, 'SpellVisualID_1': 143, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 sec 3.1: category cooldown 12 sec (was 8). 'Always critically strikes' is Mage::ApplySpellCritChanceMods (Phase 3) - there is no DBC attribute for a guaranteed crit.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 6, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the enemy for $s1 Fire damage. Always critically strikes.', 'EffectBonusMultiplier_1': 0.42899999022483826, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2, 'SpellClassSet': 3, 'SpellLevel': 6, 'SpellPriority': 50, 'SpellVisualID_1': 143, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -2039,11 +2039,10 @@ blast_wave_11113 = spell(
     effects=[
         Effect(type=EffectType.SCHOOL_DAMAGE, base_points=153, points_per_level=10.2667, die_sides=33, implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
         Effect(type=EffectType.APPLY_AURA, base_points=-51, mechanic=Mechanic.SNARE, implicit_target_a=22, implicit_target_b=15, apply_aura=AuraType.MOD_DECREASE_SPEED, radius_yards=10.0),
-        Effect(type=EffectType.KNOCK_BACK, base_points=79, implicit_target_a=22, implicit_target_b=15, misc_value=100, radius_yards=10.0),
     ],
     spell_icon_id=292,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 30); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Dazed.', 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A wave of flame radiates outward from the caster, damaging all enemies caught within the blast for $s1 Fire damage, knocking them back and dazing them for $d.', 'EffectBonusMultiplier_1': 0.19300000369548798, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 64, 'SpellClassSet': 3, 'SpellLevel': 30, 'SpellPriority': 50, 'SpellVisualID_1': 963, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 sec 3.2: knockback effect (stock Effect_3) removed, daze kept, self-centered 10 yd, 30 sec cooldown unchanged. spell_mage_blast_wave's glyph-knockback hook now simply never fires.",
+    raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Dazed.', 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A wave of flame radiates outward from the caster, damaging all enemies caught within the blast for $s1 Fire damage and dazing them for $d.', 'EffectBonusMultiplier_1': 0.19300000369548798, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 64, 'SpellClassSet': 3, 'SpellLevel': 30, 'SpellPriority': 50, 'SpellVisualID_1': 963, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -2198,14 +2197,14 @@ combustion_11129 = spell(
     mana_cost=0,
     mana_cost_pct=0,
     range_yards=0.0,
-    duration_ms=-1,
+    duration_ms=10000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=108, misc_value=15),
-        Effect(type=EffectType.TRIGGER_SPELL, die_sides=0, implicit_target_a=1, trigger_spell=28682),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CRIT_DAMAGE_BONUS),
+        Effect(type=EffectType.APPLY_AURA, base_points=10, die_sides=0, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
     ],
     spell_icon_id=33,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 268435456, 'AttributesEx3': 67108864, 'AttributesEx4': 524352, 'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 40, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When activated, this spell increases your critical strike damage bonus with Fire damage spells by $s1%, and causes each of your Fire damage spell hits to increase your critical strike chance with Fire damage spells by $28682s1%.  This effect lasts until you have caused $11129n non-periodic critical strikes with Fire spells.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 146800663, 'EffectSpellClassMaskA_2': 200776, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcCharges': 3, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassMask_2': 67108864, 'SpellClassMask_3': 8, 'SpellClassSet': 3, 'SpellLevel': 40, 'SpellPriority': 50, 'SpellVisualID_1': 7634, 'StanceBarOrder': 4294967295},
+    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (6,1): fully replaces the stock charge-based version - fixed 10 sec duration (was until 3 crits), Effect_2 is a flat +10% crit SpellMod on the same Fire classmask Effect_1's crit-damage bonus already used (EffectSpellClassMaskB_* = A_*), no more 28682 stacking trigger / ProcCharges. spell_mage_combustion (the 3-crit remover) is unbound in Phase 3. 2 min RecoveryTime -> Cooldown Haste applies.",
+    raw_overrides={'AttributesEx': 268435456, 'AttributesEx3': 67108864, 'AttributesEx4': 524352, 'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 40, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When activated, increases your critical strike chance with Fire spells by $s2% and your critical strike damage bonus with Fire spells by $s1% for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 146800663, 'EffectSpellClassMaskA_2': 200776, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 67108864, 'SpellClassMask_3': 8, 'SpellClassSet': 3, 'SpellLevel': 40, 'SpellPriority': 50, 'SpellVisualID_1': 7634, 'StanceBarOrder': 4294967295, 'EffectSpellClassMaskB_1': 146800663, 'EffectSpellClassMaskB_2': 200776, 'AuraDescription_Lang_enUS': 'Critical strike chance with Fire spells increased by $s2%, critical strike damage bonus with Fire spells increased by $s1%.'},
 )
 
 
@@ -2395,3 +2394,23 @@ scripted_by(meteor_200095, 'spell_mage_meteor')
 trained_by(meteor_200095, trainer_id=212, req_level=58, money_cost=200000)
 bonus_coefficients(meteor_impact_200096, direct=0.3, dot=0.15,
                    comment='Mage - Meteor impact / ground burn (fire-mage-rework.md sec 2; dot is per tick, same convention as Flamestrike)')
+
+
+flashpoint_200111 = spell(
+    id=200111,
+    name='Flashpoint',
+    school=School.FIRE,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=45000,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=10,
+    range_yards=40.0,
+    effects=[
+        Effect(type=EffectType.DUMMY, implicit_target_a=6),
+    ],
+    spell_icon_id=1197,
+    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (10,1): new talent on repurposed stock talent id 1848 (Fiery Payback) - the tree's single 50-point capstone ability. Shell only: instant, 45 sec RecoveryTime (Cooldown Haste applies), 10% base mana (spec gives no cost - user-adjustable), Effect_1 DUMMY on the enemy target. Phase 3's spell_mage_flashpoint consumes the target's whole Ignite bank (Mage::ConsumeIgnite) and deals 5x it, half that to enemies within 8 yd, neither able to crit. Custom dword-2 bit 0x80. Icon 1197 (Cataclysm). Player-castable and talent-granted -> SkillLineAbility 30409 in mage_talents.py.",
+    raw_overrides={'BaseLevel': 60, 'SpellLevel': 60, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'DefenseType': 1, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 8, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 3, 'SpellClassMask_3': 128, 'SpellPriority': 50, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Detonates your Ignite on the target, dealing 5 times its remaining damage instantly and half that amount to all enemies within 8 yards. This damage cannot be a critical strike.', 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
