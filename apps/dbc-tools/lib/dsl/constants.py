@@ -146,3 +146,71 @@ class AuraType(IntEnum):
     PERIODIC_DAMAGE_PERCENT = 89
     MOD_ATTACK_POWER = 99
     MOD_HEALING_PCT = 118
+    MOD_SPELL_HIT_CHANCE = 55
+    MOD_SPELL_CRIT_CHANCE = 57
+    MOD_CASTING_SPEED_NOT_STACK = 65  # the standard passive "+X% spell haste"
+    MOD_SPELL_CRIT_CHANCE_SCHOOL = 71
+    MOD_POWER_COST_SCHOOL_PCT = 72
+    MOD_DAMAGE_PERCENT_DONE = 79
+    ADD_FLAT_MODIFIER = 107  # SpellMod - EffectMiscValue is the SPELLMOD_* op, classmask scopes it
+    ADD_PCT_MODIFIER = 108
+    MOD_SPEED_ALWAYS = 129
+    MOD_CRIT_DAMAGE_BONUS = 163
+    MOD_RATING = 189
+    PERIODIC_DUMMY = 226
+    MOD_CRIT_PCT = 290
+    # Custom aura types this fork added (see each one's comment in SpellAuraDefines.h):
+    MOD_LEECH_PCT = 295  # % of damage dealt returned as health - Unit::GetLeechPercentage
+    MOD_CUSTOM_STAT_PCT = 306  # flat % to one custom stat; misc_value = 1 << CR_* (see CombatRating below)
+
+
+class SpellModOp(IntEnum):
+    """`misc_value` of an `AuraType.ADD_FLAT_MODIFIER`/`ADD_PCT_MODIFIER`
+    effect - which property of the classmask-matched spells it modifies.
+    Transcribed from `SpellModOp` in src/server/game/Spells/SpellDefines.h.
+    Every one of these needs a real `EffectSpellClassMask*` on the same
+    effect slot or it applies to the whole spell family - see
+    apps/dbc-tools/README.md's classmask gotcha and `lib/lint.py`."""
+
+    DAMAGE = 0
+    DURATION = 1
+    THREAT = 2
+    EFFECT1 = 3
+    CHARGES = 4
+    RANGE = 5
+    RADIUS = 6
+    CRITICAL_CHANCE = 7
+    ALL_EFFECTS = 8
+    NOT_LOSE_CASTING_TIME = 9
+    CASTING_TIME = 10
+    COOLDOWN = 11
+    EFFECT2 = 12
+    IGNORE_ARMOR = 13
+    COST = 14
+    CRIT_DAMAGE_BONUS = 15
+    RESIST_MISS_CHANCE = 16
+    JUMP_TARGETS = 17
+    CHANCE_OF_SUCCESS = 18
+    ACTIVATION_TIME = 19
+    DAMAGE_MULTIPLIER = 20
+    GLOBAL_COOLDOWN = 21
+    DOT = 22
+    EFFECT3 = 23
+    BONUS_MULTIPLIER = 24
+    PROC_PER_MINUTE = 26
+    VALUE_MULTIPLIER = 27
+    RESIST_DISPEL_CHANCE = 28
+
+
+class CombatRating(IntEnum):
+    """`CombatRating` in src/server/game/Entities/Unit/Unit.h - the index a
+    `AuraType.MOD_RATING`/`MOD_CUSTOM_STAT_PCT` effect selects through its
+    `misc_value` as a **bit** (`1 << CR_*`), so pass e.g.
+    `misc_value=1 << CombatRating.VERSATILITY`. Only the four custom stats
+    this fork added are named here (they're the only ones a talent has ever
+    needed to grant by aura); the rest are plain stock ratings."""
+
+    PROC_CHANCE = 11  # Custom: was CR_HIT_TAKEN_MELEE
+    MASTERY = 20  # Custom: was CR_WEAPON_SKILL_MAINHAND
+    VERSATILITY = 21  # Custom: was CR_WEAPON_SKILL_OFFHAND
+    COOLDOWN_HASTE = 22  # Custom: was CR_WEAPON_SKILL_RANGED

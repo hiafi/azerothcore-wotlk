@@ -64,6 +64,11 @@ def _read_value(text: str, i: int, terminators: str = ",)") -> tuple[object, int
     while text[j] not in terminators:
         j += 1
     token = text[i:j].strip()
+    if token[:2].lower() == "0x":
+        # MySQL hex literal (`0x10`) - common in hand-written spell_proc rows for
+        # ProcFlags/HitMask. Checked before the float branch since a hex digit
+        # can be 'e'.
+        return int(token, 16), j
     return (float(token) if "." in token or "e" in token.lower() else int(token)), j
 
 

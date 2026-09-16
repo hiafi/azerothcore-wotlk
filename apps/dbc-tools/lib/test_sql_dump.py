@@ -164,6 +164,18 @@ class ReadTableRowsTest(unittest.TestCase):
             rows = sql_dump.read_table_rows(path, "t", ())
         self.assertEqual(rows, [{"A": 1, "B": 2}])
 
+    def test_hex_literals_parse_as_ints(self):
+        # Hand-written spell_proc rows routinely use MySQL hex for
+        # ProcFlags/HitMask (data/sql/updates/db_world/2026_03_09_01.sql:
+        # 0x61401035) - these used to make the whole file unparseable.
+        # `0x1e5` also has to survive the "'e' means float" heuristic.
+        sql = "INSERT INTO `t` (`A`, `B`, `C`) VALUES (0x10, 0x1e5, 0X0);\n"
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "x.sql"
+            path.write_text(sql)
+            rows = sql_dump.read_table_rows(path, "t", ())
+        self.assertEqual(rows, [{"A": 16, "B": 0x1E5, "C": 0}])
+
 
 class ParseCreateTableColumnsTest(unittest.TestCase):
     def test_extracts_columns_in_order(self):

@@ -47,10 +47,13 @@ UNIT_NPC_FLAG_TRAINER = 0x00000010
 _TRAINER_TABLES = ("creature_default_trainer", "trainer_spell", "creature_template", "creature")
 
 
-def _load_table_rows(table_name: str) -> list[dict]:
+def load_table_rows(table_name: str) -> list[dict]:
     """Every INSERT `table_name` has ever appeared in, across the base dump
     and every db_world/pending_db_world migration that mentions it (a cheap
-    substring check before bothering to parse each file).
+    substring check before bothering to parse each file). Public because
+    `lib/spell_tables.py` reuses it for `spell_script_names`/
+    `spell_bonus_data`/`spell_proc` - same union-of-INSERTs semantics and
+    the same "no DELETE replay" limitation from the module docstring.
 
     The base dump is expected to always parse cleanly (confirmed for all
     four tables this module uses - creature/creature_template's base files
@@ -153,4 +156,4 @@ class TrainerIndex:
 
 
 def load_trainer_index() -> TrainerIndex:
-    return TrainerIndex(*(_load_table_rows(name) for name in _TRAINER_TABLES))
+    return TrainerIndex(*(load_table_rows(name) for name in _TRAINER_TABLES))

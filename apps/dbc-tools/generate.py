@@ -36,7 +36,7 @@ TOOL_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOL_ROOT))
 
 from lib import build, dbcfile, dbcfmt, lint, patch_out, resolve, source, sql_out, state  # noqa: E402
-from lib import trainer_state  # noqa: E402
+from lib import spell_tables, trainer_state  # noqa: E402
 from lib.dsl import registry as dsl_registry  # noqa: E402
 from lib.reuse import ReuseContext  # noqa: E402
 
@@ -159,9 +159,14 @@ def main() -> int:
             f"note: source/classes/*.py (DSL) contributed {len(dsl_classes['spells'])} "
             f"spell(s), {len(dsl_classes['talents'])} talent(s), {len(dsl_classes['tabs'])} "
             f"talent tab(s), {len(dsl_classes['skill_line_abilities'])} skill line "
-            f"abilitie(s), {len(dsl_classes['trainer_spells'])} trainer spell grant(s)"
+            f"abilitie(s), {len(dsl_classes['trainer_spells'])} trainer spell grant(s), "
+            + ", ".join(f"{n} {name}" for name, n in spell_tables.count_declared(dsl_classes).items())
         )
     trainer_spell_rows = _trainer_spells_to_emit(dsl_classes["trainer_spells"], trainer_index)
+    # spell_script_names / spell_bonus_data / spell_proc - same
+    # "skip what's already live, DELETE+INSERT the rest" path as trainer_spell,
+    # see lib/spell_tables.py.
+    spell_table_blocks = spell_tables.render_blocks(spell_tables.load_spell_table_index(), dsl_classes)
 
     existing_spells = state.load_existing_rows(dbcfmt.SPELL)
     existing_talents = state.load_existing_rows(dbcfmt.TALENT)
@@ -318,7 +323,9 @@ def main() -> int:
 
     rev = int(time.time() * 1_000_000_000)
     out_path = PENDING_SQL_DIR / f"rev_{rev}.sql"
-    wrote_sql = sql_out.emit_pending_sql(out_path, blocks, header, extra_blocks=[trainer_spell_block])
+    wrote_sql = sql_out.emit_pending_sql(
+        out_path, blocks, header, extra_blocks=[trainer_spell_block, *spell_table_blocks],
+    )
     print(f"SQL: wrote {out_path.relative_to(REPO_ROOT)}" if wrote_sql else "SQL: nothing to emit")
 
     # -- client patch: needs a complete file (base + new), so any table with
