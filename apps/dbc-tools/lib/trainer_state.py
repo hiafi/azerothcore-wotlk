@@ -18,28 +18,80 @@ see that module's docstring): a trainer wiring fix might already exist in a
 not-yet-promoted migration, and treating it as "still missing" here would be
 a false failure for exactly the case this is meant to help with.
 
-**Known limitation**: this is a union of every `INSERT` ever seen for these
-tables across every file scanned - it does NOT replay `DELETE`/`UPDATE`
-statements against them the way `lib/state.py`/`lib/sql_dump.py`'s
-`apply_statements` does for `lib/dbcfmt.py`'s single-int-PK DBC tables
-(`creature_default_trainer`/`trainer_spell`/`creature`/`creature_template`
-don't fit that single-PK shape). A row inserted once and later deleted would
-still read as "exists" here. Acceptable for what this is used for - a
-build-time sanity check that a `TrainerId` isn't obviously dead, not a
-source of truth for trainer content itself - but worth knowing about before
-trusting this module for anything else.
+**Module SQL counts too.** `DBUpdater` applies every module's own
+`data/sql/db-world/*.sql` at worldserver start, and mod-progression applies
+`src/phase_NN/sql/*.sql` for every phase up to the configured
+`Progression.Phase` - and phase_00 is exactly where this server's class
+trainers get rewired (`UPDATE creature_default_trainer SET TrainerId =
+@TrainerId+N WHERE CreatureId IN (...)`: every mage trainer moves from the
+stock 16 to 212). Scanning only `data/sql/` made `trained_by()` reject the
+one TrainerId that actually works here (first hit: Meteor, Fire Mage
+rework, 2026-09-15), so both module locations are scanned as well - see
+`MODULE_SQL_FILES`.
+
+**Replay vs union.** `creature_default_trainer` (single-int PK, and the one
+table the rewiring above rewrites in place) is reconstructed by *replaying*
+INSERT/UPDATE/DELETE in order via `sql_dump.apply_statements`, the same as
+`lib/state.py` does for DBC tables. The other three (`trainer_spell`,
+`creature`, `creature_template` - composite keys, or far too big to care)
+stay a plain union of every `INSERT` ever seen, so a row inserted once and
+later deleted still reads as "exists" there. Acceptable for a build-time
+"is this TrainerId obviously dead" check, not a source of truth for trainer
+content itself.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
+import re
+
 from . import sql_dump
+from .dbcfmt import DbcTable
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 BASE_SQL_DIR = REPO_ROOT / "data" / "sql" / "base" / "db_world"
 PROMOTED_SQL_DIR = REPO_ROOT / "data" / "sql" / "updates" / "db_world"
 PENDING_SQL_DIR = REPO_ROOT / "data" / "sql" / "updates" / "pending_db_world"
+MODULES_DIR = REPO_ROOT / "modules"
+# The worldserver.conf-side modules config this deployment actually runs with (docker bind-mounts
+# env/dist/etc); the .dist default is the fallback for a checkout with no env/ yet.
+PROGRESSION_CONF = REPO_ROOT / "env" / "dist" / "etc" / "modules" / "mod_progression.conf"
+PROGRESSION_CONF_DIST = MODULES_DIR / "mod-progression" / "conf" / "mod_progression.conf.dist"
+PROGRESSION_PHASE_DEFAULT = 18  # mod_progression_database.cpp's GetOption default
+
+_PROGRESSION_PHASE_RE = re.compile(r"^\s*Progression\.Phase\s*=\s*(\d+)", re.MULTILINE)
+
+
+def progression_phase() -> int:
+    """`Progression.Phase` as the live server sees it - mod-progression applies
+    `src/phase_NN/sql/` for every NN <= this (mod_progression_database.cpp's
+    GetActivePhases)."""
+    for conf in (PROGRESSION_CONF, PROGRESSION_CONF_DIST):
+        if conf.is_file():
+            m = _PROGRESSION_PHASE_RE.search(conf.read_text(encoding="utf-8"))
+            if m:
+                return int(m.group(1))
+    return PROGRESSION_PHASE_DEFAULT
+
+
+def module_sql_files() -> list[Path]:
+    """Every module SQL file `DBUpdater` would apply to the world DB, in the
+    order it applies them: each module's `data/sql/db-world/` (recursively -
+    some modules nest a `base/`/`updates/` split), then mod-progression's
+    active phases in phase order."""
+    if not MODULES_DIR.is_dir():
+        return []
+    files: list[Path] = []
+    for module_dir in sorted(MODULES_DIR.iterdir()):
+        world = module_dir / "data" / "sql" / "db-world"
+        if world.is_dir():
+            files.extend(sorted(world.rglob("*.sql")))
+    phases_root = MODULES_DIR / "mod-progression" / "src"
+    if phases_root.is_dir():
+        for phase in range(progression_phase() + 1):
+            files.extend(sorted((phases_root / f"phase_{phase:02}" / "sql").glob("*.sql")))
+    return files
 
 # src/server/game/Entities/Unit/UnitDefines.h
 UNIT_NPC_FLAG_TRAINER = 0x00000010
@@ -75,16 +127,43 @@ def load_table_rows(table_name: str) -> list[dict]:
     if base_path.is_file():
         fallback_columns = sql_dump.parse_create_table_columns(base_path, table_name)
         rows.extend(sql_dump.read_table_rows(base_path, table_name, fallback_columns))
+    for path in _migration_files_mentioning(table_name):
+        try:
+            rows.extend(sql_dump.read_table_rows(path, table_name, fallback_columns))
+        except Exception as exc:  # pragma: no cover - defensive, see docstring above
+            print(f"warning: trainer_state.py: skipping {path} for {table_name}: {exc}")
+    return rows
+
+
+def _migration_files_mentioning(table_name: str) -> list[Path]:
+    """Every non-base SQL file that mentions `table_name`, in apply order:
+    promoted core updates, pending core updates, then module SQL (a cheap
+    substring check before bothering to parse each file)."""
     needle = f"`{table_name}`"
-    for directory in (PROMOTED_SQL_DIR, PENDING_SQL_DIR):
-        for path in sorted(directory.glob("*.sql")):
-            text = path.read_text(encoding="utf-8")
-            if needle not in text:
-                continue
-            try:
-                rows.extend(sql_dump.read_table_rows(path, table_name, fallback_columns))
-            except Exception as exc:  # pragma: no cover - defensive, see docstring above
-                print(f"warning: trainer_state.py: skipping {path} for {table_name}: {exc}")
+    candidates = [
+        *(sorted(PROMOTED_SQL_DIR.glob("*.sql")) if PROMOTED_SQL_DIR.is_dir() else []),
+        *(sorted(PENDING_SQL_DIR.glob("*.sql")) if PENDING_SQL_DIR.is_dir() else []),
+        *module_sql_files(),
+    ]
+    return [p for p in candidates if needle in p.read_text(encoding="utf-8")]
+
+
+def load_keyed_table_rows(table_name: str, columns: tuple[str, ...]) -> dict[int, dict]:
+    """`load_table_rows` for a single-int-PK table, but *replaying*
+    INSERT/UPDATE/DELETE in apply order (base dump, promoted, pending, module
+    SQL) via `sql_dump.apply_statements` instead of unioning INSERTs - so an
+    `UPDATE ... SET TrainerId = @TrainerId+12 WHERE CreatureId IN (...)`
+    actually moves the rows it names. `columns[0]` is the key."""
+    table = DbcTable(
+        name=table_name, dbc_filename="", sql_table=table_name,
+        fmt="n" + "i" * (len(columns) - 1), columns=tuple(columns),
+    )
+    rows: dict[int, dict] = {}
+    base_path = BASE_SQL_DIR / f"{table_name}.sql"
+    if base_path.is_file():
+        sql_dump.apply_statements(rows, table, base_path.read_text(encoding="utf-8"))
+    for path in _migration_files_mentioning(table_name):
+        sql_dump.apply_statements(rows, table, path.read_text(encoding="utf-8"))
     return rows
 
 
@@ -156,4 +235,7 @@ class TrainerIndex:
 
 
 def load_trainer_index() -> TrainerIndex:
-    return TrainerIndex(*(load_table_rows(name) for name in _TRAINER_TABLES))
+    return TrainerIndex(
+        list(load_keyed_table_rows("creature_default_trainer", ("CreatureId", "TrainerId")).values()),
+        *(load_table_rows(name) for name in _TRAINER_TABLES[1:]),
+    )

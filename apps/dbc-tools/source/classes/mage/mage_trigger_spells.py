@@ -4,8 +4,8 @@ Mage - spells that are never directly cast - proc/periodic-tick effects, trigger
 Split from a single source/classes/mage.py via split_class_file.py (.agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md) - see source/classes/README.md for the multi-file layout and lib/dsl/registry.py's load_class_package for how cross-file references (`from .mage_...` below) resolve.
 """
 
-from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, School
-from lib.dsl.registry import spell
+from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, School, SpellModOp
+from lib.dsl.registry import scripted_by, spell
 
 
 arcane_missile_7268 = spell(
@@ -405,7 +405,7 @@ frostbite_11071 = spell(
     ],
     spell_icon_id=119,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Dealing direct Frost damage has a $s1% chance to freeze the target for $12494d.  The freeze breaks on damage. \n\n|cFF9D9D9DCapstone Bonus: Increases the damage of your Frost spells against frozen targets based on your Mastery.|r', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_2': 4096, 'EffectSpellClassMaskB_2': 4096, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 5, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassMask_2': 512, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Dealing direct Frost damage has a $s1% chance to freeze the target for $12494d.  The freeze breaks on damage.\n\n|cFF9D9D9DCapstone Bonus: Increases the damage of your Frost spells against frozen targets based on your Mastery.|r', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_2': 4096, 'EffectSpellClassMaskB_2': 4096, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 5, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassMask_2': 512, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -604,10 +604,10 @@ ignite_11119 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=8, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=937,
-    notes='pulled from existing data',
+    notes='Fire Mage rework Phase 1: EFFECT_0 DUMMY now carries the live Ignite percentage (8, die_sides 0 so GetAmount() is exact) so spell_mage_ignite reads it instead of hardcoding 8 * GetRank() - see Mage::AddIgniteDamage. Value unchanged from stock for this rank.',
     raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your critical strikes from Fire damage spells cause the target to burn for an additional 8% of your spell's damage over $12654d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 327680, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
@@ -624,10 +624,10 @@ ignite_11120 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=16, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=937,
-    notes='pulled from existing data',
+    notes='Fire Mage rework Phase 1: EFFECT_0 DUMMY now carries the live Ignite percentage (16, die_sides 0 so GetAmount() is exact) so spell_mage_ignite reads it instead of hardcoding 8 * GetRank() - see Mage::AddIgniteDamage. Value unchanged from stock for this rank.',
     raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your critical strikes from Fire damage spells cause the target to burn for an additional 16% of your spell's damage over $12654d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 327680, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
@@ -878,7 +878,7 @@ arcane_subtlety_11213 = spell(
     ],
     spell_icon_id=74,
     notes='Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 1): repoints stock Arcane Concentration\'s slot (id 75) to (1,1), trimmed to 3 ranks. "Increases the range of your damaging spells with a channeling or cast time by 2/4/6 yards." effect1 SPELL_AURA_ADD_FLAT_MODIFIER (107)/SPELLMOD_RANGE (5), EffectSpellClassMaskA_1 (raw_override, NOT the friendly effect misc_value) covering Frostbolt|Fireball|Arcane Blast|Blizzard|Pyroblast|Arcane Missiles - individually verified live via the DB overlay; not exhaustive (Frostfire Bolt, Cone of Cold, a few others not yet verified), flagged for a follow-up data pass. "Reduces the mana cost of your Arcane Spells by 4/8/12%" - effect2 SPELL_AURA_MOD_POWER_COST_SCHOOL_PCT (72), misc_value 64 (Arcane school, not classmask - no scoping risk). Capstone (rank 3 only, "threat reduced by 30%") - effect3 SPELL_AURA_MOD_THREAT (10), misc_value 64. Corrected from an earlier broken version of this edit: the range effect\'s classmask was accidentally written into the friendly effect1 JSON blob instead of raw_overrides (silently ignored there), and stale trigger_spell/classmask/attribute fields from the real Arcane Concentration data this slot used to hold survived a merge instead of being cleared - both caught by generate.py\'s lint WARNING and fixed here with a full (non-merging) rewrite.',
-    raw_overrides={'CastingTimeIndex': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your damaging spells with a channeling or cast time by 2 yards. Reduces the mana cost of your Arcane Spells by 4%. \n\n|cFF9D9D9DCapstone Bonus: All threat generated is reduced by 30%.|r', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': 541591713},
+    raw_overrides={'CastingTimeIndex': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your damaging spells with a channeling or cast time by 2 yards. Reduces the mana cost of your Arcane Spells by 4%.\n\n|cFF9D9D9DCapstone Bonus: All threat generated is reduced by 30%.|r', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': 541591713},
 )
 
 
@@ -1002,7 +1002,7 @@ improved_counterspell_11255 = spell(
     ],
     spell_icon_id=17,
     notes='Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 3): repoints stock Improved Counterspell\'s slot (id 88) to (3,1) - real content (silence-on-cast proc only, no CD reduction) replaced. "Reduce the cooldown of your Counterspell ability by 5/10 seconds." effect1 SPELL_AURA_ADD_FLAT_MODIFIER (107)/SPELLMOD_COOLDOWN (11), EffectSpellClassMaskA_1 = 16384 (Counterspell, 2139 - verified live via the DB overlay) in raw_overrides. Capstone ("Counterspell now silences the target for 2 sec", rank 2) NOT built this phase - adds a wholly new effect to Counterspell, not expressible as a SpellMod; may also need a spell_proc/spell_proc_event row outside dbc-tools\' pipeline. Deferred to Phase 3. raw_overrides fully replaced (not merged) - the earlier version left a stale AttributesEx3 flag from the real silence-proc data; caught and fixed.',
-    raw_overrides={'CastingTimeIndex': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Counterspell ability by 5 seconds. \n\n|cFF9D9D9DCapstone Bonus: Your Counterspell ability now silences the target for 2 sec.|r', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': 16384},
+    raw_overrides={'CastingTimeIndex': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Counterspell ability by 5 seconds.\n\n|cFF9D9D9DCapstone Bonus: Your Counterspell ability now silences the target for 2 sec.|r', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': 16384},
 )
 
 
@@ -1545,7 +1545,7 @@ frostbite_12496 = spell(
     ],
     spell_icon_id=119,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Dealing direct Frost damage has a $s1% chance to freeze the target for $12494d.  The freeze breaks on damage. \n\n|cFF9D9D9DCapstone Bonus: Increases the damage of your Frost spells against frozen targets based on your Mastery.|r', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_2': 4096, 'EffectSpellClassMaskB_2': 4096, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassMask_2': 512, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Dealing direct Frost damage has a $s1% chance to freeze the target for $12494d.  The freeze breaks on damage.\n\n|cFF9D9D9DCapstone Bonus: Increases the damage of your Frost spells against frozen targets based on your Mastery.|r', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_2': 4096, 'EffectSpellClassMaskB_2': 4096, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassMask_2': 512, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1566,7 +1566,7 @@ frostbite_12497 = spell(
     ],
     spell_icon_id=119,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Dealing direct Frost damage has a $s1% chance to freeze the target for $12494d.  The freeze breaks on damage. \n\nCapstone Bonus: Increases the damage of your Frost spells against frozen targets based on your Mastery.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_2': 4096, 'EffectSpellClassMaskB_2': 4096, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 15, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassMask_2': 512, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Dealing direct Frost damage has a $s1% chance to freeze the target for $12494d.  The freeze breaks on damage.\n\nCapstone Bonus: Increases the damage of your Frost spells against frozen targets based on your Mastery.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_2': 4096, 'EffectSpellClassMaskB_2': 4096, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 15, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassMask_2': 512, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1673,7 +1673,7 @@ arcane_subtlety_12574 = spell(
     ],
     spell_icon_id=74,
     notes='Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 1): repoints stock Arcane Concentration\'s slot (id 75) to (1,1), trimmed to 3 ranks. "Increases the range of your damaging spells with a channeling or cast time by 2/4/6 yards." effect1 SPELL_AURA_ADD_FLAT_MODIFIER (107)/SPELLMOD_RANGE (5), EffectSpellClassMaskA_1 (raw_override, NOT the friendly effect misc_value) covering Frostbolt|Fireball|Arcane Blast|Blizzard|Pyroblast|Arcane Missiles - individually verified live via the DB overlay; not exhaustive (Frostfire Bolt, Cone of Cold, a few others not yet verified), flagged for a follow-up data pass. "Reduces the mana cost of your Arcane Spells by 4/8/12%" - effect2 SPELL_AURA_MOD_POWER_COST_SCHOOL_PCT (72), misc_value 64 (Arcane school, not classmask - no scoping risk). Capstone (rank 3 only, "threat reduced by 30%") - effect3 SPELL_AURA_MOD_THREAT (10), misc_value 64. Corrected from an earlier broken version of this edit: the range effect\'s classmask was accidentally written into the friendly effect1 JSON blob instead of raw_overrides (silently ignored there), and stale trigger_spell/classmask/attribute fields from the real Arcane Concentration data this slot used to hold survived a merge instead of being cleared - both caught by generate.py\'s lint WARNING and fixed here with a full (non-merging) rewrite.',
-    raw_overrides={'CastingTimeIndex': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your damaging spells with a channeling or cast time by 4 yards. Reduces the mana cost of your Arcane Spells by 8%. \n\n|cFF9D9D9DCapstone Bonus: All threat generated is reduced by 30%.|r', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': 541591713},
+    raw_overrides={'CastingTimeIndex': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your damaging spells with a channeling or cast time by 4 yards. Reduces the mana cost of your Arcane Spells by 8%.\n\n|cFF9D9D9DCapstone Bonus: All threat generated is reduced by 30%.|r', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': 541591713},
 )
 
 
@@ -1695,7 +1695,7 @@ arcane_subtlety_12575 = spell(
     ],
     spell_icon_id=74,
     notes='Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 1): repoints stock Arcane Concentration\'s slot (id 75) to (1,1), trimmed to 3 ranks. "Increases the range of your damaging spells with a channeling or cast time by 2/4/6 yards." effect1 SPELL_AURA_ADD_FLAT_MODIFIER (107)/SPELLMOD_RANGE (5), EffectSpellClassMaskA_1 (raw_override, NOT the friendly effect misc_value) covering Frostbolt|Fireball|Arcane Blast|Blizzard|Pyroblast|Arcane Missiles - individually verified live via the DB overlay; not exhaustive (Frostfire Bolt, Cone of Cold, a few others not yet verified), flagged for a follow-up data pass. "Reduces the mana cost of your Arcane Spells by 4/8/12%" - effect2 SPELL_AURA_MOD_POWER_COST_SCHOOL_PCT (72), misc_value 64 (Arcane school, not classmask - no scoping risk). Capstone (rank 3 only, "threat reduced by 30%") - effect3 SPELL_AURA_MOD_THREAT (10), misc_value 64. Corrected from an earlier broken version of this edit: the range effect\'s classmask was accidentally written into the friendly effect1 JSON blob instead of raw_overrides (silently ignored there), and stale trigger_spell/classmask/attribute fields from the real Arcane Concentration data this slot used to hold survived a merge instead of being cleared - both caught by generate.py\'s lint WARNING and fixed here with a full (non-merging) rewrite.',
-    raw_overrides={'CastingTimeIndex': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your damaging spells with a channeling or cast time by 6 yards. Reduces the mana cost of your Arcane Spells by 12%. \n\nCapstone Bonus: All threat generated is reduced by 30%.', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': 541591713},
+    raw_overrides={'CastingTimeIndex': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your damaging spells with a channeling or cast time by 6 yards. Reduces the mana cost of your Arcane Spells by 12%.\n\nCapstone Bonus: All threat generated is reduced by 30%.', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': 541591713},
 )
 
 
@@ -1776,7 +1776,7 @@ improved_counterspell_12598 = spell(
     ],
     spell_icon_id=17,
     notes='Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 3): repoints stock Improved Counterspell\'s slot (id 88) to (3,1) - real content (silence-on-cast proc only, no CD reduction) replaced. "Reduce the cooldown of your Counterspell ability by 5/10 seconds." effect1 SPELL_AURA_ADD_FLAT_MODIFIER (107)/SPELLMOD_COOLDOWN (11), EffectSpellClassMaskA_1 = 16384 (Counterspell, 2139 - verified live via the DB overlay) in raw_overrides. Capstone ("Counterspell now silences the target for 2 sec", rank 2) NOT built this phase - adds a wholly new effect to Counterspell, not expressible as a SpellMod; may also need a spell_proc/spell_proc_event row outside dbc-tools\' pipeline. Deferred to Phase 3. raw_overrides fully replaced (not merged) - the earlier version left a stale AttributesEx3 flag from the real silence-proc data; caught and fixed.',
-    raw_overrides={'CastingTimeIndex': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Counterspell ability by 10 seconds. \n\nCapstone Bonus: Your Counterspell ability now silences the target for 2 sec.', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': 16384},
+    raw_overrides={'CastingTimeIndex': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Counterspell ability by 10 seconds.\n\nCapstone Bonus: Your Counterspell ability now silences the target for 2 sec.', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': 16384},
 )
 
 
@@ -1897,10 +1897,10 @@ ignite_12846 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=24, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=937,
-    notes='pulled from existing data',
+    notes='Fire Mage rework Phase 1: EFFECT_0 DUMMY now carries the live Ignite percentage (24, die_sides 0 so GetAmount() is exact) so spell_mage_ignite reads it instead of hardcoding 8 * GetRank() - see Mage::AddIgniteDamage. Value unchanged from stock for this rank.',
     raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your critical strikes from Fire damage spells cause the target to burn for an additional 24% of your spell's damage over $12654d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 327680, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
@@ -1917,10 +1917,10 @@ ignite_12847 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=32, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=937,
-    notes='pulled from existing data',
+    notes='Fire Mage rework Phase 1: EFFECT_0 DUMMY now carries the live Ignite percentage (32, die_sides 0 so GetAmount() is exact) so spell_mage_ignite reads it instead of hardcoding 8 * GetRank() - see Mage::AddIgniteDamage. Value unchanged from stock for this rank.',
     raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your critical strikes from Fire damage spells cause the target to burn for an additional 32% of your spell's damage over $12654d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 4', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 327680, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
@@ -1937,10 +1937,10 @@ ignite_12848 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=40, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=937,
-    notes='pulled from existing data',
+    notes='Fire Mage rework Phase 1: EFFECT_0 DUMMY now carries the live Ignite percentage (40, die_sides 0 so GetAmount() is exact) so spell_mage_ignite reads it instead of hardcoding 8 * GetRank() - see Mage::AddIgniteDamage. Value unchanged from stock for this rank.',
     raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your critical strikes from Fire damage spells cause the target to burn for an additional 40% of your spell's damage over $12654d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 134217728, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 5', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 327680, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
@@ -2542,7 +2542,7 @@ improved_blink_31569 = spell(
     ],
     spell_icon_id=1499,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of Blink by $47000s1 sec and its mana cost by $s1%. \n\n|cFF9D9D9DCapstone Bonus: After casting Blink all damage taken is reduced by 20% for 3 sec.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 65536, 'EffectSpellClassMaskB_1': 65536, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of Blink by $47000s1 sec and its mana cost by $s1%.\n\n|cFF9D9D9DCapstone Bonus: After casting Blink all damage taken is reduced by 20% for 3 sec.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 65536, 'EffectSpellClassMaskB_1': 65536, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -2564,7 +2564,7 @@ improved_blink_31570 = spell(
     ],
     spell_icon_id=1499,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of Blink by $47000s1 sec and its mana cost by $s1%. \n\nCapstone Bonus: After casting Blink all damage taken is reduced by 20% for 3 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 65536, 'EffectSpellClassMaskB_1': 65536, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of Blink by $47000s1 sec and its mana cost by $s1%.\n\nCapstone Bonus: After casting Blink all damage taken is reduced by 20% for 3 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 65536, 'EffectSpellClassMaskB_1': 65536, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3388,7 +3388,7 @@ spell_power_35578 = spell(
     ],
     spell_icon_id=2281,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases critical strike damage bonus of all spells by $s1%. \n\n|cFF9D9D9DCapstone Bonus: Dealing direct critical damage with a spell while your mana is below 50% taps into raw power, restoring 1% of your total mana each second and increasing your magic damage by 10% and Arcane damage by another 5%. This effect lasts for 10 seconds and can only occur once every 30 seconds.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 551686903, 'EffectSpellClassMaskA_2': 102472, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases critical strike damage bonus of all spells by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Dealing direct critical damage with a spell while your mana is below 50% taps into raw power, restoring 1% of your total mana each second and increasing your magic damage by 10% and Arcane damage by another 5%. This effect lasts for 10 seconds and can only occur once every 30 seconds.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 551686903, 'EffectSpellClassMaskA_2': 102472, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3408,7 +3408,7 @@ spell_power_35581 = spell(
     ],
     spell_icon_id=2281,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases critical strike damage bonus of all spells by $s1%. \n\n|cFF9D9D9DCapstone Bonus: Dealing direct critical damage with a spell while your mana is below 50% taps into raw power, restoring 1% of your total mana each second and increasing your magic damage by 10% and Arcane damage by another 5%. This effect lasts for 10 seconds and can only occur once every 30 seconds.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 551686903, 'EffectSpellClassMaskA_2': 102472, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases critical strike damage bonus of all spells by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Dealing direct critical damage with a spell while your mana is below 50% taps into raw power, restoring 1% of your total mana each second and increasing your magic damage by 10% and Arcane damage by another 5%. This effect lasts for 10 seconds and can only occur once every 30 seconds.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 551686903, 'EffectSpellClassMaskA_2': 102472, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3429,7 +3429,7 @@ arcane_flows_44378 = spell(
     ],
     spell_icon_id=2940,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Presence of Mind, Arcane Power and Invisibility spells by $s1% and the cooldown of your Evocation spell by $/1000;s2 sec. \n\n|cFF9D9D9DCapstone Bonus: Your Arcane Power increases your magic damage dealt by an additional 5%.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 4, 'EffectSpellClassMaskA_2': 786464, 'EffectSpellClassMaskB_1': 67108864, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'EffectSpellClassMaskA_3': 2},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Presence of Mind, Arcane Power and Invisibility spells by $s1% and the cooldown of your Evocation spell by $/1000;s2 sec.\n\n|cFF9D9D9DCapstone Bonus: Your Arcane Power increases your magic damage dealt by an additional 5%.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 4, 'EffectSpellClassMaskA_2': 786464, 'EffectSpellClassMaskB_1': 67108864, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'EffectSpellClassMaskA_3': 2},
 )
 
 
@@ -3451,7 +3451,7 @@ arcane_flows_44379 = spell(
     ],
     spell_icon_id=2940,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Presence of Mind, Arcane Power and Invisibility spells by $s1% and the cooldown of your Evocation spell by $/1000;s2 sec. \n\nCapstone Bonus: Your Arcane Power increases your magic damage dealt by an additional 5%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 4, 'EffectSpellClassMaskA_2': 786464, 'EffectSpellClassMaskB_1': 67108864, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'EffectSpellClassMaskA_3': 2},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Presence of Mind, Arcane Power and Invisibility spells by $s1% and the cooldown of your Evocation spell by $/1000;s2 sec.\n\nCapstone Bonus: Your Arcane Power increases your magic damage dealt by an additional 5%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 4, 'EffectSpellClassMaskA_2': 786464, 'EffectSpellClassMaskB_1': 67108864, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'EffectSpellClassMaskA_3': 2},
 )
 
 
@@ -3471,7 +3471,7 @@ netherwind_presence_44400 = spell(
     ],
     spell_icon_id=2943,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell haste by $s1%. \n\n|cFF9D9D9DCapstone Bonus: Casting Slow while Netherwind Presence is fully stacked increases your movement speed by 50% for 5 sec. This effect cannot occur more than once every 30 sec.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'RangeIndex': 1, 'SpellClassSet': 3, 'ProcTypeMask': 65536, 'ProcCharges': 0},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell haste by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Casting Slow while Netherwind Presence is fully stacked increases your movement speed by 50% for 5 sec. This effect cannot occur more than once every 30 sec.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'RangeIndex': 1, 'SpellClassSet': 3, 'ProcTypeMask': 65536, 'ProcCharges': 0},
 )
 
 
@@ -3491,7 +3491,7 @@ netherwind_presence_44402 = spell(
     ],
     spell_icon_id=2943,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell haste by $s1%. \n\n|cFF9D9D9DCapstone Bonus: Casting Slow while Netherwind Presence is fully stacked increases your movement speed by 50% for 5 sec. This effect cannot occur more than once every 30 sec.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'RangeIndex': 1, 'SpellClassSet': 3, 'ProcTypeMask': 65536, 'ProcCharges': 0},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell haste by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Casting Slow while Netherwind Presence is fully stacked increases your movement speed by 50% for 5 sec. This effect cannot occur more than once every 30 sec.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'RangeIndex': 1, 'SpellClassSet': 3, 'ProcTypeMask': 65536, 'ProcCharges': 0},
 )
 
 
@@ -3512,7 +3512,7 @@ netherwind_presence_44403 = spell(
     ],
     spell_icon_id=2943,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell haste by $s1%. \n\nCapstone Bonus: Casting Slow while Netherwind Presence is fully stacked increases your movement speed by 50% for 5 sec. This effect cannot occur more than once every 30 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'RangeIndex': 1, 'SpellClassSet': 3, 'ProcTypeMask': 65536, 'ProcCharges': 0},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell haste by $s1%.\n\nCapstone Bonus: Casting Slow while Netherwind Presence is fully stacked increases your movement speed by 50% for 5 sec. This effect cannot occur more than once every 30 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'RangeIndex': 1, 'SpellClassSet': 3, 'ProcTypeMask': 65536, 'ProcCharges': 0},
 )
 
 
@@ -4931,7 +4931,7 @@ incanter_s_absorption_44394 = spell(
     ],
     spell_icon_id=2941,
     notes='pulled from existing data | Bugfix (playtest report, 2026-09-08): Description_Lang_enUS still read as the unmodified real-game tooltip ("does not have the right tooltip and looks like its the old version") even though Phase 2/3 added the Spellsteal CD (effect2) and shield-grant proc (spell_mage_incanters_absorption_shield, spell_mage.cpp) on top of the pre-existing ward-absorb clause (kept working, untouched) - text now describes all three.',
-    raw_overrides={'AttributesEx3': 67108864, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your Mana Shield, Frost Ward, Fire Ward, or Ice Barrier absorbs damage your spell damage is increased by $s1% of the amount absorbed for $44413d. Reduces the cooldown of Spellsteal by 1 sec. Casting a direct damaging Arcane spell with a cast time, or Arcane Missiles while Missile Barrage is active, grants you a shield that absorbs a small amount of damage. \n\n|cFF9D9D9DCapstone Bonus: Your Spellsteal also steals an additional spell from the target.|r', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 16, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'RangeIndex': 1, 'ProcTypeMask': 65536, 'ProcCharges': 0},
+    raw_overrides={'AttributesEx3': 67108864, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your Mana Shield, Frost Ward, Fire Ward, or Ice Barrier absorbs damage your spell damage is increased by $s1% of the amount absorbed for $44413d. Reduces the cooldown of Spellsteal by 1 sec. Casting a direct damaging Arcane spell with a cast time, or Arcane Missiles while Missile Barrage is active, grants you a shield that absorbs a small amount of damage.\n\n|cFF9D9D9DCapstone Bonus: Your Spellsteal also steals an additional spell from the target.|r', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 16, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'RangeIndex': 1, 'ProcTypeMask': 65536, 'ProcCharges': 0},
 )
 
 
@@ -4952,7 +4952,7 @@ incanter_s_absorption_44395 = spell(
     ],
     spell_icon_id=2941,
     notes="pulled from existing data | Bugfix (playtest report, 2026-09-08): Description_Lang_enUS now describes the Spellsteal CD (effect2) and shield-grant proc alongside the pre-existing ward-absorb clause - see 44394's note.",
-    raw_overrides={'AttributesEx3': 67108864, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your Mana Shield, Frost Ward, Fire Ward, or Ice Barrier absorbs damage your spell damage is increased by $s1% of the amount absorbed for $44413d. Reduces the cooldown of Spellsteal by 2 sec. Casting a direct damaging Arcane spell with a cast time, or Arcane Missiles while Missile Barrage is active, grants you a shield that absorbs a small amount of damage. \n\n|cFF9D9D9DCapstone Bonus: Your Spellsteal also steals an additional spell from the target.|r', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 16, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'RangeIndex': 1, 'ProcTypeMask': 65536, 'ProcCharges': 0},
+    raw_overrides={'AttributesEx3': 67108864, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your Mana Shield, Frost Ward, Fire Ward, or Ice Barrier absorbs damage your spell damage is increased by $s1% of the amount absorbed for $44413d. Reduces the cooldown of Spellsteal by 2 sec. Casting a direct damaging Arcane spell with a cast time, or Arcane Missiles while Missile Barrage is active, grants you a shield that absorbs a small amount of damage.\n\n|cFF9D9D9DCapstone Bonus: Your Spellsteal also steals an additional spell from the target.|r', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 16, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'RangeIndex': 1, 'ProcTypeMask': 65536, 'ProcCharges': 0},
 )
 
 
@@ -4974,7 +4974,7 @@ incanter_s_absorption_44396 = spell(
     ],
     spell_icon_id=2941,
     notes="pulled from existing data | Bugfix (playtest report, 2026-09-08): Description_Lang_enUS now describes the Spellsteal CD (effect2), shield-grant proc, and rank-3 capstone (effect3 marker, read by spell_mage_spellsteal for an extra steal) alongside the pre-existing ward-absorb clause - see 44394's note.",
-    raw_overrides={'AttributesEx3': 67108864, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your Mana Shield, Frost Ward, Fire Ward, or Ice Barrier absorbs damage your spell damage is increased by $s1% of the amount absorbed for $44413d. Reduces the cooldown of Spellsteal by 3 sec. Casting a direct damaging Arcane spell with a cast time, or Arcane Missiles while Missile Barrage is active, grants you a shield that absorbs a small amount of damage. \n\nCapstone Bonus: Your Spellsteal also steals an additional spell from the target.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 16, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'RangeIndex': 1, 'ProcTypeMask': 65536, 'ProcCharges': 0},
+    raw_overrides={'AttributesEx3': 67108864, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your Mana Shield, Frost Ward, Fire Ward, or Ice Barrier absorbs damage your spell damage is increased by $s1% of the amount absorbed for $44413d. Reduces the cooldown of Spellsteal by 3 sec. Casting a direct damaging Arcane spell with a cast time, or Arcane Missiles while Missile Barrage is active, grants you a shield that absorbs a small amount of damage.\n\nCapstone Bonus: Your Spellsteal also steals an additional spell from the target.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 16, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'RangeIndex': 1, 'ProcTypeMask': 65536, 'ProcCharges': 0},
 )
 
 
@@ -4995,7 +4995,7 @@ spell_power_200077 = spell(
     ],
     spell_icon_id=2281,
     notes="Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 4) - new spell, 3rd rank of Spell Power (id 1826), minted from source/ids.yaml's reserved spell block. Mirrors ranks 1-2's structure exactly.",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases critical strike damage bonus of all spells by $s1%. \n\nCapstone Bonus: Dealing direct critical damage with a spell while your mana is below 50% taps into raw power, restoring 1% of your total mana each second and increasing your magic damage by 10% and Arcane damage by another 5%. This effect lasts for 10 seconds and can only occur once every 30 seconds.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 551686903, 'EffectSpellClassMaskA_2': 102472, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'ProcTypeMask': 65536, 'ProcCharges': 0},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases critical strike damage bonus of all spells by $s1%.\n\nCapstone Bonus: Dealing direct critical damage with a spell while your mana is below 50% taps into raw power, restoring 1% of your total mana each second and increasing your magic damage by 10% and Arcane damage by another 5%. This effect lasts for 10 seconds and can only occur once every 30 seconds.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 551686903, 'EffectSpellClassMaskA_2': 102472, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'ProcTypeMask': 65536, 'ProcCharges': 0},
 )
 
 
@@ -5285,3 +5285,97 @@ netherwind_presence_200094 = spell(
     notes="Arcane Mage rework (docs/arcane-mage-rework-design.md, Phase 3 Batch D) - Netherwind Presence's (9,1) capstone speed buff, granted by spell_mage_slow when Slow is cast while fully stacked (rank 3 only), gated by a 30s ICD (200091).",
     raw_overrides={'BaseLevel': 80, 'SpellLevel': 80, 'CastingTimeIndex': 1, 'DefenseType': 1, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Movement speed increased by 50%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement speed increased.'},
 )
+
+
+# ---------------------------------------------------------------------------------------------
+# Fire Mage rework (docs/reworks/fire-mage-rework.md) - Phase 1: new systems. See mage_spells.py's
+# "Fire Mage rework" block for the custom SpellClassMask_3 bit assignments.
+# ---------------------------------------------------------------------------------------------
+
+meteor_impact_200096 = spell(
+    id=200096,
+    name='Meteor',
+    school=School.FIRE,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=40.0,
+    radius_yards=8.0,
+    duration_ms=4000,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=751, points_per_level=14.1, die_sides=41, implicit_target_a=16, radius_yards=8.0),
+        Effect(type=EffectType.PERSISTENT_AREA_AURA, base_points=160, points_per_level=3.3, implicit_target_a=28, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000, radius_yards=8.0),
+    ],
+    spell_icon_id=1516,
+    notes="Fire Mage rework sec 2 - Meteor's impact + ground burn, cast by spell_mage_meteor 3 sec after the player's Meteor (200095). Same shape as Flamestrike (2120): effect1 direct damage to every enemy in the 8yd area, effect2 a 4-sec persistent ground aura ticking every 1 sec. Budget (user call, 2026-09-15): ~2x Flamestrike - direct 751+14.1/lvl (die 41) vs Flamestrike's 51+7.4955/lvl anchored at Meteor's own SpellLevel 58, so ~780 at 60 / ~1060 at 80 vs Flamestrike's ~381 / ~531; burn 160+3.3/lvl per 1-sec tick x4 vs Flamestrike's 84->117 per 2-sec tick x4. Coefficients (spec: 0.3 direct / 0.15 burn) are in spell_bonus_data via bonus_coefficients() in mage_spells.py - dot_bonus is applied PER TICK by Unit::SpellDamageBonusDone, the same convention Flamestrike's own 0.122 row uses. Only the impact can crit -> only the impact banks Ignite (sec 4.1a); the burn is periodic and never does.",
+    raw_overrides={'BaseLevel': 58, 'SpellLevel': 58, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'DefenseType': 1, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 3, 'SpellClassMask_3': 32, 'SpellPriority': 50, 'SpellVisualID_1': 10383, 'Targets': 64, 'AttributesEx': 268435592, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals $s1 Fire damage to all enemies in the area and burns the ground for $o2 Fire damage over $d.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s2 Fire damage every $t2 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+kindling_200097 = spell(
+    id=200097,
+    name='Kindling',
+    school=School.FIRE,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+    ],
+    spell_icon_id=292,
+    notes="Fire Mage rework sec 4.2 - Kindling. Stacking buff on the mage (CumulativeAura 25), each stack +9% Blast Wave damage via a SPELLMOD_DAMAGE scoped to Blast Wave's own classmask bit (Effect_1 -> EffectSpellClassMaskA_2 = 64, the dword Blast Wave 11113 carries SpellClassMask_2 = 64 in) - AuraEffect::CalculateAmount multiplies by stack count, so 25 stacks = +225%. Granted by Mage::GrantKindling() (Tinderbox's Ignite-tick roll, Impact Crater's Meteor hits), consumed entirely by spell_mage_blast_wave after the cast's damage is calculated. No duration ('until consumed'), no internal cooldown - the stack cap is the throttle. Icon 292 = Blast Wave's own.",
+    raw_overrides={'BaseLevel': 1, 'SpellLevel': 1, 'CastingTimeIndex': 1, 'CumulativeAura': 25, 'EffectSpellClassMaskA_2': 64, 'EquippedItemClass': -1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your next Blast Wave deals $s1% increased damage per stack. Consumed by Blast Wave.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Blast Wave damage increased by $s1% per stack.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+ignite_tick_200098 = spell(
+    id=200098,
+    name='Ignite',
+    school=School.FIRE,
+    dispel=DispelType.NONE,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, die_sides=0, implicit_target_a=6),
+    ],
+    spell_icon_id=937,
+    notes="Fire Mage rework sec 4.1 - the Ignite accumulator's per-tick payout. Cast by spell_mage_ignite_dot (the script on the visible Ignite aura, 12654) each tick with the bank's share as the custom base point, instead of letting a SPELL_AURA_PERIODIC_DAMAGE tick pay it: this fork applies spell haste to every periodic-damage aura's amplitude (AuraEffect::CalculatePeriodic) and pads the final tick (GetFinalTickBonusMultiplier), both of which would fight an explicit remaining_damage/ticks_remaining bank. AttributesEx2 CANT_CRIT (crits are already priced into the bank, sec 4.1a) + AttributesEx3 ALWAYS_HIT | IGNORE_CASTER_MODIFIERS (the banked damage already went through every caster-side modifier once; SpellDamageBonusTaken still applies so target-side debuffs/Versatility behave like a normal DoT). Carries Ignite's own family bit (SpellClassMask_1 = 0x08000000, same as 12654) so stock Empowered Fire's proc mask still sees it, plus custom dword-2 bit 0x40 so scripts can exclude it by mask.",
+    raw_overrides={'AttributesEx2': 536870912, 'AttributesEx3': 537133056, 'AttributesEx5': 8388608, 'BaseLevel': 1, 'SpellLevel': 1, 'CastingTimeIndex': 1, 'DefenseType': 1, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 3, 'SpellClassMask_1': 134217728, 'SpellClassMask_3': 64, 'SpellPriority': 50, 'SpellVisualID_1': 2638, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Burns the target for $s1 Fire damage.', 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+ignite_12654 = spell(
+    id=12654,
+    name='Ignite',
+    school=School.FIRE,
+    dispel=DispelType.MAGIC,
+    attributes=8388608,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    duration_ms=4000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=1000),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=937,
+    notes="Fire Mage rework sec 4.1 - the visible Ignite aura, now a PERIODIC_DUMMY timing/display vehicle for the server-side bank in MageMechanics (Mage::AddIgniteDamage et al.) instead of a re-applied PERIODIC_DAMAGE DoT. Edits vs stock: tick every 1 sec (was 2; sec 3.3), aura type 3 -> 226 (see ignite_tick_200098 for why), CumulativeAura 255 so the 3.3.5 aura-update packet carries a stack count (it never carries effect amounts) - the script keeps stacks = banked damage / 100, sec 4.1's client-display fallback. Never re-cast while up: a new Fire crit adds to the bank and RefreshDuration()s this aura in place, leaving the tick cadence alone.",
+    raw_overrides={'AttributesEx': 136, 'AttributesEx2': 4, 'AttributesEx3': 268697600, 'AttributesEx4': 1048960, 'AttributesEx5': 8388608, 'AttributesEx6': 536870912, 'CastingTimeIndex': 1, 'CumulativeAura': 255, 'ProcChance': 101, 'BaseLevel': 99, 'SpellLevel': 99, 'EquippedItemClass': -1, 'SpellVisualID_1': 2638, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': "Your critical strikes from Fire damage spells cause the target to burn for an additional percentage of your spell's damage over $12654d.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Burning. Each stack is 100 banked Fire damage, paid out evenly over the remaining $t1-sec ticks.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 3, 'SpellClassMask_1': 134217728, 'SpellClassMask_3': 8, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+scripted_by(ignite_12654, 'spell_mage_ignite_dot')

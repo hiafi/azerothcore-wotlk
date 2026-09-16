@@ -5,8 +5,8 @@ Split from a single source/classes/mage.py via split_class_file.py (.agents/plan
 """
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, School
-from lib.dsl.registry import spell
-from .mage_trigger_spells import arcane_blast_debuff, arcane_missile_7268, blizzard_42208, molten_armor_34913
+from lib.dsl.registry import bonus_coefficients, scripted_by, spell, trained_by
+from .mage_trigger_spells import arcane_blast_debuff, arcane_missile_7268, blizzard_42208, meteor_impact_200096, molten_armor_34913
 
 
 blizzard_10 = spell(
@@ -2356,3 +2356,42 @@ arcane_overload_200079 = spell(
     notes='Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 10): shell only - icon/cost/cooldown (SPELL_EFFECT_DUMMY effect1, Phase 3 hook). Variable mana-spend AoE damage, the %-of-max-mana regen tick (same live-read need as Brilliance Aura) and the +10% spell damage buff are all one coherent Phase 3 CastCustomSpell implementation - see deferred list. SpellIconID 145 (Spell_Frost_ManaBurn) - no dedicated Arcane Overload icon exists in the client (Cata-era spell, this fork is WotLK 3.3.5a).',
     raw_overrides={'BaseLevel': 80, 'SpellLevel': 80, 'CastingTimeIndex': 1, 'DefenseType': 1, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 6, 'SpellClassSet': 3, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Expend up to 30% of your maximum mana to annihilate your enemy target and nearby enemies for damage equal to the mana spent plus a spell power coefficient. Deals reduced damage beyond 5 targets. For 15 sec afterward, restore 3% of your maximum mana every 1 sec and your spell damage is increased by 10%.'},
 )
+
+
+# ---------------------------------------------------------------------------------------------
+# Fire Mage rework (docs/reworks/fire-mage-rework.md) - Phase 1: net-new baseline spells.
+#
+# Custom SpellClassMask_3 (family-flags dword 2) bits, so talents can scope SpellMods and procs to
+# exactly these spells. Stock Mage data uses dword-2 bits 0-4 only; everything from bit 5 up is
+# ours (checked across all of source/classes/mage/ before picking):
+#   0x20  Meteor (200095 cast + 200096 impact/burn)
+#   0x40  Ignite tick (200098) - so a script can tell "Ignite's own payout" apart from a real
+#         player-cast Fire spell by mask instead of by id
+# ---------------------------------------------------------------------------------------------
+
+meteor_200095 = spell(
+    id=200095,
+    name='Meteor',
+    school=School.FIRE,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=45000,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=12,
+    range_yards=40.0,
+    radius_yards=8.0,
+    effects=[
+        Effect(type=EffectType.DUMMY, implicit_target_a=87, radius_yards=8.0),
+    ],
+    spell_icon_id=1516,
+    notes="Fire Mage rework sec 2 - Meteor. Ground-targeted (Targets 0x40 = TARGET_FLAG_DEST_LOCATION, effect target 87 = TARGET_DEST_DEST) instant; spell_mage_meteor schedules Meteor Impact (200096) at the stored destination 3 sec later (an m_Events lambda on the caster - there's no DBC way to express a fixed-delay ground impact, a missile's flight time scales with distance). Learned at 58 from the Mage class trainer (TrainerId 212). SpellIconID 1516 (Spell_Fire_MeteorStorm). 45s RecoveryTime is >= CUSTOM_COOLDOWN_HASTE_MIN_BASE_COOLDOWN_MS so Cooldown Haste applies (sec 8).",
+    raw_overrides={'BaseLevel': 58, 'SpellLevel': 58, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'DefenseType': 1, 'EquippedItemClass': -1, 'FacingCasterFlags': 0, 'InterruptFlags': 8, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 3, 'SpellClassMask_3': 32, 'SpellPriority': 50, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Targets': 64, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Calls down a meteor which lands at the target location after 3 sec, dealing $200096s1 Fire damage to all enemies within $200096a1 yards, and burns the ground, dealing $200096o2 Fire damage over $200096d to all enemies in the area.', 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+scripted_by(meteor_200095, 'spell_mage_meteor')
+# First real user of trained_by() - 212 is the TrainerId every other level-58+ Mage spell on this
+# deployment is taught from (data/sql/updates/db_world/2026_09_10_13.sql). Cost matches
+# Invisibility's (66) level-58 row.
+trained_by(meteor_200095, trainer_id=212, req_level=58, money_cost=200000)
+bonus_coefficients(meteor_impact_200096, direct=0.3, dot=0.15,
+                   comment='Mage - Meteor impact / ground burn (fire-mage-rework.md sec 2; dot is per tick, same convention as Flamestrike)')

@@ -19,8 +19,10 @@
 #define __MAGEMECHANICS_H
 
 #include "Define.h"
+#include "ObjectGuid.h"
 #include "SharedDefines.h"
 
+class Aura;
 class SpellInfo;
 class Unit;
 
@@ -59,6 +61,36 @@ namespace Mage
 
     // Unit::Kill's Frost Channeling capstone check.
     void OnKill(Unit* killer, Unit* victim, SpellInfo const* spellProto);
+
+    /*
+     * Ignite accumulator - Fire Mage rework, docs/reworks/fire-mage-rework.md sec 4.1. Explicit
+     * per-(caster, target) server state { remaining_damage, ticks_remaining } instead of a re-applied
+     * DoT aura, so two crits landing in the same batch both bank (no "munching") and the bank can
+     * never pay out more than it holds (no "vomit"). The visible Ignite aura (12654) is only the
+     * timing/display vehicle: applied once, refreshed in place, ticking as PERIODIC_DUMMY - its
+     * script (spell_mage_ignite_dot) calls TakeIgniteTick each tick and deals the payout itself
+     * via the Ignite tick spell (200098). Lives here rather than in spell_mage.cpp so Unit.cpp
+     * (Burnout's capstone reads the bank from SpellPctDamageModsDone) and mod-playerbots/mod-dpssim
+     * (a rotation deciding when to Flashpoint) can read it without depending on scripts/.
+     */
+    // Banks `amount` into caster's Ignite on target: applies 12654 if it isn't up, otherwise
+    // RefreshDuration()s it (tick cadence deliberately untouched), then refreshes ticks_remaining
+    // to the full count. Fanned Flames' non-crit Scorch calls this directly - it's the amount, not
+    // the crit, that this cares about.
+    void AddIgniteDamage(Unit* caster, Unit* target, uint32 amount);
+    uint32 GetIgniteRemaining(Unit const* caster, Unit const* target);
+    // Flashpoint: returns the whole bank, zeroes it and removes the aura.
+    uint32 ConsumeIgnite(Unit* caster, Unit* target);
+    // One tick's payout (remaining / ticks_remaining, everything on the final tick) - advances the
+    // state and re-syncs the aura's stack-count display. 0 when nothing is banked.
+    uint32 TakeIgniteTick(Unit* caster, Unit* target, Aura* ignite);
+    // Aura gone (expired, dispelled, target died/despawned) - drop the bank. GUIDs, not Unit*,
+    // because the aura's own removal hook can fire after its caster has logged out.
+    void ClearIgnite(ObjectGuid casterGuid, ObjectGuid targetGuid);
+
+    // Kindling (sec 4.2) - grants `stacks` stacks of the Kindling buff (200097) to the mage, capped
+    // at the aura's own max stack count. Tinderbox and Impact Crater both feed this one pool.
+    void GrantKindling(Unit* caster, uint32 stacks);
 }
 
 #endif

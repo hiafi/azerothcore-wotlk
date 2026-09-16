@@ -174,8 +174,18 @@ enum MageSpells
     SPELL_MAGE_NETHERWIND_PRESENCE_ICD           = 200091,
     SPELL_MAGE_ARCANE_OVERLOAD_DAMAGE            = 200092,
     SPELL_MAGE_ARCANE_OVERLOAD_BUFF              = 200093,
-    SPELL_MAGE_NETHERWIND_PRESENCE_CAPSTONE      = 200094
+    SPELL_MAGE_NETHERWIND_PRESENCE_CAPSTONE      = 200094,
+
+    // Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 1 - new spells, reserved block
+    // 200000-209999. Keep in sync with MageMechanics.cpp's own SPELL_IGNITE_TICK / SPELL_KINDLING.
+    SPELL_MAGE_METEOR                            = 200095,
+    SPELL_MAGE_METEOR_IMPACT                     = 200096,
+    SPELL_MAGE_KINDLING                          = 200097,
+    SPELL_MAGE_IGNITE_TICK                       = 200098
 };
+
+// Fire Mage rework sec 2 - Meteor "lands at the target location after 3 sec".
+constexpr Milliseconds METEOR_IMPACT_DELAY = 3s;
 
 enum FrostMageReworkCreatures
 {
@@ -1588,7 +1598,7 @@ class spell_mage_blast_wave : public SpellScript
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_MAGE_GLYPH_OF_BLAST_WAVE });
+        return ValidateSpellInfo({ SPELL_MAGE_GLYPH_OF_BLAST_WAVE, SPELL_MAGE_KINDLING });
     }
 
     void HandleKnockBack(SpellEffIndex effIndex)
@@ -1597,9 +1607,18 @@ class spell_mage_blast_wave : public SpellScript
             PreventHitDefaultEffect(effIndex);
     }
 
+    // Fire Mage rework sec 4.2: "Blast Wave consumes all stacks on cast regardless of how many
+    // enemies are hit." Kindling's own +9%/stack SPELLMOD_DAMAGE has already been applied to every
+    // target's damage by the time AfterCast runs, so removing it here can't shortchange the hit.
+    void ConsumeKindling()
+    {
+        GetCaster()->RemoveAurasDueToSpell(SPELL_MAGE_KINDLING);
+    }
+
     void Register() override
     {
         OnEffectHitTarget += SpellEffectFn(spell_mage_blast_wave::HandleKnockBack, EFFECT_2, SPELL_EFFECT_KNOCK_BACK);
+        AfterCast += SpellCastFn(spell_mage_blast_wave::ConsumeKindling);
     }
 };
 
@@ -1842,7 +1861,11 @@ class spell_mage_ice_barrier : public SpellScript
     }
 };
 
-// -11119 - Ignite
+// -11119 - Ignite (the talent). Fire Mage rework sec 4.1/4.1a: a direct-damage Fire critical
+// strike banks a share of its damage into the accumulator in MageMechanics (Mage::AddIgniteDamage)
+// - no more re-applied DoT, no more "Xinef: implement ignite bug" delayed cast. The share is the
+// talent rank's own EFFECT_0 DUMMY amount (apps/dbc-tools mage_trigger_spells.py carries the
+// percentage there), not 8 * rank, so Phase 2's 3-rank 17/33/50 restructure is data-only.
 class spell_mage_ignite : public AuraScript
 {
     PrepareAuraScript(spell_mage_ignite);
@@ -1858,42 +1881,109 @@ class spell_mage_ignite : public AuraScript
             return false;
 
         DamageInfo* damageInfo = eventInfo.GetDamageInfo();
-
-        if (!damageInfo || !damageInfo->GetSpellInfo())
-        {
+        if (!damageInfo || !damageInfo->GetSpellInfo() || !damageInfo->GetDamage())
             return false;
-        }
 
+        // Sec 4.1a "General rule: direct damage critical strikes only. Periodic damage never
+        // applies Ignite, even when talented to crit" - the talent's own DBC ProcTypeMask still
+        // carries PROC_FLAG_DONE_PERIODIC from stock, so reject the periodic ones here.
+        if (eventInfo.GetTypeMask() & PROC_FLAG_DONE_PERIODIC)
+            return false;
+
+        SpellInfo const* spellInfo = damageInfo->GetSpellInfo();
         // Molten Armor
-        if (SpellInfo const* spellInfo = eventInfo.GetSpellInfo())
-        {
-            if (spellInfo->SpellFamilyFlags[1] & 0x8)
-            {
-                return false;
-            }
-        }
+        if (spellInfo->SpellFamilyFlags[1] & 0x8)
+            return false;
+        // The bank's own payout (Ignite tick, 200098) can't crit, but belt and braces - it must
+        // never feed itself.
+        if (spellInfo->Id == SPELL_MAGE_IGNITE_TICK)
+            return false;
 
         return true;
     }
 
-    void HandleProc(AuraEffect const*  /*aurEff*/, ProcEventInfo& eventInfo)
+    void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
     {
         PreventDefaultAction();
-
-        SpellInfo const* igniteDot = sSpellMgr->AssertSpellInfo(SPELL_MAGE_IGNITE);
-        int32 pct = 8 * GetSpellInfo()->GetRank();
-
-        int32 amount = int32(CalculatePct(eventInfo.GetDamageInfo()->GetDamage(), pct) / igniteDot->GetMaxTicks());
-
-        // Xinef: implement ignite bug
-        eventInfo.GetProcTarget()->CastDelayedSpellWithPeriodicAmount(eventInfo.GetActor(), SPELL_MAGE_IGNITE, SPELL_AURA_PERIODIC_DAMAGE, amount);
-        //GetTarget()->CastCustomSpell(SPELL_MAGE_IGNITE, SPELLVALUE_BASE_POINT0, amount, eventInfo.GetProcTarget(), true, nullptr, aurEff);
+        uint32 amount = CalculatePct(eventInfo.GetDamageInfo()->GetDamage(), aurEff->GetAmount());
+        Mage::AddIgniteDamage(eventInfo.GetActor(), eventInfo.GetProcTarget(), amount);
     }
 
     void Register() override
     {
         DoCheckProc += AuraCheckProcFn(spell_mage_ignite::CheckProc);
         OnEffectProc += AuraEffectProcFn(spell_mage_ignite::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+    }
+};
+
+// 12654 - Ignite (the aura on the target). Fire Mage rework sec 4.1: PERIODIC_DUMMY timing/display
+// vehicle for the bank in MageMechanics. Each tick asks the bank for this tick's payout and deals
+// it through the Ignite tick spell (200098 - can't crit, ignores caster modifiers, since the banked
+// damage already went through all of them once); removal of the aura for any reason drops the bank.
+class spell_mage_ignite_dot : public AuraScript
+{
+    PrepareAuraScript(spell_mage_ignite_dot);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_IGNITE_TICK });
+    }
+
+    void HandlePeriodic(AuraEffect const* aurEff)
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetTarget();
+        if (!caster || !target)
+            return;
+
+        int32 damage = int32(Mage::TakeIgniteTick(caster, target, GetAura()));
+        if (damage > 0)
+            caster->CastCustomSpell(SPELL_MAGE_IGNITE_TICK, SPELLVALUE_BASE_POINT0, damage, target, true, nullptr, aurEff);
+    }
+
+    void AfterRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        Mage::ClearIgnite(GetCasterGUID(), GetTarget()->GetGUID());
+    }
+
+    void Register() override
+    {
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_mage_ignite_dot::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+        AfterEffectRemove += AuraEffectRemoveFn(spell_mage_ignite_dot::AfterRemove, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+// 200095 - Meteor (Fire Mage rework sec 2). The cast itself is an instant ground-targeted dummy;
+// the impact + ground burn (200096, Flamestrike-shaped) lands at that spot METEOR_IMPACT_DELAY later
+// via an event on the caster - a missile's flight time scales with distance, this must not.
+class spell_mage_meteor : public SpellScript
+{
+    PrepareSpellScript(spell_mage_meteor);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_METEOR_IMPACT });
+    }
+
+    void HandleDummy(SpellEffIndex /*effIndex*/)
+    {
+        WorldLocation const* dest = GetExplTargetDest();
+        if (!dest)
+            return;
+
+        Unit* caster = GetCaster();
+        Position const impact = dest->GetPosition();
+        // The lambda is owned by the caster's own event processor, which is destroyed with the
+        // caster - so `caster` can't dangle here (same pattern as the rest of m_Events use).
+        caster->m_Events.AddEventAtOffset([caster, impact]()
+        {
+            caster->CastSpell(impact.GetPositionX(), impact.GetPositionY(), impact.GetPositionZ(), SPELL_MAGE_METEOR_IMPACT, true);
+        }, METEOR_IMPACT_DELAY);
+    }
+
+    void Register() override
+    {
+        OnEffectHit += SpellEffectFn(spell_mage_meteor::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
     }
 };
 
@@ -2286,8 +2376,11 @@ class spell_mage_empowered_fire : public AuraScript
         if (!spellInfo)
             return false;
 
-        // Only proc on Ignite
-        return spellInfo->Id == SPELL_MAGE_IGNITE;
+        // Only proc on Ignite - since the Fire Mage rework's accumulator the damage is dealt by the
+        // Ignite tick spell (200098), not the aura (12654) itself. Sec 7.2's rework of this talent
+        // (33/66/100% chance, 1% base mana) is a Phase 3 item; the stock behaviour is kept until
+        // then.
+        return spellInfo->Id == SPELL_MAGE_IGNITE || spellInfo->Id == SPELL_MAGE_IGNITE_TICK;
     }
 
     void HandleProc(AuraEffect const* aurEff, ProcEventInfo& /*eventInfo*/)
@@ -3554,6 +3647,10 @@ class spell_mage_arcane_overload : public SpellScript
 
 void AddSC_mage_spell_scripts()
 {
+    // Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 1.
+    RegisterSpellScript(spell_mage_ignite_dot);
+    RegisterSpellScript(spell_mage_meteor);
+
     RegisterSpellScript(spell_mage_arcane_blast);
     RegisterSpellScript(spell_mage_arcane_missiles);
     RegisterSpellScript(spell_mage_arcane_potency);
