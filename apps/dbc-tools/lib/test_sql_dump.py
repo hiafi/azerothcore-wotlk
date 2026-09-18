@@ -79,6 +79,18 @@ class ApplyStatementsTest(unittest.TestCase):
         sql_dump.apply_statements(rows, TABLE, "UPDATE `widget_dbc` SET `Name` = NULL WHERE (`ID` = 1);")
         self.assertEqual(rows[1], {"ID": 1, "Name": "", "Value": 10})
 
+    def test_update_with_session_variable_and_commented_in_list(self):
+        # mod-progression's phase_00-creature_default_trainer.sql, verbatim shape.
+        rows = {328: {"ID": 328, "Value": 16}, 331: {"ID": 331, "Value": 16}, 1: {"ID": 1, "Value": 5}}
+        sql_dump.apply_statements(rows, TABLE, (
+            "SET @TrainerId := 200;\n"
+            "UPDATE `widget_dbc` SET `Value` = @TrainerId+12 WHERE `ID` IN (\n"
+            "    328, -- Zaldimar Wefhellt <Mage Trainer>\n"
+            "    331 -- Maginor Dumas <Mage Trainer>\n"
+            ");\n"
+        ))
+        self.assertEqual([rows[328]["Value"], rows[331]["Value"], rows[1]["Value"]], [212, 212, 5])
+
     def test_update_where_id_in_list_patches_every_row(self):
         # Real shape from data/sql/updates/db_world/2026_09_14_01.sql (the Glacial Spike/
         # Fireball cast-time fix): one UPDATE repointing several IDs to the same new value.
@@ -163,6 +175,31 @@ class ReadTableRowsTest(unittest.TestCase):
             path.write_text(sql)
             rows = sql_dump.read_table_rows(path, "t", ())
         self.assertEqual(rows, [{"A": 1, "B": 2}])
+
+    def test_session_variable_with_offset_in_insert(self):
+        # `SET @CGUID := 500;` then `(@CGUID+0, ...)` - the creature-spawn migration shape that
+        # used to be skipped outright with an "invalid literal" warning.
+        sql = (
+            "SET @CGUID := 500;\n"
+            "INSERT INTO `t` (`A`, `B`) VALUES (@CGUID+0, @CGUID + 2), (@CGUID, 1);\n"
+        )
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "x.sql"
+            path.write_text(sql)
+            rows = sql_dump.read_table_rows(path, "t", ())
+        self.assertEqual(rows, [{"A": 500, "B": 502}, {"A": 500, "B": 1}])
+
+    def test_hex_literals_parse_as_ints(self):
+        # Hand-written spell_proc rows routinely use MySQL hex for
+        # ProcFlags/HitMask (data/sql/updates/db_world/2026_03_09_01.sql:
+        # 0x61401035) - these used to make the whole file unparseable.
+        # `0x1e5` also has to survive the "'e' means float" heuristic.
+        sql = "INSERT INTO `t` (`A`, `B`, `C`) VALUES (0x10, 0x1e5, 0X0);\n"
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "x.sql"
+            path.write_text(sql)
+            rows = sql_dump.read_table_rows(path, "t", ())
+        self.assertEqual(rows, [{"A": 16, "B": 0x1E5, "C": 0}])
 
 
 class ParseCreateTableColumnsTest(unittest.TestCase):

@@ -16,12 +16,15 @@
  */
 
 #include "MageMechanics.h"
+#include "ObjectGuid.h"
 #include "Player.h"
 #include "SpellAuraEffects.h"
+#include "SpellAuras.h"
 #include "SpellInfo.h"
 #include "Unit.h"
 #include "Util.h"
 #include <algorithm>
+#include <map>
 
 namespace Mage
 {
@@ -42,6 +45,50 @@ namespace Mage
         constexpr uint32 SPELL_ARCANE_POWER = 12042;
         // Phase 3 Batch C - keep in sync with spell_mage.cpp's own SPELL_MAGE_ARCANE_MASTERY.
         constexpr uint32 SPELL_ARCANE_MASTERY = 200085;
+
+        // Fire Mage rework (docs/reworks/fire-mage-rework.md) - keep in sync with spell_mage.cpp's
+        // SPELL_MAGE_IGNITE / SPELL_MAGE_IGNITE_TICK / SPELL_MAGE_KINDLING.
+        constexpr uint32 SPELL_IGNITE_DOT = 12654;
+        constexpr uint32 SPELL_IGNITE_TICK = 200098;
+        constexpr uint32 SPELL_KINDLING = 200097;
+        constexpr uint32 SPELL_FIRE_BLAST = 2136;
+        constexpr uint32 SPELL_BLAZING_SPEED_ESCAPE = 200113;
+        // Phase 3 - keep in sync with spell_mage.cpp's own SPELL_MAGE_PYROBLAST /
+        // SPELL_MAGE_HOT_STREAK_PROC / MAGE_ICON_HOT_STREAK.
+        constexpr uint32 SPELL_PYROBLAST = 11366;
+        constexpr uint32 SPELL_HOT_STREAK_PROC = 48108;
+        constexpr uint32 MAGE_ICON_HOT_STREAK = 2999;
+        // Sec 3.3: 4 sec, 1 sec tick interval, 4 ticks. Kept as the count rather than derived from
+        // the aura's duration/amplitude so a refresh mid-cadence still means "4 more payouts".
+        constexpr uint8 IGNITE_TICKS = 4;
+        // Sec 4.1's client-display fallback: stack count = banked damage / this. The 3.3.5 aura
+        // update packet carries a stack byte but never effect amounts, so this is the only number
+        // the client can show.
+        constexpr uint32 IGNITE_DAMAGE_PER_DISPLAY_STACK = 100;
+
+        struct IgniteBank
+        {
+            uint32 remaining = 0;
+            uint8 ticksRemaining = 0;
+        };
+
+        // Keyed by (caster, target) GUID pair - one bank per mage per victim, exactly like one
+        // Ignite aura per mage per victim. Entries only live while the aura does (ClearIgnite runs
+        // from the aura's own AfterEffectRemove), so this never grows past the number of live
+        // Ignites in the world.
+        std::map<std::pair<ObjectGuid, ObjectGuid>, IgniteBank> igniteBanks;
+
+        std::pair<ObjectGuid, ObjectGuid> IgniteKey(Unit const* caster, Unit const* target)
+        {
+            return { caster->GetGUID(), target->GetGUID() };
+        }
+
+        void SyncIgniteDisplay(Aura* ignite, IgniteBank const& bank)
+        {
+            uint32 stacks = std::clamp<uint32>(bank.remaining / IGNITE_DAMAGE_PER_DISPLAY_STACK, 1, 255);
+            if (ignite->GetStackAmount() != stacks)
+                ignite->SetStackAmount(uint8(stacks));
+        }
     }
 
     bool IsFrozenTarget(Unit const* caster, Unit const* victim)
@@ -246,5 +293,126 @@ namespace Mage
             if (killerPlr->isHonorOrXPTarget(victim))
                 if (killerPlr->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_MAGE, 15, EFFECT_2))
                     killerPlr->EnergizeBySpell(killerPlr, 12519, CalculatePct(killerPlr->GetMaxPower(POWER_MANA), 12), POWER_MANA);
+    }
+}
+
+namespace Mage
+{
+    void AddIgniteDamage(Unit* caster, Unit* target, uint32 amount)
+    {
+        if (!caster || !target || !amount || !target->IsAlive())
+            return;
+
+        Aura* ignite = target->GetAura(SPELL_IGNITE_DOT, caster->GetGUID());
+        if (!ignite)
+        {
+            // Fresh application - triggered and ALWAYS_HIT (12654's own AttributesEx3), so it's on
+            // the target synchronously unless the target is immune, in which case nothing banks.
+            caster->CastSpell(target, SPELL_IGNITE_DOT, true);
+            ignite = target->GetAura(SPELL_IGNITE_DOT, caster->GetGUID());
+            if (!ignite)
+                return;
+            igniteBanks[IgniteKey(caster, target)] = IgniteBank();
+        }
+        else
+            // Sec 4.1 "On a Fire critical strike" step 2/3: duration back to the full 4 sec, but
+            // RefreshDuration (not RefreshTimers) so the periodic timer keeps its schedule.
+            ignite->RefreshDuration();
+
+        IgniteBank& bank = igniteBanks[IgniteKey(caster, target)];
+        bank.remaining += amount;
+        bank.ticksRemaining = IGNITE_TICKS;
+        SyncIgniteDisplay(ignite, bank);
+    }
+
+    uint32 GetIgniteRemaining(Unit const* caster, Unit const* target)
+    {
+        if (!caster || !target)
+            return 0;
+        auto it = igniteBanks.find(IgniteKey(caster, target));
+        return it != igniteBanks.end() ? it->second.remaining : 0;
+    }
+
+    uint32 ConsumeIgnite(Unit* caster, Unit* target)
+    {
+        uint32 remaining = GetIgniteRemaining(caster, target);
+        // RemoveAura -> spell_mage_ignite_dot's AfterEffectRemove -> ClearIgnite erases the bank.
+        target->RemoveAura(SPELL_IGNITE_DOT, caster->GetGUID());
+        ClearIgnite(caster->GetGUID(), target->GetGUID());
+        return remaining;
+    }
+
+    uint32 TakeIgniteTick(Unit* caster, Unit* target, Aura* /*ignite*/)
+    {
+        if (!caster || !target)
+            return 0;
+        auto it = igniteBanks.find(IgniteKey(caster, target));
+        if (it == igniteBanks.end())
+            return 0;
+
+        IgniteBank& bank = it->second;
+        if (!bank.remaining)
+            return 0;
+
+        // Sec 4.1 "On tick": deal remaining / ticks_remaining, subtract, decrement. The final tick
+        // takes whatever is left so rounding never strands damage in the bank.
+        uint32 tick = bank.ticksRemaining <= 1 ? bank.remaining : bank.remaining / bank.ticksRemaining;
+        bank.remaining -= tick;
+        bank.ticksRemaining = bank.ticksRemaining ? bank.ticksRemaining - 1 : 0;
+        if (Aura* ignite = target->GetAura(SPELL_IGNITE_DOT, caster->GetGUID()))
+            SyncIgniteDisplay(ignite, bank);
+        return tick;
+    }
+
+    void ClearIgnite(ObjectGuid casterGuid, ObjectGuid targetGuid)
+    {
+        igniteBanks.erase({ casterGuid, targetGuid });
+    }
+
+    void GrantKindling(Unit* caster, uint32 stacks)
+    {
+        if (!caster || !stacks)
+            return;
+
+        Aura* kindling = caster->GetAura(SPELL_KINDLING, caster->GetGUID());
+        if (!kindling)
+        {
+            caster->CastSpell(caster, SPELL_KINDLING, true);
+            kindling = caster->GetAura(SPELL_KINDLING, caster->GetGUID());
+            if (!kindling)
+                return;
+            --stacks; // the fresh application is stack 1
+        }
+        if (stacks)
+            kindling->ModStackAmount(int32(stacks));
+    }
+
+    bool ApplySpellCritChanceMods(Unit const* caster, SpellInfo const* spellProto, float& critChance)
+    {
+        if (spellProto->Id == SPELL_FIRE_BLAST)
+        {
+            critChance = 100.0f;
+            return true;
+        }
+        // Hot Streak (sec 5 (8,2)) - "This Pyroblast always critically strikes." Same HasAura gate
+        // ApplyDoneDamagePctMods' Mastery bonus uses; spell_mage_pyroblast consumes the buff after
+        // this cast either way.
+        if (spellProto->Id == SPELL_PYROBLAST && caster && caster->HasAura(SPELL_HOT_STREAK_PROC))
+        {
+            critChance = 100.0f;
+            return true;
+        }
+        return false;
+    }
+
+    bool CanCastWhileMoving(Unit const* caster, SpellInfo const* spellInfo)
+    {
+        if (!caster || !spellInfo || spellInfo->SpellFamilyName != SPELLFAMILY_MAGE)
+            return false;
+        if (spellInfo->IsChanneled())
+            return false;
+        if (!(spellInfo->GetSchoolMask() & SPELL_SCHOOL_MASK_FIRE))
+            return false;
+        return caster->HasAura(SPELL_BLAZING_SPEED_ESCAPE);
     }
 }

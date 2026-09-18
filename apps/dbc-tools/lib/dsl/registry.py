@@ -91,9 +91,18 @@ class Registry:
     tabs: list[dict] = field(default_factory=list)
     skill_line_abilities: list[dict] = field(default_factory=list)
     trainer_spells: list[dict] = field(default_factory=list)
+    # Three more plain world-DB tables with no DBC counterpart, same shape/
+    # rationale as `trainer_spells` - see `scripted_by`/`bonus_coefficients`/
+    # `procs_on` below and `lib/spell_tables.py` for how they're emitted.
+    spell_script_names: list[dict] = field(default_factory=list)
+    spell_bonus_data: list[dict] = field(default_factory=list)
+    spell_procs: list[dict] = field(default_factory=list)
 
 
-MERGE_KEYS = ("spells", "talents", "tabs", "skill_line_abilities", "trainer_spells")
+MERGE_KEYS = (
+    "spells", "talents", "tabs", "skill_line_abilities", "trainer_spells",
+    "spell_script_names", "spell_bonus_data", "spell_procs",
+)
 
 # The registry a class file's spell()/talent()/tab()/skill_line_ability()
 # calls register into while it's being imported, and (separately) the
@@ -206,6 +215,126 @@ def trained_by(
         "VerifiedBuild": 0,
     }
     _require_active().trainer_spells.append(row)
+    return row
+
+
+def _spell_id_of(spell: model.Spell | int) -> int:
+    """`scripted_by`/`bonus_coefficients`/`procs_on` accept either the
+    `Spell` object a `spell(...)` call returned or a bare stock spell ID -
+    the latter for binding to a pre-existing Blizzard spell that has no
+    declaration in source at all (e.g. a script on a stock proc aura the
+    rework only touches from C++), mirroring `granted_by_talent`'s own
+    bare-int rank convention."""
+    return spell.id if isinstance(spell, model.Spell) else int(spell)
+
+
+def scripted_by(spell: model.Spell | int, *script_names: str) -> list[dict]:
+    """Declares one `spell_script_names` row per name in `script_names` for
+    `spell` - the C++ `SpellScript`/`AuraScript` binding(s) that
+    `AddSC_<class>_spell_scripts()` registers under that name. Lives next to
+    the spell declaration instead of in a hand-written migration so "wrote
+    the script, forgot the row" (which fails silently - the script simply
+    never runs, no boot-log line) is one call instead of a separate file.
+
+    Binds the exact positive spell ID only - never the stock table's
+    negative "-<id> = this spell and every rank in its spell_ranks chain"
+    convention. A multi-rank talent binds each rank individually (the
+    `Spell` objects are all right there), which doesn't depend on a
+    `spell_ranks` row existing for the chain."""
+    if not script_names:
+        raise ValueError(f"scripted_by({_spell_id_of(spell)}): pass at least one script name")
+    rows = []
+    for name in script_names:
+        if not name or len(name) > 64:
+            raise ValueError(
+                f"scripted_by({_spell_id_of(spell)}): script name {name!r} must be 1-64 chars "
+                f"(spell_script_names.ScriptName is char(64))"
+            )
+        row = {
+            "id": f"{_spell_id_of(spell)}:{name}",
+            "spell_id": _spell_id_of(spell),
+            "ScriptName": name,
+        }
+        _require_active().spell_script_names.append(row)
+        rows.append(row)
+    return rows
+
+
+def bonus_coefficients(
+    spell: model.Spell | int,
+    direct: float = 0.0,
+    dot: float = 0.0,
+    ap: float = 0.0,
+    ap_dot: float = 0.0,
+    comment: str | None = None,
+) -> dict:
+    """Declares `spell`'s `spell_bonus_data` row - the spell-power (`direct`
+    / `dot`) and attack-power (`ap` / `ap_dot`) coefficients
+    `SpellMgr::GetSpellBonusData` reads, overriding the DBC-derived default
+    the engine would otherwise compute from cast time. `comment` fills the
+    table's own free-text `comments` column; defaults to the spell's name
+    when a `Spell` object was passed."""
+    if comment is None and isinstance(spell, model.Spell):
+        comment = spell.name
+    row = {
+        "id": _spell_id_of(spell),
+        "entry": _spell_id_of(spell),
+        "direct_bonus": float(direct),
+        "dot_bonus": float(dot),
+        "ap_bonus": float(ap),
+        "ap_dot_bonus": float(ap_dot),
+        "comments": comment,
+    }
+    _require_active().spell_bonus_data.append(row)
+    return row
+
+
+def procs_on(
+    spell: model.Spell | int,
+    proc_flags: int,
+    school_mask: int = 0,
+    family_name: int = 0,
+    family_mask: tuple[int, int, int] = (0, 0, 0),
+    spell_type_mask: int = 0,
+    spell_phase_mask: int = 0,
+    hit_mask: int = 0,
+    attributes_mask: int = 0,
+    disable_effects_mask: int = 0,
+    ppm: float = 0.0,
+    chance: float = 0.0,
+    cooldown_ms: int = 0,
+    charges: int = 0,
+) -> dict:
+    """Declares `spell`'s `spell_proc` row - what the aura procs on
+    (`proc_flags` is `PROC_FLAG_*`, `hit_mask` is `PROC_HIT_*`,
+    `spell_type_mask`/`spell_phase_mask` are `PROC_SPELL_TYPE_*`/
+    `PROC_SPELL_PHASE_*`, all from src/server/game/Spells/SpellMgr.h) and
+    how often (`chance` in %, or `ppm`; `cooldown_ms` is the internal
+    cooldown). `family_name`/`family_mask` restrict which triggering spells
+    count, same three-dword classmask convention as everywhere else.
+    Overrides whatever the DBC's own `ProcTypeMask`/`ProcChance` said - the
+    row is what the engine actually uses once it exists."""
+    m0, m1, m2 = (tuple(family_mask) + (0, 0, 0))[:3]
+    row = {
+        "id": _spell_id_of(spell),
+        "SpellId": _spell_id_of(spell),
+        "SchoolMask": int(school_mask),
+        "SpellFamilyName": int(family_name),
+        "SpellFamilyMask0": int(m0),
+        "SpellFamilyMask1": int(m1),
+        "SpellFamilyMask2": int(m2),
+        "ProcFlags": int(proc_flags),
+        "SpellTypeMask": int(spell_type_mask),
+        "SpellPhaseMask": int(spell_phase_mask),
+        "HitMask": int(hit_mask),
+        "AttributesMask": int(attributes_mask),
+        "DisableEffectsMask": int(disable_effects_mask),
+        "ProcsPerMinute": float(ppm),
+        "Chance": float(chance),
+        "Cooldown": int(cooldown_ms),
+        "Charges": int(charges),
+    }
+    _require_active().spell_procs.append(row)
     return row
 
 

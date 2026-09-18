@@ -33,14 +33,35 @@ _INSERT_HEAD_RE = re.compile(
 )
 
 
-def _read_value(text: str, i: int, terminators: str = ",)") -> tuple[object, int]:
+_VAR_EXPR_RE = re.compile(r"(?P<name>@\w+)(?:\s*(?P<op>[+-])\s*(?P<num>\d+))?")
+
+
+def _read_value(
+    text: str, i: int, terminators: str = ",)", variables: dict[str, int] | None = None
+) -> tuple[object, int]:
     """Parse a single SQL literal (quoted string, NULL, or number) starting at
     `text[i]` (leading whitespace already skipped by the caller). Returns
     (value, index_just_past_the_literal). `terminators` bounds a bare numeric
     token - widen it for a value not immediately followed by ',' or ')' (e.g.
     the last assignment in an `UPDATE ... SET` clause, followed by whitespace
-    then `WHERE`)."""
+    then `WHERE`).
+
+    `variables` enables the one non-literal shape this repo's hand-written
+    SQL actually uses: a MySQL session variable, bare (`@TrainerId`) or with
+    one integer offset (`@TrainerId+3`, `@CGUID + 0`), where the variable was
+    assigned a plain integer by an earlier `SET @name := n;` (see
+    `apply_statements`). mod-progression's trainer rewiring is written
+    entirely this way. An unknown variable, or `variables=None`, raises like
+    any other unparseable token."""
     n = len(text)
+    if text[i] == "@":
+        m = _VAR_EXPR_RE.match(text, i)
+        if variables is None or m.group("name") not in variables:
+            raise ValueError(f"unresolved session variable {text[i:i + 24]!r}")
+        value = variables[m.group("name")]
+        if m.group("op"):
+            value += int(m.group("num")) * (1 if m.group("op") == "+" else -1)
+        return value, m.end()
     if text[i] == "'":
         j = i + 1
         buf = []
@@ -64,6 +85,11 @@ def _read_value(text: str, i: int, terminators: str = ",)") -> tuple[object, int
     while text[j] not in terminators:
         j += 1
     token = text[i:j].strip()
+    if token[:2].lower() == "0x":
+        # MySQL hex literal (`0x10`) - common in hand-written spell_proc rows for
+        # ProcFlags/HitMask. Checked before the float branch since a hex digit
+        # can be 'e'.
+        return int(token, 16), j
     return (float(token) if "." in token or "e" in token.lower() else int(token)), j
 
 
@@ -86,7 +112,9 @@ def _skip_ws_and_comments(text: str, i: int) -> int:
     return i
 
 
-def _read_tuples(text: str, start: int) -> tuple[list[list], int]:
+def _read_tuples(
+    text: str, start: int, variables: dict[str, int] | None = None
+) -> tuple[list[list], int]:
     """Parse a comma-separated list of parenthesized value-tuples starting at
     `text[start]` (which must be '('), stopping at the terminating ';'.
     Returns (tuples, index_just_past_the_semicolon)."""
@@ -103,7 +131,7 @@ def _read_tuples(text: str, start: int) -> tuple[list[list], int]:
         values = []
         while True:
             i = _skip_ws_and_comments(text, i)
-            value, i = _read_value(text, i)
+            value, i = _read_value(text, i, variables=variables)
             values.append(value)
             i = _skip_ws_and_comments(text, i)
             if text[i] == ",":
@@ -125,7 +153,9 @@ def _read_tuples(text: str, start: int) -> tuple[list[list], int]:
 _COL_EQ_RE = re.compile(r"`(?P<col>\w+)`\s*=\s*")
 
 
-def _read_set_assignments(text: str, start: int) -> tuple[dict, int]:
+def _read_set_assignments(
+    text: str, start: int, variables: dict[str, int] | None = None
+) -> tuple[dict, int]:
     """Parse a `` `col` = value (, `col` = value)* `` list starting at
     `start` (right after `UPDATE ... SET `), stopping as soon as the next
     `` `col` = `` pattern doesn't match - i.e. at the WHERE clause. Returns
@@ -139,7 +169,7 @@ def _read_set_assignments(text: str, start: int) -> tuple[dict, int]:
         m = _COL_EQ_RE.match(text, i)
         if not m:
             break
-        value, i = _read_value(text, m.end(), terminators=" \t\r\n,);")
+        value, i = _read_value(text, m.end(), terminators=" \t\r\n,);", variables=variables)
         assignments[m.group("col")] = value
         while i < n and text[i] in " \t\r\n":
             i += 1
@@ -247,6 +277,9 @@ def read_table_rows(path: Path, table_name: str, columns: tuple[str, ...]) -> li
     plain list rather than being collapsed into a dict keyed by one column,
     which would silently drop rows that share whatever column got picked."""
     text = Path(path).read_text(encoding="utf-8")
+    # Every integer `SET @name := n;` in the file, resolved up front (not in statement order -
+    # good enough for the "assigned once at the top" shape these files use).
+    variables = {m.group("name"): int(m.group("value")) for m in _SET_VAR_RE.finditer(text)}
     out: list[dict] = []
     pos = 0
     while True:
@@ -260,7 +293,7 @@ def read_table_rows(path: Path, table_name: str, columns: tuple[str, ...]) -> li
             [c.strip(" `") for c in m.group("cols").split(",")] if m.group("cols") else None
         )
         cols = explicit_cols or list(columns)
-        tuples, pos = _read_tuples(text, m.end())
+        tuples, pos = _read_tuples(text, m.end(), variables)
         for values in tuples:
             if len(values) != len(cols):
                 raise ValueError(
@@ -272,6 +305,10 @@ def read_table_rows(path: Path, table_name: str, columns: tuple[str, ...]) -> li
 
 
 _DELETE_HEAD_RE = re.compile(r"DELETE\s+FROM\s+`(?P<table>\w+)`\s*", re.IGNORECASE)
+# `SET @TrainerId := 200;` - integer session variables only (see _read_value). A `SET @GUID :=
+# (SELECT MAX(guid)+1 ...)` doesn't match and stays what it always was: an unresolvable token that
+# skips the statement using it.
+_SET_VAR_RE = re.compile(r"SET\s+(?P<name>@\w+)\s*:?=\s*(?P<value>-?\d+)\s*;", re.IGNORECASE)
 _UPDATE_HEAD_RE = re.compile(r"UPDATE\s+`(?P<table>\w+)`\s+SET\s+", re.IGNORECASE)
 _DELETE_WHERE_RANGE_RE = re.compile(
     r"WHERE\s+`\w+`\s+BETWEEN\s+(?P<start>-?\d+)\s+AND\s+(?P<end>-?\d+)\s*;",
@@ -287,6 +324,15 @@ _WHERE_EQ_RE = re.compile(
     r"WHERE\s*\(?\s*`\w+`\s*=\s*(?P<id>-?\d+)\s*\)?\s*;",
     re.IGNORECASE,
 )
+
+
+def _parse_id_list(ids_text: str) -> list[int]:
+    """The `(...)` body of a `WHERE col IN (...)`, one int per entry, with
+    `-- trailing comments` stripped line by line - mod-progression's trainer
+    rewiring annotates every CreatureId that way (`913, -- Lyria Du Lac
+    <Warrior Trainer>`)."""
+    cleaned = "\n".join(line.split("--", 1)[0] for line in ids_text.splitlines())
+    return [int(token.strip()) for token in cleaned.split(",") if token.strip()]
 
 
 def _skip_statement(text: str, pos: int) -> int:
@@ -306,12 +352,15 @@ def _next_match(pattern: re.Pattern, text: str, pos: int, table_name: str) -> re
         pos = m.end()
 
 
-def _apply_insert(rows: dict[int, dict], table: DbcTable, text: str, m: re.Match) -> int:
+def _apply_insert(
+    rows: dict[int, dict], table: DbcTable, text: str, m: re.Match,
+    variables: dict[str, int] | None = None,
+) -> int:
     explicit_cols = (
         [c.strip(" `") for c in m.group("cols").split(",")] if m.group("cols") else None
     )
     columns = explicit_cols or list(table.columns)
-    tuples, pos = _read_tuples(text, m.end())
+    tuples, pos = _read_tuples(text, m.end(), variables)
     for values in tuples:
         if len(values) != len(columns):
             continue  # not a shape we recognize for this table - skip, don't crash the replay
@@ -330,8 +379,8 @@ def _apply_delete(rows: dict[int, dict], text: str, pos: int) -> int:
         return m.end()
     m = _WHERE_IN_RE.match(text, pos)
     if m:
-        for token in m.group("ids").split(","):
-            rows.pop(int(token.strip()), None)
+        for id_ in _parse_id_list(m.group("ids")):
+            rows.pop(id_, None)
         return m.end()
     m = _WHERE_EQ_RE.match(text, pos)
     if m:
@@ -340,7 +389,10 @@ def _apply_delete(rows: dict[int, dict], text: str, pos: int) -> int:
     return _skip_statement(text, pos)
 
 
-def _apply_update(rows: dict[int, dict], table: DbcTable, text: str, pos: int) -> int:
+def _apply_update(
+    rows: dict[int, dict], table: DbcTable, text: str, pos: int,
+    variables: dict[str, int] | None = None,
+) -> int:
     """`UPDATE ... SET col = val, ... WHERE \\`col\\` = n` (one row) or
     `WHERE \\`col\\` IN (n, m, ...)` (several rows, same assignments applied
     to each) - the second shape is a real one, not hypothetical: the
@@ -352,7 +404,7 @@ def _apply_update(rows: dict[int, dict], table: DbcTable, text: str, pos: int) -
     per `apply_statements`'s own docstring) but left `state.py`'s
     reconstruction of "what's live" stale for every ID past the first,
     surfacing as a spurious drift report from `generate.py`."""
-    assignments, pos = _read_set_assignments(text, pos)
+    assignments, pos = _read_set_assignments(text, pos, variables)
     if not assignments:
         return _skip_statement(text, pos)
     m = _WHERE_EQ_RE.match(text, pos)
@@ -362,7 +414,7 @@ def _apply_update(rows: dict[int, dict], table: DbcTable, text: str, pos: int) -
         m = _WHERE_IN_RE.match(text, pos)
         if not m:
             return _skip_statement(text, pos)
-        ids = [int(token.strip()) for token in m.group("ids").split(",")]
+        ids = _parse_id_list(m.group("ids"))
         end = m.end()
     for id_ in ids:
         row = rows.get(id_)
@@ -397,20 +449,25 @@ def apply_statements(rows: dict[int, dict], table: DbcTable, sql_text: str) -> N
     an imperfect replay can only leave an ID looking "changed" when it
     isn't (today's bug, just smaller in scope), never write wrong data."""
     pos = 0
+    variables: dict[str, int] = {}
     while True:
         ins_m = _next_match(_INSERT_HEAD_RE, sql_text, pos, table.sql_table)
         del_m = _next_match(_DELETE_HEAD_RE, sql_text, pos, table.sql_table)
         upd_m = _next_match(_UPDATE_HEAD_RE, sql_text, pos, table.sql_table)
-        candidates = [m for m in (ins_m, del_m, upd_m) if m is not None]
+        set_m = _SET_VAR_RE.search(sql_text, pos)
+        candidates = [m for m in (ins_m, del_m, upd_m, set_m) if m is not None]
         if not candidates:
             return
         m = min(candidates, key=lambda match: match.start())
         try:
-            if m is ins_m:
-                pos = _apply_insert(rows, table, sql_text, m)
+            if m is set_m:
+                variables[m.group("name")] = int(m.group("value"))
+                pos = m.end()
+            elif m is ins_m:
+                pos = _apply_insert(rows, table, sql_text, m, variables)
             elif m is del_m:
                 pos = _apply_delete(rows, sql_text, m.end())
             else:
-                pos = _apply_update(rows, table, sql_text, m.end())
+                pos = _apply_update(rows, table, sql_text, m.end(), variables)
         except Exception:
             pos = _skip_statement(sql_text, m.end())

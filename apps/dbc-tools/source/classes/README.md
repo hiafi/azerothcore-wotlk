@@ -113,5 +113,28 @@ fireball = spell(id=200002, name="Fireball", school=School.FIRE, cast_time_ms=25
 trained_by(fireball, trainer_id=212, req_level=20, money_cost=500)
 ```
 
+Three more plain world-DB tables can be declared right next to the spell
+they belong to, instead of in a hand-written migration that has to be kept
+in sync with the C++ separately (`lib/spell_tables.py`; same "skip what's
+already live, DELETE+INSERT the rest" emission `trained_by` gets):
+
+```python
+from lib.dsl.registry import bonus_coefficients, procs_on, scripted_by
+
+meteor = spell(id=200095, name="Meteor", ...)
+scripted_by(meteor, "spell_mage_meteor")           # -> spell_script_names
+bonus_coefficients(meteor, direct=0.3, dot=0.15)   # -> spell_bonus_data
+procs_on(kindling_trigger, proc_flags=PROC_FLAG_DONE_PERIODIC, family_name=3,
+         family_mask=(0, 0, 0x8), chance=10, cooldown_ms=0)  # -> spell_proc
+
+# All three also take a bare stock spell ID, for binding to a Blizzard spell
+# that has no declaration in source (e.g. a script on stock Ignite, 12654).
+scripted_by(12654, "spell_mage_ignite")
+```
+
+`scripted_by` always binds the exact positive ID - never the stock table's
+negative "-<id> = this and every spell_ranks rank" shorthand; bind each rank
+of a multi-rank talent individually, the `Spell` objects are right there.
+
 A file whose name starts with `_` is skipped by the loader (reserved for a
 future shared-helpers module, not a class file).

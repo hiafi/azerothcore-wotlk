@@ -9255,6 +9255,12 @@ float Unit::SpellDoneCritChance(Unit const* /*victim*/, SpellInfo const* spellPr
     if (Player* modOwner = GetSpellModOwner())
         modOwner->ApplySpellMod(spellProto->Id, SPELLMOD_CRITICAL_CHANCE, crit_chance);
 
+    // Fire Mage rework (docs/reworks/fire-mage-rework.md sec 3.1) - Fire Blast always critically
+    // strikes. An absolute override, applied last, so no other modifier (positive or negative)
+    // can push it off 100.
+    if (spellProto->SpellFamilyName == SPELLFAMILY_MAGE)
+        Mage::ApplySpellCritChanceMods(this, spellProto, crit_chance);
+
     // xinef: can be negative!
     return crit_chance;
 }

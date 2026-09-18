@@ -29,7 +29,16 @@ wiring into `generate.py` are Phase 1, not yet done.
 
 from __future__ import annotations
 
-from .constants import AuraType, DispelType, EffectType, Mechanic, PowerType, School
+from .constants import (
+    AuraType,
+    CombatRating,
+    DispelType,
+    EffectType,
+    Mechanic,
+    PowerType,
+    School,
+    SpellModOp,
+)
 from .model import ApplyAura, Damage, Effect, SkillLineAbility, Spell, Talent, TalentTab
 from .registry import (
     DeadTrainerError,
@@ -49,6 +58,8 @@ __all__ = [
     "Mechanic",
     "EffectType",
     "AuraType",
+    "SpellModOp",
+    "CombatRating",
     "Effect",
     "ApplyAura",
     "Damage",
