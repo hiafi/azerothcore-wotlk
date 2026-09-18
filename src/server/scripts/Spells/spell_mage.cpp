@@ -193,6 +193,15 @@ enum MageSpells
     SPELL_MAGE_FANNED_FLAMES_ICD                 = 200120,
     SPELL_MAGE_FLASHPOINT_DAMAGE                 = 200119,
 
+    // 2026-09-16 tree review - new spells, reserved block 200000-209999.
+    SPELL_MAGE_SCORCHED_EARTH_VULN                = 200123,
+    SPELL_MAGE_STOKING_THE_FIRE_R1                = 200124,
+    SPELL_MAGE_STOKING_THE_FIRE_R2                = 200125,
+    SPELL_MAGE_STOKING_THE_FIRE_R3                = 200126,
+    SPELL_MAGE_STOKING_THE_FIRE_BUFF_R1           = 200127,
+    SPELL_MAGE_STOKING_THE_FIRE_BUFF_R2           = 200128,
+    SPELL_MAGE_STOKING_THE_FIRE_BUFF_R3           = 200129,
+
     // Phase 3 - real stock/talent-rank IDs the new scripts need by name.
     SPELL_MAGE_SCORCH                            = 2948,
     SPELL_MAGE_FLAMESTRIKE                       = 2120,
@@ -241,7 +250,10 @@ enum MageSpellIcons
     MAGE_ICON_EMPOWERED_FIRE                      = 185,
     MAGE_ICON_BURNOUT                             = 2998,
     MAGE_ICON_BLAZING_SPEED                       = 2127,
-    MAGE_ICON_HOT_STREAK                           = 2999
+    MAGE_ICON_HOT_STREAK                           = 2999,
+    // talent-tooltip-audit, 2026-09-17: was 1899, swapped to Spell_Shaman_StormEarthFire (3063) in
+    // apps/dbc-tools - keep this in sync with Scorched Earth's spell_icon_id, the lookup below reads it.
+    MAGE_ICON_SCORCHED_EARTH                       = 3063
 };
 
 /*
@@ -1905,6 +1917,14 @@ class spell_mage_ignite : public AuraScript
         if (eventInfo.GetTypeMask() & PROC_FLAG_DONE_PERIODIC)
             return false;
 
+        // "direct damage critical strikes only" - the crit-requirement half of the same rule.
+        // Bug found via playtest 2026-09-16: this was missing, so every non-periodic hit (crit or
+        // not) was banking Ignite. Fanned Flames (7,1) is the sole, deliberate exception to
+        // "crit-only" and is handled entirely outside this proc (spell_mage_scorch's own
+        // HandleFannedFlamesBanking), not by loosening this check.
+        if (!(eventInfo.GetHitMask() & PROC_HIT_CRITICAL))
+            return false;
+
         SpellInfo const* spellInfo = damageInfo->GetSpellInfo();
         // Molten Armor
         if (spellInfo->SpellFamilyFlags[1] & 0x8)
@@ -2409,6 +2429,103 @@ class spell_mage_flamestrike : public SpellScript
     }
 };
 
+// 2120 - Flamestrike (AuraScript half - Flamestrike's own persistent-area periodic-damage aura,
+// EFFECT_1, per flamestrike_2120's own DSL definition).
+// 2026-09-16 tree review (1,1) Scorched Earth - "Enemies standing in your Flamestrike take 5/10%
+// increased damage from your Fire spells." Bound as a SECOND spell_script_names row on 2120
+// alongside spell_mage_flamestrike above (a SpellScript and an AuraScript on the same spell id is
+// a normal, independently-loaded pair in this engine - see ObjectMgr::LoadSpellScripts). Hooking
+// the persistent-area aura directly (rather than spell_mage_flamestrike's own OnEffectHitTarget)
+// is deliberate: a DynamicObject-backed persistent area aura re-scans its radius for the rest of
+// its duration and applies to later entrants too, not just the targets resolved at the original
+// cast - OnEffectHitTarget only ever sees the latter.
+class spell_mage_flamestrike_vulnerability : public AuraScript
+{
+    PrepareAuraScript(spell_mage_flamestrike_vulnerability);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_SCORCHED_EARTH_VULN });
+    }
+
+    void ApplyVulnerability(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetTarget();
+        if (!caster || !target)
+            return;
+
+        // Scorched Earth's rank marker (200121/200122) - EFFECT_2 DUMMY carries the vulnerability
+        // percentage (5/10). No aura, no talent invested, nothing to apply.
+        AuraEffect const* marker = caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_MAGE, MAGE_ICON_SCORCHED_EARTH, EFFECT_2);
+        if (!marker)
+            return;
+
+        int32 amount = marker->GetAmount();
+        caster->CastCustomSpell(SPELL_MAGE_SCORCHED_EARTH_VULN, SPELLVALUE_BASE_POINT0, amount, target, true, nullptr, aurEff);
+    }
+
+    void Register() override
+    {
+        OnEffectApply += AuraEffectApplyFn(spell_mage_flamestrike_vulnerability::ApplyVulnerability, EFFECT_1, SPELL_AURA_PERIODIC_DAMAGE, AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK);
+    }
+};
+
+// 200124/200125/200126 - Stoking the Fire (9,1), all 3 ranks bound to this one class.
+// 2026-09-16 tree review - "Each Fire spell you cast increases your Fire damage by 1%, stacking
+// up to 3/6/9 times." EFFECT_0 DUMMY + a spell_proc row (procs_on, dbc-tools) scoped to
+// SchoolMask Fire + PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG + PROC_SPELL_PHASE_CAST - fires on
+// every successful Fire-school damaging cast, not on hit (design call 2026-09-16: stacks apply on
+// cast, matching Kindling/Hot Streak's own "trigger on the event, not on damage landing"
+// convention). Internal vehicle casts (Ignite's tick payout, Flashpoint's detonation, Burnout's
+// explosion) are all cast with the simple-bool `CastCustomSpell(..., true)` overload, which maps
+// to TRIGGERED_FULL_MASK - TRIGGERED_DISALLOW_PROC_EVENTS is part of that mask, so none of them
+// generate proc events here; nothing to filter out.
+//
+// **Explicit CastSpell here, not the native PROC_TRIGGER_SPELL aura type.** An earlier pass had
+// each rank spell's own EFFECT_0 be PROC_TRIGGER_SPELL (trigger_spell = the matching buff),
+// letting the engine auto-cast on proc with no C++ at all - the same zero-script shape stock
+// Improved Scorch's own vulnerability proc (22959) uses. Live sim testing (2026-09-16,
+// FireMageSim.20260916-025235.report.json's raw auraEvents) showed that path doesn't refresh-and-
+// stack an existing CumulativeAura: every proc logged as an `applied: false` immediately followed
+// by `applied: true`, both at stackAmount 1, never climbing toward the rank's cap.
+// AuraEffect::HandleProcTriggerSpellAuraProc's own triggered CastSpell call looks identical in
+// shape to any other triggered cast, so the exact reason isn't nailed down further here - but
+// Kindling's own stacking buff (4.2), granted via an explicit Mage::GrantKindling() -> CastSpell
+// rather than a native proc trigger, reaches 25 stacks correctly in the same sim harness. This
+// class reproduces that same explicit-CastSpell shape instead of chasing the engine bug further.
+class spell_mage_stoking_the_fire : public AuraScript
+{
+    PrepareAuraScript(spell_mage_stoking_the_fire);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MAGE_STOKING_THE_FIRE_BUFF_R1, SPELL_MAGE_STOKING_THE_FIRE_BUFF_R2, SPELL_MAGE_STOKING_THE_FIRE_BUFF_R3 });
+    }
+
+    void HandleProc(AuraEffect const* aurEff, ProcEventInfo& /*eventInfo*/)
+    {
+        PreventDefaultAction();
+
+        uint32 buffId;
+        switch (GetId())
+        {
+            case SPELL_MAGE_STOKING_THE_FIRE_R1: buffId = SPELL_MAGE_STOKING_THE_FIRE_BUFF_R1; break;
+            case SPELL_MAGE_STOKING_THE_FIRE_R2: buffId = SPELL_MAGE_STOKING_THE_FIRE_BUFF_R2; break;
+            case SPELL_MAGE_STOKING_THE_FIRE_R3: buffId = SPELL_MAGE_STOKING_THE_FIRE_BUFF_R3; break;
+            default:
+                return;
+        }
+
+        GetTarget()->CastSpell(GetTarget(), buffId, true, nullptr, aurEff);
+    }
+
+    void Register() override
+    {
+        OnEffectProc += AuraEffectProcFn(spell_mage_stoking_the_fire::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+    }
+};
+
 // 200111 - Flashpoint
 // Fire Mage rework sec 5 (10,1) Flashpoint - "Detonates your Ignite on the target, dealing 5 times
 // its remaining damage instantly and half that amount to all enemies within 8 yards. This damage
@@ -2433,7 +2550,10 @@ class spell_mage_flashpoint : public SpellScript
         if (!bank)
             return;
 
-        int32 primary = int32(bank * 5);
+        // EFFECT_0's BasePoints (200111, dbc-tools) is the Ignite multiplier, not a display
+        // amount - GetEffectValue() is this spell's own damage member, populated from
+        // Effects[EFFECT_0].CalcValue() before this hook runs (Spell::HandleEffects).
+        int32 primary = int32(bank * GetEffectValue());
         int32 splash = primary / 2;
         caster->CastCustomSpell(target, SPELL_MAGE_FLASHPOINT_DAMAGE, &primary, &splash, nullptr, true);
     }
@@ -4145,6 +4265,8 @@ void AddSC_mage_spell_scripts()
     RegisterSpellScript(spell_mage_blazing_speed_capstone);
     RegisterSpellScript(spell_mage_scorch);
     RegisterSpellScript(spell_mage_flamestrike);
+    RegisterSpellScript(spell_mage_flamestrike_vulnerability);
+    RegisterSpellScript(spell_mage_stoking_the_fire);
     RegisterSpellScript(spell_mage_flashpoint);
     RegisterSpellScript(spell_mage_pyroblast);
 

@@ -1,12 +1,16 @@
 """
 Sanity checks run over freshly-built spell rows before they're written out.
 
-Currently just one check, but it's its own module (rather than living in
-generate.py or build.py) because it's a *content* sanity check on the fully
-built row, not part of building the row or deciding whether to emit it.
+It's its own module (rather than living in generate.py or build.py) because
+these are *content* sanity checks on the fully built/resolved rows, not part
+of building a row or deciding whether to emit it.
 """
 
 from __future__ import annotations
+
+from types import SimpleNamespace
+
+from lib.dsl.registry import looks_player_castable
 
 # SpellModOp values (SpellDefines.h) that only ever make sense scoped to
 # specific spells via a classmask - i.e. finding one of these with an
@@ -76,4 +80,67 @@ def check_classmask_scoping(entries: list[dict], rows: list[dict]) -> list[str]:
                     f"letter. All-zero here means the engine applies it to every matching spell in "
                     f"the family, not just the intended one."
                 )
+    return warnings
+
+
+def check_missing_skill_line_ability(
+    entries: list[dict],
+    skill_line_ability_entries: list[dict],
+    existing_skill_line_ability_rows: dict[int, dict],
+    ids_cfg: dict,
+) -> list[str]:
+    """Flags a fully-custom, player-castable spell ID with no `SkillLineAbility`
+    coverage at all - the gap that makes a client silently drop it, rather
+    than just misfile it, from any UI that buckets spells by skill line
+    (Spellbook *and*, per the Meteor incident below, the Trainer window too).
+
+    `granted_by_talent()` already guards against this for talent ranks (see
+    `MissingSkillLineAbilityError`), but that check only ever sees spells
+    passed through `ranks=`. A baseline spell declared with a bare `spell()`
+    call and taught via `trained_by()` - Meteor being the first real example
+    - goes through neither, so nothing caught it until a live playtest report
+    (`docs/bugs-and-fixes.md`'s "New custom spell IDs granted by a talent
+    show up in the Spellbook's 'General' tab instead of the class's own tab"
+    - that entry describes the Spellbook-tab symptom; Meteor showed the same
+    root cause can make the Trainer window drop the entry outright, confirmed
+    via server-side packet logging: the row was correctly sent as
+    `Usable=Available`, the client just never rendered it). This check closes
+    that gap at generation time instead of needing another live incident to
+    catch the next one.
+
+    Reuses `looks_player_castable` (the exact heuristic `granted_by_talent()`
+    already relies on) via a `SimpleNamespace` shim, so there's one
+    castable/trigger-only rule for the whole pipeline, not two to keep in
+    sync. Already-covered spells (either freshly declared elsewhere in this
+    run, or already live from a prior run/Blizzard's own data) are exempt;
+    reused stock IDs are exempt outright - Blizzard's own data covers them if
+    they need it."""
+    covered = {e["spell_id"] for e in skill_line_ability_entries}
+    covered |= {row.get("Spell") for row in existing_skill_line_ability_rows.values()}
+    spell_range = ids_cfg["spell"]
+
+    warnings: list[str] = []
+    for entry in entries:
+        notes = entry.get("notes") or ""
+        if notes.strip() == "pulled from existing data":
+            continue
+        spell_id = entry["id"]
+        if not (spell_range["start"] <= spell_id <= spell_range["end"]):
+            continue  # reused stock ID - Blizzard's own data already covers it if it needs it
+        if spell_id in covered:
+            continue
+        if not looks_player_castable(SimpleNamespace(**entry)):
+            continue
+        warnings.append(
+            f"spell {spell_id} ({entry.get('name', '?')}): looks player-castable (a real "
+            f"cast_time_ms/cooldown_ms/category_cooldown_ms/mana_cost and not marked passive) "
+            f"but has no SkillLineAbility row anywhere - it'll silently drop out of (or misfile "
+            f"in) any client UI that buckets spells by skill line, including the Spellbook and "
+            f"the Trainer window. If a player can actually learn/cast this, add a row via "
+            f"skill_line_ability(id=<next from ids.yaml's skilllineability block>, "
+            f"skill_line=<class's line>, spell_id={spell_id}, class_mask=<class mask>). If it's "
+            f"really only ever granted as a hidden triggered effect (never learned or cast "
+            f"directly by a player), this is a false positive - `looks_player_castable`'s "
+            f"heuristic isn't proof, see its docstring."
+        )
     return warnings

@@ -5,7 +5,7 @@ Split from a single source/classes/mage.py via split_class_file.py (.agents/plan
 """
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, School, SpellModOp
-from lib.dsl.registry import bonus_coefficients, scripted_by, spell, trained_by
+from lib.dsl.registry import bonus_coefficients, scripted_by, skill_line_ability, spell, trained_by
 from .mage_trigger_spells import arcane_blast_debuff, arcane_missile_7268, blizzard_42208, meteor_impact_200096, molten_armor_34913
 
 
@@ -1973,8 +1973,8 @@ arcane_ward_200068 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=164, points_per_level=17.75, implicit_target_a=1, apply_aura=69, misc_value=64),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=74, misc_value=64),
     ],
-    spell_icon_id=72,
-    notes='Arcane Mage rework (docs/arcane-mage-rework-design.md, New Spells): "Baseline for all Mages. Mirrors Fire Ward and Frost Ward in level learned, cooldown, absorb amount and rank progression, applied to the Arcane school." Row is a straight copy of Fire Ward (543)\'s structure/numbers with school and effect misc_value (school-absorb target mask) swapped from Fire (4) to Arcane (64) - single rank, matching Fire Ward\'s own single-rank-bootstrap shape (BaseLevel/SpellLevel 20, MaxLevel 80). effect2 (Reflect Spells School, base_points -1 -> live 0%) is inert dead data inherited unchanged from Fire Ward\'s own pulled row - not this rework\'s concern to fix. SpellIconID 72 (Spell_Nature_GuardianWard) - no dedicated "Arcane Ward" icon exists in the client (Blizzard never shipped one); Fire (16)/Frost (14) already use their own school-specific icons so a generic ward icon keeps this one visually distinct from both.',
+    spell_icon_id=1918,
+    notes='Arcane Mage rework (docs/arcane-mage-rework-design.md, New Spells): "Baseline for all Mages. Mirrors Fire Ward and Frost Ward in level learned, cooldown, absorb amount and rank progression, applied to the Arcane school." Row is a straight copy of Fire Ward (543)\'s structure/numbers with school and effect misc_value (school-absorb target mask) swapped from Fire (4) to Arcane (64) - single rank, matching Fire Ward\'s own single-rank-bootstrap shape (BaseLevel/SpellLevel 20, MaxLevel 80). effect2 (Reflect Spells School, base_points -1 -> live 0%) is inert dead data inherited unchanged from Fire Ward\'s own pulled row - not this rework\'s concern to fix. SpellIconID 1918 (Spell_Arcane_ArcaneResilience, talent-tooltip-audit 2026-09-17: was 72/Spell_Nature_GuardianWard, a generic placeholder used because no dedicated "Arcane Ward" icon was known to exist in the client) - Fire (16)/Frost (14) already use their own school-specific icons, this now does too.',
     raw_overrides={'BaseLevel': 20, 'SpellLevel': 20, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'DefenseType': 1, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellClassMask_1': 8, 'SpellClassMask_3': 8, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Absorbs $s1 Arcane damage.  Lasts $d.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Absorbs Arcane damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_2': 1.0},
 )
 
@@ -2200,10 +2200,10 @@ combustion_11129 = spell(
     duration_ms=10000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CRIT_DAMAGE_BONUS),
-        Effect(type=EffectType.APPLY_AURA, base_points=10, die_sides=0, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, die_sides=0, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
     ],
     spell_icon_id=33,
-    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (6,1): fully replaces the stock charge-based version - fixed 10 sec duration (was until 3 crits), Effect_2 is a flat +10% crit SpellMod on the same Fire classmask Effect_1's crit-damage bonus already used (EffectSpellClassMaskB_* = A_*), no more 28682 stacking trigger / ProcCharges. spell_mage_combustion (the 3-crit remover) is unbound in Phase 3. 2 min RecoveryTime -> Cooldown Haste applies.",
+    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (6,1): fully replaces the stock charge-based version - fixed 10 sec duration (was until 3 crits), Effect_2 is a flat +10% crit SpellMod on the same Fire classmask Effect_1's crit-damage bonus already used (EffectSpellClassMaskB_* = A_*), no more 28682 stacking trigger / ProcCharges. spell_mage_combustion (the 3-crit remover) is unbound in Phase 3. 2 min RecoveryTime -> Cooldown Haste applies. Bugfix (talent-tooltip-audit, 2026-09-17): base_points was 10, displaying as 11% ($s2 = base_points+1) against the design doc's 10% - dropped to 9.",
     raw_overrides={'AttributesEx': 268435456, 'AttributesEx3': 67108864, 'AttributesEx4': 524352, 'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 40, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When activated, increases your critical strike chance with Fire spells by $s2% and your critical strike damage bonus with Fire spells by $s1% for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 146800663, 'EffectSpellClassMaskA_2': 200776, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 67108864, 'SpellClassMask_3': 8, 'SpellClassSet': 3, 'SpellLevel': 40, 'SpellPriority': 50, 'SpellVisualID_1': 7634, 'StanceBarOrder': 4294967295, 'EffectSpellClassMaskB_1': 146800663, 'EffectSpellClassMaskB_2': 200776, 'AuraDescription_Lang_enUS': 'Critical strike chance with Fire spells increased by $s2%, critical strike damage bonus with Fire spells increased by $s1%.'},
 )
 
@@ -2392,6 +2392,18 @@ scripted_by(meteor_200095, 'spell_mage_meteor')
 # deployment is taught from (data/sql/updates/db_world/2026_09_10_13.sql). Cost matches
 # Invisibility's (66) level-58 row.
 trained_by(meteor_200095, trainer_id=212, req_level=58, money_cost=200000)
+# Bug found via playtest 2026-09-16/17: Meteor never showed up in the trainer window at all,
+# despite the trainer_spell row and spell_dbc data being confirmed correct end-to-end (server-side
+# debug logging showed the server did include SpellId 200095 in the outgoing SMSG_TRAINER_LIST
+# packet as Usable/Available - the client was silently dropping it from render). This is the
+# documented "new custom spell IDs need their own SkillLineAbility row" gap (docs/bugs-and-fixes.md
+# "New custom spell IDs granted by a talent show up in the Spellbook's 'General' tab instead of the
+# class's own tab") - it's previously only been seen affecting the Spellbook window (miscategorized
+# into General), but the same missing row apparently makes the client drop a fully-custom,
+# player-cast spell ID from the Trainer window's list entirely rather than just misfiling it.
+# Meteor is a brand-new baseline (non-talent) player-cast spell with a fully custom ID, so it needs
+# this row like Arcane's baseline 200067-200070 (skilllineability 30403-30406) did.
+skill_line_ability(id=30410, skill_line=8, spell_id=200095, class_mask=128)
 bonus_coefficients(meteor_impact_200096, direct=0.3, dot=0.15,
                    comment='Mage - Meteor impact / ground burn (fire-mage-rework.md sec 2; dot is per tick, same convention as Flamestrike)')
 
@@ -2408,10 +2420,10 @@ flashpoint_200111 = spell(
     mana_cost_pct=10,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.DUMMY, implicit_target_a=6),
+        Effect(type=EffectType.DUMMY, base_points=2, implicit_target_a=6),
     ],
     spell_icon_id=1197,
-    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (10,1): new talent on repurposed stock talent id 1848 (Fiery Payback) - the tree's single 50-point capstone ability. Shell only: instant, 45 sec RecoveryTime (Cooldown Haste applies), 10% base mana (spec gives no cost - user-adjustable), Effect_1 DUMMY on the enemy target. Phase 3's spell_mage_flashpoint consumes the target's whole Ignite bank (Mage::ConsumeIgnite) and deals 5x it, half that to enemies within 8 yd, neither able to crit. Custom dword-2 bit 0x80. Icon 1197 (Cataclysm). Player-castable and talent-granted -> SkillLineAbility 30409 in mage_talents.py.",
+    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (10,1): new talent on repurposed stock talent id 1848 (Fiery Payback) - the tree's single 50-point capstone ability. Shell only: instant, 45 sec RecoveryTime (Cooldown Haste applies), 10% base mana (spec gives no cost - user-adjustable), Effect_1 DUMMY on the enemy target. EFFECT_0's BasePoints (2, -1 convention -> CalcValue() 3) is the Ignite multiplier spell_mage_flashpoint (spell_mage.cpp) reads via GetEffectValue() - baked into spell data instead of a C++ constant so retuning the multiplier is a data change, not a rebuild. Phase 3's spell_mage_flashpoint consumes the target's whole Ignite bank (Mage::ConsumeIgnite) and deals that multiplier x the bank, half that to enemies within 8 yd, neither able to crit. Custom dword-2 bit 0x80. Icon 1197 (Cataclysm). Player-castable and talent-granted -> SkillLineAbility 30409 in mage_talents.py.",
     raw_overrides={'BaseLevel': 60, 'SpellLevel': 60, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'DefenseType': 1, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 8, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 3, 'SpellClassMask_3': 128, 'SpellPriority': 50, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Detonates your Ignite on the target, dealing 5 times its remaining damage instantly and half that amount to all enemies within 8 yards. This damage cannot be a critical strike.', 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 

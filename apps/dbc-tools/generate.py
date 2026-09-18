@@ -239,6 +239,10 @@ def main() -> int:
     spell_rows = [build.build_spell_row(e, reuse) for e in spell_resolved.entries]
     for warning in lint.check_classmask_scoping(spell_resolved.entries, spell_rows):
         print(f"WARNING: {warning}")
+    for warning in lint.check_missing_skill_line_ability(
+        spell_resolved.entries, skilllineability_resolved.entries, existing_skilllineabilities, ids_cfg,
+    ):
+        print(f"WARNING: {warning}")
     talent_rows = [build.build_talent_row(e) for e in talent_resolved.entries]
     talenttab_rows = [build.build_talenttab_row(e) for e in talenttab_resolved.entries]
     skilllineability_rows = [
