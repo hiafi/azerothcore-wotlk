@@ -302,6 +302,61 @@ CREATUREDISPLAYINFO = DbcTable(
                                "PortraitTextureName"}),
 )
 
+# Also not part of ALL_TABLES, same reasoning as CREATUREMODELDATA/CREATUREDISPLAYINFO above -
+# patched directly by patch_mage_vfx_models.py. Nothing in DBCStructure.h defines a
+# SpellVisualEntry/SpellVisualKitEntry/SpellVisualEffectNameEntry struct at all (grepped - only
+# `Spell::SpellVisual` exists, a plain uint32[2] holding the *ID*, not a loaded row) - the AC
+# server engine never reads these three tables' contents, only ships them through so the client
+# has somewhere to look the ID up. SPELLVISUAL's columns/fmt are transcribed verbatim from
+# data/sql/base/db_world/spellvisual_dbc.sql's CREATE TABLE (same convention as every table above);
+# no equivalent *_dbc.sql exists for the other two, so SPELLVISUALKIT/SPELLVISUALEFFECTNAME below
+# were instead derived by decoding real records from the working-copy binaries field-by-field and
+# cross-checking against wowdev.wiki's documented semantics (both independently agreed) - see
+# docs/reworks/fire-mage-meteor-vfx.md for that verification. Every column is 'x' (never 'i') since
+# there is no AC struct to call any of them "used" by.
+SPELLVISUAL = DbcTable(
+    name="SpellVisual",
+    dbc_filename="SpellVisual.dbc",
+    sql_table="spellvisual_dbc",
+    fmt="n" + "x" * 25 + "f" * 6,
+    columns=_cols(
+        "ID", "PrecastKit", "CastKit", "ImpactKit", "StateKit", "StateDoneKit",
+        "ChannelKit", "HasMissile", "MissileModel", "MissilePathType",
+        "MissileDestinationAttachment", "MissileSound", "AnimEventSoundID", "Flags",
+        "CasterImpactKit", "TargetImpactKit", "MissileAttachment",
+        "MissileFollowGroundHeight", "MissileFollowGroundDropSpeed",
+        "MissileFollowGroundApproach", "MissileFollowGroundFlags", "MissileMotion",
+        "MissileTargetingKit", "InstantAreaKit", "ImpactAreaKit", "PersistentAreaKit",
+        "MissileCastOffsetX", "MissileCastOffsetY", "MissileCastOffsetZ",
+        "MissileImpactOffsetX", "MissileImpactOffsetY", "MissileImpactOffsetZ",
+    ),
+)
+
+SPELLVISUALKIT = DbcTable(
+    name="SpellVisualKit",
+    dbc_filename="SpellVisualKit.dbc",
+    sql_table="spellvisualkit_dbc",
+    fmt="n" + "x" * 20 + "f" * 16 + "x",
+    columns=_cols(
+        "ID", "StartAnimID", "AnimID", "HeadEffect", "ChestEffect", "BaseEffect",
+        "LeftHandEffect", "RightHandEffect", "BreathEffect", "LeftWeaponEffect",
+        "RightWeaponEffect", ("SpecialEffect", 3), "WorldEffect", "SoundID", "ShakeID",
+        ("CharProc", 4), ("CharParamZero", 4), ("CharParamOne", 4), ("CharParamTwo", 4),
+        ("CharParamThree", 4), "Flags",
+    ),
+)
+
+SPELLVISUALEFFECTNAME = DbcTable(
+    name="SpellVisualEffectName",
+    dbc_filename="SpellVisualEffectName.dbc",
+    sql_table="spellvisualeffectname_dbc",
+    fmt="nssffff",
+    columns=_cols(
+        "ID", "Name", "FileName", "AreaEffectSize", "Scale", "MinAllowedScale",
+        "MaxAllowedScale",
+    ),
+)
+
 ALL_TABLES = (
     SPELL, TALENT, TALENTTAB, SPELLCASTTIMES, SPELLDURATION, SPELLRANGE,
     SPELLRADIUS, SKILLLINEABILITY, ITEM,
