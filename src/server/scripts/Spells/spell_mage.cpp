@@ -88,6 +88,8 @@ enum MageSpells
     SPELL_MAGE_GLACIAL_SPIKE                     = 200002,
     SPELL_MAGE_SHATTERING_COLD                   = 200003,
     SPELL_MAGE_FLURRY                            = 200004,
+    // Internal - one of Flurry's 3 sequential bolts (see spell_mage_flurry::FireBolts below).
+    SPELL_MAGE_FLURRY_BOLT                       = 200037,
     SPELL_MAGE_REFRESHMENT                       = 200006,
     SPELL_MAGE_FROZEN_ORB                        = 200007,
     SPELL_MAGE_FROZEN_ORB_PULSE                  = 200008,
@@ -97,9 +99,11 @@ enum MageSpells
     SPELL_MAGE_BITING_COLD_R3                    = 200012,
     SPELL_MAGE_BITING_COLD_BITE                  = 200013,
     SPELL_MAGE_GLACIAL_SPIKE_SHATTER             = 200014,
-    // Glacial Spike's 3-stage acceleration ramp (docs/frost-mage-handoff.md's art-pass
-    // discussion) - two cosmetic wind-up hops, then the real damage-dealing impact. See
-    // spell_mage_glacial_spike/spell_mage_glacial_spike_impact below.
+    // No longer cast by anything (see the Glacial Spike header comment near
+    // spell_mage_glacial_spike) - the converging-icicles visual moved into 200002's own CastKit
+    // (plays for the full 2.5s cast bar instead of two post-cast cosmetic hops), so these two
+    // legs of the old 3-stage ramp are unused. Kept only because the rows are still present in
+    // spell_dbc.
     SPELL_MAGE_GLACIAL_SPIKE_WINDUP_1            = 200025,
     SPELL_MAGE_GLACIAL_SPIKE_WINDUP_2            = 200026,
     SPELL_MAGE_GLACIAL_SPIKE_IMPACT              = 200027,
@@ -215,10 +219,22 @@ enum MageSpells
 
 // Fire Mage rework sec 2 - Meteor "lands at the target location after 3 sec".
 constexpr Milliseconds METEOR_IMPACT_DELAY = 3s;
+// docs/reworks/fire-mage-meteor-vfx.md: how high above the impact point the falling-meteor visual
+// creature (NPC_MAGE_METEOR_MISSILE) spawns - purely cosmetic, chosen only so its fall (timed to
+// take exactly METEOR_IMPACT_DELAY - see npc_mage_meteor_missile) reads as "dropping from the sky"
+// without spawning inside nearby terrain/geometry at typical outdoor combat heights.
+constexpr float METEOR_MISSILE_FALL_HEIGHT = 40.0f;
 
 enum FrostMageReworkCreatures
 {
     NPC_MAGE_FROZEN_ORB = 300001
+};
+
+enum FireMageReworkCreatures
+{
+    // Fire Mage rework sec 2 - Meteor's falling-meteor visual (docs/reworks/fire-mage-meteor-vfx.md).
+    // Purely cosmetic - see npc_mage_meteor_missile below - carries no damage/aura of its own.
+    NPC_MAGE_METEOR_MISSILE = 300002
 };
 
 enum MageSpellIcons
@@ -402,46 +418,27 @@ class spell_mage_blizzard_icicles : public AuraScript
 };
 
 // 200002 - Glacial Spike
-// Redesigned as a 3-stage "ramp-up" missile chain to fake mid-flight acceleration - Spell.dbc
-// only exposes one constant Speed per spell and the engine has no acceleration field at all (see
-// docs/frost-mage-handoff.md's art-pass discussion). This spell (200002, the real button/cast-bar
-// spell) no longer deals damage or travels itself (effect1 is a no-op DUMMY, Speed removed - see
-// its CSV row's notes) - it only gates the cast (CheckIcicles) and, on hit (instant, since it no
-// longer travels), kicks off the chain via BeginRamp:
-//   1. Two short, dest-targeted (TARGET_DEST_DEST) cosmetic hops toward the real target -
-//      SPELL_MAGE_GLACIAL_SPIKE_WINDUP_1 (Speed 1, ~0.5yd, ~0.5s) then _WINDUP_2 (Speed 5, ~1.5yd,
-//      ~0.3s), fired ~0ms and ~500ms after the cast completes. Each hop's destination is computed
-//      fresh (caster may have turned/moved) via GetFirstCollisionPosition - these spells are
-//      purely visual and don't themselves know the real target.
-//   2. The real hit, SPELL_MAGE_GLACIAL_SPIKE_IMPACT (Speed 30), cast at the real target ~800ms
-//      after the button-press completes - see spell_mage_glacial_spike_impact below for icicle/
-//      Fingers-of-Frost consumption and the Arctic Winds shatter-cleave, both moved there since
-//      that's the stage that now represents the spell actually landing.
+// The button/cast-bar spell (2.5s cast). Effect1 is a no-op DUMMY with Speed removed - it deals no
+// damage and travels nowhere itself; it only gates the cast (CheckIcicles) and, on hit (instant,
+// since it no longer travels), immediately casts the real damage-dealing leg,
+// SPELL_MAGE_GLACIAL_SPIKE_IMPACT - see spell_mage_glacial_spike_impact below for icicle/
+// Fingers-of-Frost consumption and the Arctic Winds shatter-cleave, both handled there since
+// that's the stage that represents the spell actually landing.
 //
-// This deliberately does *not* use the engine's native SPELL_EFFECT_TRIGGER_MISSILE_SPELL DBC
-// chaining: for a unit-targeted trigger effect, EffectTriggerMissileSpell (SpellEffects.cpp)
-// always re-casts the triggered spell from the caster's *current* position to the *same real*
-// unit target - i.e. every leg re-flies the entire real cast distance, not a fraction of it.
-// There's no way to get a short, controlled hop distance while keeping a real enemy unit as the
-// target through that mechanism, so the whole chain is driven by hand instead: the real target is
-// carried across the ~800ms ramp by GUID + ObjectAccessor (re-resolved and alive-checked at each
-// stage) rather than by DBC-level target propagation, since a raw Unit* pointer captured into a
-// delayed event isn't safe to hold across that much real time (the target could die/despawn).
+// The "icicles converging" visual (previously a 2-stage, ~800ms post-cast cosmetic ramp fired via
+// SPELL_MAGE_GLACIAL_SPIKE_WINDUP_1/_2 - see those enum entries' comment) now instead plays as a
+// WorldEffect on 200002's own CastKit (patch_mage_vfx_models.py's KIT_GLACIALSPIKE_CAST), so it
+// runs for the full visible 2.5s cast bar instead of after it - the icicles visibly build up while
+// the player is casting, and the spike launches the instant the cast bar finishes.
 class spell_mage_glacial_spike : public SpellScript
 {
     PrepareSpellScript(spell_mage_glacial_spike);
 
     static constexpr uint8 REQUIRED_ICICLES = 5;
 
-    // Ramp timing/distances - see the class comment above for why the chain is hand-driven.
-    static constexpr float WINDUP_1_DISTANCE = 0.5f;
-    static constexpr float WINDUP_2_DISTANCE = 1.5f;
-    static constexpr uint32 WINDUP_2_DELAY_MS = 500;
-    static constexpr uint32 IMPACT_DELAY_MS = 800;
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_MAGE_ICICLES, SPELL_MAGE_GLACIAL_SPIKE_WINDUP_1, SPELL_MAGE_GLACIAL_SPIKE_WINDUP_2, SPELL_MAGE_GLACIAL_SPIKE_IMPACT });
+        return ValidateSpellInfo({ SPELL_MAGE_ICICLES, SPELL_MAGE_GLACIAL_SPIKE_IMPACT });
     }
 
     SpellCastResult CheckIcicles()
@@ -453,46 +450,20 @@ class spell_mage_glacial_spike : public SpellScript
         return SPELL_CAST_OK;
     }
 
-    // Short, collision-safe hop toward (not all the way to) the real target, from the caster's
-    // *current* position at fire time. angle is relative to the caster's own facing (matching
-    // GetFirstCollisionPosition's convention), so this points at the target regardless of which
-    // way the caster happens to be facing.
-    static void FireCosmeticHop(Unit* caster, Unit* target, float distance, uint32 spellId)
-    {
-        float const relativeAngle = caster->GetAngle(target) - caster->GetOrientation();
-        Position const hop = caster->GetFirstCollisionPosition(distance, relativeAngle);
-        caster->CastSpell(hop.GetPositionX(), hop.GetPositionY(), hop.GetPositionZ(), spellId, true);
-    }
-
-    void BeginRamp()
+    void LaunchImpact()
     {
         Unit* caster = GetCaster();
         Unit* target = GetHitUnit();
         if (!caster || !target)
             return;
 
-        ObjectGuid const targetGuid = target->GetGUID();
-        FireCosmeticHop(caster, target, WINDUP_1_DISTANCE, SPELL_MAGE_GLACIAL_SPIKE_WINDUP_1);
-
-        caster->m_Events.AddEventAtOffset([caster, targetGuid]()
-        {
-            Unit* target = ObjectAccessor::GetUnit(*caster, targetGuid);
-            if (target && target->IsAlive())
-                FireCosmeticHop(caster, target, WINDUP_2_DISTANCE, SPELL_MAGE_GLACIAL_SPIKE_WINDUP_2);
-        }, Milliseconds(WINDUP_2_DELAY_MS));
-
-        caster->m_Events.AddEventAtOffset([caster, targetGuid]()
-        {
-            Unit* target = ObjectAccessor::GetUnit(*caster, targetGuid);
-            if (target && target->IsAlive())
-                caster->CastSpell(target, SPELL_MAGE_GLACIAL_SPIKE_IMPACT, true);
-        }, Milliseconds(IMPACT_DELAY_MS));
+        caster->CastSpell(target, SPELL_MAGE_GLACIAL_SPIKE_IMPACT, true);
     }
 
     void Register() override
     {
         OnCheckCast += SpellCheckCastFn(spell_mage_glacial_spike::CheckIcicles);
-        OnHit += SpellHitFn(spell_mage_glacial_spike::BeginRamp);
+        OnHit += SpellHitFn(spell_mage_glacial_spike::LaunchImpact);
     }
 };
 
@@ -568,29 +539,59 @@ public:
 };
 
 // 200004 - Flurry
+// The button spell - no damage/travel of its own (effect1 is a no-op DUMMY). On hit (instant),
+// fires 3 separate SPELL_MAGE_FLURRY_BOLT casts at the real target, 0.2s apart, so the missile
+// visual plays as a genuine burst of 3 sequential bolts instead of one bolt carrying 3x damage
+// (previously 3 simultaneous SCHOOL_DAMAGE effects on this same entry - see 200037's notes for
+// why the damage/bonus math moved to a separate triggered spell). Target is carried across the
+// ~400ms sequence by GUID + ObjectAccessor (re-resolved and alive-checked per bolt), same pattern
+// Glacial Spike's old ramp used for the same reason - a raw Unit* isn't safe to hold across a
+// delayed event.
 class spell_mage_flurry : public SpellScript
 {
     PrepareSpellScript(spell_mage_flurry);
 
+    static constexpr uint8 BOLT_COUNT = 3;
+    static constexpr uint32 BOLT_INTERVAL_MS = 200;
+
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_MAGE_SHATTERING_COLD });
+        return ValidateSpellInfo({ SPELL_MAGE_FLURRY_BOLT, SPELL_MAGE_SHATTERING_COLD });
     }
 
-    // Applied once here, after Flurry's own three SCHOOL_DAMAGE effects (the CSV row's
-    // effect1-3) have already resolved for this hit - that ordering is what makes
-    // "Flurry's own bolts do not benefit from Shattering Cold" true with no extra guard.
-    void ApplyShatteringCold()
+    void FireBolts()
     {
         Unit* caster = GetCaster();
         Unit* target = GetHitUnit();
-        if (caster && target)
-            caster->CastSpell(target, SPELL_MAGE_SHATTERING_COLD, true);
+        if (!caster || !target)
+            return;
+
+        ObjectGuid const targetGuid = target->GetGUID();
+        caster->CastSpell(target, SPELL_MAGE_FLURRY_BOLT, true);
+
+        for (uint8 bolt = 1; bolt < BOLT_COUNT; ++bolt)
+        {
+            bool const isLastBolt = (bolt == BOLT_COUNT - 1);
+            caster->m_Events.AddEventAtOffset([caster, targetGuid, isLastBolt]()
+            {
+                Unit* target = ObjectAccessor::GetUnit(*caster, targetGuid);
+                if (!target || !target->IsAlive())
+                    return;
+
+                caster->CastSpell(target, SPELL_MAGE_FLURRY_BOLT, true);
+                // Applied once, right after the last bolt is cast (not from 200037 itself) -
+                // best-effort preservation of "Flurry's own bolts do not benefit from Shattering
+                // Cold" (see 200037's notes for why this is cast-order, not hit-order, and why
+                // that's fine today).
+                if (isLastBolt)
+                    caster->CastSpell(target, SPELL_MAGE_SHATTERING_COLD, true);
+            }, Milliseconds(bolt * BOLT_INTERVAL_MS));
+        }
     }
 
     void Register() override
     {
-        OnHit += SpellHitFn(spell_mage_flurry::ApplyShatteringCold);
+        OnHit += SpellHitFn(spell_mage_flurry::FireBolts);
     }
 };
 
@@ -759,13 +760,21 @@ namespace
     constexpr float FROZEN_ORB_SPEED_RATE = 0.55f;
 }
 
-// 300001 - Frozen Orb (the projectile itself). Display is CreatureDisplayID 26753, Ulduar's
-// "Charged Sphere" - a real, already-in-use stock display, reverted back to from a custom "Ice
-// Nuke Missile" pairing (90001) whose DBC row and client patch were confirmed correct and
-// confirmed delivered, but which still rendered invisible after a full client restart - pointing
-// at the underlying .mdx asset itself not existing in this project's actual client build. See
-// git history on this comment for the full chain (stock invisible-stalker 1126 first, then each
-// of the above).
+// 300001 - Frozen Orb (the projectile itself). Display is CreatureDisplayID 90001, a custom row
+// pointing at the stock "Ice Nuke Missile" model. NOTE this comment used to say the custom model
+// was reverted back to a stock display (Ulduar's "Charged Sphere", 26753) after rendering
+// invisible post-client-restart, with the invisibility blamed on the .mdx asset itself - that
+// turned out to be a misdiagnosis, corrected the very next day: the real cause was
+// CREATURE_FLAG_EXTRA_TRIGGER left set on this creature's flags_extra (see
+// docs/bugs-and-fixes.md's CREATURE_FLAG_EXTRA_TRIGGER entry), which makes a creature invisible to
+// players regardless of a byte-correct model/DBC pipeline. Once that bit was cleared
+// (data/sql/updates/db_world/2026_09_01_01.sql, same migration that put CreatureDisplayID back to
+// 90001), the "broken" custom model rendered fine after all - see git history on this comment for
+// the full chain (stock invisible-stalker 1126 first, then Charged Sphere, then this).
+// docs/reworks/fire-mage-meteor-vfx.md's VFX pass adds a purpose-built orb model as a new row
+// (90002, via patch_mage_vfx_models.py) rather than overwriting 90001 in place, and repoints this
+// creature's creature_template_model.CreatureDisplayID from 90001 to 90002 via pending SQL - see
+// that migration for the actual current value, not this comment.
 class npc_mage_frozen_orb : public CreatureAI
 {
 public:
@@ -2014,9 +2023,49 @@ class spell_mage_ignite_dot : public AuraScript
     }
 };
 
+// 300002 - Meteor's falling-meteor visual (docs/reworks/fire-mage-meteor-vfx.md). Purely cosmetic:
+// no damage, no aura, no interaction with any player - it exists only to visibly fall from
+// METEOR_MISSILE_FALL_HEIGHT above the impact point down to the ground over exactly
+// METEOR_IMPACT_DELAY, landing right as spell_mage_meteor's own event fires the real impact
+// (200096). Same SummonCreature + SetDisableGravity + GetMotionMaster()->MovePoint mechanism
+// Frozen Orb's own orb already proves works (see npc_mage_frozen_orb above and its own comment on
+// CREATURE_FLAG_EXTRA_TRIGGER) - just falling instead of flying level. This creature's
+// creature_template.flags_extra clears CREATURE_FLAG_EXTRA_TRIGGER from the start (see the
+// accompanying pending SQL) specifically so it doesn't repeat that exact bug.
+class npc_mage_meteor_missile : public CreatureAI
+{
+public:
+    explicit npc_mage_meteor_missile(Creature* creature) : CreatureAI(creature) { }
+
+    void IsSummonedBy(WorldObject* /*summoner*/) override
+    {
+        me->SetDisableGravity(true);
+        me->SetHover(true);
+
+        Position const dest(me->GetPositionX(), me->GetPositionY(),
+                             me->GetPositionZ() - METEOR_MISSILE_FALL_HEIGHT, me->GetOrientation());
+        // Explicit speed (yards/sec) rather than SetSpeedRate: this creature has no "base" run
+        // speed that a rate multiplier would meaningfully scale, so the fall time is derived
+        // directly from METEOR_MISSILE_FALL_HEIGHT / METEOR_IMPACT_DELAY instead - if either
+        // constant changes, the fall duration stays correct automatically. generatePath=false:
+        // pathfinding would curve this around obstacles like a mob giving chase, which looks
+        // wrong for a straight vertical drop through open air (same reasoning as Frozen Orb's own
+        // MovePoint call above).
+        float const fallSeconds = std::chrono::duration<float>(METEOR_IMPACT_DELAY).count();
+        me->GetMotionMaster()->MovePoint(0, dest, FORCED_MOVEMENT_NONE, METEOR_MISSILE_FALL_HEIGHT / fallSeconds, false);
+    }
+
+    // Pure virtual on CreatureAI/UnitAI - every subclass must implement it even when, like here,
+    // there's nothing to tick. All of this creature's behavior is the one-shot MovePoint issued in
+    // IsSummonedBy above; TEMPSUMMON_TIMED_DESPAWN handles cleanup without any per-tick logic here.
+    void UpdateAI(uint32 /*diff*/) override { }
+};
+
 // 200095 - Meteor (Fire Mage rework sec 2). The cast itself is an instant ground-targeted dummy;
 // the impact + ground burn (200096, Flamestrike-shaped) lands at that spot METEOR_IMPACT_DELAY later
-// via an event on the caster - a missile's flight time scales with distance, this must not.
+// via an event on the caster - a missile's flight time scales with distance, this must not. The
+// falling-meteor visual (npc_mage_meteor_missile) is summoned alongside that same scheduled event,
+// spawned METEOR_MISSILE_FALL_HEIGHT above the impact point so its own fall lands in sync.
 class spell_mage_meteor : public SpellScript
 {
     PrepareSpellScript(spell_mage_meteor);
@@ -2034,6 +2083,12 @@ class spell_mage_meteor : public SpellScript
 
         Unit* caster = GetCaster();
         Position const impact = dest->GetPosition();
+
+        Position const missileSpawn(impact.GetPositionX(), impact.GetPositionY(),
+                                     impact.GetPositionZ() + METEOR_MISSILE_FALL_HEIGHT, impact.GetOrientation());
+        caster->SummonCreature(NPC_MAGE_METEOR_MISSILE, missileSpawn, TEMPSUMMON_TIMED_DESPAWN,
+                                static_cast<uint32>(METEOR_IMPACT_DELAY.count()));
+
         // The lambda is owned by the caster's own event processor, which is destroyed with the
         // caster - so `caster` can't dangle here (same pattern as the rest of m_Events use).
         caster->m_Events.AddEventAtOffset([caster, impact]()
@@ -4254,6 +4309,7 @@ void AddSC_mage_spell_scripts()
     // Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 1.
     RegisterSpellScript(spell_mage_ignite_dot);
     RegisterSpellScript(spell_mage_meteor);
+    RegisterCreatureAI(npc_mage_meteor_missile);
 
     // Fire Mage rework Phase 3.
     RegisterSpellScript(spell_mage_meteor_impact);

@@ -1,11 +1,18 @@
 #!/usr/bin/env python3
 """
 Packages every DBC in the hand-maintained model/visual working copy
-(apps/dbc-tools/var/model-visual-dbc/DBFilesClient/ by default) into patch-M.mpq - the ongoing
-home for custom creature-display/spell-visual client content that falls outside
-apps/dbc-tools/generate.py's own pipeline (which owns Spell.dbc/Talent.dbc/etc. and ships as
-patch-Z.mpq - see lib/patch_out.py). patch-Y.mpq (GT combat-rating tables, patch_gt_tables.py) is
-the third leg of the same convention.
+(apps/dbc-tools/var/model-visual-dbc/DBFilesClient/ by default), plus every model/skin asset in its
+sibling SPELLS/ working copy (apps/dbc-tools/var/model-visual-dbc/SPELLS/ by default - populated by
+hand via `smpq -x` against a reference client, never committed - see that directory's own
+gitignore), into patch-M.mpq - the ongoing home for custom creature-display/spell-visual client
+content that falls outside apps/dbc-tools/generate.py's own pipeline (which owns
+Spell.dbc/Talent.dbc/etc. and ships as patch-Z.mpq - see lib/patch_out.py). patch-Y.mpq (GT
+combat-rating tables, patch_gt_tables.py) is the third leg of the same convention.
+
+The SPELLS/ half only matters once a DBC row's ModelName/FileName field actually points at one of
+these files (see patch_mage_vfx_models.py) - packing an asset the DBCs don't reference yet is
+harmless (just unused bytes in the archive), but a DBC row referencing a file that ISN'T packed here
+leaves the client with a model path pointing at nothing.
 
 The working copy used to live at client/AscensionFiles/enUS/DBFilesClient/ - a full extracted
 client copy, multiple GB, kept around solely so these two scripts had loose .dbc files to read.
@@ -24,10 +31,16 @@ patch-service's PATCH_ROOT so the timer-driven manifest_gen.py container picks i
 pass (or immediately, if run by hand - see apps/patch-service/README.md).
 
 Usage:
-    python3 apps/dbc-tools/build_patch_m.py [--dbfilesclient PATH] [--deploy-root PATH]
+    python3 apps/dbc-tools/build_patch_m.py [--dbfilesclient PATH] [--spells PATH] [--deploy-root PATH]
 
-    --dbfilesclient  Working-copy directory to package (default:
+    --dbfilesclient  DBC working-copy directory to package (default:
                       apps/dbc-tools/var/model-visual-dbc/DBFilesClient).
+    --spells         Model/skin working-copy directory to package (default:
+                      apps/dbc-tools/var/model-visual-dbc/SPELLS). Packed at archive path
+                      "SPELLS\\<filename>", matching every FileName/ModelName this pass's DBC rows
+                      reference. Skipped (with a note, not an error) if the directory doesn't exist
+                      or is empty - earlier patch-M.mpq builds (pre-dating any SPELLS/ content) still
+                      work with no flag needed.
     --deploy-root    patch-service PATCH_ROOT to copy patch-M.mpq's Data/ into (default: this
                       box's DEPLOY_ROOT from lib/local_config.py, or no deployment if that file
                       doesn't exist - see lib/local_config.py.example). Pass --deploy-root '' to
@@ -44,6 +57,7 @@ from pathlib import Path
 from lib.mpq_writer import write_mpq
 
 DEFAULT_DBFILESCLIENT = Path(__file__).resolve().parent / "var" / "model-visual-dbc" / "DBFilesClient"
+DEFAULT_SPELLS = Path(__file__).resolve().parent / "var" / "model-visual-dbc" / "SPELLS"
 LOCAL_OUT = Path(__file__).resolve().parent / "var" / "dbc-patch" / "patch-M.mpq"
 
 # Operator-specific and this repo is public on GitHub, so it lives in lib/local_config.py
@@ -57,6 +71,7 @@ except ImportError:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dbfilesclient", type=Path, default=DEFAULT_DBFILESCLIENT)
+    parser.add_argument("--spells", type=Path, default=DEFAULT_SPELLS)
     parser.add_argument("--deploy-root", type=str, default=str(DEFAULT_DEPLOY_ROOT) if DEFAULT_DEPLOY_ROOT else "")
     args = parser.parse_args()
 
@@ -65,11 +80,20 @@ def main() -> None:
         raise SystemExit(f"no .dbc files found in {args.dbfilesclient}")
 
     files = {f"DBFilesClient\\{p.name}": p.read_bytes() for p in dbc_files}
+
+    spell_files = sorted(p for p in args.spells.iterdir() if p.is_file()) if args.spells.is_dir() else []
+    files.update({f"SPELLS\\{p.name}": p.read_bytes() for p in spell_files})
+
     LOCAL_OUT.parent.mkdir(parents=True, exist_ok=True)
     write_mpq(LOCAL_OUT, files)
-    print(f"built {LOCAL_OUT} ({LOCAL_OUT.stat().st_size} bytes) from {len(dbc_files)} file(s):")
+    print(f"built {LOCAL_OUT} ({LOCAL_OUT.stat().st_size} bytes) from {len(dbc_files)} DBC + "
+          f"{len(spell_files)} SPELLS asset file(s):")
     for p in dbc_files:
-        print(f"  {p.name}")
+        print(f"  DBFilesClient\\{p.name}")
+    for p in spell_files:
+        print(f"  SPELLS\\{p.name}")
+    if not spell_files:
+        print(f"  (no SPELLS/ assets found under {args.spells} - only DBCs packed)")
 
     if args.deploy_root:
         deploy_path = Path(args.deploy_root) / "Data" / "patch-M.mpq"
