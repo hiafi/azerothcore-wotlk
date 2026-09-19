@@ -364,6 +364,8 @@ void WorldConfig::BuildConfigCache()
 
     SetConfigValue<bool>(CONFIG_CAIS_ENABLED, "CAIS.Enable", false);
 
+    SetConfigValue<bool>(CONFIG_ABSORB_ATTRIBUTION, "AbsorbAttribution.Enable", true);
+
     SetConfigValue<uint32>(CONFIG_EVENT_ANNOUNCE, "Event.Announce", 0);
 
     SetConfigValue<float>(CONFIG_CREATURE_LEASH_RADIUS, "CreatureLeashRadius", 30.0f);

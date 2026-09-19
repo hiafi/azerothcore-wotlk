@@ -4316,6 +4316,17 @@ StrictChannelNames = 0
 AddonChannel = 1
 
 #
+#    AbsorbAttribution.Enable
+#        Description: Broadcast per-shield absorb attribution (caster, target, spell, amount) to a
+#                     victim's group over the addon channel (prefix "AABS"), so a companion client
+#                     addon can credit absorbed damage to its caster on a meter. Requires
+#                     AddonChannel to also be enabled.
+#        Default:     1 - (Enabled)
+#                     0 - (Disabled)
+
+AbsorbAttribution.Enable = 1
+
+#
 #    ChatFakeMessagePreventing
 #        Description: Additional protection from creating fake chat messages using spaces.
 #                     Collapses multiple subsequent whitespaces into a single whitespace.
