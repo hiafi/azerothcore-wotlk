@@ -64,6 +64,7 @@
 #include "SpellAuras.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
+#include "StringFormat.h"
 #include "TemporarySummon.h"
 #include "Totem.h"
 #include "TotemAI.h"
@@ -2369,6 +2370,39 @@ float Unit::GetEffectiveResistChance(Unit const* owner, SpellSchoolMask schoolMa
     return std::min(victimResistance / (victimResistance + resistanceConstant), 0.75f);
 }
 
+namespace
+{
+    // Broadcasts exact per-shield absorb attribution to the victim's raid over the addon channel
+    // (prefix "AABS") so a companion client addon can credit it to its caster on a meter, since the
+    // 3.3.5a client's own combat log has no absorb-attribution event to drive that natively.
+    void BroadcastAbsorbAttribution(Unit* victim, Unit* attacker, Unit* caster, uint32 absorbSpellId, SpellInfo const* sourceSpellInfo, uint32 amount)
+    {
+        if (!amount || !caster)
+            return;
+
+        if (!sWorld->getBoolConfig(CONFIG_ADDON_CHANNEL) || !sWorld->getBoolConfig(CONFIG_ABSORB_ATTRIBUTION))
+            return;
+
+        Group* group = victim->GetGroup();
+        if (!group && attacker)
+            group = attacker->GetGroup();
+        if (!group)
+            return;
+
+        std::string const payload = Acore::StringFormat("AABS\t{}\t{}\t{}\t{}\t{}", victim->GetName(), caster->GetName(),
+            absorbSpellId, sourceSpellInfo ? sourceSpellInfo->Id : 0, amount);
+
+        WorldPacket data;
+        ChatHandler::BuildChatPacket(data, group->isRaidGroup() ? CHAT_MSG_RAID : CHAT_MSG_PARTY, LANG_ADDON,
+            victim->GetGUID(), ObjectGuid::Empty, payload, CHAT_TAG_NONE, victim->GetName());
+
+        for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+            if (Player* member = itr->GetSource())
+                if (WorldSession* session = member->GetSession())
+                    session->SendPacket(&data);
+    }
+}
+
 void Unit::CalcAbsorbResist(DamageInfo& dmgInfo, bool Splited)
 {
     Unit* victim = dmgInfo.GetVictim();
@@ -2499,6 +2533,9 @@ void Unit::CalcAbsorbResist(DamageInfo& dmgInfo, bool Splited)
 
         dmgInfo.AbsorbDamage(currentAbsorb);
 
+        if (currentAbsorb > 0)
+            BroadcastAbsorbAttribution(victim, attacker, absorbAurEff->GetCaster(), absorbAurEff->GetId(), spellInfo, uint32(currentAbsorb));
+
         tempAbsorb = currentAbsorb;
         absorbAurEff->GetBase()->CallScriptEffectAfterAbsorbHandlers(absorbAurEff, aurApp, dmgInfo, tempAbsorb);
 
@@ -2560,6 +2597,9 @@ void Unit::CalcAbsorbResist(DamageInfo& dmgInfo, bool Splited)
         currentAbsorb = currentAbsorb ? int32(float(currentAbsorb) * (float(manaTaken) / float(manaReduction))) : 0;
 
         dmgInfo.AbsorbDamage(currentAbsorb);
+
+        if (currentAbsorb > 0)
+            BroadcastAbsorbAttribution(victim, attacker, absorbAurEff->GetCaster(), absorbAurEff->GetId(), spellInfo, uint32(currentAbsorb));
 
         tempAbsorb = currentAbsorb;
         absorbAurEff->GetBase()->CallScriptEffectAfterManaShieldHandlers(absorbAurEff, aurApp, dmgInfo, tempAbsorb);
