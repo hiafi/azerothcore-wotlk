@@ -357,6 +357,44 @@ SPELLVISUALEFFECTNAME = DbcTable(
     ),
 )
 
+# SpellIcon.dbc - not in DBCfmt.h at all (confirmed via grep: AzerothCore's DBCStores.cpp never
+# loads this table server-side, so it has no LOAD_DBC call and thus no fmt string to transcribe
+# from there the way every other table in this file is - see docs/ascension-asset-mining.md Part 1
+# and build_patch_i.py, which is the one script that edits this). Two columns only (ID + a single
+# texture path, no locale variants) - stable, well-documented WotLK-era client format. Deliberately
+# excluded from ALL_TABLES below, same as SPELLVISUALEFFECTNAME/CREATUREMODELDATA/
+# CREATUREDISPLAYINFO - a single-row-edit table outside generate.py's own source/*.csv pipeline,
+# never round-tripped through the normal resolve/build/sql_out machinery.
+SPELLICON = DbcTable(
+    name="SpellIcon",
+    dbc_filename="SpellIcon.dbc",
+    sql_table="",  # no SQL overlay - client-only table, nothing server-side reads it
+    fmt="ns",
+    columns=_cols("ID", "TextureFilename"),
+)
+
+# Not part of ALL_TABLES, same reasoning/pattern as CREATUREMODELDATA/CREATUREDISPLAYINFO above -
+# patched directly by whichever one-off script needs a new GameObjectDisplayInfo row (e.g. a
+# ground-trap GO's dropped-item model), reusing read_dbc/write_dbc off this definition.
+# Server-loaded (DBCStores.cpp: LOAD_DBC(sGameObjectDisplayInfoStore, "GameObjectDisplayInfo.dbc",
+# "gameobjectdisplayinfo_dbc")), so a new row needs the matching SQL overlay too, same as
+# CreatureModelData/CreatureDisplayInfo. fmt/columns transcribed from DBCfmt.h's
+# GameObjectDisplayInfofmt ("nsxxxxxxxxxxffffffx") and DBCStructure.h's GameObjectDisplayInfoEntry -
+# ModelName and the 10 Sound_N slots are 'x' in the AC struct (never read server-side) but are real
+# columns in the file/SQL overlay, same string-offset convention read_as_string handles elsewhere in
+# this module.
+GAMEOBJECTDISPLAYINFO = DbcTable(
+    name="GameObjectDisplayInfo",
+    dbc_filename="GameObjectDisplayInfo.dbc",
+    sql_table="gameobjectdisplayinfo_dbc",
+    fmt="nsxxxxxxxxxxffffffx",
+    columns=_cols(
+        "ID", "ModelName", ("Sound", 10), "GeoBoxMinX", "GeoBoxMinY", "GeoBoxMinZ",
+        "GeoBoxMaxX", "GeoBoxMaxY", "GeoBoxMaxZ", "ObjectEffectPackageID",
+    ),
+    read_as_string=frozenset({"ModelName"}),
+)
+
 ALL_TABLES = (
     SPELL, TALENT, TALENTTAB, SPELLCASTTIMES, SPELLDURATION, SPELLRANGE,
     SPELLRADIUS, SKILLLINEABILITY, ITEM,

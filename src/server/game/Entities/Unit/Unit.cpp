@@ -55,6 +55,7 @@
 #include "PetAI.h"
 #include "PetPackets.h"
 #include "Player.h"
+#include "PriestMechanics.h"
 #include "ReputationMgr.h"
 #include "ScriptMgr.h"
 #include "SharedDefines.h"
@@ -2383,9 +2384,11 @@ namespace
         if (!sWorld->getBoolConfig(CONFIG_ADDON_CHANNEL) || !sWorld->getBoolConfig(CONFIG_ABSORB_ATTRIBUTION))
             return;
 
-        Group* group = victim->GetGroup();
+        Player* victimPlayer = victim->ToPlayer();
+        Group* group = victimPlayer ? victimPlayer->GetGroup() : nullptr;
         if (!group && attacker)
-            group = attacker->GetGroup();
+            if (Player* attackerPlayer = attacker->ToPlayer())
+                group = attackerPlayer->GetGroup();
         if (!group)
             return;
 
@@ -8740,6 +8743,10 @@ float Unit::SpellPctDamageModsDone(Unit* victim, SpellInfo const* spellProto, Da
             Mage::ApplyDoneDamagePctMods(this, victim, spellProto, DoneTotalMod);
             break;
         case SPELLFAMILY_PRIEST:
+            // Voidform's periodic-Shadow-damage boost (docs/reworks/priest-new-spells.md, Void
+            // Eruption) - see PriestMechanics.cpp for the full hook.
+            Priest::ApplyDoneDamagePctMods(this, victim, spellProto, damagetype, DoneTotalMod);
+
             // Mind Flay
             if (spellProto->SpellFamilyFlags[0] & 0x800000)
             {
