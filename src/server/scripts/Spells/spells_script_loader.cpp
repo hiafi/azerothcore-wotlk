@@ -23,6 +23,7 @@ void AddSC_hunter_spell_scripts();
 void AddSC_mage_spell_scripts();
 void AddSC_paladin_spell_scripts();
 void AddSC_priest_spell_scripts();
+void AddSC_priest_new_spell_scripts();
 void AddSC_rogue_spell_scripts();
 void AddSC_shaman_spell_scripts();
 void AddSC_warlock_spell_scripts();
@@ -41,6 +42,7 @@ void AddSpellsScripts()
     AddSC_mage_spell_scripts();
     AddSC_paladin_spell_scripts();
     AddSC_priest_spell_scripts();
+    AddSC_priest_new_spell_scripts();
     AddSC_rogue_spell_scripts();
     AddSC_shaman_spell_scripts();
     AddSC_warlock_spell_scripts();

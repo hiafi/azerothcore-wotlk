@@ -240,17 +240,12 @@ class spell_pri_divine_hymn : public SpellScript
 {
     PrepareSpellScript(spell_pri_divine_hymn);
 
+    // Priest baseline rework (docs/reworks/priest-new-spells.md): "Heals all party or raid
+    // members within 40 yards" - the old top-3-lowest-health cap is gone, everyone in range is
+    // healed now. Only the RaidCheck (party/raid membership) filter survives.
     void FilterTargets(std::list<WorldObject*>& targets)
     {
         targets.remove_if(Acore::RaidCheck(GetCaster(), false));
-
-        uint32 const maxTargets = 3;
-
-        if (targets.size() > maxTargets)
-        {
-            targets.sort(Acore::HealthPctOrderPred());
-            targets.resize(maxTargets);
-        }
     }
 
     void Register() override

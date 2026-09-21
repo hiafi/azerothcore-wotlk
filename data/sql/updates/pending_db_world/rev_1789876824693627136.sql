@@ -1,0 +1,18 @@
+-- Greater Heal (2060) becomes auto-learned at character creation, same treatment Lesser Heal
+-- (2050) had before the Priest heal-line collapse moved that role onto Greater Heal (see
+-- data/sql/updates/db_world/2026_09_06_01.sql). apps/dbc-tools/source/classes/priest/
+-- priest_spells.py's skill_line_ability(id=3777, ...) flips that spell's stock SkillLineAbility.dbc
+-- row from AcquireMethod=0 (trainer-taught) to AcquireMethod=2 (client auto-learns it once skill
+-- line 56 - Priest - reaches MinSkillLineRank 1, i.e. immediately at character creation) - handled
+-- by generate.py, not this file.
+--
+-- This migration is the trainer_spell side of that same change: now that the spell is auto-known,
+-- retire it from the Priest trainers (TrainerId 11 Alliance/dead - see docs/bugs-and-fixes.md - and
+-- 208 Horde/live), exactly like Heal (2054) was retired in 2026_09_06_01.sql when Greater Heal
+-- absorbed its old level range. Both rows come from mod-progression's own
+-- phase_00-trainer_spell.sql (TrainerId 208, SpellId 2060, ReqLevel 40 originally, bumped to 1 by
+-- 2026_09_06_01.sql's UPDATE) and the base game's own trainer_spell.sql (TrainerId 11, same SpellId,
+-- same original ReqLevel 40) - not from this project's own DSL (trained_by()'s registry only emits
+-- rows it's explicitly told about, so a module/base-sourced row needs a hand-written DELETE to
+-- remove, same as 2026_09_06_01.sql's own (11,2054)/(208,2054) DELETE).
+DELETE FROM `trainer_spell` WHERE (`TrainerId`, `SpellId`) IN ((11, 2060), (208, 2060));

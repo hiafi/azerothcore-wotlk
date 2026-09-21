@@ -4,6 +4,10 @@
 
 .cache
 .claude
+# Stray output if apps/patch-service/manifest_gen.py is ever run from the repo root without
+# PATCH_ROOT set (it defaults to ".", hashing the whole repo instead of the real patch deploy dir)
+/manifest.txt
+/.manifest_cache.json
 /apps/patch-service/*
 /apps/dbc-tools/lib/output/*
 /conf/*

@@ -5,7 +5,7 @@ Split from a single source/classes/priest.py via split_class_file.py (.agents/pl
 """
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, School
-from lib.dsl.registry import spell
+from lib.dsl.registry import bonus_coefficients, scripted_by, spell
 
 
 lightwell_renew_7001 = spell(
@@ -4168,4 +4168,127 @@ body_and_soul_64129 = spell(
     spell_icon_id=2218,
     notes='pulled from existing data',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "When you cast Power Word: Shield, you increase the target's movement speed by $s1% for $64128d, and you have a $s2% chance when you cast Abolish Disease on yourself to also cleanse 1 poison effect in addition to diseases.", 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 402653696, 'EffectSpellClassMaskA_2': 4, 'EffectSpellClassMaskB_3': 4, 'EffectSpellClassMaskC_2': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 6},
+)
+
+
+# Priest baseline rework (docs/reworks/priest-new-spells.md) - Phase 1 shared spells. See
+# priest_spells.py's own header comment for the 6 player-cast button spells this file's rows below
+# are triggered by. Style/field-shape precedent throughout: Frost Mage's Frozen Orb Pulse
+# (mage_trigger_spells.py's frozen_orb_pulse_200008 + spell_mage.cpp's spell_mage_frozen_orb) - the
+# closest in-repo analog for a "summon a trigger NPC/aura that casts an owner-attributed pulse
+# spell" mechanic.
+
+angelic_feather_place_200141 = spell(
+    id=200141,
+    name='Angelic Feather',
+    school=School.HOLY,
+    attributes=65536,
+    cast_time_ms=0,
+    range_yards=40.0,
+    effects=[
+        Effect(type=104, implicit_target_a=87, misc_value=300101, radius_yards=2.0),
+    ],
+    spell_icon_id=90100,
+    notes='Angelic Feather\'s actual GO-placement half, split out of angelic_feather_200130 (priest_spells.py - see that row\'s own notes for the full ring-investigation writeup and why this split exists). Never player-cast or spellbook-visible (no scripted_by/skill_line_ability/trained_by - same "hidden implementation spell" shape as this file\'s other trigger-only rows) - triggered once per cast of 200130 via that spell\'s own effect 2 (SPELL_EFFECT_TRIGGER_SPELL, Spell::EffectTriggerSpell in SpellEffects.cpp). This is the entirety of what the ORIGINAL single-spell 200130 used to carry as its own second effect before the split: SUMMON_OBJECT_SLOT1 (type 104, same effect type this project\'s pulled Hunter trap data already uses, e.g. Freezing Trap/1499), TARGET_DEST_DEST (implicit_target_a=87, same reticle mechanism Death and Decay uses), summoning gameobject_template entry 300101 (Angelic Feather trap GO). Targets=64 (raw_overrides below) is what makes SpellInfo::GetExplicitTargetMask() include TARGET_FLAG_DEST_LOCATION for this spell specifically (also already implied by effect 0\'s own ImplicitTargetA=87, independent of this override, but kept explicit to match the original single-spell row\'s own convention) - EffectTriggerSpell\'s SPELL_EFFECT_HANDLE_LAUNCH branch reads exactly that flag (`spellInfo->GetExplicitTargetMask() & TARGET_FLAG_DEST_LOCATION`) on *this* (triggered) spell to decide whether to copy the outer cast\'s ground-click destination down via `targets.SetDst(m_targets)` before casting this spell - without it, the feather would summon at the caster\'s own position instead of the clicked location. No mana_cost/cooldown_ms/duration_ms here: the outer spell (200130) already pays the real mana cost and owns the real 30-sec cooldown, and this spell is always triggered with TRIGGERED_FULL_MASK (ignores power/reagent cost and spell/category cooldowns regardless), and has no aura effect that would need a duration. spell_pri_angelic_feather\'s "only 3 feathers at once" BeforeCast hook (spell_priest_new.cpp) stays registered on 200130, not this spell - it is cast-level (not keyed to a SpellEffIndex) and 200130\'s BeforeCast still fires before 200130\'s own effect-handling (where the TRIGGER_SPELL effect that summons this spell\'s cast lives), so despawn-oldest-if-at-cap still correctly runs before the new feather is placed. No C++ changes needed for the split.',
+    raw_overrides={'Targets': 64, 'CastingTimeIndex': 1, 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellClassSet': 6, 'SpellPriority': 50},
+)
+
+
+angelic_feather_buff_200131 = spell(
+    id=200131,
+    name='Angelic Feather',
+    school=School.HOLY,
+    cast_time_ms=0,
+    duration_ms=5000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=21, apply_aura=AuraType.MOD_INCREASE_SPEED),
+    ],
+    spell_icon_id=90100,
+    notes='Angelic Feather\'s triggered speed buff (docs/reworks/priest-new-spells.md, "grants 40% increased movement speed for 5 sec"). Cast by the Angelic Feather trap GameObject directly on whichever player triggers it - GameObject::CastSpell(target, trap.spellId) (GameObject.cpp:799) passes the found player as the explicit unit target, so implicit_target_a=21 (TARGET_UNIT_TARGET_ALLY) is what actually restricts the speed boost to allies: the trap itself fires on any nearby player, ally or enemy (native GAMEOBJECT_TYPE_TRAP "environmental trap" branch, GameObject.cpp:717-726 - trap.autoCloseTime=-1 takes AnyPlayerInObjectRangeCheck rather than the hostile-only hunter-trap NearestAttackableNoTotemUnitInObjectRangeCheck branch), so an enemy can trigger/consume a feather but this effect simply fails its own ally check against them. base_points=39 (this repo\'s stored-value-is-live-minus-1 convention, die_sides defaults to 1) for the tooltip\'s +40%. spell_icon_id 505 (Spell_Magic_FeatherFall) is a stock placeholder pending the icon-mining pass (see apps/dbc-tools/build_patch_i.py) which reuses this same value for the parent cast spell (angelic_feather_200130, priest_spells.py).',
+    raw_overrides={'SpellClassSet': 0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 0, 'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Movement speed increased by 40%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellPriority': 50},
+)
+
+
+divine_star_pulse_200134 = spell(
+    id=200134,
+    name='Divine Star',
+    school=School.HOLY,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.HEAL, base_points=99, implicit_target_a=21),
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=99, implicit_target_a=6),
+    ],
+    spell_icon_id=90101,
+    coeff_weight=0.4,
+    notes='Divine Star\'s heal/damage pulse (docs/reworks/priest-new-spells.md: "100 (0.4 spellpower coeff) healing/damage"). Cast by the owning priest directly at whichever specific unit npc_pri_divine_star (spell_priest_new.cpp) finds newly within its own small pulse radius as it travels out and back - an explicit single-unit target per cast (owner->CastSpell(unit, 200134, true)), not a native AoE dest-area query. TARGET_UNIT_TARGET_ALLY (21) on the heal effect and TARGET_UNIT_TARGET_ENEMY (6) on the damage effect do NOT independently no-op against an explicit single-unit target server-side - Spell::SelectImplicitTargetObjectTargets (the TARGET_REFERENCE_TYPE_TARGET/TARGET_SELECT_CATEGORY_DEFAULT path these two target types take) never consults SpellImplicitTargetInfo::GetCheckType() the way the AoE/nearby/chain/trajectory search paths do, so both effects were applying to literally every unit hit - a priest healing themselves also silently self-damaged for the same amount, and any enemy hit also got healed. Playtest bugfix (2026-09-20, "not sure if Divine Star is healing, is it being attributed correctly"): spell_pri_divine_star_pulse (spell_priest_new.cpp) now hooks OnObjectTargetSelect per effect (EFFECT_0/ally, EFFECT_1/enemy) and nulls the target WorldObject*& when the caster\'s actual IsValidAssistTarget/IsValidAttackTarget disagrees with that effect\'s intended reaction - same idiom as spell_mage_arcane_blast::ClearSelfTarget (spell_mage.cpp) for nulling a single effect\'s target without touching the other effect\'s own resolution. This also gives full manual control over per-leg hit-dedup (tracked in the creature AI, not this row) rather than fighting native AoE re-hit semantics. base_points=99 (stored -1 convention) for the tooltip\'s 100; coeff_weight=0.4 matches the design doc\'s spellpower coefficient but is passthrough metadata only (lib/build.py\'s own docstring) - it never turns into a spell_bonus_data row or an EffectBonusMultiplier by itself. Confirmed live: spell_bonus_data had zero rows for 200134 and EffectBonusMultiplier_1/_2 were both 0 in spell_dbc, so every cast landed for a flat, non-scaling 100 regardless of the caster\'s spellpower. Fixed below via bonus_coefficients(), the actual mechanism (see halo_pulse_200136\'s own identical fix just above, and mage_trigger_spells.py/mage_spells.py for the established precedent - e.g. meteor_impact_200096, burnout_explosion_200116) that emits the spell_bonus_data row SpellMgr::GetSpellBonusData reads (both SpellDamageBonusDone and SpellHealingBonusDone key off the same direct_bonus column, so one row covers both effects). "Healing reduced beyond 6 targets": npc_pri_divine_star tracks a cast-wide (both legs) count of distinct allies healed and, once that count exceeds 6, casts the heal via CastCustomSpell/SPELLVALUE_BASE_POINT0 with a reduced amount instead of this row\'s own base_points - default falloff 10% per target beyond 6, compounding (retail\'s own value; docs/reworks/priest-new-spells.md doesn\'t specify a curve, flagged as playtest-tunable). No RangeIndex/range concern: the owner casts this triggered (bypasses range checks) at the missile\'s live position, which may be well outside the caster\'s own melee range. SpellVisualID_1=90013 is the yellow burst impact kit patch_priest_vfx_models.py mints (ChestEffect -> Priest_DivineStar_Impact_Yellow, mined from Ascension\'s client) - the missile\'s own travelling orb model is wired separately, on the creature_template row, not here.',
+    raw_overrides={'SpellClassSet': 0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 0, 'EquippedItemClass': -1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellPriority': 50, 'SpellVisualID_1': 90013},
+)
+scripted_by(divine_star_pulse_200134, 'spell_pri_divine_star_pulse')
+bonus_coefficients(divine_star_pulse_200134, direct=0.4,
+    comment='Divine Star pulse (200134) - 0.4 SP coeff on both the heal and the damage effect, docs/reworks/priest-new-spells.md')
+
+
+halo_pulse_200136 = spell(
+    id=200136,
+    name='Halo',
+    school=School.HOLY,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.HEAL, base_points=199, implicit_target_a=21),
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=199, implicit_target_a=6),
+    ],
+    spell_icon_id=90102,
+    coeff_weight=0.526,
+    notes='Halo\'s heal/damage pulse (docs/reworks/priest-new-spells.md: "200 (0.526 spellpower coeff) healing/damage"). Cast by the owning priest directly at whichever specific unit spell_pri_halo (AuraScript on 200135, spell_priest_new.cpp) finds newly crossed by the expanding ring on each periodic tick - same explicit-single-unit-target "ally heals / enemy damages" idiom as Divine Star\'s pulse (200134, priest_trigger_spells.py); see that spell\'s own notes for why this sidesteps native-AoE re-hit dedup problems entirely. base_points=199 (stored -1 convention) for the tooltip\'s 200; coeff_weight=0.526 matches the design doc. Playtest bugfix (2026-09-20, "Halo is also not healing either or its not being attributed correctly") - two independent bugs, same shape as Divine Star\'s own pulse (200134, see its notes just above for the full mechanism writeup): (1) TARGET_UNIT_TARGET_ALLY (21, EFFECT_0/HEAL) and TARGET_UNIT_TARGET_ENEMY (6, EFFECT_1/SCHOOL_DAMAGE) do NOT independently gate against an explicit single-unit target - Spell::SelectImplicitTargetObjectTargets never consults each effect\'s own check type for this target-reference path, so both effects landed on every unit the ring touched regardless of reaction (an ally took damage alongside the heal; an enemy got healed alongside the damage) - fixed by spell_pri_halo_pulse (spell_priest_new.cpp), same OnObjectTargetSelect-nulling idiom as spell_pri_divine_star_pulse. (2) coeff_weight alone is passthrough metadata only (lib/build.py\'s own docstring) - it never turns into a spell_bonus_data row or an EffectBonusMultiplier by itself, unlike what its name suggests. Confirmed live: spell_bonus_data had zero rows for 200136 and EffectBonusMultiplier_1/_2 were both 0 in spell_dbc, so every cast landed for a flat, non-scaling ~200 regardless of the caster\'s spellpower. Fixed by calling bonus_coefficients() below, the actual mechanism (see mage_trigger_spells.py/mage_spells.py for the established precedent - e.g. meteor_impact_200096, burnout_explosion_200116) that emits the spell_bonus_data row SpellMgr::GetSpellBonusData reads.',
+    raw_overrides={'SpellClassSet': 0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 0, 'EquippedItemClass': -1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellPriority': 50},
+)
+scripted_by(halo_pulse_200136, 'spell_pri_halo_pulse')
+bonus_coefficients(halo_pulse_200136, direct=0.526,
+    comment='Halo pulse (200136) - 0.526 SP coeff on both the heal and the damage effect, docs/reworks/priest-new-spells.md')
+
+
+leap_of_faith_jump_200138 = spell(
+    id=200138,
+    name='Leap of Faith',
+    school=School.HOLY,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=42, implicit_target_a=87),
+    ],
+    spell_icon_id=90103,
+    notes='Leap of Faith\'s landing effect - SPELL_EFFECT_JUMP_DEST (type 42), TARGET_DEST_DEST (87, "the explicit dest this cast was given"). Mirrors DK Death Grip\'s own jump spell (57604, source/spells/npc.csv, pulled-from-client data) field-for-field, a known-working spline-jump in this exact engine build: base_points left unset (stored -1 convention -> live 0, matching 57604\'s own -1), Speed=50000.0 and EffectMiscValueB_1=150 copied verbatim from 57604\'s raw_overrides rather than guessed. spell_pri_leap_of_faith (spell_priest_new.cpp) casts this on the pulled ally at a point near the caster - target->CastSpell(destX, destY, destZ, 200138, true), same call shape as spell_dk_death_grip::HandleDummy\'s target->CastSpell(gripPos..., 57604, true) - direction reversed from Death Grip (the destination is near the *caster*, pulling the ally to the priest, not the other way around), so they land offset rather than stacked exactly on top of the caster.',
+    raw_overrides={'SpellClassSet': 0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 0, 'EquippedItemClass': -1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellPriority': 50, 'Speed': 50000.0, 'EffectMiscValueB_1': 150, 'Targets': 64},
+)
+
+
+void_eruption_buff_200140 = spell(
+    id=200140,
+    name='Voidform',
+    school=School.SHADOW,
+    cast_time_ms=0,
+    duration_ms=10000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=90104,
+    notes='Void Eruption\'s self-buff (docs/reworks/priest-new-spells.md: "increases your periodic Shadow damage by 10% for 10 sec, with the duration increased by 0.5 sec for each enemy hit... the 0.5 sec per enemy hit extends the buff duration, not the percentage"). No native WotLK AuraType computes "+X% periodic damage done" - SPELL_AURA_DUMMY (marker-aura-by-icon idiom, .claude/skills/class-rework Phase 3) read by Priest::ApplyDoneDamagePctMods (PriestMechanics.cpp) via caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_PRIEST, <this spell\'s own SpellIconID>, EFFECT_0). base_points=9 (stored -1 convention) for +10%. Reuses retail\'s own name for this buff ("Voidform") since the design doc doesn\'t name it, matching the mined icon (spell_priest_voidform.blp - no exact "voideruption" icon exists in the Ascension source archive; retail shares this icon between the spell and its buff anyway, see docs/ascension-asset-mining.md). Duration extension (+0.5s per enemy hit) is applied by spell_pri_void_eruption (spell_priest_new.cpp) via CastCustomSpell/SPELLVALUE_AURA_DURATION after counting hits, not expressible in this row\'s own static duration_ms (10000 here is the base/minimum, 0 enemies hit).',
+    raw_overrides={'SpellClassSet': 0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Periodic Shadow damage increased by $s1%.', 'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Periodic Shadow damage increased by $s1%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellPriority': 50},
+)
+
+
+divine_hymn_64844 = spell(
+    id=64844,
+    name='Divine Hymn',
+    school=School.HOLY,
+    dispel=DispelType.MAGIC,
+    range_yards=40.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.HEAL, base_points=199, implicit_target_a=22, implicit_target_b=30, radius_yards=40.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=22, implicit_target_b=30, apply_aura=AuraType.MOD_HEALING_PCT, misc_value=127, radius_yards=40.0),
+    ],
+    spell_icon_id=2845,
+    coeff_weight=0.2,
+    notes='Priest baseline rework (docs/reworks/priest-new-spells.md): migrated out of the legacy source/spells/npc.csv (a pulled-from-client row; that row is deleted in the same change - generate.py would otherwise see this ID declared twice) into this DSL package so it can take coeff_weight/raw_overrides cleanly like every other spell here. implicit_target_a=22/implicit_target_b=30 (TARGET_UNIT_SRC_AREA_ALLY/TARGET_UNIT_PARTY, unchanged from the pulled data) - triggered every tick by 64843\'s own PERIODIC_TRIGGER_SPELL aura (priest_spells.py\'s divine_hymn_64843), cast by the priest each tick, landing on everyone within 40 yds. Old design capped this at the 3 lowest-health targets in spell_pri_divine_hymn::FilterTargets (spell_priest.cpp) - that resize(3) is deleted in the same change (its RaidCheck filter is kept); new design heals everyone in range. Retuned: 64843\'s own duration_ms 8000->5000 and amplitude 2000->1000 (5 ticks over 5 sec instead of 4 over 8), heal per tick ~200 (base_points=199, stored -1 convention; coeff_weight=0.2 reading the design doc\'s "1000 + 1.0 coeff over 5 sec" as a HoT-style total split evenly across 5 ticks, same convention as Renew\'s own tooltip math rather than a literal per-tick 1000 - flagged as a judgment call, revisit if it reads wrong in-game). Healing-taken buff, on this row\'s own APPLY_AURA effect: duration_ms 8000->15000 (this row\'s own duration governs the aura, independent of 64843\'s trigger cadence), 10%->4% per application (base_points 9->3, stored -1 convention), and CumulativeAura=5 added to raw_overrides so it stacks (the pulled data had none, meaning the old buff just refreshed at a flat 10% - default stack cap of 5 is a first-pass tunable, one full channel\'s worth of ticks, not specified in the design doc).',
+    raw_overrides={'AttributesEx': 136, 'AttributesEx2': 1073741828, 'AttributesEx4': 128, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Healing received increased by $s2%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 0, 'EffectBonusMultiplier_1': 0.20000000298023224, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_3': 4, 'SpellClassSet': 6, 'SpellVisualID_1': 13751, 'CumulativeAura': 5},
 )
