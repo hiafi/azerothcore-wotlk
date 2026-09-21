@@ -36,6 +36,7 @@
 #include "CellImpl.h"
 #include "Containers.h"
 #include "CreatureAI.h"
+#include "CreatureScript.h"
 #include "EventMap.h"
 #include "GameObject.h"
 #include "GridNotifiers.h"
