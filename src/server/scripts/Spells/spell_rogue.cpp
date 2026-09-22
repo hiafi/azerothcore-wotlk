@@ -19,6 +19,7 @@
 #include "CellImpl.h"
 #include "GameTime.h"
 #include "GridNotifiers.h"
+#include "PriestMechanics.h"
 #include "SpellAuraEffects.h"
 #include "SpellMgr.h"
 #include "SpellScript.h"
@@ -189,11 +190,18 @@ class spell_rog_cheat_death : public AuraScript
     void Absorb(AuraEffect* /*aurEff*/, DamageInfo& dmgInfo, uint32& absorbAmount)
     {
         Player* target = GetTarget()->ToPlayer();
-        if (dmgInfo.GetDamage() < target->GetHealth() || target->HasSpellCooldown(SPELL_ROGUE_CHEAT_DEATH_COOLDOWN) || !roll_chance_i(absorbChance))
+        // Priest Holy rework (docs/reworks/priest-holy-rework.md, Spirit of Redemption capstone):
+        // Spirit of Redemption, Cheat Death and Ardent Defender share one 2-min lockout via the
+        // Priest::SPELL_CHEATED_DEATH_MARKER debuff (PLAN sec 1, "bidirectional via one shared
+        // marker debuff") - Cheat Death's own SPELL_ROGUE_CHEAT_DEATH_COOLDOWN (1 min) stays as-is;
+        // while the marker is up this bails out too, so its effective lockout becomes 2 min.
+        if (dmgInfo.GetDamage() < target->GetHealth() || target->HasSpellCooldown(SPELL_ROGUE_CHEAT_DEATH_COOLDOWN)
+            || target->HasAura(Priest::SPELL_CHEATED_DEATH_MARKER) || !roll_chance_i(absorbChance))
             return;
 
         target->CastSpell(target, SPELL_ROGUE_CHEAT_DEATH_COOLDOWN, true);
         target->CastSpell(target, SPELL_ROGUE_CHEATING_DEATH, true);
+        target->CastSpell(target, Priest::SPELL_CHEATED_DEATH_MARKER, true);
         target->AddSpellCooldown(SPELL_ROGUE_CHEAT_DEATH_COOLDOWN, 0, MINUTE * IN_MILLISECONDS);
 
         uint32 health10 = target->CountPctFromMaxHealth(10);

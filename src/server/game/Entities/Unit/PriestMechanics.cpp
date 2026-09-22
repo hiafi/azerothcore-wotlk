@@ -17,7 +17,9 @@
 
 #include "PriestMechanics.h"
 #include "Player.h"
+#include "Spell.h"
 #include "SpellAuraEffects.h"
+#include "SpellAuras.h"
 #include "SpellInfo.h"
 #include "Unit.h"
 #include "Util.h"
@@ -28,6 +30,30 @@ namespace
     // priest_trigger_spells.py, mined into SpellIcon.dbc by apps/dbc-tools/build_patch_i.py's
     // ICON_ID_VOID_ERUPTION) - keep in sync if that spell's icon ever changes.
     constexpr uint32 PRIEST_ICON_VOIDFORM = 90104;
+
+    // Divine Fury's (1,2) stock SpellIconID (apps/dbc-tools/source/classes/priest/
+    // priest_trigger_spells.py: divine_fury_18530/18531/18533, `spell_icon_id=307`) and Test of
+    // Faith's (8,2) stock SpellIconID (test_of_faith_47558/47559/47560, `spell_icon_id=2844`) -
+    // both stock icons, unchanged by the rework's data pass.
+    constexpr uint32 PRIEST_ICON_DIVINE_FURY = 307;
+    constexpr uint32 PRIEST_ICON_TEST_OF_FAITH = 2844;
+
+    // Priest SpellFamilyFlags bits Holy's cross-cutting hooks need as raw dword values - C++ can't
+    // import apps/dbc-tools/source/classes/priest/_masks.py, which is the authoritative source
+    // these are copied from (PLAN sec 4.4/HOLY.md). Keep in sync if that file's values ever change.
+    constexpr uint32 PRIEST_MASK_DW1_SMITE = 0x00000080;
+    constexpr uint32 PRIEST_MASK_DW1_HOLY_FIRE = 0x00100000;
+    // _masks.py PRIEST_HEAL_MASK, dword 1/2/3 (Renew|PoH|FlashHeal|GreaterHeal|HolyNovaHeal|
+    // DesperatePrayer|CoH|Lightwell, BindingHeal|PoM|PenanceHealBolt|DivineHymn,
+    // DivineStar|Halo|HWSerenity|HWSanctify).
+    constexpr uint32 PRIEST_HEAL_MASK_DW1 = 0x59001A40;
+    constexpr uint32 PRIEST_HEAL_MASK_DW2 = 0x00410024;
+    constexpr uint32 PRIEST_HEAL_MASK_DW3 = 0x01830000;
+
+    // Renew extension pool (docs/reworks/priest-holy-rework.md 5.3): "Total duration may never
+    // exceed 21 seconds from application" - base Renew duration is 15 s, so this is the ceiling on
+    // extensions from Holy Concentration (6,0) and Empowered Renew's capstone (8,0) combined.
+    constexpr int32 PRIEST_RENEW_EXTENSION_POOL_MAX_MS = 6000;
 
     enum PriestMechanicsSpells
     {
@@ -52,7 +78,15 @@ namespace
         // Discipline rework spells (DISC.md "ID map").
         SPELL_PRIEST_GREATER_POWER_WORD_SHIELD  = 200155,
         SPELL_PRIEST_SPIRIT_SHELL               = 200166,
-        SPELL_PRIEST_SPIRIT_SHELL_ABSORB        = 200167
+        SPELL_PRIEST_SPIRIT_SHELL_ABSORB        = 200167,
+
+        // Holy rework (HOLY.md talent table 8,2). Talent rank spell id, never a talent_dbc id
+        // (PLAN sec 3.10).
+        SPELL_PRIEST_TEST_OF_FAITH_R3            = 47560,   // (8,2) rank 3 - capstone marker
+
+        // Holy rework (HOLY.md talent table 2,0 / docs/reworks/priest-holy-rework.md sec 2):
+        // Desperate Prayer's own tooltip. Baseline spell, not a talent rank.
+        SPELL_PRIEST_DESPERATE_PRAYER            = 19236
     };
 
     // Renewed Hope (7,0) rides SPELL_AURA_OVERRIDE_CLASS_SCRIPTS with these two misc values; the
@@ -86,16 +120,42 @@ namespace
                 return false;
         }
     }
+
+    // Test of Faith (8,2) capstone: "10% less magic damage taken while casting Smite, Holy Fire or
+    // any Priest healing spell." `castSpell` is whatever the priest is currently casting/channeling.
+    bool IsTestOfFaithProtectedCast(SpellInfo const* castSpell)
+    {
+        if (!castSpell || castSpell->SpellFamilyName != SPELLFAMILY_PRIEST)
+            return false;
+
+        if (castSpell->SpellFamilyFlags[0] & (PRIEST_MASK_DW1_SMITE | PRIEST_MASK_DW1_HOLY_FIRE))
+            return true;
+
+        return castSpell->SpellFamilyFlags.HasFlag(PRIEST_HEAL_MASK_DW1, PRIEST_HEAL_MASK_DW2, PRIEST_HEAL_MASK_DW3);
+    }
 }
 
 namespace Priest
 {
     void ApplyDoneDamagePctMods(Unit* caster, Unit* victim, SpellInfo const* spellProto, DamageEffectType damagetype, float& doneTotalMod)
     {
-        // Cross-class clauses (a later pass's Divine Fury, which buffs direct Holy-school damage
-        // from *any* class - PLAN sec 1) belong above this gate. Everything below it is
-        // priest-family-only and used to live in Unit::SpellPctDamageModsDone's own
-        // `case SPELLFAMILY_PRIEST:`.
+        // Divine Fury (1,2): "+3/6/9% direct magic damage against targets afflicted by your Holy
+        // Fire" - the *spell* is classless per PLAN sec 1's resolved design call ("direct
+        // Holy-school damage from any class, not Priest-family only"), so this sits above the
+        // priest-family gate below. The caster class check is only a cheap pre-filter: only a
+        // Priest can carry the aura, so it spares every Paladin/Druid holy hit the dummy-aura scan.
+        if (damagetype != DOT && caster->IsClass(CLASS_PRIEST, CLASS_CONTEXT_ABILITY)
+            && (spellProto->GetSchoolMask() & SPELL_SCHOOL_MASK_HOLY))
+        {
+            AuraEffect const* divineFury = caster->GetDummyAuraEffect(SPELLFAMILY_PRIEST, PRIEST_ICON_DIVINE_FURY,
+                EFFECT_1);
+            if (divineFury && victim->GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_PRIEST,
+                PRIEST_MASK_DW1_HOLY_FIRE, 0, 0, caster->GetGUID()))
+                AddPct(doneTotalMod, divineFury->GetAmount());
+        }
+
+        // Everything below this gate is priest-family-only and used to live in
+        // Unit::SpellPctDamageModsDone's own `case SPELLFAMILY_PRIEST:`.
         if (spellProto->SpellFamilyName != SPELLFAMILY_PRIEST)
             return;
 
@@ -137,6 +197,17 @@ namespace Priest
                 if (victim->HasAuraState(AURA_STATE_HEALTHLESS_35_PERCENT))
                     AddPct(doneTotalMod, aurEff->GetAmount());
         }
+
+        // Test of Faith (8,2) damage clause: "Smite and Holy Fire damage +4/8/12% against targets
+        // at or below 50% health." eff2 (EFFECT_1) is a plain DUMMY carrying the rank amount -
+        // eff1 (EFFECT_0, the healing clause) is handled by ApplyDoneHealingPctMods below.
+        if (spellProto->SpellFamilyFlags[0] & (PRIEST_MASK_DW1_SMITE | PRIEST_MASK_DW1_HOLY_FIRE))
+        {
+            AuraEffect const* testOfFaith = caster->GetDummyAuraEffect(SPELLFAMILY_PRIEST, PRIEST_ICON_TEST_OF_FAITH,
+                EFFECT_1);
+            if (testOfFaith && victim->HealthBelowPct(50))
+                AddPct(doneTotalMod, testOfFaith->GetAmount());
+        }
     }
 
     void ApplySpellCritChanceMods(Unit const* caster, SpellInfo const* spellProto, float& critChance)
@@ -145,6 +216,14 @@ namespace Priest
         // (docs/reworks/priest-disc-rework.md). *To*, not *by* - an absolute override, and the
         // charge itself is consumed by the normal SpellMod path on the same cast.
         if (spellProto->Id == SPELL_PRIEST_FLASH_HEAL && caster->HasAura(SPELL_PRIEST_INNER_FOCUS))
+            critChance = 100.0f;
+
+        // Desperate Prayer (2,0): "Below 50% health it is a guaranteed critical heal"
+        // (docs/reworks/priest-holy-rework.md sec 2; HOLY.md 2,0's own script column names this
+        // exact clause - talent-tooltip-audit fix, WP-C: tooltip already claimed this, no
+        // implementation existed). Self-cast only, so `caster`'s own health is what the tooltip
+        // means by "you."
+        if (spellProto->Id == SPELL_PRIEST_DESPERATE_PRAYER && caster->HealthBelowPct(50))
             critChance = 100.0f;
     }
 
@@ -214,5 +293,65 @@ namespace Priest
         // produce two Mastery-scaled absorbs).
         heal = 0;
         return true;
+    }
+
+    void ApplyDoneHealingPctMods(Unit* caster, Unit* victim, SpellInfo const* spellProto, float& doneTotalMod)
+    {
+        if (!caster || !victim)
+            return;
+
+        // Test of Faith (8,2), migrated out of Unit::SpellPctHealingModsDone's
+        // OVERRIDE_CLASS_SCRIPTS loop (`case 21: case 6935: case 6918:`, one misc value per rank -
+        // PLAN sec 6.8). The icon-keyed read below matches all three ranks at once, which is why
+        // none of them may stay in that switch (they'd apply twice). That loop's own
+        // IsAffectedOnSpell() call is what actually scopes the bonus to Priest healing spells;
+        // reproduced here so the semantics don't change.
+        AuraEffect const* testOfFaith = caster->GetAuraEffect(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS, SPELLFAMILY_PRIEST,
+            PRIEST_ICON_TEST_OF_FAITH, EFFECT_0);
+        if (testOfFaith && testOfFaith->IsAffectedOnSpell(spellProto) && victim->HealthBelowPct(50))
+            AddPct(doneTotalMod, testOfFaith->GetAmount());
+    }
+
+    void ApplySpellDamageTakenPctMods(Unit* victim, Unit* /*attacker*/, SpellInfo const* spellProto, float& takenMod)
+    {
+        // Test of Faith (8,2) capstone (rank 3 only, eff3/EFFECT_2 DUMMY=1 is the marker - no
+        // icon-read needed per PLAN sec 3.9's "capstone that only exists on the last rank" idiom):
+        // "10% less magic damage taken while casting Smite, Holy Fire or any Priest healing spell."
+        Player* player = victim ? victim->ToPlayer() : nullptr;
+        if (!player || !spellProto)
+            return;
+
+        if (spellProto->GetSchoolMask() & SPELL_SCHOOL_MASK_NORMAL)
+            return;
+
+        if (!player->HasAura(SPELL_PRIEST_TEST_OF_FAITH_R3))
+            return;
+
+        // Whatever the priest is currently casting/channeling - unrelated to the incoming spell
+        // that's dealing the damage this function is computing taken-mods for.
+        Spell const* currentSpell = player->GetCurrentSpell(CURRENT_GENERIC_SPELL);
+        if (!currentSpell)
+            currentSpell = player->GetCurrentSpell(CURRENT_CHANNELED_SPELL);
+        if (!currentSpell)
+            return;
+
+        if (IsTestOfFaithProtectedCast(currentSpell->GetSpellInfo()))
+            takenMod *= 0.9f;
+    }
+
+    void ExtendRenewDuration(Aura* renew, int32 ms)
+    {
+        if (!renew)
+            return;
+
+        int32 baseDuration = renew->GetSpellInfo()->GetMaxDuration();
+        int32 alreadyUsed = renew->GetMaxDuration() - baseDuration;
+
+        ms = std::min(ms, PRIEST_RENEW_EXTENSION_POOL_MAX_MS - alreadyUsed);
+        if (ms <= 0)
+            return;
+
+        renew->SetDuration(renew->GetDuration() + ms);
+        renew->SetMaxDuration(renew->GetMaxDuration() + ms);
     }
 }

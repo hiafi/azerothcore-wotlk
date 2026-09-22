@@ -109,6 +109,20 @@ enum PriestDiscSpells
     SPELL_PRIEST_SPIRIT_SHELL                       = 200166
 };
 
+/*
+ * Holy rework (docs/reworks/priest-holy-rework.md, priest-rework.HOLY.md "ID map") - ids the
+ * reworked stock scripts below need. Talent entries are the *rank spell* ids from HOLY.md's "Rank
+ * spell ids" column, never talent_dbc ids (PLAN sec 3.10).
+ */
+enum PriestHolySpells
+{
+    SPELL_PRIEST_RENEW                              = 139,
+
+    // Blessed Recovery (1,1) capstone.
+    SPELL_PRIEST_BLESSED_RECOVERY_HEAL              = 200177,
+    SPELL_PRIEST_BLESSED_RECOVERY_LOCKOUT           = 200178
+};
+
 namespace
 {
     // "Overhealing generates 75% less shielding, and the absorb is limited to 30% of the target's
@@ -298,8 +312,9 @@ enum PriestProcSpells
     SPELL_PRIEST_BLESSED_HEALING                    = 70772,
     SPELL_PRIEST_SHADOW_WORD_DEATH_R1               = 32379,
     SPELL_PRIEST_MIND_BLAST_R1                      = 8092,
-    SPELL_PRIEST_MIND_FLAY_DAMAGE                   = 58381,
-    SPELL_PRIEST_BLESSED_RECOVERY_R1                = 27813
+    SPELL_PRIEST_MIND_FLAY_DAMAGE                   = 58381
+    // SPELL_PRIEST_BLESSED_RECOVERY_R1 (27813) removed - Blessed Recovery no longer triggers off
+    // this rank spell after the Holy rework (see spell_pri_blessed_recovery, now rank-3-only).
 };
 
 enum Mics
@@ -1301,6 +1316,18 @@ class spell_pri_renew : public AuraScript
 {
     PrepareAuraScript(spell_pri_renew);
 
+    // Renew extension pool (docs/reworks/priest-holy-rework.md 5.3, shared by Holy Concentration
+    // (6,0) and Empowered Renew's capstone (8,0)) is implemented as `Priest::ExtendRenewDuration`
+    // in PriestMechanics.h/.cpp, not here. The plan's original idiom (a per-instance
+    // `extensionUsedMs` member fetched cross-file via `aura->GetScript<spell_pri_renew>(...)`)
+    // does not compile: `Aura::GetScript<T>()` is `dynamic_cast<T*>(...)`, which needs T's complete
+    // definition at the call site, but both callers of the pool
+    // (spell_pri_holy_concentration_extend, spell_pri_empowered_renew_capstone) live in
+    // spell_priest_holy.cpp, a different translation unit than this class. PriestMechanics.cpp's
+    // free function instead derives "how much extension this Renew has already used" from the gap
+    // between the aura's current and base max duration (`Aura::GetMaxDuration()` vs
+    // `Aura::GetSpellInfo()->GetMaxDuration()`), needing no per-instance state at all.
+
     bool Load() override
     {
         return GetCaster() && GetCaster()->IsPlayer();
@@ -1315,7 +1342,10 @@ class spell_pri_renew : public AuraScript
     {
         if (Unit* caster = GetCaster())
         {
-            // Empowered Renew
+            // Empowered Renew - HOLY.md 8,0: "Instant chunk: only rank 3, 25%." The stock talent
+            // marker read below is unchanged; WP-A's data sets EFFECT_1 = 0/0/25 across the three
+            // ranks, so ranks 1-2 naturally cast a 0-basepoints (no-op) chunk without any extra
+            // code-side rank gate.
             if (AuraEffect const* empoweredRenewAurEff = caster->GetDummyAuraEffect(SPELLFAMILY_PRIEST, PRIEST_ICON_ID_EMPOWERED_RENEW_TALENT, EFFECT_1))
             {
                 uint32 heal = GetEffect(EFFECT_0)->GetAmount();
@@ -1597,32 +1627,26 @@ class spell_pri_body_and_soul : public AuraScript
 
     bool CheckProcTriggerSpell(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
     {
+        // Holy rework (docs/reworks/priest-holy-rework.md 7,0): "Casting Renew or Leap of Faith
+        // increases the target's movement speed" - retargeted from the old Power Word: Shield cast
+        // (0x00000001, PWS dw1). RENEW=0x40 (dw1), Leap of Faith=0x40000 (dw3, PLAN sec 4.4 bit
+        // 18). This is a hardcoded literal, not derived from spell_proc data, so it has to move in
+        // lockstep with WP-A's EffectSpellClassMaskA_1/_3 retarget of 64127/64129's own eff1 or the
+        // talent can never fire again - the HOLY.md table's "D (+ script trim)" characterization
+        // undersells this; it's a required mask change, not just a deletion.
+        //
+        // Answered Prayers' spread Renews are cast via TRIGGERED_FULL_MASK (spell_pri_renew_cast),
+        // which suppresses procs entirely (design doc sec 6, "does not trigger Body and Soul"), so
+        // no extra IsTriggered() guard is needed here.
         SpellInfo const* spellInfo = eventInfo.GetSpellInfo();
-        return spellInfo && (spellInfo->SpellFamilyFlags[0] & 0x00000001) != 0;
-    }
-
-    bool CheckProcDummy(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
-    {
-        if (eventInfo.GetActor() != eventInfo.GetActionTarget())
+        if (!spellInfo)
             return false;
-
-        SpellInfo const* spellInfo = eventInfo.GetSpellInfo();
-        return spellInfo && spellInfo->Id == 552;
-    }
-
-    void HandleProcDummy(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
-    {
-        PreventDefaultAction();
-
-        if (roll_chance_i(aurEff->GetAmount()))
-            eventInfo.GetActor()->CastSpell(eventInfo.GetActor(), SPELL_PRIEST_BODY_AND_SOUL_SPEED, true, nullptr, aurEff);
+        return (spellInfo->SpellFamilyFlags[0] & 0x00000040) != 0 || (spellInfo->SpellFamilyFlags[2] & 0x00040000) != 0;
     }
 
     void Register() override
     {
         DoCheckEffectProc += AuraCheckEffectProcFn(spell_pri_body_and_soul::CheckProcTriggerSpell, EFFECT_0, SPELL_AURA_PROC_TRIGGER_SPELL);
-        DoCheckEffectProc += AuraCheckEffectProcFn(spell_pri_body_and_soul::CheckProcDummy, EFFECT_1, SPELL_AURA_DUMMY);
-        OnEffectProc += AuraEffectProcFn(spell_pri_body_and_soul::HandleProcDummy, EFFECT_1, SPELL_AURA_DUMMY);
     }
 };
 
@@ -1877,39 +1901,83 @@ class spell_pri_pain_and_suffering_dummy : public AuraScript
     }
 };
 
-// -27811 - Blessed Recovery
+/*
+ * -27816 - Blessed Recovery (1,1) capstone (docs/reworks/priest-holy-rework.md 5.5). Reworked from
+ * the old "damage taken triggers a HoT" shape (27811/27813) to "your Renew healing a target at or
+ * below 35% health immediately heals them for 2 more ticks worth" - now registers on rank 3
+ * (27816) only, since only the fully-talented capstone grants the effect at all (HOLY.md 1,1); the
+ * eff1 ADD_PCT_MODIFIER "+3/6/9% Priest healing effectiveness" on all three ranks is pure data
+ * (WP-A), needing no script. 27813 (the old rank's HoT) is unused after this.
+ */
 class spell_pri_blessed_recovery : public AuraScript
 {
     PrepareAuraScript(spell_pri_blessed_recovery);
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_PRIEST_BLESSED_RECOVERY_R1 });
+        return ValidateSpellInfo(
+        {
+            SPELL_PRIEST_RENEW,
+            SPELL_PRIEST_EMPOWERED_RENEW,
+            SPELL_PRIEST_BLESSED_RECOVERY_HEAL,
+            SPELL_PRIEST_BLESSED_RECOVERY_LOCKOUT
+        });
     }
 
-    void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        // "Trigger: Any healing event from the caster's Renew. This includes periodic ticks and
+        // Empowered Renew's instant 25% chunk on application." (design doc 5.5)
+        SpellInfo const* procSpell = eventInfo.GetSpellInfo();
+        if (!procSpell || (procSpell->Id != SPELL_PRIEST_RENEW && procSpell->Id != SPELL_PRIEST_EMPOWERED_RENEW))
+            return false;
+
+        Unit* target = eventInfo.GetProcTarget();
+        if (!target || !target->HealthBelowPct(35))
+            return false;
+
+        // 20 sec per-target-per-caster lockout, not a spell cooldown (design doc 5.5: "Not a spell
+        // cooldown, so no Cooldown Haste").
+        if (target->GetAuraEffect(SPELL_PRIEST_BLESSED_RECOVERY_LOCKOUT, EFFECT_0, GetTarget()->GetGUID()))
+            return false;
+
+        return true;
+    }
+
+    void HandleProc(ProcEventInfo& eventInfo)
     {
         PreventDefaultAction();
 
-        DamageInfo* dmgInfo = eventInfo.GetDamageInfo();
-        if (!dmgInfo || !dmgInfo->GetDamage())
+        Unit* caster = GetTarget();
+        Unit* target = eventInfo.GetProcTarget();
+        if (!caster || !target)
             return;
 
-        Unit* target = eventInfo.GetActionTarget();
-        uint32 triggerSpell = sSpellMgr->GetSpellWithRank(SPELL_PRIEST_BLESSED_RECOVERY_R1, aurEff->GetSpellInfo()->GetRank());
-        SpellInfo const* triggerInfo = sSpellMgr->AssertSpellInfo(triggerSpell);
+        // "One instant heal worth 2 Renew ticks" - read off the caster's own Renew on this target,
+        // same idiom spell_pri_renew::HandleApplyEffect uses for Empowered Renew's chunk (manually
+        // re-apply the taken-side bonus onto the aura's stored per-tick amount, since GetAmount()
+        // itself is the pre-bonus base value).
+        AuraEffect const* renewTick = target->GetAuraEffect(SPELL_PRIEST_RENEW, EFFECT_0, caster->GetGUID());
+        if (!renewTick)
+            return;
 
-        int32 bp = CalculatePct(static_cast<int32>(dmgInfo->GetDamage()), aurEff->GetAmount());
+        uint32 heal = uint32(std::max(renewTick->GetAmount(), 0));
+        heal = target->SpellHealingBonusTaken(caster, renewTick->GetSpellInfo(), heal, DOT);
 
-        ASSERT(triggerInfo->GetMaxTicks() > 0);
-        bp /= triggerInfo->GetMaxTicks();
+        int32 bp = int32(heal) * 2;
 
-        target->CastCustomSpell(target, triggerSpell, &bp, nullptr, nullptr, true, nullptr, aurEff);
+        // Crit rolls normally (design doc 5.5) - a plain triggered CastCustomSpell already can
+        // crit in this codebase (Unit::SpellDoneCritChance only ever suppresses crit via
+        // SPELL_ATTR2_CANT_CRIT / !IsCritCapable(), never via the trigger flag), so no special
+        // trigger-flag combination is needed here.
+        caster->CastCustomSpell(SPELL_PRIEST_BLESSED_RECOVERY_HEAL, SPELLVALUE_BASE_POINT0, bp, target, true);
+        caster->CastSpell(target, SPELL_PRIEST_BLESSED_RECOVERY_LOCKOUT, true);
     }
 
     void Register() override
     {
-        OnEffectProc += AuraEffectProcFn(spell_pri_blessed_recovery::HandleProc, EFFECT_0, SPELL_AURA_PROC_TRIGGER_SPELL);
+        DoCheckProc += AuraCheckProcFn(spell_pri_blessed_recovery::CheckProc);
+        OnProc += AuraProcFn(spell_pri_blessed_recovery::HandleProc);
     }
 };
 

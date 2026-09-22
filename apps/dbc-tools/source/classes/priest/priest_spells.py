@@ -5,7 +5,7 @@ Split from a single source/classes/priest.py via split_class_file.py (.agents/pl
 """
 
 from lib.dsl import ApplyAura, AuraType, DispelType, Effect, EffectType, Mechanic, School, SpellModOp
-from lib.dsl.registry import scripted_by, skill_line_ability, spell, trained_by
+from lib.dsl.registry import bonus_coefficients, scripted_by, skill_line_ability, spell, trained_by
 from . import _masks
 from .priest_trigger_spells import (
     angelic_feather_buff_200131,
@@ -172,6 +172,7 @@ smite_585 = spell(
     notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1→top rank's own top level (83, chain has a gap at 60) slope (anchor rank 48123, rank 12); coefficient/cast_time_ms/mana_cost_pct from max rank (48123, rank 12); MaxLevel set to 80",
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Smite an enemy for $s1 Holy damage.', 'EffectBonusMultiplier_1': 0.7139999866485596, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'SpellClassMask_1': 128, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellVisualID_1': 128, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+scripted_by(smite_585, 'spell_pri_surge_of_light_consume')  # Holy (5,0) Surge of Light
 
 
 fade_586 = spell(
@@ -511,6 +512,7 @@ flash_heal_2061 = spell(
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope (anchor rank 10917, rank 7); coefficient/cast_time_ms/mana_cost_pct from max rank (48071, rank 11); MaxLevel set to 80',
     raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for $s1.', 'EffectBonusMultiplier_1': 0.8069999814033508, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_1': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_1': 2048, 'SpellClassSet': 6, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 3077, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+scripted_by(flash_heal_2061, 'spell_pri_surge_of_light_consume')  # Holy (5,0) Surge of Light
 
 
 mind_vision_2096 = spell(
@@ -1048,9 +1050,14 @@ binding_heal_32546 = spell(
         Effect(type=EffectType.HEAL, base_points=1041, points_per_level=51.3333, die_sides=297, implicit_target_a=1),
     ],
     spell_icon_id=2266,
-    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 64); RealPointsPerLevel from rank1→top rank's own top level (82, chain has a gap at 60) slope (anchor rank 48120, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (48120, rank 3); MaxLevel set to 80",
-    raw_overrides={'AttributesEx': 524288, 'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 64, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target and the caster for $s1.  Low threat.', 'EffectBonusMultiplier_1': 0.8069999814033508, 'EffectBonusMultiplier_2': 0.8069999814033508, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_1': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_2': 4, 'SpellClassSet': 6, 'SpellLevel': 64, 'SpellPriority': 50, 'SpellVisualID_1': 3077, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 64); RealPointsPerLevel from rank1→top rank's own top level (82, chain has a gap at 60) slope (anchor rank 48120, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (48120, rank 3); MaxLevel set to 80. "
+          'Priest Holy rework (HOLY.md "Baseline spell edits"): BaseLevel/SpellLevel 64->46 - see the trained_by() call below, the first ever added for this spell (it was live only via the trainer\'s stock data before).',
+    raw_overrides={'AttributesEx': 524288, 'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 46, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target and the caster for $s1.  Low threat.', 'EffectBonusMultiplier_1': 0.8069999814033508, 'EffectBonusMultiplier_2': 0.8069999814033508, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_1': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_2': 4, 'SpellClassSet': 6, 'SpellLevel': 46, 'SpellPriority': 50, 'SpellVisualID_1': 3077, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+# No trained_by() call existed for this spell before (live only via the trainer 208's own stock
+# data - HOLY.md "Baseline spell edits"). MoneyCost 18000 extrapolated the same way as
+# leap_of_faith_200137's own level-46 row on this trainer (18000c) - same level, same basis.
+trained_by(binding_heal_32546, trainer_id=208, req_level=46, money_cost=18000)
 
 
 prayer_of_mending_33076 = spell(
@@ -1212,17 +1219,18 @@ lightwell_724 = spell(
     category=1145,
     cast_time_ms=500,
     cooldown_ms=0,
-    category_cooldown_ms=180000,
+    category_cooldown_ms=90000,
     mana_cost=0,
     mana_cost_pct=17,
     range_yards=40.0,
-    duration_ms=180000,
+    duration_ms=30000,
     effects=[
         Effect(type=EffectType.SUMMON, implicit_target_a=87, misc_value=31897),
     ],
     spell_icon_id=1878,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1→level-60 slope (anchor rank 27871, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (48087, rank 6); MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 131072, 'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Creates a Holy Lightwell.  Friendly players can click the Lightwell to restore ${$7001m1*3*$<mult>} health over $7001d.  Attacks done to you equal to 30% of your total health will cancel the effect. Lightwell lasts for $d or 10 charges.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 1141, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_1': 1073741824, 'SpellClassSet': 6, 'SpellDescriptionVariableID': 162, 'SpellLevel': 40, 'SpellVisualID_1': 7550, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Targets': 64},
+    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1→level-60 slope (anchor rank 27871, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (48087, rank 6); MaxLevel set to 80. '
+          'Priest Holy rework (HOLY.md "Baseline spell edits" / design doc §3): 90 s cooldown added on category_cooldown_ms (this row already used category_cooldown_ms, not cooldown_ms, for its stock 3-min recharge - the field that was actually load-bearing before, so this keeps the same field rather than adding a redundant cooldown_ms). Summon duration 180000->30000: checked src/server/game/Spells/SpellEffects.cpp\'s Spell::EffectSummonType (SUMMON_TYPE_LIGHTWELL branch) - it calls `SummonCreature(entry, *destTarget, properties, duration, ...)` with `duration = m_spellInfo->GetDuration()`, i.e. THIS spell\'s own duration_ms is what controls the summoned Lightwell object\'s lifetime, not any field on the creature_template - so that\'s the one changed. No more clicking: the object auto-heals via npc_pet_pri_lightwell (WP-B, pet_priest.cpp) instead of Lightwell Charges (59907)/Lightwell Renew (7001), which go unused after this pass.',
+    raw_overrides={'AttributesEx': 131072, 'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Creates a Holy Lightwell that lasts $d. Once per sec, it heals the party or raid member within 20 yds most in need for $200202s1, for up to 10 heals.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 1141, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_1': 1073741824, 'SpellClassSet': 6, 'SpellDescriptionVariableID': 162, 'SpellLevel': 40, 'SpellVisualID_1': 7550, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Targets': 64},
 )
 
 
@@ -1261,12 +1269,15 @@ desperate_prayer_19236 = spell(
     mana_cost=0,
     mana_cost_pct=21,
     range_yards=0.0,
+    duration_ms=10000,
     effects=[
         Effect(type=EffectType.HEAL, base_points=262, points_per_level=26.525, die_sides=63, implicit_target_a=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
     ],
     spell_icon_id=73,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope (anchor rank 19243, rank 6); coefficient/cast_time_ms/mana_cost_pct from max rank (48173, rank 9); MaxLevel set to 80',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly heals the caster for $s1.', 'EffectBonusMultiplier_1': 0.8069999814033508, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassMask_1': 16777216, 'SpellClassSet': 6, 'SpellLevel': 20, 'SpellVisualID_1': 4819, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope (anchor rank 19243, rank 6); coefficient/cast_time_ms/mana_cost_pct from max rank (48173, rank 9); MaxLevel set to 80. '
+          'Priest Holy rework (HOLY.md "Baseline spell edits" / design doc row 2,0): new EFFECT_1 (previously unused) MOD_DAMAGE_PERCENT_TAKEN (aura 87) misc_value=127 (physical+all-magic school mask - confirmed against several other classes\' own -X%-damage-taken cooldowns in this codebase using the identical misc_value=127, e.g. deathknight_spells.py/paladin_spells.py/druid_spells.py, rather than assuming), base_points=-21 (stored -1 convention -> live -20%), duration_ms=10000 added at the spell level for this new aura effect to run on (the HEAL effect is instant and does not consume it).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly heals the caster for $s1 and reduces damage taken by 20% for $19236d.  Below 50% health, this heal is always a critical strike.', 'EffectBonusMultiplier_1': 0.8069999814033508, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassMask_1': 16777216, 'SpellClassSet': 6, 'SpellLevel': 20, 'SpellVisualID_1': 4819, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1283,12 +1294,14 @@ circle_of_healing_34861 = spell(
     mana_cost_pct=21,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, base_points=342, points_per_level=11.5, die_sides=37, implicit_target_a=63, implicit_target_b=31, radius_yards=15.0),
+        Effect(type=EffectType.HEAL, base_points=342, die_sides=1, implicit_target_a=63, implicit_target_b=31, radius_yards=15.0),
     ],
     spell_icon_id=2214,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1→level-60 slope (anchor rank 34864, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (48089, rank 7); MaxLevel set to 80',
-    raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx5': 4194304, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 50, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals up to $?s55675[6][5] friendly party or raid members within $a1 yards of the target for $s1.', 'EffectBonusMultiplier_1': 0.4020000100135803, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_1': 268435456, 'SpellClassSet': 6, 'SpellLevel': 50, 'SpellPriority': 50, 'SpellVisualID_1': 8253, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1→level-60 slope (anchor rank 34864, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (48089, rank 7); MaxLevel set to 80. '
+          'Priest Holy rework (HOLY.md "Baseline spell edits" / design doc §3): amount set to a flat 343 - checked this row\'s actual die_sides per PLAN §3.5 before typing the number, and it was NOT the default 1 (it was 37, a real min/max variance range inherited from the stock rank chain: 343-379). HOLY.md\'s own arithmetic ("base_points=342 if die_sides=1") assumes the default, which this row did not have - flattened die_sides to 1 (explicit override) here so the stated flat "343 + 0.4 SP" reads as a deterministic amount, consistent with how every other new spell in this pass (Holy Word: Serenity/Sanctify, Divine Star, Halo) is a flat number rather than a stock-style random range. points_per_level dropped (single-rank spells derive their level scaling from bonus_coefficients, not RealPointsPerLevel) - bonus_coefficients(direct=0.4) call below. Radius stays 15 yd (user override of the design doc\'s 30 yd, PLAN §1) - only the target-count/selection logic changes, in WP-B\'s C++ script.',
+    raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx5': 4194304, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 50, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals up to 5 friendly party or raid members within $a1 yards of the target for $s1.', 'EffectBonusMultiplier_1': 0.4020000100135803, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_1': 268435456, 'SpellClassSet': 6, 'SpellLevel': 50, 'SpellPriority': 50, 'SpellVisualID_1': 8253, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+bonus_coefficients(circle_of_healing_34861, direct=0.4)
 
 
 vampiric_touch_34914 = spell(
@@ -1650,8 +1663,9 @@ halo_200135 = spell(
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=100),
     ],
     spell_icon_id=90102,
-    notes='docs/reworks/priest-new-spells.md: "Creates a ring of Holy energy around you that quickly expands to a 40 yd radius, healing allies for... and dealing... Holy damage to enemies." Deliberately NOT a summoned-creature spell (Frozen Orb\'s *travel-in-one-direction* half doesn\'t fit an all-directions-at-once ring; its *periodic-pulse-with-owner-attribution* half does): self-buff aura (PERIODIC_DUMMY, apply_aura=226) ticking every 100ms (amplitude=100) for the buff\'s duration_ms=2000 (total ring-expansion time to reach 40 yds - not specified in the design doc, flagged as playtest-tunable). spell_pri_halo (AuraScript on this spell, spell_priest_new.cpp), on OnEffectPeriodic, computes the ring\'s current radius from elapsed/total time, does a manual search for units newly crossed by the ring since the last tick, and casts halo_pulse_200136 (priest_trigger_spells.py) at each one individually - same explicit-single-unit-target "ally heals / enemy damages" idiom as Divine Star\'s pulse, chosen specifically to avoid native-AoE re-hit dedup problems (a naive fixed-radius AoE re-query every 100ms would re-hit everyone already inside the ring, not just those newly crossed by it). Live playtest bug (2026-09-20): originally shipped with AttributesEx=4 (SPELL_ATTR1_IS_CHANNELED) copy-pasted from this batch\'s other 5 new spells - harmless on those (no duration_ms, so Spell::handle_immediate\'s IsChanneled()+duration>0 branch never fires), but Halo\'s own duration_ms=2000 made the server actually open a 2-second channel (SendChannelStart), and the client then looked for this spell\'s (empty) ChannelKit instead of its correctly-authored PrecastKit/CastKit - explaining both "shows a channel bar" and "no animation plays" as one bug. Removed.',
-    raw_overrides={'BaseLevel': 52, 'SpellLevel': 52, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Creates a ring of Holy energy around you that quickly expands to a 40 yd radius, healing allies for $s1 and dealing $s1 Holy damage to enemies.', 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 90014, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'SpellClassMask_3': _masks.HALO},
+    notes='docs/reworks/priest-new-spells.md: "Creates a ring of Holy energy around you that quickly expands to a 40 yd radius, healing allies for... and dealing... Holy damage to enemies." Deliberately NOT a summoned-creature spell (Frozen Orb\'s *travel-in-one-direction* half doesn\'t fit an all-directions-at-once ring; its *periodic-pulse-with-owner-attribution* half does): self-buff aura (PERIODIC_DUMMY, apply_aura=226) ticking every 100ms (amplitude=100) for the buff\'s duration_ms=2000 (total ring-expansion time to reach 40 yds - not specified in the design doc, flagged as playtest-tunable). spell_pri_halo (AuraScript on this spell, spell_priest_new.cpp), on OnEffectPeriodic, computes the ring\'s current radius from elapsed/total time, does a manual search for units newly crossed by the ring since the last tick, and casts halo_pulse_200136 (priest_trigger_spells.py) at each one individually - same explicit-single-unit-target "ally heals / enemy damages" idiom as Divine Star\'s pulse, chosen specifically to avoid native-AoE re-hit dedup problems (a naive fixed-radius AoE re-query every 100ms would re-hit everyone already inside the ring, not just those newly crossed by it). Live playtest bug (2026-09-20): originally shipped with AttributesEx=4 (SPELL_ATTR1_IS_CHANNELED) copy-pasted from this batch\'s other 5 new spells - harmless on those (no duration_ms, so Spell::handle_immediate\'s IsChanneled()+duration>0 branch never fires), but Halo\'s own duration_ms=2000 made the server actually open a 2-second channel (SendChannelStart), and the client then looked for this spell\'s (empty) ChannelKit instead of its correctly-authored PrecastKit/CastKit - explaining both "shows a channel bar" and "no animation plays" as one bug. Removed. '
+          'Priest Holy rework (HOLY.md "Halo healing-taken" / design doc §3 "Halo"): tooltip gains the +10% healing-taken clause - design doc resolves the doc\'s own "unset variable" placeholder to a literal 10%, not a variable to compute. The buff itself (200173, MOD_HEALING_RECEIVED base 10, 10 s, scoped to this caster\'s own Holy heals via the SPELLFAMILY_PRIEST caster-GUID check native to SPELL_AURA_MOD_HEALING_RECEIVED - see Unit.cpp:9607-9613 - plus a classmask restricting it to priest heals, mirroring stock Grace\'s 47930 shape exactly) is declared in priest_trigger_spells.py; spell_pri_halo_pulse casting it on each target hit is WP-B\'s job (spell_priest_new.cpp).',
+    raw_overrides={'BaseLevel': 52, 'SpellLevel': 52, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Creates a ring of Holy energy around you that quickly expands to a 40 yd radius, healing allies for $s1 and dealing $s1 Holy damage to enemies.  Allies healed by Halo take 10% increased healing from you for 10 sec.', 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 90014, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'SpellClassMask_3': _masks.HALO},
 )
 scripted_by(halo_200135, 'spell_pri_halo')
 skill_line_ability(id=30414, skill_line=56, spell_id=halo_200135.id, class_mask=16)  # Holy
@@ -1774,3 +1788,165 @@ scripted_by(mass_dispel_32375, 'spell_pri_absolution')             # (3,0) Absol
 scripted_by(32592, 'spell_pri_absolution')                         # (3,0) Absolution - hostile half
 scripted_by(flash_heal_2061, 'spell_pri_improved_flash_heal_capstone')   # (6,2) capstone
 scripted_by(power_infusion_10060, 'spell_pri_aspiration_power_infusion')  # (7,2) capstone
+
+
+# =====================================================================================
+# Priest Holy rework (docs/reworks/priest-holy-rework.md,
+# .agents/plans/priest-rework/priest-rework.HOLY.md) - the 4 new player-castable Holy Word
+# spells + Apotheosis. All four are TALENT-granted (60016/60017/60021/60022 in priest_talents.py),
+# so - same convention as Spirit Shell (60010) above - none of them get a manual
+# skill_line_ability() call here: player_castable=True + skill_line_ability_ids on their
+# granted_by_talent() call derives the SkillLineAbility row (30418-30421) that keeps them in the
+# Holy spellbook tab (holy_202_tab.skill_line=56, set in the Disc pass). No trained_by() either -
+# these aren't trainer-taught.
+# =====================================================================================
+
+holy_word_serenity_200197 = spell(
+    id=200197,
+    name='Holy Word: Serenity',
+    school=School.HOLY,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=60000,
+    mana_cost_pct=12,
+    range_yards=40.0,
+    effects=[
+        Effect(type=EffectType.HEAL, base_points=499, die_sides=1, implicit_target_a=21),
+    ],
+    spell_icon_id=90106,
+    notes='HOLY.md §2/§"ID map": instant single-friendly heal, 60 s cooldown, 12% base mana, 500 + '
+          '1.4 SP (base_points=499, stored -1 convention; bonus_coefficients(direct=1.4) below). '
+          'TARGET_UNIT_TARGET_ALLY (21, SharedDefines.h) for "single friendly target". Reuses '
+          'Halo\'s mined icon (90102) as a stand-in Holy Word icon pending dedicated icon mining '
+          '(follow-up pass, per PLAN §7 runbook - icons/VFX are mined only after mechanics are '
+          'verified). dword-3 bit 23 (_masks.HW_SERENITY) is its own family-flag identity, read by '
+          'Divine Providence/Echo of Light/Apotheosis\'s classmask-scoped SpellMods and by the '
+          'Serendipity capstone\'s cooldown-reduction script (HasAura/ModifySpellCooldown, not '
+          'classmask - the family flag exists for the SpellMod consumers instead).',
+    raw_overrides={'BaseLevel': 10, 'SpellLevel': 10, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly heals a friendly target for $s1.', 'EquippedItemClass': -1, 'InterruptFlags': 0, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 280, 'SpellClassMask_3': _masks.HW_SERENITY},
+)
+bonus_coefficients(holy_word_serenity_200197, direct=1.4)
+scripted_by(holy_word_serenity_200197, 'spell_pri_echo_of_light_heal')  # (8,3) Echo of Light
+
+
+holy_word_sanctify_200198 = spell(
+    id=200198,
+    name='Holy Word: Sanctify',
+    school=School.HOLY,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=60000,
+    mana_cost_pct=20,
+    range_yards=40.0,
+    radius_yards=8.0,
+    effects=[
+        Effect(type=EffectType.HEAL, base_points=299, die_sides=1, implicit_target_a=31, radius_yards=8.0),
+    ],
+    spell_icon_id=90107,
+    notes='HOLY.md §2/§"ID map": instant ground-targeted AoE heal, 60 s cooldown, 20% base mana, '
+          '300 + 0.6 SP per target (base_points=299, stored -1 convention; '
+          'bonus_coefficients(direct=0.6) below), 8 yd radius. Ground-target: raw_overrides '
+          'Targets=64 (TARGET_FLAG_DEST_LOCATION, client-side reticle flag) same as Angelic '
+          'Feather (200130) and Power Word: Barrier (200132) use for their own ground-click '
+          'spells. Implicit target TARGET_UNIT_DEST_AREA_ALLY (31, SharedDefines.h - the same '
+          'enum Circle of Healing\'s own effect_2 already uses for "area allies around a dest '
+          'point") heals allies around wherever the reticle is placed; no separate "select the '
+          'dest" effect is needed the way PW:Barrier\'s PERSISTENT_AREA_AURA pair needs TargetA '
+          '=TargetB=29, because a direct HEAL effect (not a persistent-aura zone) reads the cast\'s '
+          'own dest target directly. No exact stock or in-repo precedent for "ground-target, '
+          'direct (non-aura) AoE heal" was found via grep - flagged as a best-effort construction '
+          'from the two closest precedents (PW:Barrier\'s ground-click plumbing, CoH\'s dest-area-'
+          'ally implicit target) rather than a byte-for-byte copy of an existing row; verify the '
+          'reticle actually appears in a live playtest. Falloff beyond 5 targets '
+          '(sqrt(5/n) per target) is WP-B\'s job in spell_pri_holy_word_sanctify. dword-3 bit 24 '
+          '(_masks.HW_SANCTIFY) is its own family-flag identity (same rationale as Serenity above).',
+    raw_overrides={'Targets': 64, 'BaseLevel': 10, 'SpellLevel': 10, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals up to 5 friendly targets within $a1 yards of the target location for $s1.  Healing is reduced beyond 5 targets.', 'EquippedItemClass': -1, 'InterruptFlags': 0, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 280, 'SpellClassMask_3': _masks.HW_SANCTIFY},
+)
+bonus_coefficients(holy_word_sanctify_200198, direct=0.6)
+scripted_by(holy_word_sanctify_200198, 'spell_pri_holy_word_sanctify')
+scripted_by(holy_word_sanctify_200198, 'spell_pri_echo_of_light_heal')  # (8,3) Echo of Light
+
+
+holy_word_chastise_200223 = spell(
+    id=200223,
+    name='Holy Word: Chastise',
+    school=School.HOLY,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=60000,
+    mana_cost_pct=10,
+    range_yards=30.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=399, die_sides=1, implicit_target_a=6),
+        Effect(type=EffectType.TRIGGER_SPELL, implicit_target_a=1, trigger_spell=200224),
+    ],
+    spell_icon_id=90108,
+    notes='HOLY.md §2/§"ID map": instant single-enemy Holy damage, 60 s cooldown, 10% base mana, '
+          '30 yd. Damage amount is a playtest guess per design doc §7 - PLAN §1\'s resolved call '
+          'is "400 + 1.0 SP first pass" (base_points=399, stored -1 convention; '
+          'bonus_coefficients(direct=1.0) below). effect_2 TRIGGER_SPELL (self) applies the '
+          '10 sec Smite/Holy Fire damage buff (200224, priest_trigger_spells.py). dword-3 bit 25 '
+          '(_masks.HW_CHASTISE) is its own family-flag identity (same rationale as Serenity above). '
+          "Reuses Void Eruption's mined icon (90104) as a stand-in pending dedicated icon mining "
+          '(follow-up pass, per PLAN §7 runbook - same convention as Serenity/Sanctify reusing '
+          "Halo's 90102; talent-tooltip-audit noted the reuse, this comment documents it rather "
+          'than treating it as an oversight).',
+    raw_overrides={'BaseLevel': 10, 'SpellLevel': 10, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Smites an enemy for $s1 Holy damage and increases the damage of your next Smite or Holy Fire spell by 30% for 10 sec.', 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellClassMask_3': _masks.HW_CHASTISE},
+)
+bonus_coefficients(holy_word_chastise_200223, direct=1.0)
+scripted_by(holy_word_chastise_200223, 'spell_pri_echo_of_light_damage')  # (8,3) Echo of Light
+
+
+apotheosis_200225 = spell(
+    id=200225,
+    name='Apotheosis',
+    school=School.HOLY,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=180000,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=20000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.MOD_HEALING_DONE_PERCENT),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=108, misc_value=SpellModOp.COST),
+    ],
+    spell_icon_id=90109,
+    notes='HOLY.md §2/§"ID map" (10,1): instant self-buff, 180 s cooldown, no cost, 20 s. eff1 '
+          'MOD_HEALING_DONE_PERCENT (136) +10% (base_points=9, stored -1 convention); eff2 '
+          'MOD_DAMAGE_PERCENT_DONE (79) misc_value=2 (Holy school mask) +30% (base_points=29) - '
+          'design doc §2 "school-wide rather than Priest-only" (PLAN §8 accepted risk #1: this is '
+          'deliberate, a Classless build can buy the same window). eff3 ADD_PCT_MODIFIER (108) '
+          'misc_value=SpellModOp.COST (14) -100% (base_points=-101), scoped via '
+          'EffectSpellClassMaskC_3 (letter C = effect index 3, per the load-bearing letter/number '
+          'gotcha) to HW_SERENITY|HW_SANCTIFY|HW_CHASTISE so only the three Holy Words go free. '
+          'dword-3 bit 26 (_masks.APOTHEOSIS) is its own family-flag identity, unused by any '
+          'classmask-scoped SpellMod so far but minted per PLAN §4.4\'s table for consistency with '
+          'the other three new spells. Serendipity\'s x3 Holy Word cooldown-reduction rate reads '
+          'this buff by HasAura(200225), not by classmask - WP-B\'s job (spell_pri_holy_word_engine). '
+          "Reuses Void Eruption's mined icon (90104) as a stand-in pending dedicated icon mining "
+          '(follow-up pass, per PLAN §7 runbook - same convention as Serenity/Sanctify/Chastise).',
+    raw_overrides={'BaseLevel': 10, 'SpellLevel': 10, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'For $d, your healing done is increased by 10%, your Holy school damage done is increased by 30%, your Holy Words cost no mana, and Serendipity\'s Holy Word cooldown reduction is tripled.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Healing and Holy damage done increased; Holy Words cost no mana.', 'EquippedItemClass': -1, 'InterruptFlags': 0, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellClassMask_3': _masks.APOTHEOSIS, 'EffectSpellClassMaskC_3': _masks.HW_SERENITY | _masks.HW_SANCTIFY | _masks.HW_CHASTISE},
+)
+
+
+# --- spell_script_names bindings for the Holy C++ pass (HOLY.md's "Script" column) --------------
+# spell_pri_holy_concentration_extend (6,0 Holy Concentration): AfterCast on the 4 spells that can
+# roll the Renew-extension chance.
+scripted_by(greater_heal_2060, 'spell_pri_holy_concentration_extend')
+scripted_by(flash_heal_2061, 'spell_pri_holy_concentration_extend')
+scripted_by(binding_heal_32546, 'spell_pri_holy_concentration_extend')
+scripted_by(circle_of_healing_34861, 'spell_pri_holy_concentration_extend')
+# spell_pri_renew_cast (2,1 Answered Prayers): AfterCast on Renew itself.
+scripted_by(renew_139, 'spell_pri_renew_cast')
+# spell_pri_holy_word_engine (7,2 Serendipity capstone): AfterCast on every spell whose cast can
+# charge a Holy Word's cooldown reduction.
+scripted_by(greater_heal_2060, 'spell_pri_holy_word_engine')
+scripted_by(flash_heal_2061, 'spell_pri_holy_word_engine')
+scripted_by(binding_heal_32546, 'spell_pri_holy_word_engine')
+scripted_by(prayer_of_healing_596, 'spell_pri_holy_word_engine')
+scripted_by(circle_of_healing_34861, 'spell_pri_holy_word_engine')
+scripted_by(renew_139, 'spell_pri_holy_word_engine')
+scripted_by(smite_585, 'spell_pri_holy_word_engine')
+scripted_by(holy_fire_14914, 'spell_pri_holy_word_engine')

@@ -31,6 +31,7 @@
 #include "OutdoorPvPMgr.h"
 #include "Pet.h"
 #include "Player.h"
+#include "PriestMechanics.h"
 #include "ReputationMgr.h"
 #include "ScriptMgr.h"
 #include "Spell.h"
@@ -39,6 +40,8 @@
 #include "Util.h"
 #include "Vehicle.h"
 #include "WorldPacket.h"
+#include <algorithm>
+#include <array>
 
 /// @todo: this import is not necessary for compilation and marked as unused by the IDE
 //  however, for some reasons removing it would cause a damn linking issue
@@ -581,6 +584,23 @@ int32 AuraEffect::CalculateAmount(Unit* caster)
     return amount;
 }
 
+namespace
+{
+    // Class-agnostic list (PLAN sec 8): any future fixed-cadence periodic goes here too. Currently
+    // only Priest Holy's Echo of Light reservoir ticks (docs/reworks/priest-holy-rework.md sec 5.1).
+    constexpr std::array<uint32, 2> FIXED_CADENCE_PERIODIC_SPELLS =
+    {
+        Priest::SPELL_ECHO_OF_LIGHT_HEAL,
+        Priest::SPELL_ECHO_OF_LIGHT_DAMAGE
+    };
+}
+
+bool IsFixedCadencePeriodic(uint32 spellId)
+{
+    return std::find(FIXED_CADENCE_PERIODIC_SPELLS.begin(), FIXED_CADENCE_PERIODIC_SPELLS.end(), spellId)
+        != FIXED_CADENCE_PERIODIC_SPELLS.end();
+}
+
 void AuraEffect::CalculatePeriodicData()
 {
     // xinef: save caster depending auras with pct mods
@@ -647,7 +667,10 @@ void AuraEffect::CalculatePeriodic(Unit* caster, bool create, bool load)
 
         if (caster)
         {
-            if (caster->HasAuraTypeWithAffectMask(SPELL_AURA_PERIODIC_HASTE, m_spellInfo) || m_spellInfo->HasAttribute(SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC) || m_spellInfo->HasPeriodicDamageOrHealEffect())
+            bool const hasteAffectsPeriodic = caster->HasAuraTypeWithAffectMask(SPELL_AURA_PERIODIC_HASTE, m_spellInfo)
+                || m_spellInfo->HasAttribute(SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC)
+                || m_spellInfo->HasPeriodicDamageOrHealEffect();
+            if (hasteAffectsPeriodic && !IsFixedCadencePeriodic(m_spellInfo->Id))
                 m_amplitude = int32(m_amplitude * caster->GetFloatValue(UNIT_MOD_CAST_SPEED));
         }
     }
@@ -6338,7 +6361,15 @@ void AuraEffect::HandlePeriodicDamageAurasTick(Unit* target, Unit* caster) const
         // xinef: leave only target depending bonuses, rest is handled in calculate amount
         if (GetBase()->GetType() == DYNOBJ_AURA_TYPE && caster)
             damage = caster->SpellDamageBonusDone(target, GetSpellInfo(), damage, DOT, GetEffIndex(), 0.0f, GetBase()->GetStackAmount());
-        damage = target->SpellDamageBonusTaken(caster, GetSpellInfo(), damage, DOT, GetBase()->GetStackAmount());
+
+        // Echo of Light (8,3) exemption: "Snapshots ... at application and does not re-evaluate per
+        // tick" (design doc 5.1) - spell_pri_echo_of_light_damage (spell_priest_holy.cpp) already
+        // baked the taken-side bonus into this aura's basepoints once, at application, by calling
+        // Unit::SpellDamageBonusTaken itself; skip it here so the tick doesn't apply it a second
+        // time (or diverge from the snapshot as the target's own taken-mods change over the echo's
+        // lifetime).
+        if (!IsFixedCadencePeriodic(m_spellInfo->Id))
+            damage = target->SpellDamageBonusTaken(caster, GetSpellInfo(), damage, DOT, GetBase()->GetStackAmount());
 
         // Calculate armor mitigation
         if (Unit::IsDamageReducedByArmor(GetSpellInfo()->GetSchoolMask(), GetSpellInfo(), GetEffIndex()))
@@ -6631,10 +6662,24 @@ void AuraEffect::HandlePeriodicHealAurasTick(Unit* target, Unit* caster) const
         if (GetBase()->GetType() == DYNOBJ_AURA_TYPE)
             damage = caster->SpellHealingBonusDone(target, GetSpellInfo(), damage, DOT, GetEffIndex(), 0.0f, GetBase()->GetStackAmount());
 
-        if (caster && GetBase()->GetType() == UNIT_AURA_TYPE)
+        // Echo of Light (8,3) exemption: for a UNIT_AURA_TYPE periodic heal this per-tick
+        // multiplier is the *only* done-side bonus ever applied on this path at all (a plain
+        // Renew-shaped HoT never calls Unit::SpellHealingBonusDone either), so it needs its own
+        // check here rather than relying on a guard inside that function.
+        bool const fixedCadence = IsFixedCadencePeriodic(m_spellInfo->Id);
+        if (caster && GetBase()->GetType() == UNIT_AURA_TYPE && !fixedCadence)
             damage = int32(float(damage) * caster->GetTotalAuraMultiplier(SPELL_AURA_MOD_HEALING_DONE_PERCENT));
 
-        damage = target->SpellHealingBonusTaken(caster, GetSpellInfo(), damage, DOT, GetBase()->GetStackAmount());
+        // Taken-side exemption: spell_pri_echo_of_light_heal (spell_priest_holy.cpp) already baked
+        // Unit::SpellHealingBonusTaken's result into this aura's basepoints once, at application
+        // (design doc 5.1, "does not re-evaluate per tick") - skip it here so the tick doesn't
+        // apply it again, which would double-count Guardian Spirit/Grace-style taken-side buffs (or
+        // silently diverge from the snapshot as those buffs come and go over the echo's lifetime).
+        // This guard lives at the call site rather than inside Unit::SpellHealingBonusTaken itself
+        // because that function is also what the Echo scripts call directly to compute the
+        // snapshot in the first place - guarding it there would block that legitimate call too.
+        if (!fixedCadence)
+            damage = target->SpellHealingBonusTaken(caster, GetSpellInfo(), damage, DOT, GetBase()->GetStackAmount());
     }
 
     // Leftover time from haste-shortened ticks that didn't fit a full extra tick — see

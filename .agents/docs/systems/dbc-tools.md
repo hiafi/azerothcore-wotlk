@@ -31,6 +31,40 @@ spell(s) [...]" line before treating the generated SQL as ready to apply — if 
 didn't touch, hand-extract just the block(s) you actually meant to ship into their own migration
 file rather than applying (or discarding) the whole thing.
 
+## Watch out: never delete an earlier generated `pending_db_world/rev_*.sql`
+
+`generate.py` emits **delta** rows for `trainer_spell`, `spell_script_names`, `spell_bonus_data`
+and `spell_proc`: `lib/trainer_state.py` scans `base/` + `updates/db_world/` + **`pending_db_world/`**
+and anything already present there is "live" and skipped (`lib/spell_tables.py`'s
+`rows_to_emit`). The DBC tables (`spell_dbc`, `talent_dbc`, …) deliberately ignore `pending_db_world/`
+and are re-emitted in full every run. So generated pending files are meant to **accumulate**: each
+new one carries a full DBC rebuild plus only the secondary-table rows the previous files don't
+already have.
+
+Deleting an earlier generated file *after* running `generate.py` silently drops every
+secondary-table row it alone carried — the new file skipped them as live, and now nothing has them.
+Git will often show this as a rename (`R old.sql -> new.sql`) because the DBC blocks are near-
+identical, which hides that the small itemised blocks vanished. This shipped once (Priest Holy pass
+deleting the Disc pass's file: 10 Disc spells lost their script bindings, procs and trainer rows —
+`docs/bugs-and-fixes.md`). If you genuinely want one consolidated file, delete the old one
+**before** running `generate.py`, never after; and treat an `R` on a `rev_*.sql` in `git status` as
+a red flag to diff the `spell_script_names`/`spell_proc` blocks.
+
+## Watch out: one client DBC, one patch archive
+
+Four scripts each own a patch letter: `generate.py` → `patch-Z.mpq` (Spell/Talent/Item/…),
+`build_patch_m.py` → `patch-M.mpq` (SpellVisual*/CreatureDisplayInfo/CreatureModelData/
+GameObjectDisplayInfo + `SPELLS/` models), `build_patch_i.py` → `patch-I.mpq` (`SpellIcon.dbc` +
+`Interface/Icons/*.blp`), `patch_gt_tables.py` → `patch-Y.mpq` (GT tables). The client loads
+lettered patches alphabetically and the **highest letter wins per file**, so a DBC packed into two
+archives is silently served from whichever has the later letter — usually a stale copy. That's
+exactly what blanked every custom `SpellIcon` row minted after patch-M's last rebuild (patch-M was
+sweeping the shared `var/model-visual-dbc/DBFilesClient/` dir wholesale; `docs/bugs-and-fixes.md`).
+`build_patch_m.py` now has a `NOT_OURS` skip-set — extend it, don't remove it, if another script
+starts keeping its working copy in that directory. Diagnostic when a client ignores a DBC row the
+plumbing says is right: `for p in <patch-root>/Data/patch-*.mpq; do smpq -l $p | grep -i
+<table>.dbc; done`.
+
 ## Load-bearing gotcha: `EffectSpellClassMask{A,B,C}_{1,2,3}`
 
 Every other per-effect `spell_dbc` column uses `_1/_2/_3` as the **effect index**

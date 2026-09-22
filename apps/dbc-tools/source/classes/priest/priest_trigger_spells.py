@@ -16,6 +16,14 @@ PROC_FLAG_TAKEN_DAMAGE = 0x00100000
 PROC_SPELL_PHASE_CAST = 0x1
 PROC_SPELL_PHASE_HIT = 0x2
 PROC_ATTR_TRIGGERED_CAN_PROC = 0x2
+# Priest Holy rework (priest-rework.HOLY.md) additions - same source, SpellMgr.h.
+PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG = 0x00010000
+PROC_FLAG_TAKEN_SPELL_MAGIC_DMG_CLASS_NEG = 0x00020000
+PROC_FLAG_DONE_PERIODIC = 0x00040000
+PROC_FLAG_TAKEN_PERIODIC = 0x00080000
+PROC_SPELL_TYPE_DAMAGE = 0x0000001
+PROC_SPELL_TYPE_HEAL = 0x0000002
+PROC_HIT_CRITICAL = 0x0000002
 
 
 lightwell_renew_7001 = spell(
@@ -682,11 +690,11 @@ holy_specialization_14889 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=71, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=71, misc_value=2),
     ],
     spell_icon_id=305,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical effect chance of your Holy spells by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 424943232, 'EffectSpellClassMaskA_2': 36, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 0,2): 1..5% (5 ranks) -> 2/4/6% (3 ranks, rank 1: base_points 0->1). 15010/15011 orphaned.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical effect chance of your Holy spells by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 424943232, 'EffectSpellClassMaskA_2': 36, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -705,8 +713,9 @@ inspiration_14892 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=21, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=inspiration_14893.id),
     ],
     spell_icon_id=79,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces your target's physical damage taken by $14893s1% for $14893d after getting a critical effect from your Flash Heal, Heal, Greater Heal, Binding Heal, Penance, Prayer of Mending, Prayer of Healing, or Circle of Healing spell.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    notes="Holy rework (HOLY.md 2,3): unchanged mechanically ('none (stock 3/6/10)') - "
+          "NameSubtext stripped per PLAN sec 3.1 (talent-tooltip-audit fix, WP-C).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces your target's physical damage taken by $14893s1% for $14893d after getting a critical effect from your Flash Heal, Heal, Greater Heal, Binding Heal, Penance, Prayer of Mending, Prayer of Healing, or Circle of Healing spell.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -722,12 +731,13 @@ spiritual_healing_14898 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=108, misc_value=22),
     ],
     spell_icon_id=46,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by your healing spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 419700288, 'EffectSpellClassMaskA_2': 134283268, 'EffectSpellClassMaskA_3': 4, 'EffectSpellClassMaskB_1': 419700288, 'EffectSpellClassMaskB_2': 134283268, 'EffectSpellClassMaskB_3': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    notes="Holy rework (HOLY.md 5,2): 2/4/6/8/10% -> 3/6/10%, orphaning 15355/15356 "
+          "(talent-tooltip-audit fix, WP-C).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by your healing spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 419700288, 'EffectSpellClassMaskA_2': 134283268, 'EffectSpellClassMaskA_3': 4, 'EffectSpellClassMaskB_1': 419700288, 'EffectSpellClassMaskB_2': 134283268, 'EffectSpellClassMaskB_3': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -743,12 +753,14 @@ spiritual_guidance_14901 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=174, misc_value=126),
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=175, misc_value=4),
+        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=174, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=175, misc_value=4),
     ],
     spell_icon_id=1873,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases spell power by $s1% of your total Spirit.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes="Holy rework (HOLY.md 4,2): 5/10/15/20/25% -> 8/16/25%, orphaning 15030/15031. WP-A's "
+          "first pass left this row's base_points/NameSubtext untouched despite its own comment "
+          "claiming the trim was done (talent-tooltip-audit finding, fixed in WP-C).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases spell power by $s1% of your total Spirit.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 
 
@@ -765,11 +777,11 @@ improved_renew_14908 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=108, misc_value=22),
     ],
     spell_icon_id=321,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by your Renew spell by $s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 0,1): 5/10/15% -> 7/14/20% (rank 1: base_points 4->6).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by your Renew spell by $s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -787,10 +799,14 @@ searing_light_14909 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108),
         Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=-9, implicit_target_a=1, apply_aura=108, misc_value=SpellModOp.COST),
     ],
     spell_icon_id=1868,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Smite, Holy Fire, Holy Nova and Penance spells by $s1%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 5243008, 'EffectSpellClassMaskA_2': 32768, 'EffectSpellClassMaskB_1': 1048576, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    notes="Priest Holy rework (HOLY.md 3,2): rank 1 - eff1/eff2 (damage +5%, unchanged from stock) "
+          "mask also gains Penance's dmg-bolt bit (dw3=128) per HOLY.md's target mask ("
+          "Smite|HF|Holy Nova dmg|Penance dmg bolt). New eff3 SPELLMOD_COST -8% (base_points=-9) "
+          "scoped Holy Nova damage only.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Smite, Holy Fire, Holy Nova and Penance spells by $s1%, and reduces the mana cost of your Holy Nova by $s2%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 5243008, 'EffectSpellClassMaskA_2': 32768, 'EffectSpellClassMaskA_3': _masks.PENANCE_BOLT, 'EffectSpellClassMaskB_1': 1048576, 'EffectSpellClassMaskC_1': _masks.HOLY_NOVA_DMG, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -829,10 +845,13 @@ healing_prayers_14911 = spell(
     duration_ms=-1,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=108, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
     ],
     spell_icon_id=540,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Prayer of Healing and Prayer of Mending spell by $s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 512, 'EffectSpellClassMaskA_2': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 4,0): eff1 mask gains Halo (dw3) so the cost reduction also '
+          'covers it; new eff2 SPELLMOD_CRITICAL_CHANCE +5% (base_points=4) scoped Prayer of '
+          'Healing (dw1) + Halo (dw3).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Prayer of Healing, Prayer of Mending and Halo spells by $s1%, and increases the critical strike chance of your Prayer of Healing and Halo spells by $s2%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 512, 'EffectSpellClassMaskA_2': 32, 'EffectSpellClassMaskA_3': _masks.HALO, 'EffectSpellClassMaskB_1': _masks.POH, 'EffectSpellClassMaskB_3': _masks.HALO, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -852,7 +871,7 @@ improved_healing_14912 = spell(
     ],
     spell_icon_id=684,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Lesser Heal, Heal, Greater Heal, Divine Hymn and Penance spells by $s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 267264, 'EffectSpellClassMaskA_2': 12582912, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Greater Heal, Divine Hymn and Penance spells by $s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 267264, 'EffectSpellClassMaskA_2': 12582912, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -868,11 +887,18 @@ healing_focus_14913 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=34, implicit_target_a=1, apply_aura=108, misc_value=9),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=108, misc_value=9),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL),
     ],
     spell_icon_id=1871,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the pushback suffered from damaging attacks  while casting any healing spell by $s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 269824, 'EffectSpellClassMaskA_2': 12681220, 'EffectSpellClassMaskA_3': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 0,0): pushback reduction 35% -> 50% (rank 1: base_points 34->49, '
+          'keeps its existing SpellMod classmask). New eff2: generalized spell/melee/ranged haste (193, '
+          'HASTE_ALL - PLAN §1) +1% (base_points=0), no classmask needed (a plain passive stat buff, '
+          'not a SpellMod). Tooltip capstone line previews the (2,0/eff... ) Greater Heal/Prayer of '
+          'Healing/Divine Hymn haste-stack capstone in grey on this non-final rank.\n\n'
+          '|cFF9D9D9DCapstone Bonus: Completing a cast of Greater Heal, Prayer of Healing or Divine '
+          'Hymn grants 2% spell haste for 10 sec, stacking up to 3 times.|r',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases spell, ranged and melee haste by $s2%, and reduces the pushback suffered from damaging attacks while casting any healing spell by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Completing a cast of Greater Heal, Prayer of Healing or Divine Hymn grants 2% spell haste for 10 sec, stacking up to 3 times.|r', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 269824, 'EffectSpellClassMaskA_2': 12681220, 'EffectSpellClassMaskA_3': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -889,11 +915,11 @@ holy_specialization_15008 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=71, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=71, misc_value=2),
     ],
     spell_icon_id=305,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical effect chance of your Holy spells by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 424943232, 'EffectSpellClassMaskA_2': 36, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 0,2): 1..5% (5 ranks) -> 2/4/6% (3 ranks, rank 2: base_points 1->3).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical effect chance of your Holy spells by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 424943232, 'EffectSpellClassMaskA_2': 36, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -910,11 +936,11 @@ holy_specialization_15009 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=71, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=71, misc_value=2),
     ],
     spell_icon_id=305,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical effect chance of your Holy spells by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 424943232, 'EffectSpellClassMaskA_2': 36, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 0,2): 1..5% (5 ranks) -> 2/4/6% (3 ranks, rank 3: base_points 2->5).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical effect chance of your Holy spells by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 424943232, 'EffectSpellClassMaskA_2': 36, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -972,12 +998,18 @@ healing_focus_15012 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=69, implicit_target_a=1, apply_aura=108, misc_value=9),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=108, misc_value=9),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL),
     ],
     spell_icon_id=1871,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the pushback suffered from damaging attacks  while casting any healing spell by $s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 269824, 'EffectSpellClassMaskA_2': 12681220, 'EffectSpellClassMaskA_3': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 0,0): pushback reduction 35% -> 100% (rank 2: base_points 69->99). '
+          'New eff2: generalized haste (193, HASTE_ALL) +2% (base_points=1). Final-rank capstone clause '
+          'in plain color (PLAN §3.1).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases spell, ranged and melee haste by $s2%, and reduces the pushback suffered from damaging attacks while casting any healing spell by $s1%.\n\nCapstone Bonus: Completing a cast of Greater Heal, Prayer of Healing or Divine Hymn grants 2% spell haste for 10 sec, stacking up to 3 times.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 269824, 'EffectSpellClassMaskA_2': 12681220, 'EffectSpellClassMaskA_3': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
+procs_on(healing_focus_15012, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS, spell_phase_mask=PROC_SPELL_PHASE_CAST,
+         family_name=6, family_mask=(_masks.GREATER_HEAL | _masks.POH, _masks.DIVINE_HYMN, 0), chance=100)
+scripted_by(healing_focus_15012, 'spell_pri_healing_focus_capstone')
 
 
 improved_healing_15013 = spell(
@@ -996,7 +1028,7 @@ improved_healing_15013 = spell(
     ],
     spell_icon_id=684,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Lesser Heal, Heal, Greater Heal, Divine Hymn and Penance spells by $s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 267264, 'EffectSpellClassMaskA_2': 12582912, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Greater Heal, Divine Hymn and Penance spells by $s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 267264, 'EffectSpellClassMaskA_2': 12582912, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -1016,7 +1048,7 @@ improved_healing_15014 = spell(
     ],
     spell_icon_id=684,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Lesser Heal, Heal, Greater Heal, Divine Hymn and Penance spells by $s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 267264, 'EffectSpellClassMaskA_2': 12582912, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Greater Heal, Divine Hymn and Penance spells by $s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 267264, 'EffectSpellClassMaskA_2': 12582912, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -1034,10 +1066,12 @@ searing_light_15017 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=-17, implicit_target_a=1, apply_aura=108, misc_value=SpellModOp.COST),
     ],
     spell_icon_id=1868,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Smite, Holy Fire, Holy Nova and Penance spells by $s1%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 5243008, 'EffectSpellClassMaskA_2': 32768, 'EffectSpellClassMaskB_1': 1048576, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    notes="Priest Holy rework (HOLY.md 3,2): rank 2 - mask gains Penance dmg-bolt bit (dw3=128). New "
+          "eff3 SPELLMOD_COST -16% (base_points=-17) scoped Holy Nova damage.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Smite, Holy Fire, Holy Nova and Penance spells by $s1%, and reduces the mana cost of your Holy Nova by $s2%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 5243008, 'EffectSpellClassMaskA_2': 32768, 'EffectSpellClassMaskA_3': _masks.PENANCE_BOLT, 'EffectSpellClassMaskB_1': 1048576, 'EffectSpellClassMaskC_1': _masks.HOLY_NOVA_DMG, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -1055,10 +1089,12 @@ healing_prayers_15018 = spell(
     duration_ms=-1,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=108, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
     ],
     spell_icon_id=540,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Prayer of Healing and Prayer of Mending spell by $s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 512, 'EffectSpellClassMaskA_2': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 4,0): rank 2, cost -20% (mask += Halo dw3), new eff2 crit +10% '
+          '(base_points=9) scoped PoH (dw1) + Halo (dw3).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Prayer of Healing, Prayer of Mending and Halo spells by $s1%, and increases the critical strike chance of your Prayer of Healing and Halo spells by $s2%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 512, 'EffectSpellClassMaskA_2': 32, 'EffectSpellClassMaskA_3': _masks.HALO, 'EffectSpellClassMaskB_1': _masks.POH, 'EffectSpellClassMaskB_3': _masks.HALO, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -1075,11 +1111,11 @@ improved_renew_15020 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=13, implicit_target_a=1, apply_aura=108, misc_value=22),
     ],
     spell_icon_id=321,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by your Renew spell by $s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 0,1): 5/10/15% -> 7/14/20% (rank 2: base_points 9->13).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by your Renew spell by $s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -1095,12 +1131,12 @@ spiritual_guidance_15028 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=174, misc_value=126),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=175, misc_value=4),
+        Effect(type=EffectType.APPLY_AURA, base_points=15, implicit_target_a=1, apply_aura=174, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=15, implicit_target_a=1, apply_aura=175, misc_value=4),
     ],
     spell_icon_id=1873,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases spell power by $s1% of your total Spirit.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes="Holy rework (HOLY.md 4,2): 5/10/15/20/25% -> 8/16/25% (talent-tooltip-audit fix, WP-C).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases spell power by $s1% of your total Spirit.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 
 
@@ -1116,12 +1152,12 @@ spiritual_guidance_15029 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=174, misc_value=126),
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=175, misc_value=4),
+        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=174, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=175, misc_value=4),
     ],
     spell_icon_id=1873,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases spell power by $s1% of your total Spirit.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes="Holy rework (HOLY.md 4,2): 5/10/15/20/25% -> 8/16/25% (talent-tooltip-audit fix, WP-C).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases spell power by $s1% of your total Spirit.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 
 
@@ -1722,12 +1758,12 @@ spiritual_healing_15349 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108, misc_value=22),
     ],
     spell_icon_id=46,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by your healing spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 419700288, 'EffectSpellClassMaskA_2': 134283268, 'EffectSpellClassMaskA_3': 4, 'EffectSpellClassMaskB_1': 419700288, 'EffectSpellClassMaskB_2': 134283268, 'EffectSpellClassMaskB_3': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    notes="Holy rework (HOLY.md 5,2): 2/4/6/8/10% -> 3/6/10% (talent-tooltip-audit fix, WP-C).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by your healing spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 419700288, 'EffectSpellClassMaskA_2': 134283268, 'EffectSpellClassMaskA_3': 4, 'EffectSpellClassMaskB_1': 419700288, 'EffectSpellClassMaskB_2': 134283268, 'EffectSpellClassMaskB_3': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -1743,12 +1779,12 @@ spiritual_healing_15354 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=22),
     ],
     spell_icon_id=46,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by your healing spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 419700288, 'EffectSpellClassMaskA_2': 134283268, 'EffectSpellClassMaskA_3': 4, 'EffectSpellClassMaskB_1': 419700288, 'EffectSpellClassMaskB_2': 134283268, 'EffectSpellClassMaskB_3': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    notes="Holy rework (HOLY.md 5,2): 2/4/6/8/10% -> 3/6/10% (talent-tooltip-audit fix, WP-C).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by your healing spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 419700288, 'EffectSpellClassMaskA_2': 134283268, 'EffectSpellClassMaskA_3': 4, 'EffectSpellClassMaskB_1': 419700288, 'EffectSpellClassMaskB_2': 134283268, 'EffectSpellClassMaskB_3': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -1809,8 +1845,9 @@ inspiration_15362 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=21, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=15357),
     ],
     spell_icon_id=79,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces your target's physical damage taken by $15357s1% for $15357d after getting a critical effect from your Flash Heal, Heal, Greater Heal, Binding Heal, Penance, Prayer of Mending, Prayer of Healing, or Circle of Healing spell.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    notes="Holy rework (HOLY.md 2,3): unchanged mechanically - NameSubtext stripped per PLAN "
+          "sec 3.1 (talent-tooltip-audit fix, WP-C).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces your target's physical damage taken by $15357s1% for $15357d after getting a critical effect from your Flash Heal, Heal, Greater Heal, Binding Heal, Penance, Prayer of Mending, Prayer of Healing, or Circle of Healing spell.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -1829,8 +1866,9 @@ inspiration_15363 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=21, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=15359),
     ],
     spell_icon_id=79,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces your target's physical damage taken by $15359s1% for $15359d after getting a critical effect from your Flash Heal, Heal, Greater Heal, Binding Heal, Penance, Prayer of Mending, Prayer of Healing, or Circle of Healing spell.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    notes="Holy rework (HOLY.md 2,3): unchanged mechanically - NameSubtext stripped per PLAN "
+          "sec 3.1 (talent-tooltip-audit fix, WP-C).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces your target's physical damage taken by $15359s1% for $15359d after getting a critical effect from your Flash Heal, Heal, Greater Heal, Binding Heal, Penance, Prayer of Mending, Prayer of Healing, or Circle of Healing spell.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -1889,11 +1927,11 @@ improved_renew_17191 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=22),
     ],
     spell_icon_id=321,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by your Renew spell by $s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 0,1): 5/10/15% -> 7/14/20% (rank 3: base_points 14->19).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by your Renew spell by $s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -1950,11 +1988,15 @@ divine_fury_18530 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=107, misc_value=10),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=307,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the casting time of your Smite, Holy Fire, Heal and Greater Heal spells by $/1000;S1 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectItemType_1': 1053824, 'EffectSpellClassMaskA_1': 1053824, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 1,2): rebuilt from a cast-time SpellMod into eff1'
+          'ADD_FLAT_MODIFIER SPELLMOD_CRITICAL_CHANCE +2% scoped to Holy Fire (dw1) - rank 1 '
+          '(base_points=1) - and eff2 DUMMY +3% (base_points=2, marker read by '
+          'Priest::ApplyDoneDamagePctMods for "direct Holy damage vs your Holy Fire DoT target").',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Holy Fire spell by $s1%, and increases direct Holy damage done to targets afflicted by your Holy Fire by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': _masks.HOLY_FIRE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -1971,11 +2013,12 @@ divine_fury_18531 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-201, implicit_target_a=1, apply_aura=107, misc_value=10),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=307,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the casting time of your Smite, Holy Fire, Heal and Greater Heal spells by $/1000;S1 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectItemType_1': 1053824, 'EffectSpellClassMaskA_1': 1053824, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 1,2): rank 2 - crit +4% (base_points=3), damage +6% (base_points=5).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Holy Fire spell by $s1%, and increases direct Holy damage done to targets afflicted by your Holy Fire by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': _masks.HOLY_FIRE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -1992,11 +2035,12 @@ divine_fury_18533 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-301, implicit_target_a=1, apply_aura=107, misc_value=10),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
+        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=307,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the casting time of your Smite, Holy Fire, Heal and Greater Heal spells by $/1000;S1 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectItemType_1': 1053824, 'EffectSpellClassMaskA_1': 1053824, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 1,2): rank 3 - crit +6% (base_points=5), damage +9% (base_points=8).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Holy Fire spell by $s1%, and increases direct Holy damage done to targets afflicted by your Holy Fire by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': _masks.HOLY_FIRE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -2054,12 +2098,18 @@ spirit_of_redemption_20711 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=137, misc_value=4),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=137, misc_value=4),
     ],
     spell_icon_id=1654,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 30, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases total Spirit by $s2% and upon death, the priest becomes the Spirit of Redemption for $27827d.  The Spirit of Redemption cannot move, attack, be attacked or targeted by any spells or effects.  While in this form the priest can cast any healing spell free of cost.  When the effect ends, the priest dies.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_3': 512, 'SpellClassSet': 6, 'SpellLevel': 30},
+    notes='Priest Holy rework (HOLY.md 4,1): now 3 ranks - this row is rank 1 (Spirit +3%, '
+          'base_points=2). The stock DUMMY effect is REMOVED (not just left inert): '
+          "Unit::Kill's on-death hardcode (Unit.cpp:13787-13830, deleted by this pass per PLAN "
+          '§6.8) keys on GetAuraEffectDummy(20711), so dropping the DUMMY here retires the old '
+          'on-death form with zero core changes - the new capstone form (200191-200194/200226) '
+          'is entirely script-driven instead (spell_pri_spirit_of_redemption on 200192). Capstone '
+          'preview text added per PLAN sec 3.1 (talent-tooltip-audit fix, WP-C: was missing on '
+          'this non-final rank entirely).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 30, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases total Spirit by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Absorb otherwise lethal damage up to 300% of Spirit. If it prevents death, become a Spirit of Redemption for 5 sec: cannot move or attack, 50% reduced damage taken, Holy Priest heals cost no mana. Shares a 2 min cooldown with Ardent Defender and Cheat Death.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_3': 512, 'SpellClassSet': 6, 'SpellLevel': 30},
 )
 
 
@@ -2075,12 +2125,21 @@ holy_reach_27789 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=5),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=6),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.RANGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=SpellModOp.RADIUS),
     ],
     spell_icon_id=300,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your Smite and Holy Fire spells and the radius of your Prayer of Healing, Holy Nova, Divine Hymn and Circle of Healing spells by $s1%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1048704, 'EffectSpellClassMaskB_1': 406848000, 'EffectSpellClassMaskB_3': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes="Priest Holy rework (HOLY.md 3,0/design doc row 3,0): rank 1 - eff1 changed from the "
+          "stock ADD_PCT_MODIFIER (+10% range) to ADD_FLAT_MODIFIER +3 yd (base_points=2) per the "
+          "design doc's own '+3/6 yd' wording (a flat distance, not a percentage) - this is a real "
+          "aura-type change, not just a value tweak. Mask replaced with Shadow Reach's own live "
+          "mask (17322: dw1=109223940, "
+          "dw2=3147010, dw3=8256 - Mind Blast/Mind Sear/Vampiric Touch/Mind Flay) PLUS Smite|Holy "
+          "Fire on dw1, per HOLY.md's literal instruction. eff2 (SPELLMOD_RADIUS) mask gains Holy "
+          "Word: Sanctify (dw3) alongside the existing Divine Hymn pulse tag (dw3=4, confirmed via "
+          "divine_hymn_64844's own SpellClassMask_3=4 elsewhere in this file) - dw1 (406848000 = "
+          "Prayer of Healing|Circle of Healing|Holy Nova heal, unchanged) is left untouched.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your damaging spells with a cast or channel by $s1 yds, and the radius of your Prayer of Healing, Holy Nova, Divine Hymn, Circle of Healing and Holy Word: Sanctify spells by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Directly healing or damaging a target beyond 20 yds has a 20% chance to restore 2% of missing mana over 4 sec, once per 15 sec.|r', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 110272644, 'EffectSpellClassMaskA_2': 3147010, 'EffectSpellClassMaskA_3': 8256, 'EffectSpellClassMaskB_1': 406848000, 'EffectSpellClassMaskB_3': 16777220, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 
 
@@ -2096,13 +2155,20 @@ holy_reach_27790 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=5),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=6),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.RANGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=SpellModOp.RADIUS),
     ],
     spell_icon_id=300,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your Smite and Holy Fire spells and the radius of your Prayer of Healing, Holy Nova, Divine Hymn and Circle of Healing spells by $s1%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1048704, 'EffectSpellClassMaskB_1': 406848000, 'EffectSpellClassMaskB_3': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 4194304, 'SpellClassSet': 6},
+    notes="Priest Holy rework (HOLY.md 3,0): rank 2 - eff1 +6 yd (base_points=5, ADD_FLAT_MODIFIER, "
+          "same aura-type change as rank 1). eff2 radius +20% unchanged, mask gains Holy Word: "
+          "Sanctify (dw3) same as rank 1. This rank's own top-level 'SpellClassMask_2': 4194304 "
+          "(Divine Hymn CHANNEL's own dw2 tag, 64843) is left as-is - a spell-wide field, not tied "
+          "to either per-effect classmask - since HOLY.md never asked for it to change.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your damaging spells with a cast or channel by $s1 yds, and the radius of your Prayer of Healing, Holy Nova, Divine Hymn, Circle of Healing and Holy Word: Sanctify spells by $s2%.\n\nCapstone Bonus: Directly healing or damaging a target beyond 20 yds has a 20% chance to restore 2% of missing mana over 4 sec, once per 15 sec.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 110272644, 'EffectSpellClassMaskA_2': 3147010, 'EffectSpellClassMaskA_3': 8256, 'EffectSpellClassMaskB_1': 406848000, 'EffectSpellClassMaskB_3': 16777220, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 4194304, 'SpellClassSet': 6},
 )
+procs_on(holy_reach_27790, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG,
+         spell_phase_mask=PROC_SPELL_PHASE_HIT, chance=20, cooldown_ms=15000)
+scripted_by(holy_reach_27790, 'spell_pri_holy_reach_capstone')
 
 
 blessed_recovery_27811 = spell(
@@ -2117,11 +2183,17 @@ blessed_recovery_27811 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=18350),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=1875,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'After being struck by a melee or ranged critical hit, Blessed Recovery heals you for $s1% of the damage taken over $27818d.  Additional critical hits taken during the effect increase the healing received.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 680, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 1,1): rebuilt from the old "heal % of a melee/ranged crit taken" '
+          'proc into a flat "Priest healing effectiveness +3/6/9%" SpellMod (ADD_PCT_MODIFIER '
+          'SPELLMOD_DAMAGE, scoped PRIEST_HEAL_MASK on all three dwords) - rank 1 (base_points=2). '
+          'ProcTypeMask/ProcChance dropped: this rank no longer procs on anything itself (the capstone '
+          'proc lives on rank 3, 27816, below). 27813 (the old instant-heal-over-time payout aura) is '
+          'now unused - 200177/200178 replace it. Capstone preview text added per PLAN sec 3.1 '
+          '(talent-tooltip-audit fix, WP-C: was missing on this non-final rank entirely).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effectiveness of your healing spells by $s1%.\n\n|cFF9D9D9DCapstone Bonus: When your Renew heals a target at or below 35% health, immediately heal them for an additional 2 ticks worth without consuming duration. Occurs once per 20 sec per target.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': _masks.PRIEST_HEAL_MASK[0], 'EffectSpellClassMaskA_2': _masks.PRIEST_HEAL_MASK[1], 'EffectSpellClassMaskA_3': _masks.PRIEST_HEAL_MASK[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 
 
@@ -2137,11 +2209,12 @@ blessed_recovery_27815 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=18350),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=1875,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'After being struck by a melee or ranged critical hit, Blessed Recovery heals you for $s1% of the damage taken over $27818d.  Additional critical hits taken during the effect increase the healing received.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 680, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 1,1): rank 2, +6% (base_points=5). Capstone preview text '
+          'added per PLAN sec 3.1 (talent-tooltip-audit fix, WP-C).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effectiveness of your healing spells by $s1%.\n\n|cFF9D9D9DCapstone Bonus: When your Renew heals a target at or below 35% health, immediately heal them for an additional 2 ticks worth without consuming duration. Occurs once per 20 sec per target.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': _masks.PRIEST_HEAL_MASK[0], 'EffectSpellClassMaskA_2': _masks.PRIEST_HEAL_MASK[1], 'EffectSpellClassMaskA_3': _masks.PRIEST_HEAL_MASK[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 
 
@@ -2157,12 +2230,19 @@ blessed_recovery_27816 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=18350),
+        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=1875,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'After being struck by a melee or ranged critical hit, Blessed Recovery heals you for $s1% of the damage taken over $27818d.  Additional critical hits taken during the effect increase the healing received.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 680, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 1,1): rank 3, +9% (base_points=8) plus the capstone: your Renew '
+          'healing a target at or below 35% health immediately heals them for 2 more ticks worth, once '
+          'per 20 sec per target (spell_pri_blessed_recovery, rewritten). procs_on gates the AuraScript '
+          'to Renew/Empowered Renew-chunk periodic or direct-heal events only, per HOLY.md/design doc §5.5. '
+          'Non-final ranks show the identical clause in grey as a preview (PLAN §3.1).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effectiveness of your healing spells by $s1%.\n\nCapstone Bonus: When your Renew heals a target at or below 35% health, immediately heal them for an additional 2 ticks worth without consuming duration. Occurs once per 20 sec per target.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': _masks.PRIEST_HEAL_MASK[0], 'EffectSpellClassMaskA_2': _masks.PRIEST_HEAL_MASK[1], 'EffectSpellClassMaskA_3': _masks.PRIEST_HEAL_MASK[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
+procs_on(blessed_recovery_27816, PROC_FLAG_DONE_PERIODIC | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS,
+         family_name=6, family_mask=(_masks.RENEW, 0, 0), spell_type_mask=PROC_SPELL_TYPE_HEAL, chance=100)
+scripted_by(blessed_recovery_27816, 'spell_pri_blessed_recovery')
 
 
 improved_vampiric_embrace_27839 = spell(
@@ -2388,9 +2468,12 @@ surge_of_light_33150 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=33151),
     ],
     spell_icon_id=2176,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell criticals have a $h% chance to cause your next Smite or Flash Heal spell to be instant cast, cost no mana but be incapable of a critical hit.  This effect lasts $33151d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 25, 'ProcTypeMask': 344064, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 5,0): rank 1, 10% (procs_on chance below replaces the stock '
+          'ProcChance/ProcTypeMask row - direct-crit only, no periodic flags).',
+    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your direct damage and healing criticals have a 10% chance to cause your next Smite or Flash Heal spell to be instant cast and cost no mana. Stacks up to 2 times.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
+procs_on(surge_of_light_33150, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS,
+         hit_mask=PROC_HIT_CRITICAL, chance=10)
 
 
 surge_of_light_33154 = spell(
@@ -2408,9 +2491,14 @@ surge_of_light_33154 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=33151),
     ],
     spell_icon_id=2176,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell criticals have a $h% chance to cause your next Smite or Flash Heal spell to be instant cast, cost no mana but be incapable of a critical hit.  This effect lasts $33151d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 50, 'ProcTypeMask': 81920, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 5,0): rank 2, 20%.',
+    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your direct damage and healing criticals have a 20% chance to cause your next Smite or Flash Heal spell to be instant cast and cost no mana. Stacks up to 2 times.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
+procs_on(surge_of_light_33154, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS,
+         hit_mask=PROC_HIT_CRITICAL, chance=20)
+# spell_pri_surge_of_light_consume binds on Smite (585) and Flash Heal (2061) themselves (HOLY.md
+# 5,0's Script column), not on these talent ranks - see the scripted_by() calls next to those two
+# spells in priest_spells.py.
 
 
 empowered_healing_33158 = spell(
@@ -2426,11 +2514,13 @@ empowered_healing_33158 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=107, misc_value=24),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=107, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=107, misc_value=24),
     ],
     spell_icon_id=241,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Greater Heal spell gains an additional $s1% and your Flash Heal and Binding Heal gain an additional $s2% of your bonus healing effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4096, 'EffectSpellClassMaskB_1': 2048, 'EffectSpellClassMaskB_2': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes="Priest Holy rework (HOLY.md 7,1): 7/15/23% (5 ranks) -> 8/16/25% (3 ranks - stored 7/15/24 "
+          "per die_sides=1 convention). Rank 1's target (8%) matches the stock value already "
+          '(base_points=7 unchanged); eff2 mask gains Halo (dw3).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Greater Heal, Flash Heal, Binding Heal and Halo gain an additional $s1% of your bonus healing effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4096, 'EffectSpellClassMaskB_1': 2048, 'EffectSpellClassMaskB_2': 4, 'EffectSpellClassMaskB_3': _masks.HALO, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 
 
@@ -2447,11 +2537,12 @@ empowered_healing_33159 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=15, implicit_target_a=1, apply_aura=107, misc_value=24),
-        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=107, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=15, implicit_target_a=1, apply_aura=107, misc_value=24),
     ],
     spell_icon_id=241,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Greater Heal spell gains an additional $s1% and your Flash Heal and Binding Heal gain an additional $s2% of your bonus healing effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4096, 'EffectSpellClassMaskB_1': 2048, 'EffectSpellClassMaskB_2': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 7,1): rank 2, target 16% matches the stock value already '
+          '(base_points=15 unchanged); eff2 mask gains Halo (dw3).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Greater Heal, Flash Heal, Binding Heal and Halo gain an additional $s1% of your bonus healing effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4096, 'EffectSpellClassMaskB_1': 2048, 'EffectSpellClassMaskB_2': 4, 'EffectSpellClassMaskB_3': _masks.HALO, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 
 
@@ -2467,12 +2558,14 @@ empowered_healing_33160 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=23, implicit_target_a=1, apply_aura=107, misc_value=24),
-        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=107, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=107, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=107, misc_value=24),
     ],
     spell_icon_id=241,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Greater Heal spell gains an additional $s1% and your Flash Heal and Binding Heal gain an additional $s2% of your bonus healing effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4096, 'EffectSpellClassMaskB_1': 2048, 'EffectSpellClassMaskB_2': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 7,1): rank 3 (now the final kept rank), 23% -> 25% '
+          '(base_points 23->24); eff2 bumped to match (was 11/12%, now the same 24 as eff1) and its '
+          'mask gains Halo (dw3).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Greater Heal, Flash Heal, Binding Heal and Halo gain an additional $s1% of your bonus healing effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4096, 'EffectSpellClassMaskB_1': 2048, 'EffectSpellClassMaskB_2': 4, 'EffectSpellClassMaskB_3': _masks.HALO, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 
 
@@ -2969,12 +3062,24 @@ holy_concentration_34753 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=34754),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200199),
+        Effect(type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2169,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your mana regeneration from spirit is increased by $34754s1% for $34754d after you critically heal with Flash Heal, Greater Heal, Binding Heal or Empowered Renew.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassMask_2': 131072, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='Priest Holy rework (HOLY.md 6,0): reworked - eff1 now triggers the new 200199 Spirit buff '
+          '(replacing the old mana-regen buff 34754); procs_on below adds Holy Fire/Smite crits to '
+          'the trigger list (stock only covered heal crits). New eff2 DUMMY 33% (base_points=32) - '
+          'the Renew-extension chance read by spell_pri_holy_concentration_extend.',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Spirit is increased by $200199s1% for $200199d after a critical heal with Flash Heal, Greater Heal or Binding Heal, or a critical hit with Holy Fire or Smite. Greater Heal, Flash Heal, Binding Heal and Circle of Healing have a $s2% chance to extend your Renew on all nearby party and raid members by 3 sec, to a maximum of 6 additional sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellPriority': 50},
 )
+procs_on(holy_concentration_34753, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG,
+         hit_mask=PROC_HIT_CRITICAL, family_name=6,
+         family_mask=(_masks.FLASH_HEAL | _masks.GREATER_HEAL | _masks.SMITE | _masks.HOLY_FIRE, _masks.BINDING_HEAL, 0),
+         chance=100)
+# spell_pri_holy_concentration_extend binds on Greater Heal (2060), Flash Heal (2061), Binding
+# Heal (32546) and Circle of Healing (34861) themselves (HOLY.md 6,0's Script column: AfterCast on
+# each), not on this talent rank - see the scripted_by() calls next to those four spells in
+# priest_spells.py.
 
 
 holy_concentration_34859 = spell(
@@ -2989,12 +3094,18 @@ holy_concentration_34859 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=63724),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200200),
+        Effect(type=EffectType.APPLY_AURA, base_points=65, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2169,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your mana regeneration from spirit is increased by $63724s1% for $63724d after you critically heal with Flash Heal, Greater Heal, Binding Heal or Empowered Renew.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassMask_2': 131072, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='Priest Holy rework (HOLY.md 6,0): rank 2 - triggers 200200 (20% Spirit); Renew-extension '
+          'chance 66% (base_points=65).',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Spirit is increased by $200200s1% for $200200d after a critical heal with Flash Heal, Greater Heal or Binding Heal, or a critical hit with Holy Fire or Smite. Greater Heal, Flash Heal, Binding Heal and Circle of Healing have a $s2% chance to extend your Renew on all nearby party and raid members by 3 sec, to a maximum of 6 additional sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 131072, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellPriority': 50},
 )
+procs_on(holy_concentration_34859, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG,
+         hit_mask=PROC_HIT_CRITICAL, family_name=6,
+         family_mask=(_masks.FLASH_HEAL | _masks.GREATER_HEAL | _masks.SMITE | _masks.HOLY_FIRE, _masks.BINDING_HEAL, 0),
+         chance=100)
 
 
 holy_concentration_34860 = spell(
@@ -3009,12 +3120,18 @@ holy_concentration_34860 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=63725),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200201),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2169,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your mana regeneration from spirit is increased by $63725s1% for $63725d after you critically heal with Flash Heal, Greater Heal, Binding Heal or Empowered Renew.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassMask_2': 131072, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='Priest Holy rework (HOLY.md 6,0): rank 3 - triggers 200201 (30% Spirit); Renew-extension '
+          'chance 100% (base_points=99).',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Spirit is increased by $200201s1% for $200201d after a critical heal with Flash Heal, Greater Heal or Binding Heal, or a critical hit with Holy Fire or Smite. Greater Heal, Flash Heal, Binding Heal and Circle of Healing have a $s2% chance to extend your Renew on all nearby party and raid members by 3 sec, to a maximum of 6 additional sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 131072, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellPriority': 50},
 )
+procs_on(holy_concentration_34860, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG,
+         hit_mask=PROC_HIT_CRITICAL, family_name=6,
+         family_mask=(_masks.FLASH_HEAL | _masks.GREATER_HEAL | _masks.SMITE | _masks.HOLY_FIRE, _masks.BINDING_HEAL, 0),
+         chance=100)
 
 
 # Priest Discipline rework (docs/reworks/priest-disc-rework.md (5,2)): Enlightenment now grants all
@@ -3385,11 +3502,14 @@ test_of_faith_47558 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=112, misc_value=21),
-        Effect(type=EffectType.DUMMY, base_points=1, implicit_target_a=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2844,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases healing by $s1% on friendly targets at or below 50% health.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 419700288, 'EffectSpellClassMaskA_2': 134283300, 'EffectSpellClassMaskA_3': 4100, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 8,2): eff1 (healing ≤50% target, engine misc 21) unchanged - '
+          "4% stays 4% (base_points=3). eff2 REPURPOSED from the old '1 extra Aegis/other-consumer "
+          "marker' DUMMY into the new '+4% Smite/Holy Fire damage vs ≤50% targets' marker "
+          '(base_points=3), read by Priest::ApplyDoneDamagePctMods.',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your healing by $s1% and your Smite and Holy Fire damage by $s2% on friendly or enemy targets at or below 50% health.\n\n|cFF9D9D9DCapstone Bonus: You take 10% less magic damage while casting Smite, Holy Fire, or any Priest healing spell.|r', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': 419700288, 'EffectSpellClassMaskA_2': 134283300, 'EffectSpellClassMaskA_3': 4100, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 
 
@@ -3406,11 +3526,12 @@ test_of_faith_47559 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=112, misc_value=6935),
-        Effect(type=EffectType.DUMMY, base_points=3, implicit_target_a=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2844,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases healing by $s1% on friendly targets at or below 50% health.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 419700288, 'EffectSpellClassMaskA_2': 134283300, 'EffectSpellClassMaskA_3': 4100, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 8,2): rank 2, healing 8% unchanged; damage marker +8% '
+          '(base_points=7).',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your healing by $s1% and your Smite and Holy Fire damage by $s2% on friendly or enemy targets at or below 50% health.\n\n|cFF9D9D9DCapstone Bonus: You take 10% less magic damage while casting Smite, Holy Fire, or any Priest healing spell.|r', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': 419700288, 'EffectSpellClassMaskA_2': 134283300, 'EffectSpellClassMaskA_3': 4100, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 
 
@@ -3427,11 +3548,15 @@ test_of_faith_47560 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=112, misc_value=6918),
-        Effect(type=EffectType.DUMMY, base_points=5, implicit_target_a=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2844,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases healing by $s1% on friendly targets at or below 50% health.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 419700288, 'EffectSpellClassMaskA_2': 134283300, 'EffectSpellClassMaskA_3': 4100, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 8,2): rank 3 (final kept rank), healing 12% unchanged; damage '
+          'marker +12% (base_points=11); new eff3 capstone marker (base_points=0, i.e. present/1 - '
+          'read by Priest::ApplySpellDamageTakenPctMods, not a %-scaled value itself, the -10% is a '
+          'fixed multiplier gated on this marker existing). Tooltip capstone line, final rank plain color.',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your healing by $s1% and your Smite and Holy Fire damage by $s2% on friendly or enemy targets at or below 50% health.\n\nCapstone Bonus: You take 10% less magic damage while casting Smite, Holy Fire, or any Priest healing spell.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': 419700288, 'EffectSpellClassMaskA_2': 134283300, 'EffectSpellClassMaskA_3': 4100, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 
 
@@ -3449,11 +3574,17 @@ divine_providence_47562 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108),
         Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108, misc_value=22),
-        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=1, apply_aura=108, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=108, misc_value=11),
     ],
     spell_icon_id=2845,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by Circle of Healing, Binding Heal, Holy Nova, Prayer of Healing, Divine Hymn and Prayer of Mending by $s1%, and reduces the cooldown of your Prayer of Mending by $s3%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 402653696, 'EffectSpellClassMaskA_2': 4, 'EffectSpellClassMaskA_3': 4, 'EffectSpellClassMaskB_3': 4, 'EffectSpellClassMaskC_2': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    notes="Priest Holy rework (HOLY.md 9,0): now 3 ranks (47566/47567 orphaned), moved from (9,1). "
+          'eff1 (heal%, unchanged 3%) mask gains Greater Heal (dw1) and Penance heal bolt (dw2) - '
+          "Divine Hymn's own dw3=4 bit was already present. eff2 (the periodic/DoT-style variant, "
+          "dw3-only in the pulled data) mask gains the same new custom-spell bits. eff3 REPURPOSED "
+          'from a Prayer of Mending cooldown reduction (dw2=32) into a Halo cooldown reduction '
+          '(dw3=HALO) - the exact SpellMod op (COOLDOWN) is unchanged, only its scope moves; -10% '
+          '(base_points=-11).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by Holy Word: Serenity, Holy Word: Sanctify, Circle of Healing, Binding Heal, Holy Nova, Halo, Prayer of Healing, Greater Heal, Penance and Divine Star by $s1%, and reduces the cooldown of your Halo by $s3%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 402657792, 'EffectSpellClassMaskA_2': 65540, 'EffectSpellClassMaskA_3': 25362436, 'EffectSpellClassMaskB_3': 25362436, 'EffectSpellClassMaskC_3': _masks.HALO, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -3471,11 +3602,12 @@ divine_providence_47564 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=108),
         Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=108, misc_value=22),
-        Effect(type=EffectType.APPLY_AURA, base_points=-13, implicit_target_a=1, apply_aura=108, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=108, misc_value=11),
     ],
     spell_icon_id=2845,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by Circle of Healing, Binding Heal, Holy Nova, Prayer of Healing, Divine Hymn and Prayer of Mending by $s1%, and reduces the cooldown of your Prayer of Mending by $s3%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 402653696, 'EffectSpellClassMaskA_2': 4, 'EffectSpellClassMaskA_3': 4, 'EffectSpellClassMaskB_3': 4, 'EffectSpellClassMaskC_2': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 9,0): rank 2 - heal 6% unchanged; Halo cooldown -20% '
+          '(base_points=-21); same mask changes as rank 1.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by Holy Word: Serenity, Holy Word: Sanctify, Circle of Healing, Binding Heal, Holy Nova, Halo, Prayer of Healing, Greater Heal, Penance and Divine Star by $s1%, and reduces the cooldown of your Halo by $s3%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 402657792, 'EffectSpellClassMaskA_2': 65540, 'EffectSpellClassMaskA_3': 25362436, 'EffectSpellClassMaskB_3': 25362436, 'EffectSpellClassMaskC_3': _masks.HALO, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -3491,13 +3623,14 @@ divine_providence_47565 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108, misc_value=22),
-        Effect(type=EffectType.APPLY_AURA, base_points=-19, implicit_target_a=1, apply_aura=108, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=108, misc_value=11),
     ],
     spell_icon_id=2845,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by Circle of Healing, Binding Heal, Holy Nova, Prayer of Healing, Divine Hymn and Prayer of Mending by $s1%, and reduces the cooldown of your Prayer of Mending by $s3%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 402653696, 'EffectSpellClassMaskA_2': 4, 'EffectSpellClassMaskA_3': 4, 'EffectSpellClassMaskB_3': 4, 'EffectSpellClassMaskC_2': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 9,0): rank 3 (now the final kept rank), heal 6%->9% '
+          '(base_points 5->8); Halo cooldown -30% (base_points=-31); same mask changes as rank 1.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by Holy Word: Serenity, Holy Word: Sanctify, Circle of Healing, Binding Heal, Holy Nova, Halo, Prayer of Healing, Greater Heal, Penance and Divine Star by $s1%, and reduces the cooldown of your Halo by $s3%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 402657792, 'EffectSpellClassMaskA_2': 65540, 'EffectSpellClassMaskA_3': 25362436, 'EffectSpellClassMaskB_3': 25362436, 'EffectSpellClassMaskC_3': _masks.HALO, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 6},
 )
 
 
@@ -4160,12 +4293,15 @@ empowered_renew_63534 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108, misc_value=24),
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=7997),
+        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=108, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=7997),
     ],
     spell_icon_id=3021,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Renew spell gains an additional $s1% of your bonus healing effects, and your Renew will instantly heal the target for $s2% of the total periodic effect.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EffectSpellClassMaskB_1': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 8,0): 5/10/15% -> 8/16/25% (rank 1: base_points 4->7). Instant'
+          "chunk is rank-3-only now (design doc row 8,0's capstone): eff2's amount zeroed here "
+          '(base_points=-1, i.e. 0% - the marker is still present so the spell keeps its effect '
+          'count/shape, but rank 1/2 grant no instant chunk).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Renew spell gains an additional $s1% of your bonus healing effects.\n\n|cFF9D9D9DCapstone Bonus: Renew instantly heals for 25% of its total periodic effect on application. Each Renew critical tick extends its duration 1 sec, drawing on the shared extension pool.|r', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EffectSpellClassMaskB_1': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 
 
@@ -4181,12 +4317,12 @@ empowered_renew_63542 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=24),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=7997),
+        Effect(type=EffectType.APPLY_AURA, base_points=15, implicit_target_a=1, apply_aura=108, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=7997),
     ],
     spell_icon_id=3021,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Renew spell gains an additional $s1% of your bonus healing effects, and your Renew will instantly heal the target for $s2% of the total periodic effect.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EffectSpellClassMaskB_1': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 8,0): rank 2, 16% (base_points=15). No instant chunk (see rank 1).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Renew spell gains an additional $s1% of your bonus healing effects.\n\n|cFF9D9D9DCapstone Bonus: Renew instantly heals for 25% of its total periodic effect on application. Each Renew critical tick extends its duration 1 sec, drawing on the shared extension pool.|r', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EffectSpellClassMaskB_1': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
 
 
@@ -4202,13 +4338,21 @@ empowered_renew_63543 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108, misc_value=24),
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=7997),
+        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=108, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=7997),
     ],
     spell_icon_id=3021,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Renew spell gains an additional $s1% of your bonus healing effects, and your Renew will instantly heal the target for $s2% of the total periodic effect.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EffectSpellClassMaskB_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 8,0): rank 3 (final kept rank), 25% (base_points=24) plus the '
+          'capstone: Renew instantly heals for 25% of its total periodic effect on application '
+          '(eff2 DUMMY, base_points=24, read by the stock spell_pri_renew::HandleApplyEffect - only '
+          'this rank carries a nonzero eff2, so the instant-chunk-on-apply behavior is rank-3-only '
+          'by construction) plus a critical-tick duration-extend (procs_on + '
+          'spell_pri_empowered_renew_capstone below). Tooltip capstone line, final rank plain color.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Renew spell gains an additional $s1% of your bonus healing effects.\n\nCapstone Bonus: Renew instantly heals for 25% of its total periodic effect on application. Each Renew critical tick extends its duration 1 sec, drawing on the shared extension pool.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EffectSpellClassMaskB_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
+procs_on(empowered_renew_63543, PROC_FLAG_DONE_PERIODIC, hit_mask=PROC_HIT_CRITICAL,
+         family_name=6, family_mask=(_masks.RENEW, 0, 0), chance=100)
+scripted_by(empowered_renew_63543, 'spell_pri_empowered_renew_capstone')
 
 
 # Priest Discipline rework (docs/reworks/priest-disc-rework.md (4,2)): Soul Warding becomes a
@@ -4322,9 +4466,16 @@ serendipity_63730 = spell(
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=8152, trigger_spell=63731),
     ],
     spell_icon_id=2900,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you heal with Binding Heal or Flash Heal, the cast time of your next Greater Heal or Prayer of Healing spell is reduced by $63731s1%. Stacks up to 3 times. Lasts $63731d.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 6144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 7,2): rank 1 - procs_on below replaces the stock ProcTypeMask '
+          'with NO family restriction (Classless: Paladin heals must also be able to charge this), '
+          'the actual gating (Priest BH/FH/Renew/Smite vs Paladin Holy Light/Flash of Light) is '
+          'done in spell_pri_serendipity\'s own CheckProc. Non-final-rank grey capstone preview '
+          '(PLAN §3.1).',
+    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you heal with Binding Heal or Flash Heal, casting Renew, or damaging with Smite, the cast time and mana cost of your next Greater Heal or Prayer of Healing spell is reduced by $63731s1%. Stacks up to 3 times. Lasts $63731d.\n\n|cFF9D9D9DCapstone Bonus: Casting Greater Heal, Flash Heal, Binding Heal, Prayer of Healing, Circle of Healing, Renew, Smite or Holy Fire reduces the cooldown of your Holy Words.|r', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 6144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
+procs_on(serendipity_63730, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG,
+         spell_phase_mask=PROC_SPELL_PHASE_HIT | PROC_SPELL_PHASE_CAST, chance=100)
+scripted_by(serendipity_63730, 'spell_pri_serendipity')
 
 
 serendipity_63733 = spell(
@@ -4342,9 +4493,12 @@ serendipity_63733 = spell(
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=8152, trigger_spell=63735),
     ],
     spell_icon_id=2900,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you heal with Binding Heal or Flash Heal, the cast time of your next Greater Heal or Prayer of Healing spell is reduced by $63735s1%. Stacks up to 3 times. Lasts $63735d.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 6144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 7,2): rank 2. Non-final-rank grey capstone preview (PLAN §3.1).',
+    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you heal with Binding Heal or Flash Heal, casting Renew, or damaging with Smite, the cast time and mana cost of your next Greater Heal or Prayer of Healing spell is reduced by $63735s1%. Stacks up to 3 times. Lasts $63735d.\n\n|cFF9D9D9DCapstone Bonus: Casting Greater Heal, Flash Heal, Binding Heal, Prayer of Healing, Circle of Healing, Renew, Smite or Holy Fire reduces the cooldown of your Holy Words.|r', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 6144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
+procs_on(serendipity_63733, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG,
+         spell_phase_mask=PROC_SPELL_PHASE_HIT | PROC_SPELL_PHASE_CAST, chance=100)
+scripted_by(serendipity_63733, 'spell_pri_serendipity')
 
 
 serendipity_63737 = spell(
@@ -4362,9 +4516,16 @@ serendipity_63737 = spell(
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=8152, trigger_spell=63734),
     ],
     spell_icon_id=2900,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you heal with Binding Heal or Flash Heal, the cast time of your next Greater Heal or Prayer of Healing spell is reduced by $63734s1%. Stacks up to 3 times. Lasts $63734d.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 6144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 7,2): rank 3 - carries the capstone Holy Word engine '
+          '(spell_pri_holy_word_engine, see the scripted_by() calls next to greater_heal_2060/'
+          'flash_heal_2061/binding_heal_32546/prayer_of_healing_596/circle_of_healing_34861/'
+          'renew_139/smite_585/holy_fire_14914 in priest_spells.py). Tooltip capstone line - final '
+          'rank, plain color (PLAN §3.1).',
+    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you heal with Binding Heal or Flash Heal, casting Renew, or damaging with Smite, the cast time and mana cost of your next Greater Heal or Prayer of Healing spell is reduced by $63734s1%. Stacks up to 3 times. Lasts $63734d.\n\nCapstone Bonus: Casting Greater Heal, Flash Heal, Binding Heal, Prayer of Healing, Circle of Healing, Renew, Smite or Holy Fire reduces the cooldown of your Holy Words.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 6144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
+procs_on(serendipity_63737, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG,
+         spell_phase_mask=PROC_SPELL_PHASE_HIT | PROC_SPELL_PHASE_CAST, chance=100)
+scripted_by(serendipity_63737, 'spell_pri_serendipity')
 
 
 body_and_soul_64127 = spell(
@@ -4380,12 +4541,21 @@ body_and_soul_64127 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=64128),
-        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2218,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "When you cast Power Word: Shield, you increase the target's movement speed by $s1% for $64128d, and you have a $s2% chance when you cast Abolish Disease on yourself to also cleanse 1 poison effect in addition to diseases.", 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 402653696, 'EffectSpellClassMaskA_2': 4, 'EffectSpellClassMaskB_3': 4, 'EffectSpellClassMaskC_2': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 7,0): full mechanic replacement - eff1 now procs on casting '
+          'Renew or Leap of Faith (procs_on below, family_mask RENEW dw1 + LEAP_OF_FAITH dw3) '
+          'instead of Power Word: Shield; speed bonus unchanged (30% - PLAN §2 default, base_points '
+          'stays 29). eff2 (the old "chance to also cleanse a poison" DUMMY) neutered to an inert '
+          '0%-chance marker per the design doc\'s "drop the poison-cure clause" (D + script trim) - '
+          'kept present, not removed, so the stock spell_pri_body_and_soul script\'s hook '
+          'registration on this effect index does not break; the script body itself (WP-B) simply '
+          'stops acting on it.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Casting Renew or Leap of Faith increases the target's movement speed by $s1% for $64128d.", 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
+procs_on(body_and_soul_64127, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS, spell_phase_mask=PROC_SPELL_PHASE_CAST,
+         family_name=6, family_mask=(_masks.RENEW, 0, _masks.LEAP_OF_FAITH), chance=100)
 
 
 body_and_soul_64129 = spell(
@@ -4401,12 +4571,18 @@ body_and_soul_64129 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=65081),
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2218,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "When you cast Power Word: Shield, you increase the target's movement speed by $s1% for $64128d, and you have a $s2% chance when you cast Abolish Disease on yourself to also cleanse 1 poison effect in addition to diseases.", 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 402653696, 'EffectSpellClassMaskA_2': 4, 'EffectSpellClassMaskB_3': 4, 'EffectSpellClassMaskC_2': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes='Priest Holy rework (HOLY.md 7,0): rank 2, 60% speed (base_points=59, unchanged). '
+          "trigger_spell 65081 is now declared (talent-tooltip-audit fix, WP-C - was undeclared, "
+          "which left this rank's own tooltip borrowing rank 1's $64128d token instead of its own "
+          '$65081d); duration token corrected to match.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Casting Renew or Leap of Faith increases the target's movement speed by $s1% for $65081d.", 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
+procs_on(body_and_soul_64129, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS, spell_phase_mask=PROC_SPELL_PHASE_CAST,
+         family_name=6, family_mask=(_masks.RENEW, 0, _masks.LEAP_OF_FAITH), chance=100)
+scripted_by(body_and_soul_64129, 'spell_pri_body_and_soul')
 
 
 # Priest baseline rework (docs/reworks/priest-new-spells.md) - Phase 1 shared spells. See
@@ -5761,4 +5937,1168 @@ spirit_shell_absorb_200167 = spell(
           'die_sides=0 because the amount always arrives as BP0 from CastCustomSpell. Icon shared '
           'with spirit_shell_200166 - see that spell\'s notes.',
     raw_overrides={'AttributesEx2': 2621440, 'AttributesEx3': 67108864, 'AttributesEx4': 1048576, 'CastingTimeIndex': 1, 'InterruptFlags': 8, 'ProcChance': 101, 'BaseLevel': 1, 'SpellLevel': 1, 'EquippedItemClass': -1, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Absorbs damage.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Absorbs damage.', 'SpellClassSet': 6, 'SpellClassMask_3': _masks.SPIRIT_SHELL, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+# ============================================================================================
+# Priest Holy rework (docs/reworks/priest-holy-rework.md, .agents/plans/priest-rework/
+# priest-rework.HOLY.md) - WP-0 prep. Rows below were bare stock data (npc.csv, now deleted from
+# there) that the Holy pass needs to edit; pulled verbatim via
+# `pull_dsl.py 33151 63731 63734 63735 63544 64128 33110 27827 --constants` (PLAN sec 3.4 - editing
+# an undeclared ID is a silent no-op) and pasted unmodified here. WP-A edits these in place for its
+# own talents; this pass leaves them as pulled.
+# ============================================================================================
+
+surge_of_light_33151 = spell(
+    id=33151,
+    name='Surge of Light',
+    school=School.HOLY,
+    dispel=DispelType.MAGIC,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=10000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=10),
+        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+    ],
+    spell_icon_id=2176,
+    notes='Priest Holy rework (HOLY.md 5,0): design doc §5.7 - "the free cast can now crit and '
+          're-roll this proc" - so the old eff3 (crit-block, misc=7/SPELLMOD_CRITICAL_CHANCE '
+          '-100%) is REPURPOSED (only 3 effect slots exist) into SPELLMOD_DAMAGE +60% '
+          '(base_points=59) scoped to Smite only (EffectSpellClassMaskC_1 below), matching '
+          'PLAN §2\'s "applied unconditionally" (no PvP-only clause) call. StackAmount=2, '
+          'ProcCharges=0 (stack consumption handled in C++ by spell_pri_surge_of_light_consume, '
+          'not the native charge system, so a second stack survives a partial consume).',
+    raw_overrides={'ShapeshiftExclude': 1073741824, 'CastingTimeIndex': 1, 'ProcTypeMask': 81920, 'ProcChance': 100, 'ProcCharges': 0, 'StackAmount': 2, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 2176, 'EffectSpellClassMaskB_1': 2176, 'EffectSpellClassMaskC_1': _masks.SMITE, 'SpellVisualID_1': 12989, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your next Smite or Flash Heal spell is instant cast and costs no mana. If it is Smite, its damage is increased by 60%.  This effect lasts $33151d, stacking up to 2 times.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Smite or Flash Heal spell is instant cast and costs no mana.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 6, 'SpellClassMask_2': 4096, 'SpellClassMask_3': 1024, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+serendipity_63731 = spell(
+    id=63731,
+    name='Serendipity',
+    school=School.HOLY,
+    dispel=DispelType.MAGIC,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=20000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-6, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CASTING_TIME),
+        Effect(type=EffectType.APPLY_AURA, base_points=-6, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COST),
+    ],
+    spell_icon_id=2900,
+    notes='Priest Holy rework (HOLY.md 7,2): this is the rank-1 (63730) buff (confirmed via the live '
+          'trigger_spell wiring on the talent ranks below, NOT ascending spell-ID order - see the '
+          "note on 63734/63735 for why HOLY.md's own listing order doesn't match). -5% (base_points "
+          '-6, hand-authored convention now that this row is edited rather than left pulled) on both '
+          'cast time and a new SPELLMOD_COST effect. Mask corrected to Greater Heal|Prayer of '
+          'Healing (4608) - the pulled stock value (6144 = Greater Heal|Flash Heal) did not actually '
+          'match either this row\'s own tooltip text or HOLY.md\'s target mask.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 17408, 'ProcChance': 100, 'ProcCharges': 1, 'RangeIndex': 1, 'CumulativeAura': 3, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 4608, 'EffectSpellClassMaskB_1': 4608, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'NameSubtext_Lang_enUS': '', 'Description_Lang_enUS': 'When you heal with Binding Heal or Flash Heal, casting Renew, or damaging with Smite, the cast time and mana cost of your next Greater Heal or Prayer of Healing spell is reduced by $63731s1%. Stacks up to 3 times. Lasts $63731d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Reduces the cast time and mana cost of your next Greater Heal or Prayer of Healing by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 6, 'SpellClassMask_2': 4096, 'SpellClassMask_3': 1024, 'DefenseType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+serendipity_63734 = spell(
+    id=63734,
+    name='Serendipity',
+    school=School.HOLY,
+    dispel=DispelType.MAGIC,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=20000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-16, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CASTING_TIME),
+        Effect(type=EffectType.APPLY_AURA, base_points=-16, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COST),
+    ],
+    spell_icon_id=2900,
+    notes='Priest Holy rework (HOLY.md 7,2): this is the rank-3 (63737) buff, per the live '
+          'trigger_spell wiring (serendipity_63737.trigger_spell == 63734) - HOLY.md\'s own listing '
+          'reads 63731/63734/63735 in ascending ID order and assumes that is rank order, but the '
+          "live data does not wire the ranks to their buffs in ascending-ID order (rank 2's own "
+          'talent, 63733, triggers 63735, not 63734) - flagged as HOLY.md getting the ID-to-rank '
+          'mapping wrong; values below follow the ACTUAL wiring (rank -> its own trigger_spell), not '
+          "HOLY.md's listing order. -15% (base_points -16) on both cast time and a new SPELLMOD_COST "
+          'effect. Mask corrected to Greater Heal|Prayer of Healing (4608), same fix as 63731.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 17408, 'ProcChance': 100, 'ProcCharges': 1, 'RangeIndex': 1, 'CumulativeAura': 3, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 4608, 'EffectSpellClassMaskB_1': 4608, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'NameSubtext_Lang_enUS': '', 'Description_Lang_enUS': 'When you heal with Binding Heal or Flash Heal, casting Renew, or damaging with Smite, the cast time and mana cost of your next Greater Heal or Prayer of Healing spell is reduced by $63734s1%. Stacks up to 3 times. Lasts $63734d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Reduces the cast time and mana cost of your next Greater Heal or Prayer of Healing by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 6, 'SpellClassMask_2': 4096, 'SpellClassMask_3': 1024, 'DefenseType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+serendipity_63735 = spell(
+    id=63735,
+    name='Serendipity',
+    school=School.HOLY,
+    dispel=DispelType.MAGIC,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=20000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CASTING_TIME),
+        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COST),
+    ],
+    spell_icon_id=2900,
+    notes='Priest Holy rework (HOLY.md 7,2): this is the rank-2 (63733) buff, per the live '
+          'trigger_spell wiring (serendipity_63733.trigger_spell == 63735) - see 63734\'s own notes '
+          'for the ID-order mismatch this uncovered. -10% (base_points -11) on both cast time and a '
+          'new SPELLMOD_COST effect. Mask corrected to Greater Heal|Prayer of Healing (4608).',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 17408, 'ProcChance': 100, 'ProcCharges': 1, 'RangeIndex': 1, 'CumulativeAura': 3, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 4608, 'EffectSpellClassMaskB_1': 4608, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'NameSubtext_Lang_enUS': '', 'Description_Lang_enUS': 'When you heal with Binding Heal or Flash Heal, casting Renew, or damaging with Smite, the cast time and mana cost of your next Greater Heal or Prayer of Healing spell is reduced by $63735s1%. Stacks up to 3 times. Lasts $63735d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Reduces the cast time and mana cost of your next Greater Heal or Prayer of Healing by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 6, 'SpellClassMask_2': 4096, 'SpellClassMask_3': 1024, 'DefenseType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+empowered_renew_63544 = spell(
+    id=63544,
+    name='Empowered Renew',
+    school=School.HOLY,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.HEAL, base_points=-1, implicit_target_a=21),
+    ],
+    spell_icon_id=3021,
+    notes='pulled from existing data',
+    raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 1073741824, 'ShapeshiftMask': 2147483648, 'ShapeshiftExclude': 134217728, 'CastingTimeIndex': 1, 'ProcChance': 101, 'BaseLevel': 1, 'SpellLevel': 1, 'EquippedItemClass': -1, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Your Renew spell gains an additional portion of your bonus healing effects, and your Renew will instantly heal the target for a portion of the total periodic effect.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 6, 'SpellClassMask_3': 4096, 'DefenseType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+body_and_soul_64128 = spell(
+    id=64128,
+    name='Body and Soul',
+    school=School.HOLY,
+    dispel=DispelType.MAGIC,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    duration_ms=3000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=21, apply_aura=AuraType.MOD_INCREASE_SPEED),
+    ],
+    spell_icon_id=3106,
+    notes='HOLY.md 7,0: rank 1 speed buff (30%, base_points=29 unchanged). duration_ms 4000 -> 3000 '
+          '(design doc row 7,0 / HOLY.md "64128 speed 30/60, 3 s"; talent-tooltip-audit fix, WP-C). '
+          'Description rewritten for the Renew/Leap of Faith retarget (was stale Power Word: Shield/ '
+          'Abolish Disease text).',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EffectBasePoints_2': -1, 'EffectBasePoints_3': -1, 'EffectSpellClassMaskA_1': 402653696, 'EffectSpellClassMaskA_2': 4, 'EffectSpellClassMaskB_3': 4, 'EffectSpellClassMaskC_2': 32, 'SpellVisualID_1': 13827, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': "Casting Renew or Leap of Faith increases the target's movement speed by $s1% for $d.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement speed increased by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 6, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+)
+
+
+body_and_soul_65081 = spell(
+    id=65081,
+    name='Body and Soul',
+    school=School.HOLY,
+    dispel=DispelType.MAGIC,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    duration_ms=3000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=21, apply_aura=AuraType.MOD_INCREASE_SPEED),
+    ],
+    spell_icon_id=3106,
+    notes="HOLY.md 7,0: rank 2's own speed buff (60%, base_points=59) - never pulled into the DSL "
+          "before now (talent-tooltip-audit fix, WP-C: body_and_soul_64129's own PROC_TRIGGER_SPELL "
+          "points at this id, but it was undeclared, so 64129's tooltip borrowed 64128's $d token "
+          "instead of its own). duration_ms 4000 -> 3000 and description rewritten to match 64128's "
+          "same fix (both ranks share the same 3 sec duration and Renew/Leap of Faith retarget).",
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EffectBasePoints_2': -1, 'EffectBasePoints_3': -1, 'EffectSpellClassMaskA_1': 402653696, 'EffectSpellClassMaskA_2': 4, 'EffectSpellClassMaskB_3': 4, 'EffectSpellClassMaskC_2': 32, 'SpellVisualID_1': 13827, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': "Casting Renew or Leap of Faith increases the target's movement speed by $s1% for $d.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement speed increased by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 6, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+)
+
+
+prayer_of_mending_33110 = spell(
+    id=33110,
+    name='Prayer of Mending',
+    school=School.HOLY,
+    attributes=134479872,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.HEAL, implicit_target_a=1),
+    ],
+    spell_icon_id=2219,
+    notes='pulled from existing data',
+    raw_overrides={'AttributesEx': 1024, 'AttributesEx2': 4, 'AttributesEx3': 1073741824, 'TargetCreatureType': 767, 'CastingTimeIndex': 1, 'ProcChance': 101, 'BaseLevel': 1, 'SpellLevel': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 1714, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Places a spell on the target that heals them the next time they take damage.  When the heal occurs, Prayer of Mending jumps to a party or raid member within $41635a1 yards. Jumps up to $48113n times and lasts $48111d after each jump. This spell can only be placed on one target at a time.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 6, 'SpellClassMask_2': 32, 'DefenseType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+# spirit_of_redemption_27827 is the stock on-death "FORM_SPIRITOFREDEMPTION" spell
+# Unit::Kill(Unit.cpp:13787-13830)'s hardcode currently casts when it finds 20711's DUMMY - that
+# whole block is deleted by this pass (PLAN sec 6.8, HOLY.md "Core hardcode migration owed by this
+# pass"), so 27827 goes unreferenced once WP-B lands. Declared anyway per PLAN sec 3.4 (an
+# undeclared id can't be edited later without being a silent no-op) and left otherwise untouched.
+spirit_of_redemption_27827 = spell(
+    id=27827,
+    name='Spirit of Redemption',
+    school=School.HOLY,
+    attributes=8454144,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.HEAL, implicit_target_a=1),
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=82),
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=36, misc_value=32),
+    ],
+    spell_icon_id=241,
+    notes='pulled from existing data',
+    raw_overrides={'AttributesEx2': 1, 'AttributesEx3': 1048576, 'ShapeshiftExclude': 134217728, 'CastingTimeIndex': 1, 'AuraInterruptFlags': 527360, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Increases total Spirit by $20711s2% and upon death, the priest becomes the Spirit of Redemption for $27827d.  The Spirit of Redemption cannot move, attack, be attacked or targeted by any spells or effects.  While in this form the priest can cast any healing spell free of cost.  When the effect ends, the priest dies.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'You have become more powerful than anyone can possibly imagine.', 'AuraDescription_Lang_Mask': 16712190, 'StartRecoveryCategory': 133, 'SpellClassSet': 6, 'SpellClassMask_3': 512, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+# =====================================================================================
+# Priest Holy rework (docs/reworks/priest-holy-rework.md,
+# .agents/plans/priest-rework/priest-rework.HOLY.md) - all brand-new hidden trigger/buff spells
+# and new talent-rank spells (200172-200226, per HOLY.md's "ID map"). Player-castable new spells
+# (Holy Word: Serenity/Sanctify/Chastise, Apotheosis) live in priest_spells.py instead - see that
+# file's own "Priest Holy rework" section.
+# =====================================================================================
+
+# --- 0,0 Healing Focus capstone -------------------------------------------------------
+healing_focus_capstone_200172 = spell(
+    id=200172,
+    name='Healing Focus',
+    school=School.HOLY,
+    cast_time_ms=0,
+    duration_ms=10000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL),
+    ],
+    spell_icon_id=1871,
+    notes='HOLY.md 0,0: Healing Focus capstone buff. +2% generalized haste (base_points=1), '
+          'StackAmount=3, 10 s. spell_pri_healing_focus_capstone (AuraScript on 15012) casts this '
+          'on self, stacking, after a Greater Heal/Prayer of Healing/Divine Hymn cast completes.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases spell haste by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spell haste increased by $s1%.', 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'StackAmount': 3, 'SpellVisualID_1': 1155, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+# --- 1,0 Divine Touch (NEW talent 60011) -----------------------------------------------
+divine_touch_200174 = spell(
+    id=200174,
+    name='Divine Touch',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200176),
+    ],
+    spell_icon_id=237,
+    notes='HOLY.md 1,0/design doc §5.6: rank 1, 2% chance (procs_on below) on Renew periodic '
+          "healing only (Empowered Renew's instant chunk and Blessed Recovery's payout are "
+          'non-periodic and cannot roll it, by construction of the proc flag). 5 s per-caster '
+          'lockout is the spell_proc row\'s own Cooldown, not a spell cooldown (design doc §1: no '
+          'Cooldown Haste on internal cooldowns).',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Renew's periodic healing has a 2% chance to grant Divine Touch: your next Greater Heal is instant and free. Lasts 15 sec. Once per 5 sec.", 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your Renew has a chance to grant Divine Touch.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
+)
+procs_on(divine_touch_200174, PROC_FLAG_DONE_PERIODIC, family_name=6, family_mask=(_masks.RENEW, 0, 0),
+         spell_type_mask=PROC_SPELL_TYPE_HEAL, chance=2, cooldown_ms=5000)
+
+
+divine_touch_200175 = spell(
+    id=200175,
+    name='Divine Touch',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200176),
+    ],
+    spell_icon_id=237,
+    notes='HOLY.md 1,0: rank 2, 4% chance.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Renew's periodic healing has a 4% chance to grant Divine Touch: your next Greater Heal is instant and free. Lasts 15 sec. Once per 5 sec.", 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your Renew has a chance to grant Divine Touch.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
+)
+procs_on(divine_touch_200175, PROC_FLAG_DONE_PERIODIC, family_name=6, family_mask=(_masks.RENEW, 0, 0),
+         spell_type_mask=PROC_SPELL_TYPE_HEAL, chance=4, cooldown_ms=5000)
+
+
+divine_touch_buff_200176 = spell(
+    id=200176,
+    name='Divine Touch',
+    school=School.HOLY,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CASTING_TIME),
+        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COST),
+    ],
+    spell_icon_id=237,
+    notes='HOLY.md 1,0: the Divine Touch buff - next Greater Heal instant (-100% cast time) and free '
+          '(-100% cost), scoped to Greater Heal only (both effects), 1 charge, 15 s, no stack.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your next Greater Heal is instant and free.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Greater Heal is instant and free.', 'EquippedItemClass': -1, 'ProcChance': 101, 'ProcCharges': 1, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.GREATER_HEAL, 'EffectSpellClassMaskB_1': _masks.GREATER_HEAL, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+
+
+# --- 1,1 Blessed Recovery capstone payout ----------------------------------------------
+blessed_recovery_heal_200177 = spell(
+    id=200177,
+    name='Blessed Recovery',
+    school=School.HOLY,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.HEAL, base_points=0, implicit_target_a=1),
+    ],
+    spell_icon_id=1875,
+    notes='HOLY.md 1,1/design doc §5.5: the capstone instant-heal payout - script-set BasePoints via '
+          'CastCustomSpell (2 Renew ticks worth), crit rolls normally.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+blessed_recovery_lockout_200178 = spell(
+    id=200178,
+    name='Blessed Recovery',
+    school=School.HOLY,
+    duration_ms=20000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=1875,
+    notes='HOLY.md 1,1: hidden 20 s per-target-per-caster lockout marker (design doc §5.5) - not a '
+          'spell cooldown, so no Cooldown Haste.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blessed Recovery cannot trigger again on this target yet.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Blessed Recovery is on cooldown for this target.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'AttributesEx': 1024, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+# --- 2,1 Answered Prayers (NEW talent 60012) --------------------------------------------
+answered_prayers_200179 = spell(
+    id=200179,
+    name='Answered Prayers',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200182),
+    ],
+    spell_icon_id=2819,
+    notes='HOLY.md 2,1/design doc §5.4: rank 1, 5% chance (procs_on below) on a Greater Heal cast.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Greater Heal cast has a 5% chance to restore 2% of your maximum mana and cause your next Renew to also apply to 2 additional allies within 30 yds. Lasts 15 sec, no stack.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your Greater Heal has a chance to grant Answered Prayers.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
+)
+procs_on(answered_prayers_200179, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS, spell_phase_mask=PROC_SPELL_PHASE_CAST,
+         family_name=6, family_mask=(_masks.GREATER_HEAL, 0, 0), chance=5)
+
+
+answered_prayers_200180 = spell(
+    id=200180,
+    name='Answered Prayers',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200182),
+    ],
+    spell_icon_id=2819,
+    notes='HOLY.md 2,1: rank 2, 10% chance.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Greater Heal cast has a 10% chance to restore 2% of your maximum mana and cause your next Renew to also apply to 2 additional allies within 30 yds. Lasts 15 sec, no stack.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your Greater Heal has a chance to grant Answered Prayers.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
+)
+procs_on(answered_prayers_200180, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS, spell_phase_mask=PROC_SPELL_PHASE_CAST,
+         family_name=6, family_mask=(_masks.GREATER_HEAL, 0, 0), chance=10)
+
+
+answered_prayers_200181 = spell(
+    id=200181,
+    name='Answered Prayers',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200182),
+    ],
+    spell_icon_id=2819,
+    notes='HOLY.md 2,1: rank 3, 15% chance.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Greater Heal cast has a 15% chance to restore 2% of your maximum mana and cause your next Renew to also apply to 2 additional allies within 30 yds. Lasts 15 sec, no stack.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your Greater Heal has a chance to grant Answered Prayers.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
+)
+procs_on(answered_prayers_200181, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS, spell_phase_mask=PROC_SPELL_PHASE_CAST,
+         family_name=6, family_mask=(_masks.GREATER_HEAL, 0, 0), chance=15)
+
+
+answered_prayers_buff_200182 = spell(
+    id=200182,
+    name='Answered Prayers',
+    school=School.HOLY,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.ENERGIZE_PCT, base_points=2, implicit_target_a=1),
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2819,
+    notes='HOLY.md 2,1: the Answered Prayers buff - eff1 ENERGIZE_PCT (137, a direct SPELL_EFFECT, '
+          'not an APPLY_AURA) restores 2% mana immediately on application; eff2 is the hidden '
+          'DUMMY marker spell_pri_renew_cast reads (HasAura check) to know the next Renew cast '
+          'should spread. 15 s, no stack.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your next Renew also applies to 2 additional allies within 30 yds.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Renew also applies to 2 additional allies within 30 yds.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+
+
+# --- 2,2 Improved Holy Nova (NEW talent 60013) ------------------------------------------
+improved_holy_nova_200183 = spell(
+    id=200183,
+    name='Improved Holy Nova',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+    ],
+    spell_icon_id=1874,
+    notes='HOLY.md 2,2: rank 1, +10% (base_points=9), scoped to BOTH Holy Nova bits - damage '
+          '(15237) and heal (23455) - EffectSpellClassMaskA_1 below, since HOLY.md flags they use '
+          'different family bits and both need covering on this one effect slot.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage and healing of your Holy Nova spell by $s1%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.HOLY_NOVA_DMG | _masks.HOLY_NOVA_HEAL, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+improved_holy_nova_200184 = spell(
+    id=200184,
+    name='Improved Holy Nova',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+    ],
+    spell_icon_id=1874,
+    notes='HOLY.md 2,2: rank 2, +20% (base_points=19).',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage and healing of your Holy Nova spell by $s1%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.HOLY_NOVA_DMG | _masks.HOLY_NOVA_HEAL, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+# --- 3,0 Holy Reach capstone mana restore -----------------------------------------------
+holy_reach_mana_200185 = spell(
+    id=200185,
+    name='Holy Reach',
+    school=School.HOLY,
+    duration_ms=4000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.PERIODIC_ENERGIZE, amplitude=1000),
+    ],
+    spell_icon_id=300,
+    notes='HOLY.md 3,0/design doc §5.7: capstone mana-restore-over-time - BasePoints set by script '
+          '(CastCustomSpell, missing mana x 2% / 4 ticks), PERIODIC_ENERGIZE over 4 sec.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Restores mana over 4 sec.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Restoring mana.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+# --- 3,2 Searing Light rank 3 ------------------------------------------------------------
+searing_light_200186 = spell(
+    id=200186,
+    name='Searing Light',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=-26, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COST),
+    ],
+    spell_icon_id=1868,
+    notes='HOLY.md 3,2: rank 3 (14909/15017 are ranks 1/2, unchanged trims). Mirrors ranks 1/2\'s own '
+          'two-effect shape exactly (eff1 misc=0 + eff2 misc=22, both damage +15%/base_points=14) '
+          'rather than collapsing to one, since some of the covered spells (Holy Fire\'s DoT '
+          'portion) read the misc=22 variant - same masks as 14909/15017 (Smite|HF|Holy Nova dmg|'
+          'Penance dmg bolt on eff1, Holy Fire only on eff2). New eff3 SPELLMOD_COST -25% '
+          '(base_points=-26) scoped Holy Nova damage only.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Smite, Holy Fire, Holy Nova and Penance spells by $s1%, and reduces the mana cost of your Holy Nova by $s2%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': 5243008, 'EffectSpellClassMaskA_2': 32768, 'EffectSpellClassMaskA_3': _masks.PENANCE_BOLT, 'EffectSpellClassMaskB_1': 1048576, 'EffectSpellClassMaskC_1': _masks.HOLY_NOVA_DMG, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+# --- 3,3 Kindled Faith (NEW talent 60014) -----------------------------------------------
+kindled_faith_200187 = spell(
+    id=200187,
+    name='Kindled Faith',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=156,
+    notes='HOLY.md 3,3: rank 1, 8% chance (procs_on below) on Smite damage. Icon reuses Holy '
+          "Fire's own (156, talent-tooltip-audit fix, WP-C: originally 1868, an unintentional "
+          'collision with Searing Light).',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Smite has an 8% chance to reset the cooldown of Holy Fire and make your next Holy Fire instant. Lasts 10 sec, no stack.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
+)
+procs_on(kindled_faith_200187, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG, family_name=6,
+         family_mask=(_masks.SMITE, 0, 0), chance=8)
+scripted_by(kindled_faith_200187, 'spell_pri_kindled_faith')
+
+
+kindled_faith_200188 = spell(
+    id=200188,
+    name='Kindled Faith',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=156,
+    notes='HOLY.md 3,3: rank 2, 16% chance. Icon reuses Holy Fire\'s own (156, talent-tooltip-audit '
+          'fix, WP-C).',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Smite has a 16% chance to reset the cooldown of Holy Fire and make your next Holy Fire instant. Lasts 10 sec, no stack.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
+)
+procs_on(kindled_faith_200188, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG, family_name=6,
+         family_mask=(_masks.SMITE, 0, 0), chance=16)
+scripted_by(kindled_faith_200188, 'spell_pri_kindled_faith')
+
+
+kindled_faith_200189 = spell(
+    id=200189,
+    name='Kindled Faith',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=156,
+    notes='HOLY.md 3,3: rank 3, 25% chance. Icon reuses Holy Fire\'s own (156, talent-tooltip-audit '
+          'fix, WP-C).',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Smite has a 25% chance to reset the cooldown of Holy Fire and make your next Holy Fire instant. Lasts 10 sec, no stack.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
+)
+procs_on(kindled_faith_200189, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG, family_name=6,
+         family_mask=(_masks.SMITE, 0, 0), chance=25)
+scripted_by(kindled_faith_200189, 'spell_pri_kindled_faith')
+
+
+kindled_faith_buff_200190 = spell(
+    id=200190,
+    name='Kindled Faith',
+    school=School.HOLY,
+    duration_ms=10000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CASTING_TIME),
+    ],
+    spell_icon_id=156,
+    notes='HOLY.md 3,3: the Kindled Faith buff - next Holy Fire instant (-100% cast time), scoped to '
+          "Holy Fire only, 1 charge, 10 s, no stack. Icon reuses Holy Fire's own (156, "
+          'talent-tooltip-audit fix, WP-C).',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your next Holy Fire is instant.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Holy Fire is instant.', 'EquippedItemClass': -1, 'ProcChance': 101, 'ProcCharges': 1, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.HOLY_FIRE, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+# --- 4,1 Spirit of Redemption capstone (ranks 2/3, marker, form, free heals) ------------
+spirit_of_redemption_200191 = spell(
+    id=200191,
+    name='Spirit of Redemption',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=137, misc_value=4),
+    ],
+    spell_icon_id=1654,
+    notes='HOLY.md 4,1: rank 2, Spirit +6% (base_points=5). No DUMMY - the on-death hardcode this '
+          "talent used to key off is deleted by this pass (see 20711's own notes). Capstone "
+          'preview text added per PLAN sec 3.1 (talent-tooltip-audit fix, WP-C).',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases total Spirit by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Absorb otherwise lethal damage up to 300% of Spirit. If it prevents death, become a Spirit of Redemption for 5 sec: cannot move or attack, 50% reduced damage taken, Holy Priest heals cost no mana. Shares a 2 min cooldown with Ardent Defender and Cheat Death.|r', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+spirit_of_redemption_200192 = spell(
+    id=200192,
+    name='Spirit of Redemption',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=137, misc_value=4),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.SCHOOL_ABSORB, misc_value=127),
+    ],
+    spell_icon_id=1654,
+    notes='HOLY.md 4,1: rank 3 (final kept rank), Spirit +9% (base_points=8) plus the capstone '
+          'absorb (eff2 SCHOOL_ABSORB, misc 127 = all schools, base_points=-1/script-driven - '
+          'spell_pri_spirit_of_redemption computes the actual absorb amount as '
+          'min(damage, 3xSpirit) on OnEffectAbsorb and, if it prevents death and no 200193 is up, '
+          'casts 200193+200194+200226 on self). Tooltip capstone line, final rank plain color.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases total Spirit by $s1%.\n\nCapstone Bonus: Absorb otherwise lethal damage up to 300% of Spirit. If it prevents death, become a Spirit of Redemption for 5 sec: cannot move or attack, 50% reduced damage taken, Holy Priest heals cost no mana. Shares a 2 min cooldown with Ardent Defender and Cheat Death.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+scripted_by(spirit_of_redemption_200192, 'spell_pri_spirit_of_redemption')
+
+
+cheated_death_200193 = spell(
+    id=200193,
+    name='Cheated Death',
+    school=School.NORMAL,
+    duration_ms=120000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=1654,
+    notes='PLAN §1/§4.4: shared 2-min marker between Spirit of Redemption, Cheat Death (Rogue) and '
+          'Ardent Defender (Paladin) - HasAura(200193) on any of the three blocks the others. '
+          'Hidden, no visible aura icon needed but not attribute-hidden either (PLAN gives no '
+          "explicit hide instruction and Discipline's own shared markers stay visible - kept "
+          'consistent).',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You cannot be saved from death by Spirit of Redemption, Cheat Death or Ardent Defender.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Cannot be saved from death again.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+spirit_of_redemption_form_200194 = spell(
+    id=200194,
+    name='Spirit of Redemption',
+    school=School.HOLY,
+    duration_ms=5000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.MOD_PACIFY),
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.MOD_ROOT),
+        Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
+    ],
+    spell_icon_id=1654,
+    notes='HOLY.md 4,1: the on-death form - pacify + root + -50% damage taken (base_points=-51), 5 s.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have become a Spirit of Redemption. You cannot move or attack, and take 50% reduced damage.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spirit of Redemption.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+spirit_of_redemption_free_heals_200226 = spell(
+    id=200226,
+    name='Spirit of Redemption',
+    school=School.HOLY,
+    duration_ms=5000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COST),
+    ],
+    spell_icon_id=1654,
+    notes='HOLY.md 4,1 ID map: "4th effect of the form" - a separate spell (not a 4th Effect slot, '
+          'which does not exist) cast alongside 200193/200194 by spell_pri_spirit_of_redemption. '
+          '-100% cost (base_points=-101) scoped to PRIEST_HEAL_MASK on all three dwords, 5 s.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Holy Priest heals cost no mana.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals cost no mana.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.PRIEST_HEAL_MASK[0], 'EffectSpellClassMaskA_2': _masks.PRIEST_HEAL_MASK[1], 'EffectSpellClassMaskA_3': _masks.PRIEST_HEAL_MASK[2], 'EffectChainAmplitude_1': 1.0},
+)
+
+
+# --- 4,3 Improved Prayer of Mending (NEW talent 60015) ----------------------------------
+improved_prayer_of_mending_200195 = spell(
+    id=200195,
+    name='Improved Prayer of Mending',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=-2000, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COOLDOWN),
+    ],
+    spell_icon_id=2219,
+    notes='HOLY.md 4,3: rank 1, healing +10% (base_points=9) and cooldown -2000 ms, both scoped to '
+          "Prayer of Mending's dw2 bit 32 (also covers the 33110 heal jump, same bit).",
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the healing of your Prayer of Mending by $s1%, and reduces its cooldown by $/1000;s2 sec.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_2': _masks.POM, 'EffectSpellClassMaskB_2': _masks.POM, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+
+
+improved_prayer_of_mending_200196 = spell(
+    id=200196,
+    name='Improved Prayer of Mending',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=-4000, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COOLDOWN),
+    ],
+    spell_icon_id=2219,
+    notes='HOLY.md 4,3: rank 2, healing +20% (base_points=19), cooldown -4000 ms.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the healing of your Prayer of Mending by $s1%, and reduces its cooldown by $/1000;s2 sec.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_2': _masks.POM, 'EffectSpellClassMaskB_2': _masks.POM, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+
+
+# --- 6,0 Holy Concentration Spirit buffs -------------------------------------------------
+holy_concentration_buff_200199 = spell(
+    id=200199,
+    name='Holy Concentration',
+    school=School.HOLY,
+    duration_ms=12000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=137, misc_value=4),
+    ],
+    spell_icon_id=2169,
+    notes='HOLY.md 6,0: rank 1 buff, Spirit +10% (base_points=9), 12 s.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases total Spirit by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spirit increased by $s1%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+holy_concentration_buff_200200 = spell(
+    id=200200,
+    name='Holy Concentration',
+    school=School.HOLY,
+    duration_ms=12000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=137, misc_value=4),
+    ],
+    spell_icon_id=2169,
+    notes='HOLY.md 6,0: rank 2 buff, Spirit +20% (base_points=19).',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases total Spirit by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spirit increased by $s1%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+holy_concentration_buff_200201 = spell(
+    id=200201,
+    name='Holy Concentration',
+    school=School.HOLY,
+    duration_ms=12000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=137, misc_value=4),
+    ],
+    spell_icon_id=2169,
+    notes='HOLY.md 6,0: rank 3 buff, Spirit +30% (base_points=29).',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases total Spirit by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spirit increased by $s1%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+# --- 6,1 Lightwell auto-heal --------------------------------------------------------------
+lightwell_heal_200202 = spell(
+    id=200202,
+    name='Lightwell',
+    school=School.HOLY,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.HEAL, base_points=289, die_sides=1, implicit_target_a=1),
+    ],
+    spell_icon_id=1878,
+    notes='HOLY.md 6,1/baseline edits: the Lightwell object\'s own auto-heal, cast by '
+          'npc_pet_pri_lightwell (WP-B, pet_priest.cpp) once per sec at the party/raid member most '
+          'in need within 20 yds. 290 (base_points=289) + 0.4 SP (bonus_coefficients below) - PLAN '
+          "§2's default (spec text gives no coefficient).",
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for $s1.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
+)
+bonus_coefficients(lightwell_heal_200202, direct=0.4)
+
+
+# --- 6,2 Blessed Warding (REPURPOSED talent 411, was Spell Warding) ---------------------
+blessed_warding_200203 = spell(
+    id=200203,
+    name='Blessed Warding',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=1880,
+    notes='HOLY.md 6,2: rank 1 - eff1 spell damage taken -2% (base_points=-3, misc 126 = magic '
+          "schools). eff2 hidden marker holding the healing-done-%-per-stack tuning (1%), read by "
+          'spell_pri_blessed_warding to size the 200206 buff cast.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces spell damage taken by $s1%. Taking area or periodic damage increases your healing done by $s2% for 10 sec, stacking up to 3 times.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+procs_on(blessed_warding_200203, PROC_FLAG_TAKEN_SPELL_MAGIC_DMG_CLASS_NEG | PROC_FLAG_TAKEN_PERIODIC, chance=100)
+scripted_by(blessed_warding_200203, 'spell_pri_blessed_warding')
+
+
+blessed_warding_200204 = spell(
+    id=200204,
+    name='Blessed Warding',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-5, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=1880,
+    notes='HOLY.md 6,2: rank 2 - damage taken -4% (base_points=-5); healing-done marker 2% (base_points=1).',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces spell damage taken by $s1%. Taking area or periodic damage increases your healing done by $s2% for 10 sec, stacking up to 3 times.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+procs_on(blessed_warding_200204, PROC_FLAG_TAKEN_SPELL_MAGIC_DMG_CLASS_NEG | PROC_FLAG_TAKEN_PERIODIC, chance=100)
+scripted_by(blessed_warding_200204, 'spell_pri_blessed_warding')
+
+
+blessed_warding_200205 = spell(
+    id=200205,
+    name='Blessed Warding',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=1880,
+    notes='HOLY.md 6,2: rank 3 - damage taken -6% (base_points=-7); healing-done marker 3% (base_points=2).',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces spell damage taken by $s1%. Taking area or periodic damage increases your healing done by $s2% for 10 sec, stacking up to 3 times.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+procs_on(blessed_warding_200205, PROC_FLAG_TAKEN_SPELL_MAGIC_DMG_CLASS_NEG | PROC_FLAG_TAKEN_PERIODIC, chance=100)
+scripted_by(blessed_warding_200205, 'spell_pri_blessed_warding')
+
+
+blessed_warding_buff_200206 = spell(
+    id=200206,
+    name='Blessed Warding',
+    school=School.HOLY,
+    duration_ms=10000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_HEALING_DONE_PERCENT),
+    ],
+    spell_icon_id=1880,
+    notes='HOLY.md 6,2: the Blessed Warding buff - healing done % (BasePoints set by script per rank, '
+          'CastCustomSpell), StackAmount=3, 10 s.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases healing done by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Healing done increased by $s1%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'StackAmount': 3, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+# --- 6,3 Radiant Fury (REPURPOSED talent 1765, was Blessed Resilience) -------------------
+radiant_fury_200207 = spell(
+    id=200207,
+    name='Radiant Fury',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.BONUS_MULTIPLIER),
+        Effect(type=EffectType.APPLY_AREA_AURA_RAID, base_points=0, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL, radius_yards=50.0),
+    ],
+    spell_icon_id=2177,
+    notes='HOLY.md 6,3: rank 1 - eff1 SPELLMOD_BONUS_MULTIPLIER (24, the same aura/op Empowered '
+          'Healing uses for "additional % of bonus") +7% (base_points=6) scoped Smite|HF|Holy Nova '
+          'dmg. eff2 APPLY_AREA_AURA_RAID (65, precedent: Improved Icy Talons 55610) generalized '
+          'haste (193) +1% (base_points=0) to raid within 50 yds.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the bonus spell damage of your Smite, Holy Fire and Holy Nova by $s1%, and increases the spell haste of party and raid members within 50 yds by $s2%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.SMITE | _masks.HOLY_FIRE | _masks.HOLY_NOVA_DMG, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+
+
+radiant_fury_200208 = spell(
+    id=200208,
+    name='Radiant Fury',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=13, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.BONUS_MULTIPLIER),
+        Effect(type=EffectType.APPLY_AREA_AURA_RAID, base_points=1, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL, radius_yards=50.0),
+    ],
+    spell_icon_id=2177,
+    notes='HOLY.md 6,3: rank 2, +14% (base_points=13) / +2% raid haste (base_points=1).',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the bonus spell damage of your Smite, Holy Fire and Holy Nova by $s1%, and increases the spell haste of party and raid members within 50 yds by $s2%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.SMITE | _masks.HOLY_FIRE | _masks.HOLY_NOVA_DMG, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+radiant_fury_200209 = spell(
+    id=200209,
+    name='Radiant Fury',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.BONUS_MULTIPLIER),
+        Effect(type=EffectType.APPLY_AREA_AURA_RAID, base_points=2, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL, radius_yards=50.0),
+    ],
+    spell_icon_id=2177,
+    notes='HOLY.md 6,3: rank 3, +20% (base_points=19) / +3% raid haste (base_points=2). PLAN §8 '
+          'accepted risk #5 - this may collide with Improved Moonkin Form.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the bonus spell damage of your Smite, Holy Fire and Holy Nova by $s1%, and increases the spell haste of party and raid members within 50 yds by $s2%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.SMITE | _masks.HOLY_FIRE | _masks.HOLY_NOVA_DMG, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+# --- end Radiant Fury ---
+
+
+# --- 7,3 Holy Wrath (NEW talent 60018) ---------------------------------------------------
+_HOLY_WRATH_DMG_MASK = (_masks.SMITE | _masks.HOLY_FIRE | _masks.HOLY_NOVA_DMG,
+                        0,
+                        _masks.PENANCE_BOLT | _masks.HW_CHASTISE | _masks.HALO | _masks.DIVINE_STAR)
+
+holy_wrath_200210 = spell(
+    id=200210,
+    name='Holy Wrath',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CRIT_DAMAGE_BONUS),
+    ],
+    spell_icon_id=2168,
+    notes='HOLY.md 7,3: rank 1 - spell criticals deal 165% damage (SPELLMOD_CRIT_DAMAGE_BONUS +30%, '
+          'base_points=29), scoped to Smite|HF|Holy Nova dmg|Penance dmg bolt|Chastise|Halo|Divine Star.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell criticals deal $s1% damage.\n\n|cFF9D9D9DCapstone Bonus: Direct damaging criticals increase the crit chance of your next Holy spell by 4%, stacking up to 5 times, once per sec. Damaging Holy criticals have a chance to increase magic damage done by 5% for 8 sec.|r', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _HOLY_WRATH_DMG_MASK[0], 'EffectSpellClassMaskA_3': _HOLY_WRATH_DMG_MASK[2], 'EffectChainAmplitude_1': 1.0},
+)
+
+
+holy_wrath_200211 = spell(
+    id=200211,
+    name='Holy Wrath',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CRIT_DAMAGE_BONUS),
+    ],
+    spell_icon_id=2168,
+    notes='HOLY.md 7,3: rank 2, criticals deal 180% (base_points=59).',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell criticals deal $s1% damage.\n\n|cFF9D9D9DCapstone Bonus: Direct damaging criticals increase the crit chance of your next Holy spell by 4%, stacking up to 5 times, once per sec. Damaging Holy criticals have a chance to increase magic damage done by 5% for 8 sec.|r', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _HOLY_WRATH_DMG_MASK[0], 'EffectSpellClassMaskA_3': _HOLY_WRATH_DMG_MASK[2], 'EffectChainAmplitude_1': 1.0},
+)
+
+
+holy_wrath_200212 = spell(
+    id=200212,
+    name='Holy Wrath',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CRIT_DAMAGE_BONUS),
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2168,
+    notes='HOLY.md 7,3: rank 3 (final kept rank), criticals deal 200% (base_points=99), plus the '
+          'capstone (eff2 hidden DUMMY marker, read by spell_pri_holy_wrath_capstone). procs_on '
+          'below has no spell_proc Cooldown - the 1 s crit-stack gate and the separate magic-damage '
+          'roll are both script-side so they gate independently. Tooltip capstone line, final rank '
+          'plain color.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell criticals deal $s1% damage.\n\nCapstone Bonus: Direct damaging criticals increase the crit chance of your next Holy spell by 4%, stacking up to 5 times, once per sec. Damaging Holy criticals have a chance to increase magic damage done by 5% for 8 sec.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _HOLY_WRATH_DMG_MASK[0], 'EffectSpellClassMaskA_3': _HOLY_WRATH_DMG_MASK[2], 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+procs_on(holy_wrath_200212, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG, hit_mask=PROC_HIT_CRITICAL, chance=100)
+scripted_by(holy_wrath_200212, 'spell_pri_holy_wrath_capstone')
+
+
+holy_wrath_crit_200213 = spell(
+    id=200213,
+    name='Holy Wrath',
+    school=School.HOLY,
+    duration_ms=5000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
+    ],
+    spell_icon_id=2168,
+    notes='HOLY.md 7,3: capstone clause 1 buff - +4% crit chance to Holy-school priest spells '
+          '(base_points=3), StackAmount=5, ProcCharges=1 (each stack consumes one charge of the '
+          'next Holy spell that crits/casts - WP-B decides the exact consume point), 5 s. Mask is '
+          "the standard priest-heal family bits (Flash Heal/Heal/Greater Heal/Binding Heal/Penance/"
+          'Prayer of Mending/Prayer of Healing/Circle of Healing, same as Inspiration/Test of '
+          "Faith's own scoping) PLUS Smite|Holy Fire (dw1), since \"next Holy spell\" in a damage "
+          "capstone's own tooltip most plausibly includes the caster's direct Holy nukes, not only heals.",
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your next Holy spell by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Next Holy spell crit chance increased.', 'EquippedItemClass': -1, 'ProcChance': 101, 'ProcCharges': 1, 'StackAmount': 5, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': 420748992, 'EffectSpellClassMaskA_2': 134283268, 'EffectSpellClassMaskA_3': 4, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+holy_wrath_magic_dmg_200214 = spell(
+    id=200214,
+    name='Holy Wrath',
+    school=School.HOLY,
+    duration_ms=8000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=126),
+    ],
+    spell_icon_id=2168,
+    notes='HOLY.md 7,3: capstone clause 2 buff - +5% magic damage done (base_points=4, misc 126 = '
+          'magic schools), 8 s.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases magic damage done by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Magic damage done increased by $s1%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+# --- 8,3 Echo of Light (NEW talent 60019) ------------------------------------------------
+_ECHO_HOLY_WORD_MASK = (0, 0, _masks.HW_SERENITY | _masks.HW_SANCTIFY | _masks.HW_CHASTISE)
+
+echo_of_light_200215 = spell(
+    id=200215,
+    name='Echo of Light',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2382,
+    notes='HOLY.md 8,3/design doc §5.1: rank 1 - eff1 Holy Words +10% effective (base_points=9), '
+          'scoped HW_SERENITY|HW_SANCTIFY|HW_CHASTISE (dw3). eff2 hidden marker holding the Echo '
+          "base (25% of the Holy Word's amount, base_points=24) that spell_pri_echo_of_light_heal/"
+          '_damage read via GetEchoOfLightBasePct and then AddPct by Mastery. Was 250/300/350% '
+          '"of Mastery" (a pure multiplier, so 0 Mastery meant no Echo at all) - changed 2026-09-22 '
+          'per the user: Mastery increases the Echo, it is not a prerequisite for it.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Holy Words are $s1% more effective. Holy Word: Serenity and Holy Word: Sanctify apply a healing Echo, and Holy Word: Chastise applies a damage Echo, for $s2% of the amount over 6 sec, increased by your Mastery.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_3': _ECHO_HOLY_WORD_MASK[2], 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+
+
+echo_of_light_200216 = spell(
+    id=200216,
+    name='Echo of Light',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2382,
+    notes='HOLY.md 8,3: rank 2, +20% (base_points=19), Echo base 30% (base_points=29).',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Holy Words are $s1% more effective. Holy Word: Serenity and Holy Word: Sanctify apply a healing Echo, and Holy Word: Chastise applies a damage Echo, for $s2% of the amount over 6 sec, increased by your Mastery.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_3': _ECHO_HOLY_WORD_MASK[2], 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+
+
+echo_of_light_200217 = spell(
+    id=200217,
+    name='Echo of Light',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=34, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2382,
+    notes='HOLY.md 8,3: rank 3, +30% (base_points=29), Echo base 35% (base_points=34). The '
+          'only Mastery consumer in this tree (design doc §1).',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Holy Words are $s1% more effective. Holy Word: Serenity and Holy Word: Sanctify apply a healing Echo, and Holy Word: Chastise applies a damage Echo, for $s2% of the amount over 6 sec, increased by your Mastery.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_3': _ECHO_HOLY_WORD_MASK[2], 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+
+
+echo_of_light_heal_200218 = spell(
+    id=200218,
+    name='Echo of Light',
+    school=School.HOLY,
+    duration_ms=6000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.PERIODIC_HEAL, amplitude=2000),
+    ],
+    spell_icon_id=2382,
+    notes='HOLY.md 8,3/design doc §5.1: healing Echo - 6 s, 3 ticks at a fixed 2 s interval, per-tick '
+          'amount script-set (reservoir math in spell_pri_echo_of_light_heal). '
+          'AttributesEx2|=SPELL_ATTR2_CANT_CRIT (0x20000000) and '
+          'AttributesEx3|=SPELL_ATTR3_SUPPRESS_CASTER_PROCS|SPELL_ATTR3_SUPPRESS_TARGET_PROCS|'
+          'SPELL_ATTR3_IGNORE_CASTER_MODIFIERS (0x10000|0x20000|0x20000000) implement the design '
+          "doc's exemptions (cannot crit, cannot proc, snapshotted done-mods). No family bits, by "
+          'design (PLAN §2: "no talent can accidentally SpellMod" the Echo).',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target every $t1 sec.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Healing every $t1 sec.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'AttributesEx2': 536870912, 'AttributesEx3': 536936448, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+echo_of_light_damage_200219 = spell(
+    id=200219,
+    name='Echo of Light',
+    school=School.HOLY,
+    duration_ms=6000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+    ],
+    spell_icon_id=2382,
+    notes='HOLY.md 8,3: damage Echo, same shape as 200218 - 6 s, 3 ticks, fixed 2 s interval, '
+          'same CANT_CRIT/SUPPRESS_PROCS/IGNORE_CASTER_MODIFIERS attributes, no family bits.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals damage to the target every $t1 sec.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Damage every $t1 sec.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'AttributesEx2': 536870912, 'AttributesEx3': 536936448, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+# --- 9,2 Epiphany of Light (NEW talent 60020) --------------------------------------------
+epiphany_of_light_200220 = spell(
+    id=200220,
+    name='Epiphany of Light',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=33151),
+    ],
+    spell_icon_id=1876,
+    notes='HOLY.md 9,2: rank 1 - eff1 SPELLMOD_DOT +20% (base_points=19) scoped Holy Fire. eff2 '
+          'procs Surge of Light (33151) at 2% chance (procs_on below), 5 s internal lockout.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the periodic damage of your Holy Fire by $s1%, and gives it a 2% chance to trigger Surge of Light. Once per 5 sec.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.HOLY_FIRE, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+procs_on(epiphany_of_light_200220, PROC_FLAG_DONE_PERIODIC, family_name=6, family_mask=(_masks.HOLY_FIRE, 0, 0),
+         spell_type_mask=PROC_SPELL_TYPE_DAMAGE, chance=2, cooldown_ms=5000)
+
+
+epiphany_of_light_200221 = spell(
+    id=200221,
+    name='Epiphany of Light',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=33151),
+    ],
+    spell_icon_id=1876,
+    notes='HOLY.md 9,2: rank 2, +40% (base_points=39), 4% chance.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the periodic damage of your Holy Fire by $s1%, and gives it a 4% chance to trigger Surge of Light. Once per 5 sec.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.HOLY_FIRE, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+procs_on(epiphany_of_light_200221, PROC_FLAG_DONE_PERIODIC, family_name=6, family_mask=(_masks.HOLY_FIRE, 0, 0),
+         spell_type_mask=PROC_SPELL_TYPE_DAMAGE, chance=4, cooldown_ms=5000)
+
+
+epiphany_of_light_200222 = spell(
+    id=200222,
+    name='Epiphany of Light',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=33151),
+    ],
+    spell_icon_id=1876,
+    notes='HOLY.md 9,2: rank 3, +60% (base_points=59), 6% chance.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the periodic damage of your Holy Fire by $s1%, and gives it a 6% chance to trigger Surge of Light. Once per 5 sec.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.HOLY_FIRE, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+procs_on(epiphany_of_light_200222, PROC_FLAG_DONE_PERIODIC, family_name=6, family_mask=(_masks.HOLY_FIRE, 0, 0),
+         spell_type_mask=PROC_SPELL_TYPE_DAMAGE, chance=6, cooldown_ms=5000)
+
+
+# --- 9,3 Holy Word: Chastise buff --------------------------------------------------------
+chastise_buff_200224 = spell(
+    id=200224,
+    name='Chastise',
+    school=School.HOLY,
+    duration_ms=10000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+    ],
+    spell_icon_id=90104,
+    notes='HOLY.md 9,3/§2 "Chastise follow-up": +30% Smite/Holy Fire damage (base_points=29), 10 s, '
+          'applied by Holy Word: Chastise\'s own effect_2 TRIGGER_SPELL (self).',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your next Smite or Holy Fire by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Smite and Holy Fire damage increased by $s1%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.SMITE | _masks.HOLY_FIRE, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+# --- Halo healing-taken buff (baseline edit, HOLY.md "Halo healing-taken") --------------
+halo_healing_taken_200173 = spell(
+    id=200173,
+    name='Halo',
+    school=School.HOLY,
+    dispel=DispelType.MAGIC,
+    duration_ms=10000,
+    effects=[
+        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=21, apply_aura=AuraType.MOD_HEALING_RECEIVED),
+    ],
+    spell_icon_id=90102,
+    notes='HOLY.md "Halo healing-taken"/design doc §3: +10% Holy healing received from the caster '
+          '(base_points=9), 10 s - mirrors stock Grace\'s (47930) exact shape: MOD_HEALING_RECEIVED '
+          '(283) lives on effect_2 (letter B) with effect_1 empty, and the caster-scoping ("from '
+          'that caster only") is native to the aura (Unit.cpp:9607-9613 checks '
+          'caster->GetGUID()==aurEff->GetCasterGUID(), confirmed by reading '
+          'Unit::SpellHealingBonusTaken before writing this row, per the plan\'s instruction) - no '
+          'script needed for that part. Classmask (letter B = effect index 2) reuses Grace\'s own '
+          '"all priest healing spells" mask verbatim: 283 has no school-restriction knob of its '
+          'own (confirmed by reading HandleAuraModHealingReceived/SpellHealingBonusTaken - it '
+          'checks caster GUID and classmask only, never SpellSchoolMask), so "Holy healing" is '
+          'realized via the priest-heal family bits rather than an actual school filter, same '
+          'approach the codebase already uses for Grace. Cast by spell_pri_halo_pulse (WP-B, '
+          'spell_priest_new.cpp) on each target Halo heals.',
+    raw_overrides={'AttributesEx3': 262272, 'AttributesEx5': 32, 'AttributesEx7': 268435456, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases Holy healing received from the caster by $s2%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Healing received from the caster increased by $s2%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectDieSides_1': 1, 'EffectBasePoints_1': -1, 'EffectSpellClassMaskB_1': 423894593, 'EffectSpellClassMaskB_2': 65572, 'EffectSpellClassMaskB_3': 2147500036, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
 )

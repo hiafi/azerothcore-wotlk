@@ -66,11 +66,15 @@ ICON_ID_DIVINE_STAR = 90101
 ICON_ID_HALO = 90102
 ICON_ID_LEAP_OF_FAITH = 90103
 ICON_ID_VOID_ERUPTION = 90104  # shared by void_eruption_200139 and void_eruption_buff_200140
-# 90105 (ability_priest_angelicbulwark, tried for Spirit Shell) is deliberately not reused - it
-# rendered as a blank talent-frame slot in-game for reasons not conclusively diagnosed even
-# though the DBC rows/packed file/manifest all checked out correct; reverted to the stock icon
-# (docs/bugs-and-fixes.md). Skipping the id rather than reassigning it, in case whatever's wrong
-# with this specific file is content-addressed rather than id-addressed.
+# 90105 (ability_priest_angelicbulwark, tried for Spirit Shell) rendered blank and was reverted to
+# a stock icon - root-caused later (2026-09-22, docs/bugs-and-fixes.md): build_patch_m.py was
+# packing a stale copy of SpellIcon.dbc into patch-M.mpq, which the client loads *after* patch-I and
+# so shadowed every row minted here after patch-M's last rebuild. The file was never at fault; the
+# id is still free in the working copy if Spirit Shell wants its icon back.
+ICON_ID_HOLY_WORD_SERENITY = 90106
+ICON_ID_HOLY_WORD_SANCTIFY = 90107  # was sharing 90102 (Halo) with Serenity - split out to fix that
+ICON_ID_HOLY_WORD_CHASTISE = 90108  # was sharing 90104 (Void Eruption) with Apotheosis - split out
+ICON_ID_APOTHEOSIS = 90109
 
 ICONS = (
     (ICON_ID_ANGELIC_FEATHER, "Interface/icons/ability_priest_angelicfeather.blp"),
@@ -78,6 +82,10 @@ ICONS = (
     (ICON_ID_HALO, "Interface/icons/ability_priest_halo.blp"),
     (ICON_ID_LEAP_OF_FAITH, "Interface/icons/priest_spell_leapoffaith_a.blp"),
     (ICON_ID_VOID_ERUPTION, "Interface/icons/spell_priest_voidform.blp"),
+    (ICON_ID_HOLY_WORD_SERENITY, "Interface/icons/spell_priest_burningwill.blp"),
+    (ICON_ID_HOLY_WORD_SANCTIFY, "Interface/icons/spell_holy_divineprovidence.blp"),
+    (ICON_ID_HOLY_WORD_CHASTISE, "Interface/icons/spell_holy_chastise.blp"),
+    (ICON_ID_APOTHEOSIS, "Interface/icons/spell_priest_chakra.blp"),
 )
 
 

@@ -8733,6 +8733,10 @@ uint32 Unit::SpellDamageBonusTaken(Unit* caster, SpellInfo const* spellProto, ui
 
     TakenTotalMod = processDummyAuras(TakenTotalMod);
 
+    // Test of Faith (8,2) capstone - see PriestMechanics.cpp. `this` is the victim taking spell
+    // damage (any class may carry it), `caster` is whoever cast the incoming damaging spell.
+    Priest::ApplySpellDamageTakenPctMods(this, caster, spellProto, TakenTotalMod);
+
     // From caster spells
     if (caster)
     {
@@ -9339,12 +9343,8 @@ float Unit::SpellPctHealingModsDone(Unit* victim, SpellInfo const* spellProto, D
 
         switch ((*i)->GetMiscValue())
         {
-            case   21: // Test of Faith
-            case 6935:
-            case 6918:
-                if (victim->HealthBelowPct(50))
-                    AddPct(DoneTotalMod, (*i)->GetAmount());
-                break;
+            // Test of Faith (misc 21/6935/6918, one per rank) migrated to
+            // Priest::ApplyDoneHealingPctMods below (PLAN sec 6.8).
             case 7798: // Glyph of Regrowth
                 {
                     if (victim->GetAuraEffect(SPELL_AURA_PERIODIC_HEAL, SPELLFAMILY_DRUID, 0x40, 0, 0))
@@ -9386,6 +9386,10 @@ float Unit::SpellPctHealingModsDone(Unit* victim, SpellInfo const* spellProto, D
                     AddPct(DoneTotalMod, aurEff->GetAmount());
             break;
     }
+
+    // Test of Faith (8,2) - see PriestMechanics.cpp for the full clause; this is Unit.cpp's own
+    // "done scripted mod" OVERRIDE_CLASS_SCRIPTS loop's former `case 21:` (PLAN sec 6.8).
+    Priest::ApplyDoneHealingPctMods(this, victim, spellProto, DoneTotalMod);
 
     return DoneTotalMod;
 }
@@ -13784,45 +13788,17 @@ void Unit::Kill(Unit* killer, Unit* victim, bool durabilityLoss, WeaponAttackTyp
         if (Player* killerPlayer = killer->GetCharmerOrOwnerPlayerOrPlayerItself())
             killerPlayer->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_GET_KILLING_BLOWS, 1, 0, victim);
 
-    // Spirit of Redemption
-    // if talent known but not triggered (check priest class for speedup check)
+    // Spirit of Redemption's old on-death hardcode (keyed on victim->GetAuraEffectDummy(20711))
+    // is retired by the Holy rework (docs/reworks/priest-holy-rework.md 4,1,
+    // priest-rework.HOLY.md "Core hardcode migration owed by this pass" / PLAN sec 6.8): the
+    // talent's own DUMMY effect on 20711 is removed by WP-A's data (all 3 ranks are now a plain
+    // MOD_TOTAL_STAT_PERCENTAGE Spirit bonus - see priest_trigger_spells.py's
+    // spirit_of_redemption_20711 comment), so this block would never find anything to key on
+    // anyway. The new capstone (spell_pri_spirit_of_redemption, AuraScript on rank 3's 200192, in
+    // spell_priest_holy.cpp) replaces it with a script-driven absorb-on-lethal-damage instead of an
+    // on-death hardcode. `spiritOfRedemption` stays declared (unconditionally false now) since the
+    // achievement-criteria block above and the `if (!spiritOfRedemption)` below still reference it.
     bool spiritOfRedemption = false;
-    if (victim->IsPlayer() && victim->IsClass(CLASS_PRIEST, CLASS_CONTEXT_ABILITY) && !victim->ToPlayer()->HasPlayerFlag(PLAYER_FLAGS_IS_OUT_OF_BOUNDS))
-    {
-        if (AuraEffect* aurEff = victim->GetAuraEffectDummy(20711))
-        {
-            // Xinef: aura_spirit_of_redemption is triggered by 27827 shapeshift
-            if (victim->HasSpiritOfRedemptionAura() || victim->HasAura(27827))
-            {
-                /*LOG_INFO("misc", "Player ({}) died with spirit of redemption. Killer (Entry: {}, Name: {}), Map: {}, x: {}, y: {}, z: {}",
-                    victim->GetGUID().ToString(), killer ? killer->GetEntry() : 1, killer ? killer->GetName() : "", victim->GetMapId(), victim->GetPositionX(),
-                    victim->GetPositionY(), victim->GetPositionZ());
-
-                ACE_Stack_Trace trace(0, 50);
-                LOG_INFO("misc", "TRACE: {}\n\n", trace);*/
-            }
-            else
-            {
-                // save value before aura remove
-                uint32 ressSpellId = victim->GetUInt32Value(PLAYER_SELF_RES_SPELL);
-                if (!ressSpellId)
-                    ressSpellId = victim->ToPlayer()->GetResurrectionSpellId();
-
-                //Remove all expected to remove at death auras (most important negative case like DoT or periodic triggers)
-                victim->RemoveAllAurasOnDeath();
-
-                // Stop attacks
-                victim->CombatStop();
-
-                // restore for use at real death
-                victim->SetUInt32Value(PLAYER_SELF_RES_SPELL, ressSpellId);
-
-                // FORM_SPIRITOFREDEMPTION and related auras
-                victim->CastSpell(victim, 27827, true, nullptr, aurEff);
-                spiritOfRedemption = true;
-            }
-        }
-    }
 
     if (!spiritOfRedemption)
     {

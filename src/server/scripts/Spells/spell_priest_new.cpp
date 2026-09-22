@@ -72,7 +72,11 @@ enum PriestNewSpells
     // (.agents/plans/priest-rework/priest-rework.DISC.md). Rank *spell* ids, not talent_dbc ids.
     SPELL_PRIEST_GUIDING_STAR_R1               = 200156,
     SPELL_PRIEST_GUIDING_STAR_R2               = 200157,
-    SPELL_PRIEST_GUIDING_STAR_ABSORB           = 200158
+    SPELL_PRIEST_GUIDING_STAR_ABSORB           = 200158,
+
+    // Holy rework (priest-rework.HOLY.md "ID map"): "+10% Holy healing received from caster, 10 s
+    // (aura 283, mirror 47930's shape)".
+    SPELL_PRIEST_HALO_HEALING_TAKEN            = 200173
 };
 
 enum PriestNewCreatures
@@ -522,10 +526,26 @@ class spell_pri_halo_pulse : public SpellScript
             target = nullptr;
     }
 
+    // Holy rework (priest-rework.HOLY.md "Halo healing-taken (+10%)"): "In spell_pri_halo_pulse
+    // heal branch AfterHit -> cast 200173 on the target." AfterHit fires once per unit the whole
+    // spell hit; GetHitHeal() > 0 is what distinguishes the heal (ally) branch from the damage
+    // (enemy) branch for that unit, since exactly one of EFFECT_0/EFFECT_1 actually lands per unit
+    // (the other was nulled by the FilterAllyTarget/FilterEnemyTarget pair above).
+    void ApplyHealingTakenBuff()
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetHitUnit();
+        if (!caster || !target || !GetHitHeal())
+            return;
+
+        caster->CastSpell(target, SPELL_PRIEST_HALO_HEALING_TAKEN, true);
+    }
+
     void Register() override
     {
         OnObjectTargetSelect += SpellObjectTargetSelectFn(spell_pri_halo_pulse::FilterAllyTarget, EFFECT_0, TARGET_UNIT_TARGET_ALLY);
         OnObjectTargetSelect += SpellObjectTargetSelectFn(spell_pri_halo_pulse::FilterEnemyTarget, EFFECT_1, TARGET_UNIT_TARGET_ENEMY);
+        AfterHit += SpellHitFn(spell_pri_halo_pulse::ApplyHealingTakenBuff);
     }
 };
 

@@ -109,9 +109,11 @@ class EffectType(IntEnum):
     WEAPON_DAMAGE = 58
     THREAT = 63
     TRIGGER_SPELL = 64
+    APPLY_AREA_AURA_RAID = 65
     INTERRUPT_CAST = 68
     ADD_COMBO_POINTS = 80
     KNOCK_BACK = 98
+    ENERGIZE_PCT = 137  # SPELL_EFFECT_ENERGIZE_PCT - a direct effect, not an APPLY_AURA aura type
 
 
 class AuraType(IntEnum):
@@ -160,6 +162,8 @@ class AuraType(IntEnum):
     MOD_TOTAL_STAT_PERCENTAGE = 137
     MOD_SPEED_ALWAYS = 129
     MOD_CRIT_DAMAGE_BONUS = 163
+    MOD_SPELL_DAMAGE_OF_STAT_PERCENT = 174
+    MOD_SPELL_HEALING_OF_STAT_PERCENT = 175
     MOD_RATING = 189
     HASTE_ALL = 193  # SPELL_AURA_MELEE_SLOW in C++ (misnamed) - applies cast+melee+ranged haste in one effect (Bloodlust's own aura, SpellAuraEffects.cpp:4762) - PLAN §1's "generalized spell haste" mechanism
     MOD_RATING_FROM_STAT = 220
