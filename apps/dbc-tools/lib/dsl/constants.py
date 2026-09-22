@@ -148,16 +148,23 @@ class AuraType(IntEnum):
     MOD_HEALING_PCT = 118
     MOD_SPELL_HIT_CHANCE = 55
     MOD_SPELL_CRIT_CHANCE = 57
+    SCHOOL_ABSORB = 69
     MOD_CASTING_SPEED_NOT_STACK = 65  # the standard passive "+X% spell haste"
     MOD_SPELL_CRIT_CHANCE_SCHOOL = 71
     MOD_POWER_COST_SCHOOL_PCT = 72
     MOD_DAMAGE_PERCENT_DONE = 79
     ADD_FLAT_MODIFIER = 107  # SpellMod - EffectMiscValue is the SPELLMOD_* op, classmask scopes it
     ADD_PCT_MODIFIER = 108
+    MOD_MANA_REGEN_INTERRUPT = 134
+    MOD_HEALING_DONE_PERCENT = 136
+    MOD_TOTAL_STAT_PERCENTAGE = 137
     MOD_SPEED_ALWAYS = 129
     MOD_CRIT_DAMAGE_BONUS = 163
     MOD_RATING = 189
+    HASTE_ALL = 193  # SPELL_AURA_MELEE_SLOW in C++ (misnamed) - applies cast+melee+ranged haste in one effect (Bloodlust's own aura, SpellAuraEffects.cpp:4762) - PLAN §1's "generalized spell haste" mechanism
+    MOD_RATING_FROM_STAT = 220
     PERIODIC_DUMMY = 226
+    MOD_HEALING_RECEIVED = 283  # SpellAuraDefines.h: "Possibly only for some spell family class spells"
     MOD_CRIT_PCT = 290
     # Custom aura types this fork added (see each one's comment in SpellAuraDefines.h):
     MOD_LEECH_PCT = 295  # % of damage dealt returned as health - Unit::GetLeechPercentage

@@ -2398,19 +2398,39 @@ namespace
         if (!group && attacker)
             if (Player* attackerPlayer = attacker->ToPlayer())
                 group = attackerPlayer->GetGroup();
-        if (!group)
-            return;
 
         std::string const payload = Acore::StringFormat("AABS\t{}\t{}\t{}\t{}\t{}", victim->GetName(), caster->GetName(),
             absorbSpellId, sourceSpellInfo ? sourceSpellInfo->Id : 0, amount);
 
         WorldPacket data;
-        ChatHandler::BuildChatPacket(data, group->isRaidGroup() ? CHAT_MSG_RAID : CHAT_MSG_PARTY, LANG_ADDON,
+
+        if (group)
+        {
+            ChatHandler::BuildChatPacket(data, group->isRaidGroup() ? CHAT_MSG_RAID : CHAT_MSG_PARTY, LANG_ADDON,
+                victim->GetGUID(), ObjectGuid::Empty, payload, CHAT_TAG_NONE, victim->GetName());
+
+            for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+                if (Player* member = itr->GetSource())
+                    if (WorldSession* session = member->GetSession())
+                        session->SendPacket(&data);
+            return;
+        }
+
+        // Not grouped (e.g. solo self-shielding while leveling/testing) - a self-caster still
+        // wants their own meter credited, and the party/raid path above never reaches them since
+        // there's no Group to iterate. CHAT_MSG_WHISPER is the other message type LANG_ADDON is
+        // valid for (ChatHandler::HandleMessagechatOpcode), so send it directly to whichever of
+        // victim/caster are real online players instead of silently dropping the credit.
+        ChatHandler::BuildChatPacket(data, CHAT_MSG_WHISPER, LANG_ADDON,
             victim->GetGUID(), ObjectGuid::Empty, payload, CHAT_TAG_NONE, victim->GetName());
 
-        for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
-            if (Player* member = itr->GetSource())
-                if (WorldSession* session = member->GetSession())
+        if (victimPlayer)
+            if (WorldSession* session = victimPlayer->GetSession())
+                session->SendPacket(&data);
+
+        if (Player* casterPlayer = caster->ToPlayer())
+            if (casterPlayer != victimPlayer)
+                if (WorldSession* session = casterPlayer->GetSession())
                     session->SendPacket(&data);
     }
 }
@@ -8433,6 +8453,13 @@ float Unit::SpellPctDamageModsDone(Unit* victim, SpellInfo const* spellProto, Da
         }
     }
 
+    // Voidform's periodic-Shadow-damage boost, the Mind Flay/Smite/Shadow Word: Death glyphs and
+    // Twisted Faith's Mind Flay half - see PriestMechanics.cpp for the full set. Deliberately
+    // outside the per-family switch below (priest-rework.PLAN.md sec 6.7) so a later Holy-side
+    // clause that buffs Holy-school damage from *any* class has somewhere to live; every clause
+    // that is priest-family-only gates itself inside.
+    Priest::ApplyDoneDamagePctMods(this, victim, spellProto, damagetype, DoneTotalMod);
+
     // Custom scripted damage
     switch (spellProto->SpellFamilyName)
     {
@@ -8440,44 +8467,6 @@ float Unit::SpellPctDamageModsDone(Unit* victim, SpellInfo const* spellProto, Da
             // Ice Lance, Torment the Weak, and every Frost Mage rework damage-done capstone -
             // see MageMechanics.cpp for the full set; consolidated there instead of inline here.
             Mage::ApplyDoneDamagePctMods(this, victim, spellProto, DoneTotalMod);
-            break;
-        case SPELLFAMILY_PRIEST:
-            // Voidform's periodic-Shadow-damage boost (docs/reworks/priest-new-spells.md, Void
-            // Eruption) - see PriestMechanics.cpp for the full hook.
-            Priest::ApplyDoneDamagePctMods(this, victim, spellProto, damagetype, DoneTotalMod);
-
-            // Mind Flay
-            if (spellProto->SpellFamilyFlags[0] & 0x800000)
-            {
-                // Glyph of Shadow Word: Pain
-                if (AuraEffect* aurEff = GetAuraEffect(55687, 0))
-                    // Increase Mind Flay damage if Shadow Word: Pain present on target
-                    if (victim->GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_PRIEST, 0x8000, 0, 0, GetGUID()))
-                        AddPct(DoneTotalMod, aurEff->GetAmount());
-
-                // Twisted Faith - Mind Flay part
-                if (AuraEffect* aurEff = GetAuraEffect(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS, SPELLFAMILY_PRIEST, 2848, 1))
-                    // Increase Mind Flay damage if Shadow Word: Pain present on target
-                    if (victim->GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_PRIEST, 0x8000, 0, 0, GetGUID()))
-                        AddPct(DoneTotalMod, aurEff->GetAmount());
-            }
-            // Smite
-            else if (spellProto->SpellFamilyFlags[0] & 0x80)
-            {
-                // Glyph of Smite
-                if (AuraEffect* aurEff = GetAuraEffect(55692, 0))
-                    if (victim->GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_PRIEST, 0x100000, 0, 0, GetGUID()))
-                        AddPct(DoneTotalMod, aurEff->GetAmount());
-            }
-            // Shadow Word: Death
-            else if (spellProto->SpellFamilyFlags[1] & 0x2)
-            {
-                // Glyph of Shadow Word: Death
-                if (AuraEffect* aurEff = GetAuraEffect(55682, 1))
-                    if (victim->HasAuraState(AURA_STATE_HEALTHLESS_35_PERCENT))
-                        AddPct(DoneTotalMod, aurEff->GetAmount());
-            }
-
             break;
         case SPELLFAMILY_PALADIN:
             // Judgement of Vengeance/Judgement of Corruption
@@ -9007,6 +8996,11 @@ float Unit::SpellDoneCritChance(Unit const* /*victim*/, SpellInfo const* spellPr
     if (spellProto->SpellFamilyName == SPELLFAMILY_MAGE)
         Mage::ApplySpellCritChanceMods(this, spellProto, crit_chance);
 
+    // Discipline rework (docs/reworks/priest-disc-rework.md) - Inner Focus's guaranteed Flash Heal
+    // crit, same "absolute override, applied last" shape as Mage's above. See PriestMechanics.cpp.
+    if (spellProto->SpellFamilyName == SPELLFAMILY_PRIEST)
+        Priest::ApplySpellCritChanceMods(this, spellProto, crit_chance);
+
     // xinef: can be negative!
     return crit_chance;
 }
@@ -9072,11 +9066,9 @@ float Unit::SpellTakenCritChance(Unit const* caster, SpellInfo const* spellProto
                                 if (HasAuraState(AURA_STATE_HEALTHLESS_35_PERCENT, spellProto, caster))
                                     crit_chance += (*i)->GetAmount();
                                 break;
-                            case 7997: // Renewed Hope
-                            case 7998:
-                                if (HasAura(6788))
-                                    crit_chance += (*i)->GetAmount();
-                                break;
+                            // Renewed Hope's `case 7997: case 7998:` used to live here; it moved to
+                            // Priest::ApplySpellTakenCritChanceMods with the rest of the priest
+                            // hardcodes (priest-rework.PLAN.md sec 6.8), scoping included.
                             default:
                                 break;
                         }
@@ -9130,6 +9122,11 @@ float Unit::SpellTakenCritChance(Unit const* caster, SpellInfo const* spellProto
                                     return 100.0f;
                                 break;
                             }
+                            break;
+                        case SPELLFAMILY_PRIEST:
+                            // Renewed Hope's Weakened-Soul crit bonus and Focused Power's Prayer
+                            // of Healing capstone - see PriestMechanics.cpp.
+                            Priest::ApplySpellTakenCritChanceMods(this, caster, spellProto, crit_chance);
                             break;
                         case SPELLFAMILY_SHAMAN:
                             // Lava Burst

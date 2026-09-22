@@ -32,12 +32,38 @@ enum DamageEffectType : uint8;
  */
 namespace Priest
 {
-    // Unit::SpellPctDamageModsDone's SPELLFAMILY_PRIEST case - Void Eruption's Voidform buff
-    // (docs/reworks/priest-new-spells.md): "increases your periodic Shadow damage by 10% for 10
-    // sec." No native WotLK AuraType computes "+X% periodic damage done", hence this live read
-    // instead of a stock aura - see spell_priest_new.cpp's void_eruption_buff_200140 notes for the
-    // marker-aura-by-icon idiom this uses.
+    // Unit::SpellPctDamageModsDone's whole (former) SPELLFAMILY_PRIEST case: Void Eruption's
+    // Voidform buff (docs/reworks/priest-new-spells.md - "increases your periodic Shadow damage by
+    // 10% for 10 sec"; no native WotLK AuraType computes "+X% periodic damage done", hence the live
+    // marker-aura-by-icon read), plus the stock Mind Flay / Smite / Shadow Word: Death glyph
+    // clauses and Twisted Faith's Mind Flay half, migrated out of Unit.cpp verbatim
+    // (.agents/plans/priest-rework/priest-rework.PLAN.md sec 6.8).
+    //
+    // The call site now sits *outside* Unit::SpellPctDamageModsDone's per-family switch (PLAN sec
+    // 6.7), so this runs for every spell family - each clause carries its own gate. Everything
+    // here is currently priest-family-only and lives behind one shared family check; a later
+    // cross-class clause (Holy's Divine Fury, which buffs Holy-school damage from any class) goes
+    // *above* that check.
     void ApplyDoneDamagePctMods(Unit* caster, Unit* victim, SpellInfo const* spellProto, DamageEffectType damagetype, float& doneTotalMod);
+
+    // Unit::SpellDoneCritChance's priest hook, next to Mage's own equivalent - Discipline's Inner
+    // Focus (2,1) turns its charge into a guaranteed Flash Heal crit
+    // (docs/reworks/priest-disc-rework.md). An absolute override, applied last, so no other
+    // modifier can push it off 100.
+    void ApplySpellCritChanceMods(Unit const* caster, SpellInfo const* spellProto, float& critChance);
+
+    // Unit::SpellTakenCritChance's "Custom crit by class" SPELLFAMILY_PRIEST case - Renewed Hope's
+    // Weakened-Soul crit bonus (migrated out of that function's OVERRIDE_CLASS_SCRIPTS loop, PLAN
+    // sec 6.8) and Focused Power's (5,0) Prayer of Healing capstone. `victim` is the unit being
+    // healed/hit, `caster` the priest.
+    void ApplySpellTakenCritChanceMods(Unit const* victim, Unit const* caster, SpellInfo const* spellProto, float& critChance);
+
+    // Spirit Shell (Discipline 10,1): "your direct healing spells no longer heal - instead they
+    // create an absorption shield on the target for the amount that would have been healed."
+    // Called from Spell::DoAllEffectOnTarget's heal branch with the post-crit heal amount; returns
+    // true (and zeroes `heal`) when the heal was converted, so the heal itself lands for 0 and
+    // Divine Aegis sees nothing to work with.
+    bool TryConvertHealToSpiritShell(Unit* caster, Unit* target, SpellInfo const* spellProto, uint32& heal);
 }
 
 #endif

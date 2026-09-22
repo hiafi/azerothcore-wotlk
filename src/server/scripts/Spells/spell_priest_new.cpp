@@ -66,7 +66,13 @@ enum PriestNewSpells
 
     // Real stock spells this file's scripts need by number.
     SPELL_PRIEST_SHADOWFORM                    = 15473,
-    SPELL_PRIEST_SHADOW_WORD_PAIN              = 589
+    SPELL_PRIEST_SHADOW_WORD_PAIN              = 589,
+
+    // Discipline rework - Guiding Star (5,3) bolts an absorb onto Divine Star's healing
+    // (.agents/plans/priest-rework/priest-rework.DISC.md). Rank *spell* ids, not talent_dbc ids.
+    SPELL_PRIEST_GUIDING_STAR_R1               = 200156,
+    SPELL_PRIEST_GUIDING_STAR_R2               = 200157,
+    SPELL_PRIEST_GUIDING_STAR_ABSORB           = 200158
 };
 
 enum PriestNewCreatures
@@ -352,6 +358,11 @@ class spell_pri_divine_star_pulse : public SpellScript
 {
     PrepareSpellScript(spell_pri_divine_star_pulse);
 
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_PRIEST_GUIDING_STAR_ABSORB });
+    }
+
     void FilterAllyTarget(WorldObject*& target)
     {
         Unit* caster = GetCaster();
@@ -368,10 +379,51 @@ class spell_pri_divine_star_pulse : public SpellScript
             target = nullptr;
     }
 
+    /*
+     * Guiding Star (Discipline 5,3, docs/reworks/priest-disc-rework.md): "causes its healing to
+     * apply an absorb shield equal to 15/30% of the amount healed. Applies once per pass, so a
+     * full out-and-back cast shields twice." Each pass is a separate pulse cast, so hooking the
+     * pulse gives the "once per pass" rule for free. Self-contained: it does not require, and does
+     * not consume, the Divine Aegis talent (PLAN sec 2: a second pass adds to the first, same
+     * shape as Divine Aegis).
+     *
+     * The talent's two ranks are read by explicit rank spell id rather than the dummy-by-icon
+     * idiom - this talent is brand new, so its SpellIconID is assigned on the data side and there
+     * is no stock icon to key on, while both rank ids are fixed by DISC.md's ID map.
+     */
+    void HandleGuidingStar()
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetHitUnit();
+        if (!caster || !target)
+            return;
+
+        int32 healed = GetHitHeal();
+        if (healed <= 0)
+            return;
+
+        AuraEffect const* guidingStar = caster->GetAuraEffect(SPELL_PRIEST_GUIDING_STAR_R2, EFFECT_2);
+        if (!guidingStar)
+            guidingStar = caster->GetAuraEffect(SPELL_PRIEST_GUIDING_STAR_R1, EFFECT_2);
+
+        if (!guidingStar)
+            return;
+
+        int32 absorb = int32(CalculatePct(float(healed), float(guidingStar->GetAmount())));
+        if (absorb <= 0)
+            return;
+
+        if (AuraEffect const* existing = target->GetAuraEffect(SPELL_PRIEST_GUIDING_STAR_ABSORB, EFFECT_0, caster->GetGUID()))
+            absorb += existing->GetAmount();
+
+        caster->CastCustomSpell(SPELL_PRIEST_GUIDING_STAR_ABSORB, SPELLVALUE_BASE_POINT0, absorb, target, true);
+    }
+
     void Register() override
     {
         OnObjectTargetSelect += SpellObjectTargetSelectFn(spell_pri_divine_star_pulse::FilterAllyTarget, EFFECT_0, TARGET_UNIT_TARGET_ALLY);
         OnObjectTargetSelect += SpellObjectTargetSelectFn(spell_pri_divine_star_pulse::FilterEnemyTarget, EFFECT_1, TARGET_UNIT_TARGET_ENEMY);
+        AfterHit += SpellHitFn(spell_pri_divine_star_pulse::HandleGuidingStar);
     }
 };
 

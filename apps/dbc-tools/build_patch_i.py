@@ -3,7 +3,8 @@
 Priest baseline rework (docs/reworks/priest-new-spells.md): mints new SpellIcon.dbc rows for the 5
 new spells that needed real icon art (Power Word: Barrier already has a matching stock icon,
 3837 - see priest_spells.py's own notes on that spell - so it isn't touched here), then packages
-the underlying .blp files into patch-I.mpq and deploys it.
+the underlying .blp files into patch-I.mpq and deploys it. A 6th icon (Spirit Shell, Discipline
+rework) was tried and reverted - see the comment above ICONS for why.
 
 Implements docs/ascension-asset-mining.md Part 1's recommended pipeline (extract -> pack -> add
 DBC rows), scoped narrowly to the 5 files this pass actually needs rather than the full 76k-icon
@@ -65,6 +66,11 @@ ICON_ID_DIVINE_STAR = 90101
 ICON_ID_HALO = 90102
 ICON_ID_LEAP_OF_FAITH = 90103
 ICON_ID_VOID_ERUPTION = 90104  # shared by void_eruption_200139 and void_eruption_buff_200140
+# 90105 (ability_priest_angelicbulwark, tried for Spirit Shell) is deliberately not reused - it
+# rendered as a blank talent-frame slot in-game for reasons not conclusively diagnosed even
+# though the DBC rows/packed file/manifest all checked out correct; reverted to the stock icon
+# (docs/bugs-and-fixes.md). Skipping the id rather than reassigning it, in case whatever's wrong
+# with this specific file is content-addressed rather than id-addressed.
 
 ICONS = (
     (ICON_ID_ANGELIC_FEATHER, "Interface/icons/ability_priest_angelicfeather.blp"),

@@ -38,6 +38,7 @@
 #include "Opcodes.h"
 #include "Pet.h"
 #include "Player.h"
+#include "PriestMechanics.h"
 #include "ScriptMgr.h"
 #include "SharedDefines.h"
 #include "SpellAuraDefines.h"
@@ -2833,6 +2834,13 @@ void Spell::DoAllEffectOnTarget(TargetInfo* target)
 
             if (crit)
                 addhealth = Unit::SpellCriticalHealingBonus(caster, m_spellInfo, addhealth, nullptr);
+
+            // Priest Discipline rework (docs/reworks/priest-disc-rework.md, Spirit Shell): while
+            // Spirit Shell is up, the priest's direct heals stop healing and instead shield the
+            // target for what they would have healed. Deliberately placed after the crit bonus
+            // (crits make a bigger shell) and before HealInfo is built, so everything downstream -
+            // the heal itself, its threat, Divine Aegis - sees a zeroed heal.
+            Priest::TryConvertHealToSpiritShell(caster, unitTarget, m_spellInfo, addhealth);
 
             HealInfo healInfo(caster, unitTarget, addhealth, m_spellInfo, m_spellInfo->GetSchoolMask());
 
