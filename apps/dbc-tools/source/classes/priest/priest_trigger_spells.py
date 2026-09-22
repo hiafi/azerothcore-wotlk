@@ -6931,7 +6931,7 @@ echo_of_light_200215 = spell(
           '_damage read via GetEchoOfLightBasePct and then AddPct by Mastery. Was 250/300/350% '
           '"of Mastery" (a pure multiplier, so 0 Mastery meant no Echo at all) - changed 2026-09-22 '
           'per the user: Mastery increases the Echo, it is not a prerequisite for it.',
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Holy Words are $s1% more effective. Holy Word: Serenity and Holy Word: Sanctify apply a healing Echo, and Holy Word: Chastise applies a damage Echo, for $s2% of the amount over 6 sec, increased by your Mastery.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_3': _ECHO_HOLY_WORD_MASK[2], 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Holy Words are $s1% more effective. Holy Word: Serenity and Holy Word: Sanctify apply a healing Echo, and Holy Word: Chastise applies a damage Echo, for $s2% of the amount over 6 sec, increased by 3 times your Mastery.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_3': _ECHO_HOLY_WORD_MASK[2], 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
 )
 
 
@@ -6947,7 +6947,7 @@ echo_of_light_200216 = spell(
     ],
     spell_icon_id=2382,
     notes='HOLY.md 8,3: rank 2, +20% (base_points=19), Echo base 30% (base_points=29).',
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Holy Words are $s1% more effective. Holy Word: Serenity and Holy Word: Sanctify apply a healing Echo, and Holy Word: Chastise applies a damage Echo, for $s2% of the amount over 6 sec, increased by your Mastery.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_3': _ECHO_HOLY_WORD_MASK[2], 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Holy Words are $s1% more effective. Holy Word: Serenity and Holy Word: Sanctify apply a healing Echo, and Holy Word: Chastise applies a damage Echo, for $s2% of the amount over 6 sec, increased by 3 times your Mastery.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_3': _ECHO_HOLY_WORD_MASK[2], 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
 )
 
 
@@ -6964,7 +6964,7 @@ echo_of_light_200217 = spell(
     spell_icon_id=2382,
     notes='HOLY.md 8,3: rank 3, +30% (base_points=29), Echo base 35% (base_points=34). The '
           'only Mastery consumer in this tree (design doc §1).',
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Holy Words are $s1% more effective. Holy Word: Serenity and Holy Word: Sanctify apply a healing Echo, and Holy Word: Chastise applies a damage Echo, for $s2% of the amount over 6 sec, increased by your Mastery.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_3': _ECHO_HOLY_WORD_MASK[2], 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Holy Words are $s1% more effective. Holy Word: Serenity and Holy Word: Sanctify apply a healing Echo, and Holy Word: Chastise applies a damage Echo, for $s2% of the amount over 6 sec, increased by 3 times your Mastery.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_3': _ECHO_HOLY_WORD_MASK[2], 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
 )
 
 
@@ -6972,13 +6972,27 @@ echo_of_light_heal_200218 = spell(
     id=200218,
     name='Echo of Light',
     school=School.HOLY,
+    range_yards=100.0,
     duration_ms=6000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.PERIODIC_HEAL, amplitude=2000),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=2000),
     ],
     spell_icon_id=2382,
     notes='HOLY.md 8,3/design doc §5.1: healing Echo - 6 s, 3 ticks at a fixed 2 s interval, per-tick '
           'amount script-set (reservoir math in spell_pri_echo_of_light_heal). '
+          'range_yards=100 because a spell with no range_yards gets RangeIndex 0, which the '
+          'engine reads as a NULL RangeEntry -> GetMaxRange() 0.0 -> the cast only ever '
+          'reaches a unit at distance 0, i.e. the caster. Spell::CheckRange runs on triggered '
+          'casts too ("Triggered spells also have range check") and only exempts RangeIndex 1, '
+          'so index 0 is not exempt - the Echo silently applied to the priest alone (playtest '
+          '2026-09-22). These auras are never cast directly, only by the script onto a unit the '
+          'parent Holy Word already hit and validated, so any range check is redundant - 100 yd '
+          'makes it a non-issue rather than coupling this row to each parent spell range. '
+          'implicit_target_a=21 (TARGET_UNIT_TARGET_ALLY), NOT 1/TARGET_UNIT_CASTER: the script '
+          'casts this at the healed ally, but an effect whose implicit target is CASTER resolves '
+          'back to the priest no matter what unit CastCustomSpell was handed - so the Echo landed '
+          'on the caster (playtest 2026-09-22). 21 matches stock Renew (139) and Divine Aegis '
+          "(47753), and this pass's own already-working Guiding Star (200158)/Spirit Shell (200167). "
           'AttributesEx2|=SPELL_ATTR2_CANT_CRIT (0x20000000) and '
           'AttributesEx3|=SPELL_ATTR3_SUPPRESS_CASTER_PROCS|SPELL_ATTR3_SUPPRESS_TARGET_PROCS|'
           'SPELL_ATTR3_IGNORE_CASTER_MODIFIERS (0x10000|0x20000|0x20000000) implement the design '
@@ -6992,12 +7006,16 @@ echo_of_light_damage_200219 = spell(
     id=200219,
     name='Echo of Light',
     school=School.HOLY,
+    range_yards=100.0,
     duration_ms=6000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
     ],
     spell_icon_id=2382,
     notes='HOLY.md 8,3: damage Echo, same shape as 200218 - 6 s, 3 ticks, fixed 2 s interval, '
+          'implicit_target_a=6 (TARGET_UNIT_TARGET_ENEMY) for the same reason 200218 uses 21 - '
+          'see its note, as is range_yards=100 (RangeIndex 0 = max range 0 = self only). '
+          'see its note; 6 matches stock Shadow Word: Pain/Vampiric Touch and Chastise (200223). '
           'same CANT_CRIT/SUPPRESS_PROCS/IGNORE_CASTER_MODIFIERS attributes, no family bits.',
     raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals damage to the target every $t1 sec.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Damage every $t1 sec.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'AttributesEx2': 536870912, 'AttributesEx3': 536936448, 'EffectChainAmplitude_1': 1.0},
 )

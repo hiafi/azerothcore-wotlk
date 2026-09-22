@@ -136,6 +136,11 @@ namespace
     // 5.1: "6 sec, 3 ticks at a fixed 2 sec interval").
     constexpr int32 PRIEST_ECHO_OF_LIGHT_TICKS = 3;
 
+    // Echo of Light counts Mastery at triple weight (user tuning call, 2026-09-22): Mastery is the
+    // only stat this whole tree reads (design doc 1), so at 1x it moved the Echo too little to be
+    // worth gearing for. Applies to the Mastery bonus only, never to the rank's base %.
+    constexpr float PRIEST_ECHO_OF_LIGHT_MASTERY_WEIGHT = 3.0f;
+
     // Echo of Light's per-rank base (design doc 5.1: 25 / 30 / 35% of the Holy Word's amount) -
     // read from the rank's hidden EFFECT_1 dummy ($s2 in the tooltip, priest_trigger_spells.py
     // echo_of_light_200215..200217) so the tooltip and the math can't drift apart. A brand-new
@@ -170,14 +175,14 @@ namespace
         if (basePct <= 0)
             return;
 
-        // "raw amount x base%, increased by Mastery" (design doc 5.1). Mastery is a bonus on top
-        // of the base Echo - AddPct, the same shape MageMechanics/PriestMechanics' other Mastery
+        // "raw amount x base% x (1 + Mastery x 3)" (design doc 5.1). Mastery is a bonus on top of
+        // the base Echo - AddPct, the same shape MageMechanics/PriestMechanics' other Mastery
         // consumers use - not a prerequisite for it: a Priest with 0 Mastery still gets the full
         // base Echo. (Originally "x Mastery" as a bare fraction, which silently zeroed the talent
         // on any character without Mastery gear - playtest 2026-09-22.)
         int32 amount = CalculatePct(rawAmount, basePct);
         if (Player* player = caster->ToPlayer())
-            AddPct(amount, player->GetMasteryPercentage());
+            AddPct(amount, player->GetMasteryPercentage() * PRIEST_ECHO_OF_LIGHT_MASTERY_WEIGHT);
         if (amount <= 0)
             return;
 
