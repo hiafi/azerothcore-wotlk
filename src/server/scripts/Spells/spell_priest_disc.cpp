@@ -52,7 +52,11 @@ enum PriestDiscSpells
     SPELL_PRIEST_GREATER_HEAL                   = 2060,
     SPELL_PRIEST_FLASH_HEAL                     = 2061,
     SPELL_PRIEST_MASS_DISPEL                    = 32375,
-    SPELL_PRIEST_PENANCE_HEAL_BOLT              = 47757,
+    // 47757 is the outer Penance bolt spell cast by spell_pri_penance::HandleDummy - it only
+    // triggers 47750, the spell that actually carries EffectHeal and is what proc/hit hooks see
+    // (docs/bugs-and-fixes.md "A hardcoded spell-id allowlist keyed on a channeled ability's bolt
+    // spell never matches"; same fix PriestMechanics.cpp already applies).
+    SPELL_PRIEST_PENANCE_HEAL_BOLT              = 47750,
 
     // Talent rank spell ids (DISC.md's "Rank spell ids" column).
     SPELL_PRIEST_MARTYRDOM_R1                   = 14531,    // (1,2)
@@ -281,6 +285,12 @@ class spell_pri_absolution : public SpellScript
 
     void SnapshotDispellable(SpellMissInfo missInfo)
     {
+        // Reset unconditionally, before the miss check: Mass Dispel calls BeforeHit/AfterHit once
+        // per target through this same script instance, so a miss/immune target here must not
+        // leave a stale snapshot behind for RewardOnDispel to compare a *later* target against.
+        _snapshotTaken = false;
+        _chargesBefore = 0;
+
         if (missInfo != SPELL_MISS_NONE)
             return;
 
@@ -297,6 +307,11 @@ class spell_pri_absolution : public SpellScript
     {
         if (!_snapshotTaken)
             return;
+
+        // Consume the snapshot now - this target's AfterHit is the only thing that should ever
+        // read it, and clearing it here (both the grant and no-grant paths) keeps a re-entrant or
+        // out-of-order call from reusing it.
+        _snapshotTaken = false;
 
         Player* caster = GetCaster() ? GetCaster()->ToPlayer() : nullptr;
         Unit* target = GetHitUnit();

@@ -2521,8 +2521,9 @@ empowered_healing_33162 = spell(
 # Priest Discipline rework (docs/reworks/priest-disc-rework.md (3,0)): Absolution's old "reduces the
 # mana cost of your dispel spells" SpellMod is cut entirely (its dispel-cost niche was rolled into
 # the baseline Dispel Magic change) and replaced by a single SPELL_AURA_DUMMY carrying the tuned
-# crit percentage. spell_pri_absolution (registered on Dispel Magic 527 and Mass Dispel 32375) reads
-# it through the marker-aura-by-icon idiom - GetDummyAuraEffect(SPELLFAMILY_PRIEST, 2212, EFFECT_0),
+# crit percentage. spell_pri_absolution (registered on Dispel Magic 527, and on Mass Dispel's two
+# effects 32375/32592 - the friendly and hostile purge halves) reads it through the marker-aura-by-
+# icon idiom - GetDummyAuraEffect(SPELLFAMILY_PRIEST, 2212, EFFECT_0),
 # icon 2212 (Spell_Holy_Absolution) being unique to these three rows inside the priest family - and
 # casts absolution_buff_200153 with the amount as BP0, on its own 30 s cooldown.
 _ABSOLUTION_NOTE = (
@@ -4955,7 +4956,7 @@ renewed_hope_63944 = spell(
     range_yards=0.0,
     duration_ms=30000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-2, implicit_target_a=56, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, radius_yards=100.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=-2, implicit_target_a=21, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN),
     ],
     spell_icon_id=329,
     notes=(
@@ -4969,9 +4970,15 @@ renewed_hope_63944 = spell(
         '-3%/60s that matched neither the doc\'s 1/2% nor 30 sec). Rank 2 gets its own row, '
         'renewed_hope_target_debuff_200168, since one shared buff spell cannot express two '
         'different percentages - see 57472 (rank 2) for why its trigger_spell points there instead '
-        'of here.'
+        'of here. Review fix (disc-review-fixes, 2026-09-21): implicit_target_a was 56 '
+        '(TARGET_UNIT_CASTER_AREA_RAID, radius 100) - a leftover from the pulled-data row - which '
+        'buffed the whole raid on every Power Word: Shield cast regardless of Renewed Hope, making '
+        'both this spell and the hand-applied cast on Greater PW:S extra targets '
+        '(spell_pri_power_word_shield::HandleGreaterShield) pointless. 21 (TARGET_UNIT_TARGET_ALLY) '
+        'matches the design doc ("Your Power Word: Shield target takes...reduced damage") and lets '
+        '57470/57472\'s own PROC_TRIGGER_SPELL apply it to just the shield target.'
     ),
-    raw_overrides={'AttributesEx2': 4, 'AttributesEx6': 67108864, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 6144, 'EffectSpellClassMaskA_2': 65536, 'EffectSpellClassMaskB_1': 1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Increases the critical effect chance of your Flash Heal, Greater Heal and Penance (Heal) spells on targets afflicted by the Weakened Soul effect, and you have a chance to reduce all damage taken to all friendly party and raid targets when you cast Power Word: Shield.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Reduces all damage taken by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 6, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+    raw_overrides={'AttributesEx2': 4, 'AttributesEx6': 67108864, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 6144, 'EffectSpellClassMaskA_2': 65536, 'EffectSpellClassMaskB_1': 1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Increases the critical effect chance of your Flash Heal, Greater Heal and Penance (Heal) spells on targets afflicted by the Weakened Soul effect, and you have a chance to reduce damage taken by your Power Word: Shield target.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Reduces damage taken by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 6, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
 
@@ -4987,16 +4994,18 @@ renewed_hope_target_debuff_200168 = spell(
     range_yards=0.0,
     duration_ms=30000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=56, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, radius_yards=100.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=21, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN),
     ],
     spell_icon_id=329,
     notes=(
         'Renewed Hope (7,0) rank 2\'s own PW:S-target debuff - a clone of 63944 (rank 1\'s row, see '
         'its notes) at 2% (stored -3) instead of 1%, minted from DISC.md\'s spare 200168-200171 '
         "block since a single shared buff spell can't hold two different percentages. Bound as "
-        "57472's (rank 2) PROC_TRIGGER_SPELL trigger_spell in place of 63944."
+        "57472's (rank 2) PROC_TRIGGER_SPELL trigger_spell in place of 63944. Review fix "
+        "(disc-review-fixes, 2026-09-21): same implicit_target_a fix as 63944 (56/raid -> "
+        "21/TARGET_UNIT_TARGET_ALLY) - see that row's notes for why."
     ),
-    raw_overrides={'AttributesEx2': 4, 'AttributesEx6': 67108864, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 6144, 'EffectSpellClassMaskA_2': 65536, 'EffectSpellClassMaskB_1': 1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Increases the critical effect chance of your Flash Heal, Greater Heal and Penance (Heal) spells on targets afflicted by the Weakened Soul effect, and you have a chance to reduce all damage taken to all friendly party and raid targets when you cast Power Word: Shield.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Reduces all damage taken by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 6, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+    raw_overrides={'AttributesEx2': 4, 'AttributesEx6': 67108864, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 6144, 'EffectSpellClassMaskA_2': 65536, 'EffectSpellClassMaskB_1': 1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Increases the critical effect chance of your Flash Heal, Greater Heal and Penance (Heal) spells on targets afflicted by the Weakened Soul effect, and you have a chance to reduce damage taken by your Power Word: Shield target.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Reduces damage taken by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 6, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
 

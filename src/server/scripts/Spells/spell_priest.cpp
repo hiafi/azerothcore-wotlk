@@ -90,7 +90,8 @@ enum PriestDiscSpells
     SPELL_PRIEST_GRACE_BUFF_R1                      = 200164,
     SPELL_PRIEST_GRACE_BUFF_R2                      = 200165,
     SPELL_PRIEST_GRACE_BUFF_R3                      = 47930,
-    SPELL_PRIEST_RENEWED_HOPE_BUFF                  = 63944,
+    SPELL_PRIEST_RENEWED_HOPE_BUFF                  = 63944,    // rank 1's PW:S-target debuff
+    SPELL_PRIEST_RENEWED_HOPE_BUFF_R2               = 200168,   // rank 2's own row (2% vs 1%)
     SPELL_PRIEST_RAPTURE_SELF_MANA                  = 47755,
     SPELL_PRIEST_RAPTURE_TARGET_MANA                = 63654,
     SPELL_PRIEST_RAPTURE_TARGET_RAGE                = 63653,
@@ -185,6 +186,18 @@ namespace
             return SPELL_PRIEST_GRACE_BUFF_R2;
         if (caster->HasAura(SPELL_PRIEST_GRACE_R1))
             return SPELL_PRIEST_GRACE_BUFF_R1;
+        return 0;
+    }
+
+    // Renewed Hope's own PW:S-target debuff: rank 2's row (200168, 2%) if known, else rank 1's
+    // (63944, 1%) - the two ranks can't share a row (see priest_trigger_spells.py's 200168 notes),
+    // same idiom as GetGraceBuffForCaster above.
+    uint32 GetRenewedHopeBuffForCaster(Unit const* caster)
+    {
+        if (caster->HasAura(SPELL_PRIEST_RENEWED_HOPE_R2))
+            return SPELL_PRIEST_RENEWED_HOPE_BUFF_R2;
+        if (caster->HasAura(SPELL_PRIEST_RENEWED_HOPE_R1))
+            return SPELL_PRIEST_RENEWED_HOPE_BUFF;
         return 0;
     }
 
@@ -416,7 +429,17 @@ class spell_pri_divine_aegis : public AuraScript
 
     bool CheckProc(ProcEventInfo& eventInfo)
     {
-        return eventInfo.GetProcTarget() && eventInfo.GetHealInfo();
+        if (!eventInfo.GetProcTarget() || !eventInfo.GetHealInfo())
+            return false;
+
+        // Empowered Penance's extra bolts (200160) already get Divine Aegis granted by hand, "as
+        // if it had crit" (HandleEmpoweredPenance below), regardless of whether the bolt actually
+        // crit. A real crit must not also trigger this stock proc, or a crit bolt shields twice.
+        SpellInfo const* procSpell = eventInfo.GetSpellInfo();
+        if (procSpell && procSpell->Id == SPELL_PRIEST_EMPOWERED_PENANCE_HEAL)
+            return false;
+
+        return true;
     }
 
     /*
@@ -1108,7 +1131,8 @@ class spell_pri_power_word_shield : public SpellScript
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_PRIEST_WEAKENED_SOUL, SPELL_PRIEST_GREATER_POWER_WORD_SHIELD,
-                                   SPELL_PRIEST_GREATER_POWER_WORD_SHIELD_READY, SPELL_PRIEST_RENEWED_HOPE_BUFF });
+                                   SPELL_PRIEST_GREATER_POWER_WORD_SHIELD_READY, SPELL_PRIEST_RENEWED_HOPE_BUFF,
+                                   SPELL_PRIEST_RENEWED_HOPE_BUFF_R2 });
     }
 
     SpellCastResult CheckCast()
@@ -1194,14 +1218,14 @@ class spell_pri_power_word_shield : public SpellScript
             return;
 
         uint32 graceBuff = GetGraceBuffForCaster(caster);
-        bool renewedHope = caster->HasAura(SPELL_PRIEST_RENEWED_HOPE_R1) || caster->HasAura(SPELL_PRIEST_RENEWED_HOPE_R2);
+        uint32 renewedHopeBuff = GetRenewedHopeBuffForCaster(caster);
 
         for (Unit* extraTarget : extraTargets)
         {
             caster->CastSpell(extraTarget, SPELL_PRIEST_GREATER_POWER_WORD_SHIELD, TRIGGERED_FULL_MASK);
 
-            if (renewedHope)
-                caster->CastSpell(extraTarget, SPELL_PRIEST_RENEWED_HOPE_BUFF, true);
+            if (renewedHopeBuff)
+                caster->CastSpell(extraTarget, renewedHopeBuff, true);
 
             if (graceBuff)
                 caster->CastSpell(extraTarget, graceBuff, true);

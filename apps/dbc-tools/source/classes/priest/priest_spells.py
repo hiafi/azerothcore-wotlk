@@ -1769,6 +1769,8 @@ spirit_shell_200166 = spell(
 # "-<id> = this and every rank" shorthand (source/classes/README.md).
 scripted_by(mind_blast_8092, 'spell_pri_inner_focus_mind_blast')   # (2,1) Inner Focus: Mind Blast slow
 scripted_by(dispel_magic_527, 'spell_pri_absolution')              # (3,0) Absolution
-scripted_by(mass_dispel_32375, 'spell_pri_absolution')             # (3,0) Absolution
+scripted_by(mass_dispel_32375, 'spell_pri_absolution')             # (3,0) Absolution - friendly half
+# 32592 (bare id) is 32375's own TRIGGER_SPELL effect - the hostile purge half, no source/ Spell object.
+scripted_by(32592, 'spell_pri_absolution')                         # (3,0) Absolution - hostile half
 scripted_by(flash_heal_2061, 'spell_pri_improved_flash_heal_capstone')   # (6,2) capstone
 scripted_by(power_infusion_10060, 'spell_pri_aspiration_power_infusion')  # (7,2) capstone
