@@ -44,6 +44,7 @@
 #include "Group.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
+#include "PriestMechanics.h"
 #include "SpellAuraEffects.h"
 #include "SpellMgr.h"
 #include "SpellScript.h"
@@ -655,6 +656,13 @@ class spell_pri_void_eruption : public SpellScript
 
         int32 duration = VOID_ERUPTION_VOIDFORM_BASE_DURATION_MS + int32(_hitCount) * VOID_ERUPTION_VOIDFORM_DURATION_PER_HIT_MS;
         caster->CastCustomSpell(SPELL_PRIEST_VOIDFORM, SPELLVALUE_AURA_DURATION, duration, caster, true);
+
+        // Shadow rework (Call of the Void, priest-rework.SHADOW.md "Scripts on stock spells"):
+        // "Generates 25 Madness... flat regardless" (design doc sec 4.3/"Void Eruption" note) - a
+        // no-op unless Call of the Void is talented (Priest::AddMadness's own guard), so this can
+        // fire unconditionally on every Void Eruption cast, Shadow-talented or not.
+        if (Player* player = caster->ToPlayer())
+            Priest::AddMadness(player, 25, Priest::MadnessSource::VoidEruption);
     }
 
     void Register() override

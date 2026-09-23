@@ -15,13 +15,14 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-// Custom: Hit is no longer a meaningful player stat - players always land white melee/ranged
-// auto-attacks against non-player targets (PvE only; PvP hit/miss is untouched). Expertise is
-// handled the same way: melee auto-attacks against non-player targets can no longer be dodged or
-// parried either (block is untouched - that's governed by the victim's block stat, not
-// expertise). Spell hit/dodge/parry chance vs. NPCs is handled separately in
-// Unit::MeleeSpellHitResult / Unit::MagicSpellHitResult (Unit.cpp), since no equivalent script
-// hook exists on those paths.
+// Custom: Hit is no longer a meaningful player stat - players and their minions always land white
+// melee/ranged auto-attacks against non-player targets (PvE only; PvP hit/miss is untouched).
+// Expertise is handled the same way: melee auto-attacks against non-player targets can no longer
+// be dodged or parried either (block is untouched - that's governed by the victim's block stat,
+// not expertise). Spell hit/dodge/parry chance vs. NPCs is handled separately in
+// Unit::MeleeSpellHitResult (Unit.cpp) and WorldObject::MagicSpellHitResult (Object.cpp - it was
+// moved out of Unit by the 20260920 upstream merge), since no equivalent script hook exists on
+// those paths.
 
 #include "ScriptMgr.h"
 #include "Unit.h"
@@ -36,7 +37,7 @@ public:
         int32& /*attackerWeaponSkill*/, int32& /*victimDefenseSkill*/, int32& /*crit_chance*/,
         int32& miss_chance, int32& dodge_chance, int32& parry_chance, int32& /*block_chance*/) override
     {
-        if (attacker->IsPlayer() && !victim->IsPlayer())
+        if (!victim->IsPlayer() && attacker->GetSpellModOwner())
         {
             miss_chance = 0;
             dodge_chance = 0;

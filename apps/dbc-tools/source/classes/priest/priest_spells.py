@@ -238,6 +238,9 @@ shadow_word_pain_589 = spell(
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1→level-60 slope (anchor rank 10894, rank 8); coefficient/cast_time_ms/mana_cost_pct from max rank (48125, rank 12); MaxLevel set to 80',
     raw_overrides={'AttributesEx2': 524288, 'AttributesEx4': 1048576, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s1 Shadow damage every $t1 seconds.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A word of darkness that causes $o1 Shadow damage over $d.', 'EffectBasePoints_2': -1, 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ShapeshiftMask': 134217728, 'SpellClassMask_1': 32768, 'SpellClassMask_3': 1024, 'SpellClassSet': 6, 'SpellLevel': 4, 'SpellVisualID_1': 71, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+# Priest Shadow rework (SHADOW.md "Scripts on stock spells"): row unchanged - OnEffectPeriodic
+# tentacle spawn roll (ignoring the shared ICD) while Surrender to Madness is active.
+scripted_by(shadow_word_pain_589, 'spell_pri_shadow_word_pain_surrender')
 
 
 prayer_of_healing_596 = spell(
@@ -569,6 +572,10 @@ devouring_plague_2944 = spell(
 # level 14 rather than leaving it stale. MoneyCost 1200 matches this trainer's own real level-14
 # rows (528/8122, both 1200c) rather than keeping the old level-20 price on the new lower level.
 trained_by(devouring_plague_2944, trainer_id=208, req_level=14, money_cost=1200)
+# Priest Shadow rework (SHADOW.md "Core hardcode migration owed by this pass" / PLAN §6.8):
+# Improved Devouring Plague's instant chunk (SpellAuras.cpp:1499, hardcoded OnEffectApply cast of
+# 63675) moves to a spell_pri_devouring_plague AuraScript bound directly to this stock spell.
+scripted_by(devouring_plague_2944, 'spell_pri_devouring_plague')
 
 
 heal_6063 = spell(
@@ -632,6 +639,10 @@ mind_blast_8092 = spell(
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 10); RealPointsPerLevel from rank1→level-60 slope (anchor rank 10947, rank 9); coefficient/cast_time_ms/mana_cost_pct from max rank (48127, rank 13); MaxLevel set to 80',
     raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 10, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the target for $s1 Shadow damage.', 'EffectBonusMultiplier_1': 0.42899999022483826, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftMask': 134217728, 'SpellClassMask_1': 8192, 'SpellClassSet': 6, 'SpellLevel': 10, 'SpellVisualID_1': 3057, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+# Priest Shadow rework (SHADOW.md "Scripts on stock spells"): row unchanged, one script class
+# handles all three Mind Blast hooks (Tentacles of Madness 3,0 spawn roll, Darkness 0,2's free-cast
+# consumption, Void-touched Mind 7,2's Voidform extension, Madness generation).
+scripted_by(mind_blast_8092, 'spell_pri_mind_blast_shadow')
 
 
 psychic_scream_8122 = spell(
@@ -1032,6 +1043,18 @@ shadow_word_death_32379 = spell(
 # own trained_by() comment above) - it was never actually trainable in this project until now.
 # MoneyCost 10000 matches this trainer's own real level-30 rows (596/976/605, all 10000c).
 trained_by(shadow_word_death_32379, trainer_id=208, req_level=30, money_cost=10000)
+# Priest Shadow rework (SHADOW.md "Scripts on stock spells"): row unchanged - Deathspeaker (4,1)'s
+# backlash-tentacle roll (subject to the shared ICD) and OnKill's kill-tentacle roll (Priest::OnKill,
+# no ICD) both live in spell_pri_shadow_word_death, which is already bound.
+#
+# NO scripted_by() here on purpose. data/sql/base/db_world/spell_script_names.sql already carries
+# (-32379, 'spell_pri_shadow_word_death') - the negative-ID "this spell and every rank in its
+# spell_ranks chain" form, and 32379 has a real 4-rank chain (32379/32996/48157/48158).
+# ObjectMgr::LoadSpellScriptNames expands that into _spellScriptsStore, which is a MULTIMAP: adding
+# a positive (32379, ...) row on top does not replace the base row, it registers the script a second
+# time for rank 1. Every hook then runs twice - doubled SW:D backlash damage and a doubled
+# Deathspeaker roll on every cast. scripted_by()'s own docstring covers the convention; 32379 is the
+# only stock spell this rework binds that already has a base row (verified against all ten).
 
 
 binding_heal_32546 = spell(
@@ -1255,6 +1278,10 @@ mind_flay_15407 = spell(
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope (anchor rank 18807, rank 6); coefficient/cast_time_ms/mana_cost_pct from max rank (48156, rank 9); MaxLevel set to 80',
     raw_overrides={'AttributesEx': 67125252, 'AttributesEx2': 524288, 'AttributesEx5': 134225920, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement speed slowed.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'ChannelInterruptFlags': 31756, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Assault the target's mind with Shadow energy, causing ${$m3*3} Shadow damage over $d and slowing their movement speed by $s2%.", 'EffectBonusMultiplier_3': 0.2709999978542328, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftMask': 134217728, 'SpellClassMask_3': 1088, 'SpellClassSet': 6, 'SpellLevel': 20, 'SpellVisualID_1': 12637, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+# Priest Shadow rework (SHADOW.md "Scripts on stock spells"): row unchanged - OnEffectPeriodic
+# generates 1 Madness/tick (3 during Surrender) and, while Surrender to Madness is active, rolls a
+# tentacle spawn on every tick ignoring the shared ICD.
+scripted_by(mind_flay_15407, 'spell_pri_mind_flay_madness')
 
 
 desperate_prayer_19236 = spell(
@@ -1448,9 +1475,16 @@ silence_15487 = spell(
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=6, apply_aura=AuraType.MOD_SILENCE),
     ],
     spell_icon_id=211,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx2': 524288, 'AttributesEx6': 10485760, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Silenced.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Silences the target, preventing them from casting spells for $d.  Non-player victim spellcasting is also interrupted for $32747d.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftMask': 134217728, 'SpellClassMask_2': 2101248, 'SpellClassSet': 6, 'SpellVisualID_1': 179},
+    notes='Priest Shadow rework (SHADOW.md "Baseline spell edits" / design doc §5): moved out of the '
+          'talent tree (541) into the base kit, trainer-taught at 30 like Shadow Word: Death '
+          '(BaseLevel/SpellLevel added below; see trained_by() call). No other data changes - the '
+          'stock SkillLineAbility row for skill 78 already exists.',
+    raw_overrides={'AttributesEx2': 524288, 'AttributesEx6': 10485760, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Silenced.', 'BaseLevel': 30, 'SpellLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Silences the target, preventing them from casting spells for $d.  Non-player victim spellcasting is also interrupted for $32747d.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftMask': 134217728, 'SpellClassMask_2': 2101248, 'SpellClassSet': 6, 'SpellVisualID_1': 179},
 )
+# Trainer-taught at 30, same TrainerId/cost curve as Shadow Word: Death's own level-30 row
+# (shadow_word_death_32379's trained_by() above: MoneyCost 10000 matches trainer 208's real
+# level-30 rows).
+trained_by(silence_15487, trainer_id=208, req_level=30, money_cost=10000)
 
 
 pain_suppression_33206 = spell(
@@ -1715,8 +1749,11 @@ void_eruption_200139 = spell(
     ],
     spell_icon_id=90104,
     notes='docs/reworks/priest-new-spells.md: "Releases an explosive blast of pure void energy, causing Shadow damage to up to 10 enemies within 10 yards of your target. The power drawn from the Void increases your periodic Shadow damage by 10% for 10 sec, with the duration increased by 0.5 sec for each enemy hit. While in Shadowform this spell also applies Shadow Word: Pain to all enemies hit." Baseline behavior only this pass, per the user\'s explicit scope call - Shadow spec\'s "Generates 25 Madness" (priest-shadow-rework.md) is deferred to whenever the Shadow resource system itself gets built. Effect 0: SCHOOL_DAMAGE, dest-area-enemy (implicit_target_a=16, matches Frozen Orb Pulse\'s own dest-area-enemy target), 10 yd radius; base_points=299 (stored -1 convention, ~300 damage - the design doc gives no explicit number, this is a first-pass placeholder in line with other level-40 Priest AoE damage, flagged as playtest-tunable). The "up to 10 enemies" cap is enforced in spell_pri_void_eruption (spell_priest_new.cpp) via OnObjectAreaTargetSelect trimming the hit list, not a DBC field. Effect 1: TRIGGER_SPELL, self, applying void_eruption_buff_200140 ("Voidform", priest_trigger_spells.py) - see that spell\'s own notes for the periodic-Shadow-damage-%-boost hook (PriestMechanics.h/.cpp) and the duration-extension/Shadow-Word:-Pain-application logic (both spell_pri_void_eruption).',
-    raw_overrides={'BaseLevel': 40, 'SpellLevel': 40, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Releases an explosive blast of pure void energy, causing Shadow damage to up to 10 enemies within 10 yards of your target.  The power drawn from the Void increases your periodic Shadow damage by 10% for 10 sec, with the duration increased by 0.5 sec for each enemy hit.  While in Shadowform this spell also applies Shadow Word: Pain to all enemies hit.', 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 90015, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'SpellClassMask_3': _masks.VOID_ERUPTION},
+    raw_overrides={'BaseLevel': 40, 'SpellLevel': 40, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Releases an explosive blast of pure void energy, causing Shadow damage to up to 10 enemies within 10 yards of your target.  The power drawn from the Void increases your periodic Shadow damage by 10% for 10 sec, with the duration increased by 0.5 sec for each enemy hit.  While in Shadowform this spell also applies Shadow Word: Pain to all enemies hit.  Generates 12 Madness.', 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 90015, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'SpellClassMask_3': _masks.VOID_ERUPTION},
 )
+# Priest Shadow rework (SHADOW.md "Baseline spell edits"): tooltip now states "Generates 12
+# Madness" - visible units of the internal 25 (PLAN §1's display transform, visible=floor(internal/2)).
+# The actual AddMadness(25, VoidEruption) call is WP-B's (spell_pri_void_eruption AfterCast).
 scripted_by(void_eruption_200139, 'spell_pri_void_eruption')
 skill_line_ability(id=30416, skill_line=78, spell_id=void_eruption_200139.id, class_mask=16)  # Shadow
 # See angelic_feather_200130's trained_by() comment for the TrainerId 208 rationale. MoneyCost
@@ -1950,3 +1987,70 @@ scripted_by(circle_of_healing_34861, 'spell_pri_holy_word_engine')
 scripted_by(renew_139, 'spell_pri_holy_word_engine')
 scripted_by(smite_585, 'spell_pri_holy_word_engine')
 scripted_by(holy_fire_14914, 'spell_pri_holy_word_engine')
+
+
+# --- Priest Shadow rework: player-castable new spells (SHADOW.md's "ID map") ---------------------
+# Call of the Void (200248) and Surrender to Madness (200269) both have a real cast_time_ms/
+# cooldown_ms and aren't marked passive, so looks_player_castable() would hard-error without
+# player_castable=True on their granted_by_talent() calls (priest_talents.py) - see
+# source/classes/README.md.
+
+call_of_the_void_200248 = spell(
+    id=200248,
+    name='Call of the Void',
+    school=School.SHADOW,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=60000,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.DUMMY, implicit_target_a=1),
+    ],
+    spell_icon_id=90104,
+    notes='Priest Shadow rework (SHADOW.md (4,0) / ID map): NEW talent-granted active, repurposes '
+          '542 (was Improved Psychic Scream at 2,0). Instant, 60 s cooldown, no cost, self. eff1 is a '
+          'real (non-aura) SPELL_EFFECT_DUMMY - script-driven entirely by spell_pri_call_of_the_void '
+          "(WP-B: CheckCast locks it out while Surrender to Madness (200269) is up; OnCast consumes "
+          'all Madness and casts the buff, 200249, with BP0 = consumed/2). dword3 bit 27 '
+          '(_masks.CALL_OF_THE_VOID) is its own family-flag identity. SkillLineAbility 30422 is '
+          "derived automatically by granted_by_talent's player_castable=True (priest_talents.py) - "
+          "no separate skill_line_ability() call needed. Reuses Void Eruption's mined icon (90104) "
+          'as a stand-in pending dedicated icon mining (follow-up pass, per PLAN §7 runbook).',
+    raw_overrides={'BaseLevel': 40, 'SpellLevel': 40, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "You generate Madness, up to 250. Your Mind Flay damage and your Tentacles of Madness' Mind Flay damage generate Madness, and your Mind Blast generates more. Consume all Madness, increasing the damage of your Tentacles of Madness by 1% per Madness consumed for 15 sec.", 'EquippedItemClass': -1, 'InterruptFlags': 0, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellClassMask_3': _masks.CALL_OF_THE_VOID},
+)
+scripted_by(call_of_the_void_200248, 'spell_pri_call_of_the_void')
+
+
+surrender_to_madness_200269 = spell(
+    id=200269,
+    name='Surrender to Madness',
+    school=School.SHADOW,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=180000,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=120000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=1000),
+        Effect(type=EffectType.DUMMY, implicit_target_a=1),
+    ],
+    spell_icon_id=90104,
+    notes='Priest Shadow rework (SHADOW.md (10,1) / ID map): NEW talent, minted id 60025 - '
+          '**no `depends_on`** (PLAN §1/SHADOW.md top-of-file: overrides the design doc\'s own '
+          '"real prerequisite arrow" note and design doc §4.5 - a 6-tier diagonal arrow from Call '
+          'of the Void (4,0) cannot render in TalentFrame_DrawLines; Surrender\'s own CheckCast gate '
+          '(GetMadness()==0 -> fail) already makes it useless without Call of the Void). Instant, '
+          '180 s cooldown, self, 120 s duration (spell_pri_surrender_to_madness ends it early once '
+          'Madness reaches 0 or combat drops). eff1 PERIODIC_DUMMY (226), 1 s amplitude - drives the '
+          "drain-per-second OnPeriodic tick. eff2 is a real (non-aura) SPELL_EFFECT_DUMMY, unused by "
+          'the script directly (declared per the ID map\'s effect shape). dword3 bit 28 '
+          '(_masks.SURRENDER) is its own family-flag identity. SkillLineAbility 30423 is derived '
+          "automatically by granted_by_talent's player_castable=True (priest_talents.py). Reuses "
+          "Void Eruption's mined icon (90104) as a stand-in pending dedicated icon mining.",
+    raw_overrides={'BaseLevel': 50, 'SpellLevel': 50, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You surrender to the voices. Your Madness drains at 6.5 per second, increasing by 0.5 per second each second, and can no longer be spent. Your own Mind Flay and Mind Blast generate triple Madness. While active, your Tentacles of Madness do not expire, and every Shadow Word: Pain and Mind Flay damage event summons one, ignoring the shared cooldown. When your Madness reaches 0, Surrender ends and your Tentacles of Madness are destroyed. If no enemies remain in combat with you or your party, Surrender ends immediately and you do not suffer Sundered Mind.', 'EquippedItemClass': -1, 'InterruptFlags': 0, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellClassMask_3': _masks.SURRENDER},
+)
+scripted_by(surrender_to_madness_200269, 'spell_pri_surrender_to_madness')

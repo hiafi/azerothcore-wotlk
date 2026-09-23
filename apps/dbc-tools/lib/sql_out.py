@@ -78,6 +78,42 @@ def render_generic_table_block(
     )
 
 
+def stable_key_sort(keys):
+    """Deterministic ordering for key tuples that may mix numbers, strings and
+    `None` within a column (a migration that omitted a column normalises to
+    `None`), which plain `sorted()` raises a TypeError on. Numbers keep
+    numeric order; the type rank only separates otherwise-incomparable
+    values."""
+    def rank(value):
+        if value is None:
+            return (0, 0.0, "")
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return (1, float(value), "")
+        return (2, 0.0, str(value))
+    return sorted(keys, key=lambda key: tuple(rank(v) for v in key))
+
+
+def render_delete_only_block(
+    table_name: str, key_columns: tuple[str, ...], keys: list[tuple], comment: str = ""
+) -> str:
+    """A bare DELETE for `keys`, with no INSERT behind it - the prune pass's
+    output (`spell_tables.render_prune_blocks`), where the whole point is that
+    nothing replaces the rows. `keys` are key tuples in `key_columns` order,
+    as `spell_tables.SpellTableIndex` stores them (so ints arrive as floats
+    from `_normalise`; whole ones are written back out as ints so the SQL
+    reads `17322`, not `17322.0`). Returns `""` for empty `keys`."""
+    if not keys:
+        return ""
+    def _part(value):
+        if isinstance(value, float) and value.is_integer():
+            value = int(value)
+        return _sql_literal(value)
+    key_cols_sql = ", ".join(f"`{c}`" for c in key_columns)
+    key_tuples = ", ".join("(" + ", ".join(_part(v) for v in key) + ")" for key in stable_key_sort(keys))
+    sql = f"DELETE FROM `{table_name}` WHERE ({key_cols_sql}) IN ({key_tuples});"
+    return f"{comment}\n{sql}" if comment else sql
+
+
 def emit_pending_sql(
     output_path,
     blocks: list[tuple[DbcTable, dict, list[dict], list[int]]],

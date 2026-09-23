@@ -3457,11 +3457,13 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo
 
     uint32 roll = urand (0, 10000);
 
-    // Custom: Hit/Expertise are no longer meaningful player stats - players always land
-    // melee-classed spells against non-player targets and can't be dodged/parried doing so
-    // (PvE only; block/resist below are untouched - block is governed by the victim's block
-    // stat, not expertise).
-    bool const pveAlwaysHit = IsPlayer() && !victim->IsPlayer();
+    // Custom: Hit/Expertise are no longer meaningful player stats - players and their minions
+    // always land melee-classed spells against non-player targets and can't be dodged/parried
+    // doing so (PvE only; block/resist below are untouched - block is governed by the victim's
+    // block stat, not expertise). GetSpellModOwner() returns the unit itself for a Player and the
+    // owning Player for a pet/guardian, matching WorldObject::MagicSpellHitResult's companion
+    // check.
+    bool const pveAlwaysHit = !victim->IsPlayer() && GetSpellModOwner();
 
     uint32 missChance = pveAlwaysHit ? 0 : uint32(MeleeSpellMissChance(victim, attType, skillDiff, spellInfo->Id) * 100.0f);
     // Roll miss
@@ -8418,13 +8420,9 @@ float Unit::SpellPctDamageModsDone(Unit* victim, SpellInfo const* spellProto, Da
                         AddPct(DoneTotalMod, (*i)->GetSpellInfo()->GetRank() * 2.0f);
                     break;
                 }
-            // Twisted Faith
-            case 7377:
-                {
-                    if (victim->GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_PRIEST, 0x8000, 0, 0, GetGUID()))
-                        AddPct(DoneTotalMod, (*i)->GetAmount());
-                    break;
-                }
+            // Twisted Faith's Mind Blast half moved to Priest::ApplyDoneDamagePctMods
+            // (PriestMechanics.cpp, "Twisted Faith (9,2), Mind Blast half" - Shadow rework,
+            // priest-rework.PLAN.md sec 6.8/8). Its Mind Flay half already lived there.
             // Marked for Death
             case 7598:
             case 7599:
@@ -13956,6 +13954,10 @@ void Unit::Kill(Unit* killer, Unit* victim, bool durabilityLoss, WeaponAttackTyp
     // Frost Channeling's capstone - see MageMechanics.cpp for the full set of Mage-specific hooks
     // that don't fit a SpellScript/AuraScript.
     Mage::OnKill(killer, victim, spellProto);
+
+    // Deathspeaker's (Shadow 4,1) kill clause - see PriestMechanics.cpp for the full set of
+    // Priest-specific hooks that don't fit a SpellScript/AuraScript.
+    Priest::OnKill(killer, victim, spellProto);
 
     sScriptMgr->OnUnitDeath(victim, killer);
 }

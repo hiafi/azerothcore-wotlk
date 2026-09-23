@@ -242,5 +242,63 @@ class ParseCreateTableColumnsTest(unittest.TestCase):
                 sql_dump.parse_create_table_columns(path, "nonexistent")
 
 
+class ReadTableStatementsTest(unittest.TestCase):
+    """`read_table_statements` - the ordered INSERT/DELETE reader the prune
+    pass replays (`lib/spell_tables.py`)."""
+
+    def _events(self, sql: str, table="spell_script_names", columns=("spell_id", "ScriptName")):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "x.sql"
+            path.write_text(sql, encoding="utf-8")
+            return list(sql_dump.read_table_statements(path, table, columns))
+
+    def test_reads_insert_and_composite_delete_in_file_order(self):
+        events = self._events(
+            "INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (1, 'a'), (2, 'b');\n"
+            "DELETE FROM `spell_script_names` WHERE (`spell_id`, `ScriptName`) IN ((1, 'a'), (2, 'b'));\n"
+        )
+        self.assertEqual([k for k, _ in events], ["insert", "delete"])
+        self.assertEqual(events[0][1], [{"spell_id": 1, "ScriptName": "a"},
+                                        {"spell_id": 2, "ScriptName": "b"}])
+        self.assertEqual(events[1][1], (("spell_id", "ScriptName"), [(1, "a"), (2, "b")]))
+
+    def test_order_is_file_order_not_statement_type(self):
+        events = self._events(
+            "DELETE FROM `spell_script_names` WHERE (`spell_id`, `ScriptName`) IN ((9, 'z'));\n"
+            "INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (9, 'z');\n"
+        )
+        self.assertEqual([k for k, _ in events], ["delete", "insert"])
+
+    def test_single_column_delete_shapes_normalise_to_one_tuple_form(self):
+        for sql, expected in (
+            ("DELETE FROM `spell_proc` WHERE `SpellId` IN (7, 8);", [(7,), (8,)]),
+            ("DELETE FROM `spell_proc` WHERE `SpellId` = 7;", [(7,)]),
+            ("DELETE FROM `spell_proc` WHERE (`SpellId`) IN ((7));", [(7,)]),
+        ):
+            events = self._events(sql, table="spell_proc", columns=("SpellId",))
+            self.assertEqual(len(events), 1, sql)
+            self.assertEqual(events[0][0], "delete", sql)
+            self.assertEqual(events[0][1][1], expected, sql)
+
+    def test_other_tables_are_ignored(self):
+        events = self._events(
+            "INSERT INTO `other_table` (`a`) VALUES (1);\n"
+            "DELETE FROM `other_table` WHERE `a` = 1;\n"
+            "INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (3, 'c');\n"
+        )
+        self.assertEqual([k for k, _ in events], ["insert"])
+        self.assertEqual(events[0][1], [{"spell_id": 3, "ScriptName": "c"}])
+
+    def test_unrecognized_delete_shape_is_flagged_not_silently_skipped(self):
+        events = self._events("DELETE FROM `spell_script_names` WHERE `ScriptName` LIKE 'x%';\n")
+        self.assertEqual([k for k, _ in events], ["delete_unparsed"])
+
+    def test_negative_and_quoted_values_round_trip(self):
+        events = self._events(
+            "DELETE FROM `spell_proc` WHERE (`SpellId`) IN ((-47516), (-14531));",
+            table="spell_proc", columns=("SpellId",))
+        self.assertEqual(events[0][1][1], [(-47516,), (-14531,)])
+
+
 if __name__ == "__main__":
     unittest.main()

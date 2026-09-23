@@ -24,6 +24,26 @@ from .reuse import ReuseContext
 _ALL_LOCALES = dbcfmt.LOCALE_SUFFIXES
 
 
+def _apply_raw_overrides(row: dict, entry: dict, table) -> None:
+    """Applies the row's `raw_overrides` escape hatch, rejecting any key that
+    is not a real column of `table`.
+
+    Without this check a misspelled key is simply added to the dict and then
+    dropped: both sql_out.py and dbcfile.py iterate `table.columns` and never
+    look at extra keys, so the intended value silently never ships and the
+    column keeps its empty_row default. That is exactly how five Priest rows
+    carried `StackAmount` (not a Spell.dbc column - the stack column is
+    `CumulativeAura`) and shipped with no visible buff stack count."""
+    overrides = entry.get("raw_overrides") or {}
+    unknown = [key for key in overrides if key not in table.columns]
+    if unknown:
+        raise KeyError(
+            f"{table.name} row {entry.get('id', '?')}: raw_overrides has "
+            f"no such column(s): {', '.join(sorted(unknown))}"
+        )
+    row.update(overrides)
+
+
 def _set_all_locales(row: dict, base_column: str, text: str) -> None:
     """Mirrors upstream convention (see spell_dbc.sql): only enUS is set,
     every other locale column stays blank."""
@@ -73,7 +93,7 @@ def build_spell_row(entry: dict, reuse: ReuseContext) -> dict:
             effect.get("radius_yards", default_radius)
         )
 
-    row.update(entry.get("raw_overrides") or {})
+    _apply_raw_overrides(row, entry, dbcfmt.SPELL)
     return row
 
 
@@ -90,7 +110,7 @@ def build_talent_row(entry: dict) -> dict:
     row["PrereqTalent_1"] = depends.get("talent_id", 0)
     row["PrereqRank_1"] = depends.get("rank", 0)
     row["Flags"] = entry.get("flags", 0) or 0
-    row.update(entry.get("raw_overrides") or {})
+    _apply_raw_overrides(row, entry, dbcfmt.TALENT)
     return row
 
 
@@ -102,7 +122,7 @@ def build_talenttab_row(entry: dict) -> dict:
     row["ClassMask"] = entry.get("class_mask", 0) or 0
     row["PetTalentMask"] = entry.get("pet_talent_mask", 0) or 0
     row["OrderIndex"] = entry.get("order_index", 0) or 0
-    row.update(entry.get("raw_overrides") or {})
+    _apply_raw_overrides(row, entry, dbcfmt.TALENTTAB)
     return row
 
 
@@ -127,5 +147,5 @@ def build_skilllineability_row(entry: dict) -> dict:
     row["ClassMask"] = entry.get("class_mask", 0) or 0
     row["RaceMask"] = entry.get("race_mask", 0) or 0
     row["MinSkillLineRank"] = entry.get("min_skill_line_rank", 1) or 0
-    row.update(entry.get("raw_overrides") or {})
+    _apply_raw_overrides(row, entry, dbcfmt.SKILLLINEABILITY)
     return row

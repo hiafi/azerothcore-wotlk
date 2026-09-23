@@ -23,6 +23,12 @@ MIND_BLAST = 8192
 SWP = 32768
 HOLY_FIRE = 1048576
 HOLY_NOVA_DMG = 4194304
+# 58381, the helper spell Mind Flay's PERIODIC_TRIGGER_SPELL_WITH_VALUE effect fires once per tick -
+# the spell that actually deals Mind Flay damage, and so the SpellInfo any "Mind Flay damage" proc
+# or SpellMod is matched against. Same "the tick is a different row from the button" shape as
+# MIND_SEAR_TICK below. 15407 itself carries only the dword-3 MIND_FLAY bit, so a modifier scoped to
+# dword 3 alone never reaches the player's own Mind Flay damage.
+MIND_FLAY_TICK = 8388608
 DESPERATE_PRAYER = 16777216
 DEVOURING_PLAGUE = 33554432
 HOLY_NOVA_HEAL = 134217728

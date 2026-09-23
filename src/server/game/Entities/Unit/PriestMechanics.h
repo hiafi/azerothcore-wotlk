@@ -19,9 +19,11 @@
 #define __PRIESTMECHANICS_H
 
 #include "Define.h"
+#include "ObjectGuid.h"
 #include "SharedDefines.h"
 
 class Aura;
+class Player;
 class SpellInfo;
 class Unit;
 enum DamageEffectType : uint8;
@@ -102,6 +104,138 @@ namespace Priest
     // `ms` is the requested extension, capped so total duration never exceeds base + 6000ms (PLAN's
     // "Total duration may never exceed 21 seconds from application", base Renew being 15 s).
     void ExtendRenewDuration(Aura* renew, int32 ms);
+
+    /*
+     * Shadow rework (docs/reworks/priest-shadow-rework.md,
+     * .agents/plans/priest-rework/priest-rework.SHADOW.md "PriestMechanics additions") - the
+     * Madness resource, Tentacle of Madness spawn/despawn bookkeeping and the Deathspeaker kill
+     * clause. This is the first player-keyed state this file carries - PriestMechanics.cpp keeps
+     * it in file-scope `unordered_map<ObjectGuid, ...>`s in an anonymous namespace, the same
+     * unsynchronized-access shape `Unit.h`'s own `extraAttacksTargets` member already uses
+     * (`std::unordered_map<ObjectGuid, uint32>`), safe here for the same reason: every call site
+     * below fires from world update, which is single-threaded in this fork (map/instance updates
+     * run on dedicated update threads, but never concurrently with each other's own player/unit
+     * state - see `Map::Update`'s caller in `MapUpdater`/`World::Update`).
+     */
+
+    // Madness source, spec units (SHADOW.md "PriestMechanics additions"): 1 per player Mind Flay
+    // tick, 1 per tentacle Mind Flay tick (never x3, even during Surrender - design doc sec 4.1
+    // "the unit's own behaviour ... unaffected by the exclusion list"), 5 per Mind Blast cast, 25
+    // flat per Void Eruption cast. PlayerMindFlay/MindBlast are x3'd by AddMadness itself while
+    // Surrender to Madness (200269) is active (design doc sec 4.5); VoidEruption is never x3'd
+    // (design doc sec "Void Eruption": "Madness generation is a flat 25 regardless").
+    enum class MadnessSource : uint8
+    {
+        PlayerMindFlay,
+        TentacleMindFlay,
+        MindBlast,
+        VoidEruption
+    };
+
+    // What summoned/attempted to summon a Tentacle of Madness - TrySummonTentacle uses this to
+    // decide ICD/bypass rules (SHADOW.md "Spawn budget / ICD rules"): ShadowWordPain/MindFlay/
+    // Backlash share a 3 s ICD (bypassed while Surrender to Madness is up, for ShadowWordPain and
+    // MindFlay only); MindBlast and Kill always bypass it. The max-5-live-tentacles cap applies to
+    // every trigger unconditionally.
+    enum class TentacleTrigger : uint8
+    {
+        ShadowWordPain,
+        MindFlay,
+        Backlash,
+        MindBlast,
+        Kill
+    };
+
+    // Is Call of the Void known at all - AddMadness is a no-op unless this is true (SHADOW.md:
+    // "All Madness calls are no-ops unless Priest::HasMadness(player)"), so every generation call
+    // site can fire unconditionally without its own guard.
+    bool HasMadness(Player const* player);
+
+    // Adds Madness (no-op if !HasMadness or amount <= 0), clamping to the raised internal cap
+    // (priest-rework.PLAN.md sec 1: 500, not the design doc's 450 - kept in spec units so the
+    // visible/250-stack math under WotLK's uint8 aura-stack ceiling stays clean at floor(v/2)) and
+    // refreshing the visible Madness aura (200271)'s stack count and its full 30 s duration -
+    // refresh-on-gain, not per-stack independent expiry (design doc sec 4.3: per-stack expiry caps
+    // effective Madness far below the real maximum).
+    void AddMadness(Player* player, int32 amount, MadnessSource source);
+
+    // Current internal Madness value (spec units, 0..500) for `player`, or 0 if untracked.
+    int32 GetMadness(Player const* player);
+
+    // Consumes up to `amount` (or all of it when amount < 0), clamped to what's available, and
+    // returns how much was actually consumed. Drops the visible Madness aura (200271) once the
+    // value reaches 0 - this is a *manual* removal (AURA_REMOVE_BY_DEFAULT), not the aura's own
+    // 30 s expiry, so it deliberately does not run through spell_pri_madness's OnRemove
+    // (expire-only) hook; the internal value is already authoritative here, ClearMadness is only
+    // for the natural-expiry path.
+    int32 ConsumeMadness(Player* player, int32 amount);
+
+    // spell_pri_madness's OnRemove erases the tracked value for `playerGuid`. Runs on *every*
+    // removal mode, not just the natural 30 s expiry: death (`RemoveAllAurasOnDeath`, removal mode
+    // AURA_REMOVE_BY_DEFAULT) and a dispel would otherwise leave an invisible internal value behind
+    // with no aura to show it. Harmless on the ConsumeMadness path, which erases the entry itself
+    // before removing the aura, so this is only ever a second erase of an absent key.
+    void ClearMadness(ObjectGuid playerGuid);
+
+    // Drops every piece of per-player Shadow state this file keeps for `playerGuid` - the Madness
+    // value plus the two spawn-bookkeeping timestamps (shared tentacle ICD, last Mind Blast spawn),
+    // neither of which any aura's removal covers and so would otherwise grow without bound over a
+    // long uptime. Called from the OnPlayerLogout PlayerScript in spell_priest_shadow.cpp.
+    void ClearShadowPlayerState(ObjectGuid playerGuid);
+
+    // Attempts to summon a Tentacle of Madness (200245) for `player` via `trigger`. Enforces the
+    // max-5-live cap (counts `player->m_Controlled` for creature entry 300102, the same public
+    // `Unit::ControlSet` idiom `spell_dk.cpp`/`spell_hunter.cpp`/`spell_item.cpp` already use to
+    // find a player's own guardians) and the shared 3 s ICD for ShadowWordPain/MindFlay/Backlash
+    // (bypassed for those two triggers while Surrender to Madness (200269) is active - SHADOW.md
+    // "Spawn budget / ICD rules"; MindBlast and Kill always bypass it). On an actual summon for the
+    // MindBlast trigger, stamps the last-Mind-Blast-spawn timestamp IsMindBlastTentacleGuaranteed
+    // reads (see that function's own comment for why the timestamp lives here rather than in the
+    // calling script). Returns whether a tentacle was actually summoned.
+    bool TrySummonTentacle(Player* player, TentacleTrigger trigger);
+
+    // Small addition beyond SHADOW.md's literal PriestMechanics code block, needed to keep the
+    // Mind Blast 25 s "guaranteed if none summoned in that window" timestamp (SHADOW.md talent
+    // table 3,0 / design doc sec 4.2) fully encapsulated in this file's own state instead of
+    // leaking a second copy of it into spell_priest_shadow.cpp: `spell_pri_mind_blast_shadow` needs
+    // to read "has it been >= 25 s" to decide whether to force the roll, but the timestamp itself
+    // is stamped by TrySummonTentacle on an actual summon (see that function's comment) - so the
+    // read side needs its own accessor. Does not mutate anything.
+    bool IsMindBlastTentacleGuaranteed(Player const* player);
+
+    // Despawns every one of `player`'s live Tentacles of Madness (Surrender to Madness ending,
+    // either exit path - design doc sec 4.5 "your Tentacles of Madness are destroyed").
+    void DespawnTentacles(Player* player);
+
+    // Per-tentacle stat snapshot, captured once at summon (design doc sec 4.1 "Reads spell power,
+    // haste, crit, Mastery and Versatility once at summon and holds them for its full life").
+    // Native stats with a real AuraType (spell power, crit, haste) are snapshotted by
+    // spell_pri_tentacle_scaling's own DoEffectCalcAmount handlers on aura 200272 (same shape as
+    // spell_pri_shadowfiend_scaling) and need no entry here; Mastery/Versatility are this server's
+    // own custom stats (priest-rework.PLAN.md sec 3.8/6) with no native per-Unit field or AuraType
+    // to carry them on a Guardian, so they're the only two fields this struct needs.
+    struct TentacleSnapshot
+    {
+        float mastery = 0.0f;
+        float versatility = 0.0f;
+    };
+
+    // Read side, called from the tentacle's own damage path in ApplyDoneDamagePctMods.
+    TentacleSnapshot const* GetTentacleSnapshot(Unit const* tentacle);
+
+    // Write side - companion to GetTentacleSnapshot (SHADOW.md declares the struct and the read
+    // accessor but the backing map obviously needs a way to be populated; called once from
+    // spell_pri_tentacle_scaling::OnEffectApply).
+    void SetTentacleSnapshot(ObjectGuid tentacleGuid, TentacleSnapshot const& snapshot);
+
+    // Cleanup companion, called from spell_pri_tentacle_scaling::OnEffectRemove so the backing map
+    // doesn't grow unboundedly over a long raid night as tentacles spawn and despawn.
+    void ClearTentacleSnapshot(ObjectGuid tentacleGuid);
+
+    // Deathspeaker's (4,1) kill clause (design doc sec 4.2/SHADOW.md talent table): a Shadow Word:
+    // Death kill rolls a separate, ICD-exempt Tentacle of Madness chance. Call site next to
+    // `Mage::OnKill` in `Unit::Kill` (`Unit.cpp` ~13958).
+    void OnKill(Unit* killer, Unit* victim, SpellInfo const* spellProto);
 }
 
 #endif

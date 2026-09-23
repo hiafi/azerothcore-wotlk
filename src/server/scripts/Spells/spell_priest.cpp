@@ -19,6 +19,7 @@
 #include "Group.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
+#include "PriestMechanics.h"
 #include "SpellAuraEffects.h"
 #include "SpellMgr.h"
 #include "SpellScript.h"
@@ -296,7 +297,11 @@ enum PriestSpellIcons
     PRIEST_ICON_ID_BORROWED_TIME                    = 2899,
     PRIEST_ICON_ID_EMPOWERED_RENEW_TALENT           = 3021,
     PRIEST_ICON_ID_PAIN_AND_SUFFERING               = 2874,
-    PRIEST_ICON_ID_BODY_AND_SOUL                    = 2218
+    PRIEST_ICON_ID_BODY_AND_SOUL                    = 2218,
+    // Improved Devouring Plague - stock icon, unchanged by the rework's data pass (matches the
+    // hardcode this migrates, SpellAuras.cpp's old `case SPELLFAMILY_PRIEST:` Devouring Plague
+    // block, which read it the same way).
+    PRIEST_ICON_ID_IMPROVED_DEVOURING_PLAGUE        = 3790
 };
 
 // Proc system triggered spells
@@ -316,6 +321,31 @@ enum PriestProcSpells
     // SPELL_PRIEST_BLESSED_RECOVERY_R1 (27813) removed - Blessed Recovery no longer triggers off
     // this rank spell after the Holy rework (see spell_pri_blessed_recovery, now rank-3-only).
 };
+
+/*
+ * Shadow rework (docs/reworks/priest-shadow-rework.md, priest-rework.SHADOW.md "ID map") - ids the
+ * reworked stock scripts below need. Talent entries are the *rank spell* ids, never talent_dbc ids
+ * (PLAN sec 3.10).
+ */
+enum PriestShadowSpells
+{
+    SPELL_PRIEST_DEVOURING_PLAGUE                   = 2944,
+
+    // Deathspeaker (4,1) rank ids.
+    SPELL_PRIEST_DEATHSPEAKER_R1                    = 200250,
+    SPELL_PRIEST_DEATHSPEAKER_R2                    = 200251,
+    SPELL_PRIEST_DEATHSPEAKER_R3                    = 200252,
+
+    SPELL_PRIEST_DEVOURING_PLAGUE_INSTANT_CHUNK     = 63675,
+    SPELL_PRIEST_DEVOURING_PLAGUE_SELF_HEAL         = 75999
+};
+
+// Vampiric Embrace (2,3) cap (SHADOW.md baseline edits / talent table): "Either heal cannot exceed
+// 5% of the maximum health of the caster" - re-read carefully (design doc sec 7 row 2,3 and sec
+// 4.1's own note): the tooltip's literal wording names only "the caster", so both the self-heal AND
+// the party-share heal are capped against the CASTER's own max health, not each recipient's own -
+// see spell_pri_vampiric_embrace::HandleProc's own comment for the full ambiguity note.
+constexpr float PRIEST_VAMPIRIC_EMBRACE_MAX_HEALTH_PCT = 5.0f;
 
 enum Mics
 {
@@ -1363,6 +1393,68 @@ class spell_pri_renew : public AuraScript
     }
 };
 
+/*
+ * -2944 - Devouring Plague
+ * Improved Devouring Plague's (0,1) instant chunk, migrated out of SpellAuras.cpp's old
+ * `case SPELLFAMILY_PRIEST:` hardcode block (Shadow rework, priest-rework.PLAN.md sec 6.8/8,
+ * priest-rework.SHADOW.md "Core hardcode migration owed by this pass"). Same idiom as
+ * spell_pri_renew::HandleApplyEffect above: OnEffectApply with
+ * AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK so a DP refresh (not just the first application) also
+ * deals its own chunk, matching the original `if (apply)`-without-onReapply-gate semantics this
+ * replaces (SpellAuras.cpp's `Aura::HandleAuraSpecificMods`, gated only by `if (apply)`).
+ *
+ * 75999 investigation (mandated before deciding to keep or cut the self-heal cast alongside the
+ * chunk): grepped docs/bugs-and-fixes.md and docs/dbc-build-pipeline.md for "75999" - no hits, so
+ * nothing documents it as dead or wrong. apps/dbc-tools/source/spells/npc.csv (WP-A's own pulled
+ * client data) carries a full "pulled from existing data" row for spell 75999: a real client spell
+ * literally named "Improved Devouring Plague", SPELL_EFFECT_HEAL (effect type 10), self-targeted,
+ * SpellIconID 3790 (the same icon as the talent), described as "...and when you cast Devouring
+ * Plague you instantly deal damage equal to a portion of its total periodic effect" - i.e. this is
+ * Blizzard's own live spell backing this exact self-heal, not an orphaned or broken id. Kept
+ * verbatim per the task's default ("preserve unless documented dead" - no such evidence found).
+ */
+class spell_pri_devouring_plague : public AuraScript
+{
+    PrepareAuraScript(spell_pri_devouring_plague);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_PRIEST_DEVOURING_PLAGUE_INSTANT_CHUNK, SPELL_PRIEST_DEVOURING_PLAGUE_SELF_HEAL });
+    }
+
+    void HandleApplyEffect(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetTarget();
+        if (!caster || !target)
+            return;
+
+        AuraEffect const* improvedDevouringPlague = caster->GetDummyAuraEffect(SPELLFAMILY_PRIEST,
+            PRIEST_ICON_ID_IMPROVED_DEVOURING_PLAGUE, EFFECT_1);
+        if (!improvedDevouringPlague)
+            return;
+
+        uint32 damage = aurEff->GetAmount();
+        damage = target->SpellDamageBonusTaken(caster, GetSpellInfo(), damage, DOT);
+
+        int32 basepoints0 = improvedDevouringPlague->GetAmount() * aurEff->GetTotalTicks() * int32(damage) / 100;
+        int32 heal = int32(CalculatePct(basepoints0, 15));
+
+        caster->CastCustomSpell(target, SPELL_PRIEST_DEVOURING_PLAGUE_INSTANT_CHUNK, &basepoints0, nullptr, nullptr, true, nullptr, aurEff);
+        caster->CastCustomSpell(caster, SPELL_PRIEST_DEVOURING_PLAGUE_SELF_HEAL, &heal, nullptr, nullptr, true, nullptr, aurEff);
+    }
+
+    void Register() override
+    {
+        // EFFECT_0 is SPELL_AURA_PERIODIC_LEECH (53), not PERIODIC_DAMAGE - verified against live
+        // acore_world.spell_dbc and apps/dbc-tools/source/classes/priest/priest_spells.py's
+        // devouring_plague_2944 (its single effect, "15% of damage caused ... heals the caster").
+        // The SpellAuras.cpp hardcode this replaces read GetEffect(0) with no aura-type filter, so
+        // it worked on a leech effect; a PERIODIC_DAMAGE binding here silently never fires.
+        OnEffectApply += AuraEffectApplyFn(spell_pri_devouring_plague::HandleApplyEffect, EFFECT_0, SPELL_AURA_PERIODIC_LEECH, AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK);
+    }
+};
+
 // -32379 - Shadow Word Death
 class spell_pri_shadow_word_death : public SpellScript
 {
@@ -1377,6 +1469,42 @@ class spell_pri_shadow_word_death : public SpellScript
             AddPct(damage, aurEff->GetAmount());
 
         GetCaster()->CastCustomSpell(GetCaster(), SPELL_PRIEST_SHADOW_WORD_DEATH, &damage, 0, 0, true);
+
+        // Deathspeaker (4,1) backlash clause: "When you take damage from your own Shadow Word:
+        // Death, you have a 15/30/45% chance to summon a Tentacle of Madness" (design doc sec 4.2 /
+        // SHADOW.md talent table 4,1). Rolls unconditionally on every cast - the backlash damage
+        // itself is dealt regardless of Pain and Suffering's reduction just above (amount
+        // irrelevant to the roll), and, per investigation below, regardless of whether the cast
+        // was lethal to the enemy target.
+        //
+        // SW:D backlash-vs-kill mutual-exclusivity finding: the design doc's own text ("Backlash
+        // and kill are mutually exclusive per cast by construction ... a kill produces no
+        // backlash") does not hold for this codebase's actual implementation. This `HandleDamage`
+        // is bound to `OnHit` (see Register() below), which fires for every successful hit on the
+        // enemy target - including a killing one - and unconditionally casts the backlash spell on
+        // the caster; nothing here (or anywhere else in this class) checks whether the target
+        // survived. `Priest::OnKill` (PriestMechanics.cpp, called from Unit::Kill) fires
+        // independently whenever this same cast kills the target. So a *lethal* Shadow Word: Death
+        // cast rolls BOTH the backlash chance here AND the kill chance in Priest::OnKill on the
+        // same cast - not mutually exclusive. No extra guard is added to force exclusivity (the
+        // task's instruction was to investigate and handle correctly, not to silently patch stock
+        // SW:D's backlash-on-kill behavior, which is unrelated pre-existing engine behavior outside
+        // this class's owned scope); both rolls remain independent, each still gated by their own
+        // ICD/no-ICD rule, and the max-5-live cap bounds the worst case of a double-summon.
+        if (Player* caster = GetCaster()->ToPlayer())
+        {
+            AuraEffect const* deathspeaker = nullptr;
+            for (uint32 rank : { SPELL_PRIEST_DEATHSPEAKER_R1, SPELL_PRIEST_DEATHSPEAKER_R2, SPELL_PRIEST_DEATHSPEAKER_R3 })
+                if ((deathspeaker = caster->GetAuraEffect(rank, EFFECT_1)) != nullptr)
+                    break;
+
+            if (deathspeaker)
+            {
+                float chance = float(deathspeaker->GetAmount()) * (1.0f + caster->GetProcChancePercentage() / 100.0f);
+                if (roll_chance_f(chance))
+                    Priest::TrySummonTentacle(caster, Priest::TentacleTrigger::Backlash);
+            }
+        }
     }
 
     void Register() override
@@ -1560,6 +1688,18 @@ class spell_pri_vampiric_embrace : public AuraScript
 
         int32 selfHeal = CalculatePct(static_cast<int32>(damageInfo->GetDamage()), aurEff->GetAmount());
         int32 partyHeal = selfHeal / 5;
+
+        // Shadow rework (SHADOW.md baseline edits / talent table 2,3): "Either heal cannot exceed
+        // 5% of the maximum health of the caster." Re-read design doc sec 4.1/sec 7 row 2,3 once
+        // more before implementing - the tooltip's literal wording names only "the caster" for
+        // both clauses (it doesn't say "of the recipient" for the party share), so both are capped
+        // against GetTarget()'s (the caster's) own max health below, not each party member's own.
+        // Genuinely ambiguous whether the party share was meant to cap against each recipient
+        // instead - flagged in the WP-B report; implemented per the literal tooltip text.
+        int32 maxHealthCap = int32(GetTarget()->CountPctFromMaxHealth(PRIEST_VAMPIRIC_EMBRACE_MAX_HEALTH_PCT));
+        selfHeal = std::min(selfHeal, maxHealthCap);
+        partyHeal = std::min(partyHeal, maxHealthCap);
+
         GetTarget()->CastCustomSpell(GetTarget(), SPELL_PRIEST_VAMPIRIC_EMBRACE_HEAL, &partyHeal, &selfHeal, nullptr, true, nullptr, aurEff);
     }
 
@@ -2007,6 +2147,7 @@ void AddSC_priest_spell_scripts()
     RegisterSpellScript(spell_pri_power_word_shield_aura);
     RegisterSpellScript(spell_pri_prayer_of_mending_heal);
     RegisterSpellScript(spell_pri_renew);
+    RegisterSpellScript(spell_pri_devouring_plague);
     RegisterSpellScript(spell_pri_shadow_word_death);
     RegisterSpellScript(spell_pri_vampiric_touch);
     RegisterSpellScript(spell_pri_mind_control);

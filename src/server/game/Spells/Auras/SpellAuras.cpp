@@ -1485,23 +1485,12 @@ void Aura::HandleAuraSpecificMods(AuraApplication const* aurApp, Unit* caster, b
             case SPELLFAMILY_PRIEST:
                 if (!caster)
                     break;
-                // Devouring Plague
-                if (GetSpellInfo()->SpellFamilyFlags[0] & 0x02000000 && GetEffect(0))
-                {
-                    // Improved Devouring Plague
-                    if (AuraEffect const* aurEff = caster->GetDummyAuraEffect(SPELLFAMILY_PRIEST, 3790, 1))
-                    {
-                        uint32 damage = GetEffect(0)->GetAmount();
-                        damage = target->SpellDamageBonusTaken(caster, GetSpellInfo(), damage, DOT);
-                        int32 basepoints0 = aurEff->GetAmount() * GetEffect(0)->GetTotalTicks() * int32(damage) / 100;
-                        int32 heal = int32(CalculatePct(basepoints0, 15));
-
-                        caster->CastCustomSpell(target, 63675, &basepoints0, nullptr, nullptr, true, nullptr, GetEffect(0));
-                        caster->CastCustomSpell(caster, 75999, &heal, nullptr, nullptr, true, nullptr, GetEffect(0));
-                    }
-                }
+                // Devouring Plague's Improved Devouring Plague instant chunk moved to
+                // spell_pri_devouring_plague (spell_priest.cpp AuraScript on 2944 - Shadow rework,
+                // priest-rework.PLAN.md sec 6.8/8, priest-rework.SHADOW.md "Core hardcode migration
+                // owed by this pass").
                 // Power Word: Shield
-                else if (m_spellInfo->SpellFamilyFlags[0] & 0x1 && m_spellInfo->SpellFamilyFlags[2] & 0x400 && GetEffect(0))
+                if (m_spellInfo->SpellFamilyFlags[0] & 0x1 && m_spellInfo->SpellFamilyFlags[2] & 0x400 && GetEffect(0))
                 {
                     // Glyph of Power Word: Shield
                     if (AuraEffect* glyph = caster->GetAuraEffect(55672, 0))
