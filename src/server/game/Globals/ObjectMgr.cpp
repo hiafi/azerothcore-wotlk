@@ -1889,6 +1889,10 @@ void ObjectMgr::LoadPlayerShapeshiftModels()
 
 uint32 ObjectMgr::GetModelForShapeshift(ShapeshiftForm form, Player* player) const
 {
+    // Custom: a player-chosen appearance wins over the race/customization defaults below
+    if (uint32 displayId = player->GetShapeshiftAppearance(form))
+        return displayId;
+
     uint8 customizationID;
 
     if (player->GetTeamId() == TEAM_ALLIANCE)

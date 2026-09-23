@@ -2695,6 +2695,22 @@ public:
     [[nodiscard]] PlayerSetting GetPlayerSetting(std::string const& source, uint32 index);
     void UpdatePlayerSetting(std::string const& source, uint32 index, uint32 value);
 
+    // Custom: player-chosen shapeshift model, overriding ObjectMgr's race/customization default.
+    // Owned and persisted by Scripts/Custom/custom_shapeshift_appearance.cpp; 0 clears it.
+    void SetShapeshiftAppearance(ShapeshiftForm form, uint32 displayId)
+    {
+        if (displayId)
+            _shapeshiftAppearances[form] = displayId;
+        else
+            _shapeshiftAppearances.erase(form);
+    }
+
+    [[nodiscard]] uint32 GetShapeshiftAppearance(ShapeshiftForm form) const
+    {
+        auto itr = _shapeshiftAppearances.find(form);
+        return itr != _shapeshiftAppearances.end() ? itr->second : 0;
+    }
+
     void SendSystemMessage(std::string_view msg, bool escapeCharacters = false);
 
     void ResetSpeakTimers();
@@ -3092,6 +3108,8 @@ private:
     bool _wasOutdoor;
 
     PlayerSettingMap m_charSettingsMap;
+
+    std::unordered_map<uint8 /*ShapeshiftForm*/, uint32 /*displayId*/> _shapeshiftAppearances;
 
     Seconds m_creationTime;
 
