@@ -1,3 +1,4 @@
+-- DB update 2026_09_23_03 -> 2026_09_23_04
 -- Fix the four custom-stat QA test rings (Mastery/Versatility/Cooldown Haste/Proc
 -- Chance) to actually read 100% of their stat instead of the placeholder 700 rating
 -- they were hand-authored with, which only worked out to 25%/50% depending on the

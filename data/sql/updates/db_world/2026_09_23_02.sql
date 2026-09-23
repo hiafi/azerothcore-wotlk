@@ -1,3 +1,4 @@
+-- DB update 2026_09_23_01 -> 2026_09_23_02
 -- Greater Heal (2060) becomes auto-learned at character creation, same treatment Lesser Heal
 -- (2050) had before the Priest heal-line collapse moved that role onto Greater Heal (see
 -- data/sql/updates/db_world/2026_09_06_01.sql). apps/dbc-tools/source/classes/priest/

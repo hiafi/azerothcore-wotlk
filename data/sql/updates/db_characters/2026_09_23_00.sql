@@ -1,3 +1,4 @@
+-- DB update 2026_08_15_00 -> 2026_09_23_00
 --
 -- Priest Discipline rework (docs/reworks/priest-disc-rework.md): talent tree shape changes and
 -- several stock talent IDs are repurposed into new talents, so points left in a repurposed row

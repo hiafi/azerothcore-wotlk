@@ -1,3 +1,4 @@
+-- DB update 2026_09_23_06 -> 2026_09_23_07
 -- Priest Holy rework (docs/reworks/priest-holy-rework.md sec 3 "Lightwell",
 -- priest-rework.HOLY.md 6,1): Lightwell now heals automatically (npc_pet_pri_lightwell,
 -- src/server/scripts/Pet/pet_priest.cpp) with no player click-to-drink interaction. Confirmed via

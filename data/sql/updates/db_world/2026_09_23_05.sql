@@ -1,3 +1,4 @@
+-- DB update 2026_09_23_04 -> 2026_09_23_05
 -- Repair for a live-DB regression introduced by renaming already-applied db_world migrations
 -- 2026_09_05_00.sql..03.sql to 2026_09_05_00b.sql..03b.sql (to dodge the updater's "duplicate
 -- filename" fatal against upstream's unrelated files of the same names). UpdateFetcher.cpp's

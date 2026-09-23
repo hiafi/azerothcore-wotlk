@@ -1,3 +1,4 @@
+-- DB update 2026_09_23_11 -> 2026_09_23_12
 -- Priest Shadow rework (docs/reworks/priest-shadow-rework.md sec 4.1,
 -- .agents/plans/priest-rework/priest-rework.SHADOW.md "ID map"/"WP-0 prep") - hand-written
 -- world-DB content for Tentacle of Madness (creature_template/creature_template_model aren't part

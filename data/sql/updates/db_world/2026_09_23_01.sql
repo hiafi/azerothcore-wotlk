@@ -1,3 +1,4 @@
+-- DB update 2026_09_23_00 -> 2026_09_23_01
 -- Healing target dummy for playtest support (companion to the existing damage-testing dummies at
 -- entries 900001-900006, cloned from 900001's own row - see data/sql/updates/db_world/ for that
 -- migration's own notes). Unlike npc_training_dummy (900001-900006's ScriptName), this dummy has

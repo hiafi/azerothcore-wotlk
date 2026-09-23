@@ -1,3 +1,4 @@
+-- DB update 2026_09_23_14 -> 2026_09_23_15
 -- Priest Shadow rework (docs/reworks/priest-shadow-rework.md talent table 8,1 "Pain and Suffering",
 -- priest-rework.SHADOW.md's own "(D +verify)" flag on that row) - fixes a real boot-log regression
 -- found during WP-C's boot-log check: `data/sql/base/db_world/spell_proc.sql` carries a stock row

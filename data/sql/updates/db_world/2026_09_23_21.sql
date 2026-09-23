@@ -1,3 +1,4 @@
+-- DB update 2026_09_23_20 -> 2026_09_23_21
 -- Priest Shadow rework (docs/reworks/priest-shadow-rework.md sec 4.1) - Tentacle of Madness
 -- (300102) visual scale retune: 0.5 -> 0.3 of the Eye Tentacle model's native size, per user
 -- request (creature_template/creature_template_model aren't part of apps/dbc-tools' generate.py

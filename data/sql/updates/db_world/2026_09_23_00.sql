@@ -1,3 +1,4 @@
+-- DB update 2026_09_05_38 -> 2026_09_23_00
 -- Priest baseline rework (docs/reworks/priest-new-spells.md) - hand-written world-DB content for
 -- two of the new spells (creature_template/creature_template_model/gameobject_template aren't part
 -- of apps/dbc-tools' generate.py pipeline, same as Frost Mage's Frozen Orb before this).
