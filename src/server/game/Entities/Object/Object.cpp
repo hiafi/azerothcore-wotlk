@@ -3620,6 +3620,18 @@ SpellMissInfo WorldObject::MagicSpellHitResult(Unit* victim, SpellInfo const* sp
     else if (HitChance > 10000)
         HitChance = 10000;
 
+    // Custom: Hit is no longer a meaningful player stat - players and their minions always land
+    // spells against non-player targets (PvE only; resist/deflect rolls below are untouched).
+    // GetSpellModOwner() returns the unit itself for a Player and the owning Player for a
+    // pet/guardian, so a summon's spells can't miss either - guardians never inherit the owner's
+    // spell hit rating (only totems do, just above), so they would otherwise miss where their
+    // owner cannot.
+    // Re-applied here after the 20260920 upstream merge (aa32e0dde) moved this function from
+    // Unit::MagicSpellHitResult to WorldObject::MagicSpellHitResult and dropped the original
+    // customization added in 71736e3d4. The melee half still lives in Unit::MeleeSpellHitResult.
+    if (!victim->IsPlayer() && unitCaster && unitCaster->GetSpellModOwner())
+        HitChance = 10000;
+
     int32 tmp = 10000 - HitChance;
 
     int32 rand = irand(1, 10000); // Needs to be  1 to 10000 to avoid the 1/10000 chance to miss on 100% hit rating

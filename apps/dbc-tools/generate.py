@@ -166,7 +166,20 @@ def main() -> int:
     # spell_script_names / spell_bonus_data / spell_proc - same
     # "skip what's already live, DELETE+INSERT the rest" path as trainer_spell,
     # see lib/spell_tables.py.
-    spell_table_blocks = spell_tables.render_blocks(spell_tables.load_spell_table_index(), dsl_classes)
+    spell_table_index = spell_tables.load_spell_table_index()
+    spell_table_blocks = spell_tables.render_blocks(spell_table_index, dsl_classes)
+    # Prune: rows an *earlier* run of this script emitted that source/classes/*
+    # no longer declares (a removed scripted_by()/procs_on()/bonus_coefficients()).
+    # render_blocks above only ever speaks about rows still declared, so without
+    # this an orphan stays live in the world DB forever - see
+    # .agents/plans/dbc-tools-prune-pass/dbc-tools-prune-pass.PLAN.md for why
+    # provenance is "did a generated file emit it", not "is it one of our spell ids".
+    if "--no-prune" in sys.argv:
+        prune_blocks, prune_report = [], ["prune: skipped (--no-prune)"]
+    else:
+        prune_blocks, prune_report = spell_tables.render_prune_blocks(spell_table_index, dsl_classes)
+    for line in prune_report:
+        print(line)
 
     existing_spells = state.load_existing_rows(dbcfmt.SPELL)
     existing_talents = state.load_existing_rows(dbcfmt.TALENT)
@@ -328,7 +341,8 @@ def main() -> int:
     rev = int(time.time() * 1_000_000_000)
     out_path = PENDING_SQL_DIR / f"rev_{rev}.sql"
     wrote_sql = sql_out.emit_pending_sql(
-        out_path, blocks, header, extra_blocks=[trainer_spell_block, *spell_table_blocks],
+        out_path, blocks, header,
+        extra_blocks=[*prune_blocks, trainer_spell_block, *spell_table_blocks],
     )
     print(f"SQL: wrote {out_path.relative_to(REPO_ROOT)}" if wrote_sql else "SQL: nothing to emit")
 

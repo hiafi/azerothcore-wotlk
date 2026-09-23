@@ -3,7 +3,8 @@
 Priest baseline rework (docs/reworks/priest-new-spells.md): mints new SpellIcon.dbc rows for the 5
 new spells that needed real icon art (Power Word: Barrier already has a matching stock icon,
 3837 - see priest_spells.py's own notes on that spell - so it isn't touched here), then packages
-the underlying .blp files into patch-I.mpq and deploys it.
+the underlying .blp files into patch-I.mpq and deploys it. A 6th icon (Spirit Shell, Discipline
+rework) was tried and reverted - see the comment above ICONS for why.
 
 Implements docs/ascension-asset-mining.md Part 1's recommended pipeline (extract -> pack -> add
 DBC rows), scoped narrowly to the 5 files this pass actually needs rather than the full 76k-icon
@@ -65,6 +66,15 @@ ICON_ID_DIVINE_STAR = 90101
 ICON_ID_HALO = 90102
 ICON_ID_LEAP_OF_FAITH = 90103
 ICON_ID_VOID_ERUPTION = 90104  # shared by void_eruption_200139 and void_eruption_buff_200140
+# 90105 (ability_priest_angelicbulwark, tried for Spirit Shell) rendered blank and was reverted to
+# a stock icon - root-caused later (2026-09-22, docs/bugs-and-fixes.md): build_patch_m.py was
+# packing a stale copy of SpellIcon.dbc into patch-M.mpq, which the client loads *after* patch-I and
+# so shadowed every row minted here after patch-M's last rebuild. The file was never at fault; the
+# id is still free in the working copy if Spirit Shell wants its icon back.
+ICON_ID_HOLY_WORD_SERENITY = 90106
+ICON_ID_HOLY_WORD_SANCTIFY = 90107  # was sharing 90102 (Halo) with Serenity - split out to fix that
+ICON_ID_HOLY_WORD_CHASTISE = 90108  # was sharing 90104 (Void Eruption) with Apotheosis - split out
+ICON_ID_APOTHEOSIS = 90109
 
 ICONS = (
     (ICON_ID_ANGELIC_FEATHER, "Interface/icons/ability_priest_angelicfeather.blp"),
@@ -72,6 +82,10 @@ ICONS = (
     (ICON_ID_HALO, "Interface/icons/ability_priest_halo.blp"),
     (ICON_ID_LEAP_OF_FAITH, "Interface/icons/priest_spell_leapoffaith_a.blp"),
     (ICON_ID_VOID_ERUPTION, "Interface/icons/spell_priest_voidform.blp"),
+    (ICON_ID_HOLY_WORD_SERENITY, "Interface/icons/spell_priest_burningwill.blp"),
+    (ICON_ID_HOLY_WORD_SANCTIFY, "Interface/icons/spell_holy_divineprovidence.blp"),
+    (ICON_ID_HOLY_WORD_CHASTISE, "Interface/icons/spell_holy_chastise.blp"),
+    (ICON_ID_APOTHEOSIS, "Interface/icons/spell_priest_chakra.blp"),
 )
 
 

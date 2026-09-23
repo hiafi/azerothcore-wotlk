@@ -4,8 +4,9 @@ Priest - player-castable spells (real cast_time_ms/cooldown_ms, not marked passi
 Split from a single source/classes/priest.py via split_class_file.py (.agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md) - see source/classes/README.md for the multi-file layout and lib/dsl/registry.py's load_class_package for how cross-file references (`from .priest_...` below) resolve.
 """
 
-from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, School
-from lib.dsl.registry import scripted_by, skill_line_ability, spell, trained_by
+from lib.dsl import ApplyAura, AuraType, DispelType, Effect, EffectType, Mechanic, School, SpellModOp
+from lib.dsl.registry import bonus_coefficients, scripted_by, skill_line_ability, spell, trained_by
+from . import _masks
 from .priest_trigger_spells import (
     angelic_feather_buff_200131,
     angelic_feather_place_200141,
@@ -28,17 +29,18 @@ power_word_shield_17 = spell(
     attributes=329728,
     category=56,
     cast_time_ms=0,
-    cooldown_ms=0,
+    cooldown_ms=4000,
     category_cooldown_ms=4000,
     mana_cost=0,
     mana_cost_pct=23,
     range_yards=40.0,
     duration_ms=30000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=43, points_per_level=16.6296, implicit_target_a=21, apply_aura=69, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=43, points_per_level=16.6296, implicit_target_a=21, apply_aura=AuraType.SCHOOL_ABSORB, misc_value=127),
     ],
     spell_icon_id=566,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 6); RealPointsPerLevel from rank1→level-60 slope (anchor rank 10901, rank 10); coefficient/cast_time_ms/mana_cost_pct from max rank (48066, rank 14); MaxLevel set to 80',
+    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 6); RealPointsPerLevel from rank1→level-60 slope (anchor rank 10901, rank 10); coefficient/cast_time_ms/mana_cost_pct from max rank (48066, rank 14); MaxLevel set to 80. '
+          'Discipline rework baseline edit (docs/reworks/priest-disc-rework.md, "Baseline Changes"): cooldown_ms=4000 added alongside the stock 4-second category cooldown, so the spec\'s "4 sec base cooldown, reduced to 0 by Soul Warding (4,2) at full rank" holds. Soul Warding\'s SPELLMOD_COOLDOWN applies to BOTH RecoveryTime and CategoryRecoveryTime (Player::AddSpellAndCategoryCooldowns, Player.cpp:11181/11185), so -4 sec at rank 2 zeroes both.',
     raw_overrides={'AttributesEx2': 2621440, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Absorbs damage.', 'BaseLevel': 6, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Draws on the soul of the friendly target to shield them, absorbing $s1 damage.  Lasts $d.  While the shield holds, spellcasting will not be interrupted by damage.  Once shielded, the target cannot be shielded again for $6788d.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'ExcludeTargetAuraSpell': 6788, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftMask': 134217728, 'SpellClassMask_1': 1, 'SpellClassMask_3': 1024, 'SpellClassSet': 6, 'SpellLevel': 6, 'SpellPriority': 50, 'SpellVisualID_1': 784, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -170,6 +172,7 @@ smite_585 = spell(
     notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1→top rank's own top level (83, chain has a gap at 60) slope (anchor rank 48123, rank 12); coefficient/cast_time_ms/mana_cost_pct from max rank (48123, rank 12); MaxLevel set to 80",
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Smite an enemy for $s1 Holy damage.', 'EffectBonusMultiplier_1': 0.7139999866485596, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'SpellClassMask_1': 128, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellVisualID_1': 128, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+scripted_by(smite_585, 'spell_pri_surge_of_light_consume')  # Holy (5,0) Surge of Light
 
 
 fade_586 = spell(
@@ -235,6 +238,9 @@ shadow_word_pain_589 = spell(
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1→level-60 slope (anchor rank 10894, rank 8); coefficient/cast_time_ms/mana_cost_pct from max rank (48125, rank 12); MaxLevel set to 80',
     raw_overrides={'AttributesEx2': 524288, 'AttributesEx4': 1048576, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s1 Shadow damage every $t1 seconds.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A word of darkness that causes $o1 Shadow damage over $d.', 'EffectBasePoints_2': -1, 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ShapeshiftMask': 134217728, 'SpellClassMask_1': 32768, 'SpellClassMask_3': 1024, 'SpellClassSet': 6, 'SpellLevel': 4, 'SpellVisualID_1': 71, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+# Priest Shadow rework (SHADOW.md "Scripts on stock spells"): row unchanged - OnEffectPeriodic
+# tentacle spawn roll (ignoring the shared ICD) while Surrender to Madness is active.
+scripted_by(shadow_word_pain_589, 'spell_pri_shadow_word_pain_surrender')
 
 
 prayer_of_healing_596 = spell(
@@ -509,6 +515,7 @@ flash_heal_2061 = spell(
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope (anchor rank 10917, rank 7); coefficient/cast_time_ms/mana_cost_pct from max rank (48071, rank 11); MaxLevel set to 80',
     raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for $s1.', 'EffectBonusMultiplier_1': 0.8069999814033508, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_1': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_1': 2048, 'SpellClassSet': 6, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 3077, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+scripted_by(flash_heal_2061, 'spell_pri_surge_of_light_consume')  # Holy (5,0) Surge of Light
 
 
 mind_vision_2096 = spell(
@@ -565,6 +572,10 @@ devouring_plague_2944 = spell(
 # level 14 rather than leaving it stale. MoneyCost 1200 matches this trainer's own real level-14
 # rows (528/8122, both 1200c) rather than keeping the old level-20 price on the new lower level.
 trained_by(devouring_plague_2944, trainer_id=208, req_level=14, money_cost=1200)
+# Priest Shadow rework (SHADOW.md "Core hardcode migration owed by this pass" / PLAN §6.8):
+# Improved Devouring Plague's instant chunk (SpellAuras.cpp:1499, hardcoded OnEffectApply cast of
+# 63675) moves to a spell_pri_devouring_plague AuraScript bound directly to this stock spell.
+scripted_by(devouring_plague_2944, 'spell_pri_devouring_plague')
 
 
 heal_6063 = spell(
@@ -628,6 +639,10 @@ mind_blast_8092 = spell(
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 10); RealPointsPerLevel from rank1→level-60 slope (anchor rank 10947, rank 9); coefficient/cast_time_ms/mana_cost_pct from max rank (48127, rank 13); MaxLevel set to 80',
     raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 10, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the target for $s1 Shadow damage.', 'EffectBonusMultiplier_1': 0.42899999022483826, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftMask': 134217728, 'SpellClassMask_1': 8192, 'SpellClassSet': 6, 'SpellLevel': 10, 'SpellVisualID_1': 3057, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+# Priest Shadow rework (SHADOW.md "Scripts on stock spells"): row unchanged, one script class
+# handles all three Mind Blast hooks (Tentacles of Madness 3,0 spawn roll, Darkness 0,2's free-cast
+# consumption, Void-touched Mind 7,2's Voidform extension, Madness generation).
+scripted_by(mind_blast_8092, 'spell_pri_mind_blast_shadow')
 
 
 psychic_scream_8122 = spell(
@@ -955,7 +970,7 @@ prayer_of_spirit_27681 = spell(
     ],
     spell_icon_id=1870,
     notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1→top rank's own top level (90, chain has a gap at 60) slope (anchor rank 48074, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (48074, rank 3); MaxLevel set to 80",
-    raw_overrides={'AttributesEx': 131072, 'AttributesEx2': 524288, 'AttributesEx6': 67108864, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases Spirit by $s1.', 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Power infuses the target's party and raid members, increasing their Spirit by $s1 for $d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ReagentCount_1': 1, 'Reagent_1': 17029, 'ShapeshiftMask': 134217728, 'SpellClassMask_1': 32, 'SpellClassSet': 6, 'SpellLevel': 60, 'SpellVisualID_1': 193, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx': 131072, 'AttributesEx2': 524288, 'AttributesEx6': 67108864, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases Spirit by $s1.', 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Power infuses the target's party and raid members, increasing their Spirit by $s1 for $d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftMask': 134217728, 'SpellClassMask_1': 32, 'SpellClassSet': 6, 'SpellLevel': 60, 'SpellVisualID_1': 193, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1028,6 +1043,18 @@ shadow_word_death_32379 = spell(
 # own trained_by() comment above) - it was never actually trainable in this project until now.
 # MoneyCost 10000 matches this trainer's own real level-30 rows (596/976/605, all 10000c).
 trained_by(shadow_word_death_32379, trainer_id=208, req_level=30, money_cost=10000)
+# Priest Shadow rework (SHADOW.md "Scripts on stock spells"): row unchanged - Deathspeaker (4,1)'s
+# backlash-tentacle roll (subject to the shared ICD) and OnKill's kill-tentacle roll (Priest::OnKill,
+# no ICD) both live in spell_pri_shadow_word_death, which is already bound.
+#
+# NO scripted_by() here on purpose. data/sql/base/db_world/spell_script_names.sql already carries
+# (-32379, 'spell_pri_shadow_word_death') - the negative-ID "this spell and every rank in its
+# spell_ranks chain" form, and 32379 has a real 4-rank chain (32379/32996/48157/48158).
+# ObjectMgr::LoadSpellScriptNames expands that into _spellScriptsStore, which is a MULTIMAP: adding
+# a positive (32379, ...) row on top does not replace the base row, it registers the script a second
+# time for rank 1. Every hook then runs twice - doubled SW:D backlash damage and a doubled
+# Deathspeaker roll on every cast. scripted_by()'s own docstring covers the convention; 32379 is the
+# only stock spell this rework binds that already has a base row (verified against all ten).
 
 
 binding_heal_32546 = spell(
@@ -1046,9 +1073,14 @@ binding_heal_32546 = spell(
         Effect(type=EffectType.HEAL, base_points=1041, points_per_level=51.3333, die_sides=297, implicit_target_a=1),
     ],
     spell_icon_id=2266,
-    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 64); RealPointsPerLevel from rank1→top rank's own top level (82, chain has a gap at 60) slope (anchor rank 48120, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (48120, rank 3); MaxLevel set to 80",
-    raw_overrides={'AttributesEx': 524288, 'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 64, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target and the caster for $s1.  Low threat.', 'EffectBonusMultiplier_1': 0.8069999814033508, 'EffectBonusMultiplier_2': 0.8069999814033508, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_1': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_2': 4, 'SpellClassSet': 6, 'SpellLevel': 64, 'SpellPriority': 50, 'SpellVisualID_1': 3077, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 64); RealPointsPerLevel from rank1→top rank's own top level (82, chain has a gap at 60) slope (anchor rank 48120, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (48120, rank 3); MaxLevel set to 80. "
+          'Priest Holy rework (HOLY.md "Baseline spell edits"): BaseLevel/SpellLevel 64->46 - see the trained_by() call below, the first ever added for this spell (it was live only via the trainer\'s stock data before).',
+    raw_overrides={'AttributesEx': 524288, 'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 46, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target and the caster for $s1.  Low threat.', 'EffectBonusMultiplier_1': 0.8069999814033508, 'EffectBonusMultiplier_2': 0.8069999814033508, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_1': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_2': 4, 'SpellClassSet': 6, 'SpellLevel': 46, 'SpellPriority': 50, 'SpellVisualID_1': 3077, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+# No trained_by() call existed for this spell before (live only via the trainer 208's own stock
+# data - HOLY.md "Baseline spell edits"). MoneyCost 18000 extrapolated the same way as
+# leap_of_faith_200137's own level-46 row on this trainer (18000c) - same level, same basis.
+trained_by(binding_heal_32546, trainer_id=208, req_level=46, money_cost=18000)
 
 
 prayer_of_mending_33076 = spell(
@@ -1210,17 +1242,18 @@ lightwell_724 = spell(
     category=1145,
     cast_time_ms=500,
     cooldown_ms=0,
-    category_cooldown_ms=180000,
+    category_cooldown_ms=90000,
     mana_cost=0,
     mana_cost_pct=17,
     range_yards=40.0,
-    duration_ms=180000,
+    duration_ms=30000,
     effects=[
         Effect(type=EffectType.SUMMON, implicit_target_a=87, misc_value=31897),
     ],
     spell_icon_id=1878,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1→level-60 slope (anchor rank 27871, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (48087, rank 6); MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 131072, 'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Creates a Holy Lightwell.  Friendly players can click the Lightwell to restore ${$7001m1*3*$<mult>} health over $7001d.  Attacks done to you equal to 30% of your total health will cancel the effect. Lightwell lasts for $d or 10 charges.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 1141, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_1': 1073741824, 'SpellClassSet': 6, 'SpellDescriptionVariableID': 162, 'SpellLevel': 40, 'SpellVisualID_1': 7550, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Targets': 64},
+    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1→level-60 slope (anchor rank 27871, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (48087, rank 6); MaxLevel set to 80. '
+          'Priest Holy rework (HOLY.md "Baseline spell edits" / design doc §3): 90 s cooldown added on category_cooldown_ms (this row already used category_cooldown_ms, not cooldown_ms, for its stock 3-min recharge - the field that was actually load-bearing before, so this keeps the same field rather than adding a redundant cooldown_ms). Summon duration 180000->30000: checked src/server/game/Spells/SpellEffects.cpp\'s Spell::EffectSummonType (SUMMON_TYPE_LIGHTWELL branch) - it calls `SummonCreature(entry, *destTarget, properties, duration, ...)` with `duration = m_spellInfo->GetDuration()`, i.e. THIS spell\'s own duration_ms is what controls the summoned Lightwell object\'s lifetime, not any field on the creature_template - so that\'s the one changed. No more clicking: the object auto-heals via npc_pet_pri_lightwell (WP-B, pet_priest.cpp) instead of Lightwell Charges (59907)/Lightwell Renew (7001), which go unused after this pass.',
+    raw_overrides={'AttributesEx': 131072, 'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Creates a Holy Lightwell that lasts $d. Once per sec, it heals the party or raid member within 20 yds most in need for $200202s1, for up to 10 heals.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 1141, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_1': 1073741824, 'SpellClassSet': 6, 'SpellDescriptionVariableID': 162, 'SpellLevel': 40, 'SpellVisualID_1': 7550, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Targets': 64},
 )
 
 
@@ -1245,6 +1278,10 @@ mind_flay_15407 = spell(
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope (anchor rank 18807, rank 6); coefficient/cast_time_ms/mana_cost_pct from max rank (48156, rank 9); MaxLevel set to 80',
     raw_overrides={'AttributesEx': 67125252, 'AttributesEx2': 524288, 'AttributesEx5': 134225920, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement speed slowed.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'ChannelInterruptFlags': 31756, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Assault the target's mind with Shadow energy, causing ${$m3*3} Shadow damage over $d and slowing their movement speed by $s2%.", 'EffectBonusMultiplier_3': 0.2709999978542328, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftMask': 134217728, 'SpellClassMask_3': 1088, 'SpellClassSet': 6, 'SpellLevel': 20, 'SpellVisualID_1': 12637, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+# Priest Shadow rework (SHADOW.md "Scripts on stock spells"): row unchanged - OnEffectPeriodic
+# generates 1 Madness/tick (3 during Surrender) and, while Surrender to Madness is active, rolls a
+# tentacle spawn on every tick ignoring the shared ICD.
+scripted_by(mind_flay_15407, 'spell_pri_mind_flay_madness')
 
 
 desperate_prayer_19236 = spell(
@@ -1259,12 +1296,15 @@ desperate_prayer_19236 = spell(
     mana_cost=0,
     mana_cost_pct=21,
     range_yards=0.0,
+    duration_ms=10000,
     effects=[
         Effect(type=EffectType.HEAL, base_points=262, points_per_level=26.525, die_sides=63, implicit_target_a=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
     ],
     spell_icon_id=73,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope (anchor rank 19243, rank 6); coefficient/cast_time_ms/mana_cost_pct from max rank (48173, rank 9); MaxLevel set to 80',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly heals the caster for $s1.', 'EffectBonusMultiplier_1': 0.8069999814033508, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassMask_1': 16777216, 'SpellClassSet': 6, 'SpellLevel': 20, 'SpellVisualID_1': 4819, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope (anchor rank 19243, rank 6); coefficient/cast_time_ms/mana_cost_pct from max rank (48173, rank 9); MaxLevel set to 80. '
+          'Priest Holy rework (HOLY.md "Baseline spell edits" / design doc row 2,0): new EFFECT_1 (previously unused) MOD_DAMAGE_PERCENT_TAKEN (aura 87) misc_value=127 (physical+all-magic school mask - confirmed against several other classes\' own -X%-damage-taken cooldowns in this codebase using the identical misc_value=127, e.g. deathknight_spells.py/paladin_spells.py/druid_spells.py, rather than assuming), base_points=-21 (stored -1 convention -> live -20%), duration_ms=10000 added at the spell level for this new aura effect to run on (the HEAL effect is instant and does not consume it).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly heals the caster for $s1 and reduces damage taken by 20% for $19236d.  Below 50% health, this heal is always a critical strike.', 'EffectBonusMultiplier_1': 0.8069999814033508, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassMask_1': 16777216, 'SpellClassSet': 6, 'SpellLevel': 20, 'SpellVisualID_1': 4819, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1281,12 +1321,14 @@ circle_of_healing_34861 = spell(
     mana_cost_pct=21,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, base_points=342, points_per_level=11.5, die_sides=37, implicit_target_a=63, implicit_target_b=31, radius_yards=15.0),
+        Effect(type=EffectType.HEAL, base_points=342, die_sides=1, implicit_target_a=63, implicit_target_b=31, radius_yards=15.0),
     ],
     spell_icon_id=2214,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1→level-60 slope (anchor rank 34864, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (48089, rank 7); MaxLevel set to 80',
-    raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx5': 4194304, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 50, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals up to $?s55675[6][5] friendly party or raid members within $a1 yards of the target for $s1.', 'EffectBonusMultiplier_1': 0.4020000100135803, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_1': 268435456, 'SpellClassSet': 6, 'SpellLevel': 50, 'SpellPriority': 50, 'SpellVisualID_1': 8253, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1→level-60 slope (anchor rank 34864, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (48089, rank 7); MaxLevel set to 80. '
+          'Priest Holy rework (HOLY.md "Baseline spell edits" / design doc §3): amount set to a flat 343 - checked this row\'s actual die_sides per PLAN §3.5 before typing the number, and it was NOT the default 1 (it was 37, a real min/max variance range inherited from the stock rank chain: 343-379). HOLY.md\'s own arithmetic ("base_points=342 if die_sides=1") assumes the default, which this row did not have - flattened die_sides to 1 (explicit override) here so the stated flat "343 + 0.4 SP" reads as a deterministic amount, consistent with how every other new spell in this pass (Holy Word: Serenity/Sanctify, Divine Star, Halo) is a flat number rather than a stock-style random range. points_per_level dropped (single-rank spells derive their level scaling from bonus_coefficients, not RealPointsPerLevel) - bonus_coefficients(direct=0.4) call below. Radius stays 15 yd (user override of the design doc\'s 30 yd, PLAN §1) - only the target-count/selection logic changes, in WP-B\'s C++ script.',
+    raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx5': 4194304, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 50, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals up to 5 friendly party or raid members within $a1 yards of the target for $s1.', 'EffectBonusMultiplier_1': 0.4020000100135803, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_1': 268435456, 'SpellClassSet': 6, 'SpellLevel': 50, 'SpellPriority': 50, 'SpellVisualID_1': 8253, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+bonus_coefficients(circle_of_healing_34861, direct=0.4)
 
 
 vampiric_touch_34914 = spell(
@@ -1370,12 +1412,24 @@ inner_focus_14751 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=108, misc_value=14),
-        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COST),
+        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
+        Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CASTING_TIME),
     ],
     spell_icon_id=101,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 67108864, 'AttributesEx4': 524352, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'The mana cost of your next spell is reduced by $s1%.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When activated, reduces the mana cost of your next spell by $s1% and increases its critical effect chance by $s2% if it is capable of a critical effect.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3612868607, 'EffectSpellClassMaskA_2': 13997559, 'EffectSpellClassMaskA_3': 8256, 'EffectSpellClassMaskB_1': 3386130064, 'EffectSpellClassMaskB_2': 13205558, 'EffectSpellClassMaskB_3': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcCharges': 1, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'ShapeshiftMask': 134217728, 'SpellClassMask_2': 1073745920, 'SpellClassMask_3': 1024, 'SpellClassSet': 6, 'SpellVisualID_1': 4372},
+    notes='Discipline rework (2,1) (docs/reworks/priest-disc-rework.md): Inner Focus stops being '
+          '"your next spell, whatever it is" and becomes "your next Greater Heal, Flash Heal, Mind '
+          'Blast or Power Word: Shield", with a different extra effect per spell. eff1 keeps its '
+          'op (-100% mana cost) but is re-scoped from the stock everything-mask to exactly those '
+          'four spells; eff2 keeps its op and +25% amount but is re-scoped to Greater Heal alone; '
+          'eff3 is new - -50% cast time on Greater Heal and Mind Blast. Each SpellMod carries its '
+          'classmask on ITS OWN letter (A = effect 1, B = effect 2, C = effect 3). The remaining '
+          'two clauses are C++ (WP-B): Flash Heal\'s 100% crit is '
+          'Priest::ApplySpellCritChanceMods, Mind Blast\'s 70% snare is '
+          'spell_pri_inner_focus_mind_blast casting 200146, and Power Word: Shield\'s -10 sec '
+          'Weakened Soul is in spell_pri_power_word_shield. ProcCharges stays 1 so the first '
+          'matching cast consumes it.',
+    raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 67108864, 'AttributesEx4': 524352, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Greater Heal, Flash Heal, Mind Blast or Power Word: Shield is enhanced.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When activated, enhances your next Greater Heal, Flash Heal, Mind Blast or Power Word: Shield, reducing its mana cost by 100% and adding an additional effect.\n\nGreater Heal: reduces cast time by 50% and increases critical strike chance by 25%\nFlash Heal: increases critical strike chance to 100%\nMind Blast: reduces cast time by 50% and slows the target by 70% for 5 sec\nPower Word: Shield: reduces Weakened Soul duration by 10 sec', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': _masks.GREATER_HEAL | _masks.FLASH_HEAL | _masks.MIND_BLAST | _masks.PWS, 'EffectSpellClassMaskB_1': _masks.GREATER_HEAL, 'EffectSpellClassMaskC_1': _masks.GREATER_HEAL | _masks.MIND_BLAST, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcCharges': 1, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'ShapeshiftMask': 134217728, 'SpellClassMask_2': 1073745920, 'SpellClassMask_3': 1024, 'SpellClassSet': 6, 'SpellVisualID_1': 4372},
 )
 
 
@@ -1421,9 +1475,16 @@ silence_15487 = spell(
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=6, apply_aura=AuraType.MOD_SILENCE),
     ],
     spell_icon_id=211,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx2': 524288, 'AttributesEx6': 10485760, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Silenced.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Silences the target, preventing them from casting spells for $d.  Non-player victim spellcasting is also interrupted for $32747d.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftMask': 134217728, 'SpellClassMask_2': 2101248, 'SpellClassSet': 6, 'SpellVisualID_1': 179},
+    notes='Priest Shadow rework (SHADOW.md "Baseline spell edits" / design doc §5): moved out of the '
+          'talent tree (541) into the base kit, trainer-taught at 30 like Shadow Word: Death '
+          '(BaseLevel/SpellLevel added below; see trained_by() call). No other data changes - the '
+          'stock SkillLineAbility row for skill 78 already exists.',
+    raw_overrides={'AttributesEx2': 524288, 'AttributesEx6': 10485760, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Silenced.', 'BaseLevel': 30, 'SpellLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Silences the target, preventing them from casting spells for $d.  Non-player victim spellcasting is also interrupted for $32747d.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftMask': 134217728, 'SpellClassMask_2': 2101248, 'SpellClassSet': 6, 'SpellVisualID_1': 179},
 )
+# Trainer-taught at 30, same TrainerId/cost curve as Shadow Word: Death's own level-30 row
+# (shadow_word_death_32379's trained_by() above: MoneyCost 10000 matches trainer 208's real
+# level-30 rows).
+trained_by(silence_15487, trainer_id=208, req_level=30, money_cost=10000)
 
 
 pain_suppression_33206 = spell(
@@ -1554,7 +1615,7 @@ angelic_feather_200130 = spell(
     ],
     spell_icon_id=90100,
     notes='docs/reworks/priest-new-spells.md: "Places a feather at the target location, granting the first ally to walk through it 40% increased movement speed for 5 sec. Only 3 feathers can be placed at one time." Ground-targeted (Targets=64 raw_overrides below tells the client to show the ground-target cursor). Round-3 playtest fix (2026-09-20, "ring is STILL missing" after round 2\'s reorder): **split into two spells** - this row now carries ONLY the ring-drawing dummy (effect 0, unchanged from round 2: PERSISTENT_AREA_AURA/SPELL_AURA_DUMMY, base_points=0, radius_yards=3.0 to visually match the GO\'s own real 3-yard trigger, implicit_target_a=implicit_target_b=29/TARGET_DEST_DYNOBJ_ALLY) plus a new effect 1 (SPELL_EFFECT_TRIGGER_SPELL, cast-level, implicit_target_a left at 0/TARGET_NONE - SpellInfo.cpp\'s g_SpellEffectTargetTypes table lists SPELL_EFFECT_TRIGGER_SPELL as EFFECT_IMPLICIT_TARGET_NONE so this fires exactly once via Spell::EffectTriggerSpell\'s SPELL_EFFECT_HANDLE_LAUNCH branch, not per-unit) that triggers angelic_feather_place_200141 (priest_trigger_spells.py) - the actual SUMMON_OBJECT_SLOT1 effect that places the trap GO now lives entirely on that spell; see its own notes for why (dest-propagation mechanism, why Targets=64 matters there, why no C++ changes were needed). duration_ms=500 stays at the spell level, needed only for this row\'s own PERSISTENT_AREA_AURA dummy\'s DynamicObject to exist. Root-cause investigation for the split (2026-09-20): queried this project\'s own full client Spell.dbc (var/extractors/dbc/Spell.dbc, all 49839 rows, via lib.dbcfile.read_dbc) for every spell combining a SUMMON_OBJECT_SLOT1-4 effect (type 104-107) with a PERSISTENT_AREA_AURA effect (type 27) on the same spell ID - zero matches, out of 46 total stock spells using SUMMON_OBJECT_SLOT1-4 at all. Every real stock trap (Freezing Trap 1499, Immolation Trap 13795, etc.) uses Targets=0 (no ground-click reticle at all, placed at the caster\'s facing) rather than Targets=64 - the one Targets=64+ImplicitTargetA=87 exception found (Freezing Arrow 60202, a Cataclysm-era Hunter ground-target trap-shot, present in this client\'s Spell.dbc but with no confirmed live 3.3.5a usage - no creature/script in this repo references it) has EffectRadiusIndex_1=0 (no SpellRadius.dbc row for ID 0), i.e. no AoE radius at all for the client to size a ring from, so it isn\'t usable counter-evidence either way. This confirms round 2\'s "effect order" theory was never the real variable (reordering demonstrably did nothing, per the live playtest that prompted this round) and supports the working theory instead: the client\'s ground-target UI, on seeing a SUMMON_OBJECT_SLOT1-4 effect anywhere on the spell being aimed, switches to a "trap/object placement" cursor mode that never draws the AoE-radius ring overlay, regardless of what other effects coexist on the same spell ID or their ordering - matching that zero real Blizzard spell ever asks the client to do both at once. AttributesEx (0 on this spell vs nonzero on Blizzard/Flame Strike/PW:Barrier, flagged in the round-3 investigation brief as worth independently re-checking) was decoded bit-by-bit and ruled out: Blizzard\'s bits are SPELL_ATTR1_IS_CHANNELED/NO_REDIRECTION/NO_REFLECTION/NO_AURA_ICON, Flame Strike\'s and PW:Barrier\'s are NO_REDIRECTION/NO_REFLECTION - all either combat-mechanic flags or client-only aura-bar-visibility flags (SharedDefines.h), nothing ring-related, confirming the first-pass assessment independently. The GO itself, not this cast spell, is what actually grants the speed buff - see angelic_feather_buff_200131\'s own notes (priest_trigger_spells.py) for the trap-triggering mechanism and why it needs no proximity-check C++ of its own. spell_pri_angelic_feather (spell_priest_new.cpp) enforces "only 3 feathers at once" and stays registered on THIS spell (200130), not the new 200141 - see 200141\'s own notes for why the split doesn\'t break that ordering and why no C++ changes were needed for this round.',
-    raw_overrides={'Targets': 64, 'BaseLevel': 42, 'SpellLevel': 42, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Places a feather at the target location, granting the first ally to walk through it 40% increased movement speed for 5 sec.  Only 3 feathers can be placed at one time.', 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 90011, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'Targets': 64, 'BaseLevel': 42, 'SpellLevel': 42, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Places a feather at the target location, granting the first ally to walk through it 40% increased movement speed for 5 sec.  Only 3 feathers can be placed at one time.', 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 90011, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'SpellClassMask_3': _masks.ANGELIC_FEATHER},
 )
 scripted_by(angelic_feather_200130, 'spell_pri_angelic_feather')
 # skill_line here is the Spellbook tab this spell shows under (docs/skilllineability-handoff.md -
@@ -1593,7 +1654,7 @@ power_word_barrier_200132 = spell(
     ],
     spell_icon_id=3837,
     notes='docs/reworks/priest-new-spells.md: "Summons a holy barrier to protect all allies at the target location for 10 sec, reducing all damage taken by 20% and preventing damage from delaying spellcasting." Fully data-driven, no C++ needed at all - two PERSISTENT_AREA_AURA effects on one dest-target spell share a single DynamicObject/Aura zone (Spell::EffectPersistentAA, SpellEffects.cpp), so both land as one ground zone: effect 0 is MOD_DAMAGE_PERCENT_TAKEN (base_points=-21, stored -1 convention, for -20%); effect 1 is SPELL_AURA_REDUCE_PUSHBACK (apply_aura=149, SpellAuraDefines.h) at amount 100 (base_points=99, stored -1 convention) - confirmed read directly in Spell::Delayed (Spell.cpp): delayReduce>=100 fully suppresses cast-pushback for anyone standing in the zone, exactly matching "preventing damage from delaying spellcasting". implicit_target_a=29 (TARGET_DEST_DYNOBJ_ALLY, same target type Death and Decay/43265 uses for its own enemy-side equivalent, 28) both selects the ground-target reticle (raw_overrides Targets=64) and scopes the zone to allies only. Zone radius: the design doc doesn\'t give one - defaulted to 10 yds (retail\'s own value), flagged as playtest-tunable. spell_icon_id 3837 (Spell_Holy_PowerWordBarrier, apps/dbc-tools/var/spell_icon_names.csv) is the real spell\'s own stock icon - no icon mining needed for this one. SpellVisualID_1=90017 (patch_priest_vfx_models.py, SV_POWER_WORD_BARRIER) wraps genuine stock 3.3.5a client data - SpellVisualKit 12286 (BaseEffect=5211 "Power Word: Barrier Base" -> Spells\\Priest_PowerWardBarrier.mdx, a real Blizzard-authored dome model simply never wired to a live spell in vanilla WotLK) is reused completely untouched; no file extraction needed for this one, unlike the other 5 new spells. Two live playtest bugs (2026-09-20), both fixed: (1) originally set SpellVisualID_1 straight to stock 13210, which wires kit 12286 in as its ChannelKit - wrong slot for a non-channeled SPELL_EFFECT_PERSISTENT_AREA_AURA spell (confirmed against Death and Decay/Blizzard/Rain of Fire/Frost Trap Aura\'s own stock rows, which all use PersistentAreaKit for their ground-zone visual, never ChannelKit) - so the dome never rendered. Fixed by minting 90017, a fresh row pointing the same untouched kit 12286 at PersistentAreaKit instead (never hand-edit the shared stock row itself). (2) implicit_target_b was left at its 0 default on both effects - DynObjAura::FillTargetMap (SpellAuras.cpp) branches on TargetB, not TargetA, to decide whether a persistent-area aura\'s per-tick scan searches for friendly or enemy units; with TargetB unset it fell through to an enemy-only search (Unit::_IsValidAttackTarget), so a player standing in their own barrier could never actually receive the buff. Fixed by adding implicit_target_b=29 (TARGET_DEST_DYNOBJ_ALLY) to both effects, matching every real stock "stand in me for a friendly buff" persistent-area spell (Anti-Magic Barrier 52918, Toasty Fire 62821, Shield of the Blue 45848/47314, etc.). Live playtest bug #3 (2026-09-20): "the buff for Power Word: Barrier has no description" when hovering the aura icon on the buff bar while standing in the zone - NOT a missing/stale Description_Lang_enUS (that field was already correct in both the pending SQL and the deployed client patch-Z.mpq\'s own Spell.dbc, confirmed byte-for-byte). Root cause: Description_Lang and AuraDescription_Lang are two independent client-read string fields (both \'x\'/read_as_string in dbcfmt.py) for two different tooltip surfaces - Description is the spellbook/cast-bar tooltip, AuraDescription is what the buff-bar icon tooltip actually reads, and the client does NOT fall back from one to the other when the latter is empty. Confirmed against this project\'s own stock base DBC (var/extractors/dbc/Spell.dbc): every real buff/HoT spell sets a distinct, shorter AuraDescription alongside its longer Description (Renew 139: Description "Heals the target for $<total> over $d." vs AuraDescription "Healing $s1 damage every $t1 seconds."; Anti-Magic Zone 50461, the closest stock analog to this spell - a ground-target PERSISTENT_AREA_AURA buff zone - likewise has a distinct AuraDescription "Absorbs $50461s1% of spell damage." separate from its longer Description). This row never set AuraDescription_Lang at all, so the buff-bar tooltip had nothing to read. Divine Star (200133) and Halo (200135), whose spellbook/cast-bar descriptions the user confirmed look correct, aren\'t counter-evidence: neither applies a lasting buff to allies the way this spell does (Divine Star has no aura at all; Halo\'s aura is self-only), so neither one\'s buff-bar tooltip was ever exercised by that playtest. Fixed by adding AuraDescription_Lang_Mask=16712190 and a short AuraDescription_Lang_enUS ("Reduces damage taken by 20% and prevents damage from delaying spellcasting.") mirroring the stock convention of a condensed one-line summary of the zone\'s effect.',
-    raw_overrides={'Targets': 64, 'BaseLevel': 60, 'SpellLevel': 60, 'MaxLevel': 80, 'AttributesEx': 136, 'AttributesEx5': 512, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Reduces damage taken by 20% and prevents damage from delaying spellcasting.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a holy barrier to protect all allies at the target location for $d, reducing all damage taken by 20% and preventing damage from delaying spellcasting.', 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 90017, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'Targets': 64, 'BaseLevel': 60, 'SpellLevel': 60, 'MaxLevel': 80, 'AttributesEx': 136, 'AttributesEx5': 512, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Reduces damage taken by 20% and prevents damage from delaying spellcasting.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a holy barrier to protect all allies at the target location for $d, reducing all damage taken by 20% and preventing damage from delaying spellcasting.', 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 90017, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'SpellClassMask_3': _masks.PW_BARRIER},
 )
 skill_line_ability(id=30412, skill_line=613, spell_id=power_word_barrier_200132.id, class_mask=16)  # Discipline
 # See angelic_feather_200130's trained_by() comment for the TrainerId 208 rationale. MoneyCost
@@ -1614,7 +1675,7 @@ divine_star_200133 = spell(
     ],
     spell_icon_id=90101,
     notes='docs/reworks/priest-new-spells.md: "Throw a Divine Star forward 27 yds, healing allies in its path... and dealing... Holy damage to enemies. After reaching its destination, the Divine Star returns to you, healing allies and damaging enemies in its path again." Modeled directly on Frost Mage\'s Frozen Orb (mage_spells.py\'s frozen_orb_200007 + spell_mage.cpp\'s spell_mage_frozen_orb/npc_mage_frozen_orb) - the closest in-repo precedent for "summon a trigger creature that travels and pulses AoE, owner-attributed". SPELL_EFFECT_SCRIPT_EFFECT (type 77), self-targeted (implicit_target_a=1), instant, no damage/heal of its own - spell_pri_divine_star (spell_priest_new.cpp) summons npc_pri_divine_star (creature_template entry 300100, hand-written pending SQL) at the caster\'s position; that creature\'s own AI drives the out-and-back travel and, on each tick, has the OWNER cast divine_star_pulse_200134 (priest_trigger_spells.py) at whichever units it newly finds nearby - see that spell\'s own notes for the per-leg hit-dedup and the ">6 targets" healing falloff, both tracked in the creature AI rather than in DBC data. Differs from Frozen Orb in one real way: two separate legs (out, then back), each hitting a target at most once, rather than Frozen Orb\'s single halt-on-first-hit travel.',
-    raw_overrides={'BaseLevel': 32, 'SpellLevel': 32, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Throw a Divine Star forward, healing allies in its path and dealing Holy damage to enemies.  After reaching its destination, the Divine Star returns to you, healing allies and damaging enemies in its path again.  Healing reduced beyond 6 targets.', 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 90012, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'BaseLevel': 32, 'SpellLevel': 32, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Throw a Divine Star forward, healing allies in its path and dealing Holy damage to enemies.  After reaching its destination, the Divine Star returns to you, healing allies and damaging enemies in its path again.  Healing reduced beyond 6 targets.', 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 90012, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'SpellClassMask_3': _masks.DIVINE_STAR},
 )
 scripted_by(divine_star_200133, 'spell_pri_divine_star')
 skill_line_ability(id=30413, skill_line=56, spell_id=divine_star_200133.id, class_mask=16)  # Holy
@@ -1636,8 +1697,9 @@ halo_200135 = spell(
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=100),
     ],
     spell_icon_id=90102,
-    notes='docs/reworks/priest-new-spells.md: "Creates a ring of Holy energy around you that quickly expands to a 40 yd radius, healing allies for... and dealing... Holy damage to enemies." Deliberately NOT a summoned-creature spell (Frozen Orb\'s *travel-in-one-direction* half doesn\'t fit an all-directions-at-once ring; its *periodic-pulse-with-owner-attribution* half does): self-buff aura (PERIODIC_DUMMY, apply_aura=226) ticking every 100ms (amplitude=100) for the buff\'s duration_ms=2000 (total ring-expansion time to reach 40 yds - not specified in the design doc, flagged as playtest-tunable). spell_pri_halo (AuraScript on this spell, spell_priest_new.cpp), on OnEffectPeriodic, computes the ring\'s current radius from elapsed/total time, does a manual search for units newly crossed by the ring since the last tick, and casts halo_pulse_200136 (priest_trigger_spells.py) at each one individually - same explicit-single-unit-target "ally heals / enemy damages" idiom as Divine Star\'s pulse, chosen specifically to avoid native-AoE re-hit dedup problems (a naive fixed-radius AoE re-query every 100ms would re-hit everyone already inside the ring, not just those newly crossed by it). Live playtest bug (2026-09-20): originally shipped with AttributesEx=4 (SPELL_ATTR1_IS_CHANNELED) copy-pasted from this batch\'s other 5 new spells - harmless on those (no duration_ms, so Spell::handle_immediate\'s IsChanneled()+duration>0 branch never fires), but Halo\'s own duration_ms=2000 made the server actually open a 2-second channel (SendChannelStart), and the client then looked for this spell\'s (empty) ChannelKit instead of its correctly-authored PrecastKit/CastKit - explaining both "shows a channel bar" and "no animation plays" as one bug. Removed.',
-    raw_overrides={'BaseLevel': 52, 'SpellLevel': 52, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Creates a ring of Holy energy around you that quickly expands to a 40 yd radius, healing allies for $s1 and dealing $s1 Holy damage to enemies.', 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 90014, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='docs/reworks/priest-new-spells.md: "Creates a ring of Holy energy around you that quickly expands to a 40 yd radius, healing allies for... and dealing... Holy damage to enemies." Deliberately NOT a summoned-creature spell (Frozen Orb\'s *travel-in-one-direction* half doesn\'t fit an all-directions-at-once ring; its *periodic-pulse-with-owner-attribution* half does): self-buff aura (PERIODIC_DUMMY, apply_aura=226) ticking every 100ms (amplitude=100) for the buff\'s duration_ms=2000 (total ring-expansion time to reach 40 yds - not specified in the design doc, flagged as playtest-tunable). spell_pri_halo (AuraScript on this spell, spell_priest_new.cpp), on OnEffectPeriodic, computes the ring\'s current radius from elapsed/total time, does a manual search for units newly crossed by the ring since the last tick, and casts halo_pulse_200136 (priest_trigger_spells.py) at each one individually - same explicit-single-unit-target "ally heals / enemy damages" idiom as Divine Star\'s pulse, chosen specifically to avoid native-AoE re-hit dedup problems (a naive fixed-radius AoE re-query every 100ms would re-hit everyone already inside the ring, not just those newly crossed by it). Live playtest bug (2026-09-20): originally shipped with AttributesEx=4 (SPELL_ATTR1_IS_CHANNELED) copy-pasted from this batch\'s other 5 new spells - harmless on those (no duration_ms, so Spell::handle_immediate\'s IsChanneled()+duration>0 branch never fires), but Halo\'s own duration_ms=2000 made the server actually open a 2-second channel (SendChannelStart), and the client then looked for this spell\'s (empty) ChannelKit instead of its correctly-authored PrecastKit/CastKit - explaining both "shows a channel bar" and "no animation plays" as one bug. Removed. '
+          'Priest Holy rework (HOLY.md "Halo healing-taken" / design doc §3 "Halo"): tooltip gains the +10% healing-taken clause - design doc resolves the doc\'s own "unset variable" placeholder to a literal 10%, not a variable to compute. The buff itself (200173, MOD_HEALING_RECEIVED base 10, 10 s, scoped to this caster\'s own Holy heals via the SPELLFAMILY_PRIEST caster-GUID check native to SPELL_AURA_MOD_HEALING_RECEIVED - see Unit.cpp:9607-9613 - plus a classmask restricting it to priest heals, mirroring stock Grace\'s 47930 shape exactly) is declared in priest_trigger_spells.py; spell_pri_halo_pulse casting it on each target hit is WP-B\'s job (spell_priest_new.cpp).',
+    raw_overrides={'BaseLevel': 52, 'SpellLevel': 52, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Creates a ring of Holy energy around you that quickly expands to a 40 yd radius, healing allies for $s1 and dealing $s1 Holy damage to enemies.  Allies healed by Halo take 10% increased healing from you for 10 sec.', 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 90014, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'SpellClassMask_3': _masks.HALO},
 )
 scripted_by(halo_200135, 'spell_pri_halo')
 skill_line_ability(id=30414, skill_line=56, spell_id=halo_200135.id, class_mask=16)  # Holy
@@ -1661,7 +1723,7 @@ leap_of_faith_200137 = spell(
     ],
     spell_icon_id=90103,
     notes='docs/reworks/priest-new-spells.md: "Pulls the spirit of a party or raid member, instantly moving them directly in front of you." Modeled directly on DK Death Grip (spell_dk.cpp\'s spell_dk_death_grip, spells 49560/49576/57604): SPELL_EFFECT_DUMMY on an ally target (implicit_target_a=21, TARGET_UNIT_TARGET_ALLY - reversed from Death Grip\'s enemy target, since this pulls a friendly). spell_pri_leap_of_faith (spell_priest_new.cpp) computes a point near the caster (GetFirstCollisionPosition, facing-relative) and casts leap_of_faith_jump_200138 (priest_trigger_spells.py) on the target at that point, same target->CastSpell(destX, destY, destZ, jumpSpellId, true) call shape spell_dk_death_grip::HandleDummy uses - direction reversed (destination is near the *caster*, not the target\'s own explicit-target dest) so the ally lands offset from the priest rather than stacked on top of them.',
-    raw_overrides={'BaseLevel': 46, 'SpellLevel': 46, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Pulls the spirit of a party or raid member, instantly moving them directly in front of you.', 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 90016, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'BaseLevel': 46, 'SpellLevel': 46, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Pulls the spirit of a party or raid member, instantly moving them directly in front of you.', 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 90016, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'SpellClassMask_3': _masks.LEAP_OF_FAITH},
 )
 scripted_by(leap_of_faith_200137, 'spell_pri_leap_of_faith')
 skill_line_ability(id=30415, skill_line=56, spell_id=leap_of_faith_200137.id, class_mask=16)  # Holy
@@ -1687,11 +1749,308 @@ void_eruption_200139 = spell(
     ],
     spell_icon_id=90104,
     notes='docs/reworks/priest-new-spells.md: "Releases an explosive blast of pure void energy, causing Shadow damage to up to 10 enemies within 10 yards of your target. The power drawn from the Void increases your periodic Shadow damage by 10% for 10 sec, with the duration increased by 0.5 sec for each enemy hit. While in Shadowform this spell also applies Shadow Word: Pain to all enemies hit." Baseline behavior only this pass, per the user\'s explicit scope call - Shadow spec\'s "Generates 25 Madness" (priest-shadow-rework.md) is deferred to whenever the Shadow resource system itself gets built. Effect 0: SCHOOL_DAMAGE, dest-area-enemy (implicit_target_a=16, matches Frozen Orb Pulse\'s own dest-area-enemy target), 10 yd radius; base_points=299 (stored -1 convention, ~300 damage - the design doc gives no explicit number, this is a first-pass placeholder in line with other level-40 Priest AoE damage, flagged as playtest-tunable). The "up to 10 enemies" cap is enforced in spell_pri_void_eruption (spell_priest_new.cpp) via OnObjectAreaTargetSelect trimming the hit list, not a DBC field. Effect 1: TRIGGER_SPELL, self, applying void_eruption_buff_200140 ("Voidform", priest_trigger_spells.py) - see that spell\'s own notes for the periodic-Shadow-damage-%-boost hook (PriestMechanics.h/.cpp) and the duration-extension/Shadow-Word:-Pain-application logic (both spell_pri_void_eruption).',
-    raw_overrides={'BaseLevel': 40, 'SpellLevel': 40, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Releases an explosive blast of pure void energy, causing Shadow damage to up to 10 enemies within 10 yards of your target.  The power drawn from the Void increases your periodic Shadow damage by 10% for 10 sec, with the duration increased by 0.5 sec for each enemy hit.  While in Shadowform this spell also applies Shadow Word: Pain to all enemies hit.', 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 90015, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'BaseLevel': 40, 'SpellLevel': 40, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Releases an explosive blast of pure void energy, causing Shadow damage to up to 10 enemies within 10 yards of your target.  The power drawn from the Void increases your periodic Shadow damage by 10% for 10 sec, with the duration increased by 0.5 sec for each enemy hit.  While in Shadowform this spell also applies Shadow Word: Pain to all enemies hit.  Generates 12 Madness.', 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 90015, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'SpellClassMask_3': _masks.VOID_ERUPTION},
 )
+# Priest Shadow rework (SHADOW.md "Baseline spell edits"): tooltip now states "Generates 12
+# Madness" - visible units of the internal 25 (PLAN §1's display transform, visible=floor(internal/2)).
+# The actual AddMadness(25, VoidEruption) call is WP-B's (spell_pri_void_eruption AfterCast).
 scripted_by(void_eruption_200139, 'spell_pri_void_eruption')
 skill_line_ability(id=30416, skill_line=78, spell_id=void_eruption_200139.id, class_mask=16)  # Shadow
 # See angelic_feather_200130's trained_by() comment for the TrainerId 208 rationale. MoneyCost
 # 15000 extrapolated from this trainer's real level-30/32/34 rows (~500c/level past 30) -
 # first-pass estimate.
 trained_by(void_eruption_200139, trainer_id=208, req_level=40, money_cost=15000)
+
+
+# =====================================================================================
+# Priest Discipline rework (docs/reworks/priest-disc-rework.md,
+# .agents/plans/priest-rework/priest-rework.DISC.md)
+# =====================================================================================
+
+# --- (10,1) Spirit Shell -----------------------------------------------------------
+# The one player-castable new spell of the Discipline pass. Instant, 1 min cooldown, 5%
+# base mana, self-buff: while it is up, Priest::TryConvertHealToSpiritShell (PriestMechanics,
+# called from Spell::DoAllEffectOnTarget's heal branch) turns each direct heal from Flash
+# Heal / Greater Heal / Binding Heal / Prayer of Healing / Penance's heal bolt into an
+# absorb (spirit_shell_absorb_200167) instead. The single DUMMY effect is only the marker
+# that hook checks for. dword-3 bit 21 (_masks.SPIRIT_SHELL) is what lets Aspiration's
+# cooldown SpellMod see it (PLAN §4.4).
+spirit_shell_200166 = spell(
+    id=200166,
+    name='Spirit Shell',
+    school=School.HOLY,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=60000,
+    mana_cost_pct=5,
+    range_yards=0.0,
+    duration_ms=15000,
+    effects=[
+        ApplyAura(AuraType.DUMMY, base_points=0, implicit_target_a=1),
+    ],
+    spell_icon_id=1804,
+    notes='docs/reworks/priest-disc-rework.md, "Spirit Shell": "For 15 sec, your direct healing '
+          'spells no longer heal. Instead they create an absorption shield on the target for the '
+          'amount that would have been healed." The conversion list is fixed in PLAN §1 (Flash '
+          'Heal, Greater Heal, Binding Heal, Prayer of Healing, Penance heal bolts - NOT Renew, '
+          'Prayer of Mending, Circle of Healing, Divine Hymn, Halo, Divine Star, Holy Nova, Holy '
+          'Words or Desperate Prayer) and lives in Priest::TryConvertHealToSpiritShell, not here. '
+          'Absorb cap (60% of the target\'s max health), the Improved Power Word: Shield r3 '
+          'Mastery multiplier and the "no Divine Aegis while Spirit Shell is active" rule are all '
+          'in that same hook plus spell_pri_divine_aegis. Icon 1804 '
+          '(Spell_Holy_GreaterBlessingofSanctuary) is a stock icon not otherwise used by any '
+          'Discipline talent. A mined Ascension icon (ability_priest_angelicbulwark, custom id '
+          '90105) was tried and rendered as a blank talent-frame slot in-game for reasons not '
+          'conclusively diagnosed (DBC rows, packed file bytes, and manifest all verified correct '
+          'both client- and server-side; reverted rather than keep chasing it - see '
+          'docs/bugs-and-fixes.md).',
+    raw_overrides={'BaseLevel': 80, 'SpellLevel': 80, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'For $d, your direct healing spells no longer heal.  Instead they create an absorption shield on the target for the amount that would have been healed.  Spirit Shell absorbs last 15 sec and are capped at 60% of the target\'s maximum health.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Direct heals create an absorption shield instead of healing.', 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_3': _masks.SPIRIT_SHELL, 'SpellClassSet': 6, 'SpellPriority': 50, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+)
+# No skill_line_ability() call here on purpose: Spirit Shell is TALENT-granted, so its
+# SkillLineAbility row (30417) is derived by granted_by_talent(player_castable=True, ...)
+# in priest_talents.py, which is also what keeps it in the Discipline spellbook tab
+# (discipline_201_tab.skill_line = 613). See lib/dsl/registry.py's granted_by_talent
+# docstring and docs/skilllineability-handoff.md.
+
+
+# --- spell_script_names bindings for the Discipline C++ pass -------------------------
+# Every one of these binds an EXISTING stock spell (no row edit of its own) to a script
+# class WP-B writes in src/server/scripts/Spells/spell_priest_disc.cpp. Exact positive
+# ids, one call per spell - never the spell_script_names table's negative
+# "-<id> = this and every rank" shorthand (source/classes/README.md).
+scripted_by(mind_blast_8092, 'spell_pri_inner_focus_mind_blast')   # (2,1) Inner Focus: Mind Blast slow
+scripted_by(dispel_magic_527, 'spell_pri_absolution')              # (3,0) Absolution
+scripted_by(mass_dispel_32375, 'spell_pri_absolution')             # (3,0) Absolution - friendly half
+# 32592 (bare id) is 32375's own TRIGGER_SPELL effect - the hostile purge half, no source/ Spell object.
+scripted_by(32592, 'spell_pri_absolution')                         # (3,0) Absolution - hostile half
+scripted_by(flash_heal_2061, 'spell_pri_improved_flash_heal_capstone')   # (6,2) capstone
+scripted_by(power_infusion_10060, 'spell_pri_aspiration_power_infusion')  # (7,2) capstone
+
+
+# =====================================================================================
+# Priest Holy rework (docs/reworks/priest-holy-rework.md,
+# .agents/plans/priest-rework/priest-rework.HOLY.md) - the 4 new player-castable Holy Word
+# spells + Apotheosis. All four are TALENT-granted (60016/60017/60021/60022 in priest_talents.py),
+# so - same convention as Spirit Shell (60010) above - none of them get a manual
+# skill_line_ability() call here: player_castable=True + skill_line_ability_ids on their
+# granted_by_talent() call derives the SkillLineAbility row (30418-30421) that keeps them in the
+# Holy spellbook tab (holy_202_tab.skill_line=56, set in the Disc pass). No trained_by() either -
+# these aren't trainer-taught.
+# =====================================================================================
+
+holy_word_serenity_200197 = spell(
+    id=200197,
+    name='Holy Word: Serenity',
+    school=School.HOLY,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=60000,
+    mana_cost_pct=12,
+    range_yards=40.0,
+    effects=[
+        Effect(type=EffectType.HEAL, base_points=499, die_sides=1, implicit_target_a=21),
+    ],
+    spell_icon_id=90106,
+    notes='HOLY.md §2/§"ID map": instant single-friendly heal, 60 s cooldown, 12% base mana, 500 + '
+          '1.4 SP (base_points=499, stored -1 convention; bonus_coefficients(direct=1.4) below). '
+          'TARGET_UNIT_TARGET_ALLY (21, SharedDefines.h) for "single friendly target". Reuses '
+          'Halo\'s mined icon (90102) as a stand-in Holy Word icon pending dedicated icon mining '
+          '(follow-up pass, per PLAN §7 runbook - icons/VFX are mined only after mechanics are '
+          'verified). dword-3 bit 23 (_masks.HW_SERENITY) is its own family-flag identity, read by '
+          'Divine Providence/Echo of Light/Apotheosis\'s classmask-scoped SpellMods and by the '
+          'Serendipity capstone\'s cooldown-reduction script (HasAura/ModifySpellCooldown, not '
+          'classmask - the family flag exists for the SpellMod consumers instead).',
+    raw_overrides={'BaseLevel': 10, 'SpellLevel': 10, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly heals a friendly target for $s1.', 'EquippedItemClass': -1, 'InterruptFlags': 0, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 280, 'SpellClassMask_3': _masks.HW_SERENITY},
+)
+bonus_coefficients(holy_word_serenity_200197, direct=1.4)
+scripted_by(holy_word_serenity_200197, 'spell_pri_echo_of_light_heal')  # (8,3) Echo of Light
+
+
+holy_word_sanctify_200198 = spell(
+    id=200198,
+    name='Holy Word: Sanctify',
+    school=School.HOLY,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=60000,
+    mana_cost_pct=20,
+    range_yards=40.0,
+    radius_yards=8.0,
+    effects=[
+        Effect(type=EffectType.HEAL, base_points=299, die_sides=1, implicit_target_a=31, radius_yards=8.0),
+    ],
+    spell_icon_id=90107,
+    notes='HOLY.md §2/§"ID map": instant ground-targeted AoE heal, 60 s cooldown, 20% base mana, '
+          '300 + 0.6 SP per target (base_points=299, stored -1 convention; '
+          'bonus_coefficients(direct=0.6) below), 8 yd radius. Ground-target: raw_overrides '
+          'Targets=64 (TARGET_FLAG_DEST_LOCATION, client-side reticle flag) same as Angelic '
+          'Feather (200130) and Power Word: Barrier (200132) use for their own ground-click '
+          'spells. Implicit target TARGET_UNIT_DEST_AREA_ALLY (31, SharedDefines.h - the same '
+          'enum Circle of Healing\'s own effect_2 already uses for "area allies around a dest '
+          'point") heals allies around wherever the reticle is placed; no separate "select the '
+          'dest" effect is needed the way PW:Barrier\'s PERSISTENT_AREA_AURA pair needs TargetA '
+          '=TargetB=29, because a direct HEAL effect (not a persistent-aura zone) reads the cast\'s '
+          'own dest target directly. No exact stock or in-repo precedent for "ground-target, '
+          'direct (non-aura) AoE heal" was found via grep - flagged as a best-effort construction '
+          'from the two closest precedents (PW:Barrier\'s ground-click plumbing, CoH\'s dest-area-'
+          'ally implicit target) rather than a byte-for-byte copy of an existing row; verify the '
+          'reticle actually appears in a live playtest. Falloff beyond 5 targets '
+          '(sqrt(5/n) per target) is WP-B\'s job in spell_pri_holy_word_sanctify. dword-3 bit 24 '
+          '(_masks.HW_SANCTIFY) is its own family-flag identity (same rationale as Serenity above).',
+    raw_overrides={'Targets': 64, 'BaseLevel': 10, 'SpellLevel': 10, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals up to 5 friendly targets within $a1 yards of the target location for $s1.  Healing is reduced beyond 5 targets.', 'EquippedItemClass': -1, 'InterruptFlags': 0, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellVisualID_1': 280, 'SpellClassMask_3': _masks.HW_SANCTIFY},
+)
+bonus_coefficients(holy_word_sanctify_200198, direct=0.6)
+scripted_by(holy_word_sanctify_200198, 'spell_pri_holy_word_sanctify')
+scripted_by(holy_word_sanctify_200198, 'spell_pri_echo_of_light_heal')  # (8,3) Echo of Light
+
+
+holy_word_chastise_200223 = spell(
+    id=200223,
+    name='Holy Word: Chastise',
+    school=School.HOLY,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=60000,
+    mana_cost_pct=10,
+    range_yards=30.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=399, die_sides=1, implicit_target_a=6),
+        Effect(type=EffectType.TRIGGER_SPELL, implicit_target_a=1, trigger_spell=200224),
+    ],
+    spell_icon_id=90108,
+    notes='HOLY.md §2/§"ID map": instant single-enemy Holy damage, 60 s cooldown, 10% base mana, '
+          '30 yd. Damage amount is a playtest guess per design doc §7 - PLAN §1\'s resolved call '
+          'is "400 + 1.0 SP first pass" (base_points=399, stored -1 convention; '
+          'bonus_coefficients(direct=1.0) below). effect_2 TRIGGER_SPELL (self) applies the '
+          '10 sec Smite/Holy Fire damage buff (200224, priest_trigger_spells.py). dword-3 bit 25 '
+          '(_masks.HW_CHASTISE) is its own family-flag identity (same rationale as Serenity above). '
+          "Reuses Void Eruption's mined icon (90104) as a stand-in pending dedicated icon mining "
+          '(follow-up pass, per PLAN §7 runbook - same convention as Serenity/Sanctify reusing '
+          "Halo's 90102; talent-tooltip-audit noted the reuse, this comment documents it rather "
+          'than treating it as an oversight).',
+    raw_overrides={'BaseLevel': 10, 'SpellLevel': 10, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Smites an enemy for $s1 Holy damage and increases the damage of your next Smite or Holy Fire spell by 30% for 10 sec.', 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellClassMask_3': _masks.HW_CHASTISE},
+)
+bonus_coefficients(holy_word_chastise_200223, direct=1.0)
+scripted_by(holy_word_chastise_200223, 'spell_pri_echo_of_light_damage')  # (8,3) Echo of Light
+
+
+apotheosis_200225 = spell(
+    id=200225,
+    name='Apotheosis',
+    school=School.HOLY,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=180000,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=20000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.MOD_HEALING_DONE_PERCENT),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=108, misc_value=SpellModOp.COST),
+    ],
+    spell_icon_id=90109,
+    notes='HOLY.md §2/§"ID map" (10,1): instant self-buff, 180 s cooldown, no cost, 20 s. eff1 '
+          'MOD_HEALING_DONE_PERCENT (136) +10% (base_points=9, stored -1 convention); eff2 '
+          'MOD_DAMAGE_PERCENT_DONE (79) misc_value=2 (Holy school mask) +30% (base_points=29) - '
+          'design doc §2 "school-wide rather than Priest-only" (PLAN §8 accepted risk #1: this is '
+          'deliberate, a Classless build can buy the same window). eff3 ADD_PCT_MODIFIER (108) '
+          'misc_value=SpellModOp.COST (14) -100% (base_points=-101), scoped via '
+          'EffectSpellClassMaskC_3 (letter C = effect index 3, per the load-bearing letter/number '
+          'gotcha) to HW_SERENITY|HW_SANCTIFY|HW_CHASTISE so only the three Holy Words go free. '
+          'dword-3 bit 26 (_masks.APOTHEOSIS) is its own family-flag identity, unused by any '
+          'classmask-scoped SpellMod so far but minted per PLAN §4.4\'s table for consistency with '
+          'the other three new spells. Serendipity\'s x3 Holy Word cooldown-reduction rate reads '
+          'this buff by HasAura(200225), not by classmask - WP-B\'s job (spell_pri_holy_word_engine). '
+          "Reuses Void Eruption's mined icon (90104) as a stand-in pending dedicated icon mining "
+          '(follow-up pass, per PLAN §7 runbook - same convention as Serenity/Sanctify/Chastise).',
+    raw_overrides={'BaseLevel': 10, 'SpellLevel': 10, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'For $d, your healing done is increased by 10%, your Holy school damage done is increased by 30%, your Holy Words cost no mana, and Serendipity\'s Holy Word cooldown reduction is tripled.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Healing and Holy damage done increased; Holy Words cost no mana.', 'EquippedItemClass': -1, 'InterruptFlags': 0, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellClassMask_3': _masks.APOTHEOSIS, 'EffectSpellClassMaskC_3': _masks.HW_SERENITY | _masks.HW_SANCTIFY | _masks.HW_CHASTISE},
+)
+
+
+# --- spell_script_names bindings for the Holy C++ pass (HOLY.md's "Script" column) --------------
+# spell_pri_holy_concentration_extend (6,0 Holy Concentration): AfterCast on the 4 spells that can
+# roll the Renew-extension chance.
+scripted_by(greater_heal_2060, 'spell_pri_holy_concentration_extend')
+scripted_by(flash_heal_2061, 'spell_pri_holy_concentration_extend')
+scripted_by(binding_heal_32546, 'spell_pri_holy_concentration_extend')
+scripted_by(circle_of_healing_34861, 'spell_pri_holy_concentration_extend')
+# spell_pri_renew_cast (2,1 Answered Prayers): AfterCast on Renew itself.
+scripted_by(renew_139, 'spell_pri_renew_cast')
+# spell_pri_holy_word_engine (7,2 Serendipity capstone): AfterCast on every spell whose cast can
+# charge a Holy Word's cooldown reduction.
+scripted_by(greater_heal_2060, 'spell_pri_holy_word_engine')
+scripted_by(flash_heal_2061, 'spell_pri_holy_word_engine')
+scripted_by(binding_heal_32546, 'spell_pri_holy_word_engine')
+scripted_by(prayer_of_healing_596, 'spell_pri_holy_word_engine')
+scripted_by(circle_of_healing_34861, 'spell_pri_holy_word_engine')
+scripted_by(renew_139, 'spell_pri_holy_word_engine')
+scripted_by(smite_585, 'spell_pri_holy_word_engine')
+scripted_by(holy_fire_14914, 'spell_pri_holy_word_engine')
+
+
+# --- Priest Shadow rework: player-castable new spells (SHADOW.md's "ID map") ---------------------
+# Call of the Void (200248) and Surrender to Madness (200269) both have a real cast_time_ms/
+# cooldown_ms and aren't marked passive, so looks_player_castable() would hard-error without
+# player_castable=True on their granted_by_talent() calls (priest_talents.py) - see
+# source/classes/README.md.
+
+call_of_the_void_200248 = spell(
+    id=200248,
+    name='Call of the Void',
+    school=School.SHADOW,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=60000,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.DUMMY, implicit_target_a=1),
+    ],
+    spell_icon_id=90104,
+    notes='Priest Shadow rework (SHADOW.md (4,0) / ID map): NEW talent-granted active, repurposes '
+          '542 (was Improved Psychic Scream at 2,0). Instant, 60 s cooldown, no cost, self. eff1 is a '
+          'real (non-aura) SPELL_EFFECT_DUMMY - script-driven entirely by spell_pri_call_of_the_void '
+          "(WP-B: CheckCast locks it out while Surrender to Madness (200269) is up; OnCast consumes "
+          'all Madness and casts the buff, 200249, with BP0 = consumed/2). dword3 bit 27 '
+          '(_masks.CALL_OF_THE_VOID) is its own family-flag identity. SkillLineAbility 30422 is '
+          "derived automatically by granted_by_talent's player_castable=True (priest_talents.py) - "
+          "no separate skill_line_ability() call needed. Reuses Void Eruption's mined icon (90104) "
+          'as a stand-in pending dedicated icon mining (follow-up pass, per PLAN §7 runbook).',
+    raw_overrides={'BaseLevel': 40, 'SpellLevel': 40, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "You generate Madness, up to 250. Your Mind Flay damage and your Tentacles of Madness' Mind Flay damage generate Madness, and your Mind Blast generates more. Consume all Madness, increasing the damage of your Tentacles of Madness by 1% per Madness consumed for 15 sec.", 'EquippedItemClass': -1, 'InterruptFlags': 0, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellClassMask_3': _masks.CALL_OF_THE_VOID},
+)
+scripted_by(call_of_the_void_200248, 'spell_pri_call_of_the_void')
+
+
+surrender_to_madness_200269 = spell(
+    id=200269,
+    name='Surrender to Madness',
+    school=School.SHADOW,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=180000,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=120000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=1000),
+        Effect(type=EffectType.DUMMY, implicit_target_a=1),
+    ],
+    spell_icon_id=90104,
+    notes='Priest Shadow rework (SHADOW.md (10,1) / ID map): NEW talent, minted id 60025 - '
+          '**no `depends_on`** (PLAN §1/SHADOW.md top-of-file: overrides the design doc\'s own '
+          '"real prerequisite arrow" note and design doc §4.5 - a 6-tier diagonal arrow from Call '
+          'of the Void (4,0) cannot render in TalentFrame_DrawLines; Surrender\'s own CheckCast gate '
+          '(GetMadness()==0 -> fail) already makes it useless without Call of the Void). Instant, '
+          '180 s cooldown, self, 120 s duration (spell_pri_surrender_to_madness ends it early once '
+          'Madness reaches 0 or combat drops). eff1 PERIODIC_DUMMY (226), 1 s amplitude - drives the '
+          "drain-per-second OnPeriodic tick. eff2 is a real (non-aura) SPELL_EFFECT_DUMMY, unused by "
+          'the script directly (declared per the ID map\'s effect shape). dword3 bit 28 '
+          '(_masks.SURRENDER) is its own family-flag identity. SkillLineAbility 30423 is derived '
+          "automatically by granted_by_talent's player_castable=True (priest_talents.py). Reuses "
+          "Void Eruption's mined icon (90104) as a stand-in pending dedicated icon mining.",
+    raw_overrides={'BaseLevel': 50, 'SpellLevel': 50, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You surrender to the voices. Your Madness drains at 6.5 per second, increasing by 0.5 per second each second, and can no longer be spent. Your own Mind Flay and Mind Blast generate triple Madness. While active, your Tentacles of Madness do not expire, and every Shadow Word: Pain and Mind Flay damage event summons one, ignoring the shared cooldown. When your Madness reaches 0, Surrender ends and your Tentacles of Madness are destroyed. If no enemies remain in combat with you or your party, Surrender ends immediately and you do not suffer Sundered Mind.', 'EquippedItemClass': -1, 'InterruptFlags': 0, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6, 'SpellPriority': 50, 'SpellClassMask_3': _masks.SURRENDER},
+)
+scripted_by(surrender_to_madness_200269, 'spell_pri_surrender_to_madness')

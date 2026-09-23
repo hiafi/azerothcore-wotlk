@@ -28,6 +28,13 @@ class SpellInfo;
 
 typedef void(AuraEffect::*pAuraEffectHandler)(AuraApplication const* aurApp, uint8 mode, bool apply) const;
 
+// Priest Holy rework (docs/reworks/priest-holy-rework.md sec 5.1, Echo of Light): "Does not gain
+// ticks from haste. The interval is always 2 sec" and "Cannot critically strike... snapshots ...
+// at application and does not re-evaluate per tick." Class-agnostic infrastructure (PLAN sec 8) -
+// exempts a periodic aura from both the haste-adds-ticks rule (AuraEffect::CalculatePeriodic) and
+// the per-tick done/taken bonus re-evaluation (Unit::Spell{Healing,Damage}Bonus{Done,Taken}).
+bool IsFixedCadencePeriodic(uint32 spellId);
+
 enum BrewfestEntries
 {
     BREWFEST_KODO = 30507,

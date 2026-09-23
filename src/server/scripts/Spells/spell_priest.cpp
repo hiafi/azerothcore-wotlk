@@ -16,7 +16,10 @@
  */
 
 #include "GridNotifiers.h"
+#include "Group.h"
+#include "ObjectAccessor.h"
 #include "Player.h"
+#include "PriestMechanics.h"
 #include "SpellAuraEffects.h"
 #include "SpellMgr.h"
 #include "SpellScript.h"
@@ -58,12 +61,247 @@ enum PriestSpells
     SPELL_PRIEST_DIVINE_PROVIDENCE_R1               = 47562
 };
 
+/*
+ * Discipline rework (docs/reworks/priest-disc-rework.md,
+ * .agents/plans/priest-rework/priest-rework.DISC.md) - ids the reworked stock scripts below need.
+ * Talent entries are the *rank spell* ids from DISC.md's "Rank spell ids" column, never talent_dbc
+ * ids (PLAN sec 3.10).
+ */
+enum PriestDiscSpells
+{
+    SPELL_PRIEST_POWER_WORD_SHIELD                  = 17,
+    SPELL_PRIEST_WEAKENED_SOUL                      = 6788,
+
+    // Talent rank spell ids.
+    SPELL_PRIEST_INNER_FOCUS                        = 14751,    // (2,1), single rank
+    SPELL_PRIEST_IMPROVED_POWER_WORD_SHIELD_R3      = 14769,    // (2,2) rank 3 - Mastery capstone
+    SPELL_PRIEST_FOCUSED_WILL_R3                    = 45244,    // (6,0) rank 3 - Empowered Penance
+    SPELL_PRIEST_GRACE_R1                           = 47516,    // (8,2)
+    SPELL_PRIEST_GRACE_R2                           = 47517,
+    SPELL_PRIEST_GRACE_R3                           = 200163,
+    SPELL_PRIEST_DIVINE_AEGIS_R1                    = 47509,    // (8,0)
+    SPELL_PRIEST_DIVINE_AEGIS_R2                    = 47511,    // rank 2 - Mastery capstone
+    SPELL_PRIEST_RAPTURE_R1                         = 47535,    // (7,1)
+    SPELL_PRIEST_RAPTURE_R2                         = 47536,
+    SPELL_PRIEST_RAPTURE_R3                         = 47537,
+    SPELL_PRIEST_RENEWED_HOPE_R1                    = 57470,    // (7,0)
+    SPELL_PRIEST_RENEWED_HOPE_R2                    = 57472,    // rank 2 - Greater PW:S capstone
+
+    // Talent-triggered buffs.
+    SPELL_PRIEST_GRACE_BUFF_R1                      = 200164,
+    SPELL_PRIEST_GRACE_BUFF_R2                      = 200165,
+    SPELL_PRIEST_GRACE_BUFF_R3                      = 47930,
+    SPELL_PRIEST_RENEWED_HOPE_BUFF                  = 63944,    // rank 1's PW:S-target debuff
+    SPELL_PRIEST_RENEWED_HOPE_BUFF_R2               = 200168,   // rank 2's own row (2% vs 1%)
+    SPELL_PRIEST_RAPTURE_SELF_MANA                  = 47755,
+    SPELL_PRIEST_RAPTURE_TARGET_MANA                = 63654,
+    SPELL_PRIEST_RAPTURE_TARGET_RAGE                = 63653,
+    SPELL_PRIEST_RAPTURE_TARGET_ENERGY              = 63655,
+    SPELL_PRIEST_RAPTURE_TARGET_RUNIC_POWER         = 63652,
+    // Kept verbatim from the engine block this migrated out of (SpellAuras.cpp): rogues/druids
+    // carrying this aura get no energy back.
+    SPELL_PRIEST_RAPTURE_ENERGY_EXCLUSION           = 70405,
+
+    // Discipline rework spells (DISC.md "ID map").
+    SPELL_PRIEST_GREATER_POWER_WORD_SHIELD          = 200155,
+    SPELL_PRIEST_EMPOWERED_PENANCE_READY            = 200159,
+    SPELL_PRIEST_EMPOWERED_PENANCE_HEAL             = 200160,
+    SPELL_PRIEST_GREATER_POWER_WORD_SHIELD_READY    = 200161,
+    SPELL_PRIEST_SPIRIT_SHELL                       = 200166
+};
+
+/*
+ * Holy rework (docs/reworks/priest-holy-rework.md, priest-rework.HOLY.md "ID map") - ids the
+ * reworked stock scripts below need. Talent entries are the *rank spell* ids from HOLY.md's "Rank
+ * spell ids" column, never talent_dbc ids (PLAN sec 3.10).
+ */
+enum PriestHolySpells
+{
+    SPELL_PRIEST_RENEW                              = 139,
+
+    // Blessed Recovery (1,1) capstone.
+    SPELL_PRIEST_BLESSED_RECOVERY_HEAL              = 200177,
+    SPELL_PRIEST_BLESSED_RECOVERY_LOCKOUT           = 200178
+};
+
+namespace
+{
+    // "Overhealing generates 75% less shielding, and the absorb is limited to 30% of the target's
+    // maximum health" (docs/reworks/priest-disc-rework.md, Divine Aegis).
+    constexpr float PRIEST_DIVINE_AEGIS_OVERHEAL_WEIGHT = 0.25f;
+    constexpr int32 PRIEST_DIVINE_AEGIS_MAX_HEALTH_PCT = 30;
+
+    // Rapture (7,1): "This effect can only occur once every 5 sec" (stock engine block used 12 s
+    // plus an 11.5 s "let every bubble broken by one hit pay out" grace window; the retune makes
+    // the internal cooldown a hard one, which is what the design text asks for).
+    constexpr uint32 PRIEST_RAPTURE_INTERNAL_COOLDOWN_MS = 5000;
+    // "You also energize your shielded target with 1% total mana, 8 rage and 16 energy" - the rage
+    // and energy amounts live on their own trigger spell rows, only the mana share is computed.
+    constexpr uint32 PRIEST_RAPTURE_TARGET_MANA_PCT = 1;
+
+    // Inner Focus (2,1): "Power Word: Shield: reduces Weakened Soul duration by 10 sec."
+    constexpr int32 PRIEST_INNER_FOCUS_WEAKENED_SOUL_REDUCTION_MS = 10000;
+
+    // Greater Power Word: Shield - "the 2 nearest injured party/raid allies within 20 yd of the
+    // primary target" (PLAN sec 2).
+    constexpr float PRIEST_GREATER_PWS_RADIUS = 20.0f;
+    constexpr uint32 PRIEST_GREATER_PWS_EXTRA_TARGETS = 2;
+
+    // Empowered Penance (Focused Will's capstone) - "up to 3 allies within 10 yd of the Penance
+    // target" (PLAN sec 2).
+    constexpr float PRIEST_EMPOWERED_PENANCE_RADIUS = 10.0f;
+    constexpr uint32 PRIEST_EMPOWERED_PENANCE_TARGETS = 3;
+
+    // Renewed Hope (7,0) capstone: "Your Penance bolts have a 5% chance to transform your next
+    // Power Word: Shield into Greater Power Word: Shield."
+    constexpr float PRIEST_RENEWED_HOPE_CAPSTONE_CHANCE = 5.0f;
+
+    /*
+     * "the N nearest injured party/raid allies within <radius> of <center>", excluding `exclude`.
+     * Walks the caster's group (falling back to the caster alone when ungrouped) instead of doing
+     * a grid search - the same shape Prayer of Mending's jump search uses in Unit.cpp - because a
+     * grid search would also return friendly non-group units, which none of these talents want.
+     */
+    void SelectNearbyInjuredRaidAllies(Unit* caster, Unit* center, float radius, uint32 maxTargets, Unit const* exclude, std::list<Unit*>& out)
+    {
+        if (!caster || !center || !maxTargets)
+            return;
+
+        std::list<Unit*> candidates;
+        if (Group* group = caster->IsPlayer() ? caster->ToPlayer()->GetGroup() : nullptr)
+        {
+            for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+                if (Player* member = itr->GetSource())
+                    candidates.push_back(member);
+        }
+        else
+            candidates.push_back(caster);
+
+        candidates.remove_if([caster, center, radius, exclude](Unit* unit)
+        {
+            return unit == exclude || !unit->IsAlive() || unit->IsFullHealth() || !caster->IsFriendlyTo(unit)
+                   || !center->IsWithinDistInMap(unit, radius) || !center->IsWithinLOSInMap(unit);
+        });
+
+        candidates.sort(Acore::ObjectDistanceOrderPred(center));
+        if (candidates.size() > maxTargets)
+            candidates.resize(maxTargets);
+
+        out = std::move(candidates);
+    }
+
+    // Grace (8,2) hands out a different buff per rank (DISC.md "ID map"); Greater Power Word:
+    // Shield has to apply it to its two extra targets by hand, since they are hit by a fully
+    // triggered cast that suppresses the normal proc chain.
+    uint32 GetGraceBuffForCaster(Unit const* caster)
+    {
+        if (caster->HasAura(SPELL_PRIEST_GRACE_R3))
+            return SPELL_PRIEST_GRACE_BUFF_R3;
+        if (caster->HasAura(SPELL_PRIEST_GRACE_R2))
+            return SPELL_PRIEST_GRACE_BUFF_R2;
+        if (caster->HasAura(SPELL_PRIEST_GRACE_R1))
+            return SPELL_PRIEST_GRACE_BUFF_R1;
+        return 0;
+    }
+
+    // Renewed Hope's own PW:S-target debuff: rank 2's row (200168, 2%) if known, else rank 1's
+    // (63944, 1%) - the two ranks can't share a row (see priest_trigger_spells.py's 200168 notes),
+    // same idiom as GetGraceBuffForCaster above.
+    uint32 GetRenewedHopeBuffForCaster(Unit const* caster)
+    {
+        if (caster->HasAura(SPELL_PRIEST_RENEWED_HOPE_R2))
+            return SPELL_PRIEST_RENEWED_HOPE_BUFF_R2;
+        if (caster->HasAura(SPELL_PRIEST_RENEWED_HOPE_R1))
+            return SPELL_PRIEST_RENEWED_HOPE_BUFF;
+        return 0;
+    }
+
+    // Rapture's per-rank self-mana share: 1 / 1.75 / 2.5% (docs/reworks/priest-disc-rework.md).
+    // Deliberately not read from the rank row's own base points: those are int32, so 1.75% cannot
+    // be stored there - the stock engine block had the same problem and fudged it by adding or
+    // subtracting 0.5 per rank id, which is the idiom this replaces.
+    float GetRaptureSelfManaPct(uint32 rankSpellId)
+    {
+        switch (rankSpellId)
+        {
+            case SPELL_PRIEST_RAPTURE_R1:
+                return 1.0f;
+            case SPELL_PRIEST_RAPTURE_R2:
+                return 1.75f;
+            case SPELL_PRIEST_RAPTURE_R3:
+                return 2.5f;
+            default:
+                return 0.0f;
+        }
+    }
+}
+
+/*
+ * Divine Aegis's absorb math (docs/reworks/priest-disc-rework.md 8,0), shared between the talent's
+ * own proc (spell_pri_divine_aegis) and Empowered Penance, which applies Divine Aegis to each of
+ * its extra bolts "as if it had crit" (PLAN sec 2). `healAmount` is the already-weighted heal
+ * contribution: the proc folds overhealing in at 25% before calling, Empowered Penance passes its
+ * bolt's heal straight through. File-local namespace - both callers live in this translation unit.
+ */
+namespace PriestDisc
+{
+    void GrantDivineAegis(Unit* caster, Unit* target, uint32 healAmount, bool isSingleTarget)
+    {
+        if (!caster || !target || !healAmount)
+            return;
+
+        // Spirit Shell already turned this cast into its own Mastery-scaled absorb; one cast must
+        // never produce two (docs/reworks/priest-disc-rework.md, Spirit Shell).
+        if (caster->HasAura(SPELL_PRIEST_SPIRIT_SHELL))
+            return;
+
+        // Only one of the two ranks is ever known, so rank 2 is both the amount source and the
+        // Mastery-capstone marker - no dummy-by-icon read needed.
+        bool masteryScaled = true;
+        AuraEffect const* talent = caster->GetAuraEffect(SPELL_PRIEST_DIVINE_AEGIS_R2, EFFECT_0);
+        if (!talent)
+        {
+            masteryScaled = false;
+            talent = caster->GetAuraEffect(SPELL_PRIEST_DIVINE_AEGIS_R1, EFFECT_0);
+        }
+
+        if (!talent)
+            return;
+
+        int32 absorb = int32(CalculatePct(float(healAmount), float(talent->GetAmount())));
+
+        // "Divine Aegis is doubled for single target heals" (PLAN sec 2: 30/60%).
+        if (isSingleTarget)
+            absorb *= 2;
+
+        // Rank 2 capstone: "additionally increased by your Mastery. This bonus is multiplicative
+        // and applies after all other modifiers." Applied to this application's own contribution
+        // before the running total is folded in, so a shield refreshed five times is not scaled by
+        // Mastery five times over.
+        if (masteryScaled)
+            if (Player* player = caster->ToPlayer())
+                AddPct(absorb, player->GetMasteryPercentage());
+
+        // Multiple effects stack, so let's try to find this aura.
+        if (AuraEffect const* aegis = target->GetAuraEffect(SPELL_PRIEST_DIVINE_AEGIS, EFFECT_0, caster->GetGUID()))
+            absorb += aegis->GetAmount();
+
+        absorb = std::min<int32>(absorb, int32(target->CountPctFromMaxHealth(PRIEST_DIVINE_AEGIS_MAX_HEALTH_PCT)));
+
+        caster->CastCustomSpell(SPELL_PRIEST_DIVINE_AEGIS, SPELLVALUE_BASE_POINT0, absorb, target, true);
+    }
+}
+
 enum PriestSpellIcons
 {
     PRIEST_ICON_ID_BORROWED_TIME                    = 2899,
     PRIEST_ICON_ID_EMPOWERED_RENEW_TALENT           = 3021,
     PRIEST_ICON_ID_PAIN_AND_SUFFERING               = 2874,
-    PRIEST_ICON_ID_BODY_AND_SOUL                    = 2218
+    PRIEST_ICON_ID_BODY_AND_SOUL                    = 2218,
+    // Improved Devouring Plague - stock icon, unchanged by the rework's data pass (matches the
+    // hardcode this migrates, SpellAuras.cpp's old `case SPELLFAMILY_PRIEST:` Devouring Plague
+    // block, which read it the same way).
+    PRIEST_ICON_ID_IMPROVED_DEVOURING_PLAGUE        = 3790
 };
 
 // Proc system triggered spells
@@ -79,9 +317,35 @@ enum PriestProcSpells
     SPELL_PRIEST_BLESSED_HEALING                    = 70772,
     SPELL_PRIEST_SHADOW_WORD_DEATH_R1               = 32379,
     SPELL_PRIEST_MIND_BLAST_R1                      = 8092,
-    SPELL_PRIEST_MIND_FLAY_DAMAGE                   = 58381,
-    SPELL_PRIEST_BLESSED_RECOVERY_R1                = 27813
+    SPELL_PRIEST_MIND_FLAY_DAMAGE                   = 58381
+    // SPELL_PRIEST_BLESSED_RECOVERY_R1 (27813) removed - Blessed Recovery no longer triggers off
+    // this rank spell after the Holy rework (see spell_pri_blessed_recovery, now rank-3-only).
 };
+
+/*
+ * Shadow rework (docs/reworks/priest-shadow-rework.md, priest-rework.SHADOW.md "ID map") - ids the
+ * reworked stock scripts below need. Talent entries are the *rank spell* ids, never talent_dbc ids
+ * (PLAN sec 3.10).
+ */
+enum PriestShadowSpells
+{
+    SPELL_PRIEST_DEVOURING_PLAGUE                   = 2944,
+
+    // Deathspeaker (4,1) rank ids.
+    SPELL_PRIEST_DEATHSPEAKER_R1                    = 200250,
+    SPELL_PRIEST_DEATHSPEAKER_R2                    = 200251,
+    SPELL_PRIEST_DEATHSPEAKER_R3                    = 200252,
+
+    SPELL_PRIEST_DEVOURING_PLAGUE_INSTANT_CHUNK     = 63675,
+    SPELL_PRIEST_DEVOURING_PLAGUE_SELF_HEAL         = 75999
+};
+
+// Vampiric Embrace (2,3) cap (SHADOW.md baseline edits / talent table): "Either heal cannot exceed
+// 5% of the maximum health of the caster" - re-read carefully (design doc sec 7 row 2,3 and sec
+// 4.1's own note): the tooltip's literal wording names only "the caster", so both the self-heal AND
+// the party-share heal are capped against the CASTER's own max health, not each recipient's own -
+// see spell_pri_vampiric_embrace::HandleProc's own comment for the full ambiguity note.
+constexpr float PRIEST_VAMPIRIC_EMBRACE_MAX_HEALTH_PCT = 5.0f;
 
 enum Mics
 {
@@ -210,22 +474,43 @@ class spell_pri_divine_aegis : public AuraScript
 
     bool CheckProc(ProcEventInfo& eventInfo)
     {
-        return eventInfo.GetProcTarget();
+        if (!eventInfo.GetProcTarget() || !eventInfo.GetHealInfo())
+            return false;
+
+        // Empowered Penance's extra bolts (200160) already get Divine Aegis granted by hand, "as
+        // if it had crit" (HandleEmpoweredPenance below), regardless of whether the bolt actually
+        // crit. A real crit must not also trigger this stock proc, or a crit bolt shields twice.
+        SpellInfo const* procSpell = eventInfo.GetSpellInfo();
+        if (procSpell && procSpell->Id == SPELL_PRIEST_EMPOWERED_PENANCE_HEAL)
+            return false;
+
+        return true;
     }
 
-    void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
+    /*
+     * Discipline rework (docs/reworks/priest-disc-rework.md 8,0): "Your critical Holy healing
+     * spells create a protective barrier absorbing damage up to 15/30% of the healed amount...
+     * Divine Aegis is doubled for single target heals. Overhealing generates 75% less shielding,
+     * and the absorb is limited to 30% of the target's maximum health." The old flat
+     * `pct x GetHeal(), capped at level*125` is gone: overhealing is now worth a quarter, the cap
+     * scales with the target, and the rank-2 Mastery capstone rides on top - all of that lives in
+     * PriestDisc::GrantDivineAegis, which Empowered Penance shares.
+     */
+    void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
     {
         PreventDefaultAction();
 
-        int32 absorb = CalculatePct(int32(eventInfo.GetHealInfo()->GetHeal()), aurEff->GetAmount());
+        HealInfo* healInfo = eventInfo.GetHealInfo();
+        uint32 effectiveHeal = healInfo->GetEffectiveHeal();
+        uint32 overheal = healInfo->GetHeal() > effectiveHeal ? healInfo->GetHeal() - effectiveHeal : 0;
+        uint32 contribution = effectiveHeal + uint32(float(overheal) * PRIEST_DIVINE_AEGIS_OVERHEAL_WEIGHT);
 
-        // Multiple effects stack, so let's try to find this aura.
-        if (AuraEffect const* aegis = eventInfo.GetProcTarget()->GetAuraEffect(SPELL_PRIEST_DIVINE_AEGIS, EFFECT_0))
-            absorb += aegis->GetAmount();
+        // PoM's bounce and Binding Heal are both plain single-unit heals, so IsAffectingArea()
+        // classifies them as single-target for free (PLAN sec 1).
+        SpellInfo const* healSpellInfo = healInfo->GetSpellInfo();
+        bool singleTarget = !healSpellInfo || !healSpellInfo->IsAffectingArea();
 
-        absorb = std::min(absorb, eventInfo.GetProcTarget()->GetLevel() * 125);
-
-        GetTarget()->CastCustomSpell(SPELL_PRIEST_DIVINE_AEGIS, SPELLVALUE_BASE_POINT0, absorb, eventInfo.GetProcTarget(), true, nullptr, aurEff);
+        PriestDisc::GrantDivineAegis(GetTarget(), eventInfo.GetProcTarget(), contribution, singleTarget);
     }
 
     void Register() override
@@ -592,6 +877,10 @@ class spell_pri_penance : public SpellScript
 
     bool Validate(SpellInfo const* spellInfo) override
     {
+        if (!ValidateSpellInfo({ SPELL_PRIEST_EMPOWERED_PENANCE_READY, SPELL_PRIEST_EMPOWERED_PENANCE_HEAL,
+                                 SPELL_PRIEST_GREATER_POWER_WORD_SHIELD_READY }))
+            return false;
+
         SpellInfo const* firstRankSpellInfo = sSpellMgr->GetSpellInfo(SPELL_PRIEST_PENANCE_R1);
         if (!firstRankSpellInfo)
             return false;
@@ -620,10 +909,74 @@ class spell_pri_penance : public SpellScript
             uint8 rank = GetSpellInfo()->GetRank();
 
             if (caster->IsFriendlyTo(unitTarget))
+            {
                 caster->CastSpell(unitTarget, sSpellMgr->GetSpellWithRank(SPELL_PRIEST_PENANCE_R1_HEAL, rank), false);
+                HandleEmpoweredPenance(caster, unitTarget);
+            }
             else
                 caster->CastSpell(unitTarget, sSpellMgr->GetSpellWithRank(SPELL_PRIEST_PENANCE_R1_DAMAGE, rank), false);
+
+            HandleRenewedHopeCapstone(caster);
         }
+    }
+
+    /*
+     * Focused Will (6,0) capstone: "Your Flash Heal and Greater Heal have a 5% chance to empower
+     * your next Penance. Empowered Penance fires additional bolts at allies near your target,
+     * applying Divine Aegis to each." PLAN sec 2 pins that down to "up to 3 allies within 10 yd of
+     * the Penance target, each bolt heals for a normal Penance bolt amount and applies Divine Aegis
+     * at the caster's DA rank as if it had crit (no aegis if DA isn't talented)".
+     *
+     * Fired once per Penance cast, not once per channel tick: Penance's ticks live inside the bolt
+     * spell (47757) rather than in 47540, and only 47540 carries a script binding.
+     */
+    void HandleEmpoweredPenance(Unit* caster, Unit* primaryTarget)
+    {
+        if (!caster->HasAura(SPELL_PRIEST_EMPOWERED_PENANCE_READY))
+            return;
+
+        caster->RemoveAurasDueToSpell(SPELL_PRIEST_EMPOWERED_PENANCE_READY);
+
+        SpellInfo const* boltInfo = sSpellMgr->GetSpellInfo(SPELL_PRIEST_EMPOWERED_PENANCE_HEAL);
+        if (!boltInfo)
+            return;
+
+        std::list<Unit*> extraTargets;
+        SelectNearbyInjuredRaidAllies(caster, primaryTarget, PRIEST_EMPOWERED_PENANCE_RADIUS, PRIEST_EMPOWERED_PENANCE_TARGETS, primaryTarget, extraTargets);
+
+        for (Unit* extraTarget : extraTargets)
+        {
+            caster->CastSpell(extraTarget, SPELL_PRIEST_EMPOWERED_PENANCE_HEAL, true);
+
+            // The aegis has to be granted "as if it had crit", which the normal crit-driven proc
+            // can't express, so the heal the bolt is about to land for is recomputed here with the
+            // same pipeline the cast itself uses. A Penance bolt is a single-target heal, so it
+            // takes Divine Aegis's doubled single-target value.
+            uint32 heal = uint32(std::max<int32>(0, boltInfo->Effects[EFFECT_0].CalcValue(caster)));
+            heal = caster->SpellHealingBonusDone(extraTarget, boltInfo, heal, HEAL, EFFECT_0);
+            heal = extraTarget->SpellHealingBonusTaken(caster, boltInfo, heal, HEAL);
+            PriestDisc::GrantDivineAegis(caster, extraTarget, heal, true);
+        }
+    }
+
+    /*
+     * Renewed Hope (7,0) capstone: "Your Penance bolts have a 5% chance to transform your next
+     * Power Word: Shield into Greater Power Word: Shield." Rolled once per Penance cast for the
+     * same reason as Empowered Penance above (the bolts themselves carry no script binding), and
+     * scaled by the Proc Chance stat by hand because this is a script-side roll, not a spell_proc
+     * one (PLAN sec 3.8).
+     */
+    void HandleRenewedHopeCapstone(Unit* caster)
+    {
+        if (!caster->HasAura(SPELL_PRIEST_RENEWED_HOPE_R2))
+            return;
+
+        Player* player = caster->ToPlayer();
+        float chance = PRIEST_RENEWED_HOPE_CAPSTONE_CHANCE * (1.0f + (player ? player->GetProcChancePercentage() : 0.0f) / 100.0f);
+        if (!roll_chance_f(chance))
+            return;
+
+        caster->CastSpell(caster, SPELL_PRIEST_GREATER_POWER_WORD_SHIELD_READY, true);
     }
 
     SpellCastResult CheckCast()
@@ -699,14 +1052,97 @@ class spell_pri_power_word_shield_aura : public AuraScript
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_PRIEST_REFLECTIVE_SHIELD_TRIGGERED, SPELL_PRIEST_REFLECTIVE_SHIELD_R1 });
+        return ValidateSpellInfo({ SPELL_PRIEST_REFLECTIVE_SHIELD_TRIGGERED, SPELL_PRIEST_REFLECTIVE_SHIELD_R1,
+                                   SPELL_PRIEST_RAPTURE_SELF_MANA, SPELL_PRIEST_RAPTURE_TARGET_MANA,
+                                   SPELL_PRIEST_RAPTURE_TARGET_RAGE, SPELL_PRIEST_RAPTURE_TARGET_ENERGY,
+                                   SPELL_PRIEST_RAPTURE_TARGET_RUNIC_POWER });
     }
 
     void CalculateAmount(AuraEffect const* aurEff, int32& amount, bool& canBeRecalculated)
     {
         canBeRecalculated = false;
-        if (Unit* caster = GetCaster())
-            amount = CalculateSpellAmount(caster, amount, GetSpellInfo(), aurEff);
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+
+        amount = CalculateSpellAmount(caster, amount, GetSpellInfo(), aurEff);
+
+        // Improved Power Word: Shield (2,2) capstone: "Your Power Word: Shield and Spirit Shell
+        // absorption is additionally increased by your Mastery. This bonus is multiplicative and
+        // applies after all other modifiers." Rank 3 only, so its own rank spell id is the marker.
+        // Reflective Shield reads the post-Mastery value because it hooks the absorb itself.
+        if (Player* player = caster->ToPlayer())
+            if (player->HasAura(SPELL_PRIEST_IMPROVED_POWER_WORD_SHIELD_R3))
+                AddPct(amount, player->GetMasteryPercentage());
+    }
+
+    /*
+     * Rapture (7,1): "When your Power Word: Shield is completely absorbed you are instantly
+     * energized with 1/1.75/2.5% of your total mana. You also energize your shielded target with
+     * 1% total mana, 8 rage and 16 energy. This effect can only occur once every 5 sec."
+     *
+     * Migrated out of Aura::HandleAuraSpecificMods (SpellAuras.cpp) per PLAN sec 6.8: living on
+     * the shield's own aura script means Greater Power Word: Shield (200155), which shares this
+     * script, is covered by the same code for free. The engine block keyed purely on
+     * AURA_REMOVE_BY_ENEMY_SPELL, which a *dispel* also uses; checking that the remaining absorb
+     * ran out distinguishes "completely absorbed" from "stolen/dispelled".
+     */
+    void HandleRapture(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+    {
+        if (GetTargetApplication()->GetRemoveMode() != AURA_REMOVE_BY_ENEMY_SPELL || aurEff->GetAmount() > 0)
+            return;
+
+        Unit* target = GetTarget();
+        Player* caster = GetCaster() ? GetCaster()->ToPlayer() : nullptr;
+        if (!target || !caster)
+            return;
+
+        Aura const* rapture = caster->GetAuraOfRankedSpell(SPELL_PRIEST_RAPTURE_R1);
+        if (!rapture)
+            return;
+
+        if (caster->HasSpellCooldown(rapture->GetId()))
+            return;
+
+        caster->AddSpellCooldown(rapture->GetId(), 0, PRIEST_RAPTURE_INTERNAL_COOLDOWN_MS);
+
+        int32 selfMana = int32(CalculatePct(float(caster->GetMaxPower(POWER_MANA)), GetRaptureSelfManaPct(rapture->GetId())));
+        if (selfMana > 0)
+            caster->CastCustomSpell(caster, SPELL_PRIEST_RAPTURE_SELF_MANA, &selfMana, nullptr, nullptr, true);
+
+        AuraEffect const* targetEffect = rapture->GetEffect(EFFECT_1);
+        if (!targetEffect)
+            return;
+
+        // Rolls its own chance, so it has to fold the Proc Chance stat in by hand (PLAN sec 3.8).
+        float chance = float(targetEffect->GetAmount()) * (1.0f + caster->GetProcChancePercentage() / 100.0f);
+        if (!roll_chance_f(chance))
+            return;
+
+        uint32 triggeredSpellId = 0;
+        switch (target->getPowerType())
+        {
+            case POWER_MANA:
+            {
+                int32 targetMana = int32(CalculatePct(target->GetMaxPower(POWER_MANA), PRIEST_RAPTURE_TARGET_MANA_PCT));
+                caster->CastCustomSpell(target, SPELL_PRIEST_RAPTURE_TARGET_MANA, &targetMana, nullptr, nullptr, true);
+                break;
+            }
+            case POWER_RAGE:
+                triggeredSpellId = SPELL_PRIEST_RAPTURE_TARGET_RAGE;
+                break;
+            case POWER_ENERGY:
+                triggeredSpellId = !target->HasAura(SPELL_PRIEST_RAPTURE_ENERGY_EXCLUSION) ? SPELL_PRIEST_RAPTURE_TARGET_ENERGY : 0;
+                break;
+            case POWER_RUNIC_POWER:
+                triggeredSpellId = SPELL_PRIEST_RAPTURE_TARGET_RUNIC_POWER;
+                break;
+            default:
+                break;
+        }
+
+        if (triggeredSpellId)
+            caster->CastSpell(target, triggeredSpellId, true);
     }
 
     void ReflectDamage(AuraEffect* aurEff, DamageInfo& dmgInfo, uint32& absorbAmount)
@@ -729,12 +1165,20 @@ class spell_pri_power_word_shield_aura : public AuraScript
     {
         DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_pri_power_word_shield_aura::CalculateAmount, EFFECT_0, SPELL_AURA_SCHOOL_ABSORB);
         AfterEffectAbsorb += AuraEffectAbsorbFn(spell_pri_power_word_shield_aura::ReflectDamage, EFFECT_0);
+        AfterEffectRemove += AuraEffectRemoveFn(spell_pri_power_word_shield_aura::HandleRapture, EFFECT_0, SPELL_AURA_SCHOOL_ABSORB, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
 class spell_pri_power_word_shield : public SpellScript
 {
     PrepareSpellScript(spell_pri_power_word_shield);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_PRIEST_WEAKENED_SOUL, SPELL_PRIEST_GREATER_POWER_WORD_SHIELD,
+                                   SPELL_PRIEST_GREATER_POWER_WORD_SHIELD_READY, SPELL_PRIEST_RENEWED_HOPE_BUFF,
+                                   SPELL_PRIEST_RENEWED_HOPE_BUFF_R2 });
+    }
 
     SpellCastResult CheckCast()
     {
@@ -755,10 +1199,97 @@ class spell_pri_power_word_shield : public SpellScript
         return SPELL_CAST_OK;
     }
 
+    /*
+     * Inner Focus (2,1) "Power Word: Shield: reduces Weakened Soul duration by 10 sec". The charge
+     * is recorded in BeforeCast and never later: Inner Focus is a one-charge aura, and the normal
+     * SpellMod path consumes it during the cast, so an AfterCast/AfterHit read would always come
+     * back false.
+     */
+    void RecordInnerFocus()
+    {
+        _innerFocus = GetCaster() && GetCaster()->HasAura(SPELL_PRIEST_INNER_FOCUS);
+    }
+
+    void HandleHit()
+    {
+        Unit* target = GetHitUnit();
+        if (!target)
+            return;
+
+        _primaryTargetGuid = target->GetGUID();
+
+        if (!_innerFocus)
+            return;
+
+        // Weakened Soul has just been applied by the shield's own trigger effect, and Reprieve's
+        // duration SpellMod has already been folded into it.
+        if (Aura* weakenedSoul = target->GetAura(SPELL_PRIEST_WEAKENED_SOUL))
+        {
+            int32 remaining = weakenedSoul->GetDuration() - PRIEST_INNER_FOCUS_WEAKENED_SOUL_REDUCTION_MS;
+            if (remaining <= 0)
+                target->RemoveAura(weakenedSoul);
+            else
+                weakenedSoul->SetDuration(remaining);
+        }
+    }
+
+    /*
+     * Greater Power Word: Shield (docs/reworks/priest-disc-rework.md): Renewed Hope's capstone
+     * proc "replaces Power Word: Shield" with a version that "shields the target and the 2 nearest
+     * injured allies". Implemented as two extra 200155 absorbs rather than a separate castable
+     * spell, so the primary target keeps the real shield (and the only Weakened Soul).
+     *
+     * The extra shields go out with TRIGGERED_FULL_MASK so they raise no proc events of their own -
+     * that is what keeps Borrowed Time and Copious Power firing once, from the primary cast, per
+     * the design doc's rules list. Renewed Hope's damage reduction and Grace therefore have to be
+     * applied here by hand, since the primary's proc chain never sees these targets.
+     */
+    void HandleGreaterShield()
+    {
+        Unit* caster = GetCaster();
+        if (!caster || !caster->HasAura(SPELL_PRIEST_GREATER_POWER_WORD_SHIELD_READY))
+            return;
+
+        Unit* primary = ObjectAccessor::GetUnit(*caster, _primaryTargetGuid);
+        if (!primary)
+            return;
+
+        std::list<Unit*> extraTargets;
+        SelectNearbyInjuredRaidAllies(caster, primary, PRIEST_GREATER_PWS_RADIUS, PRIEST_GREATER_PWS_EXTRA_TARGETS, primary, extraTargets);
+
+        // Already carrying this caster's Greater Power Word: Shield - don't overwrite it.
+        extraTargets.remove_if([caster](Unit* unit) { return unit->GetAura(SPELL_PRIEST_GREATER_POWER_WORD_SHIELD, caster->GetGUID()) != nullptr; });
+        if (extraTargets.empty())
+            return;
+
+        uint32 graceBuff = GetGraceBuffForCaster(caster);
+        uint32 renewedHopeBuff = GetRenewedHopeBuffForCaster(caster);
+
+        for (Unit* extraTarget : extraTargets)
+        {
+            caster->CastSpell(extraTarget, SPELL_PRIEST_GREATER_POWER_WORD_SHIELD, TRIGGERED_FULL_MASK);
+
+            if (renewedHopeBuff)
+                caster->CastSpell(extraTarget, renewedHopeBuff, true);
+
+            if (graceBuff)
+                caster->CastSpell(extraTarget, graceBuff, true);
+        }
+
+        caster->RemoveAurasDueToSpell(SPELL_PRIEST_GREATER_POWER_WORD_SHIELD_READY);
+    }
+
     void Register() override
     {
         OnCheckCast += SpellCheckCastFn(spell_pri_power_word_shield::CheckCast);
+        BeforeCast += SpellCastFn(spell_pri_power_word_shield::RecordInnerFocus);
+        AfterHit += SpellHitFn(spell_pri_power_word_shield::HandleHit);
+        AfterCast += SpellCastFn(spell_pri_power_word_shield::HandleGreaterShield);
     }
+
+private:
+    ObjectGuid _primaryTargetGuid;
+    bool _innerFocus = false;
 };
 
 // 33110 - Prayer of Mending Heal
@@ -815,6 +1346,18 @@ class spell_pri_renew : public AuraScript
 {
     PrepareAuraScript(spell_pri_renew);
 
+    // Renew extension pool (docs/reworks/priest-holy-rework.md 5.3, shared by Holy Concentration
+    // (6,0) and Empowered Renew's capstone (8,0)) is implemented as `Priest::ExtendRenewDuration`
+    // in PriestMechanics.h/.cpp, not here. The plan's original idiom (a per-instance
+    // `extensionUsedMs` member fetched cross-file via `aura->GetScript<spell_pri_renew>(...)`)
+    // does not compile: `Aura::GetScript<T>()` is `dynamic_cast<T*>(...)`, which needs T's complete
+    // definition at the call site, but both callers of the pool
+    // (spell_pri_holy_concentration_extend, spell_pri_empowered_renew_capstone) live in
+    // spell_priest_holy.cpp, a different translation unit than this class. PriestMechanics.cpp's
+    // free function instead derives "how much extension this Renew has already used" from the gap
+    // between the aura's current and base max duration (`Aura::GetMaxDuration()` vs
+    // `Aura::GetSpellInfo()->GetMaxDuration()`), needing no per-instance state at all.
+
     bool Load() override
     {
         return GetCaster() && GetCaster()->IsPlayer();
@@ -829,7 +1372,10 @@ class spell_pri_renew : public AuraScript
     {
         if (Unit* caster = GetCaster())
         {
-            // Empowered Renew
+            // Empowered Renew - HOLY.md 8,0: "Instant chunk: only rank 3, 25%." The stock talent
+            // marker read below is unchanged; WP-A's data sets EFFECT_1 = 0/0/25 across the three
+            // ranks, so ranks 1-2 naturally cast a 0-basepoints (no-op) chunk without any extra
+            // code-side rank gate.
             if (AuraEffect const* empoweredRenewAurEff = caster->GetDummyAuraEffect(SPELLFAMILY_PRIEST, PRIEST_ICON_ID_EMPOWERED_RENEW_TALENT, EFFECT_1))
             {
                 uint32 heal = GetEffect(EFFECT_0)->GetAmount();
@@ -847,6 +1393,68 @@ class spell_pri_renew : public AuraScript
     }
 };
 
+/*
+ * -2944 - Devouring Plague
+ * Improved Devouring Plague's (0,1) instant chunk, migrated out of SpellAuras.cpp's old
+ * `case SPELLFAMILY_PRIEST:` hardcode block (Shadow rework, priest-rework.PLAN.md sec 6.8/8,
+ * priest-rework.SHADOW.md "Core hardcode migration owed by this pass"). Same idiom as
+ * spell_pri_renew::HandleApplyEffect above: OnEffectApply with
+ * AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK so a DP refresh (not just the first application) also
+ * deals its own chunk, matching the original `if (apply)`-without-onReapply-gate semantics this
+ * replaces (SpellAuras.cpp's `Aura::HandleAuraSpecificMods`, gated only by `if (apply)`).
+ *
+ * 75999 investigation (mandated before deciding to keep or cut the self-heal cast alongside the
+ * chunk): grepped docs/bugs-and-fixes.md and docs/dbc-build-pipeline.md for "75999" - no hits, so
+ * nothing documents it as dead or wrong. apps/dbc-tools/source/spells/npc.csv (WP-A's own pulled
+ * client data) carries a full "pulled from existing data" row for spell 75999: a real client spell
+ * literally named "Improved Devouring Plague", SPELL_EFFECT_HEAL (effect type 10), self-targeted,
+ * SpellIconID 3790 (the same icon as the talent), described as "...and when you cast Devouring
+ * Plague you instantly deal damage equal to a portion of its total periodic effect" - i.e. this is
+ * Blizzard's own live spell backing this exact self-heal, not an orphaned or broken id. Kept
+ * verbatim per the task's default ("preserve unless documented dead" - no such evidence found).
+ */
+class spell_pri_devouring_plague : public AuraScript
+{
+    PrepareAuraScript(spell_pri_devouring_plague);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_PRIEST_DEVOURING_PLAGUE_INSTANT_CHUNK, SPELL_PRIEST_DEVOURING_PLAGUE_SELF_HEAL });
+    }
+
+    void HandleApplyEffect(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetTarget();
+        if (!caster || !target)
+            return;
+
+        AuraEffect const* improvedDevouringPlague = caster->GetDummyAuraEffect(SPELLFAMILY_PRIEST,
+            PRIEST_ICON_ID_IMPROVED_DEVOURING_PLAGUE, EFFECT_1);
+        if (!improvedDevouringPlague)
+            return;
+
+        uint32 damage = aurEff->GetAmount();
+        damage = target->SpellDamageBonusTaken(caster, GetSpellInfo(), damage, DOT);
+
+        int32 basepoints0 = improvedDevouringPlague->GetAmount() * aurEff->GetTotalTicks() * int32(damage) / 100;
+        int32 heal = int32(CalculatePct(basepoints0, 15));
+
+        caster->CastCustomSpell(target, SPELL_PRIEST_DEVOURING_PLAGUE_INSTANT_CHUNK, &basepoints0, nullptr, nullptr, true, nullptr, aurEff);
+        caster->CastCustomSpell(caster, SPELL_PRIEST_DEVOURING_PLAGUE_SELF_HEAL, &heal, nullptr, nullptr, true, nullptr, aurEff);
+    }
+
+    void Register() override
+    {
+        // EFFECT_0 is SPELL_AURA_PERIODIC_LEECH (53), not PERIODIC_DAMAGE - verified against live
+        // acore_world.spell_dbc and apps/dbc-tools/source/classes/priest/priest_spells.py's
+        // devouring_plague_2944 (its single effect, "15% of damage caused ... heals the caster").
+        // The SpellAuras.cpp hardcode this replaces read GetEffect(0) with no aura-type filter, so
+        // it worked on a leech effect; a PERIODIC_DAMAGE binding here silently never fires.
+        OnEffectApply += AuraEffectApplyFn(spell_pri_devouring_plague::HandleApplyEffect, EFFECT_0, SPELL_AURA_PERIODIC_LEECH, AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK);
+    }
+};
+
 // -32379 - Shadow Word Death
 class spell_pri_shadow_word_death : public SpellScript
 {
@@ -861,6 +1469,42 @@ class spell_pri_shadow_word_death : public SpellScript
             AddPct(damage, aurEff->GetAmount());
 
         GetCaster()->CastCustomSpell(GetCaster(), SPELL_PRIEST_SHADOW_WORD_DEATH, &damage, 0, 0, true);
+
+        // Deathspeaker (4,1) backlash clause: "When you take damage from your own Shadow Word:
+        // Death, you have a 15/30/45% chance to summon a Tentacle of Madness" (design doc sec 4.2 /
+        // SHADOW.md talent table 4,1). Rolls unconditionally on every cast - the backlash damage
+        // itself is dealt regardless of Pain and Suffering's reduction just above (amount
+        // irrelevant to the roll), and, per investigation below, regardless of whether the cast
+        // was lethal to the enemy target.
+        //
+        // SW:D backlash-vs-kill mutual-exclusivity finding: the design doc's own text ("Backlash
+        // and kill are mutually exclusive per cast by construction ... a kill produces no
+        // backlash") does not hold for this codebase's actual implementation. This `HandleDamage`
+        // is bound to `OnHit` (see Register() below), which fires for every successful hit on the
+        // enemy target - including a killing one - and unconditionally casts the backlash spell on
+        // the caster; nothing here (or anywhere else in this class) checks whether the target
+        // survived. `Priest::OnKill` (PriestMechanics.cpp, called from Unit::Kill) fires
+        // independently whenever this same cast kills the target. So a *lethal* Shadow Word: Death
+        // cast rolls BOTH the backlash chance here AND the kill chance in Priest::OnKill on the
+        // same cast - not mutually exclusive. No extra guard is added to force exclusivity (the
+        // task's instruction was to investigate and handle correctly, not to silently patch stock
+        // SW:D's backlash-on-kill behavior, which is unrelated pre-existing engine behavior outside
+        // this class's owned scope); both rolls remain independent, each still gated by their own
+        // ICD/no-ICD rule, and the max-5-live cap bounds the worst case of a double-summon.
+        if (Player* caster = GetCaster()->ToPlayer())
+        {
+            AuraEffect const* deathspeaker = nullptr;
+            for (uint32 rank : { SPELL_PRIEST_DEATHSPEAKER_R1, SPELL_PRIEST_DEATHSPEAKER_R2, SPELL_PRIEST_DEATHSPEAKER_R3 })
+                if ((deathspeaker = caster->GetAuraEffect(rank, EFFECT_1)) != nullptr)
+                    break;
+
+            if (deathspeaker)
+            {
+                float chance = float(deathspeaker->GetAmount()) * (1.0f + caster->GetProcChancePercentage() / 100.0f);
+                if (roll_chance_f(chance))
+                    Priest::TrySummonTentacle(caster, Priest::TentacleTrigger::Backlash);
+            }
+        }
     }
 
     void Register() override
@@ -1044,6 +1688,18 @@ class spell_pri_vampiric_embrace : public AuraScript
 
         int32 selfHeal = CalculatePct(static_cast<int32>(damageInfo->GetDamage()), aurEff->GetAmount());
         int32 partyHeal = selfHeal / 5;
+
+        // Shadow rework (SHADOW.md baseline edits / talent table 2,3): "Either heal cannot exceed
+        // 5% of the maximum health of the caster." Re-read design doc sec 4.1/sec 7 row 2,3 once
+        // more before implementing - the tooltip's literal wording names only "the caster" for
+        // both clauses (it doesn't say "of the recipient" for the party share), so both are capped
+        // against GetTarget()'s (the caster's) own max health below, not each party member's own.
+        // Genuinely ambiguous whether the party share was meant to cap against each recipient
+        // instead - flagged in the WP-B report; implemented per the literal tooltip text.
+        int32 maxHealthCap = int32(GetTarget()->CountPctFromMaxHealth(PRIEST_VAMPIRIC_EMBRACE_MAX_HEALTH_PCT));
+        selfHeal = std::min(selfHeal, maxHealthCap);
+        partyHeal = std::min(partyHeal, maxHealthCap);
+
         GetTarget()->CastCustomSpell(GetTarget(), SPELL_PRIEST_VAMPIRIC_EMBRACE_HEAL, &partyHeal, &selfHeal, nullptr, true, nullptr, aurEff);
     }
 
@@ -1111,32 +1767,26 @@ class spell_pri_body_and_soul : public AuraScript
 
     bool CheckProcTriggerSpell(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
     {
+        // Holy rework (docs/reworks/priest-holy-rework.md 7,0): "Casting Renew or Leap of Faith
+        // increases the target's movement speed" - retargeted from the old Power Word: Shield cast
+        // (0x00000001, PWS dw1). RENEW=0x40 (dw1), Leap of Faith=0x40000 (dw3, PLAN sec 4.4 bit
+        // 18). This is a hardcoded literal, not derived from spell_proc data, so it has to move in
+        // lockstep with WP-A's EffectSpellClassMaskA_1/_3 retarget of 64127/64129's own eff1 or the
+        // talent can never fire again - the HOLY.md table's "D (+ script trim)" characterization
+        // undersells this; it's a required mask change, not just a deletion.
+        //
+        // Answered Prayers' spread Renews are cast via TRIGGERED_FULL_MASK (spell_pri_renew_cast),
+        // which suppresses procs entirely (design doc sec 6, "does not trigger Body and Soul"), so
+        // no extra IsTriggered() guard is needed here.
         SpellInfo const* spellInfo = eventInfo.GetSpellInfo();
-        return spellInfo && (spellInfo->SpellFamilyFlags[0] & 0x00000001) != 0;
-    }
-
-    bool CheckProcDummy(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
-    {
-        if (eventInfo.GetActor() != eventInfo.GetActionTarget())
+        if (!spellInfo)
             return false;
-
-        SpellInfo const* spellInfo = eventInfo.GetSpellInfo();
-        return spellInfo && spellInfo->Id == 552;
-    }
-
-    void HandleProcDummy(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
-    {
-        PreventDefaultAction();
-
-        if (roll_chance_i(aurEff->GetAmount()))
-            eventInfo.GetActor()->CastSpell(eventInfo.GetActor(), SPELL_PRIEST_BODY_AND_SOUL_SPEED, true, nullptr, aurEff);
+        return (spellInfo->SpellFamilyFlags[0] & 0x00000040) != 0 || (spellInfo->SpellFamilyFlags[2] & 0x00040000) != 0;
     }
 
     void Register() override
     {
         DoCheckEffectProc += AuraCheckEffectProcFn(spell_pri_body_and_soul::CheckProcTriggerSpell, EFFECT_0, SPELL_AURA_PROC_TRIGGER_SPELL);
-        DoCheckEffectProc += AuraCheckEffectProcFn(spell_pri_body_and_soul::CheckProcDummy, EFFECT_1, SPELL_AURA_DUMMY);
-        OnEffectProc += AuraEffectProcFn(spell_pri_body_and_soul::HandleProcDummy, EFFECT_1, SPELL_AURA_DUMMY);
     }
 };
 
@@ -1391,39 +2041,83 @@ class spell_pri_pain_and_suffering_dummy : public AuraScript
     }
 };
 
-// -27811 - Blessed Recovery
+/*
+ * -27816 - Blessed Recovery (1,1) capstone (docs/reworks/priest-holy-rework.md 5.5). Reworked from
+ * the old "damage taken triggers a HoT" shape (27811/27813) to "your Renew healing a target at or
+ * below 35% health immediately heals them for 2 more ticks worth" - now registers on rank 3
+ * (27816) only, since only the fully-talented capstone grants the effect at all (HOLY.md 1,1); the
+ * eff1 ADD_PCT_MODIFIER "+3/6/9% Priest healing effectiveness" on all three ranks is pure data
+ * (WP-A), needing no script. 27813 (the old rank's HoT) is unused after this.
+ */
 class spell_pri_blessed_recovery : public AuraScript
 {
     PrepareAuraScript(spell_pri_blessed_recovery);
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_PRIEST_BLESSED_RECOVERY_R1 });
+        return ValidateSpellInfo(
+        {
+            SPELL_PRIEST_RENEW,
+            SPELL_PRIEST_EMPOWERED_RENEW,
+            SPELL_PRIEST_BLESSED_RECOVERY_HEAL,
+            SPELL_PRIEST_BLESSED_RECOVERY_LOCKOUT
+        });
     }
 
-    void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        // "Trigger: Any healing event from the caster's Renew. This includes periodic ticks and
+        // Empowered Renew's instant 25% chunk on application." (design doc 5.5)
+        SpellInfo const* procSpell = eventInfo.GetSpellInfo();
+        if (!procSpell || (procSpell->Id != SPELL_PRIEST_RENEW && procSpell->Id != SPELL_PRIEST_EMPOWERED_RENEW))
+            return false;
+
+        Unit* target = eventInfo.GetProcTarget();
+        if (!target || !target->HealthBelowPct(35))
+            return false;
+
+        // 20 sec per-target-per-caster lockout, not a spell cooldown (design doc 5.5: "Not a spell
+        // cooldown, so no Cooldown Haste").
+        if (target->GetAuraEffect(SPELL_PRIEST_BLESSED_RECOVERY_LOCKOUT, EFFECT_0, GetTarget()->GetGUID()))
+            return false;
+
+        return true;
+    }
+
+    void HandleProc(ProcEventInfo& eventInfo)
     {
         PreventDefaultAction();
 
-        DamageInfo* dmgInfo = eventInfo.GetDamageInfo();
-        if (!dmgInfo || !dmgInfo->GetDamage())
+        Unit* caster = GetTarget();
+        Unit* target = eventInfo.GetProcTarget();
+        if (!caster || !target)
             return;
 
-        Unit* target = eventInfo.GetActionTarget();
-        uint32 triggerSpell = sSpellMgr->GetSpellWithRank(SPELL_PRIEST_BLESSED_RECOVERY_R1, aurEff->GetSpellInfo()->GetRank());
-        SpellInfo const* triggerInfo = sSpellMgr->AssertSpellInfo(triggerSpell);
+        // "One instant heal worth 2 Renew ticks" - read off the caster's own Renew on this target,
+        // same idiom spell_pri_renew::HandleApplyEffect uses for Empowered Renew's chunk (manually
+        // re-apply the taken-side bonus onto the aura's stored per-tick amount, since GetAmount()
+        // itself is the pre-bonus base value).
+        AuraEffect const* renewTick = target->GetAuraEffect(SPELL_PRIEST_RENEW, EFFECT_0, caster->GetGUID());
+        if (!renewTick)
+            return;
 
-        int32 bp = CalculatePct(static_cast<int32>(dmgInfo->GetDamage()), aurEff->GetAmount());
+        uint32 heal = uint32(std::max(renewTick->GetAmount(), 0));
+        heal = target->SpellHealingBonusTaken(caster, renewTick->GetSpellInfo(), heal, DOT);
 
-        ASSERT(triggerInfo->GetMaxTicks() > 0);
-        bp /= triggerInfo->GetMaxTicks();
+        int32 bp = int32(heal) * 2;
 
-        target->CastCustomSpell(target, triggerSpell, &bp, nullptr, nullptr, true, nullptr, aurEff);
+        // Crit rolls normally (design doc 5.5) - a plain triggered CastCustomSpell already can
+        // crit in this codebase (Unit::SpellDoneCritChance only ever suppresses crit via
+        // SPELL_ATTR2_CANT_CRIT / !IsCritCapable(), never via the trigger flag), so no special
+        // trigger-flag combination is needed here.
+        caster->CastCustomSpell(SPELL_PRIEST_BLESSED_RECOVERY_HEAL, SPELLVALUE_BASE_POINT0, bp, target, true);
+        caster->CastSpell(target, SPELL_PRIEST_BLESSED_RECOVERY_LOCKOUT, true);
     }
 
     void Register() override
     {
-        OnEffectProc += AuraEffectProcFn(spell_pri_blessed_recovery::HandleProc, EFFECT_0, SPELL_AURA_PROC_TRIGGER_SPELL);
+        DoCheckProc += AuraCheckProcFn(spell_pri_blessed_recovery::CheckProc);
+        OnProc += AuraProcFn(spell_pri_blessed_recovery::HandleProc);
     }
 };
 
@@ -1445,8 +2139,15 @@ void AddSC_priest_spell_scripts()
     RegisterSpellScript(spell_pri_pain_and_suffering_proc);
     RegisterSpellScript(spell_pri_penance);
     RegisterSpellAndAuraScriptPair(spell_pri_power_word_shield, spell_pri_power_word_shield_aura);
+    // RegisterSpellAndAuraScriptPair names the loader after its *first* argument, so the pair
+    // above is only reachable from spell_script_names as "spell_pri_power_word_shield". Greater
+    // Power Word: Shield (200155) needs the aura half alone - it has no cast of its own, no
+    // Weakened Soul and no CheckCast - so the same AuraScript is registered a second time under
+    // its own name for that binding (DISC.md: `scripted_by(200155, 'spell_pri_power_word_shield_aura')`).
+    RegisterSpellScript(spell_pri_power_word_shield_aura);
     RegisterSpellScript(spell_pri_prayer_of_mending_heal);
     RegisterSpellScript(spell_pri_renew);
+    RegisterSpellScript(spell_pri_devouring_plague);
     RegisterSpellScript(spell_pri_shadow_word_death);
     RegisterSpellScript(spell_pri_vampiric_touch);
     RegisterSpellScript(spell_pri_mind_control);

@@ -1,0 +1,27 @@
+-- DB update 2026_09_23_14 -> 2026_09_23_15
+-- Priest Shadow rework (docs/reworks/priest-shadow-rework.md talent table 8,1 "Pain and Suffering",
+-- priest-rework.SHADOW.md's own "(D +verify)" flag on that row) - fixes a real boot-log regression
+-- found during WP-C's boot-log check: `data/sql/base/db_world/spell_proc.sql` carries a stock row
+-- keyed on the negative id `-47580` (SchoolMask 0, SpellFamilyName 6, SpellFamilyMask2 64,
+-- SpellPhaseMask 2 = HIT-phase) which, per the "-<id> = this spell and every rank in its chain"
+-- convention (`SpellMgr::LoadSpellProcs`'s `allRanks` handling), expands at load time to also cover
+-- ranks 47581 and 47582. `apps/dbc-tools/source/classes/priest/priest_trigger_spells.py`'s new
+-- `procs_on(pain_and_suffering_4758{0,1,2}, ...)` calls (WP-A, this pass) declare the reworked
+-- CAST-phase proc as three separate POSITIVE-id rows - a different key
+-- (`lib/spell_tables.py`'s `SpellTableIndex` keys `spell_proc` on `SpellId` alone), so
+-- `generate.py`'s DELETE-before-INSERT idempotency never touches the old negative-id row; both rows
+-- end up live at once. `SpellMgr::LoadSpellProcs` has no `ORDER BY` on its query and InnoDB returns
+-- primary-key order for an unfiltered scan, so the negative row (-47580 < 47580) loads first, its
+-- rank-walk populates `mSpellProcMap` for 47580/47581/47582 with the OLD stock HIT-phase behavior,
+-- and the new CAST-phase rows this pass actually wants are then rejected as
+-- "Spell 47580/47581/47582 listed in `spell_proc` has duplicate entry in the table" (confirmed live
+-- in the boot log) - silently keeping Pain and Suffering on its pre-rework proc shape instead of the
+-- reworked one. Same failure mode SHADOW.md's own "Core hardcode migration"/WP-7-equivalent bugs
+-- take (an old binding outliving a new one it should have been superseded by), just in `spell_proc`
+-- instead of `spell_script_names` - see docs/bugs-and-fixes.md for the general pattern and the
+-- review-fix pass's WP-7 (Shadow Word: Death's duplicate `spell_script_names` binding) for the sibling
+-- fix. Deleting the stale negative-id row (not editable in place - `data/sql/base/db_world/` is
+-- immutable per AGENTS.md) leaves the three explicit positive-id rows this pass declared as Pain and
+-- Suffering's only proc data, letting `generate.py`'s own DELETE-before-INSERT for those three keys
+-- keep working normally on every future run.
+DELETE FROM `spell_proc` WHERE `SpellId` = -47580;

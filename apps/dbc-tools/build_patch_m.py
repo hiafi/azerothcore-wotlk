@@ -7,7 +7,9 @@ hand via `smpq -x` against a reference client, never committed - see that direct
 gitignore), into patch-M.mpq - the ongoing home for custom creature-display/spell-visual client
 content that falls outside apps/dbc-tools/generate.py's own pipeline (which owns
 Spell.dbc/Talent.dbc/etc. and ships as patch-Z.mpq - see lib/patch_out.py). patch-Y.mpq (GT
-combat-rating tables, patch_gt_tables.py) is the third leg of the same convention.
+combat-rating tables, patch_gt_tables.py) and patch-I.mpq (SpellIcon.dbc + its .blp files,
+build_patch_i.py) are the other legs of the same convention. SpellIcon.dbc lives in the same
+working-copy directory but is deliberately NOT packed here (NOT_OURS below) - see that comment.
 
 The SPELLS/ half only matters once a DBC row's ModelName/FileName field actually points at one of
 these files (see patch_mage_vfx_models.py) - packing an asset the DBCs don't reference yet is
@@ -60,6 +62,15 @@ DEFAULT_DBFILESCLIENT = Path(__file__).resolve().parent / "var" / "model-visual-
 DEFAULT_SPELLS = Path(__file__).resolve().parent / "var" / "model-visual-dbc" / "SPELLS"
 LOCAL_OUT = Path(__file__).resolve().parent / "var" / "dbc-patch" / "patch-M.mpq"
 
+# DBCs that share this working-copy directory but are owned (and shipped) by another patch script.
+# The client loads lettered patches alphabetically with later letters overriding earlier ones, so a
+# copy of one of these packed here would silently shadow the owning patch's newer copy (patch-M >
+# patch-I). That's exactly what blanked every SpellIcon row minted after patch-M's last rebuild -
+# see docs/bugs-and-fixes.md ("Custom SpellIcon.dbc rows added after ... render as blank").
+NOT_OURS = {
+    "spellicon.dbc",  # build_patch_i.py -> patch-I.mpq (must ship next to its .blp files)
+}
+
 # Operator-specific and this repo is public on GitHub, so it lives in lib/local_config.py
 # (gitignored) rather than here - see that file's docstring / local_config.py.example.
 try:
@@ -75,7 +86,8 @@ def main() -> None:
     parser.add_argument("--deploy-root", type=str, default=str(DEFAULT_DEPLOY_ROOT) if DEFAULT_DEPLOY_ROOT else "")
     args = parser.parse_args()
 
-    dbc_files = sorted(p for p in args.dbfilesclient.iterdir() if p.suffix.lower() == ".dbc")
+    dbc_files = sorted(p for p in args.dbfilesclient.iterdir()
+                       if p.suffix.lower() == ".dbc" and p.name.lower() not in NOT_OURS)
     if not dbc_files:
         raise SystemExit(f"no .dbc files found in {args.dbfilesclient}")
 

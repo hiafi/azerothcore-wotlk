@@ -179,5 +179,168 @@ class SpellTableIndexTest(unittest.TestCase):
         self.assertFalse(any("spell_bonus_data" in b for b in blocks))
 
 
+GENERATED_HEADER = spell_tables.GENERATED_MARKER + " — DO NOT hand-edit.\n"
+
+
+class PruneTest(unittest.TestCase):
+    """The prune pass: rows an earlier generated run emitted that the source
+    no longer declares. See .agents/plans/dbc-tools-prune-pass/."""
+
+    def setUp(self):
+        self._tmp = TemporaryDirectory()
+        root = Path(self._tmp.name)
+        self._base, self._promoted, self._pending = root / "base", root / "promoted", root / "pending"
+        for d in (self._base, self._promoted, self._pending):
+            d.mkdir()
+        for table, sql in BASE_SQL.items():
+            (self._base / f"{table}.sql").write_text(sql)
+        self._orig = (trainer_state.BASE_SQL_DIR, trainer_state.PROMOTED_SQL_DIR, trainer_state.PENDING_SQL_DIR)
+        trainer_state.BASE_SQL_DIR = self._base
+        trainer_state.PROMOTED_SQL_DIR = self._promoted
+        trainer_state.PENDING_SQL_DIR = self._pending
+        self.dsl = _load_class(CLASS_FILE)
+
+    def tearDown(self):
+        (trainer_state.BASE_SQL_DIR, trainer_state.PROMOTED_SQL_DIR, trainer_state.PENDING_SQL_DIR) = self._orig
+        self._tmp.cleanup()
+
+    def _write(self, name: str, body: str, generated: bool = True):
+        (self._promoted / name).write_text((GENERATED_HEADER if generated else "") + body)
+
+    def _prune(self):
+        return spell_tables.render_prune_blocks(spell_tables.load_spell_table_index(), self.dsl)
+
+    # The real case this was built for: a renamed script leaves the old
+    # (spell_id, ScriptName) pair behind, plus a retired procs_on row.
+    def test_orphaned_rows_are_pruned(self):
+        self._write("gen.sql",
+            "INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES "
+            "(200095, 'spell_mage_meteor'), (200095, 'spell_mage_meteor_old');\n")
+        blocks, report = self._prune()
+        self.assertEqual(len(blocks), 1)
+        self.assertIn("DELETE FROM `spell_script_names` WHERE (`spell_id`, `ScriptName`) IN "
+                      "((200095, 'spell_mage_meteor_old'));", blocks[0])
+        # still-declared row untouched
+        self.assertNotIn("'spell_mage_meteor')", blocks[0].split("IN (")[1])
+        self.assertTrue(any("removing spell_script_names" in line for line in report))
+
+    def test_declared_rows_are_never_pruned(self):
+        self._write("gen.sql",
+            "INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES "
+            "(200095, 'spell_mage_meteor'), (12654, 'spell_mage_ignite_dot'), "
+            "(12654, 'spell_mage_ignite_display');\n")
+        blocks, report = self._prune()
+        self.assertEqual(blocks, [])
+        self.assertEqual([l for l in report if "removing" in l], [])
+
+    # Provenance: an identical orphan in a hand-written migration is not ours.
+    def test_hand_written_migration_rows_are_not_pruned(self):
+        self._write("hand.sql",
+            "INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES "
+            "(200095, 'spell_mage_meteor_old');\n", generated=False)
+        blocks, report = self._prune()
+        self.assertEqual(blocks, [])
+        self.assertEqual([l for l in report if "removing" in l], [])
+
+    # Safety rule 1: a past run overrode a stock row; deleting leaves a hole.
+    def test_base_dump_overlap_is_reported_not_deleted(self):
+        (self._base / "spell_proc.sql").write_text(
+            BASE_SQL["spell_proc"]
+            + "INSERT INTO `spell_proc` (`SpellId`) VALUES (12345);\n")
+        self._write("gen.sql", "INSERT INTO `spell_proc` (`SpellId`) VALUES (12345);\n")
+        blocks, report = self._prune()
+        self.assertEqual(blocks, [])
+        self.assertTrue(any("NOT removing spell_proc" in line and "12345" in line for line in report))
+
+    # Safety rule 2: zero declarations + a history means the source didn't load.
+    def test_circuit_breaker_refuses_to_empty_a_table(self):
+        self._write("gen.sql",
+            "INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (200095, 'a'), (7, 'b');\n")
+        blocks, report = spell_tables.render_prune_blocks(
+            spell_tables.load_spell_table_index(), {})
+        self.assertEqual(blocks, [])
+        self.assertTrue(any("SKIPPED spell_script_names" in line for line in report))
+
+    def test_delete_block_renders_ints_not_floats(self):
+        self._write("gen.sql", "INSERT INTO `spell_proc` (`SpellId`) VALUES (200098), (99999);\n")
+        blocks, _ = self._prune()
+        self.assertIn("DELETE FROM `spell_proc` WHERE (`SpellId`) IN ((99999));", blocks[0])
+        self.assertNotIn(".0", blocks[0])
+
+    # spell_proc's "this spell and every rank in its chain" negative-id rows
+    # are the real-world instance of safety rule 1 (three such rows are
+    # currently overridden in this repo: -14531, -45234, -47516).
+    def test_negative_spell_id_overriding_stock_is_not_pruned(self):
+        (self._base / "spell_proc.sql").write_text(
+            BASE_SQL["spell_proc"]
+            + "INSERT INTO `spell_proc` (`SpellId`) VALUES (-47516);\n")
+        self._write("gen.sql", "INSERT INTO `spell_proc` (`SpellId`) VALUES (-47516);\n")
+        blocks, report = self._prune()
+        self.assertEqual(blocks, [])
+        self.assertTrue(any("NOT removing spell_proc" in l and "-47516" in l for l in report))
+
+    def test_key_sort_tolerates_none_and_mixed_types(self):
+        from lib import sql_out
+        self.assertEqual(
+            sql_out.stable_key_sort([(2.0, "b"), (None, "a"), (1.0, "z"), (2.0, "a")]),
+            [(None, "a"), (1.0, "z"), (2.0, "a"), (2.0, "b")])
+
+    # The regression this replay exists for: once a prune has emitted its
+    # DELETE into a generated file, a later run must see the row as gone
+    # rather than re-reporting it forever.
+    def test_already_pruned_row_is_not_reported_again(self):
+        self._write("01_gen.sql",
+            "INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES "
+            "(200095, 'spell_mage_meteor'), (200095, 'spell_mage_meteor_old');\n")
+        blocks, report = self._prune()
+        self.assertEqual(len(blocks), 1)  # first run: prunes the orphan
+
+        # Simulate that prune having been written out as the next generated file.
+        self._write("02_gen.sql",
+            "DELETE FROM `spell_script_names` WHERE (`spell_id`, `ScriptName`) IN "
+            "((200095, 'spell_mage_meteor_old'));\n")
+        blocks, report = self._prune()
+        self.assertEqual(blocks, [])
+        self.assertEqual([l for l in report if "removing" in l], [])
+
+    # A DELETE+INSERT block (render_generic_table_block) must not read as a
+    # net removal - the INSERT immediately puts the row back.
+    def test_delete_then_insert_in_same_file_keeps_the_row(self):
+        self._write("gen.sql",
+            "DELETE FROM `spell_script_names` WHERE (`spell_id`, `ScriptName`) IN "
+            "((200095, 'spell_mage_meteor_old'));\n"
+            "INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES "
+            "(200095, 'spell_mage_meteor_old');\n")
+        blocks, _ = self._prune()
+        self.assertEqual(len(blocks), 1)
+        self.assertIn("spell_mage_meteor_old", blocks[0])
+
+    # Single-column DELETE against a two-column-keyed table removes every
+    # matching row (the prefix case in _matching_keys).
+    def test_single_column_delete_removes_all_matching_keys(self):
+        self._write("gen.sql",
+            "INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES "
+            "(4242, 'a'), (4242, 'b');\n"
+            "DELETE FROM `spell_script_names` WHERE `spell_id` IN (4242);\n")
+        blocks, report = self._prune()
+        self.assertEqual(blocks, [])
+        self.assertEqual([l for l in report if "removing" in l], [])
+
+    def test_spell_proc_delete_replay(self):
+        self._write("gen.sql",
+            "INSERT INTO `spell_proc` (`SpellId`) VALUES (777);\n"
+            "DELETE FROM `spell_proc` WHERE (`SpellId`) IN ((777));\n")
+        blocks, report = self._prune()
+        self.assertEqual(blocks, [])
+
+    # Safety: a shape the replay can't read must shrink the prune, not guess.
+    def test_unparsed_delete_shape_disables_prune_for_that_table(self):
+        self._write("gen.sql",
+            "INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (200095, 'orphan');\n"
+            "DELETE FROM `spell_script_names` WHERE `ScriptName` LIKE 'spell_%';\n")
+        blocks, report = self._prune()
+        self.assertEqual(blocks, [])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -18,6 +18,7 @@
 #include "GameTime.h"
 #include "Group.h"
 #include "Player.h"
+#include "PriestMechanics.h"
 #include "SpellAuraEffects.h"
 #include "SpellMgr.h"
 #include "SpellScript.h"
@@ -393,7 +394,13 @@ private:
         int32 remainingHealth = victim->GetHealth() - dmgInfo.GetDamage();
         uint32 allowedHealth = victim->CountPctFromMaxHealth(35);
         // If damage kills us
-        if (remainingHealth <= 0 && !victim->ToPlayer()->HasAura(PAL_SPELL_ARDENT_DEFENDER_DEBUFF))
+        // Priest Holy rework (docs/reworks/priest-holy-rework.md, Spirit of Redemption capstone):
+        // Spirit of Redemption, Cheat Death and Ardent Defender share one 2-min lockout via the
+        // Priest::SPELL_CHEATED_DEATH_MARKER debuff (PLAN sec 1) - while it's up, Ardent Defender's
+        // death-prevention clause doesn't fire either (its own PAL_SPELL_ARDENT_DEFENDER_DEBUFF
+        // lockout is unchanged).
+        if (remainingHealth <= 0 && !victim->ToPlayer()->HasAura(PAL_SPELL_ARDENT_DEFENDER_DEBUFF)
+            && !victim->ToPlayer()->HasAura(Priest::SPELL_CHEATED_DEATH_MARKER))
         {
             // Cast healing spell, completely avoid damage
             absorbAmount = dmgInfo.GetDamage();
@@ -408,6 +415,7 @@ private:
 
             int32 healAmount = int32(victim->CountPctFromMaxHealth(uint32(healPct * pctFromDefense)));
             victim->CastCustomSpell(PAL_SPELL_ARDENT_DEFENDER_HEAL, SPELLVALUE_BASE_POINT0, healAmount, victim, true, nullptr, aurEff);
+            victim->CastSpell(victim, Priest::SPELL_CHEATED_DEATH_MARKER, true);
         }
         else if (remainingHealth < int32(allowedHealth))
         {

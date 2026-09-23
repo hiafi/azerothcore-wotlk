@@ -326,6 +326,108 @@ _WHERE_EQ_RE = re.compile(
 )
 
 
+# The composite-key DELETE `sql_out.py` emits: "WHERE (`a`, `b`) IN ((1, 'x'), (2, 'y'));".
+# Deliberately separate from `_WHERE_IN_RE` above, whose `[^)]*` body stops dead at the first
+# ')' and so can never read a list of tuples.
+_DELETE_WHERE_TUPLE_IN_RE = re.compile(
+    r"WHERE\s*\(\s*(?P<cols>`\w+`(?:\s*,\s*`\w+`)*)\s*\)\s+IN\s*\(",
+    re.IGNORECASE,
+)
+
+
+def _read_key_tuples(
+    text: str, start: int, variables: dict[str, int] | None = None
+) -> tuple[list[list], int]:
+    """Parse `(v, v), (v, v)` and stop on the ')' closing the enclosing IN
+    list - the one difference from `_read_tuples`, which is written for an
+    INSERT's VALUES and terminates on ';' instead."""
+    tuples: list[list] = []
+    i = start
+    n = len(text)
+    while i < n:
+        i = _skip_ws_and_comments(text, i)
+        if text[i] == ")":
+            return tuples, i + 1
+        if text[i] != "(":
+            raise ValueError(f"expected '(' or ')' at offset {i}, found {text[i]!r}")
+        i += 1
+        values = []
+        while True:
+            i = _skip_ws_and_comments(text, i)
+            value, i = _read_value(text, i, variables=variables)
+            values.append(value)
+            i = _skip_ws_and_comments(text, i)
+            if text[i] == ",":
+                i += 1
+                continue
+            if text[i] == ")":
+                i += 1
+                break
+        tuples.append(values)
+        i = _skip_ws_and_comments(text, i)
+        if text[i] == ",":
+            i += 1
+    raise ValueError("unterminated IN (...) list (no closing ')' found)")
+
+
+def read_table_statements(path: Path, table_name: str, columns: tuple[str, ...]):
+    """Yield one table's INSERT/DELETE statements **in file order**, so a
+    caller can replay them instead of taking the union of INSERTs and
+    pretending no row was ever deleted.
+
+    Events are `("insert", rows)` and `("delete", (key_columns, key_tuples))`;
+    a DELETE whose shape isn't recognized yields `("delete_unparsed", None)`
+    so the caller can decide how paranoid to be rather than silently
+    believing rows survived it. A single-column WHERE col IN (...) / col = n
+    is normalised to the same one-column shape as the composite form, so
+    callers only handle one case.
+
+    Complements `read_table_rows` (union of INSERTs, no DELETE replay), which
+    stays as-is: it is the right answer for "what is live" across the base
+    dump plus every hand-written migration, where DELETE shapes are far more
+    varied than the ones `sql_out.py` emits."""
+    text = Path(path).read_text(encoding="utf-8")
+    variables = {m.group("name"): int(m.group("value")) for m in _SET_VAR_RE.finditer(text)}
+    pos = 0
+    while pos < len(text):
+        ins = _next_match(_INSERT_HEAD_RE, text, pos, table_name)
+        dele = _next_match(_DELETE_HEAD_RE, text, pos, table_name)
+        if ins is None and dele is None:
+            return
+        # Whichever comes first in the file - that is the whole point of this function.
+        if dele is None or (ins is not None and ins.start() < dele.start()):
+            explicit = (
+                [c.strip(" `") for c in ins.group("cols").split(",")] if ins.group("cols") else None
+            )
+            cols = explicit or list(columns)
+            tuples, pos = _read_tuples(text, ins.end(), variables)
+            rows = [dict(zip(cols, v)) for v in tuples if len(v) == len(cols)]
+            yield "insert", rows
+            continue
+        pos = dele.end()
+        m = _DELETE_WHERE_TUPLE_IN_RE.match(text, pos)
+        if m:
+            key_cols = tuple(c.strip(" `") for c in m.group("cols").split(","))
+            tuples, pos = _read_key_tuples(text, m.end(), variables)
+            pos = _skip_statement(text, pos)
+            yield "delete", (key_cols, [tuple(v) for v in tuples])
+            continue
+        m = _WHERE_IN_RE.match(text, pos)
+        if m:
+            col = re.search(r"`(\w+)`", m.group(0)).group(1)
+            pos = m.end()
+            yield "delete", ((col,), [(i,) for i in _parse_id_list(m.group("ids"))])
+            continue
+        m = _WHERE_EQ_RE.match(text, pos)
+        if m:
+            col = re.search(r"`(\w+)`", m.group(0)).group(1)
+            pos = m.end()
+            yield "delete", ((col,), [(int(m.group("id")),)])
+            continue
+        pos = _skip_statement(text, pos)
+        yield "delete_unparsed", None
+
+
 def _parse_id_list(ids_text: str) -> list[int]:
     """The `(...)` body of a `WHERE col IN (...)`, one int per entry, with
     `-- trailing comments` stripped line by line - mod-progression's trainer

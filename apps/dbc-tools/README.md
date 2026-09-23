@@ -74,6 +74,13 @@ Running it twice with unchanged source produces byte-identical output
 (diff the pending SQL / patch files to confirm) — that's what makes this a
 generator rather than a one-off script.
 
+Generated pending files accumulate — don't delete an earlier `rev_*.sql`
+after a run. The DBC tables are re-emitted in full each time, but
+`trainer_spell`/`spell_script_names`/`spell_bonus_data`/`spell_proc` are
+emitted as a *delta* against everything already in `pending_db_world/`, so
+an older file's rows are skipped as "already live" and exist nowhere else.
+To consolidate into one file, delete the old one *before* running, not after.
+
 ## Pulling existing data in — and editing it
 
 ```
