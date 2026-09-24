@@ -270,6 +270,60 @@ safety net if two edits collide).
 metadata only — turning them into `BasePoints`/`RealPointsPerLevel` is
 `docs/single-rank-spell-system.md`'s job, not this tool's.
 
+## Declaring more world-DB tables (WP-T)
+
+A `source/classes/*.py` file (see `source/classes/README.md` for the full DSL - `spell()`,
+`talent()`, `scripted_by()`/`bonus_coefficients()`/`procs_on()`, ...) can also declare five more
+world-DB tables right next to the spell they belong to, instead of a hand-written migration —
+same "diff against live, DELETE-then-INSERT the rest, silent on an unchanged rerun" emission as
+every other declared table (`lib/spell_tables.py`):
+
+```python
+from lib.dsl.registry import (
+    linked_spell, spell_group, spell_group_rule, custom_attr, shapeshift_form,
+)
+
+# spell_linked_spell - SpellMgr::GetSpellLinked. type: 0=cast, 1=hit, 2=aura-removal. A negative
+# trigger/effect is the table's own "on removal of / remove that aura" convention, not a typo.
+linked_spell(200326, 57865, type=2)
+
+# spell_group + spell_group_stack_rules - SpellMgr::LoadSpellGroups/LoadSpellGroupStackRules.
+# group_id must be a fresh id from ids.yaml's `spell_group` block, or one that already exists in
+# stock/migration data (adding a member to a stock group like 1054 or 1016 is legitimate). A
+# negative member id is a nested-group reference, not a rank chain - the loader expands those
+# itself.
+spell_group(1200, 200001, 200002)
+spell_group_rule(1200, stack_rule=1, description="my new debuff group")
+
+# spell_custom_attr - SpellCustomAttributes (SpellMgr.h). Declaring a stock spell_id replaces
+# that row, same as every table here.
+custom_attr(200001, attributes=0x00000001)  # SPELL_ATTR0_CU_POSITIVE
+
+# spellshapeshiftform_dbc - a FULL override row: every column starts at the real stock value
+# (var/extractors/dbc/SpellShapeshiftForm.dbc) and only the ones named here change. Accepts
+# either the real SQL column name (CombatRoundTime) or DBCStructure.h's own field name
+# (attackSpeed) - see lib/dsl/registry.py's _SHAPESHIFT_FRIENDLY_COLUMNS for the rest. Server-
+# side only, no client patch (nothing the client renders depends on this table).
+shapeshift_form(5, attackSpeed=3500)  # Bear Form's melee swing timer
+```
+
+**Declared removals** retract a row this tool never emitted itself - stock Blizzard data, or an
+older hand-written migration - which the normal "no longer declared" prune pass can't reach (that
+one only ever deletes what a *past `generate.py` run* itself emitted). Each is a key-exact
+`DELETE`, emitted once (a rerun with the same removal declared stays silent), with a `WARNING:`
+if the key doesn't exist anywhere (base dump, migrations, module SQL - almost always a typo; the
+`DELETE` is still emitted, since it's a harmless no-op either way), and an error if the same run
+both declares and removes the same key:
+
+```python
+from lib.dsl.registry import unbind_script, unlink_spell, leave_spell_group, untrain
+
+unbind_script(69366, "spell_dru_moonkin_form_passive")  # spell_script_names
+unlink_spell(200326, 57865, type=2)                      # spell_linked_spell
+leave_spell_group(1054, 200001)                          # spell_group (no id-range check - removing never mints)
+untrain(50464, trainer_ids=[212, 213])                    # trainer_spell, one DELETE per trainer id
+```
+
 ## Known limitations
 
 - `spell_icon_id` takes a raw `SpellIconID` integer, not a texture-path

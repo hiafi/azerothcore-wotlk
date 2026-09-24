@@ -21,7 +21,7 @@ from tempfile import TemporaryDirectory
 TOOL_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TOOL_ROOT))
 
-from lib import spell_tables, trainer_state  # noqa: E402
+from lib import dbcfmt, spell_tables, trainer_state  # noqa: E402
 from lib.dsl import registry  # noqa: E402
 
 CLASS_FILE = '''
@@ -58,7 +58,85 @@ BASE_SQL = {
         + "  PRIMARY KEY (`SpellId`)\n"
         ") ENGINE=InnoDB;\n"
     ),
+    # WP-T (PLAN B11/§5.0): the four plain (non-DBC) new tables - CREATE TABLEs mirror
+    # data/sql/base/db_world/*.sql exactly (see spell_tables.py's own column-tuple comment).
+    "spell_linked_spell": (
+        "CREATE TABLE `spell_linked_spell` (\n"
+        "  `spell_trigger` int NOT NULL,\n"
+        "  `spell_effect` int NOT NULL DEFAULT '0',\n"
+        "  `type` tinyint unsigned NOT NULL DEFAULT '0',\n"
+        "  `comment` text NOT NULL,\n"
+        "  UNIQUE KEY `trigger_effect_type` (`spell_trigger`,`spell_effect`,`type`)\n"
+        ") ENGINE=InnoDB;\n"
+    ),
+    "spell_group": (
+        "CREATE TABLE `spell_group` (\n"
+        "  `id` int unsigned NOT NULL DEFAULT '0',\n"
+        "  `spell_id` int NOT NULL,\n"
+        "  PRIMARY KEY (`id`,`spell_id`)\n"
+        ") ENGINE=InnoDB;\n"
+    ),
+    "spell_group_stack_rules": (
+        "CREATE TABLE `spell_group_stack_rules` (\n"
+        "  `group_id` int unsigned NOT NULL DEFAULT '0',\n"
+        "  `stack_rule` tinyint NOT NULL DEFAULT '0',\n"
+        "  `description` varchar(150) NOT NULL DEFAULT '',\n"
+        "  PRIMARY KEY (`group_id`)\n"
+        ") ENGINE=InnoDB;\n"
+    ),
+    "spell_custom_attr": (
+        "CREATE TABLE `spell_custom_attr` (\n"
+        "  `spell_id` int unsigned NOT NULL DEFAULT '0',\n"
+        "  `attributes` int unsigned NOT NULL DEFAULT '0',\n"
+        "  PRIMARY KEY (`spell_id`)\n"
+        ") ENGINE=InnoDB;\n"
+    ),
+    # Column *names* only matter for parse_create_table_columns (types are never read back out of
+    # a CREATE TABLE by this tool) - synthesized from lib.dbcfmt.SPELLSHAPESHIFTFORM rather than
+    # transcribing the real 35-column base file a second time.
+    "spellshapeshiftform_dbc": (
+        "CREATE TABLE `spellshapeshiftform_dbc` (\n"
+        + "".join(f"  `{c}` int NOT NULL DEFAULT '0',\n" for c in dbcfmt.SPELLSHAPESHIFTFORM.columns)
+        + "  PRIMARY KEY (`ID`)\n"
+        ") ENGINE=InnoDB;\n"
+    ),
 }
+
+WP_T_IDS_CFG = {"spell_group": {"start": 1200, "end": 1299}}
+
+WP_T_CLASS_FILE = '''
+from lib.dsl.registry import linked_spell, spell_group, spell_group_rule, custom_attr, unbind_script
+
+linked_spell(200326, 57865, 2)
+linked_spell(-200326, -57865, 0)
+spell_group(1200, 50171, 50172)
+spell_group_rule(1200, 1, "test group")
+custom_attr(200425, 1)
+unbind_script(69366, "spell_dru_moonkin_form_passive")
+'''
+
+
+def _load_wp_t_class(source: str = WP_T_CLASS_FILE) -> dict:
+    with tempfile.TemporaryDirectory() as d:
+        path = Path(d) / "druid.py"
+        path.write_text(source)
+        reg = registry.load_class_file(
+            path, ids_cfg=WP_T_IDS_CFG, existing_group_ids={1054, 1016},
+        )
+    return {k: getattr(reg, k) for k in registry.MERGE_KEYS}
+
+
+def _shapeshift_row(form_id: int, **overrides) -> dict:
+    """A full spellshapeshiftform_dbc row, the shape `shapeshift_form()` (lib/dsl/registry.py)
+    produces - built directly rather than via the real registry helper + a real extracted
+    `SpellShapeshiftForm.dbc`, so this stays portable across a checkout that hasn't extracted one
+    (see that module's `ShapeshiftFormTest` in test_dsl_registry.py for the registry-level,
+    mocked-index coverage of the actual merge logic)."""
+    row = {c: 0 for c in dbcfmt.SPELLSHAPESHIFTFORM.columns}
+    row["ID"] = form_id
+    row["id"] = form_id
+    row.update(overrides)
+    return row
 
 
 def _load_class(source: str) -> dict:
@@ -340,6 +418,185 @@ class PruneTest(unittest.TestCase):
             "DELETE FROM `spell_script_names` WHERE `ScriptName` LIKE 'spell_%';\n")
         blocks, report = self._prune()
         self.assertEqual(blocks, [])
+
+
+# ---------------------------------------------------------------------------
+# WP-T (.agents/plans/druid-rework/druid-rework.WP-T-HANDOFF.md, PLAN B11/§5.0):
+# the five new declared tables (emit/rerun/prune, via the same SPELL_TABLES
+# machinery as spell_script_names/spell_bonus_data/spell_proc) and the four
+# declared-removal helpers (a separate mechanism - see render_removal_blocks).
+# ---------------------------------------------------------------------------
+
+
+class NewDeclaredTablesTest(unittest.TestCase):
+    def setUp(self):
+        self._tmp = TemporaryDirectory()
+        base = Path(self._tmp.name) / "base"
+        promoted = Path(self._tmp.name) / "promoted"
+        pending = Path(self._tmp.name) / "pending"
+        for d in (base, promoted, pending):
+            d.mkdir()
+        self._promoted = promoted
+        for table, sql in BASE_SQL.items():
+            (base / f"{table}.sql").write_text(sql)
+        self._orig = (trainer_state.BASE_SQL_DIR, trainer_state.PROMOTED_SQL_DIR, trainer_state.PENDING_SQL_DIR)
+        trainer_state.BASE_SQL_DIR = base
+        trainer_state.PROMOTED_SQL_DIR = promoted
+        trainer_state.PENDING_SQL_DIR = pending
+        self.dsl = _load_wp_t_class()
+
+    def tearDown(self):
+        (trainer_state.BASE_SQL_DIR, trainer_state.PROMOTED_SQL_DIR, trainer_state.PENDING_SQL_DIR) = self._orig
+        self._tmp.cleanup()
+
+    def _blocks(self) -> list[str]:
+        return spell_tables.render_blocks(spell_tables.load_spell_table_index(), self.dsl)
+
+    def test_nothing_live_emits_all_four_plain_tables(self):
+        # shapeshift_form isn't declared by WP_T_CLASS_FILE (needs a real extracted stock DBC,
+        # covered separately in test_dsl_registry.py's ShapeshiftFormTest) - the other four are.
+        blocks = self._blocks()
+        self.assertEqual(len(blocks), 4)
+        joined = "\n".join(blocks)
+        self.assertIn("INSERT INTO `spell_linked_spell`", joined)
+        self.assertIn("(200326, 57865, 2,", joined)
+        self.assertIn("(-200326, -57865, 0,", joined)  # negative ids round-trip
+        self.assertIn("INSERT INTO `spell_group`", joined)
+        self.assertIn("(1200, 50171)", joined)
+        self.assertIn("INSERT INTO `spell_group_stack_rules`", joined)
+        self.assertIn("(1200, 1, 'test group')", joined)
+        self.assertIn("INSERT INTO `spell_custom_attr`", joined)
+        self.assertIn("(200425, 1)", joined)
+
+    def test_rerun_with_unchanged_source_emits_nothing(self):
+        header = spell_tables.GENERATED_MARKER + " -- DO NOT hand-edit.\n"
+        (self._promoted / "gen.sql").write_text(header + "\n\n".join(self._blocks()) + "\n")
+        self.assertEqual(self._blocks(), [])
+
+    def test_changed_value_is_re_emitted(self):
+        header = spell_tables.GENERATED_MARKER + " -- DO NOT hand-edit.\n"
+        (self._promoted / "gen.sql").write_text(header + "\n\n".join(self._blocks()) + "\n")
+        self.dsl = _load_wp_t_class(WP_T_CLASS_FILE.replace("custom_attr(200425, 1)", "custom_attr(200425, 2)"))
+        blocks = self._blocks()
+        self.assertTrue(any("spell_custom_attr" in b and "(200425, 2)" in b for b in blocks))
+
+
+class RemovalBlocksTest(unittest.TestCase):
+    def setUp(self):
+        self._tmp = TemporaryDirectory()
+        base = Path(self._tmp.name) / "base"
+        promoted = Path(self._tmp.name) / "promoted"
+        pending = Path(self._tmp.name) / "pending"
+        for d in (base, promoted, pending):
+            d.mkdir()
+        self._promoted = promoted
+        for table, sql in BASE_SQL.items():
+            (base / f"{table}.sql").write_text(sql)
+        # A live row for the removal helpers to actually find (see the typo-guard tests below for
+        # the "doesn't exist anywhere" case).
+        (base / "spell_script_names.sql").write_text(
+            BASE_SQL["spell_script_names"]
+            + "INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES "
+            "(69366, 'spell_dru_moonkin_form_passive');\n"
+        )
+        self._orig = (trainer_state.BASE_SQL_DIR, trainer_state.PROMOTED_SQL_DIR, trainer_state.PENDING_SQL_DIR)
+        trainer_state.BASE_SQL_DIR = base
+        trainer_state.PROMOTED_SQL_DIR = promoted
+        trainer_state.PENDING_SQL_DIR = pending
+
+    def tearDown(self):
+        (trainer_state.BASE_SQL_DIR, trainer_state.PROMOTED_SQL_DIR, trainer_state.PENDING_SQL_DIR) = self._orig
+        self._tmp.cleanup()
+
+    def test_live_removal_is_emitted_and_reported(self):
+        blocks, report = spell_tables.render_removal_blocks(_load_wp_t_class())
+        self.assertEqual(len(blocks), 1)
+        self.assertIn(
+            "DELETE FROM `spell_script_names` WHERE (`spell_id`, `ScriptName`) IN "
+            "((69366, 'spell_dru_moonkin_form_passive'));",
+            blocks[0],
+        )
+        self.assertTrue(any("removal: spell_script_names" in l and "69366" in l for l in report))
+        self.assertFalse(any(l.startswith("WARNING:") for l in report))
+
+    def test_removal_emitted_once_then_silent_on_rerun(self):
+        blocks, _ = spell_tables.render_removal_blocks(_load_wp_t_class())
+        header = spell_tables.GENERATED_MARKER + " -- DO NOT hand-edit.\n"
+        (self._promoted / "gen.sql").write_text(header + "\n\n".join(blocks) + "\n")
+        blocks2, report2 = spell_tables.render_removal_blocks(_load_wp_t_class())
+        self.assertEqual(blocks2, [])
+        self.assertEqual(report2, [])
+
+    def test_unknown_key_gets_a_warning_but_is_still_emitted(self):
+        dsl = _load_wp_t_class(
+            'from lib.dsl.registry import unbind_script\n'
+            'unbind_script(999999, "spell_that_never_existed")\n'
+        )
+        blocks, report = spell_tables.render_removal_blocks(dsl)
+        self.assertEqual(len(blocks), 1)  # still emitted - the DELETE is a harmless no-op
+        self.assertTrue(any(l.startswith("WARNING:") and "999999" in l for l in report))
+
+    def test_declare_and_remove_conflict_raises(self):
+        dsl = _load_wp_t_class(
+            'from lib.dsl.registry import scripted_by, unbind_script, spell\n'
+            'meteor = spell(id=200095, name="Meteor", school=4)\n'
+            'scripted_by(meteor, "spell_mage_meteor")\n'
+            'unbind_script(meteor, "spell_mage_meteor")\n'
+        )
+        with self.assertRaises(spell_tables.DeclareAndRemoveConflictError):
+            spell_tables.render_removal_blocks(dsl)
+
+    def test_no_removals_declared_is_a_silent_no_op(self):
+        dsl = _load_wp_t_class('from lib.dsl.registry import linked_spell\nlinked_spell(1, 2)\n')
+        blocks, report = spell_tables.render_removal_blocks(dsl)
+        self.assertEqual((blocks, report), ([], []))
+
+
+class ShapeshiftFormEmissionTest(unittest.TestCase):
+    """spellshapeshiftform_dbc through the same SpellTableIndex/render_blocks machinery as every
+    other declared table - see _shapeshift_row's docstring for why this doesn't need a real
+    extracted SpellShapeshiftForm.dbc the way the registry-level merge test does."""
+
+    def setUp(self):
+        self._tmp = TemporaryDirectory()
+        base = Path(self._tmp.name) / "base"
+        promoted = Path(self._tmp.name) / "promoted"
+        pending = Path(self._tmp.name) / "pending"
+        for d in (base, promoted, pending):
+            d.mkdir()
+        self._promoted = promoted
+        (base / "spellshapeshiftform_dbc.sql").write_text(BASE_SQL["spellshapeshiftform_dbc"])
+        self._orig = (trainer_state.BASE_SQL_DIR, trainer_state.PROMOTED_SQL_DIR, trainer_state.PENDING_SQL_DIR)
+        trainer_state.BASE_SQL_DIR = base
+        trainer_state.PROMOTED_SQL_DIR = promoted
+        trainer_state.PENDING_SQL_DIR = pending
+
+    def tearDown(self):
+        (trainer_state.BASE_SQL_DIR, trainer_state.PROMOTED_SQL_DIR, trainer_state.PENDING_SQL_DIR) = self._orig
+        self._tmp.cleanup()
+
+    def _dsl(self, combat_round_time=3500):
+        return {"shapeshift_forms": [_shapeshift_row(5, CombatRoundTime=combat_round_time, Name_Lang_enUS="Bear Form")]}
+
+    def _blocks(self, dsl):
+        return spell_tables.render_blocks(spell_tables.load_spell_table_index(), dsl)
+
+    def test_full_override_row_is_emitted(self):
+        blocks = self._blocks(self._dsl())
+        self.assertEqual(len(blocks), 1)
+        self.assertIn("DELETE FROM `spellshapeshiftform_dbc` WHERE (`ID`) IN ((5));", blocks[0])
+        self.assertIn("3500", blocks[0])
+
+    def test_rerun_with_unchanged_source_emits_nothing(self):
+        header = spell_tables.GENERATED_MARKER + " -- DO NOT hand-edit.\n"
+        (self._promoted / "gen.sql").write_text(header + "\n\n".join(self._blocks(self._dsl())) + "\n")
+        self.assertEqual(self._blocks(self._dsl()), [])
+
+    def test_changed_value_is_re_emitted(self):
+        header = spell_tables.GENERATED_MARKER + " -- DO NOT hand-edit.\n"
+        (self._promoted / "gen.sql").write_text(header + "\n\n".join(self._blocks(self._dsl())) + "\n")
+        blocks = self._blocks(self._dsl(combat_round_time=4000))
+        self.assertTrue(any("4000" in b for b in blocks))
 
 
 if __name__ == "__main__":

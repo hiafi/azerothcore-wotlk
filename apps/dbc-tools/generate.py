@@ -148,9 +148,17 @@ def main() -> int:
     # lib/trainer_state.py's docstring for why this needs no live DB connection
     # and for its "union of INSERTs, no DELETE/UPDATE replay" limitation.
     trainer_index = trainer_state.load_trainer_index()
+    # existing spell_group ids (base dump + migrations) - lib/dsl/registry.py's spell_group()/
+    # spell_group_rule() accept a member/rule for one of these even when it's outside
+    # ids.yaml's own spell_group block (adding to a stock group like 1054/1016 is legitimate).
+    existing_group_ids = {int(row["id"]) for row in trainer_state.load_table_rows("spell_group")}
+    # stock SpellShapeshiftForm rows (base DBC + base SQL) - shapeshift_form() builds a full
+    # override row starting from whichever of these form_id names.
+    shapeshift_index = state.load_stock_rows(dbcfmt.SPELLSHAPESHIFTFORM)
 
     dsl_classes = dsl_registry.load_classes_dir(
         SOURCE_DIR / "classes", ids_cfg=ids_cfg, trainer_index=trainer_index,
+        existing_group_ids=existing_group_ids, shapeshift_index=shapeshift_index,
     )
     n_dsl = sum(len(v) for v in dsl_classes.values())
     _merge_dsl_sources(spell_entries, talents, dsl_classes)
@@ -179,6 +187,12 @@ def main() -> int:
     else:
         prune_blocks, prune_report = spell_tables.render_prune_blocks(spell_table_index, dsl_classes)
     for line in prune_report:
+        print(line)
+    # Declared removals (unbind_script/unlink_spell/leave_spell_group/untrain) - a row this tool
+    # never emitted itself (stock data, or an older hand-written migration), so the prune pass
+    # above can't reach it. See lib/spell_tables.py's "Declared removals" section.
+    removal_blocks, removal_report = spell_tables.render_removal_blocks(dsl_classes)
+    for line in removal_report:
         print(line)
 
     existing_spells = state.load_existing_rows(dbcfmt.SPELL)
@@ -255,6 +269,11 @@ def main() -> int:
     for warning in lint.check_missing_skill_line_ability(
         spell_resolved.entries, skilllineability_resolved.entries, existing_skilllineabilities, ids_cfg,
     ):
+        print(f"WARNING: {warning}")
+    # PLAN A9: raw_overrides silently beating a typed field build_spell_row also sets (lib/build.py
+    # applies raw_overrides last) - see lib/lint.py's own docstring for the bug this already
+    # shipped (nine spells kept their rank-1 cast time instead of the DSL's cast_time_ms).
+    for warning in lint.check_raw_override_typed_mismatch(spell_resolved.entries, existing_secondary_by_id):
         print(f"WARNING: {warning}")
     talent_rows = [build.build_talent_row(e) for e in talent_resolved.entries]
     talenttab_rows = [build.build_talenttab_row(e) for e in talenttab_resolved.entries]
@@ -342,7 +361,7 @@ def main() -> int:
     out_path = PENDING_SQL_DIR / f"rev_{rev}.sql"
     wrote_sql = sql_out.emit_pending_sql(
         out_path, blocks, header,
-        extra_blocks=[*prune_blocks, trainer_spell_block, *spell_table_blocks],
+        extra_blocks=[*prune_blocks, *removal_blocks, trainer_spell_block, *spell_table_blocks],
     )
     print(f"SQL: wrote {out_path.relative_to(REPO_ROOT)}" if wrote_sql else "SQL: nothing to emit")
 

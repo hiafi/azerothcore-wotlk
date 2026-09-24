@@ -144,3 +144,112 @@ def check_missing_skill_line_ability(
             f"heuristic isn't proof, see its docstring."
         )
     return warnings
+
+
+# PLAN A9 (.agents/plans/druid-rework/druid-rework.PLAN.md): `lib/build.py` applies a row's
+# `raw_overrides` *last*, so a raw column silently beats a typed field that also sets it. This
+# already shipped wrong cast times on nine spells (the DSL said `cast_time_ms=2000`, but a raw
+# `CastingTimeIndex` copied from an old rank-1 pull won).
+#
+# `typed field -> SQL column` for every field `build_spell_row` (lib/build.py) maps directly onto
+# the row - two shapes: "direct" columns hold the same unit as the typed field (compare as-is);
+# the three "indexed" columns are a lookup-DBC id, so the raw override's *index id* has to be
+# resolved to its own value (via `index_tables`, the same base+overlay rows generate.py already
+# loads for SpellCastTimes/SpellDuration/SpellRange) before it can be compared to the typed
+# field's plain ms/yards value.
+_DIRECT_FIELDS = {
+    "school": "SchoolMask",
+    "dispel": "DispelType",
+    "mechanic": "Mechanic",
+    "attributes": "Attributes",
+    "category": "Category",
+    "cooldown_ms": "RecoveryTime",
+    "category_cooldown_ms": "CategoryRecoveryTime",
+    "power_type": "PowerType",
+    "mana_cost": "ManaCost",
+    "mana_cost_pct": "ManaCostPct",
+    "spell_icon_id": "SpellIconID",
+}
+# typed_field -> (SQL column, index_tables key, the index row's own value column)
+_INDEXED_FIELDS = {
+    "cast_time_ms": ("CastingTimeIndex", "spellcasttimes", "Base"),
+    "duration_ms": ("DurationIndex", "spellduration", "Duration"),
+    "range_yards": ("RangeIndex", "spellrange", "RangeMax_1"),
+}
+
+# Mismatches this check already knows about and hasn't fixed yet. Recomputed by actually running
+# this check against the real repo source (WP-T-HANDOFF.md item 4 - "recompute the full list
+# yourself"), not hand-copied from the plan text: PLAN A9's own nine cast-time mismatches (the
+# bug this check exists for) are *already fixed* as of this computation (2026-09-23, druid-rework
+# branch) - the Balance pass's cast-time edits (PLAN §6 item 11) landed before this check did, so
+# there is nothing A9-shaped left to allow-list. What's here instead are four pre-existing
+# RangeIndex mismatches this check's first real run turned up - same bug shape (a raw_overrides
+# column silently beating a typed field), but on `range_yards`/`RangeIndex`, not `cast_time_ms`/
+# `CastingTimeIndex`, and in the Mage Arcane/Fire rework, not this one. Out of scope for WP-T/the
+# druid rework to fix (PLAN §5.0 item 4: "the other classes' mismatches are flagged, not fixed, by
+# this rework") - allow-listed so `generate.py` stays clean today; a future Mage pass removes
+# these as it fixes them. {(spell_id, column): reason}.
+RAW_OVERRIDE_MISMATCH_ALLOWLIST: dict[tuple[int, str], str] = {
+    (200079, "RangeIndex"): "Arcane Overload shell - raw_overrides RangeIndex=6 (100yd) vs range_yards=30.0; Mage Arcane rework leftover, found 2026-09-23",
+    (200092, "RangeIndex"): "Arcane Overload's own damage sub-spell (200079's trigger target) - same mismatch as 200079",
+    (200116, "RangeIndex"): "Burnout explosion (Fire Mage capstone) - raw_overrides RangeIndex=1 (0yd) vs range_yards=50000.0; leftover, found 2026-09-23",
+    (200119, "RangeIndex"): "Flashpoint detonation (Fire Mage capstone, a separate spell from 200116 with the same copy-pasted raw_overrides template) - same mismatch shape as 200116",
+}
+
+
+def check_raw_override_typed_mismatch(
+    entries: list[dict], index_tables: dict[str, dict[int, dict]],
+) -> list[str]:
+    """Flags a spell whose `raw_overrides` sets a column that one of its own typed fields also
+    sets, where the two *values* disagree (never the index ids themselves - `CastingTimeIndex`
+    16 and 30004 are both 1500 ms, and that's not a bug). `index_tables` is
+    `{"spellcasttimes": {ID: row}, "spellduration": {...}, "spellrange": {...}}` - generate.py's
+    own `existing_secondary_by_id`, reused rather than re-loaded so this sees the same base+
+    overlay state everything else in a run does.
+
+    A typed field left at its default (falsy) is exempt - it isn't really asking for anything, so
+    a raw override alongside it isn't a disagreement, just an unmodeled column. Same "pulled from
+    existing data" exemption as `check_classmask_scoping`/`check_missing_skill_line_ability`
+    (those bytes are copied verbatim from the real client DBC, not hand-typed)."""
+    warnings: list[str] = []
+    for entry in entries:
+        notes = entry.get("notes") or ""
+        if notes.strip() == "pulled from existing data":
+            continue
+        overrides = entry.get("raw_overrides") or {}
+        if not overrides:
+            continue
+        spell_id = entry["id"]
+        name = entry.get("name", "?")
+        for field, column in _DIRECT_FIELDS.items():
+            if column not in overrides or (spell_id, column) in RAW_OVERRIDE_MISMATCH_ALLOWLIST:
+                continue
+            typed_value = entry.get(field) or 0
+            if not typed_value or typed_value == overrides[column]:
+                continue
+            warnings.append(
+                f"spell {spell_id} ({name}): raw_overrides sets {column}={overrides[column]!r}, "
+                f"but the typed field {field}={typed_value!r} also sets it and lib/build.py "
+                f"applies raw_overrides last, so {overrides[column]!r} silently wins - see PLAN "
+                f"A9. Drop the raw_overrides entry, or change {field} to match."
+            )
+        for field, (column, table_name, value_col) in _INDEXED_FIELDS.items():
+            if column not in overrides or (spell_id, column) in RAW_OVERRIDE_MISMATCH_ALLOWLIST:
+                continue
+            typed_value = entry.get(field) or 0
+            if not typed_value:
+                continue
+            index_row = index_tables.get(table_name, {}).get(overrides[column])
+            if index_row is None:
+                continue  # raw index doesn't resolve to anything live - not this check's job
+            resolved_value = index_row.get(value_col)
+            if resolved_value == typed_value:
+                continue
+            warnings.append(
+                f"spell {spell_id} ({name}): raw_overrides sets {column}={overrides[column]} "
+                f"(resolves to {value_col}={resolved_value!r}), but the typed field "
+                f"{field}={typed_value!r} also sets it and lib/build.py applies raw_overrides "
+                f"last, so {resolved_value!r} silently wins - see PLAN A9. Drop the "
+                f"raw_overrides entry, or change {field} to match."
+            )
+    return warnings

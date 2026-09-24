@@ -234,6 +234,38 @@ SPELLRADIUS = DbcTable(
     columns=("ID", "Radius", "RadiusPerLevel", "RadiusMax"),
 )
 
+# Not part of ALL_TABLES / the generate.py resolve.py/build.py pipeline (no source/*.csv
+# convention or reserved-ID block of its own - every row is a full-row override of an existing
+# stock form, see lib/dsl/registry.py's shapeshift_form()) - handled instead through
+# lib/spell_tables.py's generic declared-table path, same as spell_linked_spell/spell_group/
+# spell_custom_attr.
+SPELLSHAPESHIFTFORM = DbcTable(
+    name="SpellShapeshiftForm",
+    dbc_filename="SpellShapeshiftForm.dbc",
+    sql_table="spellshapeshiftform_dbc",
+    # SpellShapeshiftFormEntryfmt (DBCfmt.h). 35 fields, confirmed against a real extraction
+    # (var/extractors/dbc/SpellShapeshiftForm.dbc, pulled from patch-enUS-3.MPQ same as Item.dbc -
+    # see README's "Setup" list) — 140-byte records, matching DBCStructure.h's SpellShapeshiftFormEntry
+    # struct exactly once the two "unused" 'x' runs are counted: bonusActionBar + Name[16] + NameFlags
+    # (18 fields, columns 1-18) and attackIconID (1 field, column 21) and creatureDisplayID[2] (2
+    # fields, columns 25-26) are real columns in the SQL overlay (AttackIconID, CreatureDisplayID_3/4)
+    # even though the AC struct never reads them - same convention as every other table here.
+    fmt="n" + "x" * 18 + "ii" + "x" + "iii" + "xx" + "i" * 8,
+    columns=_cols(
+        "ID", "BonusActionBar", _locale_cols("Name"), "Flags", "CreatureType",
+        "AttackIconID", "CombatRoundTime", ("CreatureDisplayID", 4), ("PresetSpellID", 8),
+    ),
+    # creatureType is `int32` in DBCStructure.h ("<= 0 humanoid, other normal creature types") -
+    # every other column here is a plain uint32.
+    signed=frozenset(("CreatureType",)),
+    # Name_Lang_* is 'x' in DBCfmt.h (AC's struct never reads it) but is real string-table-offset
+    # data in the file (confirmed by extraction — form 5's Name_Lang_enUS offset is non-zero, i.e.
+    # a real name string sits there), same TalentTab-style exception as this module's docstring
+    # describes. Without this, dbcfile.py would read the raw offset as a bare integer and write it
+    # straight into the varchar(100) SQL column (e.g. `53`) instead of the actual name text.
+    read_as_string=frozenset(f"Name_Lang_{loc}" for loc in LOCALE_SUFFIXES),
+)
+
 ITEM = DbcTable(
     name="Item",
     dbc_filename="Item.dbc",

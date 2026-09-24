@@ -24,6 +24,12 @@
 #                 DBCStores.cpp as "last client known item added in 3.3.5a") -
 #                 70000+ starts at the one pre-existing custom entry (70001)
 #                 rather than a fresh gap, since moving it wasn't worth it.
+#   - spell_group: a DB-defined spell_group id must be above SPELL_GROUP_DB_RANGE_MIN (1000,
+#                 SpellMgr.h). The highest id anywhere in spell_group (base dump + every
+#                 migration, checked this session) is 1126, so this block starts at 1200 for a
+#                 clear gap. See apps/dbc-tools/lib/dsl/registry.py's spell_group()/
+#                 spell_group_rule() - adding a *member* to a stock group (e.g. 1054, 1016) is
+#                 legitimate and doesn't need an id from this block at all.
 #
 # `reuse.py` only mints a new ID from these blocks when nothing existing
 # (base DBC or current overlay) already matches what's being asked for.
@@ -68,3 +74,11 @@ skilllineability:
 item:
   start: 70000
   end: 79999
+
+# spell_group ids for a brand-new DB-defined group (SpellMgr::LoadSpellGroups requires every
+# group id to be above SPELL_GROUP_DB_RANGE_MIN, 1000). See the "How the bounds were picked"
+# note above - this one wasn't picked in a vacuum either: 1200 leaves a clear gap above every
+# group id already in use (base dump + migrations top out at 1126, checked this session).
+spell_group:
+  start: 1200
+  end: 1299

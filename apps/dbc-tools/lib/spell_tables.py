@@ -28,7 +28,7 @@ from dataclasses import dataclass
 
 from pathlib import Path
 
-from . import sql_dump, sql_out, trainer_state
+from . import dbcfmt, sql_dump, sql_out, trainer_state
 
 # Column tuples mirror each table's CREATE TABLE in data/sql/base/db_world/,
 # minus the synthetic "id" the registry adds for duplicate-declaration
@@ -40,6 +40,15 @@ SPELL_PROC_COLUMNS = (
     "SpellFamilyMask2", "ProcFlags", "SpellTypeMask", "SpellPhaseMask", "HitMask",
     "AttributesMask", "DisableEffectsMask", "ProcsPerMinute", "Chance", "Cooldown", "Charges",
 )
+# WP-T (.agents/plans/druid-rework/druid-rework.WP-T-HANDOFF.md, PLAN B11/§5.0): five more
+# declared tables, same column-tuple-mirrors-CREATE-TABLE convention as the three above.
+SPELL_LINKED_SPELL_COLUMNS = ("spell_trigger", "spell_effect", "type", "comment")
+SPELL_GROUP_COLUMNS = ("id", "spell_id")
+SPELL_GROUP_STACK_RULES_COLUMNS = ("group_id", "stack_rule", "description")
+SPELL_CUSTOM_ATTR_COLUMNS = ("spell_id", "attributes")
+# spellshapeshiftform_dbc is DBC-backed (unlike the other four, plain world-DB tables) - reuse
+# lib.dbcfmt's own column list rather than re-transcribing it a second time.
+SPELLSHAPESHIFTFORM_COLUMNS = dbcfmt.SPELLSHAPESHIFTFORM.columns
 
 
 # First line of every file `generate.py` writes (its `header`). This is the
@@ -162,6 +171,16 @@ SPELL_TABLES = (
     TableSpec("spell_script_names", SPELL_SCRIPT_NAMES_COLUMNS, ("spell_id", "ScriptName"), "spell_script_names"),
     TableSpec("spell_bonus_data", SPELL_BONUS_DATA_COLUMNS, ("entry",), "spell_bonus_data"),
     TableSpec("spell_proc", SPELL_PROC_COLUMNS, ("SpellId",), "spell_procs"),
+    TableSpec(
+        "spell_linked_spell", SPELL_LINKED_SPELL_COLUMNS,
+        ("spell_trigger", "spell_effect", "type"), "linked_spells",
+    ),
+    TableSpec("spell_group", SPELL_GROUP_COLUMNS, ("id", "spell_id"), "spell_groups"),
+    TableSpec(
+        "spell_group_stack_rules", SPELL_GROUP_STACK_RULES_COLUMNS, ("group_id",), "spell_group_rules",
+    ),
+    TableSpec("spell_custom_attr", SPELL_CUSTOM_ATTR_COLUMNS, ("spell_id",), "custom_attrs"),
+    TableSpec("spellshapeshiftform_dbc", SPELLSHAPESHIFTFORM_COLUMNS, ("ID",), "shapeshift_forms"),
 )
 
 
@@ -311,14 +330,16 @@ def render_prune_blocks(
             continue
         for key in result.base_blocked:
             report.append(
-                f"prune: NOT removing {spec.name} {_key_text(spec, key)} - no longer declared, "
-                f"but the stock dump owns this key too, so deleting it would leave a hole where "
-                f"AzerothCore has a row. Resolve by hand."
+                f"prune: NOT removing {spec.name} {_key_text(spec.key_columns, key)} - no longer "
+                f"declared, but the stock dump owns this key too, so deleting it would leave a "
+                f"hole where AzerothCore has a row. Resolve by hand."
             )
         if not result.keys:
             continue
         for key in result.keys:
-            report.append(f"prune: removing {spec.name} {_key_text(spec, key)} - no longer declared")
+            report.append(
+                f"prune: removing {spec.name} {_key_text(spec.key_columns, key)} - no longer declared"
+            )
         comment = (
             f"-- Prune: {len(result.keys)} {spec.name} row(s) emitted by an earlier "
             f"generate.py run that source/classes/*\n"
@@ -330,12 +351,12 @@ def render_prune_blocks(
     return blocks, report
 
 
-def _key_text(spec: TableSpec, key: tuple) -> str:
+def _key_text(key_columns: tuple[str, ...], key: tuple) -> str:
     """`(spell_id=17322, ScriptName='spell_pri_shadow_reach')` - for humans.
     Key parts arrive `_normalise`d, so ints are floats by the time we see
     them; render whole numbers without the `.0`."""
     parts = []
-    for column, value in zip(spec.key_columns, key):
+    for column, value in zip(key_columns, key):
         if isinstance(value, float) and value.is_integer():
             value = int(value)
         parts.append(f"{column}={value!r}" if isinstance(value, str) else f"{column}={value}")
@@ -365,3 +386,149 @@ def render_blocks(index: SpellTableIndex, dsl_classes: dict[str, list[dict]]) ->
 
 def count_declared(dsl_classes: dict[str, list[dict]]) -> dict[str, int]:
     return {spec.name: len(dsl_classes.get(spec.registry_key, [])) for spec in SPELL_TABLES}
+
+
+# ---------------------------------------------------------------------------
+# Declared removals (WP-T, PLAN B11/§5.0): unbind_script()/unlink_spell()/
+# leave_spell_group()/untrain() in lib/dsl/registry.py. A key-exact DELETE for
+# a row this tool never emitted itself (stock Blizzard data, or an older
+# hand-written migration) - the one sanctioned way to retract one, since the
+# prune pass above only ever touches rows a *past generate.py run* emitted
+# (its `_emitted` set). A declared removal must never be treated as a prune
+# orphan (there's nothing in `_emitted` for it to match in the first place),
+# and a prune must never be treated as a declared removal (it has no
+# `RemovalSpec` - it's keyed off the *source* no longer declaring something
+# this tool itself put there).
+# ---------------------------------------------------------------------------
+
+
+class DeclareAndRemoveConflictError(ValueError):
+    """Raised when one run's source/classes/* both declares and removes the
+    exact same row - e.g. `scripted_by(200095, "x")` and
+    `unbind_script(200095, "x")` in the same run. Contradictory by
+    construction; there is no sensible "which one wins" answer, so this
+    refuses rather than picking one silently."""
+
+
+@dataclass(frozen=True)
+class RemovalSpec:
+    removal_key: str       # Registry field holding the removal declarations (see registry.py)
+    table_name: str
+    key_columns: tuple[str, ...]
+    declared_key: str      # dsl_classes key this removal must not also declare - see DeclareAndRemoveConflictError
+    why: str                # human-readable reason, quoted into the emitted comment/report
+
+
+REMOVAL_TABLES = (
+    RemovalSpec(
+        "script_removals", "spell_script_names", ("spell_id", "ScriptName"),
+        "spell_script_names", "a rework rebinds or retires this C++ script",
+    ),
+    RemovalSpec(
+        "linked_spell_removals", "spell_linked_spell", ("spell_trigger", "spell_effect", "type"),
+        "linked_spells", "a rework removes this linked-spell relationship",
+    ),
+    RemovalSpec(
+        "spell_group_removals", "spell_group", ("id", "spell_id"),
+        "spell_groups", "a rework removes this spell from the group",
+    ),
+    RemovalSpec(
+        "trainer_removals", "trainer_spell", ("TrainerId", "SpellId"),
+        "trainer_spells", "a rework retires this trainer grant",
+    ),
+)
+
+
+def load_removed_keys(table_name: str, key_columns: tuple[str, ...]) -> set[tuple]:
+    """Every key a past generated run has already DELETEd for `table_name` -
+    the removal helpers' own "emitted once" provenance. Deliberately *not*
+    `load_generated_table_rows`: that one replays INSERT-then-DELETE to
+    answer "what's still live among rows we inserted", which is the wrong
+    question here - the removal helpers only ever target rows the DSL itself
+    never inserts (stock or hand-written-migration rows; the declare-and-
+    remove conflict check above enforces that), so there is no INSERT side
+    to net against. Plain accumulation of every matching-shape DELETE this
+    tool has ever emitted for the table is the whole answer: once a key is
+    in this set, a rerun declaring the same removal stays silent.
+
+    Only counts a DELETE whose own column list is exactly `key_columns` -
+    the removal helpers always emit that exact shape (`sql_out.
+    render_delete_only_block`), so a differently-shaped DELETE (e.g. the
+    prune pass's own output for the same table, or a hand-written one) is
+    someone/something else's and is left alone."""
+    removed: set[tuple] = set()
+    for path in trainer_state._migration_files_mentioning(table_name):
+        if not _is_generated(path):
+            continue
+        try:
+            for kind, payload in sql_dump.read_table_statements(path, table_name, ()):
+                if kind != "delete":
+                    continue
+                delete_cols, key_tuples = payload
+                if tuple(delete_cols) != tuple(key_columns):
+                    continue
+                for values in key_tuples:
+                    removed.add(tuple(_normalise(v) for v in values))
+        except Exception as exc:  # pragma: no cover - defensive, cf. load_generated_table_rows
+            print(f"warning: spell_tables.py: skipping {path} for {table_name} removals: {exc}")
+    return removed
+
+
+def _keys_of(rows: list[dict], key_columns: tuple[str, ...]) -> set[tuple]:
+    return {tuple(_normalise(r[c]) for c in key_columns) for r in rows}
+
+
+def render_removal_blocks(dsl_classes: dict[str, list[dict]]) -> tuple[list[str], list[str]]:
+    """`(sql_blocks, report_lines)` for every declared removal in
+    `REMOVAL_TABLES` - the counterpart to `render_blocks()`/
+    `render_prune_blocks()` above for a row this tool never emitted itself.
+    Every emitted key also gets a report line (never silent about a
+    removal), a key with no match anywhere in the base dump/migrations/
+    module SQL (`trainer_state.load_table_rows` - which already covers
+    module SQL, including mod-progression's phase files, via
+    `_migration_files_mentioning`) gets a `WARNING:` line (almost always a
+    typo) but is still emitted - the DELETE is idempotent either way (it
+    matches nothing, so it's a harmless no-op), and refusing outright would
+    be worse than a false positive: the same key could legitimately have
+    been removed already by an *older hand-written* migration that
+    `trainer_state.load_table_rows` (a union of INSERTs, no DELETE replay -
+    see its docstring) still reads as live. A key this same run also
+    *declares* raises `DeclareAndRemoveConflictError` rather than silently
+    picking a side."""
+    blocks: list[str] = []
+    report: list[str] = []
+    for spec in REMOVAL_TABLES:
+        removals = dsl_classes.get(spec.removal_key, [])
+        if not removals:
+            continue
+        removal_keys = _keys_of(removals, spec.key_columns)
+        declared_keys = _keys_of(dsl_classes.get(spec.declared_key, []), spec.key_columns)
+        conflict = removal_keys & declared_keys
+        if conflict:
+            texts = ", ".join(_key_text(spec.key_columns, k) for k in sorted(conflict, key=repr))
+            raise DeclareAndRemoveConflictError(
+                f"{spec.table_name}: this run both declares and removes the same row(s): {texts}"
+            )
+        live_keys = _keys_of(
+            [r for r in trainer_state.load_table_rows(spec.table_name) if all(c in r for c in spec.key_columns)],
+            spec.key_columns,
+        )
+        already_removed = load_removed_keys(spec.table_name, spec.key_columns)
+        to_emit = sql_out.stable_key_sort(removal_keys - already_removed)
+        for key in to_emit:
+            if key not in live_keys:
+                report.append(
+                    f"WARNING: {spec.table_name} removal {_key_text(spec.key_columns, key)} doesn't "
+                    f"exist anywhere (base dump, migrations, module SQL) - check for a typo."
+                )
+        if not to_emit:
+            continue
+        for key in to_emit:
+            report.append(f"removal: {spec.table_name} {_key_text(spec.key_columns, key)} - {spec.why}")
+        comment = (
+            f"-- Declared removal: {len(to_emit)} {spec.table_name} row(s) no longer wanted - "
+            f"{spec.why} (unbind_script()/unlink_spell()/leave_spell_group()/untrain(), "
+            f"source/classes/*)."
+        )
+        blocks.append(sql_out.render_delete_only_block(spec.table_name, spec.key_columns, to_emit, comment))
+    return blocks, report

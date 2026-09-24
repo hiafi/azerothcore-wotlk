@@ -91,6 +91,53 @@ write a migration file even when nothing changed.
 Note this interacts with the rule above: the prune reads *generated files still on disk*, so
 deleting an earlier `rev_*.sql` also erases the tool's memory that those rows were ever emitted.
 
+## WP-T: five more declared tables, and declared removals
+
+`.agents/plans/druid-rework/druid-rework.WP-T-HANDOFF.md` (PLAN B11/§5.0) added five more world-DB
+tables a `source/classes/*.py` file can declare - `spell_linked_spell`, `spell_group` +
+`spell_group_stack_rules`, `spell_custom_attr`, `spellshapeshiftform_dbc` (`lib/dsl/registry.py`'s
+`linked_spell`/`spell_group`/`spell_group_rule`/`custom_attr`/`shapeshift_form`) - so the druid
+rework ships with **no hand-written `pending_db_world` file at all**. All five slot into the same
+`lib/spell_tables.py` `SPELL_TABLES` machinery the original three (`spell_script_names`/
+`spell_bonus_data`/`spell_proc`) already used: diff against live, DELETE-then-INSERT the rest,
+silent on an unchanged rerun, and - since they're in `SPELL_TABLES` - automatically covered by the
+prune pass above if a class file stops declaring one. Usage: `apps/dbc-tools/README.md`'s
+"Declaring more world-DB tables" section.
+
+Two design notes worth knowing before extending this further:
+
+- **`spell_group`'s real SQL column is itself called `id`.** Every other declared table's dedup
+  key (`load_classes_dir`'s cross-file duplicate check, keyed on `entry["id"]`) is a synthetic
+  string that never collides with a real column name. `spell_group` is keyed on `(id, spell_id)`
+  with `id` being the real group id column, so two different members of the *same* group would
+  otherwise look like the same declaration twice. `entry["_dedup_id"]` is the escape hatch -
+  `load_classes_dir` checks it before falling back to `entry["id"]` - see `spell_group()`'s and
+  `load_classes_dir()`'s own docstrings. `leave_spell_group()` needs the same treatment.
+- **`shapeshift_form()` needs a real extracted `SpellShapeshiftForm.dbc`.** Unlike the other four
+  (plain world-DB tables with no DBC counterpart at all), this one builds a *full override row* -
+  every column starts at the stock value and only the named ones change - so it has to read the
+  stock row from somewhere. `var/extractors/dbc/SpellShapeshiftForm.dbc` didn't exist before this
+  package; it was extracted the same way `Item.dbc` was (`patch-enUS-3.MPQ`, this doc's "Item.dbc"
+  section above) - `smpq -x <mpq> DBFilesClient/SpellShapeshiftForm.dbc`, then flattened into
+  `var/extractors/dbc/` (not left under a `DBFilesClient/` subdirectory - `state.BASE_DBC_DIR`
+  expects the flat layout). 35 fields, 140-byte records, confirmed against `DBCStructure.h`'s
+  `SpellShapeshiftFormEntry` and the file's own header. `Name_Lang_*` is `'x'` in `DBCfmt.h` (the
+  AC struct never reads a form's name) but is real string-table-offset data in the file - marked
+  `read_as_string` in `lib/dbcfmt.py`, same as `TalentTab`'s own name column, or a raw offset like
+  `53` gets written straight into the `varchar(100)` SQL column instead of `'Bear Form'`.
+
+**Declared removals** (`unbind_script`/`unlink_spell`/`leave_spell_group`/`untrain`) are a
+separate mechanism from the prune pass above, for the case the prune pass explicitly can't cover:
+retiring a row this tool never emitted itself (stock Blizzard data, or an older hand-written
+migration) - the prune pass's whole notion of provenance is "did a *generated file* emit this",
+and a stock row was never one. Provenance for a removal instead means "has a generated file's own
+DELETE already covered this exact key" (`spell_tables.load_removed_keys` - a plain accumulation of
+every matching-shape DELETE a past run has emitted for the table, not a replay against INSERTs the
+way `load_generated_table_rows` is, since a removal never has an INSERT side to net against - the
+declare-and-remove conflict check enforces that). A removal whose key doesn't exist anywhere (base
+dump, migrations, module SQL) still gets emitted - the DELETE is a harmless no-op either way - but
+prints a `WARNING:`, almost always a typo.
+
 ## Watch out: one client DBC, one patch archive
 
 Five scripts each own a patch letter: `generate.py` → `patch-Z.mpq` (Spell/Talent/Item/…),

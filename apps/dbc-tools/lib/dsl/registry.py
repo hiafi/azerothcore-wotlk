@@ -97,11 +97,32 @@ class Registry:
     spell_script_names: list[dict] = field(default_factory=list)
     spell_bonus_data: list[dict] = field(default_factory=list)
     spell_procs: list[dict] = field(default_factory=list)
+    # WP-T (.agents/plans/druid-rework/druid-rework.WP-T-HANDOFF.md, PLAN B11/§5.0): five more
+    # declared tables, same "diff against live, DELETE-then-INSERT the rest" emission as the three
+    # above (lib/spell_tables.py's SPELL_TABLES) - see linked_spell()/spell_group()/
+    # spell_group_rule()/custom_attr()/shapeshift_form() below.
+    linked_spells: list[dict] = field(default_factory=list)
+    spell_groups: list[dict] = field(default_factory=list)
+    spell_group_rules: list[dict] = field(default_factory=list)
+    custom_attrs: list[dict] = field(default_factory=list)
+    shapeshift_forms: list[dict] = field(default_factory=list)
+    # Declared *removals* - key-exact DELETEs for a row this tool never emitted (stock Blizzard
+    # data, or an older hand-written migration) that the normal "no longer declared" prune pass
+    # can't reach (it only ever removes what a past `generate.py` run itself emitted - see
+    # `lib/spell_tables.py`'s "Relationship to the prune pass" note on `unbind_script`/
+    # `unlink_spell`/`leave_spell_group`/`untrain` below). Each entry holds just the target row's
+    # key columns - there is no "content" to declare for a removal.
+    script_removals: list[dict] = field(default_factory=list)
+    linked_spell_removals: list[dict] = field(default_factory=list)
+    spell_group_removals: list[dict] = field(default_factory=list)
+    trainer_removals: list[dict] = field(default_factory=list)
 
 
 MERGE_KEYS = (
     "spells", "talents", "tabs", "skill_line_abilities", "trainer_spells",
     "spell_script_names", "spell_bonus_data", "spell_procs",
+    "linked_spells", "spell_groups", "spell_group_rules", "custom_attrs", "shapeshift_forms",
+    "script_removals", "linked_spell_removals", "spell_group_removals", "trainer_removals",
 )
 
 # The registry a class file's spell()/talent()/tab()/skill_line_ability()
@@ -116,6 +137,8 @@ MERGE_KEYS = (
 _active: Registry | None = None
 _active_ids_cfg: dict | None = None
 _active_trainer_index = None  # lib.trainer_state.TrainerIndex | None - see trained_by()
+_active_group_ids: set[int] | None = None  # existing spell_group ids, base dump + migrations - see spell_group()
+_active_shapeshift_index: dict[int, dict] | None = None  # stock SpellShapeshiftForm rows by ID - see shapeshift_form()
 
 
 def _require_active() -> Registry:
@@ -338,6 +361,248 @@ def procs_on(
     return row
 
 
+# ---------------------------------------------------------------------------
+# WP-T (.agents/plans/druid-rework/druid-rework.WP-T-HANDOFF.md, PLAN B11/§5.0):
+# five more declared world-DB tables, plus their "declared removal" counterparts
+# for rows this tool never emitted (stock Blizzard data, or an older hand-written
+# migration) that the automatic prune pass in lib/spell_tables.py can't reach -
+# see that module's "Relationship to the prune pass" note.
+#
+# Declared removals share four rules, enforced in lib/spell_tables.py (not here -
+# a removal helper only ever needs to record *what* to remove; deciding whether
+# it's already been done, whether the key is real, and whether it collides with
+# something this same run also declares needs the full merged picture across
+# every class file, which only exists after load_classes_dir() returns):
+#   - key-exact DELETE only, rendered via sql_out.render_delete_only_block;
+#   - emitted once - a generated file's DELETE already covering the key means a
+#     rerun stays silent (spell_tables.load_removed_keys is the provenance);
+#   - a WARNING if the key exists nowhere (base dump, migrations, module SQL) -
+#     almost always a typo;
+#   - an error if the same run both declares and removes the same key.
+# ---------------------------------------------------------------------------
+
+_VALID_LINKED_SPELL_TYPES = (0, 1, 2)  # SpellLinkedType (SpellMgr.h): cast / hit / aura-removal
+
+
+def linked_spell(trigger: int, effect: int, type: int = 0, comment: str | None = None) -> dict:
+    """Declares one `spell_linked_spell` row - `SpellMgr::GetSpellLinked`'s trigger/effect/type
+    model (`type` 0=cast, 1=hit, 2=aura - see `SpellLinkedType`, SpellMgr.h). Negative ids are the
+    table's own convention, not a mistake: a negative `trigger` means "on removal of the aura
+    |trigger|", a negative `effect` means "remove that aura" - pass them through exactly as the
+    design doc gives them. `comment` is `NOT NULL text` in the schema; defaults to a plain
+    description of the link when not given."""
+    if type not in _VALID_LINKED_SPELL_TYPES:
+        raise ValueError(
+            f"linked_spell({trigger}, {effect}, type={type}): type must be 0 (cast), 1 (hit) or "
+            f"2 (aura) - see SpellLinkedType (SpellMgr.h)"
+        )
+    if comment is None:
+        comment = f"{trigger} -> {effect} (type {type})"
+    row = {
+        "id": f"{trigger}:{effect}:{type}",
+        "spell_trigger": trigger, "spell_effect": effect, "type": type, "comment": comment,
+    }
+    _require_active().linked_spells.append(row)
+    return row
+
+
+def unlink_spell(trigger: int, effect: int, type: int = 0) -> dict:
+    """Declares a removal of one `spell_linked_spell` row - the counterpart to `linked_spell()`,
+    for retiring a stock relationship (or one an earlier pass declared) a rework's replacement no
+    longer wants."""
+    if type not in _VALID_LINKED_SPELL_TYPES:
+        raise ValueError(f"unlink_spell({trigger}, {effect}, type={type}): type must be 0, 1 or 2")
+    row = {
+        "id": f"{trigger}:{effect}:{type}",
+        "spell_trigger": trigger, "spell_effect": effect, "type": type,
+    }
+    _require_active().linked_spell_removals.append(row)
+    return row
+
+
+def _require_group_ids() -> set[int]:
+    if _active_group_ids is None:
+        raise RuntimeError(
+            "spell_group()/spell_group_rule() need the existing spell_group ids (base dump + "
+            "migrations) to tell a legitimate 'add a member to a stock group' apart from a "
+            "typo'd id - pass them through registry.load_class_file(path, existing_group_ids=...) "
+            "/ load_classes_dir(dir_path, existing_group_ids=...) (generate.py already does)."
+        )
+    return _active_group_ids
+
+
+def _validate_group_id(group_id: int, caller: str) -> None:
+    """A `spell_group`/`spell_group_stack_rules` id must be a fresh mint from `source/ids.yaml`'s
+    `spell_group` block, or already exist in stock/migration data - `SpellMgr.h`'s
+    `SPELL_GROUP_DB_RANGE_MIN` (1000) is the engine's own floor for a DB-defined group, but
+    "adding members to a stock group like 1054 or 1016" is explicitly legitimate (WP-T handoff),
+    so a bare range check against the reserved block alone would wrongly reject that."""
+    ids_cfg = _active_ids_cfg
+    if ids_cfg is not None:
+        r = ids_cfg.get("spell_group")
+        if r and r["start"] <= group_id <= r["end"]:
+            return
+    if group_id in _require_group_ids():
+        return
+    raise ValueError(
+        f"{caller}({group_id}, ...): group id {group_id} is neither inside source/ids.yaml's "
+        f"spell_group reserved block nor an id already present in stock/migration data - mint a "
+        f"new one from that block, or double check the id if you meant to add a member/rule to "
+        f"an existing group."
+    )
+
+
+def spell_group(group_id: int, *spells: int) -> list[dict]:
+    """Declares one `spell_group` row per member in `spells` (`SpellMgr::LoadSpellGroups`).
+    `group_id` must be a fresh id from `source/ids.yaml`'s `spell_group` block, or an id that
+    already exists in stock/migration data (adding a member to a stock group, e.g. 1054 or 1016,
+    is legitimate - see `_validate_group_id`). A negative member id is a *nested-group reference*
+    (the loader expands a rank chain itself - this is not that), not a typo."""
+    if not spells:
+        raise ValueError(f"spell_group({group_id}): pass at least one member spell id")
+    _validate_group_id(group_id, "spell_group")
+    rows = []
+    for spell_id in spells:
+        # The real SQL column is `id` (the group id) - the same name the generic per-list
+        # duplicate-declaration dedup below keys on for every other table, which would otherwise
+        # misread "two different members of the same group" as a duplicate declaration. `_dedup_id`
+        # is load_classes_dir's escape hatch for exactly this collision - see its docstring.
+        row = {"id": group_id, "spell_id": spell_id, "_dedup_id": f"{group_id}:{spell_id}"}
+        _require_active().spell_groups.append(row)
+        rows.append(row)
+    return rows
+
+
+def leave_spell_group(group_id: int, spell: model.Spell | int) -> dict:
+    """Declares a removal of one `(group_id, spell_id)` row from `spell_group` - the counterpart
+    to `spell_group()`, for retiring one spell's membership (its own reworked group, or a stock
+    one) without touching the rest of the group. No id-range validation - removing never mints."""
+    spell_id = _spell_id_of(spell)
+    row = {"id": group_id, "spell_id": spell_id, "_dedup_id": f"{group_id}:{spell_id}"}
+    _require_active().spell_group_removals.append(row)
+    return row
+
+
+_VALID_STACK_RULES = (0, 1, 2, 3, 4)  # SpellGroupStackRule (SpellMgr.h): DEFAULT..EXCLUSIVE_HIGHEST
+
+
+def spell_group_rule(group_id: int, stack_rule: int, description: str = "") -> dict:
+    """Declares `group_id`'s `spell_group_stack_rules` row - `SpellGroupStackRule` (SpellMgr.h)
+    controlling how the engine treats simultaneously-active auras from spells in that group. Same
+    id-legitimacy rule as `spell_group()` (fresh mint from the reserved block, or an id that
+    already exists)."""
+    if stack_rule not in _VALID_STACK_RULES:
+        raise ValueError(
+            f"spell_group_rule({group_id}, stack_rule={stack_rule}): not a real "
+            f"SpellGroupStackRule (SpellMgr.h) - valid values are {list(_VALID_STACK_RULES)}"
+        )
+    _validate_group_id(group_id, "spell_group_rule")
+    row = {"id": group_id, "group_id": group_id, "stack_rule": stack_rule, "description": description}
+    _require_active().spell_group_rules.append(row)
+    return row
+
+
+def custom_attr(spell: model.Spell | int, attributes: int) -> dict:
+    """Declares `spell`'s `spell_custom_attr` row (`SpellCustomAttributes`, SpellMgr.h) - server-
+    only per-spell behavior flags the engine layers on top of the DBC data (e.g.
+    `SPELL_ATTR0_CU_POSITIVE` for a beneficial spell the engine's own heuristic misclassifies).
+    Stock rows exist for many spells; declaring one here replaces that row, same as every other
+    table in this module."""
+    spell_id = _spell_id_of(spell)
+    row = {"id": spell_id, "spell_id": spell_id, "attributes": int(attributes)}
+    _require_active().custom_attrs.append(row)
+    return row
+
+
+def unbind_script(spell: model.Spell | int, script_name: str) -> dict:
+    """Declares a removal of one `spell_script_names` row - the counterpart to `scripted_by()`,
+    for retiring a stock (or previously hand-written) C++ binding, e.g. when a rework's
+    replacement class rebinds the spell under a new `ScriptName`."""
+    spell_id = _spell_id_of(spell)
+    row = {"id": f"{spell_id}:{script_name}", "spell_id": spell_id, "ScriptName": script_name}
+    _require_active().script_removals.append(row)
+    return row
+
+
+def untrain(spell: model.Spell | int, trainer_ids: list[int]) -> list[dict]:
+    """Declares a removal of `spell`'s `trainer_spell` row for each id in `trainer_ids` - the
+    counterpart to `trained_by()`, for a spell a rework no longer wants any class trainer to
+    teach. `trainer_ids` is the *live* list of TrainerIds that actually teach this spell right now
+    (a server's real, possibly module-rewired, trainer id - see `lib.trainer_state`'s module
+    docstring - not necessarily the stock one), since each becomes its own key-exact DELETE."""
+    spell_id = _spell_id_of(spell)
+    if not trainer_ids:
+        raise ValueError(f"untrain({spell_id}, ...): pass at least one trainer id")
+    rows = []
+    for trainer_id in trainer_ids:
+        row = {"id": f"{trainer_id}:{spell_id}", "TrainerId": trainer_id, "SpellId": spell_id}
+        _require_active().trainer_removals.append(row)
+        rows.append(row)
+    return rows
+
+
+# DBCStructure.h's SpellShapeshiftFormEntry field names, for the handful that differ from this
+# table's SQL column name (see lib.dbcfmt.SPELLSHAPESHIFTFORM's own comment for the full mapping) -
+# a human reading a design doc knows "attackSpeed", not "CombatRoundTime".
+_SHAPESHIFT_FRIENDLY_COLUMNS = {
+    "flags1": "Flags",
+    "creatureType": "CreatureType",
+    "attackSpeed": "CombatRoundTime",
+    "modelID_A": "CreatureDisplayID_1",
+    "modelID_H": "CreatureDisplayID_2",
+}
+
+
+def _require_shapeshift_index() -> dict:
+    if _active_shapeshift_index is None:
+        raise RuntimeError(
+            "shapeshift_form() needs the stock SpellShapeshiftForm rows (lib.dbcfmt."
+            "SPELLSHAPESHIFTFORM, base DBC + base SQL) to build a full override row from - pass "
+            "them through registry.load_class_file(path, shapeshift_index=...) / "
+            "load_classes_dir(dir_path, shapeshift_index=...) (generate.py already does)."
+        )
+    return _active_shapeshift_index
+
+
+def shapeshift_form(form_id: int, **changed_columns) -> dict:
+    """Declares a full-row override of `spellshapeshiftform_dbc`'s stock `form_id` row: every
+    column starts at the real client value (`shapeshift_index`, the base DBC + base SQL - see
+    `load_class_file`'s docstring) and `changed_columns` overwrites just the named ones - e.g.
+    `shapeshift_form(5, attackSpeed=3500)` for Bear Form's melee swing timer. Accepts either the
+    real SQL column name (`CombatRoundTime`) or the friendlier `DBCStructure.h` field name a
+    design doc is more likely to use (`attackSpeed`) - see `_SHAPESHIFT_FRIENDLY_COLUMNS`.
+
+    Unlike a hand-authored `spell()`/`talent()` row, there is no reserved-ID-block minting here:
+    `form_id` always names an existing stock form (CAT=1, TREE=2, TRAVEL=3, AQUA=4, BEAR=5, ...,
+    MOONKIN=31 in retail 3.3.5a), so declaring one always means "override this real form", never
+    "create a new one" - nothing in the client's UI can address a form id nothing points at.
+    Server-side only: no client patch is produced for this table (nothing the client renders
+    depends on it - contrast `docs/shapeshift-appearances.md`'s CreatureDisplayInfo/
+    CreatureModelData, which does)."""
+    stock = _require_shapeshift_index().get(form_id)
+    if stock is None:
+        raise ValueError(
+            f"shapeshift_form({form_id}, ...): no stock SpellShapeshiftForm row for id {form_id} "
+            f"in var/extractors/dbc/SpellShapeshiftForm.dbc - not a real shapeshift form id"
+        )
+    row = dict(stock)
+    unknown = [
+        key for key in changed_columns
+        if key not in _SHAPESHIFT_FRIENDLY_COLUMNS and key not in row
+    ]
+    if unknown:
+        raise KeyError(
+            f"shapeshift_form({form_id}): no such column(s): {', '.join(sorted(unknown))} - see "
+            f"lib.dbcfmt.SPELLSHAPESHIFTFORM.columns for the real names, or "
+            f"_SHAPESHIFT_FRIENDLY_COLUMNS for the DBCStructure.h aliases this accepts"
+        )
+    for key, value in changed_columns.items():
+        row[_SHAPESHIFT_FRIENDLY_COLUMNS.get(key, key)] = value
+    row["id"] = form_id
+    _require_active().shapeshift_forms.append(row)
+    return row
+
+
 # SPELL_ATTR0_PASSIVE (src/server/shared/SharedDefines.h) - "Spell is
 # automatically cast on self by core", never player-cast from a Spellbook.
 _SPELL_ATTR0_PASSIVE = 0x00000040
@@ -533,7 +798,10 @@ def _exec_fresh_module(mod_name: str, path: Path, package: str | None = None):
     return module
 
 
-def load_class_file(path: Path, ids_cfg: dict | None = None, trainer_index=None) -> Registry:
+def load_class_file(
+    path: Path, ids_cfg: dict | None = None, trainer_index=None,
+    existing_group_ids: set[int] | None = None, shapeshift_index: dict | None = None,
+) -> Registry:
     """Imports one `source/classes/<class>.py` file fresh and returns
     everything it registered via `spell()`/`talent()`/`tab()`/
     `skill_line_ability()`/`granted_by_talent()`/`trained_by()`. Each call
@@ -542,16 +810,23 @@ def load_class_file(path: Path, ids_cfg: dict | None = None, trainer_index=None)
     `sys.modules`.
 
     `ids_cfg` (the parsed `source/ids.yaml`) is only needed if the file
-    calls `granted_by_talent()` - see `_is_custom_spell_id`. `trainer_index`
-    (a `lib.trainer_state.TrainerIndex` - accepted duck-typed here, not
-    imported, so this package stays dependency-free of the rest of `lib/`)
-    is only needed if the file calls `trained_by()` - see
-    `_require_trainer_index`."""
-    global _active, _active_ids_cfg, _active_trainer_index
+    calls `granted_by_talent()` - see `_is_custom_spell_id` - or
+    `spell_group()`/`spell_group_rule()` - see `_validate_group_id`.
+    `trainer_index` (a `lib.trainer_state.TrainerIndex` - accepted duck-typed
+    here, not imported, so this package stays dependency-free of the rest of
+    `lib/`) is only needed if the file calls `trained_by()` - see
+    `_require_trainer_index`. `existing_group_ids` (a plain `set[int]`, same
+    duck-typed reasoning) is only needed for `spell_group()`/
+    `spell_group_rule()` - see `_require_group_ids`. `shapeshift_index` (a
+    plain `dict[int, dict]`) is only needed for `shapeshift_form()` - see
+    `_require_shapeshift_index`."""
+    global _active, _active_ids_cfg, _active_trainer_index, _active_group_ids, _active_shapeshift_index
     registry = Registry()
     _active = registry
     _active_ids_cfg = ids_cfg
     _active_trainer_index = trainer_index
+    _active_group_ids = existing_group_ids
+    _active_shapeshift_index = shapeshift_index
     mod_name = f"dsl_class_{path.stem}"
     try:
         _exec_fresh_module(mod_name, path)
@@ -559,11 +834,16 @@ def load_class_file(path: Path, ids_cfg: dict | None = None, trainer_index=None)
         _active = None
         _active_ids_cfg = None
         _active_trainer_index = None
+        _active_group_ids = None
+        _active_shapeshift_index = None
         sys.modules.pop(mod_name, None)
     return registry
 
 
-def load_class_package(dir_path: Path, ids_cfg: dict | None = None, trainer_index=None) -> Registry:
+def load_class_package(
+    dir_path: Path, ids_cfg: dict | None = None, trainer_index=None,
+    existing_group_ids: set[int] | None = None, shapeshift_index: dict | None = None,
+) -> Registry:
     """Imports every `*.py` file inside `dir_path` (a `source/classes/<class>/`
     directory - the multi-file layout, one class split across e.g.
     `<class>_spells.py`/`<class>_trigger_spells.py`/`<class>_talents.py`
@@ -586,7 +866,7 @@ def load_class_package(dir_path: Path, ids_cfg: dict | None = None, trainer_inde
     `finally`, same "always fresh" contract `load_class_file` already has for
     the single-file case. Files starting with `_` are skipped, same
     convention as `load_classes_dir`."""
-    global _active, _active_ids_cfg, _active_trainer_index
+    global _active, _active_ids_cfg, _active_trainer_index, _active_group_ids, _active_shapeshift_index
     pkg_name = f"dsl_classpkg_{dir_path.name}_{next(_package_load_counter)}"
     pkg_spec = importlib.util.spec_from_loader(pkg_name, loader=None, is_package=True)
     pkg_module = importlib.util.module_from_spec(pkg_spec)
@@ -595,6 +875,8 @@ def load_class_package(dir_path: Path, ids_cfg: dict | None = None, trainer_inde
     _active = registry
     _active_ids_cfg = ids_cfg
     _active_trainer_index = trainer_index
+    _active_group_ids = existing_group_ids
+    _active_shapeshift_index = shapeshift_index
     sys.modules[pkg_name] = pkg_module
     # A sibling's own `from .other import x` is resolved by Python's *standard* import
     # machinery (not our `_exec_fresh_module`, which only covers the files this loop reaches
@@ -616,6 +898,8 @@ def load_class_package(dir_path: Path, ids_cfg: dict | None = None, trainer_inde
         _active = None
         _active_ids_cfg = None
         _active_trainer_index = None
+        _active_group_ids = None
+        _active_shapeshift_index = None
         # Remove every module this call put in sys.modules - not just the ones our own loop
         # inserted directly, but also any sibling pulled in by another file's own relative
         # import (that insertion happens inside `exec`, via Python's normal import machinery,
@@ -627,7 +911,8 @@ def load_class_package(dir_path: Path, ids_cfg: dict | None = None, trainer_inde
 
 
 def load_classes_dir(
-    dir_path: Path, ids_cfg: dict | None = None, trainer_index=None
+    dir_path: Path, ids_cfg: dict | None = None, trainer_index=None,
+    existing_group_ids: set[int] | None = None, shapeshift_index: dict | None = None,
 ) -> dict[str, list[dict]]:
     """Merge every `source/classes/*` entry's registered spells/talents/
     tabs/skill_line_abilities/trainer_spells into one dict, in sorted-name
@@ -647,25 +932,38 @@ def load_classes_dir(
     plan's Phase 4/5. Entries whose name starts with `_` are skipped
     (reserved for future shared helpers/examples, not class declarations -
     `Registry.spells` etc. would otherwise pick them up as a fifth
-    "class")."""
+    "class").
+
+    `ids_cfg`/`trainer_index`/`existing_group_ids`/`shapeshift_index` are
+    passed straight through to every `load_class_file`/`load_class_package`
+    call - see their docstrings."""
     merged: dict[str, list[dict]] = {key: [] for key in MERGE_KEYS}
     if not dir_path.is_dir():
         return merged
-    seen: dict[str, dict[int, str]] = {key: {} for key in MERGE_KEYS}
+    seen: dict[str, dict[object, str]] = {key: {} for key in MERGE_KEYS}
     entries = [p for p in dir_path.iterdir() if not p.name.startswith("_")]
     entries = [p for p in entries if p.is_dir() or p.suffix == ".py"]
     for path in sorted(entries, key=lambda p: p.name):
+        kwargs = dict(
+            ids_cfg=ids_cfg, trainer_index=trainer_index,
+            existing_group_ids=existing_group_ids, shapeshift_index=shapeshift_index,
+        )
         if path.is_dir():
-            registry = load_class_package(path, ids_cfg=ids_cfg, trainer_index=trainer_index)
+            registry = load_class_package(path, **kwargs)
         else:
-            registry = load_class_file(path, ids_cfg=ids_cfg, trainer_index=trainer_index)
+            registry = load_class_file(path, **kwargs)
         for key in MERGE_KEYS:
             for entry in getattr(registry, key):
-                if entry["id"] in seen[key]:
+                # `_dedup_id` is the escape hatch for a table whose real SQL column is itself
+                # called `id` (spell_group/spell_group's own leave_ counterpart) - see
+                # spell_group()'s docstring for why entry["id"] can't double as the dedup key
+                # there the way it does for every other table.
+                dedup_id = entry.get("_dedup_id", entry.get("id"))
+                if dedup_id in seen[key]:
                     raise DuplicateIdError(
-                        f"{key} entry ID {entry['id']} appears in both "
-                        f"{seen[key][entry['id']]!r} and {path.name!r}"
+                        f"{key} entry {dedup_id!r} appears in both "
+                        f"{seen[key][dedup_id]!r} and {path.name!r}"
                     )
-                seen[key][entry["id"]] = path.name
+                seen[key][dedup_id] = path.name
                 merged[key].append(entry)
     return merged
