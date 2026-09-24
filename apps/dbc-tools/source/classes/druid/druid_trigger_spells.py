@@ -626,12 +626,12 @@ brambles_16836 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.APPLY_AURA, base_points=-10001, implicit_target_a=1, apply_aura=107, misc_value=SpellModOp.COOLDOWN),
     ],
     spell_icon_id=53,
-    notes='pulled from existing data; druid-rework BALANCE §6 row (4,3): eff1 moved off DUMMY onto a Thorns damage SpellMod; eff2 becomes a plain DUMMY (Druid::AddSwell/treant script reads EFFECT_1 directly); eff3 repurposed off Barkskin\'s CHANCE_OF_SUCCESS hack (CORE-AUDIT row 2) onto a Force of Nature cooldown SpellMod',
+    notes='pulled from existing data; druid-rework BALANCE §6 row (4,3): eff1 stays an APPLY_AURA+DUMMY storing the Thorns % (CORE-AUDIT row 2: Unit.cpp\'s stock Brambles clause reads it via GetAuraEffectOfRankedSpell(16836, 0); a Thorns DAMAGE SpellMod here also applied on top of that clause, once at shield calc and again at proc, so Thorns took x8/x27/x64 instead of x2/x3/x4 - code-review fix); eff2 becomes a plain DUMMY (Druid::AddSwell/treant script reads EFFECT_1 directly); eff3 repurposed off Barkskin\'s CHANCE_OF_SUCCESS hack (CORE-AUDIT row 2) onto a Force of Nature cooldown SpellMod',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Thorns by $s1% and the damage done by your Treants by $s2%. Reduces the cooldown of Force of Nature by $/1000;s3 sec.\n\n|cFF9D9D9DCapstone Bonus: Your Entangling Roots also silence the target for 4 sec. This effect has a 10 sec cooldown.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': THORNS, 'EffectSpellClassMaskC_2': FORCE_OF_NATURE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
@@ -648,12 +648,12 @@ brambles_16839 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=199, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=199, implicit_target_a=1, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.APPLY_AURA, base_points=-20001, implicit_target_a=1, apply_aura=107, misc_value=SpellModOp.COOLDOWN),
     ],
     spell_icon_id=53,
-    notes='pulled from existing data; druid-rework BALANCE §6 row (4,3): junk misc 28 on eff1 cleared alongside the aura-type move',
+    notes='pulled from existing data; druid-rework BALANCE §6 row (4,3): junk misc 28 on eff1 cleared (eff1 stays DUMMY, see 16836)',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Thorns by $s1% and the damage done by your Treants by $s2%. Reduces the cooldown of Force of Nature by $/1000;s3 sec.\n\n|cFF9D9D9DCapstone Bonus: Your Entangling Roots also silence the target for 4 sec. This effect has a 10 sec cooldown.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': THORNS, 'EffectSpellClassMaskC_2': FORCE_OF_NATURE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
@@ -670,7 +670,7 @@ brambles_16840 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=299, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=299, implicit_target_a=1, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=1, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.APPLY_AURA, base_points=-30001, implicit_target_a=1, apply_aura=107, misc_value=SpellModOp.COOLDOWN),
     ],
@@ -3348,8 +3348,8 @@ nature_s_majesty_35363 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-5001, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COOLDOWN),
     ],
     spell_icon_id=598,
-    notes='pulled from existing data; druid-rework BALANCE §6 row (1,1): +Starsurge to the crit mask, new eff2 cuts Mass Entanglement\'s cooldown',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Wrath, Starfire, Starfall, Starsurge, Nourish, and Healing Touch by $s1%. Reduces the cooldown of your Mass Entanglement by $/1000;s2 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 37, 'EffectSpellClassMaskA_2': 41943040, 'EffectSpellClassMaskA_3': STARSURGE, 'EffectSpellClassMaskB_3': MASS_ENTANGLEMENT, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (1,1): +Starsurge to the crit mask, new eff2 cuts Mass Entanglement\'s cooldown. Tooltip drops Nourish (PLAN B8: Nourish is retired; its A_2 bit stays, harmless)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Wrath, Starfire, Starfall, Starsurge, and Healing Touch by $s1%. Reduces the cooldown of your Mass Entanglement by $/1000;s2 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 37, 'EffectSpellClassMaskA_2': 41943040, 'EffectSpellClassMaskA_3': STARSURGE, 'EffectSpellClassMaskB_3': MASS_ENTANGLEMENT, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3370,7 +3370,7 @@ nature_s_majesty_35364 = spell(
     ],
     spell_icon_id=598,
     notes='pulled from existing data; druid-rework BALANCE §6 row (1,1)',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Wrath, Starfire, Starfall, Starsurge, Nourish, and Healing Touch by $s1%. Reduces the cooldown of your Mass Entanglement by $/1000;s2 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 37, 'EffectSpellClassMaskA_2': 41943040, 'EffectSpellClassMaskA_3': STARSURGE, 'EffectSpellClassMaskB_3': MASS_ENTANGLEMENT, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Wrath, Starfire, Starfall, Starsurge, and Healing Touch by $s1%. Reduces the cooldown of your Mass Entanglement by $/1000;s2 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 37, 'EffectSpellClassMaskA_2': 41943040, 'EffectSpellClassMaskA_3': STARSURGE, 'EffectSpellClassMaskB_3': MASS_ENTANGLEMENT, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
