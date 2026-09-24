@@ -454,6 +454,39 @@ def _next_match(pattern: re.Pattern, text: str, pos: int, table_name: str) -> re
         pos = m.end()
 
 
+# `apply_statements`'s own combined head pattern - INSERT/DELETE/UPDATE/SET-var in one alternation,
+# with a distinctly-named table group per branch (Python's `re` forbids reusing a group name across
+# alternatives). Used only by `apply_statements`, which used to run `_next_match` for each of
+# `_INSERT_HEAD_RE`/`_DELETE_HEAD_RE`/`_UPDATE_HEAD_RE` plus a separate `_SET_VAR_RE.search`,
+# independently, every loop iteration - four full scans of the remaining text (each with its own
+# "skip past a different table's statement" retry loop) to find one earliest match. Profiling
+# `state.load_existing_rows(SPELL)` during the druid-rework Resto pass found this was the actual
+# dominant cost of a `generate.py` run (regex `.search()` alone: 148s of a 210s call, most of it
+# these three independent per-iteration scans re-walking past hundreds of other tables' statements
+# in the same large migration file) - see docs/bugs-and-fixes.md's "generate.py looks hung" entry.
+_STATEMENT_HEAD_RE = re.compile(
+    r"INSERT\s+INTO\s+`(?P<ins_table>\w+)`\s*(?:\((?P<cols>[^)]*)\))?\s*VALUES\s*"
+    r"|DELETE\s+FROM\s+`(?P<del_table>\w+)`\s*"
+    r"|UPDATE\s+`(?P<upd_table>\w+)`\s+SET\s+"
+    r"|SET\s+(?P<set_name>@\w+)\s*:?=\s*(?P<set_value>-?\d+)\s*;",
+    re.IGNORECASE,
+)
+
+
+def _next_statement(text: str, pos: int, table_name: str) -> re.Match | None:
+    """`_next_match`'s counterpart for `_STATEMENT_HEAD_RE`: one combined scan per position
+    instead of one per statement kind. A `SET` session-variable match (no `*_table` group) is
+    never table-filtered, matching `apply_statements`'s original `_SET_VAR_RE.search` behavior."""
+    while True:
+        m = _STATEMENT_HEAD_RE.search(text, pos)
+        if m is None:
+            return None
+        matched_table = m.group("ins_table") or m.group("del_table") or m.group("upd_table")
+        if matched_table is None or matched_table == table_name:
+            return m
+        pos = m.end()
+
+
 def _apply_insert(
     rows: dict[int, dict], table: DbcTable, text: str, m: re.Match,
     variables: dict[str, int] | None = None,
@@ -475,9 +508,18 @@ def _apply_insert(
 def _apply_delete(rows: dict[int, dict], text: str, pos: int) -> int:
     m = _DELETE_WHERE_RANGE_RE.match(text, pos)
     if m:
+        # Iterate the (small, fixed-width) target range, not every key currently in `rows` - a
+        # `WHERE id BETWEEN 200000 AND 209999` range-clear is the standard first statement of
+        # nearly every generate.py-emitted migration (one per class/pass), and `rows` grows to
+        # tens of thousands of entries as `state.load_existing_rows` replays ~80 of these files in
+        # sequence - the old `[k for k in rows if start <= k <= end]` scanned the *entire current
+        # dict* on every single one of those files, making this the dominant cost of a
+        # `generate.py` run (~190s of it, profiled during the druid-rework Resto pass) and one that
+        # gets worse every time another class's migrations are promoted. See
+        # docs/bugs-and-fixes.md's "generate.py looks hung but is CPU-bound" entry.
         start, end = int(m.group("start")), int(m.group("end"))
-        for key in [k for k in rows if start <= k <= end]:
-            del rows[key]
+        for key in range(start, end + 1):
+            rows.pop(key, None)
         return m.end()
     m = _WHERE_IN_RE.match(text, pos)
     if m:
@@ -553,21 +595,16 @@ def apply_statements(rows: dict[int, dict], table: DbcTable, sql_text: str) -> N
     pos = 0
     variables: dict[str, int] = {}
     while True:
-        ins_m = _next_match(_INSERT_HEAD_RE, sql_text, pos, table.sql_table)
-        del_m = _next_match(_DELETE_HEAD_RE, sql_text, pos, table.sql_table)
-        upd_m = _next_match(_UPDATE_HEAD_RE, sql_text, pos, table.sql_table)
-        set_m = _SET_VAR_RE.search(sql_text, pos)
-        candidates = [m for m in (ins_m, del_m, upd_m, set_m) if m is not None]
-        if not candidates:
+        m = _next_statement(sql_text, pos, table.sql_table)
+        if m is None:
             return
-        m = min(candidates, key=lambda match: match.start())
         try:
-            if m is set_m:
-                variables[m.group("name")] = int(m.group("value"))
+            if m.group("set_name") is not None:
+                variables[m.group("set_name")] = int(m.group("set_value"))
                 pos = m.end()
-            elif m is ins_m:
+            elif m.group("ins_table") is not None:
                 pos = _apply_insert(rows, table, sql_text, m, variables)
-            elif m is del_m:
+            elif m.group("del_table") is not None:
                 pos = _apply_delete(rows, sql_text, m.end())
             else:
                 pos = _apply_update(rows, table, sql_text, m.end(), variables)
