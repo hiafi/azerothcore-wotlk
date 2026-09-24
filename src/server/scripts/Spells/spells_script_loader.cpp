@@ -19,6 +19,7 @@
 void AddSC_deathknight_spell_scripts();
 void AddSC_druid_spell_scripts();
 void AddSC_druid_balance_spell_scripts(); // Custom: druid-rework Balance pass
+void AddSC_druid_resto_spell_scripts(); // Custom: druid-rework Resto pass
 void AddSC_druid_hooks(); // Custom: druid-rework shared ScriptMgr handlers
 void AddSC_generic_spell_scripts();
 void AddSC_hunter_spell_scripts();
@@ -43,6 +44,7 @@ void AddSpellsScripts()
     AddSC_deathknight_spell_scripts();
     AddSC_druid_spell_scripts();
     AddSC_druid_balance_spell_scripts(); // Custom: druid-rework Balance pass
+    AddSC_druid_resto_spell_scripts(); // Custom: druid-rework Resto pass
     AddSC_druid_hooks(); // Custom: druid-rework shared ScriptMgr handlers
     AddSC_generic_spell_scripts();
     AddSC_hunter_spell_scripts();

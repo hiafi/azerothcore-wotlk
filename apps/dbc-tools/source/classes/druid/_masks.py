@@ -44,6 +44,7 @@ TYPHOON = 0x1000000  # 50516, 61391
 NOURISH = 0x2000000  # 50464 - RETIRED (druid-rework.PLAN.md §3 item 6 / BALANCE §0.10):
 # the stock Nourish clauses stay in core and key on this bit. Never reassign it.
 WILD_GROWTH = 0x4000000  # 48438
+NATURAL_ALACRITY = 0x80000  # stock Nature's Swiftness 17116, reused baseline (RESTO §0.1/§2.4) - no new bit
 
 # --- dword 3 (SpellClassMask_3 / EffectSpellClassMaskX_3) ---
 STARFALL_TARGETING = 0x100  # 50286
@@ -64,8 +65,13 @@ UPHEAVAL = 0x00020000  # bit 17 - Upheaval 200422 (reclaimed from the orphaned I
 # Resto's bits (owned by the Resto pass; named here now so later passes only import, PLAN §4.4).
 BLOOM = 0x10000000  # bit 28 - Bloom 200560 + Bloom jump 200561
 CENARION_WARD = 0x20000000  # bit 29 - Cenarion Ward 200562 and its released HoT 200563 (shared)
+CENARION_WARD_HOT = CENARION_WARD  # alias (RESTO §0.1): the ward and its released heal share one bit
 CULTIVATION = 0x40000000  # bit 30 - Cultivation 200567
 YSERAS_GIFT = 0x80000000  # bit 31 - Ysera's Gift heal 200569
+# Germination (200568) gets NO new bit - it deliberately shares REJUVENATION's bit (dword 1 0x10)
+# so every Rejuvenation SpellMod applies to it too; code tells it apart from 774 by spell id, not
+# by mask (RESTO §0.1/§2.4).
+# Flourish (200564) gets NO bit at all - no SpellMod ever needs to scope to it (RESTO §0.1).
 
 # Every free druid dword-3 bit is now allocated (PLAN §4.4). Dword 1 bit 26 (0x4000000, NPC-only
 # 9033) is the only remaining reserve, a last resort.
@@ -99,12 +105,34 @@ NATURES_REACH = (0x400205, 0x20, MASS_ENTANGLEMENT)
 # Earth and Moon's proc trigger family scope: Wrath, Moonfire (dword 1); Starsurge (dword 3).
 EM_TRIGGER = (0x5, 0, STARSURGE)
 
+# Resto composites (RESTO §0.1/§2.4; WP-0 item 2). Third element ORs in the dword-3 bit(s).
+# Identical to stock Natural Shapeshifter's own A-mask scope (all four forms).
+SHAPESHIFT_FORMS = (0xE0000000, 0x0001E000, 0)
+# The SPELLMOD_DAMAGE side of Resto's healing bucket: direct Nature heals, Classic list.
+DIRECT_NATURE_HEAL = (HEALING_TOUCH | REGROWTH, SWIFTMEND, BLOOM)
+# The full "direct heal" SPELLMOD_DAMAGE scope (Gift of Nature, Natural Alacrity/Shapeshifter buffs).
+HEAL_DIRECT = (HEALING_TOUCH | REGROWTH | TRANQUILITY, SWIFTMEND | LIFEBLOOM, BLOOM | YSERAS_GIFT)
+# The SPELLMOD_DOT side of the same bucket.
+HEAL_DOT = (REJUVENATION | REGROWTH, LIFEBLOOM | WILD_GROWTH, CENARION_WARD_HOT | CULTIVATION)
+# Core-HoT cost scope (Deep Roots capstone reads this list directly in C++, not as a SpellMod mask,
+# but Tree of Life's -20% HoT cost SpellMod (5420 eff1) is scoped to this).
+CORE_HOT_CAST = (REJUVENATION | REGROWTH, LIFEBLOOM | WILD_GROWTH, CENARION_WARD)
+# Empowered Rejuvenation's BONUS_MULTIPLIER scope: Rejuvenation/Germination (shared bit), Lifebloom,
+# Wild Growth, Cenarion Ward's released heal. Regrowth is excluded - handled in C++ (RESTO §8 (5,1)).
+EMP_REJUV_COEFF = (REJUVENATION, LIFEBLOOM | WILD_GROWTH, CENARION_WARD_HOT)
+
 # --- Proc constants (BALANCE §3 item 2; per-file convention like priest's own DSL files) ---
+PROC_FLAG_DONE_MELEE_AUTO_ATTACK = 0x4  # RESTO §0.3 item 7 (Omen of Clarity)
 PROC_FLAG_TAKEN_MELEE_AUTO_ATTACK = 0x8
+PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS = 0x10  # RESTO §0.3 item 7
 PROC_FLAG_TAKEN_SPELL_MELEE_DMG_CLASS = 0x20
+PROC_FLAG_DONE_RANGED_AUTO_ATTACK = 0x40  # RESTO §0.3 item 7
+PROC_FLAG_DONE_SPELL_RANGED_DMG_CLASS = 0x100  # RESTO §0.3 item 7
+PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_NEG = 0x1000  # RESTO §0.3 item 7
 PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS = 0x4000
 PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG = 0x10000
 PROC_FLAG_DONE_PERIODIC = 0x40000
+PROC_FLAG_TAKEN_DAMAGE = 0x100000  # RESTO §6 (Cenarion Ward release: melee + spell + periodic damage taken)
 PROC_SPELL_TYPE_DAMAGE = 1
 PROC_SPELL_TYPE_HEAL = 2
 PROC_SPELL_PHASE_CAST = 1

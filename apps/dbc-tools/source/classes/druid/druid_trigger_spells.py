@@ -4,12 +4,20 @@ Druid - spells that are never directly cast - proc/periodic-tick effects, trigge
 Split from a single source/classes/druid.py via split_class_file.py (.agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md) - see source/classes/README.md for the multi-file layout and lib/dsl/registry.py's load_class_package for how cross-file references (`from .druid_...` below) resolve.
 """
 
-from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, School, SpellModOp
-from lib.dsl.registry import bonus_coefficients, spell
+from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, School, SpellModOp
+from lib.dsl.registry import bonus_coefficients, procs_on, scripted_by, skill_line_ability, spell
 from ._masks import (
-    DRUID_SPELL_DAMAGE, FORCE_OF_NATURE, FURY_OF_ELUNE, GENESIS_DOT, GENESIS_TICKS, HURRICANE,
-    INNERVATE, INSECT_SWARM, LIFEBLOOM, MASS_ENTANGLEMENT, MOONGLOW_SPELLS, NATURES_REACH,
-    STARFALL, STARFIRE, STARSURGE, THORNS, TYPHOON, WRATH,
+    BLOOM, CENARION_WARD, CENARION_WARD_HOT, CORE_HOT_CAST, CULTIVATION, DIRECT_NATURE_HEAL,
+    DRUID_SPELL_DAMAGE, EMP_REJUV_COEFF, FORCE_OF_NATURE, FURY_OF_ELUNE, GENESIS_DOT, GENESIS_TICKS,
+    HEALING_TOUCH, HEAL_DIRECT, HEAL_DOT, HURRICANE, INNERVATE, INSECT_SWARM, LIFEBLOOM,
+    MASS_ENTANGLEMENT, MOONGLOW_SPELLS, NATURAL_ALACRITY, NATURES_REACH, PROC_ATTR_TRIGGERED_CAN_PROC,
+    PROC_FLAG_DONE_MELEE_AUTO_ATTACK, PROC_FLAG_DONE_PERIODIC, PROC_FLAG_DONE_RANGED_AUTO_ATTACK,
+    PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS,
+    PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS, PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_NEG,
+    PROC_FLAG_DONE_SPELL_RANGED_DMG_CLASS, PROC_FLAG_TAKEN_DAMAGE, PROC_HIT_CRITICAL,
+    PROC_SPELL_PHASE_CAST, PROC_SPELL_PHASE_HIT, PROC_SPELL_TYPE_HEAL, REJUVENATION, REGROWTH,
+    SHAPESHIFT_FORMS, STARFALL, STARFIRE, STARSURGE, SWIFTMEND, THORNS, TRANQUILITY, TYPHOON,
+    WILD_GROWTH, WRATH, YSERAS_GIFT,
 )
 
 
@@ -549,11 +557,12 @@ natural_shapeshifter_16833 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=108, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=122,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of all shapeshifting by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 3758096384, 'EffectSpellClassMaskA_2': 122880, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework RESTO §8 (0,2), moved from (1,2): replaces the stock shapeshift-cost-reduction effects with two APPLY_AURA+DUMMY markers Druid::ApplyShapeshiftFormBonuses reads (CORE-AUDIT row 16) - eff1 is the 2/4/6% bucket (bear physical dmg, moonkin Arcane+Nature dmg), eff2 is the 1/2/3% bucket (cat crit, no-form/Tree of Life healing). 200573 (druid_trigger_spells.py) is the no-form healing buff it casts. scripted_by: spell_dru_natural_shapeshifter (AuraScript, Apply/Remove REAL) re-evaluates on learn/login/unlearn. Code-review fix: both markers were plain SPELL_EFFECT_DUMMY, so the talent had zero aura effects and neither the C++ reads nor the AuraScript's Apply/Remove hooks ever fired.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Bear Form: physical damage increased by $s1%. Cat Form: melee critical strike chance increased by $s2%. Moonkin Form: Arcane and Nature damage increased by $s1%. No form or Tree of Life: healing increased by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Your shapeshifts no longer trigger the global cooldown (reduced to 1 sec).|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -570,11 +579,12 @@ natural_shapeshifter_16834 = spell(
     range_yards=0.0,
     duration_ms=6000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=108, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=122,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of all shapeshifting by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 3758096384, 'EffectSpellClassMaskA_2': 122880, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework RESTO §8 (0,2): rank 2 of the DUMMY-marker rewrite above.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Bear Form: physical damage increased by $s1%. Cat Form: melee critical strike chance increased by $s2%. Moonkin Form: Arcane and Nature damage increased by $s1%. No form or Tree of Life: healing increased by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Your shapeshifts no longer trigger the global cooldown (reduced to 1 sec).|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -589,14 +599,19 @@ natural_shapeshifter_16835 = spell(
     mana_cost=0,
     mana_cost_pct=0,
     range_yards=0.0,
-    duration_ms=6000,
+    duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=108, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=-501, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.GLOBAL_COOLDOWN),
     ],
     spell_icon_id=122,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of all shapeshifting by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 3758096384, 'EffectSpellClassMaskA_2': 122880, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework RESTO §8 (0,2): rank 3, the capstone rank - duration_ms 6000->-1 (permanent while learned, matching the other capstone-carrying ranks); new eff3 flat GLOBAL_COOLDOWN -500 ms scoped to SHAPESHIFT_FORMS (C_1/C_2) - shapeshifts no longer trigger the GCD (clamped to 1000 ms floor, Spell.cpp:9256, hence the tooltip's 'reduced to 1 sec').",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Bear Form: physical damage increased by $s1%. Cat Form: melee critical strike chance increased by $s2%. Moonkin Form: Arcane and Nature damage increased by $s1%. No form or Tree of Life: healing increased by $s2%.\n\nCapstone Bonus: Your shapeshifts no longer trigger the global cooldown (reduced to 1 sec).', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_1': SHAPESHIFT_FORMS[0], 'EffectSpellClassMaskC_2': SHAPESHIFT_FORMS[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
+scripted_by(natural_shapeshifter_16833, 'spell_dru_natural_shapeshifter')
+scripted_by(natural_shapeshifter_16834, 'spell_dru_natural_shapeshifter')
+scripted_by(natural_shapeshifter_16835, 'spell_dru_natural_shapeshifter')
 
 
 brambles_16836 = spell(
@@ -875,8 +890,50 @@ omen_of_clarity_16864 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=16870),
     ],
     spell_icon_id=1754,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Each damage and healing spell and auto attacks have a chance of causing the caster to enter a Clearcasting state.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Each of the Druid's damage, healing spells and auto attacks has a chance of causing the caster to enter a Clearcasting state.  The Clearcasting state reduces the Mana, Rage or Energy cost of your next damage, healing spell or offensive ability by $16870s1%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 26, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 81924, 'RangeIndex': 1, 'SpellClassMask_2': 2097152, 'SpellClassSet': 7, 'SpellLevel': 20, 'SpellVisualID_1': 4040, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes="druid-rework RESTO §8 (2,1): rank 1 of 3 (grown from a single stock rank); ProcTypeMask zeroed - proc conditions now come entirely from procs_on() below plus the rewritten spell_dru_omen_of_clarity_resto::CheckProc (direct Nature heals, direct damage, and Lifebloom's periodic heal only). Corrections item 1: the stock binding is displaced to a new class (unbind_script/scripted_by below).",
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Each damage and healing spell and auto attacks have a chance of causing the caster to enter a Clearcasting state.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your direct damage including auto attacks, your direct Nature healing spells, and the periodic healing of your Lifebloom have a $s1% chance to trigger Clearcasting, reducing the Mana, Rage or Energy cost of your next damaging or healing spell or offensive ability by 100%. 2 sec internal cooldown.\n\n|cFF9D9D9DCapstone Bonus: The spell or ability that consumes Clearcasting deals 10% increased damage and healing.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 26, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassMask_2': 2097152, 'SpellClassSet': 7, 'SpellLevel': 20, 'SpellVisualID_1': 4040, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+)
+
+
+omen_of_clarity_200600 = spell(
+    id=200600,
+    name='Omen of Clarity',
+    school=School.NATURE,
+    dispel=DispelType.MAGIC,
+    attributes=192,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=16870),
+    ],
+    spell_icon_id=1754,
+    notes='druid-rework RESTO §8 (2,1): rank 2 - a clone of 16864 (same trigger, 16870), higher proc chance (procs_on below).',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Each damage and healing spell and auto attacks have a chance of causing the caster to enter a Clearcasting state.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your direct damage including auto attacks, your direct Nature healing spells, and the periodic healing of your Lifebloom have a $s1% chance to trigger Clearcasting, reducing the Mana, Rage or Energy cost of your next damaging or healing spell or offensive ability by 100%. 2 sec internal cooldown.\n\n|cFF9D9D9DCapstone Bonus: The spell or ability that consumes Clearcasting deals 10% increased damage and healing.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassMask_2': 2097152, 'SpellClassSet': 7, 'SpellVisualID_1': 4040, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+)
+
+
+omen_of_clarity_200601 = spell(
+    id=200601,
+    name='Omen of Clarity',
+    school=School.NATURE,
+    dispel=DispelType.MAGIC,
+    attributes=192,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200572),
+    ],
+    spell_icon_id=1754,
+    notes='druid-rework RESTO §8 (2,1): rank 3, the final/capstone rank - triggers 200572 (the Clearcasting variant that also carries the +10% capstone bonus) instead of 16870.',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Each damage and healing spell and auto attacks have a chance of causing the caster to enter a Clearcasting state.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your direct damage including auto attacks, your direct Nature healing spells, and the periodic healing of your Lifebloom have a $s1% chance to trigger Clearcasting, reducing the Mana, Rage or Energy cost of your next damaging or healing spell or offensive ability by 100%. 2 sec internal cooldown.\n\nCapstone Bonus: The spell or ability that consumes Clearcasting deals 10% increased damage and healing.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassMask_2': 2097152, 'SpellClassSet': 7, 'SpellVisualID_1': 4040, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1673,11 +1730,12 @@ nature_s_focus_17063 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=22, implicit_target_a=1, apply_aura=108, misc_value=9),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.REDUCE_PUSHBACK, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL),
     ],
     spell_icon_id=963,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the pushback suffered from damaging attacks  while casting Healing Touch, Wrath, Entangling Roots, Cyclone, Nourish, Regrowth and Tranquility by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 737, 'EffectSpellClassMaskA_2': 33554464, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework RESTO §8 (0,1): eff1 replaced with generic REDUCE_PUSHBACK (149) misc 127 (all casts/channels, Spell.cpp:8119/8161, Q31 - unscoped rather than druid-only, matching the spec's wording); new eff2 HASTE_ALL (193). Capstone tooltip realized on Tranquility (740) itself via spell_dru_natures_focus_capstone.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases spell, ranged and melee haste by $s2%. Reduces pushback from damaging attacks while casting by $s1%.\n\n|cFF9D9D9DCapstone Bonus: While channeling Tranquility, you take 50% less damage and cannot be knocked back.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -1693,11 +1751,12 @@ nature_s_focus_17065 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=45, implicit_target_a=1, apply_aura=108, misc_value=9),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.REDUCE_PUSHBACK, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL),
     ],
     spell_icon_id=963,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the pushback suffered from damaging attacks  while casting Healing Touch, Wrath, Entangling Roots, Cyclone, Nourish, Regrowth and Tranquility by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 737, 'EffectSpellClassMaskA_2': 33554464, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework RESTO §8 (0,1): rank 2 (final/capstone rank) of the rewrite above.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases spell, ranged and melee haste by $s2%. Reduces pushback from damaging attacks while casting by $s1%.\n\nCapstone Bonus: While channeling Tranquility, you take 50% less damage and cannot be knocked back.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -1734,12 +1793,11 @@ naturalist_17069 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=107, misc_value=10),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=79, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
     ],
     spell_icon_id=962,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cast time of your Healing Touch spell by $/1000;S1 sec and increases the damage you deal with physical attacks in all forms by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectItemType_1': 32, 'EffectSpellClassMaskA_1': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework RESTO §8 (4,0), moved from (1,0), trimmed 5->3 ranks (17072/17073 orphaned): eff1 replaced with flat CRITICAL_CHANCE scoped to Healing Touch (A_1) and Swiftmend (A_2); the stock physical-damage-in-forms clause (old eff2) is removed.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the critical strike chance of your Healing Touch and Swiftmend by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your direct Nature healing spells benefit from Mastery: Harmony, increasing their healing by 20% of Mastery for each of your heal over time effects on the target. Healing Touch benefits at twice the rate.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': HEALING_TOUCH, 'EffectSpellClassMaskA_2': SWIFTMEND, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -1756,12 +1814,11 @@ naturalist_17070 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-201, implicit_target_a=1, apply_aura=107, misc_value=10),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=79, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
     ],
     spell_icon_id=962,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cast time of your Healing Touch spell by $/1000;S1 sec and increases the damage you deal with physical attacks in all forms by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectItemType_1': 32, 'EffectSpellClassMaskA_1': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework RESTO §8 (4,0): rank 2 of the rewrite above.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the critical strike chance of your Healing Touch and Swiftmend by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your direct Nature healing spells benefit from Mastery: Harmony, increasing their healing by 20% of Mastery for each of your heal over time effects on the target. Healing Touch benefits at twice the rate.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': HEALING_TOUCH, 'EffectSpellClassMaskA_2': SWIFTMEND, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -1778,12 +1835,12 @@ naturalist_17071 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-301, implicit_target_a=1, apply_aura=107, misc_value=10),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=79, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
+        Effect(type=EffectType.DUMMY, base_points=0, implicit_target_a=1),
     ],
     spell_icon_id=962,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cast time of your Healing Touch spell by $/1000;S1 sec and increases the damage you deal with physical attacks in all forms by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectItemType_1': 32, 'EffectSpellClassMaskA_1': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework RESTO §8 (4,0): rank 3, the final/capstone rank of the rewrite above - Harmony hook (Druid::GetHarmonyCoefficient reads this rank id), Healing Touch benefits at 0.40 instead of 0.20 per HoT.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the critical strike chance of your Healing Touch and Swiftmend by $s1%.\n\nCapstone Bonus: Your direct Nature healing spells benefit from Mastery: Harmony, increasing their healing by 20% of Mastery for each of your heal over time effects on the target. Healing Touch benefits at twice the rate.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': HEALING_TOUCH, 'EffectSpellClassMaskA_2': SWIFTMEND, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -1843,11 +1900,11 @@ nature_s_bounty_17074 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
     ],
     spell_icon_id=197,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical effect chance of your Regrowth and Nourish spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EffectSpellClassMaskA_2': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework RESTO §8 (5,2), trimmed 5->3 ranks (17077/17078 orphaned): eff1 keeps the stock ADD_FLAT_MODIFIER CRITICAL_CHANCE SpellMod (classmask trimmed to REGROWTH only, Nourish's bit dropped). Code-review fix: a prior rewrite replaced this with a plain DUMMY marker meant for a since-deleted Druid::ApplySpellCritChanceMods function, silently losing Regrowth's crit bonus entirely. The real mechanism (spell_dru_regrowth::CalculateTickAmount, CORE-AUDIT row 13) already reads this same effect via GetRankAmount(EFFECT_0) to subtract the bonus back out of the periodic tick's snapshotted crit chance (a raw classmask SpellMod bleeds into the HoT tick too) - direct Regrowth crit only, once corrected.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the critical effect chance of your Regrowth's direct heal by $s1%.\n\n|cFF9D9D9DCapstone Bonus: When your Regrowth's direct heal is a critical heal, you apply Regrowth's heal over time to one additional target.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': REGROWTH, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -1863,11 +1920,11 @@ nature_s_bounty_17075 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
     ],
     spell_icon_id=197,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical effect chance of your Regrowth and Nourish spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EffectSpellClassMaskA_2': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework RESTO §8 (5,2): rank 2 of the rewrite above.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the critical effect chance of your Regrowth's direct heal by $s1%.\n\n|cFF9D9D9DCapstone Bonus: When your Regrowth's direct heal is a critical heal, you apply Regrowth's heal over time to one additional target.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': REGROWTH, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -1883,12 +1940,16 @@ nature_s_bounty_17076 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=197,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical effect chance of your Regrowth and Nourish spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EffectSpellClassMaskA_2': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework RESTO §8 (5,2): rank 3, the final/capstone rank - new eff2 is the capstone-proc flag spell_dru_natures_bounty_capstone OnEffectProc reads (EFFECT_1, SPELL_AURA_DUMMY); procs_on(17076, ...) below registers when it fires.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the critical effect chance of your Regrowth's direct heal by $s1%.\n\nCapstone Bonus: When your Regrowth's direct heal is a critical heal, you apply Regrowth's heal over time to one additional target.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': REGROWTH, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
+procs_on(nature_s_bounty_17076, proc_flags=PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS, family_name=7,
+         family_mask=(REGROWTH, 0, 0), spell_type_mask=PROC_SPELL_TYPE_HEAL,
+         spell_phase_mask=PROC_SPELL_PHASE_HIT, hit_mask=PROC_HIT_CRITICAL, chance=100)
 
 
 nature_s_bounty_17077 = spell(
@@ -1943,12 +2004,12 @@ gift_of_nature_17104 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
     ],
     spell_icon_id=266,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effect of all healing spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 224, 'EffectSpellClassMaskA_2': 33554448, 'EffectSpellClassMaskB_1': 80, 'EffectSpellClassMaskB_2': 67108880, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework RESTO §8 (4,1), trimmed 5->3 ranks (24945/24946 orphaned): re-scoped to HEAL_DIRECT (eff1, DAMAGE)/HEAL_DOT (eff2, DOT); stored value corrected to the design's 2/5/8 (the live pulled value was stale at 1/3/5).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effect of all Nature healing spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': HEAL_DIRECT[0], 'EffectSpellClassMaskA_2': HEAL_DIRECT[1], 'EffectSpellClassMaskA_3': HEAL_DIRECT[2], 'EffectSpellClassMaskB_1': HEAL_DOT[0], 'EffectSpellClassMaskB_2': HEAL_DOT[1], 'EffectSpellClassMaskB_3': HEAL_DOT[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -1965,11 +2026,10 @@ intensity_17106 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=16, implicit_target_a=1, apply_aura=134),
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=17080),
     ],
     spell_icon_id=101,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Allows $s1% of your Mana regeneration to continue while casting and causes your Enrage ability to instantly generate $/10;17080s1 rage.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 17408, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework RESTO §8 (2,0) / §0.13 Q3: stored value already matched (16 -> live 17, the stock number - 'not the spec's 16'); the Enrage PROC_TRIGGER_SPELL eff2 is removed and ProcTypeMask zeroed (dead without a rogue-style Enrage on this server) - non-stacking (A7) is a server-wide spell_group, not a data change here.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Allows $s1% of your mana regeneration to continue while casting. This effect does not stack with similar effects.\n\n|cFF9D9D9DCapstone Bonus: Your Mastery rating is increased by 15% of your Spirit.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -1986,11 +2046,10 @@ intensity_17107 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=1, apply_aura=134),
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=35358),
     ],
     spell_icon_id=101,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Allows $s1% of your Mana regeneration to continue while casting and causes your Enrage ability to instantly generate $/10;35358s1 rage.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 17408, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework RESTO §8 (2,0): rank 2 of the rewrite above.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Allows $s1% of your mana regeneration to continue while casting. This effect does not stack with similar effects.\n\n|cFF9D9D9DCapstone Bonus: Your Mastery rating is increased by 15% of your Spirit.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2007,11 +2066,11 @@ intensity_17108 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=134),
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=35359),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.MOD_RATING_FROM_STAT, misc_value=1048576),
     ],
     spell_icon_id=101,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Allows $s1% of your Mana regeneration to continue while casting and causes your Enrage ability to instantly generate $/10;35359s1 rage.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 17408, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework RESTO §8 (2,0): rank 3, the final/capstone rank - new eff2 MOD_RATING_FROM_STAT (220) misc 1<<20 (CR_MASTERY), EffectMiscValueB_2=4 (STAT_SPIRIT) so Mastery rating tracks 15% of total Spirit dynamically (StatSystem.cpp/PlayerUpdates.cpp), including Living Spirit's bonuses.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Allows $s1% of your mana regeneration to continue while casting. This effect does not stack with similar effects.\n\nCapstone Bonus: Your Mastery rating is increased by 15% of your Spirit.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectMiscValueB_2': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2153,12 +2212,12 @@ improved_tranquility_17123 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=1, apply_aura=108, misc_value=2),
-        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=108, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=-30001, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COOLDOWN),
     ],
     spell_icon_id=100,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces threat caused by Tranquility by $s1%, and reduces the cooldown by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 128, 'EffectSpellClassMaskB_1': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework RESTO §8 (4,3): eff1 replaces the stock threat mod with pct DAMAGE (reaches Tranquility tick 44203 via the shared TRANQUILITY bit); eff2 replaces the stock pct-cooldown mod with a flat COOLDOWN mod applied before Cooldown Haste (Player.cpp:11180-11186).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the healing of Tranquility by $s1% and reduces its cooldown by $/1000;s2 sec.\n\n|cFF9D9D9DCapstone Bonus: Tranquility benefits from Mastery: Harmony.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': TRANQUILITY, 'EffectSpellClassMaskB_1': TRANQUILITY, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2174,12 +2233,12 @@ improved_tranquility_17124 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=108, misc_value=2),
-        Effect(type=EffectType.APPLY_AURA, base_points=-61, implicit_target_a=1, apply_aura=108, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=-60001, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COOLDOWN),
     ],
     spell_icon_id=100,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces threat caused by Tranquility by $s1%, and reduces the cooldown by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 128, 'EffectSpellClassMaskB_1': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework RESTO §8 (4,3): rank 2, the final/capstone rank of the rewrite above - Harmony hook (Druid::GetHarmonyCoefficient reads this rank id on Tranquility tick 44203).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the healing of Tranquility by $s1% and reduces its cooldown by $/1000;s2 sec.\n\nCapstone Bonus: Tranquility benefits from Mastery: Harmony.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': TRANQUILITY, 'EffectSpellClassMaskB_1': TRANQUILITY, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2215,12 +2274,12 @@ gift_of_nature_24943 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
     ],
     spell_icon_id=266,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effect of all healing spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 224, 'EffectSpellClassMaskA_2': 33554448, 'EffectSpellClassMaskB_1': 80, 'EffectSpellClassMaskB_2': 67108880, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework RESTO §8 (4,1): rank 2 of the rewrite above.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effect of all Nature healing spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': HEAL_DIRECT[0], 'EffectSpellClassMaskA_2': HEAL_DIRECT[1], 'EffectSpellClassMaskA_3': HEAL_DIRECT[2], 'EffectSpellClassMaskB_1': HEAL_DOT[0], 'EffectSpellClassMaskB_2': HEAL_DOT[1], 'EffectSpellClassMaskB_3': HEAL_DOT[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2236,12 +2295,12 @@ gift_of_nature_24944 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
     ],
     spell_icon_id=266,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effect of all healing spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 224, 'EffectSpellClassMaskA_2': 33554448, 'EffectSpellClassMaskB_1': 80, 'EffectSpellClassMaskB_2': 67108880, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework RESTO §8 (4,1): rank 3 of the rewrite above.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effect of all Nature healing spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': HEAL_DIRECT[0], 'EffectSpellClassMaskA_2': HEAL_DIRECT[1], 'EffectSpellClassMaskA_3': HEAL_DIRECT[2], 'EffectSpellClassMaskB_1': HEAL_DOT[0], 'EffectSpellClassMaskB_2': HEAL_DOT[1], 'EffectSpellClassMaskB_3': HEAL_DOT[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2299,11 +2358,12 @@ tranquil_spirit_24968 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=108, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=-8, implicit_target_a=1, apply_aura=108, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=1714,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Healing Touch, Nourish and Tranquility spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 160, 'EffectSpellClassMaskA_2': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework RESTO §8 (3,1), trimmed 5->3 ranks (24971/24972 orphaned): eff1 rescoped to DIRECT_NATURE_HEAL (COST); new eff2 DAMAGE, same mask (Regrowth only gains on its direct part - DAMAGE never touches the DOT). Code-review-pass fix: this talent had been left half-implemented - eff1's base_points was still the untouched stock value (-3, delivering -2% instead of RESTO.md row 598's authoritative -7%) and eff2 didn't exist in the effects list at all, even though raw_overrides already carried EffectSpellClassMaskB_*/EffectBonusMultiplier_2 for it (prepared but never used) and the tooltip's own '$s2%' token had nothing to substitute. Both now match RESTO.md/docs/reworks/druid-resto.md's -7/-14/-20% cost, +2/4/6% healing progression.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your direct Nature healing spells by $s1% and increases their healing by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': DIRECT_NATURE_HEAL[0], 'EffectSpellClassMaskA_2': DIRECT_NATURE_HEAL[1], 'EffectSpellClassMaskA_3': DIRECT_NATURE_HEAL[2], 'EffectSpellClassMaskB_1': DIRECT_NATURE_HEAL[0], 'EffectSpellClassMaskB_2': DIRECT_NATURE_HEAL[1], 'EffectSpellClassMaskB_3': DIRECT_NATURE_HEAL[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2319,11 +2379,12 @@ tranquil_spirit_24969 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-5, implicit_target_a=1, apply_aura=108, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=-15, implicit_target_a=1, apply_aura=108, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=1714,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Healing Touch, Nourish and Tranquility spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 160, 'EffectSpellClassMaskA_2': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework RESTO §8 (3,1): rank 2 of the rewrite above.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your direct Nature healing spells by $s1% and increases their healing by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': DIRECT_NATURE_HEAL[0], 'EffectSpellClassMaskA_2': DIRECT_NATURE_HEAL[1], 'EffectSpellClassMaskA_3': DIRECT_NATURE_HEAL[2], 'EffectSpellClassMaskB_1': DIRECT_NATURE_HEAL[0], 'EffectSpellClassMaskB_2': DIRECT_NATURE_HEAL[1], 'EffectSpellClassMaskB_3': DIRECT_NATURE_HEAL[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2339,11 +2400,12 @@ tranquil_spirit_24970 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=1, apply_aura=108, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=108, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=1714,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Healing Touch, Nourish and Tranquility spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 160, 'EffectSpellClassMaskA_2': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework RESTO §8 (3,1): rank 3 of the rewrite above.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your direct Nature healing spells by $s1% and increases their healing by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': DIRECT_NATURE_HEAL[0], 'EffectSpellClassMaskA_2': DIRECT_NATURE_HEAL[1], 'EffectSpellClassMaskA_3': DIRECT_NATURE_HEAL[2], 'EffectSpellClassMaskB_1': DIRECT_NATURE_HEAL[0], 'EffectSpellClassMaskB_2': DIRECT_NATURE_HEAL[1], 'EffectSpellClassMaskB_3': DIRECT_NATURE_HEAL[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2929,12 +2991,11 @@ empowered_touch_33879 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=107, misc_value=24),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=107, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.BONUS_MULTIPLIER),
     ],
     spell_icon_id=2251,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Healing Touch spell gains an additional $s1% and your Nourish spell gains an additional $s2% of your bonus healing effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 32, 'EffectSpellClassMaskB_2': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework RESTO §8 (5,0): drops the Nourish eff2 (Nourish is removed); eff1 kept, scoped to Healing Touch only.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Healing Touch gains an additional $s1% of your bonus healing effects.\n\n|cFF9D9D9DCapstone Bonus: Your Healing Touch and Flourish casts reduce the remaining cooldown of Natural Alacrity and Tranquility by 2 sec.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': HEALING_TOUCH, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2950,12 +3011,12 @@ empowered_touch_33880 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=107, misc_value=24),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=107, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.BONUS_MULTIPLIER),
+        Effect(type=EffectType.DUMMY, base_points=1999, implicit_target_a=1),
     ],
     spell_icon_id=2251,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Healing Touch spell gains an additional $s1% and your Nourish spell gains an additional $s2% of your bonus healing effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 32, 'EffectSpellClassMaskB_2': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework RESTO §8 (5,0): rank 2, the final/capstone rank - new eff2 DUMMY stored 1999 (the 2 sec cooldown reduction); spell_dru_empowered_touch_capstone (bound to 5185 and 200564) reads this rank id and calls Druid::ReduceSpellCooldown on Natural Alacrity (17116) and Tranquility (740) after a qualifying cast.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Healing Touch gains an additional $s1% of your bonus healing effects.\n\nCapstone Bonus: Your Healing Touch and Flourish casts reduce the remaining cooldown of Natural Alacrity and Tranquility by 2 sec.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': HEALING_TOUCH, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2971,12 +3032,11 @@ natural_perfection_33881 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=natural_perfection_45281.id),
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=57, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_CRIT_PCT),
     ],
     spell_icon_id=2250,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your critical strike chance with all spells is increased by $s2% and critical strikes against you give you the Natural Perfection effect reducing all damage taken by $45281s1%.  Stacks up to $45281u times.  Lasts $45281d.', 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 664232, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework RESTO §8 (6,2): removes the stock crit-taken proc (eff1); eff2 (now eff1) generalized from MOD_SPELL_CRIT_CHANCE (57) to MOD_CRIT_PCT (290, all crit, PLAN §2 generalized-stat rule, Q13). ProcTypeMask zeroed - no proc-capable effect on r1/r2.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your critical strike chance with all spells is increased by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your critical heals from direct Nature healing spells reduce the remaining cooldown of Cenarion Ward by 2 sec.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2992,12 +3052,11 @@ natural_perfection_33882 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=45282),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=57, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_CRIT_PCT),
     ],
     spell_icon_id=2250,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your critical strike chance with all spells is increased by $s2% and critical strikes against you give you the Natural Perfection effect reducing all damage taken by $45282s1%.  Stacks up to $45282u times.  Lasts $45282d.', 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 664232, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework RESTO §8 (6,2): rank 2 of the rewrite above.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your critical strike chance with all spells is increased by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your critical heals from direct Nature healing spells reduce the remaining cooldown of Cenarion Ward by 2 sec.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3013,12 +3072,12 @@ natural_perfection_33883 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=45283),
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=57, misc_value=127),
+        Effect(type=EffectType.DUMMY, base_points=1999, implicit_target_a=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_CRIT_PCT),
     ],
     spell_icon_id=2250,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your critical strike chance with all spells is increased by $s2% and critical strikes against you give you the Natural Perfection effect reducing all damage taken by $45283s1%.  Stacks up to $45283u times.  Lasts $45283d.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 32, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 664232, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework RESTO §8 (6,2): rank 3, the final/capstone rank - eff1 DUMMY stored 1999 is cosmetic only (tooltip-matching 2 sec, not read by any script - spell_dru_natural_perfection_capstone hardcodes 2000 in its ReduceSpellCooldown call); harmless since eff2's real MOD_CRIT_PCT effect is what makes this spell create an Aura at all, and the whole-aura OnProc/DoCheckProc hooks below don't key off any specific effect index. negative procs_on(-33881, ...) below (stock -33881 precedent) fires spell_dru_natural_perfection_capstone's OnProc, which calls Druid::ReduceSpellCooldown(200562, 2000) after checking Heal::IsDirectNatureHeal.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your critical strike chance with all spells is increased by $s2%.\n\nCapstone Bonus: Your critical heals from direct Nature healing spells reduce the remaining cooldown of Cenarion Ward by 2 sec.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3034,11 +3093,11 @@ empowered_rejuvenation_33886 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=108, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=108, misc_value=24),
     ],
     spell_icon_id=2249,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The bonus healing effects of your healing over time spells is increased by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 208, 'EffectSpellClassMaskA_2': 67108880, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework RESTO §8 (5,1), moved from (7,1), trimmed 5->3 ranks (33889/33890 orphaned): re-scoped to EMP_REJUV_COEFF (Rejuvenation/Germination shared bit, Lifebloom, Wild Growth, Cenarion Ward's released heal - Regrowth deliberately excluded, handled in C++ so BONUS_MULTIPLIER doesn't also scale Regrowth's direct coefficient).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "The bonus healing effects of your Rejuvenation, Lifebloom, Wild Growth, Regrowth's heal over time and Cenarion Ward are increased by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Rejuvenation, Lifebloom, Wild Growth, Regrowth's heal over time and Cenarion Ward benefit from Mastery: Harmony.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': EMP_REJUV_COEFF[0], 'EffectSpellClassMaskA_2': EMP_REJUV_COEFF[1], 'EffectSpellClassMaskA_3': EMP_REJUV_COEFF[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3054,11 +3113,11 @@ empowered_rejuvenation_33887 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=108, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=13, implicit_target_a=1, apply_aura=108, misc_value=24),
     ],
     spell_icon_id=2249,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The bonus healing effects of your healing over time spells is increased by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 208, 'EffectSpellClassMaskA_2': 67108880, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework RESTO §8 (5,1): rank 2 of the rewrite above.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "The bonus healing effects of your Rejuvenation, Lifebloom, Wild Growth, Regrowth's heal over time and Cenarion Ward are increased by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Rejuvenation, Lifebloom, Wild Growth, Regrowth's heal over time and Cenarion Ward benefit from Mastery: Harmony.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': EMP_REJUV_COEFF[0], 'EffectSpellClassMaskA_2': EMP_REJUV_COEFF[1], 'EffectSpellClassMaskA_3': EMP_REJUV_COEFF[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3074,11 +3133,12 @@ empowered_rejuvenation_33888 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=108, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=24),
+        Effect(type=EffectType.DUMMY, base_points=0, implicit_target_a=1),
     ],
     spell_icon_id=2249,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The bonus healing effects of your healing over time spells is increased by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 208, 'EffectSpellClassMaskA_2': 67108880, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework RESTO §8 (5,1): rank 3, the final/capstone rank - new eff2 DUMMY stored 0 is the Harmony-enabled flag Druid::GetHarmonyCoefficient reads for the five listed spells.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "The bonus healing effects of your Rejuvenation, Lifebloom, Wild Growth, Regrowth's heal over time and Cenarion Ward are increased by $s1%.\n\nCapstone Bonus: Your Rejuvenation, Lifebloom, Wild Growth, Regrowth's heal over time and Cenarion Ward benefit from Mastery: Harmony.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': EMP_REJUV_COEFF[0], 'EffectSpellClassMaskA_2': EMP_REJUV_COEFF[1], 'EffectSpellClassMaskA_3': EMP_REJUV_COEFF[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3182,8 +3242,8 @@ living_spirit_34151 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=137, misc_value=4),
     ],
     spell_icon_id=2011,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Spirit by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework RESTO §8 (6,0): tooltip gains the capstone clause (rank 3 supplies the mechanic).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases your total Spirit by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Spirit is increased by 1% for each of your active Rejuvenations, up to 10%.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3203,8 +3263,8 @@ living_spirit_34152 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=137, misc_value=4),
     ],
     spell_icon_id=2011,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Spirit by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework RESTO §8 (6,0): rank 2, tooltip only.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases your total Spirit by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Spirit is increased by 1% for each of your active Rejuvenations, up to 10%.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3222,10 +3282,11 @@ living_spirit_34153 = spell(
     duration_ms=-1,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=137, misc_value=4),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=1000),
     ],
     spell_icon_id=2011,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Spirit by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework RESTO §8 (6,0): rank 3, the final/capstone rank - new eff2 PERIODIC_DUMMY (1 s) drives spell_dru_living_spirit_capstone, which counts active Rejuvenations (Druid::CountActiveRejuvenations) and stacks/removes 200571.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases your total Spirit by $s1%.\n\nCapstone Bonus: Your Spirit is increased by 1% for each of your active Rejuvenations, up to 10%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3682,11 +3743,11 @@ living_seed_48496 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2860,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you critically heal your target with Swiftmend, Regrowth, Nourish or Healing Touch spell you have a $h% chance to plant a Living Seed on the target for $s1% of the amount healed. The Living Seed will bloom when the target is next attacked. Lasts $48504d.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 33, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 7},
+    notes="druid-rework RESTO §8 (7,2): eff1 stored 29->9 (live 30->10%, per rank); trigger list generalized to 'direct Nature healing spell' (Heal::IsDirectNatureHeal, via DoCheckProc added to the stock spell_dru_living_seed). Code-review fix: eff1 must stay an APPLY_AURA+DUMMY marker (Register() binds OnEffectProc to EFFECT_0/SPELL_AURA_DUMMY) - a plain SPELL_EFFECT_DUMMY effect creates no AuraEffect, so the whole passive talent never became an aura at all.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you critically heal with a direct Nature healing spell, you have a $h% chance to plant a Living Seed on the target for $s1% of the amount healed. The seed blooms when the target is next struck by a direct spell or attack. Lasts $48504d.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 33, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 7},
 )
 
 
@@ -3702,11 +3763,11 @@ living_seed_48499 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2860,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you critically heal your target with Swiftmend, Regrowth, Nourish or Healing Touch spell you have a $h% chance to plant a Living Seed on the target for $s1% of the amount healed. The Living Seed will bloom when the target is next attacked. Lasts $48504d.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 66, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 7},
+    notes="druid-rework RESTO §8 (7,2): rank 2 of the rewrite above.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you critically heal with a direct Nature healing spell, you have a $h% chance to plant a Living Seed on the target for $s1% of the amount healed. The seed blooms when the target is next struck by a direct spell or attack. Lasts $48504d.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 66, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 7},
 )
 
 
@@ -3725,8 +3786,8 @@ living_seed_48500 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2860,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you critically heal your target with Swiftmend, Regrowth, Nourish or Healing Touch spell you have a $h% chance to plant a Living Seed on the target for $s1% of the amount healed. The Living Seed will bloom when the target is next attacked. Lasts $48504d.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 7},
+    notes="druid-rework RESTO §8 (7,2): rank 3 of the rewrite above.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you critically heal with a direct Nature healing spell, you have a $h% chance to plant a Living Seed on the target for $s1% of the amount healed. The seed blooms when the target is next struck by a direct spell or attack. Lasts $48504d.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'ShapeshiftExclude': 134217728, 'SpellClassSet': 7},
 )
 
 
@@ -3973,12 +4034,12 @@ revitalize_48539 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=112, misc_value=7010),
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=107, misc_value=12),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.OVERRIDE_CLASS_SCRIPTS),
+        Effect(type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2862,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Rejuvenation and Wild Growth spells have a $s1% chance to restore $48540s1 Energy, $/10;48541s1 Rage, $48542s1% Mana or $/10;48543s1 Runic Power per tick.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16, 'EffectSpellClassMaskB_2': 67108864, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework RESTO §8 (8,0): eff1/eff2 are marker auras spell_dru_revitalize_resto reads (tick %/cast % respectively) - eff1 keeps stock's own OVERRIDE_CLASS_SCRIPTS aura type (Register() binds OnEffectProc to EFFECT_0/SPELL_AURA_OVERRIDE_CLASS_SCRIPTS) since a plain SPELL_EFFECT_DUMMY effect creates no AuraEffect at all (SpellEffectInfo::IsAura() requires an APPLY_AURA-family effect); eff2 is a plain DUMMY marker read via GetEffect(EFFECT_1). Rejuvenation/Wild Growth roll per tick (eff1), Healing Touch/Regrowth roll per cast (eff2). Code-review fix: both effects were SPELL_EFFECT_DUMMY, so the whole spell had zero aura effects and the passive-learn cast never created a persistent Aura at all.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Rejuvenation and Wild Growth have a $s1% chance, and your Healing Touch and Regrowth a $s2% chance, to restore $48540s1 Energy, $/10;48541s1 Rage, $48542s1% Mana or 1% Mana to the target. Each time Revitalize triggers, you also restore 1% of your base mana.\n\n|cFF9D9D9DCapstone Bonus: Healing a target to full health with Healing Touch restores 30% of its mana cost.|r", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3994,12 +4055,12 @@ revitalize_48544 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=112, misc_value=7011),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=107, misc_value=12),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.OVERRIDE_CLASS_SCRIPTS),
+        Effect(type=EffectType.APPLY_AURA, base_points=65, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2862,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Rejuvenation and Wild Growth spells have a $s1% chance to restore $48540s1 Energy, $/10;48541s1 Rage, $48542s1% Mana or $/10;48543s1 Runic Power per tick.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16, 'EffectSpellClassMaskB_2': 67108864, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework RESTO §8 (8,0): rank 2 of the rewrite above.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Rejuvenation and Wild Growth have a $s1% chance, and your Healing Touch and Regrowth a $s2% chance, to restore $48540s1 Energy, $/10;48541s1 Rage, $48542s1% Mana or 1% Mana to the target. Each time Revitalize triggers, you also restore 1% of your base mana.\n\n|cFF9D9D9DCapstone Bonus: Healing a target to full health with Healing Touch restores 30% of its mana cost.|r", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -4015,13 +4076,17 @@ revitalize_48545 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=112, misc_value=7012),
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=107, misc_value=12),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.OVERRIDE_CLASS_SCRIPTS),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2862,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Rejuvenation and Wild Growth spells have a $s1% chance to restore $48540s1 Energy, $/10;48541s1 Rage, $48542s1% Mana or $/10;48543s1 Runic Power per tick.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16, 'EffectSpellClassMaskB_2': 67108864, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework RESTO §8 (8,0): rank 3, the final/capstone rank - new eff3 DUMMY-aura marker stored 29 (30% mana refund, cosmetic only - spell_dru_revitalize_capstone hardcodes the 30% and just checks HasAura(48545)); spell_dru_revitalize_capstone (bound to 5185) reads this rank id.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Rejuvenation and Wild Growth have a $s1% chance, and your Healing Touch and Regrowth a $s2% chance, to restore $48540s1 Energy, $/10;48541s1 Rage, $48542s1% Mana or 1% Mana to the target. Each time Revitalize triggers, you also restore 1% of your base mana.\n\nCapstone Bonus: Healing a target to full health with Healing Touch restores 30% of its mana cost.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
+procs_on(-48539, proc_flags=PROC_FLAG_DONE_PERIODIC | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS,
+         family_name=7, family_mask=(REJUVENATION | HEALING_TOUCH | REGROWTH, WILD_GROWTH, 0),
+         spell_type_mask=PROC_SPELL_TYPE_HEAL, spell_phase_mask=PROC_SPELL_PHASE_HIT, chance=100)
 
 
 impurity_49220 = spell(
@@ -4136,12 +4201,13 @@ gift_of_the_earthmother_51179 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=65, misc_value=21),
-        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=107, misc_value=21),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL),
+        Effect(type=EffectType.APPLY_AURA, base_points=-151, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.GLOBAL_COOLDOWN),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
     ],
     spell_icon_id=3186,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total spell haste by $s1% and reduces the base cooldown of your Lifebloom spell by ${$m2/-15}%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16, 'EffectSpellClassMaskA_2': 67108880, 'EffectSpellClassMaskB_2': 16, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework RESTO §8 (9,2), trimmed 5->3 ranks (51182/51183 orphaned): eff1 generalized MOD_CASTING_SPEED_NOT_STACK->HASTE_ALL; eff2 (stock GLOBAL_COOLDOWN) re-anchored to the design's 0.15/0.3/0.5 sec (stored -151/-301/-501; the live pulled value was stale); new eff3 pct DOT scoped to LIFEBLOOM (ticks only, C_2).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases spell, ranged and melee haste by $s1%. Increases the periodic healing of your Lifebloom by $s3%. Reduces the global cooldown of your Lifebloom by $/1000;s2 sec.\n\n|cFF9D9D9DCapstone Bonus: Your Lifebloom may be active on two targets at once.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16, 'EffectSpellClassMaskA_2': 67108880, 'EffectSpellClassMaskB_2': 16, 'EffectSpellClassMaskC_2': LIFEBLOOM, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -4157,12 +4223,13 @@ gift_of_the_earthmother_51180 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=65, misc_value=21),
-        Effect(type=EffectType.APPLY_AURA, base_points=-61, implicit_target_a=1, apply_aura=107, misc_value=21),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL),
+        Effect(type=EffectType.APPLY_AURA, base_points=-301, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.GLOBAL_COOLDOWN),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
     ],
     spell_icon_id=3186,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total spell haste by $s1% and reduces the base cooldown of your Lifebloom spell by ${$m2/-15}%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16, 'EffectSpellClassMaskA_2': 67108880, 'EffectSpellClassMaskB_2': 16, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework RESTO §8 (9,2): rank 2 of the rewrite above.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases spell, ranged and melee haste by $s1%. Increases the periodic healing of your Lifebloom by $s3%. Reduces the global cooldown of your Lifebloom by $/1000;s2 sec.\n\n|cFF9D9D9DCapstone Bonus: Your Lifebloom may be active on two targets at once.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16, 'EffectSpellClassMaskA_2': 67108880, 'EffectSpellClassMaskB_2': 16, 'EffectSpellClassMaskC_2': LIFEBLOOM, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -4178,12 +4245,13 @@ gift_of_the_earthmother_51181 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=65, misc_value=21),
-        Effect(type=EffectType.APPLY_AURA, base_points=-91, implicit_target_a=1, apply_aura=107, misc_value=21),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL),
+        Effect(type=EffectType.APPLY_AURA, base_points=-501, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.GLOBAL_COOLDOWN),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
     ],
     spell_icon_id=3186,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total spell haste by $s1% and reduces the base cooldown of your Lifebloom spell by ${$m2/-15}%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16, 'EffectSpellClassMaskA_2': 67108880, 'EffectSpellClassMaskB_2': 16, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework RESTO §8 (9,2): rank 3, the final/capstone rank of the rewrite above.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases spell, ranged and melee haste by $s1%. Increases the periodic healing of your Lifebloom by $s3%. Reduces the global cooldown of your Lifebloom by $/1000;s2 sec.\n\nCapstone Bonus: Your Lifebloom may be active on two targets at once.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16, 'EffectSpellClassMaskA_2': 67108880, 'EffectSpellClassMaskB_2': 16, 'EffectSpellClassMaskC_2': LIFEBLOOM, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -5535,4 +5603,642 @@ celestial_alignment_200340 = spell(
     spell_icon_id=2013,
     notes='NEW (druid-rework BALANCE §5 "200340 Celestial Alignment"): cast by Fury of Elune\'s SpellScript OnCast with BP0 = the caster\'s Eclipse rank eff1 amount (30 if untalented, WP-B); eff2 halves the Starsurge cooldown while up',
     raw_overrides={'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectSpellClassMaskB_3': STARSURGE, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Grants the benefits of both Solar and Lunar Eclipse, and halves the cooldown of Starsurge.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Grants the benefits of both Solar and Lunar Eclipse, and halves the cooldown of Starsurge.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+# --- Resto WP-0 pulls (druid-rework.RESTO.md §3 item 1) ---
+# Referenced by druid_talents.py's Tree of Life talent rank=[65139] as a bare int today; this pull
+# makes it a real declared row. Tooltip-only edit in the Resto pass (RESTO §8 (8,1)); the two
+# LEARN_SPELL effects teach 33891 (druid_spells.py) and 5420 (below).
+tree_of_life_65139 = spell(
+    id=65139,
+    name='Tree of Life',
+    school=School.NORMAL,
+    attributes=8651136,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    effects=[
+        Effect(type=EffectType.LEARN_SPELL, die_sides=0, implicit_target_a=1, trigger_spell=33891),
+    ],
+    spell_icon_id=2257,
+    notes="pulled from existing data; druid-rework RESTO §7 '65139 (ToL talent rank)': tooltip only - Tree of Life is a transform buff now, not a shapeshift (CORE-AUDIT row 38), so the tooltip drops the shapeshift/cast-restriction wording. Code-review fix: dropped the second LEARN_SPELL(5420) effect - 5420's bonuses already ride along only while 33891 is active via linked_spell(33891, 5420, type=2) in druid_talents.py; permanently learning 5420 here made its -20% HoT cost/-50% Healing Touch cast time/+25% Regrowth crit bonuses apply at all times, not just while shapeshifted into Tree of Life.",
+    raw_overrides={'AttributesEx': 2147483648, 'AttributesEx2': 1, 'AttributesEx4': 32768, 'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'EquippedItemClass': -1, 'SpellVisualID_1': 107, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your heal over time spells by $5420s1% and grants the ability to shift into the Tree of Life. See Tree of Life.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+# Also a legacy row in source/spells/npc.csv - deleted in this same change. CORE-AUDIT row 38: this
+# rides along via linked_spell(33891, 5420, 2) instead of ShapeshiftMask once Tree of Life becomes a
+# buff; WP-A drops the ShapeshiftMask=2 raw override and re-scopes eff1's classmask (RESTO §7).
+tree_of_life_5420 = spell(
+    id=5420,
+    name='Tree of Life',
+    school=School.NORMAL,
+    attributes=448,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COST),
+        Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CASTING_TIME),
+        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
+    ],
+    spell_icon_id=2257,
+    notes="druid-rework RESTO §7 row '5420 (ToL passive, learned by 65139)': eff1 keeps -20% SPELLMOD_COST, A-mask re-scoped to CORE_HOT_CAST (adds the CENARION_WARD bit so the ward's released heal's cost is also cut); eff2 -50% SPELLMOD_CASTING_TIME scoped to Healing Touch only (EffectSpellClassMaskB_1=HEALING_TOUCH). New eff3 (WP-B coordination, CORE-AUDIT row 13's literal text - RESTO.md's own tables omit this): flat CRITICAL_CHANCE +25%, scoped to Regrowth only (C_1=REGROWTH) - spell_dru_regrowth's AuraScript reads this via GetAuraEffect(5420, EFFECT_2) to correct Regrowth's periodic tick's snapshotted crit chance (the rider applies to the direct heal only, per RESTO §8 (8,1)). ShapeshiftMask=2 was already dropped by WP-0 (CORE-AUDIT row 38 - rides along via linked_spell(33891, 5420, 2) instead).",
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': CORE_HOT_CAST[0], 'EffectSpellClassMaskA_2': CORE_HOT_CAST[1], 'EffectSpellClassMaskA_3': CORE_HOT_CAST[2], 'EffectSpellClassMaskB_1': HEALING_TOUCH, 'EffectSpellClassMaskC_1': REGROWTH, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Passive', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712188, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 7, 'SpellClassMask_2': 134217728, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+# Already referenced by druid_trigger_spells.py as a bare int (16870, Omen of Clarity's
+# PROC_TRIGGER_SPELL target); also a legacy row in source/spells/npc.csv - deleted in this same
+# change. Resto's WP-A adds the BLOOM/CENARION_WARD bits to eff1's EffectSpellClassMaskA_* so Bloom
+# and Cenarion Ward's release consume it too (RESTO §7).
+clearcasting_16870 = spell(
+    id=16870,
+    name='Clearcasting',
+    school=School.NATURE,
+    dispel=DispelType.MAGIC,
+    attributes=262144,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=14),
+    ],
+    spell_icon_id=212,
+    notes="pulled from existing data; druid-rework RESTO §7 '16870 Clearcasting': add the BLOOM and CENARION_WARD bits to eff1's EffectSpellClassMaskA_3 so Bloom (200560/200561) and Cenarion Ward's release (200562/200563) also consume a Clearcasting charge (Flourish 200564 deliberately left out, Q25 - it does not heal directly).",
+    raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 1073938432, 'CastingTimeIndex': 1, 'ProcTypeMask': 87376, 'ProcChance': 100, 'ProcCharges': 1, 'BaseLevel': 10, 'SpellLevel': 10, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 14924799, 'EffectSpellClassMaskA_2': 126879699, 'EffectSpellClassMaskA_3': 263168 | BLOOM | CENARION_WARD, 'SpellVisualID_1': 2736, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': "Each of the Druid's damage, healing spells and auto attacks has a chance of causing the caster to enter a Clearcasting state.  The Clearcasting state reduces the Mana, Rage or Energy cost of your next damage, healing spell or offensive ability by $16870s1%.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next damage or healing spell or offensive ability has its mana, rage or energy cost reduced by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 7, 'SpellClassMask_2': 2097152, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+# Revitalize's Runic Power tick (RESTO §7 "48543 (Revitalize runic power)"): base 159 -> 79 (8 RP)
+# in WP-A. Referenced today only via the tooltip's $/10;48543s1 token.
+revitalize_48543 = spell(
+    id=48543,
+    name='Revitalize',
+    school=School.NATURE,
+    dispel=DispelType.MAGIC,
+    attributes=134217728,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    effects=[
+        Effect(type=EffectType.ENERGIZE, base_points=79, implicit_target_a=21, misc_value=6),
+    ],
+    spell_icon_id=2862,
+    notes="pulled from existing data; druid-rework RESTO §7 '48543 (Revitalize runic power)': base 159->79 (8 RP)",
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'BaseLevel': 60, 'SpellLevel': 60, 'DurationIndex': 0, 'EquippedItemClass': -1, 'SpellVisualID_1': 86, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Your Rejuvenation and Wild Growth spells have a chance to restore $48540s1 Energy, $/10;48541s1 Rage, $48542s1% Mana or $/10;48543s1 Runic Power per tick.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+# ============================================================================
+# druid-rework RESTO WP-A: new standalone/baseline spells (RESTO §2.1, §6, §7)
+# ============================================================================
+
+bloom_jump_200561 = spell(
+    id=200561,
+    name='Bloom',
+    school=School.NATURE,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    effects=[
+        Effect(type=EffectType.HEAL, base_points=162, points_per_level=4.16667, die_sides=1, implicit_target_a=21),
+    ],
+    spell_icon_id=2282,
+    notes="druid-rework RESTO §6 'Bloom (200560 castable, 200561 jump)': the jump copy Druid::StartBloomJumps casts on each wave's targets - identical formula/mask to 200560, no cost/cooldown, range_yards=100 (script-cast, docs/bugs-and-fixes.md 'works on yourself only'), AttributesEx3 |= 0x200 (NOT_A_PROC, so triggered jumps can still roll Living Seed/Omen of Clarity/Natural Perfection/Nature's Grace).",
+    raw_overrides={'AttributesEx3': 512, 'BaseLevel': 39, 'SpellLevel': 39, 'MaxLevel': 80, 'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'SpellClassMask_3': BLOOM, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for $s1.', 'EffectBonusMultiplier_1': 0.75, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+)
+bonus_coefficients(bloom_jump_200561, direct=0.75)
+
+
+cenarion_ward_heal_200563 = spell(
+    id=200563,
+    name='Cenarion Ward',
+    school=School.NATURE,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    duration_ms=6000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=210, points_per_level=5.5556, die_sides=1, implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=2000),
+    ],
+    spell_icon_id=72,
+    notes="druid-rework RESTO §6 'Cenarion Ward (200562 ward, 200563 heal)': the released heal over time - a core HoT and a Harmony stack, unlike the ward itself. spell_dru_cenarion_ward's OnEffectProc casts this with the ORIGINAL caster preserved as the aura caster (CastSpell aurEff/originalCaster overload), so it counts toward Harmony and scales off the druid's own spell power. range_yards=100 (script-cast).",
+    raw_overrides={'BaseLevel': 38, 'SpellLevel': 38, 'MaxLevel': 80, 'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'SpellClassMask_3': CENARION_WARD_HOT, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for $o1 over $d.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals $s1 damage every $t1 seconds.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+)
+bonus_coefficients(cenarion_ward_heal_200563, dot=1.0)
+
+
+flourish_buff_200565 = spell(
+    id=200565,
+    name='Flourish',
+    school=School.NATURE,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=8000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=3956,
+    notes="druid-rework RESTO §6 'Flourish (200564 castable, 200565 buff)': visible self buff for the 8 s acceleration window - UnitScript::OnAuraApply gives a HoT the caster newly applies while this buff is up the same injected ticks for the buff's remaining time (Q16). Code-review fix: attributes 192->0 - was PASSIVE|DO_NOT_DISPLAY, hiding a buff explicitly documented as visible.",
+    raw_overrides={'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your heal over time effects tick twice as fast.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your heal over time effects tick twice as fast.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+natural_alacrity_healing_buff_200566 = spell(
+    id=200566,
+    name='Natural Alacrity',
+    school=School.NATURE,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=10000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
+    ],
+    spell_icon_id=112,
+    notes="druid-rework RESTO §7 '200566': the separate, non-consumed 10% Nature healing buff triggered by Natural Alacrity (17116) eff2 - not itself a charge, so it isn't eaten by the instant-cast proc. Code-review fix: attributes 192->0 - was PASSIVE|DO_NOT_DISPLAY, hiding a timed buff the player needs to see.",
+    raw_overrides={'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'EffectSpellClassMaskA_1': HEAL_DIRECT[0], 'EffectSpellClassMaskA_2': HEAL_DIRECT[1], 'EffectSpellClassMaskA_3': HEAL_DIRECT[2], 'EffectSpellClassMaskB_1': HEAL_DOT[0], 'EffectSpellClassMaskB_2': HEAL_DOT[1], 'EffectSpellClassMaskB_3': HEAL_DOT[2], 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The effectiveness of your Nature healing spells is increased by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'The effectiveness of your Nature healing spells is increased by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+cultivation_200567 = spell(
+    id=200567,
+    name='Cultivation',
+    school=School.NATURE,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    duration_ms=6000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=14, points_per_level=0.8333, die_sides=1, implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=2000),
+    ],
+    spell_icon_id=3282,
+    notes="druid-rework RESTO §8 (1,0) 'Nature's Mending' capstone: applied by spell_dru_rejuvenation's OnEffectPeriodic when the caster knows 200582 and the target is below 50% health. A core HoT and a Harmony stack, but Harmony itself is never enabled for it. range_yards=100 (script-cast).",
+    raw_overrides={'BaseLevel': 17, 'SpellLevel': 17, 'MaxLevel': 80, 'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'SpellClassMask_3': CULTIVATION, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for $o1 over $d.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals $s1 damage every $t1 seconds.', 'EffectBonusMultiplier_1': 0.1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+)
+bonus_coefficients(cultivation_200567, dot=0.1)
+
+
+germination_200568 = spell(
+    id=200568,
+    name='Germination',
+    school=School.NATURE,
+    dispel=DispelType.MAGIC,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=40.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=7, points_per_level=3.8214285714285716, implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=3000),
+    ],
+    spell_icon_id=1216,
+    notes="druid-rework RESTO §8 (7,1) 'Proliferation' capstone: a second, distinct Rejuvenation aura - identical effect/coefficient to 774, deliberately sharing REJUVENATION's family bit (dword1 0x10, not a new bit) so every Rejuvenation SpellMod reaches it too; code tells the two apart by spell id, not by mask. Applied by spell_dru_rejuvenation via PreventHitAura+CastSpell when the target already has 774 (or refreshed directly when both exist), always TRIGGERED so cost/cast time never matter - mana_cost_pct 0 (not 18 like 774) purely to keep generate.py's looks_player_castable lint from flagging this hidden-only spell as missing a SkillLineAbility row (it is never learned or cast directly).",
+    raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx4': 1048576, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals $s1 damage every $t1 seconds.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A second Rejuvenation, counted separately.', 'EffectBonusMultiplier_1': 0.376, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 2, 'SpellClassMask_1': REJUVENATION, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 176, 'SpellLevel': 4, 'SpellVisualID_1': 32, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+)
+
+
+yseras_gift_heal_200569 = spell(
+    id=200569,
+    name="Ysera's Gift",
+    school=School.NATURE,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    effects=[
+        Effect(type=EffectType.HEAL, base_points=0, implicit_target_a=21),
+    ],
+    spell_icon_id=2067,
+    notes="druid-rework RESTO §8 (1,2) 'Ysera's Gift': amount computed entirely in spell_dru_yseras_gift (% of the druid's own max health) and passed as BP0 via CastCustomSpell - bonus_coefficients(direct=0) so percent healing mods still apply even though the base is 0. DmgClass MAGIC so it can crit. Never a direct Nature heal (Heal::IsDirectNatureHeal's never-list) and never a Harmony stack. range_yards=100 (script-cast, self or an ally).",
+    raw_overrides={'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'SpellClassMask_3': YSERAS_GIFT, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals for $s1.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+)
+bonus_coefficients(yseras_gift_heal_200569, direct=0)
+
+
+proliferation_buff_200570 = spell(
+    id=200570,
+    name='Proliferation',
+    school=School.NATURE,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2585,
+    notes="druid-rework RESTO §8 (7,1) 'Proliferation': self buff, one charge, consumed by the next Rejuvenation cast's spread (spell_dru_rejuvenation's AfterHit). Not a stacking aura - a new proc simply refreshes it. Code-review fix: attributes 192->0 - was PASSIVE|DO_NOT_DISPLAY, hiding the proc window the player needs to see to know their next Rejuvenation will spread.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Rejuvenation also applies to 2 nearby allies.', 'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'ProcCharges': 1, 'SpellClassSet': 7, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your next Rejuvenation also applies to 2 nearby allies.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+living_spirit_stat_200571 = spell(
+    id=200571,
+    name='Living Spirit',
+    school=School.NATURE,
+    attributes=192,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=4),
+    ],
+    spell_icon_id=2011,
+    notes="druid-rework RESTO §8 (6,0) capstone: self buff, 1% Spirit per stack, stack count = Druid::CountActiveRejuvenations (self + group), no cap beyond the design's 10.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your Spirit is increased.', 'CumulativeAura': 10, 'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Spirit is increased.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+clearcasting_omen_200572 = spell(
+    id=200572,
+    name='Clearcasting',
+    school=School.NATURE,
+    dispel=DispelType.MAGIC,
+    attributes=262144,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=212,
+    notes="druid-rework RESTO §8 (2,1) Omen of Clarity r3's Clearcasting variant: a clone of 16870's cost-reduction masking (including the BLOOM/CENARION_WARD bits, with the retired Nourish dword-2 bit dropped from A_2 - CORE-AUDIT §4 inert-key list, this is new-rework content) plus eff2 APPLY_AURA+DUMMY stored 9 (the capstone's +10% damage/healing), read by Druid::ConsumedEmpoweredClearcasting via m_spellModTakingSpell at cast completion - never given a DAMAGE/DOT SpellMod itself (a triggered 0-cost spell would otherwise eat the charge). Code-review fix: eff2 was a plain SPELL_EFFECT_DUMMY effect, so GetAuraEffect(200572, EFFECT_1) always returned null and the capstone's +10% never applied.",
+    raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 1073938432, 'CastingTimeIndex': 1, 'ProcTypeMask': 87376, 'ProcChance': 100, 'ProcCharges': 1, 'BaseLevel': 10, 'SpellLevel': 10, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 14924799, 'EffectSpellClassMaskA_2': 93325267, 'EffectSpellClassMaskA_3': 263168 | BLOOM | CENARION_WARD, 'SpellVisualID_1': 2736, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'NameSubtext_Lang_enUS': '', 'Description_Lang_enUS': "Reduces the Mana, Rage or Energy cost of your next damaging or healing spell or offensive ability by 100% and increases its damage or healing by 10%.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next damage or healing spell or offensive ability costs no resource and deals 10% more damage or healing.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 7, 'SpellClassMask_2': 2097152, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+natural_shapeshifter_healing_buff_200573 = spell(
+    id=200573,
+    name='Natural Shapeshifter',
+    school=School.NATURE,
+    attributes=192,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
+    ],
+    spell_icon_id=122,
+    notes="druid-rework RESTO §8 (0,2) 'Natural Shapeshifter' no-form/Tree-of-Life healing bonus: amount set dynamically from the talent's eff2 by Druid::ApplyShapeshiftFormBonuses, applied only with no form or during Tree of Life and removed otherwise (CORE-AUDIT row 16).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your healing is increased.', 'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'EffectSpellClassMaskA_1': HEAL_DIRECT[0], 'EffectSpellClassMaskA_2': HEAL_DIRECT[1], 'EffectSpellClassMaskA_3': HEAL_DIRECT[2], 'EffectSpellClassMaskB_1': HEAL_DOT[0], 'EffectSpellClassMaskB_2': HEAL_DOT[1], 'EffectSpellClassMaskB_3': HEAL_DOT[2], 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your healing is increased.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+tree_of_life_rejuv_heal_200574 = spell(
+    id=200574,
+    name='Tree of Life',
+    school=School.NATURE,
+    attributes=196608,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    effects=[
+        Effect(type=EffectType.HEAL, base_points=0, implicit_target_a=21),
+    ],
+    spell_icon_id=2257,
+    notes="druid-rework RESTO §8 (8,1) 'Tree of Life' instant Rejuvenation heal: amount = the Rejuvenation aura's own tick amount x total ticks x 25%, computed in Druid::OnRejuvenationApplied and passed as BP0. AttributesEx3 |= 0x20000000 (IGNORE_CASTER_MODIFIERS) so the caster's healing-done mods (already folded into the computed amount) aren't applied a second time. Never a direct Nature heal. RESTO's 'DmgClass NONE so it cannot crit' can't be set directly (this pipeline's Spell.dbc struct has no writable DmgClass column) - fixed instead (WP-C) with the dedicated AttributesEx2 |= SPELL_ATTR2_CANT_CRIT (0x20000000, SharedDefines.h:473), which achieves the same 'never crits' behaviour as a real spell attribute rather than needing a C++ workaround in the CastCustomSpell call.",
+    raw_overrides={'AttributesEx2': 536870912, 'AttributesEx3': 536870912, 'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for $s1.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+)
+
+
+revitalize_mana_200575 = spell(
+    id=200575,
+    name='Revitalize',
+    school=School.NATURE,
+    attributes=134217728,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    effects=[
+        Effect(type=EffectType.ENERGIZE, base_points=0, implicit_target_a=1, misc_value=0),
+    ],
+    spell_icon_id=2862,
+    notes="druid-rework RESTO §8 (8,0) 'Revitalize' caster-side mana return: 1% of the caster's base mana, cast on the caster with a computed BP0 (CalculatePct(caster->GetCreateMana(), 1)) every time either DUMMY effect on 48539-48545 fires.",
+    raw_overrides={'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Restores mana.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+tranquil_focus_200576 = spell(
+    id=200576,
+    name='Tranquil Focus',
+    school=School.NATURE,
+    attributes=196608,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=8000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.EFFECT_IMMUNITY, misc_value=98),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.EFFECT_IMMUNITY, misc_value=144),
+    ],
+    spell_icon_id=963,
+    notes="druid-rework RESTO §8 (0,1) 'Nature's Focus' capstone buff: spell_dru_natures_focus_capstone applies this on Tranquility (740) EFFECT_1 REAL apply when the caster knows the final rank (17065) and removes it with the aura. -50% damage taken plus knockback (98) and stun (144) effect immunity while channeling.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Take 50% less damage and cannot be knocked back.', 'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Take 50% less damage and cannot be knocked back.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+# ============================================================================
+# druid-rework RESTO WP-A: new talent-rank spells (RESTO §2.1/§8)
+# ============================================================================
+
+def _dru_passive_talent_kwargs():
+    return dict(school=School.NORMAL, attributes=464, cast_time_ms=0, cooldown_ms=0,
+                category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0, duration_ms=-1)
+
+
+natures_resilience_200577 = spell(
+    id=200577, name="Nature's Resilience", **_dru_passive_talent_kwargs(),
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_CUSTOM_STAT_PCT, misc_value=2097152)],
+    spell_icon_id=1675,
+    notes="druid-rework RESTO §8 (0,3) NEW, was Furor (822): percentage Versatility (MOD_CUSTOM_STAT_PCT misc 1<<21, CR_VERSATILITY), not rating.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your Versatility is increased.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Versatility by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+)
+natures_resilience_200578 = spell(
+    id=200578, name="Nature's Resilience", **_dru_passive_talent_kwargs(),
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_CUSTOM_STAT_PCT, misc_value=2097152)],
+    spell_icon_id=1675,
+    notes='druid-rework RESTO §8 (0,3): rank 2 of the rewrite above.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your Versatility is increased.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Versatility by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+)
+natures_resilience_200579 = spell(
+    id=200579, name="Nature's Resilience", **_dru_passive_talent_kwargs(),
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_CUSTOM_STAT_PCT, misc_value=2097152)],
+    spell_icon_id=1675,
+    notes='druid-rework RESTO §8 (0,3): rank 3 of the rewrite above.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your Versatility is increased.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Versatility by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+)
+
+
+natures_mending_200580 = spell(
+    id=200580, name="Nature's Mending", **_dru_passive_talent_kwargs(),
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.DUMMY)],
+    spell_icon_id=1929,
+    notes="druid-rework RESTO §8 (1,0) NEW, was Master Shapeshifter (1915): APPLY_AURA+DUMMY marker read by Druid::GetDirectHealMultiplier/ApplyPeriodicHealTickMods, a plain multiplier (PLAN A2) applied when the target is below 50% health at calc time. Code-review fix: was a plain SPELL_EFFECT_DUMMY effect, which creates no AuraEffect at all, so GetRankAmount()'s GetAuraEffect(id, EFFECT_0) lookup always returned null.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your Rejuvenation and Regrowth heal more on injured targets.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Rejuvenation and Regrowth heal targets below 50% health for $s1% more.\n\n|cFF9D9D9DCapstone Bonus: When your Rejuvenation heals a target below 50% health, it applies Cultivation, healing them for 150 plus 0.3 spell power over 6 sec.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+)
+natures_mending_200581 = spell(
+    id=200581, name="Nature's Mending", **_dru_passive_talent_kwargs(),
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY)],
+    spell_icon_id=1929,
+    notes='druid-rework RESTO §8 (1,0): rank 2 of the rewrite above.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your Rejuvenation and Regrowth heal more on injured targets.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Rejuvenation and Regrowth heal targets below 50% health for $s1% more.\n\n|cFF9D9D9DCapstone Bonus: When your Rejuvenation heals a target below 50% health, it applies Cultivation, healing them for 150 plus 0.3 spell power over 6 sec.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+)
+natures_mending_200582 = spell(
+    id=200582, name="Nature's Mending", **_dru_passive_talent_kwargs(),
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=1929,
+    notes='druid-rework RESTO §8 (1,0): rank 3, the final/capstone rank - new eff2 DUMMY stored 0 is the Cultivation-enabled flag spell_dru_rejuvenation reads (HasAura(200582)).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your Rejuvenation and Regrowth heal more on injured targets.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Rejuvenation and Regrowth heal targets below 50% health for $s1% more.\n\nCapstone Bonus: When your Rejuvenation heals a target below 50% health, it applies Cultivation, healing them for 150 plus 0.3 spell power over 6 sec.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+)
+
+
+deep_roots_200583 = spell(
+    id=200583, name='Deep Roots', **_dru_passive_talent_kwargs(),
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=999, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.DURATION),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
+    ],
+    spell_icon_id=2669,
+    notes='druid-rework RESTO §8 (1,1) NEW, was Subtlety (841), same position: both SpellMods scoped to REGROWTH (also reach Nature\'s Bounty spread copies, caster-side mods).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Your Regrowth's heal over time lasts longer and heals more.", 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the duration of your Regrowth's heal over time by $/1000;s1 sec and its healing by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Your Regrowth costs 25% less mana when cast on a target already affected by your Regrowth.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': REGROWTH, 'EffectSpellClassMaskB_1': REGROWTH, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+)
+deep_roots_200584 = spell(
+    id=200584, name='Deep Roots', **_dru_passive_talent_kwargs(),
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1999, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.DURATION),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
+    ],
+    spell_icon_id=2669,
+    notes='druid-rework RESTO §8 (1,1): rank 2 of the rewrite above.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Your Regrowth's heal over time lasts longer and heals more.", 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the duration of your Regrowth's heal over time by $/1000;s1 sec and its healing by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Your Regrowth costs 25% less mana when cast on a target already affected by your Regrowth.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': REGROWTH, 'EffectSpellClassMaskB_1': REGROWTH, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+)
+deep_roots_200585 = spell(
+    id=200585, name='Deep Roots', **_dru_passive_talent_kwargs(),
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2999, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.DURATION),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
+    ],
+    spell_icon_id=2669,
+    notes="druid-rework RESTO §8 (1,1): rank 3, the final/capstone rank. Code-review-pass cleanup: dropped a stray eff3 DUMMY stored 24 left over from an earlier draft, whose note pointed at Druid::ApplyPowerCostMods - that function (and the whole 'read a value off this talent's own effect' mechanism) was replaced by CORE-AUDIT row 15's actual design before this pass shipped: DruidDeepRootsCapstone::CanPrepare (druid_hooks.cpp) gates on HasAura(SPELL_DEEP_ROOTS_R3) alone and computes the -25% dynamically against deep_roots_cost_200602, so this talent's own rank spells need no capstone-carrying effect at all - eff3 was dead weight nothing ever read.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Your Regrowth's heal over time lasts longer and heals more.", 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the duration of your Regrowth's heal over time by $/1000;s1 sec and its healing by $s2%.\n\nCapstone Bonus: Your Regrowth costs 25% less mana when cast on a target already affected by your Regrowth.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': REGROWTH, 'EffectSpellClassMaskB_1': REGROWTH, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+)
+
+
+yseras_gift_200586 = spell(
+    id=200586, name="Ysera's Gift", **_dru_passive_talent_kwargs(),
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=5000)],
+    spell_icon_id=2067,
+    notes='druid-rework RESTO §8 (1,2) NEW: periodic trigger read by spell_dru_yseras_gift.OnEffectPeriodic (% of max health, self if not full else the lowest-HP% ally in range).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'You are periodically healed.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Every 5 sec, heals you for $s1% of your maximum health. If you are at full health, the most injured nearby ally is healed instead.\n\n|cFF9D9D9DCapstone Bonus: Ysera\'s Gift heals for 8% more for each of your active Rejuvenations.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+)
+yseras_gift_200587 = spell(
+    id=200587, name="Ysera's Gift", **_dru_passive_talent_kwargs(),
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=5000)],
+    spell_icon_id=2067,
+    notes='druid-rework RESTO §8 (1,2): rank 2 of the rewrite above.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'You are periodically healed.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Every 5 sec, heals you for $s1% of your maximum health. If you are at full health, the most injured nearby ally is healed instead.\n\n|cFF9D9D9DCapstone Bonus: Ysera\'s Gift heals for 8% more for each of your active Rejuvenations.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+)
+yseras_gift_200588 = spell(
+    id=200588, name="Ysera's Gift", **_dru_passive_talent_kwargs(),
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=5000),
+        Effect(type=EffectType.DUMMY, base_points=7, implicit_target_a=1),
+    ],
+    spell_icon_id=2067,
+    notes='druid-rework RESTO §8 (1,2): rank 3, the final/capstone rank - new eff2 DUMMY stored 7 (Waking Dream: +8% per active Rejuvenation, read by the direct-heal hook when HasAura(200588)).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'You are periodically healed.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Every 5 sec, heals you for $s1% of your maximum health. If you are at full health, the most injured nearby ally is healed instead.\n\nCapstone Bonus: Ysera's Gift heals for 8% more for each of your active Rejuvenations.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+)
+
+
+perennial_200589 = spell(
+    id=200589, name='Perennial', **_dru_passive_talent_kwargs(),
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=1999, implicit_target_a=1, apply_aura=AuraType.DUMMY)],
+    spell_icon_id=4118,
+    notes="druid-rework RESTO §8 (1,3) NEW: DUMMY stores the per-cast extension cap in ms (2000/4000/6000 live); spell_dru_rejuvenation tracks _perennialUsedMs per aura instance, +2000 ms per extension while the target is at full health before the tick (Q7).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your Rejuvenation lasts longer on full-health targets.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "When your Rejuvenation heals a target at full health, its duration is increased by 2 sec, up to $/1000;s1 sec per cast.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+)
+perennial_200590 = spell(
+    id=200590, name='Perennial', **_dru_passive_talent_kwargs(),
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=3999, implicit_target_a=1, apply_aura=AuraType.DUMMY)],
+    spell_icon_id=4118,
+    notes='druid-rework RESTO §8 (1,3): rank 2 of the rewrite above.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your Rejuvenation lasts longer on full-health targets.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "When your Rejuvenation heals a target at full health, its duration is increased by 2 sec, up to $/1000;s1 sec per cast.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+)
+perennial_200591 = spell(
+    id=200591, name='Perennial', **_dru_passive_talent_kwargs(),
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=5999, implicit_target_a=1, apply_aura=AuraType.DUMMY)],
+    spell_icon_id=4118,
+    notes='druid-rework RESTO §8 (1,3): rank 3 of the rewrite above.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your Rejuvenation lasts longer on full-health targets.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "When your Rejuvenation heals a target at full health, its duration is increased by 2 sec, up to $/1000;s1 sec per cast.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+)
+
+
+proliferation_200592 = spell(
+    id=200592, name='Proliferation', **_dru_passive_talent_kwargs(),
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200570)],
+    spell_icon_id=2585,
+    notes='druid-rework RESTO §8 (7,1) NEW: procs_on() below carries the 10/20/30% chance; triggers 200570 (the buff), not the spread itself.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your Wild Growth casts have a chance to empower your next Rejuvenation.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Wild Growth casts have a $h% chance to cause your next Rejuvenation within 15 sec to also apply to the 2 nearby allies with the lowest health that are not affected by your Rejuvenation.\n\n|cFF9D9D9DCapstone Bonus: Germination. Your Rejuvenation can be applied to a target twice. The second application counts as a separate heal over time effect. Recasting refreshes whichever has less time remaining.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'RangeIndex': 1, 'SpellClassSet': 7},
+)
+proliferation_200593 = spell(
+    id=200593, name='Proliferation', **_dru_passive_talent_kwargs(),
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200570)],
+    spell_icon_id=2585,
+    notes='druid-rework RESTO §8 (7,1): rank 2 of the rewrite above.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your Wild Growth casts have a chance to empower your next Rejuvenation.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Wild Growth casts have a $h% chance to cause your next Rejuvenation within 15 sec to also apply to the 2 nearby allies with the lowest health that are not affected by your Rejuvenation.\n\n|cFF9D9D9DCapstone Bonus: Germination. Your Rejuvenation can be applied to a target twice. The second application counts as a separate heal over time effect. Recasting refreshes whichever has less time remaining.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'RangeIndex': 1, 'SpellClassSet': 7},
+)
+proliferation_200594 = spell(
+    id=200594, name='Proliferation', **_dru_passive_talent_kwargs(),
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200570),
+        Effect(type=EffectType.DUMMY, base_points=0, implicit_target_a=1),
+    ],
+    spell_icon_id=2585,
+    notes='druid-rework RESTO §8 (7,1): rank 3, the final/capstone rank - new eff2 DUMMY stored 0 is the Germination-enabled flag spell_dru_rejuvenation reads (HasAura(200594)).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your Wild Growth casts have a chance to empower your next Rejuvenation.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Wild Growth casts have a $h% chance to cause your next Rejuvenation within 15 sec to also apply to the 2 nearby allies with the lowest health that are not affected by your Rejuvenation.\n\nCapstone Bonus: Germination. Your Rejuvenation can be applied to a target twice. The second application counts as a separate heal over time effect. Recasting refreshes whichever has less time remaining.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'RangeIndex': 1, 'SpellClassSet': 7},
+)
+procs_on(proliferation_200592, proc_flags=PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS, family_name=7,
+         family_mask=(0, WILD_GROWTH, 0), spell_phase_mask=PROC_SPELL_PHASE_CAST, chance=10)
+procs_on(proliferation_200593, proc_flags=PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS, family_name=7,
+         family_mask=(0, WILD_GROWTH, 0), spell_phase_mask=PROC_SPELL_PHASE_CAST, chance=20)
+procs_on(proliferation_200594, proc_flags=PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS, family_name=7,
+         family_mask=(0, WILD_GROWTH, 0), spell_phase_mask=PROC_SPELL_PHASE_CAST, chance=30)
+
+
+photosynthesis_200595 = spell(
+    id=200595, name='Photosynthesis', **_dru_passive_talent_kwargs(),
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE)],
+    spell_icon_id=2861,
+    notes="druid-rework RESTO §8 (8,2) NEW, was Improved Tree of Life (1930), same position: eff1 scoped to LIFEBLOOM's B-dword bit (A_2) - the only direct effect with that bit is the bloom (33778, flagged at load by SpellInfoCorrections.cpp:1246), so this only ever touches the bloom.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Your Lifebloom's bloom heals for more.", 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the healing of your Lifebloom's bloom by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Regrowth and Healing Touch casts on a target affected by your Lifebloom have a 20% chance to cause Lifebloom to bloom. This bloom does not end Lifebloom.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_2': LIFEBLOOM, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+)
+photosynthesis_200596 = spell(
+    id=200596, name='Photosynthesis', **_dru_passive_talent_kwargs(),
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE)],
+    spell_icon_id=2861,
+    notes='druid-rework RESTO §8 (8,2): rank 2 of the rewrite above.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Your Lifebloom's bloom heals for more.", 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the healing of your Lifebloom's bloom by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Regrowth and Healing Touch casts on a target affected by your Lifebloom have a 20% chance to cause Lifebloom to bloom. This bloom does not end Lifebloom.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_2': LIFEBLOOM, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+)
+photosynthesis_200597 = spell(
+    id=200597, name='Photosynthesis', **_dru_passive_talent_kwargs(),
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2861,
+    notes='druid-rework RESTO §8 (8,2): rank 3, the final/capstone rank - new eff2 APPLY_AURA+DUMMY stored 19 (the 20% forced-bloom chance), read by spell_dru_photosynthesis_capstone (bound to 5185 and 8936). Code-review fix: eff2 was a plain SPELL_EFFECT_DUMMY effect, so GetAuraEffect(200597, EFFECT_1) always returned null and the forced bloom never happened.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Your Lifebloom's bloom heals for more.", 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the healing of your Lifebloom's bloom by $s1%.\n\nCapstone Bonus: Your Regrowth and Healing Touch casts on a target affected by your Lifebloom have a 20% chance to cause Lifebloom to bloom. This bloom does not end Lifebloom.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_2': LIFEBLOOM, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+)
+
+
+unstoppable_growth_200598 = spell(
+    id=200598, name='Unstoppable Growth', **_dru_passive_talent_kwargs(),
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.DUMMY)],
+    spell_icon_id=2051,
+    notes='druid-rework RESTO §8 (9,0) NEW, was Improved Barkskin (2264), same position: DUMMY read by spell_dru_wild_growth_aura::SetTickHeal (AddPct(_baseReduction, -GetRankAmount(UG)), same idiom as the T10 2P bonus); floored at -100% (Q18).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Your Wild Growth's healing falls off less over its duration.", 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Wild Growth's healing falls off $s1% less over its duration.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+)
+unstoppable_growth_200599 = spell(
+    id=200599, name='Unstoppable Growth', **_dru_passive_talent_kwargs(),
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY)],
+    spell_icon_id=2051,
+    notes='druid-rework RESTO §8 (9,0): rank 2 of the rewrite above.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Your Wild Growth's healing falls off less over its duration.", 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Wild Growth's healing falls off $s1% less over its duration.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+)
+
+
+deep_roots_cost_200602 = spell(
+    id=200602,
+    name='Deep Roots',
+    school=School.NORMAL,
+    attributes=192,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COST),
+    ],
+    spell_icon_id=2669,
+    notes="druid-rework RESTO §8 (1,1) capstone, per WP-B coordination (CORE-AUDIT row 15 / handoff message, not in RESTO.md's own tables): the hidden 1-charge cost-reduction aura an AllSpellScript::CanPrepare hook applies via CastCustomSpell (not a bare CastSpell) when the cast target already carries the caster's own Regrowth, and removes (RemoveAurasDueToSpell) otherwise - toggled per cast, not a permanent SpellMod. Flat COST scoped to Regrowth (8936) only. base_points here is an inert placeholder (delivers 0) - CORE-AUDIT row 15 requires the flat reduction to be exactly 25% of Regrowth's own *base* mana cost so that, combined with any other pct COST modifiers, the net effect is exactly ×0.75 regardless of level; a level-80-only static constant (a code-review finding caught this: the original -254 constant was calibrated to level-80's BaseMana=3496 and over-reduced the cost at lower levels) can't express that, so DruidDeepRootsCapstone::CanPrepare now computes int32(CalculatePct(player->GetCreateMana(), Regrowth's ManaCostPercentage)) fresh per cast, takes 25% of that, and passes it as a custom SPELLVALUE_BASE_POINT0 (still minus 1 for the die_sides=1 sign convention). ProcCharges/ProcFlags are cosmetic only per WP-B (the CanPrepare hook drives apply/remove directly, not the DBC proc system).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your Regrowth costs less mana.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Regrowth costs less mana on a target already affected by your Regrowth.', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': REGROWTH, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'ProcCharges': 1, 'ProcChance': 101, 'SpellClassSet': 7},
 )

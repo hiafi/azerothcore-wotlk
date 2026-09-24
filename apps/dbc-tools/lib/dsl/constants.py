@@ -142,6 +142,7 @@ class AuraType(IntEnum):
     MOD_PACIFY = 25
     MOD_ROOT = 26
     MOD_SILENCE = 27
+    EFFECT_IMMUNITY = 37  # druid-rework RESTO §0.13 (Tranquil Focus, Nature's Focus capstone)
     MOD_STAT = 29
     MOD_INCREASE_SPEED = 31
     MOD_DECREASE_SPEED = 33
@@ -170,6 +171,7 @@ class AuraType(IntEnum):
     ADD_PCT_MODIFIER = 108
     ADD_TARGET_TRIGGER = 109  # druid-rework PLAN §6.4
     MOD_POWER_REGEN_PERCENT = 110  # druid-rework PLAN §6.4
+    OVERRIDE_CLASS_SCRIPTS = 112  # druid-rework RESTO code-review fix: Revitalize's stock marker slot
     MOD_MANA_REGEN_INTERRUPT = 134
     MOD_HEALING_DONE = 135  # druid-rework BALANCE.md CORE-AUDIT row 6 - flat healing-done bonus (not a percent), consumed by spell_dru_astral_surge_sp's DoEffectCalcAmount
     MOD_HEALING_DONE_PERCENT = 136

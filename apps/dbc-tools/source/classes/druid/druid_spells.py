@@ -6,8 +6,11 @@ Split from a single source/classes/druid.py via split_class_file.py (.agents/pla
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, School, SpellModOp
 from lib.dsl.registry import bonus_coefficients, scripted_by, skill_line_ability, spell, trained_by
-from ._masks import MASS_ENTANGLEMENT, STARSURGE
-from .druid_trigger_spells import hurricane_42231, starfall_50286, tranquility_44203, typhoon_61391
+from ._masks import BLOOM, CENARION_WARD, MASS_ENTANGLEMENT, STARSURGE
+from .druid_trigger_spells import (
+    bloom_jump_200561, cenarion_ward_heal_200563, flourish_buff_200565, hurricane_42231,
+    starfall_50286, tranquility_44203, typhoon_61391,
+)
 
 
 demoralizing_roar_99 = spell(
@@ -52,7 +55,7 @@ entangling_roots_339 = spell(
     ],
     spell_icon_id=20,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 8); RealPointsPerLevel from rank1->covers-60 (anchor rank 6 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx4': 536872960, 'AttributesEx5': 32, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Rooted.  Causes $s2 Nature damage every $t2 seconds.', 'AuraInterruptFlags': 4718592, 'BaseLevel': 8, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Roots the target in place and causes $o2 Nature damage over $d.  Damage caused may interrupt the effect.', 'EffectBonusMultiplier_2': 0.10000000149011612, 'EffectBonusMultiplier_3': 0.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 664232, 'ShapeshiftExclude': 2, 'SpellClassMask_1': 512, 'SpellClassSet': 7, 'SpellLevel': 8, 'SpellVisualID_1': 38, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx4': 536872960, 'AttributesEx5': 32, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Rooted.  Causes $s2 Nature damage every $t2 seconds.', 'AuraInterruptFlags': 4718592, 'BaseLevel': 8, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Roots the target in place and causes $o2 Nature damage over $d.  Damage caused may interrupt the effect.', 'EffectBonusMultiplier_2': 0.10000000149011612, 'EffectBonusMultiplier_3': 0.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 664232, 'ShapeshiftExclude': 0, 'SpellClassMask_1': 512, 'SpellClassSet': 7, 'SpellLevel': 8, 'SpellVisualID_1': 38, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -86,7 +89,7 @@ tranquility_740 = spell(
     category=46,
     cast_time_ms=0,
     cooldown_ms=0,
-    category_cooldown_ms=480000,
+    category_cooldown_ms=180000,
     mana_cost=0,
     mana_cost_pct=70,
     range_yards=0.0,
@@ -96,7 +99,7 @@ tranquility_740 = spell(
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PERIODIC_TRIGGER_SPELL, amplitude=2000, trigger_spell=tranquility_44203.id),
     ],
     spell_icon_id=100,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 30); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    notes="pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 30); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. druid-rework RESTO §7 'Tranquility 740': category_cooldown_ms 480000->180000 (3 min); Cooldown Haste applies to catrec (Player.cpp:11251); scripted_by(740, 'spell_dru_natures_focus_capstone') declared in druid_talents.py.",
     raw_overrides={'AttributesEx': 64, 'AttributesEx2': 1074266112, 'AttributesEx3': 128, 'AttributesEx5': 8192, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals nearby party members for $s1 every $t2 seconds.', 'BaseLevel': 30, 'CastingTimeIndex': 1, 'ChannelInterruptFlags': 31756, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals all nearby group members for $s1 every $t2 seconds for $d.  Druid must channel to maintain the spell.', 'EffectBonusMultiplier_1': 0.28600001335144043, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 2, 'SpellClassMask_1': 128, 'SpellClassSet': 7, 'SpellLevel': 30, 'SpellVisualID_1': 1283, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},  # ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7
 )
 
@@ -144,7 +147,7 @@ faerie_fire_770 = spell(
     ],
     spell_icon_id=109,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 98304, 'AttributesEx2': 524288, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Decreases armor by $s1%.  Cannot stealth or turn invisible.', 'BaseLevel': 18, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Decrease the armor of the target by $s1% for $d.  While affected, the target cannot stealth or turn invisible.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 2, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 1024, 'SpellClassSet': 7, 'SpellLevel': 18, 'SpellVisualID_1': 192, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx': 98304, 'AttributesEx2': 524288, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Decreases armor by $s1%.  Cannot stealth or turn invisible.', 'BaseLevel': 18, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Decrease the armor of the target by $s1% for $d.  While affected, the target cannot stealth or turn invisible.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 1024, 'SpellClassSet': 7, 'SpellLevel': 18, 'SpellVisualID_1': 192, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -371,7 +374,7 @@ hibernate_2637 = spell(
     ],
     spell_icon_id=44,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 18); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 262144, 'AttributesEx2': 524288, 'AttributesEx5': 32, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Asleep.', 'AuraInterruptFlags': 2, 'BaseLevel': 18, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Forces the enemy target to sleep for up to $d.  Any damage will awaken the target.  Only one target can be forced to hibernate at a time.  Only works on Beasts and Dragonkin.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 2, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 16777216, 'SpellClassMask_2': 131072, 'SpellClassMask_3': 32768, 'SpellClassSet': 7, 'SpellLevel': 18, 'SpellPriority': 50, 'SpellVisualID_1': 4999, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'TargetCreatureType': 3},
+    raw_overrides={'AttributesEx': 262144, 'AttributesEx2': 524288, 'AttributesEx5': 32, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Asleep.', 'AuraInterruptFlags': 2, 'BaseLevel': 18, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Forces the enemy target to sleep for up to $d.  Any damage will awaken the target.  Only one target can be forced to hibernate at a time.  Only works on Beasts and Dragonkin.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 16777216, 'SpellClassMask_2': 131072, 'SpellClassMask_3': 32768, 'SpellClassSet': 7, 'SpellLevel': 18, 'SpellPriority': 50, 'SpellVisualID_1': 4999, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'TargetCreatureType': 3},
 )
 
 
@@ -435,7 +438,7 @@ soothe_animal_2908 = spell(
     ],
     spell_icon_id=454,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 22); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 2228224, 'AttributesEx2': 524288, 'AttributesEx3': 196608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Reduced distance at which target will attack.', 'BaseLevel': 22, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Soothes the target beast, reducing the range at which it will attack you by $s1 yards.  Only affects Beast and Dragonkin targets level 40 or lower.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'MaxTargetLevel': 40, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 2, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 16777216, 'SpellClassMask_2': 131072, 'SpellClassMask_3': 8192, 'SpellClassSet': 7, 'SpellLevel': 22, 'SpellPriority': 50, 'SpellVisualID_1': 6439, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'TargetCreatureType': 3},
+    raw_overrides={'AttributesEx': 2228224, 'AttributesEx2': 524288, 'AttributesEx3': 196608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Reduced distance at which target will attack.', 'BaseLevel': 22, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Soothes the target beast, reducing the range at which it will attack you by $s1 yards.  Only affects Beast and Dragonkin targets level 40 or lower.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'MaxTargetLevel': 40, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 16777216, 'SpellClassMask_2': 131072, 'SpellClassMask_3': 8192, 'SpellClassSet': 7, 'SpellLevel': 22, 'SpellPriority': 50, 'SpellVisualID_1': 6439, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'TargetCreatureType': 3},
 )
 
 
@@ -455,7 +458,7 @@ starfire_2912 = spell(
     ],
     spell_icon_id=1485,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60 (anchor rank 7 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §0.13 (A9): cast 3.5s->2.5s (Starlight Wrath\'s stock cast-cut is gone, §6 row 0,1), raw CastingTimeIndex dropped (resolves via the plain 2500ms row, 30002); now cleaves (spell_dru_starfire_cleave AfterHit casts 200337, WP-B)',
-    raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes $s1 Arcane damage to the target.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 2, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 4, 'SpellClassSet': 7, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 1264, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes $s1 Arcane damage to the target.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 4, 'SpellClassSet': 7, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 1264, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 scripted_by(starfire_2912, 'spell_dru_starfire_cleave')
 
@@ -476,7 +479,7 @@ wrath_5176 = spell(
     ],
     spell_icon_id=263,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60 (anchor rank 8 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §0.13 (A9): cast_time_ms now says the 1500ms it already resolved to; raw CastingTimeIndex dropped (resolves via the plain 1500ms row, 30004)',
-    raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes $s1 Nature damage to the target.', 'EffectBonusMultiplier_1': 0.5709999799728394, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 2, 'ShapeshiftMask': 1073741824, 'Speed': 20.0, 'SpellClassMask_1': 1, 'SpellClassSet': 7, 'SpellLevel': 1, 'SpellVisualID_1': 3860, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes $s1 Nature damage to the target.', 'EffectBonusMultiplier_1': 0.5709999799728394, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 1073741824, 'Speed': 20.0, 'SpellClassMask_1': 1, 'SpellClassSet': 7, 'SpellLevel': 1, 'SpellVisualID_1': 3860, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -750,7 +753,7 @@ moonfire_8921 = spell(
     ],
     spell_icon_id=225,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 14 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §0.13: duration 9s->12s (WotLK max rank; the single-rank bootstrap kept rank 1\'s 9s DurationIndex), 4 ticks at 3s',
-    raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s1 Arcane damage every $t1 seconds.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Burns the enemy for $s2 Arcane damage and then an additional ${$m1*3*$<mult>} Arcane damage over $d.', 'EffectBonusMultiplier_1': 0.12999999523162842, 'EffectBonusMultiplier_2': 0.15000000596046448, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 2, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 2, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 176, 'SpellLevel': 4, 'SpellVisualID_1': 1263, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s1 Arcane damage every $t1 seconds.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Burns the enemy for $s2 Arcane damage and then an additional ${$m1*3*$<mult>} Arcane damage over $d.', 'EffectBonusMultiplier_1': 0.12999999523162842, 'EffectBonusMultiplier_2': 0.15000000596046448, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 2, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 176, 'SpellLevel': 4, 'SpellVisualID_1': 1263, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -917,7 +920,7 @@ hurricane_16914 = spell(
     ],
     spell_icon_id=220,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 140, 'AttributesEx2': 4718592, 'AttributesEx5': 134225920, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$42231s1 damage every $t3 seconds, and time between attacks increased by $s2%.', 'BaseLevel': 40, 'CastingTimeIndex': 1, 'ChannelInterruptFlags': 31756, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Creates a violent storm in the target area causing $42231s1 Nature damage to enemies every $16914t3 sec,$?s54831[ reducing movement speed by $54831s1%, ][ ]and increasing the time between attacks of enemies by $16914s2%.  Lasts $16914d.  Druid must channel to maintain the spell.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 2, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 4194304, 'SpellClassSet': 7, 'SpellLevel': 40, 'SpellVisualID_1': 9489, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Targets': 64},
+    raw_overrides={'AttributesEx': 140, 'AttributesEx2': 4718592, 'AttributesEx5': 134225920, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$42231s1 damage every $t3 seconds, and time between attacks increased by $s2%.', 'BaseLevel': 40, 'CastingTimeIndex': 1, 'ChannelInterruptFlags': 31756, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Creates a violent storm in the target area causing $42231s1 Nature damage to enemies every $16914t3 sec,$?s54831[ reducing movement speed by $54831s1%, ][ ]and increasing the time between attacks of enemies by $16914s2%.  Lasts $16914d.  Druid must channel to maintain the spell.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 4194304, 'SpellClassSet': 7, 'SpellLevel': 40, 'SpellVisualID_1': 9489, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Targets': 64},
 )
 
 
@@ -1291,17 +1294,18 @@ lifebloom_33763 = spell(
     cooldown_ms=0,
     category_cooldown_ms=0,
     mana_cost=0,
-    mana_cost_pct=28,
+    mana_cost_pct=14,
     range_yards=40.0,
     duration_ms=7000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=31, points_per_level=1.3125, implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=1000),
-        Effect(type=EffectType.APPLY_AURA, base_points=479, points_per_level=18.5, implicit_target_a=21, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=17, points_per_level=0.6625, implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=1000),
+        Effect(type=EffectType.APPLY_AURA, base_points=252, points_per_level=9.7, implicit_target_a=21, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2101,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 64); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 3 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals $s1 every second and $s2 when effect finishes or is dispelled.', 'BaseLevel': 64, 'CastingTimeIndex': 1, 'CumulativeAura': 3, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for ${$m1*7*$<mult>} over $d.  When Lifebloom completes its duration or is dispelled, the target instantly heals themself for $s2 and the Druid regains half the cost of the spell.  This effect can stack up to $u times on the same target.', 'EffectBonusMultiplier_1': 0.09520000219345093, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 2, 'SpellClassMask_2': 16, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 176, 'SpellLevel': 64, 'SpellVisualID_1': 8145, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},  # ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7
+    notes="druid-rework RESTO §7: mana_cost_pct 28->14; BaseLevel/SpellLevel 64->26; re-anchored level recipe (Q19, proportional to the existing L80 values: tick 40/46/53 at 60/70/80, bloom 582/679/776) - stored/ppl per RESTO §7's table (tick bp=17 ppl=0.6625, bloom bp=252 ppl=9.7); tooltip drops the mana-return mention and states the one-target rule (mana return removed in spell_dru_lifebloom, WP-B; the second Lifebloom removal itself is Druid::OnLifebloomApplied, WP-B).",
+    raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals $s1 every second and $s2 when effect finishes or is dispelled.', 'BaseLevel': 26, 'CastingTimeIndex': 1, 'CumulativeAura': 3, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for ${$m1*7*$<mult>} over $d.  When Lifebloom completes its duration or is dispelled, the target instantly heals themself for $s2.  This effect can stack up to $u times on the same target.  May be active on one target at a time.', 'EffectBonusMultiplier_1': 0.09520000219345093, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 2, 'SpellClassMask_2': 16, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 176, 'SpellLevel': 26, 'SpellVisualID_1': 8145, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},  # ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7
 )
+trained_by(lifebloom_33763, trainer_id=216, req_level=26, money_cost=5000)
 
 
 cyclone_33786 = spell(
@@ -1324,7 +1328,7 @@ cyclone_33786 = spell(
     ],
     spell_icon_id=174,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 65536, 'AttributesEx4': 536872960, 'AttributesEx5': 32, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Invulnerable, but unable to act.', 'BaseLevel': 70, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Tosses the enemy target into the air, preventing all action but making them invulnerable for up to $d.  Only one target can be affected by your Cyclone at a time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 2, 'SpellClassMask_2': 32, 'SpellClassSet': 7, 'SpellLevel': 70, 'SpellVisualID_1': 8206, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx': 65536, 'AttributesEx4': 536872960, 'AttributesEx5': 32, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Invulnerable, but unable to act.', 'BaseLevel': 70, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Tosses the enemy target into the air, preventing all action but making them invulnerable for up to $d.  Only one target can be affected by your Cyclone at a time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'SpellClassMask_2': 32, 'SpellClassSet': 7, 'SpellLevel': 70, 'SpellVisualID_1': 8206, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1527,7 +1531,7 @@ insect_swarm_5570 = spell(
     ],
     spell_icon_id=1771,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60 (anchor rank 5 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §6 row (2,1): duration 12s->14s (7 ticks), hit-reduction eff2 dropped (12.12); scripted_by(spell_dru_insect_swarm_cast) removes the caster\'s Swarming Rot copy (200352) on a real cast',
-    raw_overrides={'AttributesEx2': 524288, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s1 Nature damage every $t1 sec.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The enemy target is swarmed by insects, causing $o1 Nature damage over $d.', 'EffectBonusMultiplier_1': 0.20000000298023224, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 2, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 2097152, 'SpellClassSet': 7, 'SpellLevel': 20, 'SpellVisualID_1': 7333, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx2': 524288, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s1 Nature damage every $t1 sec.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The enemy target is swarmed by insects, causing $o1 Nature damage over $d.', 'EffectBonusMultiplier_1': 0.20000000298023224, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 2097152, 'SpellClassSet': 7, 'SpellLevel': 20, 'SpellVisualID_1': 7333, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1601,14 +1605,14 @@ typhoon_50516 = spell(
 trained_by(typhoon_50516, trainer_id=216, req_level=36, money_cost=11000)
 
 
-nature_s_swiftness_17116 = spell(
+natural_alacrity_17116 = spell(
     id=17116,
-    name="Nature's Swiftness",
+    name='Natural Alacrity',
     school=School.NORMAL,
     dispel=DispelType.MAGIC,
     attributes=33882112,
     cast_time_ms=0,
-    cooldown_ms=180000,
+    cooldown_ms=60000,
     category_cooldown_ms=0,
     mana_cost=0,
     mana_cost_pct=0,
@@ -1616,11 +1620,13 @@ nature_s_swiftness_17116 = spell(
     duration_ms=-1,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=108, misc_value=10),
+        Effect(type=EffectType.TRIGGER_SPELL, die_sides=0, implicit_target_a=1, trigger_spell=200566),
     ],
     spell_icon_id=112,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 131072, 'AttributesEx3': 196608, 'AttributesEx4': 64, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Nature spell will be an instant cast spell.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When activated, your next Nature spell with a base casting time less than 10 sec. becomes an instant cast spell.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 268436065, 'EffectSpellClassMaskA_2': 33554464, 'EffectSpellClassMaskA_3': 32768, 'EquippedItemClass': -1, 'InterruptFlags': 4, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcCharges': 1, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'ShapeshiftExclude': 1073741824, 'SpellClassMask_2': 524288, 'SpellClassSet': 7, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 4040},
+    notes="druid-rework RESTO §7 'Natural Alacrity = 17116' (reuse of stock Nature's Swiftness, renamed baseline): cooldown 180000->60000; BaseLevel/SpellLevel 1->30; drop the Nourish bit from eff1's A_2 mask (33554464=0x2000020 -> 32=0x20, inert per the retired-bit rule); new eff2 TRIGGER_SPELL -> 200566 (the separate, non-consumed 10% healing buff); trained_by(216, req_level=30). Keeps the stock eff1 (SPELLMOD_CASTING_TIME -100%, 1 charge; the stock spell_proc 17116 row handles consumption).",
+    raw_overrides={'AttributesEx': 131072, 'AttributesEx3': 196608, 'AttributesEx4': 64, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Nature spell will be an instant cast spell. The effectiveness of your Nature healing spells is increased by 10% for 10 sec.', 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your next Druid Nature spell with a base cast time under 10 sec becomes instant. In addition, the effectiveness of your Nature healing spells is increased by 10% for 10 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 268436065, 'EffectSpellClassMaskA_2': 32, 'EffectSpellClassMaskA_3': 32768, 'EquippedItemClass': -1, 'InterruptFlags': 4, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcCharges': 1, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'ShapeshiftExclude': 1073741824, 'SpellClassMask_2': 524288, 'SpellClassSet': 7, 'SpellLevel': 30, 'SpellPriority': 50, 'SpellVisualID_1': 4040},
 )
+trained_by(natural_alacrity_17116, trainer_id=216, req_level=30, money_cost=6000)
 
 
 swiftmend_18562 = spell(
@@ -1629,18 +1635,20 @@ swiftmend_18562 = spell(
     school=School.NATURE,
     attributes=65536,
     cast_time_ms=0,
-    cooldown_ms=15000,
+    cooldown_ms=25000,
     category_cooldown_ms=0,
     mana_cost=0,
     mana_cost_pct=16,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, implicit_target_a=21),
+        Effect(type=EffectType.HEAL, base_points=189, points_per_level=10.0, implicit_target_a=21),
     ],
     spell_icon_id=1917,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Consumes a Rejuvenation or Regrowth effect on a friendly target to instantly heal them an amount equal to 12 sec. of Rejuvenation or 18 sec. of Regrowth.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 2, 'SpellClassMask_2': 2, 'SpellClassSet': 7, 'SpellLevel': 1, 'SpellVisualID_1': 3884, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'TargetAuraState': 15},  # ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7 (TargetAuraState 15/SWIFTMEND stays - Resto's own job)
+    notes="druid-rework RESTO §7/§8 (2,2): moved (6,1)->(2,2); no longer consumes a heal over time effect - extends Rejuvenation/Germination, Regrowth and Lifebloom by 6 sec instead (spell_dru_swiftmend, WP-B); cooldown 15000->25000 (below the Cooldown Haste floor); heal recipe v60=600 at learn level 19 (600/700/800 at 60/70/80, stored bp=189 ppl=10); TargetAuraState 15->0 (retires the core consume branch, CORE-AUDIT row 19); bonus_coefficients(direct=1.4); tooltip rewritten.",
+    raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 19, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Requires Rejuvenation, Regrowth or Lifebloom on the target. Heals the target for $s1 and extends the duration of your Rejuvenation, Regrowth and Lifebloom on that target by 6 sec.  The extension may exceed their normal maximum duration.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 2, 'SpellClassMask_2': 2, 'SpellClassSet': 7, 'SpellLevel': 19, 'SpellVisualID_1': 3884, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'TargetAuraState': 0},  # ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7
 )
+bonus_coefficients(swiftmend_18562, direct=1.4)
+scripted_by(swiftmend_18562, 'spell_dru_swiftmend')
 
 
 moonkin_form_24858 = spell(
@@ -1831,3 +1839,104 @@ fury_of_elune_200336 = spell(
     raw_overrides={'BaseLevel': 60, 'SpellLevel': 60, 'MaxLevel': 80, 'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'ShapeshiftMask': 1073741824, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Calls down a beam of celestial energy that follows the target for $d, dealing $200338s1 Astral damage every 0.5 sec, and half that to other enemies within 8 yards. You also gain Celestial Alignment for 8 sec, granting the benefits of both Solar and Lunar Eclipse, with your Astral damage taking both bonuses, and halving the cooldown of Starsurge.', 'EquippedItemClass': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 scripted_by(fury_of_elune_200336, 'spell_dru_fury_of_elune')
+
+
+# Resto WP-0 pull (druid-rework.RESTO.md §3 item 1/§0.13 Q15): also present as a legacy row in
+# source/spells/npc.csv - that row is deleted in this same change (generate.py rejects an id
+# declared in both places). Resto's WP-A retunes duration/cooldown/cost and adds eff3 (the Tree of
+# Life instant-Rejuvenation-heal %); CORE-AUDIT row 38 turns eff0 MOD_SHAPESHIFT into
+# SPELL_AURA_TRANSFORM misc 21072 so this is a buff with the tree model, not a real form.
+tree_of_life_33891 = spell(
+    id=33891,
+    name='Tree of Life',
+    school=School.NORMAL,
+    attributes=327696,
+    cast_time_ms=0,
+    cooldown_ms=120000,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=13,
+    range_yards=0.0,
+    duration_ms=20000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.TRANSFORM, misc_value=21072),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.MECHANIC_IMMUNITY, misc_value=17),
+        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2257,
+    notes="pulled from existing data; druid-rework RESTO §0.13 Q15 / CORE-AUDIT row 38: Tree of Life is a transform buff (SPELL_AURA_TRANSFORM misc 21072, the stock Living Grove Defender creature whose only model is display 864), not a shapeshift form - no cast restrictions while active. cooldown_ms 0->120000, duration_ms -1->20000 (was permanent-until-cancelled). New eff3 APPLY_AURA+DUMMY stored 24 (the Tree of Life instant-Rejuvenation-heal %, read by Druid::OnRejuvenationApplied via spell_dru_rejuvenation, WP-B). 5420's bonuses (HoT cost, Healing Touch cast time, Regrowth crit) ride along via linked_spell(33891, 5420, type=2) instead of ShapeshiftMask. 34123 (the +6% healing-received raid aura) is dropped (Q14) - not referenced by this tooltip. Code-review fix: eff3 was a plain SPELL_EFFECT_DUMMY effect, so GetAuraEffect(33891, EFFECT_2) always returned null and Tree of Life's instant Rejuvenation heal never fired.",
+    raw_overrides={'AttributesEx': 98304, 'AttributesEx4': 2097152, 'CastingTimeIndex': 1, 'ProcTypeMask': 174624, 'ProcChance': 100, 'BaseLevel': 50, 'SpellLevel': 50, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 8598, 'ActiveIconID': 122, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': "Shift into the Tree of Life for $d. While active, the mana cost of your heal over time spells is reduced by 20%, your Rejuvenation instantly heals for 25% of its total healing when applied, your Wild Growth heals one additional target, your Healing Touch cast time is reduced by 50%, and your Regrowth's direct heal gains 25% additional critical heal chance.\n\nThe act of shifting frees the caster of Polymorph and Movement Impairing effects.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Immune to Polymorph effects.', 'AuraDescription_Lang_Mask': 16712190, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'SpellClassSet': 7, 'SpellClassMask_2': 65536, 'StanceBarOrder': 4, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+# ============================================================================
+# druid-rework RESTO WP-A: new castable spells (RESTO §2.1, §6)
+# ============================================================================
+
+bloom_200560 = spell(
+    id=200560,
+    name='Bloom',
+    school=School.NATURE,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=90000,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=5,
+    range_yards=40.0,
+    effects=[
+        Effect(type=EffectType.HEAL, base_points=162, points_per_level=4.16667, die_sides=1, implicit_target_a=21),
+    ],
+    spell_icon_id=2282,
+    notes="druid-rework RESTO §6 'Bloom (200560 castable, 200561 jump)': talent (6,1). Level recipe v60=250, learn level 39 (250/292/333 at 60/70/80, stored bp=162, ppl=4.16667). CheckCast requires the explicit target to carry the caster's Rejuvenation or Germination; AfterHit starts Druid::StartBloomJumps (0.3 s waves, up to 3 new targets each within 20 yd/LoS of the previous wave, lowest HP% first, no target cap, visited-once). Direct Nature healing spell.",
+    raw_overrides={'BaseLevel': 39, 'SpellLevel': 39, 'MaxLevel': 80, 'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'SpellClassMask_3': BLOOM, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target affected by your Rejuvenation for $s1. After a short delay it jumps to 3 nearby allies affected by your Rejuvenation. This repeats until no valid targets remain in range. Each target can be healed only once per cast.', 'EffectBonusMultiplier_1': 0.75, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+)
+scripted_by(bloom_200560, 'spell_dru_bloom')
+bonus_coefficients(bloom_200560, direct=0.75)
+
+
+cenarion_ward_200562 = spell(
+    id=200562,
+    name='Cenarion Ward',
+    school=School.NATURE,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=45000,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=18,
+    range_yards=40.0,
+    duration_ms=30000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=21, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=72,
+    notes="druid-rework RESTO §6 'Cenarion Ward (200562 ward, 200563 heal)': baseline, learned at 38 (Nourish's replacement, same cost). eff1 is a 1-charge DUMMY proc aura; procs_on(200562, PROC_FLAG_TAKEN_DAMAGE, chance=100) below covers melee/spell/periodic damage taken with no phase mask needed. spell_dru_cenarion_ward's OnEffectProc casts 200563 (preserving the druid as aura caster) and the ward is consumed. Not extended by Swiftmend; extended by Flourish only once released (200563 is the HoT, this isn't).",
+    raw_overrides={'AttributesEx3': 2048, 'BaseLevel': 38, 'SpellLevel': 38, 'MaxLevel': 80, 'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'ProcCharges': 1, 'SpellClassSet': 7, 'SpellClassMask_3': CENARION_WARD, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Protects a friendly target for $d. Any damage taken, including damage over time, consumes the ward and heals the target for $o1 over $200563d.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Protected by Cenarion Ward.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+)
+trained_by(cenarion_ward_200562, trainer_id=216, req_level=38, money_cost=12000)
+skill_line_ability(id=30446, skill_line=573, spell_id=cenarion_ward_200562.id, class_mask=1024)
+scripted_by(cenarion_ward_200562, 'spell_dru_cenarion_ward')
+
+
+flourish_200564 = spell(
+    id=200564,
+    name='Flourish',
+    school=School.NATURE,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=90000,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=10,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.DUMMY, base_points=7999, implicit_target_a=1),
+        Effect(type=EffectType.DUMMY, base_points=99, implicit_target_a=1),
+        Effect(type=EffectType.TRIGGER_SPELL, die_sides=0, implicit_target_a=1, trigger_spell=flourish_buff_200565.id),
+    ],
+    spell_icon_id=3956,
+    notes="druid-rework RESTO §6 'Flourish (200564 castable, 200565 buff)': talent (10,1). eff1 DUMMY stored 7999 (the 8 s extension), eff2 DUMMY stored 99 (+100% tick rate), eff3 triggers the 8 s visible buff. spell_dru_flourish extends (Druid::ExtendHot +8000) and accelerates (AuraEffect::AccelerateTicks) every heal over time effect the caster has within 60 yd, including Cultivation/Germination; OnAuraApply also gives a HoT newly applied during the buff's window the same treatment (Q16).",
+    raw_overrides={'BaseLevel': 50, 'SpellLevel': 50, 'MaxLevel': 80, 'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Extends the duration of all your heal over time effects on friendly targets within 60 yards by 8 sec and increases the tick rate of all your heal over time effects by 100% for 8 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+)
+scripted_by(flourish_200564, 'spell_dru_flourish', 'spell_dru_empowered_touch_capstone')

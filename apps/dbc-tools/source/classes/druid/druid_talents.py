@@ -10,14 +10,31 @@ from lib.dsl.registry import (
 )
 from ._masks import (
     EM_TRIGGER, ENTANGLING_ROOTS, INSECT_SWARM, MOONGLOW_SPELLS, NG_TRIGGER,
-    PROC_ATTR_TRIGGERED_CAN_PROC, PROC_HIT_CRITICAL, PROC_SPELL_PHASE_CAST, PROC_SPELL_PHASE_HIT,
-    PROC_SPELL_TYPE_DAMAGE,
+    PROC_ATTR_TRIGGERED_CAN_PROC, PROC_FLAG_DONE_MELEE_AUTO_ATTACK, PROC_FLAG_DONE_PERIODIC,
+    PROC_FLAG_DONE_RANGED_AUTO_ATTACK, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG,
+    PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS, PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS,
+    PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_NEG, PROC_FLAG_DONE_SPELL_RANGED_DMG_CLASS,
+    PROC_FLAG_TAKEN_DAMAGE, PROC_HIT_CRITICAL, PROC_SPELL_PHASE_CAST, PROC_SPELL_PHASE_HIT,
+    PROC_SPELL_TYPE_DAMAGE, PROC_SPELL_TYPE_HEAL,
 )
 from .druid_spells import (
-    berserk_50334, force_of_nature_33831, fury_of_elune_200336, insect_swarm_5570,
-    mass_entanglement_200334, moonkin_form_24858, nature_s_swiftness_17116, solar_beam_200335,
-    starfall_48505, starsurge_200333, survival_instincts_61336, swiftmend_18562, typhoon_50516,
-    wild_growth_48438,
+    berserk_50334, bloom_200560, cenarion_ward_200562, flourish_200564, force_of_nature_33831,
+    fury_of_elune_200336, insect_swarm_5570, lifebloom_33763, mass_entanglement_200334,
+    moonkin_form_24858, natural_alacrity_17116, solar_beam_200335, starfall_48505, starsurge_200333,
+    survival_instincts_61336, swiftmend_18562, tranquility_740, typhoon_50516, wild_growth_48438,
+)
+# druid-rework RESTO WP-A: this pass's own new/rewritten talent-rank and standalone spells
+# (druid_trigger_spells.py) that druid_talents.py's granted_by_talent()/scripted_by()/procs_on()
+# calls below need.
+from .druid_trigger_spells import (
+    deep_roots_200583, deep_roots_200584, deep_roots_200585, natural_shapeshifter_16833,
+    natural_shapeshifter_16834, natural_shapeshifter_16835, natures_mending_200580,
+    natures_mending_200581, natures_mending_200582, natures_resilience_200577,
+    natures_resilience_200578, natures_resilience_200579, omen_of_clarity_200600,
+    omen_of_clarity_200601, perennial_200589, perennial_200590, perennial_200591,
+    photosynthesis_200595, photosynthesis_200596, photosynthesis_200597, proliferation_200592,
+    proliferation_200593, proliferation_200594, unstoppable_growth_200598, unstoppable_growth_200599,
+    yseras_gift_200586, yseras_gift_200587, yseras_gift_200588,
 )
 from .druid_trigger_spells import astral_crit_200354, astral_crit_200355, astral_crit_200356, astral_surge_200344, astral_surge_200345, astral_surge_200346, balance_of_power_33592, balance_of_power_33596, balance_of_power_buff_200347, brambles_16836, starfire_cleave_200337, fury_of_elune_splash_200339, owlkin_frenzy_48389, owlkin_frenzy_48392, owlkin_frenzy_48393, brambles_16839, brambles_16840, brutal_impact_16940, brutal_impact_16941, celestial_attunement_200320, celestial_attunement_200321, celestial_attunement_200322, celestial_focus_16850, celestial_focus_16923, celestial_focus_16924, dreamstate_33597, dreamstate_33599, dreamstate_33956, earth_and_moon_48506, earth_and_moon_48510, earth_and_moon_48511, eclipse_48516, eclipse_48521, eclipse_48525, empowered_rejuvenation_33886, empowered_rejuvenation_33887, empowered_rejuvenation_33888, empowered_rejuvenation_33889, empowered_rejuvenation_33890, empowered_touch_33879, empowered_touch_33880, feral_aggression_16858, feral_aggression_16859, feral_aggression_16860, feral_aggression_16861, feral_aggression_16862, feral_instinct_16947, feral_instinct_16948, feral_instinct_16949, feral_swiftness_17002, feral_swiftness_24866, ferocity_16934, ferocity_16935, ferocity_16936, ferocity_16937, ferocity_16938, furor_17056, furor_17058, furor_17059, furor_17060, furor_17061, gale_winds_48488, gale_winds_48514, gale_winds_stack_200351, genesis_57810, genesis_57811, genesis_57812, genesis_57813, genesis_57814, gift_of_nature_17104, gift_of_nature_24943, gift_of_nature_24944, gift_of_nature_24945, gift_of_nature_24946, gift_of_the_earthmother_51179, gift_of_the_earthmother_51180, gift_of_the_earthmother_51181, gift_of_the_earthmother_51182, gift_of_the_earthmother_51183, improved_barkskin_63410, improved_barkskin_63411, improved_faerie_fire_33600, improved_faerie_fire_33601, improved_faerie_fire_33602, improved_insect_swarm_57849, improved_insect_swarm_57850, improved_insect_swarm_57851, improved_leader_of_the_pack_34297, improved_leader_of_the_pack_34300, improved_mangle_48489, improved_mangle_48491, improved_mangle_48532, improved_mark_of_the_wild_17050, improved_mark_of_the_wild_17051, improved_moonfire_16821, improved_moonfire_16822, improved_moonfire_200323, improved_moonkin_form_48384, improved_moonkin_form_48395, improved_moonkin_form_48396, improved_rejuvenation_17111, improved_rejuvenation_17112, improved_rejuvenation_17113, improved_tranquility_17123, improved_tranquility_17124, improved_tree_of_life_48535, improved_tree_of_life_48536, improved_tree_of_life_48537, infected_wounds_48483, infected_wounds_48484, infected_wounds_48485, intensity_17106, intensity_17107, intensity_17108, king_of_the_jungle_48492, king_of_the_jungle_48494, king_of_the_jungle_48495, leader_of_the_pack_17007, living_seed_48496, living_seed_48499, living_seed_48500, living_spirit_34151, living_spirit_34152, living_spirit_34153, lunar_guidance_33589, lunar_guidance_33590, lunar_guidance_33591, moonfury_16896, moonfury_16897, moonfury_16899, moonglow_16845, moonglow_16846, moonglow_16847, moonglow_buff_200348, moonglow_buff_200349, moonglow_buff_200350, natural_perfection_33881, natural_perfection_33882, natural_perfection_33883, natural_reaction_57878, natural_reaction_57880, natural_reaction_57881, natural_shapeshifter_16833, natural_shapeshifter_16834, natural_shapeshifter_16835, naturalist_17069, naturalist_17070, naturalist_17071, naturalist_17072, naturalist_17073, nature_s_bounty_17074, nature_s_bounty_17075, nature_s_bounty_17076, nature_s_bounty_17077, nature_s_bounty_17078, nature_s_focus_17063, nature_s_focus_17065, nature_s_focus_17066, nature_s_grace_16880, nature_s_grace_61345, nature_s_grace_61346, nature_s_majesty_35363, nature_s_majesty_35364, nature_s_reach_16819, nature_s_reach_16820, nature_s_splendor_200324, nature_s_splendor_200325, nature_s_splendor_200326, nurturing_instinct_33872, nurturing_instinct_33873, omen_of_clarity_16864, predatory_instincts_33859, predatory_instincts_33866, predatory_instincts_33867, predatory_strikes_16972, predatory_strikes_16974, predatory_strikes_16975, primal_gore_63503, primal_precision_48409, primal_precision_48410, primal_tenacity_33851, primal_tenacity_33852, primal_tenacity_33957, protector_of_the_pack_57873, protector_of_the_pack_57876, protector_of_the_pack_57877, rend_and_tear_48432, rend_and_tear_48433, rend_and_tear_48434, rend_and_tear_51268, rend_and_tear_51269, revitalize_48539, revitalize_48544, revitalize_48545, savage_fury_16998, savage_fury_16999, shredding_attacks_16966, shredding_attacks_16968, starlight_wrath_16814, starlight_wrath_16815, starlight_wrath_16816, starlight_wrath_16817, starlight_wrath_16818, starweaver_200327, starweaver_200328, starweaver_200329, subtlety_17118, subtlety_17119, subtlety_17120, survival_of_the_fittest_33853, survival_of_the_fittest_33855, survival_of_the_fittest_33856, swarming_rot_200330, swarming_rot_200331, swarming_rot_200332, tranquil_spirit_24968, tranquil_spirit_24969, tranquil_spirit_24970, tranquil_spirit_24971, tranquil_spirit_24972, vengeance_16909, vengeance_16910, vengeance_16911, vengeance_16912, vengeance_16913, vengeful_soul_200343, wrath_of_cenarius_33603, wrath_of_cenarius_33604, wrath_of_cenarius_33605, wrath_of_cenarius_33606, wrath_of_cenarius_33607
 
@@ -323,8 +340,8 @@ granted_by_talent(
     id=822,
     tab=restoration_282_tab,
     tier=0,
-    column=2,
-    ranks=[furor_17056, furor_17058, furor_17059, furor_17060, furor_17061],
+    column=3,
+    ranks=[natures_resilience_200577, natures_resilience_200578, natures_resilience_200579],
     player_castable=False,
 )
 
@@ -334,7 +351,7 @@ granted_by_talent(
     tab=restoration_282_tab,
     tier=0,
     column=1,
-    ranks=[nature_s_focus_17063, nature_s_focus_17065, nature_s_focus_17066],
+    ranks=[nature_s_focus_17063, nature_s_focus_17065],
     player_castable=False,
 )
 
@@ -342,9 +359,9 @@ granted_by_talent(
 granted_by_talent(
     id=824,
     tab=restoration_282_tab,
-    tier=1,
+    tier=4,
     column=0,
-    ranks=[naturalist_17069, naturalist_17070, naturalist_17071, naturalist_17072, naturalist_17073],
+    ranks=[naturalist_17069, naturalist_17070, naturalist_17071],
     player_castable=False,
 )
 
@@ -354,16 +371,15 @@ granted_by_talent(
     tab=restoration_282_tab,
     tier=5,
     column=2,
-    ranks=[nature_s_bounty_17074, nature_s_bounty_17075, nature_s_bounty_17076, nature_s_bounty_17077, nature_s_bounty_17078],
+    ranks=[nature_s_bounty_17074, nature_s_bounty_17075, nature_s_bounty_17076],
     player_castable=False,
-    depends_on={'talent_id': 830, 'rank': 2},
 )
 
 
 granted_by_talent(
     id=826,
     tab=restoration_282_tab,
-    tier=1,
+    tier=0,
     column=2,
     ranks=[natural_shapeshifter_16833, natural_shapeshifter_16834, natural_shapeshifter_16835],
     player_castable=False,
@@ -375,7 +391,7 @@ granted_by_talent(
     tab=restoration_282_tab,
     tier=2,
     column=1,
-    ranks=[omen_of_clarity_16864],
+    ranks=[omen_of_clarity_16864, omen_of_clarity_200600, omen_of_clarity_200601],
     player_castable=False,
 )
 
@@ -385,7 +401,7 @@ granted_by_talent(
     tab=restoration_282_tab,
     tier=4,
     column=1,
-    ranks=[gift_of_nature_17104, gift_of_nature_24943, gift_of_nature_24944, gift_of_nature_24945, gift_of_nature_24946],
+    ranks=[gift_of_nature_17104, gift_of_nature_24943, gift_of_nature_24944],
     player_castable=False,
 )
 
@@ -413,11 +429,11 @@ granted_by_talent(
 granted_by_talent(
     id=831,
     tab=restoration_282_tab,
-    tier=4,
-    column=0,
-    ranks=[nature_s_swiftness_17116],
-    player_castable=False,
-    depends_on={'talent_id': 829, 'rank': 2},
+    tier=6,
+    column=1,
+    ranks=[bloom_200560],
+    player_castable=True,
+    skill_line_ability_ids=[30447],
     flags=1,
 )
 
@@ -427,7 +443,7 @@ granted_by_talent(
     tab=restoration_282_tab,
     tier=1,
     column=1,
-    ranks=[subtlety_17118, subtlety_17119, subtlety_17120],
+    ranks=[deep_roots_200583, deep_roots_200584, deep_roots_200585],
     player_castable=False,
 )
 
@@ -447,7 +463,7 @@ granted_by_talent(
     tab=restoration_282_tab,
     tier=3,
     column=1,
-    ranks=[tranquil_spirit_24968, tranquil_spirit_24969, tranquil_spirit_24970, tranquil_spirit_24971, tranquil_spirit_24972],
+    ranks=[tranquil_spirit_24968, tranquil_spirit_24969, tranquil_spirit_24970],
     player_castable=False,
 )
 
@@ -455,11 +471,10 @@ granted_by_talent(
 granted_by_talent(
     id=844,
     tab=restoration_282_tab,
-    tier=6,
-    column=1,
+    tier=2,
+    column=2,
     ranks=[swiftmend_18562],
     player_castable=False,
-    depends_on={'talent_id': 828, 'rank': 4},
     flags=1,
 )
 
@@ -549,9 +564,9 @@ granted_by_talent(
 granted_by_talent(
     id=1789,
     tab=restoration_282_tab,
-    tier=7,
+    tier=5,
     column=1,
-    ranks=[empowered_rejuvenation_33886, empowered_rejuvenation_33887, empowered_rejuvenation_33888, empowered_rejuvenation_33889, empowered_rejuvenation_33890],
+    ranks=[empowered_rejuvenation_33886, empowered_rejuvenation_33887, empowered_rejuvenation_33888],
     player_castable=False,
 )
 
@@ -573,7 +588,6 @@ granted_by_talent(
     column=1,
     ranks=[65139],
     player_castable=False,
-    depends_on={'talent_id': 1789, 'rank': 4},
     flags=1,
 )
 
@@ -694,11 +708,10 @@ granted_by_talent(
 granted_by_talent(
     id=1915,
     tab=restoration_282_tab,
-    tier=2,
-    column=2,
-    ranks=[48411, 48412],
+    tier=1,
+    column=0,
+    ranks=[natures_mending_200580, natures_mending_200581, natures_mending_200582],
     player_castable=False,
-    depends_on={'talent_id': 826, 'rank': 2},
 )
 
 
@@ -707,7 +720,7 @@ granted_by_talent(
     tab=restoration_282_tab,
     tier=9,
     column=2,
-    ranks=[gift_of_the_earthmother_51179, gift_of_the_earthmother_51180, gift_of_the_earthmother_51181, gift_of_the_earthmother_51182, gift_of_the_earthmother_51183],
+    ranks=[gift_of_the_earthmother_51179, gift_of_the_earthmother_51180, gift_of_the_earthmother_51181],
     player_castable=False,
 )
 
@@ -715,11 +728,10 @@ granted_by_talent(
 granted_by_talent(
     id=1917,
     tab=restoration_282_tab,
-    tier=10,
-    column=1,
+    tier=4,
+    column=2,
     ranks=[wild_growth_48438],
     player_castable=False,
-    depends_on={'talent_id': 1791, 'rank': 0},
     flags=1,
 )
 
@@ -854,9 +866,8 @@ granted_by_talent(
     tab=restoration_282_tab,
     tier=8,
     column=2,
-    ranks=[improved_tree_of_life_48535, improved_tree_of_life_48536, improved_tree_of_life_48537],
+    ranks=[photosynthesis_200595, photosynthesis_200596, photosynthesis_200597],
     player_castable=False,
-    depends_on={'talent_id': 1791, 'rank': 0},
 )
 
 
@@ -936,7 +947,7 @@ granted_by_talent(
     tab=restoration_282_tab,
     tier=9,
     column=0,
-    ranks=[improved_barkskin_63410, improved_barkskin_63411],
+    ranks=[unstoppable_growth_200598, unstoppable_growth_200599],
     player_castable=False,
 )
 
@@ -949,6 +960,47 @@ granted_by_talent(
     ranks=[primal_gore_63503],
     player_castable=False,
     depends_on={'talent_id': 1918, 'rank': 4},
+)
+
+
+# --- druid-rework RESTO WP-A: new talents (RESTO §2.2/§8) ---
+
+granted_by_talent(
+    id=60055,
+    tab=restoration_282_tab,
+    tier=1,
+    column=2,
+    ranks=[yseras_gift_200586, yseras_gift_200587, yseras_gift_200588],
+    player_castable=False,
+)
+
+granted_by_talent(
+    id=60056,
+    tab=restoration_282_tab,
+    tier=1,
+    column=3,
+    ranks=[perennial_200589, perennial_200590, perennial_200591],
+    player_castable=False,
+)
+
+granted_by_talent(
+    id=60057,
+    tab=restoration_282_tab,
+    tier=7,
+    column=1,
+    ranks=[proliferation_200592, proliferation_200593, proliferation_200594],
+    player_castable=False,
+)
+
+granted_by_talent(
+    id=60058,
+    tab=restoration_282_tab,
+    tier=10,
+    column=1,
+    ranks=[flourish_200564],
+    player_castable=True,
+    skill_line_ability_ids=[30448],
+    flags=1,
 )
 
 
@@ -1086,3 +1138,103 @@ leave_spell_group(1107, 48391)  # Owlkin Frenzy out of "Temporary Damage Increas
 # (block starts at 1200, nothing else in this rework has minted one yet).
 spell_group(1200, moonglow_buff_200348, moonglow_buff_200349, moonglow_buff_200350, 17106)
 spell_group_rule(1200, 3, 'Druid - regen while casting (max, not sum)')
+
+
+# ============================================================================
+# druid-rework RESTO WP-A (RESTO §10 "scripted_by bindings WP-A must add" / "World-SQL
+# declarations"). Bloom (200560), Cenarion Ward (200562), Flourish (200564) and Swiftmend (18562)
+# are already bound next to their spell() declarations in druid_spells.py.
+# ============================================================================
+
+scripted_by(774, 'spell_dru_rejuvenation')
+scripted_by(200568, 'spell_dru_rejuvenation')
+scripted_by(lifebloom_33763, 'spell_dru_lifebloom_target_limit')
+scripted_by(5185, 'spell_dru_empowered_touch_capstone', 'spell_dru_photosynthesis_capstone', 'spell_dru_revitalize_capstone')
+scripted_by(8936, 'spell_dru_photosynthesis_capstone')
+scripted_by(8936, 'spell_dru_regrowth')  # WP-B coordination: a new AuraScript for Regrowth's own crit-chance/coefficient math (CORE-AUDIT rows 13-14), beyond RESTO.md's own class list
+
+# Harmony/Nature's Mending/Waking Dream/Omen-capstone direct-heal multiplier (CORE-AUDIT row 11) -
+# bound to all 7 direct-heal spell ids per WP-B's confirmed class list.
+scripted_by(5185, 'spell_dru_harmony_direct')
+scripted_by(8936, 'spell_dru_harmony_direct')
+scripted_by(18562, 'spell_dru_harmony_direct')
+scripted_by(200560, 'spell_dru_harmony_direct')
+scripted_by(200561, 'spell_dru_harmony_direct')
+scripted_by(44203, 'spell_dru_harmony_direct')
+scripted_by(200569, 'spell_dru_harmony_direct')
+scripted_by(17076, 'spell_dru_natures_bounty_capstone')
+scripted_by(33883, 'spell_dru_natural_perfection_capstone')
+scripted_by(200586, 'spell_dru_yseras_gift')
+scripted_by(200587, 'spell_dru_yseras_gift')
+scripted_by(200588, 'spell_dru_yseras_gift')
+scripted_by(34153, 'spell_dru_living_spirit_capstone')
+scripted_by(740, 'spell_dru_natures_focus_capstone')
+
+# --- Corrected stock-class replacements (Corrections item 1 in the WP-A brief: RESTO §10's own
+# "Stock scripts touched" section is wrong as literally written - CORE-AUDIT/upstream-merge.md
+# forbid editing a stock class in place, so WP-B replaces each with a new class in
+# spell_druid_resto.cpp, named "<stock ScriptName>_resto" (reconcile the exact name with WP-B's own
+# report before this pass finishes; these six pairs are WP-A's half of that displacement). ---
+
+unbind_script(-48496, 'spell_dru_living_seed')
+scripted_by(48496, 'spell_dru_living_seed_resto')
+scripted_by(48499, 'spell_dru_living_seed_resto')
+scripted_by(48500, 'spell_dru_living_seed_resto')
+
+unbind_script(-48539, 'spell_dru_revitalize')
+scripted_by(48539, 'spell_dru_revitalize_resto')
+scripted_by(48544, 'spell_dru_revitalize_resto')
+scripted_by(48545, 'spell_dru_revitalize_resto')
+
+unbind_script(-33763, 'spell_dru_lifebloom')
+scripted_by(33763, 'spell_dru_lifebloom_resto')
+
+unbind_script(-48438, 'spell_dru_wild_growth')
+scripted_by(48438, 'spell_dru_wild_growth_resto')  # RegisterSpellAndAuraScriptPair covers the aura half under this same name
+
+unbind_script(16864, 'spell_dru_omen_of_clarity')
+scripted_by(16864, 'spell_dru_omen_of_clarity_resto')
+scripted_by(200600, 'spell_dru_omen_of_clarity_resto')
+scripted_by(200601, 'spell_dru_omen_of_clarity_resto')
+
+
+# --- procs_on() declarations (RESTO §6/§8) not already declared next to their spell in
+# druid_trigger_spells.py (Nature's Bounty 17076, Proliferation 200592-4, Revitalize -48539) ---
+
+# Cenarion Ward release - any damage taken (melee, spell or periodic) consumes the ward
+procs_on(cenarion_ward_200562, proc_flags=PROC_FLAG_TAKEN_DAMAGE, chance=100)
+
+# Intensity (2,0): the stock Enrage-rage proc row is dead weight on this server - neutralise it
+# rather than leave an orphaned positive/negative mismatch (mage -44445 precedent)
+procs_on(-17106, proc_flags=0)
+
+# Omen of Clarity (2,1): direct damage (incl. auto attacks), direct Nature heals, and Lifebloom's
+# periodic heal only - the broad DONE_* mask below is what the DBC ProcTypeMask used to carry;
+# CheckProc (spell_dru_omen_of_clarity_resto) still filters to the exact three qualifying cases.
+_OMEN_PROC_FLAGS = (
+    PROC_FLAG_DONE_MELEE_AUTO_ATTACK | PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS
+    | PROC_FLAG_DONE_RANGED_AUTO_ATTACK | PROC_FLAG_DONE_SPELL_RANGED_DMG_CLASS
+    | PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_NEG | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS
+    | PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG | PROC_FLAG_DONE_PERIODIC
+)
+procs_on(16864, proc_flags=_OMEN_PROC_FLAGS, spell_phase_mask=PROC_SPELL_PHASE_HIT, chance=2, cooldown_ms=2000)
+procs_on(omen_of_clarity_200600, proc_flags=_OMEN_PROC_FLAGS, spell_phase_mask=PROC_SPELL_PHASE_HIT, chance=4, cooldown_ms=2000)
+procs_on(omen_of_clarity_200601, proc_flags=_OMEN_PROC_FLAGS, spell_phase_mask=PROC_SPELL_PHASE_HIT, chance=6, cooldown_ms=2000)
+
+# Natural Perfection (6,2) capstone - negative whole-chain row (stock -33881 precedent); direct
+# Nature heal crits only (Heal::IsDirectNatureHeal, checked in spell_dru_natural_perfection_capstone)
+procs_on(-33881, proc_flags=PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS, spell_type_mask=PROC_SPELL_TYPE_HEAL,
+         spell_phase_mask=PROC_SPELL_PHASE_HIT, hit_mask=PROC_HIT_CRITICAL, chance=100)
+
+# Living Seed (7,2) - negative whole-chain row; chance=0 falls back to each rank's own DBC
+# ProcChance (33/66/100, unchanged)
+procs_on(-48496, proc_flags=PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS, family_name=0,
+         spell_type_mask=PROC_SPELL_TYPE_HEAL, spell_phase_mask=PROC_SPELL_PHASE_HIT,
+         hit_mask=PROC_HIT_CRITICAL, chance=0)
+
+
+# --- World-SQL declarations (RESTO §0.1/§0.13 Q15, CORE-AUDIT row 38; PLAN B11, via WP-T's helpers) ---
+
+# Tree of Life is a transform buff, not a shapeshift form: 5420's bonuses (HoT cost, Healing Touch
+# cast time, Regrowth crit) ride along with 33891 via an aura link instead of ShapeshiftMask.
+linked_spell(33891, 5420, type=2, comment='Tree of Life buff carries its passive bonuses')

@@ -88,7 +88,7 @@ def _has_dummy_aura(entry: dict) -> bool:
     return False
 
 
-def _load_druid_entries():
+def _load_druid_package():
     ids_cfg = source.load_ids(TOOL_ROOT / "source" / "ids.yaml")
     # Balance WP-A adds this package's first trained_by() calls (Starsurge/Mass Entanglement/Solar
     # Beam/Typhoon), which need a real TrainerIndex to validate their TrainerId - same loader
@@ -98,17 +98,18 @@ def _load_druid_entries():
     trainer_index = trainer_state.load_trainer_index()
     spell_table_index = spell_tables.load_spell_table_index()
     existing_group_ids = {key[0] for key in spell_table_index.live_keys("spell_group")}
-    reg = registry.load_class_package(
+    return registry.load_class_package(
         DRUID_DIR, ids_cfg=ids_cfg, trainer_index=trainer_index,
         existing_group_ids=existing_group_ids,
     )
-    return reg.spells
 
 
 class InertKeyTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.entries = _load_druid_entries()
+        reg = _load_druid_package()
+        cls.entries = reg.spells
+        cls.talents = reg.talents
 
     def test_balance_retired_dummy_icons_are_clear(self):
         # CORE-AUDIT rows 3/4 - Balance's own pass; must be true by Balance's WP-C.
@@ -122,7 +123,6 @@ class InertKeyTest(unittest.TestCase):
             if entry.get("spell_icon_id") in FERAL_RETIRED_DUMMY_ICONS and _has_dummy_aura(entry):
                 self.fail(f"spell {entry['id']} ({entry.get('name')}) still carries a DUMMY aura on Feral-retired icon {entry.get('spell_icon_id')} - CORE-AUDIT rows 24/35")
 
-    @unittest.skip("Resto pass (CORE-AUDIT row 16) hasn't landed - Resto's own WP-B removes this skip")
     def test_resto_retired_generic_dummy_icon_is_clear(self):
         for entry in self.entries:
             if entry.get("spell_icon_id") == RESTO_RETIRED_GENERIC_DUMMY_ICON and _has_dummy_aura(entry):
@@ -145,12 +145,18 @@ class InertKeyTest(unittest.TestCase):
                     self.fail(f"spell {entry['id']} reuses retired aura-175/icon-2254 marker (Nurturing Instinct) - CORE-AUDIT row 32")
 
     def test_no_new_id_reuses_improved_barkskin_ranks(self):
-        # Doesn't (yet) assert 63410/63411 are unreferenced - that's true only once Resto's WP-B
-        # moves talent 2264 onto 200598/200599 (CORE-AUDIT row 18). What's checkable now, and
-        # forever: nothing this rework mints collides with these ids.
+        # Nothing this rework mints may ever collide with these ids, regardless of pass order.
         minted = MINTED_TALENT_IDS | {e["id"] for e in self.entries if e["id"] >= CUSTOM_SPELL_ID_MIN}
         reused = minted & IMPROVED_BARKSKIN_RANK_IDS
         self.assertFalse(reused, f"a newly-minted druid-rework id collides with Improved Barkskin's ranks: {reused} - CORE-AUDIT row 18")
+
+    def test_improved_barkskin_ranks_are_unreferenced(self):
+        # Resto's WP-B has now moved talent 2264 onto 200598/200599 (CORE-AUDIT row 18) - 63410/63411
+        # must no longer be referenced as a talent rank by anything.
+        for talent in self.talents:
+            referenced = IMPROVED_BARKSKIN_RANK_IDS & set(talent.get("rank_spell_ids") or [])
+            if referenced:
+                self.fail(f"talent {talent.get('id')} still references Improved Barkskin rank(s) {referenced} - CORE-AUDIT row 18")
 
     def test_nourish_bit_never_assigned_to_new_content(self):
         # The bit itself stays on stock rows (e.g. Spark of Nature 48435) until Resto's WP-A drops
@@ -166,7 +172,6 @@ class InertKeyTest(unittest.TestCase):
                 if raw.get(f"EffectSpellClassMask{letter}_2", 0) & NOURISH_BIT:
                     self.fail(f"new spell {entry['id']} sets the retired Nourish dword-2 bit on EffectSpellClassMask{letter}_2 - CORE-AUDIT §4 / _masks.py NOURISH")
 
-    @unittest.skip("Resto pass (CORE-AUDIT row 19) hasn't landed - Resto's own WP-B removes this skip once it clears 18562's TargetAuraState to 0")
     def test_swiftmend_target_aura_state_cleared(self):
         for entry in self.entries:
             if entry["id"] != 18562:
