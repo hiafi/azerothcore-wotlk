@@ -15,18 +15,18 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-// Custom: player-chosen Bear Form appearance (docs/bear-form-appearances.md).
+// Custom: player-chosen shapeshift appearance - Bear Form and Cat Form (docs/shapeshift-appearances.md).
 //
-// npc_bear_appearance (creature_template 900012) offers a catalogue of bear models via gossip. The
-// choice is stored in characters.character_shapeshift_appearance and set on the Player, where
-// ObjectMgr::GetModelForShapeshift picks it up ahead of the race/hair-colour defaults - so every
+// npc_shapeshift_appearance (creature_template 900012) offers a catalogue of models per form via
+// gossip. The choice is stored in characters.character_shapeshift_appearance and set on the Player,
+// where ObjectMgr::GetModelForShapeshift picks it up ahead of the race/hair-colour defaults - so every
 // path that re-derives the form model (shifting, relog, death, transform auras ending) uses it.
 //
 // It is loaded in OnPlayerLoadFromDB, which runs before the saved auras are re-applied: a player who
-// logged out in bear form comes back in the chosen model without any refresh.
+// logged out shifted comes back in the chosen model without any refresh.
 //
-// Display IDs 90100-90149 are minted by apps/dbc-tools/build_patch_f.py (client files ship in
-// patch-F.mpq, DBC rows in patch-M.mpq); the Night Elf / Tauren entries are stock client displays.
+// Display IDs 901xx (bear) / 902xx (cat) are minted by apps/dbc-tools/build_patch_f.py (client files
+// ship in patch-F.mpq, DBC rows in patch-M.mpq); every other ID below is a stock client display.
 
 #include "Chat.h"
 #include "CreatureScript.h"
@@ -34,113 +34,178 @@
 #include "Player.h"
 #include "PlayerScript.h"
 #include "ScriptedGossip.h"
-#include <array>
 #include <string>
 #include <vector>
 
 namespace
 {
-    constexpr uint32 NPC_TEXT_BEAR_APPEARANCE = 900012;
+    constexpr uint32 NPC_TEXT_SHAPESHIFT_APPEARANCE = 900012;
 
-    enum BearAppearanceGossip
+    enum ShapeshiftAppearanceGossip
     {
-        SENDER_MENU                 = GOSSIP_SENDER_MAIN,
-        SENDER_CATEGORY,            // action = category index
+        SENDER_MAIN_MENU            = GOSSIP_SENDER_MAIN,
+        SENDER_FORM,                // action = set index
+        SENDER_CATEGORY,            // action = set index * CATEGORY_STRIDE + category index
         SENDER_APPEARANCE,          // action = display id
-
-        ACTION_SHOW_CATEGORIES      = GOSSIP_ACTION_INFO_DEF,
-        ACTION_RESET
+        SENDER_RESET                // action = set index
     };
 
-    // Dire Bear Form shares Bear Form's choice; it is stored once, under FORM_BEAR.
-    constexpr std::array<ShapeshiftForm, 2> BEAR_FORMS = { FORM_BEAR, FORM_DIREBEAR };
+    constexpr uint32 CATEGORY_STRIDE = 100;
 
-    struct BearAppearance
+    struct Appearance
     {
         uint32 DisplayId;
         char const* Name;
     };
 
-    struct BearAppearanceCategory
+    struct AppearanceCategory
     {
         char const* Name;
-        std::vector<BearAppearance> Appearances;
+        std::vector<Appearance> Appearances;
     };
 
-    std::vector<BearAppearanceCategory> const BearAppearanceCategories =
+    struct AppearanceSet
     {
-        { "Night Elf", { { 29413, "Purple" }, { 29414, "Black" }, { 29415, "Blue" }, { 29416, "White" },
-                         { 29417, "Red" } } },
-        { "Tauren", { { 2289, "Brown" }, { 29418, "Black" }, { 29419, "Silver" }, { 29420, "Yellow" },
-                      { 29421, "White" } } },
-        { "Troll", { { 90100, "Blue" }, { 90101, "Purple" }, { 90102, "Red" }, { 90103, "White" },
-                     { 90104, "Yellow" } } },
-        { "Armored Troll", { { 90105, "Blue" }, { 90106, "Purple" }, { 90107, "Red" }, { 90108, "White" },
-                             { 90109, "Yellow" } } },
-        { "Claws of Ursoc I", { { 90110, "Black" }, { 90111, "Blue" }, { 90112, "Brown" }, { 90113, "Burgundy" },
-                                { 90114, "Gold" }, { 90115, "Purple" }, { 90116, "White" },
-                                { 90117, "Val'sharah" } } },
-        { "Claws of Ursoc II", { { 90118, "Cool" }, { 90119, "Dark" }, { 90120, "Green" }, { 90121, "Pink" } } },
-        { "Claws of Ursoc III", { { 90122, "Blue" }, { 90123, "Green" }, { 90124, "Purple" }, { 90125, "Red" } } },
-        { "Claws of Ursoc IV", { { 90126, "Blue" }, { 90127, "Brown" }, { 90128, "Green" }, { 90129, "Red" } } },
-        { "Claws of Ursoc V", { { 90130, "Black" }, { 90131, "Brown" }, { 90132, "Red" }, { 90133, "White" } } },
-        { "Claws of Ursoc VI", { { 90134, "White" }, { 90135, "Brown" }, { 90136, "Blonde" }, { 90137, "Black" } } },
-        { "Kul Tiran", { { 90138, "Brown" }, { 90139, "Dark" }, { 90140, "Green" }, { 90141, "Light" } } },
-        { "Zandalari", { { 90142, "Blue" }, { 90143, "Dark" }, { 90144, "Green" }, { 90145, "White" } } },
-        { "Zandalari, Unarmored", { { 90146, "Black" }, { 90147, "Blue" }, { 90148, "Green" }, { 90149, "White" } } },
+        char const* Name;                   // menu label
+        char const* Noun;                   // chat messages
+        ShapeshiftForm StorageForm;         // the choice is stored once, under this form
+        std::vector<ShapeshiftForm> Forms;  // ...and applies to all of these
+        std::vector<AppearanceCategory> Categories;
     };
 
-    std::pair<BearAppearanceCategory const*, BearAppearance const*> FindBearAppearance(uint32 displayId)
+    std::vector<AppearanceSet> const AppearanceSets =
     {
-        for (BearAppearanceCategory const& category : BearAppearanceCategories)
-            for (BearAppearance const& appearance : category.Appearances)
-                if (appearance.DisplayId == displayId)
-                    return { &category, &appearance };
+        { "Bear Form", "bear form", FORM_BEAR, { FORM_BEAR, FORM_DIREBEAR },
+        {
+            { "Night Elf", { { 29413, "Purple" }, { 29414, "Black" }, { 29415, "Blue" }, { 29416, "White" },
+                             { 29417, "Red" } } },
+            { "Tauren", { { 2289, "Brown" }, { 29418, "Black" }, { 29419, "Silver" }, { 29420, "Yellow" },
+                          { 29421, "White" } } },
+            { "Troll", { { 90100, "Blue" }, { 90101, "Purple" }, { 90102, "Red" }, { 90103, "White" },
+                         { 90104, "Yellow" } } },
+            { "Armored Troll", { { 90105, "Blue" }, { 90106, "Purple" }, { 90107, "Red" }, { 90108, "White" },
+                                 { 90109, "Yellow" } } },
+            { "Claws of Ursoc I", { { 90110, "Black" }, { 90111, "Blue" }, { 90112, "Brown" },
+                                    { 90113, "Burgundy" }, { 90114, "Gold" }, { 90115, "Purple" },
+                                    { 90116, "White" }, { 90117, "Val'sharah" } } },
+            { "Claws of Ursoc II", { { 90118, "Cool" }, { 90119, "Dark" }, { 90120, "Green" }, { 90121, "Pink" } } },
+            { "Claws of Ursoc III", { { 90122, "Blue" }, { 90123, "Green" }, { 90124, "Purple" },
+                                      { 90125, "Red" } } },
+            { "Claws of Ursoc IV", { { 90126, "Blue" }, { 90127, "Brown" }, { 90128, "Green" }, { 90129, "Red" } } },
+            { "Claws of Ursoc V", { { 90130, "Black" }, { 90131, "Brown" }, { 90132, "Red" }, { 90133, "White" } } },
+            { "Claws of Ursoc VI", { { 90134, "White" }, { 90135, "Brown" }, { 90136, "Blonde" },
+                                     { 90137, "Black" } } },
+            { "Kul Tiran", { { 90138, "Brown" }, { 90139, "Dark" }, { 90140, "Green" }, { 90141, "Light" } } },
+            { "Zandalari", { { 90142, "Blue" }, { 90143, "Dark" }, { 90144, "Green" }, { 90145, "White" } } },
+            { "Zandalari, Unarmored", { { 90146, "Black" }, { 90147, "Blue" }, { 90148, "Green" },
+                                        { 90149, "White" } } },
+        } },
+        { "Cat Form", "cat form", FORM_CAT, { FORM_CAT },
+        {
+            { "Night Elf", { { 892, "Black" }, { 29405, "Violet" }, { 29406, "Purple" }, { 29407, "Dark Blue" },
+                             { 29408, "White" } } },
+            { "Tauren", { { 8571, "Brown" }, { 29409, "White" }, { 29410, "Yellow" }, { 29411, "Red" },
+                          { 29412, "Black" } } },
+            { "Lynx", { { 15593, "Red" }, { 18167, "Yellow" }, { 90250, "Painted" } } },
+            { "Troll", { { 90200, "Black" }, { 90201, "Blue" }, { 90202, "Green" }, { 90203, "Red" },
+                         { 90204, "White" } } },
+            { "Armored Troll", { { 90205, "Black" }, { 90206, "Blue" }, { 90207, "Green" }, { 90208, "Red" },
+                                 { 90209, "White" } } },
+            { "Fangs of Ashamane I", { { 90210, "Black" }, { 90211, "Blue" }, { 90212, "Brown" },
+                                       { 90213, "Orange" }, { 90214, "Purple" }, { 90215, "Val'sharah" },
+                                       { 90216, "White" } } },
+            { "Fangs of Ashamane II", { { 90217, "Blue" }, { 90218, "Green" }, { 90219, "Purple" },
+                                        { 90220, "Red" } } },
+            { "Fangs of Ashamane III", { { 90221, "Blue" }, { 90222, "Green" }, { 90223, "Orange" },
+                                         { 90224, "White" } } },
+            { "Fangs of Ashamane IV", { { 90225, "Green" }, { 90226, "Orange" }, { 90227, "Purple" },
+                                        { 90228, "White" } } },
+            { "Fangs of Ashamane V", { { 90229, "Blue" }, { 90230, "Green" }, { 90231, "Orange" },
+                                       { 90232, "Red" } } },
+            { "Kul Tiran", { { 90233, "Brown" }, { 90234, "Dark" }, { 90235, "Green" }, { 90236, "Light" } } },
+            { "Kul Tiran, Unarmored", { { 90237, "Brown" }, { 90238, "Dark" }, { 90239, "Green" },
+                                        { 90240, "Light" } } },
+            { "Zandalari", { { 90241, "Black" }, { 90242, "Blue" }, { 90243, "Green" }, { 90244, "White" } } },
+            { "Zandalari, Unarmored", { { 90245, "Black" }, { 90246, "Blue" }, { 90247, "Green" },
+                                        { 90248, "White" } } },
+            { "Treant", { { 90249, "Bark" } } },
+        } },
+    };
 
-        return { nullptr, nullptr };
+    struct AppearanceLookup
+    {
+        AppearanceSet const* Set = nullptr;
+        AppearanceCategory const* Category = nullptr;
+        Appearance const* Entry = nullptr;
+    };
+
+    // Display IDs are unique across sets, so the ID alone identifies the form it belongs to.
+    AppearanceLookup FindAppearance(uint32 displayId)
+    {
+        for (AppearanceSet const& set : AppearanceSets)
+            for (AppearanceCategory const& category : set.Categories)
+                for (Appearance const& appearance : category.Appearances)
+                    if (appearance.DisplayId == displayId)
+                        return { &set, &category, &appearance };
+
+        return { };
     }
 
-    bool IsBearForm(ShapeshiftForm form)
+    bool SetHasForm(AppearanceSet const& set, ShapeshiftForm form)
     {
-        return form == FORM_BEAR || form == FORM_DIREBEAR;
+        for (ShapeshiftForm setForm : set.Forms)
+            if (setForm == form)
+                return true;
+
+        return false;
+    }
+
+    void ApplyAppearance(Player* player, AppearanceSet const& set, uint32 displayId)
+    {
+        for (ShapeshiftForm form : set.Forms)
+            player->SetShapeshiftAppearance(form, displayId);
     }
 
     // displayId 0 restores the race/hair-colour default.
-    void SetBearAppearance(Player* player, uint32 displayId)
+    void SetAppearance(Player* player, AppearanceSet const& set, uint32 displayId)
     {
-        for (ShapeshiftForm form : BEAR_FORMS)
-            player->SetShapeshiftAppearance(form, displayId);
+        ApplyAppearance(player, set, displayId);
 
         CharacterDatabasePreparedStatement* stmt;
         if (displayId)
         {
             stmt = CharacterDatabase.GetPreparedStatement(CHAR_REP_SHAPESHIFT_APPEARANCE);
             stmt->SetData(0, player->GetGUID().GetCounter());
-            stmt->SetData(1, uint8(FORM_BEAR));
+            stmt->SetData(1, uint8(set.StorageForm));
             stmt->SetData(2, displayId);
         }
         else
         {
             stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_SHAPESHIFT_APPEARANCE);
             stmt->SetData(0, player->GetGUID().GetCounter());
-            stmt->SetData(1, uint8(FORM_BEAR));
+            stmt->SetData(1, uint8(set.StorageForm));
         }
         CharacterDatabase.Execute(stmt);
 
         // Already shifted: re-derive the model now (same precedence rules as an aura ending)
-        if (IsBearForm(player->GetShapeshiftForm()))
+        if (SetHasForm(set, player->GetShapeshiftForm()))
             player->RestoreDisplayId();
+    }
+
+    std::string MarkCurrent(char const* name, bool isCurrent)
+    {
+        return isCurrent ? Acore::StringFormat("{} (current)", name) : name;
     }
 }
 
-class npc_bear_appearance : public CreatureScript
+class npc_shapeshift_appearance : public CreatureScript
 {
 public:
-    npc_bear_appearance() : CreatureScript("npc_bear_appearance") { }
+    npc_shapeshift_appearance() : CreatureScript("npc_shapeshift_appearance") { }
 
     bool OnGossipHello(Player* player, Creature* creature) override
     {
-        SendCategoryMenu(player, creature);
+        SendFormMenu(player, creature);
         return true;
     }
 
@@ -150,37 +215,54 @@ public:
 
         switch (sender)
         {
-            case SENDER_CATEGORY:
-                if (action < BearAppearanceCategories.size())
-                    SendAppearanceMenu(player, creature, action);
+            case SENDER_FORM:
+                if (action < AppearanceSets.size())
+                    SendCategoryMenu(player, creature, action);
                 else
                     CloseGossipMenuFor(player);
                 break;
+            case SENDER_CATEGORY:
+            {
+                uint32 const setIndex = action / CATEGORY_STRIDE;
+                uint32 const categoryIndex = action % CATEGORY_STRIDE;
+                if (setIndex < AppearanceSets.size() && categoryIndex < AppearanceSets[setIndex].Categories.size())
+                    SendAppearanceMenu(player, creature, setIndex, categoryIndex);
+                else
+                    CloseGossipMenuFor(player);
+                break;
+            }
             case SENDER_APPEARANCE:
             {
-                auto [category, appearance] = FindBearAppearance(action);
-                if (!appearance)
+                AppearanceLookup const lookup = FindAppearance(action);
+                if (!lookup.Entry)
                 {
                     CloseGossipMenuFor(player);
                     break;
                 }
 
-                SetBearAppearance(player, appearance->DisplayId);
-                ChatHandler(player->GetSession()).PSendSysMessage("Your bear form now takes the shape of: {} - {}.",
-                    category->Name, appearance->Name);
+                SetAppearance(player, *lookup.Set, lookup.Entry->DisplayId);
+                ChatHandler(player->GetSession()).PSendSysMessage("Your {} now takes the shape of: {} - {}.",
+                    lookup.Set->Noun, lookup.Category->Name, lookup.Entry->Name);
                 // Stay on the same page so a shifted player can flick through colours
-                SendAppearanceMenu(player, creature, uint32(category - BearAppearanceCategories.data()));
+                SendAppearanceMenu(player, creature, uint32(lookup.Set - AppearanceSets.data()),
+                    uint32(lookup.Category - lookup.Set->Categories.data()));
                 break;
             }
-            case SENDER_MENU:
-            default:
-                if (action == ACTION_RESET)
+            case SENDER_RESET:
+                if (action < AppearanceSets.size())
                 {
-                    SetBearAppearance(player, 0);
-                    ChatHandler(player->GetSession()).SendSysMessage(
-                        "Your bear form has returned to its natural shape.");
+                    AppearanceSet const& set = AppearanceSets[action];
+                    SetAppearance(player, set, 0);
+                    ChatHandler(player->GetSession()).PSendSysMessage("Your {} has returned to its natural shape.",
+                        set.Noun);
+                    SendCategoryMenu(player, creature, action);
                 }
-                SendCategoryMenu(player, creature);
+                else
+                    CloseGossipMenuFor(player);
+                break;
+            case SENDER_MAIN_MENU:
+            default:
+                SendFormMenu(player, creature);
                 break;
         }
 
@@ -188,39 +270,52 @@ public:
     }
 
 private:
-    static void SendCategoryMenu(Player* player, Creature* creature)
+    static void SendFormMenu(Player* player, Creature* creature)
     {
         ClearGossipMenuFor(player);
 
-        uint32 const current = player->GetShapeshiftAppearance(FORM_BEAR);
-        for (uint32 i = 0; i < BearAppearanceCategories.size(); ++i)
+        for (uint32 i = 0; i < AppearanceSets.size(); ++i)
+            AddGossipItemFor(player, GOSSIP_ICON_TABARD, AppearanceSets[i].Name, SENDER_FORM, i);
+
+        SendGossipMenuFor(player, NPC_TEXT_SHAPESHIFT_APPEARANCE, creature);
+    }
+
+    static void SendCategoryMenu(Player* player, Creature* creature, uint32 setIndex)
+    {
+        ClearGossipMenuFor(player);
+
+        AppearanceSet const& set = AppearanceSets[setIndex];
+        uint32 const current = player->GetShapeshiftAppearance(set.StorageForm);
+        AppearanceCategory const* currentCategory = current ? FindAppearance(current).Category : nullptr;
+        for (uint32 i = 0; i < set.Categories.size(); ++i)
         {
-            BearAppearanceCategory const& category = BearAppearanceCategories[i];
-            bool const isCurrent = current && FindBearAppearance(current).first == &category;
-            std::string const text = isCurrent ? Acore::StringFormat("{} (current)", category.Name) : category.Name;
-            AddGossipItemFor(player, GOSSIP_ICON_TABARD, text, SENDER_CATEGORY, i);
+            AppearanceCategory const& category = set.Categories[i];
+            AddGossipItemFor(player, GOSSIP_ICON_TABARD, MarkCurrent(category.Name, &category == currentCategory),
+                SENDER_CATEGORY, setIndex * CATEGORY_STRIDE + i);
         }
 
         if (current)
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Restore my natural bear form.", SENDER_MENU, ACTION_RESET);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, Acore::StringFormat("Restore my natural {}.", set.Noun),
+                SENDER_RESET, setIndex);
 
-        SendGossipMenuFor(player, NPC_TEXT_BEAR_APPEARANCE, creature);
+        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Back", SENDER_MAIN_MENU, 0);
+        SendGossipMenuFor(player, NPC_TEXT_SHAPESHIFT_APPEARANCE, creature);
     }
 
-    static void SendAppearanceMenu(Player* player, Creature* creature, uint32 categoryIndex)
+    static void SendAppearanceMenu(Player* player, Creature* creature, uint32 setIndex, uint32 categoryIndex)
     {
         ClearGossipMenuFor(player);
 
-        uint32 const current = player->GetShapeshiftAppearance(FORM_BEAR);
-        for (BearAppearance const& appearance : BearAppearanceCategories[categoryIndex].Appearances)
+        AppearanceSet const& set = AppearanceSets[setIndex];
+        uint32 const current = player->GetShapeshiftAppearance(set.StorageForm);
+        for (Appearance const& appearance : set.Categories[categoryIndex].Appearances)
         {
-            bool const isCurrent = appearance.DisplayId == current;
-            std::string const text = isCurrent ? Acore::StringFormat("{} (current)", appearance.Name) : appearance.Name;
+            std::string const text = MarkCurrent(appearance.Name, appearance.DisplayId == current);
             AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, text, SENDER_APPEARANCE, appearance.DisplayId);
         }
 
-        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Back", SENDER_MENU, ACTION_SHOW_CATEGORIES);
-        SendGossipMenuFor(player, NPC_TEXT_BEAR_APPEARANCE, creature);
+        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Back", SENDER_FORM, setIndex);
+        SendGossipMenuFor(player, NPC_TEXT_SHAPESHIFT_APPEARANCE, creature);
     }
 };
 
@@ -230,7 +325,7 @@ public:
     ShapeshiftAppearance_PlayerScript() : PlayerScript("ShapeshiftAppearance_PlayerScript",
         { PLAYERHOOK_ON_LOAD_FROM_DB, PLAYERHOOK_ON_DELETE_FROM_DB }) { }
 
-    // Synchronous on purpose: this has to land before LoadFromDB re-applies a saved bear form aura.
+    // Synchronous on purpose: this has to land before LoadFromDB re-applies a saved shapeshift aura.
     void OnPlayerLoadFromDB(Player* player) override
     {
         CharacterDatabasePreparedStatement* stmt =
@@ -246,7 +341,8 @@ public:
             uint8 const form = fields[0].Get<uint8>();
             uint32 const displayId = fields[1].Get<uint32>();
 
-            if (form != FORM_BEAR || !FindBearAppearance(displayId).second)
+            AppearanceLookup const lookup = FindAppearance(displayId);
+            if (!lookup.Set || lookup.Set->StorageForm != form)
             {
                 LOG_WARN("entities.player",
                     "character_shapeshift_appearance: {} has unknown form {} / display {}, ignored",
@@ -254,8 +350,7 @@ public:
                 continue;
             }
 
-            for (ShapeshiftForm bearForm : BEAR_FORMS)
-                player->SetShapeshiftAppearance(bearForm, displayId);
+            ApplyAppearance(player, *lookup.Set, displayId);
         } while (result->NextRow());
     }
 
@@ -270,6 +365,6 @@ public:
 
 void AddSC_custom_shapeshift_appearance()
 {
-    new npc_bear_appearance();
+    new npc_shapeshift_appearance();
     new ShapeshiftAppearance_PlayerScript();
 }

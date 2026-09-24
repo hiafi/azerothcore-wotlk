@@ -1,23 +1,28 @@
 #!/usr/bin/env python3
 """
-Bear Form appearances (docs/bear-form-appearances.md): mints the CreatureModelData.dbc /
-CreatureDisplayInfo.dbc rows for the player-choosable Bear Form looks, emits their server-side SQL
-overlay, and packages the underlying model/skin/anim/texture files into patch-F.mpq ("F" = forms -
-Cat Form's equivalent set can join the same archive later).
+Shapeshift appearances (docs/shapeshift-appearances.md): mints the CreatureModelData.dbc /
+CreatureDisplayInfo.dbc rows for the player-choosable Bear Form and Cat Form looks, emits their
+server-side SQL overlay, and packages the underlying model/skin/anim/texture files into patch-F.mpq
+("F" = forms).
 
 Every row is cloned verbatim from the Ascension client backup's own live, working
 CreatureModelData/CreatureDisplayInfo rows (its patch-M.MPQ) - only the IDs are remapped into this
 project's custom range. Those rows answered what docs/ascension-asset-mining.md Part 2 left open:
 artifact7-12 are not separate looks but per-colour geometry variants of the artifact3/artifact4
-sets, so every mined display has a real texture on disk. Deliberately left out, each for a checked
-reason:
-  - Worgen bears and the Night Elf / Tauren "Epic" armored bears: Ascension has DBC rows for them
-    but their .m2 files are nowhere in the backup.
+sets (the cat's artifact6-8 likewise belong to artifact2), so every mined display has a real
+texture on disk. Deliberately left out, each for a checked reason:
+  - Worgen bears/cats and the Night Elf / Tauren "Epic" armored bears/cats: Ascension has DBC rows
+    for them but their .m2 files are nowhere in the backup.
   - druidbear2_Pantheon: its only display needs a custom ParticleColor.dbc row (1994) this project
     doesn't have.
   - The plain druidbear2 / druidbeartauren2 / ... base models: no Ascension display row uses them.
-  - Stock bears (Night Elf 29413-29417, Tauren 2289 + 29418-29421): already in the 3.3.5a client,
-    offered as-is by the NPC with no new rows.
+  - Stock bears (Night Elf 29413-29417, Tauren 2289 + 29418-29421), stock cats (Night Elf 892 +
+    29405-29408, Tauren 8571 + 29409-29412) and the stock Lynx (15593 red, 18167 yellow): already in
+    the 3.3.5a client, offered as-is by the NPC with no new rows.
+
+The painted Lynx is the one display built on a *stock* model (DruidCat_Legacy, 3143): Ascension
+gave it a duplicate model row, but only its texture is new, so STOCK_MODELS points it back at 3143
+and just the .blp ships.
 
 The file list is derived, not hand-kept: for each model, its .m2 plus every NN.skin / NNNN-NN.anim
 sibling, each display's TextureVariation .blp files, and every hardcoded texture path in the .m2's
@@ -27,9 +32,10 @@ unless it's listed in STOCK_CLIENT_FILES.
 This script owns patch-F.mpq only. The two DBCs it edits live in the shared working copy that
 build_patch_m.py packs into patch-M.mpq, so run build_patch_m.py afterwards to ship them.
 
-IDs: 90100-90199 is reserved for Bear Form appearances in both tables (90001-90004 are the Mage /
+IDs, in both tables: 90100-90199 Bear Form, 90200-90299 Cat Form (90001-90004 are the Mage /
 Priest VFX rows). The display IDs are mirrored in src/server/scripts/Custom/
-custom_shapeshift_appearance.cpp - keep the two in sync.
+custom_shapeshift_appearance.cpp - keep the two in sync. --sql-out always emits the whole
+90100-90299 range, so the newest generated migration is the complete state.
 
 Usage:
     python3 apps/dbc-tools/build_patch_f.py [--sql-out PATH] [--deploy-root PATH]
@@ -64,9 +70,14 @@ try:
 except ImportError:
     DEFAULT_DEPLOY_ROOT = None
 
-# Hardcoded textures some models reference that the stock 3.3.5a client already ships.
+# The stock 3.3.5a client's own archive names; Ascension's copies of these carry no custom content.
+BLIZZARD_ARCHIVES = {"common.mpq", "common-2.mpq", "expansion.mpq", "lichking.mpq", "patch.mpq", "patch-2.mpq",
+                     "patch-3.mpq"}
+
+# Textures the mined models/displays reference that the stock 3.3.5a client already ships.
 STOCK_CLIENT_FILES = {
-    "particles\\breath24.blp",  # common.MPQ
+    "particles\\breath24.blp",            # common.MPQ
+    "creature\\druidcat\\lynxeyeglow.blp",  # common.MPQ
 }
 
 # Ascension CreatureModelData ID -> our CreatureModelData ID.
@@ -88,6 +99,28 @@ MODELS = {
     5733: 90114,   # druidbearkultiran
     10874: 90115,  # druidbearzandalaritroll
     5734: 90116,   # druidbearzandalaritroll_noarmor
+
+    3519: 90200,   # Creature\DruidCatTroll\DruidCatTroll
+    4670: 90201,   # Creature\DruidCatTroll\DruidCatTrollEpic
+    5723: 90202,   # druidcat2_artifact1
+    5724: 90203,   # druidcat2_artifact2 (artifact2, blue)
+    5725: 90204,   # druidcat2_artifact3
+    5726: 90205,   # druidcat2_artifact4
+    5727: 90206,   # druidcat2_artifact5
+    5728: 90207,   # druidcat2_artifact6 (artifact2, green)
+    5729: 90208,   # druidcat2_artifact7 (artifact2, purple)
+    5730: 90209,   # druidcat2_artifact8 (artifact2, red)
+    10990: 90210,  # druidcatkultiran
+    5735: 90211,   # druidcatkultiran_noarmor
+    10911: 90212,  # druidcatzandalaritroll
+    5736: 90213,   # druidcatzandalaritroll_noarmor
+    204963: 90214,  # druidcat2_tree
+}
+
+# Ascension CreatureModelData ID -> the stock client model it duplicates. Displays on these keep
+# pointing at the stock row; only their textures ship.
+STOCK_MODELS = {
+    87274: 3143,   # Creature\DRUIDCAT\DruidCat_Legacy (Lynx)
 }
 
 # (our CreatureDisplayInfo ID, Ascension CreatureDisplayInfo ID). Append-only: the IDs are what
@@ -116,9 +149,38 @@ DISPLAYS = (
     (90142, 84867), (90143, 84868), (90144, 84869), (90145, 84870),
     # Zandalari, unarmored
     (90146, 48899), (90147, 48900), (90148, 48901), (90149, 48902),
+
+    # --- Cat Form ---
+    # Troll
+    (90200, 33665), (90201, 33666), (90202, 33667), (90203, 33668), (90204, 33669),
+    # Armored Troll
+    (90205, 43775), (90206, 43773), (90207, 43778), (90208, 43776), (90209, 43777),
+    # Fangs of Ashamane I (artifact1)
+    (90210, 48870), (90211, 48869), (90212, 48868), (90213, 48867),
+    (90214, 48866), (90215, 48865), (90216, 48864),
+    # Fangs of Ashamane II (artifact2 / 6 / 7 / 8)
+    (90217, 48874), (90218, 48873), (90219, 48872), (90220, 48871),
+    # Fangs of Ashamane III (artifact3)
+    (90221, 48878), (90222, 48877), (90223, 48876), (90224, 48875),
+    # Fangs of Ashamane IV (artifact4)
+    (90225, 48882), (90226, 48881), (90227, 48880), (90228, 48879),
+    # Fangs of Ashamane V (artifact5)
+    (90229, 48886), (90230, 48885), (90231, 48884), (90232, 48883),
+    # Kul Tiran
+    (90233, 86100), (90234, 86524), (90235, 86525), (90236, 86526),
+    # Kul Tiran, unarmored
+    (90237, 48903), (90238, 48904), (90239, 48905), (90240, 48906),
+    # Zandalari
+    (90241, 85194), (90242, 85195), (90243, 85196), (90244, 85197),
+    # Zandalari, unarmored
+    (90245, 48907), (90246, 48908), (90247, 48909), (90248, 48910),
+    # Treant
+    (90249, 80719),
+    # Lynx, painted (stock model 3143)
+    (90250, 87274),
 )
 
-ID_RANGE = {"start": 90100, "end": 90199}
+ID_RANGE = {"start": 90100, "end": 90299}
 
 
 def _smpq(*args: str, cwd: Path | None = None) -> str:
@@ -176,27 +238,28 @@ def m2_hardcoded_textures(m2: bytes) -> list[str]:
     return names
 
 
-def build_rows(asc_dir: Path) -> tuple[list[dict], list[dict]]:
+def build_rows(asc_dir: Path) -> tuple[list[dict], list[dict], dict[int, str]]:
+    """Returns (model rows, display rows, ModelName by model ID) - the last also covers the stock
+    models STOCK_MODELS displays sit on, since their textures live next to that model."""
     asc_models = {r["ID"]: r for r in dbcfile.read_dbc(asc_dir / "CreatureModelData.dbc", dbcfmt.CREATUREMODELDATA)}
     asc_displays = {r["ID"]: r for r in dbcfile.read_dbc(asc_dir / "CreatureDisplayInfo.dbc", dbcfmt.CREATUREDISPLAYINFO)}
     model_rows = [{**asc_models[asc_id], "ID": our_id} for asc_id, our_id in MODELS.items()]
+    model_names = {m["ID"]: m["ModelName"] for m in model_rows}
+    model_names.update({stock_id: asc_models[asc_id]["ModelName"] for asc_id, stock_id in STOCK_MODELS.items()})
     display_rows = []
     for our_id, asc_id in DISPLAYS:
         row = asc_displays[asc_id]
-        display_rows.append({**row, "ID": our_id, "ModelID": MODELS[row["ModelID"]]})
-    return model_rows, display_rows
+        model_id = MODELS.get(row["ModelID"]) or STOCK_MODELS[row["ModelID"]]
+        display_rows.append({**row, "ID": our_id, "ModelID": model_id})
+    return model_rows, display_rows, model_names
 
 
-def asset_paths(index: dict, model_rows: list[dict], display_rows: list[dict], workdir: Path) -> set[str]:
+def asset_paths(index: dict, model_rows: list[dict], display_rows: list[dict], model_names: dict[int, str],
+                workdir: Path) -> set[str]:
     wanted: set[str] = set()
-    textures_by_model: dict[int, set[str]] = {}
-    for d in display_rows:
-        textures_by_model.setdefault(d["ModelID"], set()).update(
-            d[f"TextureVariation_{i}"] for i in (1, 2, 3) if d[f"TextureVariation_{i}"])
 
     for m in model_rows:
         base = os.path.splitext(m["ModelName"].lower())[0]
-        folder = base.rsplit("\\", 1)[0]
         m2_path = base + ".m2"
         if m2_path not in index:
             raise SystemExit(f"model {m['ID']}: {m2_path} not found in any archive")
@@ -205,14 +268,26 @@ def asset_paths(index: dict, model_rows: list[dict], display_rows: list[dict], w
         # sweeping in druidbear2_artifact10..12.
         wanted.update(p for p in index if p.startswith(base) and p[len(base):len(base) + 1].isdigit()
                       and p.endswith((".skin", ".anim")))
-        wanted.update(f"{folder}\\{t.lower()}.blp" for t in textures_by_model[m["ID"]])
         m2 = extract(index, {m2_path}, workdir)
         wanted.update(t.lower() for t in m2_hardcoded_textures(next(iter(m2.values()))))
 
-    missing = sorted(p for p in wanted - STOCK_CLIENT_FILES if p not in index)
+    # TextureVariation names resolve against the model's own folder
+    for d in display_rows:
+        folder = model_names[d["ModelID"]].lower().rsplit("\\", 1)[0]
+        wanted.update(f"{folder}\\{d[f'TextureVariation_{i}'].lower()}.blp"
+                      for i in (1, 2, 3) if d[f"TextureVariation_{i}"])
+
+    wanted -= STOCK_CLIENT_FILES
+    missing = sorted(p for p in wanted if p not in index)
     if missing:
         raise SystemExit("not found in any Ascension archive:\n  " + "\n  ".join(missing))
-    return wanted - STOCK_CLIENT_FILES
+    # Ascension's copies of the Blizzard base archives only hold stock client files - shipping one
+    # would just shadow the client's own copy. List it in STOCK_CLIENT_FILES instead.
+    stock = sorted(p for p in wanted if index[p][0].name.lower() in BLIZZARD_ARCHIVES)
+    if stock:
+        raise SystemExit("resolved to a Blizzard base archive (add to STOCK_CLIENT_FILES?):\n  "
+                         + "\n  ".join(stock))
+    return wanted
 
 
 def _merge(path: Path, table: dbcfmt.DbcTable, new_rows: list[dict]) -> bool:
@@ -254,10 +329,10 @@ def main() -> None:
         asc_dbc.mkdir()
         _smpq("-x", str(ASCENSION_DATA / "patch-M.MPQ"),
               "DBFilesClient/CreatureModelData.dbc", "DBFilesClient/CreatureDisplayInfo.dbc", cwd=asc_dbc)
-        model_rows, display_rows = build_rows(asc_dbc / "DBFilesClient")
+        model_rows, display_rows, model_names = build_rows(asc_dbc / "DBFilesClient")
 
         index = index_archives()
-        paths = asset_paths(index, model_rows, display_rows, workdir / "m2")
+        paths = asset_paths(index, model_rows, display_rows, model_names, workdir / "m2")
         files = extract(index, paths, workdir / "assets")
 
     changed = _merge(WORKING_DBC_DIR / "CreatureModelData.dbc", dbcfmt.CREATUREMODELDATA, model_rows)

@@ -96,17 +96,17 @@ deleting an earlier `rev_*.sql` also erases the tool's memory that those rows we
 Five scripts each own a patch letter: `generate.py` → `patch-Z.mpq` (Spell/Talent/Item/…),
 `build_patch_m.py` → `patch-M.mpq` (SpellVisual*/CreatureDisplayInfo/CreatureModelData/
 GameObjectDisplayInfo + `SPELLS/` models), `build_patch_i.py` → `patch-I.mpq` (`SpellIcon.dbc` +
-`Interface/Icons/*.blp`), `patch_gt_tables.py` → `patch-Y.mpq` (GT tables), `build_patch_f.py` → `patch-F.mpq`
-(shapeshift-form model assets only — its CreatureModelData/CreatureDisplayInfo rows, IDs 90100–90199,
-are written to the shared working copy and ship in patch-M; see `docs/bear-form-appearances.md`). The client loads
-lettered patches alphabetically and the **highest letter wins per file**, so a DBC packed into two
-archives is silently served from whichever has the later letter — usually a stale copy. That's
-exactly what blanked every custom `SpellIcon` row minted after patch-M's last rebuild (patch-M was
-sweeping the shared `var/model-visual-dbc/DBFilesClient/` dir wholesale; `docs/bugs-and-fixes.md`).
-`build_patch_m.py` now has a `NOT_OURS` skip-set — extend it, don't remove it, if another script
-starts keeping its working copy in that directory. Diagnostic when a client ignores a DBC row the
-plumbing says is right: `for p in <patch-root>/Data/patch-*.mpq; do smpq -l $p | grep -i
-<table>.dbc; done`.
+`Interface/Icons/*.blp`), `patch_gt_tables.py` → `patch-Y.mpq` (GT tables), `build_patch_f.py` →
+`patch-F.mpq` (Bear/Cat Form model assets only — its CreatureModelData/CreatureDisplayInfo rows, IDs
+90100–90299, are written to the shared working copy and ship in patch-M; see
+`docs/shapeshift-appearances.md`). The client loads lettered patches alphabetically and the
+**highest letter wins per file**, so a DBC packed into two archives is silently served from
+whichever has the later letter — usually a stale copy. That's exactly what blanked every custom
+`SpellIcon` row minted after patch-M's last rebuild (patch-M was sweeping the shared
+`var/model-visual-dbc/DBFilesClient/` dir wholesale; `docs/bugs-and-fixes.md`). `build_patch_m.py`
+now has a `NOT_OURS` skip-set — extend it, don't remove it, if another script starts keeping its
+working copy in that directory. Diagnostic when a client ignores a DBC row the plumbing says is
+right: `for p in <patch-root>/Data/patch-*.mpq; do smpq -l $p | grep -i <table>.dbc; done`.
 
 ## Load-bearing gotcha: `EffectSpellClassMask{A,B,C}_{1,2,3}`
 

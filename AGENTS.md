@@ -25,6 +25,8 @@ Read the matching doc(s) BEFORE starting the task:
 - Touching a subsystem that has a doc in `.agents/docs/systems/` → read that doc too
 - Changing existing live-stack e2e (`e2e/`), and only when the user asked or an existing test broke → `e2e/README.md` and `.agents/docs/e2e-policy.md`
 - Capturing a lesson or adding/updating agent docs → `.agents/docs/README.md`
+- Merging upstream, or editing any file that also exists upstream (core C++ especially) →
+  `.agents/docs/upstream-merge.md`
 - Debugging a mysterious/recurring bug → check `docs/bugs-and-fixes.md` first; add an entry there
   once root-caused so it isn't re-diagnosed later
 
