@@ -207,18 +207,13 @@ _EFFECT_FIELD_DEFAULTS = {"die_sides": 1}
 # live gets silently excluded from `resolve_rows`'s output (it reads as an "unchanged reference
 # copy"), which hid the real, still-live PLAN A9 mismatches from this check's first version (a
 # real regression this allow-list's history is worth keeping: it originally, wrongly, claimed
-# these nine were "already fixed"). Balance §6 item 11 is what fixes them for real; until it
-# lands, allow-listed here so `generate.py` stays clean. {(spell_id, column): reason}.
+# these nine were "already fixed"). PLAN A9's nine `CastingTimeIndex` entries (Wrath, Healing
+# Touch, Smite, Lesser Heal, Healing Wave, Lightning Bolt, Shadow Bolt, Firebolt, Frostfire Bolt)
+# are gone from this list as of the druid-rework Balance pass's code review fixes (2026-09-24) -
+# every one of those, plus Starfire/Regrowth/Greater Heal (which this allow-list never covered),
+# now has cast_time_ms and its raw CastingTimeIndex agreeing, so there's nothing left to hide.
+# {(spell_id, column): reason}.
 RAW_OVERRIDE_MISMATCH_ALLOWLIST: dict[tuple[int, str], str] = {
-    (5176, "CastingTimeIndex"): "Wrath - PLAN A9, fixed in the Balance pass",
-    (5185, "CastingTimeIndex"): "Healing Touch - PLAN A9, fixed in the Balance pass",
-    (585, "CastingTimeIndex"): "Smite - PLAN A9, fixed in the Balance pass",
-    (2050, "CastingTimeIndex"): "Lesser Heal - PLAN A9, fixed in the Balance pass (A10 also removes this spell)",
-    (331, "CastingTimeIndex"): "Healing Wave - PLAN A9, fixed in the Balance pass",
-    (403, "CastingTimeIndex"): "Lightning Bolt - PLAN A9, fixed in the Balance pass",
-    (686, "CastingTimeIndex"): "Shadow Bolt - PLAN A9, fixed in the Balance pass",
-    (3110, "CastingTimeIndex"): "Firebolt - PLAN A9, fixed in the Balance pass",
-    (44614, "CastingTimeIndex"): "Frostfire Bolt - PLAN A9, fixed in the Balance pass",
     (200079, "RangeIndex"): (
         "Arcane Overload shell - raw_overrides RangeIndex=6 (100yd) vs range_yards=30.0; "
         "Mage Arcane rework leftover, found 2026-09-23"

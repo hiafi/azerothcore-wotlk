@@ -35,6 +35,7 @@
 #include "CreatureAIImpl.h"
 #include "CreatureGroups.h"
 #include "DisableMgr.h"
+#include "DruidMechanics.h" // Custom: druid-rework Balance pass (CORE-AUDIT row 1)
 #include "DynamicVisibility.h"
 #include "Errors.h"
 #include "GameObjectAI.h"
@@ -8447,6 +8448,8 @@ float Unit::SpellPctDamageModsDone(Unit* victim, SpellInfo const* spellProto, Da
     // clause that buffs Holy-school damage from *any* class has somewhere to live; every clause
     // that is priest-family-only gates itself inside.
     Priest::ApplyDoneDamagePctMods(this, victim, spellProto, damagetype, DoneTotalMod);
+    // Custom: druid-rework Balance pass (CORE-AUDIT row 1) - Eclipse/Celestial Alignment/Mastery/Improved Insect Swarm
+    Druid::ApplyDoneDamagePctMods(this, victim, spellProto, damagetype, DoneTotalMod);
 
     // Custom scripted damage
     switch (spellProto->SpellFamilyName)

@@ -1825,6 +1825,10 @@ public:
     void AddSpellCooldown(uint32 spell_id, uint32 itemid, uint32 end_time, bool needSendToClient = false, bool forceSendToSpectator = false) override;
     void _AddSpellCooldown(uint32 spell_id, uint16 categoryId, uint32 itemid, uint32 end_time, bool needSendToClient = false, bool forceSendToSpectator = false);
     void ModifySpellCooldown(uint32 spellId, int32 cooldown);
+    // Custom: A8 (druid-rework CORE-AUDIT row 36) - makes ModifySpellCooldown() above visible to
+    // this 3.3.5a client (which has no live handler for SMSG_MODIFY_COOLDOWN); called from the
+    // end of ModifySpellCooldown() itself, see its definition in Player.cpp.
+    void ResendSpellCooldown(uint32 spellId);
     // Custom: Cooldown Haste's clear-then-set client-visibility fix - see the definition in
     // Player.cpp for why this exists instead of just calling ModifySpellCooldown() directly.
     void ApplyCooldownHasteCorrection(uint32 spellId, uint32 itemId, uint32 correctedRecMs);

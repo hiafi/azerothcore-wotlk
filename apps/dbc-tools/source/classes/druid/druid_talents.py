@@ -4,9 +4,22 @@ Druid - talent tabs, talents (granted_by_talent bundles a rank's SkillLineAbilit
 Split from a single source/classes/druid.py via split_class_file.py (.agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md) - see source/classes/README.md for the multi-file layout and lib/dsl/registry.py's load_class_package for how cross-file references (`from .druid_...` below) resolve.
 """
 
-from lib.dsl.registry import granted_by_talent, tab
-from .druid_spells import berserk_50334, force_of_nature_33831, insect_swarm_5570, moonkin_form_24858, nature_s_swiftness_17116, starfall_48505, survival_instincts_61336, swiftmend_18562, typhoon_50516, wild_growth_48438
-from .druid_trigger_spells import balance_of_power_33592, balance_of_power_33596, brambles_16836, brambles_16839, brambles_16840, brutal_impact_16940, brutal_impact_16941, celestial_focus_16850, celestial_focus_16923, celestial_focus_16924, dreamstate_33597, dreamstate_33599, dreamstate_33956, earth_and_moon_48506, earth_and_moon_48510, earth_and_moon_48511, eclipse_48516, eclipse_48521, eclipse_48525, empowered_rejuvenation_33886, empowered_rejuvenation_33887, empowered_rejuvenation_33888, empowered_rejuvenation_33889, empowered_rejuvenation_33890, empowered_touch_33879, empowered_touch_33880, feral_aggression_16858, feral_aggression_16859, feral_aggression_16860, feral_aggression_16861, feral_aggression_16862, feral_instinct_16947, feral_instinct_16948, feral_instinct_16949, feral_swiftness_17002, feral_swiftness_24866, ferocity_16934, ferocity_16935, ferocity_16936, ferocity_16937, ferocity_16938, furor_17056, furor_17058, furor_17059, furor_17060, furor_17061, gale_winds_48488, gale_winds_48514, genesis_57810, genesis_57811, genesis_57812, genesis_57813, genesis_57814, gift_of_nature_17104, gift_of_nature_24943, gift_of_nature_24944, gift_of_nature_24945, gift_of_nature_24946, gift_of_the_earthmother_51179, gift_of_the_earthmother_51180, gift_of_the_earthmother_51181, gift_of_the_earthmother_51182, gift_of_the_earthmother_51183, improved_barkskin_63410, improved_barkskin_63411, improved_faerie_fire_33600, improved_faerie_fire_33601, improved_faerie_fire_33602, improved_insect_swarm_57849, improved_insect_swarm_57850, improved_insect_swarm_57851, improved_leader_of_the_pack_34297, improved_leader_of_the_pack_34300, improved_mangle_48489, improved_mangle_48491, improved_mangle_48532, improved_mark_of_the_wild_17050, improved_mark_of_the_wild_17051, improved_moonfire_16821, improved_moonfire_16822, improved_moonkin_form_48384, improved_moonkin_form_48395, improved_moonkin_form_48396, improved_rejuvenation_17111, improved_rejuvenation_17112, improved_rejuvenation_17113, improved_tranquility_17123, improved_tranquility_17124, improved_tree_of_life_48535, improved_tree_of_life_48536, improved_tree_of_life_48537, infected_wounds_48483, infected_wounds_48484, infected_wounds_48485, intensity_17106, intensity_17107, intensity_17108, king_of_the_jungle_48492, king_of_the_jungle_48494, king_of_the_jungle_48495, leader_of_the_pack_17007, living_seed_48496, living_seed_48499, living_seed_48500, living_spirit_34151, living_spirit_34152, living_spirit_34153, lunar_guidance_33589, lunar_guidance_33590, lunar_guidance_33591, moonfury_16896, moonfury_16897, moonfury_16899, moonglow_16845, moonglow_16846, moonglow_16847, natural_perfection_33881, natural_perfection_33882, natural_perfection_33883, natural_reaction_57878, natural_reaction_57880, natural_reaction_57881, natural_shapeshifter_16833, natural_shapeshifter_16834, natural_shapeshifter_16835, naturalist_17069, naturalist_17070, naturalist_17071, naturalist_17072, naturalist_17073, nature_s_bounty_17074, nature_s_bounty_17075, nature_s_bounty_17076, nature_s_bounty_17077, nature_s_bounty_17078, nature_s_focus_17063, nature_s_focus_17065, nature_s_focus_17066, nature_s_grace_16880, nature_s_grace_61345, nature_s_grace_61346, nature_s_majesty_35363, nature_s_majesty_35364, nature_s_reach_16819, nature_s_reach_16820, nature_s_splendor_57865, nurturing_instinct_33872, nurturing_instinct_33873, omen_of_clarity_16864, predatory_instincts_33859, predatory_instincts_33866, predatory_instincts_33867, predatory_strikes_16972, predatory_strikes_16974, predatory_strikes_16975, primal_gore_63503, primal_precision_48409, primal_precision_48410, primal_tenacity_33851, primal_tenacity_33852, primal_tenacity_33957, protector_of_the_pack_57873, protector_of_the_pack_57876, protector_of_the_pack_57877, rend_and_tear_48432, rend_and_tear_48433, rend_and_tear_48434, rend_and_tear_51268, rend_and_tear_51269, revitalize_48539, revitalize_48544, revitalize_48545, savage_fury_16998, savage_fury_16999, shredding_attacks_16966, shredding_attacks_16968, starlight_wrath_16814, starlight_wrath_16815, starlight_wrath_16816, starlight_wrath_16817, starlight_wrath_16818, subtlety_17118, subtlety_17119, subtlety_17120, survival_of_the_fittest_33853, survival_of_the_fittest_33855, survival_of_the_fittest_33856, tranquil_spirit_24968, tranquil_spirit_24969, tranquil_spirit_24970, tranquil_spirit_24971, tranquil_spirit_24972, vengeance_16909, vengeance_16910, vengeance_16911, vengeance_16912, vengeance_16913, wrath_of_cenarius_33603, wrath_of_cenarius_33604, wrath_of_cenarius_33605, wrath_of_cenarius_33606, wrath_of_cenarius_33607
+from lib.dsl.registry import (
+    granted_by_talent, leave_spell_group, linked_spell, procs_on, scripted_by, spell_group,
+    spell_group_rule, tab, unbind_script,
+)
+from ._masks import (
+    EM_TRIGGER, ENTANGLING_ROOTS, INSECT_SWARM, MOONGLOW_SPELLS, NG_TRIGGER,
+    PROC_ATTR_TRIGGERED_CAN_PROC, PROC_HIT_CRITICAL, PROC_SPELL_PHASE_CAST, PROC_SPELL_PHASE_HIT,
+    PROC_SPELL_TYPE_DAMAGE,
+)
+from .druid_spells import (
+    berserk_50334, force_of_nature_33831, fury_of_elune_200336, insect_swarm_5570,
+    mass_entanglement_200334, moonkin_form_24858, nature_s_swiftness_17116, solar_beam_200335,
+    starfall_48505, starsurge_200333, survival_instincts_61336, swiftmend_18562, typhoon_50516,
+    wild_growth_48438,
+)
+from .druid_trigger_spells import astral_crit_200354, astral_crit_200355, astral_crit_200356, astral_surge_200344, astral_surge_200345, astral_surge_200346, balance_of_power_33592, balance_of_power_33596, balance_of_power_buff_200347, brambles_16836, starfire_cleave_200337, fury_of_elune_splash_200339, owlkin_frenzy_48389, owlkin_frenzy_48392, owlkin_frenzy_48393, brambles_16839, brambles_16840, brutal_impact_16940, brutal_impact_16941, celestial_attunement_200320, celestial_attunement_200321, celestial_attunement_200322, celestial_focus_16850, celestial_focus_16923, celestial_focus_16924, dreamstate_33597, dreamstate_33599, dreamstate_33956, earth_and_moon_48506, earth_and_moon_48510, earth_and_moon_48511, eclipse_48516, eclipse_48521, eclipse_48525, empowered_rejuvenation_33886, empowered_rejuvenation_33887, empowered_rejuvenation_33888, empowered_rejuvenation_33889, empowered_rejuvenation_33890, empowered_touch_33879, empowered_touch_33880, feral_aggression_16858, feral_aggression_16859, feral_aggression_16860, feral_aggression_16861, feral_aggression_16862, feral_instinct_16947, feral_instinct_16948, feral_instinct_16949, feral_swiftness_17002, feral_swiftness_24866, ferocity_16934, ferocity_16935, ferocity_16936, ferocity_16937, ferocity_16938, furor_17056, furor_17058, furor_17059, furor_17060, furor_17061, gale_winds_48488, gale_winds_48514, gale_winds_stack_200351, genesis_57810, genesis_57811, genesis_57812, genesis_57813, genesis_57814, gift_of_nature_17104, gift_of_nature_24943, gift_of_nature_24944, gift_of_nature_24945, gift_of_nature_24946, gift_of_the_earthmother_51179, gift_of_the_earthmother_51180, gift_of_the_earthmother_51181, gift_of_the_earthmother_51182, gift_of_the_earthmother_51183, improved_barkskin_63410, improved_barkskin_63411, improved_faerie_fire_33600, improved_faerie_fire_33601, improved_faerie_fire_33602, improved_insect_swarm_57849, improved_insect_swarm_57850, improved_insect_swarm_57851, improved_leader_of_the_pack_34297, improved_leader_of_the_pack_34300, improved_mangle_48489, improved_mangle_48491, improved_mangle_48532, improved_mark_of_the_wild_17050, improved_mark_of_the_wild_17051, improved_moonfire_16821, improved_moonfire_16822, improved_moonfire_200323, improved_moonkin_form_48384, improved_moonkin_form_48395, improved_moonkin_form_48396, improved_rejuvenation_17111, improved_rejuvenation_17112, improved_rejuvenation_17113, improved_tranquility_17123, improved_tranquility_17124, improved_tree_of_life_48535, improved_tree_of_life_48536, improved_tree_of_life_48537, infected_wounds_48483, infected_wounds_48484, infected_wounds_48485, intensity_17106, intensity_17107, intensity_17108, king_of_the_jungle_48492, king_of_the_jungle_48494, king_of_the_jungle_48495, leader_of_the_pack_17007, living_seed_48496, living_seed_48499, living_seed_48500, living_spirit_34151, living_spirit_34152, living_spirit_34153, lunar_guidance_33589, lunar_guidance_33590, lunar_guidance_33591, moonfury_16896, moonfury_16897, moonfury_16899, moonglow_16845, moonglow_16846, moonglow_16847, moonglow_buff_200348, moonglow_buff_200349, moonglow_buff_200350, natural_perfection_33881, natural_perfection_33882, natural_perfection_33883, natural_reaction_57878, natural_reaction_57880, natural_reaction_57881, natural_shapeshifter_16833, natural_shapeshifter_16834, natural_shapeshifter_16835, naturalist_17069, naturalist_17070, naturalist_17071, naturalist_17072, naturalist_17073, nature_s_bounty_17074, nature_s_bounty_17075, nature_s_bounty_17076, nature_s_bounty_17077, nature_s_bounty_17078, nature_s_focus_17063, nature_s_focus_17065, nature_s_focus_17066, nature_s_grace_16880, nature_s_grace_61345, nature_s_grace_61346, nature_s_majesty_35363, nature_s_majesty_35364, nature_s_reach_16819, nature_s_reach_16820, nature_s_splendor_200324, nature_s_splendor_200325, nature_s_splendor_200326, nurturing_instinct_33872, nurturing_instinct_33873, omen_of_clarity_16864, predatory_instincts_33859, predatory_instincts_33866, predatory_instincts_33867, predatory_strikes_16972, predatory_strikes_16974, predatory_strikes_16975, primal_gore_63503, primal_precision_48409, primal_precision_48410, primal_tenacity_33851, primal_tenacity_33852, primal_tenacity_33957, protector_of_the_pack_57873, protector_of_the_pack_57876, protector_of_the_pack_57877, rend_and_tear_48432, rend_and_tear_48433, rend_and_tear_48434, rend_and_tear_51268, rend_and_tear_51269, revitalize_48539, revitalize_48544, revitalize_48545, savage_fury_16998, savage_fury_16999, shredding_attacks_16966, shredding_attacks_16968, starlight_wrath_16814, starlight_wrath_16815, starlight_wrath_16816, starlight_wrath_16817, starlight_wrath_16818, starweaver_200327, starweaver_200328, starweaver_200329, subtlety_17118, subtlety_17119, subtlety_17120, survival_of_the_fittest_33853, survival_of_the_fittest_33855, survival_of_the_fittest_33856, swarming_rot_200330, swarming_rot_200331, swarming_rot_200332, tranquil_spirit_24968, tranquil_spirit_24969, tranquil_spirit_24970, tranquil_spirit_24971, tranquil_spirit_24972, vengeance_16909, vengeance_16910, vengeance_16911, vengeance_16912, vengeance_16913, vengeful_soul_200343, wrath_of_cenarius_33603, wrath_of_cenarius_33604, wrath_of_cenarius_33605, wrath_of_cenarius_33606, wrath_of_cenarius_33607
 
 
 feral_combat_281_tab = tab(
@@ -15,6 +28,7 @@ feral_combat_281_tab = tab(
     class_mask=1024,
     order_index=1,
     spell_icon_id=107,
+    skill_line=134,
     raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 431},
 )
 
@@ -25,6 +39,7 @@ restoration_282_tab = tab(
     class_mask=1024,
     order_index=2,
     spell_icon_id=962,
+    skill_line=573,
     raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 661},
 )
 
@@ -34,6 +49,7 @@ balance_283_tab = tab(
     name='Balance',
     class_mask=1024,
     spell_icon_id=225,
+    skill_line=574,
     raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 137},
 )
 
@@ -43,7 +59,7 @@ granted_by_talent(
     tab=balance_283_tab,
     tier=0,
     column=1,
-    ranks=[starlight_wrath_16814, starlight_wrath_16815, starlight_wrath_16816, starlight_wrath_16817, starlight_wrath_16818],
+    ranks=[starlight_wrath_16814, starlight_wrath_16815, starlight_wrath_16816],
     player_castable=False,
 )
 
@@ -52,8 +68,8 @@ granted_by_talent(
     id=763,
     tab=balance_283_tab,
     tier=1,
-    column=3,
-    ranks=[improved_moonfire_16821, improved_moonfire_16822],
+    column=2,
+    ranks=[improved_moonfire_16821, improved_moonfire_16822, improved_moonfire_200323],
     player_castable=False,
 )
 
@@ -71,8 +87,8 @@ granted_by_talent(
 granted_by_talent(
     id=782,
     tab=balance_283_tab,
-    tier=2,
-    column=0,
+    tier=4,
+    column=3,
     ranks=[brambles_16836, brambles_16839, brambles_16840],
     player_castable=False,
 )
@@ -93,7 +109,7 @@ granted_by_talent(
     tab=balance_283_tab,
     tier=3,
     column=2,
-    ranks=[celestial_focus_16850, celestial_focus_16923, celestial_focus_16924],
+    ranks=[celestial_focus_16850, celestial_focus_16923],
     player_castable=False,
 )
 
@@ -101,7 +117,7 @@ granted_by_talent(
 granted_by_talent(
     id=788,
     tab=balance_283_tab,
-    tier=4,
+    tier=2,
     column=1,
     ranks=[insect_swarm_5570],
     player_castable=False,
@@ -113,10 +129,9 @@ granted_by_talent(
     id=789,
     tab=balance_283_tab,
     tier=2,
-    column=1,
+    column=0,
     ranks=[nature_s_grace_16880, nature_s_grace_61345, nature_s_grace_61346],
     player_castable=False,
-    depends_on={'talent_id': 1822, 'rank': 1},
 )
 
 
@@ -133,9 +148,9 @@ granted_by_talent(
 granted_by_talent(
     id=792,
     tab=balance_283_tab,
-    tier=3,
-    column=1,
-    ranks=[vengeance_16909, vengeance_16910, vengeance_16911, vengeance_16912, vengeance_16913],
+    tier=6,
+    column=3,
+    ranks=[vengeance_16909, vengeance_16910, vengeance_16911],
     player_castable=False,
 )
 
@@ -493,9 +508,9 @@ granted_by_talent(
 granted_by_talent(
     id=1785,
     tab=balance_283_tab,
-    tier=6,
-    column=3,
-    ranks=[improved_faerie_fire_33600, improved_faerie_fire_33601, improved_faerie_fire_33602],
+    tier=0,
+    column=0,
+    ranks=[celestial_attunement_200320, celestial_attunement_200321, celestial_attunement_200322],
     player_castable=False,
 )
 
@@ -505,7 +520,7 @@ granted_by_talent(
     tab=balance_283_tab,
     tier=7,
     column=2,
-    ranks=[wrath_of_cenarius_33603, wrath_of_cenarius_33604, wrath_of_cenarius_33605, wrath_of_cenarius_33606, wrath_of_cenarius_33607],
+    ranks=[wrath_of_cenarius_33603, wrath_of_cenarius_33604, wrath_of_cenarius_33605],
     player_castable=False,
 )
 
@@ -513,8 +528,8 @@ granted_by_talent(
 granted_by_talent(
     id=1787,
     tab=balance_283_tab,
-    tier=8,
-    column=2,
+    tier=4,
+    column=1,
     ranks=[force_of_nature_33831],
     player_castable=False,
     flags=1,
@@ -652,7 +667,6 @@ granted_by_talent(
     column=2,
     ranks=[improved_moonkin_form_48384, improved_moonkin_form_48395, improved_moonkin_form_48396],
     player_castable=False,
-    depends_on={'talent_id': 793, 'rank': 0},
 )
 
 
@@ -661,9 +675,8 @@ granted_by_talent(
     tab=balance_283_tab,
     tier=7,
     column=0,
-    ranks=[48389, 48392, 48393],
+    ranks=[owlkin_frenzy_48389, owlkin_frenzy_48392, owlkin_frenzy_48393],
     player_castable=False,
-    depends_on={'talent_id': 793, 'rank': 0},
 )
 
 
@@ -765,11 +778,11 @@ granted_by_talent(
 granted_by_talent(
     id=1923,
     tab=balance_283_tab,
-    tier=8,
+    tier=10,
     column=1,
-    ranks=[typhoon_50516],
-    player_castable=False,
-    depends_on={'talent_id': 793, 'rank': 0},
+    ranks=[fury_of_elune_200336],
+    player_castable=True,
+    skill_line_ability_ids=[30427],
     flags=1,
 )
 
@@ -797,7 +810,7 @@ granted_by_talent(
 granted_by_talent(
     id=1926,
     tab=balance_283_tab,
-    tier=10,
+    tier=8,
     column=1,
     ranks=[starfall_48505],
     player_castable=False,
@@ -852,7 +865,7 @@ granted_by_talent(
     tab=balance_283_tab,
     tier=0,
     column=2,
-    ranks=[genesis_57810, genesis_57811, genesis_57812, genesis_57813, genesis_57814],
+    ranks=[genesis_57810, genesis_57811, genesis_57812],
     player_castable=False,
 )
 
@@ -864,7 +877,6 @@ granted_by_talent(
     column=2,
     ranks=[improved_insect_swarm_57849, improved_insect_swarm_57850, improved_insect_swarm_57851],
     player_castable=False,
-    depends_on={'talent_id': 788, 'rank': 0},
 )
 
 
@@ -873,9 +885,28 @@ granted_by_talent(
     tab=balance_283_tab,
     tier=2,
     column=2,
-    ranks=[nature_s_splendor_57865],
+    ranks=[nature_s_splendor_200324, nature_s_splendor_200325, nature_s_splendor_200326],
     player_castable=False,
-    depends_on={'talent_id': 1822, 'rank': 1},
+)
+
+
+granted_by_talent(
+    id=60026,
+    tab=balance_283_tab,
+    tier=3,
+    column=0,
+    ranks=[starweaver_200327, starweaver_200328, starweaver_200329],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=60027,
+    tab=balance_283_tab,
+    tier=3,
+    column=1,
+    ranks=[swarming_rot_200330, swarming_rot_200331, swarming_rot_200332],
+    player_castable=False,
 )
 
 
@@ -919,3 +950,139 @@ granted_by_talent(
     player_castable=False,
     depends_on={'talent_id': 1918, 'rank': 4},
 )
+
+
+# --- druid-rework Balance WP-A: scripted_by bindings (BALANCE.md §6 "scripted_by bindings WP-A
+# must add" table) - every SpellScript/AuraScript class WP-B adds in spell_druid_balance.cpp,
+# druid_hooks.cpp or DruidMechanics.cpp needs its spell_script_names row declared here. ---
+
+scripted_by(starfire_cleave_200337, 'spell_dru_starfall_aoe')
+scripted_by(fury_of_elune_splash_200339, 'spell_dru_starfall_aoe')
+scripted_by(improved_moonfire_200323, 'spell_dru_improved_moonfire_capstone')
+scripted_by(nature_s_reach_16820, 'spell_dru_natures_reach_moonfire_spread')
+scripted_by(swarming_rot_200332, 'spell_dru_swarming_rot')
+scripted_by(insect_swarm_5570, 'spell_dru_insect_swarm_cast')
+scripted_by(brambles_16840, 'spell_dru_brambles_silence')
+scripted_by(owlkin_frenzy_48389, 'spell_dru_owlkin_frenzy_proc')
+scripted_by(owlkin_frenzy_48392, 'spell_dru_owlkin_frenzy_proc')
+scripted_by(owlkin_frenzy_48393, 'spell_dru_owlkin_frenzy_proc')
+scripted_by(vengeful_soul_200343, 'spell_dru_vengeful_soul')
+scripted_by(5176, 'spell_dru_wrath_of_cenarius_capstone')  # AfterHit on Wrath (5176), not Starfire
+scripted_by(dreamstate_33597, 'spell_dru_dreamstate')
+scripted_by(dreamstate_33599, 'spell_dru_dreamstate')
+scripted_by(dreamstate_33956, 'spell_dru_dreamstate')
+scripted_by(29166, 'spell_dru_dreamstate_innervate')  # stock Innervate; spell_dru_innervate stays bound too
+scripted_by(42231, 'spell_dru_hurricane_tick')
+scripted_by(16914, 'spell_dru_hurricane_channel')
+scripted_by(force_of_nature_33831, 'spell_dru_force_of_nature')
+# Astral Surge slots + Balance of Power buff - percent-of-spell-power DoEffectCalcAmount
+# (CORE-AUDIT row 6 / corrections item 2). Missing until code review caught it: without this
+# binding the buffs fall back to their static DBC base_points instead of scaling with spell power.
+scripted_by(astral_surge_200344, 'spell_dru_astral_surge_sp')
+scripted_by(astral_surge_200345, 'spell_dru_astral_surge_sp')
+scripted_by(astral_surge_200346, 'spell_dru_astral_surge_sp')
+scripted_by(balance_of_power_buff_200347, 'spell_dru_astral_surge_sp')
+
+# --- Corrected stock-class replacements (Corrections item 4 in the WP-A brief) - unbind the stock
+# binding, rebind the exact same spell id to a new fork class in spell_druid_balance.cpp. Naming is
+# load-bearing: WP-B must use these four class names verbatim or the binding silently never fires. ---
+
+unbind_script(-48516, 'spell_dru_eclipse')
+scripted_by(-48516, 'spell_dru_eclipse_balance')
+
+unbind_script(24905, 'spell_dru_moonkin_form_passive_proc')
+scripted_by(24905, 'spell_dru_moonkin_form_proc_balance')
+
+unbind_script(50419, 'spell_dru_brambles_treant')
+scripted_by(50419, 'spell_dru_brambles_treant_balance')
+
+unbind_script(35669, 'spell_dru_treant_scaling')
+scripted_by(35669, 'spell_dru_treant_scaling_balance')
+unbind_script(35670, 'spell_dru_treant_scaling')
+scripted_by(35670, 'spell_dru_treant_scaling_balance')
+unbind_script(35671, 'spell_dru_treant_scaling')
+scripted_by(35671, 'spell_dru_treant_scaling_balance')
+unbind_script(35672, 'spell_dru_treant_scaling')
+scripted_by(35672, 'spell_dru_treant_scaling_balance')
+
+unbind_script(69366, 'spell_dru_moonkin_form_passive')  # CORE-AUDIT row 10
+
+
+# --- procs_on() declarations (BALANCE.md §6 talent-table rows + §7) ---
+
+# (1,0) Moonglow - negative whole-chain row (all 3 ranks share the stock -16845 key)
+procs_on(-16845, proc_flags=0x14000, family_name=7, family_mask=MOONGLOW_SPELLS,
+         spell_phase_mask=PROC_SPELL_PHASE_CAST, chance=5, disable_effects_mask=0x1)
+
+# (2,0) Nature's Grace - negative whole-chain row; chance=0 falls back to each rank's own DBC
+# ProcChance (33/66/100)
+procs_on(-16880, proc_flags=0x14000, family_name=7, family_mask=NG_TRIGGER, spell_type_mask=3,
+         spell_phase_mask=PROC_SPELL_PHASE_CAST, hit_mask=PROC_HIT_CRITICAL, chance=0)
+
+# (1,2) Improved Moonfire capstone - final rank only
+procs_on(improved_moonfire_200323, proc_flags=0x10000, school_mask=64,
+         spell_type_mask=PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=PROC_SPELL_PHASE_HIT,
+         hit_mask=PROC_HIT_CRITICAL, chance=100, cooldown_ms=1500)
+
+# (2,3) Nature's Reach capstone - final rank only
+procs_on(nature_s_reach_16820, proc_flags=0x10000, school_mask=64,
+         spell_type_mask=PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=PROC_SPELL_PHASE_HIT,
+         chance=100, cooldown_ms=6000)
+
+# (3,2) Celestial Focus capstone (Shooting Stars) - final rank only. PROC_FLAG_DONE_PERIODIC is in
+# both SPELL_PROC_FLAG_MASK and DONE_HIT_PROC_FLAG_MASK (SpellMgr.h), so REQ_SPELL_PHASE_PROC_FLAG_MASK
+# requires spell_phase_mask here or the proc is silently never triggered (SpellMgr.cpp:2112/917-921).
+procs_on(celestial_focus_16923, proc_flags=0x40000, family_name=7, family_mask=(0x200002, 0, 0),
+         spell_type_mask=PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=PROC_SPELL_PHASE_HIT, chance=5,
+         cooldown_ms=10000, disable_effects_mask=0x3)
+
+# (3,1) Swarming Rot capstone - final rank only. Same PROC_FLAG_DONE_PERIODIC phase requirement as
+# Celestial Focus above.
+procs_on(swarming_rot_200332, proc_flags=0x40000, family_name=7, family_mask=(INSECT_SWARM, 0, 0),
+         spell_type_mask=PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=PROC_SPELL_PHASE_HIT, chance=100)
+
+# (4,3) Brambles capstone - final rank only
+procs_on(brambles_16840, proc_flags=0x10000, family_name=7, family_mask=(ENTANGLING_ROOTS, 0, 0),
+         spell_phase_mask=PROC_SPELL_PHASE_HIT, chance=100, cooldown_ms=10000)
+
+# (7,0) Owlkin Frenzy - negative whole-chain row
+procs_on(-48389, proc_flags=0x10028, spell_phase_mask=PROC_SPELL_PHASE_CAST | PROC_SPELL_PHASE_HIT,
+         chance=100)
+
+# (6,1) Moonkin Form direct-cast mana proc - overrides the stock 15%/crit/HIT row
+procs_on(24905, proc_flags=0x10000, spell_phase_mask=PROC_SPELL_PHASE_CAST, chance=33)
+
+# (6,3) Vengeance capstone - final rank only; triggered spells allowed (Starfall/Hurricane/Fury of
+# Elune crits can roll it)
+procs_on(vengeance_16911, proc_flags=0x10000, school_mask=72,
+         spell_type_mask=PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=PROC_SPELL_PHASE_HIT,
+         hit_mask=PROC_HIT_CRITICAL, attributes_mask=PROC_ATTR_TRIGGERED_CAN_PROC, chance=15,
+         cooldown_ms=10000, disable_effects_mask=0x1)
+
+# (8,0) Eclipse - negative whole-chain row, overrides the stock -48516 row
+procs_on(-48516, proc_flags=0x10000, family_name=7, family_mask=(0x5, 0, 0),
+         spell_type_mask=PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=PROC_SPELL_PHASE_HIT, chance=100)
+
+# (9,1) Earth and Moon - negative whole-chain row
+procs_on(-48506, proc_flags=0x10000, family_name=7, family_mask=EM_TRIGGER,
+         spell_type_mask=PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=PROC_SPELL_PHASE_HIT, chance=100,
+         disable_effects_mask=0x2)
+
+
+# --- World-SQL declarations (BALANCE.md §3 item 6 / PLAN §5.0, via WP-T's helpers) ---
+
+linked_spell(200326, 57865, type=2, comment="Nature's Splendor r3 capstone durations")
+linked_spell(16821, 200354, type=2, comment='Improved Moonfire r1 Astral crit')  # CORE-AUDIT row 5
+linked_spell(16822, 200355, type=2, comment='Improved Moonfire r2 Astral crit')
+linked_spell(improved_moonfire_200323.id, 200356, type=2, comment='Improved Moonfire r3 Astral crit')
+
+spell_group(1054, 50171, 50172)  # re-add Improved Moonkin Form's raid-haste ranks to the Haste
+# Buffs group - the single-rank migration dropped them from it (PLAN §3 item 18)
+leave_spell_group(1107, 48391)  # Owlkin Frenzy out of "Temporary Damage Increases" (judgment call
+# 12.13, default: remove - the spec gives Owlkin Frenzy no "does not stack" clause)
+
+# A7: Moonglow's buffs and Intensity (rank 1, 17106) don't stack - take the max, not the sum
+# (EXCLUSIVE_SAME_EFFECT). Group id 1200 is source/ids.yaml's spell_group block's first free id
+# (block starts at 1200, nothing else in this rework has minted one yet).
+spell_group(1200, moonglow_buff_200348, moonglow_buff_200349, moonglow_buff_200350, 17106)
+spell_group_rule(1200, 3, 'Druid - regen while casting (max, not sum)')

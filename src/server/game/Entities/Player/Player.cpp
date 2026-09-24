@@ -94,6 +94,7 @@
 #include "WorldState.h"
 #include "WorldStateDefines.h"
 #include "WorldStatePackets.h"
+#include <algorithm> // Custom: druid-rework A3 - std::find over CUSTOM_COOLDOWN_HASTE_ALLOW_LIST
 #include <cmath>
 #include <queue>
 
@@ -152,6 +153,11 @@ static uint32 copseReclaimDelay[MAX_DEATH_COUNT] = { 30, 60, 120 };
 
 // Custom: Cooldown Haste stat only affects abilities whose baseline cooldown is longer than this.
 static constexpr int32 CUSTOM_COOLDOWN_HASTE_MIN_BASE_COOLDOWN_MS = 30 * IN_MILLISECONDS;
+
+// Custom: druid-rework A3 (PLAN §1A, BALANCE.md §9) - spells on this list are always Cooldown
+// Haste eligible regardless of their base cooldown (Starsurge 200333, whose 10 s base cooldown
+// would otherwise fail CUSTOM_COOLDOWN_HASTE_MIN_BASE_COOLDOWN_MS).
+static constexpr std::array<uint32, 1> CUSTOM_COOLDOWN_HASTE_ALLOW_LIST = { 200333 };
 
 // we can disable this warning for this since it only
 // causes undefined behavior when passed to the base class constructor
@@ -11246,9 +11252,15 @@ void Player::AddSpellAndCategoryCooldowns(SpellInfo const* spellInfo, uint32 ite
         if (float const cdh = GetCooldownHastePercentage(); cdh > 0.0f)
         {
             float const cooldownHasteDivisor = 1.0f + cdh / 100.0f;
-            int32 hastedRec = (rec >= CUSTOM_COOLDOWN_HASTE_MIN_BASE_COOLDOWN_MS && spellInfo->RecoveryTime >= CUSTOM_COOLDOWN_HASTE_MIN_BASE_COOLDOWN_MS)
+            // Custom: druid-rework A3 (PLAN §1A row A3, BALANCE.md §9) - an allow-listed spell is
+            // always eligible; otherwise eligibility compares only the base, unaltered
+            // RecoveryTime/CategoryRecoveryTime (the post-talent rec/catrec >= clause is dropped:
+            // a talent that cuts a cooldown below 30 s no longer removes eligibility).
+            auto const& allowList = CUSTOM_COOLDOWN_HASTE_ALLOW_LIST;
+            bool const allowListed = std::find(allowList.begin(), allowList.end(), spellInfo->Id) != allowList.end();
+            int32 hastedRec = (allowListed || spellInfo->RecoveryTime >= CUSTOM_COOLDOWN_HASTE_MIN_BASE_COOLDOWN_MS)
                 ? int32(rec / cooldownHasteDivisor) : rec;
-            int32 hastedCatrec = (catrec >= CUSTOM_COOLDOWN_HASTE_MIN_BASE_COOLDOWN_MS && spellInfo->CategoryRecoveryTime >= CUSTOM_COOLDOWN_HASTE_MIN_BASE_COOLDOWN_MS)
+            int32 hastedCatrec = (allowListed || spellInfo->CategoryRecoveryTime >= CUSTOM_COOLDOWN_HASTE_MIN_BASE_COOLDOWN_MS)
                 ? int32(catrec / cooldownHasteDivisor) : catrec;
             int32 const hastedCatrecTime = hastedCatrec ? hastedCatrec : 0;
             int32 const hastedRecTime    = hastedRec ? hastedRec : hastedCatrecTime;
@@ -11266,17 +11278,16 @@ void Player::AddSpellAndCategoryCooldowns(SpellInfo const* spellInfo, uint32 ite
             BuildCooldownPacket(data, SPELL_COOLDOWN_FLAG_NONE, spellInfo->Id, recTime);
             SendDirectMessage(&data);
         }
-        // Cooldown Haste: shrink the just-stored cooldown via clear-then-set instead of baking
-        // it into recTime above - see the comment where cooldownHasteDeltaMs is computed, and
-        // the clear-then-set comment on the deferred lambda itself.
+        // Cooldown Haste: shrink the just-stored cooldown via ModifySpellCooldown() (client-
+        // visible for free since PLAN A8/CORE-AUDIT row 36 - see the comment where
+        // cooldownHasteDeltaMs is computed) instead of baking it into recTime above.
         if (cooldownHasteDeltaMs)
         {
             uint32 const deferredSpellId = spellInfo->Id;
-            uint32 const deferredItemId = itemId;
-            uint32 const correctedRecMs = uint32(std::max<int32>(0, int32(recTime) + cooldownHasteDeltaMs));
-            m_Events.AddEventAtOffset([this, deferredSpellId, deferredItemId, correctedRecMs]()
+            int32 const deferredDeltaMs = cooldownHasteDeltaMs;
+            m_Events.AddEventAtOffset([this, deferredSpellId, deferredDeltaMs]()
             {
-                ApplyCooldownHasteCorrection(deferredSpellId, deferredItemId, correctedRecMs);
+                ModifySpellCooldown(deferredSpellId, deferredDeltaMs); // Custom: druid-rework A8
             }, 1ms);
         }
 
@@ -11334,17 +11345,16 @@ void Player::AddSpellAndCategoryCooldowns(SpellInfo const* spellInfo, uint32 ite
                 BuildCooldownPacket(data, SPELL_COOLDOWN_FLAG_NONE, spellInfo->Id, rec);
                 SendDirectMessage(&data);
             }
-            // Cooldown Haste: shrink the just-stored cooldown via clear-then-set instead of
-            // baking it into rec above - see cooldownHasteDeltaMs's own comment, and the
-            // clear-then-set comment on the deferred lambda itself.
+            // Cooldown Haste: shrink the just-stored cooldown via ModifySpellCooldown() (client-
+            // visible for free since PLAN A8/CORE-AUDIT row 36) instead of baking it into rec
+            // above - see cooldownHasteDeltaMs's own comment.
             if (cooldownHasteDeltaMs)
             {
                 uint32 const deferredSpellId = spellInfo->Id;
-                uint32 const deferredItemId = itemId;
-                uint32 const correctedRecMs = uint32(std::max<int32>(0, int32(recTime) + cooldownHasteDeltaMs));
-                m_Events.AddEventAtOffset([this, deferredSpellId, deferredItemId, correctedRecMs]()
+                int32 const deferredDeltaMs = cooldownHasteDeltaMs;
+                m_Events.AddEventAtOffset([this, deferredSpellId, deferredDeltaMs]()
                 {
-                    ApplyCooldownHasteCorrection(deferredSpellId, deferredItemId, correctedRecMs);
+                    ModifySpellCooldown(deferredSpellId, deferredDeltaMs); // Custom: druid-rework A8
                 }, 1ms);
             }
         }
@@ -11390,6 +11400,43 @@ void Player::ModifySpellCooldown(uint32 spellId, int32 cooldown)
     data << uint32(spellId);            // Spell ID
     data << GetGUID();                  // Player GUID
     data << int32(cooldown);            // Cooldown mod in milliseconds
+    SendDirectMessage(&data);
+
+    ResendSpellCooldown(spellId); // Custom: druid-rework A8 (CORE-AUDIT row 36) - see its own definition
+}
+
+void Player::ResendSpellCooldown(uint32 spellId)
+{
+    // Custom: druid-rework A8 (CORE-AUDIT row 36) - stock SMSG_MODIFY_COOLDOWN above has no
+    // effect on this 3.3.5a client (docs/bugs-and-fixes.md, "ModifySpellCooldown"), so every
+    // ModifySpellCooldown() caller silently failed to move the button on the client's action
+    // bars. Clear-then-set: the same proven shape ApplyCooldownHasteCorrection() above already
+    // uses - a "set" SMSG_SPELL_COOLDOWN is confirmed client-visible for a spell the client isn't
+    // already tracking, so clear the tracked entry first (SMSG_CLEAR_COOLDOWN) and, if time
+    // remains, re-add and re-announce it with the same category/item, max duration and
+    // needSendToClient/sendToSpectator flags as the entry already had - only `end` actually
+    // changes. Written directly into m_spellCooldowns (not via _AddSpellCooldown, which always
+    // sets maxduration = the passed-in end_time and would collapse it to the shortened remaining
+    // time - code review caught this).
+    SpellCooldowns::const_iterator itr = m_spellCooldowns.find(spellId);
+    if (itr == m_spellCooldowns.end())
+        return;
+
+    SpellCooldown const original = itr->second;
+    uint32 const now = GameTime::GetGameTimeMS().count();
+    uint32 const remaining = original.end > now ? uint32(original.end - now) : 0;
+
+    RemoveSpellCooldown(spellId, true); // erases the entry + sends SMSG_CLEAR_COOLDOWN
+
+    if (!remaining)
+        return;
+
+    SpellCooldown resent = original;
+    resent.end = now + remaining;
+    m_spellCooldowns[spellId] = resent;
+
+    WorldPacket data;
+    BuildCooldownPacket(data, SPELL_COOLDOWN_FLAG_NONE, spellId, remaining);
     SendDirectMessage(&data);
 }
 

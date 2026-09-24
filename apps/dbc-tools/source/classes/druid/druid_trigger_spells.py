@@ -4,8 +4,13 @@ Druid - spells that are never directly cast - proc/periodic-tick effects, trigge
 Split from a single source/classes/druid.py via split_class_file.py (.agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md) - see source/classes/README.md for the multi-file layout and lib/dsl/registry.py's load_class_package for how cross-file references (`from .druid_...` below) resolve.
 """
 
-from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, School
-from lib.dsl.registry import spell
+from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, School, SpellModOp
+from lib.dsl.registry import bonus_coefficients, spell
+from ._masks import (
+    DRUID_SPELL_DAMAGE, FORCE_OF_NATURE, FURY_OF_ELUNE, GENESIS_DOT, GENESIS_TICKS, HURRICANE,
+    INNERVATE, INSECT_SWARM, LIFEBLOOM, MASS_ENTANGLEMENT, MOONGLOW_SPELLS, NATURES_REACH,
+    STARFALL, STARFIRE, STARSURGE, THORNS, TYPHOON, WRATH,
+)
 
 
 blood_frenzy_16952 = spell(
@@ -153,7 +158,7 @@ improved_moonkin_form_50170 = spell(
 starfall_50286 = spell(
     id=50286,
     name='Starfall',
-    school=School.ARCANE,
+    school=School.ARCANE | School.NATURE,  # Astral (druid-rework BALANCE §6 row 8,1)
     attributes=384,
     cast_time_ms=0,
     cooldown_ms=0,
@@ -173,7 +178,7 @@ starfall_50286 = spell(
 starfall_50288 = spell(
     id=50288,
     name='Starfall',
-    school=School.ARCANE,
+    school=School.ARCANE | School.NATURE,  # Astral (druid-rework BALANCE §6 row 8,1)
     cast_time_ms=0,
     cooldown_ms=0,
     category_cooldown_ms=0,
@@ -193,7 +198,7 @@ starfall_50288 = spell(
 starfall_50294 = spell(
     id=50294,
     name='Starfall',
-    school=School.ARCANE,
+    school=School.ARCANE | School.NATURE,  # Astral (druid-rework BALANCE §6 row 8,1)
     attributes=327680,
     cast_time_ms=0,
     cooldown_ms=0,
@@ -244,13 +249,13 @@ earth_and_moon_60431 = spell(
     mana_cost=0,
     mana_cost_pct=0,
     range_yards=100.0,
-    duration_ms=12000,
+    duration_ms=8000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, points_per_level=0.15, implicit_target_a=6, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, points_per_level=0.0, implicit_target_a=6, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=126),
     ],
     spell_icon_id=2991,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 136, 'AttributesEx2': 4, 'AttributesEx3': 131072, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases spell damage taken by $s1%.', 'CastingTimeIndex': 1, 'CumulativeAura': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Wrath and Starfire spells have a chance to apply the Earth and Moon effect, which increases spell damage taken by $s1% for $d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712172, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (9,1): duration 12s->8s; eff1 base_points is now overridden by the proc\'s BP0 (aura 42->231 on 48506/48510/48511), so its own stored value is a display-only fallback; stays in spell group 1101 (EXCLUSIVE_SAME_EFFECT with Curse of the Elements/Ebon Plaguebringer)',
+    raw_overrides={'AttributesEx': 136, 'AttributesEx2': 4, 'AttributesEx3': 131072, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Magic damage taken increased by $s1%.', 'CastingTimeIndex': 1, 'CumulativeAura': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Wrath, Starfire, and Starsurge apply the Earth and Moon effect, which increases magic damage taken by $s1% for $d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712172, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassSet': 7},
 )
 
 
@@ -268,12 +273,12 @@ typhoon_61391 = spell(
     duration_ms=6000,
     effects=[
         Effect(type=EffectType.KNOCK_BACK, base_points=69, implicit_target_a=104, misc_value=150, radius_yards=30.0),
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=399, points_per_level=26.333333333333332, implicit_target_a=104, radius_yards=30.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=287, points_per_level=20.5, implicit_target_a=104, radius_yards=30.0),
         Effect(type=EffectType.APPLY_AURA, base_points=-51, mechanic=Mechanic.SNARE, implicit_target_a=104, apply_aura=AuraType.MOD_DECREASE_SPEED, radius_yards=30.0),
     ],
     spell_icon_id=15,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 128, 'AttributesEx2': 524288, 'AttributesEx3': 512, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Dazed.', 'BaseLevel': 50, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You summon a violent Typhoon that does $s2 Nature damage when in contact with hostile targets, knocking them back and dazing them for $d.', 'EffectBonusMultiplier_2': 0.19300000369548798, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ShapeshiftExclude': 2, 'ShapeshiftMask': 1073741824, 'Speed': 30.0, 'SpellClassMask_2': 16777216, 'SpellClassSet': 7, 'SpellLevel': 50, 'SpellVisualID_1': 10437},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §4: BaseLevel/SpellLevel 50->36, eff2 retuned to match 50516',
+    raw_overrides={'AttributesEx': 128, 'AttributesEx2': 524288, 'AttributesEx3': 512, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Dazed.', 'BaseLevel': 36, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You summon a violent Typhoon that does $s2 Nature damage when in contact with hostile targets, knocking them back and dazing them for $d.', 'EffectBonusMultiplier_2': 0.19300000369548798, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ShapeshiftExclude': 2, 'ShapeshiftMask': 1073741824, 'Speed': 30.0, 'SpellClassMask_2': 16777216, 'SpellClassSet': 7, 'SpellLevel': 36, 'SpellVisualID_1': 10437},
 )
 
 
@@ -289,11 +294,11 @@ owlkin_frenzy_48389 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=48391),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, trigger_spell=48391),
     ],
     spell_icon_id=2853,
-    notes='pulled from existing data | moved here from source/classes/mage.py (spell-source-dsl.PLAN.md - a split_class_file.py spot check turned up this and its two sibling ranks misfiled into Mage; description text is pure Moonkin Form/Balance-spec Druid content, not Mage). Left byte-for-byte as originally pulled otherwise - including SpellClassSet=3, which is Mage\'s family value, not Druid\'s (7, used by every other real Druid row in this file) and looks like a second, independent data error in the original pull; not corrected here since this move is a relocation, not a content fix - flag before trusting this row\'s SpellClassSet for anything.',
-    raw_overrides={'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Attacks done to you while in Moonkin form have a $h% chance to cause you to go into a Frenzy, increasing your damage by $48391s2%, cause you to be immune to pushback while casting Balance spells and restore $48391s3% base mana every $48391T3 sec. Lasts $48391d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194325, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 5, 'ProcTypeMask': 131752, 'RangeIndex': 1, 'ShapeshiftMask': 1073741824, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='pulled from existing data | moved here from source/classes/mage.py (spell-source-dsl.PLAN.md - a split_class_file.py spot check turned up this and its two sibling ranks misfiled into Mage). druid-rework BALANCE §6 row (7,0): aura 42->231, SpellClassSet 3->7 (fixes the misfiled-as-Mage bug), classmask cleared; procs_on(-48389, ...) in druid_talents.py drives the real proc logic',
+    raw_overrides={'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While in Moonkin Form, your direct Arcane and Nature damage spells have a 10% chance to trigger Owlkin Frenzy, and melee hits against you have a 30% chance. Owlkin Frenzy increases your Arcane and Nature damage by $48391s1% for $48391d, and restores $48391s3% of base mana every $48391t3 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 0, 'RangeIndex': 1, 'ShapeshiftMask': 1073741824, 'SpellClassSet': 7, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -309,11 +314,11 @@ owlkin_frenzy_48392 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=48391),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, trigger_spell=48391),
     ],
     spell_icon_id=2853,
-    notes='pulled from existing data | moved here from source/classes/mage.py - see owlkin_frenzy_48389\'s notes.',
-    raw_overrides={'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Attacks done to you while in Moonkin form have a $h% chance to cause you to go into a Frenzy, increasing your damage by $48391s2%, cause you to be immune to pushback while casting Balance spells and restore $48391s3% base mana every $48391T3 sec. Lasts $48391d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194325, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 131752, 'RangeIndex': 1, 'ShapeshiftMask': 1073741824, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='pulled from existing data | moved here from source/classes/mage.py - see owlkin_frenzy_48389\'s notes. druid-rework BALANCE §6 row (7,0)',
+    raw_overrides={'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While in Moonkin Form, your direct Arcane and Nature damage spells have a 10% chance to trigger Owlkin Frenzy, and melee hits against you have a 30% chance. Owlkin Frenzy increases your Arcane and Nature damage by $48391s1% for $48391d, and restores $48391s3% of base mana every $48391t3 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 0, 'RangeIndex': 1, 'ShapeshiftMask': 1073741824, 'SpellClassSet': 7, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -329,11 +334,11 @@ owlkin_frenzy_48393 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=48391),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, trigger_spell=48391),
     ],
     spell_icon_id=2853,
-    notes='pulled from existing data | moved here from source/classes/mage.py - see owlkin_frenzy_48389\'s notes.',
-    raw_overrides={'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Attacks done to you while in Moonkin form have a $h% chance to cause you to go into a Frenzy, increasing your damage by $48391s2%, cause you to be immune to pushback while casting Balance spells and restore $48391s3% base mana every $48391T3 sec. Lasts $48391d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194325, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 15, 'ProcTypeMask': 131752, 'RangeIndex': 1, 'ShapeshiftMask': 1073741824, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='pulled from existing data | moved here from source/classes/mage.py - see owlkin_frenzy_48389\'s notes. druid-rework BALANCE §6 row (7,0)',
+    raw_overrides={'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While in Moonkin Form, your direct Arcane and Nature damage spells have a 10% chance to trigger Owlkin Frenzy, and melee hits against you have a 30% chance. Owlkin Frenzy increases your Arcane and Nature damage by $48391s1% for $48391d, and restores $48391s3% of base mana every $48391t3 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 0, 'RangeIndex': 1, 'ShapeshiftMask': 1073741824, 'SpellClassSet': 7, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -350,11 +355,12 @@ starlight_wrath_16814 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=107, misc_value=10),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
     ],
     spell_icon_id=263,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cast time of your Wrath and Starfire spells by $/1000;S1 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 5, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (0,1): cast-time-reduction SpellMod replaced with a Wrath damage % + Starfire/Starsurge crit % (base cast times drop instead - §0.13)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Wrath by $s1%. Increases the critical strike chance of your Starfire and Starsurge by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': WRATH, 'EffectSpellClassMaskB_1': STARFIRE, 'EffectSpellClassMaskB_3': STARSURGE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -371,11 +377,12 @@ starlight_wrath_16815 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-201, implicit_target_a=1, apply_aura=107, misc_value=10),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
     ],
     spell_icon_id=263,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cast time of your Wrath and Starfire spells by $/1000;S1 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 5, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (0,1)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Wrath by $s1%. Increases the critical strike chance of your Starfire and Starsurge by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': WRATH, 'EffectSpellClassMaskB_1': STARFIRE, 'EffectSpellClassMaskB_3': STARSURGE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -392,11 +399,12 @@ starlight_wrath_16816 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-301, implicit_target_a=1, apply_aura=107, misc_value=10),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
     ],
     spell_icon_id=263,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cast time of your Wrath and Starfire spells by $/1000;S1 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 5, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (0,1)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Wrath by $s1%. Increases the critical strike chance of your Starfire and Starsurge by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': WRATH, 'EffectSpellClassMaskB_1': STARFIRE, 'EffectSpellClassMaskB_3': STARSURGE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -454,13 +462,11 @@ nature_s_reach_16819 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=5),
-        Effect(type=EffectType.APPLY_AURA, base_points=-16, implicit_target_a=1, apply_aura=108, misc_value=2),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=6),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.RANGE),
     ],
     spell_icon_id=39,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your Balance spells and Faerie Fire (Feral) ability by $s1%, and reduces the threat generated by your Balance spells by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 6293255, 'EffectSpellClassMaskA_2': 25301536, 'EffectSpellClassMaskB_1': 7341831, 'EffectSpellClassMaskB_2': 25559584, 'EffectSpellClassMaskC_2': 16777216, 'EffectSpellClassMaskC_3': 256, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (2,3): range-% SpellMod replaced with a flat +yd RANGE SpellMod re-scoped to NATURES_REACH (Wrath/Starfire/Entangling Roots/Hurricane/Cyclone/Mass Entanglement); threat and Faerie Fire (Feral) range effects dropped',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your damaging spells with a channeling or cast time by $m1 yards, and the range of your Entangling Roots, Mass Entanglement, and Cyclone by $m1 yards. Does not stack with similar effects.\n\n|cFF9D9D9DCapstone Bonus: When your Arcane spells with a cast time hit a target afflicted by your Moonfire, it spreads to all unafflicted enemies within 5 yards. This effect has a 6 sec cooldown.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': NATURES_REACH[0], 'EffectSpellClassMaskA_2': NATURES_REACH[1], 'EffectSpellClassMaskA_3': NATURES_REACH[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -476,13 +482,11 @@ nature_s_reach_16820 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=5),
-        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=108, misc_value=2),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=6),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.RANGE),
     ],
     spell_icon_id=39,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your Balance spells and Faerie Fire (Feral) ability by $s1%, and reduces the threat generated by your Balance spells by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 6293255, 'EffectSpellClassMaskA_2': 25301536, 'EffectSpellClassMaskB_1': 7341831, 'EffectSpellClassMaskB_2': 25559584, 'EffectSpellClassMaskC_2': 16777216, 'EffectSpellClassMaskC_3': 256, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (2,3): final rank, carries the Moonfire-spread capstone (procs_on(16820, ...) in druid_talents.py, spell_dru_natures_reach_moonfire_spread)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your damaging spells with a channeling or cast time by $m1 yards, and the range of your Entangling Roots, Mass Entanglement, and Cyclone by $m1 yards. Does not stack with similar effects.\n\nCapstone Bonus: When your Arcane spells with a cast time hit a target afflicted by your Moonfire, it spreads to all unafflicted enemies within 5 yards. This effect has a 6 sec cooldown.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': NATURES_REACH[0], 'EffectSpellClassMaskA_2': NATURES_REACH[1], 'EffectSpellClassMaskA_3': NATURES_REACH[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -499,13 +503,13 @@ improved_moonfire_16821 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=71, misc_value=64),
         Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108),
         Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108, misc_value=22),
     ],
     spell_icon_id=225,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage and critical strike chance of your Moonfire spell by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2, 'EffectSpellClassMaskB_1': 2, 'EffectSpellClassMaskC_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (1,2): eff1 moved from a Moonfire-scoped crit SpellMod to MOD_SPELL_CRIT_CHANCE_SCHOOL(71)/Arcane (feeds Astral via CORE-AUDIT row 5\'s linked_spell 200354-200356)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Moonfire by $s2% and the critical strike chance of your Arcane spells by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your direct Arcane critical strikes on targets afflicted by your Moonfire trigger an extra $200341s1 Arcane damage. This can occur once every 1.5 sec.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 2, 'EffectSpellClassMaskC_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -522,13 +526,13 @@ improved_moonfire_16822 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=71, misc_value=64),
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=22),
     ],
     spell_icon_id=225,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage and critical strike chance of your Moonfire spell by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2, 'EffectSpellClassMaskB_1': 2, 'EffectSpellClassMaskC_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (1,2)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Moonfire by $s2% and the critical strike chance of your Arcane spells by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your direct Arcane critical strikes on targets afflicted by your Moonfire trigger an extra $200341s1 Arcane damage. This can occur once every 1.5 sec.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 2, 'EffectSpellClassMaskC_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -607,13 +611,13 @@ brambles_16836 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=108, misc_value=22),
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=107, misc_value=18),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=-10001, implicit_target_a=1, apply_aura=107, misc_value=SpellModOp.COOLDOWN),
     ],
     spell_icon_id=53,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Damage from your Thorns and Entangling Roots increased by $s1% and damage done by your Treants increased by $s3%. In addition, damage from your Treants and attacks done to you while you have Barkskin active have a $s3% chance to daze the target for 3 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 256, 'EffectSpellClassMaskB_1': 512, 'EffectSpellClassMaskC_2': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (4,3): eff1 moved off DUMMY onto a Thorns damage SpellMod; eff2 becomes a plain DUMMY (Druid::AddSwell/treant script reads EFFECT_1 directly); eff3 repurposed off Barkskin\'s CHANCE_OF_SUCCESS hack (CORE-AUDIT row 2) onto a Force of Nature cooldown SpellMod',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Thorns by $s1% and the damage done by your Treants by $s2%. Reduces the cooldown of Force of Nature by $/1000;s3 sec.\n\n|cFF9D9D9DCapstone Bonus: Your Entangling Roots also silence the target for 4 sec. This effect has a 10 sec cooldown.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': THORNS, 'EffectSpellClassMaskC_2': FORCE_OF_NATURE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -629,13 +633,13 @@ brambles_16839 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=28),
-        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=108, misc_value=22),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=107, misc_value=18),
+        Effect(type=EffectType.APPLY_AURA, base_points=199, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=-20001, implicit_target_a=1, apply_aura=107, misc_value=SpellModOp.COOLDOWN),
     ],
     spell_icon_id=53,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Damage from your Thorns and Entangling Roots increased by $s1% and damage done by your Treants increased by $s3%. In addition, damage from your Treants and attacks done to you while you have Barkskin active have a $s3% chance to daze the target for 3 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 256, 'EffectSpellClassMaskB_1': 512, 'EffectSpellClassMaskC_2': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (4,3): junk misc 28 on eff1 cleared alongside the aura-type move',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Thorns by $s1% and the damage done by your Treants by $s2%. Reduces the cooldown of Force of Nature by $/1000;s3 sec.\n\n|cFF9D9D9DCapstone Bonus: Your Entangling Roots also silence the target for 4 sec. This effect has a 10 sec cooldown.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': THORNS, 'EffectSpellClassMaskC_2': FORCE_OF_NATURE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -651,13 +655,13 @@ brambles_16840 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=74, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, base_points=74, implicit_target_a=1, apply_aura=108, misc_value=22),
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=107, misc_value=18),
+        Effect(type=EffectType.APPLY_AURA, base_points=299, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=-30001, implicit_target_a=1, apply_aura=107, misc_value=SpellModOp.COOLDOWN),
     ],
     spell_icon_id=53,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Damage from your Thorns and Entangling Roots increased by $s1% and damage done by your Treants increased by $s3%. In addition, damage from your Treants and attacks done to you while you have Barkskin active have a $s3% chance to daze the target for 3 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 256, 'EffectSpellClassMaskB_1': 512, 'EffectSpellClassMaskC_2': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (4,3): final rank, carries the Entangling Roots silence capstone (procs_on(16840, ...) in druid_talents.py, spell_dru_brambles_silence, WP-B; new debuff 200353)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Thorns by $s1% and the damage done by your Treants by $s2%. Reduces the cooldown of Force of Nature by $/1000;s3 sec.\n\nCapstone Bonus: Your Entangling Roots also silence the target for 4 sec. This effect has a 10 sec cooldown.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': THORNS, 'EffectSpellClassMaskC_2': FORCE_OF_NATURE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -673,11 +677,12 @@ moonglow_16845 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-4, implicit_target_a=1, apply_aura=108, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=-4, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COST),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200348),
     ],
     spell_icon_id=310,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the Mana cost of your Moonfire, Starfire, Starfall, Wrath, Healing Touch, Nourish, Regrowth and Rejuvenation spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 119, 'EffectSpellClassMaskA_2': 41943040, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (1,0): cost re-scoped to MOONGLOW_SPELLS (Wrath/Starfire/Healing Touch/Regrowth/Swiftmend/Starsurge), new eff2 procs a stacking Spirit+regen buff (200348-200350, procs_on(-16845, ...) in druid_talents.py)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Starfire, Wrath, Starsurge, Healing Touch, Regrowth, and Swiftmend by $s1%. Casting these spells has a 5% chance to increase your Spirit and your mana regeneration while casting. Does not stack with similar effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': MOONGLOW_SPELLS[0], 'EffectSpellClassMaskA_2': MOONGLOW_SPELLS[1], 'EffectSpellClassMaskA_3': MOONGLOW_SPELLS[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -693,11 +698,12 @@ moonglow_16846 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=1, apply_aura=108, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COST),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200349),
     ],
     spell_icon_id=310,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the Mana cost of your Moonfire, Starfire, Starfall, Wrath, Healing Touch, Nourish, Regrowth and Rejuvenation spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 119, 'EffectSpellClassMaskA_2': 41943040, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (1,0)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Starfire, Wrath, Starsurge, Healing Touch, Regrowth, and Swiftmend by $s1%. Casting these spells has a 5% chance to increase your Spirit and your mana regeneration while casting. Does not stack with similar effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': MOONGLOW_SPELLS[0], 'EffectSpellClassMaskA_2': MOONGLOW_SPELLS[1], 'EffectSpellClassMaskA_3': MOONGLOW_SPELLS[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -713,11 +719,12 @@ moonglow_16847 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-10, implicit_target_a=1, apply_aura=108, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=-10, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COST),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200350),
     ],
     spell_icon_id=310,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the Mana cost of your Moonfire, Starfire, Starfall, Wrath, Healing Touch, Nourish, Regrowth and Rejuvenation spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 119, 'EffectSpellClassMaskA_2': 41943040, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (1,0)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Starfire, Wrath, Starsurge, Healing Touch, Regrowth, and Swiftmend by $s1%. Casting these spells has a 5% chance to increase your Spirit and your mana regeneration while casting. Does not stack with similar effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': MOONGLOW_SPELLS[0], 'EffectSpellClassMaskA_2': MOONGLOW_SPELLS[1], 'EffectSpellClassMaskA_3': MOONGLOW_SPELLS[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -733,12 +740,12 @@ celestial_focus_16850 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=22, implicit_target_a=1, apply_aura=108, misc_value=9),
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=65, misc_value=9),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.REDUCE_PUSHBACK),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL, misc_value=0),
     ],
     spell_icon_id=1485,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the pushback suffered from damaging attacks while casting Starfire, Hibernate and Hurricane by $s1% and increases your total spell haste by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194308, 'EffectSpellClassMaskA_2': 131072, 'EffectSpellClassMaskB_1': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 5, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (3,2): trimmed 3->2 ranks; REDUCE_PUSHBACK(149) applies to every spell so the classmask is cleared',
+    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases spell, ranged, and melee haste by $s2%. Reduces the pushback suffered from damaging attacks by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Moonfire and Insect Swarm periodic damage has a chance to grant Shooting Stars, empowering your next Starsurge within 15 sec to not trigger its cooldown and be a guaranteed critical strike.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -885,11 +892,11 @@ nature_s_grace_16880 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=16886),
+        Effect(type=EffectType.APPLY_AURA, base_points=7, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, trigger_spell=16886),
     ],
     spell_icon_id=10,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'All non-periodic spell criticals have a $h% chance to grace you with a blessing of nature, increasing your spell casting speed by $16886s1% for $16886d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 33, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (2,0): aura 42->231 (value overrides 16886\'s own amount); procs_on(-16880, ...) in druid_talents.py overrides the stock -16880 row',
+    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your direct damage and healing Druid spell critical strikes have a $h% chance to grant Nature\'s Grace, increasing spell, ranged, and melee haste by $16886s1% for $16886d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 33, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -907,10 +914,11 @@ moonfury_16896 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=108),
         Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=108),
     ],
     spell_icon_id=46,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Starfire, Moonfire and Wrath spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 7, 'EffectSpellClassMaskB_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (5,1): +Starsurge to eff1\'s mask; new eff3 scopes a separate Starfall damage %',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Starfire, Moonfire, Wrath, and Starsurge by $s1%, and your Starfall damage by $s3%.\n\n|cFF9D9D9DCapstone Bonus: Casting Starsurge grants Astral Surge, increasing your spell power for Arcane and Nature damage by 10% for 15 sec. Stacks up to 3 times; each stack has its own duration and multiplies the others.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 7, 'EffectSpellClassMaskA_3': STARSURGE, 'EffectSpellClassMaskB_1': 2, 'EffectSpellClassMaskC_2': STARFALL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -928,10 +936,11 @@ moonfury_16897 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108),
         Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=13, implicit_target_a=1, apply_aura=108),
     ],
     spell_icon_id=46,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Starfire, Moonfire and Wrath spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 7, 'EffectSpellClassMaskB_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (5,1)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Starfire, Moonfire, Wrath, and Starsurge by $s1%, and your Starfall damage by $s3%.\n\n|cFF9D9D9DCapstone Bonus: Casting Starsurge grants Astral Surge, increasing your spell power for Arcane and Nature damage by 10% for 15 sec. Stacks up to 3 times; each stack has its own duration and multiplies the others.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 7, 'EffectSpellClassMaskA_3': STARSURGE, 'EffectSpellClassMaskB_1': 2, 'EffectSpellClassMaskC_2': STARFALL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -949,10 +958,11 @@ moonfury_16899 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108),
     ],
     spell_icon_id=46,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Starfire, Moonfire and Wrath spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 7, 'EffectSpellClassMaskB_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (5,1): final rank, carries the Astral Surge capstone (spell_dru_starsurge AfterCast checks HasAura(16899) -> Druid::ApplyAstralSurge, WP-B)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Starfire, Moonfire, Wrath, and Starsurge by $s1%, and your Starfall damage by $s3%.\n\nCapstone Bonus: Casting Starsurge grants Astral Surge, increasing your spell power for Arcane and Nature damage by 10% for 15 sec. Stacks up to 3 times; each stack has its own duration and multiplies the others.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 7, 'EffectSpellClassMaskA_3': STARSURGE, 'EffectSpellClassMaskB_1': 2, 'EffectSpellClassMaskC_2': STARFALL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -968,11 +978,11 @@ vengeance_16909 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=15),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108, misc_value=15),
     ],
     spell_icon_id=47,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike damage bonus of your Starfire, Starfall, Moonfire, and Wrath spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 7, 'EffectSpellClassMaskA_2': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (6,3): trimmed 5->3 ranks, mask widened to DRUID_SPELL_DAMAGE (every druid magic-damage spell)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes deal $s1% damage. Does not stack with similar effects.\n\n|cFF9D9D9DCapstone Bonus: Your direct Arcane and Nature critical strikes have a 15% chance to attract a Vengeful Soul, increasing your magic damage by 8% for 12 sec. When it ends, the Soul leaves your body and restores 10% of your missing mana. Only one Vengeful Soul can be attracted at a time, and a new proc refreshes it.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': DRUID_SPELL_DAMAGE[0], 'EffectSpellClassMaskA_2': DRUID_SPELL_DAMAGE[1], 'EffectSpellClassMaskA_3': DRUID_SPELL_DAMAGE[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -988,11 +998,11 @@ vengeance_16910 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=108, misc_value=15),
+        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=1, apply_aura=108, misc_value=15),
     ],
     spell_icon_id=47,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike damage bonus of your Starfire, Starfall, Moonfire, and Wrath spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 7, 'EffectSpellClassMaskA_2': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (6,3)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes deal $s1% damage. Does not stack with similar effects.\n\n|cFF9D9D9DCapstone Bonus: Your direct Arcane and Nature critical strikes have a 15% chance to attract a Vengeful Soul, increasing your magic damage by 8% for 12 sec. When it ends, the Soul leaves your body and restores 10% of your missing mana. Only one Vengeful Soul can be attracted at a time, and a new proc refreshes it.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': DRUID_SPELL_DAMAGE[0], 'EffectSpellClassMaskA_2': DRUID_SPELL_DAMAGE[1], 'EffectSpellClassMaskA_3': DRUID_SPELL_DAMAGE[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -1008,11 +1018,12 @@ vengeance_16911 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=1, apply_aura=108, misc_value=15),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=108, misc_value=15),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200343),
     ],
     spell_icon_id=47,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike damage bonus of your Starfire, Starfall, Moonfire, and Wrath spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 7, 'EffectSpellClassMaskA_2': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (6,3): final rank, carries the Vengeful Soul capstone proc (200343 buff, procs_on(16911, ...) in druid_talents.py, spell_dru_vengeful_soul, WP-B)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes deal $s1% damage. Does not stack with similar effects.\n\nCapstone Bonus: Your direct Arcane and Nature critical strikes have a 15% chance to attract a Vengeful Soul, increasing your magic damage by 8% for 12 sec. When it ends, the Soul leaves your body and restores 10% of your missing mana. Only one Vengeful Soul can be attracted at a time, and a new proc refreshes it.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': DRUID_SPELL_DAMAGE[0], 'EffectSpellClassMaskA_2': DRUID_SPELL_DAMAGE[1], 'EffectSpellClassMaskA_3': DRUID_SPELL_DAMAGE[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -1068,12 +1079,13 @@ celestial_focus_16923 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=45, implicit_target_a=1, apply_aura=108, misc_value=9),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=65, misc_value=9),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.REDUCE_PUSHBACK),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL, misc_value=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200342),
     ],
     spell_icon_id=1485,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the pushback suffered from damaging attacks while casting Starfire, Hibernate and Hurricane by $s1% and increases your total spell haste by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194308, 'EffectSpellClassMaskA_2': 131072, 'EffectSpellClassMaskB_1': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (3,2): final rank, carries the Shooting Stars capstone proc (200342 buff, procs_on(16923, ...) in druid_talents.py, spell_dru_shooting_stars TODO WP-B)',
+    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases spell, ranged, and melee haste by $s2%. Reduces the pushback suffered from damaging attacks by $s1%.\n\nCapstone Bonus: Your Moonfire and Insect Swarm periodic damage has a chance to grant Shooting Stars, empowering your next Starsurge within 15 sec to not trigger its cooldown and be a guaranteed critical strike.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2387,12 +2399,12 @@ lunar_guidance_33589 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=174, misc_value=126),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=175, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=174, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=290, misc_value=0),
     ],
     spell_icon_id=2256,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell power by $s1% of your total Intellect.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 3, 'EffectSpellClassMaskA_1': 7, 'EffectSpellClassMaskB_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (4,0): eff2 moved from healing-from-Int to MOD_CRIT_PCT(290), junk classmasks cleared',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your critical strike chance with all spells and abilities by $s2%, and your spell damage by $s1% of your Intellect.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 3, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2408,12 +2420,12 @@ lunar_guidance_33590 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=174, misc_value=126),
-        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=175, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=174, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=290, misc_value=0),
     ],
     spell_icon_id=2256,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell power by $s1% of your total Intellect.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 3, 'EffectSpellClassMaskA_1': 7, 'EffectSpellClassMaskB_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (4,0)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your critical strike chance with all spells and abilities by $s2%, and your spell damage by $s1% of your Intellect.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 3, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2429,12 +2441,12 @@ lunar_guidance_33591 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=174, misc_value=126),
-        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=175, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=174, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=290, misc_value=0),
     ],
     spell_icon_id=2256,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell power by $s1% of your total Intellect.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 3, 'EffectSpellClassMaskA_1': 7, 'EffectSpellClassMaskB_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (4,0)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your critical strike chance with all spells and abilities by $s2%, and your spell damage by $s1% of your Intellect.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 3, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2450,12 +2462,11 @@ balance_of_power_33592 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=199, misc_value=126),
-        Effect(type=EffectType.APPLY_AURA, base_points=-4, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=0),
     ],
     spell_icon_id=2247,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to hit with all spells by $s1% and reduces your damage taken from all spells by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 7, 'EffectSpellClassMaskB_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (5,2): display-value DUMMY, spell_dru_eclipse HandleProc casts 200347 with BP0 = this rank\'s eff1 amount (CORE-AUDIT row 6 - PLAN C1 accepted)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Entering an Eclipse increases your spell power by $s1% for 5 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2471,12 +2482,11 @@ balance_of_power_33596 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=199, misc_value=126),
-        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=0),
     ],
     spell_icon_id=2247,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to hit with all spells by $s1% and reduces your damage taken from all spells by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 7, 'EffectSpellClassMaskB_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (5,2)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Entering an Eclipse increases your spell power by $s1% for 5 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2493,11 +2503,13 @@ dreamstate_33597 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=219, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=290, misc_value=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=5000),
+        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=108, misc_value=SpellModOp.EFFECT1),
     ],
     spell_icon_id=2255,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Regenerate mana equal to $s1% of your Intellect every 5 sec, even while casting.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': 7, 'EffectSpellClassMaskB_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (5,0): eff1 moved from mana-regen-from-Int to MOD_CRIT_PCT(290); new eff2 is a PERIODIC_DUMMY the AuraScript reads to energize missing mana; new eff3 boosts Innervate (spell_dru_dreamstate/_dreamstate_innervate, WP-B)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your critical strike chance with all spells and abilities by $s1%. Regenerates $s2% of your missing mana every 5 sec. Innervate restores $s3% more mana.\n\n|cFF9D9D9DCapstone Bonus: Casting Innervate on another target also casts it on yourself.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_2': INNERVATE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2514,11 +2526,13 @@ dreamstate_33599 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=219, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=290, misc_value=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=5000),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=108, misc_value=SpellModOp.EFFECT1),
     ],
     spell_icon_id=2255,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Regenerate mana equal to $s1% of your Intellect every 5 sec, even while casting.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': 7, 'EffectSpellClassMaskB_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (5,0)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your critical strike chance with all spells and abilities by $s1%. Regenerates $s2% of your missing mana every 5 sec. Innervate restores $s3% more mana.\n\n|cFF9D9D9DCapstone Bonus: Casting Innervate on another target also casts it on yourself.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_2': INNERVATE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2598,12 +2612,11 @@ wrath_of_cenarius_33603 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=107, misc_value=24),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.BONUS_MULTIPLIER),
     ],
     spell_icon_id=2248,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Starfire spell gains an additional $s1% and your Wrath gains an additional $s2% of your bonus damage effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': 4, 'EffectSpellClassMaskB_1': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (7,2): eff1 moved from a flat to a percent BONUS_MULTIPLIER SpellMod re-scoped to Starfire/Wrath/Starsurge; eff2 dropped',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the spell damage scaling of your Starfire, Wrath, and Starsurge by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Dealing damage with your Wrath reduces the remaining cooldown of your Solar Beam by 1 sec, and extends Nature\'s Grace by 0.5 sec.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': 5, 'EffectSpellClassMaskA_3': STARSURGE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2620,12 +2633,11 @@ wrath_of_cenarius_33604 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=107, misc_value=24),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=107, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=13, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.BONUS_MULTIPLIER),
     ],
     spell_icon_id=2248,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Starfire spell gains an additional $s1% and your Wrath gains an additional $s2% of your bonus damage effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': 4, 'EffectSpellClassMaskB_1': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (7,2)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the spell damage scaling of your Starfire, Wrath, and Starsurge by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Dealing damage with your Wrath reduces the remaining cooldown of your Solar Beam by 1 sec, and extends Nature\'s Grace by 0.5 sec.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': 5, 'EffectSpellClassMaskA_3': STARSURGE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2642,12 +2654,11 @@ wrath_of_cenarius_33605 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=107, misc_value=24),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=107, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.BONUS_MULTIPLIER),
     ],
     spell_icon_id=2248,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Starfire spell gains an additional $s1% and your Wrath gains an additional $s2% of your bonus damage effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': 4, 'EffectSpellClassMaskB_1': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (7,2): final rank, carries the capstone (spell_dru_wrath_of_cenarius_capstone on 5176, WP-B)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the spell damage scaling of your Starfire, Wrath, and Starsurge by $s1%.\n\nCapstone Bonus: Dealing damage with your Wrath reduces the remaining cooldown of your Solar Beam by 1 sec, and extends Nature\'s Grace by 0.5 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': 5, 'EffectSpellClassMaskA_3': STARSURGE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3124,11 +3135,13 @@ dreamstate_33956 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=219, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=290, misc_value=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=5000),
+        Effect(type=EffectType.APPLY_AURA, base_points=74, implicit_target_a=1, apply_aura=108, misc_value=SpellModOp.EFFECT1),
     ],
     spell_icon_id=2255,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Regenerate mana equal to $s1% of your Intellect every 5 sec, even while casting.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': 7, 'EffectSpellClassMaskB_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (5,0): final rank, carries the self-Innervate capstone (spell_dru_dreamstate_innervate on 29166, WP-B)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your critical strike chance with all spells and abilities by $s1%. Regenerates $s2% of your missing mana every 5 sec. Innervate restores $s3% more mana.\n\nCapstone Bonus: Casting Innervate on another target also casts it on yourself.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_2': INNERVATE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3270,11 +3283,12 @@ nature_s_majesty_35363 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
+        Effect(type=EffectType.APPLY_AURA, base_points=-5001, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COOLDOWN),
     ],
     spell_icon_id=598,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Wrath, Starfire, Starfall, Nourish and Healing Touch spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 37, 'EffectSpellClassMaskA_2': 41943040, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (1,1): +Starsurge to the crit mask, new eff2 cuts Mass Entanglement\'s cooldown',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Wrath, Starfire, Starfall, Starsurge, Nourish, and Healing Touch by $s1%. Reduces the cooldown of your Mass Entanglement by $/1000;s2 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 37, 'EffectSpellClassMaskA_2': 41943040, 'EffectSpellClassMaskA_3': STARSURGE, 'EffectSpellClassMaskB_3': MASS_ENTANGLEMENT, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3290,11 +3304,12 @@ nature_s_majesty_35364 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
+        Effect(type=EffectType.APPLY_AURA, base_points=-10001, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COOLDOWN),
     ],
     spell_icon_id=598,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Wrath, Starfire, Starfall, Nourish and Healing Touch spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 37, 'EffectSpellClassMaskA_2': 41943040, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (1,1)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Wrath, Starfire, Starfall, Starsurge, Nourish, and Healing Touch by $s1%. Reduces the cooldown of your Mass Entanglement by $/1000;s2 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 37, 'EffectSpellClassMaskA_2': 41943040, 'EffectSpellClassMaskA_3': STARSURGE, 'EffectSpellClassMaskB_3': MASS_ENTANGLEMENT, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3310,12 +3325,12 @@ improved_moonkin_form_48384 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=18),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=174, misc_value=126),
+        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=174, misc_value=126),
     ],
     spell_icon_id=2855,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Moonkin Aura also causes affected targets to gain $50170s1% haste and you to gain $s2% of your spirit as additional spell damage.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectMiscValueB_2': 4, 'EffectSpellClassMaskA_2': 8192, 'EffectSpellClassMaskB_1': 1024, 'EffectSpellClassMaskC_2': 8192, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': 1073741824, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (6,2): eff1\'s inert DUMMY cleared, eff2 doubled to 20/40/60% of Spirit',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Moonkin Aura also grants affected targets $50170s1% haste, and grants you $s2% of your Spirit as additional spell damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_2': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': 1073741824, 'SpellClassSet': 7},
 )
 
 
@@ -3331,12 +3346,12 @@ improved_moonkin_form_48395 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=65, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=18),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=174, misc_value=126),
+        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=174, misc_value=126),
     ],
     spell_icon_id=2855,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Moonkin Aura also causes affected targets to gain $50171s1% haste and you to gain $s2% of your spirit as additional spell damage.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectMiscValueB_2': 4, 'EffectSpellClassMaskA_2': 8192, 'EffectSpellClassMaskB_1': 1024, 'EffectSpellClassMaskC_2': 8192, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': 1073741824, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (6,2)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Moonkin Aura also grants affected targets $50171s1% haste, and grants you $s2% of your Spirit as additional spell damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_2': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': 1073741824, 'SpellClassSet': 7},
 )
 
 
@@ -3352,12 +3367,12 @@ improved_moonkin_form_48396 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=18),
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=174, misc_value=126),
+        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=1, apply_aura=174, misc_value=126),
     ],
     spell_icon_id=2855,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Moonkin Aura also causes affected targets to gain $50172s1% haste and you to gain $s2% of your spirit as additional spell damage.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectMiscValueB_2': 4, 'EffectSpellClassMaskA_2': 8192, 'EffectSpellClassMaskB_1': 1024, 'EffectSpellClassMaskC_2': 8192, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': 1073741824, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (6,2)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Moonkin Aura also grants affected targets $50172s1% haste, and grants you $s2% of your Spirit as additional spell damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_2': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': 1073741824, 'SpellClassSet': 7},
 )
 
 
@@ -3539,11 +3554,11 @@ gale_winds_48488 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=5),
+        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COST),
     ],
     spell_icon_id=2837,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases damage done by your Hurricane and Typhoon spells by $s1%, and increases the range of your Cyclone spell by $s2 yards.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194304, 'EffectSpellClassMaskA_2': 16777216, 'EffectSpellClassMaskB_2': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (8,3): eff2 moved from Cyclone range to a Hurricane mana-cost cut',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Hurricane and Typhoon by $s1%, and reduces the mana cost of Hurricane by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Each time your Hurricane deals damage, the damage of your Hurricane is increased by 10% for the rest of the channel, stacking up to 5 times.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': HURRICANE, 'EffectSpellClassMaskA_2': TYPHOON, 'EffectSpellClassMaskB_1': HURRICANE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3727,12 +3742,12 @@ earth_and_moon_48506 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=earth_and_moon_60431.id),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=79, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, trigger_spell=earth_and_moon_60431.id),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=79, misc_value=72),
     ],
     spell_icon_id=2991,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Wrath and Starfire spells have a $h% chance to apply the Earth and Moon effect, which increases spell damage taken by $60431s1% for $60431d.  Also increases your spell damage by $s2%.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskB_1': 2, 'EffectSpellClassMaskB_2': 32785, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (9,1): eff1 aura 42->231 (value overrides 60431\'s own stored amount), all three ranks trigger the same 60431 (60432/60433 orphaned - rank chain deleted); eff2 misc 126->72 (Astral); junk B_1/B_2 cleared; procs_on(-48506, ...) in druid_talents.py',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Arcane and Nature damage by $s2%. Your Wrath, Starfire, and Starsurge apply Earth and Moon, increasing magic damage taken by $60431s1% for $60431d. Does not stack with similar effects.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3748,12 +3763,12 @@ earth_and_moon_48510 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=60432),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=79, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, trigger_spell=earth_and_moon_60431.id),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=79, misc_value=72),
     ],
     spell_icon_id=2991,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Wrath and Starfire spells have a $h% chance to  apply the Earth and Moon effect, which increases spell damage taken by $60432s1% for $60432d.  Also increases your spell damage by $s2%.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskB_1': 2, 'EffectSpellClassMaskB_2': 32785, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (9,1)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Arcane and Nature damage by $s2%. Your Wrath, Starfire, and Starsurge apply Earth and Moon, increasing magic damage taken by $60431s1% for $60431d. Does not stack with similar effects.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3769,12 +3784,12 @@ earth_and_moon_48511 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=60433),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=79, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, trigger_spell=earth_and_moon_60431.id),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=79, misc_value=72),
     ],
     spell_icon_id=2991,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Wrath and Starfire spells have a $h% chance to apply the Earth and Moon effect, which increases spell damage taken by $60433s1% for $60433d.  Also increases your spell damage by $s2%.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskB_1': 2, 'EffectSpellClassMaskB_2': 32785, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (9,1)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Arcane and Nature damage by $s2%. Your Wrath, Starfire, and Starsurge apply Earth and Moon, increasing magic damage taken by $60431s1% for $60431d. Does not stack with similar effects.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3791,11 +3806,11 @@ gale_winds_48514 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=107, misc_value=5),
+        Effect(type=EffectType.APPLY_AURA, base_points=-61, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COST),
     ],
     spell_icon_id=2837,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases damage done by your Hurricane and Typhoon spells by $s1%, and increases the range of your Cyclone spell by $s2 yards.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194304, 'EffectSpellClassMaskA_2': 16777216, 'EffectSpellClassMaskB_2': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (8,3): final rank, carries the Hurricane-ramp capstone (200351 stack buff, spell_dru_hurricane_tick/_channel on 42231/16914, WP-B)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Hurricane and Typhoon by $s1%, and reduces the mana cost of Hurricane by $s2%.\n\nCapstone Bonus: Each time your Hurricane deals damage, the damage of your Hurricane is increased by 10% for the rest of the channel, stacking up to 5 times.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': HURRICANE, 'EffectSpellClassMaskA_2': TYPHOON, 'EffectSpellClassMaskB_1': HURRICANE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3811,12 +3826,12 @@ eclipse_48516 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=12),
-        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2856,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you critically hit with Starfire, you have a $h1% chance of increasing damage done by Wrath by $48517s1%. When you critically hit with Wrath, you have a ${$h*0.6}% chance of increasing your critical strike chance with Starfire by $48518s1%. Each effect lasts $48518d and each has a separate $s1 sec cooldown.  Both effects cannot occur simultaneously.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1026, 'EffectSpellClassMaskA_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 33, 'ProcTypeMask': 69632, 'RangeIndex': 1, 'SpellClassMask_3': 1048576, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (8,0): rewrite of spell_dru_eclipse (stock -48516 binding kept, WP-B; BALANCE §7); eff1/eff2 are pure display values now, classmasks cleared',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Dealing damage with Starfire grants Solar Eclipse, increasing your Nature damage by $s1% for 15 sec. Dealing damage with Wrath grants Lunar Eclipse, increasing your Arcane damage by $s1% for 15 sec. Both effects cannot occur at the same time, and each can only occur once every $s2 sec.\n\n|cFF9D9D9DCapstone Bonus: The damage bonus from Eclipse is increased by your Mastery.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassMask_3': 1048576, 'SpellClassSet': 7},
 )
 
 
@@ -3832,12 +3847,12 @@ eclipse_48521 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=12),
-        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2856,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you critically hit with Starfire, you have a $h1% chance of increasing damage done by Wrath by $48517s1%. When you critically hit with Wrath, you have a ${$h*0.6}% chance of increasing your critical strike chance with Starfire by $48518s1%. Each effect lasts $48518d and each has a separate $s1 sec cooldown.  Both effects cannot occur simultaneously.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1026, 'EffectSpellClassMaskA_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 66, 'ProcTypeMask': 69632, 'RangeIndex': 1, 'SpellClassMask_3': 1048576, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (8,0)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Dealing damage with Starfire grants Solar Eclipse, increasing your Nature damage by $s1% for 15 sec. Dealing damage with Wrath grants Lunar Eclipse, increasing your Arcane damage by $s1% for 15 sec. Both effects cannot occur at the same time, and each can only occur once every $s2 sec.\n\n|cFF9D9D9DCapstone Bonus: The damage bonus from Eclipse is increased by your Mastery.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassMask_3': 1048576, 'SpellClassSet': 7},
 )
 
 
@@ -3853,12 +3868,12 @@ eclipse_48525 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=12),
-        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2856,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you critically hit with Starfire, you have a $h1% chance of increasing damage done by Wrath by $48517s1%. When you critically hit with Wrath, you have a ${$h*0.6}% chance of increasing your critical strike chance with Starfire by $48518s1%. Each effect lasts $48518d and each has a separate $s1 sec cooldown.  Both effects cannot occur simultaneously.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1026, 'EffectSpellClassMaskA_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 69632, 'RangeIndex': 1, 'SpellClassMask_3': 1048576, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (8,0): final rank, the Mastery gate (Druid::SPELL_ECLIPSE_R3 in DruidMechanics.h) - Mastery only applies at 3/3 Eclipse',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Dealing damage with Starfire grants Solar Eclipse, increasing your Nature damage by $s1% for 15 sec. Dealing damage with Wrath grants Lunar Eclipse, increasing your Arcane damage by $s1% for 15 sec. Both effects cannot occur at the same time, and each can only occur once every $s2 sec.\n\nCapstone Bonus: The damage bonus from Eclipse is increased by your Mastery.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassMask_3': 1048576, 'SpellClassSet': 7},
 )
 
 
@@ -4268,12 +4283,12 @@ genesis_57810 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=108, misc_value=22),
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=1957,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage and healing done by your periodic spell damage and healing effects by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2097746, 'EffectSpellClassMaskA_2': 67108880, 'EffectSpellClassMaskB_1': 4194432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (0,2): trimmed 5->3 ranks, uniform masks on every rank (stock rank 2 had a stray classmask), GENESIS_DOT/GENESIS_TICKS composites from _masks.py (PLAN §0.10 already folds in Cenarion Ward/Cultivation)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the periodic damage and healing of your Druid spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': GENESIS_DOT[0], 'EffectSpellClassMaskA_2': GENESIS_DOT[1], 'EffectSpellClassMaskA_3': GENESIS_DOT[2], 'EffectSpellClassMaskB_1': GENESIS_TICKS[0], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -4289,12 +4304,12 @@ genesis_57811 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108, misc_value=22),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=1957,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage and healing done by your periodic spell damage and healing effects by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 6292178, 'EffectSpellClassMaskA_2': 67108880, 'EffectSpellClassMaskB_1': 4194432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (0,2)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the periodic damage and healing of your Druid spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': GENESIS_DOT[0], 'EffectSpellClassMaskA_2': GENESIS_DOT[1], 'EffectSpellClassMaskA_3': GENESIS_DOT[2], 'EffectSpellClassMaskB_1': GENESIS_TICKS[0], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -4310,12 +4325,12 @@ genesis_57812 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=108, misc_value=22),
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=1957,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage and healing done by your periodic spell damage and healing effects by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2097746, 'EffectSpellClassMaskA_2': 67108880, 'EffectSpellClassMaskB_1': 4194432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (0,2)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the periodic damage and healing of your Druid spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': GENESIS_DOT[0], 'EffectSpellClassMaskA_2': GENESIS_DOT[1], 'EffectSpellClassMaskA_3': GENESIS_DOT[2], 'EffectSpellClassMaskB_1': GENESIS_TICKS[0], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -4373,12 +4388,12 @@ improved_insect_swarm_57849 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=22),
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=1771,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your damage done by your Wrath spell to targets afflicted by your Insect Swarm by $s1%, and increases the critical strike chance of your Starfire spell by $s2% on targets afflicted by your Moonfire spell.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 6291666, 'EffectSpellClassMaskA_2': 67108880, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    spell_icon_id=1790,
+    notes='pulled from existing data; druid-rework BALANCE §6 row (4,2)/§0.2 correction: eff1 moved off DUMMY (CORE-AUDIT row 3/4 inert-key retirement, icon 1771->1790); eff2 stays a plain DUMMY percent read directly by Druid::ApplyDoneDamagePctMods (no bucket function - PLAN §0.2)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Insect Swarm by $s1%. Your Wrath deals $s2% increased damage to targets afflicted by your Insect Swarm, and your Starfire deals $s2% increased damage to targets afflicted by your Moonfire.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': INSECT_SWARM, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -4394,12 +4409,12 @@ improved_insect_swarm_57850 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=22),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=1771,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your damage done by your Wrath spell to targets afflicted by your Insect Swarm by $s1%, and increases the critical strike chance of your Starfire spell by $s2% on targets afflicted by your Moonfire spell.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 6291666, 'EffectSpellClassMaskA_2': 67108880, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    spell_icon_id=1790,
+    notes='pulled from existing data; druid-rework BALANCE §6 row (4,2)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Insect Swarm by $s1%. Your Wrath deals $s2% increased damage to targets afflicted by your Insect Swarm, and your Starfire deals $s2% increased damage to targets afflicted by your Moonfire.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': INSECT_SWARM, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -4415,12 +4430,12 @@ improved_insect_swarm_57851 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=22),
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=1771,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your damage done by your Wrath spell to targets afflicted by your Insect Swarm by $s1%, and increases the critical strike chance of your Starfire spell by $s2% on targets afflicted by your Moonfire spell.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 6291666, 'EffectSpellClassMaskA_2': 67108880, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    spell_icon_id=1790,
+    notes='pulled from existing data; druid-rework BALANCE §6 row (4,2)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Insect Swarm by $s1%. Your Wrath deals $s2% increased damage to targets afflicted by your Insect Swarm, and your Starfire deals $s2% increased damage to targets afflicted by your Moonfire.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': INSECT_SWARM, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -4584,11 +4599,11 @@ nature_s_grace_61345 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=16886),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, trigger_spell=16886),
     ],
     spell_icon_id=10,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'All non-periodic spell criticals have a $h% chance to grace you with a blessing of nature, increasing your spell casting speed by $16886s1% for $16886d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'ProcChance': 66, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (2,0)',
+    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your direct damage and healing Druid spell critical strikes have a $h% chance to grant Nature\'s Grace, increasing spell, ranged, and melee haste by $16886s1% for $16886d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'ProcChance': 66, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -4604,11 +4619,11 @@ nature_s_grace_61346 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=16886),
+        Effect(type=EffectType.APPLY_AURA, base_points=20, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, trigger_spell=16886),
     ],
     spell_icon_id=10,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'All non-periodic spell criticals have a $h% chance to grace you with a blessing of nature, increasing your spell casting speed by $16886s1% for $16886d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (2,0): final rank',
+    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your direct damage and healing Druid spell critical strikes have a $h% chance to grant Nature\'s Grace, increasing spell, ranged, and melee haste by $16886s1% for $16886d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -4673,4 +4688,851 @@ primal_gore_63503 = spell(
     spell_icon_id=262,
     notes='pulled from existing data',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Grants the periodic damage from your Lacerate and Rip abilities the ability to critically hit.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8388608, 'EffectSpellClassMaskA_2': 256, 'EffectSpellClassMaskB_3': 256, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+)
+
+
+# --- druid-rework Balance WP-0 pull list (druid-rework.BALANCE.md §3 item 1, §0.11) ---
+# Pulled via pull_dsl.py so the Balance pass can edit these rows; their legacy source/spells/npc.csv
+# rows are deleted in this same change (generate.py rejects an id declared in both places).
+
+owlkin_frenzy_48391 = spell(
+    id=48391,
+    name='Owlkin Frenzy',
+    school=School.NORMAL,
+    dispel=9,
+    mechanic=31,
+    attributes=134479872,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=10000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=72),
+        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.PERIODIC_ENERGIZE, amplitude=2000),
+    ],
+    spell_icon_id=2853,
+    notes='pulled from existing data; druid-rework BALANCE §6 row (7,0): eff1 moved from a pushback-immunity SpellMod to a display-value MOD_DAMAGE_PERCENT_DONE/Astral bucket aura (BP0 overridden by the 231 trigger on 48389/48392/48393); eff2 (old misc 127 damage%) dropped; eff3 (energize, EFFECT_2 in spell_dru_owlkin_frenzy) untouched',
+    raw_overrides={'AttributesEx': 32768, 'AttributesEx3': 262144, 'ShapeshiftMask': 1073741824, 'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 1, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 11720, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'While in Moonkin Form, your direct Arcane and Nature damage spells have a 10% chance to trigger Owlkin Frenzy, and melee hits against you have a 30% chance. Owlkin Frenzy increases your Arcane and Nature damage by $s1% for $d, and restores $s3% of base mana every $t3 sec.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Arcane and Nature damage increased by $s1%. $s3% of base mana is restored every $t3 sec.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 7, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+eclipse_solar_48517 = spell(
+    id=48517,
+    name='Solar Eclipse',
+    school=School.NORMAL,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=3449,
+    notes='pulled from existing data; druid-rework BALANCE §6 row (8,0)/§7: DUMMY display buff, BP0 overridden by spell_dru_eclipse\'s HandleProc (WP-B); classmask cleared',
+    raw_overrides={'AttributesEx6': 64, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 12705, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Nature damage increased by $s1%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Nature damage increased by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 7, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+eclipse_lunar_48518 = spell(
+    id=48518,
+    name='Lunar Eclipse',
+    school=School.NORMAL,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2856,
+    notes='pulled from existing data; druid-rework BALANCE §6 row (8,0)/§7',
+    raw_overrides={'AttributesEx6': 64, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 11567, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Arcane damage increased by $s1%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Arcane damage increased by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 7, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+nature_s_grace_16886 = spell(
+    id=16886,
+    name="Nature's Grace",
+    school=School.NATURE,
+    dispel=DispelType.MAGIC,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=4000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL, misc_value=0),
+    ],
+    spell_icon_id=10,
+    notes='pulled from existing data; druid-rework BALANCE §6 row (2,0): eff1 aura 65->193 (HASTE_ALL, display value - BP0 overridden by the procs_on(-16880) trigger); duration 3s->4s; stale classmasks cleared',
+    raw_overrides={'AttributesEx4': 64, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': "Your direct damage and healing Druid spell critical strikes have a $h% chance to grant Nature's Grace, increasing spell, ranged, and melee haste by $16886s1% for $16886d.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spell, ranged, and melee haste increased by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 7, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+moonkin_form_passive_24905 = spell(
+    id=24905,
+    name='Moonkin Form (Passive)',
+    school=School.NATURE,
+    attributes=80,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=142, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=53506),
+    ],
+    spell_icon_id=111,
+    notes='pulled from existing data; druid-rework BALANCE §6 row (6,1): eff1 40% armor (was ~370% - the stock rank\'s single-rank bootstrap value); eff3 (53506, 2% mana proc) unchanged, gated by procs_on(24905, ...) in druid_talents.py + Druid::IsDirectDamageCast (spell_dru_moonkin_form_passive_proc rewrite, WP-B)',
+    raw_overrides={'AttributesEx3': 67108864, 'ShapeshiftMask': 1073741824, 'CastingTimeIndex': 1, 'ProcTypeMask': 70656, 'ProcChance': 100, 'MaxLevel': 70, 'BaseLevel': 40, 'SpellLevel': 40, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Passive', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712188, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 7, 'SpellClassMask_3': 4, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+moonkin_form_passive_69366 = spell(
+    id=69366,
+    name='Moonkin Form (Passive)',
+    school=School.NATURE,
+    attributes=336,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=111,
+    notes='pulled from existing data; druid-rework BALANCE §6 row (6,1)/CORE-AUDIT row 10: the stun-absorb SCHOOL_ABSORB effect made a permanently inert DUMMY; unbind_script(69366, \'spell_dru_moonkin_form_passive\') in druid_talents.py stops the stock class casting it (SpellAuraEffects.cpp:1399 still casts this spell id on Moonkin entry, but it now does nothing)',
+    raw_overrides={'ShapeshiftMask': 1073741824, 'CastingTimeIndex': 1, 'ProcChance': 101, 'MaxLevel': 70, 'BaseLevel': 40, 'SpellLevel': 40, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Passive', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712188, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 7, 'SpellClassMask_3': 4, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+# --- druid-rework Balance WP-A: new talent-rank passives (BALANCE.md §2/§6) ---
+
+celestial_attunement_200320 = spell(
+    id=200320,
+    name='Celestial Attunement',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL, misc_value=0),
+    ],
+    spell_icon_id=1952,
+    notes='NEW (druid-rework BALANCE §6 row 0,0; talent 1785 repurposed from Improved Faerie Fire)',
+    raw_overrides={'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell, ranged, and melee haste by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spell, ranged, and melee haste increased by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+celestial_attunement_200321 = spell(
+    id=200321,
+    name='Celestial Attunement',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL, misc_value=0),
+    ],
+    spell_icon_id=1952,
+    notes='NEW (druid-rework BALANCE §6 row 0,0)',
+    raw_overrides={'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell, ranged, and melee haste by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spell, ranged, and melee haste increased by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+celestial_attunement_200322 = spell(
+    id=200322,
+    name='Celestial Attunement',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL, misc_value=0),
+    ],
+    spell_icon_id=1952,
+    notes='NEW (druid-rework BALANCE §6 row 0,0)',
+    raw_overrides={'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell, ranged, and melee haste by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spell, ranged, and melee haste increased by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+improved_moonfire_200323 = spell(
+    id=200323,
+    name='Improved Moonfire',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=71, misc_value=64),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108, misc_value=22),
+    ],
+    spell_icon_id=225,
+    notes='NEW rank 3 (druid-rework BALANCE §6 row 1,2 - clone of 16822 with rank-3 values); carries the capstone proc (procs_on(200323, ...) in druid_talents.py, spell_dru_improved_moonfire_capstone casts 200341 Lunar Flare, WP-B)',
+    raw_overrides={'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectSpellClassMaskB_1': 2, 'EffectSpellClassMaskC_1': 2, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Moonfire by $s2% and the critical strike chance of your Arcane spells by $s1%.\n\nCapstone Bonus: Your direct Arcane critical strikes on targets afflicted by your Moonfire trigger an extra $200341s1 Arcane damage. This can occur once every 1.5 sec.', 'AuraDescription_Lang_Mask': 16712188, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+lunar_flare_200341 = spell(
+    id=200341,
+    name='Lunar Flare',
+    school=School.ARCANE,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=30.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=11, points_per_level=0.8333333333333334, implicit_target_a=6),
+    ],
+    spell_icon_id=225,
+    notes='NEW (druid-rework BALANCE §6 row 1,2 capstone hit): scales with level (PLAN B3), learn level 15 (Improved Moonfire\'s tier), level-60 value 50 -> ppl 50/60; cast by spell_dru_improved_moonfire_capstone (WP-B)',
+    raw_overrides={'BaseLevel': 15, 'SpellLevel': 15, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'AttributesEx2': 536870912, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes $s1 Arcane damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+bonus_coefficients(lunar_flare_200341, direct=0.1)
+
+
+nature_s_splendor_200324 = spell(
+    id=200324,
+    name="Nature's Splendor",
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108, misc_value=SpellModOp.DOT),
+    ],
+    spell_icon_id=2013,
+    notes='NEW (druid-rework BALANCE §6 row 2,2 - talent 2240\'s own rank ids; stock 57865 stays unchanged and becomes the r3-linked capstone aura, linked_spell(200326, 57865, type=2) in druid_talents.py)',
+    raw_overrides={'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 66, 'EffectSpellClassMaskB_1': 2097234, 'EffectSpellClassMaskB_2': LIFEBLOOM, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the healing of your Rejuvenation, Regrowth, and Lifebloom by $s1%, and the damage of your Moonfire and Insect Swarm by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Increases the duration of your Moonfire and Rejuvenation by 3 sec, your Regrowth by 6 sec, and your Insect Swarm and Lifebloom by 2 sec.|r', 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+nature_s_splendor_200325 = spell(
+    id=200325,
+    name="Nature's Splendor",
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=108, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=108, misc_value=SpellModOp.DOT),
+    ],
+    spell_icon_id=2013,
+    notes='NEW (druid-rework BALANCE §6 row 2,2)',
+    raw_overrides={'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 66, 'EffectSpellClassMaskB_1': 2097234, 'EffectSpellClassMaskB_2': LIFEBLOOM, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the healing of your Rejuvenation, Regrowth, and Lifebloom by $s1%, and the damage of your Moonfire and Insect Swarm by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Increases the duration of your Moonfire and Rejuvenation by 3 sec, your Regrowth by 6 sec, and your Insect Swarm and Lifebloom by 2 sec.|r', 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+nature_s_splendor_200326 = spell(
+    id=200326,
+    name="Nature's Splendor",
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108, misc_value=SpellModOp.DOT),
+    ],
+    spell_icon_id=2013,
+    notes='NEW (druid-rework BALANCE §6 row 2,2): final rank, linked to stock 57865 (linked_spell(200326, 57865, type=2) in druid_talents.py) for the capstone durations',
+    raw_overrides={'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 66, 'EffectSpellClassMaskB_1': 2097234, 'EffectSpellClassMaskB_2': LIFEBLOOM, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the healing of your Rejuvenation, Regrowth, and Lifebloom by $s1%, and the damage of your Moonfire and Insect Swarm by $s2%.\n\nCapstone Bonus: Increases the duration of your Moonfire and Rejuvenation by 3 sec, your Regrowth by 6 sec, and your Insect Swarm and Lifebloom by 2 sec.', 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+starweaver_200327 = spell(
+    id=200327,
+    name='Starweaver',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1001, implicit_target_a=1, apply_aura=107, misc_value=SpellModOp.COOLDOWN),
+    ],
+    spell_icon_id=1954,
+    notes='NEW (druid-rework BALANCE §6 row 3,0; talent 60026 minted)',
+    raw_overrides={'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_2': STARFALL, 'EffectSpellClassMaskA_3': STARSURGE, 'EffectSpellClassMaskB_3': STARSURGE, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by Starsurge and Starfall by $s1%. Reduces the cooldown of Starsurge by $/1000;s2 sec.\n\n|cFF9D9D9DCapstone Bonus: Casting Starsurge lowers the remaining cooldown of Starfall by 2 sec.|r', 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+starweaver_200328 = spell(
+    id=200328,
+    name='Starweaver',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=-2001, implicit_target_a=1, apply_aura=107, misc_value=SpellModOp.COOLDOWN),
+    ],
+    spell_icon_id=1954,
+    notes='NEW (druid-rework BALANCE §6 row 3,0)',
+    raw_overrides={'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_2': STARFALL, 'EffectSpellClassMaskA_3': STARSURGE, 'EffectSpellClassMaskB_3': STARSURGE, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by Starsurge and Starfall by $s1%. Reduces the cooldown of Starsurge by $/1000;s2 sec.\n\n|cFF9D9D9DCapstone Bonus: Casting Starsurge lowers the remaining cooldown of Starfall by 2 sec.|r', 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+starweaver_200329 = spell(
+    id=200329,
+    name='Starweaver',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=-3001, implicit_target_a=1, apply_aura=107, misc_value=SpellModOp.COOLDOWN),
+    ],
+    spell_icon_id=1954,
+    notes='NEW (druid-rework BALANCE §6 row 3,0): final rank, carries the capstone (spell_dru_starsurge AfterCast checks HasAura(200329) -> Druid::ReduceSpellCooldown(48505, 2000), WP-B)',
+    raw_overrides={'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_2': STARFALL, 'EffectSpellClassMaskA_3': STARSURGE, 'EffectSpellClassMaskB_3': STARSURGE, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by Starsurge and Starfall by $s1%. Reduces the cooldown of Starsurge by $/1000;s2 sec.\n\nCapstone Bonus: Casting Starsurge lowers the remaining cooldown of Starfall by 2 sec.', 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+swarming_rot_200330 = spell(
+    id=200330,
+    name='Swarming Rot',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108, misc_value=SpellModOp.DOT),
+    ],
+    spell_icon_id=1468,
+    notes='NEW (druid-rework BALANCE §6 row 3,1; talent 60027 minted)',
+    raw_overrides={'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': INSECT_SWARM, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Insect Swarm by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Each time your Insect Swarm deals damage, it also applies Insect Swarm to one enemy within 8 yards that is already in combat with you and not already afflicted. Copies do not spread further.|r', 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+swarming_rot_200331 = spell(
+    id=200331,
+    name='Swarming Rot',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=SpellModOp.DOT),
+    ],
+    spell_icon_id=1468,
+    notes='NEW (druid-rework BALANCE §6 row 3,1)',
+    raw_overrides={'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': INSECT_SWARM, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Insect Swarm by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Each time your Insect Swarm deals damage, it also applies Insect Swarm to one enemy within 8 yards that is already in combat with you and not already afflicted. Copies do not spread further.|r', 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+swarming_rot_200332 = spell(
+    id=200332,
+    name='Swarming Rot',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108, misc_value=SpellModOp.DOT),
+    ],
+    spell_icon_id=1468,
+    notes='NEW (druid-rework BALANCE §6 row 3,1): final rank, carries the propagation capstone (procs_on(200332, ...) in druid_talents.py, spell_dru_swarming_rot casts 200352 on original-5570 ticks only, WP-B)',
+    raw_overrides={'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': INSECT_SWARM, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Insect Swarm by $s1%.\n\nCapstone Bonus: Each time your Insect Swarm deals damage, it also applies Insect Swarm to one enemy within 8 yards that is already in combat with you and not already afflicted. Copies do not spread further.', 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+insect_swarm_200352 = spell(
+    id=200352,
+    name='Insect Swarm',
+    school=School.NATURE,
+    dispel=DispelType.MAGIC,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=14000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=23, points_per_level=2.5, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+    ],
+    spell_icon_id=1771,
+    notes='NEW (druid-rework BALANCE §6 row 3,1 capstone copy): clone of 5570\'s eff1 only (same base/ppl/coefficient), shares Insect Swarm\'s family bit (INSECT_SWARM), no script binding - propagation is linear only (spell_dru_swarming_rot never re-triggers off a copy)',
+    raw_overrides={'BaseLevel': 20, 'SpellLevel': 20, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'SpellClassMask_1': INSECT_SWARM, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The enemy target is swarmed by insects, causing $o1 Nature damage over $d.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s1 Nature damage every $t1 sec.', 'EffectBonusMultiplier_1': 0.20000000298023224, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+brambles_silence_200353 = spell(
+    id=200353,
+    name='Brambles',
+    school=School.NATURE,
+    mechanic=Mechanic.SILENCE,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=4000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, mechanic=Mechanic.SILENCE, implicit_target_a=6, apply_aura=27),
+    ],
+    spell_icon_id=53,
+    notes='NEW (druid-rework BALANCE §6 row 4,3 capstone): cast by spell_dru_brambles_silence (AuraScript on 16840, WP-B) whenever the caster\'s Entangling Roots takes effect',
+    raw_overrides={'DefenseType': 1, 'PreventionType': 2, 'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Silenced.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Silenced.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+shooting_stars_200342 = spell(
+    id=200342,
+    name='Shooting Stars',
+    school=School.NORMAL,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=107, misc_value=SpellModOp.CRITICAL_CHANCE),
+        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=108, misc_value=SpellModOp.COOLDOWN),
+    ],
+    spell_icon_id=1485,
+    notes='NEW (druid-rework BALANCE §6 row 3,2 capstone buff): 1 charge, no spell_proc row (Player::RemoveSpellMods only drops charges when one exists); cast by procs_on(16923, ...)\'s AuraScript (WP-B) - Moonfire/Insect Swarm ticks empower the next Starsurge',
+    raw_overrides={'ProcCharges': 1, 'ProcTypeMask': 0, 'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_3': STARSURGE, 'EffectSpellClassMaskB_3': STARSURGE, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your next Starsurge does not trigger its cooldown and is a guaranteed critical strike.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Starsurge does not trigger its cooldown and is a guaranteed critical strike.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+vengeful_soul_200343 = spell(
+    id=200343,
+    name='Vengeful Soul',
+    school=School.NORMAL,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=12000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=126),
+    ],
+    spell_icon_id=1987,
+    notes='NEW (druid-rework BALANCE §6 row 6,3 capstone buff): a bucket aura (PLAN §0.2, ordinary MOD_DAMAGE_PERCENT_DONE multiplier for druid casters); cast by procs_on(16911, ...)\'s AuraScript, energizes 10% of missing mana on expiry (spell_dru_vengeful_soul, WP-B)',
+    raw_overrides={'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Magic damage increased by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Magic damage increased by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+astral_surge_200344 = spell(
+    id=200344,
+    name='Astral Surge',
+    school=School.NORMAL,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_DONE, misc_value=72),
+    ],
+    spell_icon_id=1961,
+    notes='NEW (druid-rework BALANCE §6 row 5,1 capstone, slot 1/3): CORE-AUDIT row 6 (PLAN C1 accepted) - flat SP worth 10% of the caster\'s current Arcane/Nature spell power, computed once when cast by spell_dru_astral_surge_sp\'s DoEffectCalcAmount (WP-B); base_points here is a display placeholder only, overridden by SetAmount',
+    raw_overrides={'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases spell power for Arcane and Nature damage by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spell power for Arcane and Nature damage increased.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+astral_surge_200345 = spell(
+    id=200345,
+    name='Astral Surge',
+    school=School.NORMAL,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_DONE, misc_value=72),
+    ],
+    spell_icon_id=1961,
+    notes='NEW (druid-rework BALANCE §6 row 5,1 capstone, slot 2/3)',
+    raw_overrides={'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases spell power for Arcane and Nature damage by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spell power for Arcane and Nature damage increased.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+astral_surge_200346 = spell(
+    id=200346,
+    name='Astral Surge',
+    school=School.NORMAL,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_DONE, misc_value=72),
+    ],
+    spell_icon_id=1961,
+    notes='NEW (druid-rework BALANCE §6 row 5,1 capstone, slot 3/3)',
+    raw_overrides={'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases spell power for Arcane and Nature damage by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spell power for Arcane and Nature damage increased.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+balance_of_power_buff_200347 = spell(
+    id=200347,
+    name='Balance of Power',
+    school=School.NORMAL,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=5000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_DONE, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.MOD_HEALING_DONE, misc_value=126),
+    ],
+    spell_icon_id=2247,
+    notes='NEW (druid-rework BALANCE §6 row 5,2 buff): CORE-AUDIT row 6 (PLAN C1 accepted) - flat SP/heal worth BP0% of current spell power, computed once when cast by spell_dru_eclipse\'s HandleProc / spell_dru_astral_surge_sp (WP-B); BP0 overrides both effects\' stored amounts',
+    raw_overrides={'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases spell power by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spell power increased by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+moonglow_buff_200348 = spell(
+    id=200348,
+    name='Moonglow',
+    school=School.NORMAL,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=12000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=4),
+        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=AuraType.MOD_MANA_REGEN_INTERRUPT),
+    ],
+    spell_icon_id=310,
+    notes='NEW (druid-rework BALANCE §6 row 1,0 capstone buff, rank 1/3): joins A7\'s spell_group (max-not-sum with Intensity, PLAN §6.7) - group id declared in druid_talents.py',
+    raw_overrides={'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Spirit increased by $s1% and mana regeneration while casting increased by $s2%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spirit increased by $s1% and mana regeneration while casting increased by $s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+moonglow_buff_200349 = spell(
+    id=200349,
+    name='Moonglow',
+    school=School.NORMAL,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=12000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=4),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.MOD_MANA_REGEN_INTERRUPT),
+    ],
+    spell_icon_id=310,
+    notes='NEW (druid-rework BALANCE §6 row 1,0 capstone buff, rank 2/3)',
+    raw_overrides={'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Spirit increased by $s1% and mana regeneration while casting increased by $s2%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spirit increased by $s1% and mana regeneration while casting increased by $s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+moonglow_buff_200350 = spell(
+    id=200350,
+    name='Moonglow',
+    school=School.NORMAL,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=12000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=4),
+        Effect(type=EffectType.APPLY_AURA, base_points=74, implicit_target_a=1, apply_aura=AuraType.MOD_MANA_REGEN_INTERRUPT),
+    ],
+    spell_icon_id=310,
+    notes='NEW (druid-rework BALANCE §6 row 1,0 capstone buff, rank 3/3)',
+    raw_overrides={'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Spirit increased by $s1% and mana regeneration while casting increased by $s2%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spirit increased by $s1% and mana regeneration while casting increased by $s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+gale_winds_stack_200351 = spell(
+    id=200351,
+    name='Gale Winds',
+    school=School.NORMAL,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=10000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+    ],
+    spell_icon_id=2837,
+    notes='NEW (druid-rework BALANCE §6 row 8,3 capstone buff): PLAN §0.2 - pure data, CumulativeAura re-applies the mod on each stack change (amount x stacks); cast by spell_dru_hurricane_tick/_channel on 42231/16914 (WP-B)',
+    raw_overrides={'CumulativeAura': 5, 'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': HURRICANE, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Hurricane damage increased by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Hurricane damage increased by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+astral_crit_200354 = spell(
+    id=200354,
+    name='Astral Crit',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=SpellModOp.CRITICAL_CHANCE),
+    ],
+    spell_icon_id=225,
+    notes='NEW hidden linked passive (CORE-AUDIT row 5, druid-rework BALANCE §6 row 1,2 correction item 2): Improved Moonfire r1\'s Arcane crit reaching Astral spells; linked_spell(16821, 200354, type=2) in druid_talents.py',
+    raw_overrides={'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_2': STARFALL, 'EffectSpellClassMaskA_3': STARSURGE | FURY_OF_ELUNE, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712188, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+astral_crit_200355 = spell(
+    id=200355,
+    name='Astral Crit',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=107, misc_value=SpellModOp.CRITICAL_CHANCE),
+    ],
+    spell_icon_id=225,
+    notes='NEW hidden linked passive (CORE-AUDIT row 5): Improved Moonfire r2; linked_spell(16822, 200355, type=2) in druid_talents.py',
+    raw_overrides={'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_2': STARFALL, 'EffectSpellClassMaskA_3': STARSURGE | FURY_OF_ELUNE, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712188, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+astral_crit_200356 = spell(
+    id=200356,
+    name='Astral Crit',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=107, misc_value=SpellModOp.CRITICAL_CHANCE),
+    ],
+    spell_icon_id=225,
+    notes='NEW hidden linked passive (CORE-AUDIT row 5): Improved Moonfire r3 (200323); linked_spell(200323, 200356, type=2) in druid_talents.py',
+    raw_overrides={'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_2': STARFALL, 'EffectSpellClassMaskA_3': STARSURGE | FURY_OF_ELUNE, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712188, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+# --- Starfire cleave + Fury of Elune's triggered parts (BALANCE.md §4, §5) ---
+
+starfire_cleave_200337 = spell(
+    id=200337,
+    name='Starfire',
+    school=School.ARCANE,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=59, die_sides=15, points_per_level=7.15, implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
+    ],
+    spell_icon_id=1485,
+    notes='NEW (druid-rework BALANCE §4 "Starfire cleave"): half of 2912\'s own base/ppl (120/29/14.3 -> 59/15/7.15); shares Starfire\'s family bit deliberately (Tentacle Mind Flay precedent); scripted_by(spell_dru_starfall_aoe) reuses the stock area-target filter that drops GetExplTargetUnit() (see druid_talents.py); cast by spell_dru_starfire_cleave AfterHit on 2912 (WP-B)',
+    raw_overrides={'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'MaxTargets': 2, 'EquippedItemClass': -1, 'SpellClassMask_1': STARFIRE, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes $s1 Arcane damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+bonus_coefficients(starfire_cleave_200337, direct=0.5)
+
+
+fury_of_elune_beam_200338 = spell(
+    id=200338,
+    name='Fury of Elune',
+    school=School.ARCANE | School.NATURE,  # Astral
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=39, points_per_level=0.6666666666666666, implicit_target_a=6),
+    ],
+    spell_icon_id=3698,
+    notes='NEW (druid-rework BALANCE §5 "Fury of Elune"): live damage every 0.5s tick, scales with level (learn 60, level-60 value 40 -> ppl 40/60); cast by the 200336 AuraScript\'s OnEffectPeriodic (WP-B)',
+    raw_overrides={'BaseLevel': 60, 'SpellLevel': 60, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'SpellClassMask_3': FURY_OF_ELUNE, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes $s1 Astral damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+bonus_coefficients(fury_of_elune_beam_200338, direct=0.1)
+
+
+fury_of_elune_splash_200339 = spell(
+    id=200339,
+    name='Fury of Elune',
+    school=School.ARCANE | School.NATURE,  # Astral
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=19, points_per_level=0.3333333333333333, implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
+    ],
+    spell_icon_id=3698,
+    notes='NEW (druid-rework BALANCE §5): half of 200338, scripted_by(spell_dru_starfall_aoe) filters the primary target out (see druid_talents.py)',
+    raw_overrides={'BaseLevel': 60, 'SpellLevel': 60, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'SpellClassMask_3': FURY_OF_ELUNE, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes $s1 Astral damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+bonus_coefficients(fury_of_elune_splash_200339, direct=0.05)
+
+
+celestial_alignment_200340 = spell(
+    id=200340,
+    name='Celestial Alignment',
+    school=School.NORMAL,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=8000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=1, apply_aura=108, misc_value=SpellModOp.COOLDOWN),
+    ],
+    spell_icon_id=2013,
+    notes='NEW (druid-rework BALANCE §5 "200340 Celestial Alignment"): cast by Fury of Elune\'s SpellScript OnCast with BP0 = the caster\'s Eclipse rank eff1 amount (30 if untalented, WP-B); eff2 halves the Starsurge cooldown while up',
+    raw_overrides={'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectSpellClassMaskB_3': STARSURGE, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Grants the benefits of both Solar and Lunar Eclipse, and halves the cooldown of Starsurge.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Grants the benefits of both Solar and Lunar Eclipse, and halves the cooldown of Starsurge.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
