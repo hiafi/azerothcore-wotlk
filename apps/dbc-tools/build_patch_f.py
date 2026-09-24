@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 Shapeshift appearances (docs/shapeshift-appearances.md): mints the CreatureModelData.dbc /
-CreatureDisplayInfo.dbc rows for the player-choosable Bear Form and Cat Form looks, emits their
-server-side SQL overlay, and packages the underlying model/skin/anim/texture files into patch-F.mpq
+CreatureDisplayInfo.dbc rows for the player-choosable Bear, Cat and Moonkin Form looks, emits
+their server-side SQL overlay, and packages the underlying model/skin/anim/texture files into patch-F.mpq
 ("F" = forms).
 
 Every row is cloned verbatim from the Ascension client backup's own live, working
@@ -16,9 +16,14 @@ texture on disk. Deliberately left out, each for a checked reason:
   - druidbear2_Pantheon: its only display needs a custom ParticleColor.dbc row (1994) this project
     doesn't have.
   - The plain druidbear2 / druidbeartauren2 / ... base models: no Ascension display row uses them.
+  - Moonkin: the Cata black/red recolours and every "Epic" armored moonkin on the original
+    DruidOwlBear model (textures / .m2 missing), and the Kul Tiran moonkin (.m2 missing). The
+    Zandalari moonkin's files exist (patch-CZ) but no Ascension display row uses them. Ascension also
+    ships its own copy of the stock DruidOwlBear.m2 - never packed, since nothing here references it.
   - Stock bears (Night Elf 29413-29417, Tauren 2289 + 29418-29421), stock cats (Night Elf 892 +
-    29405-29408, Tauren 8571 + 29409-29412) and the stock Lynx (15593 red, 18167 yellow): already in
-    the 3.3.5a client, offered as-is by the NPC with no new rows.
+    29405-29408, Tauren 8571 + 29409-29412), the stock Lynx (15593 red, 18167 yellow) and stock
+    moonkin (Night Elf 15374, Tauren 15375): already in the 3.3.5a client, offered as-is by the NPC
+    with no new rows.
 
 The painted Lynx is the one display built on a *stock* model (DruidCat_Legacy, 3143): Ascension
 gave it a duplicate model row, but only its texture is new, so STOCK_MODELS points it back at 3143
@@ -32,10 +37,10 @@ unless it's listed in STOCK_CLIENT_FILES.
 This script owns patch-F.mpq only. The two DBCs it edits live in the shared working copy that
 build_patch_m.py packs into patch-M.mpq, so run build_patch_m.py afterwards to ship them.
 
-IDs, in both tables: 90100-90199 Bear Form, 90200-90299 Cat Form (90001-90004 are the Mage /
-Priest VFX rows). The display IDs are mirrored in src/server/scripts/Custom/
-custom_shapeshift_appearance.cpp - keep the two in sync. --sql-out always emits the whole
-90100-90299 range, so the newest generated migration is the complete state.
+IDs, in both tables: 90100-90199 Bear Form, 90200-90299 Cat Form, 90300-90399 Moonkin Form
+(90001-90004 are the Mage / Priest VFX rows). The display IDs are mirrored in src/server/scripts/
+Custom/custom_shapeshift_appearance.cpp - keep the two in sync. --sql-out always emits the whole
+ID_RANGE, so the newest generated migration is the complete state.
 
 Usage:
     python3 apps/dbc-tools/build_patch_f.py [--sql-out PATH] [--deploy-root PATH]
@@ -115,6 +120,18 @@ MODELS = {
     10911: 90212,  # druidcatzandalaritroll
     5736: 90213,   # druidcatzandalaritroll_noarmor
     204963: 90214,  # druidcat2_tree
+
+    5744: 90300,   # druidowlbear2
+    5745: 90301,   # druidowlbear2\druidowlbearepic2
+    5746: 90302,   # druidowlbearhmtauren2
+    5747: 90303,   # druidowlbearhmtaurenepic2
+    5740: 90304,   # druidowlbearkultiranepic2
+    5741: 90305,   # druidowlbearzandalariepic2
+    5925: 90306,   # tindralmoonkin\blue_tindralmoonkin
+    5926: 90307,   # tindralmoonkin\green_tindralmoonkin
+    5927: 90308,   # tindralmoonkin\purple_tindralmoonkin
+    5928: 90309,   # tindralmoonkin\red_tindralmoonkin
+    5929: 90310,   # tindralmoonkin\yellow_tindralmoonkin
 }
 
 # Ascension CreatureModelData ID -> the stock client model it duplicates. Displays on these keep
@@ -178,9 +195,23 @@ DISPLAYS = (
     (90249, 80719),
     # Lynx, painted (stock model 3143)
     (90250, 87274),
+
+    # --- Moonkin Form ---
+    # Moonkin (druidowlbear2): Night Elf, Black, Blue, Raven, Red
+    (90300, 48933), (90301, 48935), (90302, 48934), (90303, 48932), (90304, 48931),
+    # Armored Moonkin (druidowlbearepic2), same colours
+    (90305, 48938), (90306, 48940), (90307, 48939), (90308, 48937), (90309, 48936),
+    # Highmountain: unarmored, armored
+    (90310, 48941), (90311, 48942),
+    # Kul Tiran, armored: Black, Green, Pale, Red
+    (90312, 48916), (90313, 48917), (90314, 48918), (90315, 48919),
+    # Zandalari, armored
+    (90316, 48920),
+    # Tindral Sageswift: Blue, Green, Purple, Red, Gold (one model per colour)
+    (90317, 110039), (90318, 110040), (90319, 110041), (90320, 110042), (90321, 110043),
 )
 
-ID_RANGE = {"start": 90100, "end": 90299}
+ID_RANGE = {"start": 90100, "end": 90399}
 
 
 def _smpq(*args: str, cwd: Path | None = None) -> str:

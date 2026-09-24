@@ -15,7 +15,7 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-// Custom: player-chosen shapeshift appearance - Bear Form and Cat Form (docs/shapeshift-appearances.md).
+// Custom: player-chosen shapeshift appearance - Bear, Cat and Moonkin Form (docs/shapeshift-appearances.md).
 //
 // npc_shapeshift_appearance (creature_template 900012) offers a catalogue of models per form via
 // gossip. The choice is stored in characters.character_shapeshift_appearance and set on the Player,
@@ -25,8 +25,9 @@
 // It is loaded in OnPlayerLoadFromDB, which runs before the saved auras are re-applied: a player who
 // logged out shifted comes back in the chosen model without any refresh.
 //
-// Display IDs 901xx (bear) / 902xx (cat) are minted by apps/dbc-tools/build_patch_f.py (client files
-// ship in patch-F.mpq, DBC rows in patch-M.mpq); every other ID below is a stock client display.
+// Display IDs 901xx (bear) / 902xx (cat) / 903xx (moonkin) are minted by apps/dbc-tools/build_patch_f.py
+// (client files ship in patch-F.mpq, DBC rows in patch-M.mpq); every other ID below is a stock client
+// display.
 
 #include "Chat.h"
 #include "CreatureScript.h"
@@ -129,6 +130,20 @@ namespace
             { "Zandalari, Unarmored", { { 90245, "Black" }, { 90246, "Blue" }, { 90247, "Green" },
                                         { 90248, "White" } } },
             { "Treant", { { 90249, "Bark" } } },
+        } },
+        { "Moonkin Form", "moonkin form", FORM_MOONKIN, { FORM_MOONKIN },
+        {
+            { "Classic", { { 15374, "Night Elf" }, { 15375, "Tauren" } } },
+            { "Moonkin", { { 90300, "Night Elf" }, { 90301, "Black" }, { 90302, "Blue" }, { 90303, "Raven" },
+                           { 90304, "Red" } } },
+            { "Armored Moonkin", { { 90305, "Night Elf" }, { 90306, "Black" }, { 90307, "Blue" },
+                                   { 90308, "Raven" }, { 90309, "Red" } } },
+            { "Highmountain", { { 90310, "Unarmored" }, { 90311, "Armored" } } },
+            { "Kul Tiran, Armored", { { 90312, "Black" }, { 90313, "Green" }, { 90314, "Pale" },
+                                      { 90315, "Red" } } },
+            { "Zandalari", { { 90316, "Armored" } } },
+            { "Tindral Sageswift", { { 90317, "Blue" }, { 90318, "Green" }, { 90319, "Purple" }, { 90320, "Red" },
+                                     { 90321, "Gold" } } },
         } },
     };
 

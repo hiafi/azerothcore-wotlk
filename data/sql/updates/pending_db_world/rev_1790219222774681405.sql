@@ -1,4 +1,4 @@
-DELETE FROM `creaturemodeldata_dbc` WHERE `ID` BETWEEN 90100 AND 90299;
+DELETE FROM `creaturemodeldata_dbc` WHERE `ID` BETWEEN 90100 AND 90399;
 INSERT INTO `creaturemodeldata_dbc` (`ID`, `Flags`, `ModelName`, `SizeClass`, `ModelScale`, `BloodID`, `FootprintTextureID`, `FootprintTextureLength`, `FootprintTextureWidth`, `FootprintParticleScale`, `FoleyMaterialID`, `FootstepShakeSize`, `DeathThudShakeSize`, `SoundID`, `CollisionWidth`, `CollisionHeight`, `MountHeight`, `GeoBoxMinX`, `GeoBoxMinY`, `GeoBoxMinZ`, `GeoBoxMaxX`, `GeoBoxMaxY`, `GeoBoxMaxZ`, `WorldEffectScale`, `AttachedEffectScale`, `MissileCollisionRadius`, `MissileCollisionPush`, `MissileCollisionRaise`) VALUES
 (90100, 4112, 'CREATURE\\DRUIDBEARTROLL\\DRUIDBEARTROLL.M2', 1, 1.0, 1, 7, 1099956224, 1094713344, 1065353216, 0, 0, 0, 3022, 0.6111119985580444, 2.031280040740967, 1.7614699602127075, 3218462097, 3211516262, 3190562291, 1071500136, 1063003735, 1073457450, 1065353216, 1065353216, 0, 0, 0),
 (90101, 4112, 'CREATURE\\DRUIDBEARTROLL\\DRUIDBEARTROLLEPIC.M2', 1, 1.0, 1, 7, 1099956224, 1094713344, 1065353216, 0, 0, 0, 3022, 0.6111119985580444, 2.031280040740967, 0.0, 3219366389, 3215565007, 3190562291, 1073081305, 1068113823, 1074096452, 1065353216, 1065353216, 0, 0, 0),
@@ -31,9 +31,20 @@ INSERT INTO `creaturemodeldata_dbc` (`ID`, `Flags`, `ModelName`, `SizeClass`, `M
 (90211, 16, 'Creature\\druidcatkultiran_noarmor\\druidcatkultiran_noarmor.mdx', 1, 1.0, 1, 7, 1099956224, 1094713344, 1065353216, 0, 0, 0, 1088, 0.6111000180244446, 2.0309998989105225, 0.0, 3223901186, 3209341448, 3164082757, 1066396591, 1060321611, 1070407352, 1065353216, 1065353216, 0, 0, 0),
 (90212, 4112, 'creature\\druidcatzandalaritroll\\druidcatzandalaritroll.mdx', 1, 1.0, 1, 7, 1094713344, 1090519040, 1065353216, 0, 0, 6514, 0, 2.031280040740967, 1.25, 0.0, 3226897178, 3205779327, 3166409771, 1068612610, 1057793688, 1072666740, 1065353216, 1065353216, 1065353216, 0, 0),
 (90213, 16, 'Creature\\druidcatzandalaritroll_noarmor\\druidcatzandalaritroll_noarmor.mdx', 1, 1.0, 1, 7, 1094713344, 1090519040, 1065353216, 0, 0, 0, 1088, 0.6111000180244446, 2.0309998989105225, 0.0, 3226897178, 3205779327, 3166409771, 1068612610, 1057793688, 1072666740, 1065353216, 1065353216, 0, 0, 0),
-(90214, 4096, 'creature\\druidcat2\\druidcat2_tree.mdx', 1, 1.0, 1, 7, 1094713344, 1090519040, 1065353216, 0, 0, 0, 5143, 2.031280040740967, 1.25, 0.0, 3224242141, 3210420727, 3179819075, 1066057104, 1058316281, 1070187655, 1065353216, 1065353216, 1065353216, 0, 0);
+(90214, 4096, 'creature\\druidcat2\\druidcat2_tree.mdx', 1, 1.0, 1, 7, 1094713344, 1090519040, 1065353216, 0, 0, 0, 5143, 2.031280040740967, 1.25, 0.0, 3224242141, 3210420727, 3179819075, 1066057104, 1058316281, 1070187655, 1065353216, 1065353216, 1065353216, 0, 0),
+(90300, 0, 'Creature\\druidowlbear2\\druidowlbear2.mdx', 1, 1.0, 1, 5, 1106247680, 1101004800, 1065353216, 0, 0, 0, 4324, 0.6111000180244446, 2.0309998989105225, 0.0, 3212472614, 3218304307, 3132238989, 1063422729, 1070801281, 1081981786, 1065353216, 1065353216, 0, 0, 0),
+(90301, 0, 'Creature\\druidowlbear2\\druidowlbearepic2.mdx', 1, 1.0, 1, 5, 1106247680, 1101004800, 1065353216, 0, 0, 0, 4324, 0.6111000180244446, 2.0309998989105225, 0.0, 3213973353, 3219642626, 3180386279, 1063917053, 1072206877, 1081981786, 1065353216, 1065353216, 0, 0, 0),
+(90302, 128, 'Creature\\druidowlbearhmtauren2\\druidowlbearhmtauren2.mdx', 1, 1.0, 1, 5, 1106247680, 1101004800, 1065353216, 0, 0, 0, 4324, 0.6111000180244446, 2.0309998989105225, 0.0, 3212472597, 3218304307, 3132240793, 1063422729, 1070801281, 1080606432, 1065353216, 1065353216, 1065353216, 0, 0),
+(90303, 0, 'Creature\\druidowlbearhmtaurenepic2\\druidowlbearhmtaurenepic2.mdx', 1, 1.0, 1, 5, 1106247680, 1101004800, 1065353216, 0, 0, 0, 4324, 0.6111000180244446, 2.0309998989105225, 0.0, 3213973353, 3219642626, 3180386333, 1063917053, 1072206877, 1080606432, 1065353216, 1065353216, 0, 0, 0),
+(90304, 128, 'Creature\\druidowlbearkultiranepic2\\druidowlbearkultiranepic2.mdx', 1, 1.0, 1, 5, 1106247680, 1101004800, 1065353216, 0, 0, 0, 2095, 0.6111000180244446, 2.0309998989105225, 0.0, 3213505268, 3216221164, 3161638921, 1060237054, 1068711931, 1079383373, 1065353216, 1065353216, 0, 0, 0),
+(90305, 128, 'Creature\\druidowlbearzandalariepic2\\druidowlbearzandalariepic2.mdx', 3, 1.0, 1, 5, 1096810496, 1092616192, 1065353216, 0, 0, 0, 2095, 0.6111000180244446, 2.0309998989105225, 2.7451300621032715, 3210571520, 3205133136, 3157327740, 1058000870, 1058372166, 1072589061, 1065353216, 1065353216, 0, 0, 0),
+(90306, 128, 'creature\\tindralmoonkin\\blue_tindralmoonkin.mdx', 1, 1.0, 1, 7, 1106247680, 1101004800, 1065353216, 0, 0, 0, 2095, 2.031280040740967, 1.0, 0.0, 3212484224, 3216221164, 3150115116, 1060237054, 1068711931, 1079303429, 1065353216, 1065353216, 1065353216, 0, 0),
+(90307, 128, 'creature\\tindralmoonkin\\green_tindralmoonkin.mdx', 1, 1.0, 1, 5, 1106247680, 1101004800, 1065353216, 0, 0, 0, 2095, 2.031280040740967, 1.0, 0.0, 3212484224, 3216221164, 3150115116, 1060237054, 1068711931, 1079303429, 1065353216, 1065353216, 1065353216, 0, 0),
+(90308, 128, 'creature\\tindralmoonkin\\purple_tindralmoonkin.mdx', 1, 1.0, 1, 5, 1106247680, 1101004800, 1065353216, 0, 0, 0, 2095, 2.031280040740967, 1.0, 0.0, 3212484224, 3216221164, 3150115116, 1060237054, 1068711931, 1079303429, 1065353216, 1065353216, 1065353216, 0, 0),
+(90309, 128, 'creature\\tindralmoonkin\\red_tindralmoonkin.mdx', 1, 1.0, 1, 5, 1106247680, 1101004800, 1065353216, 0, 0, 0, 2095, 2.031280040740967, 1.0, 0.0, 3212484224, 3216221164, 3150115116, 1060237054, 1068711931, 1079303429, 1065353216, 1065353216, 1065353216, 0, 0),
+(90310, 128, 'creature\\tindralmoonkin\\yellow_tindralmoonkin.mdx', 1, 1.0, 1, 5, 1106247680, 1101004800, 1065353216, 0, 0, 0, 2095, 2.031280040740967, 1.0, 0.0, 3212484224, 3216221164, 3150115116, 1060237054, 1068711931, 1079303429, 1065353216, 1065353216, 1065353216, 0, 0);
 
-DELETE FROM `creaturedisplayinfo_dbc` WHERE `ID` BETWEEN 90100 AND 90299;
+DELETE FROM `creaturedisplayinfo_dbc` WHERE `ID` BETWEEN 90100 AND 90399;
 INSERT INTO `creaturedisplayinfo_dbc` (`ID`, `ModelID`, `SoundID`, `ExtendedDisplayInfoID`, `CreatureModelScale`, `CreatureModelAlpha`, `TextureVariation_1`, `TextureVariation_2`, `TextureVariation_3`, `PortraitTextureName`, `BloodLevel`, `BloodID`, `NPCSoundID`, `ParticleColorID`, `CreatureGeosetData`, `ObjectEffectPackageID`) VALUES
 (90100, 90100, 0, 0, 1.0, 255, 'DruidBearTrollBlue', NULL, NULL, NULL, 1, 0, 0, 0, 0, 0),
 (90101, 90100, 0, 0, 1.0, 255, 'DruidBearTrollPurple', NULL, NULL, NULL, 1, 0, 0, 0, 0, 0),
@@ -135,4 +146,26 @@ INSERT INTO `creaturedisplayinfo_dbc` (`ID`, `ModelID`, `SoundID`, `ExtendedDisp
 (90247, 90213, 0, 0, 1.0, 255, 'druidcatzandalaritroll_noarmor_green', NULL, NULL, NULL, -1, 0, 0, 0, 0, 0),
 (90248, 90213, 0, 0, 1.0, 255, 'druidcatzandalaritroll_noarmor_white', NULL, NULL, NULL, -1, 0, 0, 0, 0, 0),
 (90249, 90214, 0, 0, 1.0, 255, 'druidcat2_treeskin', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0),
-(90250, 3143, 0, 0, 1.0, 255, 'lynxskinpainted', 'LynxEyeGlow', NULL, NULL, -1, 0, 0, 0, 0, 0);
+(90250, 3143, 0, 0, 1.0, 255, 'lynxskinpainted', 'LynxEyeGlow', NULL, NULL, -1, 0, 0, 0, 0, 0),
+(90300, 90300, 0, 0, 1.0, 255, 'druidowlbear2_ne', NULL, NULL, NULL, -1, 0, 0, 0, 0, 0),
+(90301, 90300, 0, 0, 1.0, 255, 'druidowlbear2_black', NULL, NULL, NULL, -1, 0, 0, 0, 0, 0),
+(90302, 90300, 0, 0, 1.0, 255, 'druidowlbear2_blue', NULL, NULL, NULL, -1, 0, 0, 0, 0, 0),
+(90303, 90300, 0, 0, 1.0, 255, 'druidowlbear2_raven', NULL, NULL, NULL, -1, 0, 0, 0, 0, 0),
+(90304, 90300, 0, 0, 1.0, 255, 'druidowlbear2_red', NULL, NULL, NULL, -1, 0, 0, 0, 0, 0),
+(90305, 90301, 0, 0, 1.0, 255, 'druidowlbear2_ne', 'druidformsepicarmorallianceowlbear', NULL, NULL, -1, 0, 0, 0, 0, 0),
+(90306, 90301, 0, 0, 1.0, 255, 'druidowlbear2_black', 'druidformsepicarmorallianceowlbear', NULL, NULL, -1, 0, 0, 0, 0, 0),
+(90307, 90301, 0, 0, 1.0, 255, 'druidowlbear2_blue', 'druidformsepicarmorhordeowlbear', NULL, NULL, -1, 0, 0, 0, 0, 0),
+(90308, 90301, 0, 0, 1.0, 255, 'druidowlbear2_raven', 'druidformsepicarmorhordeowlbear', NULL, NULL, -1, 0, 0, 0, 0, 0),
+(90309, 90301, 0, 0, 1.0, 255, 'druidowlbear2_red', 'druidformsepicarmorhordeowlbear', NULL, NULL, -1, 0, 0, 0, 0, 0),
+(90310, 90302, 0, 0, 1.0, 255, NULL, NULL, NULL, NULL, -1, 0, 0, 0, 0, 0),
+(90311, 90303, 0, 0, 1.0, 255, 'druidowlbear2_hmt', 'druidformsepicarmorhordeowlbear', 'druidowlbear2_hmt_horns', NULL, -1, 0, 0, 0, 0, 0),
+(90312, 90304, 0, 0, 1.0, 255, 'druidowlbearkultiranepic2_body_black', 'druidowlbearkultiranepic2_armor_black', NULL, NULL, -1, 0, 0, 0, 0, 0),
+(90313, 90304, 0, 0, 1.0, 255, 'druidowlbearkultiranepic2_body_green', 'druidowlbearkultiranepic2_armor_green', NULL, NULL, -1, 0, 0, 0, 0, 0),
+(90314, 90304, 0, 0, 1.0, 255, 'druidowlbearkultiranepic2_body_pale', 'druidowlbearkultiranepic2_armor_pale', NULL, NULL, -1, 0, 0, 0, 0, 0),
+(90315, 90304, 0, 0, 1.0, 255, 'druidowlbearkultiranepic2_body_red', 'druidowlbearkultiranepic2_armor_red', NULL, NULL, -1, 0, 0, 0, 0, 0),
+(90316, 90305, 0, 0, 1.2000000476837158, 255, 'druidowlbearzandalariepic2_body', 'druidowlbearzandalariepic2_armor', NULL, NULL, -1, 0, 0, 0, 0, 0),
+(90317, 90306, 0, 0, 1.0, 255, 'tindralmoonkin_body_blue', 'tindralmoonkin_antlers_5369290', 'tindralmoonkin_jewelry_blue', NULL, 0, 0, 0, 0, 0, 0),
+(90318, 90307, 0, 0, 1.0, 255, 'tindralmoonkin_body_green', 'tindralmoonkin_antlers_5369295', 'tindralmoonkin_jewelry_green', NULL, 0, 0, 0, 0, 0, 0),
+(90319, 90308, 0, 0, 1.0, 255, 'tindralmoonkin_body_blue', 'tindralmoonkin_antlers_5369293', 'tindralmoonkin_jewelry_blue', NULL, 0, 0, 0, 0, 0, 0),
+(90320, 90309, 0, 0, 1.0, 255, 'tindralmoonkin_body_red', 'tindralmoonkin_antlers_5369291', 'tindralmoonkin_jewelry_red', NULL, 0, 0, 0, 0, 0, 0),
+(90321, 90310, 0, 0, 1.0, 255, 'tindralmoonkin_body_gold', 'tindralmoonkin_antlers_5369294', 'tindralmoonkin_jewelry_gold', NULL, 0, 0, 0, 0, 0, 0);
