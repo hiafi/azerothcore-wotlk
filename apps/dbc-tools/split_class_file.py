@@ -52,7 +52,7 @@ from types import SimpleNamespace
 TOOL_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOL_ROOT))
 
-from lib import source, trainer_state  # noqa: E402
+from lib import dbcfmt, source, state, trainer_state  # noqa: E402
 from lib.dsl import registry  # noqa: E402
 
 SOURCE_DIR = TOOL_ROOT / "source"
@@ -132,16 +132,22 @@ def _referenced_names(node: ast.AST) -> set[str]:
     return {n.id for n in ast.walk(node) if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load)}
 
 
-def split(text: str, class_name: str, ids_cfg: dict, trainer_index) -> dict[str, str]:
+def split(
+    text: str, class_name: str, ids_cfg: dict, trainer_index,
+    existing_group_ids: set[int] | None = None, shapeshift_index: dict | None = None,
+) -> dict[str, str]:
     tree = ast.parse(text)
     tmp_path = Path(f"<{class_name}.py>")
-    # Load for real (through the standard loader, ids_cfg/trainer_index wired the same way
-    # generate.py does) to get every spell's *actual* resolved attributes/cast_time_ms/
-    # cooldown_ms (enum members, `|`-combined School bitmasks, etc. all already collapsed to
-    # plain ints by Spell.to_entry()) - classification needs real values, not a re-implementation
-    # of Python expression evaluation over the AST.
+    # Load for real (through the standard loader, ids_cfg/trainer_index/existing_group_ids/
+    # shapeshift_index wired the same way generate.py does) to get every spell's *actual*
+    # resolved attributes/cast_time_ms/cooldown_ms (enum members, `|`-combined School bitmasks,
+    # etc. all already collapsed to plain ints by Spell.to_entry()) - classification needs real
+    # values, not a re-implementation of Python expression evaluation over the AST.
     real_path = SOURCE_DIR / "classes" / f"{class_name}.py"
-    reg = registry.load_class_file(real_path, ids_cfg=ids_cfg, trainer_index=trainer_index)
+    reg = registry.load_class_file(
+        real_path, ids_cfg=ids_cfg, trainer_index=trainer_index,
+        existing_group_ids=existing_group_ids, shapeshift_index=shapeshift_index,
+    )
 
     classified = _classify(tree, reg)
     var_bucket = {varname: bucket for _, bucket, varname in classified if varname is not None}
@@ -208,7 +214,9 @@ def main(argv: list[str]) -> int:
 
     ids_cfg = source.load_ids(SOURCE_DIR / "ids.yaml")
     trainer_index = trainer_state.load_trainer_index()
-    files = split(text, class_name, ids_cfg, trainer_index)
+    existing_group_ids = {int(row["id"]) for row in trainer_state.load_table_rows("spell_group")}
+    shapeshift_index = state.load_stock_rows(dbcfmt.SPELLSHAPESHIFTFORM)
+    files = split(text, class_name, ids_cfg, trainer_index, existing_group_ids, shapeshift_index)
 
     out_dir = SOURCE_DIR / "classes" / class_name
     out_dir.mkdir(exist_ok=True)

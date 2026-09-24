@@ -381,22 +381,59 @@ def procs_on(
 #   - an error if the same run both declares and removes the same key.
 # ---------------------------------------------------------------------------
 
-_VALID_LINKED_SPELL_TYPES = (0, 1, 2)  # SpellLinkedType (SpellMgr.h): cast / hit / aura-removal
+_VALID_LINKED_SPELL_TYPES = (0, 1, 2)  # SpellLinkedType (SpellMgr.h): cast / hit / aura
+
+# SpellMgr.h/.cpp's SpellMgr::LoadSpellLinked, read carefully (verified against the real source,
+# not just its header comment - see .agents/docs/systems/dbc-tools.md's WP-T section):
+#
+#   - `type == 0` (cast): the map key is `trigger`, unshifted - a negative trigger means "on
+#     removal of the aura |trigger|" (SpellAuras.cpp reads it via `GetSpellLinked(-GetId())`); a
+#     positive trigger means "on cast of trigger" (Spell.cpp's `GetSpellLinked(m_spellInfo->Id)`).
+#     `effect`'s sign there: positive casts/applies `effect`, negative removes the aura `|effect|`.
+#   - `type == 1` (hit) / `type == 2` (aura): the key is `trigger + SPELL_LINKED_MAX_SPELLS*type`
+#     (trigger positive) or `trigger - SPELL_LINKED_MAX_SPELLS*type` (trigger negative) -
+#     `SPELL_LINKED_MAX_SPELLS` is 200000. Every engine call site for these two types only ever
+#     looks the key up as `GetId() + <offset>` (a real spell's *positive* id, offset added) -
+#     never with a negative base - so a **negative trigger with type 1 or 2 is never looked up by
+#     anything: a silently dead row**. `effect`'s sign for `type == 2` (aura, SpellAuras.cpp
+#     `HandleAuraSpecificMods`): positive applies/removes the aura `effect` in lockstep with the
+#     base aura; **negative grants/revokes immunity to spell `|effect|` (`ApplySpellImmune`), not
+#     "remove that aura"** - the "remove that aura" behavior belongs to `type == 0`'s negative-
+#     trigger branch above, a different type entirely. `type == 1` (hit, Spell.cpp
+#     `GetSpellLinked(m_spellInfo->Id + SPELL_LINK_HIT)`) only ever triggers `effect` on a
+#     positive-effect entry; no engine call site reads a negative `effect` for `type == 1`.
+#
+# The `trigger + 200000*type` offset is also why a *positive* `type == 0` trigger in
+# `source/ids.yaml`'s custom spell block (200000-209999) is dangerous: it collides with whatever
+# `type == 1` row (if any) exists for `trigger - 200000`. `lib/lint.py`'s
+# `check_linked_spell_key_collisions` catches that case (needs the full declared+live row set,
+# not available at declaration time here).
+_SPELL_LINKED_MAX_SPELLS = 200000
 
 
 def linked_spell(trigger: int, effect: int, type: int = 0, comment: str | None = None) -> dict:
-    """Declares one `spell_linked_spell` row - `SpellMgr::GetSpellLinked`'s trigger/effect/type
-    model (`type` 0=cast, 1=hit, 2=aura - see `SpellLinkedType`, SpellMgr.h). Negative ids are the
-    table's own convention, not a mistake: a negative `trigger` means "on removal of the aura
-    |trigger|", a negative `effect` means "remove that aura" - pass them through exactly as the
-    design doc gives them. `comment` is `NOT NULL text` in the schema; defaults to a plain
-    description of the link when not given."""
+    """Declares one `spell_linked_spell` row - `SpellMgr::LoadSpellLinked`'s trigger/effect/type
+    model (`type` 0=cast, 1=hit, 2=aura - see `SpellLinkedType`, SpellMgr.h, and this module's own
+    comment above `_SPELL_LINKED_MAX_SPELLS` for the full, verified-against-source semantics of
+    each type and of a negative trigger/effect - they are NOT symmetric across types). `comment`
+    is `NOT NULL text` in the schema; defaults to a plain description of the link when not given
+    (never left empty - see `_sql_literal`'s "" == NULL collapsing, which a `NOT NULL` text column
+    can't tolerate)."""
     if type not in _VALID_LINKED_SPELL_TYPES:
         raise ValueError(
             f"linked_spell({trigger}, {effect}, type={type}): type must be 0 (cast), 1 (hit) or "
             f"2 (aura) - see SpellLinkedType (SpellMgr.h)"
         )
-    if comment is None:
+    if type != 0 and trigger < 0:
+        raise ValueError(
+            f"linked_spell({trigger}, {effect}, type={type}): a negative trigger only means "
+            f"anything for type=0 ('on removal of the aura |trigger|') - SpellMgr::LoadSpellLinked "
+            f"only shifts a *positive* trigger by SPELL_LINKED_MAX_SPELLS*type for type 1/2, and "
+            f"every engine call site for those types looks the key up as a real spell's positive "
+            f"id plus that offset, never as a negative base - so this row would never be looked "
+            f"up by anything. Use type=0 if you meant 'on removal of |trigger|'."
+        )
+    if not comment:
         comment = f"{trigger} -> {effect} (type {type})"
     row = {
         "id": f"{trigger}:{effect}:{type}",
@@ -412,6 +449,12 @@ def unlink_spell(trigger: int, effect: int, type: int = 0) -> dict:
     longer wants."""
     if type not in _VALID_LINKED_SPELL_TYPES:
         raise ValueError(f"unlink_spell({trigger}, {effect}, type={type}): type must be 0, 1 or 2")
+    if type != 0 and trigger < 0:
+        raise ValueError(
+            f"unlink_spell({trigger}, {effect}, type={type}): a negative trigger only means "
+            f"anything for type=0 - see linked_spell()'s docstring; a type 1/2 row is always keyed "
+            f"on a positive trigger."
+        )
     row = {
         "id": f"{trigger}:{effect}:{type}",
         "spell_trigger": trigger, "spell_effect": effect, "type": type,
@@ -452,17 +495,21 @@ def _validate_group_id(group_id: int, caller: str) -> None:
     )
 
 
-def spell_group(group_id: int, *spells: int) -> list[dict]:
-    """Declares one `spell_group` row per member in `spells` (`SpellMgr::LoadSpellGroups`).
-    `group_id` must be a fresh id from `source/ids.yaml`'s `spell_group` block, or an id that
-    already exists in stock/migration data (adding a member to a stock group, e.g. 1054 or 1016,
-    is legitimate - see `_validate_group_id`). A negative member id is a *nested-group reference*
-    (the loader expands a rank chain itself - this is not that), not a typo."""
+def spell_group(group_id: int, *spells: model.Spell | int) -> list[dict]:
+    """Declares one `spell_group` row per member in `spells` (`SpellMgr::LoadSpellGroups`), each
+    either the `Spell` object `spell(...)` returned or a bare stock spell id - same convention as
+    every other helper here (`_spell_id_of`). `group_id` must be a fresh id from
+    `source/ids.yaml`'s `spell_group` block, or an id that already exists in stock/migration data
+    (adding a member to a stock group, e.g. 1054 or 1016, is legitimate - see
+    `_validate_group_id`). A negative member id is a *nested-group reference* (the loader expands
+    a rank chain itself - this is not that), not a typo - pass a bare negative int for it, since a
+    nested group has no `Spell` object of its own."""
     if not spells:
         raise ValueError(f"spell_group({group_id}): pass at least one member spell id")
     _validate_group_id(group_id, "spell_group")
     rows = []
-    for spell_id in spells:
+    for member in spells:
+        spell_id = _spell_id_of(member)
         # The real SQL column is `id` (the group id) - the same name the generic per-list
         # duplicate-declaration dedup below keys on for every other table, which would otherwise
         # misread "two different members of the same group" as a duplicate declaration. `_dedup_id`
@@ -490,24 +537,32 @@ def spell_group_rule(group_id: int, stack_rule: int, description: str = "") -> d
     """Declares `group_id`'s `spell_group_stack_rules` row - `SpellGroupStackRule` (SpellMgr.h)
     controlling how the engine treats simultaneously-active auras from spells in that group. Same
     id-legitimacy rule as `spell_group()` (fresh mint from the reserved block, or an id that
-    already exists)."""
+    already exists). `description` defaults to a plain, never-empty placeholder: the column is
+    `varchar(150) NOT NULL DEFAULT ''`, but `sql_out._sql_literal` renders an empty Python string
+    the same as `None` (`NULL`) - fine for a nullable column, a constraint violation for this
+    one - so an empty/unset `description` is never passed through as `""` literally."""
     if stack_rule not in _VALID_STACK_RULES:
         raise ValueError(
             f"spell_group_rule({group_id}, stack_rule={stack_rule}): not a real "
             f"SpellGroupStackRule (SpellMgr.h) - valid values are {list(_VALID_STACK_RULES)}"
         )
     _validate_group_id(group_id, "spell_group_rule")
-    row = {"id": group_id, "group_id": group_id, "stack_rule": stack_rule, "description": description}
+    row = {
+        "id": group_id, "group_id": group_id, "stack_rule": stack_rule,
+        "description": description or f"spell_group {group_id}",
+    }
     _require_active().spell_group_rules.append(row)
     return row
 
 
 def custom_attr(spell: model.Spell | int, attributes: int) -> dict:
-    """Declares `spell`'s `spell_custom_attr` row (`SpellCustomAttributes`, SpellMgr.h) - server-
-    only per-spell behavior flags the engine layers on top of the DBC data (e.g.
-    `SPELL_ATTR0_CU_POSITIVE` for a beneficial spell the engine's own heuristic misclassifies).
-    Stock rows exist for many spells; declaring one here replaces that row, same as every other
-    table in this module."""
+    """Declares `spell`'s `spell_custom_attr` row (`SpellCustomAttributes`, `SpellInfo.h`) -
+    server-only per-spell behavior flags the engine layers on top of the DBC data (e.g.
+    `SPELL_ATTR0_CU_POSITIVE_EFF0/1/2`, individually or OR'd as `SPELL_ATTR0_CU_POSITIVE`, for a
+    beneficial spell the engine's own heuristic misclassifies - there is no single
+    `SPELL_ATTR0_CU_POSITIVE` bit; double-check the exact flag against `SpellInfo.h` before using
+    one, the values are dense and easy to transpose). Stock rows exist for many spells; declaring
+    one here replaces that row, same as every other table in this module."""
     spell_id = _spell_id_of(spell)
     row = {"id": spell_id, "spell_id": spell_id, "attributes": int(attributes)}
     _require_active().custom_attrs.append(row)
@@ -529,7 +584,16 @@ def untrain(spell: model.Spell | int, trainer_ids: list[int]) -> list[dict]:
     counterpart to `trained_by()`, for a spell a rework no longer wants any class trainer to
     teach. `trainer_ids` is the *live* list of TrainerIds that actually teach this spell right now
     (a server's real, possibly module-rewired, trainer id - see `lib.trainer_state`'s module
-    docstring - not necessarily the stock one), since each becomes its own key-exact DELETE."""
+    docstring - not necessarily the stock one), since each becomes its own key-exact DELETE.
+
+    Known limitation, inherent to removing a *module*-granted row this way, not something this
+    helper can fix: `DBUpdater` applies core `pending_db_world`/`db_world` SQL (this DELETE)
+    before `OnAfterDatabasesLoaded` applies module SQL (mod-progression's phase files). On a
+    fresh database, or when `Progression.Phase` later advances past a phase that (re)inserts this
+    exact row, the module's own INSERT runs *after* this DELETE and silently brings the grant
+    back - the removal only reads as "done" (via provenance) and is never re-emitted. The
+    hand-written migration this helper replaces (see the WP-T handoff) had the identical
+    limitation; there is no DB-update-ordering fix available from this tool."""
     spell_id = _spell_id_of(spell)
     if not trainer_ids:
         raise ValueError(f"untrain({spell_id}, ...): pass at least one trainer id")
@@ -579,11 +643,24 @@ def shapeshift_form(form_id: int, **changed_columns) -> dict:
     Server-side only: no client patch is produced for this table (nothing the client renders
     depends on it - contrast `docs/shapeshift-appearances.md`'s CreatureDisplayInfo/
     CreatureModelData, which does)."""
-    stock = _require_shapeshift_index().get(form_id)
+    index = _require_shapeshift_index()
+    if not index:
+        # Distinct from "not a real form id" below: an *empty* index almost always means
+        # var/extractors/dbc/SpellShapeshiftForm.dbc isn't extracted on this checkout at all
+        # (it's gitignored - a fresh clone or another machine won't have it) rather than form_id
+        # being wrong - see apps/dbc-tools/README.md's "Setup" section for extraction, and
+        # .agents/docs/systems/dbc-tools.md's WP-T section for exactly how this file was pulled.
+        raise RuntimeError(
+            "shapeshift_form(): the stock SpellShapeshiftForm index is empty - "
+            "var/extractors/dbc/SpellShapeshiftForm.dbc is probably missing on this checkout "
+            "(extract it from patch-enUS-3.MPQ, same as Item.dbc), not a bad form_id."
+        )
+    stock = index.get(form_id)
     if stock is None:
         raise ValueError(
             f"shapeshift_form({form_id}, ...): no stock SpellShapeshiftForm row for id {form_id} "
-            f"in var/extractors/dbc/SpellShapeshiftForm.dbc - not a real shapeshift form id"
+            f"- not a real shapeshift form id ({len(index)} stock rows are loaded, so this isn't "
+            f"a missing-extraction problem)"
         )
     row = dict(stock)
     unknown = [

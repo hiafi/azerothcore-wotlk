@@ -46,6 +46,13 @@ def main(argv: list[str]) -> int:
     dsl = dsl_registry.load_classes_dir(
         SOURCE_DIR / "classes", ids_cfg=source.load_ids(SOURCE_DIR / "ids.yaml"),
         trainer_index=trainer_state.load_trainer_index(),
+        # Needed the moment any class file declares spell_group()/spell_group_rule() on a stock
+        # id, or shapeshift_form() - without these this loader raises RuntimeError the same as
+        # generate.py's own load_classes_dir call would with them omitted (review, 2026-09-23:
+        # this call site and verify_dsl_migration.py/split_class_file.py's were the only ones not
+        # wired up when the two params were added).
+        existing_group_ids={int(row["id"]) for row in trainer_state.load_table_rows("spell_group")},
+        shapeshift_index=state.load_stock_rows(dbcfmt.SPELLSHAPESHIFTFORM),
     )
     declared = {e["id"] for e in dsl["spells"]}
     # The legacy CSVs (source/spells/npc.csv, generic.csv) still count - generate.py refuses an

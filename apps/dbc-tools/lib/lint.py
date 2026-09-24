@@ -151,13 +151,15 @@ def check_missing_skill_line_ability(
 # already shipped wrong cast times on nine spells (the DSL said `cast_time_ms=2000`, but a raw
 # `CastingTimeIndex` copied from an old rank-1 pull won).
 #
-# `typed field -> SQL column` for every field `build_spell_row` (lib/build.py) maps directly onto
-# the row - two shapes: "direct" columns hold the same unit as the typed field (compare as-is);
-# the three "indexed" columns are a lookup-DBC id, so the raw override's *index id* has to be
-# resolved to its own value (via `index_tables`, the same base+overlay rows generate.py already
-# loads for SpellCastTimes/SpellDuration/SpellRange) before it can be compared to the typed
-# field's plain ms/yards value.
+# `typed field -> SQL column` for every top-level field `build_spell_row` (lib/build.py) maps
+# directly onto the row - two shapes: "direct" columns hold the same unit as the typed field
+# (compare as-is); the indexed columns (cast time/duration/range) are a lookup-DBC id, so the raw
+# override's *index id* has to be resolved to its own value (via `index_tables`, the same
+# base+overlay rows generate.py already loads for SpellCastTimes/SpellDuration/SpellRange) before
+# it can be compared to the typed field's plain ms/yards value. `Name_Lang_enUS` is direct too -
+# `name` is the one non-numeric typed field build_spell_row sets.
 _DIRECT_FIELDS = {
+    "name": "Name_Lang_enUS",
     "school": "SchoolMask",
     "dispel": "DispelType",
     "mechanic": "Mechanic",
@@ -177,40 +179,100 @@ _INDEXED_FIELDS = {
     "range_yards": ("RangeIndex", "spellrange", "RangeMax_1"),
 }
 
+# Same two shapes, one per effect slot (1/2/3) - build_spell_row's `for i in range(1, 4)` loop,
+# lib/build.py. `die_sides` is the one field whose *unset* default isn't 0 (dbcfile.empty_row
+# gives every int column 0, but build_spell_row explicitly does `effect.get("die_sides", 1)`) -
+# see `_effect_typed_value`'s handling below.
+_EFFECT_DIRECT_FIELDS = {
+    "type": "Effect",
+    "base_points": "EffectBasePoints",
+    "points_per_level": "EffectRealPointsPerLevel",
+    "die_sides": "EffectDieSides",
+    "mechanic": "EffectMechanic",
+    "implicit_target_a": "ImplicitTargetA",
+    "implicit_target_b": "ImplicitTargetB",
+    "apply_aura": "EffectAura",
+    "amplitude": "EffectAuraPeriod",
+    "misc_value": "EffectMiscValue",
+    "trigger_spell": "EffectTriggerSpell",
+    "chain_targets": "EffectChainTargets",
+}
+_EFFECT_FIELD_DEFAULTS = {"die_sides": 1}
+
 # Mismatches this check already knows about and hasn't fixed yet. Recomputed by actually running
 # this check against the real repo source (WP-T-HANDOFF.md item 4 - "recompute the full list
-# yourself"), not hand-copied from the plan text: PLAN A9's own nine cast-time mismatches (the
-# bug this check exists for) are *already fixed* as of this computation (2026-09-23, druid-rework
-# branch) - the Balance pass's cast-time edits (PLAN §6 item 11) landed before this check did, so
-# there is nothing A9-shaped left to allow-list. What's here instead are four pre-existing
-# RangeIndex mismatches this check's first real run turned up - same bug shape (a raw_overrides
-# column silently beating a typed field), but on `range_yards`/`RangeIndex`, not `cast_time_ms`/
-# `CastingTimeIndex`, and in the Mage Arcane/Fire rework, not this one. Out of scope for WP-T/the
-# druid rework to fix (PLAN §5.0 item 4: "the other classes' mismatches are flagged, not fixed, by
-# this rework") - allow-listed so `generate.py` stays clean today; a future Mage pass removes
-# these as it fixes them. {(spell_id, column): reason}.
+# yourself"), not hand-copied from the plan text, and against the *full* declared-spell population
+# (every entry `source.load_spells_csv`/the DSL classes produce), not just what a given run's own
+# `resolve.resolve_rows` happens to rebuild - a spell whose raw override already matches what's
+# live gets silently excluded from `resolve_rows`'s output (it reads as an "unchanged reference
+# copy"), which hid the real, still-live PLAN A9 mismatches from this check's first version (a
+# real regression this allow-list's history is worth keeping: it originally, wrongly, claimed
+# these nine were "already fixed"). Balance §6 item 11 is what fixes them for real; until it
+# lands, allow-listed here so `generate.py` stays clean. {(spell_id, column): reason}.
 RAW_OVERRIDE_MISMATCH_ALLOWLIST: dict[tuple[int, str], str] = {
-    (200079, "RangeIndex"): "Arcane Overload shell - raw_overrides RangeIndex=6 (100yd) vs range_yards=30.0; Mage Arcane rework leftover, found 2026-09-23",
-    (200092, "RangeIndex"): "Arcane Overload's own damage sub-spell (200079's trigger target) - same mismatch as 200079",
-    (200116, "RangeIndex"): "Burnout explosion (Fire Mage capstone) - raw_overrides RangeIndex=1 (0yd) vs range_yards=50000.0; leftover, found 2026-09-23",
-    (200119, "RangeIndex"): "Flashpoint detonation (Fire Mage capstone, a separate spell from 200116 with the same copy-pasted raw_overrides template) - same mismatch shape as 200116",
+    (5176, "CastingTimeIndex"): "Wrath - PLAN A9, fixed in the Balance pass",
+    (5185, "CastingTimeIndex"): "Healing Touch - PLAN A9, fixed in the Balance pass",
+    (585, "CastingTimeIndex"): "Smite - PLAN A9, fixed in the Balance pass",
+    (2050, "CastingTimeIndex"): "Lesser Heal - PLAN A9, fixed in the Balance pass (A10 also removes this spell)",
+    (331, "CastingTimeIndex"): "Healing Wave - PLAN A9, fixed in the Balance pass",
+    (403, "CastingTimeIndex"): "Lightning Bolt - PLAN A9, fixed in the Balance pass",
+    (686, "CastingTimeIndex"): "Shadow Bolt - PLAN A9, fixed in the Balance pass",
+    (3110, "CastingTimeIndex"): "Firebolt - PLAN A9, fixed in the Balance pass",
+    (44614, "CastingTimeIndex"): "Frostfire Bolt - PLAN A9, fixed in the Balance pass",
+    (200079, "RangeIndex"): (
+        "Arcane Overload shell - raw_overrides RangeIndex=6 (100yd) vs range_yards=30.0; "
+        "Mage Arcane rework leftover, found 2026-09-23"
+    ),
+    (200092, "RangeIndex"): (
+        "Arcane Overload's own damage sub-spell (200079's trigger target) - same mismatch as 200079"
+    ),
+    (200116, "RangeIndex"): (
+        "Burnout explosion (Fire Mage capstone) - raw_overrides RangeIndex=1 (0yd) vs "
+        "range_yards=50000.0; leftover, found 2026-09-23"
+    ),
+    (200119, "RangeIndex"): (
+        "Flashpoint detonation (Fire Mage capstone, a separate spell from 200116 with the same "
+        "copy-pasted raw_overrides template) - same mismatch shape as 200116"
+    ),
+    (50227, "EffectBasePoints_2"): (
+        "Sword and Board (source/spells/npc.csv, not yet DSL-migrated) - Protection Warrior "
+        "rework phase 2 gave effect2 real base_points=9 (\"Effect_2 was vestigial-empty\", per "
+        "its own note) but left the old raw_overrides EffectBasePoints_2=-1 from before that "
+        "behind; first found by this check's effect-level extension, 2026-09-23 - out of scope "
+        "for WP-T/the druid rework to fix"
+    ),
 }
+
+
+def _mismatch_warning(spell_id, name, column, raw_repr, field, typed_value) -> str:
+    return (
+        f"spell {spell_id} ({name}): raw_overrides sets {column}={raw_repr}, but the typed "
+        f"field {field}={typed_value!r} also sets it and lib/build.py applies raw_overrides "
+        f"last, so {raw_repr} silently wins - see PLAN A9. Drop the raw_overrides entry, or "
+        f"change {field} to match."
+    )
 
 
 def check_raw_override_typed_mismatch(
     entries: list[dict], index_tables: dict[str, dict[int, dict]],
 ) -> list[str]:
     """Flags a spell whose `raw_overrides` sets a column that one of its own typed fields also
-    sets, where the two *values* disagree (never the index ids themselves - `CastingTimeIndex`
-    16 and 30004 are both 1500 ms, and that's not a bug). `index_tables` is
-    `{"spellcasttimes": {ID: row}, "spellduration": {...}, "spellrange": {...}}` - generate.py's
-    own `existing_secondary_by_id`, reused rather than re-loaded so this sees the same base+
-    overlay state everything else in a run does.
+    sets (top-level or per-effect), where the two *values* disagree (never the index ids
+    themselves - `CastingTimeIndex` 16 and 30004 are both 1500 ms, and that's not a bug).
+    `index_tables` is `{"spellcasttimes": {ID: row}, "spellduration": {...}, "spellrange": {...},
+    "spellradius": {...}}` - generate.py's own `existing_secondary_by_id`, reused rather than
+    re-loaded so this sees the same base+overlay state everything else in a run does.
 
-    A typed field left at its default (falsy) is exempt - it isn't really asking for anything, so
-    a raw override alongside it isn't a disagreement, just an unmodeled column. Same "pulled from
-    existing data" exemption as `check_classmask_scoping`/`check_missing_skill_line_ability`
-    (those bytes are copied verbatim from the real client DBC, not hand-typed)."""
+    `entries` must be the *full* declared population (every spell source declares, not just what
+    a particular run's `resolve.resolve_rows` rebuilds this time) - see
+    `RAW_OVERRIDE_MISMATCH_ALLOWLIST`'s docstring for why a narrower population silently hides
+    real, still-live mismatches.
+
+    A typed field left at its default (falsy - or `die_sides`'s own non-zero unset default, 1) is
+    exempt - it isn't really asking for anything, so a raw override alongside it isn't a
+    disagreement, just an unmodeled column. Same "pulled from existing data" exemption as
+    `check_classmask_scoping`/`check_missing_skill_line_ability` (those bytes are copied verbatim
+    from the real client DBC, not hand-typed)."""
     warnings: list[str] = []
     for entry in entries:
         notes = entry.get("notes") or ""
@@ -221,20 +283,19 @@ def check_raw_override_typed_mismatch(
             continue
         spell_id = entry["id"]
         name = entry.get("name", "?")
+
+        def allowed(column: str) -> bool:
+            return (spell_id, column) in RAW_OVERRIDE_MISMATCH_ALLOWLIST
+
         for field, column in _DIRECT_FIELDS.items():
-            if column not in overrides or (spell_id, column) in RAW_OVERRIDE_MISMATCH_ALLOWLIST:
+            if column not in overrides or allowed(column):
                 continue
-            typed_value = entry.get(field) or 0
+            typed_value = entry.get(field) or (0 if field != "name" else "")
             if not typed_value or typed_value == overrides[column]:
                 continue
-            warnings.append(
-                f"spell {spell_id} ({name}): raw_overrides sets {column}={overrides[column]!r}, "
-                f"but the typed field {field}={typed_value!r} also sets it and lib/build.py "
-                f"applies raw_overrides last, so {overrides[column]!r} silently wins - see PLAN "
-                f"A9. Drop the raw_overrides entry, or change {field} to match."
-            )
+            warnings.append(_mismatch_warning(spell_id, name, column, repr(overrides[column]), field, typed_value))
         for field, (column, table_name, value_col) in _INDEXED_FIELDS.items():
-            if column not in overrides or (spell_id, column) in RAW_OVERRIDE_MISMATCH_ALLOWLIST:
+            if column not in overrides or allowed(column):
                 continue
             typed_value = entry.get(field) or 0
             if not typed_value:
@@ -245,11 +306,82 @@ def check_raw_override_typed_mismatch(
             resolved_value = index_row.get(value_col)
             if resolved_value == typed_value:
                 continue
-            warnings.append(
-                f"spell {spell_id} ({name}): raw_overrides sets {column}={overrides[column]} "
-                f"(resolves to {value_col}={resolved_value!r}), but the typed field "
-                f"{field}={typed_value!r} also sets it and lib/build.py applies raw_overrides "
-                f"last, so {resolved_value!r} silently wins - see PLAN A9. Drop the "
-                f"raw_overrides entry, or change {field} to match."
-            )
+            warnings.append(_mismatch_warning(
+                spell_id, name, column, f"{overrides[column]} (resolves to {value_col}={resolved_value!r})",
+                field, typed_value,
+            ))
+
+        for i in (1, 2, 3):
+            effect = entry.get(f"effect{i}") or {}
+            for field, base_column in _EFFECT_DIRECT_FIELDS.items():
+                column = f"{base_column}_{i}"
+                if column not in overrides or allowed(column):
+                    continue
+                typed_value = effect.get(field, _EFFECT_FIELD_DEFAULTS.get(field, 0))
+                if not typed_value or typed_value == overrides[column]:
+                    continue
+                warnings.append(_mismatch_warning(
+                    spell_id, name, column, repr(overrides[column]), f"effect{i}.{field}", typed_value,
+                ))
+            radius_column = f"EffectRadiusIndex_{i}"
+            if radius_column in overrides and not allowed(radius_column):
+                # build_spell_row's own fallback: an effect with no radius_yards of its own uses
+                # the entry-level default_radius (entry["radius_yards"]) instead.
+                typed_value = effect.get("radius_yards", entry.get("radius_yards")) or 0
+                if typed_value:
+                    index_row = index_tables.get("spellradius", {}).get(overrides[radius_column])
+                    if index_row is not None:
+                        resolved_value = index_row.get("Radius")
+                        if resolved_value != typed_value:
+                            warnings.append(_mismatch_warning(
+                                spell_id, name, radius_column,
+                                f"{overrides[radius_column]} (resolves to Radius={resolved_value!r})",
+                                f"effect{i}.radius_yards", typed_value,
+                            ))
+    return warnings
+
+
+# SpellMgr.h/.cpp's SpellMgr::LoadSpellLinked, verified against the real source (review,
+# 2026-09-23 - see lib/dsl/registry.py's comment above _SPELL_LINKED_MAX_SPELLS for the full
+# semantics this mirrors): the map key for a `(spell_trigger, type)` pair is `spell_trigger`
+# unshifted for type 0, or `spell_trigger ± SPELL_LINKED_MAX_SPELLS*type` (added if positive,
+# subtracted if negative) for type 1/2. `source/ids.yaml`'s whole custom-spell block (200000-
+# 209999) sits exactly inside that offset window, so a `type=0` trigger in that range can collide
+# with a `type=1`/`type=2` row declared (or already stock) at `trigger - 200000`/`trigger -
+# 400000` - two unrelated declarations that the engine reads as the *same* row.
+_SPELL_LINKED_MAX_SPELLS = 200000
+
+
+def _spell_linked_engine_key(trigger: int, type_: int) -> int:
+    if type_ == 0:
+        return trigger
+    offset = _SPELL_LINKED_MAX_SPELLS * type_
+    return trigger + offset if trigger > 0 else trigger - offset
+
+
+def check_linked_spell_key_collisions(rows: list[dict]) -> list[str]:
+    """Flags any two `spell_linked_spell` rows (declared this run, live/stock, or a mix - `rows`
+    is whatever the caller wants checked together, see `generate.py`'s wiring for "declared +
+    everything already live") whose `(spell_trigger, type)` encode to the *same*
+    `SpellMgr::LoadSpellLinked` map key - see `_spell_linked_engine_key`. At runtime, the engine
+    only ever sees the last-loaded row for that key; the other row's effects fire in the wrong
+    place entirely (e.g. a `type=0` trigger of `785` colliding with the stock `type=1` row for
+    `585` - Smite - means Smite's on-hit effects fire whenever spell `200585` is cast, and vice
+    versa)."""
+    by_key: dict[int, set[tuple[int, int]]] = {}
+    for row in rows:
+        trigger, type_ = row["spell_trigger"], row["type"]
+        key = _spell_linked_engine_key(trigger, type_)
+        by_key.setdefault(key, set()).add((trigger, type_))
+    warnings: list[str] = []
+    for key, pairs in by_key.items():
+        if len(pairs) < 2:
+            continue
+        desc = ", ".join(f"(trigger={t}, type={ty})" for t, ty in sorted(pairs))
+        warnings.append(
+            f"spell_linked_spell: {desc} all encode to the same SpellMgr::LoadSpellLinked lookup "
+            f"key ({key}) - trigger ± {_SPELL_LINKED_MAX_SPELLS}*type - so these rows collide at "
+            f"runtime; only one is ever seen for that key. A type=0 trigger inside "
+            f"source/ids.yaml's custom spell block (200000-209999) is the usual cause."
+        )
     return warnings

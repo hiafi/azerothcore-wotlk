@@ -87,11 +87,60 @@ def module_sql_files() -> list[Path]:
         world = module_dir / "data" / "sql" / "db-world"
         if world.is_dir():
             files.extend(sorted(world.rglob("*.sql")))
-    phases_root = MODULES_DIR / "mod-progression" / "src"
-    if phases_root.is_dir():
-        for phase in range(progression_phase() + 1):
-            files.extend(sorted((phases_root / f"phase_{phase:02}" / "sql").glob("*.sql")))
+    active_phase = progression_phase()
+    for phase, phase_files in progression_phase_files().items():
+        if phase <= active_phase:
+            files.extend(phase_files)
     return files
+
+
+def progression_phase_files() -> dict[int, list[Path]]:
+    """Every mod-progression phase's `src/phase_NN/sql/*.sql`, keyed by phase
+    number in phase order - *all* phases on disk, not just the active ones
+    `module_sql_files()` keeps (those `<= progression_phase()`)."""
+    phases_root = MODULES_DIR / "mod-progression" / "src"
+    if not phases_root.is_dir():
+        return {}
+    phases: dict[int, list[Path]] = {}
+    for phase_dir in sorted(phases_root.glob("phase_[0-9][0-9]")):
+        files = sorted((phase_dir / "sql").glob("*.sql"))
+        if files:
+            phases[int(phase_dir.name.removeprefix("phase_"))] = files
+    return phases
+
+
+def load_phase_table_rows(table_name: str) -> dict[int, list[dict]]:
+    """Every INSERT into `table_name` from each mod-progression phase's SQL,
+    keyed by phase number - including phases this realm hasn't reached yet,
+    which `load_table_rows` deliberately leaves out. Same union-of-INSERTs,
+    no-DELETE-replay reading as `load_table_rows`; a phase with no INSERT
+    for the table (e.g. phase_13-trainer_spell.sql, a bare range DELETE) is
+    simply absent.
+
+    Used by `spell_tables.render_removal_blocks` to tell a declared removal
+    whose row a phase (re)inserts apart from a typo: core `db_world` SQL -
+    the removal's DELETE - is applied before mod-progression's
+    `OnAfterDatabasesLoaded` applies phase SQL, so a phase that inserts the
+    row brings it back on a fresh world DB (active phase) or when the realm
+    reaches that phase (later phase)."""
+    base_path = BASE_SQL_DIR / f"{table_name}.sql"
+    fallback_columns: tuple[str, ...] = ()
+    if base_path.is_file():
+        fallback_columns = sql_dump.parse_create_table_columns(base_path, table_name)
+    needle = f"`{table_name}`"
+    rows_by_phase: dict[int, list[dict]] = {}
+    for phase, phase_files in progression_phase_files().items():
+        for path in phase_files:
+            if needle not in path.read_text(encoding="utf-8"):
+                continue
+            try:
+                rows = list(sql_dump.read_table_rows(path, table_name, fallback_columns))
+            except Exception as exc:  # pragma: no cover - defensive, same as load_table_rows
+                print(f"warning: trainer_state.py: skipping {path} for {table_name}: {exc}")
+                continue
+            if rows:
+                rows_by_phase.setdefault(phase, []).extend(rows)
+    return rows_by_phase
 
 # src/server/game/Entities/Unit/UnitDefines.h
 UNIT_NPC_FLAG_TRAINER = 0x00000010

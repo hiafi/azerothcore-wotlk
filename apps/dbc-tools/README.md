@@ -283,9 +283,14 @@ from lib.dsl.registry import (
     linked_spell, spell_group, spell_group_rule, custom_attr, shapeshift_form,
 )
 
-# spell_linked_spell - SpellMgr::GetSpellLinked. type: 0=cast, 1=hit, 2=aura-removal. A negative
-# trigger/effect is the table's own "on removal of / remove that aura" convention, not a typo.
-linked_spell(200326, 57865, type=2)
+# spell_linked_spell - SpellMgr::LoadSpellLinked. type: 0=cast, 1=hit, 2=aura. Each type reads a
+# negative trigger/effect differently - type=0's negative *trigger* means "on removal of the aura
+# |trigger|"; type=2's negative *effect* means "grant/revoke immunity to spell |effect|", not
+# "remove that aura" - see lib/dsl/registry.py's comment above _SPELL_LINKED_MAX_SPELLS for the
+# full, source-verified semantics of every case. A *positive*, type=0 trigger in ids.yaml's custom
+# spell block (200000-209999) risks colliding with a type=1/2 row on (trigger-200000) - see
+# lib/lint.py's check_linked_spell_key_collisions, which generate.py runs automatically.
+linked_spell(200326, 57865, type=2)  # positive trigger/effect, type=2: apply/remove 57865 with 200326's aura
 
 # spell_group + spell_group_stack_rules - SpellMgr::LoadSpellGroups/LoadSpellGroupStackRules.
 # group_id must be a fresh id from ids.yaml's `spell_group` block, or one that already exists in
@@ -295,9 +300,11 @@ linked_spell(200326, 57865, type=2)
 spell_group(1200, 200001, 200002)
 spell_group_rule(1200, stack_rule=1, description="my new debuff group")
 
-# spell_custom_attr - SpellCustomAttributes (SpellMgr.h). Declaring a stock spell_id replaces
-# that row, same as every table here.
-custom_attr(200001, attributes=0x00000001)  # SPELL_ATTR0_CU_POSITIVE
+# spell_custom_attr - SpellCustomAttributes (SpellInfo.h). Declaring a stock spell_id replaces
+# that row, same as every table here. Double check the exact bit against SpellInfo.h before
+# using one - there is no single SPELL_ATTR0_CU_POSITIVE bit, only POSITIVE_EFF0/1/2 (one per
+# effect slot) and NEGATIVE_EFF0/1/2, dense neighbors that are easy to transpose.
+custom_attr(200001, attributes=0x02000000)  # SPELL_ATTR0_CU_POSITIVE_EFF0 - effect 1 is beneficial
 
 # spellshapeshiftform_dbc - a FULL override row: every column starts at the real stock value
 # (var/extractors/dbc/SpellShapeshiftForm.dbc) and only the ones named here change. Accepts
@@ -323,6 +330,23 @@ unlink_spell(200326, 57865, type=2)                      # spell_linked_spell
 leave_spell_group(1054, 200001)                          # spell_group (no id-range check - removing never mints)
 untrain(50464, trainer_ids=[212, 213])                    # trainer_spell, one DELETE per trainer id
 ```
+
+**Removing a row mod-progression's phase SQL inserts** (most `untrain` targets - phase_00 is where
+this server's class trainers get their spells) only partly sticks. Core `db_world` SQL, the
+removal's `DELETE` included, is applied before mod-progression's `OnAfterDatabasesLoaded` applies
+`src/phase_NN/sql/`, so any phase that inserts the row puts it back afterwards:
+
+- a phase this realm has already applied (`<= Progression.Phase`): only a fresh world DB (a new
+  realm) gets the row back; a realm already past that phase keeps the removal. `generate.py` adds a
+  `note:` line naming the phase.
+- a phase this realm hasn't reached yet: the `DELETE` matches nothing today, and the row appears
+  when the realm reaches that phase. `generate.py` prints a `WARNING:` naming the phase instead of
+  the typo warning.
+
+Either way the removal counts as done and is never emitted again. dbc-tools can't change that
+apply order - the hand-written `data/sql/updates/db_world/2026_09_23_02.sql` this helper replaces
+had the same limit - so a removal that has to hold on every realm and every phase means editing the
+phase file itself.
 
 ## Known limitations
 

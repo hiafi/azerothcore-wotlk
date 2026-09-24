@@ -141,11 +141,16 @@ Five more (WP-T, `.agents/plans/druid-rework/druid-rework.WP-T-HANDOFF.md`), sam
 ```python
 from lib.dsl.registry import linked_spell, spell_group, spell_group_rule, custom_attr, shapeshift_form
 
-linked_spell(200326, 57865, type=2)                    # -> spell_linked_spell (0=cast, 1=hit, 2=aura)
+linked_spell(200326, 57865, type=2)                    # -> spell_linked_spell (0=cast, 1=hit, 2=aura -
+                                                         #    each type reads a negative trigger/effect
+                                                         #    differently; see registry.py's own comment
+                                                         #    above _SPELL_LINKED_MAX_SPELLS before using one)
 spell_group(1200, 200001, 200002)                      # -> spell_group (group_id: fresh from
 spell_group_rule(1200, stack_rule=1, description="x")  # -> spell_group_stack_rules  ids.yaml's `spell_group`
                                                          #    block, or already exists in stock data)
-custom_attr(200001, attributes=0x00000001)             # -> spell_custom_attr (SpellCustomAttributes)
+custom_attr(200001, attributes=0x02000000)             # -> spell_custom_attr (SpellCustomAttributes,
+                                                         #    SPELL_ATTR0_CU_POSITIVE_EFF0 here - check
+                                                         #    SpellInfo.h, there's no single "POSITIVE" bit)
 shapeshift_form(5, attackSpeed=3500)                    # -> spellshapeshiftform_dbc, a FULL override
                                                          #    row (stock row + just the named columns)
 ```

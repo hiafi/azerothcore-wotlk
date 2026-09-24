@@ -499,14 +499,39 @@ class RemovalBlocksTest(unittest.TestCase):
             + "INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES "
             "(69366, 'spell_dru_moonkin_form_passive');\n"
         )
-        self._orig = (trainer_state.BASE_SQL_DIR, trainer_state.PROMOTED_SQL_DIR, trainer_state.PENDING_SQL_DIR)
+        # The removal typo guard reads mod-progression phase SQL too - point it at an empty
+        # modules dir so the real repo's phase files can't leak into these tests.
+        modules = Path(self._tmp.name) / "modules"
+        modules.mkdir()
+        self._modules = modules
+        self._orig = (
+            trainer_state.BASE_SQL_DIR, trainer_state.PROMOTED_SQL_DIR, trainer_state.PENDING_SQL_DIR,
+            trainer_state.MODULES_DIR, trainer_state.PROGRESSION_CONF, trainer_state.PROGRESSION_CONF_DIST,
+        )
         trainer_state.BASE_SQL_DIR = base
         trainer_state.PROMOTED_SQL_DIR = promoted
         trainer_state.PENDING_SQL_DIR = pending
+        trainer_state.MODULES_DIR = modules
+        trainer_state.PROGRESSION_CONF = modules / "mod_progression.conf"
+        trainer_state.PROGRESSION_CONF_DIST = modules / "mod_progression.conf.dist"
+        trainer_state.PROGRESSION_CONF.write_text("Progression.Phase = 2\n")
 
     def tearDown(self):
-        (trainer_state.BASE_SQL_DIR, trainer_state.PROMOTED_SQL_DIR, trainer_state.PENDING_SQL_DIR) = self._orig
+        (
+            trainer_state.BASE_SQL_DIR, trainer_state.PROMOTED_SQL_DIR, trainer_state.PENDING_SQL_DIR,
+            trainer_state.MODULES_DIR, trainer_state.PROGRESSION_CONF, trainer_state.PROGRESSION_CONF_DIST,
+        ) = self._orig
         self._tmp.cleanup()
+
+    def _phase_trainer_spell(self, phase: int, trainer_id: int, spell_id: int) -> None:
+        # The shape of mod-progression's phase_NN-trainer_spell.sql (@TrainerId-relative rows).
+        sql_dir = self._modules / "mod-progression" / "src" / f"phase_{phase:02}" / "sql"
+        sql_dir.mkdir(parents=True)
+        (sql_dir / f"phase_{phase:02}-trainer_spell.sql").write_text(
+            "SET @TrainerId := 200;\n"
+            "INSERT INTO `trainer_spell` (`TrainerId`, `SpellId`, `ReqLevel`) VALUES\n"
+            f"(@TrainerId+{trainer_id - 200}, {spell_id}, 10);\n"
+        )
 
     def test_live_removal_is_emitted_and_reported(self):
         blocks, report = spell_tables.render_removal_blocks(_load_wp_t_class())
@@ -550,6 +575,77 @@ class RemovalBlocksTest(unittest.TestCase):
         dsl = _load_wp_t_class('from lib.dsl.registry import linked_spell\nlinked_spell(1, 2)\n')
         blocks, report = spell_tables.render_removal_blocks(dsl)
         self.assertEqual((blocks, report), ([], []))
+
+    # Regression test (review, 2026-09-23): load_removed_keys used to treat *any* matching-shape
+    # DELETE as proof of a past removal - including the DELETE that always precedes a declared
+    # table's own INSERT (render_generic_table_block's normal idempotent-rerun shape). That meant
+    # a key first declared (DELETE-then-INSERT) in one run, then later switched to a removal
+    # (unbind_script) in a subsequent run, was misread as "already removed" from the very first
+    # run's own DELETE half of its declare - so the real removal never got emitted.
+    def test_declare_then_later_remove_across_two_runs_still_emits_the_removal(self):
+        declare_dsl = _load_wp_t_class(
+            'from lib.dsl.registry import scripted_by, spell\n'
+            'meteor = spell(id=200095, name="Meteor", school=4)\n'
+            'scripted_by(meteor, "spell_mage_meteor")\n'
+        )
+        declared_blocks = spell_tables.render_blocks(spell_tables.load_spell_table_index(), declare_dsl)
+        header = spell_tables.GENERATED_MARKER + " -- DO NOT hand-edit.\n"
+        (self._promoted / "01_declare.sql").write_text(header + "\n\n".join(declared_blocks) + "\n")
+
+        # A later run: the design changed, scripted_by() is gone, unbind_script() replaces it.
+        remove_dsl = _load_wp_t_class(
+            'from lib.dsl.registry import unbind_script\nunbind_script(200095, "spell_mage_meteor")\n'
+        )
+        blocks, report = spell_tables.render_removal_blocks(remove_dsl)
+        self.assertEqual(len(blocks), 1)
+        self.assertIn(
+            "DELETE FROM `spell_script_names` WHERE (`spell_id`, `ScriptName`) IN "
+            "((200095, 'spell_mage_meteor'));",
+            blocks[0],
+        )
+        self.assertTrue(any("removal: spell_script_names" in l and "200095" in l for l in report))
+
+        # Promoting that removal (marker moves to line 2 - see _is_generated) makes a further
+        # rerun of the same unbind_script() declaration silent, same as the simpler case above.
+        (self._promoted / "01_declare.sql").unlink()
+        (self._promoted / "02_removed.sql").write_text(
+            "-- DB update 01 -> 02\n" + header + "\n\n".join(blocks) + "\n"
+        )
+        blocks2, report2 = spell_tables.render_removal_blocks(_load_wp_t_class(
+            'from lib.dsl.registry import unbind_script\nunbind_script(200095, "spell_mage_meteor")\n'
+        ))
+        self.assertEqual((blocks2, report2), ([], []))
+
+    def test_live_keys_by_table_is_used_instead_of_rescanning_when_given(self):
+        # An empty override for spell_script_names must be trusted over what's actually on disk -
+        # proves the pre-loaded map takes priority instead of always re-scanning.
+        dsl = _load_wp_t_class(
+            'from lib.dsl.registry import unbind_script\n'
+            'unbind_script(69366, "spell_dru_moonkin_form_passive")\n'
+        )
+        blocks, report = spell_tables.render_removal_blocks(dsl, live_keys_by_table={"spell_script_names": set()})
+        self.assertEqual(len(blocks), 1)
+        self.assertTrue(any(l.startswith("WARNING:") for l in report))  # "live" set was empty, so it warns
+
+    def test_removal_of_a_later_phase_row_names_the_phase_not_a_typo(self):
+        # Progression.Phase is 2 (setUp): phase_07's row isn't live yet, so the plain typo guard
+        # would call it nonexistent - it's real, and phase 7 will re-add it after this DELETE.
+        self._phase_trainer_spell(7, 200, 469)
+        dsl = _load_wp_t_class('from lib.dsl.registry import untrain\nuntrain(469, [200])\n')
+        blocks, report = spell_tables.render_removal_blocks(dsl)
+        self.assertEqual(len(blocks), 1)  # still emitted
+        warnings = [l for l in report if l.startswith("WARNING:")]
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("phase_07", warnings[0])
+        self.assertNotIn("check for a typo", warnings[0])
+
+    def test_removal_of_an_applied_phase_row_gets_a_fresh_db_note(self):
+        self._phase_trainer_spell(0, 208, 2060)
+        dsl = _load_wp_t_class('from lib.dsl.registry import untrain\nuntrain(2060, [208])\n')
+        blocks, report = spell_tables.render_removal_blocks(dsl)
+        self.assertEqual(len(blocks), 1)
+        self.assertFalse(any(l.startswith("WARNING:") for l in report))
+        self.assertTrue(any(l.startswith("note:") and "phase_00" in l and "fresh world DB" in l for l in report))
 
 
 class ShapeshiftFormEmissionTest(unittest.TestCase):
@@ -597,6 +693,52 @@ class ShapeshiftFormEmissionTest(unittest.TestCase):
         (self._promoted / "gen.sql").write_text(header + "\n\n".join(self._blocks(self._dsl())) + "\n")
         blocks = self._blocks(self._dsl(combat_round_time=4000))
         self.assertTrue(any("4000" in b for b in blocks))
+
+
+class IsGeneratedTest(unittest.TestCase):
+    """Regression coverage (review, 2026-09-23): every real promoted file in
+    data/sql/updates/db_world/ starts with a `-- DB update X -> Y` header line that
+    apps/ci/ci-pending-sql.sh's promotion step always prepends, pushing GENERATED_MARKER from
+    line 1 to line 2 - _is_generated used to check only line 1."""
+
+    def test_marker_on_line_one_is_recognized(self):
+        with tempfile.NamedTemporaryFile("w", suffix=".sql", delete=False) as f:
+            f.write(spell_tables.GENERATED_MARKER + " -- DO NOT hand-edit.\nSELECT 1;\n")
+            path = Path(f.name)
+        try:
+            self.assertTrue(spell_tables._is_generated(path))
+        finally:
+            path.unlink()
+
+    def test_marker_on_line_two_after_promotion_header_is_recognized(self):
+        with tempfile.NamedTemporaryFile("w", suffix=".sql", delete=False) as f:
+            f.write(
+                "-- DB update 2026_09_23_00 -> 2026_09_23_01\n"
+                + spell_tables.GENERATED_MARKER + " -- DO NOT hand-edit.\nSELECT 1;\n"
+            )
+            path = Path(f.name)
+        try:
+            self.assertTrue(spell_tables._is_generated(path))
+        finally:
+            path.unlink()
+
+    def test_marker_on_line_three_is_not_recognized(self):
+        with tempfile.NamedTemporaryFile("w", suffix=".sql", delete=False) as f:
+            f.write("-- one\n-- two\n" + spell_tables.GENERATED_MARKER + "\n")
+            path = Path(f.name)
+        try:
+            self.assertFalse(spell_tables._is_generated(path))
+        finally:
+            path.unlink()
+
+    def test_hand_written_file_is_not_recognized(self):
+        with tempfile.NamedTemporaryFile("w", suffix=".sql", delete=False) as f:
+            f.write("-- DB update 01 -> 02\nDELETE FROM `x` WHERE `id` = 1;\n")
+            path = Path(f.name)
+        try:
+            self.assertFalse(spell_tables._is_generated(path))
+        finally:
+            path.unlink()
 
 
 if __name__ == "__main__":

@@ -479,21 +479,49 @@ class LinkedSpellTest(unittest.TestCase):
         self.assertTrue(row["comment"])
         self.assertEqual(row["id"], "200326:57865:2")
 
-    def test_negative_ids_are_accepted_verbatim(self):
-        # Negative trigger = "on removal of the aura |trigger|"; negative effect = "remove that
-        # aura" - the table's own convention, not something to reject as a typo.
-        reg = _load_wp_t('from lib.dsl.registry import linked_spell\nlinked_spell(-200326, -57865, 2)\n')
+    def test_negative_trigger_with_type_zero_is_on_aura_removal(self):
+        # type=0's negative trigger is the only place a negative trigger means anything -
+        # SpellAuras.cpp looks this up via GetSpellLinked(-GetId()) when the aura is removed.
+        reg = _load_wp_t('from lib.dsl.registry import linked_spell\nlinked_spell(-33891, 200500, 0)\n')
         (row,) = reg.linked_spells
-        self.assertEqual((row["spell_trigger"], row["spell_effect"]), (-200326, -57865))
+        self.assertEqual((row["spell_trigger"], row["spell_effect"], row["type"]), (-33891, 200500, 0))
+
+    def test_negative_effect_with_type_two_means_immunity_not_removal(self):
+        # type=2's negative effect grants/revokes immunity (ApplySpellImmune), verified against
+        # SpellAuras.cpp's HandleAuraSpecificMods - NOT "remove that aura", which is type=0's
+        # negative-trigger behavior above, a different type entirely.
+        reg = _load_wp_t('from lib.dsl.registry import linked_spell\nlinked_spell(200326, -57865, 2)\n')
+        (row,) = reg.linked_spells
+        self.assertEqual((row["spell_trigger"], row["spell_effect"], row["type"]), (200326, -57865, 2))
+
+    def test_negative_trigger_with_type_one_raises(self):
+        # A dead row: no engine call site for type 1/2 ever looks up a negative-based key -
+        # SpellMgr::LoadSpellLinked only shifts a *positive* trigger for those types.
+        with self.assertRaises(ValueError):
+            _load_wp_t('from lib.dsl.registry import linked_spell\nlinked_spell(-7943, 1, 1)\n')
+
+    def test_negative_trigger_with_type_two_raises(self):
+        with self.assertRaises(ValueError):
+            _load_wp_t('from lib.dsl.registry import linked_spell\nlinked_spell(-200326, -57865, 2)\n')
 
     def test_invalid_type_raises(self):
         with self.assertRaises(ValueError):
             _load_wp_t('from lib.dsl.registry import linked_spell\nlinked_spell(1, 2, 3)\n')
 
+    def test_empty_comment_is_not_written_as_literal_empty_string(self):
+        # comment is NOT NULL text; an explicit empty string must fall back to the auto-generated
+        # description the same way omitting it entirely does, not render as NULL.
+        reg = _load_wp_t('from lib.dsl.registry import linked_spell\nlinked_spell(1, 2, 0, comment="")\n')
+        self.assertTrue(reg.linked_spells[0]["comment"])
+
     def test_unlink_spell_declares_removal(self):
         reg = _load_wp_t('from lib.dsl.registry import unlink_spell\nunlink_spell(200326, 57865, 2)\n')
         (row,) = reg.linked_spell_removals
         self.assertEqual((row["spell_trigger"], row["spell_effect"], row["type"]), (200326, 57865, 2))
+
+    def test_unlink_spell_negative_trigger_with_nonzero_type_raises(self):
+        with self.assertRaises(ValueError):
+            _load_wp_t('from lib.dsl.registry import unlink_spell\nunlink_spell(-200326, 57865, 1)\n')
 
 
 class SpellGroupTest(unittest.TestCase):
@@ -516,6 +544,18 @@ class SpellGroupTest(unittest.TestCase):
     def test_negative_member_id_is_a_nested_group_reference_not_rejected(self):
         reg = _load_wp_t('from lib.dsl.registry import spell_group\nspell_group(1200, -1016)\n')
         self.assertEqual(reg.spell_groups[0]["spell_id"], -1016)
+
+    def test_accepts_a_spell_object_member_not_just_a_bare_int(self):
+        # Regression guard: every other helper here normalizes a Spell|int member through
+        # _spell_id_of - spell_group() didn't, so a real Spell object (the normal, idiomatic way
+        # the rest of the DSL references a declared spell) rendered as its dataclass repr instead
+        # of an int.
+        reg = _load_wp_t(
+            'from lib.dsl.registry import spell, spell_group\n'
+            'moonfire = spell(id=200500, name="Moonfire")\n'
+            'spell_group(1200, moonfire)\n'
+        )
+        self.assertEqual(reg.spell_groups[0]["spell_id"], 200500)
 
     def test_two_members_of_the_same_group_do_not_collide_across_files(self):
         # Regression guard for the entry["id"] == group_id collision: spell_group's real SQL
@@ -565,6 +605,13 @@ class SpellGroupRuleTest(unittest.TestCase):
     def test_unknown_group_id_raises(self):
         with self.assertRaises(ValueError):
             _load_wp_t('from lib.dsl.registry import spell_group_rule\nspell_group_rule(999999, 1)\n')
+
+    def test_default_description_is_never_a_literal_empty_string(self):
+        # description is `varchar(150) NOT NULL DEFAULT ''`, but sql_out._sql_literal renders ""
+        # the same as NULL - a constraint violation under strict SQL mode. The signature's own
+        # default (description="") must not reach the row as a literal empty string.
+        reg = _load_wp_t('from lib.dsl.registry import spell_group_rule\nspell_group_rule(1200, 1)\n')
+        self.assertTrue(reg.spell_group_rules[0]["description"])
 
 
 class CustomAttrTest(unittest.TestCase):
@@ -626,6 +673,16 @@ class ShapeshiftFormTest(unittest.TestCase):
             _load_wp_t(
                 'from lib.dsl.registry import shapeshift_form\nshapeshift_form(5, attackSpeed=1)\n',
                 shapeshift_index=None,
+            )
+
+    def test_empty_shapeshift_index_raises_runtime_error_not_misleading_value_error(self):
+        # An empty (but non-None) index - the real symptom of SpellShapeshiftForm.dbc not being
+        # extracted on this checkout - must not be misreported as "not a real shapeshift form id"
+        # (a bad form_id), which points the author at the wrong problem entirely.
+        with self.assertRaises(RuntimeError):
+            _load_wp_t(
+                'from lib.dsl.registry import shapeshift_form\nshapeshift_form(5, attackSpeed=1)\n',
+                shapeshift_index={},
             )
 
 

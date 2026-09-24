@@ -34,7 +34,7 @@ from pathlib import Path
 TOOL_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOL_ROOT))
 
-from lib import build, source  # noqa: E402
+from lib import build, dbcfmt, source, state, trainer_state  # noqa: E402
 from lib.dsl import registry as dsl_registry  # noqa: E402
 from lib.reuse import ReuseContext  # noqa: E402
 
@@ -88,14 +88,23 @@ def verify(class_name: str) -> list[str]:
     # A migrated class is either a single `<class>.py` file or a `<class>/` directory (split via
     # split_class_file.py) - try the directory layout first since that's what a class ends up in
     # once split; both loaders return the same `Registry` shape either way.
+    #
+    # existing_group_ids/shapeshift_index: needed the moment a migrated class file happens to
+    # declare spell_group()/spell_group_rule() on a stock id, or shapeshift_form() - without
+    # these this call raises RuntimeError the same as generate.py's own load_classes_dir call
+    # would with them omitted (review, 2026-09-23).
+    existing_group_ids = {int(row["id"]) for row in trainer_state.load_table_rows("spell_group")}
+    shapeshift_index = state.load_stock_rows(dbcfmt.SPELLSHAPESHIFTFORM)
     class_dir = SOURCE_DIR / "classes" / class_name
     if class_dir.is_dir():
         new_registry = dsl_registry.load_class_package(
             class_dir, ids_cfg=ids_cfg, trainer_index=FakeTrainerIndex(),
+            existing_group_ids=existing_group_ids, shapeshift_index=shapeshift_index,
         )
     else:
         new_registry = dsl_registry.load_class_file(
             SOURCE_DIR / "classes" / f"{class_name}.py", ids_cfg=ids_cfg, trainer_index=FakeTrainerIndex(),
+            existing_group_ids=existing_group_ids, shapeshift_index=shapeshift_index,
         )
     new_spells = {e["id"]: e for e in new_registry.spells}
     new_talents = {e["id"]: e for e in new_registry.talents}

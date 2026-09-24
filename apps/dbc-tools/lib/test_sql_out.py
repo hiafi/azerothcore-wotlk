@@ -79,7 +79,8 @@ def _assert_codestyle_shape(test: unittest.TestCase, text: str) -> None:
             continue
         m = re.match(r"(DELETE FROM|INSERT INTO|UPDATE)\s+(\S+)", statement, re.IGNORECASE)
         if m:
-            test.assertTrue(m.group(2).startswith("`") and "`" in m.group(2)[1:], f"unbacktick-quoted table: {statement[:60]!r}")
+            backticked = m.group(2).startswith("`") and "`" in m.group(2)[1:]
+            test.assertTrue(backticked, f"unbacktick-quoted table: {statement[:60]!r}")
 
 
 class WpTCodestyleShapeTest(unittest.TestCase):

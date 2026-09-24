@@ -30,6 +30,9 @@ INDEX_TABLES = {
     "spellrange": {
         6: {"ID": 6, "RangeMax_1": 100.0, "RangeMax_2": 100.0},
     },
+    "spellradius": {
+        8: {"ID": 8, "Radius": 10.0},
+    },
 }
 
 
@@ -99,6 +102,114 @@ class CheckRawOverrideTypedMismatchTest(unittest.TestCase):
         # A raw index id that doesn't resolve to anything live isn't this check's job to flag.
         entry = _entry(cast_time_ms=2000, raw_overrides={"CastingTimeIndex": 999999})
         self.assertEqual(lint.check_raw_override_typed_mismatch([entry], INDEX_TABLES), [])
+
+    def test_name_lang_mismatch_warns(self):
+        entry = _entry(name="Real Name", raw_overrides={"Name_Lang_enUS": "Stale Name"})
+        warnings = lint.check_raw_override_typed_mismatch([entry], INDEX_TABLES)
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("Name_Lang_enUS", warnings[0])
+
+    def test_effect_base_points_mismatch_warns(self):
+        # Same shape as the reviewer's own concrete example (Sword and Board, 50227, effect 2 -
+        # allow-listed for real, so a distinct id is used here to test the check itself).
+        entry = _entry(
+            id=999002, effect2={"type": 6, "base_points": 9},
+            raw_overrides={"EffectBasePoints_2": -1},
+        )
+        warnings = lint.check_raw_override_typed_mismatch([entry], INDEX_TABLES)
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("EffectBasePoints_2", warnings[0])
+        self.assertIn("effect2.base_points", warnings[0])
+
+    def test_sword_and_board_is_allowlisted_for_real(self):
+        # The actual, still-live mismatch this check's effect-level extension found in the real
+        # repo (source/spells/npc.csv, not yet DSL-migrated) - confirms the allow-list entry
+        # matches reality, not just a synthetic fixture.
+        entry = _entry(
+            id=50227, effect2={"type": 6, "base_points": 9},
+            raw_overrides={"EffectBasePoints_2": -1},
+        )
+        self.assertIn((50227, "EffectBasePoints_2"), lint.RAW_OVERRIDE_MISMATCH_ALLOWLIST)
+        self.assertEqual(lint.check_raw_override_typed_mismatch([entry], INDEX_TABLES), [])
+
+    def test_effect_field_matching_value_does_not_warn(self):
+        entry = _entry(effect1={"type": 6, "base_points": 9}, raw_overrides={"EffectBasePoints_1": 9})
+        self.assertEqual(lint.check_raw_override_typed_mismatch([entry], INDEX_TABLES), [])
+
+    def test_effect_die_sides_unset_default_is_one_not_zero(self):
+        # build_spell_row does effect.get("die_sides", 1) - an *unset* die_sides is 1, not falsy,
+        # so a raw override of e.g. 0 must be flagged as a real disagreement, not skipped.
+        entry = _entry(effect1={"type": 6, "base_points": 1}, raw_overrides={"EffectDieSides_1": 0})
+        warnings = lint.check_raw_override_typed_mismatch([entry], INDEX_TABLES)
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("EffectDieSides_1", warnings[0])
+
+    def test_effect_die_sides_matching_unset_default_does_not_warn(self):
+        entry = _entry(effect1={"type": 6, "base_points": 1}, raw_overrides={"EffectDieSides_1": 1})
+        self.assertEqual(lint.check_raw_override_typed_mismatch([entry], INDEX_TABLES), [])
+
+    def test_effect_radius_index_mismatch_warns(self):
+        entry = _entry(effect1={"type": 6, "radius_yards": 5.0}, raw_overrides={"EffectRadiusIndex_1": 8})
+        warnings = lint.check_raw_override_typed_mismatch([entry], INDEX_TABLES)
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("EffectRadiusIndex_1", warnings[0])
+
+    def test_effect_radius_index_uses_entry_level_default_radius_fallback(self):
+        # build_spell_row: an effect with no radius_yards of its own falls back to the entry's
+        # own radius_yards default - the lint has to replicate that exact fallback.
+        entry = _entry(
+            radius_yards=10.0, effect1={"type": 6}, raw_overrides={"EffectRadiusIndex_1": 8},
+        )
+        self.assertEqual(lint.check_raw_override_typed_mismatch([entry], INDEX_TABLES), [])
+
+    def test_effect_allowlist_entry_is_respected(self):
+        entry = _entry(
+            id=999, effect3={"type": 6, "base_points": 1}, raw_overrides={"EffectBasePoints_3": 2},
+        )
+        lint.RAW_OVERRIDE_MISMATCH_ALLOWLIST[(999, "EffectBasePoints_3")] = "test-only"
+        try:
+            self.assertEqual(lint.check_raw_override_typed_mismatch([entry], INDEX_TABLES), [])
+        finally:
+            del lint.RAW_OVERRIDE_MISMATCH_ALLOWLIST[(999, "EffectBasePoints_3")]
+
+    def test_no_effect_dict_is_not_judged(self):
+        entry = _entry(raw_overrides={"EffectBasePoints_1": 5})
+        self.assertEqual(lint.check_raw_override_typed_mismatch([entry], INDEX_TABLES), [])
+
+
+class CheckLinkedSpellKeyCollisionsTest(unittest.TestCase):
+    def test_type_zero_trigger_collides_with_type_one_on_a_lower_spell(self):
+        # The exact scenario from the review: a custom type=0 trigger at 200585 collides with the
+        # stock type=1 (hit) row for Smite (585), since LoadSpellLinked shifts type=1 by 200000.
+        rows = [
+            {"spell_trigger": 200585, "spell_effect": 1, "type": 0},
+            {"spell_trigger": 585, "spell_effect": 2, "type": 1},
+        ]
+        warnings = lint.check_linked_spell_key_collisions(rows)
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("200585", warnings[0])
+        self.assertIn("585", warnings[0])
+
+    def test_no_collision_for_unrelated_triggers(self):
+        rows = [
+            {"spell_trigger": 200585, "spell_effect": 1, "type": 0},
+            {"spell_trigger": 585, "spell_effect": 2, "type": 0},
+        ]
+        self.assertEqual(lint.check_linked_spell_key_collisions(rows), [])
+
+    def test_same_row_twice_is_not_a_collision(self):
+        rows = [
+            {"spell_trigger": 200326, "spell_effect": 1, "type": 2},
+            {"spell_trigger": 200326, "spell_effect": 1, "type": 2},
+        ]
+        self.assertEqual(lint.check_linked_spell_key_collisions(rows), [])
+
+    def test_engine_key_matches_source(self):
+        # SpellMgr::LoadSpellLinked: `if (type) { trigger += MAX*type if positive else -= }`.
+        self.assertEqual(lint._spell_linked_engine_key(585, 0), 585)
+        self.assertEqual(lint._spell_linked_engine_key(585, 1), 200585)
+        self.assertEqual(lint._spell_linked_engine_key(585, 2), 400585)
+        self.assertEqual(lint._spell_linked_engine_key(-585, 1), -200585)
 
 
 if __name__ == "__main__":
