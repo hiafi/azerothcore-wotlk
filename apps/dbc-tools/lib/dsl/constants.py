@@ -147,6 +147,7 @@ class AuraType(IntEnum):
     MOD_INCREASE_SPEED = 31
     MOD_DECREASE_SPEED = 33
     MOD_INCREASE_HEALTH = 34  # druid-rework PLAN §6.4
+    MOD_SHAPESHIFT = 36  # druid-rework FERAL §0.16 (Bestial Fury is a form)
     PROC_TRIGGER_SPELL = 42
     MOD_DODGE_PERCENT = 49  # druid-rework PLAN §6.4
     MOD_WEAPON_CRIT_PERCENT = 52  # druid-rework PLAN §6.4

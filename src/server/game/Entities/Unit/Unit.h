@@ -1029,6 +1029,10 @@ public:
     void AddComboPointHolder(Unit* unit) { m_ComboPointHolders.insert(unit); }
     void RemoveComboPointHolder(Unit* unit) { m_ComboPointHolders.erase(unit); }
     void ClearComboPointHolders();
+    [[nodiscard]] bool KeepsComboPointsOnSelf() const; // Custom: combo points on the player, ComboPointMechanics.cpp
+    void MoveComboPoints(Unit* newTarget, bool send = true); // Custom: combo points on the player, ComboPointMechanics.cpp
+    void ReleaseComboPointHolders(); // Custom: combo points on the player, ComboPointMechanics.cpp
+    void RetargetComboPoints(ObjectGuid guid); // Custom: combo points on the player, ComboPointMechanics.cpp
 
     // PvP
     void SetContestedPvP(Player* attackedPlayer = nullptr, bool lookForNearContestedGuards = true);

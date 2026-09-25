@@ -12908,6 +12908,8 @@ void Unit::RestoreDisplayId()
 
 void Unit::AddComboPoints(Unit* target, int8 count)
 {
+    MoveComboPoints(target, !count); // Custom: a rogue's or druid's points follow it to a new target (ComboPointMechanics.cpp)
+
     if (!count)
     {
         return;
@@ -12989,6 +12991,8 @@ void Unit::SendComboPoints()
 
 void Unit::ClearComboPointHolders()
 {
+    ReleaseComboPointHolders(); // Custom: rogues and druids keep their points (ComboPointMechanics.cpp)
+
     while (!m_ComboPointHolders.empty())
     {
         (*m_ComboPointHolders.begin())->ClearComboPoints(); // this also removes it from m_comboPointHolders

@@ -140,3 +140,69 @@ PROC_SPELL_PHASE_HIT = 2
 PROC_HIT_NORMAL = 1
 PROC_HIT_CRITICAL = 2
 PROC_ATTR_TRIGGERED_CAN_PROC = 0x2
+
+# --- Feral stock bits (druid-rework FERAL §3a; added by the Feral pass's WP-0, checked against the
+# stock Spell.dbc rows 2026-09-24). Every value is the raw SpellFamilyFlags dword content. ---
+
+# dword 1
+DEMORALIZING_ROAR = 0x8  # 99
+MAUL = 0x800  # 6807
+RAKE = 0x1000  # 1822
+BASH = 0x2000  # 5211
+SHRED = 0x8000  # 5221
+RAVAGE = 0x10000  # 6785
+POUNCE = 0x20000  # 9005 (its bleed 9007 has no SpellFamily at all - no SpellMod reaches it)
+ENRAGE = 0x80000  # 5229
+RIP_FEROCIOUS_BITE = 0x800000  # 1079 AND 22568 share this bit - target Rip alone with RIP (dword 3)
+BEAR_FORM = 0x40000000  # 5487, 9634
+CAT_FORM = 0x80000000  # 768
+
+# dword 2
+FERAL_CHARGE_BEAR_D2 = 0x1  # 16979 (also dword 3 FERAL_CHARGE_BEAR_D3)
+MANGLE_BEAR = 0x40  # 33878
+MAIM = 0x80  # 22570
+LACERATE = 0x100  # 33745
+MANGLE_CAT = 0x400  # 33876
+SWIPE_BEAR = 0x100000  # 779
+SAVAGE_ROAR = 0x10000000  # 52610
+COWER = 0x20000000  # 8998
+FRENZIED_REGENERATION = 0x40000000  # 22842
+
+# dword 3
+CHALLENGING_ROAR = 0x1  # 5209
+BEAR_FORM_PASSIVE = 0x2  # 1178, 9635 (and the orphaned Improved Barkskin passive 66530)
+FERAL_CHARGE_BEAR_D3 = 0x10  # 16979
+FERAL_CHARGE_CAT = 0x20  # 49376
+BERSERK = 0x40  # 50334
+SURVIVAL_INSTINCTS = 0x80  # 61336
+SWIPE_CAT = 0x400  # 62078
+TIGERS_FURY = 0x800  # 5217
+CLAW = 0x40000  # 1082
+RIP = 0x200000  # 1079 only
+
+# --- Feral composites (druid-rework FERAL §7 with WP-BRIEF §3; added by the Feral pass's WP-A) ---
+
+# The feral bleeds a SpellMod can reach: Rake (direct + bleed), Lacerate, Rip (its Rip-only dword 3
+# bit - dword 1 0x800000 is shared with Ferocious Bite), Thrash. Pounce's bleed 9007 has no family.
+# Infected Wounds eff1 (DOT) and Primal Gore eff0 (CRIT_DAMAGE_BONUS).
+FERAL_BLEEDS = (RAKE, LACERATE, RIP | THRASH)
+
+# Berserk 50334 eff0's -50% cost scope (FERAL §7 (10,1)): the stock cat scope plus Maul, Demoralizing
+# Roar, Mangle (Bear), Lacerate, Swipe (Bear), Feral Charge (Bear) and the four new bear abilities.
+BERSERK_COST = (
+    RIP_FEROCIOUS_BITE | POUNCE | RAVAGE | SHRED | RAKE | MAUL | DEMORALIZING_ROAR,
+    SAVAGE_ROAR | COWER | SWIPE_BEAR | MANGLE_CAT | LACERATE | MAIM | MANGLE_BEAR | FERAL_CHARGE_BEAR_D2,
+    CLAW | SWIPE_CAT | FERAL_CHARGE_CAT | CHALLENGING_ROAR | IRONFUR | PULVERIZE | UPHEAVAL | THRASH,
+)
+
+# Nurturing Instinct's empowered buff 200430 (FERAL §7 (4,3)): "any feral damage ability" -
+# eff0 DAMAGE on the direct hits, eff1 DOT on the bleeds.
+NURTURING_INSTINCT_DAMAGE = (
+    RIP_FEROCIOUS_BITE | POUNCE | RAVAGE | SHRED | RAKE | MAUL,
+    SWIPE_BEAR | MANGLE_CAT | LACERATE | MAIM | MANGLE_BEAR,
+    CLAW | SWIPE_CAT | PULVERIZE | UPHEAVAL | THRASH,
+)
+NURTURING_INSTINCT_DOT = (RIP_FEROCIOUS_BITE | RAKE, LACERATE, RIP | THRASH)
+
+# Infected Wounds' proc trigger scope (procs_on(-48483), FERAL §7 (7,3)): Shred, Maul, Swipe (both), Mangle (both).
+INFECTED_WOUNDS_TRIGGER = (SHRED | MAUL, SWIPE_BEAR | MANGLE_CAT | MANGLE_BEAR, SWIPE_CAT)

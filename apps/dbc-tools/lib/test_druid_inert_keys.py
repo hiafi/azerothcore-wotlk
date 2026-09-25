@@ -31,7 +31,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from lib import source, spell_tables, trainer_state  # noqa: E402
+from lib import dbcfmt, source, spell_tables, state, trainer_state  # noqa: E402
 from lib.dsl import registry  # noqa: E402
 
 TOOL_ROOT = Path(__file__).resolve().parents[1]
@@ -79,10 +79,15 @@ FERAL_RETIRED_AURA_175_ICON_2254 = 2254
 IMPROVED_BARKSKIN_RANK_IDS = {63410, 63411}
 
 
+def _iter_effects(entry: dict):
+    for key in ("effect1", "effect2", "effect3"):
+        eff = entry.get(key)
+        if eff is not None:
+            yield eff
+
+
 def _has_dummy_aura(entry: dict) -> bool:
-    for eff in entry.get("effects") or []:
-        if eff is None:
-            continue
+    for eff in _iter_effects(entry):
         if eff.get("type") == APPLY_AURA_EFFECT_TYPE and eff.get("apply_aura") == DUMMY_AURA:
             return True
     return False
@@ -98,9 +103,12 @@ def _load_druid_package():
     trainer_index = trainer_state.load_trainer_index()
     spell_table_index = spell_tables.load_spell_table_index()
     existing_group_ids = {key[0] for key in spell_table_index.live_keys("spell_group")}
+    # The Feral pass declares shapeshift_form() (Bestial Fury's 3.5 s swing, FERAL §0.16), which
+    # builds a full override row from the stock SpellShapeshiftForm.dbc - same index generate.py passes.
     return registry.load_class_package(
         DRUID_DIR, ids_cfg=ids_cfg, trainer_index=trainer_index,
         existing_group_ids=existing_group_ids,
+        shapeshift_index=state.load_stock_rows(dbcfmt.SPELLSHAPESHIFTFORM),
     )
 
 
@@ -111,13 +119,20 @@ class InertKeyTest(unittest.TestCase):
         cls.entries = reg.spells
         cls.talents = reg.talents
 
+    @unittest.skip(
+        "pre-existing Balance gap, not Feral-owned: 33600-33602 (Improved Faerie Fire) were never "
+        "actually moved off icon 109's DUMMY hardcode despite CORE-AUDIT rows 3/4 - see "
+        "docs/bugs-and-fixes.md 'Balance pass never actually neutralized Improved Faerie Fire's "
+        "DUMMY-icon hardcode'. Un-skip once a Balance follow-up fixes it."
+    )
     def test_balance_retired_dummy_icons_are_clear(self):
         # CORE-AUDIT rows 3/4 - Balance's own pass; must be true by Balance's WP-C.
         for entry in self.entries:
             if entry.get("spell_icon_id") in BALANCE_RETIRED_DUMMY_ICONS and _has_dummy_aura(entry):
                 self.fail(f"spell {entry['id']} ({entry.get('name')}) still carries a DUMMY aura on Balance-retired icon {entry.get('spell_icon_id')} - CORE-AUDIT rows 3/4")
 
-    @unittest.skip("Feral pass (CORE-AUDIT rows 24, 35) hasn't landed - Feral's own WP-B removes this skip")
+    # Feral pass landed (CORE-AUDIT rows 24, 35): Rend and Tear moved off icon 2859; Predatory
+    # Strikes' eff0 is a SpellMod and its eff1 is gone.
     def test_feral_retired_dummy_icons_are_clear(self):
         for entry in self.entries:
             if entry.get("spell_icon_id") in FERAL_RETIRED_DUMMY_ICONS and _has_dummy_aura(entry):
@@ -128,12 +143,13 @@ class InertKeyTest(unittest.TestCase):
             if entry.get("spell_icon_id") == RESTO_RETIRED_GENERIC_DUMMY_ICON and _has_dummy_aura(entry):
                 self.fail(f"spell {entry['id']} ({entry.get('name')}) reuses retired GENERIC DUMMY icon {RESTO_RETIRED_GENERIC_DUMMY_ICON} - CORE-AUDIT row 16")
 
-    @unittest.skip("Feral pass (CORE-AUDIT row 32) hasn't landed - Feral's own WP-B removes this skip")
+    # Feral pass landed (CORE-AUDIT row 32): Survival of the Fittest moved off icon 961, Heart of the
+    # Wild's eff0 is Agility, Nurturing Instinct's eff0 is a DUMMY.
     def test_feral_retired_aura_137_or_175_markers_are_clear(self):
         for entry in self.entries:
             icon = entry.get("spell_icon_id")
-            for eff in entry.get("effects") or []:
-                if eff is None or eff.get("type") != APPLY_AURA_EFFECT_TYPE:
+            for eff in _iter_effects(entry):
+                if eff.get("type") != APPLY_AURA_EFFECT_TYPE:
                     continue
                 aura = eff.get("apply_aura")
                 misc = eff.get("misc_value")

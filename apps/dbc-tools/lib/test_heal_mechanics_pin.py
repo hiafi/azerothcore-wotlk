@@ -28,7 +28,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from lib import source, spell_tables, trainer_state  # noqa: E402
+from lib import dbcfmt, source, spell_tables, state, trainer_state  # noqa: E402
 from lib.dsl import registry  # noqa: E402
 
 TOOL_ROOT = Path(__file__).resolve().parents[1]
@@ -94,6 +94,7 @@ def _load_druid_spells() -> list[dict]:
     reg = registry.load_class_package(
         DRUID_DIR, ids_cfg=ids_cfg, trainer_index=trainer_index,
         existing_group_ids=existing_group_ids,
+        shapeshift_index=state.load_stock_rows(dbcfmt.SPELLSHAPESHIFTFORM),
     )
     return reg.spells
 

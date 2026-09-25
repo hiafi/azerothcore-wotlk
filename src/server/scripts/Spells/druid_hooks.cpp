@@ -236,9 +236,261 @@ public:
     }
 };
 
+/*
+ * Feral pass additions (druid-rework.CORE-AUDIT.md rows 22, 24, 26, 27, 29, 32). The math lives in
+ * DruidMechanics.cpp; these handlers only route. Every handler bails first unless a druid player is
+ * involved - these hooks fire on every damage/heal event server-wide.
+ */
+
+namespace
+{
+    Player* GetDruidPlayer(Unit* unit)
+    {
+        Player* player = unit ? unit->ToPlayer() : nullptr;
+        return player && player->getClass() == CLASS_DRUID ? player : nullptr;
+    }
+
+    // CORE-AUDIT row 22's gate: a weapon-damage ability with no SCHOOL_DAMAGE effect. A spell with a
+    // SCHOOL_DAMAGE effect already got the Feral clauses from Druid::ApplyDoneDamagePctMods (row 1).
+    bool IsWeaponDamageOnlySpell(SpellInfo const* spellInfo)
+    {
+        if (spellInfo->HasEffect(SPELL_EFFECT_SCHOOL_DAMAGE))
+            return false;
+
+        return spellInfo->HasEffect(SPELL_EFFECT_WEAPON_DAMAGE) ||
+               spellInfo->HasEffect(SPELL_EFFECT_WEAPON_DAMAGE_NOSCHOOL) ||
+               spellInfo->HasEffect(SPELL_EFFECT_NORMALIZED_WEAPON_DMG) ||
+               spellInfo->HasEffect(SPELL_EFFECT_WEAPON_PERCENT_DAMAGE);
+    }
+
+    // ModifyPeriodicDamageAurasTick also fires for heal ticks (SPELL_AURA_PERIODIC_HEAL /
+    // OBS_MOD_HEALTH). A spell carrying both kinds counts as a heal, so a heal tick is never reduced.
+    bool IsPeriodicDamageSpell(SpellInfo const* spellInfo)
+    {
+        if (spellInfo->HasAura(SPELL_AURA_PERIODIC_HEAL) || spellInfo->HasAura(SPELL_AURA_OBS_MOD_HEALTH))
+            return false;
+
+        return spellInfo->HasAura(SPELL_AURA_PERIODIC_DAMAGE) ||
+               spellInfo->HasAura(SPELL_AURA_PERIODIC_DAMAGE_PERCENT) ||
+               spellInfo->HasAura(SPELL_AURA_PERIODIC_LEECH);
+    }
+}
+
+// CORE-AUDIT rows 22, 27 and 32: Feral's done-% clauses on weapon abilities and autoattacks
+// (attacker side), Iron Hide's magic damage reduction (victim side) and the form boosts on every
+// shapeshift. Its own class rather than DruidRestoUnitHooks: Iron Hide is victim-side, and the Resto
+// tick handler bails on non-druid attackers.
+class DruidFeralUnitHooks : public UnitScript
+{
+public:
+    DruidFeralUnitHooks()
+        : UnitScript("DruidFeralUnitHooks", true,
+                      { UNITHOOK_MODIFY_SPELL_DAMAGE_TAKEN, UNITHOOK_MODIFY_MELEE_DAMAGE,
+                        UNITHOOK_MODIFY_PERIODIC_DAMAGE_AURAS_TICK, UNITHOOK_ON_AURA_APPLY, UNITHOOK_ON_AURA_REMOVE })
+    {
+    }
+
+    // Unit::CalculateSpellDamageTaken, before armor and crit, for every spell hit.
+    void ModifySpellDamageTaken(Unit* target, Unit* attacker, int32& damage, SpellInfo const* spellInfo) override
+    {
+        if (!target || !spellInfo || damage <= 0)
+            return;
+
+        float mult = 1.0f;
+
+        // Row 22: weapon-damage abilities. The hook has to honour IGNORE_CASTER_MODIFIERS itself
+        // (Unit::MeleeDamageBonusDone does for its own mods).
+        if (Player* player = GetDruidPlayer(attacker))
+        {
+            if (IsWeaponDamageOnlySpell(spellInfo) && !spellInfo->HasAttribute(SPELL_ATTR3_IGNORE_CASTER_MODIFIERS))
+            {
+                mult *= Druid::GetFeralDamageDoneMultiplier(player, target, spellInfo, spellInfo->GetSchoolMask());
+
+                // Omen of Clarity r3 capstone, melee side (the spell side is in ApplyDoneDamagePctMods):
+                // +10% on the ability that consumed the empowered Clearcasting.
+                if (Spell const* spell = player->m_spellModTakingSpell)
+                    if (spell->GetSpellInfo() == spellInfo && Druid::ConsumedEmpoweredClearcasting(player))
+                        if (AuraEffect const* capstone =
+                                player->GetAuraEffect(Druid::SPELL_CLEARCASTING_OMEN_CAPSTONE, EFFECT_1))
+                            AddPct(mult, capstone->GetAmount());
+            }
+        }
+
+        // Row 27: Iron Hide.
+        if (GetDruidPlayer(target))
+            mult *= Druid::GetIronHideDamageTakenMultiplier(target, spellInfo->GetSchoolMask());
+
+        if (mult != 1.0f)
+            damage = int32(float(damage) * mult);
+    }
+
+    // Unit::CalculateMeleeDamage (autoattacks), before armor. The hook passes neither the attack type
+    // nor the damage index, so the school is the attacker's main-hand school.
+    void ModifyMeleeDamage(Unit* target, Unit* attacker, uint32& damage) override
+    {
+        if (!target || !attacker || !damage)
+            return;
+
+        float mult = 1.0f;
+
+        if (Player* player = GetDruidPlayer(attacker))
+            mult *= Druid::GetFeralDamageDoneMultiplier(player, target, nullptr, attacker->GetMeleeDamageSchoolMask());
+
+        if (GetDruidPlayer(target))
+            mult *= Druid::GetIronHideDamageTakenMultiplier(target, attacker->GetMeleeDamageSchoolMask());
+
+        if (mult != 1.0f)
+            damage = uint32(float(damage) * mult);
+    }
+
+    // Row 27: Iron Hide on damage and leech ticks (the same hook fires for heal ticks - skipped).
+    void ModifyPeriodicDamageAurasTick(Unit* target, Unit* /*attacker*/, uint32& damage,
+                                        SpellInfo const* spellInfo) override
+    {
+        if (!damage || !spellInfo || !GetDruidPlayer(target) || !IsPeriodicDamageSpell(spellInfo))
+            return;
+
+        float const mult = Druid::GetIronHideDamageTakenMultiplier(target, spellInfo->GetSchoolMask());
+        if (mult != 1.0f)
+            damage = uint32(float(damage) * mult);
+    }
+
+    // Rows 29 and 32: the new form is set and its boosts/InitDataForForm have run by now.
+    void OnAuraApply(Unit* unit, Aura* aura) override
+    {
+        Player* player = GetDruidPlayer(unit);
+        if (!player || !aura || !aura->GetSpellInfo()->HasAura(SPELL_AURA_MOD_SHAPESHIFT))
+            return;
+
+        Druid::OnFeralFormChanged(player, true);
+    }
+
+    void OnAuraRemove(Unit* unit, AuraApplication* aurApp, AuraRemoveMode /*mode*/) override
+    {
+        Player* player = GetDruidPlayer(unit);
+        if (!player || !aurApp || !aurApp->GetBase()->GetSpellInfo()->HasAura(SPELL_AURA_MOD_SHAPESHIFT))
+            return;
+
+        // Shifting straight into another form: the old form is removed from inside the new form's
+        // apply handler, whose aura is already registered - its OnAuraApply above does the work once
+        // the new form is set (the form field still holds the old form here).
+        if (player->HasShapeshiftAura())
+            return;
+
+        // Back to caster form (or death/logout). The core has already dropped the Stances-bound
+        // boosts, and this runs inside its aura-removal loop, so no aura is removed or cast here.
+        Druid::OnFeralFormChanged(player, false);
+    }
+};
+
+// CORE-AUDIT row 26: healing another player casts on a Feral druid - Heart of the Wild Mastery, Elder
+// Hide x Ironfur, Nurturing Instinct (x3 under Survival Instincts). Runs before the DmgClass-NONE early
+// return in Unit::SpellHealingBonusTaken, so it covers direct heals, HoT ticks and Lifebloom's bloom.
+// The hook replaces the stock "worst MOD_HEALING_PCT" value, so this recomputes it and folds the bonus
+// in multiplicatively (PLAN A2); the first handler that returns true wins.
+class DruidFeralExternalHealing : public GlobalScript
+{
+public:
+    DruidFeralExternalHealing()
+        : GlobalScript("DruidFeralExternalHealing", { GLOBALHOOK_ON_SPELL_HEALING_BONUS_TAKEN_NEGATIVE_MODIFIERS })
+    {
+    }
+
+    bool OnSpellHealingBonusTakenNegativeModifiers(Unit const* target, Unit const* caster,
+                                                   SpellInfo const* /*spellInfo*/, float& val) override
+    {
+        if (!target || !caster)
+            return false;
+
+        Player const* player = target->ToPlayer();
+        if (!player || player->getClass() != CLASS_DRUID)
+            return false;
+
+        // "Cast on you by another player" (FERAL §0.16): a pet or guardian counts as its owner;
+        // self-heals, potions and NPC heals don't qualify.
+        Player const* healer = caster->GetCharmerOrOwnerPlayerOrPlayerItself();
+        if (!healer || healer == player)
+            return false;
+
+        float const factor = Druid::GetExternalHealingReceivedMultiplier(player);
+        if (factor == 1.0f)
+            return false;
+
+        float const maxNegative = float(target->GetMaxNegativeAuraModifier(SPELL_AURA_MOD_HEALING_PCT));
+        val = ((1.0f + maxNegative / 100.0f) * factor - 1.0f) * 100.0f;
+        return true;
+    }
+};
+
+// CORE-AUDIT row 29 (PLAN C4): Heart of the Wild r3's Mastery raises maximum health in either bear
+// form. spell_dru_heart_of_the_wild_mastery's 5 s check and the shapeshift handler above call
+// UpdateMaxHealth when the Mastery or the form changes.
+class DruidHeartOfTheWildMaxHealth : public PlayerScript
+{
+public:
+    DruidHeartOfTheWildMaxHealth()
+        : PlayerScript("DruidHeartOfTheWildMaxHealth", { PLAYERHOOK_ON_AFTER_UPDATE_MAX_HEALTH })
+    {
+    }
+
+    void OnPlayerAfterUpdateMaxHealth(Player* player, float& value) override
+    {
+        if (!player || player->getClass() != CLASS_DRUID || !Druid::IsInBearForm(player))
+            return;
+
+        if (float const pct = Druid::GetHeartOfTheWildMasteryPct(player))
+            AddPct(value, pct);
+    }
+};
+
+// CORE-AUDIT row 24 (PLAN C5): Rend and Tear's Ferocious Bite crit counts only the caster's own Rip or
+// Lacerate. Adds the hidden 1-charge crit aura 200436 (ADD_FLAT_MODIFIER CRITICAL_CHANCE on the
+// Rip/Ferocious Bite bit) right before a qualifying Ferocious Bite is cast; any other Ferocious Bite
+// or Rip prepare removes a leftover one (Rip shares that bit, and would take the crit on its DoT).
+class DruidRendAndTearCrit : public AllSpellScript
+{
+public:
+    DruidRendAndTearCrit() : AllSpellScript("DruidRendAndTearCrit", { ALLSPELLHOOK_CAN_PREPARE }) { }
+
+    bool CanPrepare(Spell* spell, SpellCastTargets const* /*targets*/, AuraEffect const* /*triggeredByAura*/) override
+    {
+        if (!spell || !spell->m_spellInfo)
+            return true;
+
+        uint32 const spellId = spell->m_spellInfo->Id;
+        if (spellId != Druid::SPELL_FEROCIOUS_BITE && spellId != Druid::SPELL_RIP)
+            return true;
+
+        Player* player = GetDruidPlayer(spell->GetCaster() ? spell->GetCaster()->ToUnit() : nullptr);
+        if (!player)
+            return true;
+
+        // spell->m_targets, not `targets` - see DruidDeepRootsCapstone.
+        int32 critBonus = 0;
+        if (spellId == Druid::SPELL_FEROCIOUS_BITE)
+            if (Unit* target = spell->m_targets.GetUnitTarget())
+                if (target->HasAura(Druid::SPELL_RIP, player->GetGUID()) ||
+                    target->HasAura(Druid::SPELL_LACERATE, player->GetGUID()))
+                    critBonus = Druid::GetRankAmount(player,
+                        { Druid::SPELL_REND_AND_TEAR_R3, Druid::SPELL_REND_AND_TEAR_R2, Druid::SPELL_REND_AND_TEAR_R1 },
+                        EFFECT_1);
+
+        if (critBonus > 0)
+            player->CastCustomSpell(Druid::SPELL_REND_AND_TEAR_CRIT, SPELLVALUE_BASE_POINT0, critBonus, player, true);
+        else
+            player->RemoveAurasDueToSpell(Druid::SPELL_REND_AND_TEAR_CRIT);
+
+        return true;
+    }
+};
+
 void AddSC_druid_hooks()
 {
     new DruidMoonkinHealCancel();
     new DruidRestoUnitHooks();
     new DruidDeepRootsCapstone();
+    new DruidFeralUnitHooks();
+    new DruidFeralExternalHealing();
+    new DruidHeartOfTheWildMaxHealth();
+    new DruidRendAndTearCrit();
 }

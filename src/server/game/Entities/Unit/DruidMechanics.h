@@ -149,6 +149,14 @@ namespace Druid
     // capstone on Solar Beam), Fury of Elune (halves the running Starsurge cooldown on cast).
     void ReduceSpellCooldown(Player* player, uint32 spellId, uint32 ms);
 
+    // Feral talent-ID internal cooldowns (FERAL-WP-BRIEF §5): several talents gate their own proc
+    // by a Has/AddSpellCooldown pair on the talent's own rank-1 spell id as a marker with no real
+    // cooldown UI. Returns false (does nothing) if the marker is already on cooldown; otherwise
+    // starts it for icdMs and returns true. Callers place every other guard (aura checks, amount
+    // checks) before calling this, so the marker is only started once the effect is actually going
+    // to happen.
+    bool TryStartInternalCooldown(Player* player, uint32 markerId, uint32 icdMs);
+
     // Moonfury r3 capstone (16899): "abilities have a chance to grant a stacking buff that
     // increases spell power" - BALANCE §7 "Astral Surge (Moonfury capstone)". Walks slots
     // {SPELL_ASTRAL_SURGE_1, _2, _3} in order; the first one `caster` lacks is cast; if all three
@@ -451,6 +459,211 @@ namespace Druid
     // (20 yd, LoS, carrying the caster's Rejuvenation/Germination, lowest HP% first) per unit in the
     // previous wave, until no new targets remain; each target is visited at most once.
     void StartBloomJumps(Unit* caster, Unit* primary);
+
+    // ---------------------------------------------------------------------------------------
+    // Feral pass (druid-rework.FERAL.md §2/§6/§7 with §0.15-§0.17 applied; CORE-AUDIT rows 22-35
+    // and 37). WP-0 declares the constants and the helpers spell_druid_feral.cpp calls, so the
+    // script half and the DruidMechanics.cpp/druid_hooks.cpp half of WP-B run in parallel. No Feral
+    // core call site exists: the only core line is Balance's ApplyDoneDamagePctMods, whose body
+    // this pass extends (school-damage/bleed clauses, CORE-AUDIT row 1).
+    //
+    // Forms (FERAL §0.16): the everyday bear is FORM_DIREBEAR (8) at every level; Bestial Fury is
+    // the stock FORM_BEAR (5). "In bear" = form 5 or 8, "Bestial Fury active" = form 5.
+    // ---------------------------------------------------------------------------------------
+
+    // New spells (FERAL §2)
+    constexpr uint32 SPELL_IRONFUR = 200420;
+    constexpr uint32 SPELL_PULVERIZE = 200421;
+    constexpr uint32 SPELL_UPHEAVAL = 200422;
+    constexpr uint32 SPELL_THRASH = 200423;
+    constexpr uint32 SPELL_BESTIAL_FURY = 200425;             // shapeshift, form 5
+    constexpr uint32 SPELL_SWELL = 200426;
+    constexpr uint32 SPELL_INFECTED_WOUND = 200427;
+    constexpr uint32 SPELL_SHREDDED_DEFENSE = 200428;
+    constexpr uint32 SPELL_FURY_SWIPE = 200429;
+    constexpr uint32 SPELL_NI_EMPOWER = 200430;               // Nurturing Instinct buff, 2 charges
+    constexpr uint32 SPELL_FERAL_INSTINCT_BUFF = 200431;
+    constexpr uint32 SPELL_KOTJ_ENERGY = 200432;              // King of the Jungle energy over 10 s
+    constexpr uint32 SPELL_STAMPEDE_BEAR = 200433;
+    constexpr uint32 SPELL_STAMPEDE_CAT = 200434;
+    constexpr uint32 SPELL_IMP_MANGLE_RAGE = 200435;
+    constexpr uint32 SPELL_REND_AND_TEAR_CRIT = 200436;       // CORE-AUDIT row 24 helper, 1 charge
+    constexpr uint32 SPELL_BESTIAL_FURY_RAGE = 200437;        // hidden, linked to 200425
+
+    // Talent ranks read at runtime (FERAL §7; "C" rows only). Ranks are read by rank spell id,
+    // highest first, through GetRankAmount - never by icon (PLAN §2).
+    constexpr uint32 SPELL_ELDER_HIDE_R1 = 200440;
+    constexpr uint32 SPELL_ELDER_HIDE_R2 = 200441;
+    constexpr uint32 SPELL_ELDER_HIDE_R3 = 200442;            // capstone: healing received per Ironfur
+    constexpr uint32 SPELL_FLESH_RENDER_R1 = 200446;
+    constexpr uint32 SPELL_FLESH_RENDER_R2 = 200447;
+    constexpr uint32 SPELL_FLESH_RENDER_R3 = 200448;
+    constexpr uint32 SPELL_RENDING_SWIPES_R1 = 200449;
+    constexpr uint32 SPELL_RENDING_SWIPES_R2 = 200450;
+    constexpr uint32 SPELL_FURY_SWIPES_R1 = 200451;
+    constexpr uint32 SPELL_FURY_SWIPES_R2 = 200452;
+    constexpr uint32 SPELL_FURY_SWIPES_R3 = 200453;
+    constexpr uint32 SPELL_BLOODLETTING_R1 = 200454;
+    constexpr uint32 SPELL_BLOODLETTING_R2 = 200455;          // capstone; also its own 3 s ICD id
+    constexpr uint32 SPELL_BONEBREAKER_R1 = 200456;
+    constexpr uint32 SPELL_BONEBREAKER_R2 = 200457;
+    constexpr uint32 SPELL_BONEBREAKER_R3 = 200458;           // capstone: Mastery
+    constexpr uint32 SPELL_SAVAGE_DEFENSE_R1 = 200459;
+    constexpr uint32 SPELL_SAVAGE_DEFENSE_R2 = 200460;
+    constexpr uint32 SPELL_SABERTOOTH_R1 = 200461;
+    constexpr uint32 SPELL_SABERTOOTH_R2 = 200462;
+    constexpr uint32 SPELL_SABERTOOTH_R3 = 200463;
+    constexpr uint32 SPELL_SPLINTERING_BLOWS_R1 = 200464;
+    constexpr uint32 SPELL_SPLINTERING_BLOWS_R2 = 200465;
+    constexpr uint32 SPELL_SPLINTERING_BLOWS_R3 = 200466;
+    constexpr uint32 SPELL_IRON_HIDE_R1 = 200467;             // also Iron Hide's 1 s ICD id
+    constexpr uint32 SPELL_IRON_HIDE_R2 = 200468;
+    constexpr uint32 SPELL_IRON_HIDE_R3 = 200469;
+    constexpr uint32 SPELL_PRIMAL_GORE_R1 = 63503;
+    constexpr uint32 SPELL_PRIMAL_GORE_R2 = 200470;
+    constexpr uint32 SPELL_PRIMAL_GORE_R3 = 200471;           // capstone: Mastery
+
+    // Repurposed/reused stock talent ranks read at runtime
+    constexpr uint32 SPELL_FERAL_INSTINCT_R1 = 16947;
+    constexpr uint32 SPELL_FERAL_INSTINCT_R2 = 16948;
+    constexpr uint32 SPELL_FERAL_INSTINCT_R3 = 16949;
+    constexpr uint32 SPELL_FERAL_AGGRESSION_R1 = 16858;
+    constexpr uint32 SPELL_FERAL_AGGRESSION_R2 = 16859;
+    constexpr uint32 SPELL_FERAL_AGGRESSION_R3 = 16860;
+    constexpr uint32 SPELL_FERAL_SWIFTNESS_R1 = 17002;
+    constexpr uint32 SPELL_FERAL_SWIFTNESS_R2 = 24866;        // capstone: Stampede
+    constexpr uint32 SPELL_SHREDDING_ATTACKS_R2 = 16968;      // capstone: Shredded Defense
+    constexpr uint32 SPELL_PRIMAL_PRECISION_R2 = 48410;       // capstone; also its own 3 s ICD id
+    constexpr uint32 SPELL_NURTURING_INSTINCT_R1 = 33872;
+    constexpr uint32 SPELL_NURTURING_INSTINCT_R2 = 33873;
+    constexpr uint32 SPELL_HEART_OF_THE_WILD_R1 = 17003;
+    constexpr uint32 SPELL_HEART_OF_THE_WILD_R2 = 17004;
+    constexpr uint32 SPELL_HEART_OF_THE_WILD_R3 = 17005;      // capstone: Mastery
+    constexpr uint32 SPELL_SURVIVAL_OF_THE_FITTEST_R1 = 33853;
+    constexpr uint32 SPELL_SURVIVAL_OF_THE_FITTEST_R2 = 33855;
+    constexpr uint32 SPELL_SURVIVAL_OF_THE_FITTEST_R3 = 33856;
+    constexpr uint32 SPELL_PROTECTOR_OF_THE_PACK_R1 = 57873;
+    constexpr uint32 SPELL_PROTECTOR_OF_THE_PACK_R2 = 57876;
+    constexpr uint32 SPELL_PROTECTOR_OF_THE_PACK_R3 = 57877;
+    constexpr uint32 SPELL_PREDATORY_INSTINCTS_R1 = 33859;
+    constexpr uint32 SPELL_PREDATORY_INSTINCTS_R2 = 33866;
+    constexpr uint32 SPELL_PREDATORY_INSTINCTS_R3 = 33867;
+    constexpr uint32 SPELL_INFECTED_WOUNDS_R1 = 48483;
+    constexpr uint32 SPELL_INFECTED_WOUNDS_R2 = 48484;
+    constexpr uint32 SPELL_INFECTED_WOUNDS_R3 = 48485;
+    constexpr uint32 SPELL_INFECTED_WOUNDS_SLOW_R1 = 58179;
+    constexpr uint32 SPELL_INFECTED_WOUNDS_SLOW_R2 = 58180;
+    constexpr uint32 SPELL_INFECTED_WOUNDS_SLOW_R3 = 58181;
+    constexpr uint32 SPELL_KING_OF_THE_JUNGLE_R1 = 48492;
+    constexpr uint32 SPELL_KING_OF_THE_JUNGLE_R2 = 48494;
+    constexpr uint32 SPELL_KING_OF_THE_JUNGLE_R3 = 48495;
+    constexpr uint32 SPELL_IMPROVED_MANGLE_R2 = 48489;        // capstone; also its own 3 s ICD id
+    constexpr uint32 SPELL_REND_AND_TEAR_R1 = 48432;
+    constexpr uint32 SPELL_REND_AND_TEAR_R2 = 48433;
+    constexpr uint32 SPELL_REND_AND_TEAR_R3 = 48434;
+
+    // Referenced stock spells
+    constexpr uint32 SPELL_BEAR_FORM = 5487;                  // now form 8 (FORM_DIREBEAR)
+    constexpr uint32 SPELL_DIRE_BEAR_FORM = 9634;
+    constexpr uint32 SPELL_CAT_FORM = 768;
+    constexpr uint32 SPELL_LACERATE = 33745;
+    constexpr uint32 SPELL_RIP = 1079;
+    constexpr uint32 SPELL_RAKE = 1822;
+    constexpr uint32 SPELL_FEROCIOUS_BITE = 22568;
+    constexpr uint32 SPELL_SHRED = 5221;
+    constexpr uint32 SPELL_RAVAGE = 6785;
+    constexpr uint32 SPELL_MAUL = 6807;
+    constexpr uint32 SPELL_SWIPE_BEAR = 779;
+    constexpr uint32 SPELL_SWIPE_CAT = 62078;
+    constexpr uint32 SPELL_MANGLE_BEAR = 33878;
+    constexpr uint32 SPELL_MANGLE_CAT = 33876;
+    constexpr uint32 SPELL_BERSERK = 50334;
+    constexpr uint32 SPELL_TIGERS_FURY = 5217;
+    constexpr uint32 SPELL_ENRAGE = 5229;
+    constexpr uint32 SPELL_SURVIVAL_INSTINCTS = 61336;
+    constexpr uint32 SPELL_SAVAGE_DEFENSE_ABSORB = 62606;
+    constexpr uint32 SPELL_PREDATORS_SWIFTNESS = 69369;       // Predatory Strikes' instant-cast buff
+    constexpr uint32 SPELL_HOTW_BEAR_BUFF = 24899;            // form boost casts (CORE-AUDIT row 32)
+    constexpr uint32 SPELL_HOTW_CAT_BUFF = 24900;
+    constexpr uint32 SPELL_FERAL_SWIFTNESS_SPEED = 24867;
+    constexpr uint32 SPELL_ELDER_HIDE_ARMOR = 62069;          // stock "Survival of the Fittest" armor buff
+
+    constexpr uint8 SWELL_MAX_STACKS = 5;
+    constexpr uint8 SWELL_MAX_CONSUMED = 2;                   // Pulverize/Upheaval consume (and deal damage for) at most 2 stacks
+    constexpr int32 SWELL_DURATION_IN_COMBAT_MS = 15000;
+    constexpr int32 SWELL_DURATION_OUT_OF_COMBAT_MS = 20000;
+    constexpr uint32 BARKSKIN_COOLDOWN_FLOOR_MS = 30000;      // B7 / CORE-AUDIT row 34
+
+    bool IsInBearForm(Unit const* unit);                      // form 5 or 8
+    bool IsBestialFuryActive(Unit const* unit);               // form 5
+
+    // Swell (FERAL §4 "Swell 200426"). Every source goes through AddSwell: it requires Bestial Fury,
+    // caps at SWELL_MAX_STACKS and restarts the one shared timer at 15 s in combat or 20 s out of
+    // combat. ConsumeSwell is a no-op while Berserk is up. Both call OnSwellChanged afterwards.
+    uint8 GetSwellStacks(Unit const* unit);
+    // The Swell count a Pulverize/Upheaval hit deals damage for: Berserk's EFFECT_1 value (2)
+    // while Berserk is up, otherwise min(2, stacks).
+    uint8 GetSwellStacksForDamage(Unit const* unit);
+    void AddSwell(Unit* unit, uint8 count);
+    void ConsumeSwell(Unit* unit, uint8 count);
+    // Recalculates EFFECT_0 of whichever Splintering Blows (200464-200466) and Bonebreaker
+    // (200456-200458) rank `unit` has; their AuraScripts in spell_druid_feral.cpp compute the amount
+    // from GetSwellStacks (CORE-AUDIT rows 23, 25). Also called by the Swell AuraScript on removal.
+    void OnSwellChanged(Unit* unit);
+
+    // Stack decay shared by Ironfur and Swell ("expiry drops one stack, the timer resets"). Never
+    // re-adds inside the expiring aura's own handler: schedules a 1 ms event on target->m_Events that
+    // re-adds `spellId` as a self-cast aura with `stacks` stacks and a fresh timer (`durationMs`, or
+    // the spell's own duration when <= 0), unless `target` no longer meets the spell's
+    // ShapeshiftMask. Swell's restart also calls OnSwellChanged.
+    void RestartWithStacks(Unit* target, uint32 spellId, uint8 stacks, int32 durationMs);
+
+    // Barkskin's 30 s floor (B7, CORE-AUDIT row 34). OnBarkskinCast records the cast time per GUID
+    // (after Cooldown Haste the entry's maxduration is no longer the time since the cast, FERAL
+    // §0.15). ApplyBarkskinFloor raises the remaining cooldown to FLOOR - elapsed when it is lower;
+    // spell_druid_feral.cpp's Barkskin SpellScript calls it 2 ms after the cast, after Cooldown
+    // Haste's own 1 ms deferred correction. ReduceSpellCooldown (above) clamps Barkskin reductions
+    // against the same floor.
+    void OnBarkskinCast(Player* player);
+    void ApplyBarkskinFloor(Player* player);
+
+    // Heart of the Wild's Mastery capstone (17005): the percent its three clauses add - EFFECT_2's
+    // value (50) % of Mastery - or 0 without the capstone. The clauses themselves gate on the form:
+    // max health in either bear form, external healing in form 8 only (suppressed in Bestial Fury),
+    // Frenzied Regeneration by its own bear-only ShapeshiftMask.
+    float GetHeartOfTheWildMasteryPct(Player const* player);
+
+    // --- Feral WP-B2 additions (append-only; the WP-0 block above is frozen) ---
+
+    // Feral's done-damage clauses (CORE-AUDIT rows 1 and 22), one multiplier shared by the three
+    // places damage is done: ApplyDoneDamagePctMods (spells with a SCHOOL_DAMAGE effect, and every
+    // DoT snapshot), druid_hooks.cpp's ModifySpellDamageTaken (weapon-damage abilities) and
+    // ModifyMeleeDamage (autoattacks: `spellInfo` is nullptr). Feral Aggression (victim above 75%
+    // health), Rending Swipes (Swipe (Bear), Swipe (Cat) and Upheaval vs the caster's Thrash), Rend
+    // and Tear (Maul and Shred vs the caster's Rip or Lacerate), Shredded Defense (physical, the
+    // caster's stacks on the victim), Primal Gore r3 Mastery (Cat Form, bleed-mechanic spells). The
+    // clauses multiply (PLAN A2). Omen of Clarity's +10% is not in here: the spell side is already in
+    // ApplyDoneDamagePctMods, the melee side is added by the hook itself.
+    float GetFeralDamageDoneMultiplier(Player const* player, Unit const* victim, SpellInfo const* spellInfo,
+                                       SpellSchoolMask schoolMask);
+
+    // Iron Hide (CORE-AUDIT row 27): 1 - (rank tenths / 1000) x Ironfur stacks for magic-school
+    // damage taken by `victim`, else 1.
+    float GetIronHideDamageTakenMultiplier(Unit const* victim, SpellSchoolMask schoolMask);
+
+    // Healing another player casts on `target` (CORE-AUDIT row 26): Heart of the Wild Mastery (form
+    // 8 only) x Elder Hide r3 per Ironfur stack x Nurturing Instinct (cat or either bear, tripled
+    // while Survival Instincts is up). Multiplicative (A2); 1 when nothing applies.
+    float GetExternalHealingReceivedMultiplier(Player const* target);
+
+    // Form change for a druid player (CORE-AUDIT rows 29, 32; druid_hooks.cpp's shapeshift
+    // UnitScript). `refreshBoosts`: recast the form boosts for the current form - Heart of the Wild
+    // and Feral Aggression (24900 cat, 24899 bear), Elder Hide (62069, bear), Feral Swiftness (24867)
+    // - after dropping the old ones; only safe from OnAuraApply (OnAuraRemove runs inside the core's
+    // aura-removal loop, and the core has already dropped the Stances-bound boosts by then). Always
+    // recalculates Protector of the Pack, Survival of the Fittest and Predatory Instincts and calls
+    // UpdateMaxHealth (Heart of the Wild's Mastery, C4).
+    void OnFeralFormChanged(Player* player, bool refreshBoosts);
 }
 
 #endif

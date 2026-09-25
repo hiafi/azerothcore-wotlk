@@ -4,7 +4,8 @@ Druid - spells that are never directly cast - proc/periodic-tick effects, trigge
 Split from a single source/classes/druid.py via split_class_file.py (.agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md) - see source/classes/README.md for the multi-file layout and lib/dsl/registry.py's load_class_package for how cross-file references (`from .druid_...` below) resolve.
 """
 
-from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, School, SpellModOp
+from lib.dsl import AuraType, CombatRating, DispelType, Effect, EffectType, Mechanic, PowerType, School, SpellModOp
+from lib.dsl.constants import ShapeshiftForm
 from lib.dsl.registry import bonus_coefficients, procs_on, scripted_by, skill_line_ability, spell
 from ._masks import (
     BLOOM, CENARION_WARD, CENARION_WARD_HOT, CORE_HOT_CAST, CULTIVATION, DIRECT_NATURE_HEAL,
@@ -19,6 +20,22 @@ from ._masks import (
     SHAPESHIFT_FORMS, STARFALL, STARFIRE, STARSURGE, SWIFTMEND, THORNS, TRANQUILITY, TYPHOON,
     WILD_GROWTH, WRATH, YSERAS_GIFT,
 )
+# druid-rework Feral pass (FERAL §4/§5/§7): Feral stock bits and composites.
+from ._masks import (
+    BEAR_FORM_PASSIVE, DEMORALIZING_ROAR, FERAL_BLEEDS, LACERATE, MAIM, MANGLE_BEAR, MANGLE_CAT, MAUL,
+    NURTURING_INSTINCT_DAMAGE, NURTURING_INSTINCT_DOT, PROC_HIT_NORMAL, PROC_SPELL_TYPE_DAMAGE, PULVERIZE, RAKE,
+    RAVAGE, RIP, RIP_FEROCIOUS_BITE, SAVAGE_ROAR, SHRED, SURVIVAL_INSTINCTS, SWIPE_BEAR, SWIPE_CAT, THRASH,
+)
+
+# druid-rework Feral pass: ShapeshiftMask/ShapeshiftExclude bits (`1 << (form - 1)`,
+# SpellInfo::CheckShapeshift). Since FERAL §0.16 / CORE-AUDIT row 37 the everyday bear is FORM_DIREBEAR
+# (8) at every level and Bestial Fury is the stock FORM_BEAR (5); "in bear" = either one.
+SS_CAT = 1 << (ShapeshiftForm.CAT - 1)  # 0x01
+SS_TREE = 1 << (ShapeshiftForm.TREE - 1)  # 0x02
+SS_BESTIAL_FURY = 1 << (ShapeshiftForm.BEAR - 1)  # 0x10 - form 5, Bestial Fury only
+SS_BEAR = 1 << (ShapeshiftForm.DIREBEAR - 1)  # 0x80 - form 8, the everyday bear (Bear Form 5487 / Dire Bear 9634)
+SS_ANY_BEAR = SS_BESTIAL_FURY | SS_BEAR  # 0x90 = 144
+SS_FERAL = SS_CAT | SS_ANY_BEAR  # 0x91 = 145
 
 
 blood_frenzy_16952 = spell(
@@ -236,12 +253,12 @@ infected_wounds_58179 = spell(
     range_yards=5.0,
     duration_ms=12000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-17, points_per_level=-3.4, mechanic=Mechanic.SNARE, implicit_target_a=6, apply_aura=AuraType.MOD_DECREASE_SPEED),
-        Effect(type=EffectType.APPLY_AURA, base_points=-7, points_per_level=-1.4, mechanic=8, implicit_target_a=6, apply_aura=138),
+        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=-8, mechanic=8, implicit_target_a=6, apply_aura=AuraType.MOD_MELEE_HASTE),
     ],
     spell_icon_id=2857,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 131208, 'AttributesEx2': 16777216, 'AttributesEx3': 131072, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement speed slowed by $s1% and attack speed slowed by $s2%.', 'BaseLevel': 50, 'CastingTimeIndex': 1, 'CumulativeAura': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Shred, Maul, and Mangle attacks cause an Infected Wound in the target. The Infected Wound reduces the movement speed of the target by $58179s1% and the attack speed by $58179s2%. Lasts $58179d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712172, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassSet': 7, 'SpellLevel': 50, 'SpellVisualID_1': 11569},
+    notes="druid-rework FERAL §7 (7,3): Infected Wounds' Mangle slow - eff0 movement snare removed, eff1 attack speed -7/-14/-20% flat (ppl 0); cast by spell_dru_mangle for the caster's rank.",
+    raw_overrides={'AttributesEx': 131208, 'AttributesEx2': 16777216, 'AttributesEx3': 131072, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Attack speed slowed by $s2%.', 'BaseLevel': 50, 'CastingTimeIndex': 1, 'CumulativeAura': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Mangle reduces the target's attack speed by $58179s2% for $58179d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712172, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassSet': 7, 'SpellLevel': 50, 'SpellVisualID_1': 11569},
 )
 
 
@@ -777,12 +794,12 @@ feral_aggression_16858 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=108, misc_value=8),
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=960,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the attack power reduction of your Demoralizing Roar by $s1% and the damage caused by your Ferocious Bite by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectItemType_1': 8, 'EffectItemType_2': 8388608, 'EffectSpellClassMaskA_1': 8, 'EffectSpellClassMaskB_1': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (1,3), moved from (0,2), trimmed 5->3 ranks (16861/16862 orphaned): rank 1/3 - eff0 APPLY_AURA DUMMY 5/10/15% damage vs targets above 75% health (Druid damage hooks), eff1 APPLY_AURA DUMMY 2/4/6% AP in forms (form-boost BP1 of 24899/24900). No ShapeshiftMask (WP-BRIEF §3).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage you do to targets above 75% health by $s1%. Increases your attack power in Cat, Bear and Dire Bear Form by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -799,12 +816,12 @@ feral_aggression_16859 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=15, implicit_target_a=1, apply_aura=108, misc_value=8),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=960,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the attack power reduction of your Demoralizing Roar by $s1% and the damage caused by your Ferocious Bite by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectItemType_1': 8, 'EffectItemType_2': 8388608, 'EffectSpellClassMaskA_1': 8, 'EffectSpellClassMaskB_1': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (1,3), moved from (0,2), trimmed 5->3 ranks (16861/16862 orphaned): rank 2/3 - eff0 APPLY_AURA DUMMY 5/10/15% damage vs targets above 75% health (Druid damage hooks), eff1 APPLY_AURA DUMMY 2/4/6% AP in forms (form-boost BP1 of 24899/24900). No ShapeshiftMask (WP-BRIEF §3).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage you do to targets above 75% health by $s1%. Increases your attack power in Cat, Bear and Dire Bear Form by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -821,12 +838,12 @@ feral_aggression_16860 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=23, implicit_target_a=1, apply_aura=108, misc_value=8),
-        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=960,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the attack power reduction of your Demoralizing Roar by $s1% and the damage caused by your Ferocious Bite by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectItemType_1': 8, 'EffectItemType_2': 8388608, 'EffectSpellClassMaskA_1': 8, 'EffectSpellClassMaskB_1': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (1,3), moved from (0,2), trimmed 5->3 ranks (16861/16862 orphaned): rank 3/3 - eff0 APPLY_AURA DUMMY 5/10/15% damage vs targets above 75% health (Druid damage hooks), eff1 APPLY_AURA DUMMY 2/4/6% AP in forms (form-boost BP1 of 24899/24900). No ShapeshiftMask (WP-BRIEF §3).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage you do to targets above 75% health by $s1%. Increases your attack power in Cat, Bear and Dire Bear Form by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -1179,12 +1196,13 @@ ferocity_16934 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=107, misc_value=14),
-        Effect(type=EffectType.APPLY_AURA, base_points=-2, implicit_target_a=1, apply_aura=107, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COST),
+        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COST),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=-1),
     ],
     spell_icon_id=1565,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cost of your Maul, Swipe, Claw, Rake and Mangle abilities by $/10;s1 Rage or Energy.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2048, 'EffectSpellClassMaskA_2': 1048640, 'EffectSpellClassMaskB_1': 4096, 'EffectSpellClassMaskB_2': 1024, 'EffectSpellClassMaskB_3': 263168, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (0,0), moved from (0,1): rank 1/5 - eff0 rage COST (Maul, Swipe (Bear), Mangle (Bear), Thrash) unchanged, eff1 energy COST retuned to -2..-10 (Rake, Mangle (Cat), Swipe (Cat); Claw dropped), new eff2 +1..5% all attributes.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all attributes by $s3%. Reduces the energy cost of your Swipe (Cat), Rake and Mangle (Cat) abilities by $s2 Energy. Reduces the rage cost of your Maul, Swipe (Bear), Thrash and Mangle (Bear) abilities by $/10;s1 Rage.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': MAUL, 'EffectSpellClassMaskA_2': SWIPE_BEAR | MANGLE_BEAR, 'EffectSpellClassMaskB_1': RAKE, 'EffectSpellClassMaskB_2': MANGLE_CAT, 'EffectSpellClassMaskB_3': SWIPE_CAT, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'EffectSpellClassMaskA_3': THRASH},
 )
 
 
@@ -1200,12 +1218,13 @@ ferocity_16935 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=107, misc_value=14),
-        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=107, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COST),
+        Effect(type=EffectType.APPLY_AURA, base_points=-5, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COST),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=-1),
     ],
     spell_icon_id=1565,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cost of your Maul, Swipe, Claw, Rake and Mangle abilities by $/10;s1 Rage or Energy.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2048, 'EffectSpellClassMaskA_2': 1048640, 'EffectSpellClassMaskB_1': 4096, 'EffectSpellClassMaskB_2': 1024, 'EffectSpellClassMaskB_3': 263168, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (0,0), moved from (0,1): rank 2/5 - eff0 rage COST (Maul, Swipe (Bear), Mangle (Bear), Thrash) unchanged, eff1 energy COST retuned to -2..-10 (Rake, Mangle (Cat), Swipe (Cat); Claw dropped), new eff2 +1..5% all attributes.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all attributes by $s3%. Reduces the energy cost of your Swipe (Cat), Rake and Mangle (Cat) abilities by $s2 Energy. Reduces the rage cost of your Maul, Swipe (Bear), Thrash and Mangle (Bear) abilities by $/10;s1 Rage.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': MAUL, 'EffectSpellClassMaskA_2': SWIPE_BEAR | MANGLE_BEAR, 'EffectSpellClassMaskB_1': RAKE, 'EffectSpellClassMaskB_2': MANGLE_CAT, 'EffectSpellClassMaskB_3': SWIPE_CAT, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'EffectSpellClassMaskA_3': THRASH},
 )
 
 
@@ -1221,12 +1240,13 @@ ferocity_16936 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=107, misc_value=14),
-        Effect(type=EffectType.APPLY_AURA, base_points=-4, implicit_target_a=1, apply_aura=107, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COST),
+        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COST),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=-1),
     ],
     spell_icon_id=1565,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cost of your Maul, Swipe, Claw, Rake and Mangle abilities by $/10;s1 Rage or Energy.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2048, 'EffectSpellClassMaskA_2': 1048640, 'EffectSpellClassMaskB_1': 4096, 'EffectSpellClassMaskB_2': 1024, 'EffectSpellClassMaskB_3': 263168, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (0,0), moved from (0,1): rank 3/5 - eff0 rage COST (Maul, Swipe (Bear), Mangle (Bear), Thrash) unchanged, eff1 energy COST retuned to -2..-10 (Rake, Mangle (Cat), Swipe (Cat); Claw dropped), new eff2 +1..5% all attributes.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all attributes by $s3%. Reduces the energy cost of your Swipe (Cat), Rake and Mangle (Cat) abilities by $s2 Energy. Reduces the rage cost of your Maul, Swipe (Bear), Thrash and Mangle (Bear) abilities by $/10;s1 Rage.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': MAUL, 'EffectSpellClassMaskA_2': SWIPE_BEAR | MANGLE_BEAR, 'EffectSpellClassMaskB_1': RAKE, 'EffectSpellClassMaskB_2': MANGLE_CAT, 'EffectSpellClassMaskB_3': SWIPE_CAT, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'EffectSpellClassMaskA_3': THRASH},
 )
 
 
@@ -1242,12 +1262,13 @@ ferocity_16937 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-41, implicit_target_a=1, apply_aura=107, misc_value=14),
-        Effect(type=EffectType.APPLY_AURA, base_points=-5, implicit_target_a=1, apply_aura=107, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=-41, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COST),
+        Effect(type=EffectType.APPLY_AURA, base_points=-9, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COST),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=-1),
     ],
     spell_icon_id=1565,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cost of your Maul, Swipe, Claw, Rake and Mangle abilities by $/10;s1 Rage or Energy.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2048, 'EffectSpellClassMaskA_2': 1048640, 'EffectSpellClassMaskB_1': 4096, 'EffectSpellClassMaskB_2': 1024, 'EffectSpellClassMaskB_3': 263168, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 4', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (0,0), moved from (0,1): rank 4/5 - eff0 rage COST (Maul, Swipe (Bear), Mangle (Bear), Thrash) unchanged, eff1 energy COST retuned to -2..-10 (Rake, Mangle (Cat), Swipe (Cat); Claw dropped), new eff2 +1..5% all attributes.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all attributes by $s3%. Reduces the energy cost of your Swipe (Cat), Rake and Mangle (Cat) abilities by $s2 Energy. Reduces the rage cost of your Maul, Swipe (Bear), Thrash and Mangle (Bear) abilities by $/10;s1 Rage.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': MAUL, 'EffectSpellClassMaskA_2': SWIPE_BEAR | MANGLE_BEAR, 'EffectSpellClassMaskB_1': RAKE, 'EffectSpellClassMaskB_2': MANGLE_CAT, 'EffectSpellClassMaskB_3': SWIPE_CAT, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'EffectSpellClassMaskA_3': THRASH},
 )
 
 
@@ -1263,12 +1284,13 @@ ferocity_16938 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=1, apply_aura=107, misc_value=14),
-        Effect(type=EffectType.APPLY_AURA, base_points=-6, implicit_target_a=1, apply_aura=107, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COST),
+        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COST),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=-1),
     ],
     spell_icon_id=1565,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cost of your Maul, Swipe, Claw, Rake and Mangle abilities by $/10;s1 Rage or Energy.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2048, 'EffectSpellClassMaskA_2': 1048640, 'EffectSpellClassMaskB_1': 4096, 'EffectSpellClassMaskB_2': 1024, 'EffectSpellClassMaskB_3': 263168, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 5', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (0,0), moved from (0,1): rank 5/5 - eff0 rage COST (Maul, Swipe (Bear), Mangle (Bear), Thrash) unchanged, eff1 energy COST retuned to -2..-10 (Rake, Mangle (Cat), Swipe (Cat); Claw dropped), new eff2 +1..5% all attributes.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all attributes by $s3%. Reduces the energy cost of your Swipe (Cat), Rake and Mangle (Cat) abilities by $s2 Energy. Reduces the rage cost of your Maul, Swipe (Bear), Thrash and Mangle (Bear) abilities by $/10;s1 Rage.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': MAUL, 'EffectSpellClassMaskA_2': SWIPE_BEAR | MANGLE_BEAR, 'EffectSpellClassMaskB_1': RAKE, 'EffectSpellClassMaskB_2': MANGLE_CAT, 'EffectSpellClassMaskB_3': SWIPE_CAT, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'EffectSpellClassMaskA_3': THRASH},
 )
 
 
@@ -1326,12 +1348,12 @@ feral_instinct_16947 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=154),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=103,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Swipe ability by $s2% and reduces the chance enemies have to detect you while Prowling.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 1048576, 'EffectSpellClassMaskB_3': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': 145, 'SpellClassSet': 7},
+    notes="druid-rework FERAL §7 (1,0): rank 1/3 - eff0 prowl-detection aura -> APPLY_AURA DUMMY 1% (all damage during Tiger's Fury; spell_dru_tiger_s_fury_feral casts 200431 with it as BP0), eff1 Swipe damage SpellMod now also covers Ravage. ShapeshiftMask 145 kept (WP-BRIEF §3).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage done by your Swipe and Ravage abilities by $s2%. Increases all damage you deal by $s1% while Tiger's Fury is active.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': SWIPE_BEAR, 'EffectSpellClassMaskB_3': SWIPE_CAT, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': SS_FERAL, 'SpellClassSet': 7, 'EffectSpellClassMaskB_1': RAVAGE},
 )
 
 
@@ -1347,12 +1369,12 @@ feral_instinct_16948 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=154),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=103,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Swipe ability by $s2% and reduces the chance enemies have to detect you while Prowling.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 1048576, 'EffectSpellClassMaskB_3': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': 145, 'SpellClassSet': 7},
+    notes="druid-rework FERAL §7 (1,0): rank 2/3 - eff0 prowl-detection aura -> APPLY_AURA DUMMY 2% (all damage during Tiger's Fury; spell_dru_tiger_s_fury_feral casts 200431 with it as BP0), eff1 Swipe damage SpellMod now also covers Ravage. ShapeshiftMask 145 kept (WP-BRIEF §3).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage done by your Swipe and Ravage abilities by $s2%. Increases all damage you deal by $s1% while Tiger's Fury is active.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': SWIPE_BEAR, 'EffectSpellClassMaskB_3': SWIPE_CAT, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': SS_FERAL, 'SpellClassSet': 7, 'EffectSpellClassMaskB_1': RAVAGE},
 )
 
 
@@ -1368,12 +1390,12 @@ feral_instinct_16949 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=154),
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=103,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Swipe ability by $s2% and reduces the chance enemies have to detect you while Prowling.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 1048576, 'EffectSpellClassMaskB_3': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': 145, 'SpellClassSet': 7},
+    notes="druid-rework FERAL §7 (1,0): rank 3/3 - eff0 prowl-detection aura -> APPLY_AURA DUMMY 3% (all damage during Tiger's Fury; spell_dru_tiger_s_fury_feral casts 200431 with it as BP0), eff1 Swipe damage SpellMod now also covers Ravage. ShapeshiftMask 145 kept (WP-BRIEF §3).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage done by your Swipe and Ravage abilities by $s2%. Increases all damage you deal by $s1% while Tiger's Fury is active.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': SWIPE_BEAR, 'EffectSpellClassMaskB_3': SWIPE_CAT, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': SS_FERAL, 'SpellClassSet': 7, 'EffectSpellClassMaskB_1': RAVAGE},
 )
 
 
@@ -1390,12 +1412,11 @@ shredding_attacks_16966 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-10, implicit_target_a=1, apply_aura=107, misc_value=14),
-        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=107, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=-8, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COST),
     ],
     spell_icon_id=147,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the energy cost of your Shred ability by $s1 and the rage cost of your Lacerate ability by $/10;s2.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': 32768, 'EffectSpellClassMaskB_2': 256, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (3,0): rank 1/2 - eff0 energy COST -7 on Shred and Ravage; eff1 (Lacerate rage) removed.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the energy cost of your Shred and Ravage abilities by $s1.\n\n|cFF9D9D9DCapstone Bonus: Using Shred or Ravage while behind a target applies Shredded Defense, increasing the Physical damage the target takes from you by $200428s1% for $200428d. Stacks up to $200428u times.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': SHRED | RAVAGE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -1412,12 +1433,12 @@ shredding_attacks_16968 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-19, implicit_target_a=1, apply_aura=107, misc_value=14),
-        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=107, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=-16, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COST),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=147,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the energy cost of your Shred ability by $s1 and the rage cost of your Lacerate ability by $/10;s2.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': 32768, 'EffectSpellClassMaskB_2': 256, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework FERAL §7 (3,0): rank 2/2, capstone (spell_dru_shredding_attacks casts Shredded Defense 200428 from behind) - eff0 energy COST -15 on Shred and Ravage; eff1 APPLY_AURA DUMMY 5 (% per Shredded Defense stack, informational - the C++ reads 200428's own eff0).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the energy cost of your Shred and Ravage abilities by $s1.\n\nCapstone Bonus: Using Shred or Ravage while behind a target applies Shredded Defense, increasing the Physical damage the target takes from you by $200428s1% for $200428d. Stacks up to $200428u times.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': SHRED | RAVAGE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -1433,13 +1454,13 @@ predatory_strikes_16972 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=109, trigger_spell=69369),
+        Effect(type=EffectType.APPLY_AURA, base_points=-4, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COST),
+        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.ADD_TARGET_TRIGGER, trigger_spell=69369),
     ],
     spell_icon_id=1563,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your melee attack power in Cat, Bear and Dire Bear Forms by $s1% of your level and $s2% of any attack power on your equipped weapon.  In addition, your finishing moves have a $b3% chance per combo point to make your next Nature spell with a base casting time less than 10 sec. become an instant cast spell.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectPointsPerCombo_3': 7.0, 'EffectSpellClassMaskC_1': 8388608, 'EffectSpellClassMaskC_2': 268435584, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework FERAL §7 (3,1): rank 1/3 - eff0 (icon-1563 DUMMY the core's feral-AP block reads) -> energy COST -3/-6/-9 on Rip/Ferocious Bite/Savage Roar/Maim, eff1 DUMMY removed (CORE-AUDIT row 35: the stock AP loop now adds 0), eff2 Predator's Swiftness trigger kept at 5/10/15% per combo point.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the energy cost of your Cat Form finishing moves by $s1. Your Feral finishing moves have a $b3% chance per combo point to make your next Druid Nature spell with a base casting time less than 10 sec become an instant cast spell.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectPointsPerCombo_3': 5.0, 'EffectSpellClassMaskC_1': 8388608, 'EffectSpellClassMaskC_2': 268435584, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'EffectSpellClassMaskA_1': RIP_FEROCIOUS_BITE, 'EffectSpellClassMaskA_2': SAVAGE_ROAR | MAIM},
 )
 
 
@@ -1455,13 +1476,13 @@ predatory_strikes_16974 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, base_points=13, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=109, trigger_spell=69369),
+        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COST),
+        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.ADD_TARGET_TRIGGER, trigger_spell=69369),
     ],
     spell_icon_id=1563,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your melee attack power in Cat, Bear and Dire Bear Forms by $s1% of your level and $s2% of any attack power on your equipped weapon.  In addition, your finishing moves have a $b3% chance per combo point to make your next Nature spell with a base casting time less than 10 sec. become an instant cast spell.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectPointsPerCombo_3': 13.0, 'EffectSpellClassMaskC_1': 8388608, 'EffectSpellClassMaskC_2': 268435584, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework FERAL §7 (3,1): rank 2/3 - eff0 (icon-1563 DUMMY the core's feral-AP block reads) -> energy COST -3/-6/-9 on Rip/Ferocious Bite/Savage Roar/Maim, eff1 DUMMY removed (CORE-AUDIT row 35: the stock AP loop now adds 0), eff2 Predator's Swiftness trigger kept at 5/10/15% per combo point.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the energy cost of your Cat Form finishing moves by $s1. Your Feral finishing moves have a $b3% chance per combo point to make your next Druid Nature spell with a base casting time less than 10 sec become an instant cast spell.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectPointsPerCombo_3': 10.0, 'EffectSpellClassMaskC_1': 8388608, 'EffectSpellClassMaskC_2': 268435584, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'EffectSpellClassMaskA_1': RIP_FEROCIOUS_BITE, 'EffectSpellClassMaskA_2': SAVAGE_ROAR | MAIM},
 )
 
 
@@ -1477,13 +1498,13 @@ predatory_strikes_16975 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=149, implicit_target_a=1, apply_aura=AuraType.DUMMY, trigger_spell=4294967295),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=109, trigger_spell=69369),
+        Effect(type=EffectType.APPLY_AURA, base_points=-10, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COST),
+        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.ADD_TARGET_TRIGGER, trigger_spell=69369),
     ],
     spell_icon_id=1563,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your melee attack power in Cat, Bear and Dire Bear Forms by $s1% of your level and $s2% of any attack power on your equipped weapon.  In addition, your finishing moves have a $b3% chance per combo point to make your next Nature spell with a base casting time less than 10 sec. become an instant cast spell.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectPointsPerCombo_3': 20.0, 'EffectSpellClassMaskC_1': 8388608, 'EffectSpellClassMaskC_2': 268435584, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework FERAL §7 (3,1): rank 3/3 - eff0 (icon-1563 DUMMY the core's feral-AP block reads) -> energy COST -3/-6/-9 on Rip/Ferocious Bite/Savage Roar/Maim, eff1 DUMMY removed (CORE-AUDIT row 35: the stock AP loop now adds 0), eff2 Predator's Swiftness trigger kept at 5/10/15% per combo point.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the energy cost of your Cat Form finishing moves by $s1. Your Feral finishing moves have a $b3% chance per combo point to make your next Druid Nature spell with a base casting time less than 10 sec become an instant cast spell.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectPointsPerCombo_3': 15.0, 'EffectSpellClassMaskC_1': 8388608, 'EffectSpellClassMaskC_2': 268435584, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'EffectSpellClassMaskA_1': RIP_FEROCIOUS_BITE, 'EffectSpellClassMaskA_2': SAVAGE_ROAR | MAIM},
 )
 
 
@@ -1499,13 +1520,12 @@ savage_fury_16998 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=22),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=23),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
     ],
     spell_icon_id=1531,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage caused by your Claw, Rake, Mangle (Cat), Mangle (Bear), and Maul abilities by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 6144, 'EffectSpellClassMaskA_3': 262144, 'EffectSpellClassMaskB_1': 4096, 'EffectSpellClassMaskC_2': 1088, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework FERAL §7 (1,1): rank 1/2 - 6/12% (was 10/20%): eff0 DAMAGE on Rake/Maul/Shred and both Mangles (Claw dropped), eff1 DOT on Rake's bleed, eff2 (EFFECT3 on the Mangles) removed.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage caused by your Rake, Shred, Mangle (Cat), Mangle (Bear) and Maul abilities by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': RAKE | MAUL | SHRED, 'EffectSpellClassMaskB_1': RAKE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'EffectSpellClassMaskA_2': MANGLE_CAT | MANGLE_BEAR},
 )
 
 
@@ -1521,13 +1541,12 @@ savage_fury_16999 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=22),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=23),
+        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
     ],
     spell_icon_id=1531,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage caused by your Claw, Rake, Mangle (Cat), Mangle (Bear), and Maul abilities by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 6144, 'EffectSpellClassMaskA_3': 262144, 'EffectSpellClassMaskB_1': 4096, 'EffectSpellClassMaskC_2': 1088, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework FERAL §7 (1,1): rank 2/2 - 6/12% (was 10/20%): eff0 DAMAGE on Rake/Maul/Shred and both Mangles (Claw dropped), eff1 DOT on Rake's bleed, eff2 (EFFECT3 on the Mangles) removed.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage caused by your Rake, Shred, Mangle (Cat), Mangle (Bear) and Maul abilities by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': RAKE | MAUL | SHRED, 'EffectSpellClassMaskB_1': RAKE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'EffectSpellClassMaskA_2': MANGLE_CAT | MANGLE_BEAR},
 )
 
 
@@ -1543,11 +1562,12 @@ feral_swiftness_17002 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.MOD_INCREASE_SPEED),
+        Effect(type=EffectType.APPLY_AURA, base_points=-26, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COOLDOWN),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=67,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your movement speed by $s1% in Cat Form and increases your chance to dodge while in Cat Form, Bear Form and Dire Bear Form by $24867s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': 1, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (2,0): rank 1/2 - eff0 cat speed aura -> -25% Survival Instincts cooldown SpellMod; eff1 APPLY_AURA DUMMY 10 = cat move speed % (bear gets half; form-boost 24867 BP0, WP-BRIEF §4 item 1). ShapeshiftMask 1 removed so the passive exists in every form (WP-BRIEF §3).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your movement speed by $s2% in Cat Form and by ${$m2/2}% in Bear Form. Reduces the cooldown of Survival Instincts by $s1%.\n\n|cFF9D9D9DCapstone Bonus: After using Feral Charge (Bear), your next Mangle (Bear) within $200433d costs no rage and its cooldown is reset. After using Feral Charge (Cat), your next Ravage within $200434d requires no stealth and costs no energy.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'NameSubtext_Lang_enUS': '', 'EffectSpellClassMaskA_3': SURVIVAL_INSTINCTS},
 )
 
 
@@ -1566,8 +1586,8 @@ leader_of_the_pack_17007 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=312,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While in Cat, Bear or Dire Bear Form, the Leader of the Pack increases ranged and melee critical chance of all party and raid members within $24932a1 yards by $24932s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (6,1): tooltip only - the 4% base-health heal now lives on 24932 eff1 (spell_dru_leader_of_the_pack_feral).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While in Cat, Bear or Dire Bear Form, increases ranged and melee critical strike chance of all party and raid members within $24932a1 yards by $24932s1%. Affected targets also heal themselves for $24932s2% of their base health when they land a direct damage critical strike with a melee or ranged attack, no more than once every 6 sec. Does not stack with other similar effects. Periodic damage does not trigger the heal.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'NameSubtext_Lang_enUS': ''},
 )
 
 
@@ -2254,11 +2274,12 @@ feral_swiftness_24866 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.MOD_INCREASE_SPEED),
+        Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COOLDOWN),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=67,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 2147483648, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your movement speed by $s1% in Cat Form and increases your chance to dodge while in Cat Form, Bear Form and Dire Bear Form by $24864s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': 1, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (2,0): rank 2/2, capstone (Stampede: spell_dru_feral_charge casts 200433/200434) - eff0 -50% Survival Instincts cooldown SpellMod; eff1 APPLY_AURA DUMMY 20 = cat move speed %. ShapeshiftMask removed.',
+    raw_overrides={'AttributesEx': 2147483648, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your movement speed by $s2% in Cat Form and by ${$m2/2}% in Bear Form. Reduces the cooldown of Survival Instincts by $s1%.\n\nCapstone Bonus: After using Feral Charge (Bear), your next Mangle (Bear) within $200433d costs no rage and its cooldown is reset. After using Feral Charge (Cat), your next Ravage within $200434d requires no stealth and costs no energy.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'NameSubtext_Lang_enUS': '', 'EffectSpellClassMaskA_3': SURVIVAL_INSTINCTS},
 )
 
 
@@ -2822,13 +2843,12 @@ survival_of_the_fittest_33853 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=137, misc_value=-1),
-        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=187),
-        Effect(type=EffectType.DUMMY, base_points=10, implicit_target_a=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=-1),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_ATTACK_POWER_PCT),
     ],
-    spell_icon_id=961,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases all attributes by $s1%, reduces the chance you'll be critically hit by melee attacks by $s2%, and increases your armor contribution from cloth and leather items in Bear Form and Dire Bear Form by $s3%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    spell_icon_id=2253,
+    notes='druid-rework FERAL §7 (5,2): rank 1/3 - eff0 all attributes 1/2/3%; eff1 crit-taken aura -> MOD_ATTACK_POWER_PCT 3/6/10% (spell_dru_survival_of_the_fittest zeroes it unless Bestial Fury); eff2 (stock armor DUMMY) removed; ShapeshiftMask 0 -> both bears; icon 961 -> 2253 (Ability_Druid_PrimalTenacity, freed by the Primal Tenacity cut) so the stock icon-961 aura-137 block goes inert (CORE-AUDIT row 32).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While you are in Bear Form or Dire Bear Form, increases all attributes by $s1%. While Bestial Fury is active, increases your attack power by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'ShapeshiftMask': SS_ANY_BEAR},
 )
 
 
@@ -2844,13 +2864,12 @@ survival_of_the_fittest_33855 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=137, misc_value=-1),
-        Effect(type=EffectType.APPLY_AURA, base_points=-5, implicit_target_a=1, apply_aura=187),
-        Effect(type=EffectType.DUMMY, base_points=21, implicit_target_a=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=-1),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.MOD_ATTACK_POWER_PCT),
     ],
-    spell_icon_id=961,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases all attributes by $s1%, reduces the chance you'll be critically hit by melee attacks by $s2%, and increases your armor contribution from cloth and leather items in Bear Form and Dire Bear Form by $s3%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    spell_icon_id=2253,
+    notes='druid-rework FERAL §7 (5,2): rank 2/3 - eff0 all attributes 1/2/3%; eff1 crit-taken aura -> MOD_ATTACK_POWER_PCT 3/6/10% (spell_dru_survival_of_the_fittest zeroes it unless Bestial Fury); eff2 (stock armor DUMMY) removed; ShapeshiftMask 0 -> both bears; icon 961 -> 2253 (Ability_Druid_PrimalTenacity, freed by the Primal Tenacity cut) so the stock icon-961 aura-137 block goes inert (CORE-AUDIT row 32).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While you are in Bear Form or Dire Bear Form, increases all attributes by $s1%. While Bestial Fury is active, increases your attack power by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'ShapeshiftMask': SS_ANY_BEAR},
 )
 
 
@@ -2866,13 +2885,12 @@ survival_of_the_fittest_33856 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=137, misc_value=-1),
-        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=1, apply_aura=187),
-        Effect(type=EffectType.DUMMY, base_points=32, implicit_target_a=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=-1),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.MOD_ATTACK_POWER_PCT),
     ],
-    spell_icon_id=961,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases all attributes by $s1%, reduces the chance you'll be critically hit by melee attacks by $s2%, and increases your armor contribution from cloth and leather items in Bear Form and Dire Bear Form by $s3%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    spell_icon_id=2253,
+    notes='druid-rework FERAL §7 (5,2): rank 3/3 - eff0 all attributes 1/2/3%; eff1 crit-taken aura -> MOD_ATTACK_POWER_PCT 3/6/10% (spell_dru_survival_of_the_fittest zeroes it unless Bestial Fury); eff2 (stock armor DUMMY) removed; ShapeshiftMask 0 -> both bears; icon 961 -> 2253 (Ability_Druid_PrimalTenacity, freed by the Primal Tenacity cut) so the stock icon-961 aura-137 block goes inert (CORE-AUDIT row 32).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While you are in Bear Form or Dire Bear Form, increases all attributes by $s1%. While Bestial Fury is active, increases your attack power by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'ShapeshiftMask': SS_ANY_BEAR},
 )
 
 
@@ -2888,12 +2906,12 @@ predatory_instincts_33859 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=163, misc_value=1),
-        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=229, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.MOD_CRIT_DAMAGE_BONUS, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=-4, implicit_target_a=1, apply_aura=AuraType.MOD_AOE_DAMAGE_AVOIDANCE, misc_value=127),
     ],
     spell_icon_id=2252,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While in Cat Form increases your damage from melee critical strikes by $s1% and reduces the damage taken from area of effect attacks by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': 1, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (7,2) + CORE-AUDIT row 25 (C2 accepted): rank 1/3 - eff0 aura 163 misc 1 5/10/15 (x1.05/1.10/1.15 on the 200% crit = 210/220/230%; spell_dru_predatory_instincts zeroes it outside Cat Form, so bleed ticks in cat are boosted too - accepted deviation (a)); eff1 AoE damage taken -3/-6/-10%; ShapeshiftMask 1 removed (WP-BRIEF §3).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your critical strikes in Cat Form deal ${200+$m1*2}% damage instead of 200%. Reduces the damage taken from area of effect attacks by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2909,12 +2927,12 @@ predatory_instincts_33866 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=163, misc_value=1),
-        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=229, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.MOD_CRIT_DAMAGE_BONUS, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=1, apply_aura=AuraType.MOD_AOE_DAMAGE_AVOIDANCE, misc_value=127),
     ],
     spell_icon_id=2252,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While in Cat Form increases your damage from melee critical strikes by $s1% and reduces the damage taken from area of effect attacks by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': 1, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (7,2) + CORE-AUDIT row 25 (C2 accepted): rank 2/3 - eff0 aura 163 misc 1 5/10/15 (x1.05/1.10/1.15 on the 200% crit = 210/220/230%; spell_dru_predatory_instincts zeroes it outside Cat Form, so bleed ticks in cat are boosted too - accepted deviation (a)); eff1 AoE damage taken -3/-6/-10%; ShapeshiftMask 1 removed (WP-BRIEF §3).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your critical strikes in Cat Form deal ${200+$m1*2}% damage instead of 200%. Reduces the damage taken from area of effect attacks by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2930,12 +2948,12 @@ predatory_instincts_33867 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=163, misc_value=1),
-        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=229, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.MOD_CRIT_DAMAGE_BONUS, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=AuraType.MOD_AOE_DAMAGE_AVOIDANCE, misc_value=127),
     ],
     spell_icon_id=2252,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While in Cat Form increases your damage from melee critical strikes by $s1% and reduces the damage taken from area of effect attacks by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': 1, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (7,2) + CORE-AUDIT row 25 (C2 accepted): rank 3/3 - eff0 aura 163 misc 1 5/10/15 (x1.05/1.10/1.15 on the 200% crit = 210/220/230%; spell_dru_predatory_instincts zeroes it outside Cat Form, so bleed ticks in cat are boosted too - accepted deviation (a)); eff1 AoE damage taken -3/-6/-10%; ShapeshiftMask 1 removed (WP-BRIEF §3).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your critical strikes in Cat Form deal ${200+$m1*2}% damage instead of 200%. Reduces the damage taken from area of effect attacks by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2951,11 +2969,12 @@ nurturing_instinct_33872 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=34, implicit_target_a=1, apply_aura=175, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2254,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your healing spells by up to $s1% of your Agility, and increases healing done to you by $47179s1% while in Cat form.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (4,3): rank 1/2 - eff0 aura 175 -> APPLY_AURA DUMMY 5/10% healing received from other players in cat/bear/dire bear (CORE-AUDIT row 26 hook; the stock icon-2254 aura-175 block goes inert, row 32); new eff1 APPLY_AURA DUMMY 15/30% (BP0/BP1 of the 200430 buff).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases healing done to you by other players by $s1% while in Cat, Bear and Dire Bear Form. When you cast Regrowth or Healing Touch made instant by Predatory Strikes, your next $200430n melee abilities within $200430d deal $s2% increased damage.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2971,11 +2990,12 @@ nurturing_instinct_33873 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=69, implicit_target_a=1, apply_aura=175, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2254,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your healing spells by up to $s1% of your Agility, and increases healing done to you by $47180s1% while in Cat form.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 33554432, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (4,3): rank 2/2 - eff0 aura 175 -> APPLY_AURA DUMMY 5/10% healing received from other players in cat/bear/dire bear (CORE-AUDIT row 26 hook; the stock icon-2254 aura-175 block goes inert, row 32); new eff1 APPLY_AURA DUMMY 15/30% (BP0/BP1 of the 200430 buff).',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases healing done to you by other players by $s1% while in Cat, Bear and Dire Bear Form. When you cast Regrowth or Healing Touch made instant by Predatory Strikes, your next $200430n melee abilities within $200430d deal $s2% increased damage.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3449,12 +3469,11 @@ primal_precision_48409 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=240),
-        Effect(type=EffectType.APPLY_AURA, base_points=-41, implicit_target_a=1, apply_aura=108, misc_value=30),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.MOD_POWER_REGEN_PERCENT, misc_value=3),
     ],
     spell_icon_id=2858,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your expertise by $s1, and you are refunded $s2% of the energy cost of a finishing move if it fails to land.', 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 4096, 'EffectSpellClassMaskB_1': 8388608, 'EffectSpellClassMaskB_2': 268435584, 'EffectSpellClassMaskC_2': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (3,3): rank 1/2 - expertise -> +10/20% energy regeneration (aura 110 misc 3 = POWER_ENERGY); finishing-move refund removed.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your energy regeneration rate by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Cat Form finishing moves reduce the cooldown of Berserk by $48410s2 sec. Cannot occur more than once every 3 sec.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3470,12 +3489,12 @@ primal_precision_48410 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=240),
-        Effect(type=EffectType.APPLY_AURA, base_points=-81, implicit_target_a=1, apply_aura=108, misc_value=30),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.MOD_POWER_REGEN_PERCENT, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2858,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your expertise by $s1, and you are refunded $s2% of the energy cost of a finishing move if it fails to land.', 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 4096, 'EffectSpellClassMaskB_1': 8388608, 'EffectSpellClassMaskB_2': 268435584, 'EffectSpellClassMaskC_2': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (3,3): rank 2/2 - expertise -> +10/20% energy regeneration (aura 110 misc 3 = POWER_ENERGY); finishing-move refund removed; capstone eff1 APPLY_AURA DUMMY 3 = seconds off Berserk (spell_dru_primal_precision, 3 s ICD).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your energy regeneration rate by $s1%.\n\nCapstone Bonus: Your Cat Form finishing moves reduce the cooldown of Berserk by $48410s2 sec. Cannot occur more than once every 3 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3491,12 +3510,12 @@ rend_and_tear_48432 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=7),
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=2859,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases damage done by your Maul and Shred attacks on bleeding targets by $s1%, and increases the critical strike chance of your Ferocious Bite ability on bleeding targets by $s2%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 34816, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    spell_icon_id=494,
+    notes="druid-rework FERAL §7 (9,1), trimmed 5->3 ranks: rank 1/3 - eff0 7/14/20% Maul/Shred damage, eff1 10/20/30% Ferocious Bite crit (BP0 of the CanPrepare helper 200436), both vs the caster's own Rip or Lacerate; icon 2859 -> 494 (Ability_Druid_Disembowel) so the stock any-bleed hardcodes go inert (CORE-AUDIT row 24).",
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Targets affected by your Rip or Lacerate make your Maul and Shred attacks deal $s1% more damage and increase the critical strike chance of your Ferocious Bite ability by $s2%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 34816, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3512,12 +3531,12 @@ rend_and_tear_48433 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=7),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=13, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=2859,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases damage done by your Maul and Shred attacks on bleeding targets by $s1%, and increases the critical strike chance of your Ferocious Bite ability on bleeding targets by $s2%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 34816, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    spell_icon_id=494,
+    notes="druid-rework FERAL §7 (9,1), trimmed 5->3 ranks: rank 2/3 - eff0 7/14/20% Maul/Shred damage, eff1 10/20/30% Ferocious Bite crit (BP0 of the CanPrepare helper 200436), both vs the caster's own Rip or Lacerate; icon 2859 -> 494 (Ability_Druid_Disembowel) so the stock any-bleed hardcodes go inert (CORE-AUDIT row 24).",
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Targets affected by your Rip or Lacerate make your Maul and Shred attacks deal $s1% more damage and increase the critical strike chance of your Ferocious Bite ability by $s2%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 34816, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3533,12 +3552,12 @@ rend_and_tear_48434 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=7),
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=2859,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases damage done by your Maul and Shred attacks on bleeding targets by $s1%, and increases the critical strike chance of your Ferocious Bite ability on bleeding targets by $s2%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 34816, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    spell_icon_id=494,
+    notes="druid-rework FERAL §7 (9,1), trimmed 5->3 ranks: rank 3/3 - eff0 7/14/20% Maul/Shred damage, eff1 10/20/30% Ferocious Bite crit (BP0 of the CanPrepare helper 200436), both vs the caster's own Rip or Lacerate; icon 2859 -> 494 (Ability_Druid_Disembowel) so the stock any-bleed hardcodes go inert (CORE-AUDIT row 24).",
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Targets affected by your Rip or Lacerate make your Maul and Shred attacks deal $s1% more damage and increase the critical strike chance of your Ferocious Bite ability by $s2%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 34816, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3554,11 +3573,12 @@ infected_wounds_48483 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=infected_wounds_58179.id),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200427),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
     ],
     spell_icon_id=2857,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Shred, Maul, and Mangle attacks cause an Infected Wound in the target. The Infected Wound reduces the movement speed of the target by $58179s1% and the attack speed by $58179s2%. Lasts $58179d.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (7,3): rank 1/3 - eff0 now procs Infected Wound 200427 on every rank (the 58179 attack-speed slow is cast by spell_dru_mangle instead); new eff1 +3/6/9% DOT on the feral bleeds (Rake, Lacerate, Rip, Thrash). Proc conditions come from procs_on(-48483) in druid_talents.py (10%, negative id - a positive rank row would be dropped, FERAL §10); raw ProcChance 10 only feeds $h.',
+    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your feral bleeds by $s2%. Your Mangle also reduces the target's attack speed by $58179s2% for $58179d. Your Shred, Maul, Swipe and Mangle attacks have a $h% chance to cause an Infected Wound, dealing $200427o1 Nature damage plus 19% of your attack power over $200427d. Chance is modified by Proc Chance. The Infected Wound does not count as a bleed.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 7, 'EffectSpellClassMaskB_1': FERAL_BLEEDS[0], 'EffectSpellClassMaskB_2': FERAL_BLEEDS[1], 'EffectSpellClassMaskB_3': FERAL_BLEEDS[2]},
 )
 
 
@@ -3574,11 +3594,12 @@ infected_wounds_48484 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=58180),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200427),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
     ],
     spell_icon_id=2857,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Shred, Maul, and Mangle attacks cause an Infected Wound in the target. The Infected Wound reduces the movement speed of the target by $58180s1% and the attack speed by $58180s2%. Lasts $58180d.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (7,3): rank 2/3 - eff0 now procs Infected Wound 200427 on every rank (the 58180 attack-speed slow is cast by spell_dru_mangle instead); new eff1 +3/6/9% DOT on the feral bleeds (Rake, Lacerate, Rip, Thrash). Proc conditions come from procs_on(-48483) in druid_talents.py (10%, negative id - a positive rank row would be dropped, FERAL §10); raw ProcChance 10 only feeds $h.',
+    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your feral bleeds by $s2%. Your Mangle also reduces the target's attack speed by $58180s2% for $58180d. Your Shred, Maul, Swipe and Mangle attacks have a $h% chance to cause an Infected Wound, dealing $200427o1 Nature damage plus 19% of your attack power over $200427d. Chance is modified by Proc Chance. The Infected Wound does not count as a bleed.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 7, 'EffectSpellClassMaskB_1': FERAL_BLEEDS[0], 'EffectSpellClassMaskB_2': FERAL_BLEEDS[1], 'EffectSpellClassMaskB_3': FERAL_BLEEDS[2]},
 )
 
 
@@ -3594,11 +3615,12 @@ infected_wounds_48485 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=58181),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200427),
+        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
     ],
     spell_icon_id=2857,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Shred, Maul, and Mangle attacks cause an Infected Wound in the target. The Infected Wound reduces the movement speed of the target by $58181s1% and the attack speed by $58181s2%. Lasts $58181d.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (7,3): rank 3/3 - eff0 now procs Infected Wound 200427 on every rank (the 58181 attack-speed slow is cast by spell_dru_mangle instead); new eff1 +3/6/9% DOT on the feral bleeds (Rake, Lacerate, Rip, Thrash). Proc conditions come from procs_on(-48483) in druid_talents.py (10%, negative id - a positive rank row would be dropped, FERAL §10); raw ProcChance 10 only feeds $h.',
+    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your feral bleeds by $s2%. Your Mangle also reduces the target's attack speed by $58181s2% for $58181d. Your Shred, Maul, Swipe and Mangle attacks have a $h% chance to cause an Infected Wound, dealing $200427o1 Nature damage plus 19% of your attack power over $200427d. Chance is modified by Proc Chance. The Infected Wound does not count as a bleed.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 7, 'EffectSpellClassMaskB_1': FERAL_BLEEDS[0], 'EffectSpellClassMaskB_2': FERAL_BLEEDS[1], 'EffectSpellClassMaskB_3': FERAL_BLEEDS[2]},
 )
 
 
@@ -3635,12 +3657,13 @@ improved_mangle_48489 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1001, implicit_target_a=6, apply_aura=107, misc_value=11),
-        Effect(type=EffectType.APPLY_AURA, base_points=-5, implicit_target_a=1, apply_aura=107, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COST),
+        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2312,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Mangle (Bear) ability by ${$m1/-1000}.1 sec., and reduces the energy cost of your Mangle (Cat) ability by $s2.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 64, 'EffectSpellClassMaskB_2': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='druid-rework FERAL §7 (8,2), trimmed 3->2 ranks (48491 orphaned): rank 2/2 - eff0 Mangle (Bear) cooldown -> +10/20% damage on both Mangles (target fixed 6 -> 1); eff1 Mangle (Cat) energy -3/-6; capstone eff2 APPLY_AURA DUMMY 25 (% chance for 200435, spell_dru_mangle).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Mangle by $s1%. Reduces the energy cost of your Mangle (Cat) ability by $s2.\n\nCapstone Bonus: Your Mangle (Bear) has a $48489s3% chance to generate $/10;200435s1 rage. Your Mangle (Bear) also reduces the cooldown of Enrage by 3 sec, no more than once every 3 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': MANGLE_CAT | MANGLE_BEAR, 'EffectSpellClassMaskB_2': MANGLE_CAT, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3679,11 +3702,10 @@ king_of_the_jungle_48492 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=126),
         Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=1),
-        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=108, misc_value=14),
     ],
     spell_icon_id=2850,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "While using your Enrage ability in Bear Form or Dire Bear Form, your damage is increased by $s1%, and your Tiger's Fury ability also instantly restores $s2 energy.  In addition, the mana cost of Bear Form, Cat Form, and Dire Bear Form is reduced by $s3%.", 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_1': 3221225472, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (8,0) + §0.16 Q3: rank 1/3 - eff0 (Enrage damage 5/10/15%, BP of 51185) and eff1 (20/40/60 energy, spell_dru_tiger_s_fury_feral casts 200432 with value/10 per tick) unchanged; eff2 (form mana cost) removed on every rank - no capstone.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "While in Bear Form or Dire Bear Form, Enrage increases physical damage done by $s1%. While in Cat Form, casting Tiger's Fury restores $s2 energy over $200432d.", 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3701,11 +3723,10 @@ king_of_the_jungle_48494 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=126),
         Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=1),
-        Effect(type=EffectType.APPLY_AURA, base_points=-41, implicit_target_a=1, apply_aura=108, misc_value=14),
     ],
     spell_icon_id=2850,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "While using your Enrage ability in Bear Form or Dire Bear Form, your damage is increased by $s1%, and your Tiger's Fury ability also instantly restores $s2 energy.  In addition, the mana cost of Bear Form, Cat Form, and Dire Bear Form is reduced by $s3%.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_1': 3221225472, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (8,0) + §0.16 Q3: rank 2/3 - eff0 (Enrage damage 5/10/15%, BP of 51185) and eff1 (20/40/60 energy, spell_dru_tiger_s_fury_feral casts 200432 with value/10 per tick) unchanged; eff2 (form mana cost) removed on every rank - no capstone.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "While in Bear Form or Dire Bear Form, Enrage increases physical damage done by $s1%. While in Cat Form, casting Tiger's Fury restores $s2 energy over $200432d.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3723,11 +3744,10 @@ king_of_the_jungle_48495 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=126),
         Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, base_points=-61, implicit_target_a=1, apply_aura=108, misc_value=14),
     ],
     spell_icon_id=2850,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "While using your Enrage ability in Bear Form or Dire Bear Form, your damage is increased by $s1%, and your Tiger's Fury ability also instantly restores $s2 energy.  In addition, the mana cost of Bear Form, Cat Form, and Dire Bear Form is reduced by $s3%.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_1': 3221225472, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (8,0) + §0.16 Q3: rank 3/3 - eff0 (Enrage damage 5/10/15%, BP of 51185) and eff1 (20/40/60 energy, spell_dru_tiger_s_fury_feral casts 200432 with value/10 per tick) unchanged; eff2 (form mana cost) removed on every rank - no capstone.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "While in Bear Form or Dire Bear Form, Enrage increases physical damage done by $s1%. While in Cat Form, casting Tiger's Fury restores $s2 energy over $200432d.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3950,12 +3970,12 @@ improved_mangle_48532 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-501, implicit_target_a=6, apply_aura=107, misc_value=11),
-        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=107, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=-4, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COST),
     ],
     spell_icon_id=2312,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Mangle (Bear) ability by ${$m1/-1000}.1 sec., and reduces the energy cost of your Mangle (Cat) ability by $s2.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 64, 'EffectSpellClassMaskB_2': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='druid-rework FERAL §7 (8,2), trimmed 3->2 ranks (48491 orphaned): rank 1/2 - eff0 Mangle (Bear) cooldown -> +10/20% damage on both Mangles (target fixed 6 -> 1); eff1 Mangle (Cat) energy -3/-6.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Mangle by $s1%. Reduces the energy cost of your Mangle (Cat) ability by $s2.\n\n|cFF9D9D9DCapstone Bonus: Your Mangle (Bear) has a $48489s3% chance to generate $/10;200435s1 rage. Your Mangle (Bear) also reduces the cooldown of Enrage by 3 sec, no more than once every 3 sec.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': MANGLE_CAT | MANGLE_BEAR, 'EffectSpellClassMaskB_2': MANGLE_CAT, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -4312,8 +4332,8 @@ rend_and_tear_51268 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=15, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=7),
         Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=2859,
-    notes='pulled from existing data',
+    spell_icon_id=494,
+    notes='druid-rework FERAL §1: orphaned old Rend and Tear rank (talent trimmed 5->3), kept declared; icon 2859 -> 494 like the live ranks so no DUMMY aura stays on the retired icon (CORE-AUDIT §4).',
     raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases damage done by your Maul and Shred attacks on bleeding targets by $s1%, and increases the critical strike chance of your Ferocious Bite ability on bleeding targets by $s2%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 34816, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 4', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
@@ -4333,8 +4353,8 @@ rend_and_tear_51269 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=7),
         Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=2859,
-    notes='pulled from existing data',
+    spell_icon_id=494,
+    notes='druid-rework FERAL §1: orphaned old Rend and Tear rank (talent trimmed 5->3), kept declared; icon 2859 -> 494 like the live ranks so no DUMMY aura stays on the retired icon (CORE-AUDIT §4).',
     raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases damage done by your Maul and Shred attacks on bleeding targets by $s1%, and increases the critical strike chance of your Ferocious Bite ability on bleeding targets by $s2%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 34816, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 5', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
@@ -4541,12 +4561,13 @@ protector_of_the_pack_57873 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=166, misc_value=23),
-        Effect(type=EffectType.APPLY_AURA, base_points=-5, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_ATTACK_POWER_PCT, misc_value=23),
+        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.EFFECT1),
     ],
     spell_icon_id=957,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your attack power by $s1% and reduces the damage you take by $s2%, while in Bear or Dire Bear Form.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_3': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': 144, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (7,0): rank 1/3 - eff0 AP% unchanged; eff1 damage taken all schools -> physical only, -2/-4/-6% (spell_dru_protector_of_the_pack zeroes it in Bestial Fury); new eff2 +7/14/20% Demoralizing Roar EFFECT1 (the AP reduction). Stock bear ShapeshiftMask kept (WP-BRIEF §3).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While in Bear Form or Dire Bear Form your attack power is increased by $s1% and the physical damage you take is reduced by $s2%. Increases the melee attack power reduction of your Demoralizing Roar by $s3%. The damage reduction is suppressed while Bestial Fury is active.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': SS_ANY_BEAR, 'SpellClassSet': 7, 'EffectSpellClassMaskC_1': DEMORALIZING_ROAR},
 )
 
 
@@ -4562,12 +4583,13 @@ protector_of_the_pack_57876 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=166, misc_value=23),
-        Effect(type=EffectType.APPLY_AURA, base_points=-9, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.MOD_ATTACK_POWER_PCT, misc_value=23),
+        Effect(type=EffectType.APPLY_AURA, base_points=-5, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=13, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.EFFECT1),
     ],
     spell_icon_id=957,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your attack power by $s1% and reduces the damage you take by $s2%, while in Bear or Dire Bear Form.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_3': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': 144, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (7,0): rank 2/3 - eff0 AP% unchanged; eff1 damage taken all schools -> physical only, -2/-4/-6% (spell_dru_protector_of_the_pack zeroes it in Bestial Fury); new eff2 +7/14/20% Demoralizing Roar EFFECT1 (the AP reduction). Stock bear ShapeshiftMask kept (WP-BRIEF §3).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While in Bear Form or Dire Bear Form your attack power is increased by $s1% and the physical damage you take is reduced by $s2%. Increases the melee attack power reduction of your Demoralizing Roar by $s3%. The damage reduction is suppressed while Bestial Fury is active.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': SS_ANY_BEAR, 'SpellClassSet': 7, 'EffectSpellClassMaskC_1': DEMORALIZING_ROAR},
 )
 
 
@@ -4583,12 +4605,13 @@ protector_of_the_pack_57877 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=166, misc_value=23),
-        Effect(type=EffectType.APPLY_AURA, base_points=-13, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.MOD_ATTACK_POWER_PCT, misc_value=23),
+        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.EFFECT1),
     ],
     spell_icon_id=957,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your attack power by $s1% and reduces the damage you take by $s2%, while in Bear or Dire Bear Form.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_3': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': 144, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (7,0): rank 3/3 - eff0 AP% unchanged; eff1 damage taken all schools -> physical only, -2/-4/-6% (spell_dru_protector_of_the_pack zeroes it in Bestial Fury); new eff2 +7/14/20% Demoralizing Roar EFFECT1 (the AP reduction). Stock bear ShapeshiftMask kept (WP-BRIEF §3).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While in Bear Form or Dire Bear Form your attack power is increased by $s1% and the physical damage you take is reduced by $s2%. Increases the melee attack power reduction of your Demoralizing Roar by $s3%. The damage reduction is suppressed while Bestial Fury is active.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'ShapeshiftMask': SS_ANY_BEAR, 'SpellClassSet': 7, 'EffectSpellClassMaskC_1': DEMORALIZING_ROAR},
 )
 
 
@@ -4604,12 +4627,12 @@ natural_reaction_57878 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=49, misc_value=12),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.MOD_RATING_FROM_STAT, misc_value=1 << CombatRating.DODGE),
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=57893),
     ],
     spell_icon_id=50,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your dodge while in Bear Form or Dire Bear Form by $s1%, and you regenerate $s2 rage every time you dodge while in Bear Form or Dire Bear Form.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 172712, 'RangeIndex': 1, 'ShapeshiftMask': 144, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (5,0): rank 1/3 - eff0 dodge % aura -> MOD_RATING_FROM_STAT dodge rating from Agility 5/10/15% (misc 1<<CR_DODGE, MiscValueB 1 = STAT_AGILITY); eff1 proc to 57893 kept (retuned to 5/10/15 rage); stock spell_proc -57878 (dodge) kept.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your dodge rating by $s1% of your Agility while in Bear Form or Dire Bear Form. You regenerate $/10;57893s1 rage every time you dodge while in Bear Form or Dire Bear Form.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 172712, 'RangeIndex': 1, 'ShapeshiftMask': SS_ANY_BEAR, 'SpellClassSet': 7, 'EffectMiscValueB_1': 1},
 )
 
 
@@ -4625,12 +4648,12 @@ natural_reaction_57880 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=49, misc_value=12),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.MOD_RATING_FROM_STAT, misc_value=1 << CombatRating.DODGE),
         Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=59071),
     ],
     spell_icon_id=50,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your dodge while in Bear Form or Dire Bear Form by $s1%, and you regenerate $s2 rage every time you dodge while in Bear Form or Dire Bear Form.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 10920, 'RangeIndex': 1, 'ShapeshiftMask': 144, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (5,0): rank 2/3 - eff0 dodge % aura -> MOD_RATING_FROM_STAT dodge rating from Agility 5/10/15% (misc 1<<CR_DODGE, MiscValueB 1 = STAT_AGILITY); eff1 proc to 59071 kept (retuned to 5/10/15 rage); stock spell_proc -57878 (dodge) kept.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your dodge rating by $s1% of your Agility while in Bear Form or Dire Bear Form. You regenerate $/10;59071s1 rage every time you dodge while in Bear Form or Dire Bear Form.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 10920, 'RangeIndex': 1, 'ShapeshiftMask': SS_ANY_BEAR, 'SpellClassSet': 7, 'EffectMiscValueB_1': 1},
 )
 
 
@@ -4646,12 +4669,12 @@ natural_reaction_57881 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=49, misc_value=12),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.MOD_RATING_FROM_STAT, misc_value=1 << CombatRating.DODGE),
         Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=59072),
     ],
     spell_icon_id=50,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your dodge while in Bear Form or Dire Bear Form by $s1%, and you regenerate $s2 rage every time you dodge while in Bear Form or Dire Bear Form.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 10920, 'RangeIndex': 1, 'ShapeshiftMask': 144, 'SpellClassSet': 7},
+    notes='druid-rework FERAL §7 (5,0): rank 3/3 - eff0 dodge % aura -> MOD_RATING_FROM_STAT dodge rating from Agility 5/10/15% (misc 1<<CR_DODGE, MiscValueB 1 = STAT_AGILITY); eff1 proc to 59072 kept (retuned to 5/10/15 rage); stock spell_proc -57878 (dodge) kept.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your dodge rating by $s1% of your Agility while in Bear Form or Dire Bear Form. You regenerate $/10;59072s1 rage every time you dodge while in Bear Form or Dire Bear Form.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 10920, 'RangeIndex': 1, 'ShapeshiftMask': SS_ANY_BEAR, 'SpellClassSet': 7, 'EffectMiscValueB_1': 1},
 )
 
 
@@ -4751,11 +4774,11 @@ primal_gore_63503 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=1, apply_aura=286, misc_value=12),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CRIT_DAMAGE_BONUS),
     ],
     spell_icon_id=262,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Grants the periodic damage from your Lacerate and Rip abilities the ability to critically hit.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8388608, 'EffectSpellClassMaskA_2': 256, 'EffectSpellClassMaskB_3': 256, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework FERAL §7 (9,2) + CORE-AUDIT row 25 (C2): rank 1/3 - aura 286 -> ADD_PCT_MODIFIER CRIT_DAMAGE_BONUS +30% of the crit's extra damage on the feral bleeds (Rake, Lacerate, Rip, Thrash) = x1.15 of a 200% crit.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike damage of your bleeds by ${$m1/2}%.\n\n|cFF9D9D9DCapstone Bonus: While in Cat Form, your bleed damage is increased by $200471s2% of your Mastery.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': FERAL_BLEEDS[0], 'EffectSpellClassMaskA_2': FERAL_BLEEDS[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'EffectSpellClassMaskA_3': FERAL_BLEEDS[2]},
 )
 
 
@@ -6241,4 +6264,1175 @@ deep_roots_cost_200602 = spell(
     spell_icon_id=2669,
     notes="druid-rework RESTO §8 (1,1) capstone, per WP-B coordination (CORE-AUDIT row 15 / handoff message, not in RESTO.md's own tables): the hidden 1-charge cost-reduction aura an AllSpellScript::CanPrepare hook applies via CastCustomSpell (not a bare CastSpell) when the cast target already carries the caster's own Regrowth, and removes (RemoveAurasDueToSpell) otherwise - toggled per cast, not a permanent SpellMod. Flat COST scoped to Regrowth (8936) only. base_points here is an inert placeholder (delivers 0) - CORE-AUDIT row 15 requires the flat reduction to be exactly 25% of Regrowth's own *base* mana cost so that, combined with any other pct COST modifiers, the net effect is exactly ×0.75 regardless of level; a level-80-only static constant (a code-review finding caught this: the original -254 constant was calibrated to level-80's BaseMana=3496 and over-reduced the cost at lower levels) can't express that, so DruidDeepRootsCapstone::CanPrepare now computes int32(CalculatePct(player->GetCreateMana(), Regrowth's ManaCostPercentage)) fresh per cast, takes 25% of that, and passes it as a custom SPELLVALUE_BASE_POINT0 (still minus 1 for the die_sides=1 sign convention). ProcCharges/ProcFlags are cosmetic only per WP-B (the CanPrepare hook drives apply/remove directly, not the DBC proc system).",
     raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your Regrowth costs less mana.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Regrowth costs less mana on a target already affected by your Regrowth.', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': REGROWTH, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'ProcCharges': 1, 'ProcChance': 101, 'SpellClassSet': 7},
+)
+
+
+# --- druid-rework Feral pass WP-0 (FERAL §3 item 1 + §0.16): stock rows pulled verbatim with
+# pull_dsl.py --constants. WP-A edits them; an untouched pulled row emits nothing.
+
+
+sharpened_claws_16942 = spell(
+    id=16942,
+    name='Sharpened Claws',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_CRIT_PCT),
+    ],
+    spell_icon_id=1561,
+    notes='druid-rework FERAL §7 (2,2): melee crit (aura 52) -> MOD_CRIT_PCT (290, crit with all spells and abilities), 2/4/6% unchanged, cat/bear/dire bear ShapeshiftMask kept.',
+    raw_overrides={'ShapeshiftMask': SS_FERAL, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your critical strike chance with all spells and abilities while in Bear, Dire Bear or Cat Form by $s1%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+sharpened_claws_16943 = spell(
+    id=16943,
+    name='Sharpened Claws',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.MOD_CRIT_PCT),
+    ],
+    spell_icon_id=1561,
+    notes='druid-rework FERAL §7 (2,2): melee crit (aura 52) -> MOD_CRIT_PCT (290, crit with all spells and abilities), 2/4/6% unchanged, cat/bear/dire bear ShapeshiftMask kept.',
+    raw_overrides={'ShapeshiftMask': SS_FERAL, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your critical strike chance with all spells and abilities while in Bear, Dire Bear or Cat Form by $s1%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+sharpened_claws_16944 = spell(
+    id=16944,
+    name='Sharpened Claws',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.MOD_CRIT_PCT),
+    ],
+    spell_icon_id=1561,
+    notes='druid-rework FERAL §7 (2,2): melee crit (aura 52) -> MOD_CRIT_PCT (290, crit with all spells and abilities), 2/4/6% unchanged, cat/bear/dire bear ShapeshiftMask kept.',
+    raw_overrides={'ShapeshiftMask': SS_FERAL, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your critical strike chance with all spells and abilities while in Bear, Dire Bear or Cat Form by $s1%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+primal_fury_37116 = spell(
+    id=37116,
+    name='Primal Fury',
+    school=School.NORMAL,
+    attributes=8651136,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.LEARN_SPELL, base_points=-1, implicit_target_a=1, trigger_spell=16958),
+        Effect(type=EffectType.LEARN_SPELL, base_points=-1, implicit_target_a=1, trigger_spell=16952),
+    ],
+    spell_icon_id=146,
+    notes="druid-rework FERAL §7 (3,2): tooltip only - mechanics unchanged (the taught procs' DBC ProcTypeMask 87380 has no DONE_PERIODIC and procs per target hit).",
+    raw_overrides={'AttributesEx': 2147483648, 'AttributesEx2': 1, 'AttributesEx4': 32768, 'ShapeshiftMask': 145, 'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives you a $16958h% chance to gain an additional $/10;16959s1 Rage anytime you land a direct damage critical strike while in Bear Form or Dire Bear Form. Rage is granted per target hit. Your critical strikes from Cat Form abilities that add combo points have a $16952h% chance to add an additional combo point. Periodic damage does not trigger either clause.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+primal_fury_37117 = spell(
+    id=37117,
+    name='Primal Fury',
+    school=School.NORMAL,
+    attributes=8651136,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.LEARN_SPELL, base_points=-1, implicit_target_a=1, trigger_spell=16961),
+        Effect(type=EffectType.LEARN_SPELL, base_points=-1, implicit_target_a=1, trigger_spell=16954),
+    ],
+    spell_icon_id=146,
+    notes="druid-rework FERAL §7 (3,2): tooltip only - mechanics unchanged (the taught procs' DBC ProcTypeMask 87380 has no DONE_PERIODIC and procs per target hit).",
+    raw_overrides={'AttributesEx': 2147483648, 'AttributesEx2': 1, 'AttributesEx4': 32768, 'ShapeshiftMask': 145, 'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives you a $16961h% chance to gain an additional $/10;16959s1 Rage anytime you land a direct damage critical strike while in Bear Form or Dire Bear Form. Rage is granted per target hit. Your critical strikes from Cat Form abilities that add combo points have a $16954h% chance to add an additional combo point. Periodic damage does not trigger either clause.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+heart_of_the_wild_17003 = spell(
+    id=17003,
+    name='Heart of the Wild',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=240,
+    notes='druid-rework FERAL §7 (5,1), trimmed 5->3 ranks (17006/24894 orphaned): rank 1/3 - eff0 Intellect -> Agility 3/6/9% (misc 1: the stock icon-240/INT form-boost block goes inert, CORE-AUDIT row 32); eff1 plain DUMMY -> APPLY_AURA DUMMY 2/4/6% (form-boost BP of 24899/24900); raw eff3 cleared.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Agility by $s1%. While in Cat Form your haste is increased by $s2%. While in Bear Form or Dire Bear Form your Stamina is increased by $s2% and your attack power is increased by $s2%.\n\n|cFF9D9D9DCapstone Bonus: While in Bear Form or Dire Bear Form, your maximum health is increased by $17005s3% of your Mastery, healing you receive from other players is increased by $17005s3% of your Mastery, and your Frenzied Regeneration heals for an additional $17005s3% of your Mastery. The external healing bonus is suppressed while Bestial Fury is active.|r', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+heart_of_the_wild_17004 = spell(
+    id=17004,
+    name='Heart of the Wild',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=240,
+    notes='druid-rework FERAL §7 (5,1), trimmed 5->3 ranks (17006/24894 orphaned): rank 2/3 - eff0 Intellect -> Agility 3/6/9% (misc 1: the stock icon-240/INT form-boost block goes inert, CORE-AUDIT row 32); eff1 plain DUMMY -> APPLY_AURA DUMMY 2/4/6% (form-boost BP of 24899/24900); raw eff3 cleared.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Agility by $s1%. While in Cat Form your haste is increased by $s2%. While in Bear Form or Dire Bear Form your Stamina is increased by $s2% and your attack power is increased by $s2%.\n\n|cFF9D9D9DCapstone Bonus: While in Bear Form or Dire Bear Form, your maximum health is increased by $17005s3% of your Mastery, healing you receive from other players is increased by $17005s3% of your Mastery, and your Frenzied Regeneration heals for an additional $17005s3% of your Mastery. The external healing bonus is suppressed while Bestial Fury is active.|r', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+heart_of_the_wild_17005 = spell(
+    id=17005,
+    name='Heart of the Wild',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=5000),
+    ],
+    spell_icon_id=240,
+    notes='druid-rework FERAL §7 (5,1), trimmed 5->3 ranks (17006/24894 orphaned): rank 3/3 - eff0 Intellect -> Agility 3/6/9% (misc 1: the stock icon-240/INT form-boost block goes inert, CORE-AUDIT row 32); eff1 plain DUMMY -> APPLY_AURA DUMMY 2/4/6% (form-boost BP of 24899/24900); raw eff3 cleared; capstone eff2 PERIODIC_DUMMY 5 s, 50 = % of Mastery (CORE-AUDIT row 29, spell_dru_heart_of_the_wild_mastery refreshes max health on a Mastery change).',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Agility by $s1%. While in Cat Form your haste is increased by $s2%. While in Bear Form or Dire Bear Form your Stamina is increased by $s2% and your attack power is increased by $s2%.\n\nCapstone Bonus: While in Bear Form or Dire Bear Form, your maximum health is increased by $17005s3% of your Mastery, healing you receive from other players is increased by $17005s3% of your Mastery, and your Frenzied Regeneration heals for an additional $17005s3% of your Mastery. The external healing bonus is suppressed while Bestial Fury is active.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+leader_of_the_pack_24932 = spell(
+    id=24932,
+    name='Leader of the Pack',
+    school=School.NORMAL,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AREA_AURA_RAID, base_points=4, implicit_target_a=1, apply_aura=AuraType.MOD_WEAPON_CRIT_PERCENT, radius_yards=100.0),
+        Effect(type=EffectType.APPLY_AREA_AURA_RAID, base_points=3, implicit_target_a=1, apply_aura=AuraType.DUMMY, radius_yards=45.0),
+        Effect(type=EffectType.APPLY_AREA_AURA_RAID, base_points=-1, implicit_target_a=1, apply_aura=AuraType.MOD_RATING, misc_value=768, radius_yards=45.0),
+    ],
+    spell_icon_id=312,
+    notes='druid-rework FERAL §7 (6,1): eff1 DUMMY -1 -> 3 (4% of base health heal, read by spell_dru_leader_of_the_pack_feral); DBC ProcTypeMask 4436 has no periodic flag.',
+    raw_overrides={'AttributesEx': 1024, 'AttributesEx4': 2097152, 'AttributesEx7': 268435456, 'ShapeshiftMask': 145, 'CastingTimeIndex': 1, 'ProcTypeMask': 4436, 'ProcChance': 100, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'While in Cat, Bear or Dire Bear Form, the Leader of the Pack increases ranged and melee critical chance of all party and raid members within $24932a1 yards by $24932s1%. Affected targets also heal themselves for $24932s2% of their base health when they land a direct damage critical strike, no more than once every 6 sec.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases ranged and melee critical chance by $s1%. Direct damage critical strikes heal you for $s2% of your base health, no more than once every 6 sec.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 7, 'SpellClassMask_2': 2048, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+heart_of_the_wild_bear_effect_24899 = spell(
+    id=24899,
+    name='Heart of the Wild Bear Effect',
+    school=School.NORMAL,
+    attributes=400,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.MOD_ATTACK_POWER_PCT),
+    ],
+    spell_icon_id=0,
+    notes='druid-rework FERAL §7 (5,1): Heart of the Wild bear form boost, cast by the shapeshift UnitScript - eff0 Stamina % (BP0 = HotW eff1), new eff1 AP % (BP1 = HotW eff1 + Feral Aggression eff1). Both BP-driven (ppl 0).',
+    raw_overrides={'AttributesEx': 1024, 'AttributesEx4': 2097152, 'ShapeshiftMask': 144, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+
+
+heart_of_the_wild_cat_effect_24900 = spell(
+    id=24900,
+    name='Heart of the Wild Cat Effect',
+    school=School.NORMAL,
+    attributes=400,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.MOD_ATTACK_POWER_PCT),
+    ],
+    spell_icon_id=0,
+    notes='druid-rework FERAL §7 (5,1): Heart of the Wild cat form boost, cast by the shapeshift UnitScript - eff0 AP % -> HASTE_ALL (BP0 = HotW eff1), new eff1 AP % (BP1 = Feral Aggression eff1). Both BP-driven (ppl 0).',
+    raw_overrides={'AttributesEx': 1024, 'AttributesEx4': 2097152, 'ShapeshiftMask': 1, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+
+
+feral_swiftness_passive_1a_24867 = spell(
+    id=24867,
+    name='Feral Swiftness Passive 1a',
+    school=School.NORMAL,
+    attributes=128,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    power_type=PowerType.ENERGY,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.MOD_INCREASE_SPEED),
+    ],
+    spell_icon_id=67,
+    notes='druid-rework FERAL §7 (2,0): Feral Swiftness form boost, cast by the shapeshift UnitScript - eff0 dodge -> MOD_INCREASE_SPEED, BP-driven (cat 10/20, bear half); cat/bear/dire bear ShapeshiftMask kept.',
+    raw_overrides={'AttributesEx': 1024, 'AttributesEx4': 2097152, 'ShapeshiftMask': SS_FERAL, 'CastingTimeIndex': 1, 'ProcChance': 101, 'BaseLevel': 8, 'SpellLevel': 8, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Increases movement speed.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement speed increased.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 7, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+survival_of_the_fittest_62069 = spell(
+    id=62069,
+    name='Elder Hide',
+    school=School.NORMAL,
+    attributes=400,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.MOD_BASE_RESISTANCE_PCT, misc_value=1),
+    ],
+    spell_icon_id=1558,
+    notes='druid-rework FERAL §7 (0,1): renamed Elder Hide - the bear item-armor boost, cast by the shapeshift UnitScript with BP0 = Elder Hide eff1 (10/20/30); both bears (Stances drop it on the next form change).',
+    raw_overrides={'ShapeshiftMask': SS_ANY_BEAR, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Increases your Armor contribution from cloth and leather items while in Bear Form or Dire Bear Form.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+savage_defense_62606 = spell(
+    id=62606,
+    name='Savage Defense',
+    school=School.NATURE,
+    attributes=262144,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=10000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.SCHOOL_ABSORB, misc_value=127),
+    ],
+    spell_icon_id=2323,
+    notes="druid-rework FERAL §7 (6,0) + §0.16 Q13: a plain all-schools absorb pool, BP-driven by spell_dru_savage_defense_talent (existing remaining absorb + % of armor); ProcTypeMask/ProcCharges dropped (the stock spell_proc row's ProcFlags 0 now resolves to 0 - never procs); stock spell_dru_savage_defense unbound; ShapeshiftMask 0x80 so entering Bestial Fury drops it. Icon matches its own talent (2323, was the stock 146 which collided with Primal Fury 801 - talent-tooltip-audit finding).",
+    raw_overrides={'ShapeshiftMask': SS_BEAR, 'CastingTimeIndex': 1, 'ProcChance': 100, 'BaseLevel': 1, 'SpellLevel': 1, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 14198, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Absorbs damage from all schools. Lasts $d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Absorbs damage from all schools.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 7, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_2': 1.0},
+)
+
+
+natural_reaction_57893 = spell(
+    id=57893,
+    name='Natural Reaction',
+    school=School.NORMAL,
+    dispel=DispelType.MAGIC,
+    attributes=134217728,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    effects=[
+        Effect(type=EffectType.ENERGIZE, base_points=49, implicit_target_a=1, misc_value=1),
+    ],
+    spell_icon_id=2862,
+    notes="druid-rework FERAL §7 (5,0): Natural Reaction's rage-on-dodge energize retuned to 5/10/15 rage.",
+    raw_overrides={'AttributesEx2': 4, 'CastingTimeIndex': 1, 'ProcChance': 101, 'BaseLevel': 60, 'SpellLevel': 60, 'DurationIndex': 0, 'EquippedItemClass': -1, 'SpellVisualID_1': 12490, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Generates $/10;s1 rage.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+natural_reaction_59071 = spell(
+    id=59071,
+    name='Natural Reaction',
+    school=School.NORMAL,
+    dispel=DispelType.MAGIC,
+    attributes=134217728,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    effects=[
+        Effect(type=EffectType.ENERGIZE, base_points=99, implicit_target_a=1, misc_value=1),
+    ],
+    spell_icon_id=2862,
+    notes="druid-rework FERAL §7 (5,0): Natural Reaction's rage-on-dodge energize retuned to 5/10/15 rage.",
+    raw_overrides={'AttributesEx2': 4, 'CastingTimeIndex': 1, 'ProcChance': 101, 'BaseLevel': 60, 'SpellLevel': 60, 'DurationIndex': 0, 'EquippedItemClass': -1, 'SpellVisualID_1': 12490, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Generates $/10;s1 rage.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+natural_reaction_59072 = spell(
+    id=59072,
+    name='Natural Reaction',
+    school=School.NORMAL,
+    dispel=DispelType.MAGIC,
+    attributes=134217728,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    effects=[
+        Effect(type=EffectType.ENERGIZE, base_points=149, implicit_target_a=1, misc_value=1),
+    ],
+    spell_icon_id=2862,
+    notes="druid-rework FERAL §7 (5,0): Natural Reaction's rage-on-dodge energize retuned to 5/10/15 rage.",
+    raw_overrides={'AttributesEx2': 4, 'CastingTimeIndex': 1, 'ProcChance': 101, 'BaseLevel': 60, 'SpellLevel': 60, 'DurationIndex': 0, 'EquippedItemClass': -1, 'SpellVisualID_1': 12490, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Generates $/10;s1 rage.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+infected_wounds_58180 = spell(
+    id=58180,
+    name='Infected Wounds',
+    school=School.NATURE,
+    dispel=DispelType.DISEASE,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=5.0,
+    duration_ms=12000,
+    effects=[
+        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=-15, mechanic=8, implicit_target_a=6, apply_aura=AuraType.MOD_MELEE_HASTE),
+    ],
+    spell_icon_id=2857,
+    notes="druid-rework FERAL §7 (7,3): Infected Wounds' Mangle slow - eff0 movement snare removed, eff1 attack speed -7/-14/-20% flat (ppl 0); cast by spell_dru_mangle for the caster's rank.",
+    raw_overrides={'AttributesEx': 131208, 'AttributesEx2': 16777216, 'AttributesEx3': 131072, 'CastingTimeIndex': 1, 'ProcChance': 101, 'BaseLevel': 50, 'SpellLevel': 50, 'RangeIndex': 2, 'CumulativeAura': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 11569, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': "Your Mangle reduces the target's attack speed by $58180s2% for $58180d.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Attack speed slowed by $s2%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 7, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'NameSubtext_Lang_enUS': ''},
+)
+
+
+infected_wounds_58181 = spell(
+    id=58181,
+    name='Infected Wounds',
+    school=School.NATURE,
+    dispel=DispelType.DISEASE,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=5.0,
+    duration_ms=12000,
+    effects=[
+        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=-21, mechanic=8, implicit_target_a=6, apply_aura=AuraType.MOD_MELEE_HASTE),
+    ],
+    spell_icon_id=2857,
+    notes="druid-rework FERAL §7 (7,3): Infected Wounds' Mangle slow - eff0 movement snare removed, eff1 attack speed -7/-14/-20% flat (ppl 0); cast by spell_dru_mangle for the caster's rank.",
+    raw_overrides={'AttributesEx': 131208, 'AttributesEx3': 131072, 'CastingTimeIndex': 1, 'ProcChance': 101, 'BaseLevel': 50, 'SpellLevel': 50, 'RangeIndex': 2, 'CumulativeAura': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 11569, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': "Your Mangle reduces the target's attack speed by $58181s2% for $58181d.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Attack speed slowed by $s2%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 7, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'NameSubtext_Lang_enUS': ''},
+)
+
+
+bear_form_passive_1178 = spell(
+    id=1178,
+    name='Bear Form (Passive)',
+    school=School.NATURE,
+    attributes=80,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=369, implicit_target_a=1, apply_aura=AuraType.MOD_BASE_RESISTANCE_PCT, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, points_per_level=3.0, implicit_target_a=1, apply_aura=AuraType.MOD_ATTACK_POWER),
+    ],
+    spell_icon_id=107,
+    notes='druid-rework FERAL §0.16 / CORE-AUDIT row 37 + user decision 2026-09-24: the form-5 (Bestial Fury) passive, an identical copy of the Dire Bear passive 9635 (effects, values, BaseLevel/SpellLevel 10, no MaxLevel) so Bestial Fury keeps every bear passive; keeps its own ShapeshiftMask 16. Stock spell_dru_bear_form_passive unbound.',
+    raw_overrides={'ShapeshiftMask': SS_BESTIAL_FURY, 'CastingTimeIndex': 1, 'ProcChance': 101, 'BaseLevel': 10, 'SpellLevel': 10, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Passive', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712188, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 7, 'SpellClassMask_3': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+dire_bear_form_passive_9635 = spell(
+    id=9635,
+    name='Dire Bear Form (Passive)',
+    school=School.NATURE,
+    attributes=80,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=369, implicit_target_a=1, apply_aura=AuraType.MOD_BASE_RESISTANCE_PCT, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, points_per_level=3.0, implicit_target_a=1, apply_aura=AuraType.MOD_ATTACK_POWER),
+    ],
+    spell_icon_id=107,
+    notes="druid-rework FERAL §0.16 / CORE-AUDIT row 37 + user decision 2026-09-24: the form-8 passive is the everyday bear's at every level now, so it scales from level 10 - BaseLevel = SpellLevel = 10, no MaxLevel, eff2 attack power 30 + 3/level (stock Bear Form's values below 40, stock Dire Bear's from 40 on: 120 at 40, 240 at 80); eff0 armor contribution +370% and eff1 Stamina +25% flat at every level. Stock spell_dru_bear_form_passive unbound.",
+    raw_overrides={'ShapeshiftMask': SS_BEAR, 'CastingTimeIndex': 1, 'ProcChance': 101, 'BaseLevel': 10, 'SpellLevel': 10, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Passive', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712188, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 7, 'SpellClassMask_3': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+improved_barkskin_passive_66530 = spell(
+    id=66530,
+    name='Improved Barkskin (Passive)',
+    school=School.NATURE,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.MOD_BASE_RESISTANCE_PCT, misc_value=1),
+    ],
+    spell_icon_id=107,
+    notes='druid-rework FERAL §0.2 / PLAN §4.4: orphaned Improved Barkskin passive - dword 3 bit 0x20000 reclaimed for Upheaval (200422), only BEAR_FORM_PASSIVE left on it.',
+    raw_overrides={'AttributesEx2': 524288, 'ShapeshiftMask': 4, 'ShapeshiftExclude': 1073741843, 'CastingTimeIndex': 1, 'ProcChance': 101, 'BaseLevel': 10, 'SpellLevel': 10, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EffectBasePoints_2': -1, 'EffectBasePoints_3': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Passive', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712188, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 7, 'SpellClassMask_3': BEAR_FORM_PASSIVE, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+# ============================================================================
+# druid-rework FERAL WP-A: new trigger/buff spells (FERAL §2/§4/§7 with §0.16, WP-BRIEF §3). None of
+# them carries a family bit (FERAL §3a: no SpellMod or charge consumption may reach them). "BP-driven"
+# effects get their real value from CastCustomSpell in spell_druid_feral.cpp, so they have no level
+# scaling and their stored base point is only a placeholder.
+# ============================================================================
+
+
+def _feral_raw(desc, aura_desc=None, **extra):
+    raw = {
+        'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'EquippedItemClass': -1,
+        'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '',
+        'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': desc,
+        'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0,
+    }
+    if aura_desc is not None:
+        raw['AuraDescription_Lang_Mask'] = 16712190
+        raw['AuraDescription_Lang_enUS'] = aura_desc
+    raw.update(extra)
+    return raw
+
+
+def _feral_buff_kwargs(duration_ms, attributes=0):
+    return dict(school=School.NORMAL, attributes=attributes, cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0,
+                mana_cost=0, mana_cost_pct=0, range_yards=0.0, duration_ms=duration_ms)
+
+
+# SPELL_ATTR0_DO_NOT_DISPLAY | SPELL_ATTR0_DO_NOT_LOG - hidden helper auras.
+_HIDDEN_AURA_ATTRIBUTES = 0x80 | 0x100
+# SPELL_ATTR3_NOT_A_PROC (SharedDefines.h): lets a triggered spell trigger other auras' procs
+# (SpellAuras.cpp Aura::IsProcTriggeredOnEvent).
+_SPELL_ATTR3_NOT_A_PROC = 0x00000200
+
+
+swell_200426 = spell(
+    id=200426, name='Swell', **_feral_buff_kwargs(20000),
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.MOD_SCALE),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2005,
+    notes="NEW (druid-rework FERAL §4 'Swell', WP-BRIEF §3/§4 item 6): +2% physical damage and +5% size per stack, 5 "
+          "stacks; ShapeshiftMask 0x10 = Bestial Fury only, so leaving Bestial Fury drops it. Every source goes through "
+          "Druid::AddSwell (15 sec in combat / 20 sec out, reset on gain); spell_dru_swell drops one stack on expiry.",
+    raw_overrides=_feral_raw(
+        "Increases your physical damage done by $s1% and your size by $s2% per stack.  Stacks up to $u times.  Lasts "
+        "15 sec in combat and $d out of combat; each new stack resets the duration, and when it expires one stack is "
+        "removed.",
+        "Physical damage done increased by $s1% per stack.",
+        CumulativeAura=5, ShapeshiftMask=SS_BESTIAL_FURY,
+    ),
+)
+scripted_by(swell_200426, 'spell_dru_swell')
+
+
+infected_wound_200427 = spell(
+    id=200427,
+    name='Infected Wound',
+    school=School.NATURE,
+    dispel=DispelType.DISEASE,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    duration_ms=4000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=26, points_per_level=5.105, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000),
+    ],
+    spell_icon_id=2857,
+    notes="NEW (druid-rework FERAL §11.3 with §0.16 Q9, WP-BRIEF §3): Infected Wounds' proc - one full Rake (the "
+          "level-24 Rake hit + 3 ticks = 107 -> 4 ticks of ~27, ppl = Rake's (2.839 + 3 x 5.857)/4 = 5.105; stored 26 "
+          "-> 27 at level 24, ~313 per tick at 80) over 4 sec as 4 Nature ticks, +0.0475 AP per tick (0.19 total). "
+          "Disease, melee DefenseType, no bleed mechanic (excluded from Primal Gore's Mastery), no family bit. Icon "
+          "2857 like the talent (note: spell_gen_black_magic_enchant's stock icon-2857 check lets it proc Black Magic, "
+          "the same as the stock Infected Wounds slow).",
+    raw_overrides=_feral_raw(
+        "Deals $o1 Nature damage over $d.",
+        "Taking $s1 Nature damage every $t1 sec.",
+        BaseLevel=24, SpellLevel=24, MaxLevel=80, DefenseType=2, RangeIndex=13,
+    ),
+)
+bonus_coefficients(infected_wound_200427, ap_dot=0.0475)
+
+
+shredded_defense_200428 = spell(
+    id=200428,
+    name='Shredded Defense',
+    school=School.NORMAL,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    duration_ms=6000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=6, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=565,
+    notes="NEW (druid-rework FERAL §7 (3,0) capstone, WP-BRIEF §3): +5% Physical damage taken from the caster per "
+          "stack, 3 stacks, 6 sec, per caster (§13 Q8); read by the Druid damage hooks. Cast by "
+          "spell_dru_shredding_attacks from behind. No family bit.",
+    raw_overrides=_feral_raw(
+        "Increases the Physical damage the target takes from the caster by $s1% per stack for $d.  Stacks up to $u "
+        "times.",
+        "Physical damage taken from the caster increased by $s1% per stack.",
+        CumulativeAura=3, RangeIndex=13,
+    ),
+)
+
+
+fury_swipe_200429 = spell(
+    id=200429,
+    name='Fury Swipe',
+    school=School.NORMAL,
+    attributes=262160,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=5.0,
+    effects=[
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, base_points=309, implicit_target_a=6),
+        Effect(type=EffectType.ENERGIZE, base_points=199, implicit_target_a=1, misc_value=1),
+    ],
+    spell_icon_id=4114,
+    notes="NEW (druid-rework FERAL §7 (4,1), WP-BRIEF §3): 310% weapon damage, non-normalized (uses the actual "
+          "swing); eff1 +20 rage, prevented outside bear by spell_dru_fury_swipe. Physical, melee DefenseType. "
+          "AttributesEx3 SPELL_ATTR3_NOT_A_PROC implements §13 Q7's default ('can crit, triggers Primal Fury and "
+          "Savage Defense'): without it a proc-triggered spell can't trigger other auras. No family bit. Visual: "
+          "Swipe (Bear)'s.",
+    raw_overrides=_feral_raw(
+        "Deals $s1% weapon damage.  In Bear Form, also generates $/10;s2 rage.",
+        DefenseType=2, PreventionType=2, RangeIndex=2, AttributesEx3=_SPELL_ATTR3_NOT_A_PROC, SpellVisualID_1=189,
+        EffectBonusMultiplier_1=1.0, DurationIndex=0,
+    ),
+)
+scripted_by(fury_swipe_200429, 'spell_dru_fury_swipe')
+
+
+nurturing_instinct_empower_200430 = spell(
+    id=200430, name='Nurturing Instinct', **_feral_buff_kwargs(15000),
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
+    ],
+    spell_icon_id=2254,
+    notes="NEW (druid-rework FERAL §7 (4,3), WP-BRIEF §3): 15 sec, 2 charges consumed by any feral damage ability "
+          "(§13 Q17); both SpellMods BP-driven (BP0 = BP1 = Nurturing Instinct eff1, 15/30) by "
+          "spell_dru_nurturing_instinct_empower.",
+    raw_overrides=_feral_raw(
+        "Your next $n melee abilities deal increased damage.",
+        "Your next melee abilities deal increased damage.",
+        ProcCharges=2,
+        EffectSpellClassMaskA_1=NURTURING_INSTINCT_DAMAGE[0], EffectSpellClassMaskA_2=NURTURING_INSTINCT_DAMAGE[1],
+        EffectSpellClassMaskA_3=NURTURING_INSTINCT_DAMAGE[2],
+        EffectSpellClassMaskB_1=NURTURING_INSTINCT_DOT[0], EffectSpellClassMaskB_2=NURTURING_INSTINCT_DOT[1],
+        EffectSpellClassMaskB_3=NURTURING_INSTINCT_DOT[2],
+    ),
+)
+
+
+feral_instinct_buff_200431 = spell(
+    id=200431, name='Feral Instinct', **_feral_buff_kwargs(6000),
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=127),
+    ],
+    spell_icon_id=103,
+    notes="NEW (druid-rework FERAL §7 (1,0), WP-BRIEF §3): Tiger's Fury companion, all damage +1/2/3% (BP-driven from "
+          "Feral Instinct eff0; spell_dru_tiger_s_fury_feral matches Tiger's Fury's duration).",
+    raw_overrides=_feral_raw("Increases all damage you deal.", "All damage dealt increased."),
+)
+
+
+king_of_the_jungle_energy_200432 = spell(
+    id=200432, name='King of the Jungle', **_feral_buff_kwargs(10000),
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.PERIODIC_ENERGIZE, amplitude=1000, misc_value=3),
+    ],
+    spell_icon_id=2850,
+    notes="NEW (druid-rework FERAL §7 (8,0), WP-BRIEF §3): energy over 10 sec after Tiger's Fury - BP-driven energy per "
+          "tick (King of the Jungle eff1 / 10: 2/4/6 per sec = 20/40/60 total).",
+    raw_overrides=_feral_raw("Restores energy over $d.", "Restoring energy."),
+)
+
+
+stampede_bear_200433 = spell(
+    id=200433, name='Stampede', **_feral_buff_kwargs(10000),
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COST),
+    ],
+    spell_icon_id=1559,
+    notes="NEW (druid-rework FERAL §7 (2,0) capstone, WP-BRIEF §3): cast by spell_dru_feral_charge after Feral Charge "
+          "(Bear) with Feral Swiftness r2 - next Mangle (Bear) costs no rage (1 charge, 10 sec, §13 Q19); the cooldown "
+          "reset is the script's.",
+    raw_overrides=_feral_raw(
+        "Your next Mangle (Bear) costs no rage.", "Your next Mangle (Bear) costs no rage.",
+        ProcCharges=1, EffectSpellClassMaskA_2=MANGLE_BEAR,
+    ),
+)
+
+
+stampede_cat_200434 = spell(
+    id=200434, name='Stampede', **_feral_buff_kwargs(10000),
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COST),
+    ],
+    spell_icon_id=3930,
+    notes="NEW (druid-rework FERAL §7 (2,0) capstone, WP-BRIEF §3): cast by spell_dru_feral_charge after Feral Charge "
+          "(Cat) with Feral Swiftness r2 - next Ravage costs no energy (1 charge, 10 sec); the no-stealth part is "
+          "spell_dru_ravage (CheckCast) which also removes this aura after the cast.",
+    raw_overrides=_feral_raw(
+        "Your next Ravage costs no energy and does not require stealth.",
+        "Your next Ravage costs no energy and does not require stealth.",
+        ProcCharges=1, EffectSpellClassMaskA_1=RAVAGE,
+    ),
+)
+
+
+improved_mangle_rage_200435 = spell(
+    id=200435, name='Improved Mangle', **_feral_buff_kwargs(None),
+    effects=[
+        Effect(type=EffectType.ENERGIZE, base_points=149, implicit_target_a=1, misc_value=1),
+    ],
+    spell_icon_id=2312,
+    notes="NEW (druid-rework FERAL §7 (8,2) capstone, WP-BRIEF §3): +15 rage, cast by spell_dru_mangle (Mangle (Bear), "
+          "25% x (1 + Proc Chance)).",
+    raw_overrides=_feral_raw("Generates $/10;s1 rage.", DurationIndex=0),
+)
+
+
+rend_and_tear_crit_200436 = spell(
+    id=200436, name='Rend and Tear', **_feral_buff_kwargs(10000, attributes=_HIDDEN_AURA_ATTRIBUTES),
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
+    ],
+    spell_icon_id=494,
+    notes="NEW (druid-rework CORE-AUDIT row 24, WP-BRIEF §3): hidden 1-charge crit helper - the CanPrepare hook casts it "
+          "with BP0 = Rend and Tear eff1 before a Ferocious Bite on a target with the caster's Rip or Lacerate, and "
+          "removes it on any other Ferocious Bite/Rip prepare (Rip shares dword 1 0x800000).",
+    raw_overrides=_feral_raw("Ferocious Bite critical strike chance increased.", ProcCharges=1,
+                             EffectSpellClassMaskA_1=RIP_FEROCIOUS_BITE),
+)
+
+
+bestial_fury_rage_200437 = spell(
+    id=200437, name='Bestial Fury', **_feral_buff_kwargs(-1, attributes=_HIDDEN_AURA_ATTRIBUTES),
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.MOD_RAGE_FROM_DAMAGE_DEALT),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.MECHANIC_IMMUNITY, misc_value=17),
+    ],
+    spell_icon_id=2229,
+    notes="NEW (druid-rework FERAL §0.16 + WP-BRIEF §4 item 2): hidden aura linked to Bestial Fury 200425 "
+          "(linked_spell type 2, druid_talents.py) - +50% rage from damage dealt (Unit::RewardRage) and the Polymorph "
+          "immunity Bear Form 5487's own eff1 gives (Bestial Fury replaces that aura).",
+    raw_overrides=_feral_raw("Rage from damage dealt increased by $s1%.  Immune to Polymorph effects."),
+)
+
+
+# ============================================================================
+# druid-rework FERAL WP-A: new talent ranks (FERAL §7, WP-BRIEF §3). "DUMMY" values the C++ reads are
+# APPLY_AURA + DUMMY (a plain SPELL_EFFECT_DUMMY creates no AuraEffect for GetRankAmount to find - Resto
+# code-review lesson). Capstones follow PLAN §2 (every rank carries the clause; grey below max).
+# None of these carries a ShapeshiftMask except Fury Swipes (145) and Savage Defense (0x80) (WP-BRIEF §3).
+# ============================================================================
+
+
+def _cap_lower(rank_text, clause):
+    return f"{rank_text}\n\n|cFF9D9D9DCapstone Bonus: {clause}|r"
+
+
+def _cap_final(rank_text, clause):
+    return f"{rank_text}\n\nCapstone Bonus: {clause}"
+
+
+def _feral_talent_raw(desc, **extra):
+    return _feral_raw(desc, AuraDescription_Lang_Mask=16712188, EffectBonusMultiplier_1=1.0, **extra)
+
+
+def _aura(aura, base_points, misc_value=0, **kwargs):
+    return Effect(type=EffectType.APPLY_AURA, base_points=base_points, implicit_target_a=1, apply_aura=aura,
+                  misc_value=misc_value, **kwargs)
+
+
+# (0,1) Elder Hide - talent 794 (was Thick Hide), capstone r3
+_ELDER_HIDE_TEXT = ("Increases your Stamina by $s1%.  Increases the Armor contribution from cloth and leather items while "
+                    "in Bear Form or Dire Bear Form by $s2%.")
+_ELDER_HIDE_CLAUSE = ("Your Ironfur increases the healing you receive from other players by $200442s3% per stack.")
+_ELDER_HIDE_NOTES = ("NEW (druid-rework FERAL §7 (0,1), WP-BRIEF §3), talent 794 (was Thick Hide): eff0 Stamina "
+                     "1/2/3%; eff1 DUMMY 10/20/30 = bear item-armor % (form-boost BP0 of 62069 'Elder Hide'); r3 eff2 "
+                     "DUMMY 4 = healing received from other players per Ironfur stack (healing hook).")
+elder_hide_200440 = spell(
+    id=200440, name='Elder Hide', **_dru_passive_talent_kwargs(),
+    effects=[_aura(AuraType.MOD_TOTAL_STAT_PERCENTAGE, 0, 2), _aura(AuraType.DUMMY, 9)],
+    spell_icon_id=1558, notes=_ELDER_HIDE_NOTES + " Rank 1/3.",
+    raw_overrides=_feral_talent_raw(_cap_lower(_ELDER_HIDE_TEXT, _ELDER_HIDE_CLAUSE)),
+)
+elder_hide_200441 = spell(
+    id=200441, name='Elder Hide', **_dru_passive_talent_kwargs(),
+    effects=[_aura(AuraType.MOD_TOTAL_STAT_PERCENTAGE, 1, 2), _aura(AuraType.DUMMY, 19)],
+    spell_icon_id=1558, notes=_ELDER_HIDE_NOTES + " Rank 2/3.",
+    raw_overrides=_feral_talent_raw(_cap_lower(_ELDER_HIDE_TEXT, _ELDER_HIDE_CLAUSE)),
+)
+elder_hide_200442 = spell(
+    id=200442, name='Elder Hide', **_dru_passive_talent_kwargs(),
+    effects=[_aura(AuraType.MOD_TOTAL_STAT_PERCENTAGE, 2, 2), _aura(AuraType.DUMMY, 29), _aura(AuraType.DUMMY, 3)],
+    spell_icon_id=1558, notes=_ELDER_HIDE_NOTES + " Rank 3/3 (capstone).",
+    raw_overrides=_feral_talent_raw(_cap_final(_ELDER_HIDE_TEXT, _ELDER_HIDE_CLAUSE)),
+)
+
+
+# (0,2) Primal Attunement - minted talent 60040
+_PRIMAL_ATTUNEMENT_NOTES = ("NEW (druid-rework FERAL §7 (0,2) + §13 Q6), talent 60040: percentage Mastery "
+                            "(MOD_CUSTOM_STAT_PCT misc 1<<CR_MASTERY) +2/4/6.")
+primal_attunement_200443 = spell(
+    id=200443, name='Primal Attunement', **_dru_passive_talent_kwargs(),
+    effects=[_aura(AuraType.MOD_CUSTOM_STAT_PCT, 1, 1 << CombatRating.MASTERY)],
+    spell_icon_id=2382, notes=_PRIMAL_ATTUNEMENT_NOTES + " Rank 1/3.",
+    raw_overrides=_feral_talent_raw("Increases your Mastery by $s1%."),
+)
+primal_attunement_200444 = spell(
+    id=200444, name='Primal Attunement', **_dru_passive_talent_kwargs(),
+    effects=[_aura(AuraType.MOD_CUSTOM_STAT_PCT, 3, 1 << CombatRating.MASTERY)],
+    spell_icon_id=2382, notes=_PRIMAL_ATTUNEMENT_NOTES + " Rank 2/3.",
+    raw_overrides=_feral_talent_raw("Increases your Mastery by $s1%."),
+)
+primal_attunement_200445 = spell(
+    id=200445, name='Primal Attunement', **_dru_passive_talent_kwargs(),
+    effects=[_aura(AuraType.MOD_CUSTOM_STAT_PCT, 5, 1 << CombatRating.MASTERY)],
+    spell_icon_id=2382, notes=_PRIMAL_ATTUNEMENT_NOTES + " Rank 3/3.",
+    raw_overrides=_feral_talent_raw("Increases your Mastery by $s1%."),
+)
+
+
+# (1,2) Flesh Render - minted talent 60041
+_FLESH_RENDER_TEXT = ("Increases the damage of your Lacerate by $s1%.  Your Lacerate has a $s3% chance to apply an "
+                      "additional application.")
+_FLESH_RENDER_NOTES = ("NEW (druid-rework FERAL §7 (1,2), WP-BRIEF §3), talent 60041: +10/20/30% Lacerate hit (DAMAGE) "
+                       "and bleed (DOT); eff2 DUMMY 10/20/30 = extra-application chance (spell_dru_lacerate, x (1 + "
+                       "Proc Chance)).")
+flesh_render_200446 = spell(
+    id=200446, name='Flesh Render', **_dru_passive_talent_kwargs(),
+    effects=[
+        _aura(AuraType.ADD_PCT_MODIFIER, 9, SpellModOp.DAMAGE),
+        _aura(AuraType.ADD_PCT_MODIFIER, 9, SpellModOp.DOT),
+        _aura(AuraType.DUMMY, 9),
+    ],
+    spell_icon_id=3777, notes=_FLESH_RENDER_NOTES + " Rank 1/3.",
+    raw_overrides=_feral_talent_raw(_FLESH_RENDER_TEXT, EffectSpellClassMaskA_2=LACERATE, EffectSpellClassMaskB_2=LACERATE),
+)
+flesh_render_200447 = spell(
+    id=200447, name='Flesh Render', **_dru_passive_talent_kwargs(),
+    effects=[
+        _aura(AuraType.ADD_PCT_MODIFIER, 19, SpellModOp.DAMAGE),
+        _aura(AuraType.ADD_PCT_MODIFIER, 19, SpellModOp.DOT),
+        _aura(AuraType.DUMMY, 19),
+    ],
+    spell_icon_id=3777, notes=_FLESH_RENDER_NOTES + " Rank 2/3.",
+    raw_overrides=_feral_talent_raw(_FLESH_RENDER_TEXT, EffectSpellClassMaskA_2=LACERATE, EffectSpellClassMaskB_2=LACERATE),
+)
+flesh_render_200448 = spell(
+    id=200448, name='Flesh Render', **_dru_passive_talent_kwargs(),
+    effects=[
+        _aura(AuraType.ADD_PCT_MODIFIER, 29, SpellModOp.DAMAGE),
+        _aura(AuraType.ADD_PCT_MODIFIER, 29, SpellModOp.DOT),
+        _aura(AuraType.DUMMY, 29),
+    ],
+    spell_icon_id=3777, notes=_FLESH_RENDER_NOTES + " Rank 3/3.",
+    raw_overrides=_feral_talent_raw(_FLESH_RENDER_TEXT, EffectSpellClassMaskA_2=LACERATE, EffectSpellClassMaskB_2=LACERATE),
+)
+
+
+# (4,0) Rending Swipes - minted talent 60042
+_RENDING_SWIPES_TEXT = ("Increases the damage of your Thrash and Swipe by $s1%.  Targets affected by your Thrash bleed take "
+                        "$s3% increased damage from your Swipe and Upheaval.")
+_RENDING_SWIPES_NOTES = ("NEW (druid-rework FERAL §7 (4,0), WP-BRIEF §3), talent 60042: +10/20% Thrash (hit and bleed) "
+                         "and Swipe (Bear/Cat) damage; eff2 DUMMY 5/10 = bonus for Swipe (Bear/Cat) and Upheaval vs "
+                         "targets with the caster's Thrash (Druid damage hooks).")
+
+rending_swipes_200449 = spell(
+    id=200449, name='Rending Swipes', **_dru_passive_talent_kwargs(),
+    effects=[
+        _aura(AuraType.ADD_PCT_MODIFIER, 9, SpellModOp.DAMAGE),
+        _aura(AuraType.ADD_PCT_MODIFIER, 9, SpellModOp.DOT),
+        _aura(AuraType.DUMMY, 4),
+    ],
+    spell_icon_id=4001, notes=_RENDING_SWIPES_NOTES + " Rank 1/2.",
+    raw_overrides=_feral_talent_raw(_RENDING_SWIPES_TEXT, EffectSpellClassMaskA_2=SWIPE_BEAR, EffectSpellClassMaskA_3=SWIPE_CAT | THRASH, EffectSpellClassMaskB_3=THRASH),
+)
+
+rending_swipes_200450 = spell(
+    id=200450, name='Rending Swipes', **_dru_passive_talent_kwargs(),
+    effects=[
+        _aura(AuraType.ADD_PCT_MODIFIER, 19, SpellModOp.DAMAGE),
+        _aura(AuraType.ADD_PCT_MODIFIER, 19, SpellModOp.DOT),
+        _aura(AuraType.DUMMY, 9),
+    ],
+    spell_icon_id=4001, notes=_RENDING_SWIPES_NOTES + " Rank 2/2.",
+    raw_overrides=_feral_talent_raw(_RENDING_SWIPES_TEXT, EffectSpellClassMaskA_2=SWIPE_BEAR, EffectSpellClassMaskA_3=SWIPE_CAT | THRASH, EffectSpellClassMaskB_3=THRASH),
+)
+
+
+
+# (4,1) Fury Swipes - minted talent 60043. The chance lives in procs_on (Proc Chance applies automatically,
+# SpellAuras.cpp); raw ProcChance only feeds the tooltip's $h.
+_FURY_SWIPES_TEXT = ("Your autoattacks in Cat Form or Bear Form have a $h% chance to cause a Fury Swipe, dealing "
+                     "$200429s1% weapon damage.  In Bear Form, Fury Swipe also generates $/10;200429s2 rage.  Cannot "
+                     "occur more than once every 3 sec.  Chance is modified by Proc Chance.")
+_FURY_SWIPES_NOTES = ("NEW (druid-rework FERAL §7 (4,1), WP-BRIEF §3), talent 60043: autoattacks proc Fury Swipe 200429 "
+                      "3/5/8% (3 sec ICD), cat/bear/dire bear only (ShapeshiftMask 145).")
+
+fury_swipes_200451 = spell(
+    id=200451, name='Fury Swipes', **_dru_passive_talent_kwargs(),
+    effects=[
+        _aura(AuraType.PROC_TRIGGER_SPELL, -1, trigger_spell=fury_swipe_200429.id),
+    ],
+    spell_icon_id=4114, notes=_FURY_SWIPES_NOTES + " Rank 1/3.",
+    raw_overrides=_feral_talent_raw(_FURY_SWIPES_TEXT, ShapeshiftMask=SS_FERAL, ProcChance=3),
+)
+
+procs_on(fury_swipes_200451, proc_flags=PROC_FLAG_DONE_MELEE_AUTO_ATTACK,
+         hit_mask=PROC_HIT_NORMAL | PROC_HIT_CRITICAL, chance=3, cooldown_ms=3000)
+
+fury_swipes_200452 = spell(
+    id=200452, name='Fury Swipes', **_dru_passive_talent_kwargs(),
+    effects=[
+        _aura(AuraType.PROC_TRIGGER_SPELL, -1, trigger_spell=fury_swipe_200429.id),
+    ],
+    spell_icon_id=4114, notes=_FURY_SWIPES_NOTES + " Rank 2/3.",
+    raw_overrides=_feral_talent_raw(_FURY_SWIPES_TEXT, ShapeshiftMask=SS_FERAL, ProcChance=5),
+)
+
+procs_on(fury_swipes_200452, proc_flags=PROC_FLAG_DONE_MELEE_AUTO_ATTACK,
+         hit_mask=PROC_HIT_NORMAL | PROC_HIT_CRITICAL, chance=5, cooldown_ms=3000)
+
+fury_swipes_200453 = spell(
+    id=200453, name='Fury Swipes', **_dru_passive_talent_kwargs(),
+    effects=[
+        _aura(AuraType.PROC_TRIGGER_SPELL, -1, trigger_spell=fury_swipe_200429.id),
+    ],
+    spell_icon_id=4114, notes=_FURY_SWIPES_NOTES + " Rank 3/3.",
+    raw_overrides=_feral_talent_raw(_FURY_SWIPES_TEXT, ShapeshiftMask=SS_FERAL, ProcChance=8),
+)
+
+procs_on(fury_swipes_200453, proc_flags=PROC_FLAG_DONE_MELEE_AUTO_ATTACK,
+         hit_mask=PROC_HIT_NORMAL | PROC_HIT_CRITICAL, chance=8, cooldown_ms=3000)
+
+
+
+# (4,2) Bloodletting - minted talent 60044, capstone r2
+_BLOODLETTING_TEXT = "Increases the damage of your Rip and Rake by $s1%."
+_BLOODLETTING_CLAUSE = ("Your Rake reduces the cooldown of Tiger's Fury by $200455s3 sec.  Cannot occur more than once "
+                        "every 3 sec.")
+_BLOODLETTING_NOTES = ("NEW (druid-rework FERAL §7 (4,2), WP-BRIEF §3), talent 60044: +8/15% Rake hit (DAMAGE) and Rake/"
+                       "Rip bleed (DOT, Rip via its Rip-only dword 3 bit).")
+
+bloodletting_200454 = spell(
+    id=200454, name='Bloodletting', **_dru_passive_talent_kwargs(),
+    effects=[
+        _aura(AuraType.ADD_PCT_MODIFIER, 7, SpellModOp.DAMAGE),
+        _aura(AuraType.ADD_PCT_MODIFIER, 7, SpellModOp.DOT),
+    ],
+    spell_icon_id=2770, notes=_BLOODLETTING_NOTES + " Rank 1/2.",
+    raw_overrides=_feral_talent_raw(_cap_lower(_BLOODLETTING_TEXT, _BLOODLETTING_CLAUSE), EffectSpellClassMaskA_1=RAKE, EffectSpellClassMaskB_1=RAKE, EffectSpellClassMaskB_3=RIP),
+)
+
+bloodletting_200455 = spell(
+    id=200455, name='Bloodletting', **_dru_passive_talent_kwargs(),
+    effects=[
+        _aura(AuraType.ADD_PCT_MODIFIER, 14, SpellModOp.DAMAGE),
+        _aura(AuraType.ADD_PCT_MODIFIER, 14, SpellModOp.DOT),
+        _aura(AuraType.DUMMY, 2),
+    ],
+    spell_icon_id=2770, notes=_BLOODLETTING_NOTES + " Rank 2/2 (capstone): eff2 DUMMY 3 = seconds off Tiger's Fury per Rake (spell_dru_rake, 3 sec ICD).",
+    raw_overrides=_feral_talent_raw(_cap_final(_BLOODLETTING_TEXT, _BLOODLETTING_CLAUSE), EffectSpellClassMaskA_1=RAKE, EffectSpellClassMaskB_1=RAKE, EffectSpellClassMaskB_3=RIP),
+)
+
+
+
+# (5,3) Bonebreaker - talent 797 (was Brutal Impact), capstone r3. CORE-AUDIT row 25 (C2 accepted): aura 163
+# multiplies the whole 200% crit, so spell_dru_bonebreaker sets the amount to P/2 x Swell stacks (x (1 + 1.5 x
+# Mastery%) with the capstone); the stored value is P = 14/27/40 points per stack.
+_BONEBREAKER_TEXT = "Your Swell also increases your critical strike damage by $s1% per stack."
+_BONEBREAKER_CLAUSE = "The critical strike damage per stack is increased by $200458s2% of your Mastery."
+_BONEBREAKER_NOTES = ("NEW (druid-rework FERAL §7 (5,3) + §0.16 Q1/Q15, WP-BRIEF §3), talent 797: eff0 aura 163 misc 1 "
+                      "(physical) P = 14/27/40 points per Swell stack, recalculated by spell_dru_bonebreaker on every "
+                      "Swell change; every crit incl. periodic while Swell is up.")
+
+bonebreaker_200456 = spell(
+    id=200456, name='Bonebreaker', **_dru_passive_talent_kwargs(),
+    effects=[
+        _aura(AuraType.MOD_CRIT_DAMAGE_BONUS, 13, 1),
+    ],
+    spell_icon_id=599, notes=_BONEBREAKER_NOTES + " Rank 1/3.",
+    raw_overrides=_feral_talent_raw(_cap_lower(_BONEBREAKER_TEXT, _BONEBREAKER_CLAUSE)),
+)
+
+bonebreaker_200457 = spell(
+    id=200457, name='Bonebreaker', **_dru_passive_talent_kwargs(),
+    effects=[
+        _aura(AuraType.MOD_CRIT_DAMAGE_BONUS, 26, 1),
+    ],
+    spell_icon_id=599, notes=_BONEBREAKER_NOTES + " Rank 2/3.",
+    raw_overrides=_feral_talent_raw(_cap_lower(_BONEBREAKER_TEXT, _BONEBREAKER_CLAUSE)),
+)
+
+bonebreaker_200458 = spell(
+    id=200458, name='Bonebreaker', **_dru_passive_talent_kwargs(),
+    effects=[
+        _aura(AuraType.MOD_CRIT_DAMAGE_BONUS, 39, 1),
+        _aura(AuraType.DUMMY, 149),
+    ],
+    spell_icon_id=599, notes=_BONEBREAKER_NOTES + " Rank 3/3 (capstone): eff1 DUMMY 150 = % of Mastery.",
+    raw_overrides=_feral_talent_raw(_cap_final(_BONEBREAKER_TEXT, _BONEBREAKER_CLAUSE)),
+)
+
+
+
+# (6,0) Savage Defense - talent 1793 (was Primal Tenacity); the old passive 62600 is untrained in druid_talents.py.
+_SAVAGE_DEFENSE_TEXT = ("Each time you land a direct damage critical strike while in Bear Form or Dire Bear Form, you add "
+                        "an absorb equal to $s1% of your current armor to Savage Defense.  The pool lasts $62606d.  "
+                        "Cannot occur more than once every 3 sec.  Does not function while Bestial Fury is active.  "
+                        "Periodic damage does not trigger this effect.")
+_SAVAGE_DEFENSE_NOTES = ("NEW (druid-rework FERAL §7 (6,0), WP-BRIEF §3), talent 1793: eff0 DUMMY 4/8 = % of current "
+                         "armor added to the 62606 absorb pool (x2 during Berserk) by spell_dru_savage_defense_talent; "
+                         "ShapeshiftMask 0x80 (everyday bear only - off in Bestial Fury). procs_on: direct melee crits, no "
+                         "DONE_PERIODIC, 3 sec ICD.")
+
+savage_defense_200459 = spell(
+    id=200459, name='Savage Defense', **_dru_passive_talent_kwargs(),
+    effects=[
+        _aura(AuraType.DUMMY, 3),
+    ],
+    spell_icon_id=2323, notes=_SAVAGE_DEFENSE_NOTES + " Rank 1/2.",
+    raw_overrides=_feral_talent_raw(_SAVAGE_DEFENSE_TEXT, ShapeshiftMask=SS_BEAR),
+)
+
+procs_on(savage_defense_200459, proc_flags=PROC_FLAG_DONE_MELEE_AUTO_ATTACK | PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS,
+         spell_type_mask=PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=PROC_SPELL_PHASE_HIT,
+         hit_mask=PROC_HIT_CRITICAL, chance=100, cooldown_ms=3000)
+
+savage_defense_200460 = spell(
+    id=200460, name='Savage Defense', **_dru_passive_talent_kwargs(),
+    effects=[
+        _aura(AuraType.DUMMY, 7),
+    ],
+    spell_icon_id=2323, notes=_SAVAGE_DEFENSE_NOTES + " Rank 2/2.",
+    raw_overrides=_feral_talent_raw(_SAVAGE_DEFENSE_TEXT, ShapeshiftMask=SS_BEAR),
+)
+
+procs_on(savage_defense_200460, proc_flags=PROC_FLAG_DONE_MELEE_AUTO_ATTACK | PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS,
+         spell_type_mask=PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=PROC_SPELL_PHASE_HIT,
+         hit_mask=PROC_HIT_CRITICAL, chance=100, cooldown_ms=3000)
+
+
+
+# (6,3) Sabertooth - talent 1798 (was Improved Leader of the Pack)
+_SABERTOOTH_TEXT = ("Your Ferocious Bite extends the duration of your Rip on the target by $s1 sec, up to a maximum of 1.5 "
+                    "times its original duration.")
+_SABERTOOTH_NOTES = ("NEW (druid-rework FERAL §7 (6,3), WP-BRIEF §3), talent 1798: eff0 DUMMY 2/4/6 = seconds added to the "
+                     "caster's Rip by spell_dru_ferocious_bite (cap 1.5 x the modded max duration, before the pro-rated "
+                     "final tick).")
+
+sabertooth_200461 = spell(
+    id=200461, name='Sabertooth', **_dru_passive_talent_kwargs(),
+    effects=[
+        _aura(AuraType.DUMMY, 1),
+    ],
+    spell_icon_id=293, notes=_SABERTOOTH_NOTES + " Rank 1/3.",
+    raw_overrides=_feral_talent_raw(_SABERTOOTH_TEXT),
+)
+
+sabertooth_200462 = spell(
+    id=200462, name='Sabertooth', **_dru_passive_talent_kwargs(),
+    effects=[
+        _aura(AuraType.DUMMY, 3),
+    ],
+    spell_icon_id=293, notes=_SABERTOOTH_NOTES + " Rank 2/3.",
+    raw_overrides=_feral_talent_raw(_SABERTOOTH_TEXT),
+)
+
+sabertooth_200463 = spell(
+    id=200463, name='Sabertooth', **_dru_passive_talent_kwargs(),
+    effects=[
+        _aura(AuraType.DUMMY, 5),
+    ],
+    spell_icon_id=293, notes=_SABERTOOTH_NOTES + " Rank 3/3.",
+    raw_overrides=_feral_talent_raw(_SABERTOOTH_TEXT),
+)
+
+
+
+# (8,3) Splintering Blows - talent 1796 (was Mangle). CORE-AUDIT row 23: a crit SpellMod on Pulverize's own bit,
+# scaled by Swell stacks in spell_dru_splintering_blows (stored value = per-stack %).
+_SPLINTERING_BLOWS_TEXT = "Your Swell also increases the critical strike chance of your Pulverize by $s1% per stack."
+_SPLINTERING_BLOWS_NOTES = ("NEW (druid-rework FERAL §7 (8,3), WP-BRIEF §3), talent 1796: eff0 flat CRITICAL_CHANCE on "
+                            "Pulverize 4/8/12 per Swell stack (amount x stacks, recalculated on every Swell change).")
+
+splintering_blows_200464 = spell(
+    id=200464, name='Splintering Blows', **_dru_passive_talent_kwargs(),
+    effects=[
+        _aura(AuraType.ADD_FLAT_MODIFIER, 3, SpellModOp.CRITICAL_CHANCE),
+    ],
+    spell_icon_id=3998, notes=_SPLINTERING_BLOWS_NOTES + " Rank 1/3.",
+    raw_overrides=_feral_talent_raw(_SPLINTERING_BLOWS_TEXT, EffectSpellClassMaskA_3=PULVERIZE),
+)
+
+splintering_blows_200465 = spell(
+    id=200465, name='Splintering Blows', **_dru_passive_talent_kwargs(),
+    effects=[
+        _aura(AuraType.ADD_FLAT_MODIFIER, 7, SpellModOp.CRITICAL_CHANCE),
+    ],
+    spell_icon_id=3998, notes=_SPLINTERING_BLOWS_NOTES + " Rank 2/3.",
+    raw_overrides=_feral_talent_raw(_SPLINTERING_BLOWS_TEXT, EffectSpellClassMaskA_3=PULVERIZE),
+)
+
+splintering_blows_200466 = spell(
+    id=200466, name='Splintering Blows', **_dru_passive_talent_kwargs(),
+    effects=[
+        _aura(AuraType.ADD_FLAT_MODIFIER, 11, SpellModOp.CRITICAL_CHANCE),
+    ],
+    spell_icon_id=3998, notes=_SPLINTERING_BLOWS_NOTES + " Rank 3/3.",
+    raw_overrides=_feral_talent_raw(_SPLINTERING_BLOWS_TEXT, EffectSpellClassMaskA_3=PULVERIZE),
+)
+
+
+
+# (9,0) Iron Hide - minted talent 60045
+_IRON_HIDE_TEXT = ("Your Ironfur also reduces magic damage taken by $/10;s1% per stack.  Each cast of Ironfur reduces "
+                   "the cooldown of Barkskin by 1 sec, no more than once every 1 sec.")
+_IRON_HIDE_NOTES = ("NEW (druid-rework FERAL §7 (9,0), WP-BRIEF §3), talent 60045: eff0 DUMMY 6/12/20 = tenths of a "
+                    "percent of magic damage reduction per Ironfur stack (Druid damage-taken hooks); spell_dru_ironfur "
+                    "takes 1 sec off Barkskin per cast (1 sec ICD, Barkskin's 30 sec floor applies).")
+
+iron_hide_200467 = spell(
+    id=200467, name='Iron Hide', **_dru_passive_talent_kwargs(),
+    effects=[
+        _aura(AuraType.DUMMY, 5),
+    ],
+    spell_icon_id=2015, notes=_IRON_HIDE_NOTES + " Rank 1/3.",
+    raw_overrides=_feral_talent_raw(_IRON_HIDE_TEXT),
+)
+
+iron_hide_200468 = spell(
+    id=200468, name='Iron Hide', **_dru_passive_talent_kwargs(),
+    effects=[
+        _aura(AuraType.DUMMY, 11),
+    ],
+    spell_icon_id=2015, notes=_IRON_HIDE_NOTES + " Rank 2/3.",
+    raw_overrides=_feral_talent_raw(_IRON_HIDE_TEXT),
+)
+
+iron_hide_200469 = spell(
+    id=200469, name='Iron Hide', **_dru_passive_talent_kwargs(),
+    effects=[
+        _aura(AuraType.DUMMY, 19),
+    ],
+    spell_icon_id=2015, notes=_IRON_HIDE_NOTES + " Rank 3/3.",
+    raw_overrides=_feral_talent_raw(_IRON_HIDE_TEXT),
+)
+
+
+
+# (9,2) Primal Gore ranks 2-3 (63503 is rank 1). CORE-AUDIT row 25 (C2): CRIT_DAMAGE_BONUS acts on the crit's
+# extra damage, so +30/60/100% of it = x1.15/1.30/1.50 of a 200% crit.
+_PRIMAL_GORE_TEXT = "Increases the critical strike damage of your bleeds by ${$m1/2}%."
+_PRIMAL_GORE_CLAUSE = "While in Cat Form, your bleed damage is increased by $200471s2% of your Mastery."
+_PRIMAL_GORE_NOTES = ("NEW (druid-rework FERAL §1/§7 (9,2), WP-BRIEF §3): Primal Gore grows 1 -> 3 ranks; eff0 "
+                      "ADD_PCT_MODIFIER CRIT_DAMAGE_BONUS on the feral bleeds (Rake, Lacerate, Rip, Thrash).")
+
+primal_gore_200470 = spell(
+    id=200470, name='Primal Gore', **_dru_passive_talent_kwargs(),
+    effects=[
+        _aura(AuraType.ADD_PCT_MODIFIER, 59, SpellModOp.CRIT_DAMAGE_BONUS),
+    ],
+    spell_icon_id=262, notes=_PRIMAL_GORE_NOTES + " Rank 2/3 (+60% of the extra = x1.30).",
+    raw_overrides=_feral_talent_raw(_cap_lower(_PRIMAL_GORE_TEXT, _PRIMAL_GORE_CLAUSE), EffectSpellClassMaskA_1=FERAL_BLEEDS[0], EffectSpellClassMaskA_2=FERAL_BLEEDS[1], EffectSpellClassMaskA_3=FERAL_BLEEDS[2]),
+)
+
+primal_gore_200471 = spell(
+    id=200471, name='Primal Gore', **_dru_passive_talent_kwargs(),
+    effects=[
+        _aura(AuraType.ADD_PCT_MODIFIER, 99, SpellModOp.CRIT_DAMAGE_BONUS),
+        _aura(AuraType.DUMMY, 99),
+    ],
+    spell_icon_id=262, notes=_PRIMAL_GORE_NOTES + " Rank 3/3 (capstone, +100% of the extra = x1.50): eff1 DUMMY 100 = % of Mastery added to cat-form bleed damage (Druid::ApplyDoneDamagePctMods).",
+    raw_overrides=_feral_talent_raw(_cap_final(_PRIMAL_GORE_TEXT, _PRIMAL_GORE_CLAUSE), EffectSpellClassMaskA_1=FERAL_BLEEDS[0], EffectSpellClassMaskA_2=FERAL_BLEEDS[1], EffectSpellClassMaskA_3=FERAL_BLEEDS[2]),
 )

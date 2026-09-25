@@ -11931,6 +11931,8 @@ void Player::SetSelection(ObjectGuid guid)
 
     if (NeedSendSpectatorData())
         ArenaSpectator::SendCommand_GUID(FindMap(), GetGUID(), "TRG", guid);
+
+    RetargetComboPoints(guid); // Custom: combo points follow the hostile selection (ComboPointMechanics.cpp)
 }
 
 void Player::SetGroup(Group* group, int8 subgroup)
