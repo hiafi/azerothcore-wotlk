@@ -132,7 +132,7 @@ class Spell:
     power_type: int = 0
     mana_cost: int | None = None
     mana_cost_pct: int | None = None
-    range_yards: float | None = None
+    range_yards: float | str | None = None  # or constants.RANGE_SELF
     radius_yards: float | None = None
     duration_ms: int | None = None
     effects: list[Effect | None] = field(default_factory=list)

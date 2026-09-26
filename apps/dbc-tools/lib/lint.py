@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+from lib.dsl.constants import RANGE_SELF, RANGE_SELF_INDEX
 from lib.dsl.registry import looks_player_castable
 
 # SpellModOp values (SpellDefines.h) that only ever make sense scoped to
@@ -295,6 +296,12 @@ def check_raw_override_typed_mismatch(
             typed_value = entry.get(field) or 0
             if not typed_value:
                 continue
+            if typed_value == RANGE_SELF:
+                if overrides[column] != RANGE_SELF_INDEX:
+                    warnings.append(_mismatch_warning(
+                        spell_id, name, column, repr(overrides[column]), field, typed_value,
+                    ))
+                continue
             index_row = index_tables.get(table_name, {}).get(overrides[column])
             if index_row is None:
                 continue  # raw index doesn't resolve to anything live - not this check's job
@@ -335,6 +342,67 @@ def check_raw_override_typed_mismatch(
                             ))
     return warnings
 
+
+
+# Targets.h/SharedDefines.h `Targets` values that aim at the cast's explicit unit target (or a
+# destination taken from it) - i.e. the ones where Spell::CheckRange measures caster -> some
+# *other* unit. Channel targets (76/77) are left out: they're whatever the channel already hit.
+_EXPLICIT_UNIT_TARGETS = {
+    6,   # TARGET_UNIT_TARGET_ENEMY
+    21,  # TARGET_UNIT_TARGET_ALLY
+    25,  # TARGET_UNIT_TARGET_ANY
+    35,  # TARGET_UNIT_TARGET_PARTY
+    45,  # TARGET_UNIT_TARGET_CHAINHEAL_ALLY
+    53,  # TARGET_DEST_TARGET_ENEMY
+    57,  # TARGET_UNIT_TARGET_RAID
+    61,  # TARGET_UNIT_TARGET_AREA_RAID_CLASS
+    63, 64, 65, 66, 67, 68, 69, 70, 71,  # TARGET_DEST_TARGET_ANY / _FRONT ... _FRONT_LEFT
+    74,  # TARGET_DEST_TARGET_RANDOM
+    75,  # TARGET_DEST_TARGET_RADIUS
+    90,  # TARGET_UNIT_TARGET_MINIPET
+    95,  # TARGET_UNIT_TARGET_PASSENGER
+}
+
+
+def check_zero_range_unit_target(entries: list[dict]) -> list[str]:
+    """Flags a spell that builds with RangeIndex 0 (`range_yards` 0/unset and no raw
+    `RangeIndex` override) while one of its effects targets another unit. RangeIndex 0 means no
+    SpellRange row, so `GetSpellMaxRangeForTarget` returns 0 and `Spell::CheckRange` - which runs
+    for triggered casts too, `TRIGGERED_FULL_MASK` doesn't skip it - fails OUT_OF_RANGE unless
+    the target is in melee contact. No log line, the spell just never lands (Fury of Elune,
+    Starfire cleave, Swarming Rot, Brambles silence, Halo healing-taken - docs/bugs-and-fixes.md).
+
+    Give it a real range (`range_yards=50000.0` "Anywhere" for a script-cast trigger), or mark a
+    genuine no-range spell with `range_yards=RANGE_SELF` (SpellRange 1, which CheckRange skips) or an
+    explicit raw `RangeIndex`. Self-only spells (every effect on the caster) are exempt - the
+    range check never runs against the caster itself.
+
+    Like check_raw_override_typed_mismatch, pass the *full* declared population, not
+    spell_resolved.entries - an unchanged, still-live broken row would otherwise never be seen."""
+    warnings: list[str] = []
+    for entry in entries:
+        notes = entry.get("notes") or ""
+        if notes.strip() == "pulled from existing data":
+            continue
+        if entry.get("range_yards") or "RangeIndex" in (entry.get("raw_overrides") or {}):
+            continue
+        targets = {
+            effect.get(key)
+            for i in (1, 2, 3)
+            if (effect := entry.get(f"effect{i}"))
+            for key in ("implicit_target_a", "implicit_target_b")
+        }
+        hits = sorted(targets & _EXPLICIT_UNIT_TARGETS)
+        if not hits:
+            continue
+        warnings.append(
+            f"spell {entry['id']} ({entry.get('name', '?')}): range_yards is 0/unset (RangeIndex "
+            f"0 = 0 yd max range) but an effect targets another unit (implicit target {hits}), "
+            f"so Spell::CheckRange fails it OUT_OF_RANGE beyond melee contact - triggered casts "
+            f"included. Set a real range_yards (50000.0 = Anywhere for a script-cast trigger), "
+            f"or range_yards=RANGE_SELF if it really has no range."
+        )
+    return warnings
 
 # SpellMgr.h/.cpp's SpellMgr::LoadSpellLinked, verified against the real source (review,
 # 2026-09-23 - see lib/dsl/registry.py's comment above _SPELL_LINKED_MAX_SPELLS for the full

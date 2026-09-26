@@ -311,6 +311,10 @@ def main() -> int:
     # wrongly concluded all nine PLAN A9 spells were already fixed).
     for warning in lint.check_raw_override_typed_mismatch(spell_entries, existing_secondary_by_id):
         print(f"WARNING: {warning}")
+    # Same full-population scan: RangeIndex 0 on a spell aimed at another unit fails CheckRange
+    # silently (Fury of Elune's beam did no damage - docs/bugs-and-fixes.md).
+    for warning in lint.check_zero_range_unit_target(spell_entries):
+        print(f"WARNING: {warning}")
     talent_rows = [build.build_talent_row(e) for e in talent_resolved.entries]
     talenttab_rows = [build.build_talenttab_row(e) for e in talenttab_resolved.entries]
     skilllineability_rows = [

@@ -18,6 +18,7 @@ regenerating with no new distinct values reuses every ID it used last time.
 from __future__ import annotations
 
 from . import dbcfile, dbcfmt
+from .dsl.constants import RANGE_SELF, RANGE_SELF_INDEX
 
 
 class IdBlockExhausted(Exception):
@@ -161,7 +162,9 @@ class ReuseContext:
             },
         )
 
-    def range_index(self, range_yards: float | None) -> int:
+    def range_index(self, range_yards: float | str | None) -> int:
+        if range_yards == RANGE_SELF:
+            return RANGE_SELF_INDEX
         if not range_yards:
             return 0
         match = {

@@ -142,18 +142,34 @@ prints a `WARNING:`, almost always a typo.
 
 Five scripts each own a patch letter: `generate.py` → `patch-Z.mpq` (Spell/Talent/Item/…),
 `build_patch_m.py` → `patch-M.mpq` (SpellVisual*/CreatureDisplayInfo/CreatureModelData/
-GameObjectDisplayInfo + `SPELLS/` models), `build_patch_i.py` → `patch-I.mpq` (`SpellIcon.dbc` +
-`Interface/Icons/*.blp`), `patch_gt_tables.py` → `patch-Y.mpq` (GT tables), `build_patch_f.py` →
-`patch-F.mpq` (Bear/Cat Form model assets only — its CreatureModelData/CreatureDisplayInfo rows, IDs
-90100–90299, are written to the shared working copy and ship in patch-M; see
-`docs/shapeshift-appearances.md`). The client loads lettered patches alphabetically and the
-**highest letter wins per file**, so a DBC packed into two archives is silently served from
+GameObjectDisplayInfo/SoundEntries + `SPELLS/` models and `SOUND/` sounds), `build_patch_i.py` →
+`patch-I.mpq` (`SpellIcon.dbc` + `Interface/Icons/*.blp`), `patch_gt_tables.py` → `patch-Y.mpq` (GT
+tables), `build_patch_f.py` → `patch-F.mpq` (Bear/Cat Form model assets only — its
+CreatureModelData/CreatureDisplayInfo rows, IDs 90100–90299, are written to the shared working copy
+and ship in patch-M; see `docs/shapeshift-appearances.md`). The client loads lettered patches
+alphabetically and the **highest letter wins per file**, so a DBC packed into two archives is silently served from
 whichever has the later letter — usually a stale copy. That's exactly what blanked every custom
 `SpellIcon` row minted after patch-M's last rebuild (patch-M was sweeping the shared
 `var/model-visual-dbc/DBFilesClient/` dir wholesale; `docs/bugs-and-fixes.md`). `build_patch_m.py`
 now has a `NOT_OURS` skip-set — extend it, don't remove it, if another script starts keeping its
 working copy in that directory. Diagnostic when a client ignores a DBC row the plumbing says is
 right: `for p in <patch-root>/Data/patch-*.mpq; do smpq -l $p | grep -i <table>.dbc; done`.
+
+## Mined spell visuals and sounds (`patch_{mage,priest,druid}_vfx_models.py`)
+
+These scripts sit outside `generate.py` and write rows straight into the working-copy DBCs in
+`var/model-visual-dbc/DBFilesClient/`. `build_patch_m.py` then ships the rows. Each spell's DSL
+source only points `SpellVisualID_1` at the minted `SpellVisual` row. The full mining procedure
+and the custom ID ranges in use are in `docs/ascension-asset-mining.md` Part 3. Two traps:
+
+- **A kit's `SoundID` must exist in our `SoundEntries.dbc`.** A sound ID copied from Ascension is
+  silently ignored. Mint a row with `_sound_row()` (`patch_priest_vfx_models.py`) and put the
+  `.wav` in `var/model-visual-dbc/SOUND/`.
+- **A model needs all its textures.** Read the `.m2`'s texture table and ship every texture stock
+  doesn't have, or the model renders as nothing.
+
+After running one of these scripts, run `build_patch_m.py`. Also apply the `--sql-out` migration if
+the script changed `SpellVisual`, which the server loads.
 
 ## Load-bearing gotcha: `EffectSpellClassMask{A,B,C}_{1,2,3}`
 

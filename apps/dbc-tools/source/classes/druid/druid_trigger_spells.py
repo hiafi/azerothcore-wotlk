@@ -579,7 +579,7 @@ natural_shapeshifter_16833 = spell(
     ],
     spell_icon_id=122,
     notes="druid-rework RESTO §8 (0,2), moved from (1,2): replaces the stock shapeshift-cost-reduction effects with two APPLY_AURA+DUMMY markers Druid::ApplyShapeshiftFormBonuses reads (CORE-AUDIT row 16) - eff1 is the 2/4/6% bucket (bear physical dmg, moonkin Arcane+Nature dmg), eff2 is the 1/2/3% bucket (cat crit, no-form/Tree of Life healing). 200573 (druid_trigger_spells.py) is the no-form healing buff it casts. scripted_by: spell_dru_natural_shapeshifter (AuraScript, Apply/Remove REAL) re-evaluates on learn/login/unlearn. Code-review fix: both markers were plain SPELL_EFFECT_DUMMY, so the talent had zero aura effects and neither the C++ reads nor the AuraScript's Apply/Remove hooks ever fired.",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Bear Form: physical damage increased by $s1%. Cat Form: melee critical strike chance increased by $s2%. Moonkin Form: Arcane and Nature damage increased by $s1%. No form or Tree of Life: healing increased by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Your shapeshifts no longer trigger the global cooldown (reduced to 1 sec).|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Bear Form: physical damage increased by $s1%. Cat Form: melee critical strike chance increased by $s2%. Moonkin Form: Arcane and Nature damage increased by $s1%. No form or Tree of Life: healing increased by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Reduces the global cooldown of your shapeshifts to 1 sec.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -601,7 +601,7 @@ natural_shapeshifter_16834 = spell(
     ],
     spell_icon_id=122,
     notes='druid-rework RESTO §8 (0,2): rank 2 of the DUMMY-marker rewrite above.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Bear Form: physical damage increased by $s1%. Cat Form: melee critical strike chance increased by $s2%. Moonkin Form: Arcane and Nature damage increased by $s1%. No form or Tree of Life: healing increased by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Your shapeshifts no longer trigger the global cooldown (reduced to 1 sec).|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Bear Form: physical damage increased by $s1%. Cat Form: melee critical strike chance increased by $s2%. Moonkin Form: Arcane and Nature damage increased by $s1%. No form or Tree of Life: healing increased by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Reduces the global cooldown of your shapeshifts to 1 sec.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -623,8 +623,8 @@ natural_shapeshifter_16835 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-501, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.GLOBAL_COOLDOWN),
     ],
     spell_icon_id=122,
-    notes="druid-rework RESTO §8 (0,2): rank 3, the capstone rank - duration_ms 6000->-1 (permanent while learned, matching the other capstone-carrying ranks); new eff3 flat GLOBAL_COOLDOWN -500 ms scoped to SHAPESHIFT_FORMS (C_1/C_2) - shapeshifts no longer trigger the GCD (clamped to 1000 ms floor, Spell.cpp:9256, hence the tooltip's 'reduced to 1 sec').",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Bear Form: physical damage increased by $s1%. Cat Form: melee critical strike chance increased by $s2%. Moonkin Form: Arcane and Nature damage increased by $s1%. No form or Tree of Life: healing increased by $s2%.\n\nCapstone Bonus: Your shapeshifts no longer trigger the global cooldown (reduced to 1 sec).', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_1': SHAPESHIFT_FORMS[0], 'EffectSpellClassMaskC_2': SHAPESHIFT_FORMS[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework RESTO §8 (0,2): rank 3, the capstone rank - duration_ms 6000->-1 (permanent while learned, matching the other capstone-carrying ranks); new eff3 flat GLOBAL_COOLDOWN -500 ms scoped to SHAPESHIFT_FORMS (C_1/C_2) - shapeshift GCD drops to 1 sec (clamped to 1000 ms floor, Spell.cpp:9256).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Bear Form: physical damage increased by $s1%. Cat Form: melee critical strike chance increased by $s2%. Moonkin Form: Arcane and Nature damage increased by $s1%. No form or Tree of Life: healing increased by $s2%.\n\nCapstone Bonus: Reduces the global cooldown of your shapeshifts to 1 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_1': SHAPESHIFT_FORMS[0], 'EffectSpellClassMaskC_2': SHAPESHIFT_FORMS[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 scripted_by(natural_shapeshifter_16833, 'spell_dru_natural_shapeshifter')
 scripted_by(natural_shapeshifter_16834, 'spell_dru_natural_shapeshifter')
@@ -5231,7 +5231,7 @@ insect_swarm_200352 = spell(
     category_cooldown_ms=0,
     mana_cost=0,
     mana_cost_pct=0,
-    range_yards=0.0,
+    range_yards=50000.0,  # script-cast on a unit: RangeIndex 0 = 0yd, fails CheckRange
     duration_ms=14000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=23, points_per_level=2.5, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
@@ -5253,13 +5253,13 @@ brambles_silence_200353 = spell(
     category_cooldown_ms=0,
     mana_cost=0,
     mana_cost_pct=0,
-    range_yards=0.0,
+    range_yards=100.0,
     duration_ms=4000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-1, mechanic=Mechanic.SILENCE, implicit_target_a=6, apply_aura=27),
     ],
     spell_icon_id=53,
-    notes='NEW (druid-rework BALANCE §6 row 4,3 capstone): cast by spell_dru_brambles_silence (AuraScript on 16840, WP-B) whenever the caster\'s Entangling Roots takes effect',
+    notes='NEW (druid-rework BALANCE §6 row 4,3 capstone): cast by spell_dru_brambles_silence (AuraScript on 16840, WP-B) whenever the caster\'s Entangling Roots takes effect; range_yards 100 (not 0): Spell::CheckRange runs even for triggered casts, and RangeIndex 0 means max range 0 so the silence failed OUT_OF_RANGE beyond melee',
     raw_overrides={'DefenseType': 1, 'PreventionType': 2, 'SpellClassSet': 7, 'ProcChance': 101, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Silenced.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Silenced.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
@@ -5554,7 +5554,7 @@ starfire_cleave_200337 = spell(
     category_cooldown_ms=0,
     mana_cost=0,
     mana_cost_pct=0,
-    range_yards=0.0,
+    range_yards=50000.0,  # script-cast on a unit: RangeIndex 0 = 0yd, fails CheckRange
     effects=[
         Effect(type=EffectType.SCHOOL_DAMAGE, base_points=59, die_sides=15, points_per_level=7.15, implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
     ],
@@ -5575,13 +5575,13 @@ fury_of_elune_beam_200338 = spell(
     category_cooldown_ms=0,
     mana_cost=0,
     mana_cost_pct=0,
-    range_yards=0.0,
+    range_yards=50000.0,  # script-cast on a unit: RangeIndex 0 = 0yd, fails CheckRange
     effects=[
         Effect(type=EffectType.SCHOOL_DAMAGE, base_points=39, points_per_level=0.6666666666666666, implicit_target_a=6),
     ],
     spell_icon_id=3698,
-    notes='NEW (druid-rework BALANCE §5 "Fury of Elune"): live damage every 0.5s tick, scales with level (learn 60, level-60 value 40 -> ppl 40/60); cast by the 200336 AuraScript\'s OnEffectPeriodic (WP-B)',
-    raw_overrides={'BaseLevel': 60, 'SpellLevel': 60, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'SpellClassMask_3': FURY_OF_ELUNE, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes $s1 Astral damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+    notes='NEW (druid-rework BALANCE §5 "Fury of Elune"): live damage every 0.5s tick, scales with level (learn 60, level-60 value 40 -> ppl 40/60); cast by the 200336 AuraScript\'s OnEffectPeriodic (WP-B); SpellVisualID_1 90020 (patch_druid_vfx_models.py): stock Moonfire impact + Fury of Elune damage-impact sound on every tick, under the beam 200336 carries',
+    raw_overrides={'BaseLevel': 60, 'SpellLevel': 60, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'SpellClassMask_3': FURY_OF_ELUNE, 'SpellVisualID_1': 90020, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes $s1 Astral damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 bonus_coefficients(fury_of_elune_beam_200338, direct=0.1)
 
@@ -5596,7 +5596,7 @@ fury_of_elune_splash_200339 = spell(
     category_cooldown_ms=0,
     mana_cost=0,
     mana_cost_pct=0,
-    range_yards=0.0,
+    range_yards=50000.0,  # script-cast on a unit: RangeIndex 0 = 0yd, fails CheckRange
     effects=[
         Effect(type=EffectType.SCHOOL_DAMAGE, base_points=19, points_per_level=0.3333333333333333, implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
     ],

@@ -713,17 +713,21 @@ namespace Druid
             if (amplitude <= 0)
                 continue;
 
-            uint32 const extraTicks = uint32(windowMs) / uint32(amplitude);
-            if (!extraTicks)
-                continue;
-
             uint8 const effIndex = effect->GetEffIndex();
             Aura* const expected = aura;
 
-            for (uint32 tick = 1; tick <= extraTicks; ++tick)
-            {
-                int32 const offset = int32(tick) * amplitude / 2;
+            // Doubling the tick rate = one extra tick halfway between every pair of regular ticks
+            // inside the window. The next regular tick fires in GetPeriodicTimer() ms, so the
+            // nearest upcoming midpoint is half an amplitude before it (or, if that's already
+            // past, half an amplitude after it); from there, one every amplitude until the window
+            // closes. (Offsets of tick * amplitude / 2 from "now" bunched every extra tick into
+            // the first few seconds, often on top of a regular tick.)
+            int32 firstOffset = effect->GetPeriodicTimer() - amplitude / 2;
+            if (firstOffset < 0)
+                firstOffset += amplitude;
 
+            for (int32 offset = firstOffset; offset < windowMs; offset += amplitude)
+            {
                 // The event lives on `target`'s own m_Events, so it dies with `target` - the raw
                 // pointer capture is safe (Karazhan's boss_shade_of_aran precedent). The aura itself
                 // may have been removed/refreshed by the time this fires, so it is re-resolved by

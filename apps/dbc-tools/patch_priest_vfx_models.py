@@ -78,6 +78,27 @@ def _row(table: dbcfmt.DbcTable, id_: int, **fields) -> dict:
     return row
 
 
+SOUND_FLAG_LOOPING = 512  # what every stock "...loop" spell sound sets
+
+
+def _sound_row(id_: int, name: str, files: list[str], *, min_distance: float, cutoff: float,
+               flags: int = 0, eax: int = 0) -> dict:
+    """A SoundEntries.dbc row for sound files shipped in var/model-visual-dbc/SOUND/ (packed at
+    Sound\\Spells\\ by build_patch_m.py). Field values come from the matching Ascension row, except
+    SoundEntriesAdvancedID (their SoundEntriesAdvanced.dbc rows don't exist in stock, so 0) and the
+    extension: Ascension ships .ogg, converted to 16-bit PCM .wav because stock 3.3.5a
+    SoundEntries never references an .ogg."""
+    row = _row(
+        dbcfmt.SOUNDENTRIES, id_,
+        SoundType=1, Name=name, DirectoryBase="Sound\\Spells", Volumefloat=1.0,
+        Flags=flags, MinDistance=min_distance, DistanceCutoff=cutoff, EAXDef=eax,
+    )
+    for i, f in enumerate(files, start=1):
+        row[f"File_{i}"] = f"{f}.wav"
+        row[f"Freq_{i}"] = 1
+    return row
+
+
 def _kit_row(id_: int, **fields) -> dict:
     row = _row(
         dbcfmt.SPELLVISUALKIT, id_,
@@ -166,6 +187,49 @@ def build_effect_name_rows() -> list[dict]:
     ]
 
 
+# --- SoundEntries.dbc (90005-90010) ---
+# The kits below originally pointed straight at Ascension's own SoundEntries IDs, none of which
+# exist in stock 3.3.5a (stock tops out at 18019), so every one of these cues was silent until
+# 2026-09-25. Minted here instead, continuing after patch_druid_vfx_models.py's 90001-90004.
+
+SOUND_HOLY_PRECAST_START_LARGE = 90005  # Ascension 89660
+SOUND_DIVINE_STAR_IMPACT = 90006        # Ascension 27193
+SOUND_SHINING_FORCE_IMPACT = 90007      # Ascension 89548
+SOUND_VOID_ERUPTION_PRECAST = 90008     # Ascension 90284
+SOUND_VOID_ERUPTION_CAST = 90009        # Ascension 90285
+SOUND_NEMESIS_CAST = 90010              # Ascension 283490 (a Demon Hunter sound, as Ascension wires it)
+
+
+def build_sound_rows() -> list[dict]:
+    return [
+        _sound_row(
+            SOUND_HOLY_PRECAST_START_LARGE, "spell_pr_revamp_holy_precast_start_large",
+            [f"spell_pr_revamp_holy_precast_start_large_0{i}" for i in (3, 2, 1)], min_distance=8.0, cutoff=45.0,
+        ),
+        _sound_row(
+            SOUND_DIVINE_STAR_IMPACT, "spell_pr_divinestar_impact",
+            [f"spell_pr_divinestar_impact0{i}" for i in (1, 2, 3, 4)], min_distance=8.0, cutoff=45.0,
+        ),
+        _sound_row(
+            SOUND_SHINING_FORCE_IMPACT, "spell_pr_revamp_shining_force_impact",
+            [f"spell_pr_revamp_shining_force_impact_0{i}" for i in (1, 2)], min_distance=8.0, cutoff=45.0,
+        ),
+        _sound_row(
+            SOUND_VOID_ERUPTION_PRECAST, "spell_pr_revamp_shadow_void_eruption_precast",
+            [f"spell_pr_revamp_shadow_void_eruption_precast_0{i}" for i in (2, 1)], min_distance=12.0, cutoff=35.0,
+        ),
+        _sound_row(
+            SOUND_VOID_ERUPTION_CAST, "spell_pr_revamp_shadow_void_eruption_cast",
+            [f"spell_pr_revamp_shadow_void_eruption_cast_0{i}" for i in (3, 2, 1)], min_distance=8.0, cutoff=45.0,
+            eax=2,
+        ),
+        _sound_row(
+            SOUND_NEMESIS_CAST, "spell_dh_nemesis_cast",
+            [f"spell_dh_nemesis_cast_0{i}" for i in (4, 3, 2, 1)], min_distance=10.0, cutoff=45.0, eax=2,
+        ),
+    ]
+
+
 # --- SpellVisualKit.dbc (90008-90017) ---
 
 KIT_ANGELIC_FEATHER_CAST = 90008
@@ -194,7 +258,7 @@ def build_kit_rows() -> list[dict]:
     return [
         _kit_row(
             KIT_ANGELIC_FEATHER_CAST,
-            AnimID=54, SoundID=89660,
+            AnimID=54, SoundID=SOUND_HOLY_PRECAST_START_LARGE,
             LeftHandEffect=EFFECT_HOLY_PRECAST_LOW_HAND, RightHandEffect=EFFECT_HOLY_PRECAST_LOW_HAND,
         ),
         _kit_row(
@@ -207,25 +271,25 @@ def build_kit_rows() -> list[dict]:
             AnimID=53,
             LeftHandEffect=EFFECT_HOLY_PRECAST_LOW_HAND, RightHandEffect=EFFECT_HOLY_PRECAST_LOW_HAND,
         ),
-        _kit_row(KIT_DIVINE_STAR_IMPACT, AnimID=NOFIELD, ChestEffect=EFFECT_DIVINE_STAR_IMPACT, SoundID=27193, Flags=2048),
+        _kit_row(KIT_DIVINE_STAR_IMPACT, AnimID=NOFIELD, ChestEffect=EFFECT_DIVINE_STAR_IMPACT, SoundID=SOUND_DIVINE_STAR_IMPACT, Flags=2048),
         _kit_row(
             KIT_HALO_CAST,
-            AnimID=54, SoundID=89548, WorldEffect=EFFECT_HALO_CAST,
+            AnimID=54, SoundID=SOUND_SHINING_FORCE_IMPACT, WorldEffect=EFFECT_HALO_CAST,
             LeftHandEffect=EFFECT_HOLY_PRECAST_HIGH_HAND, RightHandEffect=EFFECT_HOLY_PRECAST_HIGH_HAND,
         ),
         _kit_row(
             KIT_VOID_ERUPTION_PRECAST,
-            AnimID=52, SoundID=90284,
+            AnimID=52, SoundID=SOUND_VOID_ERUPTION_PRECAST,
             LeftHandEffect=EFFECT_SHADOW_STRIKES_STATE_HAND, RightHandEffect=EFFECT_SHADOW_STRIKES_STATE_HAND,
         ),
         _kit_row(
             KIT_VOID_ERUPTION_CAST,
-            AnimID=54, SoundID=90285, BaseEffect=EFFECT_SHADOW_NOVA_CAST_STOCK,
+            AnimID=54, SoundID=SOUND_VOID_ERUPTION_CAST, BaseEffect=EFFECT_SHADOW_NOVA_CAST_STOCK,
             LeftHandEffect=EFFECT_SHADOW_STRIKES_STATE_HAND, RightHandEffect=EFFECT_SHADOW_STRIKES_STATE_HAND,
         ),
         _kit_row(
             KIT_LEAP_OF_FAITH_CAST,
-            ChestEffect=EFFECT_LEAP_OF_FAITH_TARGET_YELLOW, SoundID=283490,
+            ChestEffect=EFFECT_LEAP_OF_FAITH_TARGET_YELLOW, SoundID=SOUND_NEMESIS_CAST,
         ),
         _kit_row(KIT_LEAP_OF_FAITH_IMPACT, AnimID=NOFIELD, SoundID=5756, CharParamThree_4=2.5559700588928536e-05),
         _kit_row(
@@ -347,13 +411,14 @@ def main() -> None:
     args = parser.parse_args()
 
     added = 0
+    added += _merge(DBC_DIR / "SoundEntries.dbc", dbcfmt.SOUNDENTRIES, build_sound_rows())
     added += _merge(DBC_DIR / "SpellVisualEffectName.dbc", dbcfmt.SPELLVISUALEFFECTNAME, build_effect_name_rows())
     added += _merge(DBC_DIR / "SpellVisualKit.dbc", dbcfmt.SPELLVISUALKIT, build_kit_rows())
     added += _merge(DBC_DIR / "SpellVisual.dbc", dbcfmt.SPELLVISUAL, build_spellvisual_rows())
     added += _merge(DBC_DIR / "CreatureModelData.dbc", dbcfmt.CREATUREMODELDATA, [build_creature_model_row()])
     added += _merge(DBC_DIR / "CreatureDisplayInfo.dbc", dbcfmt.CREATUREDISPLAYINFO, [build_creature_display_row()])
     added += _merge(DBC_DIR / "GameObjectDisplayInfo.dbc", dbcfmt.GAMEOBJECTDISPLAYINFO, [build_gameobject_display_row()])
-    print(f"added {added} row(s) across the 6 working-copy DBCs (0 means everything already existed)")
+    print(f"added {added} row(s) across the 7 working-copy DBCs (0 means everything already existed)")
 
     if args.sql_out:
         args.sql_out.write_text(build_pending_sql())

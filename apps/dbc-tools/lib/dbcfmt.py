@@ -362,6 +362,9 @@ SPELLVISUAL = DbcTable(
         "MissileCastOffsetX", "MissileCastOffsetY", "MissileCastOffsetZ",
         "MissileImpactOffsetX", "MissileImpactOffsetY", "MissileImpactOffsetZ",
     ),
+    # -1 = "no attachment" in the client file; the SQL overlay's columns are signed `int`, so an
+    # unsigned 4294967295 is rejected there (ERROR 1264 Out of range).
+    signed=frozenset({"MissileDestinationAttachment", "MissileAttachment"}),
 )
 
 SPELLVISUALKIT = DbcTable(
@@ -425,6 +428,25 @@ GAMEOBJECTDISPLAYINFO = DbcTable(
         "GeoBoxMaxX", "GeoBoxMaxY", "GeoBoxMaxZ", "ObjectEffectPackageID",
     ),
     read_as_string=frozenset({"ModelName"}),
+)
+
+# Not part of ALL_TABLES - patched directly by the one-off VFX scripts (patch_druid_vfx_models.py
+# first) when a mined SpellVisualKit.SoundID has no stock row. Server-loaded (DBCStores.cpp:
+# LOAD_DBC(sSoundEntriesStore, "SoundEntries.dbc", "soundentries_dbc")), but nothing server-side
+# ever looks up a sound that only a SpellVisualKit references, so these rows ship client-only.
+# Column names from data/sql/base/db_world/soundentries_dbc.sql. DBCfmt.h's SoundEntriesfmt is
+# all 'x' (AC reads only the ID); the 3 float columns are 'f' here and the string columns are in
+# read_as_string so the rows can actually be authored - same byte layout either way.
+SOUNDENTRIES = DbcTable(
+    name="SoundEntries",
+    dbc_filename="SoundEntries.dbc",
+    sql_table="soundentries_dbc",
+    fmt="n" + "x" * 23 + "f" + "x" + "ff" + "xx",
+    columns=_cols(
+        "ID", "SoundType", "Name", ("File", 10), ("Freq", 10), "DirectoryBase", "Volumefloat",
+        "Flags", "MinDistance", "DistanceCutoff", "EAXDef", "SoundEntriesAdvancedID",
+    ),
+    read_as_string=frozenset({"Name", *(f"File_{i}" for i in range(1, 11)), "DirectoryBase"}),
 )
 
 ALL_TABLES = (

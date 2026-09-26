@@ -433,8 +433,9 @@ namespace Druid
     // Flourish's tick-rate doubling (CORE-AUDIT row 21 correction #1 in the WP-B brief - explicitly
     // NO `AuraEffect::AccelerateTicks` core API/no SpellAuraEffects.h/.cpp edit). For every
     // SPELL_AURA_PERIODIC_HEAL effect on `aura` (skipping SpellAuraEffects.h's
-    // `IsFixedCadencePeriodic`), schedules floor(windowMs / amplitude) extra
-    // `AuraEffect::PeriodicTick()` calls at half-amplitude spacing on the aura owner's own
+    // `IsFixedCadencePeriodic`), schedules one extra `AuraEffect::PeriodicTick()` at the midpoint
+    // of every regular tick interval inside the window (phased off `GetPeriodicTimer()`, so the
+    // HoT ticks every amplitude/2 for `windowMs`) on the aura owner's own
     // `m_Events` (which dies with the owner, so the raw `Unit*` capture is safe); each scheduled
     // event re-resolves the aura by (ownerGuid-implicit via the same m_Events, casterGUID, base
     // spell id) and compares the resolved `Aura*` against the one captured at schedule time before

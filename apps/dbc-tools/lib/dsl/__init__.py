@@ -36,6 +36,7 @@ from .constants import (
     EffectType,
     Mechanic,
     PowerType,
+    RANGE_SELF,
     School,
     SpellModOp,
 )
@@ -52,6 +53,7 @@ from .registry import (
 )
 
 __all__ = [
+    "RANGE_SELF",
     "School",
     "PowerType",
     "DispelType",

@@ -270,3 +270,12 @@ class ShapeshiftForm(IntEnum):
     FLIGHT_EPIC = 27
     FLIGHT = 29
     MOONKIN = 31
+
+
+# `range_yards=RANGE_SELF` - the explicit "this spell really has no range" marker. It builds as
+# SpellRange.dbc ID 1 ("Self Only"), which Spell::CheckRange skips outright. A bare
+# `range_yards=0.0`/unset builds as RangeIndex 0 (no range entry = 0 yd max range), which still
+# fails OUT_OF_RANGE on any unit target beyond melee contact, triggered casts included - see
+# lib/lint.py's check_zero_range_unit_target and docs/bugs-and-fixes.md.
+RANGE_SELF = "self"
+RANGE_SELF_INDEX = 1

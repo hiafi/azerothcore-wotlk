@@ -4,7 +4,9 @@ Mage - spells that are never directly cast - proc/periodic-tick effects, trigger
 Split from a single source/classes/mage.py via split_class_file.py (.agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md) - see source/classes/README.md for the multi-file layout and lib/dsl/registry.py's load_class_package for how cross-file references (`from .mage_...` below) resolve.
 """
 
-from lib.dsl import AuraType, CombatRating, DispelType, Effect, EffectType, Mechanic, PowerType, School, SpellModOp
+from lib.dsl import (
+    RANGE_SELF, AuraType, CombatRating, DispelType, Effect, EffectType, Mechanic, PowerType, School, SpellModOp,
+)
 from lib.dsl.registry import bonus_coefficients, procs_on, scripted_by, spell
 
 
@@ -4485,13 +4487,14 @@ shattered_barrier_200021 = spell(
     cooldown_ms=0,
     category_cooldown_ms=0,
     mana_cost=0,
+    range_yards=RANGE_SELF,
     radius_yards=10.0,
     duration_ms=4000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-71, mechanic=Mechanic.SNARE, implicit_target_a=6, apply_aura=AuraType.MOD_DECREASE_SPEED, radius_yards=10.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=-71, mechanic=Mechanic.SNARE, implicit_target_a=22, implicit_target_b=15, apply_aura=AuraType.MOD_DECREASE_SPEED, radius_yards=10.0),
     ],
     spell_icon_id=2945,
-    notes="Frost Mage rework (docs/frost-mage-redesign.md sec 4 Row 7, Shattered Barrier capstone). Triggered only (spell_mage_ice_barrier_aura::AfterEffectAbsorb, spell_mage.cpp), cast on the caster (TARGET_UNIT_SRC_AREA_ENEMY, implicit_target_a=6 -- same area-enemy shape as Frozen Orb Pulse/Icy Bite/Icy Shatter) when Ice Barrier's shield is destroyed by damage, not merely expiring. -70% movement speed for 4 sec, 10 yd radius, matches spec exactly.",
+    notes="Frost Mage rework (docs/frost-mage-redesign.md sec 4 Row 7, Shattered Barrier capstone). Triggered only (spell_mage_ice_barrier_aura::AfterEffectAbsorb, spell_mage.cpp), cast on the caster, TARGET_SRC_CASTER + TARGET_UNIT_SRC_AREA_ENEMY (22/15) with Self Only range - Frost Nova's (122) exact shape (was implicit_target_a=6 TARGET_UNIT_TARGET_ENEMY, which aimed at the mage itself and never slowed anyone) when Ice Barrier's shield is destroyed by damage, not merely expiring. -70% movement speed for 4 sec, 10 yd radius, matches spec exactly.",
     raw_overrides={'SpellClassSet': 3, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Movement speed reduced.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'SpellLevel': 1},
 )
 

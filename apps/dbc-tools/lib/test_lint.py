@@ -16,6 +16,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from lib import lint  # noqa: E402
+from lib.dsl.constants import RANGE_SELF, RANGE_SELF_INDEX  # noqa: E402
+from lib.reuse import ReuseContext  # noqa: E402
 
 # A minimal index_tables fixture: two SpellCastTimes ids (16 and 30004) that both resolve to the
 # same 1500ms Base - the real-world pair the docstring/handoff calls out ("CastingTimeIndex 16 and
@@ -210,6 +212,54 @@ class CheckLinkedSpellKeyCollisionsTest(unittest.TestCase):
         self.assertEqual(lint._spell_linked_engine_key(585, 1), 200585)
         self.assertEqual(lint._spell_linked_engine_key(585, 2), 400585)
         self.assertEqual(lint._spell_linked_engine_key(-585, 1), -200585)
+
+
+class CheckZeroRangeUnitTargetTest(unittest.TestCase):
+    def test_zero_range_enemy_target_warns(self):
+        # Fury of Elune's beam (200338) as it shipped: range_yards=0.0 on a TARGET_UNIT_TARGET_ENEMY.
+        entry = _entry(id=200338, range_yards=0.0, effect1={"type": 2, "implicit_target_a": 6})
+        warnings = lint.check_zero_range_unit_target([entry])
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("200338", warnings[0])
+
+    def test_unset_range_dest_target_warns(self):
+        entry = _entry(effect1={"type": 2, "implicit_target_a": 53, "implicit_target_b": 16})
+        self.assertEqual(len(lint.check_zero_range_unit_target([entry])), 1)
+
+    def test_self_only_spell_does_not_warn(self):
+        entry = _entry(range_yards=0.0, effect1={"type": 6, "implicit_target_a": 1})
+        self.assertEqual(lint.check_zero_range_unit_target([entry]), [])
+
+    def test_real_range_does_not_warn(self):
+        entry = _entry(range_yards=50000.0, effect1={"type": 2, "implicit_target_a": 6})
+        self.assertEqual(lint.check_zero_range_unit_target([entry]), [])
+
+    def test_self_constant_does_not_warn(self):
+        entry = _entry(range_yards=RANGE_SELF, effect1={"type": 2, "implicit_target_a": 6})
+        self.assertEqual(lint.check_zero_range_unit_target([entry]), [])
+
+    def test_raw_range_index_override_does_not_warn(self):
+        entry = _entry(effect1={"type": 2, "implicit_target_a": 6}, raw_overrides={"RangeIndex": 1})
+        self.assertEqual(lint.check_zero_range_unit_target([entry]), [])
+
+    def test_pulled_from_existing_data_is_exempt(self):
+        entry = _entry(effect1={"type": 2, "implicit_target_a": 6}, notes="pulled from existing data")
+        self.assertEqual(lint.check_zero_range_unit_target([entry]), [])
+
+    def test_self_constant_builds_self_only_range_index(self):
+        ids_cfg = {
+            name: {"start": 1, "end": 1}
+            for name in ("spellcasttimes", "spellduration", "spellrange", "spellradius")
+        }
+        self.assertEqual(ReuseContext({}, ids_cfg).range_index(RANGE_SELF), RANGE_SELF_INDEX)
+
+    def test_self_constant_with_matching_raw_range_index_is_not_a_mismatch(self):
+        entry = _entry(range_yards=RANGE_SELF, raw_overrides={"RangeIndex": RANGE_SELF_INDEX})
+        self.assertEqual(lint.check_raw_override_typed_mismatch([entry], INDEX_TABLES), [])
+
+    def test_self_constant_with_other_raw_range_index_is_a_mismatch(self):
+        entry = _entry(range_yards=RANGE_SELF, raw_overrides={"RangeIndex": 6})
+        self.assertEqual(len(lint.check_raw_override_typed_mismatch([entry], INDEX_TABLES)), 1)
 
 
 if __name__ == "__main__":
