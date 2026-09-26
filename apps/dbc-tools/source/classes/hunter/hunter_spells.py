@@ -5,7 +5,7 @@ Split from a single source/classes/hunter.py via split_class_file.py (.agents/pl
 """
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, School
-from lib.dsl.registry import spell
+from lib.dsl.registry import spell, trained_by
 from .hunter_trigger_spells import volley_42243
 
 
@@ -690,6 +690,8 @@ tranquilizing_shot_19801 = spell(
     notes='pulled from existing data',
     raw_overrides={'AttributesEx2': 131072, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 18, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Attempts to remove $s1 Enrage and $s2 Magic effect from an enemy target.', 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 40.0, 'SpellClassMask_1': 65536, 'SpellClassMask_3': 256, 'SpellClassSet': 9, 'SpellLevel': 60, 'SpellVisualID_1': 560, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+# Only on a stock TrainerId no NPC uses; 204 is the live Hunter trainer (docs/spell_learn_level.md).
+trained_by(tranquilizing_shot_19801, trainer_id=204, req_level=60, money_cost=50000)
 
 
 track_demons_19878 = spell(
@@ -1104,6 +1106,8 @@ aspect_of_the_viper_34074 = spell(
     notes='pulled from existing data',
     raw_overrides={'ActiveIconID': 122, 'AttributesEx': 1024, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your ranged and melee attacks regenerate a percentage of your base mana, but your total damage done is reduced by $s2%.  In addition, you gain $s1% of maximum mana every $t sec.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The hunter takes on the aspect of the viper, causing ranged and melee attacks to regenerate mana but reducing your total damage done by $34074s2%.  In addition, you gain $s1% of maximum mana every $t sec.  Mana gained is based on the speed of your ranged weapon. Requires a ranged weapon. Only one Aspect can be active at a time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 69972, 'RangeIndex': 1, 'SpellClassMask_2': 262144, 'SpellClassSet': 9, 'SpellLevel': 20, 'SpellVisualID_1': 3399},
 )
+# Only on a stock TrainerId no NPC uses; 204 is the live Hunter trainer (docs/spell_learn_level.md).
+trained_by(aspect_of_the_viper_34074, trainer_id=204, req_level=20, money_cost=2200)
 
 
 misdirection_34477 = spell(
@@ -1680,6 +1684,8 @@ steady_shot_56641 = spell(
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
     raw_overrides={'AttributesEx2': 131072, 'AttributesEx4': 134217728, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 50, 'CastingTimeIndex': 16, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A steady shot that causes unmodified weapon damage, plus ammo, plus ${$RAP*0.1+$m1}.  Causes an additional $s2 against Dazed targets.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 40.0, 'SpellClassMask_2': 1, 'SpellClassSet': 9, 'SpellLevel': 50, 'SpellVisualID_1': 8155, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+# Only on a stock TrainerId no NPC uses; 204 is the live Hunter trainer (docs/spell_learn_level.md).
+trained_by(steady_shot_56641, trainer_id=204, req_level=50, money_cost=36000)
 
 
 stampede_57386 = spell(

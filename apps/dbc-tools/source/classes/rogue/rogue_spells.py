@@ -5,7 +5,7 @@ Split from a single source/classes/rogue.py via split_class_file.py (.agents/pla
 """
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, School
-from lib.dsl.registry import spell
+from lib.dsl.registry import spell, trained_by
 from .rogue_trigger_spells import mutilate_27576, mutilate_5374, vanish_11327
 
 
@@ -1104,6 +1104,8 @@ dismantle_51722 = spell(
     notes='pulled from existing data',
     raw_overrides={'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Disarmed.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Disarm the enemy, removing all weapons, shield or other equipment carried for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_2': 1048576, 'SpellClassSet': 8, 'SpellLevel': 20, 'SpellVisualID_1': 11540, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
+# Only on a stock TrainerId no NPC uses; 206 is the live Rogue trainer (docs/spell_learn_level.md).
+trained_by(dismantle_51722, trainer_id=206, req_level=20, money_cost=3000)
 
 
 fan_of_knives_51723 = spell(

@@ -5,7 +5,7 @@ Split from a single source/classes/paladin.py via split_class_file.py (.agents/p
 """
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, School
-from lib.dsl.registry import spell
+from lib.dsl.registry import spell, trained_by
 
 
 divine_protection_498 = spell(
@@ -675,6 +675,8 @@ righteous_defense_31789 = spell(
     notes='pulled from existing data',
     raw_overrides={'AttributesEx': 524288, 'AttributesEx5': 2048, 'AttributesEx6': 8, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 14, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Come to the defense of a friendly target, commanding up to 3 enemies attacking the target to attack the Paladin instead.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 4, 'SpellClassSet': 10, 'SpellLevel': 14, 'SpellVisualID_1': 7893},
 )
+# Only on a stock TrainerId no NPC uses; 202 is the live Paladin trainer (docs/spell_learn_level.md).
+trained_by(righteous_defense_31789, trainer_id=202, req_level=14, money_cost=2000)
 
 
 seal_of_vengeance_31801 = spell(
@@ -767,6 +769,8 @@ judgement_of_justice_53407 = spell(
     notes='pulled from existing data',
     raw_overrides={'AttributesEx2': 1048576, 'AttributesEx3': 196608, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 28, 'CasterAuraState': 5, 'CastingTimeIndex': 1, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Unleashes the energy of a Seal spell to judge an enemy for $20184d, preventing them from fleeing and limiting their movement speed.  Refer to individual Seals for additional Judgement effect.  Only one Judgement per Paladin can be active at any one time.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'SpellClassMask_3': 8, 'SpellClassSet': 10, 'SpellLevel': 28, 'SpellVisualID_1': 11853, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+# Only on a stock TrainerId no NPC uses; 202 is the live Paladin trainer (docs/spell_learn_level.md).
+trained_by(judgement_of_justice_53407, trainer_id=202, req_level=28, money_cost=9000)
 
 
 judgement_of_wisdom_53408 = spell(
@@ -788,6 +792,8 @@ judgement_of_wisdom_53408 = spell(
     notes='pulled from existing data',
     raw_overrides={'AttributesEx2': 1048576, 'AttributesEx3': 196608, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 12, 'CasterAuraState': 5, 'CastingTimeIndex': 1, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Unleashes the energy of a Seal spell to judge an enemy for $20186d, giving each attack a chance to restore $20268s1% of the attacker's base mana.  Refer to individual Seals for additional Judgement effect.  Only one Judgement per Paladin can be active at any one time.", 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'SpellClassMask_1': 8388608, 'SpellClassSet': 10, 'SpellLevel': 12, 'SpellVisualID_1': 11855, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+# Only on a stock TrainerId no NPC uses; 202 is the live Paladin trainer (docs/spell_learn_level.md).
+trained_by(judgement_of_wisdom_53408, trainer_id=202, req_level=12, money_cost=1000)
 
 
 shield_of_righteousness_53600 = spell(
@@ -900,6 +906,8 @@ hand_of_reckoning_62124 = spell(
     notes='pulled from existing data',
     raw_overrides={'AttributesEx2': 67108864, 'AttributesEx4': 2048, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Taunted.', 'BaseLevel': 16, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Taunts the target to attack you.  If the target is tauntable and not currently targeting you, causes ${1+0.5*$AP} Holy damage.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 1073741824, 'SpellClassSet': 10, 'SpellLevel': 16, 'SpellVisualID_1': 34},
 )
+# Only on a stock TrainerId no NPC uses; 202 is the live Paladin trainer (docs/spell_learn_level.md).
+trained_by(hand_of_reckoning_62124, trainer_id=202, req_level=16, money_cost=3000)
 
 
 holy_shock_20473 = spell(

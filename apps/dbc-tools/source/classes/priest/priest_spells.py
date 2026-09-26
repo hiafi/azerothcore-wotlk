@@ -857,6 +857,8 @@ prayer_of_fortitude_21562 = spell(
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 48); RealPointsPerLevel from rank1→level-60 slope (anchor rank 21564, rank 2); coefficient/cast_time_ms/mana_cost_pct from max rank (48162, rank 4); MaxLevel set to 80',
     raw_overrides={'AttributesEx': 131072, 'AttributesEx2': 524288, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases Stamina by $s1.', 'BaseLevel': 48, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Power infuses all party and raid members, increasing their Stamina by $s1 for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ReagentCount_1': 1, 'Reagent_1': 17028, 'ShapeshiftMask': 134217728, 'SpellClassMask_1': 8, 'SpellClassMask_3': 1024, 'SpellClassSet': 6, 'SpellLevel': 48, 'SpellVisualID_1': 278, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+# Only on a stock TrainerId no NPC uses; 208 is the live Priest trainer (docs/spell_learn_level.md).
+trained_by(prayer_of_fortitude_21562, trainer_id=208, req_level=48, money_cost=28000)
 
 
 prayer_of_fortitude_21564 = spell(
@@ -1007,6 +1009,8 @@ prayer_of_shadow_protection_27683 = spell(
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 56); RealPointsPerLevel from rank1→level-60 slope (anchor rank 27683, rank 1); coefficient/cast_time_ms/mana_cost_pct from max rank (48170, rank 3); MaxLevel set to 80',
     raw_overrides={'AttributesEx': 131072, 'AttributesEx2': 524288, 'AttributesEx6': 67108864, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases Shadow Resistance by $s1.', 'BaseLevel': 56, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Power infuses the target's party and raid members, increasing their Shadow resistance by $s1 for $d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ReagentCount_1': 1, 'Reagent_1': 17029, 'ShapeshiftMask': 134217728, 'SpellClassMask_1': 256, 'SpellClassMask_3': 1024, 'SpellClassSet': 6, 'SpellLevel': 56, 'SpellVisualID_1': 27, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+# Only on a stock TrainerId no NPC uses; 208 is the live Priest trainer (docs/spell_learn_level.md).
+trained_by(prayer_of_shadow_protection_27683, trainer_id=208, req_level=56, money_cost=42000)
 
 
 mass_dispel_32375 = spell(

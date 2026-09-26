@@ -190,7 +190,7 @@ def _require_trainer_index():
 
 
 def trained_by(
-    spell: model.Spell,
+    spell: model.Spell | int,
     trainer_id: int,
     req_level: int,
     money_cost: int = 0,
@@ -216,18 +216,23 @@ def trained_by(
     behind two real bugs (see `DeadTrainerError`'s docstring). This can't
     catch "picked a *plausible but wrong* TrainerId" (a TrainerId that
     resolves to a real trainer, just not the one you meant) - only "picked
-    one nothing resolves to at all"."""
+    one nothing resolves to at all".
+
+    `spell` may also be a bare stock spell ID (see `_spell_id_of`), for a
+    Blizzard spell with no declaration in source that only needs a trainer."""
+    spell_id = _spell_id_of(spell)
+    label = spell.name if isinstance(spell, model.Spell) else spell_id
     problems = _require_trainer_index().trainer_problems(trainer_id)
     if problems:
         raise DeadTrainerError(
-            f"trained_by({spell.name!r}, trainer_id={trainer_id}): this TrainerId doesn't "
+            f"trained_by({label!r}, trainer_id={trainer_id}): this TrainerId doesn't "
             f"resolve to a usable trainer NPC:\n  - " + "\n  - ".join(problems)
         )
     req_ability = (req_ability or [])[:3] + [0, 0, 0]
     row = {
-        "id": f"{trainer_id}:{spell.id}",
+        "id": f"{trainer_id}:{spell_id}",
         "TrainerId": trainer_id,
-        "SpellId": spell.id,
+        "SpellId": spell_id,
         "MoneyCost": money_cost,
         "ReqSkillLine": req_skill_line,
         "ReqSkillRank": req_skill_rank,

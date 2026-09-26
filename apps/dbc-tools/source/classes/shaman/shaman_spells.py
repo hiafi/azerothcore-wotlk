@@ -5,7 +5,7 @@ Split from a single source/classes/shaman.py via split_class_file.py (.agents/pl
 """
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, School
-from lib.dsl.registry import spell
+from lib.dsl.registry import spell, trained_by
 
 
 water_breathing_131 = spell(
@@ -1050,6 +1050,12 @@ earthliving_weapon_51730 = spell(
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 30); RealPointsPerLevel from rank1->covers-60 (anchor rank 4 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
     raw_overrides={'AttributesEx': 131072, 'AttributesEx2': 8, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Imbue the Shaman's weapon with earthen life. Increases healing done by $51940s2 and each heal has a $<chance>% chance to proc Earthliving on the target, healing an additional $51945o over $51945d. Lasts 30 minutes.", 'EffectBasePoints_2': 19, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 2048, 'SpellClassSet': 11, 'SpellDescriptionVariableID': 101, 'SpellLevel': 30, 'SpellVisualID_1': 8723, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Targets': 16},
 )
+# Only on a stock TrainerId no NPC uses; 210 is the live Shaman trainer (docs/spell_learn_level.md).
+trained_by(earthliving_weapon_51730, trainer_id=210, req_level=30, money_cost=7000)
+# Call of the Elements/Ancestors/Spirits have no declaration in source - stock spells, bare IDs.
+trained_by(66842, trainer_id=210, req_level=30, money_cost=7000)  # Call of the Elements
+trained_by(66843, trainer_id=210, req_level=40, money_cost=12000)  # Call of the Ancestors
+trained_by(66844, trainer_id=210, req_level=50, money_cost=23000)  # Call of the Spirits
 
 
 wind_shear_57994 = spell(
@@ -1072,6 +1078,8 @@ wind_shear_57994 = spell(
     notes='pulled from existing data',
     raw_overrides={'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 16, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly blasts the target with a gust of wind, causing no damage but interrupting spellcasting and preventing any spell in that school from being cast for $d. Also lowers your threat, making the enemy less likely to attack you.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 134219776, 'SpellClassSet': 11, 'SpellLevel': 16, 'SpellVisualID_1': 14861},
 )
+# Only on a stock TrainerId no NPC uses; 210 is the live Shaman trainer (docs/spell_learn_level.md).
+trained_by(wind_shear_57994, trainer_id=210, req_level=16, money_cost=1800)
 
 
 earth_shield_974 = spell(
