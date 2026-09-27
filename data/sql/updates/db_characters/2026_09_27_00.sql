@@ -1,3 +1,4 @@
+-- DB update 2026_09_23_00 -> 2026_09_27_00
 -- Custom: player-chosen shapeshift appearance (docs/bear-form-appearances.md).
 -- One row per character per form; Bear Form's choice is stored under form 5 (FORM_BEAR) and also
 -- covers Dire Bear Form. Read at login by src/server/scripts/Custom/custom_shapeshift_appearance.cpp.

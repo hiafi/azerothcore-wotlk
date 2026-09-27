@@ -1,3 +1,4 @@
+-- DB update 2026_09_27_04 -> 2026_09_27_05
 -- Healing Training Dummy combat variant fixes.
 -- 1) Anchor 900014: drop CREATURE_FLAG_EXTRA_TRIGGER (flags_extra 130 -> 2, CIVILIAN only).
 --    NullCreatureAI's constructor calls SetIsCombatDisallowed(true) on every trigger creature

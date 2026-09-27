@@ -1,3 +1,4 @@
+-- DB update 2026_09_27_06 -> 2026_09_27_07
 -- Druid SpellVisual overlay (apps/dbc-tools/patch_druid_vfx_models.py --sql-out): Starsurge/Fury of Elune
 -- (90018-90020, unchanged) plus the Resto Flourish/Bloom visuals (90021-90024).
 DELETE FROM `spellvisual_dbc` WHERE `ID` BETWEEN 90018 AND 90024;

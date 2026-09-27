@@ -1,3 +1,4 @@
+-- DB update 2026_09_27_01 -> 2026_09_27_02
 -- Custom: druid-rework Resto pass (.agents/plans/druid-rework/druid-rework.RESTO.md §3 item 9,
 -- PLAN §5.0 item 5 "one hand-written line per pass" / §6 item 9 "repeated per pass", B10/A10).
 -- The Resto tree moves/cuts/adds talents, so existing druids need another reset on top of the

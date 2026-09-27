@@ -1,3 +1,4 @@
+-- DB update 2026_09_27_03 -> 2026_09_27_04
 -- Custom: druid-rework Feral follow-up. Claw (1082) is retired and Shred (5221) takes its place (learned at
 -- level 20, no behind-the-target requirement). Every druid who knew Claw gets Shred, Claw action buttons
 -- become Shred, and Claw is dropped from the spellbook.

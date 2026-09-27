@@ -1,3 +1,4 @@
+-- DB update 2026_09_27_01 -> 2026_09_27_02
 -- Squash (2026-09-25) of the druid-rework branch's non-generate.py world migrations, in their
 -- original order: Bear/Cat/Moonkin Form appearance models + NPC 900012, Healing Training Dummy
 -- 900013/900014, and the Starsurge/Fury of Elune SpellVisual rows (patch_druid_vfx_models.py).

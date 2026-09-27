@@ -1,3 +1,4 @@
+-- DB update 2026_09_27_02 -> 2026_09_27_03
 -- Custom: druid-rework Feral pass (.agents/plans/druid-rework/druid-rework.FERAL.md §3 item 7, PLAN B10).
 -- The only hand-written SQL in this pass - every world-DB row goes through dbc-tools (WP-T, PLAN B11).
 -- The Feral tree moves/cuts/adds talents, so existing druids need another talent reset; the old

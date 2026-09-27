@@ -1,3 +1,4 @@
+-- DB update 2026_09_27_00 -> 2026_09_27_01
 -- Custom: druid-rework Balance pass (.agents/plans/druid-rework/druid-rework.PLAN.md §5.1 WP-0,
 -- B10/A10). The only hand-written SQL in this pass - every world-DB row goes through dbc-tools
 -- (WP-T, PLAN B11). Talent reset for every druid so the new Balance tree loads clean; Lesser Heal

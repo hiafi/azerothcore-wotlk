@@ -1,3 +1,4 @@
+-- DB update 2026_09_27_03 -> 2026_09_27_04
 -- Earth Shock back to stock (2026-09-26). mod-progression's phase_00 overrode every rank to also
 -- interrupt spellcasting, as a stand-in until Wind Shear at its phase 13. Player spells no longer
 -- change with the progression phase, so that edit is removed from the module and its override rows

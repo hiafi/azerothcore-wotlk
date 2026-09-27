@@ -1,3 +1,4 @@
+-- DB update 2026_09_05_38 -> 2026_09_27_00
 -- Class trainer baseline (2026-09-26): trainers 200-217 and the class-trainer NPCs pointing at them,
 -- taken over from mod-progression so trainers never change with the progression phase. mod-progression's
 -- phase_00 created this layout (it ran once, 2026-09-02); its phase_00/07/13 trainer SQL is deleted from
