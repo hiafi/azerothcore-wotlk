@@ -79,7 +79,6 @@ namespace
     // Internal cooldowns and fixed cooldown reductions (FERAL-WP-BRIEF §5)
     constexpr uint32 IRON_HIDE_ICD_MS = 1000;
     constexpr uint32 IRON_HIDE_BARKSKIN_REDUCTION_MS = 1000;
-    constexpr uint32 PRIMAL_PRECISION_ICD_MS = 3000;
     constexpr uint32 BLOODLETTING_ICD_MS = 3000;
     constexpr uint32 IMPROVED_MANGLE_ICD_MS = 3000;
     constexpr uint32 IMPROVED_MANGLE_ENRAGE_REDUCTION_MS = 3000;
@@ -212,7 +211,7 @@ class spell_dru_pulverize : public SpellScript
 
     void HandleAfterHit()
     {
-        Unit* caster = GetCaster();
+        Player* caster = GetCaster() ? GetCaster()->ToPlayer() : nullptr;
         Unit* target = GetHitUnit();
         if (!caster || !target)
             return;
@@ -224,7 +223,8 @@ class spell_dru_pulverize : public SpellScript
             lacerate->RefreshDuration();
         }
 
-        Druid::ConsumeSwell(caster, Druid::SWELL_MAX_CONSUMED);
+        Druid::OnSwellSpent(caster, Druid::ConsumeSwell(caster, Druid::SWELL_MAX_CONSUMED));
+        Druid::TryPrimalPrecisionBearReduction(caster, Druid::PRIMAL_PRECISION_PULVERIZE_REDUCTION_MS);
     }
 
     void Register() override
@@ -268,8 +268,9 @@ class spell_dru_upheaval : public SpellScript
     // Once per cast, after every target was hit. An Upheaval that hit nothing consumes nothing.
     void HandleAfterCast()
     {
-        if (_targetCount && GetCaster())
-            Druid::ConsumeSwell(GetCaster(), Druid::SWELL_MAX_CONSUMED);
+        Player* caster = GetCaster() ? GetCaster()->ToPlayer() : nullptr;
+        if (_targetCount && caster)
+            Druid::OnSwellSpent(caster, Druid::ConsumeSwell(caster, Druid::SWELL_MAX_CONSUMED));
     }
 
     void Register() override
@@ -413,15 +414,65 @@ class spell_dru_maul : public SpellScript
 {
     PrepareSpellScript(spell_dru_maul);
 
+    // FERAL-ADDENDUM decision 5: a cast that hit nothing (evade, immune) never rolls Tooth and Claw.
+    void HandleHit()
+    {
+        _hitAny = true;
+    }
+
     void HandleAfterCast()
     {
-        if (Unit* caster = GetCaster())
-            Druid::AddSwell(caster, SWELL_FROM_MAUL);
+        Player* caster = GetCaster() ? GetCaster()->ToPlayer() : nullptr;
+        if (!caster)
+            return;
+
+        Druid::AddSwell(caster, SWELL_FROM_MAUL);
+
+        if (_hitAny)
+            Druid::TryGrantToothAndClaw(caster, Druid::TOOTH_AND_CLAW_MAUL_MANGLE_CHANCE_PCT);
     }
 
     void Register() override
     {
+        OnHit += SpellHitFn(spell_dru_maul::HandleHit);
         AfterCast += SpellCastFn(spell_dru_maul::HandleAfterCast);
+    }
+
+private:
+    bool _hitAny = false;
+};
+
+// 200439 - Savage Bite (docs/reworks/druid-feral-addition.md, FERAL-ADDENDUM.md): usable only with a
+// Tooth and Claw charge, enforced by data (CasterAuraSpell 200438). Consumes 1 charge and triggers
+// Nurturing Instinct exactly like a Predator's Swiftness Regrowth would. Sharing Pulverize's family
+// bit (§3.3, user decision) already gives it Splintering Blows' crit chance and lets it both benefit
+// from and spend an already-active Nurturing Instinct buff - no extra code for either. Never touches
+// Swell and never rolls Tooth and Claw itself. Primal Precision's bear clause takes 3 sec off Berserk.
+class spell_dru_savage_bite : public SpellScript
+{
+    PrepareSpellScript(spell_dru_savage_bite);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ Druid::SPELL_TOOTH_AND_CLAW });
+    }
+
+    void HandleAfterHit()
+    {
+        Player* caster = GetCaster() ? GetCaster()->ToPlayer() : nullptr;
+        if (!caster || !GetHitUnit())
+            return;
+
+        if (Aura* toothAndClaw = caster->GetAura(Druid::SPELL_TOOTH_AND_CLAW, caster->GetGUID()))
+            toothAndClaw->ModStackAmount(-1);
+
+        Druid::ApplyNurturingInstinctEmpower(caster);
+        Druid::TryPrimalPrecisionBearReduction(caster, Druid::PRIMAL_PRECISION_SAVAGE_BITE_REDUCTION_MS);
+    }
+
+    void Register() override
+    {
+        AfterHit += SpellHitFn(spell_dru_savage_bite::HandleAfterHit);
     }
 };
 
@@ -508,7 +559,9 @@ class spell_dru_ferocious_bite : public SpellScript
 };
 
 // 1079, 22568, 52610, 22570 - Rip / Ferocious Bite / Savage Roar / Maim: Primal Precision r2 capstone
-// (3,3) - finishers reduce Berserk's cooldown, at most once every 3 sec.
+// (3,3) - finishers reduce Berserk's cooldown, at most once every 5 sec (FERAL-ADDENDUM §3.7 - was
+// 3 sec, now the same shared ICD as Druid::TryPrimalPrecisionBearReduction). Nothing happens, and no
+// ICD is burned, while Berserk is active (decision: rule 9).
 class spell_dru_primal_precision : public SpellScript
 {
     PrepareSpellScript(spell_dru_primal_precision);
@@ -521,7 +574,7 @@ class spell_dru_primal_precision : public SpellScript
     void HandleAfterCast()
     {
         Player* caster = GetCaster() ? GetCaster()->ToPlayer() : nullptr;
-        if (!caster)
+        if (!caster || caster->HasAura(Druid::SPELL_BERSERK))
             return;
 
         AuraEffect const* capstone = caster->GetAuraEffect(Druid::SPELL_PRIMAL_PRECISION_R2, EFFECT_1);
@@ -529,7 +582,7 @@ class spell_dru_primal_precision : public SpellScript
             return;
 
         // 48410 doubles as its own internal cooldown marker.
-        if (!Druid::TryStartInternalCooldown(caster, Druid::SPELL_PRIMAL_PRECISION_R2, PRIMAL_PRECISION_ICD_MS))
+        if (!Druid::TryStartInternalCooldown(caster, Druid::SPELL_PRIMAL_PRECISION_R2, Druid::PRIMAL_PRECISION_ICD_MS))
             return;
 
         Druid::ReduceSpellCooldown(caster, Druid::SPELL_BERSERK, uint32(capstone->GetAmount() * IN_MILLISECONDS));
@@ -538,6 +591,29 @@ class spell_dru_primal_precision : public SpellScript
     void Register() override
     {
         AfterCast += SpellCastFn(spell_dru_primal_precision::HandleAfterCast);
+    }
+};
+
+// 48409, 48410 - Primal Precision: while Bestial Fury is active, increases haste by 5/10%
+// (FERAL-ADDENDUM §3.7). EFFECT_2 zeroed outside Bestial Fury; druid_hooks.cpp's shapeshift handler
+// recalculates it on every form change (DruidMechanics.cpp's OnFeralFormChanged).
+class spell_dru_primal_precision_haste : public AuraScript
+{
+    PrepareAuraScript(spell_dru_primal_precision_haste);
+
+    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    {
+        canBeRecalculated = true;
+
+        Unit* owner = GetUnitOwner();
+        if (!owner || !Druid::IsBestialFuryActive(owner))
+            amount = 0;
+    }
+
+    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_dru_primal_precision_haste::CalculateAmount, EFFECT_2,
+                                                      SPELL_AURA_MELEE_SLOW);
     }
 };
 
@@ -666,6 +742,8 @@ class spell_dru_mangle : public SpellScript
         if (!caster || !target)
             return;
 
+        _hitAny = true;
+
         static constexpr std::array<std::pair<uint32, uint32>, 3> infectedWounds =
         {{
             { Druid::SPELL_INFECTED_WOUNDS_R3, Druid::SPELL_INFECTED_WOUNDS_SLOW_R3 },
@@ -699,10 +777,26 @@ class spell_dru_mangle : public SpellScript
         Druid::ReduceSpellCooldown(caster, Druid::SPELL_ENRAGE, IMPROVED_MANGLE_ENRAGE_REDUCTION_MS);
     }
 
+    // FERAL-ADDENDUM §3.2: Mangle (Bear) rolls Tooth and Claw once per cast, only when it hit
+    // something. Mangle (Cat) never rolls it (Tooth and Claw requires Bestial Fury, form 5, which
+    // can't be in Cat Form anyway - the Id check is the belt-and-suspenders reason for both).
+    void HandleAfterCast()
+    {
+        if (!_hitAny || GetSpellInfo()->Id != Druid::SPELL_MANGLE_BEAR)
+            return;
+
+        if (Player* caster = GetCaster() ? GetCaster()->ToPlayer() : nullptr)
+            Druid::TryGrantToothAndClaw(caster, Druid::TOOTH_AND_CLAW_MAUL_MANGLE_CHANCE_PCT);
+    }
+
     void Register() override
     {
         AfterHit += SpellHitFn(spell_dru_mangle::HandleAfterHit);
+        AfterCast += SpellCastFn(spell_dru_mangle::HandleAfterCast);
     }
+
+private:
+    bool _hitAny = false;
 };
 
 // 16979, 49376 - Feral Charge (Bear) / (Cat): Feral Swiftness r2 capstone (2,0), Stampede.
@@ -840,25 +934,16 @@ class spell_dru_nurturing_instinct_empower : public SpellScript
                        caster->HasAura(Druid::SPELL_PREDATORS_SWIFTNESS);
     }
 
+    // FERAL-ADDENDUM §3.3/§3.8: this class is bound only to Regrowth (unbind_script dropped the
+    // Healing Touch binding - user override, Predator's Swiftness/Nurturing Instinct are Regrowth
+    // only). The shared body also fires from Savage Bite.
     void HandleAfterCast()
     {
         if (!_madeInstant)
             return;
 
-        Player* caster = GetCaster() ? GetCaster()->ToPlayer() : nullptr;
-        if (!caster)
-            return;
-
-        int32 const bonus = Druid::GetRankAmount(caster,
-            { Druid::SPELL_NURTURING_INSTINCT_R2, Druid::SPELL_NURTURING_INSTINCT_R1 }, EFFECT_1);
-        if (bonus <= 0)
-            return;
-
-        // Both effects (damage and periodic damage) take the rank's value.
-        CustomSpellValues values;
-        values.AddSpellMod(SPELLVALUE_BASE_POINT0, bonus);
-        values.AddSpellMod(SPELLVALUE_BASE_POINT1, bonus);
-        caster->CastCustomSpell(Druid::SPELL_NI_EMPOWER, values, caster, TRIGGERED_FULL_MASK);
+        if (Player* caster = GetCaster() ? GetCaster()->ToPlayer() : nullptr)
+            Druid::ApplyNurturingInstinctEmpower(caster);
     }
 
     void Register() override
@@ -1213,9 +1298,11 @@ void AddSC_druid_feral_spell_scripts()
     RegisterSpellScript(spell_dru_swell);
     RegisterSpellScript(spell_dru_fury_swipe);
     RegisterSpellScript(spell_dru_maul);
+    RegisterSpellScript(spell_dru_savage_bite);
     RegisterSpellScript(spell_dru_lacerate);
     RegisterSpellScript(spell_dru_ferocious_bite);
     RegisterSpellScript(spell_dru_primal_precision);
+    RegisterSpellScript(spell_dru_primal_precision_haste);
     RegisterSpellScript(spell_dru_rake);
     RegisterSpellScript(spell_dru_shredding_attacks);
     RegisterSpellScript(spell_dru_ravage);

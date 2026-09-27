@@ -153,7 +153,8 @@ private:
 
 // Invisible combat partner for npc_healing_dummy_combat. Must have a script: a creature without
 // one gets a default aggressive AI whose UpdateVictim() would evade (and drop combat) immediately,
-// since the anchor never has anyone on its threat list.
+// since the anchor never has anyone on its threat list. Must NOT be flagged
+// CREATURE_FLAG_EXTRA_TRIGGER: NullCreatureAI's constructor marks triggers combat-disallowed.
 struct npc_healing_dummy_combat_anchor : public NullCreatureAI
 {
     explicit npc_healing_dummy_combat_anchor(Creature* creature) : NullCreatureAI(creature) { }

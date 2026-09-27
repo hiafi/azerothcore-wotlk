@@ -753,6 +753,9 @@ granted_by_talent(
     ranks=[primal_precision_48409, primal_precision_48410],
     player_castable=False,
 )
+# FERAL-ADDENDUM §3.7: the Bestial Fury haste clause's EFFECT_2 is zeroed outside Bestial Fury.
+scripted_by(primal_precision_48409, 'spell_dru_primal_precision_haste')
+scripted_by(primal_precision_48410, 'spell_dru_primal_precision_haste')
 
 
 granted_by_talent(
@@ -1382,7 +1385,10 @@ for _builder in (shred_5221, rake_1822, mangle_cat_33876, ravage_6785, pounce_90
 scripted_by(savage_defense_200459, 'spell_dru_savage_defense_talent')
 scripted_by(savage_defense_200460, 'spell_dru_savage_defense_talent')
 scripted_by(regrowth_8936, 'spell_dru_nurturing_instinct_empower')
-scripted_by(healing_touch_5185, 'spell_dru_nurturing_instinct_empower')
+# FERAL-ADDENDUM §3.5 (user override): Predator's Swiftness/Nurturing Instinct are Regrowth only now
+# - the Healing Touch binding is dropped, not just left unreferenced (unbind_script actually deletes
+# the live spell_script_names row; a bare removal from this file would leave it bound on redeploy).
+unbind_script(healing_touch_5185, 'spell_dru_nurturing_instinct_empower')
 # Protector of the Pack: damage reduction off in Bestial Fury
 for _rank in (protector_of_the_pack_57873, protector_of_the_pack_57876, protector_of_the_pack_57877):
     scripted_by(_rank, 'spell_dru_protector_of_the_pack')

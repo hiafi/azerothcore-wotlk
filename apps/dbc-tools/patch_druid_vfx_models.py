@@ -17,11 +17,22 @@ What Ascension ships, traced from its own Spell.dbc:
   on the aura's StateKit as a BaseEffect instead. The 0.5s damage tick (200338) gets the stock
   Moonfire impact (EffectName 1885) plus the Fury of Elune damage-impact sound.
 
+Resto's Flourish (200564) and Bloom (200560 cast, 200561 jump) were added later:
+- Flourish: stock nature cast hands (kit 183) and the stock "Flourish Impact" burst + sound (kit
+  10691, druid_flourish.mdx). The ground effect is Ascension's Druid_Efflorescence_Persistent on
+  the PersistentAreaKit of 200603, a hidden 1.5 s ground zone Flourish's buff triggers at the
+  caster's feet. Model settings (AreaEffectSize 0, Scale 3.4) are Ascension's own Efflorescence
+  row (SpellVisualEffectName 236522 in SpellVisual 22251).
+- Bloom: Ascension's Wrath orb (Druid_Wrath_Missile_V2, its SpellVisual 278885) on the stock
+  "Parabola (High)" MissileMotion (224), landing with the stock Nourish flower (kit 10693). The
+  jump copy has no CastKit, since Druid::StartBloomJumps casts it from the previous target.
+
 Assets (gitignored working copies, extracted by hand via `smpq -x`, see
 docs/ascension-asset-mining.md):
-- var/model-visual-dbc/SPELLS/: the 4 models + NN.skin files (patch-N.MPQ), plus the 15
+- var/model-visual-dbc/SPELLS/: the 6 models + NN.skin files (patch-N.MPQ), plus the 16
   textures they reference that stock 3.3.5a doesn't have (read from each .m2's texture table -
-  the rest resolve to stock common.MPQ/lichking.MPQ files).
+  the rest resolve to stock common.MPQ/lichking.MPQ/patch*.MPQ files). Resto added only
+  rune11.blp (Efflorescence); the Wrath orb's 3 textures are all stock.
 - var/model-visual-dbc/SOUND/: the sounds (patch-O.MPQ), converted .ogg -> 16-bit PCM .wav since
   stock 3.3.5a SoundEntries never references an .ogg. build_patch_m.py packs them at
   Sound\\Spells\\.
@@ -51,6 +62,11 @@ from patch_priest_vfx_models import (
 # --- Stock IDs reused as-is ---
 
 EFFECT_MOONFIRE_IMPACT_BASE_STOCK = 1885  # spells\moonfire_impact_base.mdx (Moonfire's ImpactKit 3293)
+KIT_NATURE_CAST_HAND_STOCK = 183          # Healing Touch/Nourish CastKit: anim 54 + Nature_Cast_Hand
+KIT_FLOURISH_IMPACT_STOCK = 10691         # druid_flourish.mdx + Druid_Flourish sound (stock SV 11568)
+KIT_NOURISH_IMPACT_STOCK = 10693          # druid_nourish.mdx flower + sound (Nourish's ImpactKit)
+MISSILE_MOTION_PARABOLA_HIGH_STOCK = 224  # SpellMissileMotion.dbc "Parabola (High)"
+MISSILE_DESTINATION_CHEST = 1             # stock heals' MissileDestinationAttachment
 SOUND_STARSURGE_PRECAST_STOCK = 3087      # Ascension's own Starsurge PrecastKit sound, stock
 SOUND_MAGIC_CAST_STOCK = 1641             # Ascension's own Starsurge CastKit sound, stock (Moonfire/Starfire cast)
 NO_ATTACHMENT = -1                        # SpellVisual's signed "none" (dbcfmt.SPELLVISUAL.signed)
@@ -87,12 +103,14 @@ def build_sound_rows() -> list[dict]:
     ]
 
 
-# --- SpellVisualEffectName.dbc (90018-90021) ---
+# --- SpellVisualEffectName.dbc (90018-90023) ---
 
 EFFECT_STARSURGE_MISSILE = 90018
 EFFECT_STARSURGE_PRECAST = 90019
 EFFECT_STARSURGE_IMPACT = 90020
 EFFECT_FURY_OF_ELUNE_STATEBASE = 90021
+EFFECT_EFFLORESCENCE_PERSISTENT = 90022
+EFFECT_BLOOM_MISSILE = 90023
 
 
 def build_effect_name_rows() -> list[dict]:
@@ -102,16 +120,23 @@ def build_effect_name_rows() -> list[dict]:
         (EFFECT_STARSURGE_PRECAST, "Starsurge Precast (Custom)", "Druid_Starsurge_Precast_Omni", 1.0),
         (EFFECT_STARSURGE_IMPACT, "Starsurge Impact (Custom)", "Druid_Starsurge_Impact", 1.0),
         (EFFECT_FURY_OF_ELUNE_STATEBASE, "Fury of Elune State Base (Custom)", "cfx_druid_furyofelune_statebase", 1.0),
+        (EFFECT_BLOOM_MISSILE, "Bloom Missile (Custom)", "Druid_Wrath_Missile_V2", 1.0),
     ):
         rows.append(_row(
             dbcfmt.SPELLVISUALEFFECTNAME, id_,
             Name=name, FileName=model_path(filename),
             AreaEffectSize=1.0, Scale=scale, MinAllowedScale=0.01, MaxAllowedScale=100.0,
         ))
+    # AreaEffectSize 0 keeps the model at a fixed Scale instead of stretching it to the zone radius.
+    rows.append(_row(
+        dbcfmt.SPELLVISUALEFFECTNAME, EFFECT_EFFLORESCENCE_PERSISTENT,
+        Name="Efflorescence Persistent (Custom)", FileName=model_path("Druid_Efflorescence_Persistent"),
+        AreaEffectSize=0.0, Scale=3.4, MinAllowedScale=0.01, MaxAllowedScale=100.0,
+    ))
     return rows
 
 
-# --- SpellVisualKit.dbc (90018-90023) ---
+# --- SpellVisualKit.dbc (90018-90024) ---
 
 KIT_STARSURGE_PRECAST = 90018
 KIT_STARSURGE_CAST = 90019
@@ -119,6 +144,7 @@ KIT_STARSURGE_IMPACT = 90020
 KIT_FURY_OF_ELUNE_CAST = 90021
 KIT_FURY_OF_ELUNE_STATE = 90022
 KIT_FURY_OF_ELUNE_TICK = 90023
+KIT_EFFLORESCENCE_PERSISTENT = 90024
 
 
 def build_kit_rows() -> list[dict]:
@@ -143,14 +169,19 @@ def build_kit_rows() -> list[dict]:
             KIT_FURY_OF_ELUNE_TICK,
             AnimID=NOFIELD, BaseEffect=EFFECT_MOONFIRE_IMPACT_BASE_STOCK, SoundID=SOUND_FURY_OF_ELUNE_IMPACT,
         ),
+        _kit_row(KIT_EFFLORESCENCE_PERSISTENT, AnimID=NOFIELD, BaseEffect=EFFECT_EFFLORESCENCE_PERSISTENT),
     ]
 
 
-# --- SpellVisual.dbc (90018-90020) ---
+# --- SpellVisual.dbc (90018-90024) ---
 
 SV_STARSURGE = 90018          # spell 200333
 SV_FURY_OF_ELUNE = 90019      # spell 200336 (the aura on the target)
 SV_FURY_OF_ELUNE_TICK = 90020  # spell 200338 (0.5s beam damage)
+SV_FLOURISH = 90021            # spell 200564
+SV_FLOURISH_GROUND = 90022     # spell 200603 (the 1.5 s ground zone)
+SV_BLOOM = 90023               # spell 200560 (druid -> first target)
+SV_BLOOM_JUMP = 90024          # spell 200561 (previous target -> next target)
 
 
 def build_spellvisual_rows() -> list[dict]:
@@ -171,12 +202,34 @@ def build_spellvisual_rows() -> list[dict]:
             ImpactKit=KIT_FURY_OF_ELUNE_TICK,
             MissileDestinationAttachment=NO_ATTACHMENT, MissileAttachment=NO_ATTACHMENT,
         ),
+        _row(
+            dbcfmt.SPELLVISUAL, SV_FLOURISH,
+            CastKit=KIT_NATURE_CAST_HAND_STOCK, ImpactKit=KIT_FLOURISH_IMPACT_STOCK,
+            MissileDestinationAttachment=MISSILE_DESTINATION_CHEST, MissileAttachment=NO_ATTACHMENT,
+        ),
+        _row(
+            dbcfmt.SPELLVISUAL, SV_FLOURISH_GROUND,
+            PersistentAreaKit=KIT_EFFLORESCENCE_PERSISTENT,
+            MissileDestinationAttachment=NO_ATTACHMENT, MissileAttachment=NO_ATTACHMENT,
+        ),
+        _row(
+            dbcfmt.SPELLVISUAL, SV_BLOOM,
+            CastKit=KIT_NATURE_CAST_HAND_STOCK, ImpactKit=KIT_NOURISH_IMPACT_STOCK,
+            HasMissile=1, MissileModel=EFFECT_BLOOM_MISSILE, MissileMotion=MISSILE_MOTION_PARABOLA_HIGH_STOCK,
+            MissileDestinationAttachment=MISSILE_DESTINATION_CHEST, MissileAttachment=NO_ATTACHMENT,
+        ),
+        _row(
+            dbcfmt.SPELLVISUAL, SV_BLOOM_JUMP,
+            ImpactKit=KIT_NOURISH_IMPACT_STOCK,
+            HasMissile=1, MissileModel=EFFECT_BLOOM_MISSILE, MissileMotion=MISSILE_MOTION_PARABOLA_HIGH_STOCK,
+            MissileDestinationAttachment=MISSILE_DESTINATION_CHEST, MissileAttachment=NO_ATTACHMENT,
+        ),
     ]
 
 
 def build_pending_sql() -> str:
     """Server-side overlay for SpellVisual only - see the module docstring for SoundEntries."""
-    return _table_block(dbcfmt.SPELLVISUAL, {"start": 90018, "end": 90020}, build_spellvisual_rows(), []) + "\n"
+    return _table_block(dbcfmt.SPELLVISUAL, {"start": 90018, "end": 90024}, build_spellvisual_rows(), []) + "\n"
 
 
 def main() -> None:

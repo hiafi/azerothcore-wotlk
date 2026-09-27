@@ -1455,12 +1455,12 @@ predatory_strikes_16972 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-4, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COST),
-        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=124, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.DAMAGE),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.ADD_TARGET_TRIGGER, trigger_spell=69369),
     ],
     spell_icon_id=1563,
-    notes="druid-rework FERAL §7 (3,1): rank 1/3 - eff0 (icon-1563 DUMMY the core's feral-AP block reads) -> energy COST -3/-6/-9 on Rip/Ferocious Bite/Savage Roar/Maim, eff1 DUMMY removed (CORE-AUDIT row 35: the stock AP loop now adds 0), eff2 Predator's Swiftness trigger kept at 5/10/15% per combo point.",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the energy cost of your Cat Form finishing moves by $s1. Your Feral finishing moves have a $b3% chance per combo point to make your next Druid Nature spell with a base casting time less than 10 sec become an instant cast spell.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectPointsPerCombo_3': 5.0, 'EffectSpellClassMaskC_1': 8388608, 'EffectSpellClassMaskC_2': 268435584, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'EffectSpellClassMaskA_1': RIP_FEROCIOUS_BITE, 'EffectSpellClassMaskA_2': SAVAGE_ROAR | MAIM},
+    notes="druid-rework FERAL §7 (3,1) + FERAL-ADDENDUM §3.4: rank 1/3 - eff0 (icon-1563 DUMMY the core's feral-AP block reads) -> energy COST -3/-6/-9 on Rip/Ferocious Bite/Savage Roar/Maim, eff1 DUMMY removed (CORE-AUDIT row 35: the stock AP loop now adds 0) then re-added as a new marker 124/249/374 (12.5/25/37.5% in tenths, off-by-one convention) - ADD_FLAT_MODIFIER SpellModOp.DAMAGE with no classmask (matches nothing), not DUMMY, because icon 1563 is CORE-AUDIT row 35's own poisoned-icon (lib/test_druid_inert_keys.py FERAL_RETIRED_DUMMY_ICONS) - a DUMMY aura here would reactivate the still-live stock feral-AP hardcode. Read by Druid::OnSwellSpent as the bear Tooth and Claw chance per Swell stack consumed, eff2 Predator's Swiftness trigger kept at 5/10/15% per combo point (69369 narrowed to Regrowth only, user override).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces the energy cost of your Cat Form finishing moves by $s1. Your Feral finishing moves have a $b3% chance per combo point spent to make your next Regrowth instant. Your Pulverize and Upheaval have a ${$s2/10}% chance per Swell stack consumed to grant Tooth and Claw.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectPointsPerCombo_3': 5.0, 'EffectSpellClassMaskC_1': 8388608, 'EffectSpellClassMaskC_2': 268435584, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'EffectSpellClassMaskA_1': RIP_FEROCIOUS_BITE, 'EffectSpellClassMaskA_2': SAVAGE_ROAR | MAIM},
 )
 
 
@@ -1477,12 +1477,12 @@ predatory_strikes_16974 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COST),
-        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=249, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.DAMAGE),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.ADD_TARGET_TRIGGER, trigger_spell=69369),
     ],
     spell_icon_id=1563,
-    notes="druid-rework FERAL §7 (3,1): rank 2/3 - eff0 (icon-1563 DUMMY the core's feral-AP block reads) -> energy COST -3/-6/-9 on Rip/Ferocious Bite/Savage Roar/Maim, eff1 DUMMY removed (CORE-AUDIT row 35: the stock AP loop now adds 0), eff2 Predator's Swiftness trigger kept at 5/10/15% per combo point.",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the energy cost of your Cat Form finishing moves by $s1. Your Feral finishing moves have a $b3% chance per combo point to make your next Druid Nature spell with a base casting time less than 10 sec become an instant cast spell.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectPointsPerCombo_3': 10.0, 'EffectSpellClassMaskC_1': 8388608, 'EffectSpellClassMaskC_2': 268435584, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'EffectSpellClassMaskA_1': RIP_FEROCIOUS_BITE, 'EffectSpellClassMaskA_2': SAVAGE_ROAR | MAIM},
+    notes="druid-rework FERAL §7 (3,1) + FERAL-ADDENDUM §3.4: rank 2/3 - eff0 (icon-1563 DUMMY the core's feral-AP block reads) -> energy COST -3/-6/-9 on Rip/Ferocious Bite/Savage Roar/Maim, eff1 DUMMY removed (CORE-AUDIT row 35: the stock AP loop now adds 0) then re-added as a new marker 124/249/374 (12.5/25/37.5% in tenths, off-by-one convention) - ADD_FLAT_MODIFIER SpellModOp.DAMAGE with no classmask (matches nothing), not DUMMY, because icon 1563 is CORE-AUDIT row 35's own poisoned-icon (lib/test_druid_inert_keys.py FERAL_RETIRED_DUMMY_ICONS) - a DUMMY aura here would reactivate the still-live stock feral-AP hardcode. Read by Druid::OnSwellSpent as the bear Tooth and Claw chance per Swell stack consumed, eff2 Predator's Swiftness trigger kept at 5/10/15% per combo point (69369 narrowed to Regrowth only, user override).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces the energy cost of your Cat Form finishing moves by $s1. Your Feral finishing moves have a $b3% chance per combo point spent to make your next Regrowth instant. Your Pulverize and Upheaval have a ${$s2/10}% chance per Swell stack consumed to grant Tooth and Claw.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectPointsPerCombo_3': 10.0, 'EffectSpellClassMaskC_1': 8388608, 'EffectSpellClassMaskC_2': 268435584, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'EffectSpellClassMaskA_1': RIP_FEROCIOUS_BITE, 'EffectSpellClassMaskA_2': SAVAGE_ROAR | MAIM},
 )
 
 
@@ -1499,12 +1499,38 @@ predatory_strikes_16975 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-10, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COST),
-        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=374, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.DAMAGE),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.ADD_TARGET_TRIGGER, trigger_spell=69369),
     ],
     spell_icon_id=1563,
-    notes="druid-rework FERAL §7 (3,1): rank 3/3 - eff0 (icon-1563 DUMMY the core's feral-AP block reads) -> energy COST -3/-6/-9 on Rip/Ferocious Bite/Savage Roar/Maim, eff1 DUMMY removed (CORE-AUDIT row 35: the stock AP loop now adds 0), eff2 Predator's Swiftness trigger kept at 5/10/15% per combo point.",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the energy cost of your Cat Form finishing moves by $s1. Your Feral finishing moves have a $b3% chance per combo point to make your next Druid Nature spell with a base casting time less than 10 sec become an instant cast spell.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectPointsPerCombo_3': 15.0, 'EffectSpellClassMaskC_1': 8388608, 'EffectSpellClassMaskC_2': 268435584, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'EffectSpellClassMaskA_1': RIP_FEROCIOUS_BITE, 'EffectSpellClassMaskA_2': SAVAGE_ROAR | MAIM},
+    notes="druid-rework FERAL §7 (3,1) + FERAL-ADDENDUM §3.4: rank 3/3 - eff0 (icon-1563 DUMMY the core's feral-AP block reads) -> energy COST -3/-6/-9 on Rip/Ferocious Bite/Savage Roar/Maim, eff1 DUMMY removed (CORE-AUDIT row 35: the stock AP loop now adds 0) then re-added as a new marker 124/249/374 (12.5/25/37.5% in tenths, off-by-one convention) - ADD_FLAT_MODIFIER SpellModOp.DAMAGE with no classmask (matches nothing), not DUMMY, because icon 1563 is CORE-AUDIT row 35's own poisoned-icon (lib/test_druid_inert_keys.py FERAL_RETIRED_DUMMY_ICONS) - a DUMMY aura here would reactivate the still-live stock feral-AP hardcode. Read by Druid::OnSwellSpent as the bear Tooth and Claw chance per Swell stack consumed, eff2 Predator's Swiftness trigger kept at 5/10/15% per combo point (69369 narrowed to Regrowth only, user override).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces the energy cost of your Cat Form finishing moves by $s1. Your Feral finishing moves have a $b3% chance per combo point spent to make your next Regrowth instant. Your Pulverize and Upheaval have a ${$s2/10}% chance per Swell stack consumed to grant Tooth and Claw.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectPointsPerCombo_3': 15.0, 'EffectSpellClassMaskC_1': 8388608, 'EffectSpellClassMaskC_2': 268435584, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7, 'EffectSpellClassMaskA_1': RIP_FEROCIOUS_BITE, 'EffectSpellClassMaskA_2': SAVAGE_ROAR | MAIM},
+)
+
+
+predator_s_swiftness_69369 = spell(
+    id=69369,
+    name="Predator's Swiftness",
+    school=School.NORMAL,
+    dispel=DispelType.MAGIC,
+    attributes=33816576,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=8000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=10),
+    ],
+    spell_icon_id=1563,
+    notes="druid-rework FERAL-ADDENDUM §3.4: pulled from npc.csv (was declared only there, stock A_1 "
+          "0x10000661/A_2/A_3 covering most Nature spells) and narrowed to REGROWTH only, dword 1, dropping "
+          "A_2/A_3 entirely (user override: Predatory Strikes'/Nurturing Instinct's instant-cast proc reaches "
+          "Regrowth only, not Healing Touch or any other Nature spell). Mechanism unchanged (ADD_PCT_MODIFIER "
+          "misc SPELLMOD_CASTING_TIME, -100%).",
+    raw_overrides={'AttributesEx': 131072, 'AttributesEx3': 196608, 'AttributesEx4': 64, 'CastingTimeIndex': 1, 'InterruptFlags': 4, 'ProcTypeMask': 87376, 'ProcChance': 100, 'ProcCharges': 1, 'SpellLevel': 1, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': REGROWTH, 'SpellVisualID_1': 4040, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'When activated, your next Regrowth becomes an instant cast spell.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Regrowth is instant.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 7, 'SpellClassMask_2': 524288, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
 
@@ -2973,8 +2999,8 @@ nurturing_instinct_33872 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2254,
-    notes='druid-rework FERAL §7 (4,3): rank 1/2 - eff0 aura 175 -> APPLY_AURA DUMMY 5/10% healing received from other players in cat/bear/dire bear (CORE-AUDIT row 26 hook; the stock icon-2254 aura-175 block goes inert, row 32); new eff1 APPLY_AURA DUMMY 15/30% (BP0/BP1 of the 200430 buff).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases healing done to you by other players by $s1% while in Cat, Bear and Dire Bear Form. When you cast Regrowth or Healing Touch made instant by Predatory Strikes, your next $200430n melee abilities within $200430d deal $s2% increased damage.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework FERAL §7 (4,3) + FERAL-ADDENDUM §3.8: rank 1/2 - eff0 aura 175 -> APPLY_AURA DUMMY 5/10% healing received from other players in cat/bear/dire bear (CORE-AUDIT row 26 hook; the stock icon-2254 aura-175 block goes inert, row 32); new eff1 APPLY_AURA DUMMY 15/30% (BP0/BP1 of the 200430 buff), now triggered by a Predator's-Swiftness Regrowth (not Healing Touch, user override) or by Savage Bite (200439, shares Pulverize's family bit so it needs no extra mask).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases healing done to you by other players by $s1% while in Cat, Bear and Dire Bear Form. When you cast Regrowth made instant by Predatory Strikes, or when you use Savage Bite, your next $200430n melee abilities within $200430d deal $s2% increased damage.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -2994,8 +3020,8 @@ nurturing_instinct_33873 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2254,
-    notes='druid-rework FERAL §7 (4,3): rank 2/2 - eff0 aura 175 -> APPLY_AURA DUMMY 5/10% healing received from other players in cat/bear/dire bear (CORE-AUDIT row 26 hook; the stock icon-2254 aura-175 block goes inert, row 32); new eff1 APPLY_AURA DUMMY 15/30% (BP0/BP1 of the 200430 buff).',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases healing done to you by other players by $s1% while in Cat, Bear and Dire Bear Form. When you cast Regrowth or Healing Touch made instant by Predatory Strikes, your next $200430n melee abilities within $200430d deal $s2% increased damage.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework FERAL §7 (4,3) + FERAL-ADDENDUM §3.8: rank 2/2 - eff0 aura 175 -> APPLY_AURA DUMMY 5/10% healing received from other players in cat/bear/dire bear (CORE-AUDIT row 26 hook; the stock icon-2254 aura-175 block goes inert, row 32); new eff1 APPLY_AURA DUMMY 15/30% (BP0/BP1 of the 200430 buff), now triggered by a Predator's-Swiftness Regrowth (not Healing Touch, user override) or by Savage Bite (200439, shares Pulverize's family bit so it needs no extra mask).",
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases healing done to you by other players by $s1% while in Cat, Bear and Dire Bear Form. When you cast Regrowth made instant by Predatory Strikes, or when you use Savage Bite, your next $200430n melee abilities within $200430d deal $s2% increased damage.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3470,10 +3496,12 @@ primal_precision_48409 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.MOD_POWER_REGEN_PERCENT, misc_value=3),
+        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL),
     ],
     spell_icon_id=2858,
-    notes='druid-rework FERAL §7 (3,3): rank 1/2 - expertise -> +10/20% energy regeneration (aura 110 misc 3 = POWER_ENERGY); finishing-move refund removed.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your energy regeneration rate by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Cat Form finishing moves reduce the cooldown of Berserk by $48410s2 sec. Cannot occur more than once every 3 sec.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework FERAL §7 (3,3) + FERAL-ADDENDUM §3.7: rank 1/2 - expertise -> +10/20% energy regeneration (aura 110 misc 3 = POWER_ENERGY); finishing-move refund removed; new eff2 HASTE_ALL 5/10% (aura 193, misnamed SPELL_AURA_MELEE_SLOW in C++), zeroed outside Bestial Fury by spell_dru_primal_precision_haste (canBeRecalculated, recalculated by Druid::OnFeralFormChanged on every form change).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases your energy regeneration rate by $s1%. While Bestial Fury is active, increases your haste by $s3%.\n\n|cFF9D9D9DCapstone Bonus: Your Cat Form finishing moves reduce the cooldown of Berserk by $48410s2 sec. Your Pulverize reduces the cooldown of Berserk by 10 sec, and your Savage Bite by 3 sec. These effects cannot occur more than once every 5 sec, and do not reduce the cooldown of Berserk while Berserk is active.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -3491,10 +3519,11 @@ primal_precision_48410 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.MOD_POWER_REGEN_PERCENT, misc_value=3),
         Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL),
     ],
     spell_icon_id=2858,
-    notes='druid-rework FERAL §7 (3,3): rank 2/2 - expertise -> +10/20% energy regeneration (aura 110 misc 3 = POWER_ENERGY); finishing-move refund removed; capstone eff1 APPLY_AURA DUMMY 3 = seconds off Berserk (spell_dru_primal_precision, 3 s ICD).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your energy regeneration rate by $s1%.\n\nCapstone Bonus: Your Cat Form finishing moves reduce the cooldown of Berserk by $48410s2 sec. Cannot occur more than once every 3 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes="druid-rework FERAL §7 (3,3) + FERAL-ADDENDUM §3.7: rank 2/2 - expertise -> +10/20% energy regeneration (aura 110 misc 3 = POWER_ENERGY); finishing-move refund removed; capstone eff1 APPLY_AURA DUMMY 3 = seconds off Berserk per Cat Form finisher (spell_dru_primal_precision, now a shared 5 s ICD with the bear clause below, nothing while Berserk is active); new eff2 HASTE_ALL 5/10% (aura 193, misnamed SPELL_AURA_MELEE_SLOW in C++), zeroed outside Bestial Fury by spell_dru_primal_precision_haste; bear clause (Druid::TryPrimalPrecisionBearReduction, playtest revision - was 2 sec per Swell stack Pulverize/Upheaval consume) takes 10 sec off Berserk per Pulverize and 3 sec per Savage Bite, sharing this rank's 48410 ICD marker.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases your energy regeneration rate by $s1%. While Bestial Fury is active, increases your haste by $s3%.\n\nCapstone Bonus: Your Cat Form finishing moves reduce the cooldown of Berserk by $48410s2 sec. Your Pulverize reduces the cooldown of Berserk by 10 sec, and your Savage Bite by 3 sec. These effects cannot occur more than once every 5 sec, and do not reduce the cooldown of Berserk while Berserk is active.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
 
 
@@ -4479,7 +4508,7 @@ improved_insect_swarm_57849 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
         Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=1790,
+    spell_icon_id=116,
     notes='pulled from existing data; druid-rework BALANCE §6 row (4,2)/§0.2 correction: eff1 moved off DUMMY (CORE-AUDIT row 3/4 inert-key retirement, icon 1771->1790); eff2 stays a plain DUMMY percent read directly by Druid::ApplyDoneDamagePctMods (no bucket function - PLAN §0.2)',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Insect Swarm by $s1%. Your Wrath deals $s2% increased damage to targets afflicted by your Insect Swarm, and your Starfire deals $s2% increased damage to targets afflicted by your Moonfire.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': INSECT_SWARM, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
@@ -4500,7 +4529,7 @@ improved_insect_swarm_57850 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
         Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=1790,
+    spell_icon_id=116,
     notes='pulled from existing data; druid-rework BALANCE §6 row (4,2)',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Insect Swarm by $s1%. Your Wrath deals $s2% increased damage to targets afflicted by your Insect Swarm, and your Starfire deals $s2% increased damage to targets afflicted by your Moonfire.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': INSECT_SWARM, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
@@ -4521,7 +4550,7 @@ improved_insect_swarm_57851 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=1790,
+    spell_icon_id=116,
     notes='pulled from existing data; druid-rework BALANCE §6 row (4,2)',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Insect Swarm by $s1%. Your Wrath deals $s2% increased damage to targets afflicted by your Insect Swarm, and your Starfire deals $s2% increased damage to targets afflicted by your Moonfire.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': INSECT_SWARM, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
@@ -5579,7 +5608,7 @@ fury_of_elune_beam_200338 = spell(
     effects=[
         Effect(type=EffectType.SCHOOL_DAMAGE, base_points=39, points_per_level=0.6666666666666666, implicit_target_a=6),
     ],
-    spell_icon_id=3698,
+    spell_icon_id=90111,
     notes='NEW (druid-rework BALANCE §5 "Fury of Elune"): live damage every 0.5s tick, scales with level (learn 60, level-60 value 40 -> ppl 40/60); cast by the 200336 AuraScript\'s OnEffectPeriodic (WP-B); SpellVisualID_1 90020 (patch_druid_vfx_models.py): stock Moonfire impact + Fury of Elune damage-impact sound on every tick, under the beam 200336 carries',
     raw_overrides={'BaseLevel': 60, 'SpellLevel': 60, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'SpellClassMask_3': FURY_OF_ELUNE, 'SpellVisualID_1': 90020, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes $s1 Astral damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
@@ -5600,7 +5629,7 @@ fury_of_elune_splash_200339 = spell(
     effects=[
         Effect(type=EffectType.SCHOOL_DAMAGE, base_points=19, points_per_level=0.3333333333333333, implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
     ],
-    spell_icon_id=3698,
+    spell_icon_id=90111,
     notes='NEW (druid-rework BALANCE §5): half of 200338, scripted_by(spell_dru_starfall_aoe) filters the primary target out (see druid_talents.py)',
     raw_overrides={'BaseLevel': 60, 'SpellLevel': 60, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'SpellClassMask_3': FURY_OF_ELUNE, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes $s1 Astral damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
@@ -5746,9 +5775,9 @@ bloom_jump_200561 = spell(
     effects=[
         Effect(type=EffectType.HEAL, base_points=162, points_per_level=4.16667, die_sides=1, implicit_target_a=21),
     ],
-    spell_icon_id=2282,
-    notes="druid-rework RESTO §6 'Bloom (200560 castable, 200561 jump)': the jump copy Druid::StartBloomJumps casts on each wave's targets - identical formula/mask to 200560, no cost/cooldown, range_yards=100 (script-cast, docs/bugs-and-fixes.md 'works on yourself only'), AttributesEx3 |= 0x200 (NOT_A_PROC, so triggered jumps can still roll Living Seed/Omen of Clarity/Natural Perfection/Nature's Grace).",
-    raw_overrides={'AttributesEx3': 512, 'BaseLevel': 39, 'SpellLevel': 39, 'MaxLevel': 80, 'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'SpellClassMask_3': BLOOM, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for $s1.', 'EffectBonusMultiplier_1': 0.75, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    spell_icon_id=90130,
+    notes="druid-rework RESTO §6 'Bloom (200560 castable, 200561 jump)': the jump copy Druid::StartBloomJumps casts on each wave's targets - identical formula/mask to 200560, no cost/cooldown, range_yards=100 (script-cast, docs/bugs-and-fixes.md 'works on yourself only'), AttributesEx3 |= 0x200 (NOT_A_PROC, so triggered jumps can still roll Living Seed/Omen of Clarity/Natural Perfection/Nature's Grace). A lobbed projectile (Speed 25, SpellVisualID_1 90024: the Bloom orb with no CastKit) - StartBloomJumps casts it from the previous target with the druid as original caster, so the orb bounces target to target while the heal, crit and procs stay the druid's.",
+    raw_overrides={'AttributesEx3': 512, 'BaseLevel': 39, 'SpellLevel': 39, 'MaxLevel': 80, 'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'SpellClassMask_3': BLOOM, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for $s1.', 'EffectBonusMultiplier_1': 0.75, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'SpellVisualID_1': 90024, 'Speed': 25.0},
 )
 bonus_coefficients(bloom_jump_200561, direct=0.75)
 
@@ -5768,11 +5797,32 @@ cenarion_ward_heal_200563 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=210, points_per_level=5.5556, die_sides=1, implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=2000),
     ],
-    spell_icon_id=72,
+    spell_icon_id=198,
     notes="druid-rework RESTO §6 'Cenarion Ward (200562 ward, 200563 heal)': the released heal over time - a core HoT and a Harmony stack, unlike the ward itself. spell_dru_cenarion_ward's OnEffectProc casts this with the ORIGINAL caster preserved as the aura caster (CastSpell aurEff/originalCaster overload), so it counts toward Harmony and scales off the druid's own spell power. range_yards=100 (script-cast).",
     raw_overrides={'BaseLevel': 38, 'SpellLevel': 38, 'MaxLevel': 80, 'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'SpellClassMask_3': CENARION_WARD_HOT, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for $o1 over $d.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals $s1 damage every $t1 seconds.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 bonus_coefficients(cenarion_ward_heal_200563, dot=1.0)
+
+
+flourish_ground_200603 = spell(
+    id=200603,
+    name='Flourish',
+    school=School.NATURE,
+    attributes=0x80 | 0x100,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=1500,
+    effects=[
+        Effect(type=EffectType.PERSISTENT_AREA_AURA, base_points=0, implicit_target_a=18, implicit_target_b=29, apply_aura=AuraType.DUMMY, radius_yards=5.0),
+    ],
+    spell_icon_id=90131,
+    notes="Visual only: the Efflorescence ground effect at the caster's feet when Flourish is cast, triggered by flourish_buff_200565's eff2. A 1.5 s ground zone (TARGET_DEST_CASTER / TARGET_DEST_DYNOBJ_ALLY, the shape of stock 'Tower Buff' 23467) whose PersistentAreaKit (SpellVisualID_1 90022, patch_druid_vfx_models.py) shows Druid_Efflorescence_Persistent for the zone's lifetime. Its DUMMY aura does nothing; attributes DO_NOT_DISPLAY | DO_NOT_LOG keep it off buff bars and the combat log.",
+    raw_overrides={'DefenseType': 0, 'PreventionType': 0, 'ProcChance': 101, 'SpellClassSet': 7, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'SpellVisualID_1': 90022},
+)
 
 
 flourish_buff_200565 = spell(
@@ -5789,9 +5839,10 @@ flourish_buff_200565 = spell(
     duration_ms=8000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.TRIGGER_SPELL, implicit_target_a=1, trigger_spell=flourish_ground_200603.id),
     ],
-    spell_icon_id=3956,
-    notes="druid-rework RESTO §6 'Flourish (200564 castable, 200565 buff)': visible self buff for the 8 s acceleration window - UnitScript::OnAuraApply gives a HoT the caster newly applies while this buff is up the same injected ticks for the buff's remaining time (Q16). Code-review fix: attributes 192->0 - was PASSIVE|DO_NOT_DISPLAY, hiding a buff explicitly documented as visible.",
+    spell_icon_id=90131,
+    notes="druid-rework RESTO §6 'Flourish (200564 castable, 200565 buff)': eff2 triggers flourish_ground_200603, the Efflorescence ground visual at the caster's feet. Visible self buff for the 8 s acceleration window - UnitScript::OnAuraApply gives a HoT the caster newly applies while this buff is up the same injected ticks for the buff's remaining time (Q16). Code-review fix: attributes 192->0 - was PASSIVE|DO_NOT_DISPLAY, hiding a buff explicitly documented as visible.",
     raw_overrides={'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your heal over time effects tick twice as fast.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your heal over time effects tick twice as fast.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
@@ -6778,6 +6829,28 @@ _HIDDEN_AURA_ATTRIBUTES = 0x80 | 0x100
 _SPELL_ATTR3_NOT_A_PROC = 0x00000200
 
 
+tooth_and_claw_200438 = spell(
+    id=200438, name='Tooth and Claw', **_feral_buff_kwargs(8000),
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2229,
+    notes="NEW (docs/reworks/druid-feral-addition.md §2, FERAL-ADDENDUM §3.1): proc buff, up to 2 charges, granted "
+          "by Mangle (Bear) and Maul while Bestial Fury is active (Druid::TryGrantToothAndClaw), and by Pulverize/"
+          "Upheaval via Predatory Strikes' bear clause (Druid::OnSwellSpent). Enables Savage Bite 200439. "
+          "ShapeshiftMask 0x10 (Bestial Fury/form 5 only, same as Swell 200426) - leaving Bestial Fury drops it with "
+          "no script needed. CumulativeAura 2: a proc at 0-1 charges adds 1 and refreshes to 8 sec; a proc at 2 "
+          "refreshes only (stock behaviour, addendum pending item 2). No family bit. Icon shared with Bestial Fury "
+          "2229 (no icon mined this pass).",
+    raw_overrides=_feral_raw(
+        "A proc buff.  Enables Savage Bite.  Stacks up to 2 times, refreshing $d each time.  Removed when Bestial "
+        "Fury ends.",
+        "Enables Savage Bite.",
+        CumulativeAura=2, ShapeshiftMask=SS_BESTIAL_FURY,
+    ),
+)
+
+
 swell_200426 = spell(
     id=200426, name='Swell', **_feral_buff_kwargs(20000),
     effects=[
@@ -7065,19 +7138,19 @@ _PRIMAL_ATTUNEMENT_NOTES = ("NEW (druid-rework FERAL §7 (0,2) + §13 Q6), talen
 primal_attunement_200443 = spell(
     id=200443, name='Primal Attunement', **_dru_passive_talent_kwargs(),
     effects=[_aura(AuraType.MOD_CUSTOM_STAT_PCT, 1, 1 << CombatRating.MASTERY)],
-    spell_icon_id=2382, notes=_PRIMAL_ATTUNEMENT_NOTES + " Rank 1/3.",
+    spell_icon_id=2025, notes=_PRIMAL_ATTUNEMENT_NOTES + " Rank 1/3.",
     raw_overrides=_feral_talent_raw("Increases your Mastery by $s1%."),
 )
 primal_attunement_200444 = spell(
     id=200444, name='Primal Attunement', **_dru_passive_talent_kwargs(),
     effects=[_aura(AuraType.MOD_CUSTOM_STAT_PCT, 3, 1 << CombatRating.MASTERY)],
-    spell_icon_id=2382, notes=_PRIMAL_ATTUNEMENT_NOTES + " Rank 2/3.",
+    spell_icon_id=2025, notes=_PRIMAL_ATTUNEMENT_NOTES + " Rank 2/3.",
     raw_overrides=_feral_talent_raw("Increases your Mastery by $s1%."),
 )
 primal_attunement_200445 = spell(
     id=200445, name='Primal Attunement', **_dru_passive_talent_kwargs(),
     effects=[_aura(AuraType.MOD_CUSTOM_STAT_PCT, 5, 1 << CombatRating.MASTERY)],
-    spell_icon_id=2382, notes=_PRIMAL_ATTUNEMENT_NOTES + " Rank 3/3.",
+    spell_icon_id=2025, notes=_PRIMAL_ATTUNEMENT_NOTES + " Rank 3/3.",
     raw_overrides=_feral_talent_raw("Increases your Mastery by $s1%."),
 )
 
@@ -7210,7 +7283,7 @@ bloodletting_200454 = spell(
         _aura(AuraType.ADD_PCT_MODIFIER, 7, SpellModOp.DAMAGE),
         _aura(AuraType.ADD_PCT_MODIFIER, 7, SpellModOp.DOT),
     ],
-    spell_icon_id=2770, notes=_BLOODLETTING_NOTES + " Rank 1/2.",
+    spell_icon_id=90121, notes=_BLOODLETTING_NOTES + " Rank 1/2.",
     raw_overrides=_feral_talent_raw(_cap_lower(_BLOODLETTING_TEXT, _BLOODLETTING_CLAUSE), EffectSpellClassMaskA_1=RAKE, EffectSpellClassMaskB_1=RAKE, EffectSpellClassMaskB_3=RIP),
 )
 
@@ -7221,7 +7294,7 @@ bloodletting_200455 = spell(
         _aura(AuraType.ADD_PCT_MODIFIER, 14, SpellModOp.DOT),
         _aura(AuraType.DUMMY, 2),
     ],
-    spell_icon_id=2770, notes=_BLOODLETTING_NOTES + " Rank 2/2 (capstone): eff2 DUMMY 3 = seconds off Tiger's Fury per Rake (spell_dru_rake, 3 sec ICD).",
+    spell_icon_id=90121, notes=_BLOODLETTING_NOTES + " Rank 2/2 (capstone): eff2 DUMMY 3 = seconds off Tiger's Fury per Rake (spell_dru_rake, 3 sec ICD).",
     raw_overrides=_feral_talent_raw(_cap_final(_BLOODLETTING_TEXT, _BLOODLETTING_CLAUSE), EffectSpellClassMaskA_1=RAKE, EffectSpellClassMaskB_1=RAKE, EffectSpellClassMaskB_3=RIP),
 )
 
@@ -7341,10 +7414,14 @@ sabertooth_200463 = spell(
 
 
 # (8,3) Splintering Blows - talent 1796 (was Mangle). CORE-AUDIT row 23: a crit SpellMod on Pulverize's own bit,
-# scaled by Swell stacks in spell_dru_splintering_blows (stored value = per-stack %).
-_SPLINTERING_BLOWS_TEXT = "Your Swell also increases the critical strike chance of your Pulverize by $s1% per stack."
+# scaled by Swell stacks in spell_dru_splintering_blows (stored value = per-stack %). FERAL-ADDENDUM
+# §3.3 (user decision): Savage Bite 200439 shares this same bit, so it reaches Savage Bite too with
+# no extra mask - Savage Bite never consumes Swell, so it always reads the full current stack count.
+_SPLINTERING_BLOWS_TEXT = ("Your Swell also increases the critical strike chance of your Pulverize and Savage Bite "
+                           "by $s1% per stack.")
 _SPLINTERING_BLOWS_NOTES = ("NEW (druid-rework FERAL §7 (8,3), WP-BRIEF §3), talent 1796: eff0 flat CRITICAL_CHANCE on "
-                            "Pulverize 4/8/12 per Swell stack (amount x stacks, recalculated on every Swell change).")
+                            "Pulverize (and Savage Bite, FERAL-ADDENDUM §3.3, sharing the PULVERIZE bit) 4/8/12 per "
+                            "Swell stack (amount x stacks, recalculated on every Swell change).")
 
 splintering_blows_200464 = spell(
     id=200464, name='Splintering Blows', **_dru_passive_talent_kwargs(),

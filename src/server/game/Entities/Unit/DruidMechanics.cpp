@@ -34,6 +34,7 @@
 #include "Group.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
+#include "Random.h"
 #include "Spell.h"
 #include "SpellAuraDefines.h"
 #include "SpellAuraEffects.h"
@@ -44,6 +45,7 @@
 #include "Util.h"
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <list>
 #include <memory>
 #include <mutex>
@@ -76,6 +78,14 @@ namespace Druid
             std::lock_guard<std::mutex> lock(barkskinCastTimesLock);
             auto const itr = barkskinCastTimeByPlayer.find(player->GetGUID());
             return itr != barkskinCastTimeByPlayer.end() ? itr->second + BARKSKIN_COOLDOWN_FLOOR_MS : 0;
+        }
+
+        // FERAL-ADDENDUM §3.1/§3.4: a chance this file rolls itself is scaled by Proc Chance, the
+        // same formula spell_druid_feral.cpp's own (separate) copy uses for its script-rolled chances.
+        bool RollProcChance(Player const* player, float chancePct)
+        {
+            float const scaled = chancePct * (1.0f + player->GetProcChancePercentage() / 100.0f);
+            return roll_chance_f(std::min(100.0f, scaled));
         }
     }
 
@@ -811,14 +821,30 @@ namespace Druid
         constexpr float BLOOM_JUMP_RANGE = 20.0f;
         constexpr uint32 BLOOM_JUMP_MAX_TARGETS = 3;
         constexpr Milliseconds BLOOM_JUMP_DELAY{ 300 };
+        constexpr TriggerCastFlags BLOOM_JUMP_CAST_FLAGS =
+            TriggerCastFlags(TRIGGERED_FULL_MASK & ~TRIGGERED_DISALLOW_PROC_EVENTS);
 
         void ScheduleBloomWave(Unit* caster, std::shared_ptr<std::vector<ObjectGuid>> visited,
-                                std::shared_ptr<std::vector<ObjectGuid>> frontier);
+                                std::shared_ptr<std::vector<ObjectGuid>> frontier, Milliseconds delay);
+
+        // Mirrors Spell::AddUnitTarget's projectile delay: launcher-to-target distance, at least
+        // 5 yards, over the spell's Speed.
+        Milliseconds GetBloomFlightTime(Unit const* launcher, Unit const* target)
+        {
+            SpellInfo const* jump = sSpellMgr->GetSpellInfo(SPELL_BLOOM_JUMP);
+            if (!jump || jump->Speed <= 0.0f || launcher == target)
+                return 0ms;
+
+            float const dist = std::max(launcher->GetDistance(target->GetPositionX(), target->GetPositionY(),
+                                                              target->GetPositionZ()), 5.0f);
+            return Milliseconds(static_cast<int64>(std::floor(dist / jump->Speed * 1000.0f)));
+        }
 
         void RunBloomWave(Unit* caster, std::shared_ptr<std::vector<ObjectGuid>> visited,
                            std::shared_ptr<std::vector<ObjectGuid>> frontier)
         {
             auto nextFrontier = std::make_shared<std::vector<ObjectGuid>>();
+            Milliseconds longestFlight = 0ms;
 
             for (ObjectGuid const& sourceGuid : *frontier)
             {
@@ -858,34 +884,44 @@ namespace Druid
                     if (taken >= BLOOM_JUMP_MAX_TARGETS)
                         break;
 
-                    // The manual LoS check above is source->unit, but the actual cast below is
-                    // caster->unit (SPELL_BLOOM_JUMP is cast by the original caster, not by
-                    // `source`), so Spell::CheckCast can still fail this target on LoS/range from
-                    // the caster on a multi-hop chain even though it passed the source-relative
-                    // check. Code-review fix: only count/track a target once the cast actually
-                    // resolved, instead of unconditionally consuming a jump slot and marking it
-                    // visited for a cast that silently failed and healed nothing.
-                    if (caster->CastSpell(unit, SPELL_BLOOM_JUMP,
-                            TriggerCastFlags(TRIGGERED_FULL_MASK & ~TRIGGERED_DISALLOW_PROC_EVENTS)) != SPELL_CAST_OK)
+                    // SPELL_BLOOM_JUMP is a projectile, so `source` (the previous hop) launches it
+                    // and the orb visibly bounces target to target. The druid stays the original
+                    // caster, so the heal, its crit and its procs stay the druid's (Spell::EffectHeal
+                    // and DoAllEffectOnTarget use m_originalCaster). A dead source can't launch, so
+                    // the druid launches instead; the same fallback covers a source whose own
+                    // CheckCast fails. Code-review fix: only count/track a target once a cast
+                    // actually resolved, instead of consuming a jump slot for a failed cast.
+                    Unit* launcher = source->IsAlive() ? source : caster;
+                    SpellCastResult result = launcher->CastSpell(unit, SPELL_BLOOM_JUMP, BLOOM_JUMP_CAST_FLAGS, nullptr,
+                                                                 nullptr, caster->GetGUID());
+                    if (result != SPELL_CAST_OK && launcher != caster)
+                    {
+                        launcher = caster;
+                        result = caster->CastSpell(unit, SPELL_BLOOM_JUMP, BLOOM_JUMP_CAST_FLAGS);
+                    }
+
+                    if (result != SPELL_CAST_OK)
                         continue;
 
                     visited->push_back(unit->GetGUID());
                     nextFrontier->push_back(unit->GetGUID());
+                    longestFlight = std::max(longestFlight, GetBloomFlightTime(launcher, unit));
                     ++taken;
                 }
             }
 
+            // The next wave waits for this wave's slowest orb to land before its own short delay.
             if (!nextFrontier->empty())
-                ScheduleBloomWave(caster, visited, nextFrontier);
+                ScheduleBloomWave(caster, visited, nextFrontier, longestFlight + BLOOM_JUMP_DELAY);
         }
 
         void ScheduleBloomWave(Unit* caster, std::shared_ptr<std::vector<ObjectGuid>> visited,
-                                std::shared_ptr<std::vector<ObjectGuid>> frontier)
+                                std::shared_ptr<std::vector<ObjectGuid>> frontier, Milliseconds delay)
         {
             // The event lives on the caster's own m_Events, so it dies with the caster - safe to
             // capture the raw pointer (RESTO §6: "the events die with the caster").
             caster->m_Events.AddEventAtOffset(
-                [caster, visited, frontier]() { RunBloomWave(caster, visited, frontier); }, BLOOM_JUMP_DELAY);
+                [caster, visited, frontier]() { RunBloomWave(caster, visited, frontier); }, delay);
         }
     }
 
@@ -900,7 +936,8 @@ namespace Druid
         auto frontier = std::make_shared<std::vector<ObjectGuid>>();
         frontier->push_back(primary->GetGUID());
 
-        ScheduleBloomWave(caster, visited, frontier);
+        // Called from Bloom's AfterHit, i.e. once its own orb has landed.
+        ScheduleBloomWave(caster, visited, frontier, BLOOM_JUMP_DELAY);
     }
 
     /*
@@ -978,20 +1015,23 @@ namespace Druid
         OnSwellChanged(unit);
     }
 
-    void ConsumeSwell(Unit* unit, uint8 count)
+    uint8 ConsumeSwell(Unit* unit, uint8 count)
     {
         if (!unit || !count || unit->HasAura(SPELL_BERSERK))
-            return;
+            return 0;
 
         Aura* swell = unit->GetAura(SPELL_SWELL, unit->GetGUID());
         if (!swell)
-            return;
+            return 0;
+
+        uint8 const removed = std::min<uint8>(count, swell->GetStackAmount());
 
         // Consuming never restarts the timer. Spending the last stacks removes the aura with
         // AURA_REMOVE_BY_DEFAULT, which spell_dru_swell's expire-only decay leaves alone.
         swell->ModStackAmount(-int32(count));
 
         OnSwellChanged(unit);
+        return removed;
     }
 
     void OnSwellChanged(Unit* unit)
@@ -1005,6 +1045,59 @@ namespace Druid
                                SPELL_BONEBREAKER_R1, SPELL_BONEBREAKER_R2, SPELL_BONEBREAKER_R3 })
             if (AuraEffect* effect = unit->GetAuraEffect(rankId, EFFECT_0))
                 effect->RecalculateAmount();
+    }
+
+    void TryGrantToothAndClaw(Player* caster, float chancePct)
+    {
+        if (!caster || chancePct <= 0.0f || !IsBestialFuryActive(caster))
+            return;
+
+        if (!RollProcChance(caster, chancePct))
+            return;
+
+        caster->CastSpell(caster, SPELL_TOOTH_AND_CLAW, TRIGGERED_FULL_MASK);
+    }
+
+    void OnSwellSpent(Player* caster, uint8 consumed)
+    {
+        if (!caster || !consumed)
+            return;
+
+        // Predatory Strikes' bear clause (FERAL-ADDENDUM §3.4): rankTenths/10 x stacks consumed,
+        // e.g. rank 3 (37.5%) at 2 stacks -> 75% - RollProcChance caps the total at 100%.
+        int32 const tenths = GetRankAmount(caster,
+            { SPELL_PREDATORY_STRIKES_R3, SPELL_PREDATORY_STRIKES_R2, SPELL_PREDATORY_STRIKES_R1 }, EFFECT_1);
+        if (tenths > 0)
+            TryGrantToothAndClaw(caster, float(tenths) * float(consumed) / 10.0f);
+    }
+
+    void TryPrimalPrecisionBearReduction(Player* caster, uint32 reductionMs)
+    {
+        if (!caster || !caster->HasAura(SPELL_PRIMAL_PRECISION_R2) || caster->HasAura(SPELL_BERSERK))
+            return;
+
+        // 48410 doubles as the ICD marker shared with the cat clause (spell_dru_primal_precision).
+        if (!TryStartInternalCooldown(caster, SPELL_PRIMAL_PRECISION_R2, PRIMAL_PRECISION_ICD_MS))
+            return;
+
+        ReduceSpellCooldown(caster, SPELL_BERSERK, reductionMs);
+    }
+
+    void ApplyNurturingInstinctEmpower(Player* caster)
+    {
+        if (!caster)
+            return;
+
+        int32 const bonus = GetRankAmount(caster,
+            { SPELL_NURTURING_INSTINCT_R2, SPELL_NURTURING_INSTINCT_R1 }, EFFECT_1);
+        if (bonus <= 0)
+            return;
+
+        // Both effects (damage and periodic damage) take the rank's value.
+        CustomSpellValues values;
+        values.AddSpellMod(SPELLVALUE_BASE_POINT0, bonus);
+        values.AddSpellMod(SPELLVALUE_BASE_POINT1, bonus);
+        caster->CastCustomSpell(SPELL_NI_EMPOWER, values, caster, TRIGGERED_FULL_MASK);
     }
 
     void RestartWithStacks(Unit* target, uint32 spellId, uint8 stacks, int32 durationMs)
@@ -1275,6 +1368,11 @@ namespace Druid
         for (uint32 rankId : { SPELL_PREDATORY_INSTINCTS_R1, SPELL_PREDATORY_INSTINCTS_R2,
                                SPELL_PREDATORY_INSTINCTS_R3 })
             if (AuraEffect* effect = player->GetAuraEffect(rankId, EFFECT_0))
+                effect->RecalculateAmount();
+
+        // Primal Precision's Bestial Fury haste clause (FERAL-ADDENDUM §3.7), EFFECT_2 on both ranks.
+        for (uint32 rankId : { SPELL_PRIMAL_PRECISION_R1, SPELL_PRIMAL_PRECISION_R2 })
+            if (AuraEffect* effect = player->GetAuraEffect(rankId, EFFECT_2))
                 effect->RecalculateAmount();
 
         // Heart of the Wild's Mastery max health follows the form (C4).

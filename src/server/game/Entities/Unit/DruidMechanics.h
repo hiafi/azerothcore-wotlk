@@ -491,6 +491,11 @@ namespace Druid
     constexpr uint32 SPELL_REND_AND_TEAR_CRIT = 200436;       // CORE-AUDIT row 24 helper, 1 charge
     constexpr uint32 SPELL_BESTIAL_FURY_RAGE = 200437;        // hidden, linked to 200425
 
+    // Tooth and Claw addendum (docs/reworks/druid-feral-addition.md, FERAL-ADDENDUM.md). No core
+    // edits; everything below is data + the calls listed next to each constant/function.
+    constexpr uint32 SPELL_TOOTH_AND_CLAW = 200438;           // buff, 2 charges, Bestial Fury only
+    constexpr uint32 SPELL_SAVAGE_BITE = 200439;              // trainer-taught, requires Tooth and Claw
+
     // Talent ranks read at runtime (FERAL §7; "C" rows only). Ranks are read by rank spell id,
     // highest first, through GetRankAmount - never by icon (PLAN §2).
     constexpr uint32 SPELL_ELDER_HIDE_R1 = 200440;
@@ -534,7 +539,11 @@ namespace Druid
     constexpr uint32 SPELL_FERAL_SWIFTNESS_R1 = 17002;
     constexpr uint32 SPELL_FERAL_SWIFTNESS_R2 = 24866;        // capstone: Stampede
     constexpr uint32 SPELL_SHREDDING_ATTACKS_R2 = 16968;      // capstone: Shredded Defense
-    constexpr uint32 SPELL_PRIMAL_PRECISION_R2 = 48410;       // capstone; also its own 3 s ICD id
+    constexpr uint32 SPELL_PREDATORY_STRIKES_R1 = 16972;      // FERAL-ADDENDUM §3.4: bear TnC clause, EFFECT_1
+    constexpr uint32 SPELL_PREDATORY_STRIKES_R2 = 16974;
+    constexpr uint32 SPELL_PREDATORY_STRIKES_R3 = 16975;
+    constexpr uint32 SPELL_PRIMAL_PRECISION_R1 = 48409;
+    constexpr uint32 SPELL_PRIMAL_PRECISION_R2 = 48410;       // capstone; also its own shared 5 s ICD id
     constexpr uint32 SPELL_NURTURING_INSTINCT_R1 = 33872;
     constexpr uint32 SPELL_NURTURING_INSTINCT_R2 = 33873;
     constexpr uint32 SPELL_HEART_OF_THE_WILD_R1 = 17003;
@@ -595,6 +604,14 @@ namespace Druid
     constexpr int32 SWELL_DURATION_OUT_OF_COMBAT_MS = 20000;
     constexpr uint32 BARKSKIN_COOLDOWN_FLOOR_MS = 30000;      // B7 / CORE-AUDIT row 34
 
+    // Tooth and Claw addendum, shared between spell_druid_feral.cpp and this file's own bodies
+    // (FERAL-ADDENDUM §3.2/§3.7). Predatory Strikes' cat clause used a 3 s ICD before this pass;
+    // the addendum's shared cat/bear ICD replaces it (48410 doubles as the marker for both clauses).
+    constexpr float TOOTH_AND_CLAW_MAUL_MANGLE_CHANCE_PCT = 15.0f;
+    constexpr uint32 PRIMAL_PRECISION_ICD_MS = 5000;
+    constexpr uint32 PRIMAL_PRECISION_PULVERIZE_REDUCTION_MS = 10000;   // bear clause, playtest revision
+    constexpr uint32 PRIMAL_PRECISION_SAVAGE_BITE_REDUCTION_MS = 3000;
+
     bool IsInBearForm(Unit const* unit);                      // form 5 or 8
     bool IsBestialFuryActive(Unit const* unit);               // form 5
 
@@ -606,7 +623,9 @@ namespace Druid
     // while Berserk is up, otherwise min(2, stacks).
     uint8 GetSwellStacksForDamage(Unit const* unit);
     void AddSwell(Unit* unit, uint8 count);
-    void ConsumeSwell(Unit* unit, uint8 count);
+    // Returns the stacks actually removed (0 under Berserk or with no Swell up) - FERAL-ADDENDUM
+    // §3.6 callers (Pulverize/Upheaval) feed this straight into OnSwellSpent.
+    uint8 ConsumeSwell(Unit* unit, uint8 count);
     // Recalculates EFFECT_0 of whichever Splintering Blows (200464-200466) and Bonebreaker
     // (200456-200458) rank `unit` has; their AuraScripts in spell_druid_feral.cpp compute the amount
     // from GetSwellStacks (CORE-AUDIT rows 23, 25). Also called by the Swell AuraScript on removal.
@@ -633,6 +652,30 @@ namespace Druid
     // max health in either bear form, external healing in form 8 only (suppressed in Bestial Fury),
     // Frenzied Regeneration by its own bear-only ShapeshiftMask.
     float GetHeartOfTheWildMasteryPct(Player const* player);
+
+    // --- Tooth and Claw addendum (docs/reworks/druid-feral-addition.md, FERAL-ADDENDUM.md) ---
+
+    // Grants a Tooth and Claw (200438) charge/refresh if `caster` is in Bestial Fury and the roll
+    // (scaled and capped by Proc Chance) succeeds. A no-op with chancePct <= 0 (e.g. no Predatory
+    // Strikes rank, or a Swell spender that consumed 0 stacks under Berserk). Callers: Maul and
+    // Mangle (Bear)'s AfterCast (flat 15%, only when the cast actually hit something), and
+    // OnSwellSpent below (the Predatory Strikes bear clause).
+    void TryGrantToothAndClaw(Player* caster, float chancePct);
+
+    // Predatory Strikes' bear clause, keyed on Swell stacks actually spent by Pulverize/Upheaval
+    // (FERAL-ADDENDUM §3.4/§3.6). No-op when consumed == 0 (Berserk: nothing is consumed -
+    // addendum decision 2).
+    void OnSwellSpent(Player* caster, uint8 consumed);
+
+    // Primal Precision's bear clause (FERAL-ADDENDUM §3.7, playtest revision): Pulverize takes
+    // PRIMAL_PRECISION_PULVERIZE_REDUCTION_MS and Savage Bite PRIMAL_PRECISION_SAVAGE_BITE_REDUCTION_MS
+    // off Berserk's cooldown. Shares its ICD marker (48410) and PRIMAL_PRECISION_ICD_MS with the cat
+    // clause in spell_dru_primal_precision; nothing happens, and no ICD is burned, while Berserk is up.
+    void TryPrimalPrecisionBearReduction(Player* caster, uint32 reductionMs);
+
+    // Nurturing Instinct's empowered buff (200430), shared by a Regrowth made instant by Predator's
+    // Swiftness (spell_dru_nurturing_instinct_empower) and by Savage Bite (FERAL-ADDENDUM §3.3/§3.8).
+    void ApplyNurturingInstinctEmpower(Player* caster);
 
     // --- Feral WP-B2 additions (append-only; the WP-0 block above is frozen) ---
 

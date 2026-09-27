@@ -57,7 +57,10 @@ FURY_OF_ELUNE = 0x01000000  # bit 24 - Fury of Elune beam 200338 + splash 200339
 
 # Feral's bits (owned by the Feral pass; named here now so later passes only import, PLAN §4.4).
 IRONFUR = 0x02000000  # bit 25 - Ironfur 200420
-PULVERIZE = 0x04000000  # bit 26 - Pulverize 200421
+PULVERIZE = 0x04000000  # bit 26 - Pulverize 200421 + Savage Bite 200439 (shared, FERAL-ADDENDUM §3.3
+# user decision: Savage Bite reuses Pulverize's bit instead of the last dword-1 reserve bit, so it
+# also gets Nurturing Instinct's buff (already in NURTURING_INSTINCT_DAMAGE below) and Splintering
+# Blows (druid_trigger_spells.py). Any future PULVERIZE-scoped SpellMod reaches Savage Bite too.)
 THRASH = 0x08000000  # bit 27 - Thrash 200423
 UPHEAVAL = 0x00020000  # bit 17 - Upheaval 200422 (reclaimed from the orphaned Improved Barkskin
 # passive 66530 - strip it from 66530 when the Feral pass lands)
