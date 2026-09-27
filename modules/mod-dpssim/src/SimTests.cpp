@@ -49,19 +49,19 @@ namespace
     //     value for a 3.0s-cast direct-damage nuke; confirmed this fork's own custom balance work
     //     didn't touch it (those changes target DoTs specifically - see the plan doc's git-log
     //     note about haste/crit-scaling dots).
-    //   SpellLevel=60, MaxLevel=64 - MaxLevel > SpellLevel means Unit::CalculateLevelPenalty()
-    //     does *not* early-return 1.0f (that only happens when SpellLevel >= MaxLevel) and instead
-    //     computes a real one: LvlFactor = (SpellLevel+6)/CasterLevel = 66/80 = 0.825, LvlPenalty=0
-    //     (SpellLevel is not < 20). A level-80 caster on this MaxLevel-64 spell really does eat a
-    //     ~17.5% coefficient penalty - not obvious going in, worth remembering if this ever looks
-    //     like a bug later.
+    //   SpellLevel=60, MaxLevel=64 - stock Unit::CalculateLevelPenalty() would scale the
+    //     coefficient by (SpellLevel+6)/CasterLevel = 66/80 = 0.825 here (the downranking
+    //     penalty). This fork disables that penalty (single-rank spells: every class spell keeps
+    //     rank 1's SpellLevel, so it cut nearly all player spell power scaling at 80 - see
+    //     docs/bugs-and-fixes.md), so the factor is 1.0. If this test starts failing low by ~17.5%,
+    //     the penalty has come back (e.g. lost in an upstream merge).
     //
     // SpellEffectInfo::CalcValue()'s dice roll (patch-3.3.3 semantics: range is [1, DieSides]) puts
     // the pre-spellpower base value at BasePoints + roll, i.e. [515, 555].
     constexpr float FROSTBOLT_BASE_MIN = 514.0f + 1.0f;
     constexpr float FROSTBOLT_BASE_MAX = 514.0f + 41.0f;
     constexpr float FROSTBOLT_COEFF = 0.857f;
-    constexpr float FROSTBOLT_LEVEL_PENALTY = 66.0f / 80.0f;
+    constexpr float FROSTBOLT_LEVEL_PENALTY = 1.0f;
 
     // Frostbolt's cast time is 3.0s (unmodified in this fork, 0 haste on a bare actor) - well
     // above the 1.5s GCD, so cast time (not GCD) is what paces the rotation. Confirmed against

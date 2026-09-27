@@ -548,6 +548,12 @@ enum CharacterDatabaseStatements : uint32
 
     CHAR_NO_OP_PROVIDE_REALM_CONTEXT,
 
+    // Custom: shapeshift appearances (Scripts/Custom/custom_shapeshift_appearance.cpp)
+    CHAR_SEL_SHAPESHIFT_APPEARANCES,
+    CHAR_REP_SHAPESHIFT_APPEARANCE,
+    CHAR_DEL_SHAPESHIFT_APPEARANCE,
+    CHAR_DEL_SHAPESHIFT_APPEARANCES,
+
     MAX_CHARACTERDATABASE_STATEMENTS
 };
 

@@ -81,6 +81,29 @@ def load_stock_rows(table: DbcTable) -> dict[int, dict]:
     return rows
 
 
+_promoted_sql_cache: list[tuple[Path, str]] | None = None
+
+
+def _promoted_sql_files() -> list[tuple[Path, str]]:
+    """Every `data/sql/updates/db_world/*.sql` file's path and full text, read
+    from disk exactly once per process and reused across every
+    `load_existing_rows` call. `generate.py` calls `load_existing_rows` once
+    per table (9 times, as of this writing) - each call used to independently
+    re-glob this directory and re-`read_text()` every file in it from
+    scratch, so a run paid for N tables x M files of disk I/O instead of M.
+    With M past 950 and climbing (every past rework's promoted migrations
+    live here forever), that 9x-redundant re-read became this tool's single
+    largest cost - see docs/dbc-build-pipeline.md's "generate.py looks hung
+    but is CPU-bound" entry, added the same day this cache was."""
+    global _promoted_sql_cache
+    if _promoted_sql_cache is None:
+        _promoted_sql_cache = [
+            (path, path.read_text(encoding="utf-8"))
+            for path in sorted(PROMOTED_SQL_DIR.glob("*.sql"))
+        ]
+    return _promoted_sql_cache
+
+
 def load_existing_rows(table: DbcTable) -> dict[int, dict]:
     """`load_stock_rows` further overlaid by every already-promoted db_world/
     migration - "what the server's world DB actually has right now". Use
@@ -89,8 +112,7 @@ def load_existing_rows(table: DbcTable) -> dict[int, dict]:
     docstring for why those are different questions with different answers."""
     rows = load_stock_rows(table)
     needle = f"`{table.sql_table}`"
-    for path in sorted(PROMOTED_SQL_DIR.glob("*.sql")):
-        text = path.read_text(encoding="utf-8")
+    for path, text in _promoted_sql_files():
         if needle not in text:
             continue
         try:

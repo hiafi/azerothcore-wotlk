@@ -234,6 +234,38 @@ SPELLRADIUS = DbcTable(
     columns=("ID", "Radius", "RadiusPerLevel", "RadiusMax"),
 )
 
+# Not part of ALL_TABLES / the generate.py resolve.py/build.py pipeline (no source/*.csv
+# convention or reserved-ID block of its own - every row is a full-row override of an existing
+# stock form, see lib/dsl/registry.py's shapeshift_form()) - handled instead through
+# lib/spell_tables.py's generic declared-table path, same as spell_linked_spell/spell_group/
+# spell_custom_attr.
+SPELLSHAPESHIFTFORM = DbcTable(
+    name="SpellShapeshiftForm",
+    dbc_filename="SpellShapeshiftForm.dbc",
+    sql_table="spellshapeshiftform_dbc",
+    # SpellShapeshiftFormEntryfmt (DBCfmt.h). 35 fields, confirmed against a real extraction
+    # (var/extractors/dbc/SpellShapeshiftForm.dbc, pulled from patch-enUS-3.MPQ same as Item.dbc -
+    # see README's "Setup" list) — 140-byte records, matching DBCStructure.h's SpellShapeshiftFormEntry
+    # struct exactly once the two "unused" 'x' runs are counted: bonusActionBar + Name[16] + NameFlags
+    # (18 fields, columns 1-18) and attackIconID (1 field, column 21) and creatureDisplayID[2] (2
+    # fields, columns 25-26) are real columns in the SQL overlay (AttackIconID, CreatureDisplayID_3/4)
+    # even though the AC struct never reads them - same convention as every other table here.
+    fmt="n" + "x" * 18 + "ii" + "x" + "iii" + "xx" + "i" * 8,
+    columns=_cols(
+        "ID", "BonusActionBar", _locale_cols("Name"), "Flags", "CreatureType",
+        "AttackIconID", "CombatRoundTime", ("CreatureDisplayID", 4), ("PresetSpellID", 8),
+    ),
+    # creatureType is `int32` in DBCStructure.h ("<= 0 humanoid, other normal creature types") -
+    # every other column here is a plain uint32.
+    signed=frozenset(("CreatureType",)),
+    # Name_Lang_* is 'x' in DBCfmt.h (AC's struct never reads it) but is real string-table-offset
+    # data in the file (confirmed by extraction — form 5's Name_Lang_enUS offset is non-zero, i.e.
+    # a real name string sits there), same TalentTab-style exception as this module's docstring
+    # describes. Without this, dbcfile.py would read the raw offset as a bare integer and write it
+    # straight into the varchar(100) SQL column (e.g. `53`) instead of the actual name text.
+    read_as_string=frozenset(f"Name_Lang_{loc}" for loc in LOCALE_SUFFIXES),
+)
+
 ITEM = DbcTable(
     name="Item",
     dbc_filename="Item.dbc",
@@ -330,6 +362,9 @@ SPELLVISUAL = DbcTable(
         "MissileCastOffsetX", "MissileCastOffsetY", "MissileCastOffsetZ",
         "MissileImpactOffsetX", "MissileImpactOffsetY", "MissileImpactOffsetZ",
     ),
+    # -1 = "no attachment" in the client file; the SQL overlay's columns are signed `int`, so an
+    # unsigned 4294967295 is rejected there (ERROR 1264 Out of range).
+    signed=frozenset({"MissileDestinationAttachment", "MissileAttachment"}),
 )
 
 SPELLVISUALKIT = DbcTable(
@@ -393,6 +428,25 @@ GAMEOBJECTDISPLAYINFO = DbcTable(
         "GeoBoxMaxX", "GeoBoxMaxY", "GeoBoxMaxZ", "ObjectEffectPackageID",
     ),
     read_as_string=frozenset({"ModelName"}),
+)
+
+# Not part of ALL_TABLES - patched directly by the one-off VFX scripts (patch_druid_vfx_models.py
+# first) when a mined SpellVisualKit.SoundID has no stock row. Server-loaded (DBCStores.cpp:
+# LOAD_DBC(sSoundEntriesStore, "SoundEntries.dbc", "soundentries_dbc")), but nothing server-side
+# ever looks up a sound that only a SpellVisualKit references, so these rows ship client-only.
+# Column names from data/sql/base/db_world/soundentries_dbc.sql. DBCfmt.h's SoundEntriesfmt is
+# all 'x' (AC reads only the ID); the 3 float columns are 'f' here and the string columns are in
+# read_as_string so the rows can actually be authored - same byte layout either way.
+SOUNDENTRIES = DbcTable(
+    name="SoundEntries",
+    dbc_filename="SoundEntries.dbc",
+    sql_table="soundentries_dbc",
+    fmt="n" + "x" * 23 + "f" + "x" + "ff" + "xx",
+    columns=_cols(
+        "ID", "SoundType", "Name", ("File", 10), ("Freq", 10), "DirectoryBase", "Volumefloat",
+        "Flags", "MinDistance", "DistanceCutoff", "EAXDef", "SoundEntriesAdvancedID",
+    ),
+    read_as_string=frozenset({"Name", *(f"File_{i}" for i in range(1, 11)), "DirectoryBase"}),
 )
 
 ALL_TABLES = (

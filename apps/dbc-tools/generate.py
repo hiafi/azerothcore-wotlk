@@ -137,10 +137,21 @@ def _merge_dsl_sources(spell_entries: list[dict], talents: dict, dsl_classes: di
 
 
 def main() -> int:
+    start = time.monotonic()
+
+    def progress(label: str) -> None:
+        # Several of the steps below have no output of their own and can run for minutes on a
+        # full-size source tree (a bare CLI run can otherwise look identical to a hang) - see
+        # docs/bugs-and-fixes.md's "generate.py looks hung but is CPU-bound" entry. flush=True since
+        # this print is the only signal something is happening, and a piped/redirected run
+        # (`generate.py > log.txt`) would otherwise buffer it invisibly until exit.
+        print(f"[{time.monotonic() - start:6.1f}s] {label}", flush=True)
+
     ids_cfg = source.load_ids(SOURCE_DIR / "ids.yaml")
     spell_entries = source.load_spells_csv(SOURCE_DIR / "spells")
     talents = source.load_talents_yaml(SOURCE_DIR / "talents")
     item_entries = source.load_items_csv(SOURCE_DIR / "items.csv")
+    progress("loaded source/ (ids.yaml, spells/*.csv, talents/*.yaml, items.csv)")
 
     # Static scan of creature_default_trainer/creature_template/creature (base +
     # updates/pending_db_world) - lib/dsl/registry.py's trained_by() validates
@@ -148,11 +159,29 @@ def main() -> int:
     # lib/trainer_state.py's docstring for why this needs no live DB connection
     # and for its "union of INSERTs, no DELETE/UPDATE replay" limitation.
     trainer_index = trainer_state.load_trainer_index()
+    progress("loaded trainer index")
+    # spell_script_names / spell_bonus_data / spell_proc / spell_linked_spell / spell_group / ... -
+    # built *before* load_classes_dir below (it needs no dsl_classes input, only what's already
+    # on disk) so its already-loaded live data can be reused instead of rescanned - both for
+    # existing_group_ids right below, and later for render_removal_blocks's typo guard and the
+    # linked_spell collision check (review, 2026-09-23 - see lib/spell_tables.py's SpellTableIndex.
+    # live_keys()/live_rows()).
+    spell_table_index = spell_tables.load_spell_table_index()
+    progress("loaded spell table index (spell_script_names/spell_bonus_data/spell_proc/...)")
+    # existing spell_group ids (base dump + migrations) - lib/dsl/registry.py's spell_group()/
+    # spell_group_rule() accept a member/rule for one of these even when it's outside
+    # ids.yaml's own spell_group block (adding to a stock group like 1054/1016 is legitimate).
+    existing_group_ids = {key[0] for key in spell_table_index.live_keys("spell_group")}
+    # stock SpellShapeshiftForm rows (base DBC + base SQL) - shapeshift_form() builds a full
+    # override row starting from whichever of these form_id names.
+    shapeshift_index = state.load_stock_rows(dbcfmt.SPELLSHAPESHIFTFORM)
 
     dsl_classes = dsl_registry.load_classes_dir(
         SOURCE_DIR / "classes", ids_cfg=ids_cfg, trainer_index=trainer_index,
+        existing_group_ids=existing_group_ids, shapeshift_index=shapeshift_index,
     )
     n_dsl = sum(len(v) for v in dsl_classes.values())
+    progress(f"loaded source/classes/*.py DSL ({n_dsl} entries)")
     _merge_dsl_sources(spell_entries, talents, dsl_classes)
     if n_dsl:
         print(
@@ -162,11 +191,11 @@ def main() -> int:
             f"abilitie(s), {len(dsl_classes['trainer_spells'])} trainer spell grant(s), "
             + ", ".join(f"{n} {name}" for name, n in spell_tables.count_declared(dsl_classes).items())
         )
+    for warning in lint.check_linked_spell_key_collisions(
+        spell_table_index.live_rows("spell_linked_spell") + dsl_classes["linked_spells"]
+    ):
+        print(f"WARNING: {warning}")
     trainer_spell_rows = _trainer_spells_to_emit(dsl_classes["trainer_spells"], trainer_index)
-    # spell_script_names / spell_bonus_data / spell_proc - same
-    # "skip what's already live, DELETE+INSERT the rest" path as trainer_spell,
-    # see lib/spell_tables.py.
-    spell_table_index = spell_tables.load_spell_table_index()
     spell_table_blocks = spell_tables.render_blocks(spell_table_index, dsl_classes)
     # Prune: rows an *earlier* run of this script emitted that source/classes/*
     # no longer declares (a removed scripted_by()/procs_on()/bonus_coefficients()).
@@ -180,6 +209,19 @@ def main() -> int:
         prune_blocks, prune_report = spell_tables.render_prune_blocks(spell_table_index, dsl_classes)
     for line in prune_report:
         print(line)
+    # Declared removals (unbind_script/unlink_spell/leave_spell_group/untrain) - a row this tool
+    # never emitted itself (stock data, or an older hand-written migration), so the prune pass
+    # above can't reach it. See lib/spell_tables.py's "Declared removals" section. Reuses
+    # spell_table_index's/trainer_index's already-loaded live data for the three REMOVAL_TABLES
+    # entries that overlap SPELL_TABLES, instead of a fresh rescan per table (review, 2026-09-23).
+    removal_live_keys = {
+        spec.name: spell_table_index.live_keys(spec.name) for spec in spell_tables.SPELL_TABLES
+    }
+    removal_live_keys["trainer_spell"] = set(trainer_index.existing_trainer_spells.keys())
+    removal_blocks, removal_report = spell_tables.render_removal_blocks(dsl_classes, removal_live_keys)
+    for line in removal_report:
+        print(line)
+    progress("rendered spell-table blocks (prune + removal passes done)")
 
     existing_spells = state.load_existing_rows(dbcfmt.SPELL)
     existing_talents = state.load_existing_rows(dbcfmt.TALENT)
@@ -190,6 +232,7 @@ def main() -> int:
         name: state.load_existing_rows(table) for name, table in SECONDARY_TABLES.items()
     }
     existing_secondary = {name: list(rows.values()) for name, rows in existing_secondary_by_id.items()}
+    progress("loaded existing (db_world-promoted-aware) DBC state")
 
     # Reconcile source/ against what's actually live: an entry is either new
     # (id inside the reserved block), a deliberate edit to something that
@@ -245,6 +288,7 @@ def main() -> int:
             f"{skilllineability_resolved.edited_ids}, {len(item_resolved.edited_ids)} "
             f"item(s) {item_resolved.edited_ids}"
         )
+    progress("resolved source/ against existing rows (new/edited/unchanged split)")
 
     # Real build pass (real ReuseContext this time) over just what survived
     # reconciliation — this is what actually gets emitted to SQL.
@@ -256,12 +300,28 @@ def main() -> int:
         spell_resolved.entries, skilllineability_resolved.entries, existing_skilllineabilities, ids_cfg,
     ):
         print(f"WARNING: {warning}")
+    # PLAN A9: raw_overrides silently beating a typed field build_spell_row also sets (lib/build.py
+    # applies raw_overrides last) - see lib/lint.py's own docstring for the bug this already
+    # shipped (nine spells kept their rank-1 cast time instead of the DSL's cast_time_ms).
+    # Scans the *full* spell_entries, not spell_resolved.entries - resolve_rows silently drops any
+    # entry whose built row is unchanged from what's already live (an "unchanged reference copy"),
+    # which is exactly where a still-live A9-shaped bug hides: a spell nobody edited this run
+    # never gets built or compared, so the mismatch stays invisible to a resolved-only scan (found
+    # via review, 2026-09-23 - a first version of this check scanned spell_resolved.entries and
+    # wrongly concluded all nine PLAN A9 spells were already fixed).
+    for warning in lint.check_raw_override_typed_mismatch(spell_entries, existing_secondary_by_id):
+        print(f"WARNING: {warning}")
+    # Same full-population scan: RangeIndex 0 on a spell aimed at another unit fails CheckRange
+    # silently (Fury of Elune's beam did no damage - docs/bugs-and-fixes.md).
+    for warning in lint.check_zero_range_unit_target(spell_entries):
+        print(f"WARNING: {warning}")
     talent_rows = [build.build_talent_row(e) for e in talent_resolved.entries]
     talenttab_rows = [build.build_talenttab_row(e) for e in talenttab_resolved.entries]
     skilllineability_rows = [
         build.build_skilllineability_row(e) for e in skilllineability_resolved.entries
     ]
     item_rows = [build.build_item_row(e) for e in item_resolved.entries]
+    progress("built rows for SQL emission and ran lint checks")
 
     # Second reconciliation pass, against pure-vanilla state instead of
     # state.load_existing_rows's db_world-promoted-aware state, purely to
@@ -300,6 +360,7 @@ def main() -> int:
         build.build_skilllineability_row(e) for e in client_skilllineability_resolved.entries
     ]
     client_item_rows = [build.build_item_row(e) for e in client_item_resolved.entries]
+    progress("built client-patch rows (resolved against pure-vanilla stock baseline)")
 
     # -- pending SQL: reserved range + explicit edited IDs, per table --
     blocks = [
@@ -342,9 +403,10 @@ def main() -> int:
     out_path = PENDING_SQL_DIR / f"rev_{rev}.sql"
     wrote_sql = sql_out.emit_pending_sql(
         out_path, blocks, header,
-        extra_blocks=[*prune_blocks, trainer_spell_block, *spell_table_blocks],
+        extra_blocks=[*prune_blocks, *removal_blocks, trainer_spell_block, *spell_table_blocks],
     )
     print(f"SQL: wrote {out_path.relative_to(REPO_ROOT)}" if wrote_sql else "SQL: nothing to emit")
+    progress("SQL emission done")
 
     # -- client patch: needs a complete file (base + new), so any table with
     # new/changed rows but no extracted base file gets skipped, not
@@ -403,6 +465,7 @@ def main() -> int:
                   f"by hand for an immediate manifest.txt refresh)")
     else:
         print("patch: nothing to write (no base DBCs available yet)")
+    progress("done")
 
     return 0
 

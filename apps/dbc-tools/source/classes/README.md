@@ -136,5 +136,39 @@ scripted_by(12654, "spell_mage_ignite")
 negative "-<id> = this and every spell_ranks rank" shorthand; bind each rank
 of a multi-rank talent individually, the `Spell` objects are right there.
 
+Five more (WP-T, `.agents/plans/druid-rework/druid-rework.WP-T-HANDOFF.md`), same emission model:
+
+```python
+from lib.dsl.registry import linked_spell, spell_group, spell_group_rule, custom_attr, shapeshift_form
+
+linked_spell(200326, 57865, type=2)                    # -> spell_linked_spell (0=cast, 1=hit, 2=aura -
+                                                         #    each type reads a negative trigger/effect
+                                                         #    differently; see registry.py's own comment
+                                                         #    above _SPELL_LINKED_MAX_SPELLS before using one)
+spell_group(1200, 200001, 200002)                      # -> spell_group (group_id: fresh from
+spell_group_rule(1200, stack_rule=1, description="x")  # -> spell_group_stack_rules  ids.yaml's `spell_group`
+                                                         #    block, or already exists in stock data)
+custom_attr(200001, attributes=0x02000000)             # -> spell_custom_attr (SpellCustomAttributes,
+                                                         #    SPELL_ATTR0_CU_POSITIVE_EFF0 here - check
+                                                         #    SpellInfo.h, there's no single "POSITIVE" bit)
+shapeshift_form(5, attackSpeed=3500)                    # -> spellshapeshiftform_dbc, a FULL override
+                                                         #    row (stock row + just the named columns)
+```
+
+And their declared-removal counterparts, for a row this tool never emitted itself (stock data, or
+an older hand-written migration) that the "no longer declared" prune pass can't reach - see
+`apps/dbc-tools/README.md`'s "Declaring more world-DB tables" section for the full rules (emitted
+once, a `WARNING:` for a key that doesn't exist anywhere, an error for declaring and removing the
+same key in one run):
+
+```python
+from lib.dsl.registry import unbind_script, unlink_spell, leave_spell_group, untrain
+
+unbind_script(69366, "spell_dru_moonkin_form_passive")
+unlink_spell(200326, 57865, type=2)
+leave_spell_group(1054, 200001)
+untrain(50464, trainer_ids=[212, 213])
+```
+
 A file whose name starts with `_` is skipped by the loader (reserved for a
 future shared-helpers module, not a class file).

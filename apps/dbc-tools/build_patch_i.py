@@ -75,6 +75,16 @@ ICON_ID_HOLY_WORD_SERENITY = 90106
 ICON_ID_HOLY_WORD_SANCTIFY = 90107  # was sharing 90102 (Halo) with Serenity - split out to fix that
 ICON_ID_HOLY_WORD_CHASTISE = 90108  # was sharing 90104 (Void Eruption) with Apotheosis - split out
 ICON_ID_APOTHEOSIS = 90109
+# Druid rework (.agents/plans/druid-rework/druid-rework.PLAN.md): Balance 90110-90119, Feral
+# 90120-90129, Resto 90130-90139. Cenarion Ward, Improved Insect Swarm and Primal Attunement use
+# stock icons (198, 116, 2025) that already carry the wanted art, so they aren't mined here.
+ICON_ID_MASS_ENTANGLEMENT = 90110
+ICON_ID_FURY_OF_ELUNE = 90111  # shared by 200336 and its 200338/200339 beam/splash triggers
+ICON_ID_IRONFUR = 90120
+ICON_ID_BLOODLETTING = 90121
+ICON_ID_SAVAGE_BITE = 90122  # 200439 (FERAL-ADDENDUM, was sharing Maul's 1680)
+ICON_ID_BLOOM = 90130  # shared by 200560 and its 200561 jump
+ICON_ID_FLOURISH = 90131  # shared by 200564 and its 200565/200603 buff/ground triggers
 
 ICONS = (
     (ICON_ID_ANGELIC_FEATHER, "Interface/icons/ability_priest_angelicfeather.blp"),
@@ -86,6 +96,13 @@ ICONS = (
     (ICON_ID_HOLY_WORD_SANCTIFY, "Interface/icons/spell_holy_divineprovidence.blp"),
     (ICON_ID_HOLY_WORD_CHASTISE, "Interface/icons/spell_holy_chastise.blp"),
     (ICON_ID_APOTHEOSIS, "Interface/icons/spell_priest_chakra.blp"),
+    (ICON_ID_MASS_ENTANGLEMENT, "Interface/icons/spell_druid_massentanglement.blp"),
+    (ICON_ID_FURY_OF_ELUNE, "Interface/icons/ability_druid_cresentburn.blp"),
+    (ICON_ID_IRONFUR, "Interface/icons/ability_druid_ironfur.blp"),
+    (ICON_ID_BLOODLETTING, "Interface/icons/ability_ironmaidens_corruptedblood.blp"),
+    (ICON_ID_SAVAGE_BITE, "Interface/icons/spell_druid_bearhug.blp"),
+    (ICON_ID_BLOOM, "Interface/icons/ability_evoker_spiritbloom.blp"),
+    (ICON_ID_FLOURISH, "Interface/icons/inv12_ability_druid_flourish_empowered.blp"),
 )
 
 

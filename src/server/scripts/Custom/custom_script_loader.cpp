@@ -20,6 +20,7 @@
 void AddSC_custom_xp_rates();
 void AddSC_custom_pve_always_hit();
 void AddSC_custom_healing_dummy();
+void AddSC_custom_shapeshift_appearance();
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
@@ -28,4 +29,5 @@ void AddCustomScripts()
     AddSC_custom_xp_rates();
     AddSC_custom_pve_always_hit();
     AddSC_custom_healing_dummy();
+    AddSC_custom_shapeshift_appearance();
 }

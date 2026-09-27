@@ -5,7 +5,7 @@ Split from a single source/classes/priest.py via split_class_file.py (.agents/pl
 """
 
 from lib.dsl import ApplyAura, AuraType, DispelType, Effect, EffectType, Mechanic, School, SpellModOp
-from lib.dsl.registry import bonus_coefficients, scripted_by, skill_line_ability, spell, trained_by
+from lib.dsl.registry import bonus_coefficients, scripted_by, skill_line_ability, spell, trained_by, untrain
 from . import _masks
 from .priest_trigger_spells import (
     angelic_feather_buff_200131,
@@ -159,7 +159,7 @@ smite_585 = spell(
     name='Smite',
     school=School.HOLY,
     attributes=65536,
-    cast_time_ms=2500,
+    cast_time_ms=2000,
     cooldown_ms=0,
     category_cooldown_ms=0,
     mana_cost=0,
@@ -169,8 +169,8 @@ smite_585 = spell(
         Effect(type=EffectType.SCHOOL_DAMAGE, base_points=12, points_per_level=8.7561, die_sides=5, implicit_target_a=6),
     ],
     spell_icon_id=237,
-    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1→top rank's own top level (83, chain has a gap at 60) slope (anchor rank 48123, rank 12); coefficient/cast_time_ms/mana_cost_pct from max rank (48123, rank 12); MaxLevel set to 80",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Smite an enemy for $s1 Holy damage.', 'EffectBonusMultiplier_1': 0.7139999866485596, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'SpellClassMask_1': 128, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellVisualID_1': 128, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1→top rank's own top level (83, chain has a gap at 60) slope (anchor rank 48123, rank 12); coefficient/mana_cost_pct from max rank (48123, rank 12); MaxLevel set to 80. PLAN A9 (BALANCE §0.13/druid-rework code review finding #9): cast_time_ms=2000, raw CastingTimeIndex (16, 1500ms) dropped so it no longer wins over the typed field.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Smite an enemy for $s1 Holy damage.', 'EffectBonusMultiplier_1': 0.7139999866485596, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'SpellClassMask_1': 128, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellVisualID_1': 128, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 scripted_by(smite_585, 'spell_pri_surge_of_light_consume')  # Holy (5,0) Surge of Light
 
@@ -405,7 +405,7 @@ lesser_heal_2050 = spell(
     name='Lesser Heal',
     school=School.HOLY,
     attributes=65536,
-    cast_time_ms=2500,
+    cast_time_ms=1500,
     cooldown_ms=0,
     category_cooldown_ms=0,
     mana_cost=0,
@@ -415,9 +415,22 @@ lesser_heal_2050 = spell(
         Effect(type=EffectType.HEAL, base_points=45, points_per_level=6.9286, die_sides=11, implicit_target_a=21),
     ],
     spell_icon_id=682,
-    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1→top rank's own top level (15, chain has a gap at 60) slope (anchor rank 2053, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (2053, rank 3); MaxLevel set to 80",
-    raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heal your target for $s1.', 'EffectBonusMultiplier_1': 0.8389999866485596, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_1': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_1': 262144, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 285, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1→top rank's own top level (15, chain has a gap at 60) slope (anchor rank 2053, rank 3); coefficient/mana_cost_pct from max rank (2053, rank 3); MaxLevel set to 80. PLAN A9 (druid-rework code review finding #9): keeps its live cast time - cast_time_ms=1500, raw CastingTimeIndex (16, 1500ms) dropped so the two fields agree instead of one silently winning; no behaviour change (A10 also deprecates this spell from new characters, but the row stays for A9/lint consistency).",
+    raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heal your target for $s1.', 'EffectBonusMultiplier_1': 0.8389999866485596, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_1': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_1': 262144, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 285, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+# Stop auto-learning Lesser Heal at character creation - druid-rework.PLAN.md §1 A10 ("deprecated,
+# remove both" Lesser Heal and Heal; Greater Heal has been the level-1 heal since 2026-09-06). All
+# other columns kept at their stock values (raw_overrides only touches AcquireMethod), matching the
+# real SkillLineAbility 2313 row (SkillLine 56, Spell 2050, ClassMask 16, MinSkillLineRank 1) so the
+# regenerated row is identical to stock apart from that one flag - same pattern as 3777 above it.
+skill_line_ability(id=2313, skill_line=56, spell_id=lesser_heal_2050.id, class_mask=16,
+                    min_skill_line_rank=1, raw_overrides={'AcquireMethod': 0})
+# Any live trainer row still teaching Lesser Heal 2052 or Heal 2054 (druid-rework.PLAN.md §1 A10) -
+# checked via trainer_state.load_trainer_index().existing_trainer_spells 2026-09-24: 2050 has no
+# live trainer row left, 2052 is still on {11, 12, 208, 209} (mod-progression's phase_00 lists it),
+# 2054 is still on {11, 208}.
+untrain(2052, [11, 12, 208, 209])
+untrain(2054, [11, 208])
 
 
 lesser_heal_2052 = spell(
@@ -465,7 +478,7 @@ greater_heal_2060 = spell(
     name='Greater Heal',
     school=School.HOLY,
     attributes=65536,
-    cast_time_ms=3000,
+    cast_time_ms=2500,
     cooldown_ms=0,
     category_cooldown_ms=0,
     mana_cost=0,
@@ -475,8 +488,8 @@ greater_heal_2060 = spell(
         Effect(type=EffectType.HEAL, base_points=45, points_per_level=37.8101, die_sides=115, implicit_target_a=21),
     ],
     spell_icon_id=241,
-    notes="re-anchored for the Priest heal-line collapse (Lesser Heal/Heal retired from trainers, Greater Heal is now the one heal spell learned at level 1): base_points/BaseLevel/SpellLevel moved from rank1's old level-40 anchor down to Lesser Heal rank1's (2050) level-1 value (45); RealPointsPerLevel recomputed as a straight line from that level-1 value to this spell's own previous level-80 ceiling (898 + 40*53.35 = 3032), so max-level healing is unchanged; die_sides/cast_time_ms/mana_cost_pct/coefficient kept as before (from max rank 48063, rank 9). See docs/.master-todo-list.md.",
-    raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'CastingTimeIndex': 14, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A slow casting spell that heals a single target for $s1.', 'EffectBonusMultiplier_1': 1.6109999418258667, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_1': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_1': 4096, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 57, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes="re-anchored for the Priest heal-line collapse (Lesser Heal/Heal retired from trainers, Greater Heal is now the one heal spell learned at level 1): base_points/BaseLevel/SpellLevel moved from rank1's old level-40 anchor down to Lesser Heal rank1's (2050) level-1 value (45); RealPointsPerLevel recomputed as a straight line from that level-1 value to this spell's own previous level-80 ceiling (898 + 40*53.35 = 3032), so max-level healing is unchanged; die_sides/mana_cost_pct/coefficient kept as before (from max rank 48063, rank 9). See docs/.master-todo-list.md. PLAN A9 (BALANCE §0.13/druid-rework code review finding #9): cast_time_ms=2500, raw CastingTimeIndex (14, 3000ms) dropped.",
+    raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A slow casting spell that heals a single target for $s1.', 'EffectBonusMultiplier_1': 1.6109999418258667, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_1': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_1': 4096, 'SpellClassSet': 6, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 57, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 # Auto-learned at character creation, same as Lesser Heal (2050, SkillLineAbility.dbc ID 2313,
 # AcquireMethod=2) was before the heal-line collapse moved that role onto Greater Heal - confirmed
@@ -844,6 +857,8 @@ prayer_of_fortitude_21562 = spell(
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 48); RealPointsPerLevel from rank1→level-60 slope (anchor rank 21564, rank 2); coefficient/cast_time_ms/mana_cost_pct from max rank (48162, rank 4); MaxLevel set to 80',
     raw_overrides={'AttributesEx': 131072, 'AttributesEx2': 524288, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases Stamina by $s1.', 'BaseLevel': 48, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Power infuses all party and raid members, increasing their Stamina by $s1 for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ReagentCount_1': 1, 'Reagent_1': 17028, 'ShapeshiftMask': 134217728, 'SpellClassMask_1': 8, 'SpellClassMask_3': 1024, 'SpellClassSet': 6, 'SpellLevel': 48, 'SpellVisualID_1': 278, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+# Only on a stock TrainerId no NPC uses; 208 is the live Priest trainer (docs/spell_learn_level.md).
+trained_by(prayer_of_fortitude_21562, trainer_id=208, req_level=48, money_cost=28000)
 
 
 prayer_of_fortitude_21564 = spell(
@@ -994,6 +1009,8 @@ prayer_of_shadow_protection_27683 = spell(
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 56); RealPointsPerLevel from rank1→level-60 slope (anchor rank 27683, rank 1); coefficient/cast_time_ms/mana_cost_pct from max rank (48170, rank 3); MaxLevel set to 80',
     raw_overrides={'AttributesEx': 131072, 'AttributesEx2': 524288, 'AttributesEx6': 67108864, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases Shadow Resistance by $s1.', 'BaseLevel': 56, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Power infuses the target's party and raid members, increasing their Shadow resistance by $s1 for $d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ReagentCount_1': 1, 'Reagent_1': 17029, 'ShapeshiftMask': 134217728, 'SpellClassMask_1': 256, 'SpellClassMask_3': 1024, 'SpellClassSet': 6, 'SpellLevel': 56, 'SpellVisualID_1': 27, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+# Only on a stock TrainerId no NPC uses; 208 is the live Priest trainer (docs/spell_learn_level.md).
+trained_by(prayer_of_shadow_protection_27683, trainer_id=208, req_level=56, money_cost=42000)
 
 
 mass_dispel_32375 = spell(
@@ -1403,7 +1420,7 @@ inner_focus_14751 = spell(
     name='Inner Focus',
     school=School.NORMAL,
     dispel=DispelType.MAGIC,
-    attributes=33882112,
+    attributes=327680,  # stock 33882112 minus SPELL_ATTR0_COOLDOWN_ON_EVENT - docs/bugs-and-fixes.md
     cast_time_ms=0,
     cooldown_ms=180000,
     category_cooldown_ms=0,

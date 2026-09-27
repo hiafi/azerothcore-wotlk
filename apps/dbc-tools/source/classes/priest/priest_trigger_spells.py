@@ -7219,6 +7219,7 @@ halo_healing_taken_200173 = spell(
     name='Halo',
     school=School.HOLY,
     dispel=DispelType.MAGIC,
+    range_yards=50000.0,  # script-cast on an ally: RangeIndex 0 = 0yd, fails CheckRange
     duration_ms=10000,
     effects=[
         None,

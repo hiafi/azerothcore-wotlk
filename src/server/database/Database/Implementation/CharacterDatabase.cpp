@@ -649,6 +649,12 @@ void CharacterDatabaseConnection::DoPrepareStatements()
     // By providing the realm ID explicitly, this ensures that mysql reverse proxy will use
     // correct realm database for the transaction.
     PrepareStatement(CHAR_NO_OP_PROVIDE_REALM_CONTEXT, "SELECT ? AS no_op", CONNECTION_ASYNC);
+
+    // Custom: shapeshift appearances
+    PrepareStatement(CHAR_SEL_SHAPESHIFT_APPEARANCES, "SELECT form, display_id FROM character_shapeshift_appearance WHERE guid = ?", CONNECTION_SYNCH);
+    PrepareStatement(CHAR_REP_SHAPESHIFT_APPEARANCE, "REPLACE INTO character_shapeshift_appearance (guid, form, display_id) VALUES (?, ?, ?)", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_DEL_SHAPESHIFT_APPEARANCE, "DELETE FROM character_shapeshift_appearance WHERE guid = ? AND form = ?", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_DEL_SHAPESHIFT_APPEARANCES, "DELETE FROM character_shapeshift_appearance WHERE guid = ?", CONNECTION_ASYNC);
 }
 
 CharacterDatabaseConnection::CharacterDatabaseConnection(MySQLConnectionInfo& connInfo) : MySQLConnection(connInfo)

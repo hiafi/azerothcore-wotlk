@@ -190,6 +190,46 @@ class TrainerStateTest(unittest.TestCase):
         self.assertEqual(trainer_state.progression_phase(), 2)
         self.assertEqual(idx.trainer_problems(212), [])
 
+    def _progression_trainer_spells(self, phase: int, rows: list[tuple[int, int]]) -> None:
+        # The shape of mod-progression's phase_NN-trainer_spell.sql: range DELETE, then
+        # @TrainerId-relative INSERT rows (or no INSERT at all, like the real phase_13).
+        sql_dir = self._modules / "mod-progression" / "src" / f"phase_{phase:02}" / "sql"
+        sql_dir.mkdir(parents=True, exist_ok=True)
+        sql = (
+            "SET @TrainerId := 200;\n"
+            "DELETE FROM `trainer_spell` WHERE `TrainerId` BETWEEN @TrainerId+0 AND @TrainerId+17;\n"
+        )
+        if rows:
+            values = ",\n".join(
+                f"(@TrainerId+{trainer_id - 200}, {spell_id}, 0, 0, 0, 0, 0, 0, 10, 0)"
+                for trainer_id, spell_id in rows
+            )
+            sql += (
+                "INSERT INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, "
+                "`ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, "
+                f"`VerifiedBuild`) VALUES\n{values};\n"
+            )
+        (sql_dir / f"phase_{phase:02}-trainer_spell.sql").write_text(sql)
+
+    def test_phase_table_rows_include_phases_above_configured_phase(self):
+        # load_table_rows stops at Progression.Phase (what's live); load_phase_table_rows must
+        # not - a removal's typo guard needs to know a phase_07 row exists before phase 7 is live.
+        self._progression_trainer_spells(0, [(208, 2060)])
+        self._progression_trainer_spells(7, [(200, 469)])
+        trainer_state.PROGRESSION_CONF.write_text("Progression.Phase = 2\n")
+        by_phase = trainer_state.load_phase_table_rows("trainer_spell")
+        self.assertEqual(
+            {phase: [(r["TrainerId"], r["SpellId"]) for r in rows] for phase, rows in by_phase.items()},
+            {0: [(208, 2060)], 7: [(200, 469)]},
+        )
+        live = {(r["TrainerId"], r["SpellId"]) for r in trainer_state.load_table_rows("trainer_spell")}
+        self.assertEqual(live, {(208, 2060)})
+
+    def test_phase_with_no_insert_for_the_table_is_absent(self):
+        self._progression_trainer_spells(0, [(208, 2060)])
+        self._progression_trainer_spells(13, [])  # bare range DELETE, like the real phase_13
+        self.assertEqual(sorted(trainer_state.load_phase_table_rows("trainer_spell")), [0])
+
     def test_module_db_world_sql_is_scanned(self):
         # A plain module's data/sql/db-world/ INSERT counts like a core migration would.
         sql_dir = self._modules / "mod-example" / "data" / "sql" / "db-world"

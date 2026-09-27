@@ -43,6 +43,11 @@ Usage:
                       reference. Skipped (with a note, not an error) if the directory doesn't exist
                       or is empty - earlier patch-M.mpq builds (pre-dating any SPELLS/ content) still
                       work with no flag needed.
+    --sounds         Sound working-copy directory to package (default:
+                      apps/dbc-tools/var/model-visual-dbc/SOUND). Packed at archive path
+                      "Sound\\Spells\\<filename>", matching the DirectoryBase every custom
+                      SoundEntries.dbc row uses (patch_druid_vfx_models.py). Skipped the same way
+                      as --spells when missing or empty.
     --deploy-root    patch-service PATCH_ROOT to copy patch-M.mpq's Data/ into (default: this
                       box's DEPLOY_ROOT from lib/local_config.py, or no deployment if that file
                       doesn't exist - see lib/local_config.py.example). Pass --deploy-root '' to
@@ -60,6 +65,7 @@ from lib.mpq_writer import write_mpq
 
 DEFAULT_DBFILESCLIENT = Path(__file__).resolve().parent / "var" / "model-visual-dbc" / "DBFilesClient"
 DEFAULT_SPELLS = Path(__file__).resolve().parent / "var" / "model-visual-dbc" / "SPELLS"
+DEFAULT_SOUNDS = Path(__file__).resolve().parent / "var" / "model-visual-dbc" / "SOUND"
 LOCAL_OUT = Path(__file__).resolve().parent / "var" / "dbc-patch" / "patch-M.mpq"
 
 # DBCs that share this working-copy directory but are owned (and shipped) by another patch script.
@@ -83,6 +89,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dbfilesclient", type=Path, default=DEFAULT_DBFILESCLIENT)
     parser.add_argument("--spells", type=Path, default=DEFAULT_SPELLS)
+    parser.add_argument("--sounds", type=Path, default=DEFAULT_SOUNDS)
     parser.add_argument("--deploy-root", type=str, default=str(DEFAULT_DEPLOY_ROOT) if DEFAULT_DEPLOY_ROOT else "")
     args = parser.parse_args()
 
@@ -96,14 +103,19 @@ def main() -> None:
     spell_files = sorted(p for p in args.spells.iterdir() if p.is_file()) if args.spells.is_dir() else []
     files.update({f"SPELLS\\{p.name}": p.read_bytes() for p in spell_files})
 
+    sound_files = sorted(p for p in args.sounds.iterdir() if p.is_file()) if args.sounds.is_dir() else []
+    files.update({f"Sound\\Spells\\{p.name}": p.read_bytes() for p in sound_files})
+
     LOCAL_OUT.parent.mkdir(parents=True, exist_ok=True)
     write_mpq(LOCAL_OUT, files)
     print(f"built {LOCAL_OUT} ({LOCAL_OUT.stat().st_size} bytes) from {len(dbc_files)} DBC + "
-          f"{len(spell_files)} SPELLS asset file(s):")
+          f"{len(spell_files)} SPELLS asset + {len(sound_files)} sound file(s):")
     for p in dbc_files:
         print(f"  DBFilesClient\\{p.name}")
     for p in spell_files:
         print(f"  SPELLS\\{p.name}")
+    for p in sound_files:
+        print(f"  Sound\\Spells\\{p.name}")
     if not spell_files:
         print(f"  (no SPELLS/ assets found under {args.spells} - only DBCs packed)")
 

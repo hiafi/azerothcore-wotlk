@@ -35,6 +35,7 @@
 #include "CreatureAIImpl.h"
 #include "CreatureGroups.h"
 #include "DisableMgr.h"
+#include "DruidMechanics.h" // Custom: druid-rework Balance pass (CORE-AUDIT row 1)
 #include "DynamicVisibility.h"
 #include "Errors.h"
 #include "GameObjectAI.h"
@@ -3320,25 +3321,15 @@ uint32 Unit::CalculateDamage(WeaponAttackType attType, bool normalized, bool add
     return urand(uint32(minDamage), uint32(maxDamage));
 }
 
-float Unit::CalculateLevelPenalty(SpellInfo const* spellProto) const
+float Unit::CalculateLevelPenalty(SpellInfo const* /*spellProto*/) const
 {
-    if (!IsPlayer())
-        return 1.0f;
-
-    if (spellProto->SpellLevel <= 0 || spellProto->SpellLevel >= spellProto->MaxLevel)
-        return 1.0f;
-
-    float LvlPenalty = 0.0f;
-
-    // xinef: added brackets
-    if (spellProto->SpellLevel < 20)
-        LvlPenalty = (20.0f - spellProto->SpellLevel) * 3.75f;
-
-    float LvlFactor = (float(spellProto->SpellLevel) + 6.0f) / float(GetLevel());
-    if (LvlFactor > 1.0f)
-        LvlFactor = 1.0f;
-
-    return AddPct(LvlFactor, -LvlPenalty);
+    // Custom: single-rank spell system. Stock scaled a player spell's spell power coefficient by
+    // (SpellLevel + 6) / casterLevel, minus 3.75% per SpellLevel below 20, to punish downranking.
+    // Every class ability here survives as its rank-1 spell with rank 1's low SpellLevel and
+    // MaxLevel 80, so that penalty hit almost every player spell at max level (Wrath, SpellLevel 1,
+    // kept ~2.5% of its coefficient at 80). There are no lower ranks left to downrank to, so no
+    // spell takes the penalty. Non-players already returned 1.0 in stock.
+    return 1.0f;
 }
 
 void Unit::SendMeleeAttackStart(Unit* victim, Player* sendTo)
@@ -8457,6 +8448,8 @@ float Unit::SpellPctDamageModsDone(Unit* victim, SpellInfo const* spellProto, Da
     // clause that buffs Holy-school damage from *any* class has somewhere to live; every clause
     // that is priest-family-only gates itself inside.
     Priest::ApplyDoneDamagePctMods(this, victim, spellProto, damagetype, DoneTotalMod);
+    // Custom: druid-rework Balance pass (CORE-AUDIT row 1) - Eclipse/Celestial Alignment/Mastery/Improved Insect Swarm
+    Druid::ApplyDoneDamagePctMods(this, victim, spellProto, damagetype, DoneTotalMod);
 
     // Custom scripted damage
     switch (spellProto->SpellFamilyName)
@@ -12915,6 +12908,8 @@ void Unit::RestoreDisplayId()
 
 void Unit::AddComboPoints(Unit* target, int8 count)
 {
+    MoveComboPoints(target, !count); // Custom: a rogue's or druid's points follow it to a new target (ComboPointMechanics.cpp)
+
     if (!count)
     {
         return;
@@ -12996,6 +12991,8 @@ void Unit::SendComboPoints()
 
 void Unit::ClearComboPointHolders()
 {
+    ReleaseComboPointHolders(); // Custom: rogues and druids keep their points (ComboPointMechanics.cpp)
+
     while (!m_ComboPointHolders.empty())
     {
         (*m_ComboPointHolders.begin())->ClearComboPoints(); // this also removes it from m_comboPointHolders
