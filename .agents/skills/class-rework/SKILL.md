@@ -38,8 +38,15 @@ way round.
   `source/spells/<class>.csv` (learned-outright) or `<class>_talents.csv` (talent-point-granted).
   Never pick numbers ad hoc — see `apps/dbc-tools/README.md`'s "Source files".
   - **Sign convention:** stored `base_points` is the live value minus 1 (die_sides=1 makes the
-    engine add 1 back); a "-30%" reduction is stored as `-31`. Applies to `CastCustomSpell` basepoints
-    too, not just static rows.
+    engine add 1 back); a "-30%" reduction is stored as `-31`. This applies to **static rows** only.
+    Values a script passes in depend on the API:
+    - `CastCustomSpell`, `CastSpell` with `CustomSpellValues`, `SPELLVALUE_BASE_POINTn`: pass the
+      **live** value (`-30` for -30%). `Spell::SetSpellValue` already runs it through
+      `SpellEffectInfo::CalcBaseValue`, which subtracts 1 when `DieSides != 0`, and the die adds it
+      back. Passing live − 1 comes out one point low.
+    - A raw `baseAmount` into `Aura::TryCreate` / `TryRefreshStackOrCreate`: pass the **stored**
+      value (live − 1). It goes straight into `CalcValue`, which adds the die roll.
+    - `AuraEffect::SetAmount` / `ChangeAmount`, `SetHitDamage`, `SetEffectValue`: the **live** amount.
 - If a mechanic needs a hook with no `SpellScript`/`AuraScript` equivalent (e.g. "reduce damage
   after a block-value subtraction already happened in core combat math"), don't grow
   `Unit.cpp`/`Player.cpp` inline. Add `src/server/game/Entities/Unit/<Class>Mechanics.h`/`.cpp`
