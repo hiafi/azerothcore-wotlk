@@ -23,19 +23,29 @@
  * server-wide - every handler here checks for a warlock caster/target (or the specific spell/
  * talent id it cares about) first before doing anything.
  *
- * This pass (Affliction, S1) adds:
+ * This pass (Affliction, S1) added:
  *   - UnitScript::ModifyPeriodicDamageAurasTick - Bane of Agony's live per-tick stack multiplier
- *     (AFFLICTION.md §7.2). Destruction adds Nether Protection's periodic-taken DR to the same
- *     handler in S2.
+ *     (AFFLICTION.md §7.2).
  *   - AllSpellScript::OnCalcMaxDuration - Pandemic's duration carry (AFFLICTION.md §7.4).
  *   - AllSpellScript::CanPrepare / OnSpellCast - the instant-cast priority arbiter
- *     (Warlock::OnPrepareGrantInstantCast / OnCastConsumeInstantCast); a no-op this pass (empty
- *     registry - Destruction registers real sources in S2).
+ *     (Warlock::OnPrepareGrantInstantCast / OnCastConsumeInstantCast); a no-op that pass (empty
+ *     registry - Destruction registers real sources below).
  *   - PlayerScript::OnPlayerLearnTalents / OnPlayerTalentsReset / OnPlayerAfterSpecSlotChanged /
  *     OnPlayerLogin - Warlock::RefreshLeechTalents (SHARED §4's leech-talent rule; note this
  *     fires for every class, since Blazing Speed is a Fire Mage talent).
  *   - An AuraScript on Fire Mage Blazing Speed (31641/31642/200107) - spell_leech_talent_gate,
  *     zeroing its leech amount unless it is the caster's active leech talent.
+ *
+ * This pass (Destruction, S2) extends the two existing handlers above (no second registration of
+ * either hook, per the WP brief) and adds one new class:
+ *   - WarlockHooksUnit::ModifyPeriodicDamageAurasTick gains Nether Protection's periodic-taken
+ *     reduction branch (DESTRUCTION.md §7.12, victim side).
+ *   - WarlockHooksAllSpell::CanPrepare gains the Destructive Reach crit-helper branch
+ *     (DESTRUCTION.md §7.9, via Warlock::ApplyDestructiveReachCrit).
+ *   - New class WarlockEmberstormCooldown (AllSpellScript::OnSpellCast) - Emberstorm's capstone
+ *     Chaos Bolt cooldown reduction (DESTRUCTION.md §7.15); a second AllSpellScript instance
+ *     hooking OnSpellCast is fine (the brief explicitly calls this class out separately from the
+ *     "don't re-register CanPrepare/ModifyPeriodicDamageAurasTick" rule).
  */
 
 #include "WarlockMechanics.h"
@@ -58,6 +68,28 @@ namespace
         Player* player = unit ? unit->ToPlayer() : nullptr;
         return player && player->getClass() == CLASS_WARLOCK ? player : nullptr;
     }
+
+    // Destruction pass (S2) local ids - talent rank ids not part of the frozen WarlockMechanics.h
+    // block (Destruction didn't mint new ids for these moved/retained-stock talents), duplicated
+    // here rather than widening the frozen header (DESTRUCTION.md §7.12, §7.15).
+    constexpr uint32 SPELL_NETHER_PROTECTION_R1 = 30299;
+    constexpr uint32 SPELL_NETHER_PROTECTION_R2 = 30301;
+    constexpr uint32 SPELL_NETHER_PROTECTION_R3 = 30302;
+    constexpr uint32 SPELL_EMBERSTORM_R3 = 17956;
+    constexpr uint32 SPELL_SEARING_PAIN = 5676;
+
+    // druid_hooks.cpp:266-276 precedent, reused verbatim: ModifyPeriodicDamageAurasTick also fires
+    // for periodic heals (SpellAuraEffects.cpp:6699, the heal amount passed as `damage`) - a heal
+    // tick must never be reduced by Nether Protection.
+    bool IsPeriodicDamageSpell(SpellInfo const* spellInfo)
+    {
+        if (spellInfo->HasAura(SPELL_AURA_PERIODIC_HEAL) || spellInfo->HasAura(SPELL_AURA_OBS_MOD_HEALTH))
+            return false;
+
+        return spellInfo->HasAura(SPELL_AURA_PERIODIC_DAMAGE) ||
+               spellInfo->HasAura(SPELL_AURA_PERIODIC_DAMAGE_PERCENT) ||
+               spellInfo->HasAura(SPELL_AURA_PERIODIC_LEECH);
+    }
 }
 
 // AFFLICTION.md §7.2 - Bane of Agony's live per-tick stack multiplier. Destruction extends this
@@ -70,15 +102,33 @@ public:
     void ModifyPeriodicDamageAurasTick(Unit* target, Unit* attacker, uint32& damage,
                                         SpellInfo const* spellInfo) override
     {
-        if (!target || !attacker || !spellInfo || spellInfo->Id != Warlock::SPELL_BANE_OF_AGONY)
+        if (!target || !spellInfo)
             return;
 
-        if (!GetWarlockPlayer(attacker))
-            return;
+        // AFFLICTION.md §7.2 - Bane of Agony's live per-tick stack multiplier (attacker side).
+        if (attacker && spellInfo->Id == Warlock::SPELL_BANE_OF_AGONY && GetWarlockPlayer(attacker))
+        {
+            uint8 const stacks = Warlock::GetAgonyStacks(target, attacker->GetGUID());
+            if (stacks)
+                damage = uint32(float(damage) * (1.0f + 0.1f * float(stacks)));
+        }
 
-        uint8 const stacks = Warlock::GetAgonyStacks(target, attacker->GetGUID());
-        if (stacks)
-            damage = uint32(float(damage) * (1.0f + 0.1f * float(stacks)));
+        // DESTRUCTION.md §7.12 - Nether Protection's periodic-taken reduction (victim side).
+        // `attacker` may be null here (don't dereference it) - this branch only needs the target.
+        if (Player* player = target->ToPlayer())
+        {
+            if (IsPeriodicDamageSpell(spellInfo) && (spellInfo->GetSchoolMask() & SPELL_SCHOOL_MASK_MAGIC))
+            {
+                AuraEffect const* rank = player->GetAuraEffect(SPELL_NETHER_PROTECTION_R3, EFFECT_1);
+                if (!rank)
+                    rank = player->GetAuraEffect(SPELL_NETHER_PROTECTION_R2, EFFECT_1);
+                if (!rank)
+                    rank = player->GetAuraEffect(SPELL_NETHER_PROTECTION_R1, EFFECT_1);
+
+                if (rank)
+                    damage = uint32(float(damage) * (1.0f - float(rank->GetAmount()) / 100.0f));
+            }
+        }
     }
 };
 
@@ -129,7 +179,12 @@ public:
         {
             Unit* casterUnit = spell->GetCaster() ? spell->GetCaster()->ToUnit() : nullptr;
             if (Player* player = GetWarlockPlayer(casterUnit))
+            {
                 Warlock::OnPrepareGrantInstantCast(player, spell);
+                // DESTRUCTION.md §7.9 - Destructive Reach's >20 yd crit helper (C3), same handler,
+                // same timing contract.
+                Warlock::ApplyDestructiveReachCrit(player, spell);
+            }
         }
         return true;
     }
@@ -138,6 +193,35 @@ public:
     {
         if (Player* player = GetWarlockPlayer(caster))
             Warlock::OnCastConsumeInstantCast(player, spell);
+    }
+};
+
+// DESTRUCTION.md §7.15 - Emberstorm's capstone Chaos Bolt cooldown reduction. Scorch and Fireball
+// are mage-family (Classless, PLAN B4), so this needs AllSpellScript::OnSpellCast rather than a
+// same-spell SpellScript bound to 29722/5676.
+class WarlockEmberstormCooldown : public AllSpellScript
+{
+public:
+    WarlockEmberstormCooldown() : AllSpellScript("WarlockEmberstormCooldown", { ALLSPELLHOOK_ON_CAST }) { }
+
+    void OnSpellCast(Spell* spell, Unit* caster, SpellInfo const* spellInfo, bool /*skipCheck*/) override
+    {
+        if (!spell || !spellInfo || spell->IsTriggered())
+            return;
+
+        Player* player = GetWarlockPlayer(caster);
+        if (!player || !player->HasAura(SPELL_EMBERSTORM_R3))
+            return;
+
+        bool qualifies = false;
+        if (spellInfo->SpellFamilyName == SPELLFAMILY_WARLOCK)
+            qualifies = spellInfo->Id == Warlock::SPELL_INCINERATE || spellInfo->Id == SPELL_SEARING_PAIN;
+        else if (spellInfo->SpellFamilyName == SPELLFAMILY_MAGE)
+            qualifies = spellInfo->SpellFamilyFlags.HasFlag(0x1, 0, 0) ||  // Fireball
+                        spellInfo->SpellFamilyFlags.HasFlag(0x10, 0, 0);   // Scorch
+
+        if (qualifies)
+            Warlock::ReduceChaosBoltCooldown(player, 1500);
     }
 };
 
@@ -202,6 +286,7 @@ void AddSC_warlock_hooks()
 {
     new WarlockHooksUnit();
     new WarlockHooksAllSpell();
+    new WarlockEmberstormCooldown();
     new WarlockLeechTalentRefresh();
     RegisterSpellScript(spell_leech_talent_gate);
 }

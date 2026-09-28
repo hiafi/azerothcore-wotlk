@@ -4,7 +4,7 @@ Warlock - spells that are never directly cast - proc/periodic-tick effects, trig
 Split from a single source/classes/warlock.py via split_class_file.py (.agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md) - see source/classes/README.md for the multi-file layout and lib/dsl/registry.py's load_class_package for how cross-file references (`from .warlock_...` below) resolve.
 """
 
-from lib.dsl import AuraType, DispelType, Effect, EffectType, PowerType, RANGE_SELF, School
+from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, RANGE_SELF, School
 from lib.dsl.registry import bonus_coefficients, linked_spell, procs_on, scripted_by, spell, spell_group, spell_group_rule, unbind_script, unlink_spell
 from . import _masks as m
 
@@ -191,12 +191,13 @@ rain_of_fire_42223 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=59, points_per_level=10.283333333333333, implicit_target_a=76, implicit_target_b=16, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=0, points_per_level=0.0, implicit_target_a=87, implicit_target_b=16, radius_yards=8.0),
     ],
     spell_icon_id=547,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 136, 'AttributesEx2': 1073741824, 'AttributesEx3': 1073741824, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Calls down a fiery rain to burn enemies in the area of effect for ${$42223m1*4} Fire damage over $5740d.', 'EffectBonusMultiplier_1': 0.28600001335144043, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 135, 'SpellClassMask_1': 32, 'SpellClassSet': 5, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 10045, 'StartRecoveryCategory': 133},
+    notes="warlock-rework DESTRUCTION §4.2 (B18 + R5 + C5, spell_warl_rain_of_fire_tick / AuraScript on 5740, WP-B): bp/ppl zeroed - the AuraScript passes the whole snapshot as CustomSpellValues BP0 every tick (Spell::SetSpellValue already applies the die_sides convention, so the script passes the intended value, not value-1). implicit_target_a 76 (DEST_CHANNEL_TARGET, no longer exists once RoF isn't a channel) -> 87 (TARGET_DEST_DEST); B 16 and range 100 kept. AttributesEx3 |= 0x20000000 (IGNORE_CASTER_MODIFIERS - fixed per-tick base; blocks every SpellMod except SPELLMOD_DURATION, taken-side mods unaffected). EffectBonusMultiplier_1 -> 0.1716 (documentation only, inert under the attribute). No SUPPRESS_CASTER_PROCS - RoF hits must still proc Molten Skin and Hellstorm (their spell_proc rows carry PROC_ATTR_TRIGGERED_CAN_PROC).",
+    raw_overrides={'AttributesEx': 136, 'AttributesEx2': 1073741824, 'AttributesEx3': 1610612736, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Calls down a fiery rain to burn enemies in the area of effect for ${$42223m1*4} Fire damage over $5740d.', 'EffectBonusMultiplier_1': 0.1716, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 135, 'SpellClassMask_1': 32, 'SpellClassSet': 5, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 10045, 'StartRecoveryCategory': 133},
 )
+scripted_by(rain_of_fire_42223, 'spell_warl_rain_of_fire_tick')
 
 
 seed_of_corruption_43991 = spell(
@@ -314,11 +315,11 @@ cataclysm_17778 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-5, implicit_target_a=1, apply_aura=108, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108, misc_value=0),
     ],
     spell_icon_id=1197,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the Mana cost of your Destruction spells by $s1%.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 997, 'EffectSpellClassMaskA_2': 8589504, 'EffectSpellClassMaskB_1': 997, 'EffectSpellClassMaskB_2': 8589504, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (1,2): eff0 misc COST(14) -> DAMAGE(0), mask -> CATACLYSM_SPELLS (RoF/Hellfire, Shadowfury, Inferno Effect, HoG); stock B mask (vestigial - no effect 2) cleared.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Rain of Fire, Hellfire, Inferno, Hand of Gul'dan and Shadowfury by $s1%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.CATACLYSM_SPELLS[0], 'EffectSpellClassMaskA_2': m.CATACLYSM_SPELLS[1], 'EffectSpellClassMaskA_3': m.CATACLYSM_SPELLS[2], 'EffectSpellClassMaskB_1': 0, 'EffectSpellClassMaskB_2': 0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -334,11 +335,11 @@ cataclysm_17779 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-8, implicit_target_a=1, apply_aura=108, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=108, misc_value=0),
     ],
     spell_icon_id=1197,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the Mana cost of your Destruction spells by $s1%.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 997, 'EffectSpellClassMaskA_2': 8589504, 'EffectSpellClassMaskB_1': 997, 'EffectSpellClassMaskB_2': 8589504, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (1,2): see rank 1s note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Rain of Fire, Hellfire, Inferno, Hand of Gul'dan and Shadowfury by $s1%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.CATACLYSM_SPELLS[0], 'EffectSpellClassMaskA_2': m.CATACLYSM_SPELLS[1], 'EffectSpellClassMaskA_3': m.CATACLYSM_SPELLS[2], 'EffectSpellClassMaskB_1': 0, 'EffectSpellClassMaskB_2': 0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -354,11 +355,11 @@ cataclysm_17780 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=108, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=17, implicit_target_a=1, apply_aura=108, misc_value=0),
     ],
     spell_icon_id=1197,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the Mana cost of your Destruction spells by $s1%.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 997, 'EffectSpellClassMaskA_2': 8589504, 'EffectSpellClassMaskB_1': 997, 'EffectSpellClassMaskB_2': 8589504, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (1,2): see rank 1s note. Tooltip amended by S3 to insert "Summon Infernal, " after "Inferno, " (DEMONOLOGY §11 Q8) - not yet done here.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Rain of Fire, Hellfire, Inferno, Hand of Gul'dan and Shadowfury by $s1%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.CATACLYSM_SPELLS[0], 'EffectSpellClassMaskA_2': m.CATACLYSM_SPELLS[1], 'EffectSpellClassMaskA_3': m.CATACLYSM_SPELLS[2], 'EffectSpellClassMaskB_1': 0, 'EffectSpellClassMaskB_2': 0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -439,12 +440,12 @@ bane_17788 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=107, misc_value=10),
-        Effect(type=EffectType.APPLY_AURA, base_points=-401, implicit_target_a=1, apply_aura=107, misc_value=10),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=-6, implicit_target_a=1, apply_aura=108, misc_value=14),
     ],
     spell_icon_id=169,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the casting time of your Shadow Bolt. Chaos Bolt and Immolate spells by $/1000;S1 sec and your Soul Fire spell by $/1000;S2 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 5, 'EffectSpellClassMaskA_2': 131072, 'EffectSpellClassMaskB_2': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (0,2): eff0 rewritten from a cast-time SpellMod to ADD_FLAT_MODIFIER CRITICAL_CHANCE (+2/4/6%), eff1 to ADD_PCT_MODIFIER COST (-5/-10/-15%), both A/B = BANE_SPELLS (SB, Immolate; Incinerate, Soul Fire, Shadowflame, Chaos Bolt; Shadowflame DoT; Hand of Gul\'dan).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the critical strike chance of Shadow Bolt, Incinerate, Chaos Bolt, Immolate, Hand of Gul'dan, Soul Fire and Shadowflame by $s1% and reduces the mana cost of these spells by $s2%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.BANE_SPELLS[0], 'EffectSpellClassMaskA_2': m.BANE_SPELLS[1], 'EffectSpellClassMaskA_3': m.BANE_SPELLS[2], 'EffectSpellClassMaskB_1': m.BANE_SPELLS[0], 'EffectSpellClassMaskB_2': m.BANE_SPELLS[1], 'EffectSpellClassMaskB_3': m.BANE_SPELLS[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -460,12 +461,12 @@ bane_17789 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-201, implicit_target_a=1, apply_aura=107, misc_value=10),
-        Effect(type=EffectType.APPLY_AURA, base_points=-801, implicit_target_a=1, apply_aura=107, misc_value=10),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=108, misc_value=14),
     ],
     spell_icon_id=169,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the casting time of your Shadow Bolt. Chaos Bolt and Immolate spells by $/1000;S1 sec and your Soul Fire spell by $/1000;S2 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 5, 'EffectSpellClassMaskA_2': 131072, 'EffectSpellClassMaskB_2': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (0,2): see rank 1s note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the critical strike chance of Shadow Bolt, Incinerate, Chaos Bolt, Immolate, Hand of Gul'dan, Soul Fire and Shadowflame by $s1% and reduces the mana cost of these spells by $s2%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.BANE_SPELLS[0], 'EffectSpellClassMaskA_2': m.BANE_SPELLS[1], 'EffectSpellClassMaskA_3': m.BANE_SPELLS[2], 'EffectSpellClassMaskB_1': m.BANE_SPELLS[0], 'EffectSpellClassMaskB_2': m.BANE_SPELLS[1], 'EffectSpellClassMaskB_3': m.BANE_SPELLS[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -481,12 +482,12 @@ bane_17790 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-301, implicit_target_a=1, apply_aura=107, misc_value=10),
-        Effect(type=EffectType.APPLY_AURA, base_points=-1201, implicit_target_a=1, apply_aura=107, misc_value=10),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=-16, implicit_target_a=1, apply_aura=108, misc_value=14),
     ],
     spell_icon_id=169,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the casting time of your Shadow Bolt. Chaos Bolt and Immolate spells by $/1000;S1 sec and your Soul Fire spell by $/1000;S2 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 5, 'EffectSpellClassMaskA_2': 131072, 'EffectSpellClassMaskB_2': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (0,2): see rank 1s note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the critical strike chance of Shadow Bolt, Incinerate, Chaos Bolt, Immolate, Hand of Gul'dan, Soul Fire and Shadowflame by $s1% and reduces the mana cost of these spells by $s2%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.BANE_SPELLS[0], 'EffectSpellClassMaskA_2': m.BANE_SPELLS[1], 'EffectSpellClassMaskA_3': m.BANE_SPELLS[2], 'EffectSpellClassMaskB_1': m.BANE_SPELLS[0], 'EffectSpellClassMaskB_2': m.BANE_SPELLS[1], 'EffectSpellClassMaskB_3': m.BANE_SPELLS[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -545,11 +546,11 @@ improved_shadow_bolt_17793 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=17800),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108),
     ],
     spell_icon_id=213,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Shadow Bolt spell by $s2%, and your Shadow Bolt has a $h% chance to cause your target to be vulnerable to spell damage, increasing spell critical strike chance against that target by $17800s1%. Effect lasts $17800d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (0,1): eff1 bp 1/3/5 -> 4/9/14 (5/10/15%), mask widened to Shadow Bolt + Incinerate (B_2 = INCINERATE); ProcChance 20/40/60 -> 33/66/100; -18095 stock proc row replaced (§8).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Shadow Bolt and Incinerate by $s2%. Your Shadow Bolt and Incinerate have a $h% chance to cause your target to be vulnerable to spell damage, increasing spell critical strike chance against that target by $17800s1%. Effect lasts $17800d. Does not stack with other similar effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': m.SHADOW_BOLT, 'EffectSpellClassMaskB_2': m.INCINERATE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 33, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -566,11 +567,11 @@ improved_shadow_bolt_17796 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=17800),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
     ],
     spell_icon_id=213,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Shadow Bolt spell by $s2%, and your Shadow Bolt has a $h% chance to cause your target to be vulnerable to spell damage, increasing spell critical strike chance against that target by $17800s1%. Effect lasts $17800d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 40, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (0,1): see rank 1s note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Shadow Bolt and Incinerate by $s2%. Your Shadow Bolt and Incinerate have a $h% chance to cause your target to be vulnerable to spell damage, increasing spell critical strike chance against that target by $17800s1%. Effect lasts $17800d. Does not stack with other similar effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': m.SHADOW_BOLT, 'EffectSpellClassMaskB_2': m.INCINERATE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 66, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -587,12 +588,13 @@ improved_shadow_bolt_17801 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=17800),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108),
     ],
     spell_icon_id=213,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Shadow Bolt spell by $s2%, and your Shadow Bolt has a $h% chance to cause your target to be vulnerable to spell damage, increasing spell critical strike chance against that target by $17800s1%. Effect lasts $17800d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 60, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (0,1): see rank 1s note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Shadow Bolt and Incinerate by $s2%. Your Shadow Bolt and Incinerate have a $h% chance to cause your target to be vulnerable to spell damage, increasing spell critical strike chance against that target by $17800s1%. Effect lasts $17800d. Does not stack with other similar effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': m.SHADOW_BOLT, 'EffectSpellClassMaskB_2': m.INCINERATE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+procs_on(-17793, proc_flags=m.PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG, family_name=5, family_mask=(m.SHADOW_BOLT, m.INCINERATE, 0), spell_type_mask=m.PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, chance=0, cooldown_ms=0)
 
 
 improved_shadow_bolt_17802 = spell(
@@ -800,8 +802,8 @@ improved_immolate_17815 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=22),
     ],
     spell_icon_id=31,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Immolate spell by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4, 'EffectSpellClassMaskB_1': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (4,3): data unchanged; tooltip gets the grey capstone preview (PLAN §2 format - r3 carries the real capstone).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Immolate spell by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Immolate periodic damage has a 5% chance to erupt, dealing Fire damage to all enemies within 5 yards of the target that are in combat with you.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4, 'EffectSpellClassMaskB_1': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -821,8 +823,8 @@ improved_immolate_17833 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=22),
     ],
     spell_icon_id=31,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Immolate spell by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4, 'EffectSpellClassMaskB_1': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (4,3): data unchanged; tooltip gets the grey capstone preview (PLAN §2 format).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Immolate spell by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Immolate periodic damage has a 5% chance to erupt, dealing Fire damage to all enemies within 5 yards of the target that are in combat with you.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4, 'EffectSpellClassMaskB_1': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -840,12 +842,14 @@ improved_immolate_17834 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108),
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108, misc_value=22),
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=286),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=31,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Immolate spell by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4, 'EffectSpellClassMaskB_1': 4, 'EffectSpellClassMaskC_2': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (4,3): r3 eff2 aura 286 (ABILITY_PERIODIC_CRIT) -> DUMMY (proc carrier for the eruption capstone, §7.10); stale C_2 Conflagrate mask cleared. eff0/eff1 (damage/DOT %) unchanged.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Immolate spell by $s1%.\n\nCapstone Bonus: Your Immolate periodic damage has a 5% chance to erupt, dealing Fire damage to all enemies within 5 yards of the target that are in combat with you.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4, 'EffectSpellClassMaskB_1': 4, 'EffectSpellClassMaskC_2': 0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+scripted_by(improved_immolate_17834, 'spell_warl_improved_immolate_eruption')
+procs_on(improved_immolate_17834, proc_flags=m.PROC_FLAG_DONE_PERIODIC, family_name=5, family_mask=(m.IMMOLATE, 0, 0), spell_type_mask=m.PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, chance=5, cooldown_ms=2000, disable_effects_mask=0x3)
 
 
 destructive_reach_17917 = spell(
@@ -860,13 +864,14 @@ destructive_reach_17917 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=5),
-        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=108, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=160,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your Destruction spells by $s1% and reduces threat caused by Destruction spells by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 5029, 'EffectSpellClassMaskA_2': 8589504, 'EffectSpellClassMaskB_1': 997, 'EffectSpellClassMaskB_2': 8589504, 'EffectSpellClassMaskB_3': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (3,1): both effects zeroed the SHARED §1.1 way (type -> APPLY_AURA DUMMY, bp 0, die_sides 0, masks cleared - a die-1 +1 SpellMod or a stale mask would otherwise still apply/leak). Range joins the shared Reach passives via linked_spell(17917, 200707, 2); capstone (r2) crit is a CanPrepare script (WP-B, §7.9).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your damaging spells by 3 yards. This does not stack with other similar effects.\n\n|cFF9D9D9DCapstone Bonus: Increases your spell critical strike chance by 4% against enemies farther than 20 yards away.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 0, 'EffectSpellClassMaskA_2': 0, 'EffectSpellClassMaskB_1': 0, 'EffectSpellClassMaskB_2': 0, 'EffectSpellClassMaskB_3': 0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+linked_spell(17917, 200707, type=2)
 
 
 destructive_reach_17918 = spell(
@@ -881,13 +886,14 @@ destructive_reach_17918 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=5),
-        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=108, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=160,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your Destruction spells by $s1% and reduces threat caused by Destruction spells by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 5029, 'EffectSpellClassMaskA_2': 8523968, 'EffectSpellClassMaskB_1': 997, 'EffectSpellClassMaskB_2': 8589504, 'EffectSpellClassMaskB_3': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (3,1): r2, see rank 1s note. Capstone Bonus text on this (final) rank; the +4% crit approximation is Warlock::ApplyDestructiveReachCrit in the shared CanPrepare handler (WP-B, §7.9), helper spell 200991 (built here).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your damaging spells by 6 yards. This does not stack with other similar effects.\n\nCapstone Bonus: Increases your spell critical strike chance by 4% against enemies farther than 20 yards away.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 0, 'EffectSpellClassMaskA_2': 0, 'EffectSpellClassMaskB_1': 0, 'EffectSpellClassMaskB_2': 0, 'EffectSpellClassMaskB_3': 0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+linked_spell(17918, 200708, type=2)
 
 
 improved_searing_pain_17927 = spell(
@@ -965,13 +971,13 @@ emberstorm_17954 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=108, misc_value=22),
-        Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=1, apply_aura=107, misc_value=10),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=37,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Fire spells by $s1% and reduces the cast time of your Incinerate spell by ${$m3/-1000}.2 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 868, 'EffectSpellClassMaskA_2': 8519872, 'EffectSpellClassMaskB_1': 100, 'EffectSpellClassMaskB_2': 8388608, 'EffectSpellClassMaskB_3': 2, 'EffectSpellClassMaskC_2': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (5,1): eff0/eff1 bp 2/5/8 -> 1/3/5 (2/4/6%), masks -> EMBERSTORM_DAMAGE/EMBERSTORM_DOT; eff2 (stock Incinerate cast-time SpellMod) zeroed the SHARED §1.1 way (type -> APPLY_AURA DUMMY, bp 0, die_sides 0, C masks cleared).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Fire spells by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Incinerate, Searing Pain, Scorch and Fireball casts reduce the remaining cooldown of Chaos Bolt by 1.5 sec. When an enemy dies while afflicted by your Shadowburn, the remaining cooldown of Chaos Bolt is reduced by 4 sec.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.EMBERSTORM_DAMAGE[0], 'EffectSpellClassMaskA_2': m.EMBERSTORM_DAMAGE[1], 'EffectSpellClassMaskA_3': m.EMBERSTORM_DAMAGE[2], 'EffectSpellClassMaskB_1': m.EMBERSTORM_DOT[0], 'EffectSpellClassMaskB_2': m.EMBERSTORM_DOT[1], 'EffectSpellClassMaskB_3': m.EMBERSTORM_DOT[2], 'EffectSpellClassMaskC_2': 0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -987,13 +993,13 @@ emberstorm_17955 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108, misc_value=22),
-        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=107, misc_value=10),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=37,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Fire spells by $s1% and reduces the cast time of your Incinerate spell by ${$m3/-1000}.2 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 868, 'EffectSpellClassMaskA_2': 8519872, 'EffectSpellClassMaskB_1': 100, 'EffectSpellClassMaskB_2': 8388608, 'EffectSpellClassMaskB_3': 2, 'EffectSpellClassMaskC_2': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (5,1): see rank 1s note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Fire spells by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Incinerate, Searing Pain, Scorch and Fireball casts reduce the remaining cooldown of Chaos Bolt by 1.5 sec. When an enemy dies while afflicted by your Shadowburn, the remaining cooldown of Chaos Bolt is reduced by 4 sec.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.EMBERSTORM_DAMAGE[0], 'EffectSpellClassMaskA_2': m.EMBERSTORM_DAMAGE[1], 'EffectSpellClassMaskA_3': m.EMBERSTORM_DAMAGE[2], 'EffectSpellClassMaskB_1': m.EMBERSTORM_DOT[0], 'EffectSpellClassMaskB_2': m.EMBERSTORM_DOT[1], 'EffectSpellClassMaskB_3': m.EMBERSTORM_DOT[2], 'EffectSpellClassMaskC_2': 0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -1009,13 +1015,13 @@ emberstorm_17956 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=108, misc_value=22),
-        Effect(type=EffectType.APPLY_AURA, base_points=-151, implicit_target_a=1, apply_aura=107, misc_value=10),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=37,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Fire spells by $s1% and reduces the cast time of your Incinerate spell by ${$m3/-1000}.2 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 868, 'EffectSpellClassMaskA_2': 8519872, 'EffectSpellClassMaskB_1': 100, 'EffectSpellClassMaskB_2': 8388608, 'EffectSpellClassMaskB_3': 2, 'EffectSpellClassMaskC_2': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (5,1): r3, final rank - plain capstone text; capstone script is WarlockEmberstormCooldown (warlock_hooks.cpp, WP-B) + spell_warl_shadowburn_destruction (§7.8/§7.15).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Fire spells by $s1%.\n\nCapstone Bonus: Your Incinerate, Searing Pain, Scorch and Fireball casts reduce the remaining cooldown of Chaos Bolt by 1.5 sec. When an enemy dies while afflicted by your Shadowburn, the remaining cooldown of Chaos Bolt is reduced by 4 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.EMBERSTORM_DAMAGE[0], 'EffectSpellClassMaskA_2': m.EMBERSTORM_DAMAGE[1], 'EffectSpellClassMaskA_3': m.EMBERSTORM_DAMAGE[2], 'EffectSpellClassMaskB_1': m.EMBERSTORM_DOT[0], 'EffectSpellClassMaskB_2': m.EMBERSTORM_DOT[1], 'EffectSpellClassMaskB_3': m.EMBERSTORM_DOT[2], 'EffectSpellClassMaskC_2': 0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -1075,12 +1081,13 @@ ruin_17959 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=15),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=234,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the critical strike damage bonus of your Destruction spells and your Imp's Firebolt spell by $s1%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 5093, 'EffectSpellClassMaskA_2': 12783808, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (5,2), A1/A2 (SHARED §1.1): eff0 stock ADD_PCT_MODIFIER CRIT_DAMAGE_BONUS zeroed (type -> APPLY_AURA DUMMY, bp 0, die_sides 0, A masks cleared) and replaced by the shared crit-damage passive via linked_spell(17959, 200701, 2) - 165% at this rank.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 165% damage. This does not stack with other similar effects.\n\n|cFF9D9D9DCapstone Bonus: Increases your Fire and Shadow damage done by 3%. This effect is quadrupled against targets above 75% health.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 0, 'EffectSpellClassMaskA_2': 0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+linked_spell(17959, 200701, type=2)
 
 
 pyroclasm_18073 = spell(
@@ -1099,8 +1106,9 @@ pyroclasm_18073 = spell(
     ],
     spell_icon_id=1137,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you critically strike with Searing Pain or Conflagrate, your Fire and Shadow spell damage is increased by $63243s1% for $63243d.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 576, 'EffectSpellClassMaskA_2': 8388736, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you critically strike with Searing Pain, Scorch, or Conflagrate, your Fire and Shadow spell damage is increased by $63243s1% for $63243d.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 576, 'EffectSpellClassMaskA_2': 8388736, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+scripted_by(pyroclasm_18073, 'spell_warl_pyroclasm')
 
 
 nightfall_18094 = spell(
@@ -1184,8 +1192,10 @@ pyroclasm_18096 = spell(
     ],
     spell_icon_id=1137,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you critically strike with Searing Pain or Conflagrate, your Fire and Shadow spell damage is increased by $18093s1% for $18093d.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 576, 'EffectSpellClassMaskA_2': 8388736, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you critically strike with Searing Pain, Scorch, or Conflagrate, your Fire and Shadow spell damage is increased by $18093s1% for $18093d.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 576, 'EffectSpellClassMaskA_2': 8388736, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+scripted_by(pyroclasm_18096, 'spell_warl_pyroclasm')
+procs_on(-18096, proc_flags=m.PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG, family_name=0, spell_type_mask=0, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, hit_mask=m.PROC_HIT_CRITICAL, chance=100, cooldown_ms=0)
 
 
 aftermath_18119 = spell(
@@ -1242,12 +1252,13 @@ demonic_power_18126 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-251, implicit_target_a=1, apply_aura=107, misc_value=10),
+        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=107, misc_value=10),
         Effect(type=EffectType.APPLY_AURA, base_points=-3001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=0),
     ],
     spell_icon_id=18,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces the cooldown of your Succubus' Lash of Pain spell by $/1000;s2 sec. and reduces the casting time of your Imp's Firebolt spell by ${0-$m1/1000}.2 sec.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4096, 'EffectSpellClassMaskB_1': 8192, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (2,0): eff0 bp -251 -> -101 (-0.1s cast time, matches the design docs "0.1 sec"); eff1 unchanged (Lash of Pain CD -3s). New eff2 ADD_PCT_MODIFIER DAMAGE (SpellModOp.DAMAGE=0) bp 6 (+7%), C_1 = IMP_FIREBOLT (0x1000) - the "+7% Imps Firebolt damage" clause. Wild Imp Fel Firebolt 200824 side is scripted, Demonologys (S3) job (§0.1/§11 Q13 resolved (a)).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces the cooldown of your Succubus' Lash of Pain spell by $/1000;s2 sec. Reduces the cast time of your Imp's Firebolt and the Firebolt of your Wild Imps by $/-1000;s1 sec, and increases their damage by $s3%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4096, 'EffectSpellClassMaskB_1': 8192, 'EffectSpellClassMaskC_1': m.IMP_FIREBOLT, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -1263,12 +1274,13 @@ demonic_power_18127 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-501, implicit_target_a=1, apply_aura=107, misc_value=10),
+        Effect(type=EffectType.APPLY_AURA, base_points=-251, implicit_target_a=1, apply_aura=107, misc_value=10),
         Effect(type=EffectType.APPLY_AURA, base_points=-6001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=13, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=0),
     ],
     spell_icon_id=18,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces the cooldown of your Succubus' Lash of Pain spell by $/1000;s2 sec. and reduces the casting time of your Imp's Firebolt spell by ${0-$m1/1000}.2 sec.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4096, 'EffectSpellClassMaskB_1': 8192, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (2,0): r2, see rank 1s note - eff0 bp -501 -> -251 (-0.25s cast time), eff2 bp 13 (+14%).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces the cooldown of your Succubus' Lash of Pain spell by $/1000;s2 sec. Reduces the cast time of your Imp's Firebolt and the Firebolt of your Wild Imps by $/-1000;s1 sec, and increases their damage by $s3%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4096, 'EffectSpellClassMaskB_1': 8192, 'EffectSpellClassMaskC_1': m.IMP_FIREBOLT, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -1284,12 +1296,54 @@ devastation_18130 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=7),
     ],
     spell_icon_id=678,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Destruction spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 997, 'EffectSpellClassMaskA_2': 8589504, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (4,2): rank count 1->3 (200969/200970 are the new r2/r3). eff0 bp 4 -> 1 (2%), mask -> DESTRUCTION_SPELLS.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Destruction spells by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Incinerate casts have a 10% chance to trigger Chaotic Inferno, making your next Chaos Bolt instant. Lasts 15 sec.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.DESTRUCTION_SPELLS[0], 'EffectSpellClassMaskA_2': m.DESTRUCTION_SPELLS[1], 'EffectSpellClassMaskA_3': m.DESTRUCTION_SPELLS[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+
+
+devastation_200969 = spell(
+    id=200969,
+    name='Devastation',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=107, misc_value=7),
+    ],
+    spell_icon_id=678,
+    notes='warlock-rework DESTRUCTION §6 (4,2): new rank 2 (talent 981 rank count 1->3), clone of 18130 with bp 3 (4%).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Destruction spells by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Incinerate casts have a 10% chance to trigger Chaotic Inferno, making your next Chaos Bolt instant. Lasts 15 sec.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.DESTRUCTION_SPELLS[0], 'EffectSpellClassMaskA_2': m.DESTRUCTION_SPELLS[1], 'EffectSpellClassMaskA_3': m.DESTRUCTION_SPELLS[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+devastation_200970 = spell(
+    id=200970,
+    name='Devastation',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL),
+    ],
+    spell_icon_id=678,
+    notes='warlock-rework DESTRUCTION §6 (4,2): new rank 3 (final), bp 5 (6%); eff1 PROC_TRIGGER_SPELL carrier for the Chaotic Inferno capstone (row in §8: DONE_SPELL_MAGIC_DMG_CLASS_NEG, fam 5 (0, 0x40, 0), CAST, chance 10). Plain capstone text (final rank).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Destruction spells by $s1%.\n\nCapstone Bonus: Your Incinerate casts have a 10% chance to trigger Chaotic Inferno, making your next Chaos Bolt instant. Lasts 15 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.DESTRUCTION_SPELLS[0], 'EffectSpellClassMaskA_2': m.DESTRUCTION_SPELLS[1], 'EffectSpellClassMaskA_3': m.DESTRUCTION_SPELLS[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+procs_on(devastation_200970, proc_flags=m.PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG, family_name=5, family_mask=(0, m.INCINERATE, 0), spell_type_mask=m.PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=m.PROC_SPELL_PHASE_CAST, chance=10, cooldown_ms=0, disable_effects_mask=0x1)
 
 
 intensity_18135 = spell(
@@ -1304,11 +1358,11 @@ intensity_18135 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=34, implicit_target_a=1, apply_aura=108, misc_value=9),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=108, misc_value=9),
     ],
     spell_icon_id=876,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the pushback suffered from damaging attacks while casting or channeling any Destruction spell by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 485, 'EffectSpellClassMaskA_2': 135360, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (3,0): eff0 bp 34 -> 49 (50%), mask -> DESTRUCTION_CAST_SPELLS.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the pushback suffered from damaging attacks while casting or channeling any Destruction spell by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Chaos Bolt and Conflagrate casts have a 15% chance to grant Intensity, increasing your haste by 15% for 8 sec.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.DESTRUCTION_CAST_SPELLS[0], 'EffectSpellClassMaskA_2': m.DESTRUCTION_CAST_SPELLS[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -1324,12 +1378,14 @@ intensity_18136 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=69, implicit_target_a=1, apply_aura=108, misc_value=9),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=108, misc_value=9),
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200988),
     ],
     spell_icon_id=876,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the pushback suffered from damaging attacks  while casting or channeling any Destruction spell by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 485, 'EffectSpellClassMaskA_2': 135360, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (3,0): r2 final rank, eff0 bp 69 -> 99 (100%), mask -> DESTRUCTION_CAST_SPELLS; new eff1 PROC_TRIGGER_SPELL carrier for the Intensity-buff capstone proc (§8: fam 5 (0, 0x820000, 0), CAST, chance 15).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the pushback suffered from damaging attacks while casting or channeling any Destruction spell by $s1%.\n\nCapstone Bonus: Your Chaos Bolt and Conflagrate casts have a 15% chance to grant Intensity, increasing your haste by 15% for 8 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.DESTRUCTION_CAST_SPELLS[0], 'EffectSpellClassMaskA_2': m.DESTRUCTION_CAST_SPELLS[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+procs_on(intensity_18136, proc_flags=m.PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG, family_name=5, family_mask=(0, 0x820000, 0), spell_type_mask=0, spell_phase_mask=m.PROC_SPELL_PHASE_CAST, chance=15, cooldown_ms=0, disable_effects_mask=0x1)
 
 
 suppression_18174 = spell(
@@ -2619,11 +2675,12 @@ shadow_and_flame_30288 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=108, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=108, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=-2001, implicit_target_a=1, apply_aura=107, misc_value=11),
     ],
     spell_icon_id=1986,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Shadow Bolt, Shadowburn, Chaos Bolt and Incinerate spells gain an additional $s1% of your bonus spell damage effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 129, 'EffectSpellClassMaskA_2': 131136, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (7,1): eff0 bp 3/7/11 -> 6/13/19 (7/14/20%), mask -> SHADOW_AND_FLAME_SPELLS (Hand of Guldan removed). New eff1 ADD_FLAT_MODIFIER COOLDOWN bp -2001/-4001/-6001 (-2/-4/-6s), B_2 = SHADOWFLAME (0x10000, its own 15s category CD).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the spell damage scaling of your Shadow Bolt, Shadowburn, Chaos Bolt, Shadowfury, Soul Fire, Incinerate and Shadowflame by $s1%. Reduces the cooldown of Shadowflame by $/-1000;s2 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.SHADOW_AND_FLAME_SPELLS[0], 'EffectSpellClassMaskA_2': m.SHADOW_AND_FLAME_SPELLS[1], 'EffectSpellClassMaskA_3': m.SHADOW_AND_FLAME_SPELLS[2], 'EffectSpellClassMaskB_2': m.SHADOWFLAME, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2639,11 +2696,12 @@ shadow_and_flame_30289 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=108, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=13, implicit_target_a=1, apply_aura=108, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=-4001, implicit_target_a=1, apply_aura=107, misc_value=11),
     ],
     spell_icon_id=1986,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Shadow Bolt, Shadowburn, Chaos Bolt and Incinerate spells gain an additional $s1% of your bonus spell damage effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 129, 'EffectSpellClassMaskA_2': 131136, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (7,1): see rank 1s note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the spell damage scaling of your Shadow Bolt, Shadowburn, Chaos Bolt, Shadowfury, Soul Fire, Incinerate and Shadowflame by $s1%. Reduces the cooldown of Shadowflame by $/-1000;s2 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.SHADOW_AND_FLAME_SPELLS[0], 'EffectSpellClassMaskA_2': m.SHADOW_AND_FLAME_SPELLS[1], 'EffectSpellClassMaskA_3': m.SHADOW_AND_FLAME_SPELLS[2], 'EffectSpellClassMaskB_2': m.SHADOWFLAME, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2659,11 +2717,12 @@ shadow_and_flame_30290 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=108, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=-6001, implicit_target_a=1, apply_aura=107, misc_value=11),
     ],
     spell_icon_id=1986,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Shadow Bolt, Shadowburn, Chaos Bolt and Incinerate spells gain an additional $s1% of your bonus spell damage effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 129, 'EffectSpellClassMaskA_2': 131136, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (7,1): r3 final rank, see rank 1s note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the spell damage scaling of your Shadow Bolt, Shadowburn, Chaos Bolt, Shadowfury, Soul Fire, Incinerate and Shadowflame by $s1%. Reduces the cooldown of Shadowflame by $/-1000;s2 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.SHADOW_AND_FLAME_SPELLS[0], 'EffectSpellClassMaskA_2': m.SHADOW_AND_FLAME_SPELLS[1], 'EffectSpellClassMaskA_3': m.SHADOW_AND_FLAME_SPELLS[2], 'EffectSpellClassMaskB_2': m.SHADOWFLAME, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2719,12 +2778,14 @@ soul_leech_30293 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2027,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your Shadow Bolt, Shadowburn, Chaos Bolt, Soul Fire, Incinerate, Searing Pain and Conflagrate spells a $h% chance to return health equal to $s1% of the damage caused.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 897, 'EffectSpellClassMaskA_2': 192, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (6,2): eff0 bp 19 -> 4 (5%), junk masks cleared. ProcChance 10 -> 100, ProcTypeMask -> DONE_SPELL_MAGIC_DMG_CLASS_NEG (0x10000). Only one leech talent works (SHARED §4, §0.2 item 9, §7.11) - unbind_script(-30293) below, spell_warl_soul_leech_destruction (WP-B) checks Warlock::GetActiveLeechTalent.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your direct single target Destruction spells heal you for $s1% of the damage caused. Each heal returns at most 15% of your health. This effect can only occur once every 3 seconds. Does not stack with other similar effects.\n\n|cFF9D9D9DCapstone Bonus: Your Soul Leech also restores mana to you and your summoned demon equal to 4% of your missing mana, and grants Replenishment.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 0, 'EffectSpellClassMaskA_2': 0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+unbind_script(-30293, 'spell_warl_soul_leech')
+scripted_by(30293, 'spell_warl_soul_leech_destruction')
 
 
 soul_leech_30295 = spell(
@@ -2739,12 +2800,13 @@ soul_leech_30295 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2027,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your Shadow Bolt, Shadowburn, Chaos Bolt, Soul Fire, Incinerate, Searing Pain and Conflagrate spells a $h% chance to return health equal to $s1% of the damage caused.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 897, 'EffectSpellClassMaskA_2': 192, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (6,2): see rank 1s note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your direct single target Destruction spells heal you for $s1% of the damage caused. Each heal returns at most 15% of your health. This effect can only occur once every 3 seconds. Does not stack with other similar effects.\n\n|cFF9D9D9DCapstone Bonus: Your Soul Leech also restores mana to you and your summoned demon equal to 4% of your missing mana, and grants Replenishment.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 0, 'EffectSpellClassMaskA_2': 0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+scripted_by(30295, 'spell_warl_soul_leech_destruction')
 
 
 soul_leech_30296 = spell(
@@ -2759,12 +2821,14 @@ soul_leech_30296 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2027,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your Shadow Bolt, Shadowburn, Chaos Bolt, Soul Fire, Incinerate, Searing Pain and Conflagrate spells a $h% chance to return health equal to $s1% of the damage caused.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 897, 'EffectSpellClassMaskA_2': 192, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 30, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (6,2): r3 final rank, eff0 bp 14 (15%); capstone (mana/Replenishment to warlock+demon) implemented in spell_warl_soul_leech_destruction (§7.11), no new effect slot needed (r3 already at 3 effects would need one, but the capstone reads r3 by talent rank and grants the mana/Replenishment as a script side effect off the same DUMMY proc).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your direct single target Destruction spells heal you for $s1% of the damage caused. Each heal returns at most 15% of your health. This effect can only occur once every 3 seconds. Does not stack with other similar effects.\n\nCapstone Bonus: Your Soul Leech also restores mana to you and your summoned demon equal to 4% of your missing mana, and grants Replenishment.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 0, 'EffectSpellClassMaskA_2': 0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+scripted_by(30296, 'spell_warl_soul_leech_destruction')
+procs_on(-30293, proc_flags=m.PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG, family_name=5, family_mask=m.SOUL_LEECH_SPELLS, spell_type_mask=m.PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, chance=100, cooldown_ms=3000)
 
 
 nether_protection_30299 = spell(
@@ -2780,10 +2844,11 @@ nether_protection_30299 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=1206),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1985,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'After being hit with a spell, you have a $h% chance to gain Nether Protection, reducing all damage by that spell school by $54370s1% for $54370d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 997, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 131072, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (5,0): eff0 kept (stock spell_warl_nether_protection, -30299, still bound); ProcChance 10/20/30 -> 0/0/20 (r3 only), ProcTypeMask -> 0xA0000 (HIT + TAKEN_PERIODIC, §8). New eff1 DUMMY bp 1/3/5 (2/4/6%) - the periodic-taken reduction itself is data-only via warlock_hooks.cpp ModifyPeriodicDamageAurasTick (WP-B, §7.12), reading whichever rank is present.',
+    raw_overrides={'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces periodic spell damage taken by $s2%.\n\n|cFF9D9D9DCapstone Bonus: When you are hit by a spell or take periodic spell damage, you have a 20% chance to gain Nether Protection, reducing damage taken from that spell\'s school by 10% for 6 sec. Cannot occur more than once every 4 sec.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 997, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 0, 'ProcTypeMask': 655360, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2800,10 +2865,11 @@ nether_protection_30301 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=1206),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1985,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'After being hit with a spell, you have a $h% chance to gain Nether Protection, reducing all damage by that spell school by $54370s1% for $54370d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 997, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 131072, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (5,0): see rank 1s note.',
+    raw_overrides={'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces periodic spell damage taken by $s2%.\n\n|cFF9D9D9DCapstone Bonus: When you are hit by a spell or take periodic spell damage, you have a 20% chance to gain Nether Protection, reducing damage taken from that spell\'s school by 10% for 6 sec. Cannot occur more than once every 4 sec.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 997, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 0, 'ProcTypeMask': 655360, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2820,11 +2886,14 @@ nether_protection_30302 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=1206),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1985,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'After being hit with a spell, you have a $h% chance to gain Nether Protection, reducing all damage by that spell school by $54370s1% for $54370d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 997, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 30, 'ProcTypeMask': 131072, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (5,0): r3 final rank, keeps the DBC proc (chance 20) for the school-buff capstone (stock spell_warl_nether_protection, -30299, casts 54370-75). Nether Protection capstone excludes self-inflicted damage (§11 Q23) via an additive DoCheckProc class (WP-B).',
+    raw_overrides={'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces periodic spell damage taken by $s2%.\n\nCapstone Bonus: When you are hit by a spell or take periodic spell damage, you have a 20% chance to gain Nether Protection, reducing damage taken from that spell\'s school by 10% for 6 sec. Cannot occur more than once every 4 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 997, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 655360, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+scripted_by(nether_protection_30302, 'spell_warl_nether_protection_destruction')
+procs_on(-30299, proc_flags=m.PROC_FLAG_TAKEN_SPELL_MAGIC_DMG_CLASS_NEG | m.PROC_FLAG_TAKEN_PERIODIC, school_mask=126, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, chance=0, cooldown_ms=4000)
 
 
 demonic_resilience_30319 = spell(
@@ -3448,11 +3517,11 @@ empowered_imp_47220 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=1, apply_aura=107, misc_value=18),
+        Effect(type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=1, apply_aura=108, misc_value=15),
     ],
     spell_icon_id=3171,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Imp by $s1%, and all critical hits done by your Imp have a $s2% chance to increase your spell critical hit chance for your next spell by $47283s1%. This effect lasts $47283d.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4096, 'EffectSpellClassMaskB_2': 16777216, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (8,2): eff1 rewritten from ADD_FLAT_MODIFIER CHANCE_OF_SUCCESS (stock 54278 proc chance mod) to ADD_PCT_MODIFIER CRIT_DAMAGE_BONUS (+33/66/100%), bp unchanged, mask -> B_1 IMP_FIREBOLT (0x1000). Removing the CHANCE_OF_SUCCESS mod leaves 54278s proc at its DBC chance 0 -> inert.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage done by your Imp's Firebolt by $s1% and its critical strike damage bonus by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Your Imp's Firebolt has a 5% chance to make your next Soul Fire instant. Lasts 15 sec.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.IMP_FIREBOLT, 'EffectSpellClassMaskB_1': m.IMP_FIREBOLT, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -3469,11 +3538,11 @@ empowered_imp_47221 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=65, implicit_target_a=1, apply_aura=107, misc_value=18),
+        Effect(type=EffectType.APPLY_AURA, base_points=65, implicit_target_a=1, apply_aura=108, misc_value=15),
     ],
     spell_icon_id=3171,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Imp by $s1%, and all critical hits done by your Imp have a $s2% chance to increase your spell critical hit chance for your next spell by $47283s1%. This effect lasts $47283d.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4096, 'EffectSpellClassMaskB_2': 16777216, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (8,2): see rank 1s note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage done by your Imp's Firebolt by $s1% and its critical strike damage bonus by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Your Imp's Firebolt has a 5% chance to make your next Soul Fire instant. Lasts 15 sec.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.IMP_FIREBOLT, 'EffectSpellClassMaskB_1': m.IMP_FIREBOLT, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -3490,12 +3559,13 @@ empowered_imp_47223 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=107, misc_value=18),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=108, misc_value=15),
     ],
     spell_icon_id=3171,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Imp by $s1%, and all critical hits done by your Imp have a $s2% chance to increase your spell critical hit chance for your next spell by $47283s1%. This effect lasts $47283d.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4096, 'EffectSpellClassMaskB_2': 16777216, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (8,2): r3 final rank, see rank 1s note; capstone script is spell_warl_empowered_imp on Firebolt 3110 (WP-B, §7.15) + the CanPrepare arbiter registration (§7.6).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage done by your Imp's Firebolt by $s1% and its critical strike damage bonus by $s2%.\n\nCapstone Bonus: Your Imp's Firebolt has a 5% chance to make your next Soul Fire instant. Lasts 15 sec.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.IMP_FIREBOLT, 'EffectSpellClassMaskB_1': m.IMP_FIREBOLT, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+scripted_by(3110, 'spell_warl_empowered_imp')
 
 
 fel_synergy_47230 = spell(
@@ -3724,10 +3794,11 @@ backdraft_47258 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=7, trigger_spell=54274),
+        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=108),
     ],
     spell_icon_id=3170,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you cast Conflagrate, the cast time and global cooldown of your next three Destruction spells is reduced by $54274s1%. Lasts $54274d.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 516, 'EffectSpellClassMaskA_2': 65536, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 69632, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (8,0): eff0 kept. New eff1 ADD_PCT_MODIFIER DAMAGE bp 6/13/19 (7/14/20%), B_1 = SHADOWBURN (0x80). CheckProc filter in spell_warl_backdraft (WP-B, §7.15) - Conflagrate, Shadowfury, Shadowburn, or priest Mind Blast (Classless); -47258 row -> family 0, CAST (§8).',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you cast Conflagrate, Mind Blast, Shadowfury or Shadowburn, the cast time and global cooldown of your next three Destruction spells are reduced by $54274s1%. Lasts $54274d. Increases the damage of your Shadowburn by $s2%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 516, 'EffectSpellClassMaskA_2': 65536, 'EffectSpellClassMaskB_1': m.SHADOWBURN, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 69632, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -3744,10 +3815,11 @@ backdraft_47259 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=7, trigger_spell=54276),
+        Effect(type=EffectType.APPLY_AURA, base_points=13, implicit_target_a=1, apply_aura=108),
     ],
     spell_icon_id=3170,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you cast Conflagrate, the cast time and global cooldown of your next three Destruction spells is reduced by $54276s1%. Lasts $54276d.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 516, 'EffectSpellClassMaskA_2': 65536, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (8,0): see rank 1s note.',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you cast Conflagrate, Mind Blast, Shadowfury or Shadowburn, the cast time and global cooldown of your next three Destruction spells are reduced by $54276s1%. Lasts $54276d. Increases the damage of your Shadowburn by $s2%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 516, 'EffectSpellClassMaskA_2': 65536, 'EffectSpellClassMaskB_1': m.SHADOWBURN, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -3764,11 +3836,16 @@ backdraft_47260 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=7, trigger_spell=54277),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108),
     ],
     spell_icon_id=3170,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you cast Conflagrate, the cast time and global cooldown of your next three Destruction spells is reduced by $54277s1%. Lasts $54277d.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 516, 'EffectSpellClassMaskA_2': 65536, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (8,0): r3 final rank, see rank 1s note.',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you cast Conflagrate, Mind Blast, Shadowfury or Shadowburn, the cast time and global cooldown of your next three Destruction spells are reduced by $54277s1%. Lasts $54277d. Increases the damage of your Shadowburn by $s2%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 516, 'EffectSpellClassMaskA_2': 65536, 'EffectSpellClassMaskB_1': m.SHADOWBURN, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+scripted_by(47258, 'spell_warl_backdraft')
+scripted_by(47259, 'spell_warl_backdraft')
+scripted_by(47260, 'spell_warl_backdraft')
+procs_on(-47258, proc_flags=m.PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG, family_name=0, spell_type_mask=0, spell_phase_mask=m.PROC_SPELL_PHASE_CAST, chance=100, cooldown_ms=0)
 
 
 fire_and_brimstone_47266 = spell(
@@ -3783,12 +3860,12 @@ fire_and_brimstone_47266 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=24),
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=107, misc_value=23),
+        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=107, misc_value=7),
     ],
     spell_icon_id=3173,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Incinerate and Chaos Bolt spells to targets afflicted by your Immolate by $s1%, and the critical strike chance of your Conflagrate spell is increased by $s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4, 'EffectSpellClassMaskB_2': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (9,1): eff0 rewritten from DUMMY (stock C4 key icon 3173) to ADD_FLAT_MODIFIER EFFECT3 (SPELLMOD_EFFECT3, adds to Immolate 348 eff2s aura-271 amount) bp 2/5/9 (+3/6/10), A_1 = IMMOLATE (0x4). eff1 bp 4/9/14 -> 7/15/24 (8/16/25%), mask -> B_2 CONFLAGRATE (0x800000).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Incinerate, Searing Pain, Soul Fire and Chaos Bolt spells to targets afflicted by your Immolate by $s1%. Increases the critical strike chance of your Conflagrate by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Your Fire spells with a cast time that deal direct damage increase the damage the target takes from your next Soul Fire by 5%. Stacks up to 10. Incinerate generates 2 stacks. Soul Fire does not generate stacks.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.IMMOLATE, 'EffectSpellClassMaskB_2': m.CONFLAGRATE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -3804,12 +3881,12 @@ fire_and_brimstone_47267 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=24),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=107, misc_value=23),
+        Effect(type=EffectType.APPLY_AURA, base_points=15, implicit_target_a=1, apply_aura=107, misc_value=7),
     ],
     spell_icon_id=3173,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Incinerate and Chaos Bolt spells to targets afflicted by your Immolate by $s1%, and the critical strike chance of your Conflagrate spell is increased by $s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4, 'EffectSpellClassMaskB_2': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (9,1): see rank 1s note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Incinerate, Searing Pain, Soul Fire and Chaos Bolt spells to targets afflicted by your Immolate by $s1%. Increases the critical strike chance of your Conflagrate by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Your Fire spells with a cast time that deal direct damage increase the damage the target takes from your next Soul Fire by 5%. Stacks up to 10. Incinerate generates 2 stacks. Soul Fire does not generate stacks.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.IMMOLATE, 'EffectSpellClassMaskB_2': m.CONFLAGRATE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -3825,13 +3902,16 @@ fire_and_brimstone_47268 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=24),
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=107, misc_value=23),
+        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200990),
     ],
     spell_icon_id=3173,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Incinerate and Chaos Bolt spells to targets afflicted by your Immolate by $s1%, and the critical strike chance of your Conflagrate spell is increased by $s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4, 'EffectSpellClassMaskB_2': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (9,1): r3 final rank, bp 9/24; new eff2 PROC_TRIGGER_SPELL -> 200990 (never DUMMY - C4 keys on a caster DUMMY aura on icon 3173, so the capstone marker must not be one; row in §8: fam 0, school Fire, chance 100).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Incinerate, Searing Pain, Soul Fire and Chaos Bolt spells to targets afflicted by your Immolate by $s1%. Increases the critical strike chance of your Conflagrate by $s2%.\n\nCapstone Bonus: Your Fire spells with a cast time that deal direct damage increase the damage the target takes from your next Soul Fire by 5%. Stacks up to 10. Incinerate generates 2 stacks. Soul Fire does not generate stacks.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.IMMOLATE, 'EffectSpellClassMaskB_2': m.CONFLAGRATE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+scripted_by(fire_and_brimstone_47268, 'spell_warl_fire_and_brimstone')
+procs_on(fire_and_brimstone_47268, proc_flags=m.PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG, family_name=0, school_mask=4, spell_type_mask=m.PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, chance=100, cooldown_ms=0, disable_effects_mask=0x3)
 
 
 fire_and_brimstone_47269 = spell(
@@ -4137,12 +4217,13 @@ ruin_59738 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=108, misc_value=15),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=234,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the critical strike damage bonus of your Destruction spells and your Imp's Firebolt spell by $s1%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 5093, 'EffectSpellClassMaskA_2': 12783808, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (5,2), A1/A2 (SHARED §1.1): r2 eff0 stock ADD_PCT_MODIFIER CRIT_DAMAGE_BONUS zeroed (type -> APPLY_AURA DUMMY, bp 0, die_sides 0, A masks cleared), replaced by linked_spell(59738, 200702, 2) - 180% at this rank.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 180% damage. This does not stack with other similar effects.\n\n|cFF9D9D9DCapstone Bonus: Increases your Fire and Shadow damage done by 3%. This effect is quadrupled against targets above 75% health.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 0, 'EffectSpellClassMaskA_2': 0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+linked_spell(59738, 200702, type=2)
 
 
 ruin_59739 = spell(
@@ -4157,12 +4238,15 @@ ruin_59739 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=1, apply_aura=108, misc_value=15),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=36),
+        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_DONE_VERSUS_AURASTATE, misc_value=23),
     ],
     spell_icon_id=234,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the critical strike damage bonus of your Destruction spells and your Imp's Firebolt spell by $s1%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 5093, 'EffectSpellClassMaskA_2': 12783808, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (5,2), A1/A2: r3 final rank - eff0 zeroed, linked_spell(59739, 200703, 2) (200% display; stored amount 33 per A1). New eff1 MOD_DAMAGE_PERCENT_DONE misc 36 (Fire|Shadow) bp 2 (+3%); new eff2 MOD_DAMAGE_DONE_VERSUS_AURASTATE misc 23 (AURA_STATE_HEALTH_ABOVE_75_PERCENT) bp 8 (+9%, combined 1.03x1.09=+12.27%, §11 Q3) - Warlock::GetAuraStateDoneFactor reads this for the Rain of Fire snapshot correction (§7.1).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 200% damage. This does not stack with other similar effects.\n\nCapstone Bonus: Increases your Fire and Shadow damage done by 3%. This effect is quadrupled against targets above 75% health.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 0, 'EffectSpellClassMaskA_2': 0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+linked_spell(59739, 200703, type=2)
 
 
 ruin_59740 = spell(
@@ -4370,8 +4454,9 @@ pyroclasm_63245 = spell(
     ],
     spell_icon_id=1137,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you critically strike with Searing Pain or Conflagrate, your Fire and Shadow spell damage is increased by $63244s1% for $63244d.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 576, 'EffectSpellClassMaskA_2': 8388736, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you critically strike with Searing Pain, Scorch, or Conflagrate, your Fire and Shadow spell damage is increased by $63244s1% for $63244d.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 576, 'EffectSpellClassMaskA_2': 8388736, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+scripted_by(pyroclasm_63245, 'spell_warl_pyroclasm')
 
 
 
@@ -5123,4 +5208,1075 @@ impending_doom_200870 = spell(
     spell_icon_id=170,
     notes='warlock-rework AFFLICTION §11 Q7: rank 2 capstone marker (eff2 DUMMY) - S3 binds the "critical strikes from Bane of Doom summon a Wild Imp" proc to this id.',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Bane of Doom by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_3': m.DEMONOLOGY_D3_BIT_23, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+# ---------------------------------------------------------------------------
+# warlock-rework DESTRUCTION pass (S2), WP-0 §3 items 1-2:
+# - pulled DSL rows for stock spells this pass retunes/rebinds (pull_dsl.py
+#   34936 47283 54274 54276 54277 54370 54371 54372 54373 54374 54375 47960
+#   18118 --constants); their source/spells/npc.csv rows were deleted in the
+#   same change.
+# - Backlash 34935/34938/34939 moved here from mage/mage_trigger_spells.py
+#   and Molten Skin 63349/63350/63351 from rogue/rogue_trigger_spells.py
+#   (both are Warlock talents that were left filed under their old stock
+#   SpellFamily's DSL file); SpellClassSet corrected 3/8 -> 5 (Warlock).
+#   warlock_talents.py's granted_by_talent() rows 1817/1887 already grant
+#   these ranks by bare int - switched to reference the objects below.
+# ---------------------------------------------------------------------------
+
+backlash_34936 = spell(
+    id=34936,
+    name='Backlash',
+    school=School.FIRE,
+    dispel=DispelType.MAGIC,
+    attributes=262144,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=20000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=10),
+    ],
+    spell_icon_id=2130,
+    notes='warlock-rework DESTRUCTION §5 (Backlash 4,0 proc buff): duration_ms 8000 -> 20000; mask scoped to Immolate only (A_1 = IMMOLATE 0x4, A_2 cleared - was Shadow Bolt|Incinerate). ProcCharges 1 (also set at load, SpellInfoCorrections.cpp:260). Consumed only by an Immolate the warlock casts (spell_warl_backlash-equivalent consumption is the engine\'s own SpellMod charge spend on Immolate cast - Fury of the Void\'s AddAura(348) does not consume it, G13/§7.13).',
+    raw_overrides={'AttributesEx': 32768, 'AttributesEx3': 262144, 'AttributesEx4': 64, 'AttributesEx6': 64, 'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 1, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': m.IMMOLATE, 'EffectSpellClassMaskA_2': 0, 'SpellVisualID_1': 8259, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Increases your critical strike chance with all spells and abilities and gives you a chance for your Immolate periodic damage to make your next Immolate instant.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Immolate is instant.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+procs_on(34936, proc_flags=m.PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG, family_name=5, family_mask=(m.IMMOLATE, 0, 0), spell_phase_mask=m.PROC_SPELL_PHASE_CAST, attributes_mask=m.PROC_ATTR_REQ_SPELLMOD, charges=1)
+
+
+empowered_imp_47283 = spell(
+    id=47283,
+    name='Empowered Imp',
+    school=School.SHADOW,
+    dispel=DispelType.MAGIC,
+    attributes=168099840,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=8000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=27, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=7),
+    ],
+    spell_icon_id=3171,
+    notes='pulled from existing data',
+    raw_overrides={'AttributesEx3': 67108864, 'CastingTimeIndex': 1, 'ProcTypeMask': 69632, 'ProcChance': 100, 'ProcCharges': 1, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 933, 'EffectSpellClassMaskA_2': 8622272, 'SpellVisualID_1': 7424, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Critical effect chance of next spell increased by $s1%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Critical effect chance of next spell increased by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 5, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_2': 1.0},
+)
+
+
+backdraft_54274 = spell(
+    id=54274,
+    name='Backdraft',
+    school=School.NORMAL,
+    dispel=DispelType.MAGIC,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=10),
+        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=21),
+    ],
+    spell_icon_id=3170,
+    notes='pulled from existing data',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 86016, 'ProcChance': 100, 'ProcCharges': 3, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 293, 'EffectSpellClassMaskA_2': 200896, 'EffectSpellClassMaskB_1': 293, 'EffectSpellClassMaskB_2': 200896, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Cast time and global cooldown of your next three Destruction spell reduced by $s1%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Reduced cast time and global cooldown for your Destruction spells by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 5, 'DefenseType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+backdraft_54276 = spell(
+    id=54276,
+    name='Backdraft',
+    school=School.NORMAL,
+    dispel=DispelType.MAGIC,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=10),
+        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=21),
+    ],
+    spell_icon_id=3170,
+    notes='pulled from existing data',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 86016, 'ProcChance': 100, 'ProcCharges': 3, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 357, 'EffectSpellClassMaskA_2': 200896, 'EffectSpellClassMaskB_1': 357, 'EffectSpellClassMaskB_2': 200896, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Cast time and global cooldown of your next three Destruction spell reduced by $s1%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Reduced cast time and global cooldown for your Destruction spells by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 5, 'DefenseType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+backdraft_54277 = spell(
+    id=54277,
+    name='Backdraft',
+    school=School.NORMAL,
+    dispel=DispelType.MAGIC,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=10),
+        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=21),
+    ],
+    spell_icon_id=3170,
+    notes='pulled from existing data',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 86016, 'ProcChance': 100, 'ProcCharges': 3, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 357, 'EffectSpellClassMaskA_2': 200896, 'EffectSpellClassMaskB_1': 357, 'EffectSpellClassMaskB_2': 200896, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Cast time and global cooldown of your next three Destruction spell reduced by $s1%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Reduced cast time and global cooldown for your Destruction spells by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 5, 'DefenseType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+nether_protection_54370 = spell(
+    id=54370,
+    name='Nether Protection',
+    school=School.NORMAL,
+    dispel=DispelType.MAGIC,
+    attributes=151257088,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=8000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=2),
+    ],
+    spell_icon_id=1985,
+    notes='pulled from existing data',
+    raw_overrides={'AttributesEx2': 268435456, 'AttributesEx4': 16512, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 997, 'SpellVisualID_1': 9750, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'After being hit with a spell, you have a chance to gain Nether Protection, reducing all damage by that spell school by $s1% for $d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Holy spell damage reduced by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+nether_protection_54371 = spell(
+    id=54371,
+    name='Nether Protection',
+    school=School.NORMAL,
+    dispel=DispelType.MAGIC,
+    attributes=151257088,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=8000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=4),
+    ],
+    spell_icon_id=1985,
+    notes='pulled from existing data',
+    raw_overrides={'AttributesEx2': 268435456, 'AttributesEx4': 16512, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 997, 'SpellVisualID_1': 9750, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'After being hit with a spell, you have a chance to gain Nether Protection, reducing all damage by that spell school by $s1% for $d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Fire spell damage reduced by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+nether_protection_54372 = spell(
+    id=54372,
+    name='Nether Protection',
+    school=School.NORMAL,
+    dispel=DispelType.MAGIC,
+    attributes=151257088,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=8000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=16),
+    ],
+    spell_icon_id=1985,
+    notes='pulled from existing data',
+    raw_overrides={'AttributesEx2': 268435456, 'AttributesEx4': 16512, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 997, 'SpellVisualID_1': 9750, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'After being hit with a spell, you have a chance to gain Nether Protection, reducing all damage by that spell school by $s1% for $d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Frost spell damage reduced by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+nether_protection_54373 = spell(
+    id=54373,
+    name='Nether Protection',
+    school=School.NORMAL,
+    dispel=DispelType.MAGIC,
+    attributes=151257088,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=8000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=64),
+    ],
+    spell_icon_id=1985,
+    notes='pulled from existing data',
+    raw_overrides={'AttributesEx2': 268435456, 'AttributesEx4': 16512, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 997, 'SpellVisualID_1': 9750, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'After being hit with a spell, you have a chance to gain Nether Protection, reducing all damage by that spell school by $s1% for $d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Arcane spell damage reduced by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+nether_protection_54374 = spell(
+    id=54374,
+    name='Nether Protection',
+    school=School.NORMAL,
+    dispel=DispelType.MAGIC,
+    attributes=151257088,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=8000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=32),
+    ],
+    spell_icon_id=1985,
+    notes='pulled from existing data',
+    raw_overrides={'AttributesEx2': 268435456, 'AttributesEx4': 16512, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 997, 'SpellVisualID_1': 9750, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'After being hit with a spell, you have a chance to gain Nether Protection, reducing all damage by that spell school by $s1% for $d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Shadow spell damage reduced by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+nether_protection_54375 = spell(
+    id=54375,
+    name='Nether Protection',
+    school=School.NORMAL,
+    dispel=DispelType.MAGIC,
+    attributes=151257088,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=8000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=8),
+    ],
+    spell_icon_id=1985,
+    notes='pulled from existing data',
+    raw_overrides={'AttributesEx2': 268435456, 'AttributesEx4': 16512, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 997, 'SpellVisualID_1': 9750, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'After being hit with a spell, you have a chance to gain Nether Protection, reducing all damage by that spell school by $s1% for $d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Nature spell damage reduced by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+shadowflame_47960 = spell(
+    id=47960,
+    name='Shadowflame',
+    school=School.FIRE,
+    dispel=DispelType.MAGIC,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    duration_ms=8000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=113, points_per_level=2.266667, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+    ],
+    spell_icon_id=3317,
+    notes='warlock-rework DESTRUCTION §4.1 (B3 rebase, matches 47897s learn level 75->50): bp/ppl rescaled so the level-60 value is unchanged (114 @50, 136 @60, 182 @80, +34% vs todays @80); MaxLevel 83->80 (matches the class-wide 80 cap); coefficient (spell_bonus_data dot 0.0667) unchanged/undeclared - its row survives live (only 47897s own row was deleted by 2026_09_01_26.sql).',
+    raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 262144, 'CastingTimeIndex': 1, 'InterruptFlags': 15, 'ProcChance': 101, 'MaxLevel': 80, 'BaseLevel': 50, 'SpellLevel': 50, 'EquippedItemClass': -1, 'EffectDieSides_2': 1, 'EffectBasePoints_2': -1, 'ImplicitTargetA_3': 6, 'SpellVisualID_1': 11247, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Targets in a cone in front of the caster take $47897s1 Shadow damage and an additional $47960o1 Fire damage over $47960d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s1 Fire damage every $t1 seconds.', 'AuraDescription_Lang_Mask': 16712190, 'StartRecoveryTime': 1500, 'SpellClassSet': 5, 'SpellClassMask_3': 2, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_2': 0.10700000077486038},
+)
+
+
+aftermath_18118 = spell(
+    id=18118,
+    name='Aftermath',
+    school=School.FIRE,
+    dispel=DispelType.MAGIC,
+    mechanic=27,
+    attributes=8388608,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    duration_ms=5000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-71, mechanic=Mechanic.SNARE, implicit_target_a=6, apply_aura=AuraType.MOD_DECREASE_SPEED),
+    ],
+    spell_icon_id=11,
+    notes='pulled from existing data',
+    raw_overrides={'AttributesEx': 136, 'AttributesEx2': 4, 'AttributesEx3': 131072, 'CastingTimeIndex': 1, 'ProcChance': 101, 'EquippedItemClass': -1, 'SpellVisualID_1': 84, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Increases the periodic damage done by your Immolate, and your Conflagrate has a chance to daze the target for $18118d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Dazed.', 'AuraDescription_Lang_Mask': 16712190, 'DefenseType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+backlash_34935 = spell(
+    id=34935,
+    name='Backlash',
+    school=School.FIRE,
+    attributes=262352,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=34936),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.MOD_CRIT_PCT),
+    ],
+    spell_icon_id=2130,
+    notes='warlock-rework DESTRUCTION §6 (4,0): eff0 junk mask 0x400015 -> IMMOLATE (0x4); eff1 aura 57 -> 290 MOD_CRIT_PCT (bp unchanged, 1/2/3%). ProcChance 8/16/25 -> 3/6/10, ProcTypeMask 680 -> DONE_PERIODIC (0x40000) - row §8 -34935.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your critical strike chance with all spells and abilities by $s2%. Your Immolate periodic damage has a $h% chance to make your next Immolate instant. Lasts $34936d. Cannot occur more than once every 8 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.IMMOLATE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 3, 'ProcTypeMask': m.PROC_FLAG_DONE_PERIODIC, 'RangeIndex': 1, 'SpellClassSet': 5, 'SpellLevel': 1, 'SpellPriority': 50},
+)
+
+
+backlash_34938 = spell(
+    id=34938,
+    name='Backlash',
+    school=School.FIRE,
+    attributes=262352,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=34936),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_CRIT_PCT),
+    ],
+    spell_icon_id=2130,
+    notes='warlock-rework DESTRUCTION §6 (4,0): see rank 1s note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your critical strike chance with all spells and abilities by $s2%. Your Immolate periodic damage has a $h% chance to make your next Immolate instant. Lasts $34936d. Cannot occur more than once every 8 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.IMMOLATE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 6, 'ProcTypeMask': m.PROC_FLAG_DONE_PERIODIC, 'RangeIndex': 1, 'SpellClassSet': 5, 'SpellLevel': 1, 'SpellPriority': 50},
+)
+
+
+backlash_34939 = spell(
+    id=34939,
+    name='Backlash',
+    school=School.FIRE,
+    attributes=262352,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=34936),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_CRIT_PCT),
+    ],
+    spell_icon_id=2130,
+    notes='warlock-rework DESTRUCTION §6 (4,0): see rank 1s note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your critical strike chance with all spells and abilities by $s2%. Your Immolate periodic damage has a $h% chance to make your next Immolate instant. Lasts $34936d. Cannot occur more than once every 8 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.IMMOLATE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': m.PROC_FLAG_DONE_PERIODIC, 'RangeIndex': 1, 'SpellClassSet': 5, 'SpellLevel': 1, 'SpellPriority': 50},
+)
+procs_on(-34935, proc_flags=m.PROC_FLAG_DONE_PERIODIC, family_name=5, family_mask=(m.IMMOLATE, 0, 0), spell_type_mask=m.PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, chance=0, cooldown_ms=8000)
+
+
+molten_skin_63349 = spell(
+    id=63349,
+    name='Molten Skin',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=108, misc_value=22),
+    ],
+    spell_icon_id=2307,
+    notes='warlock-rework DESTRUCTION §6 (1,1): eff0 rewritten from MOD_DAMAGE_PERCENT_TAKEN (all damage) to ADD_PCT_MODIFIER DOT (SPELLMOD_DOT, misc 22 - Hellfires self-damage 1949 eff1 is the only periodic-damage effect under d1 0x40; 5857 is direct) bp -3/-5/-7 -> -11/-21/-31 (-10/-20/-30%), A_1 = HELLFIRE (0x40). AttributesEx3 INSTANT_TARGET_PROCS (0x80000) cleared.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces all damage taken by your Hellfire by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Rain of Fire and Hellfire damage has a 2% chance per hit to reset the cooldown of Shadowfury. This effect cannot occur more than once every 15 sec.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.HELLFIRE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'SpellLevel': 1, 'SpellPriority': 50},
+)
+
+
+molten_skin_63350 = spell(
+    id=63350,
+    name='Molten Skin',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=108, misc_value=22),
+    ],
+    spell_icon_id=2307,
+    notes='warlock-rework DESTRUCTION §6 (1,1): see rank 1s note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces all damage taken by your Hellfire by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Rain of Fire and Hellfire damage has a 2% chance per hit to reset the cooldown of Shadowfury. This effect cannot occur more than once every 15 sec.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.HELLFIRE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'SpellLevel': 1, 'SpellPriority': 50},
+)
+
+
+molten_skin_63351 = spell(
+    id=63351,
+    name='Molten Skin',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2307,
+    notes='warlock-rework DESTRUCTION §6 (1,1): r3 final rank, new eff1 DUMMY (proc carrier for the Shadowfury cooldown reset capstone, §8 63351 row: fam 5 (0x60,0,0), HIT, chance 2, cooldown 15000, DONE_PERIODIC included since Hellfires self-damage procs as periodic, C33).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces all damage taken by your Hellfire by $s1%.\n\nCapstone Bonus: Your Rain of Fire and Hellfire damage has a 2% chance per hit to reset the cooldown of Shadowfury. This effect cannot occur more than once every 15 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.HELLFIRE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'SpellLevel': 1, 'SpellPriority': 50},
+)
+scripted_by(molten_skin_63351, 'spell_warl_molten_skin')
+procs_on(molten_skin_63351, proc_flags=m.PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG | m.PROC_FLAG_DONE_PERIODIC, family_name=5, family_mask=(0x60, 0, 0), spell_type_mask=m.PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, attributes_mask=m.PROC_ATTR_TRIGGERED_CAN_PROC, chance=2, cooldown_ms=15000, disable_effects_mask=0x1)
+
+
+# ---------------------------------------------------------------------------
+# warlock-rework DESTRUCTION pass (S2) - new spells (§5, DESTRUCTION.md §2.1).
+# Talent-rank passives (Volatility, Kindling, Hellstorm, Fury of the Void,
+# Chaotic Resonance) plus every triggered/buff/debuff spell the tree needs.
+# Talent grants (granted_by_talent, SLA rows) live in warlock_talents.py.
+# ---------------------------------------------------------------------------
+
+volatility_200960 = spell(
+    id=200960,
+    name='Volatility',
+    school=School.NORMAL,
+    attributes=464,
+    duration_ms=-1,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_CUSTOM_STAT_PCT, misc_value=1 << 11),
+    ],
+    spell_icon_id=2340,
+    notes='warlock-rework DESTRUCTION §6 (0,0) NEW talent 965 (repurposed from Improved Searing Pain): misc = 1 << CombatRating.PROC_CHANCE (2048).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Proc Chance increased by $s1%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Proc Chance by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+volatility_200961 = spell(
+    id=200961,
+    name='Volatility',
+    school=School.NORMAL,
+    attributes=464,
+    duration_ms=-1,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.MOD_CUSTOM_STAT_PCT, misc_value=1 << 11),
+    ],
+    spell_icon_id=2340,
+    notes='warlock-rework DESTRUCTION §6 (0,0): r2, see r1s note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Proc Chance increased by $s1%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Proc Chance by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+volatility_200962 = spell(
+    id=200962,
+    name='Volatility',
+    school=School.NORMAL,
+    attributes=464,
+    duration_ms=-1,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.MOD_CUSTOM_STAT_PCT, misc_value=1 << 11),
+    ],
+    spell_icon_id=2340,
+    notes='warlock-rework DESTRUCTION §6 (0,0): r3 final rank, see r1s note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Proc Chance increased by $s1%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Proc Chance by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+kindling_200963 = spell(
+    id=200963,
+    name='Kindling',
+    school=School.NORMAL,
+    attributes=464,
+    duration_ms=-1,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=999, implicit_target_a=1, apply_aura=107, misc_value=1),
+    ],
+    spell_icon_id=2298,
+    notes='warlock-rework DESTRUCTION §6 (0,3) NEW talent 60100: ADD_FLAT_MODIFIER DURATION (+1/2/3s), A_1 = IMMOLATE (0x4).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Immolate duration increased by $/1000;s1 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the duration of your Immolate by $/1000;s1 sec.\n\n|cFF9D9D9DCapstone Bonus: Your Shadow Bolt and Incinerate casts have a 10% chance to fire 4 Molten Bolts at the target, one every 0.5 sec, each dealing $200985s1 Fire damage.|r', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': m.IMMOLATE, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+kindling_200964 = spell(
+    id=200964,
+    name='Kindling',
+    school=School.NORMAL,
+    attributes=464,
+    duration_ms=-1,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1999, implicit_target_a=1, apply_aura=107, misc_value=1),
+    ],
+    spell_icon_id=2298,
+    notes='warlock-rework DESTRUCTION §6 (0,3): r2, see r1s note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Immolate duration increased by $/1000;s1 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the duration of your Immolate by $/1000;s1 sec.\n\n|cFF9D9D9DCapstone Bonus: Your Shadow Bolt and Incinerate casts have a 10% chance to fire 4 Molten Bolts at the target, one every 0.5 sec, each dealing $200985s1 Fire damage.|r', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': m.IMMOLATE, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+kindling_200965 = spell(
+    id=200965,
+    name='Kindling',
+    school=School.NORMAL,
+    attributes=464,
+    duration_ms=-1,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2999, implicit_target_a=1, apply_aura=107, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200984),
+    ],
+    spell_icon_id=2298,
+    notes='warlock-rework DESTRUCTION §6 (0,3): r3 final rank, new eff1 PROC_TRIGGER_SPELL -> 200984 Molten Bolts (§8: fam 5 (0x1, 0x40, 0), HIT, chance 10, disable 0x1).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Immolate duration increased by $/1000;s1 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the duration of your Immolate by $/1000;s1 sec.\n\nCapstone Bonus: Your Shadow Bolt and Incinerate casts have a 10% chance to fire 4 Molten Bolts at the target, one every 0.5 sec, each dealing $200985s1 Fire damage.', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': m.IMMOLATE, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+procs_on(kindling_200965, proc_flags=m.PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG, family_name=5, family_mask=(m.SHADOW_BOLT, m.INCINERATE, 0), spell_type_mask=m.PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, chance=10, cooldown_ms=0, disable_effects_mask=0x1)
+
+
+hellstorm_200966 = spell(
+    id=200966,
+    name='Hellstorm',
+    school=School.NORMAL,
+    attributes=464,
+    duration_ms=-1,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=108, misc_value=14),
+    ],
+    spell_icon_id=2385,
+    notes='warlock-rework DESTRUCTION §6 (2,2) NEW talent 60101: eff0 ADD_PCT_MODIFIER DAMAGE (+5/10/15%), A_1 = 0xA0 (RoF | Shadowburn). eff1 ADD_PCT_MODIFIER COST (-10/-20/-30%), B_1 = 0xA0.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Rain of Fire and Shadowburn damage increased by $s1%, mana cost reduced by $s2%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Rain of Fire and Shadowburn by $s1% and reduces their mana cost by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Your Rain of Fire damage has a 3% chance per hit to make your Hellfire tick 50% faster for 8 sec. While active, each Hellfire tick deals 33% less damage to you, so your damage taken per second is unchanged.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': m.RAIN_OF_FIRE | m.SHADOWBURN, 'EffectSpellClassMaskB_1': m.RAIN_OF_FIRE | m.SHADOWBURN, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+hellstorm_200967 = spell(
+    id=200967,
+    name='Hellstorm',
+    school=School.NORMAL,
+    attributes=464,
+    duration_ms=-1,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=108, misc_value=14),
+    ],
+    spell_icon_id=2385,
+    notes='warlock-rework DESTRUCTION §6 (2,2): r2, see r1s note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Rain of Fire and Shadowburn damage increased by $s1%, mana cost reduced by $s2%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Rain of Fire and Shadowburn by $s1% and reduces their mana cost by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Your Rain of Fire damage has a 3% chance per hit to make your Hellfire tick 50% faster for 8 sec. While active, each Hellfire tick deals 33% less damage to you, so your damage taken per second is unchanged.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': m.RAIN_OF_FIRE | m.SHADOWBURN, 'EffectSpellClassMaskB_1': m.RAIN_OF_FIRE | m.SHADOWBURN, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+hellstorm_200968 = spell(
+    id=200968,
+    name='Hellstorm',
+    school=School.NORMAL,
+    attributes=464,
+    duration_ms=-1,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=108, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL),
+    ],
+    spell_icon_id=2385,
+    notes='warlock-rework DESTRUCTION §6 (2,2): r3 final rank, new eff2 PROC_TRIGGER_SPELL carrier for the Hellstorm-buff capstone (§8: fam 5 (0x20,0,0), HIT, attr TRIGGERED_CAN_PROC, chance 3, cooldown 10000, disable 0x3); spell_warl_hellstorm_proc (WP-B) CheckProc excludes overlap with 200989.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Rain of Fire and Shadowburn damage increased by $s1%, mana cost reduced by $s2%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Rain of Fire and Shadowburn by $s1% and reduces their mana cost by $s2%.\n\nCapstone Bonus: Your Rain of Fire damage has a 3% chance per hit to make your Hellfire tick 50% faster for 8 sec. While active, each Hellfire tick deals 33% less damage to you, so your damage taken per second is unchanged.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': m.RAIN_OF_FIRE | m.SHADOWBURN, 'EffectSpellClassMaskB_1': m.RAIN_OF_FIRE | m.SHADOWBURN, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+scripted_by(hellstorm_200968, 'spell_warl_hellstorm_proc')
+procs_on(hellstorm_200968, proc_flags=m.PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG, family_name=5, family_mask=(m.RAIN_OF_FIRE, 0, 0), spell_type_mask=m.PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, attributes_mask=m.PROC_ATTR_TRIGGERED_CAN_PROC, chance=3, cooldown_ms=10000, disable_effects_mask=0x3)
+
+
+fury_of_the_void_200971 = spell(
+    id=200971,
+    name='Fury of the Void',
+    school=School.NORMAL,
+    attributes=464,
+    duration_ms=-1,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=199, implicit_target_a=1, apply_aura=107, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=22),
+    ],
+    spell_icon_id=2356,
+    notes='warlock-rework DESTRUCTION §6 (7,0) NEW talent 1889 (repurposed from Improved Soul Leech): eff0 ADD_FLAT_MODIFIER DURATION (+0.2/0.4/0.6s), A_2 = SHADOWFURY (0x1000). eff1 ADD_PCT_MODIFIER DAMAGE (+10/20/30%), B_2 = SHADOWFURY|SHADOWFLAME (0x11000). eff2 ADD_PCT_MODIFIER DOT (+10/20/30%), C_3 = SHADOWFLAME_DOT (0x2).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Shadowfury duration increased, Shadowfury/Shadowflame damage increased.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the duration of Shadowfury by $/1000;s1 seconds and increases the damage of your Shadowfury and Shadowflame by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Your Shadowfury also afflicts all enemies hit with the periodic effect of your Immolate.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': m.SHADOWFURY, 'EffectSpellClassMaskB_2': m.SHADOWFURY | m.SHADOWFLAME, 'EffectSpellClassMaskC_3': m.SHADOWFLAME_DOT, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+fury_of_the_void_200972 = spell(
+    id=200972,
+    name='Fury of the Void',
+    school=School.NORMAL,
+    attributes=464,
+    duration_ms=-1,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=399, implicit_target_a=1, apply_aura=107, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=22),
+    ],
+    spell_icon_id=2356,
+    notes='warlock-rework DESTRUCTION §6 (7,0): r2, see r1s note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Shadowfury duration increased, Shadowfury/Shadowflame damage increased.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the duration of Shadowfury by $/1000;s1 seconds and increases the damage of your Shadowfury and Shadowflame by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Your Shadowfury also afflicts all enemies hit with the periodic effect of your Immolate.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': m.SHADOWFURY, 'EffectSpellClassMaskB_2': m.SHADOWFURY | m.SHADOWFLAME, 'EffectSpellClassMaskC_3': m.SHADOWFLAME_DOT, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+fury_of_the_void_200973 = spell(
+    id=200973,
+    name='Fury of the Void',
+    school=School.NORMAL,
+    attributes=464,
+    duration_ms=-1,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=599, implicit_target_a=1, apply_aura=107, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108, misc_value=22),
+    ],
+    spell_icon_id=2356,
+    notes='warlock-rework DESTRUCTION §6 (7,0): r3 final rank, see r1s note. Capstone: spell_warl_fury_of_the_void SpellScript on Shadowfury 30283 (WP-B, §7.13) - AddAura(348) on hit targets when the caster has this rank.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Shadowfury duration increased, Shadowfury/Shadowflame damage increased.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the duration of Shadowfury by $/1000;s1 seconds and increases the damage of your Shadowfury and Shadowflame by $s2%.\n\nCapstone Bonus: Your Shadowfury also afflicts all enemies hit with the periodic effect of your Immolate.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': m.SHADOWFURY, 'EffectSpellClassMaskB_2': m.SHADOWFURY | m.SHADOWFLAME, 'EffectSpellClassMaskC_3': m.SHADOWFLAME_DOT, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+chaotic_resonance_200975 = spell(
+    id=200975,
+    name='Chaotic Resonance',
+    school=School.NORMAL,
+    attributes=464,
+    duration_ms=-1,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108, misc_value=0),
+    ],
+    spell_icon_id=2352,
+    notes='warlock-rework DESTRUCTION §6 (9,2) NEW talent 60103: ADD_PCT_MODIFIER DAMAGE (+2/4/6%), A_2 = CHAOS_BOLT (0x20000, reaches Rift Bolt + copies + echoes via shared family flags, G3).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Chaos Bolt damage increased by $s1%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Chaos Bolt by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Chaos Bolts and Chaos Rift Bolts have a 5% chance to fire a Chaos Echo, a copy of themselves, at the same target.|r', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_2': m.CHAOS_BOLT, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+chaotic_resonance_200976 = spell(
+    id=200976,
+    name='Chaotic Resonance',
+    school=School.NORMAL,
+    attributes=464,
+    duration_ms=-1,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=108, misc_value=0),
+    ],
+    spell_icon_id=2352,
+    notes='warlock-rework DESTRUCTION §6 (9,2): r2, see r1s note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Chaos Bolt damage increased by $s1%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Chaos Bolt by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Chaos Bolts and Chaos Rift Bolts have a 5% chance to fire a Chaos Echo, a copy of themselves, at the same target.|r', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_2': m.CHAOS_BOLT, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+chaotic_resonance_200977 = spell(
+    id=200977,
+    name='Chaotic Resonance',
+    school=School.NORMAL,
+    attributes=464,
+    duration_ms=-1,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108, misc_value=0),
+    ],
+    spell_icon_id=2352,
+    notes='warlock-rework DESTRUCTION §6 (9,2): r3 final rank, see r1s note. Chaos Echo roll happens in spell_warl_chaos_bolt (WP-B, §7.7) and the Rift AI (§7.2), reading this rank id.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Chaos Bolt damage increased by $s1%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Chaos Bolt by $s1%.\n\nCapstone Bonus: Your Chaos Bolts and Chaos Rift Bolts have a 5% chance to fire a Chaos Echo, a copy of themselves, at the same target.', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_2': m.CHAOS_BOLT, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+# ---------------------------------------------------------------------------
+# warlock-rework DESTRUCTION pass (S2) - Chaos Rift / Havoc / Chaos Bolt
+# family (§5, §7.2/§7.5/§7.6/§7.7): Rift Bolt, the Havoc/Soulburn Chaos Bolt
+# copy, both Chaos Echo strengths, and Chaotic Burn.
+# ---------------------------------------------------------------------------
+
+rift_bolt_200979 = spell(
+    id=200979,
+    name='Rift Bolt',
+    school=36,  # Fire | Shadow (Shadowflame)
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=418, points_per_level=6.975, die_sides=113, implicit_target_a=6),
+    ],
+    spell_icon_id=3178,
+    notes='warlock-rework DESTRUCTION §5/§7.2: 50% of the rebased Chaos Bolt (bp 418, ppl 6.975, die 113, Base/SpellLevel 60 - the Rift exists only from level 60; 419-531 @60, 558-670 @80 = half of Chaos Bolts own 837-1061/1116-1340). Cast by npc_warl_chaos_rift with the warlock as original caster (WP-B). range_yards 100 - the AI pre-filters to 40yd. Shares Chaos Bolts d2 0x20000 so Bane/Chaotic Resonance/Mastery reach it (G3); AttributesEx3 ALWAYS_HIT|SUPPRESS_CASTER_PROCS, AttributesEx4 as 50796 (absorb-pierce/resist-ignore inherited via 58284s SpellInfoCorrections).',
+    raw_overrides={'AttributesEx3': 327680, 'AttributesEx4': 2048, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 19, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals $s1 Shadowflame damage. Cannot be resisted, and pierces through all absorption effects.', 'EffectBonusMultiplier_1': 0.357, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_2': m.CHAOS_BOLT, 'SpellClassSet': 5, 'SpellLevel': 60, 'SpellVisualID_1': 11240, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
+)
+scripted_by(rift_bolt_200979, 'spell_warl_chaos_bolt_mastery')
+
+
+chaos_bolt_copy_200980 = spell(
+    id=200980,
+    name='Chaos Bolt',
+    school=36,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=30.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=557, points_per_level=13.95, die_sides=225, implicit_target_a=6),
+    ],
+    spell_icon_id=3178,
+    notes='warlock-rework DESTRUCTION §5/§7.5/§7.6: identical damage data to the rebased Chaos Bolt 50796 (bp 557, ppl 13.95, die 225, Base/SpellLevel 40, EffectBonusMultiplier 0.714). Cast for the Havoc duplicate and Soulburn: Chaos Bolts extra targets (WP-B); range_yards 30 so Destructive Reach and the engine range check enforce "within range". Shares Chaos Bolts d2 0x20000; triggered + SUPPRESS_CASTER_PROCS so it never re-rolls Soulburn/Chaotic Inferno/Intensity/Soul Leech/Chaos Echo (G3).',
+    raw_overrides={'AttributesEx3': 327680, 'AttributesEx4': 2048, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 19, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals $s1 Shadowflame damage. Cannot be resisted, and pierces through all absorption effects.', 'EffectBonusMultiplier_1': 0.7139999866485596, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_2': m.CHAOS_BOLT, 'SpellClassSet': 5, 'SpellLevel': 40, 'SpellVisualID_1': 11240, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
+)
+scripted_by(chaos_bolt_copy_200980, 'spell_warl_chaos_bolt_copy', 'spell_warl_chaos_bolt_mastery')
+
+
+chaos_echo_200981 = spell(
+    id=200981,
+    name='Chaos Echo',
+    school=36,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=557, points_per_level=13.95, die_sides=225, implicit_target_a=6),
+    ],
+    spell_icon_id=3178,
+    notes='warlock-rework DESTRUCTION §5/§7.7 (Chaotic Resonance r3 200977): full-Chaos-Bolt-strength echo (200980s data, range widened to 100 since the echo re-targets the same unit, not a fresh cast). Shares Chaos Bolts d2 0x20000; SUPPRESS_CASTER_PROCS + triggered - never applies Chaotic Burn, never re-rolls Chaos Echo, never consumes Soulburn/Chaotic Inferno, never starts Chaos Bolts cooldown (QA #28).',
+    raw_overrides={'AttributesEx3': 327680, 'AttributesEx4': 2048, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 19, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals $s1 Shadowflame damage. Cannot be resisted, and pierces through all absorption effects.', 'EffectBonusMultiplier_1': 0.7139999866485596, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_2': m.CHAOS_BOLT, 'SpellClassSet': 5, 'SpellLevel': 40, 'SpellVisualID_1': 11240, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
+)
+scripted_by(chaos_echo_200981, 'spell_warl_chaos_bolt_mastery')
+
+
+chaos_echo_200982 = spell(
+    id=200982,
+    name='Chaos Echo',
+    school=36,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=418, points_per_level=6.975, die_sides=113, implicit_target_a=6),
+    ],
+    spell_icon_id=3178,
+    notes='warlock-rework DESTRUCTION §5/§7.2/§7.7: Rift-Bolt-strength echo (200979s data, range_yards 100). Fired by npc_warl_chaos_rift for every bolt when the caster has Chaotic Resonance r3 (WP-B).',
+    raw_overrides={'AttributesEx3': 327680, 'AttributesEx4': 2048, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 19, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals $s1 Shadowflame damage. Cannot be resisted, and pierces through all absorption effects.', 'EffectBonusMultiplier_1': 0.357, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_2': m.CHAOS_BOLT, 'SpellClassSet': 5, 'SpellLevel': 60, 'SpellVisualID_1': 11240, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
+)
+scripted_by(chaos_echo_200982, 'spell_warl_chaos_bolt_mastery')
+
+
+chaotic_burn_200983 = spell(
+    id=200983,
+    name='Chaotic Burn',
+    school=36,
+    attributes=65536,
+    duration_ms=6000,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    dispel=DispelType.MAGIC,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+    ],
+    spell_icon_id=2299,
+    notes="warlock-rework DESTRUCTION §5/§7.7: fixed base points from the script (CastCustomSpell BP0 = perTick, §7.7) - 3 ticks at 0 haste = 25% of the Chaos Bolt hit that applied it. No family bits (its own spell, not Chaos Bolts family). AttributesEx2 CANT_CRIT (already carries the triggering hits crit, §11 Q4) + AttributesEx3 IGNORE_CASTER_MODIFIERS (fixed base points). Base/SpellLevel 40.",
+    raw_overrides={'AttributesEx2': 536870912, 'AttributesEx3': 536870912, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s1 Shadowflame damage every $t1 sec.', 'BaseLevel': 40, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': '$o1 Shadowflame damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellLevel': 40},
+)
+
+
+molten_bolts_200984 = spell(
+    id=200984,
+    name='Molten Bolts',
+    school=School.FIRE,
+    attributes=65536,
+    duration_ms=2000,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=6, apply_aura=AuraType.PERIODIC_TRIGGER_SPELL, amplitude=500, trigger_spell=200985),
+    ],
+    spell_icon_id=2298,
+    notes='warlock-rework DESTRUCTION §5/§7.14 (Kindling r3 capstone volley): 0.5s period over 2s = 4 bolts at 0.5/1.0/1.5/2.0s; not hasted (no ATTR5 flag, no periodic-damage effect so CalculatePeriodic leaves the amplitude alone) - fixed at 4 bolts regardless of haste (QA #23/#24 precedent). A new proc while bolts are firing restarts the volley (refresh resets the timer/counter). Stops when the target dies (aura falls off with the target).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Firing Molten Bolts.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Fires 4 Molten Bolts at the target, one every 0.5 sec, each dealing $200985s1 Fire damage.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 5},
+)
+
+
+molten_bolt_200985 = spell(
+    id=200985,
+    name='Molten Bolt',
+    school=School.FIRE,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=6, points_per_level=0.671667, implicit_target_a=6),
+    ],
+    spell_icon_id=2298,
+    notes='warlock-rework DESTRUCTION §5: 10% of the rebased Incinerate (bp 6, ppl 0.671667, Base/SpellLevel 10 - Kindling sits in tier 0): 7@10, 16@24, 40@60, 54@80 (10% of Incinerates 403@60/538@80). Speed 0 (instant hit, no missile travel time - triggered by the Molten Bolts aura, no family bit so it never rolls procs itself).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 10, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals $s1 Fire damage.', 'EffectBonusMultiplier_1': 0.0714, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 0.0, 'SpellClassMask_3': m.MOLTEN_BOLT, 'SpellClassSet': 5, 'SpellLevel': 10, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
+)
+
+
+immolate_eruption_200986 = spell(
+    id=200986,
+    name='Immolate Eruption',
+    school=School.FIRE,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    radius_yards=5.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=0, implicit_target_a=53, implicit_target_b=16, radius_yards=5.0),
+    ],
+    spell_icon_id=31,
+    notes='warlock-rework DESTRUCTION §5/§7.10 (Improved Immolate r3 capstone): fixed base points from the script (CastCustomSpell BP0 = the tick snapshot / 2, §7.10). AttributesEx3 IGNORE_CASTER_MODIFIERS|SUPPRESS_CASTER_PROCS (fixed damage, no procs). OnObjectAreaTargetSelect drops units not IsInCombatWith(caster); the source target is included (C3, QA #25).',
+    raw_overrides={'AttributesEx3': 536936448, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals $s1 Fire damage to all enemies within 5 yards of the target that are in combat with you.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 5, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
+)
+scripted_by(immolate_eruption_200986, 'spell_warl_immolate_eruption')
+
+
+chaotic_inferno_200987 = spell(
+    id=200987,
+    name='Chaotic Inferno',
+    school=School.FIRE,
+    attributes=65536,
+    duration_ms=15000,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=RANGE_SELF,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=3178,
+    notes='warlock-rework DESTRUCTION §5 (Devastation r3 capstone): self marker, no charges (the arbiter grants/consumes it, §7.6). Registered as InstantCastSource.ChaoticInferno for base spell 50796.',
+    raw_overrides={'AttributesEx': 131072, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Chaos Bolt is instant.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your next Chaos Bolt is instant.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+intensity_200988 = spell(
+    id=200988,
+    name='Intensity',
+    school=School.NORMAL,
+    attributes=65536,
+    duration_ms=8000,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=RANGE_SELF,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL),
+    ],
+    spell_icon_id=876,
+    notes='warlock-rework DESTRUCTION §5 (Intensity r2 capstone buff): self, +15% haste for 8s. Granted by intensity_18136s PROC_TRIGGER_SPELL row.',
+    raw_overrides={'AttributesEx': 131072, 'AttributesEx5': 8192, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Haste increased by $s1%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your haste by $s1% for $d.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+hellstorm_200989 = spell(
+    id=200989,
+    name='Hellstorm',
+    school=School.FIRE,
+    attributes=65536,
+    duration_ms=8000,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=RANGE_SELF,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2385,
+    notes='warlock-rework DESTRUCTION §5/§7.4 (Hellstorm r3 capstone buff): self, drives the Hellfire tick-rate injection (Warlock::StartHellstormAcceleration, WP-B). bp 49 -> displays 50 (the +50% rate, informational only - the actual acceleration is scripted).',
+    raw_overrides={'AttributesEx': 131072, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Hellfire ticks $s1% faster.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Hellfire ticks $s1% faster. Your damage taken from Hellfire per second is unchanged.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+scripted_by(hellstorm_200989, 'spell_warl_hellstorm')
+scripted_by(1949, 'spell_warl_hellfire_hellstorm')
+
+
+fire_and_brimstone_200990 = spell(
+    id=200990,
+    name='Fire and Brimstone',
+    school=School.FIRE,
+    attributes=65536,
+    duration_ms=30000,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=6, apply_aura=AuraType.MOD_DAMAGE_FROM_CASTER),
+    ],
+    spell_icon_id=3173,
+    notes="warlock-rework DESTRUCTION §5/§7.14 (Fire and Brimstone r3 capstone stacks): target debuff, per caster, aura 271 (5% per stack, bp 4 -> displays 5), EffectSpellClassMaskA_2 = SOUL_FIRE (0x80, the only spell it boosts). CumulativeAura 10 (max +50%). 30s duration, refreshed per stack (§11 Q6). A debuff, not a talent rank - C4 only scans the casters own DUMMY auras, so this carries no DUMMY effect.",
+    raw_overrides={'AttributesEx3': 128, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Takes $s1% increased damage from the warlocks next Soul Fire.', 'CastingTimeIndex': 1, 'CumulativeAura': 10, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases damage taken from the warlocks next Soul Fire by $s1%. Stacks up to 10.', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_2': m.SOUL_FIRE, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 5},
+)
+
+
+destructive_reach_crit_200991 = spell(
+    id=200991,
+    name='Destructive Reach',
+    school=School.NORMAL,
+    attributes=0x180,  # hidden helper convention (DESTRUCTION.md §5): 0x80 | 0x100, no NOT_SHAPESHIFTED - never cast from the spellbook
+    duration_ms=10000,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=RANGE_SELF,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=107, misc_value=7),
+    ],
+    spell_icon_id=160,
+    notes='warlock-rework DESTRUCTION §5/§7.9 (C3, Destructive Reach r2 capstone helper): hidden 1-charge ADD_FLAT_MODIFIER CRITICAL_CHANCE (+4%), SpellClassSet 5 with an all-effect-index class mask (letter A = effect index 0) of WARLOCK_PLAYER_DAMAGE_FULL (WP-A OR-term: Destruction scope | REACH_SPELLS, _masks.py). ProcCharges 1, ProcTypeMask 0 so no auto-generated spell_proc row eats the charge (SpellMgr.cpp:2159-2239 / Player.cpp:10253). Granted/removed by Warlock::ApplyDestructiveReachCrit in the shared CanPrepare handler (WP-B).',
+    raw_overrides={'AttributesEx4': 0, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Critical strike chance increased by 4% against distant enemies.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell critical strike chance by 4% against enemies farther than 20 yards away.', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': m.WARLOCK_PLAYER_DAMAGE_FULL[0], 'EffectSpellClassMaskA_2': m.WARLOCK_PLAYER_DAMAGE_FULL[1], 'EffectSpellClassMaskA_3': m.WARLOCK_PLAYER_DAMAGE_FULL[2], 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcCharges': 1, 'ProcChance': 101, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+instant_cast_helper_200713 = spell(
+    id=200713,
+    name='Instant Cast',
+    school=School.NORMAL,
+    attributes=0x180,
+    duration_ms=10000,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=RANGE_SELF,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=108, misc_value=10),
+    ],
+    spell_icon_id=160,
+    notes='warlock-rework DESTRUCTION §0.3/§5 (SHARED §1.3 id, declared here per the reconciled ownership - AFFLICTION.md §0.4 item 11 / WP-0 item 6 defer this row to Destruction): hidden 1-charge ADD_PCT_MODIFIER CASTING_TIME -100% (the Backlash 34936 shape). Mask = Soul Fire d2 0x80 | Chaos Bolt d2 0x20000 (INSTANT_CAST_HELPER) - both Soul Fire sources (Empowered Imp, Soulburn) and Chaos Bolts Soulburn/Chaotic Inferno sources are registered in this pass. ProcCharges 1, ProcTypeMask 0 (no auto spell_proc row, same reasoning as 200991). Granted/consumed solely by the Affliction-built CanPrepare/OnSpellCast arbiter (§7.6).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next qualifying cast is instant.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your next qualifying cast is instant.', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_2': m.INSTANT_CAST_HELPER[1], 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcCharges': 1, 'ProcChance': 101, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 5},
 )

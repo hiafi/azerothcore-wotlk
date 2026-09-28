@@ -392,6 +392,138 @@ namespace Warlock
     // Exhale (200734) OnEffectHitTarget: returns true and hands back the stored copy (clearing it)
     // only when a copy is held; false leaves nothing to apply.
     bool TakeSoulSwap(Player* player, ObjectGuid& outSource, std::vector<SoulSwapEntry>& outEntries);
+
+    // ------------------------------------------------------------------
+    // Destruction pass (S2) additions - DESTRUCTION.md §2.1/§2.6/§14. Append-only: WP-B fills in
+    // the bodies below and may add further Destruction-local helpers, but must not rename or
+    // change the signature of anything already declared without flagging it back (mirrors the
+    // Affliction WP-B precedent above).
+    // ------------------------------------------------------------------
+
+    // New spells this pass mints (DESTRUCTION.md §2.1, spell block 200960-201059)
+    constexpr uint32 SPELL_VOLATILITY_R1 = 200960;                      // talent 965 (repurposed Improved Searing Pain), (0,0)
+    constexpr uint32 SPELL_VOLATILITY_R2 = 200961;
+    constexpr uint32 SPELL_VOLATILITY_R3 = 200962;
+    constexpr uint32 SPELL_KINDLING_R1 = 200963;                        // talent 60100 (minted), (0,3)
+    constexpr uint32 SPELL_KINDLING_R2 = 200964;
+    constexpr uint32 SPELL_KINDLING_R3 = 200965;                        // carries the Molten Bolts proc
+    constexpr uint32 SPELL_HELLSTORM_TALENT_R1 = 200966;                // talent 60101 (minted), (2,2)
+    constexpr uint32 SPELL_HELLSTORM_TALENT_R2 = 200967;
+    constexpr uint32 SPELL_HELLSTORM_TALENT_R3 = 200968;                // carries the Hellstorm proc
+    constexpr uint32 SPELL_DEVASTATION_R2 = 200969;                     // r1 = stock 18130
+    constexpr uint32 SPELL_DEVASTATION_R3 = 200970;                     // carries the Chaotic Inferno proc
+    constexpr uint32 SPELL_FURY_OF_THE_VOID_R1 = 200971;                // talent 1889 (repurposed Improved Soul Leech), (7,0)
+    constexpr uint32 SPELL_FURY_OF_THE_VOID_R2 = 200972;
+    constexpr uint32 SPELL_FURY_OF_THE_VOID_R3 = 200973;                // read by the Shadowfury script
+    constexpr uint32 SPELL_HAVOC = 200974;                              // talent 60102 (minted), (8,1) castable
+    constexpr uint32 SPELL_CHAOTIC_RESONANCE_R1 = 200975;               // talent 60103 (minted), (9,2)
+    constexpr uint32 SPELL_CHAOTIC_RESONANCE_R2 = 200976;
+    constexpr uint32 SPELL_CHAOTIC_RESONANCE_R3 = 200977;               // read by scripts (Chaos Echo)
+    constexpr uint32 SPELL_CHAOS_RIFT = 200978;                         // talent 60104 (minted), (10,1) castable - summons creature 300170
+    constexpr uint32 SPELL_RIFT_BOLT = 200979;                          // triggered, cast by the Rift, 50% of Chaos Bolt
+    constexpr uint32 SPELL_CHAOS_BOLT_COPY = 200980;                    // Havoc duplicate / Soulburn extra target
+    constexpr uint32 SPELL_CHAOS_ECHO_BOLT = 200981;                    // full Chaos Bolt strength echo
+    constexpr uint32 SPELL_CHAOS_ECHO_RIFT = 200982;                    // Rift Bolt strength echo (50%)
+    constexpr uint32 SPELL_CHAOTIC_BURN = 200983;                       // DoT debuff, fixed base points from the script
+    constexpr uint32 SPELL_MOLTEN_BOLTS = 200984;                       // periodic-trigger debuff, 4 x 0.5 s
+    constexpr uint32 SPELL_MOLTEN_BOLT = 200985;                        // 10% of an Incinerate
+    constexpr uint32 SPELL_IMMOLATE_ERUPTION = 200986;                  // Improved Immolate capstone
+    constexpr uint32 SPELL_CHAOTIC_INFERNO = 200987;                    // self buff marker, 15 s
+    constexpr uint32 SPELL_INTENSITY = 200988;                          // self buff, +15% haste, 8 s
+    constexpr uint32 SPELL_HELLSTORM_BUFF = 200989;                     // self buff, 8 s - drives the Hellfire tick injection
+    constexpr uint32 SPELL_FIRE_AND_BRIMSTONE_DEBUFF = 200990;          // target debuff, aura 271 on Soul Fire, 5%/stack, max 10
+    constexpr uint32 SPELL_DESTRUCTIVE_REACH_CRIT_HELPER = 200991;      // hidden 1-charge crit SpellMod (C3)
+    // 200713 (shared instant-cast helper, SHARED §1.3) - declared by this pass's WP-A (§5); the
+    // registry/handlers already exist (Affliction's WP-0, above).
+
+    // Stock ids this pass reuses (retuned) or references (DESTRUCTION.md §2.1/§5/§7)
+    constexpr uint32 SPELL_RAIN_OF_FIRE = 5740;
+    constexpr uint32 SPELL_RAIN_OF_FIRE_TICK = 42223;
+    constexpr uint32 SPELL_CONFLAGRATE = 17962;
+    constexpr uint32 SPELL_CHAOS_BOLT = 50796;                          // talent, rebased row 6
+    constexpr uint32 SPELL_SHADOWFURY = 30283;                          // talent, rebased row 6
+    constexpr uint32 SPELL_INCINERATE = 29722;
+    constexpr uint32 SPELL_SHADOWFLAME = 47897;
+    constexpr uint32 SPELL_IMMOLATE = 348;
+    constexpr uint32 SPELL_SHADOWBURN = 29341;
+    constexpr uint32 SPELL_SOUL_FIRE = 6353;
+    constexpr uint32 SPELL_IMP_FIREBOLT = 3110;
+    constexpr uint32 SPELL_BACKLASH_BUFF = 34936;                       // "Your next Shadow Bolt or Incinerate ..." -> retuned to Immolate only
+    constexpr uint32 SPELL_EMPOWERED_IMP_BUFF = 47283;
+    constexpr uint32 SPELL_BACKDRAFT_R1 = 54274;
+    constexpr uint32 SPELL_BACKDRAFT_R2 = 54276;
+    constexpr uint32 SPELL_BACKDRAFT_R3 = 54277;
+    constexpr uint32 SPELL_NETHER_PROTECTION_HOLY = 54370;
+    constexpr uint32 SPELL_NETHER_PROTECTION_FIRE = 54371;
+    constexpr uint32 SPELL_NETHER_PROTECTION_FROST = 54372;
+    constexpr uint32 SPELL_NETHER_PROTECTION_ARCANE = 54373;
+    constexpr uint32 SPELL_NETHER_PROTECTION_SHADOW = 54374;
+    constexpr uint32 SPELL_NETHER_PROTECTION_NATURE = 54375;
+    constexpr uint32 SPELL_AFTERMATH_DAZE = 18118;
+    constexpr uint32 SPELL_SHADOWFLAME_DOT = 47960;
+    constexpr uint32 SPELL_PYROCLASM_R1 = 18093;
+    constexpr uint32 SPELL_PYROCLASM_R2 = 63243;
+    constexpr uint32 SPELL_PYROCLASM_R3 = 63244;
+    constexpr uint32 SPELL_IMPROVED_SHADOW_BOLT_DEBUFF = 17800;         // ISB debuff, used unchanged
+    constexpr uint32 SPELL_SOUL_LEECH_HEAL = 30294;                     // used unchanged
+    constexpr uint32 SPELL_SOUL_LEECH_R1 = 30293;                       // talent 967, (0,1)
+    constexpr uint32 SPELL_SOUL_LEECH_R2 = 30295;
+    constexpr uint32 SPELL_SOUL_LEECH_R3 = 30296;
+    constexpr uint32 SPELL_BACKLASH_R1 = 34935;                         // talent 1817, (4,0) - moved in from mage_trigger_spells.py
+    constexpr uint32 SPELL_BACKLASH_R2 = 34938;
+    constexpr uint32 SPELL_BACKLASH_R3 = 34939;
+    constexpr uint32 SPELL_MOLTEN_SKIN_R1 = 63349;                      // talent 1887, (1,1) - moved in from rogue_trigger_spells.py
+    constexpr uint32 SPELL_MOLTEN_SKIN_R2 = 63350;
+    constexpr uint32 SPELL_MOLTEN_SKIN_R3 = 63351;
+
+    // Talent ids this pass mints/repurposes (DESTRUCTION.md §2.2)
+    constexpr uint32 TALENT_VOLATILITY = 965;                           // repurposed Improved Searing Pain
+    constexpr uint32 TALENT_FURY_OF_THE_VOID = 1889;                    // repurposed Improved Soul Leech
+    constexpr uint32 TALENT_KINDLING = 60100;                           // minted
+    constexpr uint32 TALENT_HELLSTORM = 60101;                          // minted
+    constexpr uint32 TALENT_HAVOC = 60102;                              // minted
+    constexpr uint32 TALENT_CHAOTIC_RESONANCE = 60103;                  // minted
+    constexpr uint32 TALENT_CHAOS_RIFT = 60104;                         // minted
+
+    // creature_template 300170 "Chaos Rift" (DESTRUCTION.md §2.6, declared via stage T1's DSL
+    // creature declarations, not hand-written SQL)
+    constexpr uint32 NPC_CHAOS_RIFT = 300170;
+
+    // ------------------------------------------------------------------
+    // Havoc (R2, DESTRUCTION.md §7.5) - scans the caster's single-cast auras for the live Havoc
+    // (200974) target. Returns nullptr when Havoc isn't up.
+    // ------------------------------------------------------------------
+    Unit* GetHavocTarget(Unit* caster);
+
+    // ------------------------------------------------------------------
+    // Ruin's ">75% target health" clause (PLAN §2, aura 303 MOD_DAMAGE_DONE_VERSUS_AURASTATE,
+    // DESTRUCTION.md §0.1 item 14) - product of the caster's live aura-303 effects whose aura-state
+    // condition `victim` currently satisfies. 1.0f when none apply.
+    // ------------------------------------------------------------------
+    float GetAuraStateDoneFactor(Unit const* caster, Unit const* victim, SpellInfo const* spellInfo);
+
+    // ------------------------------------------------------------------
+    // Hellstorm (C4, DESTRUCTION.md §7.4) - injects one extra Hellfire self-tick (1949) every 2 s
+    // on the player's running Hellfire channel while Hellstorm (200989) is up (Flourish precedent,
+    // Warlock::FirePeriodicTickNow). Owns a per-player generation counter so two starters (re-cast,
+    // talent proc) never double-schedule the same channel.
+    // ------------------------------------------------------------------
+    void StartHellstormAcceleration(Player* player);
+
+    // ------------------------------------------------------------------
+    // Destructive Reach crit (C3, DESTRUCTION.md §7.9) - AllSpellScript::CanPrepare branch (in
+    // warlock_hooks.cpp, alongside Affliction's instant-cast grant): when the cast target is more
+    // than 20 yd from `player`, grants the 1-charge crit helper (200991). Judged against the cast
+    // target only; AoE secondary targets don't re-check distance (accepted, C3 RESOLVED).
+    // ------------------------------------------------------------------
+    void ApplyDestructiveReachCrit(Player* player, Spell* spell);
+
+    // ------------------------------------------------------------------
+    // Chaos Bolt cooldown reduction (A8, DESTRUCTION.md §2.6) - real seconds off Chaos Bolt's
+    // (50796) remaining cooldown. `ModifySpellCooldown(50796, -ms)`; a no-op when Chaos Bolt isn't
+    // currently cooling down (Player.cpp:11391).
+    // ------------------------------------------------------------------
+    void ReduceChaosBoltCooldown(Player* player, uint32 ms);
 }
 
 #endif

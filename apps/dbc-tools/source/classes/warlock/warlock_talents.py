@@ -5,8 +5,8 @@ Split from a single source/classes/warlock.py via split_class_file.py (.agents/p
 """
 
 from lib.dsl.registry import granted_by_talent, tab
-from .warlock_spells import chaos_bolt_50796, conflagrate_17962, dark_soul_misery_200732, demonic_empowerment_47193, haunt_48181, phantom_singularity_200729, shadowburn_17877, shadowfury_30283, soul_link_19028, summon_felguard_30146, unstable_affliction_30108
-from .warlock_trigger_spells import aftermath_18119, aftermath_18120, agonizing_pain_200754, agonizing_pain_200755, backdraft_47258, backdraft_47259, backdraft_47260, bane_17788, bane_17789, bane_17790, bane_17791, bane_17792, cataclysm_17778, cataclysm_17779, cataclysm_17780, compounding_darkness_200762, compounding_darkness_200763, compounding_darkness_200764, contagion_30060, contagion_30061, contagion_30062, contagion_30063, contagion_30064, creeping_agony_200751, creeping_agony_200752, creeping_agony_200753, dark_pact_18220, deaths_grasp_200742, deaths_grasp_200743, deaths_grasp_200744, death_s_embrace_47198, death_s_embrace_47199, death_s_embrace_47200, decimation_63156, decimation_63158, demonic_aegis_30143, demonic_aegis_30144, demonic_aegis_30145, demonic_brutality_18705, demonic_brutality_18706, demonic_brutality_18707, demonic_knowledge_35691, demonic_knowledge_35692, demonic_knowledge_35693, demonic_pact_47236, demonic_pact_47237, demonic_pact_47238, demonic_pact_47239, demonic_pact_47240, demonic_power_18126, demonic_power_18127, demonic_resilience_30319, demonic_resilience_30320, demonic_resilience_30321, demonic_tactics_30242, demonic_tactics_30245, demonic_tactics_30246, demonic_tactics_30247, demonic_tactics_30248, destructive_reach_17917, destructive_reach_17918, devastation_18130, emberstorm_17954, emberstorm_17955, emberstorm_17956, emberstorm_17957, emberstorm_17958, empowered_corruption_32381, empowered_corruption_32382, empowered_corruption_32383, empowered_imp_47220, empowered_imp_47221, empowered_imp_47223, eradication_47195, eradication_47196, eradication_47197, everlasting_affliction_47201, everlasting_affliction_47202, everlasting_affliction_47203, everlasting_affliction_47204, everlasting_affliction_47205, fatal_echoes_200756, fatal_echoes_200757, fatal_echoes_200758, fel_concentration_17783, fel_concentration_17784, fel_concentration_17785, fel_synergy_47230, fel_synergy_47231, fel_vitality_18731, fel_vitality_18743, fel_vitality_18744, fire_and_brimstone_47266, fire_and_brimstone_47267, fire_and_brimstone_47268, fire_and_brimstone_47269, fire_and_brimstone_47270, grim_reach_18218, grim_reach_18219, harvester_of_death_200745, harvester_of_death_200746, harvester_of_death_200747, improved_bane_of_agony_18827, improved_bane_of_agony_18829, improved_corruption_17810, improved_corruption_17811, improved_corruption_17812, improved_corruption_17813, improved_corruption_17814, improved_curses_18179, improved_curses_18180, improved_demonic_tactics_54347, improved_demonic_tactics_54348, improved_demonic_tactics_54349, improved_fear_53754, improved_fear_53759, improved_felhunter_54037, improved_felhunter_54038, improved_health_funnel_18703, improved_health_funnel_18704, improved_healthstone_18692, improved_healthstone_18693, improved_howl_of_terror_30054, improved_howl_of_terror_30057, improved_immolate_17815, improved_immolate_17833, improved_immolate_17834, improved_imp_18694, improved_imp_18695, improved_imp_18696, improved_life_tap_18182, improved_life_tap_18183, improved_life_tap_200765, improved_searing_pain_17927, improved_searing_pain_17929, improved_searing_pain_17930, improved_shadow_bolt_17793, improved_shadow_bolt_17796, improved_shadow_bolt_17801, improved_shadow_bolt_17802, improved_shadow_bolt_17803, improved_soul_leech_54117, improved_soul_leech_54118, improved_succubus_18754, improved_succubus_18755, improved_succubus_18756, intensity_18135, intensity_18136, lingering_agony_200749, lingering_agony_200750, malediction_32477, malediction_32483, malediction_32484, mana_feed_30326, master_conjuror_18767, master_conjuror_18768, master_summoner_18709, master_summoner_18710, metamorphosis_59672, molten_core_47245, molten_core_47246, molten_core_47247, nemesis_63117, nemesis_63121, nemesis_63123, nether_protection_30299, nether_protection_30301, nether_protection_30302, nightfall_18094, nightfall_18095, nightfall_200766, pandemic_58435, pandemic_200768, pyroclasm_18073, pyroclasm_18096, pyroclasm_63245, ruin_17959, ruin_59738, ruin_59739, ruin_59740, ruin_59741, shadow_and_flame_30288, shadow_and_flame_30289, shadow_and_flame_30290, shadow_and_flame_30291, shadow_and_flame_30292, shadow_embrace_32385, shadow_embrace_32387, shadow_embrace_32392, shadow_embrace_32393, shadow_embrace_32394, shadow_mastery_18271, shadow_mastery_18272, shadow_mastery_18273, shadow_mastery_18274, shadow_mastery_18275, shadow_pact_200739, shadow_pact_200740, shadow_pact_200741, siphon_life_63108, siphon_life_200767, siphon_power_18213, siphon_power_18372, soul_leech_30293, soul_leech_30295, soul_leech_30296, soul_siphon_17804, soul_siphon_17805, suppression_18174, suppression_18175, suppression_18176, unholy_power_18769, unholy_power_18770, unholy_power_18771, unholy_power_18772, unholy_power_18773, virulence_200759, virulence_200760, virulence_200761, impending_doom_200869, impending_doom_200870
+from .warlock_spells import chaos_bolt_50796, chaos_rift_200978, conflagrate_17962, dark_soul_misery_200732, demonic_empowerment_47193, havoc_200974, haunt_48181, phantom_singularity_200729, shadowburn_17877, shadowfury_30283, soul_link_19028, summon_felguard_30146, unstable_affliction_30108
+from .warlock_trigger_spells import aftermath_18119, aftermath_18120, backlash_34935, backlash_34938, backlash_34939, molten_skin_63349, molten_skin_63350, molten_skin_63351, agonizing_pain_200754, agonizing_pain_200755, backdraft_47258, backdraft_47259, backdraft_47260, bane_17788, bane_17789, bane_17790, bane_17791, bane_17792, cataclysm_17778, cataclysm_17779, cataclysm_17780, compounding_darkness_200762, compounding_darkness_200763, compounding_darkness_200764, contagion_30060, contagion_30061, contagion_30062, contagion_30063, contagion_30064, creeping_agony_200751, creeping_agony_200752, creeping_agony_200753, dark_pact_18220, deaths_grasp_200742, deaths_grasp_200743, deaths_grasp_200744, death_s_embrace_47198, death_s_embrace_47199, death_s_embrace_47200, decimation_63156, decimation_63158, demonic_aegis_30143, demonic_aegis_30144, demonic_aegis_30145, demonic_brutality_18705, demonic_brutality_18706, demonic_brutality_18707, demonic_knowledge_35691, demonic_knowledge_35692, demonic_knowledge_35693, demonic_pact_47236, demonic_pact_47237, demonic_pact_47238, demonic_pact_47239, demonic_pact_47240, demonic_power_18126, demonic_power_18127, demonic_resilience_30319, demonic_resilience_30320, demonic_resilience_30321, demonic_tactics_30242, demonic_tactics_30245, demonic_tactics_30246, demonic_tactics_30247, demonic_tactics_30248, destructive_reach_17917, destructive_reach_17918, devastation_18130, emberstorm_17954, emberstorm_17955, emberstorm_17956, emberstorm_17957, emberstorm_17958, empowered_corruption_32381, empowered_corruption_32382, empowered_corruption_32383, empowered_imp_47220, empowered_imp_47221, empowered_imp_47223, eradication_47195, eradication_47196, eradication_47197, everlasting_affliction_47201, everlasting_affliction_47202, everlasting_affliction_47203, everlasting_affliction_47204, everlasting_affliction_47205, fatal_echoes_200756, fatal_echoes_200757, fatal_echoes_200758, fel_concentration_17783, fel_concentration_17784, fel_concentration_17785, fel_synergy_47230, fel_synergy_47231, fel_vitality_18731, fel_vitality_18743, fel_vitality_18744, fire_and_brimstone_47266, fire_and_brimstone_47267, fire_and_brimstone_47268, fire_and_brimstone_47269, fire_and_brimstone_47270, grim_reach_18218, grim_reach_18219, harvester_of_death_200745, harvester_of_death_200746, harvester_of_death_200747, improved_bane_of_agony_18827, improved_bane_of_agony_18829, improved_corruption_17810, improved_corruption_17811, improved_corruption_17812, improved_corruption_17813, improved_corruption_17814, improved_curses_18179, improved_curses_18180, improved_demonic_tactics_54347, improved_demonic_tactics_54348, improved_demonic_tactics_54349, improved_fear_53754, improved_fear_53759, improved_felhunter_54037, improved_felhunter_54038, improved_health_funnel_18703, improved_health_funnel_18704, improved_healthstone_18692, improved_healthstone_18693, improved_howl_of_terror_30054, improved_howl_of_terror_30057, improved_immolate_17815, improved_immolate_17833, improved_immolate_17834, improved_imp_18694, improved_imp_18695, improved_imp_18696, improved_life_tap_18182, improved_life_tap_18183, improved_life_tap_200765, improved_searing_pain_17927, improved_searing_pain_17929, improved_searing_pain_17930, improved_shadow_bolt_17793, improved_shadow_bolt_17796, improved_shadow_bolt_17801, improved_shadow_bolt_17802, improved_shadow_bolt_17803, improved_soul_leech_54117, improved_soul_leech_54118, improved_succubus_18754, improved_succubus_18755, improved_succubus_18756, intensity_18135, intensity_18136, lingering_agony_200749, lingering_agony_200750, malediction_32477, malediction_32483, malediction_32484, mana_feed_30326, master_conjuror_18767, master_conjuror_18768, master_summoner_18709, master_summoner_18710, metamorphosis_59672, molten_core_47245, molten_core_47246, molten_core_47247, nemesis_63117, nemesis_63121, nemesis_63123, nether_protection_30299, nether_protection_30301, nether_protection_30302, nightfall_18094, nightfall_18095, nightfall_200766, pandemic_58435, pandemic_200768, pyroclasm_18073, pyroclasm_18096, pyroclasm_63245, ruin_17959, ruin_59738, ruin_59739, ruin_59740, ruin_59741, shadow_and_flame_30288, shadow_and_flame_30289, shadow_and_flame_30290, shadow_and_flame_30291, shadow_and_flame_30292, shadow_embrace_32385, shadow_embrace_32387, shadow_embrace_32392, shadow_embrace_32393, shadow_embrace_32394, shadow_mastery_18271, shadow_mastery_18272, shadow_mastery_18273, shadow_mastery_18274, shadow_mastery_18275, shadow_pact_200739, shadow_pact_200740, shadow_pact_200741, siphon_life_63108, siphon_life_200767, siphon_power_18213, siphon_power_18372, soul_leech_30293, soul_leech_30295, soul_leech_30296, soul_siphon_17804, soul_siphon_17805, suppression_18174, suppression_18175, suppression_18176, unholy_power_18769, unholy_power_18770, unholy_power_18771, unholy_power_18772, unholy_power_18773, virulence_200759, virulence_200760, virulence_200761, impending_doom_200869, impending_doom_200870, volatility_200960, volatility_200961, volatility_200962, kindling_200963, kindling_200964, kindling_200965, hellstorm_200966, hellstorm_200967, hellstorm_200968, fury_of_the_void_200971, fury_of_the_void_200972, fury_of_the_void_200973, chaotic_resonance_200975, chaotic_resonance_200976, chaotic_resonance_200977, devastation_200969, devastation_200970
 
 
 destruction_301_tab = tab(
@@ -56,7 +56,7 @@ granted_by_talent(
     tab=destruction_301_tab,
     tier=0,
     column=2,
-    ranks=[bane_17788, bane_17789, bane_17790, bane_17791, bane_17792],
+    ranks=[bane_17788, bane_17789, bane_17790],
     player_castable=False,
 )
 
@@ -66,7 +66,7 @@ granted_by_talent(
     tab=destruction_301_tab,
     tier=0,
     column=1,
-    ranks=[improved_shadow_bolt_17793, improved_shadow_bolt_17796, improved_shadow_bolt_17801, improved_shadow_bolt_17802, improved_shadow_bolt_17803],
+    ranks=[improved_shadow_bolt_17793, improved_shadow_bolt_17796, improved_shadow_bolt_17801],
     player_castable=False,
 )
 
@@ -75,7 +75,7 @@ granted_by_talent(
     id=961,
     tab=destruction_301_tab,
     tier=4,
-    column=1,
+    column=3,
     ranks=[improved_immolate_17815, improved_immolate_17833, improved_immolate_17834],
     player_castable=False,
 )
@@ -105,9 +105,9 @@ granted_by_talent(
 granted_by_talent(
     id=965,
     tab=destruction_301_tab,
-    tier=3,
-    column=3,
-    ranks=[improved_searing_pain_17927, improved_searing_pain_17929, improved_searing_pain_17930],
+    tier=0,
+    column=0,
+    ranks=[volatility_200960, volatility_200961, volatility_200962],
     player_castable=False,
 )
 
@@ -116,8 +116,8 @@ granted_by_talent(
     id=966,
     tab=destruction_301_tab,
     tier=5,
-    column=2,
-    ranks=[emberstorm_17954, emberstorm_17955, emberstorm_17956, emberstorm_17957, emberstorm_17958],
+    column=1,
+    ranks=[emberstorm_17954, emberstorm_17955, emberstorm_17956],
     player_castable=False,
 )
 
@@ -125,9 +125,9 @@ granted_by_talent(
 granted_by_talent(
     id=967,
     tab=destruction_301_tab,
-    tier=2,
+    tier=5,
     column=2,
-    ranks=[ruin_17959, ruin_59738, ruin_59739, ruin_59740, ruin_59741],
+    ranks=[ruin_17959, ruin_59738, ruin_59739],
     player_castable=False,
 )
 
@@ -135,11 +135,10 @@ granted_by_talent(
 granted_by_talent(
     id=968,
     tab=destruction_301_tab,
-    tier=6,
+    tier=4,
     column=1,
     ranks=[conflagrate_17962],
     player_castable=False,
-    depends_on={'talent_id': 961, 'rank': 2},
     flags=1,
 )
 
@@ -149,9 +148,8 @@ granted_by_talent(
     tab=destruction_301_tab,
     tier=4,
     column=2,
-    ranks=[devastation_18130],
+    ranks=[devastation_18130, devastation_200969, devastation_200970],
     player_castable=False,
-    depends_on={'talent_id': 967, 'rank': 4},
 )
 
 
@@ -192,7 +190,6 @@ granted_by_talent(
     column=3,
     ranks=[pyroclasm_18096, pyroclasm_18073, pyroclasm_63245],
     player_castable=False,
-    depends_on={'talent_id': 0, 'rank': 1},
 )
 
 
@@ -589,8 +586,8 @@ granted_by_talent(
 granted_by_talent(
     id=1676,
     tab=destruction_301_tab,
-    tier=8,
-    column=1,
+    tier=6,
+    column=0,
     ranks=[shadowfury_30283],
     player_castable=False,
     flags=1,
@@ -602,7 +599,7 @@ granted_by_talent(
     tab=destruction_301_tab,
     tier=7,
     column=1,
-    ranks=[shadow_and_flame_30288, shadow_and_flame_30289, shadow_and_flame_30290, shadow_and_flame_30291, shadow_and_flame_30292],
+    ranks=[shadow_and_flame_30288, shadow_and_flame_30289, shadow_and_flame_30290],
     player_castable=False,
 )
 
@@ -662,9 +659,8 @@ granted_by_talent(
     tab=destruction_301_tab,
     tier=4,
     column=0,
-    ranks=[34935, 34938, 34939],
+    ranks=[backlash_34935, backlash_34938, backlash_34939],
     player_castable=False,
-    depends_on={'talent_id': 985, 'rank': 1},
 )
 
 
@@ -777,7 +773,7 @@ granted_by_talent(
     tab=destruction_301_tab,
     tier=1,
     column=1,
-    ranks=[63349, 63350, 63351],
+    ranks=[molten_skin_63349, molten_skin_63350, molten_skin_63351],
     player_castable=False,
 )
 
@@ -789,7 +785,6 @@ granted_by_talent(
     column=0,
     ranks=[backdraft_47258, backdraft_47259, backdraft_47260],
     player_castable=False,
-    depends_on={'talent_id': 968, 'rank': 0},
 )
 
 
@@ -797,10 +792,9 @@ granted_by_talent(
     id=1889,
     tab=destruction_301_tab,
     tier=7,
-    column=2,
-    ranks=[improved_soul_leech_54117, improved_soul_leech_54118],
+    column=0,
+    ranks=[fury_of_the_void_200971, fury_of_the_void_200972, fury_of_the_void_200973],
     player_castable=False,
-    depends_on={'talent_id': 1678, 'rank': 2},
 )
 
 
@@ -809,7 +803,7 @@ granted_by_talent(
     tab=destruction_301_tab,
     tier=9,
     column=1,
-    ranks=[fire_and_brimstone_47266, fire_and_brimstone_47267, fire_and_brimstone_47268, fire_and_brimstone_47269, fire_and_brimstone_47270],
+    ranks=[fire_and_brimstone_47266, fire_and_brimstone_47267, fire_and_brimstone_47268],
     player_castable=False,
 )
 
@@ -817,7 +811,7 @@ granted_by_talent(
 granted_by_talent(
     id=1891,
     tab=destruction_301_tab,
-    tier=10,
+    tier=6,
     column=1,
     ranks=[chaos_bolt_50796],
     player_castable=False,
@@ -930,5 +924,65 @@ granted_by_talent(
     ranks=[dark_soul_misery_200732],
     player_castable=True,
     skill_line_ability_ids=[30465],
+    flags=1,
+)
+
+
+# ---------------------------------------------------------------------------
+# warlock-rework DESTRUCTION pass (S2) - 5 newly minted Destruction talents
+# (PLAN §4.2, DESTRUCTION §1/§2.2/§6). All depends_on=None (B6 - drop every
+# arrow in all three trees).
+# ---------------------------------------------------------------------------
+
+granted_by_talent(
+    id=60100,
+    tab=destruction_301_tab,
+    tier=0,
+    column=3,
+    ranks=[kindling_200963, kindling_200964, kindling_200965],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=60101,
+    tab=destruction_301_tab,
+    tier=2,
+    column=2,
+    ranks=[hellstorm_200966, hellstorm_200967, hellstorm_200968],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=60102,
+    tab=destruction_301_tab,
+    tier=8,
+    column=1,
+    ranks=[havoc_200974],
+    player_castable=True,
+    skill_line_ability_ids=[30488],
+    flags=1,
+)
+
+
+granted_by_talent(
+    id=60103,
+    tab=destruction_301_tab,
+    tier=9,
+    column=2,
+    ranks=[chaotic_resonance_200975, chaotic_resonance_200976, chaotic_resonance_200977],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=60104,
+    tab=destruction_301_tab,
+    tier=10,
+    column=1,
+    ranks=[chaos_rift_200978],
+    player_castable=True,
+    skill_line_ability_ids=[30489],
     flags=1,
 )

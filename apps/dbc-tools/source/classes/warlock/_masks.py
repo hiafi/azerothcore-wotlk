@@ -117,11 +117,14 @@ DEMONOLOGY_D3_BIT_24 = 0x01000000
 DEMONOLOGY_D3_BIT_25 = 0x02000000
 DEMONOLOGY_D3_BIT_26 = 0x04000000
 DEMONOLOGY_D3_BIT_27 = 0x08000000
-DESTRUCTION_D3_BIT_9 = 0x200
-DESTRUCTION_D3_BIT_28 = 0x10000000
-DESTRUCTION_D3_BIT_29 = 0x20000000
-DESTRUCTION_D3_BIT_30 = 0x40000000
-DESTRUCTION_D3_BIT_31 = 0x80000000
+DESTRUCTION_D3_BIT_9 = 0x200  # spare (§2.4)
+MOLTEN_BOLT = 0x10000000  # bit 28 (DESTRUCTION §2.4) - 200985; Emberstorm/Devastation/"Destruction
+# spells" SpellMods reach it
+HAVOC = 0x20000000  # bit 29 (DESTRUCTION §2.4) - 200974; only needed so Demonology's Metamorphosis
+# mask (54879 aura 275) could re-enable it - that mask is now the full mask (DEMONOLOGY §11 Q2), so
+# this bit is no longer load-bearing but kept, harmless
+CHAOS_RIFT = 0x40000000  # bit 30 (DESTRUCTION §2.4) - 200978; same reason as HAVOC
+DESTRUCTION_D3_BIT_31 = 0x80000000  # spare (§2.4)
 
 # --- Composites (Affliction; each a (dword1, dword2, dword3) tuple for family_mask=) ---
 AFFLICTION_DOTS = (0x402, 0x100, PHANTOM_SINGULARITY)  # Corruption, Bane of Agony, UA, PS -
@@ -147,10 +150,57 @@ LINGERING_AGONY = (0x400, 0x100, 0)
 IMPROVED_CURSES_EXH_TONGUES = (0x400000, 0, CURSE_OF_TONGUES)
 FELHUNTER_UTILITY = (0, 0, SPELL_LOCK | DEVOUR_MAGIC)  # = (0, 0, 0x100400)
 
+# --- Composites (Destruction, DESTRUCTION.md §2.5; literals given there, tuples are (d1, d2, d3)) ---
+DESTRUCTION_SPELLS = (0x1E5, 0x8310C0, 0x10000002)  # SB, Immolate, RoF, Hellfire, Shadowburn,
+# Searing Pain; Incinerate, Soul Fire, Shadowfury, Shadowflame, Chaos Bolt(+copies), Conflagrate;
+# Shadowflame DoT, Molten Bolt
+DESTRUCTION_CAST_SPELLS = (0x165, 0x200C0, 0)  # cast/channel: SB, Immolate, RoF, Hellfire, SP;
+# Incinerate, Soul Fire, Chaos Bolt
+EMBERSTORM_DAMAGE = (0x1E4, 0x200C0, 0x10000001)  # Immolate, RoF, Hellfire(5857), Shadowburn, SP;
+# Incinerate, Soul Fire, Chaos Bolt; Inferno Effect 22703, Molten Bolt. No Conflagrate (scripted, G1)
+EMBERSTORM_DOT = (0x4, 0, 0x2)  # Immolate DoT, Shadowflame DoT. No Hellfire (d1 0x40 = self dmg 1949)
+# HAND_OF_GULDAN (d3 0x00400000) and SUMMON_INFERNAL (d3 0x04000000) are Demonology's (S3) own d3
+# bits (DEMONOLOGY.md §2.4) - not yet declared as named constants here since Demonology hasn't run
+# its own WP-0 (Destruction (S2) runs first per PLAN B1). Their literal values are folded into
+# CATACLYSM_SPELLS/BANE_SPELLS below as-is (DESTRUCTION.md Review log item 13); Demonology's own
+# WP-0 must not re-derive these two composites, only add the named constants for its own use.
+CATACLYSM_SPELLS = (0x60, 0x1000, 0x04400001)  # RoF, Hellfire; Shadowfury; Inferno Effect 22703;
+# Demonology's Hand of Gul'dan (d3 0x00400000) and Summon Infernal (d3 0x04000000)
+BANE_SPELLS = (0x5, 0x300C0, 0x00400002)  # SB, Immolate; Incinerate, Soul Fire, Shadowflame,
+# Chaos Bolt; Shadowflame DoT; Hand of Gul'dan
+SHADOW_AND_FLAME_SPELLS = (0x81, 0x310C0, 0x2)  # SB, Shadowburn; Incinerate, Soul Fire, Shadowfury,
+# Shadowflame, Chaos Bolt; Shadowflame DoT
+SOUL_LEECH_SPELLS = (0x185, 0x8200C0, 0)  # SB, Immolate (direct), Shadowburn, SP; Incinerate,
+# Soul Fire, Chaos Bolt, Conflagrate
+FNB_IMMOLATE_BONUS = (0x100, 0x200C0, 0)  # Immolate eff2 aura-271 scope: SP; Incinerate, Soul Fire,
+# Chaos Bolt(+copies)
+REACH_DESTRUCTION_ADD = (0x125, 0x200C0, 0)  # OR-ed into 200707/200708's mask (already inside
+# Affliction's REACH_SPELLS - no-op, kept as documentation, DESTRUCTION.md §0.1.9)
+WARLOCK_PLAYER_DAMAGE = (0x1E5, 0x8310C0, 0x2)  # = DESTRUCTION_SPELLS minus MOLTEN_BOLT (d3 bit 28
+# cleared - warlock-cast triggered bolts mid-cast must never eat 200991's charge, §7.9). 200991's
+# scope (player-cast spells only, never a demon bit). WP-A must OR in Affliction's own damage-spell
+# composite when it builds 200991 (DESTRUCTION.md §2.5); Demonology (S3) widens this further with
+# its own player-nuke bits. This literal is Destruction's own scope only - not yet widened.
+INSTANT_CAST_HELPER = (0, 0x20080, 0)  # 200713's scope: Soul Fire d2 0x80, Chaos Bolt d2 0x20000
+
+# WP-A's OR-term decision for WARLOCK_PLAYER_DAMAGE (DESTRUCTION.md §2.5's open call, WP brief):
+# ORs in REACH_SPELLS - "every warlock damaging spell with a target range" (AFFLICTION §11 Q17,
+# user) - rather than a narrower Affliction-only composite (AFFLICTION_DOTS/SHADOW_PERIODIC/
+# SHADOW_MASTERY_DIRECT all miss some direct-cast Affliction spell; none is a true "every Affliction
+# damage spell" set). REACH_SPELLS already spans every tree's damaging casts (its own d3 already
+# reserves Demonology's Hand of Gul'dan/Bane of Doom/Chaos Rift bits), so this also picks up
+# Demonology's player nukes for free once S3 lands, matching DESTRUCTION.md §2.5's third OR-term
+# ("Demo player nukes, S3") without Destruction needing to hardcode anything Demonology-specific.
+# Computed (not hand-computed hex) to avoid a transcription error - see the classmask-scoping gotcha
+# in apps/dbc-tools/README.md. MOLTEN_BOLT is not reintroduced (REACH_SPELLS's d3 has no bit 28).
+WARLOCK_PLAYER_DAMAGE_FULL = tuple(a | b for a, b in zip(WARLOCK_PLAYER_DAMAGE, REACH_SPELLS))
+
 # --- spell_proc constants (priest/druid precedent; values verified against SpellMgr.h:111-280) ---
 PROC_FLAG_KILL = 0x2
 PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG = 0x10000
+PROC_FLAG_TAKEN_SPELL_MAGIC_DMG_CLASS_NEG = 0x20000  # DESTRUCTION §8 -30299 Nether Protection
 PROC_FLAG_DONE_PERIODIC = 0x40000
+PROC_FLAG_TAKEN_PERIODIC = 0x80000  # DESTRUCTION §8 -30299 Nether Protection
 PROC_SPELL_TYPE_DAMAGE = 1
 PROC_SPELL_TYPE_MASK_ALL = 7
 PROC_SPELL_PHASE_CAST = 1

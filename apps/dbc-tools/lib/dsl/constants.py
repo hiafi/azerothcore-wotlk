@@ -198,6 +198,7 @@ class AuraType(IntEnum):
     MOD_HEALING_RECEIVED = 283  # SpellAuraDefines.h: "Possibly only for some spell family class spells"
     ABILITY_PERIODIC_CRIT = 286  # druid-rework PLAN §6.4
     MOD_CRIT_PCT = 290
+    MOD_DAMAGE_DONE_VERSUS_AURASTATE = 303  # warlock-rework DESTRUCTION WP-0 §3 item 4 - Ruin's >75% health clause (Warlock::GetAuraStateDoneFactor)
     MOD_MINIMUM_SPEED = 305  # warlock-rework AFFLICTION §3 item 3 - Burning Rush's 100% speed floor (Unit.cpp:11108)
     # Custom aura types this fork added (see each one's comment in SpellAuraDefines.h):
     MOD_LEECH_PCT = 295  # % of damage dealt returned as health - Unit::GetLeechPercentage

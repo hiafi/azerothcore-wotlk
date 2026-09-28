@@ -86,6 +86,15 @@ ICON_ID_SAVAGE_BITE = 90122  # 200439 (FERAL-ADDENDUM, was sharing Maul's 1680)
 ICON_ID_BLOOM = 90130  # shared by 200560 and its 200561 jump
 ICON_ID_FLOURISH = 90131  # shared by 200564 and its 200565/200603 buff/ground triggers
 
+# Warlock rework Destruction pass (warlock-rework.DESTRUCTION.md §2.6/§11 Q19, B17(b)/C11): Incinerate
+# 29722 needs to move off stock icon 2128 (Spell_Fire_Burnout) so the stock "+25% vs Immolate"
+# hardcode (keyed on that exact icon id) goes inert, without changing Incinerate's actual art - it
+# still shows the same texture, just under a new custom SpellIcon.dbc id. Unlike every row above,
+# this is a "stock path, no blp" alias: the texture already ships in the client, so there's nothing
+# to extract from the Ascension archive and nothing new to pack into patch-I.mpq - only a SpellIcon
+# row pointing at the existing stock path. See STOCK_ALIAS_ICONS below.
+ICON_ID_INCINERATE_ALIAS = 90170
+
 ICONS = (
     (ICON_ID_ANGELIC_FEATHER, "Interface/icons/ability_priest_angelicfeather.blp"),
     (ICON_ID_DIVINE_STAR, "Interface/icons/spell_priest_divinestar.blp"),
@@ -103,6 +112,15 @@ ICONS = (
     (ICON_ID_SAVAGE_BITE, "Interface/icons/spell_druid_bearhug.blp"),
     (ICON_ID_BLOOM, "Interface/icons/ability_evoker_spiritbloom.blp"),
     (ICON_ID_FLOURISH, "Interface/icons/inv12_ability_druid_flourish_empowered.blp"),
+)
+
+# "Stock path, no blp" entries (warlock-rework DESTRUCTION §2.6/§11 Q19): a SpellIcon.dbc row that
+# just aliases an existing stock texture already shipped in the client - no extraction from the
+# Ascension archive, no file packed into patch-I.mpq's Interface/Icons/. Kept as a separate tuple
+# rather than folded into ICONS because extract_icons()/the packaged-files loop below both key off
+# ICONS's archive-relative paths; build_spellicon_rows() below merges both tuples into the DBC.
+STOCK_ALIAS_ICONS = (
+    (ICON_ID_INCINERATE_ALIAS, "Interface\\Icons\\Spell_Fire_Burnout"),
 )
 
 
@@ -153,10 +171,12 @@ def load_or_bootstrap_spellicon_working_copy() -> list[dict]:
 
 
 def build_spellicon_rows() -> list[dict]:
-    return [
+    rows = [
         {"ID": icon_id, "TextureFilename": "Interface\\Icons\\" + Path(rel).stem}
         for icon_id, rel in ICONS
     ]
+    rows += [{"ID": icon_id, "TextureFilename": path} for icon_id, path in STOCK_ALIAS_ICONS]
+    return rows
 
 
 def merge_spellicon_rows(existing: list[dict], new_rows: list[dict]) -> tuple[list[dict], int]:
@@ -204,6 +224,8 @@ def main() -> None:
           f"1 DBC + {len(icon_bytes)} icon file(s):")
     for icon_id, rel in ICONS:
         print(f"  {icon_id} -> Interface\\Icons\\{Path(rel).name}")
+    for icon_id, path in STOCK_ALIAS_ICONS:
+        print(f"  {icon_id} -> {path} (stock path, no blp)")
 
     if args.deploy_root:
         deploy_path = Path(args.deploy_root) / "Data" / "patch-I.mpq"

@@ -177,6 +177,52 @@ namespace
     };
 
     std::unordered_map<ObjectGuid, SoulSwapStore> soulSwapByPlayer;
+
+    // ------------------------------------------------------------------
+    // Destruction pass (S2) additions - local implementation detail only, not part of the frozen
+    // header contract (DESTRUCTION.md §2.6's "WarlockMechanics additions"). Stock/talent ids this
+    // pass needs that weren't minted new (so the frozen header doesn't name them) are duplicated
+    // here rather than widening WarlockMechanics.h - same shape as this file's own
+    // SPELL_SEED_OF_CORRUPTION_VISUAL above.
+    // ------------------------------------------------------------------
+    constexpr uint32 SPELL_DESTRUCTIVE_REACH_R2 = 17918;   // capstone rank - the >20 yd crit clause
+    constexpr uint32 SPELL_HELLFIRE = 1949;
+
+    // Hellstorm's per-player scheduling generation counter (DESTRUCTION.md §7.4; Flourish /
+    // Druid::AccelerateHotTicks precedent, DruidMechanics.cpp:701-767, adapted for a 1.5x rate -
+    // one extra tick every 2 x amplitude instead of Flourish's every-amplitude doubling). Bumped
+    // every time StartHellstormAcceleration finds a fresh Hellfire aura to drive, so a chain
+    // started by the other starter script (or an earlier Hellfire cast) recognizes itself as
+    // superseded and stops instead of injecting a second, overlapping set of extra ticks.
+    std::unordered_map<ObjectGuid, uint32> hellstormGenerationByPlayer;
+
+    void ScheduleHellstormTick(ObjectGuid playerGuid, uint32 generation, int32 amplitude, int32 offsetMs)
+    {
+        Player* player = ObjectAccessor::FindPlayer(playerGuid);
+        if (!player)
+            return;
+
+        player->m_Events.AddEventAtOffset([playerGuid, generation, amplitude]()
+        {
+            Player* self = ObjectAccessor::FindPlayer(playerGuid);
+            if (!self)
+                return;
+
+            auto itr = hellstormGenerationByPlayer.find(playerGuid);
+            if (itr == hellstormGenerationByPlayer.end() || itr->second != generation)
+                return;
+
+            if (!self->HasAura(Warlock::SPELL_HELLSTORM_BUFF))
+                return;
+
+            Warlock::FirePeriodicTickNow(self, playerGuid, SPELL_HELLFIRE, EFFECT_0);
+
+            // 1.5x rate: one extra tick every 2 regular intervals, not every one (a 2x-rate,
+            // every-amplitude schedule like Flourish's would double the tick count instead of the
+            // specced 50% faster).
+            ScheduleHellstormTick(playerGuid, generation, amplitude, 2 * amplitude);
+        }, Milliseconds(offsetMs));
+    }
 }
 
 namespace Warlock
@@ -648,5 +694,107 @@ namespace Warlock
         outEntries = std::move(itr->second.entries);
         soulSwapByPlayer.erase(itr);
         return true;
+    }
+
+    // ------------------------------------------------------------------
+    // Destruction pass (S2) additions (DESTRUCTION.md §7 for the per-clause mapping, §2.6 for the
+    // "WarlockMechanics additions" list). Frozen signatures - see the header for the contract.
+    // ------------------------------------------------------------------
+    Unit* GetHavocTarget(Unit* caster)
+    {
+        if (!caster)
+            return nullptr;
+
+        for (Aura* aura : caster->GetSingleCastAuras())
+            if (aura->GetId() == SPELL_HAVOC)
+                return aura->GetUnitOwner();
+
+        return nullptr;
+    }
+
+    float GetAuraStateDoneFactor(Unit const* caster, Unit const* victim, SpellInfo const* spellInfo)
+    {
+        if (!caster || !victim || !spellInfo)
+            return 1.0f;
+
+        // Mirrors the stock done-damage aurastate clause (Unit.cpp:8310-8313) exactly, so dividing
+        // it back out of a snapshot and re-applying it live per target (Rain of Fire, §7.1) uses
+        // the identical factor the engine itself would have used for a normal direct hit.
+        return caster->GetTotalAuraMultiplier(SPELL_AURA_MOD_DAMAGE_DONE_VERSUS_AURASTATE,
+            [victim, spellInfo, caster](AuraEffect const* aurEff)
+            {
+                return victim->HasAuraState(AuraStateType(aurEff->GetMiscValue())) &&
+                       spellInfo->ValidateAttribute6SpellDamageMods(caster, aurEff, false);
+            });
+    }
+
+    void StartHellstormAcceleration(Player* player)
+    {
+        if (!player)
+            return;
+
+        Aura* hellfire = player->GetAura(SPELL_HELLFIRE, player->GetGUID());
+        if (!hellfire)
+            return;
+
+        AuraEffect* effect = hellfire->GetEffect(EFFECT_0);
+        if (!effect || effect->GetAuraType() != SPELL_AURA_PERIODIC_TRIGGER_SPELL)
+            return;
+
+        int32 const amplitude = effect->GetAmplitude();
+        if (amplitude <= 0)
+            return;
+
+        ObjectGuid const guid = player->GetGUID();
+        uint32 const generation = ++hellstormGenerationByPlayer[guid];
+
+        // Phase off the live tick timer (bugs-and-fixes: "Flourish doesn't visibly speed up HoT
+        // ticks") - the midpoint of the next regular interval, then every 2 x amplitude.
+        int32 firstOffset = effect->GetPeriodicTimer() - amplitude / 2;
+        if (firstOffset < 0)
+            firstOffset += amplitude;
+
+        ScheduleHellstormTick(guid, generation, amplitude, firstOffset);
+    }
+
+    void ApplyDestructiveReachCrit(Player* player, Spell* spell)
+    {
+        if (!player || !spell)
+            return;
+
+        SpellInfo const* spellInfo = spell->GetSpellInfo();
+        if (!spellInfo || !player->HasAura(SPELL_DESTRUCTIVE_REACH_R2))
+            return;
+
+        // Timing contract (SHARED §4): act only on a candidate prepare - a player's own real cast,
+        // not already mid-cast-bar (a rejected re-prepare or a spell with
+        // SPELL_ATTR4_ALLOW_CAST_WHILE_CASTING, e.g. Soulburn, would otherwise have the running
+        // cast's own charge stripped out from under it - druid_hooks.cpp:461 precedent).
+        if (spell->IsTriggered())
+            return;
+
+        if (player->IsNonMeleeSpellCast(false, true, true) &&
+            !spellInfo->HasAttribute(SPELL_ATTR4_ALLOW_CAST_WHILE_CASTING))
+            return;
+
+        SpellInfo const* helperInfo = sSpellMgr->AssertSpellInfo(SPELL_DESTRUCTIVE_REACH_CRIT_HELPER);
+        if (!helperInfo || !spellInfo->IsAffected(SPELLFAMILY_WARLOCK, helperInfo->Effects[EFFECT_0].SpellClassMask))
+            return;
+
+        Unit* target = spell->m_targets.GetUnitTarget();
+        if (target && player->IsValidAttackTarget(target) && player->GetDistance(target) > 20.0f)
+            player->CastSpell(player, SPELL_DESTRUCTIVE_REACH_CRIT_HELPER, true);
+        else
+            player->RemoveAurasDueToSpell(SPELL_DESTRUCTIVE_REACH_CRIT_HELPER);
+    }
+
+    void ReduceChaosBoltCooldown(Player* player, uint32 ms)
+    {
+        if (!player)
+            return;
+
+        // No-op when Chaos Bolt isn't currently cooling down (ModifySpellCooldown, Player.cpp:11391,
+        // returns early when the spell has no cooldown entry to modify).
+        player->ModifySpellCooldown(SPELL_CHAOS_BOLT, -int32(ms));
     }
 }
