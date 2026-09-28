@@ -698,7 +698,7 @@ CREATURE_IDS_CFG = {"creature": {"start": 300000, "end": 300999}}
 
 def _load_creature(source: str, **kwargs) -> registry.Registry:
     kwargs.setdefault("ids_cfg", CREATURE_IDS_CFG)
-    kwargs.setdefault("existing_creature_ids", set())
+    kwargs.setdefault("existing_creature_rows", {})
     kwargs.setdefault("creature_columns", spell_tables.CREATURE_TEMPLATE_COLUMNS)
     kwargs.setdefault("creature_defaults", spell_tables.CREATURE_TEMPLATE_DEFAULTS)
     with tempfile.TemporaryDirectory() as d:
@@ -780,7 +780,7 @@ class CreatureTemplateTest(unittest.TestCase):
         reg = _load_creature(
             'from lib.dsl.registry import creature_template\n'
             'creature_template(68, "Kobold Vermin")\n',
-            existing_creature_ids={68},
+            existing_creature_rows={68: {"entry": 68}},
         )
         self.assertEqual(reg.creature_templates[0]["entry"], 68)
 
@@ -792,16 +792,56 @@ class CreatureTemplateTest(unittest.TestCase):
                 creature_columns=None,
             )
 
-    def test_missing_existing_creature_ids_raises(self):
-        # An in-block entry never needs existing_creature_ids (the range check alone accepts it) -
+    def test_missing_existing_creature_rows_raises(self):
+        # An in-block entry never needs existing_creature_rows (the range check alone accepts it) -
         # use an out-of-block entry, same as test_live_entry_outside_block_is_accepted's 68, to
-        # actually reach _require_creature_ids().
+        # actually reach _require_creature_rows().
         with self.assertRaises(RuntimeError):
             _load_creature(
                 'from lib.dsl.registry import creature_template\n'
                 'creature_template(68, "Kobold Vermin")\n',
-                existing_creature_ids=None,
+                existing_creature_rows=None,
             )
+
+    # Code review, 2026-09-28: creature_template() originally always built from schema defaults,
+    # even when overriding a live row - re-declaring Tentacle of Madness (300102) to fix just its
+    # ScriptName would have silently reset faction, levels, flags and every modifier back to
+    # schema defaults. Fixed by starting an override from the entry's current live row, same
+    # pattern shapeshift_form() already uses for its own full-row override.
+    def test_overriding_a_live_entry_preserves_columns_not_mentioned(self):
+        live_row = {
+            "entry": 300102, "faction": 35, "unit_flags": 33554434, "minlevel": 5, "maxlevel": 5,
+            "ScriptName": "npc_pri_tentacle_of_madness_OLD",
+        }
+        reg = _load_creature(
+            'from lib.dsl.registry import creature_template\n'
+            'creature_template(300102, "Tentacle of Madness", ScriptName="npc_pri_tentacle_of_madness")\n',
+            existing_creature_rows={300102: live_row},
+        )
+        (row,) = reg.creature_templates
+        # The column actually being fixed:
+        self.assertEqual(row["ScriptName"], "npc_pri_tentacle_of_madness")
+        # Everything else the live row already had must survive untouched, not reset to schema
+        # defaults (faction's schema default is 0, unit_flags' is 0, minlevel/maxlevel's is 1 -
+        # all different from what the live row actually has).
+        self.assertEqual(row["faction"], 35)
+        self.assertEqual(row["unit_flags"], 33554434)
+        self.assertEqual(row["minlevel"], 5)
+        self.assertEqual(row["maxlevel"], 5)
+
+    def test_overriding_a_live_entry_still_lets_default_overrides_apply_to_columns_it_never_had(self):
+        # A live row from a *partial*-column-list INSERT (e.g. the real mod-mythic-plus/mod-transmog
+        # shape) genuinely doesn't have every column - unit_class isn't one of them here, so the
+        # boot-corrected default-override (1, not the live row's absence of a value) still applies,
+        # same as for brand-new content.
+        reg = _load_creature(
+            'from lib.dsl.registry import creature_template\n'
+            'creature_template(300170, "Chaos Rift")\n',
+            existing_creature_rows={300170: {"entry": 300170, "faction": 35}},
+        )
+        (row,) = reg.creature_templates
+        self.assertEqual(row["faction"], 35)  # preserved from the live row
+        self.assertEqual(row["unit_class"], 1)  # the live row never had this column
 
 
 class CreatureModelTest(unittest.TestCase):

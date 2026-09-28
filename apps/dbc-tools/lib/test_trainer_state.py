@@ -50,7 +50,17 @@ CREATE_TABLE_SQL = {
         "CREATE TABLE `creature_template` (\n"
         "  `entry` int unsigned NOT NULL DEFAULT '0',\n"
         "  `npcflag` int unsigned NOT NULL DEFAULT '0',\n"
+        "  `name` char(100) NOT NULL DEFAULT '0',\n"
+        "  `flags_extra` int unsigned NOT NULL DEFAULT '0',\n"
         "  PRIMARY KEY (`entry`)\n"
+        ") ENGINE=InnoDB;\n"
+    ),
+    "creature_template_model": (
+        "CREATE TABLE `creature_template_model` (\n"
+        "  `CreatureID` int unsigned NOT NULL,\n"
+        "  `Idx` smallint unsigned NOT NULL DEFAULT '0',\n"
+        "  `CreatureDisplayID` int unsigned NOT NULL,\n"
+        "  PRIMARY KEY (`CreatureID`,`Idx`)\n"
         ") ENGINE=InnoDB;\n"
     ),
     "creature": (
@@ -259,6 +269,91 @@ class TrainerStateTest(unittest.TestCase):
         )
         idx = trainer_state.load_trainer_index()  # must not raise
         self.assertEqual(idx.trainer_problems(13), [])
+
+
+class LoadReplayedTableRowsTest(unittest.TestCase):
+    """`load_replayed_table_rows` - the fix for a real bug found via code review, 2026-09-28:
+    `load_table_rows`'s plain union of INSERTs kept reporting creature_template/
+    creature_template_model's *original* values as live forever, even after a real hand-written
+    UPDATE changed them (Frozen Orb 300001's `flags_extra` 194->66 and `CreatureDisplayID` through
+    several revisions, `data/sql/updates/db_world/2026_09_01_01.sql`)."""
+
+    def setUp(self):
+        self._tmp = TemporaryDirectory()
+        base = Path(self._tmp.name) / "base"
+        promoted = Path(self._tmp.name) / "promoted"
+        pending = Path(self._tmp.name) / "pending"
+        modules = Path(self._tmp.name) / "modules"
+        for d in (base, promoted, pending, modules):
+            d.mkdir()
+        self._base, self._promoted = base, promoted
+        for table, sql in CREATE_TABLE_SQL.items():
+            (base / f"{table}.sql").write_text(sql)
+        self._orig = (
+            trainer_state.BASE_SQL_DIR, trainer_state.PROMOTED_SQL_DIR, trainer_state.PENDING_SQL_DIR,
+            trainer_state.MODULES_DIR,
+        )
+        trainer_state.BASE_SQL_DIR = base
+        trainer_state.PROMOTED_SQL_DIR = promoted
+        trainer_state.PENDING_SQL_DIR = pending
+        trainer_state.MODULES_DIR = modules
+
+    def tearDown(self):
+        (
+            trainer_state.BASE_SQL_DIR, trainer_state.PROMOTED_SQL_DIR, trainer_state.PENDING_SQL_DIR,
+            trainer_state.MODULES_DIR,
+        ) = self._orig
+        self._tmp.cleanup()
+
+    def test_single_key_table_reflects_a_later_update_not_the_original_insert(self):
+        (self._promoted / "gen.sql").write_text(
+            "INSERT INTO `creature_template` (`entry`, `npcflag`, `name`, `flags_extra`) VALUES "
+            "(300001, 0, 'Frozen Orb', 194);\n"
+            "UPDATE `creature_template` SET `flags_extra` = 66 "
+            "WHERE `entry` = 300001 AND `flags_extra` = 194;\n"
+        )
+        rows = trainer_state.load_replayed_table_rows(
+            "creature_template", ("entry", "npcflag", "name", "flags_extra"), ("entry",),
+        )
+        (row,) = [r for r in rows if r["entry"] == 300001]
+        self.assertEqual(row["flags_extra"], 66)
+
+    def test_union_of_inserts_would_have_stayed_wrong(self):
+        # Same fixture as above, through the old union-only reader - documents exactly what the
+        # bug looked like, so a future change can't silently reintroduce it unnoticed.
+        (self._promoted / "gen.sql").write_text(
+            "INSERT INTO `creature_template` (`entry`, `npcflag`, `name`, `flags_extra`) VALUES "
+            "(300001, 0, 'Frozen Orb', 194);\n"
+            "UPDATE `creature_template` SET `flags_extra` = 66 "
+            "WHERE `entry` = 300001 AND `flags_extra` = 194;\n"
+        )
+        stale_rows = trainer_state.load_table_rows("creature_template")
+        (stale_row,) = [r for r in stale_rows if r["entry"] == 300001]
+        self.assertEqual(stale_row["flags_extra"], 194)
+
+    def test_composite_key_table_reflects_a_later_point_fix(self):
+        (self._promoted / "gen.sql").write_text(
+            "INSERT INTO `creature_template_model` (`CreatureID`, `Idx`, `CreatureDisplayID`) "
+            "VALUES (300001, 0, 1126);\n"
+            "UPDATE `creature_template_model` SET `CreatureDisplayID` = 25144 "
+            "WHERE `CreatureID` = 300001 AND `CreatureDisplayID` = 1126;\n"
+        )
+        rows = trainer_state.load_replayed_table_rows(
+            "creature_template_model", ("CreatureID", "Idx", "CreatureDisplayID"), ("CreatureID", "Idx"),
+        )
+        (row,) = [r for r in rows if r["CreatureID"] == 300001]
+        self.assertEqual(row["CreatureDisplayID"], 25144)
+
+    def test_deleted_row_does_not_come_back(self):
+        (self._promoted / "gen.sql").write_text(
+            "INSERT INTO `creature_template_model` (`CreatureID`, `Idx`, `CreatureDisplayID`) "
+            "VALUES (300001, 0, 1126);\n"
+            "DELETE FROM `creature_template_model` WHERE `CreatureID` = 300001;\n"
+        )
+        rows = trainer_state.load_replayed_table_rows(
+            "creature_template_model", ("CreatureID", "Idx", "CreatureDisplayID"), ("CreatureID", "Idx"),
+        )
+        self.assertEqual([r for r in rows if r["CreatureID"] == 300001], [])
 
 
 if __name__ == "__main__":

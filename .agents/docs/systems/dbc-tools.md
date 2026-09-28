@@ -174,9 +174,10 @@ Two things make this pair different from every WP-T table above, both stemming f
 `CREATE TABLE` (`sql_dump.parse_create_table_columns`/`parse_create_table_defaults`) rather than
 hand-transcribed - the table is ~55 columns wide, and `parse_create_table_columns`'s own docstring
 already explains why hand-transcribing a table that wide is its own source of bugs.
-`creature_template()` builds a **full** row from that: an explicit `**columns` value, else a
-handful of documented overrides for columns where `ObjectMgr::CheckCreatureTemplate` rejects or
-silently rewrites the schema's own DEFAULT at boot (`unit_class` 0 is invalid, becomes 1;
+`creature_template()` builds a **full** row from that: an explicit `**columns` value, else (for an
+entry that already exists) that column's *current live value* - see "Overriding an existing entry"
+below - else a handful of documented overrides for columns where `ObjectMgr::CheckCreatureTemplate`
+rejects or silently rewrites the schema's own DEFAULT at boot (`unit_class` 0 is invalid, becomes 1;
 `BaseAttackTime`/`RangeAttackTime` 0 becomes `BASE_ATTACK_TIME`), else the real schema default.
 `creature_template_model` is narrow (6 columns) and stays a hand-typed column tuple like every
 other table above.
@@ -188,10 +189,46 @@ exception (marked `# Custom:`) only fires when the `INSERT` targets a `not_delet
 its own statement carries `ON DUPLICATE KEY UPDATE` before the terminating `;` - a plain `INSERT`
 anywhere still needs its `DELETE` exactly as before.
 
-`source/ids.yaml`'s `creature` block is `300000-300999` - five live custom entries already sat in
-it before this block existed (300001, 300002, 300100, 300101, 300102 - Tentacle of Madness), and
-the warlock-rework plan (§4.5) pre-reserved 300140-300179 inside it for the Affliction/Demonology/
-Destruction passes that use this helper next.
+`source/ids.yaml`'s `creature` block is `300000-300999` - four live custom `creature_template`
+entries already sat in it before this block existed (300001 Frozen Orb, 300002 Meteor Missile,
+300100 Divine Star, 300102 Tentacle of Madness), and the warlock-rework plan (§4.5) pre-reserved
+300140-300179 inside it for the Affliction/Demonology/Destruction passes that use this helper next.
+
+### Three correctness fixes from code review (2026-09-28)
+
+All three were found by checking T1's first commit against this repo's *actual* migration
+history, not just re-reading the code - creature_template/creature_template_model turned out to
+have real precedent the original three declared spell tables never did (a hand-written `UPDATE`
+after the original `INSERT`, and a partial-column-list `INSERT`), which the design hadn't
+accounted for:
+
+- **Live state must replay `UPDATE`/`DELETE`, not just union every `INSERT`.** Frozen Orb 300001's
+  `flags_extra` was inserted as `194` and later hand-fixed to `66` via a plain `UPDATE ... WHERE
+  entry = 300001 AND flags_extra = 194` (`data/sql/updates/db_world/2026_09_01_01.sql`) - its
+  `CreatureDisplayID` went through several such revisions too. `trainer_state.load_table_rows`
+  (every other declared table's live-state reader) only unions `INSERT`s, so it kept reporting
+  `194` as live forever; a re-declaration matching that stale value would have compared as
+  unchanged and silently never applied the real fix. `lib/spell_tables.py`'s `load_creature_table_index`
+  uses `trainer_state.load_replayed_table_rows` instead - single or composite key
+  (`sql_dump.apply_statements`/`apply_composite_key_statements`), including a new AND-guarded
+  `UPDATE` shape (`` `col` = n AND `other` = v ``, the exact idiom this repo's hand-written creature
+  fixes use) that `sql_dump.py`'s existing replay machinery didn't recognize before.
+- **Overriding an existing entry must not wipe columns it doesn't mention.** `creature_template()`
+  originally always built from schema defaults, even for an already-existing `entry` -
+  `_validate_creature_entry` explicitly allows overriding any live entry in the block, so
+  re-declaring Tentacle of Madness to fix just its `ScriptName` would have silently reset its
+  faction, levels, flags and every modifier. Fixed the same way `shapeshift_form()` already
+  handles its own full-row override: start from the entry's current live row
+  (`existing_creature_rows`, now full rows keyed by entry, not just a bare id set) and only
+  overwrite what's explicitly passed.
+- **A missing column's implicit value isn't 0 for every table.** `spell_tables._same_row` assumed
+  a column absent from a live row defaults to `0`/`NULL` - true for the original spell tables, but
+  wrong for `creature_template` (`minlevel`/`speed_run`/`RegenHealth`/... default to 1 or more).
+  Real precedent: three module SQL files (`mod-transmog`, `mod-mythic-plus` x2) `INSERT
+  creature_template` with a partial column list omitting exactly this kind of column. `TableSpec`
+  gained a `defaults` field (`CREATURE_TEMPLATE_DEFAULTS`/`CREATURE_TEMPLATE_MODEL_DEFAULTS`) that
+  `_same_row` checks before falling back to the old 0/`None` guess; every other table's `TableSpec`
+  leaves it empty and is unaffected.
 
 ## Watch out: one client DBC, one patch archive
 

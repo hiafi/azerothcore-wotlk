@@ -182,13 +182,16 @@ def main() -> int:
     # lib/spell_tables.py's CREATURE_TABLES module docstring for why this table is loaded via its
     # own SpellTableIndex rather than folded into spell_table_index above (never pruned, upsert-only).
     creature_table_index = spell_tables.load_creature_table_index()
-    existing_creature_ids = {int(k[0]) for k in creature_table_index.live_keys("creature_template")}
+    # Full rows, not just entries - creature_template() needs an overridden entry's *current*
+    # values to preserve every column the override doesn't mention (see its own docstring; found
+    # missing via code review, 2026-09-28 - a bare id set can't tell "override" from "wipe").
+    existing_creature_rows = {int(r["entry"]): r for r in creature_table_index.live_rows("creature_template")}
     progress("loaded creature table index (creature_template/creature_template_model)")
 
     dsl_classes = dsl_registry.load_classes_dir(
         SOURCE_DIR / "classes", ids_cfg=ids_cfg, trainer_index=trainer_index,
         existing_group_ids=existing_group_ids, shapeshift_index=shapeshift_index,
-        existing_creature_ids=existing_creature_ids,
+        existing_creature_rows=existing_creature_rows,
         creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
         creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS,
     )

@@ -87,11 +87,16 @@ spell_group:
 
 # creature_template/creature_template_model entries for a rework's own NPC (e.g. a talent's
 # summoned add) - lib/dsl/registry.py's creature_template(), T1 (.agents/plans/warlock-rework/
-# warlock-rework.T1-HANDOFF.md). Not picked in a vacuum: five live custom entries already sit in
-# this block - 300001, 300002, 300100, 300101 and 300102 (Tentacle of Madness,
-# data/sql/updates/db_world/2026_09_23_12.sql) - and the warlock-rework PLAN (§4.5) has already
-# pre-reserved 300140-300179 within it for the Affliction/Demonology/Destruction passes (Phantom
-# Singularity, Wild Imp/Imp Gang Boss/Dreadstalker/Doomguard/Infernal, Chaos Rift). The stock
+# warlock-rework.T1-HANDOFF.md). Not picked in a vacuum: four live custom creature_template
+# entries already sit in this block - 300001 (Frozen Orb), 300002 (Meteor Missile), 300100
+# (Divine Star) and 300102 (Tentacle of Madness, data/sql/updates/db_world/2026_09_23_12.sql) -
+# checked against creature_template specifically, not just "this number appears somewhere in a
+# file that also mentions creature_template" (300101 in this same range is a real entry, but it's
+# gameobject_template - Angelic Feather's trap GameObject, data/sql/updates/db_world/
+# 2026_09_23_00.sql - caught and corrected via code review, 2026-09-28). The warlock-rework PLAN
+# (§4.5) has already pre-reserved 300140-300179 within it for the Affliction/Demonology/
+# Destruction passes (Phantom Singularity, Wild Imp/Imp Gang Boss/Dreadstalker/Doomguard/
+# Infernal, Chaos Rift). The stock
 # client's own creature_template entries top out in the low 30000s (a 5-digit range - e.g. 30000
 # "Blizzard (1)", 30011 "Sigdis the Trader"), so a 6-digit 300000+ block stays clearly separate
 # from anything Blizzard ships while still covering every custom entry that predates this block.

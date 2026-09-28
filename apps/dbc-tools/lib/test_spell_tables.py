@@ -757,14 +757,14 @@ TENTACLE_MIGRATION = trainer_state.REPO_ROOT / "data" / "sql" / "updates" / "db_
 CREATURE_IDS_CFG = {"creature": {"start": 300000, "end": 300999}}
 
 
-def _load_creature_class(source: str, existing_creature_ids=frozenset()) -> dict:
+def _load_creature_class(source: str, existing_creature_rows: dict | None = None) -> dict:
     with tempfile.TemporaryDirectory() as d:
         path = Path(d) / "warlock.py"
         path.write_text(source)
         reg = registry.load_class_file(
             path,
             ids_cfg=CREATURE_IDS_CFG,
-            existing_creature_ids=set(existing_creature_ids),
+            existing_creature_rows=existing_creature_rows or {},
             creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
             creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS,
         )
@@ -834,8 +834,7 @@ class CreatureTablesTest(unittest.TestCase):
             '    type=10, type_flags=1024,\n'
             '    flags_extra=66, ScriptName="npc_pri_tentacle_of_madness",\n'
             ')\n'
-            'creature_model(300102, 15788, scale=0.5)\n',
-            existing_creature_ids={300102},
+            'creature_model(300102, 15788, scale=0.5)\n'
         )
         blocks = spell_tables.render_creature_blocks(self._index(), dsl)
         self.assertEqual(len(blocks), 2)
@@ -937,6 +936,92 @@ class CreatureTablesTest(unittest.TestCase):
         # a probable source-load failure rather than read as "everything was retired".
         report = spell_tables.render_creature_retirement_report(self._index(), {})
         self.assertTrue(any("SKIPPED checking creature_template " in l for l in report))
+
+    # Code review, 2026-09-28: trainer_state.load_table_rows unions every INSERT ever seen and
+    # never replays an UPDATE, so it kept reporting a creature's *original* INSERT values as live
+    # forever - real precedent, Frozen Orb 300001's flags_extra 194->66 in
+    # data/sql/updates/db_world/2026_09_01_01.sql. Fixed by routing creature tables through
+    # trainer_state.load_replayed_table_rows instead. Builds the "hand-written" baseline from the
+    # helper's own render (full 55 columns, exactly matching what a fresh declaration would build)
+    # so the *only* difference under test is flags_extra, not an incidental mismatch on some other
+    # column between the fixture and creature_template()'s own defaults.
+    def _write_baseline_then_update(self, entry: int, name: str, before: int, after: int) -> None:
+        baseline_dsl = _load_creature_class(
+            f'from lib.dsl.registry import creature_template\n'
+            f'creature_template({entry}, "{name}", flags_extra={before})\n'
+        )
+        (block,) = spell_tables.render_creature_blocks(
+            spell_tables.SpellTableIndex({}, tables=spell_tables.CREATURE_TABLES), baseline_dsl
+        )
+        insert_only = block.split(" ON DUPLICATE")[0] + ";"
+        self._promoted.joinpath("hand_written.sql").write_text(
+            insert_only + "\n"
+            f"UPDATE `creature_template` SET `flags_extra` = {after} "
+            f"WHERE `entry` = {entry} AND `flags_extra` = {before};\n"
+        )
+
+    def test_declaring_the_true_live_value_after_a_hand_written_update_is_unchanged(self):
+        self._write_baseline_then_update(300001, "Frozen Orb", before=194, after=66)
+        dsl = _load_creature_class(
+            'from lib.dsl.registry import creature_template\n'
+            'creature_template(300001, "Frozen Orb", flags_extra=66)\n'
+        )
+        self.assertEqual(spell_tables.render_creature_blocks(self._index(), dsl), [])
+
+    def test_declaring_the_stale_pre_update_value_is_re_emitted(self):
+        self._write_baseline_then_update(300001, "Frozen Orb", before=194, after=66)
+        # Re-declaring the *original*, since-superseded value must be seen as a real change - the
+        # true live value (66) differs from it, even though it matches the row's first INSERT.
+        dsl = _load_creature_class(
+            'from lib.dsl.registry import creature_template\n'
+            'creature_template(300001, "Frozen Orb", flags_extra=194)\n'
+        )
+        blocks = spell_tables.render_creature_blocks(self._index(), dsl)
+        self.assertEqual(len(blocks), 1)
+        self.assertIn(", 194,", blocks[0])
+
+
+# Code review, 2026-09-28: _same_row assumed a column missing from a live row defaults to 0 (true
+# for every column in the original spell tables) - wrong for creature_template, where ~15 columns
+# default to something else (minlevel/speed_run/RegenHealth/... all default to 1 or more). Real
+# precedent: three module SQL files (mod-transmog, mod-mythic-plus x2) INSERT creature_template
+# with a partial column list omitting exactly this kind of column - unit-level on _same_row/
+# TableSpec.defaults directly (rather than a full end-to-end render) since creature_template()'s
+# own _CREATURE_TEMPLATE_DEFAULT_OVERRIDES (unit_class/BaseAttackTime/RangeAttackTime/VerifiedBuild)
+# deliberately differ from the raw schema default _same_row must use for a *missing* column, which
+# would otherwise confound a full-row comparison on unrelated columns.
+class SameRowCreatureDefaultsTest(unittest.TestCase):
+    def setUp(self):
+        self.spec = spell_tables.CREATURE_TABLES[0]  # creature_template - has real defaults=
+        self.assertEqual(self.spec.name, "creature_template")
+
+    def _full_declared_row(self, **overrides) -> dict:
+        row = dict(spell_tables.CREATURE_TEMPLATE_DEFAULTS)
+        row.update(entry=300170, name="Chaos Rift")
+        row.update(overrides)
+        return row
+
+    def test_missing_column_falls_back_to_its_real_schema_default(self):
+        existing = {"entry": 300170, "name": "Chaos Rift"}  # every other column: genuinely unset
+        declared = self._full_declared_row(RegenHealth=1)  # RegenHealth's real default is 1
+        self.assertTrue(spell_tables._same_row(existing, declared, self.spec))
+
+    def test_declaring_a_real_zero_is_not_hidden_by_the_nonzero_default(self):
+        existing = {"entry": 300170, "name": "Chaos Rift"}
+        declared = self._full_declared_row(RegenHealth=0)  # genuinely different from the implicit 1
+        self.assertFalse(spell_tables._same_row(existing, declared, self.spec))
+
+    def test_the_old_blanket_zero_fallback_would_have_hidden_it(self):
+        # Regression guard: confirms the *old* behavior (no defaults=) really would have missed
+        # this, isolated to just the one column under test (RegenHealth) - a full 55-column
+        # comparison would also differ on plenty of *other* columns under the old bare 0/None
+        # fallback (speed_run's real default 1.14286 among them), which would mask the very thing
+        # this guard exists to catch. Protects against silently reintroducing the bug via a
+        # refactor that drops defaults= from a TableSpec construction.
+        bare_spec = spell_tables.TableSpec("creature_template", ("entry", "RegenHealth"), ("entry",), "creature_templates")
+        existing = {"entry": 300170}  # RegenHealth genuinely unset - real live value is 1
+        declared = {"entry": 300170, "RegenHealth": 0}  # genuinely different from the implicit 1
+        self.assertTrue(spell_tables._same_row(existing, declared, bare_spec))  # wrongly "unchanged"
 
 
 if __name__ == "__main__":

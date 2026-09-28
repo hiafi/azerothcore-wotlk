@@ -148,7 +148,7 @@ _active_ids_cfg: dict | None = None
 _active_trainer_index = None  # lib.trainer_state.TrainerIndex | None - see trained_by()
 _active_group_ids: set[int] | None = None  # existing spell_group ids, base dump + migrations - see spell_group()
 _active_shapeshift_index: dict[int, dict] | None = None  # stock SpellShapeshiftForm rows by ID - see shapeshift_form()
-_active_creature_ids: set[int] | None = None  # live creature_template entries - see creature_template()
+_active_creature_rows: dict[int, dict] | None = None  # live creature_template rows by entry - see creature_template()
 # creature_template's full column list/defaults, from the base dump's own CREATE TABLE (parsed by
 # the caller, not here - see creature_template()'s docstring for why this module never imports
 # sql_dump/trainer_state itself, the same reasoning as _active_trainer_index/_active_shapeshift_index).
@@ -750,16 +750,17 @@ def _require_creature_defaults() -> dict[str, object]:
     return _active_creature_defaults
 
 
-def _require_creature_ids() -> set[int]:
-    if _active_creature_ids is None:
+def _require_creature_rows() -> dict[int, dict]:
+    if _active_creature_rows is None:
         raise RuntimeError(
-            "creature_template() needs the live creature_template entries (base dump + migrations) "
-            "to tell a legitimate override of an already-existing row apart from a typo'd entry "
-            "outside source/ids.yaml's creature block - pass them through "
-            "registry.load_class_file(path, existing_creature_ids=...) / "
-            "load_classes_dir(dir_path, existing_creature_ids=...) (generate.py already does)."
+            "creature_template() needs the live creature_template rows (base dump + migrations, "
+            "keyed by entry) both to tell a legitimate override of an already-existing row apart "
+            "from a typo'd entry outside source/ids.yaml's creature block, and to preserve that "
+            "row's untouched columns on an override - pass them through "
+            "registry.load_class_file(path, existing_creature_rows=...) / "
+            "load_classes_dir(dir_path, existing_creature_rows=...) (generate.py already does)."
         )
-    return _active_creature_ids
+    return _active_creature_rows
 
 
 def _validate_creature_entry(entry: int) -> None:
@@ -772,7 +773,7 @@ def _validate_creature_entry(entry: int) -> None:
         r = ids_cfg.get("creature")
         if r and r["start"] <= entry <= r["end"]:
             return
-    if entry in _require_creature_ids():
+    if entry in _require_creature_rows():
         return
     raise ValueError(
         f"creature_template({entry}, ...): entry {entry} is neither inside source/ids.yaml's "
@@ -794,10 +795,24 @@ def creature_template(entry: int, name: str, **columns) -> dict:
     the emitted `INSERT` always has every column, matching `sql_out.render_upsert_block`'s
     "declared row replaces whatever's live" upsert semantics. A column's value is, in order:
     `name` (the required parameter) for the `name` column; whatever `columns` passes explicitly;
-    `_CREATURE_TEMPLATE_DEFAULT_OVERRIDES` for the handful of columns whose schema DEFAULT the
-    engine rejects or silently rewrites at boot (see that dict's own comment); otherwise the
-    column's real schema DEFAULT. An unknown column name in `columns` raises `KeyError` naming it -
-    a typo here must not silently produce a spurious extra column or get ignored.
+    **the entry's current live value, if `entry` already exists** (an override that doesn't
+    mention a column must not reset it - see the note below); `_CREATURE_TEMPLATE_DEFAULT_OVERRIDES`
+    for the handful of columns whose schema DEFAULT the engine rejects or silently rewrites at boot
+    (see that dict's own comment, and only reached for genuinely new content, since an existing row
+    already has *some* value there); otherwise the column's real schema DEFAULT. An unknown column
+    name in `columns` raises `KeyError` naming it - a typo here must not silently produce a
+    spurious extra column or get ignored.
+
+    **Overriding an existing entry never wipes a column you didn't mention.** `shapeshift_form()`
+    already has to solve this same problem (a full-row override starting from the stock DBC row) -
+    this mirrors it: `entry`'s current live row (from `existing_creature_rows`, see
+    `_require_creature_rows`) is the starting point for every column you don't pass explicitly,
+    not the schema default. Get this wrong (as this helper originally did - found via code review,
+    2026-09-28) and re-declaring Tentacle of Madness (300102) to fix just its `ScriptName` would
+    have reset its faction, levels, flags and every modifier back to schema defaults, with no
+    warning - `_validate_creature_entry` explicitly allows overriding *any* existing entry in the
+    block (a real collision with e.g. Frozen Orb 300001, not just an intentional override of your
+    own past declaration, is accepted the same way), so this isn't a rare edge case.
 
     Unlike every other table this module declares, `creature_template` is on the SQL linter's
     do-not-delete list (`apps/codestyle/codestyle-sql.py`'s `not_delete`) - it is never emitted as
@@ -813,6 +828,7 @@ def creature_template(entry: int, name: str, **columns) -> dict:
             f"creature_template({entry}): no such column(s): {', '.join(sorted(unknown))} - see "
             f"data/sql/base/db_world/creature_template.sql's CREATE TABLE for the real names"
         )
+    live_row = _require_creature_rows().get(entry)
     row: dict = {}
     for column in all_columns:
         if column == "entry":
@@ -821,6 +837,8 @@ def creature_template(entry: int, name: str, **columns) -> dict:
             row[column] = name
         elif column in columns:
             row[column] = columns[column]
+        elif live_row is not None and column in live_row:
+            row[column] = live_row[column]
         elif column in _CREATURE_TEMPLATE_DEFAULT_OVERRIDES:
             row[column] = _CREATURE_TEMPLATE_DEFAULT_OVERRIDES[column]
         else:
@@ -1055,7 +1073,7 @@ def _exec_fresh_module(mod_name: str, path: Path, package: str | None = None):
 def load_class_file(
     path: Path, ids_cfg: dict | None = None, trainer_index=None,
     existing_group_ids: set[int] | None = None, shapeshift_index: dict | None = None,
-    existing_creature_ids: set[int] | None = None, creature_columns: tuple[str, ...] | None = None,
+    existing_creature_rows: dict[int, dict] | None = None, creature_columns: tuple[str, ...] | None = None,
     creature_defaults: dict[str, object] | None = None,
 ) -> Registry:
     """Imports one `source/classes/<class>.py` file fresh and returns
@@ -1075,18 +1093,18 @@ def load_class_file(
     duck-typed reasoning) is only needed for `spell_group()`/
     `spell_group_rule()` - see `_require_group_ids`. `shapeshift_index` (a
     plain `dict[int, dict]`) is only needed for `shapeshift_form()` - see
-    `_require_shapeshift_index`. `existing_creature_ids`/`creature_columns`/
+    `_require_shapeshift_index`. `existing_creature_rows`/`creature_columns`/
     `creature_defaults` are only needed for `creature_template()` - see
     `_require_creature_ids`/`_require_creature_columns`/`_require_creature_defaults`."""
     global _active, _active_ids_cfg, _active_trainer_index, _active_group_ids, _active_shapeshift_index
-    global _active_creature_ids, _active_creature_columns, _active_creature_defaults
+    global _active_creature_rows, _active_creature_columns, _active_creature_defaults
     registry = Registry()
     _active = registry
     _active_ids_cfg = ids_cfg
     _active_trainer_index = trainer_index
     _active_group_ids = existing_group_ids
     _active_shapeshift_index = shapeshift_index
-    _active_creature_ids = existing_creature_ids
+    _active_creature_rows = existing_creature_rows
     _active_creature_columns = creature_columns
     _active_creature_defaults = creature_defaults
     mod_name = f"dsl_class_{path.stem}"
@@ -1098,7 +1116,7 @@ def load_class_file(
         _active_trainer_index = None
         _active_group_ids = None
         _active_shapeshift_index = None
-        _active_creature_ids = None
+        _active_creature_rows = None
         _active_creature_columns = None
         _active_creature_defaults = None
         sys.modules.pop(mod_name, None)
@@ -1108,7 +1126,7 @@ def load_class_file(
 def load_class_package(
     dir_path: Path, ids_cfg: dict | None = None, trainer_index=None,
     existing_group_ids: set[int] | None = None, shapeshift_index: dict | None = None,
-    existing_creature_ids: set[int] | None = None, creature_columns: tuple[str, ...] | None = None,
+    existing_creature_rows: dict[int, dict] | None = None, creature_columns: tuple[str, ...] | None = None,
     creature_defaults: dict[str, object] | None = None,
 ) -> Registry:
     """Imports every `*.py` file inside `dir_path` (a `source/classes/<class>/`
@@ -1134,7 +1152,7 @@ def load_class_package(
     the single-file case. Files starting with `_` are skipped, same
     convention as `load_classes_dir`."""
     global _active, _active_ids_cfg, _active_trainer_index, _active_group_ids, _active_shapeshift_index
-    global _active_creature_ids, _active_creature_columns, _active_creature_defaults
+    global _active_creature_rows, _active_creature_columns, _active_creature_defaults
     pkg_name = f"dsl_classpkg_{dir_path.name}_{next(_package_load_counter)}"
     pkg_spec = importlib.util.spec_from_loader(pkg_name, loader=None, is_package=True)
     pkg_module = importlib.util.module_from_spec(pkg_spec)
@@ -1145,7 +1163,7 @@ def load_class_package(
     _active_trainer_index = trainer_index
     _active_group_ids = existing_group_ids
     _active_shapeshift_index = shapeshift_index
-    _active_creature_ids = existing_creature_ids
+    _active_creature_rows = existing_creature_rows
     _active_creature_columns = creature_columns
     _active_creature_defaults = creature_defaults
     sys.modules[pkg_name] = pkg_module
@@ -1171,7 +1189,7 @@ def load_class_package(
         _active_trainer_index = None
         _active_group_ids = None
         _active_shapeshift_index = None
-        _active_creature_ids = None
+        _active_creature_rows = None
         _active_creature_columns = None
         _active_creature_defaults = None
         # Remove every module this call put in sys.modules - not just the ones our own loop
@@ -1187,7 +1205,7 @@ def load_class_package(
 def load_classes_dir(
     dir_path: Path, ids_cfg: dict | None = None, trainer_index=None,
     existing_group_ids: set[int] | None = None, shapeshift_index: dict | None = None,
-    existing_creature_ids: set[int] | None = None, creature_columns: tuple[str, ...] | None = None,
+    existing_creature_rows: dict[int, dict] | None = None, creature_columns: tuple[str, ...] | None = None,
     creature_defaults: dict[str, object] | None = None,
 ) -> dict[str, list[dict]]:
     """Merge every `source/classes/*` entry's registered spells/talents/
@@ -1211,7 +1229,7 @@ def load_classes_dir(
     "class").
 
     `ids_cfg`/`trainer_index`/`existing_group_ids`/`shapeshift_index`/
-    `existing_creature_ids`/`creature_columns`/`creature_defaults` are passed
+    `existing_creature_rows`/`creature_columns`/`creature_defaults` are passed
     straight through to every `load_class_file`/`load_class_package`
     call - see their docstrings."""
     merged: dict[str, list[dict]] = {key: [] for key in MERGE_KEYS}
@@ -1224,7 +1242,7 @@ def load_classes_dir(
         kwargs = dict(
             ids_cfg=ids_cfg, trainer_index=trainer_index,
             existing_group_ids=existing_group_ids, shapeshift_index=shapeshift_index,
-            existing_creature_ids=existing_creature_ids, creature_columns=creature_columns,
+            existing_creature_rows=existing_creature_rows, creature_columns=creature_columns,
             creature_defaults=creature_defaults,
         )
         if path.is_dir():
