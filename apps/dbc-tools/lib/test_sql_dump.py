@@ -202,6 +202,70 @@ class ReadTableRowsTest(unittest.TestCase):
         self.assertEqual(rows, [{"A": 16, "B": 0x1E5, "C": 0}])
 
 
+class UpsertParsingTest(unittest.TestCase):
+    """`_read_tuples`'s `ON DUPLICATE KEY UPDATE` terminator - the
+    `sql_out.render_upsert_block` shape for a do-not-delete table like
+    `creature_template` (data/sql/updates/db_world/2026_09_23_12.sql), which
+    `trainer_state.load_table_rows` used to silently skip as unparseable."""
+
+    def test_read_table_rows_single_row_upsert(self):
+        sql = (
+            "INSERT INTO `t` (`entry`, `name`) VALUES (1, 'Foo') "
+            "ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);\n"
+        )
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "x.sql"
+            path.write_text(sql)
+            rows = sql_dump.read_table_rows(path, "t", ())
+        self.assertEqual(rows, [{"entry": 1, "name": "Foo"}])
+
+    def test_read_table_rows_multi_row_upsert(self):
+        sql = (
+            "INSERT INTO `t` (`entry`, `name`) VALUES (1, 'Foo'), (2, 'Bar') "
+            "ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);\n"
+        )
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "x.sql"
+            path.write_text(sql)
+            rows = sql_dump.read_table_rows(path, "t", ())
+        self.assertEqual(rows, [{"entry": 1, "name": "Foo"}, {"entry": 2, "name": "Bar"}])
+
+    def test_read_table_statements_yields_single_insert_event(self):
+        sql = (
+            "INSERT INTO `t` (`entry`, `name`) VALUES (1, 'Foo'), (2, 'Bar') "
+            "ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);\n"
+        )
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "x.sql"
+            path.write_text(sql)
+            events = list(sql_dump.read_table_statements(path, "t", ()))
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0][0], "insert")
+        self.assertEqual(events[0][1], [{"entry": 1, "name": "Foo"}, {"entry": 2, "name": "Bar"}])
+
+    def test_real_creature_template_migration_parses(self):
+        # data/sql/updates/db_world/2026_09_23_12.sql's exact creature_template INSERT
+        # (entry 300102) - confirms the real hand-written target file parses, not just a
+        # synthetic fixture.
+        path = (
+            Path(__file__).resolve().parents[3]
+            / "data" / "sql" / "updates" / "db_world" / "2026_09_23_12.sql"
+        )
+        rows = sql_dump.read_table_rows(path, "creature_template", ())
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["entry"], 300102)
+
+    def test_malformed_trailer_after_tuple_still_raises(self):
+        # Neither ',', ';', nor 'ON DUPLICATE KEY UPDATE' - genuinely malformed, must not be
+        # silently swallowed by the new upsert handling.
+        sql = "INSERT INTO `t` (`entry`, `name`) VALUES (1, 'Foo') GARBAGE HERE;\n"
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "x.sql"
+            path.write_text(sql)
+            with self.assertRaises(ValueError):
+                sql_dump.read_table_rows(path, "t", ())
+
+
 class ParseCreateTableColumnsTest(unittest.TestCase):
     def test_extracts_columns_in_order(self):
         sql = (

@@ -83,6 +83,66 @@ def _assert_codestyle_shape(test: unittest.TestCase, text: str) -> None:
             test.assertTrue(backticked, f"unbacktick-quoted table: {statement[:60]!r}")
 
 
+UPSERT_COLUMNS = ("entry", "name", "faction")
+UPSERT_KEY = ("entry",)
+
+
+class RenderUpsertBlockTest(unittest.TestCase):
+    """`render_upsert_block` - the `creature_template` shape from
+    `data/sql/updates/db_world/2026_09_23_12.sql` (a table on
+    apps/codestyle/codestyle-sql.py's `not_delete` list, so it can never be
+    rendered as DELETE-then-INSERT)."""
+
+    def test_empty_rows_renders_nothing(self):
+        self.assertEqual(sql_out.render_upsert_block("creature_template", UPSERT_COLUMNS, UPSERT_KEY, []), "")
+
+    def test_renders_insert_on_duplicate_key_update_no_delete(self):
+        rows = [{"entry": 300102, "name": "Tentacle of Madness", "faction": 35}]
+        block = sql_out.render_upsert_block("creature_template", UPSERT_COLUMNS, UPSERT_KEY, rows)
+        self.assertEqual(
+            block,
+            "INSERT INTO `creature_template` (`entry`, `name`, `faction`) VALUES\n"
+            "(300102, 'Tentacle of Madness', 35) ON DUPLICATE KEY UPDATE "
+            "`name` = VALUES(`name`), `faction` = VALUES(`faction`);",
+        )
+        self.assertNotIn("DELETE", block)
+
+    def test_multiple_rows_comma_joined_on_duplicate_only_after_last(self):
+        rows = [
+            {"entry": 300102, "name": "Tentacle of Madness", "faction": 35},
+            {"entry": 300100, "name": "Divine Star", "faction": 35},
+        ]
+        block = sql_out.render_upsert_block("creature_template", UPSERT_COLUMNS, UPSERT_KEY, rows)
+        # Sorted by key_columns (300100 before 300102), tuples comma-joined, and the
+        # ON DUPLICATE clause appears exactly once, right after the *last* tuple.
+        self.assertEqual(
+            block,
+            "INSERT INTO `creature_template` (`entry`, `name`, `faction`) VALUES\n"
+            "(300100, 'Divine Star', 35),\n"
+            "(300102, 'Tentacle of Madness', 35) ON DUPLICATE KEY UPDATE "
+            "`name` = VALUES(`name`), `faction` = VALUES(`faction`);",
+        )
+        self.assertEqual(block.count("ON DUPLICATE"), 1)
+
+    def test_update_clause_excludes_key_columns_only(self):
+        rows = [{"entry": 300102, "name": "Tentacle of Madness", "faction": 35}]
+        block = sql_out.render_upsert_block("creature_template", UPSERT_COLUMNS, UPSERT_KEY, rows)
+        update_clause = block.split("ON DUPLICATE KEY UPDATE ", 1)[1]
+        self.assertNotIn("`entry` = VALUES(`entry`)", update_clause)
+        self.assertIn("`name` = VALUES(`name`)", update_clause)
+        self.assertIn("`faction` = VALUES(`faction`)", update_clause)
+
+    def test_matches_real_migration_shape(self):
+        # data/sql/updates/db_world/2026_09_23_12.sql's `creature_template` INSERT, entry 300102 -
+        # same literal-rendering convention (`_sql_literal` treats "" as NULL, same as every other
+        # renderer in this module), so only structural shape is asserted here.
+        rows = [{"entry": 300102, "name": "Tentacle of Madness", "faction": 35}]
+        block = sql_out.render_upsert_block("creature_template", UPSERT_COLUMNS, UPSERT_KEY, rows)
+        self.assertTrue(block.startswith("INSERT INTO `creature_template` (`entry`, `name`, `faction`) VALUES\n"))
+        self.assertTrue(block.endswith(";"))
+        self.assertNotIn("DELETE", block)
+
+
 class WpTCodestyleShapeTest(unittest.TestCase):
     """WP-T's own new tables (declared + removal) through the same render functions every other
     table already uses - see _assert_codestyle_shape's docstring for why this doesn't just call

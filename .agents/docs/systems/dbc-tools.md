@@ -138,6 +138,61 @@ declare-and-remove conflict check enforces that). A removal whose key doesn't ex
 dump, migrations, module SQL) still gets emitted - the DELETE is a harmless no-op either way - but
 prints a `WARNING:`, almost always a typo.
 
+## T1: creature_template/creature_template_model
+
+`.agents/plans/warlock-rework/warlock-rework.T1-HANDOFF.md` added two more declared tables -
+`creature_template`/`creature_template_model` (`lib/dsl/registry.py`'s `creature_template()`/
+`creature_model()`) - for a rework's own NPC (a talent's summoned add), so those also no longer
+need a hand-written migration (the precedent this replaces, Tentacle of Madness, is
+`data/sql/updates/db_world/2026_09_23_12.sql`). Usage: `apps/dbc-tools/README.md`'s "Declaring a
+creature (T1)" section.
+
+Two things make this pair different from every WP-T table above, both stemming from
+`creature_template` being on the SQL linter's do-not-delete list (`apps/codestyle/codestyle-sql.py`'s
+`not_delete`):
+
+- **Upsert, never DELETE-then-INSERT.** `creature_template` is rendered with a new
+  `lib/sql_out.py` function, `render_upsert_block` - `INSERT ... ON DUPLICATE KEY UPDATE <every
+  non-key column> = VALUES(<column>);`, no DELETE ever. Reading one back (so a live upsert reads
+  as "already declared" and a rerun stays silent) needed `lib/sql_dump.py`'s core tuple reader
+  (`_read_tuples`, shared by `read_table_rows` and `read_table_statements`) to stop treating
+  `ON DUPLICATE KEY UPDATE ...;` after a VALUES list as unparseable - previously
+  `trainer_state.load_table_rows('creature_template')` silently skipped any such file (see that
+  function's own docstring, which documented this as a known gap before T1 closed it).
+  `creature_template_model` (keyed on `CreatureID, Idx`) is narrow enough to keep the ordinary
+  `render_generic_table_block` DELETE-then-INSERT path every other table here uses - only
+  `creature_template` itself needs the upsert.
+- **Never pruned.** Both tables are deliberately kept out of `SPELL_TABLES`/`render_prune_blocks`
+  entirely - a separate `CREATURE_TABLES` tuple plus `load_creature_table_index()`/
+  `render_creature_blocks()`/`render_creature_retirement_report()` in `lib/spell_tables.py` handle
+  them instead. `creature_template` can't be DELETEd at all, and pruning only the model row would
+  leave a creature with no visible model - so a declaration dropped from source is only ever
+  reported (`render_creature_retirement_report` reuses `SpellTableIndex.rows_to_prune`'s orphan
+  computation, it just never turns the result into SQL), never deleted automatically.
+
+`creature_template`'s column list and per-column schema `DEFAULT`s are parsed from its own
+`CREATE TABLE` (`sql_dump.parse_create_table_columns`/`parse_create_table_defaults`) rather than
+hand-transcribed - the table is ~55 columns wide, and `parse_create_table_columns`'s own docstring
+already explains why hand-transcribing a table that wide is its own source of bugs.
+`creature_template()` builds a **full** row from that: an explicit `**columns` value, else a
+handful of documented overrides for columns where `ObjectMgr::CheckCreatureTemplate` rejects or
+silently rewrites the schema's own DEFAULT at boot (`unit_class` 0 is invalid, becomes 1;
+`BaseAttackTime`/`RangeAttackTime` 0 becomes `BASE_ATTACK_TIME`), else the real schema default.
+`creature_template_model` is narrow (6 columns) and stays a hand-typed column tuple like every
+other table above.
+
+The SQL linter needed one narrow exception for the upsert shape to pass at all -
+`insert_delete_safety_check` (`apps/codestyle/codestyle-sql.py`) normally demands a `DELETE`
+immediately before every `INSERT`, which an upsert into a `not_delete` table can never have. The
+exception (marked `# Custom:`) only fires when the `INSERT` targets a `not_delete` table **and**
+its own statement carries `ON DUPLICATE KEY UPDATE` before the terminating `;` - a plain `INSERT`
+anywhere still needs its `DELETE` exactly as before.
+
+`source/ids.yaml`'s `creature` block is `300000-300999` - five live custom entries already sat in
+it before this block existed (300001, 300002, 300100, 300101, 300102 - Tentacle of Madness), and
+the warlock-rework plan (§4.5) pre-reserved 300140-300179 inside it for the Affliction/Demonology/
+Destruction passes that use this helper next.
+
 ## Watch out: one client DBC, one patch archive
 
 Five scripts each own a patch letter: `generate.py` → `patch-Z.mpq` (Spell/Talent/Item/…),

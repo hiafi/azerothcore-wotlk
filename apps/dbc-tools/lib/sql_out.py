@@ -78,6 +78,30 @@ def render_generic_table_block(
     )
 
 
+def render_upsert_block(
+    table_name: str, columns: tuple[str, ...], key_columns: tuple[str, ...], rows: list[dict]
+) -> str:
+    """`INSERT ... VALUES (...) ON DUPLICATE KEY UPDATE ...;` - for a table on
+    this repo's SQL linter's do-not-delete list (apps/codestyle/codestyle-sql.py's
+    `not_delete`, e.g. `creature_template`), where `render_generic_table_block`'s
+    DELETE-then-INSERT shape is simply illegal to emit. This renderer never emits
+    a DELETE, ever - that's the whole point. It's still idempotent on rerun: a
+    repeated run's INSERT of an unchanged row collides on `key_columns` and the
+    `ON DUPLICATE KEY UPDATE` clause overwrites every other column with the same
+    values it already had. Matches `data/sql/updates/db_world/2026_09_23_12.sql`'s
+    hand-written `creature_template` block byte-for-byte. Returns `""` for an
+    empty `rows` (nothing to emit), same convention as every other renderer here."""
+    if not rows:
+        return ""
+    rows = sorted(rows, key=lambda r: tuple(r[c] for c in key_columns))
+    cols_sql = ", ".join(f"`{c}`" for c in columns)
+    tuples = ",\n".join(
+        "(" + ", ".join(_sql_literal(row.get(c)) for c in columns) + ")" for row in rows
+    )
+    update_cols = ", ".join(f"`{c}` = VALUES(`{c}`)" for c in columns if c not in key_columns)
+    return f"INSERT INTO `{table_name}` ({cols_sql}) VALUES\n{tuples} ON DUPLICATE KEY UPDATE {update_cols};"
+
+
 def stable_key_sort(keys):
     """Deterministic ordering for key tuples that may mix numbers, strings and
     `None` within a column (a migration that omitted a column normalises to

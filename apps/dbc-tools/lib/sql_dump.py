@@ -112,12 +112,26 @@ def _skip_ws_and_comments(text: str, i: int) -> int:
     return i
 
 
+# `INSERT ... VALUES (...) ON DUPLICATE KEY UPDATE ...;` - the do-not-delete-table upsert shape
+# `sql_out.render_upsert_block` emits (see data/sql/updates/db_world/2026_09_23_12.sql's
+# `creature_template` block: a real, hand-written INSERT of this exact shape). `_read_tuples`
+# treats it as an alternate tuple-list terminator, same as a bare ';' - the UPDATE clause's own
+# `` `col` = VALUES(`col`) `` pairs are never read; only the VALUES(...) tuples matter, which
+# matches how the statement actually behaves against a brand-new row.
+_ON_DUPLICATE_RE = re.compile(r"ON\s+DUPLICATE\s+KEY\s+UPDATE", re.IGNORECASE)
+
+
 def _read_tuples(
     text: str, start: int, variables: dict[str, int] | None = None
 ) -> tuple[list[list], int]:
     """Parse a comma-separated list of parenthesized value-tuples starting at
-    `text[start]` (which must be '('), stopping at the terminating ';'.
-    Returns (tuples, index_just_past_the_semicolon)."""
+    `text[start]` (which must be '('), stopping at the terminating ';' - or,
+    for an `INSERT ... ON DUPLICATE KEY UPDATE` upsert, at the `ON DUPLICATE
+    KEY UPDATE` clause that follows the last tuple (see `_ON_DUPLICATE_RE`),
+    in which case the whole clause is skipped to the statement's real
+    terminating ';' via `_skip_statement` - safe because this repo's upsert
+    shape never has an embedded ';' inside that clause. Returns (tuples,
+    index_just_past_the_semicolon)."""
     tuples = []
     i = start
     n = len(text)
@@ -147,6 +161,8 @@ def _read_tuples(
             continue
         if text[i] == ";":
             return tuples, i + 1
+        if _ON_DUPLICATE_RE.match(text, i):
+            return tuples, _skip_statement(text, i)
     raise ValueError("unterminated INSERT statement (no trailing ';' found)")
 
 
@@ -239,17 +255,10 @@ _CREATE_TABLE_RE_TEMPLATE = r"CREATE TABLE\s+`{table}`\s*\("
 _COLUMN_LINE_RE = re.compile(r"^\s*`(?P<name>\w+)`\s+\w")
 
 
-def parse_create_table_columns(path: Path, table_name: str) -> tuple[str, ...]:
-    """Extracts a table's column names, in file-column order, straight from
-    its own `CREATE TABLE` statement - for a wide table (creature_template
-    is ~70 columns) whose base dump uses a bare `INSERT INTO x VALUES (...)`
-    with no explicit column list (see read_table_rows), so parsing it
-    correctly at all needs the complete, exactly-ordered column list as the
-    fallback - and hand-transcribing that (the way lib/dbcfmt.py does for
-    DBC tables, which are a curated *subset* of a much narrower table) would
-    be its own source of transcription bugs for a table this wide. Skips
-    non-column lines (`PRIMARY KEY (...)`, `KEY ...`, `CONSTRAINT ...`) since
-    none of them start with a backtick-quoted-name-then-type pattern."""
+def _create_table_body(path: Path, table_name: str) -> str:
+    """The text strictly between a `CREATE TABLE \\`table_name\\` (` and its matching closing `)`
+    - shared by `parse_create_table_columns` and `parse_create_table_defaults`, which both need to
+    walk the same column-definition lines but extract a different piece of each one."""
     text = Path(path).read_text(encoding="utf-8")
     m = re.search(_CREATE_TABLE_RE_TEMPLATE.format(table=re.escape(table_name)), text, re.IGNORECASE)
     if not m:
@@ -262,13 +271,74 @@ def parse_create_table_columns(path: Path, table_name: str) -> tuple[str, ...]:
         elif text[i] == ")":
             depth -= 1
         i += 1
-    body = text[m.end():i - 1]
+    return text[m.end():i - 1]
+
+
+def parse_create_table_columns(path: Path, table_name: str) -> tuple[str, ...]:
+    """Extracts a table's column names, in file-column order, straight from
+    its own `CREATE TABLE` statement - for a wide table (creature_template
+    is ~70 columns) whose base dump uses a bare `INSERT INTO x VALUES (...)`
+    with no explicit column list (see read_table_rows), so parsing it
+    correctly at all needs the complete, exactly-ordered column list as the
+    fallback - and hand-transcribing that (the way lib/dbcfmt.py does for
+    DBC tables, which are a curated *subset* of a much narrower table) would
+    be its own source of transcription bugs for a table this wide. Skips
+    non-column lines (`PRIMARY KEY (...)`, `KEY ...`, `CONSTRAINT ...`) since
+    none of them start with a backtick-quoted-name-then-type pattern."""
     columns = []
-    for line in body.splitlines():
+    for line in _create_table_body(path, table_name).splitlines():
         cm = _COLUMN_LINE_RE.match(line)
         if cm:
             columns.append(cm.group("name"))
     return tuple(columns)
+
+
+# Captures a column's type keyword (right after its backtick-quoted name) and its DEFAULT literal
+# (a quoted string or bare NULL) - `[^,]*?` skips over `unsigned`/`NOT NULL`/`CHARACTER SET ...`
+# etc without crossing into a following column's line (this schema never puts a comma inside a
+# type or its modifiers before DEFAULT). A trailing `COMMENT '...'` after the DEFAULT value is
+# simply never reached by this capture group, so it doesn't need to be skipped separately.
+_COLUMN_DEFAULT_RE = re.compile(
+    r"^\s*`(?P<name>\w+)`\s+(?P<type>[a-zA-Z]+)\b[^,]*?DEFAULT\s+(?P<default>'(?:[^'\\]|\\.)*'|NULL)",
+    re.IGNORECASE,
+)
+_INT_COLUMN_TYPES = {"int", "tinyint", "smallint", "mediumint", "bigint"}
+_FLOAT_COLUMN_TYPES = {"float", "double", "decimal"}
+
+
+def _typed_default(type_name: str, raw_literal: str) -> object:
+    if raw_literal.upper() == "NULL":
+        return None
+    value = raw_literal[1:-1].replace("''", "'")  # strip the quotes; unescape a doubled quote
+    type_name = type_name.lower()
+    if type_name in _INT_COLUMN_TYPES:
+        return int(value)
+    if type_name in _FLOAT_COLUMN_TYPES:
+        return float(value)
+    return value  # char/varchar/text/enum/... (or an unrecognized type) - keep as text
+
+
+def parse_create_table_defaults(path: Path, table_name: str) -> dict[str, object]:
+    """Extracts each column's own schema `DEFAULT` (typed as int/float/str/`None`), from the same
+    `CREATE TABLE` `parse_create_table_columns` reads - for a helper like
+    `lib.dsl.registry.creature_template()` that builds a *full* row and needs "what would this
+    column be if nothing set it" for every column it wasn't explicitly given, without hand-
+    transcribing ~54 defaults (the same transcription-bug argument `parse_create_table_columns`'s
+    own docstring makes for the column list itself). A column with no `DEFAULT` clause at all is
+    simply absent from the returned dict - `creature_template`'s own `CREATE TABLE` gives every
+    column one, so this hasn't come up in practice; a caller with a real "no known default" case
+    decides what that means rather than this function guessing.
+
+    `DEFAULT 'x'` is always quoted in a `SHOW CREATE TABLE`-style dump even for a numeric column
+    (`` `entry` int unsigned NOT NULL DEFAULT '0' ``) - the column's own type keyword, captured
+    right after its name, is what decides whether that quoted text becomes a Python `int`/`float`
+    or stays a plain string; `DEFAULT NULL` is always `None` regardless of type."""
+    defaults: dict[str, object] = {}
+    for line in _create_table_body(path, table_name).splitlines():
+        m = _COLUMN_DEFAULT_RE.match(line)
+        if m:
+            defaults[m.group("name")] = _typed_default(m.group("type"), m.group("default"))
+    return defaults
 
 
 def read_table_rows(path: Path, table_name: str, columns: tuple[str, ...]) -> list[dict]:

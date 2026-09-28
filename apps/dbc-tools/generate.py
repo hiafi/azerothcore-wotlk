@@ -175,25 +175,63 @@ def main() -> int:
     # stock SpellShapeshiftForm rows (base DBC + base SQL) - shapeshift_form() builds a full
     # override row starting from whichever of these form_id names.
     shapeshift_index = state.load_stock_rows(dbcfmt.SPELLSHAPESHIFTFORM)
+    # T1 (.agents/plans/warlock-rework/warlock-rework.T1-HANDOFF.md): creature_template/
+    # creature_template_model - live creature_template entries (for creature_template()'s "fresh
+    # id from the reserved block, or override an entry that already exists" check) plus the
+    # column/default data creature_template() needs to build a full row - see
+    # lib/spell_tables.py's CREATURE_TABLES module docstring for why this table is loaded via its
+    # own SpellTableIndex rather than folded into spell_table_index above (never pruned, upsert-only).
+    creature_table_index = spell_tables.load_creature_table_index()
+    existing_creature_ids = {int(k[0]) for k in creature_table_index.live_keys("creature_template")}
+    progress("loaded creature table index (creature_template/creature_template_model)")
 
     dsl_classes = dsl_registry.load_classes_dir(
         SOURCE_DIR / "classes", ids_cfg=ids_cfg, trainer_index=trainer_index,
         existing_group_ids=existing_group_ids, shapeshift_index=shapeshift_index,
+        existing_creature_ids=existing_creature_ids,
+        creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
+        creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS,
     )
     n_dsl = sum(len(v) for v in dsl_classes.values())
     progress(f"loaded source/classes/*.py DSL ({n_dsl} entries)")
     _merge_dsl_sources(spell_entries, talents, dsl_classes)
     if n_dsl:
+        creature_counts = {
+            **spell_tables.count_declared(dsl_classes),
+            **spell_tables.count_declared(dsl_classes, tables=spell_tables.CREATURE_TABLES),
+        }
         print(
             f"note: source/classes/*.py (DSL) contributed {len(dsl_classes['spells'])} "
             f"spell(s), {len(dsl_classes['talents'])} talent(s), {len(dsl_classes['tabs'])} "
             f"talent tab(s), {len(dsl_classes['skill_line_abilities'])} skill line "
             f"abilitie(s), {len(dsl_classes['trainer_spells'])} trainer spell grant(s), "
-            + ", ".join(f"{n} {name}" for name, n in spell_tables.count_declared(dsl_classes).items())
+            + ", ".join(f"{n} {name}" for name, n in creature_counts.items())
         )
     for warning in lint.check_linked_spell_key_collisions(
         spell_table_index.live_rows("spell_linked_spell") + dsl_classes["linked_spells"]
     ):
+        print(f"WARNING: {warning}")
+    # T1: creature_template/creature_template_model - never pruned (creature_template can't be
+    # DELETEd, and pruning only the model row would leave a creature without one), so this is
+    # entirely separate from the spell_table_index prune/render pass below - see
+    # lib/spell_tables.py's CREATURE_TABLES module docstring.
+    creature_blocks = spell_tables.render_creature_blocks(creature_table_index, dsl_classes)
+    for line in spell_tables.render_creature_retirement_report(creature_table_index, dsl_classes):
+        print(line)
+    known_model_display_ids = {
+        int(r["DisplayID"]) for r in trainer_state.load_table_rows("creature_model_info")
+    }
+    has_model = (
+        {int(r["CreatureID"]) for r in dsl_classes["creature_template_models"]}
+        | {int(k[0]) for k in creature_table_index.live_keys("creature_template_model")}
+    )
+    for warning in lint.check_creature_trigger_flag_with_model(dsl_classes["creature_templates"], has_model):
+        print(f"WARNING: {warning}")
+    for warning in lint.check_creature_model_display_id(
+        dsl_classes["creature_template_models"], known_model_display_ids
+    ):
+        print(f"WARNING: {warning}")
+    for warning in lint.check_creature_without_model(dsl_classes["creature_templates"], has_model):
         print(f"WARNING: {warning}")
     trainer_spell_rows = _trainer_spells_to_emit(dsl_classes["trainer_spells"], trainer_index)
     spell_table_blocks = spell_tables.render_blocks(spell_table_index, dsl_classes)
@@ -403,7 +441,10 @@ def main() -> int:
     out_path = PENDING_SQL_DIR / f"rev_{rev}.sql"
     wrote_sql = sql_out.emit_pending_sql(
         out_path, blocks, header,
-        extra_blocks=[*prune_blocks, *removal_blocks, trainer_spell_block, *spell_table_blocks],
+        extra_blocks=[
+            *prune_blocks, *removal_blocks, trainer_spell_block, *spell_table_blocks,
+            *creature_blocks,
+        ],
     )
     print(f"SQL: wrote {out_path.relative_to(REPO_ROOT)}" if wrote_sql else "SQL: nothing to emit")
     progress("SQL emission done")

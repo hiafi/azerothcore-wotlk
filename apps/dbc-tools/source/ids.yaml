@@ -84,3 +84,20 @@ item:
 spell_group:
   start: 1200
   end: 1299
+
+# creature_template/creature_template_model entries for a rework's own NPC (e.g. a talent's
+# summoned add) - lib/dsl/registry.py's creature_template(), T1 (.agents/plans/warlock-rework/
+# warlock-rework.T1-HANDOFF.md). Not picked in a vacuum: five live custom entries already sit in
+# this block - 300001, 300002, 300100, 300101 and 300102 (Tentacle of Madness,
+# data/sql/updates/db_world/2026_09_23_12.sql) - and the warlock-rework PLAN (§4.5) has already
+# pre-reserved 300140-300179 within it for the Affliction/Demonology/Destruction passes (Phantom
+# Singularity, Wild Imp/Imp Gang Boss/Dreadstalker/Doomguard/Infernal, Chaos Rift). The stock
+# client's own creature_template entries top out in the low 30000s (a 5-digit range - e.g. 30000
+# "Blizzard (1)", 30011 "Sigdis the Trader"), so a 6-digit 300000+ block stays clearly separate
+# from anything Blizzard ships while still covering every custom entry that predates this block.
+# 300999 leaves headroom well past the warlock reservation for future reworks. The hand-built NPC
+# tools (900011-900014, Healing Training Dummy et al.) sit outside this block on purpose - they're
+# never declared through creature_template(), so they don't need to fit inside a dbc-tools block.
+creature:
+  start: 300000
+  end: 300999

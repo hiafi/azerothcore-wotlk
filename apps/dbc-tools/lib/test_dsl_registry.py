@@ -686,5 +686,146 @@ class ShapeshiftFormTest(unittest.TestCase):
             )
 
 
+# T1 (.agents/plans/warlock-rework/warlock-rework.T1-HANDOFF.md): creature_template/
+# creature_template_model. Uses the real spell_tables.CREATURE_TEMPLATE_COLUMNS/_DEFAULTS (parsed
+# from the actual data/sql/base/db_world/creature_template.sql at import time - see
+# lib/spell_tables.py) rather than a synthetic column set, so these tests exercise the exact
+# column list/defaults generate.py itself wires in.
+from lib import spell_tables  # noqa: E402
+
+CREATURE_IDS_CFG = {"creature": {"start": 300000, "end": 300999}}
+
+
+def _load_creature(source: str, **kwargs) -> registry.Registry:
+    kwargs.setdefault("ids_cfg", CREATURE_IDS_CFG)
+    kwargs.setdefault("existing_creature_ids", set())
+    kwargs.setdefault("creature_columns", spell_tables.CREATURE_TEMPLATE_COLUMNS)
+    kwargs.setdefault("creature_defaults", spell_tables.CREATURE_TEMPLATE_DEFAULTS)
+    with tempfile.TemporaryDirectory() as d:
+        path = Path(d) / "warlock.py"
+        path.write_text(source)
+        return registry.load_class_file(path, **kwargs)
+
+
+class CreatureTemplateTest(unittest.TestCase):
+    def test_fresh_id_from_reserved_block_is_accepted(self):
+        reg = _load_creature(
+            'from lib.dsl.registry import creature_template\n'
+            'creature_template(300170, "Chaos Rift")\n'
+        )
+        (row,) = reg.creature_templates
+        self.assertEqual(row["entry"], 300170)
+        self.assertEqual(row["id"], 300170)
+        self.assertEqual(row["name"], "Chaos Rift")
+
+    def test_every_real_column_gets_a_value(self):
+        reg = _load_creature(
+            'from lib.dsl.registry import creature_template\n'
+            'creature_template(300170, "Chaos Rift")\n'
+        )
+        (row,) = reg.creature_templates
+        self.assertEqual(set(row) - {"id"}, set(spell_tables.CREATURE_TEMPLATE_COLUMNS))
+
+    def test_default_overrides_avoid_boot_corrected_schema_defaults(self):
+        # unit_class 0 / BaseAttackTime 0 / RangeAttackTime 0 are each the schema's own DEFAULT,
+        # but ObjectMgr::CheckCreatureTemplate rejects/rewrites them at every boot - see
+        # _CREATURE_TEMPLATE_DEFAULT_OVERRIDES's own comment in lib/dsl/registry.py.
+        reg = _load_creature(
+            'from lib.dsl.registry import creature_template\n'
+            'creature_template(300170, "Chaos Rift")\n'
+        )
+        (row,) = reg.creature_templates
+        self.assertEqual(row["unit_class"], 1)
+        self.assertEqual(row["BaseAttackTime"], 2000)
+        self.assertEqual(row["RangeAttackTime"], 2000)
+        self.assertEqual(row["VerifiedBuild"], 0)
+
+    def test_unspecified_columns_use_the_real_schema_default(self):
+        reg = _load_creature(
+            'from lib.dsl.registry import creature_template\n'
+            'creature_template(300170, "Chaos Rift")\n'
+        )
+        (row,) = reg.creature_templates
+        self.assertEqual(row["speed_walk"], 1)
+        self.assertEqual(row["speed_run"], 1.14286)
+        self.assertEqual(row["AIName"], "")
+        self.assertIsNone(row["subname"])
+
+    def test_explicit_column_overrides_the_default(self):
+        reg = _load_creature(
+            'from lib.dsl.registry import creature_template\n'
+            'creature_template(300170, "Chaos Rift", faction=35, unit_class=3)\n'
+        )
+        (row,) = reg.creature_templates
+        self.assertEqual(row["faction"], 35)
+        self.assertEqual(row["unit_class"], 3)  # explicit value beats the default-override table
+
+    def test_unknown_column_raises(self):
+        with self.assertRaises(KeyError):
+            _load_creature(
+                'from lib.dsl.registry import creature_template\n'
+                'creature_template(300170, "Chaos Rift", notAColumn=1)\n'
+            )
+
+    def test_entry_outside_block_and_not_live_raises(self):
+        with self.assertRaises(ValueError):
+            _load_creature(
+                'from lib.dsl.registry import creature_template\n'
+                'creature_template(68, "Not our entry")\n'
+            )
+
+    def test_live_entry_outside_block_is_accepted(self):
+        # Re-declaring a live custom entry (or overriding a stock one) to change it is legitimate,
+        # the same exception spell_group()'s _validate_group_id makes for a stock group id.
+        reg = _load_creature(
+            'from lib.dsl.registry import creature_template\n'
+            'creature_template(68, "Kobold Vermin")\n',
+            existing_creature_ids={68},
+        )
+        self.assertEqual(reg.creature_templates[0]["entry"], 68)
+
+    def test_missing_creature_columns_raises(self):
+        with self.assertRaises(RuntimeError):
+            _load_creature(
+                'from lib.dsl.registry import creature_template\n'
+                'creature_template(300170, "Chaos Rift")\n',
+                creature_columns=None,
+            )
+
+    def test_missing_existing_creature_ids_raises(self):
+        # An in-block entry never needs existing_creature_ids (the range check alone accepts it) -
+        # use an out-of-block entry, same as test_live_entry_outside_block_is_accepted's 68, to
+        # actually reach _require_creature_ids().
+        with self.assertRaises(RuntimeError):
+            _load_creature(
+                'from lib.dsl.registry import creature_template\n'
+                'creature_template(68, "Kobold Vermin")\n',
+                existing_creature_ids=None,
+            )
+
+
+class CreatureModelTest(unittest.TestCase):
+    def test_declares_row_with_friendly_defaults(self):
+        reg = _load_creature(
+            'from lib.dsl.registry import creature_model\ncreature_model(300170, 11686)\n'
+        )
+        (row,) = reg.creature_template_models
+        self.assertEqual(
+            (row["CreatureID"], row["Idx"], row["CreatureDisplayID"], row["DisplayScale"], row["Probability"]),
+            (300170, 0, 11686, 1.0, 1.0),
+        )
+        self.assertEqual(row["VerifiedBuild"], 0)
+        self.assertEqual(row["id"], "300170:0")
+
+    def test_second_model_uses_explicit_idx_scale_and_probability(self):
+        reg = _load_creature(
+            'from lib.dsl.registry import creature_model\n'
+            'creature_model(300170, 11687, scale=0.5, idx=1, probability=0.3)\n'
+        )
+        (row,) = reg.creature_template_models
+        self.assertEqual((row["Idx"], row["DisplayScale"], row["Probability"]), (1, 0.5, 0.3))
+        self.assertEqual(row["id"], "300170:1")
+
+
 if __name__ == "__main__":
     unittest.main()

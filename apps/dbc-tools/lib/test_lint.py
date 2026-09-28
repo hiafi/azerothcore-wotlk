@@ -262,5 +262,60 @@ class CheckZeroRangeUnitTargetTest(unittest.TestCase):
         self.assertEqual(len(lint.check_raw_override_typed_mismatch([entry], INDEX_TABLES)), 1)
 
 
+# T1 (.agents/plans/warlock-rework/warlock-rework.T1-HANDOFF.md): creature_template/
+# creature_template_model lints.
+def _creature(entry=300170, name="Chaos Rift", flags_extra=0, **overrides):
+    row = {"entry": entry, "name": name, "flags_extra": flags_extra}
+    row.update(overrides)
+    return row
+
+
+class CheckCreatureTriggerFlagWithModelTest(unittest.TestCase):
+    def test_trigger_flag_with_a_model_warns(self):
+        row = _creature(flags_extra=lint.CREATURE_FLAG_EXTRA_TRIGGER)
+        warnings = lint.check_creature_trigger_flag_with_model([row], has_model={300170})
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("300170", warnings[0])
+
+    def test_trigger_flag_with_no_model_does_not_warn(self):
+        # No model at all is check_creature_without_model's job, not this one's.
+        row = _creature(flags_extra=lint.CREATURE_FLAG_EXTRA_TRIGGER)
+        self.assertEqual(lint.check_creature_trigger_flag_with_model([row], has_model=set()), [])
+
+    def test_model_with_no_trigger_flag_does_not_warn(self):
+        row = _creature(flags_extra=0)
+        self.assertEqual(lint.check_creature_trigger_flag_with_model([row], has_model={300170}), [])
+
+    def test_other_flags_alongside_trigger_still_warn(self):
+        # 66 = CIVILIAN(2) | NO_XP(64) | TRIGGER(0x80=128) combined - the bit must be checked with
+        # a bitwise AND, not an exact-value match.
+        row = _creature(flags_extra=lint.CREATURE_FLAG_EXTRA_TRIGGER | 66)
+        self.assertEqual(len(lint.check_creature_trigger_flag_with_model([row], has_model={300170})), 1)
+
+
+class CheckCreatureModelDisplayIdTest(unittest.TestCase):
+    def test_unknown_display_id_warns(self):
+        row = {"CreatureID": 300170, "CreatureDisplayID": 99999999}
+        warnings = lint.check_creature_model_display_id([row], known_display_ids={15788})
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("99999999", warnings[0])
+
+    def test_known_display_id_does_not_warn(self):
+        row = {"CreatureID": 300170, "CreatureDisplayID": 15788}
+        self.assertEqual(lint.check_creature_model_display_id([row], known_display_ids={15788}), [])
+
+
+class CheckCreatureWithoutModelTest(unittest.TestCase):
+    def test_no_model_anywhere_warns(self):
+        row = _creature()
+        warnings = lint.check_creature_without_model([row], has_model=set())
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("300170", warnings[0])
+
+    def test_declared_model_does_not_warn(self):
+        row = _creature()
+        self.assertEqual(lint.check_creature_without_model([row], has_model={300170}), [])
+
+
 if __name__ == "__main__":
     unittest.main()

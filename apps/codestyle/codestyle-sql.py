@@ -182,20 +182,54 @@ def sql_check(file: io, file_path: str) -> None:
         error_handler = True
         results["SQL codestyle check"] = "Failed"
 
+# Custom: a `not_delete` table (creature_template especially) can never legally have a DELETE
+# right before its INSERT - that's the *other* rule in this same check, just below. The only safe
+# way to add/update a row there is an upsert (`INSERT ... ON DUPLICATE KEY UPDATE ...`, apps/dbc-
+# tools' creature_template()/generate.py - see data/sql/updates/db_world/2026_09_23_12.sql for the
+# hand-written precedent this generates instead of), which insert_delete_safety_check would
+# otherwise always reject for lacking a preceding DELETE. This narrow exception only fires for an
+# INSERT into a not_delete table whose own statement carries ON DUPLICATE KEY UPDATE before its
+# terminating ';' - a plain INSERT (into any table) still needs its DELETE as before.
+NOT_DELETE_UPSERT_TABLES = ["creature_template", "gameobject_template", "item_template", "quest_template"]
+INSERT_INTO_TABLE_RE = re.compile(r"INSERT\s+INTO\s+`([^`]+)`", re.IGNORECASE)
+
+
+def _statement_text_from(lines: list, start_index: int) -> str:
+    """Custom: joins `lines` (0-indexed) from `start_index` up to and including the line whose
+    statement-terminating ';' is found, so `insert_delete_safety_check` can peek forward past a
+    multi-line `INSERT ... VALUES (...)` to see whether `ON DUPLICATE KEY UPDATE` appears before
+    the statement actually ends - the keyword can be many lines below the `INSERT` line itself
+    once there's more than one VALUES tuple."""
+    buf = []
+    for line in lines[start_index:]:
+        buf.append(line)
+        if ";" in line:
+            break
+    return "".join(buf)
+
+
 def insert_delete_safety_check(file: io, file_path: str) -> None:
     global error_handler, results
     file.seek(0)  # Reset file pointer to the beginning
-    not_delete = ["creature_template", "gameobject_template", "item_template", "quest_template"]
+    lines = file.readlines()
+    not_delete = NOT_DELETE_UPSERT_TABLES
     check_failed = False
     previous_line = ""
 
     # Parse all the file
-    for line_number, line in enumerate(file, start = 1):
+    for line_number, line in enumerate(lines, start = 1):
         if line.strip().startswith("--"):
             continue
         if "INSERT" in line and "DELETE" not in previous_line:
-            print(f"❌ No DELETE keyword found before the INSERT in {file_path} at line {line_number}\nIf this error is intended, please notify a maintainer")
-            check_failed = True
+            table_match = INSERT_INTO_TABLE_RE.search(line)
+            # Custom: see NOT_DELETE_UPSERT_TABLES above.
+            is_upsert_into_not_delete = (
+                table_match is not None and table_match.group(1) in not_delete
+                and "ON DUPLICATE KEY UPDATE" in _statement_text_from(lines, line_number - 1)
+            )
+            if not is_upsert_into_not_delete:
+                print(f"❌ No DELETE keyword found before the INSERT in {file_path} at line {line_number}\nIf this error is intended, please notify a maintainer")
+                check_failed = True
         previous_line = line
         match = re.match(r"DELETE FROM\s+`([^`]+)`", line, re.IGNORECASE)
         if match:
