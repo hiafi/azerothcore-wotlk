@@ -5,7 +5,7 @@ Split from a single source/classes/warlock.py via split_class_file.py (.agents/p
 """
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, RANGE_SELF, School
-from lib.dsl.registry import bonus_coefficients, creature_model, creature_template, custom_attr, scripted_by, skill_line_ability, spell, spell_group, spell_group_rule, trained_by, unbind_script
+from lib.dsl.registry import bonus_coefficients, creature_model, creature_template, custom_attr, linked_spell, procs_on, scripted_by, shapeshift_form, skill_line_ability, spell, spell_group, spell_group_rule, trained_by, unbind_script, untrain
 from .warlock_trigger_spells import hellfire_effect_5857
 from . import _masks as m
 
@@ -124,6 +124,9 @@ curse_of_doom_603 = spell(
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 3 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
     raw_overrides={'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Causes $s1 Shadow damage after $d.', 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Curses the target with impending doom, causing $s1 Shadow damage after $d.  If the target yields experience or honor when it dies from this damage, a Doomguard will be summoned.  Cannot be cast on players.', 'EffectBonusMultiplier_1': 2.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 2, 'SpellClassSet': 5, 'SpellLevel': 60, 'SpellVisualID_1': 5019, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+# warlock-rework DEMONOLOGY §4.6: Curse of Doom removed, replaced by Bane of Doom 200825. No data
+# edit (the stock spell_warl_curse_of_doom -603 binding stays and is unreachable) - just untrain it.
+untrain(curse_of_doom_603, trainer_ids=[214])
 
 
 shadow_bolt_686 = spell(
@@ -144,7 +147,7 @@ shadow_bolt_686 = spell(
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60 (anchor rank 10 @ level 60); coefficient/mana_cost_pct from max rank; MaxLevel set to 80. PLAN A9 (druid-rework code review finding #9): cast_time_ms=2000, raw CastingTimeIndex (90, 1700ms) dropped.',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Sends a shadowy bolt at the enemy, causing $s1 Shadow damage.', 'EffectBonusMultiplier_1': 0.8569999933242798, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_1': 1, 'SpellClassSet': 5, 'SpellLevel': 1, 'SpellVisualID_1': 64, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
-scripted_by(shadow_bolt_686, 'spell_warl_shadow_bolt_affliction')
+scripted_by(shadow_bolt_686, 'spell_warl_shadow_bolt_affliction', 'spell_warl_shadow_bolt_demonology')
 
 
 demon_skin_687 = spell(
@@ -420,6 +423,7 @@ enslave_demon_1098 = spell(
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 30); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
     raw_overrides={'AttributesEx': 131073, 'AttributesEx2': 64, 'AttributesEx4': 536872960, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Enslaved.', 'BaseLevel': 30, 'CastingTimeIndex': 14, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Enslaves the target demon, up to level $m1, forcing it to do your bidding.  While enslaved, the time between the demon's attacks is increased by $s2% and its casting speed is slowed by $s3%.  Lasts up to $d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ReagentCount_1': 0, 'Reagent_1': 0, 'SpellClassMask_1': 2048, 'SpellClassSet': 5, 'SpellLevel': 30, 'SpellVisualID_1': 1266, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'TargetCreatureType': 4},
 )
+scripted_by(enslave_demon_1098, 'spell_warl_enslave_demon_potency')
 
 
 drain_soul_1120 = spell(
@@ -769,13 +773,14 @@ soul_fire_6353 = spell(
     mana_cost_pct=9,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=622, points_per_level=21.875, die_sides=161, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=437, points_per_level=14.338983050847457, die_sides=8, implicit_target_a=6),
     ],
     spell_icon_id=184,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 48); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 48, 'CastingTimeIndex': 171, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Burn the enemy's soul, causing $s1 Fire damage.", 'EffectBonusMultiplier_1': 1.149999976158142, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ReagentCount_1': 0, 'Reagent_1': 0, 'Speed': 24.0, 'SpellClassMask_2': 128, 'SpellClassSet': 5, 'SpellLevel': 48, 'SpellVisualID_1': 2253, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes="warlock-rework DEMONOLOGY §4.4/§0.1.7: learn level 48 -> 30, rebased on _scaling.sb_units(1.8, 30, 868, 875) (k=1.8 x Shadow Bolt). EffectBonusMultiplier_1 = 1.8 x SB_COEF (0.857) = 1.5426. Cast time/mana_cost_pct unchanged (3.3.5 values). trained_by replaces the old 48/14000 row below.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 30, 'CastingTimeIndex': 171, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Burn the enemy's soul, causing $s1 Fire damage.", 'EffectBonusMultiplier_1': 1.5426, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ReagentCount_1': 0, 'Reagent_1': 0, 'Speed': 24.0, 'SpellClassMask_2': 128, 'SpellClassSet': 5, 'SpellLevel': 30, 'SpellVisualID_1': 2253, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
-scripted_by(soul_fire_6353, 'spell_warl_soul_fire_destruction')
+scripted_by(soul_fire_6353, 'spell_warl_soul_fire_destruction', 'spell_warl_soul_fire_demonology')
+trained_by(soul_fire_6353, 214, 30, 6000)
 
 
 soothing_kiss_6360 = spell(
@@ -1480,9 +1485,38 @@ soul_link_19028 = spell(
         Effect(type=EffectType.DUMMY, implicit_target_a=5),
     ],
     spell_icon_id=173,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx2': 4, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When active, $25228s1% of all damage taken by the caster is taken by your Imp, Voidwalker, Succubus, Felhunter, Felguard, or enslaved demon instead.  That damage cannot be prevented. Lasts as long as the demon is active and controlled.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': 64, 'SpellClassSet': 5, 'SpellLevel': 20, 'SpellVisualID_1': 969, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'TargetCreatureType': 4},
+    notes='warlock-rework DEMONOLOGY §4.5: talent -> baseline at 20 (BaseLevel/SpellLevel already 20 from stock, no data change there). trained_by/skill_line_ability(11196 override) added below; tooltip updated to drop the per-demon list and "cannot be prevented" clause (B14-era wording no longer applies) per §4.5.',
+    raw_overrides={'AttributesEx2': 4, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When active, 20% of all damage taken by the caster is taken by your summoned or enslaved demon instead. Lasts as long as the demon is active and controlled.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': 64, 'SpellClassSet': 5, 'SpellLevel': 20, 'SpellVisualID_1': 969, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'TargetCreatureType': 4},
 )
+trained_by(soul_link_19028, 214, 20, 2000)
+skill_line_ability(id=11196, skill_line=354, spell_id=19028, class_mask=256)
+scripted_by(25228, 'spell_warl_soul_link_split')
+
+
+metamorphosis_47241 = spell(
+    id=47241,
+    name='Metamorphosis',
+    school=School.NORMAL,
+    attributes=16,
+    cast_time_ms=0,
+    cooldown_ms=180000,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=20000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.MOD_SHAPESHIFT, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=149, implicit_target_a=1, apply_aura=AuraType.MOD_BASE_RESISTANCE_PCT, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=127),
+    ],
+    spell_icon_id=3314,
+    notes="warlock-rework DEMONOLOGY §5.2: duration 30000 -> 20000; eff1 armor 599 -> 149 (+150%); eff2 damage 19 -> 14 (+15%; Demonic Form's +2/4/6% is added to this effect's live amount by spell_warl_metamorphosis_demo's DoEffectCalcAmount EFFECT_2, §7.13); ShapeshiftExclude |= 0x400000 (form 23 Dark Apotheosis's stance bit) so Metamorphosis can't be cast while in Dark Apotheosis (enforced here because 200836's aura-275 mask deliberately leaves out 47241's own d3 0x2000 bit, §0.2.3). linked to 200837 (SB instant/Demonic Form/Nemesis capstone) and 200838 (Demonic Bulwark form) below.",
+    raw_overrides={'AttributesEx': 131072, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 67108864, 'EffectSpellClassMaskB_2': 16384, 'SpellVisualID_1': 12118, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': "You transform into a Demon for $d. While transformed, your Shadow Bolt is instant and extends your Bane of Doom on the target by 3 sec, to at most 30 sec remaining, and your Hand of Gul'dan also damages all other enemies within 8 yards of the target. You may use Immolation Aura and Demonic Leap, and all of your other warlock spells remain usable. Increases your armor from cloth and leather items by $47241s2% and your damage by $47241s3%, reduces the chance you are critically hit by melee attacks by 6%, and reduces the duration of stun and snare effects by $54817s1%. Your demons deal 15% more damage while you are transformed. Cannot be used with Dark Apotheosis.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Demon Form.\nArmor contribution from items increased by $47241s2%.\nChance to be critically hit by melee reduced by 6%.\nDamage increased by $47241s3%.\nStun and snare duration reduced by $54817s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 5, 'SpellClassMask_3': 8192, 'ShapeshiftExclude': 4194304, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+)
+scripted_by(metamorphosis_47241, 'spell_warl_metamorphosis_demo')
+linked_spell(47241, 200837, type=2)
+linked_spell(47241, 200838, type=2)
 
 
 summon_felguard_30146 = spell(
@@ -1501,8 +1535,8 @@ summon_felguard_30146 = spell(
         Effect(type=56, implicit_target_a=32, misc_value=17252),
     ],
     spell_icon_id=1983,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 131073, 'AttributesEx5': 2, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 50, 'CastingTimeIndex': 7, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Felguard under the command of the Warlock.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Summon', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'ReagentCount_1': 0, 'Reagent_1': 0, 'SpellClassMask_1': 536870912, 'SpellClassSet': 5, 'SpellLevel': 50, 'SpellVisualID_1': 8360, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='warlock-rework DEMONOLOGY §6 (2,1): BaseLevel/SpellLevel 50 -> 20 (B3, no scaling values to change).',
+    raw_overrides={'AttributesEx': 131073, 'AttributesEx5': 2, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 7, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Felguard under the command of the Warlock.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Summon', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'ReagentCount_1': 0, 'Reagent_1': 0, 'SpellClassMask_1': 536870912, 'SpellClassSet': 5, 'SpellLevel': 20, 'SpellVisualID_1': 8360, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1510,9 +1544,9 @@ demonic_empowerment_47193 = spell(
     id=47193,
     name='Demonic Empowerment',
     school=School.SHADOW,
-    attributes=537200640,
+    attributes=537135104,
     cast_time_ms=0,
-    cooldown_ms=60000,
+    cooldown_ms=45000,
     category_cooldown_ms=0,
     mana_cost=0,
     mana_cost_pct=6,
@@ -1521,9 +1555,11 @@ demonic_empowerment_47193 = spell(
         Effect(type=77, base_points=-1, implicit_target_a=5),
     ],
     spell_icon_id=3174,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 1073741824, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Empowered.', 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Grants the Warlock's summoned demon Empowerment.\r\n\r\nImp - Increases the Imp's spell critical strike chance by $54444s1% for $54444d.\r\n\r\nVoidwalker - Increases the Voidwalker's health by $54443s2%, and its threat generated from spells and attacks by $54443s2% for $54443d.\r\n\r\nSuccubus - Instantly vanishes, causing the Succubus to go into an improved Invisibility state. The vanish effect removes all stuns, snares and movement impairing effects from the Succubus.\r\n\r\nFelhunter - Dispels all magical effects from the Felhunter.\r\n\r\nFelguard - Increases the Felguard's attack speed by $54508s1% and breaks all stun, snare and movement impairing effects and makes your Felguard immune to them for $54508d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'SpellClassMask_3': 4160, 'SpellClassSet': 5, 'SpellLevel': 30, 'SpellVisualID_1': 13422, 'TargetCreatureType': 4},
+    notes='warlock-rework DEMONOLOGY §6 (8,1): moved (6,1)->(8,1). cooldown_ms 60000 -> 45000 (>=30s -> Cooldown Haste eligible). attributes: dropped NOT_SHAPESHIFTED (0x10000) so it is usable in Metamorphosis/Dark Apotheosis (§11 Q2). cost 6% kept; SpellLevel 30 kept. Voidwalker +20% health needs the custom BP (spell_warl_demonic_empowerment_demo, §7.10); 54443/54508 unchanged (stock 20s/15s already match, §5.3).',
+    raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 1073741824, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Empowered.', 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Empowers your summoned demon and sacrifices up to 2 of your Wild Imps, granting you one Molten Core for each. Voidwalker: Health and threat generation increased by 20% for 20 sec. Felguard: Attack speed increased by 20% for 15 sec, removes all stun, snare and movement impairing effects, and grants immunity to them for the duration.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'SpellClassMask_3': 4160, 'SpellClassSet': 5, 'SpellLevel': 30, 'SpellVisualID_1': 13422, 'TargetCreatureType': 4},
 )
+scripted_by(demonic_empowerment_47193, 'spell_warl_demonic_empowerment_demo')
+unbind_script(47193, 'spell_warl_demonic_empowerment')
 
 
 
@@ -1955,3 +1991,318 @@ creature_template(
     ScriptName='npc_warl_chaos_rift',
 )
 creature_model(300170, display_id=30039, scale=0.4)
+
+
+immolation_aura_50589 = spell(
+    id=50589,
+    name='Immolation Aura',
+    school=School.FIRE,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=30000,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=64,
+    range_yards=0.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PERIODIC_TRIGGER_SPELL, amplitude=1000, trigger_spell=50590),
+        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.MECHANIC_IMMUNITY, misc_value=16),
+    ],
+    spell_icon_id=937,
+    notes='warlock-rework DEMONOLOGY §5.2: ShapeshiftMask 0x200000 -> 0x600000 (Metamorphosis + Dark Apotheosis, form 22 | form 23 bits); BaseLevel/SpellLevel 60 -> 10 (B3). Cost/30s CD/15s duration kept. AttributesEx5 0x2000 kept (haste adds pulses). Tick 50590 edited separately in warlock_trigger_spells.py (§4.0/§7.13).',
+    raw_overrides={'AttributesEx': 98304, 'AttributesEx5': 8192, 'ShapeshiftMask': 6291456, 'CastingTimeIndex': 1, 'ChannelInterruptFlags': 31788, 'ProcChance': 101, 'BaseLevel': 10, 'SpellLevel': 10, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectDieSides_2': 1, 'EffectBasePoints_2': -1, 'SpellVisualID_1': 12038, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Demon', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Ignites the area surrounds you, causing $50590s1 Fire damage to all nearby enemies every $50589t1 sec.  Lasts $50589d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Damages all nearby enemies.', 'AuraDescription_Lang_Mask': 16712190, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'SpellClassSet': 5, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+linked_spell(-200835, -50589, type=0)
+
+
+challenging_howl_59671 = spell(
+    id=59671,
+    name='Challenging Howl',
+    school=School.NORMAL,
+    mechanic=16,
+    attributes=65552,
+    cast_time_ms=0,
+    cooldown_ms=180000,
+    category_cooldown_ms=0,
+    power_type=PowerType.RAGE,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=6000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=22, implicit_target_b=15, apply_aura=AuraType.MOD_TAUNT, radius_yards=10.0),
+        Effect(type=114, die_sides=0, implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
+    ],
+    spell_icon_id=2024,
+    notes='warlock-rework DEMONOLOGY §5.2: ShapeshiftMask 0x200000 -> 0x400000 (Dark Apotheosis only, form 23 bit); cooldown_ms 15000 -> 180000; 10 yd / 6 s kept.',
+    raw_overrides={'AttributesEx2': 67108864, 'AttributesEx4': 2048, 'AttributesEx6': 8388608, 'ShapeshiftMask': 4194304, 'CastingTimeIndex': 1, 'ProcChance': 101, 'BaseLevel': 1, 'SpellLevel': 1, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 209, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Demon', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Taunts all enemies within $a1 yards for $d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Taunted.', 'AuraDescription_Lang_Mask': 16712190, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'SpellClassSet': 5, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+demon_charge_54785 = spell(
+    id=54785,
+    name='Demon Charge',
+    school=School.NORMAL,
+    attributes=327696,
+    category=1219,
+    cast_time_ms=0,
+    cooldown_ms=25000,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=25.0,
+    effects=[
+        Effect(type=EffectType.CHARGE, die_sides=0, implicit_target_a=6),
+        Effect(type=EffectType.TRIGGER_SPELL, base_points=-1, implicit_target_a=6, trigger_spell=60995),
+    ],
+    spell_icon_id=129,
+    notes='warlock-rework DEMONOLOGY §5.2: ShapeshiftMask 0x200000 -> 0x400000 (Dark Apotheosis only); RecoveryTime (cooldown_ms) 45000 -> 25000; RangeIndex 95 (8-25 yd) kept; BaseLevel/SpellLevel 60 -> 10.',
+    raw_overrides={'AttributesEx': 32768, 'AttributesEx6': 8389696, 'AttributesEx7': 262144, 'ShapeshiftMask': 4194304, 'CastingTimeIndex': 1, 'ProcChance': 101, 'BaseLevel': 10, 'SpellLevel': 10, 'DurationIndex': 0, 'RangeIndex': 95, 'EquippedItemClass': -1, 'EffectDieSides_3': 1, 'EffectBasePoints_3': -1, 'SpellVisualID_1': 29, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Demon', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Charge an enemy, stunning it for $60995d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'DefenseType': 1, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+demonic_leap_54786 = spell(
+    id=54786,
+    name='Demonic Leap',
+    school=School.SHADOW,
+    attributes=327696,
+    cast_time_ms=0,
+    cooldown_ms=30000,
+    category_cooldown_ms=0,
+    range_yards=25.0,
+    duration_ms=2000,
+    effects=[
+        Effect(type=42, implicit_target_a=87, misc_value=50),
+    ],
+    spell_icon_id=129,
+    notes="warlock-rework DEMONOLOGY §4.7 (B11): stock Demon Leap 54786 retuned into 'Demonic Leap' - eff0 stun+eff1 damage removed, replaced by a single JUMP_DEST (42) effect, implicit_target_a=87 (DEST_DEST), misc_value=50 (min arc 5 yd, Spell::CalculateJumpSpeeds). SpellClassSet 5 / SpellClassMask_3 = DEMONIC_LEAP (Nemesis). Stances 0x200000 (Metamorphosis only). Category/CategoryRecoveryTime 44/45000 -> 0/0; cooldown_ms 30000 (>=30s -> Cooldown Haste eligible). No cost (power_type dropped). BaseLevel/SpellLevel 60 -> 40 (Metamorphosis row 6). SLA 30481 (stock 54786 had none).",
+    raw_overrides={'AttributesEx2': 4, 'Targets': 64, 'CastingTimeIndex': 1, 'ProcChance': 101, 'BaseLevel': 40, 'SpellLevel': 40, 'Speed': 28.0, 'EquippedItemClass': -1, 'SpellVisualID_1': 12033, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Leap to the target location. Metamorphosis only.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'DefenseType': 1, 'PreventionType': 2, 'ShapeshiftMask': 2097152, 'SpellClassSet': 5, 'SpellClassMask_3': m.DEMONIC_LEAP, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+skill_line_ability(id=30481, skill_line=354, spell_id=54786, class_mask=256)
+
+
+dark_apotheosis_200835 = spell(
+    id=200835,
+    name='Dark Apotheosis',
+    school=School.NORMAL,
+    attributes=16,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.MOD_SHAPESHIFT, misc_value=23),
+        Effect(type=EffectType.APPLY_AURA, base_points=199, implicit_target_a=1, apply_aura=AuraType.MOD_BASE_RESISTANCE_PCT, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=299, implicit_target_a=1, apply_aura=AuraType.MOD_THREAT, misc_value=127),
+    ],
+    spell_icon_id=545,
+    notes='warlock-rework DEMONOLOGY §5.2: toggle form (form 23), learned by talent learner 200863. ShapeshiftExclude=0x200000 (form 22 Metamorphosis bit - cannot be cast while in Metamorphosis, §11 Q22). linked to 200836 (passive), 200838 (Demonic Bulwark form) and crit-immunity 200000, all type 2; the Immolation Aura twin-removal link (-200835 -> -50589) is declared on 50589 itself above.',
+    raw_overrides={'AttributesEx': 131072, 'ShapeshiftExclude': 2097152, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Shifts you into a demonic form until cancelled. While in this form you are immune to critical strikes from melee and ranged attacks, your armor from cloth and leather items is increased by $s2%, your threat generation is increased by $s3%, and your damage done is reduced by 20%. Grants Immolation Aura, Demon Charge, Demonic Taunt and Challenging Howl. Cannot be used with Metamorphosis.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Demonic form. Immune to critical strikes. Armor and threat increased, damage done reduced.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+scripted_by(dark_apotheosis_200835, 'spell_warl_dark_apotheosis')
+skill_line_ability(id=30475, skill_line=354, spell_id=200835, class_mask=256)
+linked_spell(200835, 200836, type=2)
+linked_spell(200835, 200838, type=2)
+linked_spell(200835, 200000, type=2)
+
+
+implosion_200827 = spell(
+    id=200827,
+    name='Implosion',
+    school=School.SHADOW | School.FIRE,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=6000,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=8,
+    range_yards=40.0,
+    effects=[
+        Effect(type=EffectType.DUMMY, implicit_target_a=6),
+    ],
+    spell_icon_id=2356,
+    notes="warlock-rework DEMONOLOGY §6 (4,0): rank spell of new talent 1281 (repurposed from Mana Feed, same cell). CheckCast fails with no Wild Imps (spell_warl_implosion). eff0 DUMMY is the OnHit trigger marker read by the script (imps leap and explode, §7.2/§7.3). No NOT_SHAPESHIFTED (usable in Metamorphosis/Dark Apotheosis). SpellClassSet 5, no family bits (nothing needs to scope a modifier onto it).",
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Commands all of your Wild Imps to leap at the target and explode, each dealing $200828s1 Shadowflame damage to all enemies within 8 yards. The damage of each imp does not depend on its remaining energy. Implosion counts as damage done by your demons.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'DefenseType': 1, 'PreventionType': 1, 'InterruptFlags': 15, 'FacingCasterFlags': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+scripted_by(implosion_200827, 'spell_warl_implosion')
+
+
+call_dreadstalkers_200829 = spell(
+    id=200829,
+    name='Call Dreadstalkers',
+    school=School.SHADOW,
+    attributes=0,
+    cast_time_ms=2000,
+    cooldown_ms=20000,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=10,
+    range_yards=40.0,
+    duration_ms=13000,
+    effects=[
+        Effect(type=EffectType.SUMMON, implicit_target_a=32, misc_value=300152),
+        Effect(type=EffectType.SUMMON, implicit_target_a=32, misc_value=300152),
+        Effect(type=EffectType.DUMMY, implicit_target_a=6),
+    ],
+    spell_icon_id=4062,
+    notes='warlock-rework DEMONOLOGY §5.1/§6 (4,1): rank spell of new talent 60083. Two SUMMON effects (props 1021 always summons exactly 1 per effect, SpellEffects.cpp:2501-2522) -> two Dreadstalkers, target 32 (DEST_CASTER_SUMMON, Summon Felguard pattern). eff2 DUMMY target 6 requires an enemy target. Cooldown Haste allow list already widened by WP-0 (Player.cpp:160). No NOT_SHAPESHIFTED. SpellClassSet 5, no family bits.',
+    raw_overrides={'ProcChance': 101, 'EquippedItemClass': -1, 'EffectMiscValueB_1': 1021, 'EffectMiscValueB_2': 1021, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': "Summons 2 Dreadstalkers to attack your target for 12 sec, each biting for $200830s1 Shadow damage every 2 sec. When they depart, you gain Molten Core. Molten Core: Your next Soul Fire is instant. Stacks up to 4 times. Lasts 30 sec.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'DefenseType': 1, 'PreventionType': 1, 'InterruptFlags': 15, 'FacingCasterFlags': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+scripted_by(call_dreadstalkers_200829, 'spell_warl_call_dreadstalkers')
+
+
+summon_doomguard_200831 = spell(
+    id=200831,
+    name='Summon Doomguard',
+    school=School.SHADOW,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=120000,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=20,
+    range_yards=0.0,
+    duration_ms=26000,
+    effects=[
+        Effect(type=EffectType.SUMMON, implicit_target_a=32, misc_value=300153),
+    ],
+    spell_icon_id=99,
+    notes='warlock-rework DEMONOLOGY §5.1: learned by Legion\'s Call 200905 (not the trainer). SpellClassSet 5, SpellClassMask_3 = SUMMON_DOOMGUARD (Nemesis). No NOT_SHAPESHIFTED. props 1021, target 32 (DEST_CASTER_SUMMON).',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectMiscValueB_1': 1021, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Doomguard to fight for you for 26 sec, casting Doom Bolt at your target.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_3': m.SUMMON_DOOMGUARD, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'DefenseType': 1, 'PreventionType': 1, 'InterruptFlags': 15, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+skill_line_ability(id=30478, skill_line=354, spell_id=200831, class_mask=256)
+
+
+summon_infernal_200833 = spell(
+    id=200833,
+    name='Summon Infernal',
+    school=School.FIRE,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=120000,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=20,
+    range_yards=30.0,
+    duration_ms=26000,
+    effects=[
+        Effect(type=EffectType.SUMMON, implicit_target_a=87, misc_value=300154),
+    ],
+    spell_icon_id=460,
+    notes='warlock-rework DEMONOLOGY §5.1/§0.2.5: learned by Legion\'s Call 200905. Ground-target (Targets 0x40, implicit_target_a=87 DEST_DEST). No impact damage/stun (spec §5). SpellClassSet 5, SpellClassMask_3 = SUMMON_INFERNAL (Nemesis, Destro Cataclysm mask-only join). Separate cooldown category from Doomguard (no shared category).',
+    raw_overrides={'Targets': 64, 'CastingTimeIndex': 1, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectMiscValueB_1': 1021, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons an Infernal to fight for you for 26 sec, burning nearby enemies with Immolation Aura.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_3': m.SUMMON_INFERNAL, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'DefenseType': 1, 'PreventionType': 1, 'InterruptFlags': 15, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+skill_line_ability(id=30479, skill_line=354, spell_id=200833, class_mask=256)
+
+
+demonic_taunt_200839 = spell(
+    id=200839,
+    name='Demonic Taunt',
+    school=School.SHADOW,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=8000,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=3,
+    range_yards=30.0,
+    duration_ms=3000,
+    effects=[
+        Effect(type=EffectType.THREAT, implicit_target_a=6),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=AuraType.MOD_TAUNT),
+    ],
+    spell_icon_id=150,
+    notes='warlock-rework DEMONOLOGY §5.2: Dark Apotheosis only (ShapeshiftMask=0x400000, form 23 bit). eff0 ATTACK_ME (114) target 6, eff1 MOD_TAUNT target 6. Learned by carrier 200864.',
+    raw_overrides={'ShapeshiftMask': 4194304, 'CastingTimeIndex': 1, 'ProcChance': 101, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Taunts the target to attack you for $d. Dark Apotheosis only.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Taunted.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'DefenseType': 1, 'PreventionType': 1, 'InterruptFlags': 15, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+skill_line_ability(id=30480, skill_line=354, spell_id=200839, class_mask=256)
+
+
+hand_of_guldan_200820 = spell(
+    id=200820,
+    name="Hand of Gul'dan",
+    school=School.SHADOW | School.FIRE,
+    attributes=65536,
+    cast_time_ms=1500,
+    cooldown_ms=12000,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=10,
+    range_yards=40.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=54, points_per_level=5.177966101694915, die_sides=4, implicit_target_a=6),
+        Effect(type=EffectType.DUMMY, base_points=2, implicit_target_a=6),
+    ],
+    spell_icon_id=2340,
+    notes="warlock-rework DEMONOLOGY §4.1: baseline castable, learn 10 (B20). Shadowflame (School.SHADOW|FIRE=36). eff0 SCHOOL_DAMAGE via _scaling.sb_units(0.65, 10, 313, 316) (@60 313-316, @80 417-420). eff1 DUMMY stored 2 (= 3 Wild Imps, $s2, live=stored+1 via default die_sides=1). NOT_SHAPESHIFTED (Metamorphosis/Dark Apotheosis admit it via their own aura-275 masks). Icon fallback 2340 (mined 90160 not built this pass, optional per §2.5).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Calls down a demonic meteor on the target, dealing $s1 Shadowflame damage and summoning $s2 Wild Imps. While you are in Metamorphosis, it also deals $200821s1 Shadowflame damage to all other enemies within 8 yards of the target. Wild Imps cast Fel Firebolt at your target and last up to 60 sec.", 'EffectBonusMultiplier_1': 0.5571, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.HAND_OF_GULDAN, 'SpellClassSet': 5, 'BaseLevel': 10, 'SpellLevel': 10, 'Speed': 0.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+)
+trained_by(hand_of_guldan_200820, 214, 10, 600)
+trained_by(hand_of_guldan_200820, 215, 10, 600)
+skill_line_ability(id=30472, skill_line=354, spell_id=200820, class_mask=256)
+scripted_by(hand_of_guldan_200820, 'spell_warl_hand_of_guldan')
+
+
+bane_of_doom_200825 = spell(
+    id=200825,
+    name='Bane of Doom',
+    school=School.SHADOW,
+    dispel=DispelType.CURSE,
+    attributes=65536,
+    category=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=15,
+    range_yards=30.0,
+    duration_ms=30000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=131, points_per_level=6.372881355932203, die_sides=4, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=6000),
+    ],
+    spell_icon_id=91,
+    notes="warlock-rework DEMONOLOGY §4.2 (B14/B15): baseline castable, learn 20. Bane, not a curse-slot curse - dispel=CURSE, category 0 (not stock Curse of Doom's 1179, C27), joins spell_group 1202 (bane slot) below, Warlock::IsBane extended by WP-0. eff0 via _scaling.sb_units(0.80, 20, 386, 389) (@60 386-389, @80 514-517), amplitude 6000 (haste adds ticks automatically). AttributesEx6 copied from Curse of Agony/Doom's.",
+    raw_overrides={'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Suffering Shadow damage over time.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Inflicts impending doom on the target, causing $o1 Shadow damage over $d. Bane of Doom does not occupy your curse slot and can be active on several targets at once. Only one Bane per target.', 'EffectBonusMultiplier_1': 0.6856, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.BANE_OF_DOOM, 'SpellClassSet': 5, 'SpellLevel': 20, 'SpellVisualID_1': 5019, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+)
+trained_by(bane_of_doom_200825, 214, 20, 2000)
+skill_line_ability(id=30473, skill_line=354, spell_id=200825, class_mask=256)
+spell_group(1202, bane_of_doom_200825)
+
+
+unending_resolve_200826 = spell(
+    id=200826,
+    name='Unending Resolve',
+    school=School.SHADOW,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=180000,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=RANGE_SELF,
+    duration_ms=8000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-41, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.MECHANIC_IMMUNITY, misc_value=9),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.MECHANIC_IMMUNITY, misc_value=26),
+    ],
+    spell_icon_id=1981,
+    notes='warlock-rework DEMONOLOGY §4.3: baseline castable, learn 25. Off the GCD (StartRecoveryCategory/Time 0/0). No NOT_SHAPESHIFTED (usable in both forms). cooldown_ms 180000 (>=30s, Cooldown Haste eligible). eff0 -41 stored (-40% damage taken live). eff1/eff2 silence/interrupt immunity (mechanic 9/26).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Damage taken reduced by 40%. Immune to silence and interrupt effects.', 'BaseLevel': 25, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Hardens your soul, reducing all damage taken by 40% and making you immune to interrupt and silence effects for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.UNENDING_RESOLVE, 'SpellClassSet': 5, 'SpellLevel': 25, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
+)
+trained_by(unending_resolve_200826, 214, 25, 3000)
+skill_line_ability(id=30474, skill_line=354, spell_id=200826, class_mask=256)
+scripted_by(unending_resolve_200826, 'spell_warl_unending_resolve')
+
+
+# shapeshift_form(23) server-side override row (WP-T table) - matches Metamorphosis's live flags
+# 0xd8 (0x80 CAN_USE_ITEMS | 0x40 CAN_USE_EQUIPPED_ITEMS | 0x8 CAN_NPC_INTERACT | 0x10), per the
+# "known gap" note (DEMONOLOGY-WP-BRIEF): client-side SpellShapeshiftForm.dbc row 23 is NOT shipped
+# in the patch this pass (shapeshift_form() is server-only, registry.py - no client patch is
+# produced for this table); this is a playtest-time verification item (§11 Q26).
+shapeshift_form(23, flags1=0xd8)

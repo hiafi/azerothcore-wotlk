@@ -16,11 +16,14 @@
  */
 
 #include "WarlockMechanics.h"
+#include "CreatureAI.h"
 #include "DBCStores.h"
 #include "GameTime.h"
 #include "ObjectAccessor.h"
 #include "ObjectGuid.h"
+#include "Pet.h"
 #include "Player.h"
+#include "Random.h"
 #include "Spell.h"
 #include "SpellAuraDefines.h"
 #include "SpellAuraEffects.h"
@@ -31,6 +34,7 @@
 #include "Unit.h"
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <vector>
 
 /*
@@ -223,6 +227,60 @@ namespace
             ScheduleHellstormTick(playerGuid, generation, amplitude, 2 * amplitude);
         }, Milliseconds(offsetMs));
     }
+
+    // ------------------------------------------------------------------
+    // Demonology pass (S3) additions (DEMONOLOGY.md §7 for the per-clause mapping, §3.4 for the
+    // "WarlockMechanics additions" list). Frozen signatures - see the header for the contract.
+    // ------------------------------------------------------------------
+
+    // Main-pet creature entries (DEMONOLOGY.md §7.1's "Who gets what" table) - not warlock-specific
+    // ids, so not part of the frozen header; duplicated here the same way this file's own
+    // SPELL_SOUL_LEECH_R1/etc. (Destruction section above) duplicate cross-spec/stock ids rather
+    // than widening WarlockMechanics.h.
+    constexpr uint32 NPC_DEMON_IMP = 416;
+    constexpr uint32 NPC_DEMON_VOIDWALKER = 1860;
+    constexpr uint32 NPC_DEMON_SUCCUBUS = 1863;
+    constexpr uint32 NPC_DEMON_FELHUNTER = 417;
+    constexpr uint32 NPC_DEMON_FELGUARD = 17252;
+
+    // Highest known rank's aura-effect amount among a talent's own ranks (ranks are mutually
+    // exclusive), 0 if the talent isn't taken at all. Generalizes AFFLICTION's GetKnownLeechPct
+    // (above) to read a live AuraEffect::GetAmount() instead of a hard-coded float, for every
+    // Demonology "read live from the rank spell id" lookup (SHARED §4 convention; DEMONOLOGY.md §6
+    // header/§7.1).
+    template <std::size_t N>
+    int32 GetHighestRankAmount(Unit const* unit, std::array<uint32, N> const& ranksLowToHigh, uint8 effIndex)
+    {
+        if (!unit)
+            return 0;
+
+        for (std::size_t i = ranksLowToHigh.size(); i-- > 0;)
+            if (AuraEffect const* eff = unit->GetAuraEffect(ranksLowToHigh[i], effIndex))
+                return eff->GetAmount();
+        return 0;
+    }
+
+    // 1-based rank of the highest currently-known spell in the array, 0 if none are known.
+    template <std::size_t N>
+    uint8 GetHighestKnownRank(Unit const* unit, std::array<uint32, N> const& ranksLowToHigh)
+    {
+        if (!unit)
+            return 0;
+
+        for (std::size_t i = ranksLowToHigh.size(); i-- > 0;)
+            if (unit->HasAura(ranksLowToHigh[i]))
+                return uint8(i + 1);
+        return 0;
+    }
+
+    // Per-player Demonology state (Priest tentacle-map precedent, PriestMechanics.cpp) - cleared by
+    // ClearDemonologyPlayerState on OnPlayerLogout.
+    std::unordered_map<ObjectGuid, Warlock::PendingSummon> pendingSummonByPlayer;
+    std::unordered_map<ObjectGuid, uint32> dreadstalkerTokenCounterByPlayer;
+    // pairToken -> number of the pair's two Dreadstalkers that have departed so far (§7.4: "the
+    // second stalker of the pair is a no-op" - Molten Core grants only on the *first* departure of
+    // each token, and the entry is dropped once both have departed).
+    std::unordered_map<ObjectGuid, std::unordered_map<uint32, uint8>> dreadstalkerDepartureCountByPlayer;
 }
 
 namespace Warlock
@@ -235,11 +293,10 @@ namespace Warlock
         if (!spellInfo)
             return false;
 
-        // Demonology adds Bane of Doom's id here in S3 (PLAN B14) - a short id list rather than a
-        // single-id compare so that pass only needs one more `case`.
         switch (spellInfo->Id)
         {
             case SPELL_BANE_OF_AGONY:
+            case SPELL_BANE_OF_DOOM:
                 return true;
             default:
                 return false;
@@ -796,5 +853,535 @@ namespace Warlock
         // No-op when Chaos Bolt isn't currently cooling down (ModifySpellCooldown, Player.cpp:11391,
         // returns early when the spell has no cooldown entry to modify).
         player->ModifySpellCooldown(SPELL_CHAOS_BOLT, -int32(ms));
+    }
+
+    // ------------------------------------------------------------------
+    // Demonology pass (S3) additions (DEMONOLOGY.md §7 for the per-clause mapping, §3.4 for the
+    // "WarlockMechanics additions" list). Frozen signatures - see the header for the contract.
+    // ------------------------------------------------------------------
+    bool IsInMetamorphosis(Unit const* unit)
+    {
+        return unit && unit->GetShapeshiftForm() == FORM_METAMORPHOSIS;
+    }
+
+    bool IsInDarkApotheosis(Unit const* unit)
+    {
+        return unit && unit->GetShapeshiftForm() == FORM_DARK_APOTHEOSIS;
+    }
+
+    DemonKind GetDemonKind(Unit const* demon, Player const* owner)
+    {
+        if (!demon || !owner)
+            return DemonKind::None;
+
+        // Enslave Demon (1098) charms an arbitrary demon - checked before the entry switch so an
+        // enslaved copy of e.g. an Imp-shaped demon isn't mistaken for the warlock's own Imp pet.
+        if (demon->GetCharmerGUID() == owner->GetGUID())
+            return DemonKind::Enslaved;
+
+        switch (demon->GetEntry())
+        {
+            case NPC_DEMON_IMP: return DemonKind::Imp;
+            case NPC_DEMON_VOIDWALKER: return DemonKind::Voidwalker;
+            case NPC_DEMON_SUCCUBUS: return DemonKind::Succubus;
+            case NPC_DEMON_FELHUNTER: return DemonKind::Felhunter;
+            case NPC_DEMON_FELGUARD: return DemonKind::Felguard;
+            case NPC_WILD_IMP: return DemonKind::WildImp;
+            case NPC_IMP_GANG_BOSS: return DemonKind::ImpGangBoss;
+            case NPC_DREADSTALKER: return DemonKind::Dreadstalker;
+            case NPC_DOOMGUARD_GUARDIAN: return DemonKind::Doomguard;
+            case NPC_INFERNAL_GUARDIAN: return DemonKind::Infernal;
+            default: return DemonKind::None;
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Wild Imps (§7.2)
+    // ------------------------------------------------------------------
+    std::vector<Creature*> GetWildImps(Player* owner)
+    {
+        std::vector<Creature*> imps;
+        if (!owner)
+            return imps;
+
+        for (Unit* controlled : owner->m_Controlled)
+        {
+            if (controlled->GetEntry() != NPC_WILD_IMP && controlled->GetEntry() != NPC_IMP_GANG_BOSS)
+                continue;
+
+            Creature* creature = controlled->ToCreature();
+            if (!creature || !creature->AI() || creature->AI()->GetData(DATA_WILD_IMP_DEPARTING))
+                continue;
+
+            imps.push_back(creature);
+        }
+
+        return imps;
+    }
+
+    uint32 CountWildImps(Player const* owner)
+    {
+        if (!owner)
+            return 0;
+
+        uint32 count = 0;
+        for (Unit* controlled : owner->m_Controlled)
+        {
+            if (controlled->GetEntry() != NPC_WILD_IMP && controlled->GetEntry() != NPC_IMP_GANG_BOSS)
+                continue;
+
+            Creature const* creature = controlled->ToCreature();
+            if (!creature || !creature->AI() || creature->AI()->GetData(DATA_WILD_IMP_DEPARTING))
+                continue;
+
+            ++count;
+        }
+
+        return count;
+    }
+
+    bool TrySummonWildImp(Player* owner, Unit* target, bool gangBoss)
+    {
+        if (!owner || !target)
+            return false;
+
+        if (CountWildImps(owner) >= WILD_IMP_CAP)
+            return false;
+
+        SetPendingSummon(owner, { target->GetGUID(), 0 });
+        owner->CastSpell(target, gangBoss ? SPELL_SUMMON_IMP_GANG_BOSS : SPELL_SUMMON_WILD_IMP, TRIGGERED_FULL_MASK);
+        ClearPendingSummon(owner);
+        return true;
+    }
+
+    void OnWildImpDespawn(Player* owner, WildImpDespawnReason reason)
+    {
+        if (!owner)
+            return;
+
+        // Timeout never rolls Molten Core (§7.2's Expire clause) - only an energy-death or an
+        // Implosion consumption does.
+        if (reason != WildImpDespawnReason::Energy && reason != WildImpDespawnReason::Implosion)
+            return;
+
+        int32 const chancePct = GetHighestRankAmount(owner, RANKS_MOLTEN_CORE, EFFECT_0);
+        if (chancePct <= 0)
+            return;
+
+        float const chance = float(chancePct) * (1.0f + owner->GetProcChancePercentage() / 100.0f);
+        if (roll_chance_f(chance))
+            GrantMoltenCore(owner, 1);
+    }
+
+    void GrantMoltenCore(Player* owner, uint8 stacks)
+    {
+        if (!owner || !stacks)
+            return;
+
+        // Repeated self-casts of a CumulativeAura spell add a stack and refresh the duration each
+        // time (stock stacking semantics) - exactly "+1 stack, max 4, refresh 30 s" per cast.
+        for (uint8 i = 0; i < stacks; ++i)
+            owner->CastSpell(owner, SPELL_MOLTEN_CORE, true);
+    }
+
+    // ------------------------------------------------------------------
+    // Summon hand-off / Dreadstalker pairing (§7.2-§7.4)
+    // ------------------------------------------------------------------
+    void SetPendingSummon(Player* owner, PendingSummon const& pending)
+    {
+        if (owner)
+            pendingSummonByPlayer[owner->GetGUID()] = pending;
+    }
+
+    PendingSummon GetPendingSummon(Player const* owner)
+    {
+        if (!owner)
+            return {};
+
+        auto itr = pendingSummonByPlayer.find(owner->GetGUID());
+        return itr != pendingSummonByPlayer.end() ? itr->second : PendingSummon{};
+    }
+
+    void ClearPendingSummon(Player* owner)
+    {
+        if (owner)
+            pendingSummonByPlayer.erase(owner->GetGUID());
+    }
+
+    uint32 NextDreadstalkerPairToken(Player* owner)
+    {
+        if (!owner)
+            return 0;
+
+        return ++dreadstalkerTokenCounterByPlayer[owner->GetGUID()];
+    }
+
+    void OnDreadstalkerDeparted(Player* owner, uint32 pairToken)
+    {
+        if (!owner)
+            return;
+
+        auto& counts = dreadstalkerDepartureCountByPlayer[owner->GetGUID()];
+        uint8& count = counts[pairToken];
+        ++count;
+
+        // Molten Core only on the pair's first departure (§7.4) - the second stalker's own
+        // departure is a no-op beyond bookkeeping cleanup.
+        if (count == 1)
+            GrantMoltenCore(owner, 1);
+        if (count >= 2)
+            counts.erase(pairToken);
+    }
+
+    // ------------------------------------------------------------------
+    // Guardian base points / targeting (B21, §7.4)
+    // ------------------------------------------------------------------
+    int32 ComputeGuardianBasePoints(Unit const* guardian, uint32 spellId, float spCoefficient)
+    {
+        if (!guardian)
+            return 0;
+
+        SpellInfo const* spellInfo = sSpellMgr->AssertSpellInfo(spellId);
+        if (!spellInfo)
+            return 0;
+
+        Unit* owner = guardian->GetOwner();
+        int32 sp = 0;
+        if (owner)
+            sp = std::max(0, owner->SpellBaseDamageBonusDone(spellInfo->GetSchoolMask()));
+
+        int32 const base = spellInfo->Effects[EFFECT_0].BasePoints;
+        int32 const dieBonus = spellInfo->Effects[EFFECT_0].DieSides ? 1 : 0;
+        return base + dieBonus + int32(std::lround(spCoefficient * float(sp)));
+    }
+
+    Unit* SelectGuardianTarget(Creature* guardian, Player* owner, ObjectGuid preferred)
+    {
+        if (!guardian || !owner)
+            return nullptr;
+
+        if (!preferred.IsEmpty())
+        {
+            if (Unit* preferredUnit = ObjectAccessor::GetUnit(*guardian, preferred))
+                if (preferredUnit->IsAlive() && guardian->IsValidAttackTarget(preferredUnit) &&
+                    preferredUnit->GetMap() == guardian->GetMap())
+                    return preferredUnit;
+        }
+
+        // §11 Q10: no pulling - only follow onto a target the owner is already fighting.
+        if (Unit* current = ObjectAccessor::GetUnit(*owner, owner->GetTarget()))
+            if (current->IsAlive() && owner->IsValidAttackTarget(current) && current->IsInCombatWith(owner))
+                return current;
+
+        return nullptr;
+    }
+
+    // ------------------------------------------------------------------
+    // Demonic Potency and the other hidden demon auras (§7.1)
+    // ------------------------------------------------------------------
+    int32 ComputeDemonAuraAmount(Player const* owner, Unit const* target, uint32 spellId, uint8 effIndex)
+    {
+        if (!owner || !target)
+            return 0;
+
+        // The owner's own Fel Bond copy (200851 self-cast) tracks whichever demon the warlock
+        // currently has (main pet or enslaved) rather than `target` itself.
+        bool const isOwnerCopy = spellId == SPELL_FEL_BOND_AURA && target->GetGUID() == owner->GetGUID();
+
+        DemonKind kind = DemonKind::None;
+        if (isOwnerCopy)
+        {
+            if (Unit* pet = owner->GetPet())
+                kind = GetDemonKind(pet, owner);
+            else if (Unit* charm = owner->GetCharm())
+                kind = GetDemonKind(charm, owner);
+        }
+        else
+            kind = GetDemonKind(target, owner);
+
+        float const mastery = owner->GetMasteryPercentage();
+
+        if (spellId == SPELL_DEMONIC_POTENCY)
+        {
+            if (kind == DemonKind::None)
+                return 0;
+
+            bool const unholyPowerKind = kind == DemonKind::Imp || kind == DemonKind::Voidwalker ||
+                kind == DemonKind::Felhunter || kind == DemonKind::Felguard || kind == DemonKind::WildImp ||
+                kind == DemonKind::ImpGangBoss || kind == DemonKind::Dreadstalker || kind == DemonKind::Doomguard ||
+                kind == DemonKind::Infernal;
+
+            float sum = 0.0f;
+            if (unholyPowerKind)
+            {
+                sum += float(GetHighestRankAmount(owner, RANKS_UNHOLY_POWER, EFFECT_0));
+                if (owner->HasAura(RANKS_UNHOLY_POWER[2]))
+                    sum += mastery;
+            }
+
+            if (IsInMetamorphosis(owner))
+                sum += 15.0f + mastery + float(GetHighestRankAmount(owner, RANKS_DEMONIC_FORM, EFFECT_0));
+
+            if (owner->HasAura(SPELL_FEL_CRUELTY_BUFF))
+                sum += 10.0f;
+
+            if (kind == DemonKind::Felguard || kind == DemonKind::Enslaved)
+                sum += float(GetHighestRankAmount(owner, RANKS_FEL_BOND, EFFECT_1));
+
+            if (kind == DemonKind::Imp)
+                sum += float(GetHighestRankAmount(owner, RANKS_IMPROVED_IMP, EFFECT_1));
+
+            switch (effIndex)
+            {
+                case EFFECT_0:
+                    return int32(std::lround(sum));
+                case EFFECT_1:
+                {
+                    float magic = sum;
+                    if (owner->HasAura(SPELL_DEMONIC_PACT_EMPOWER) && owner->GetPet() == target)
+                        magic += 5.0f;
+                    return int32(std::lround(magic));
+                }
+                case EFFECT_2:
+                {
+                    bool const critKind = kind == DemonKind::Imp || kind == DemonKind::Voidwalker ||
+                        kind == DemonKind::Succubus || kind == DemonKind::Felhunter || kind == DemonKind::Felguard ||
+                        kind == DemonKind::WildImp || kind == DemonKind::ImpGangBoss || kind == DemonKind::Dreadstalker;
+                    if (!critKind)
+                        return 0;
+
+                    float const dt = float(GetHighestRankAmount(owner, RANKS_DEMONIC_TACTICS, EFFECT_1));
+                    float const idtPct = float(GetHighestRankAmount(owner, RANKS_IMPROVED_DEMONIC_TACTICS, EFFECT_0));
+                    float const shadowCrit =
+                        owner->GetFloatValue(PLAYER_SPELL_CRIT_PERCENTAGE1 + uint32(SPELL_SCHOOL_SHADOW));
+                    return int32(std::lround(dt + idtPct / 100.0f * shadowCrit));
+                }
+                default:
+                    return 0;
+            }
+        }
+
+        if (spellId == SPELL_DEMONIC_VERSATILITY)
+        {
+            // §11 Q16: every warlock's demons, no talent gate.
+            float const v = owner->GetVersatilityPercentage();
+            switch (effIndex)
+            {
+                case EFFECT_0: return int32(std::lround(v));
+                case EFFECT_1: return -int32(std::lround(v / 2.0f));
+                case EFFECT_2: return int32(std::lround(v));
+                default: return 0;
+            }
+        }
+
+        if (spellId == SPELL_GRIMOIRE_OF_SYNERGY_PET_AURA)
+            return effIndex == EFFECT_0 ? GetHighestRankAmount(owner, RANKS_GRIMOIRE_OF_SYNERGY, EFFECT_0) : 0;
+
+        if (spellId == SPELL_FEL_VITALITY_DEMON)
+        {
+            bool const felVitalityKind = kind == DemonKind::Voidwalker || kind == DemonKind::Felhunter ||
+                kind == DemonKind::Felguard || kind == DemonKind::Dreadstalker;
+            if (!felVitalityKind || (effIndex != EFFECT_1 && effIndex != EFFECT_2))
+                return 0;
+
+            return GetHighestRankAmount(owner, RANKS_FEL_VITALITY, EFFECT_1);
+        }
+
+        if (spellId == SPELL_BRUTALITY_VOIDWALKER)
+        {
+            if (kind != DemonKind::Voidwalker || (effIndex != EFFECT_0 && effIndex != EFFECT_1))
+                return 0;
+
+            return GetHighestRankAmount(owner, RANKS_DEMONIC_BRUTALITY, EFFECT_2);
+        }
+
+        if (spellId == SPELL_FEL_BOND_AURA)
+        {
+            int32 const felBondFgEnslaved = GetHighestRankAmount(owner, RANKS_FEL_BOND, EFFECT_1);
+            int32 const felBondVW = GetHighestRankAmount(owner, RANKS_FEL_BOND, EFFECT_0);
+            uint8 const resilienceRank = GetHighestKnownRank(owner, RANKS_DEMONIC_RESILIENCE);
+            int32 const resilienceDR = resilienceRank ? int32(DEMONIC_RESILIENCE_DEMON_DR[resilienceRank - 1]) : 0;
+
+            bool const fgOrEnslaved = kind == DemonKind::Felguard || kind == DemonKind::Enslaved;
+            bool const isVW = kind == DemonKind::Voidwalker;
+
+            switch (effIndex)
+            {
+                case EFFECT_0:
+                    // Demon damage-done is granted through Potency instead - only the owner's own
+                    // copy carries the +damage-done half of Fel Bond's Felguard/enslaved clause.
+                    return isOwnerCopy && fgOrEnslaved ? felBondFgEnslaved : 0;
+                case EFFECT_1:
+                {
+                    int32 amount = 0;
+                    if (fgOrEnslaved)
+                        amount += felBondFgEnslaved;
+                    if (!isOwnerCopy)
+                        amount += resilienceDR;
+                    return -amount;
+                }
+                case EFFECT_2:
+                    return isVW ? -felBondVW : 0;
+                default:
+                    return 0;
+            }
+        }
+
+        return 0;
+    }
+
+    // Recalculates every effect of an already-applied aura (RecalculateAmount() routes back through
+    // ComputeDemonAuraAmount) - used below so a buff that stays on the demon/warlock across a
+    // rank-up, a pet swap or a talent reset doesn't keep whatever amount it had when first applied
+    // (found in user review, 2026-09-28: RefreshDemonAuras used to only Add-if-missing/Remove-if-
+    // unwanted, never recalculate an aura already present).
+    void RecalculateAllEffects(Aura* aura)
+    {
+        if (!aura)
+            return;
+        for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+            if (AuraEffect* eff = aura->GetEffect(i))
+                eff->RecalculateAmount();
+    }
+
+    void RefreshDemonAuras(Player* owner, Unit* demon)
+    {
+        if (!owner || !demon)
+            return;
+
+        DemonKind const kind = GetDemonKind(demon, owner);
+        if (kind == DemonKind::None)
+            return;
+
+        // Potency and Versatility are unconditional (every demon, §7.1); their own 5 s periodic
+        // tick / explicit RefreshDemonicPotency() calls keep them current, so add-if-missing here
+        // is enough.
+        if (!demon->HasAura(SPELL_DEMONIC_POTENCY, owner->GetGUID()))
+            owner->AddAura(SPELL_DEMONIC_POTENCY, demon);
+        if (!demon->HasAura(SPELL_DEMONIC_VERSATILITY, owner->GetGUID()))
+            owner->AddAura(SPELL_DEMONIC_VERSATILITY, demon);
+
+        bool const wantsGrimoire =
+            kind == DemonKind::Felguard && GetHighestKnownRank(owner, RANKS_GRIMOIRE_OF_SYNERGY) != 0;
+        if (wantsGrimoire)
+        {
+            Aura* aura = demon->GetAura(SPELL_GRIMOIRE_OF_SYNERGY_PET_AURA, owner->GetGUID());
+            if (!aura)
+                aura = owner->AddAura(SPELL_GRIMOIRE_OF_SYNERGY_PET_AURA, demon);
+            RecalculateAllEffects(aura);
+        }
+        else
+            demon->RemoveAura(SPELL_GRIMOIRE_OF_SYNERGY_PET_AURA, owner->GetGUID());
+
+        bool const felVitalityKind = kind == DemonKind::Imp || kind == DemonKind::Voidwalker ||
+            kind == DemonKind::Succubus || kind == DemonKind::Felhunter || kind == DemonKind::Felguard ||
+            kind == DemonKind::Enslaved || kind == DemonKind::Dreadstalker;
+        bool const wantsFelVitality = felVitalityKind && GetHighestKnownRank(owner, RANKS_FEL_VITALITY) != 0;
+        if (wantsFelVitality)
+        {
+            Aura* aura = demon->GetAura(SPELL_FEL_VITALITY_DEMON, owner->GetGUID());
+            if (!aura)
+                aura = owner->AddAura(SPELL_FEL_VITALITY_DEMON, demon);
+            RecalculateAllEffects(aura);
+        }
+        else
+            demon->RemoveAura(SPELL_FEL_VITALITY_DEMON, owner->GetGUID());
+
+        bool const wantsBrutality =
+            kind == DemonKind::Voidwalker && GetHighestKnownRank(owner, RANKS_DEMONIC_BRUTALITY) != 0;
+        if (wantsBrutality)
+        {
+            Aura* aura = demon->GetAura(SPELL_BRUTALITY_VOIDWALKER, owner->GetGUID());
+            if (!aura)
+                aura = owner->AddAura(SPELL_BRUTALITY_VOIDWALKER, demon);
+            RecalculateAllEffects(aura);
+        }
+        else
+            demon->RemoveAura(SPELL_BRUTALITY_VOIDWALKER, owner->GetGUID());
+
+        bool const isMainOrEnslaved = kind == DemonKind::Imp || kind == DemonKind::Voidwalker ||
+            kind == DemonKind::Succubus || kind == DemonKind::Felhunter || kind == DemonKind::Felguard ||
+            kind == DemonKind::Enslaved;
+        bool const wantsFelBond = isMainOrEnslaved && (GetHighestKnownRank(owner, RANKS_FEL_BOND) != 0 ||
+            GetHighestKnownRank(owner, RANKS_DEMONIC_RESILIENCE) != 0);
+        if (wantsFelBond)
+        {
+            Aura* demonAura = demon->GetAura(SPELL_FEL_BOND_AURA, owner->GetGUID());
+            if (!demonAura)
+                demonAura = owner->AddAura(SPELL_FEL_BOND_AURA, demon);
+            RecalculateAllEffects(demonAura);
+
+            Aura* ownerAura = owner->GetAura(SPELL_FEL_BOND_AURA, owner->GetGUID());
+            if (!ownerAura)
+                ownerAura = owner->AddAura(SPELL_FEL_BOND_AURA, owner);
+            RecalculateAllEffects(ownerAura);
+        }
+        else if (isMainOrEnslaved)
+        {
+            demon->RemoveAura(SPELL_FEL_BOND_AURA, owner->GetGUID());
+            owner->RemoveAura(SPELL_FEL_BOND_AURA, owner->GetGUID());
+        }
+    }
+
+    void RefreshDemonicPotency(Player* owner)
+    {
+        if (!owner)
+            return;
+
+        constexpr std::array<uint32, 6> demonAuraIds = { SPELL_DEMONIC_POTENCY, SPELL_GRIMOIRE_OF_SYNERGY_PET_AURA,
+            SPELL_FEL_VITALITY_DEMON, SPELL_FEL_BOND_AURA, SPELL_BRUTALITY_VOIDWALKER, SPELL_DEMONIC_VERSATILITY };
+
+        for (Unit* controlled : owner->m_Controlled)
+        {
+            if (GetDemonKind(controlled, owner) == DemonKind::None)
+                continue;
+
+            for (uint32 spellId : demonAuraIds)
+            {
+                Aura* aura = controlled->GetAura(spellId, owner->GetGUID());
+                if (!aura)
+                    continue;
+
+                for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+                    if (AuraEffect* eff = aura->GetEffect(i))
+                        eff->RecalculateAmount();
+            }
+        }
+
+        if (Aura* ownerFelBond = owner->GetAura(SPELL_FEL_BOND_AURA, owner->GetGUID()))
+            for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+                if (AuraEffect* eff = ownerFelBond->GetEffect(i))
+                    eff->RecalculateAmount();
+    }
+
+    // ------------------------------------------------------------------
+    // Legion's Call (§7.11)
+    // ------------------------------------------------------------------
+    void SyncLegionsCall(Player* player, bool losingTalent)
+    {
+        if (!player)
+            return;
+
+        bool const has = !losingTalent && player->HasTalent(SPELL_LEGIONS_CALL, player->GetActiveSpec());
+
+        if (has)
+        {
+            player->removeSpell(SPELL_INFERNO, SPEC_MASK_ALL, false);
+            player->removeSpell(SPELL_RITUAL_OF_DOOM, SPEC_MASK_ALL, false);
+        }
+        else
+        {
+            if (player->GetLevel() >= 50 && !player->HasSpell(SPELL_INFERNO))
+                player->learnSpell(SPELL_INFERNO);
+            if (player->GetLevel() >= 60 && !player->HasSpell(SPELL_RITUAL_OF_DOOM))
+                player->learnSpell(SPELL_RITUAL_OF_DOOM);
+        }
+    }
+
+    void ClearDemonologyPlayerState(ObjectGuid playerGuid)
+    {
+        pendingSummonByPlayer.erase(playerGuid);
+        dreadstalkerTokenCounterByPlayer.erase(playerGuid);
+        dreadstalkerDepartureCountByPlayer.erase(playerGuid);
     }
 }

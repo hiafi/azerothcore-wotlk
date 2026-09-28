@@ -156,8 +156,9 @@ static constexpr int32 CUSTOM_COOLDOWN_HASTE_MIN_BASE_COOLDOWN_MS = 30 * IN_MILL
 
 // Custom: druid-rework A3 (PLAN §1A, BALANCE.md §9) - spells on this list are always Cooldown
 // Haste eligible regardless of their base cooldown (Starsurge 200333, whose 10 s base cooldown
-// would otherwise fail CUSTOM_COOLDOWN_HASTE_MIN_BASE_COOLDOWN_MS).
-static constexpr std::array<uint32, 1> CUSTOM_COOLDOWN_HASTE_ALLOW_LIST = { 200333 };
+// would otherwise fail CUSTOM_COOLDOWN_HASTE_MIN_BASE_COOLDOWN_MS), + Call Dreadstalkers 200829
+// (warlock-rework Demonology, 20 s base cooldown, DEMONOLOGY.md §7.12).
+static constexpr std::array<uint32, 2> CUSTOM_COOLDOWN_HASTE_ALLOW_LIST = { 200333, 200829 };
 
 // we can disable this warning for this since it only
 // causes undefined behavior when passed to the base class constructor

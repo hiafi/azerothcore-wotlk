@@ -5,7 +5,7 @@ Split from a single source/classes/warlock.py via split_class_file.py (.agents/p
 """
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, RANGE_SELF, School
-from lib.dsl.registry import bonus_coefficients, linked_spell, procs_on, scripted_by, spell, spell_group, spell_group_rule, unbind_script, unlink_spell
+from lib.dsl.registry import bonus_coefficients, creature_model, creature_template, custom_attr, linked_spell, procs_on, scripted_by, spell, spell_group, spell_group_rule, unbind_script, unlink_spell
 from . import _masks as m
 
 
@@ -319,7 +319,7 @@ cataclysm_17778 = spell(
     ],
     spell_icon_id=1197,
     notes='warlock-rework DESTRUCTION §6 (1,2): eff0 misc COST(14) -> DAMAGE(0), mask -> CATACLYSM_SPELLS (RoF/Hellfire, Shadowfury, Inferno Effect, HoG); stock B mask (vestigial - no effect 2) cleared.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Rain of Fire, Hellfire, Inferno, Hand of Gul'dan and Shadowfury by $s1%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.CATACLYSM_SPELLS[0], 'EffectSpellClassMaskA_2': m.CATACLYSM_SPELLS[1], 'EffectSpellClassMaskA_3': m.CATACLYSM_SPELLS[2], 'EffectSpellClassMaskB_1': 0, 'EffectSpellClassMaskB_2': 0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Rain of Fire, Hellfire, Inferno, Summon Infernal, Hand of Gul'dan and Shadowfury by $s1%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.CATACLYSM_SPELLS[0], 'EffectSpellClassMaskA_2': m.CATACLYSM_SPELLS[1], 'EffectSpellClassMaskA_3': m.CATACLYSM_SPELLS[2], 'EffectSpellClassMaskB_1': 0, 'EffectSpellClassMaskB_2': 0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -339,7 +339,7 @@ cataclysm_17779 = spell(
     ],
     spell_icon_id=1197,
     notes='warlock-rework DESTRUCTION §6 (1,2): see rank 1s note.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Rain of Fire, Hellfire, Inferno, Hand of Gul'dan and Shadowfury by $s1%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.CATACLYSM_SPELLS[0], 'EffectSpellClassMaskA_2': m.CATACLYSM_SPELLS[1], 'EffectSpellClassMaskA_3': m.CATACLYSM_SPELLS[2], 'EffectSpellClassMaskB_1': 0, 'EffectSpellClassMaskB_2': 0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Rain of Fire, Hellfire, Inferno, Summon Infernal, Hand of Gul'dan and Shadowfury by $s1%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.CATACLYSM_SPELLS[0], 'EffectSpellClassMaskA_2': m.CATACLYSM_SPELLS[1], 'EffectSpellClassMaskA_3': m.CATACLYSM_SPELLS[2], 'EffectSpellClassMaskB_1': 0, 'EffectSpellClassMaskB_2': 0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -358,8 +358,8 @@ cataclysm_17780 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=17, implicit_target_a=1, apply_aura=108, misc_value=0),
     ],
     spell_icon_id=1197,
-    notes='warlock-rework DESTRUCTION §6 (1,2): see rank 1s note. Tooltip amended by S3 to insert "Summon Infernal, " after "Inferno, " (DEMONOLOGY §11 Q8) - not yet done here.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Rain of Fire, Hellfire, Inferno, Hand of Gul'dan and Shadowfury by $s1%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.CATACLYSM_SPELLS[0], 'EffectSpellClassMaskA_2': m.CATACLYSM_SPELLS[1], 'EffectSpellClassMaskA_3': m.CATACLYSM_SPELLS[2], 'EffectSpellClassMaskB_1': 0, 'EffectSpellClassMaskB_2': 0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DESTRUCTION §6 (1,2): see rank 1s note. Tooltip amended by S3 (DEMONOLOGY §0.2 item 5/§11 Q8, user 2026-09-27): "Summon Infernal" inserted after "Inferno" - the Infernal pulse x Cataclysm mechanism itself is in spell_warl_guardian_hit_mods (WP-B), unchanged.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Rain of Fire, Hellfire, Inferno, Summon Infernal, Hand of Gul'dan and Shadowfury by $s1%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.CATACLYSM_SPELLS[0], 'EffectSpellClassMaskA_2': m.CATACLYSM_SPELLS[1], 'EffectSpellClassMaskA_3': m.CATACLYSM_SPELLS[2], 'EffectSpellClassMaskB_1': 0, 'EffectSpellClassMaskB_2': 0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -1789,10 +1789,11 @@ improved_healthstone_18692 = spell(
     duration_ms=-1,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=284,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount of Health restored by your Healthstone by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (0,2): moved (0,0)->(0,2). eff0 unchanged (stock spell_warl_create_healthstone item-tier key, icon 284). New eff1 DUMMY 9 (SP % on Healthstone use, spell_warl_healthstone_sp -> 200849).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the healing you receive from Healthstones by $s1%. Using a Healthstone increases your spell power by $s2% for 20 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -1810,10 +1811,11 @@ improved_healthstone_18693 = spell(
     duration_ms=-1,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=284,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount of Health restored by your Healthstone by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (0,2): moved (0,0)->(0,2). eff0 unchanged (stock spell_warl_create_healthstone item-tier key, icon 284). New eff1 DUMMY 19 (SP % on Healthstone use, spell_warl_healthstone_sp -> 200849).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the healing you receive from Healthstones by $s1%. Using a Healthstone increases your spell power by $s2% for 20 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -1830,11 +1832,13 @@ improved_imp_18694 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=108, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=215,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the effect of your Imp's Firebolt, Fire Shield, and Blood Pact spells by $s1%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectItemType_1': 8392704, 'EffectSpellClassMaskA_1': 8392704, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (0,0): moved (0,1)->(0,0). eff0 ALL_EFFECTS split off Fel Firebolt (A_1 drops IMP_FIREBOLT 0x1000, keeps BLOOD_PACT_FIRE_SHIELD 0x800000 only) - Fel Firebolt now scoped by Demonic Potency (§7.1). New eff1 DUMMY (Imp damage %, via Potency), new eff2 DUMMY (Fel Firebolt free-cast chance, npc_warl_wild_imp roll x owner PC).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage dealt by your Imp by $s2% and the effect of your Fire Shield and Blood Pact by $s1%. Your Wild Imps\' Fel Firebolt has a $s3% chance to cost no energy.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 8388608, 'EffectSpellClassMaskA_1': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -1851,11 +1855,13 @@ improved_imp_18695 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=13, implicit_target_a=1, apply_aura=108, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=15, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=215,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the effect of your Imp's Firebolt, Fire Shield, and Blood Pact spells by $s1%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectItemType_1': 8392704, 'EffectSpellClassMaskA_1': 8392704, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (0,0): see rank 1 note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage dealt by your Imp by $s2% and the effect of your Fire Shield and Blood Pact by $s1%. Your Wild Imps\' Fel Firebolt has a $s3% chance to cost no energy.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 8388608, 'EffectSpellClassMaskA_1': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -1872,11 +1878,13 @@ improved_imp_18696 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=215,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the effect of your Imp's Firebolt, Fire Shield, and Blood Pact spells by $s1%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectItemType_1': 8392704, 'EffectSpellClassMaskA_1': 8392704, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (0,0): see rank 1 note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage dealt by your Imp by $s2% and the effect of your Fire Shield and Blood Pact by $s1%. Your Wild Imps\' Fel Firebolt has a $s3% chance to cost no energy.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 8388608, 'EffectSpellClassMaskA_1': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -1935,11 +1943,12 @@ demonic_brutality_18705 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=8),
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=107, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=217,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the effectiveness of your Voidwalker's Torment, Consume Shadows, Sacrifice and Suffering spells by $s1%, and increases the attack power bonus on your Felguard's Demonic Frenzy effect by $s2%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 33554432, 'EffectSpellClassMaskB_3': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes="warlock-rework DEMONOLOGY §6 (2,3): moved (1,1)->(2,3). eff0 (ALL_EFFECTS, A_1=PET_ABILITIES 0x2000000) kept - Torment/Sacrifice/Suffering/Consume Shadows. eff1 (was Demonic Frenzy AP flat, B_3=DEMONIC_FRENZY) -> DUMMY stored 14/29/49 (Sacrifice +15/30/50% total, on top of the SpellMod); that AP-per-stack effect moves to Fel Bond 200877-9 eff2. New eff2 DUMMY 9/19/29 (Voidwalker health & armor via 200852, §7.1).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases your Voidwalker's health and armor by $s3%, the effectiveness of its Torment, Consume Shadows and Suffering by $s1%, and the damage absorbed by its Sacrifice by $s2%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -1956,11 +1965,12 @@ demonic_brutality_18706 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=8),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=217,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the effectiveness of your Voidwalker's Torment, Consume Shadows, Sacrifice and Suffering spells by $s1%, and increases the attack power bonus on your Felguard's Demonic Frenzy effect by $s2%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 33554432, 'EffectSpellClassMaskB_3': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (2,3): see rank 1 note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases your Voidwalker's health and armor by $s3%, the effectiveness of its Torment, Consume Shadows and Suffering by $s1%, and the damage absorbed by its Sacrifice by $s2%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -1977,12 +1987,14 @@ demonic_brutality_18707 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108, misc_value=8),
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=107, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=217,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the effectiveness of your Voidwalker's Torment, Consume Shadows, Sacrifice and Suffering spells by $s1%, and increases the attack power bonus on your Felguard's Demonic Frenzy effect by $s2%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 33554432, 'EffectSpellClassMaskB_3': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (2,3): see rank 1 note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases your Voidwalker's health and armor by $s3%, the effectiveness of its Torment, Consume Shadows and Suffering by $s1%, and the damage absorbed by its Sacrifice by $s2%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+scripted_by(7812, 'spell_warl_sacrifice_brutality')
 
 
 master_summoner_18709 = spell(
@@ -1998,12 +2010,11 @@ master_summoner_18709 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-2001, implicit_target_a=1, apply_aura=107, misc_value=10),
-        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=108, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=211,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the casting time of your Imp, Voidwalker, Succubus, Felhunter and Fel Guard Summoning spells by $/1000;s1 sec and the Mana cost by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectItemType_1': 536870912, 'EffectItemType_2': 536870912, 'EffectSpellClassMaskA_1': 536870912, 'EffectSpellClassMaskB_1': 536870912, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (1,0): moved (3,2)->(1,0). eff0 (107 cast time) -> DUMMY marker read by spell_warl_shadow_bolt_demonology AfterCast; eff1 (cost) removed; masks cleared.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Shadow Bolt has a $s1% chance to summon a Wild Imp at the target.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2020,12 +2031,11 @@ master_summoner_18710 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-4001, implicit_target_a=1, apply_aura=107, misc_value=10),
-        Effect(type=EffectType.APPLY_AURA, base_points=-41, implicit_target_a=1, apply_aura=108, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=211,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the casting time of your Imp, Voidwalker, Succubus, Felhunter and Fel Guard Summoning spells by $/1000;s1 sec and the Mana cost by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectItemType_1': 536870912, 'EffectItemType_2': 536870912, 'EffectSpellClassMaskA_1': 536870912, 'EffectSpellClassMaskB_1': 536870912, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (1,0): see rank 1 note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Shadow Bolt has a $s1% chance to summon a Wild Imp at the target.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2041,13 +2051,13 @@ fel_vitality_18731 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=107, misc_value=8),
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=132),
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=133),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=107, misc_value=12),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=125,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the Stamina and Intellect of your Imp, Voidwalker, Succubus, Felhunter and Felguard by $s1% and increases your maximum health and mana by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 402653184, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    spell_icon_id=1982,
+    notes="warlock-rework DEMONOLOGY §6 (4,2): moved (1,2)->(4,2). eff0 -> ADD_FLAT_MODIFIER EFFECT2 (misc 12) stored 49 (50% live), A_1=DRAIN_MANA (stock Mana Feed 30326's exact shape, C20 key). eff1 (132) -> DUMMY 9 (Sta/Int +10%). eff2 (133) -> DUMMY 2 (regen 3%). SpellIconID 125 -> 1982 (Life Tap Mana Feed key, spell_warlock.cpp:838-845 GetAuraEffect(ADD_FLAT_MODIFIER, WARLOCK, 1982, 0)) - Affliction's replacement Life Tap class keeps this read.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the Stamina and Intellect of your Voidwalker, Felhunter, Felguard and Dreadstalkers by $s2%. When you gain mana from Life Tap or Drain Mana, your pet gains $s1% of that amount, and your pet regenerates $s3% of its missing mana every 5 sec.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.DRAIN_MANA, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2063,13 +2073,13 @@ fel_vitality_18743 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=107, misc_value=8),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=132),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=133),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=107, misc_value=12),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=125,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the Stamina and Intellect of your Imp, Voidwalker, Succubus, Felhunter and Felguard by $s1% and increases your maximum health and mana by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 402653184, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    spell_icon_id=1982,
+    notes='warlock-rework DEMONOLOGY §6 (4,2): see rank 1 note (100% mana feed / 20% Sta-Int / 5% regen live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the Stamina and Intellect of your Voidwalker, Felhunter, Felguard and Dreadstalkers by $s2%. When you gain mana from Life Tap or Drain Mana, your pet gains $s1% of that amount, and your pet regenerates $s3% of its missing mana every 5 sec.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.DRAIN_MANA, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2085,14 +2095,15 @@ fel_vitality_18744 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=107, misc_value=8),
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=132),
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=133),
+        Effect(type=EffectType.APPLY_AURA, base_points=149, implicit_target_a=1, apply_aura=107, misc_value=12),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=125,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the Stamina and Intellect of your Imp, Voidwalker, Succubus, Felhunter and Felguard by $s1% and increases your maximum health and mana by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 402653184, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    spell_icon_id=1982,
+    notes='warlock-rework DEMONOLOGY §6 (4,2): see rank 1 note (150% mana feed / 30% Sta-Int / 8% regen live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the Stamina and Intellect of your Voidwalker, Felhunter, Felguard and Dreadstalkers by $s2%. When you gain mana from Life Tap or Drain Mana, your pet gains $s1% of that amount, and your pet regenerates $s3% of its missing mana every 5 sec.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.DRAIN_MANA, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+scripted_by(200850, 'spell_warl_fel_vitality_regen')
 
 
 improved_succubus_18754 = spell(
@@ -2170,11 +2181,11 @@ master_conjuror_18767 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=149, implicit_target_a=1, apply_aura=108, misc_value=23),
-        Effect(type=EffectType.APPLY_AURA, base_points=149, implicit_target_a=1, apply_aura=108, misc_value=23),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=108, misc_value=23),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=108, misc_value=23),
     ],
     spell_icon_id=1506,
-    notes='pulled from existing data',
+    notes='warlock-rework DEMONOLOGY §6 (3,2): moved (4,2)->(3,2). stored 149->99 (100% live).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the combat ratings gained from your conjured Firestone and Spellstone by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2097152, 'EffectSpellClassMaskB_1': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
@@ -2191,11 +2202,11 @@ master_conjuror_18768 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=299, implicit_target_a=1, apply_aura=108, misc_value=23),
-        Effect(type=EffectType.APPLY_AURA, base_points=299, implicit_target_a=1, apply_aura=108, misc_value=23),
+        Effect(type=EffectType.APPLY_AURA, base_points=199, implicit_target_a=1, apply_aura=108, misc_value=23),
+        Effect(type=EffectType.APPLY_AURA, base_points=199, implicit_target_a=1, apply_aura=108, misc_value=23),
     ],
     spell_icon_id=1506,
-    notes='pulled from existing data',
+    notes='warlock-rework DEMONOLOGY §6 (3,2): moved (4,2)->(3,2). stored 299->199 (200% live).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the combat ratings gained from your conjured Firestone and Spellstone by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2097152, 'EffectSpellClassMaskB_1': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
@@ -2213,11 +2224,12 @@ unholy_power_18769 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=107, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=107, misc_value=7),
     ],
     spell_icon_id=235,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage done by your Voidwalker, Succubus, Felhunter and Felguard's melee attacks and your Imp's Firebolt by $s1%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectItemType_1': 67108864, 'EffectSpellClassMaskA_1': 67108864, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (3,1): same cell, ranks trimmed 5->3 (18772/18773 orphaned, character_talent cleanup). eff0 (107 pet passives) -> DUMMY stored 9 (10% live, demon damage via Potency); A_1 cleared. New eff1 ADD_FLAT_MODIFIER CRITICAL_CHANCE stored 4 (5% live), B_3=HAND_OF_GULDAN. Capstone clause added (talent-tooltip-audit finding, 2026-09-28).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage done by your Imp, Voidwalker, Felhunter, Felguard, Wild Imps, Dreadstalkers, Doomguard and Infernal, and by your Implosion, by $s1%. Increases the critical strike chance of your Hand of Gul'dan by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Your Mastery further increases the damage done by your demons and your Implosion.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskB_3': m.HAND_OF_GULDAN, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2234,11 +2246,12 @@ unholy_power_18770 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=107, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=107, misc_value=7),
     ],
     spell_icon_id=235,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage done by your Voidwalker, Succubus, Felhunter and Felguard's melee attacks and your Imp's Firebolt by $s1%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectItemType_1': 67108864, 'EffectSpellClassMaskA_1': 67108864, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (3,1): see rank 1 note (20%/10% live). Capstone clause added (talent-tooltip-audit finding, 2026-09-28).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage done by your Imp, Voidwalker, Felhunter, Felguard, Wild Imps, Dreadstalkers, Doomguard and Infernal, and by your Implosion, by $s1%. Increases the critical strike chance of your Hand of Gul'dan by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Your Mastery further increases the damage done by your demons and your Implosion.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskB_3': m.HAND_OF_GULDAN, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2255,11 +2268,13 @@ unholy_power_18771 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=107, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=235,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage done by your Voidwalker, Succubus, Felhunter and Felguard's melee attacks and your Imp's Firebolt by $s1%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectItemType_1': 67108864, 'EffectSpellClassMaskA_1': 67108864, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (3,1): see rank 1 note (30%/15% live); r3 eff2 DUMMY 0 = Mastery capstone marker.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage done by your Imp, Voidwalker, Felhunter, Felguard, Wild Imps, Dreadstalkers, Doomguard and Infernal, and by your Implosion, by $s1%. Increases the critical strike chance of your Hand of Gul'dan by $s2%.\n\nCapstone Bonus: Your Mastery further increases the damage done by your demons and your Implosion.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskB_3': m.HAND_OF_GULDAN, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2506,10 +2521,12 @@ demonic_aegis_30143 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=-20001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=1999, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=89,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effectiveness of your Demon Armor and Fel Armor spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 536870944, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes="warlock-rework DEMONOLOGY §6 (3,3): moved (2,3)->(3,3). eff0 unchanged (icon 89 key, C18, 10/20/30%). New eff1 ADD_FLAT_MODIFIER COOLDOWN stored -20001 (-20000 ms live), B_3=UNENDING_RESOLVE. New eff2 DUMMY 1999 (2000 ms live, Meta/DA duration bonus, spell_warl_unending_resolve AfterEffectApply). Stock spell_warl_demonic_aegis (-30143) kept. $s2/$s3 tokens fixed to $/1000;s2/$/1000;s3 on all 3 ranks (talent-tooltip-audit finding, 2026-09-28) - both effects are ms values, the un-prefixed token was rendering 20000/2000 instead of 20/2.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effectiveness of your Demon Armor and Fel Armor by $s1%. Reduces the cooldown of your Unending Resolve by $/1000;s2 sec, and increases its duration by $/1000;s3 sec while you are in Metamorphosis or Dark Apotheosis.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 536870944, 'EffectSpellClassMaskB_3': m.UNENDING_RESOLVE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2526,10 +2543,12 @@ demonic_aegis_30144 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=-40001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=3999, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=89,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effectiveness of your Demon Armor and Fel Armor spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 536870944, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (3,3): see rank 1 note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effectiveness of your Demon Armor and Fel Armor by $s1%. Reduces the cooldown of your Unending Resolve by $/1000;s2 sec, and increases its duration by $/1000;s3 sec while you are in Metamorphosis or Dark Apotheosis.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 536870944, 'EffectSpellClassMaskB_3': m.UNENDING_RESOLVE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2546,10 +2565,12 @@ demonic_aegis_30145 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=-60001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=5999, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=89,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effectiveness of your Demon Armor and Fel Armor spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 536870944, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (3,3): see rank 1 note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effectiveness of your Demon Armor and Fel Armor by $s1%. Reduces the cooldown of your Unending Resolve by $/1000;s2 sec, and increases its duration by $/1000;s3 sec while you are in Metamorphosis or Dark Apotheosis.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 536870944, 'EffectSpellClassMaskB_3': m.UNENDING_RESOLVE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2565,13 +2586,12 @@ demonic_tactics_30242 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=8),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=57),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=52),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=290),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1981,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases melee and spell critical strike chance for you and your summoned demon by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 8192, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (7,1): same cell, ranks trimmed 5->3 (30247/30248 orphaned, character_talent cleanup in pending_db_characters). eff0 (107 pet passive) -> MOD_CRIT_PCT (290) stored 0 (1% live, all spells/attacks). eff1 (57) -> DUMMY 4 (5% live, demon crit via Potency eff2). eff2 (52) removed. Masks cleared.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases your critical strike chance with all spells and attacks by $s1%, and the critical strike chance of your Wild Imps, Dreadstalkers, summoned demon and tamed pet by $s2%.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2587,13 +2607,12 @@ demonic_tactics_30245 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=107, misc_value=8),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=57),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=52),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=290),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1981,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases melee and spell critical strike chance for you and your summoned demon by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 8192, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (7,1): see rank 1 note (2%/10% live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases your critical strike chance with all spells and attacks by $s1%, and the critical strike chance of your Wild Imps, Dreadstalkers, summoned demon and tamed pet by $s2%.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2609,13 +2628,12 @@ demonic_tactics_30246 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=107, misc_value=8),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=57),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=52),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=290),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1981,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases melee and spell critical strike chance for you and your summoned demon by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 8192, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (7,1): see rank 1 note (3%/15% live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases your critical strike chance with all spells and attacks by $s1%, and the critical strike chance of your Wild Imps, Dreadstalkers, summoned demon and tamed pet by $s2%.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2909,13 +2927,13 @@ demonic_resilience_30319 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-2, implicit_target_a=1, apply_aura=187),
-        Effect(type=EffectType.APPLY_AURA, base_points=-6, implicit_target_a=1, apply_aura=107, misc_value=8),
-        Effect(type=EffectType.APPLY_AURA, base_points=-2, implicit_target_a=1, apply_aura=179, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=-2, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.REDUCE_PUSHBACK),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=8),
     ],
     spell_icon_id=1980,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces the chance you'll be critically hit by melee and spells by $s1% and reduces all damage your summoned demon takes by $s2%.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 67108864, 'EffectSpellClassMaskB_2': 16384, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (5,3): moved (6,0)->(5,3). eff0 (187) -> MOD_DAMAGE_PERCENT_TAKEN(87) misc 127 stored -2 (-1% live). eff1 (107 misc 8) -> REDUCE_PUSHBACK(149) stored 99 (100% live, casts/channels). eff2 (179) -> ADD_PCT_MODIFIER ALL_EFFECTS stored 9 (10% live), C_1=HEALTH_FUNNEL. Demon -5/10/15% and Soul Link +2/4/6% are C++ constants keyed by rank id (DEMONIC_RESILIENCE_DEMON_DR/_SOUL_LINK, §7.1/§7.5) - no free effect slot. Capstone clause added (talent-tooltip-audit finding, 2026-09-28).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces the damage you take by $s1% and the damage your summoned or enslaved demon takes by 5%. Increases the damage transferred by your Soul Link by 2% and the health transferred by your Health Funnel by $s3%. Damage taken does not delay your spell casts or shorten your channeled spells.\n\n|cFF9D9D9DCapstone Bonus: Half of your Mastery further increases the damage transferred by Soul Link, up to 50% of damage taken, and your Mastery reduces the damage your demon takes from Soul Link.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_1': m.HEALTH_FUNNEL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2932,13 +2950,13 @@ demonic_resilience_30320 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=187),
-        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=107, misc_value=8),
-        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=179, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.REDUCE_PUSHBACK),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=8),
     ],
     spell_icon_id=1980,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces the chance you'll be critically hit by melee and spells by $s1% and reduces all damage your summoned demon takes by $s2%.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 67108864, 'EffectSpellClassMaskB_2': 16384, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (5,3): see rank 1 note (-2%/100%/20% live). Capstone clause added (talent-tooltip-audit finding, 2026-09-28).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces the damage you take by $s1% and the damage your summoned or enslaved demon takes by 10%. Increases the damage transferred by your Soul Link by 4% and the health transferred by your Health Funnel by $s3%. Damage taken does not delay your spell casts or shorten your channeled spells.\n\n|cFF9D9D9DCapstone Bonus: Half of your Mastery further increases the damage transferred by Soul Link, up to 50% of damage taken, and your Mastery reduces the damage your demon takes from Soul Link.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_1': m.HEALTH_FUNNEL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2955,13 +2973,13 @@ demonic_resilience_30321 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-4, implicit_target_a=1, apply_aura=187),
-        Effect(type=EffectType.APPLY_AURA, base_points=-16, implicit_target_a=1, apply_aura=107, misc_value=8),
-        Effect(type=EffectType.APPLY_AURA, base_points=-4, implicit_target_a=1, apply_aura=179, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=-4, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.REDUCE_PUSHBACK),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108, misc_value=8),
     ],
     spell_icon_id=1980,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces the chance you'll be critically hit by melee and spells by $s1% and reduces all damage your summoned demon takes by $s2%.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 67108864, 'EffectSpellClassMaskB_2': 16384, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (5,3): see rank 1 note (-3%/100%/30% live); capstone (final rank) = half of Mastery further raises Soul Link transfer (up to 50% of damage taken) and Mastery reduces demon damage taken from Soul Link (spell_warl_soul_link_split, §7.5).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces the damage you take by $s1% and the damage your summoned or enslaved demon takes by 15%. Increases the damage transferred by your Soul Link by 6% and the health transferred by your Health Funnel by $s3%. Damage taken does not delay your spell casts or shorten your channeled spells.\n\nCapstone Bonus: Half of your Mastery further increases the damage transferred by Soul Link, up to 50% of damage taken, and your Mastery reduces the damage your demon takes from Soul Link.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_1': m.HEALTH_FUNNEL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -3224,11 +3242,11 @@ demonic_knowledge_35691 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1876,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases your spell damage by an amount equal to $s1% of the total of your active demon's Stamina plus Intellect.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 67108864, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (1,1): moved (6,2)->(1,1). eff0 stored 3->4 (5% live). Must stay APPLY_AURA DUMMY (LoadSpellPetAuras rejects any other type); stock spell_pet_auras 35691-3 -> 35696 kept, value flows as the pet aura BP. 35696 rebound to spell_warl_demonic_knowledge_int (Int only, C8).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell damage by an amount equal to $s1% of your summoned demon\'s Intellect.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -3244,11 +3262,11 @@ demonic_knowledge_35692 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1876,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases your spell damage by an amount equal to $s1% of the total of your active demon's Stamina plus Intellect.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 67108864, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (1,1): see rank 1 note (10% live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell damage by an amount equal to $s1% of your summoned demon\'s Intellect.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -3264,12 +3282,14 @@ demonic_knowledge_35693 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1876,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases your spell damage by an amount equal to $s1% of the total of your active demon's Stamina plus Intellect.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 67108864, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (1,1): see rank 1 note (15% live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell damage by an amount equal to $s1% of your summoned demon\'s Intellect.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+unbind_script(-35696, 'spell_warl_demonic_knowledge')
+scripted_by(35696, 'spell_warl_demonic_knowledge_int')
 
 
 eradication_47195 = spell(
@@ -3580,11 +3600,11 @@ fel_synergy_47230 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=8),
     ],
     spell_icon_id=3222,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have a $h% chance to heal your pet for $s1% of the amount of spell damage done by you.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 67108864, 'EffectSpellClassMaskB_2': 16384, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 50, 'ProcTypeMask': 332096, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (1,3): moved (0,3)->(1,3). eff0 stored 14->4 (5% live); ProcChance 50->100. Stock -47230 spell_proc (TRIGGERED_CAN_PROC) and spell_warl_fel_synergy kept.',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your damage heals your pet for $s1% of the amount dealt.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 332096, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -3600,11 +3620,11 @@ fel_synergy_47231 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=3222,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have a $h% chance to heal your pet for $s1% of the amount of spell damage done by you.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 67108864, 'EffectSpellClassMaskB_2': 16384, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 332096, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (1,3): see rank 1 note (10% live); ProcChance already 100.',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your damage heals your pet for $s1% of the amount dealt.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 332096, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -3620,13 +3640,13 @@ demonic_pact_47236 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=12),
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=107, misc_value=18),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=79, misc_value=36),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=12),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=79, misc_value=126),
     ],
     spell_icon_id=3220,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases your spell damage by $s3%, and your pet's criticals apply the Demonic Pact effect to your party or raid members. Demonic Pact increases spell power by $s1% of your Spell Damage for $48090d. This effect has a $53646s2 sec cooldown. Does not work on Enslaved demons.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 524288, 'EffectSpellClassMaskB_2': 1048576, 'EffectSpellClassMaskC_1': 525799, 'EffectSpellClassMaskC_2': 8886738, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes="warlock-rework DEMONOLOGY §6 (9,2): moved (9,1)->(9,2), ranks trimmed 5->3 (47239/47240 orphaned). eff0 DUMMY stored 9 on every rank (raid SP = 10% of your SP, script-fed, §0.2.1). eff1 (107 misc 18) neutralized in place (APPLY_AURA DUMMY bp 0 die 0, masks cleared - middle slot, keeps eff2 at EFFECT_1... wait stays EFFECT index 1, do not shift). eff2 (79) misc 36->126, stored 0 (1% live spell damage).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell damage by $s3%.\n\n|cFF9D9D9DCapstone Bonus: Critical strikes by your summoned demon grant Demonic Pact to you and your demon for 45 sec, increasing spell damage by 5%, and grant party and raid members a lesser bonus to spell power and Intellect that does not stack with similar effects. This effect cannot occur more than once every 20 sec. Does not work with enslaved demons, Wild Imps, Dreadstalkers or guardians.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -3642,13 +3662,13 @@ demonic_pact_47237 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=12),
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=107, misc_value=18),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=79, misc_value=36),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=12),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=79, misc_value=126),
     ],
     spell_icon_id=3220,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases your spell damage by $s3%, and your pet's criticals apply the Demonic Pact effect to your party or raid members. Demonic Pact increases spell power by $s1% of your Spell Damage for $48090d. This effect has a $53646s2 sec cooldown. Does not work on Enslaved demons.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 524288, 'EffectSpellClassMaskB_2': 1048576, 'EffectSpellClassMaskC_1': 525799, 'EffectSpellClassMaskC_2': 8886738, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (9,2): see rank 1 note (2% live spell damage).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell damage by $s3%.\n\n|cFF9D9D9DCapstone Bonus: Critical strikes by your summoned demon grant Demonic Pact to you and your demon for 45 sec, increasing spell damage by 5%, and grant party and raid members a lesser bonus to spell power and Intellect that does not stack with similar effects. This effect cannot occur more than once every 20 sec. Does not work with enslaved demons, Wild Imps, Dreadstalkers or guardians.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -3664,14 +3684,22 @@ demonic_pact_47238 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=12),
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=107, misc_value=18),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=79, misc_value=36),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=12),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=79, misc_value=126),
     ],
     spell_icon_id=3220,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases your spell damage by $s3%, and your pet's criticals apply the Demonic Pact effect to your party or raid members. Demonic Pact increases spell power by $s1% of your Spell Damage for $48090d. This effect has a $53646s2 sec cooldown. Does not work on Enslaved demons.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 524288, 'EffectSpellClassMaskB_2': 1048576, 'EffectSpellClassMaskC_1': 525799, 'EffectSpellClassMaskC_2': 8886738, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (9,2): see rank 1 note (3% live spell damage); capstone (final rank, plain).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell damage by $s3%.\n\nCapstone Bonus: Critical strikes by your summoned demon grant Demonic Pact to you and your demon for 45 sec, increasing spell damage by 5%, and grant party and raid members a lesser bonus to spell power and Intellect that does not stack with similar effects. This effect cannot occur more than once every 20 sec. Does not work with enslaved demons, Wild Imps, Dreadstalkers or guardians.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+scripted_by(53646, 'spell_warl_demonic_pact_demo')
+scripted_by(54909, 'spell_warl_demonic_pact_demo')
+unbind_script(53646, 'spell_warl_demonic_pact')
+unbind_script(54909, 'spell_warl_demonic_pact')
+# Keep stock's ProcFlags=0 (DBC ProcTypeMask fallback), SpellTypeMask=DAMAGE, SpellPhaseMask=HIT,
+# HitMask=CRITICAL, Cooldown=20000 (spell_proc.sql:631/654) - only Chance changes 0 -> 100 (§8).
+procs_on(53646, proc_flags=0, spell_type_mask=m.PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, hit_mask=m.PROC_HIT_CRITICAL, chance=100, cooldown_ms=20000)
+procs_on(54909, proc_flags=0, spell_type_mask=m.PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, hit_mask=m.PROC_HIT_CRITICAL, chance=100, cooldown_ms=20000)
 
 
 demonic_pact_47239 = spell(
@@ -3730,12 +3758,11 @@ molten_core_47245 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=4, trigger_spell=47383),
-        Effect(type=EffectType.APPLY_AURA, base_points=2999, implicit_target_a=1, apply_aura=107, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=3175,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the duration of your Immolate by $/1000;47245s2 sec, and you have a $47245h% chance to gain the Molten Core effect when your Corruption deals damage. The Molten Core effect empowers your next 3 Incinerate or Soul Fire spells cast within $47383d.\r\n\r\nIncinerate - Increases damage done by $47383s1% and reduces cast time by $47383s3%.\r\n\r\nSoul Fire - Increases damage done by $47383s1% and increases critical strike chance by $47383s2%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 4, 'ProcTypeMask': 327680, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (5,0): moved (5,2)->(5,0). eff0 (PROC_TRIGGER_SPELL -> 47383/71162/71165) -> DUMMY stored 3 (4% live), read by Warlock::OnWildImpDespawn (rank = this eff0 amount x (1 + owner PC/100), §7.2). eff1 (Immolate +duration, trailing) removed. ProcTypeMask/ProcChance -> 0 (stock -47245 spell_proc row made inert by DBC only, no procs_on override - §8).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Wild Imps have a $s1% chance to grant you Molten Core when they run out of energy or are consumed by Implosion. Molten Core: Your next Soul Fire is instant. Stacks up to 4 times. Lasts 30 sec.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 0, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -3751,12 +3778,11 @@ molten_core_47246 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=71162),
-        Effect(type=EffectType.APPLY_AURA, base_points=5999, implicit_target_a=1, apply_aura=107, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=3175,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the duration of your Immolate by $/1000;47246s2 sec, and you have a $47246h% chance to gain the Molten Core effect when your Corruption deals damage. The Molten Core effect empowers your next 3 Incinerate or Soul Fire spells cast within $71162d.\r\n\r\nIncinerate - Increases damage done by $71162s1% and reduces cast time by $71162s3%.\r\n\r\nSoul Fire - Increases damage done by $71162s1% and increases critical strike chance by $71162s2%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 8, 'ProcTypeMask': 327680, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (5,0): see rank 1 note (7% live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Wild Imps have a $s1% chance to grant you Molten Core when they run out of energy or are consumed by Implosion. Molten Core: Your next Soul Fire is instant. Stacks up to 4 times. Lasts 30 sec.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 0, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -3772,12 +3798,11 @@ molten_core_47247 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=71165),
-        Effect(type=EffectType.APPLY_AURA, base_points=8999, implicit_target_a=1, apply_aura=107, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=3175,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the duration of your Immolate by $/1000;47247s2 sec, and you have a $47247h% chance to gain the Molten Core effect when your Corruption deals damage. The Molten Core effect empowers your next 3 Incinerate or Soul Fire spells cast within $71165d.\r\n\r\nIncinerate - Increases damage done by $71165s1% and reduces cast time by $71165s3%.\r\n\r\nSoul Fire - Increases damage done by $71165s1% and increases critical strike chance by $71165s2%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 12, 'ProcTypeMask': 262144, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (5,0): see rank 1 note (10% live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Wild Imps have a $s1% chance to grant you Molten Core when they run out of energy or are consumed by Implosion. Molten Core: Your next Soul Fire is instant. Stacks up to 4 times. Lasts 30 sec.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 0, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -4196,12 +4221,12 @@ metamorphosis_59672 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.LEARN_SPELL, die_sides=0, implicit_target_a=1, trigger_spell=47241),
-        Effect(type=EffectType.LEARN_SPELL, base_points=-1, implicit_target_a=1, trigger_spell=50581),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY, trigger_spell=0),
         Effect(type=EffectType.LEARN_SPELL, base_points=-1, implicit_target_a=1, trigger_spell=59673),
     ],
     spell_icon_id=3314,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 2147483648, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "You transform into a Demon for $47241d.  This form increases your armor by $47241s2%, damage by $47241s3%, reduces the chance you'll be critically hit by melee attacks by 6% and reduces the duration of stun and snare effects by $54817s1%.  You gain some unique demon abilities in addition to your normal abilities. 3 minute cooldown.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 67108864, 'EffectSpellClassMaskB_2': 16384, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §5.2/§6 (6,1): talent rank, same cell. eff1 (LEARN 50581 Shadow Cleave) neutralized in place (APPLY_AURA DUMMY bp0/die0, trigger_spell=0) - a LEARN rank is never cast, so the slot is inert; eff0 (LEARN 47241) and eff2 (LEARN 59673) kept.',
+    raw_overrides={'AttributesEx': 2147483648, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "You transform into a Demon for 20 sec. While transformed, your Shadow Bolt is instant and extends your Bane of Doom on the target by 3 sec, to at most 30 sec remaining, and your Hand of Gul'dan also damages all other enemies within 8 yards of the target. You may use Immolation Aura and Demonic Leap, and all of your other warlock spells remain usable. Increases your armor from cloth and leather items by $47241s2% and your damage by $47241s3%, reduces the chance you are critically hit by melee attacks by 6%, and reduces the duration of stun and snare effects by $54817s1%. Your demons deal 15% more damage while you are transformed. Cannot be used with Dark Apotheosis. 3 min cooldown.\n\nCapstone Bonus: Your Mastery increases the damage bonus your demons gain while you are transformed.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 67108864, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -4348,11 +4373,13 @@ nemesis_63117 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=108, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-10001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-6001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-5001, implicit_target_a=1, apply_aura=107, misc_value=11),
     ],
     spell_icon_id=3315,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Demonic Empowerment, Metamorphosis, and Fel Domination spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_3': 12416, 'EffectSpellClassMaskB_1': 576, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (8,2): same cell. eff0 (108 pct cooldown) -> ADD_FLAT_MODIFIER COOLDOWN stored -10001 (-10000 ms live), A_3 = METAMORPHOSIS | SUMMON_DOOMGUARD | SUMMON_INFERNAL (Fel Domination 0x80 and Demonic Empowerment 0x1000 dropped from A). New eff1 ADD_FLAT_MODIFIER COOLDOWN stored -6001, B_3=DEMONIC_EMPOWERMENT. New eff2 ADD_FLAT_MODIFIER COOLDOWN stored -5001, C_3=DEMONIC_LEAP. Flat mods apply before Cooldown Haste. Capstone clause added (talent-tooltip-audit finding, 2026-09-28).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Metamorphosis, Summon Doomguard and Summon Infernal by $/1000;s1 sec, your Demonic Empowerment by $/1000;s2 sec, and your Demonic Leap by $/1000;s3 sec.\n\n|cFF9D9D9DCapstone Bonus: While in Metamorphosis, the cooldown of your Hand of Gul\'dan is reduced by 50%.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_3': 100671488, 'EffectSpellClassMaskB_3': m.DEMONIC_EMPOWERMENT, 'EffectSpellClassMaskC_3': m.DEMONIC_LEAP, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -4368,11 +4395,13 @@ nemesis_63121 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=108, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-20001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-12001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-10001, implicit_target_a=1, apply_aura=107, misc_value=11),
     ],
     spell_icon_id=3315,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Demonic Empowerment, Metamorphosis, and Fel Domination spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_3': 12416, 'EffectSpellClassMaskB_1': 576, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (8,2): see rank 1 note (20000/12000/10000 ms live). Capstone clause added (talent-tooltip-audit finding, 2026-09-28).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Metamorphosis, Summon Doomguard and Summon Infernal by $/1000;s1 sec, your Demonic Empowerment by $/1000;s2 sec, and your Demonic Leap by $/1000;s3 sec.\n\n|cFF9D9D9DCapstone Bonus: While in Metamorphosis, the cooldown of your Hand of Gul\'dan is reduced by 50%.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_3': 100671488, 'EffectSpellClassMaskB_3': m.DEMONIC_EMPOWERMENT, 'EffectSpellClassMaskC_3': m.DEMONIC_LEAP, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -4388,11 +4417,13 @@ nemesis_63123 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=108, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-30001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-18001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-15001, implicit_target_a=1, apply_aura=107, misc_value=11),
     ],
     spell_icon_id=3315,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Demonic Empowerment, Metamorphosis, and Fel Domination spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_3': 12416, 'EffectSpellClassMaskB_1': 576, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (8,2): see rank 1 note (30000/18000/15000 ms live); capstone (final rank): 200837 eff2 amount is set by spell_warl_demonology_form_passive reading this rank id (63123) - -50% Hand of Guldan cooldown while in Metamorphosis.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Metamorphosis, Summon Doomguard and Summon Infernal by $/1000;s1 sec, your Demonic Empowerment by $/1000;s2 sec, and your Demonic Leap by $/1000;s3 sec.\n\nCapstone Bonus: While in Metamorphosis, the cooldown of your Hand of Gul\'dan is reduced by 50%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_3': 100671488, 'EffectSpellClassMaskB_3': m.DEMONIC_EMPOWERMENT, 'EffectSpellClassMaskC_3': m.DEMONIC_LEAP, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -4408,12 +4439,13 @@ decimation_63156 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=8, trigger_spell=63165),
-        Effect(type=EffectType.APPLY_AURA, base_points=34, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108, misc_value=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, die_sides=0, implicit_target_a=1, apply_aura=231, trigger_spell=63165),
     ],
     spell_icon_id=184,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you Shadowbolt, Incinerate or Soul Fire a target that is at or below $s2% health, the cast time of Soul Fire spell is reduced by $s1% for $63165d. Soul Fires cast under the effect of Decimation cost no shard.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 67108864, 'EffectSpellClassMaskB_2': 16384, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes="warlock-rework DEMONOLOGY §6 (7,0): same cell, ranks extended to 3 (new 200889 below). eff0 (PROC_TRIGGER -> 63165/63167) -> ADD_PCT_MODIFIER DAMAGE stored 4 (5% live), A_2=SOUL_FIRE. eff1 (DUMMY health threshold) -> DUMMY stored 9 (10% live, Improved Soul Fire absorb +%). New eff2 APPLY_AURA PROC_TRIGGER_SPELL_WITH_VALUE(231) -> 63165, base_points=1 (die_sides=0, literal live value - custom-BP rule exception, §0.1.6/§7.13). Proc row on this id: unbind stock -63156 (spell_warl_decimation), new procs_on (§8).",
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Soul Fire by $s1% and the absorb granted by Improved Soul Fire by $s2%. Your Soul Fire critical strikes cause your next Hand of Gul'dan within 15 sec to summon $s3 additional Wild Imps.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': m.SOUL_FIRE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -4429,12 +4461,46 @@ decimation_63158 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=8, trigger_spell=63167),
-        Effect(type=EffectType.APPLY_AURA, base_points=34, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, die_sides=0, implicit_target_a=1, apply_aura=231, trigger_spell=63165),
     ],
     spell_icon_id=184,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you Shadowbolt, Incinerate or Soul Fire a target that is at or below $63158s2% health, the cast time of your Soul Fire spell is reduced by $63158s1% for $63165d. Soul Fires cast under the effect of Decimation cost no shard.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 67108864, 'EffectSpellClassMaskB_2': 16384, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 69632, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (7,0): see rank 1 note (10%/20% live, 2 imps).',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Soul Fire by $s1% and the absorb granted by Improved Soul Fire by $s2%. Your Soul Fire critical strikes cause your next Hand of Gul'dan within 15 sec to summon $s3 additional Wild Imps.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': m.SOUL_FIRE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+decimation_200889 = spell(
+    id=200889,
+    name='Decimation',
+    school=School.NORMAL,
+    attributes=448,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108, misc_value=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, die_sides=0, implicit_target_a=1, apply_aura=231, trigger_spell=63165),
+    ],
+    spell_icon_id=184,
+    notes='warlock-rework DEMONOLOGY §6 (7,0): new rank 3, clone of 63158 with r3 values (15%/30% live, 3 imps). SpellClassSet 5 (inherited, required for the eff0 SpellMod).',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Soul Fire by $s1% and the absorb granted by Improved Soul Fire by $s2%. Your Soul Fire critical strikes cause your next Hand of Gul'dan within 15 sec to summon $s3 additional Wild Imps.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': m.SOUL_FIRE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+unbind_script(-63156, 'spell_warl_decimation')
+procs_on(
+    -63156,
+    proc_flags=m.PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG,
+    family_name=5,
+    family_mask=(0, m.SOUL_FIRE, 0),
+    spell_type_mask=m.PROC_SPELL_TYPE_DAMAGE,
+    spell_phase_mask=m.PROC_SPELL_PHASE_HIT,
+    hit_mask=m.PROC_HIT_CRITICAL,
+    chance=100,
 )
 
 
@@ -5195,8 +5261,8 @@ impending_doom_200869 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
     effects=[Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=22)],
     spell_icon_id=170,
-    notes='warlock-rework AFFLICTION §11 Q7 (Demonology tab (2,2), talent 1226 repurposed in place): data only per DEMONOLOGY.md §6 - S3 (Demonology pass) adds the script/proc and completes the tooltip capstone text. Placeholder tooltip until then.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Bane of Doom by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_3': m.DEMONOLOGY_D3_BIT_23, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (2,2): talent 1226 repurposed in place (Fel Domination -> Impending Doom, placed data-only by Affliction S1). r1: eff0 ADD_PCT_MODIFIER DOT stored 9 (+10%), A_3 = BANE_OF_DOOM. No proc on r1 (capstone is r2 only, §8).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Bane of Doom by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Critical strikes from your Bane of Doom summon a Wild Imp. This effect cannot occur more than once every 5 sec.|r', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_3': m.BANE_OF_DOOM, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 impending_doom_200870 = spell(
     id=200870, name='Impending Doom', school=School.NORMAL, attributes=464,
@@ -5206,8 +5272,22 @@ impending_doom_200870 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=170,
-    notes='warlock-rework AFFLICTION §11 Q7: rank 2 capstone marker (eff2 DUMMY) - S3 binds the "critical strikes from Bane of Doom summon a Wild Imp" proc to this id.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Bane of Doom by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_3': m.DEMONOLOGY_D3_BIT_23, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework DEMONOLOGY §6 (2,2): r2 (final rank), eff1 DUMMY is the capstone marker - spell_warl_impending_doom OnProc -> TrySummonWildImp. Proc row: DEMONOLOGY.md §8 (PROC_FLAG_DONE_PERIODIC, family 5 mask (0,0,BANE_OF_DOOM), DAMAGE/HIT/CRITICAL, chance 100, cooldown 5000ms).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Bane of Doom by $s1%.\n\nCapstone Bonus: Critical strikes from your Bane of Doom summon a Wild Imp. This effect cannot occur more than once every 5 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_3': m.BANE_OF_DOOM, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+scripted_by(impending_doom_200870, 'spell_warl_impending_doom')
+procs_on(
+    impending_doom_200870,
+    proc_flags=m.PROC_FLAG_DONE_PERIODIC,
+    family_name=5,
+    family_mask=(0, 0, m.BANE_OF_DOOM),
+    spell_type_mask=m.PROC_SPELL_TYPE_DAMAGE,
+    spell_phase_mask=m.PROC_SPELL_PHASE_HIT,
+    hit_mask=m.PROC_HIT_CRITICAL,
+    chance=100,
+    cooldown_ms=5000,
 )
 
 
@@ -6280,3 +6360,2274 @@ instant_cast_helper_200713 = spell(
     notes='warlock-rework DESTRUCTION §0.3/§5 (SHARED §1.3 id, declared here per the reconciled ownership - AFFLICTION.md §0.4 item 11 / WP-0 item 6 defer this row to Destruction): hidden 1-charge ADD_PCT_MODIFIER CASTING_TIME -100% (the Backlash 34936 shape). Mask = Soul Fire d2 0x80 | Chaos Bolt d2 0x20000 (INSTANT_CAST_HELPER) - both Soul Fire sources (Empowered Imp, Soulburn) and Chaos Bolts Soulburn/Chaotic Inferno sources are registered in this pass. ProcCharges 1, ProcTypeMask 0 (no auto spell_proc row, same reasoning as 200991). Granted/consumed solely by the Affliction-built CanPrepare/OnSpellCast arbiter (§7.6).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next qualifying cast is instant.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your next qualifying cast is instant.', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_2': m.INSTANT_CAST_HELPER[1], 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcCharges': 1, 'ProcChance': 101, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+
+
+demonic_embrace_18697 = spell(
+    id=18697,
+    name='Demonic Embrace',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=2),
+    ],
+    spell_icon_id=90,
+    notes='warlock-rework DEMONOLOGY §6 (6,3): moved (0,2)->(6,3). eff0 stored 3->2 (3% live).',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Stamina by $s1%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+demonic_embrace_18698 = spell(
+    id=18698,
+    name='Demonic Embrace',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=2),
+    ],
+    spell_icon_id=90,
+    notes='warlock-rework DEMONOLOGY §6 (6,3): see rank 1 note (6% live).',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectDieSides_2': 1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Stamina by $s1%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+demonic_embrace_18699 = spell(
+    id=18699,
+    name='Demonic Embrace',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=2),
+    ],
+    spell_icon_id=90,
+    notes='warlock-rework DEMONOLOGY §6 (6,3): see rank 1 note (10% live, unchanged from pull).',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectDieSides_2': 1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Stamina by $s1%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+demon_charge_stun_60995 = spell(
+    id=60995,
+    name='Demon Charge',
+    school=School.NORMAL,
+    attributes=327696,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    power_type=PowerType.RAGE,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    duration_ms=2000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, mechanic=Mechanic.STUN, implicit_target_a=6, apply_aura=AuraType.MOD_STUN),
+    ],
+    spell_icon_id=15,
+    notes='warlock-rework DEMONOLOGY §5.2: duration_ms -> 2000 (Demon Charge stun, triggered by 54785).',
+    raw_overrides={'AttributesEx': 648, 'AttributesEx2': 1077936132, 'CastingTimeIndex': 1, 'ProcChance': 101, 'BaseLevel': 1, 'SpellLevel': 1, 'EquippedItemClass': -1, 'EffectDieSides_2': 1, 'EffectBasePoints_2': -1, 'ImplicitTargetA_2': 6, 'SpellVisualID_1': 2816, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Demon', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Charge an enemy, stunning it for $60995d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Stunned.', 'AuraDescription_Lang_Mask': 16712190, 'DefenseType': 1, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+molten_core_71165 = spell(
+    id=71165,
+    name='Molten Core',
+    school=School.NORMAL,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=30000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=3175,
+    notes='warlock-rework DEMONOLOGY §5.3/§7.7: duration 15000->30000; CumulativeAura->4; eff0 (was a DAMAGE SpellMod) -> APPLY_AURA DUMMY bp0/die0 masks cleared (pure display/stack holder - consumption is via the SHARED CanPrepare arbiter, Warlock::GrantMoltenCore/RegisterInstantCastSource, §3.4/§7.7); eff1/eff2 (Soul Fire crit, Incinerate cast-time trailing slots) removed. ProcTypeMask kept (DBC fallback), ProcChance/ProcCharges -> 0 (never procs itself - procs_on override below needed so PROC_ATTR_REQ_SPELLMOD does not fire against a SpellMod-less aura, §8).',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 65536, 'ProcChance': 0, 'ProcCharges': 0, 'CumulativeAura': 4, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 15050, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Your next Soul Fire is instant. Stacks up to 4 times.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Soul Fire is instant. Stacks up to 4 times.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+procs_on(71165, proc_flags=65536, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, attributes_mask=0, chance=0)
+
+
+decimation_buff_63165 = spell(
+    id=63165,
+    name='Decimation',
+    school=School.NORMAL,
+    dispel=DispelType.MAGIC,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=184,
+    notes="warlock-rework DEMONOLOGY §5.3: duration 10000->15000. eff0 (was a CASTING_TIME SpellMod) -> APPLY_AURA DUMMY stored 0, mask cleared - receives the live BP 1/2/3 from the talent's PROC_TRIGGER_SPELL_WITH_VALUE (default die_sides=1 is exact under the custom-BP rule, §0.1.6/§7.13 - do not set die_sides=0 here). eff1 (aura 256 no-reagent, trailing) removed.",
+    raw_overrides={'AttributesEx4': 512, 'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 1, 'RangeIndex': 1, 'Speed': 23.0, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': "Your next Hand of Gul'dan summons additional Wild Imps.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Your next Hand of Gul'dan summons additional Wild Imps.", 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 5, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+demonic_pact_raid_48090 = spell(
+    id=48090,
+    name='Demonic Pact',
+    school=School.NORMAL,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    duration_ms=45000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=56, apply_aura=AuraType.MOD_DAMAGE_DONE, misc_value=126, radius_yards=100.0),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=56, apply_aura=AuraType.MOD_HEALING_DONE, misc_value=127, radius_yards=100.0),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=56, apply_aura=AuraType.MOD_STAT, misc_value=3, radius_yards=100.0),
+    ],
+    spell_icon_id=3220,
+    notes="warlock-rework DEMONOLOGY §0.2.1/§5.3: new eff2 APPLY_AURA MOD_STAT misc 3 (Intellect), target 56, EffectRadiusIndex matching eff0/eff1 (radius_yards=100.0 set explicitly - a new effect row doesn't inherit it). BP2 (live) from script = 10% of the warlock's Intellect, excluding any Intellect the warlock currently gets from this buff itself (no self-compounding), snapshot at grant (spell_warl_demonic_pact_demo).",
+    raw_overrides={'AttributesEx2': 4, 'AttributesEx6': 67108864, 'AttributesEx7': 268435456, 'CastingTimeIndex': 1, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 67108864, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': "Your pet's criticals apply the Demonic Pact effect to your party or raid members. Demonic Pact increases spell power and Intellect by a percentage of your Spell Damage for $48090d.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increased spell power and Intellect.', 'AuraDescription_Lang_Mask': 16712190, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+hand_of_guldan_splash_200821 = spell(
+    id=200821,
+    name="Hand of Gul'dan",
+    school=School.SHADOW | School.FIRE,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    radius_yards=8.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=27, points_per_level=2.588983050847458, die_sides=2, implicit_target_a=53, implicit_target_b=16),
+    ],
+    spell_icon_id=2340,
+    notes='warlock-rework DEMONOLOGY §4.1/§7.3: Metamorphosis-only AoE splash, triggered by spell_warl_hand_of_guldan (CastSpell TRIGGERED_FULL_MASK, not a LEARN chain). SUPPRESS_CASTER_PROCS (AttributesEx3=65536) - never procs the caster twice. eff0 via _scaling.sb_units(0.325, 10, 157, 158). implicit_target_a=53 (DEST_TARGET_ENEMY), b=16 (UNIT_DEST_AREA_ENEMY); OnObjectAreaTargetSelect removes the primary target and non-combat units (PLAN §2 propagation rule, spell_warl_hand_of_guldan_splash). SpellClassSet 5, SpellClassMask_3=HAND_OF_GULDAN (shared with 200820, Starfire-cleave precedent).',
+    raw_overrides={'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals $s1 Shadowflame damage.', 'EffectBonusMultiplier_1': 0.2785, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.HAND_OF_GULDAN, 'SpellClassSet': 5, 'BaseLevel': 10, 'SpellLevel': 10, 'Speed': 0.0, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
+)
+scripted_by(hand_of_guldan_splash_200821, 'spell_warl_hand_of_guldan_splash')
+
+
+summon_wild_imp_200822 = spell(
+    id=200822,
+    name='Summon Wild Imp',
+    school=School.NORMAL,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    duration_ms=61000,
+    effects=[
+        Effect(type=EffectType.SUMMON, implicit_target_a=53, misc_value=300150),
+    ],
+    spell_icon_id=3171,
+    notes='warlock-rework DEMONOLOGY §5.1: always cast TRIGGERED_FULL_MASK by Warlock::TrySummonWildImp (no procs). props 1021, implicit_target_a=53 (DEST_TARGET_ENEMY - imps spawn at the target); the AI scatter (<=3 yd) only matters for the lone first imp - the engine already picks a random point once the warlock controls something (SpellEffects.cpp:6370-6390). SpellClassSet 0, no bits (family-0 leak rule).',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectMiscValueB_1': 1021, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Summons a Wild Imp.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+summon_imp_gang_boss_200823 = spell(
+    id=200823,
+    name='Summon Imp Gang Boss',
+    school=School.NORMAL,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    duration_ms=61000,
+    effects=[
+        Effect(type=EffectType.SUMMON, implicit_target_a=53, misc_value=300151),
+    ],
+    spell_icon_id=3171,
+    notes='warlock-rework DEMONOLOGY §5.1: same as 200822, summons entry 300151 (Imp Gang Boss, model scale 1.4).',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectMiscValueB_1': 1021, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Summons an Imp Gang Boss.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+fel_firebolt_200824 = spell(
+    id=200824,
+    name='Fel Firebolt',
+    school=School.FIRE,
+    attributes=0,
+    cast_time_ms=2000,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=40.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=10, points_per_level=0.9559322033898305, die_sides=1, implicit_target_a=6),
+    ],
+    spell_icon_id=2298,
+    notes='warlock-rework DEMONOLOGY §5.0/§0.1.6: cast by the Wild Imp (npc_warl_wild_imp). eff0 via _scaling.sb_units(0.12, 10, 58, 58). SpellClassSet 0, no bits (guardian leak rule); no spell_bonus_data - the AI passes bp0 = ComputeGuardianBasePoints(me, 200824, 0.1028f) live via CastCustomSpell (B21); Demonic Power +7/14% is applied on the HIT in spell_warl_guardian_hit_mods, never bp0 (§4.0). AttributesEx=1024 (NO_THREAT). Speed=20 (missile); SpellVisualID_1=3110 (Firebolt).',
+    raw_overrides={'AttributesEx': 1024, 'ProcChance': 101, 'EquippedItemClass': -1, 'DefenseType': 1, 'PreventionType': 1, 'Speed': 20.0, 'SpellVisualID_1': 3110, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Deals $s1 Fire damage.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+implosion_explosion_200828 = spell(
+    id=200828,
+    name='Implosion',
+    school=School.SHADOW | School.FIRE,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    radius_yards=8.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=43, points_per_level=1.4338983050847457, die_sides=1, implicit_target_a=53, implicit_target_b=16),
+    ],
+    spell_icon_id=2356,
+    notes='warlock-rework DEMONOLOGY §5.0/§7.2/§7.3: cast by each Wild Imp on landing (MovementInform after MoveJump, §11 Q13). eff0 via _scaling.sb_units(0.18, 30, 87, 87). implicit_target_a=53 (DEST_TARGET_ENEMY), b=16 (UNIT_DEST_AREA_ENEMY), radius 8 yd - hits the primary too. SpellClassSet 0, no bits. AttributesEx=1024 (NO_THREAT).',
+    raw_overrides={'AttributesEx': 1024, 'CastingTimeIndex': 1, 'ProcChance': 101, 'EquippedItemClass': -1, 'DefenseType': 1, 'PreventionType': 1, 'Speed': 0.0, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Deals $s1 Shadowflame damage to all enemies within 8 yards.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+dreadstalker_bite_200830 = spell(
+    id=200830,
+    name='Bite',
+    school=School.SHADOW,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=5.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=44, points_per_level=1.4577966101694916, die_sides=2, implicit_target_a=6),
+    ],
+    spell_icon_id=4062,
+    notes='warlock-rework DEMONOLOGY §5.0: cast by each Dreadstalker every 2 s (npc_warl_dreadstalker). eff0 via _scaling.sb_units(0.183, 30, 88, 89). SpellClassSet 0, no bits. AttributesEx=1024 (NO_THREAT).',
+    raw_overrides={'AttributesEx': 1024, 'CastingTimeIndex': 1, 'ProcChance': 101, 'EquippedItemClass': -1, 'DefenseType': 1, 'PreventionType': 1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Deals $s1 Shadow damage.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+doom_bolt_200832 = spell(
+    id=200832,
+    name='Doom Bolt',
+    school=School.SHADOW,
+    attributes=0,
+    cast_time_ms=2500,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=40.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=481, points_per_level=7.966101694915254, die_sides=5, implicit_target_a=6),
+    ],
+    spell_icon_id=99,
+    notes='warlock-rework DEMONOLOGY §5.0: cast by the Doomguard (npc_warl_doomguard_guardian). eff0 via _scaling.sb_units(1.00, 60, 482, 486). SpellClassSet 0, no bits. AttributesEx=1024 (NO_THREAT). Speed=20; visual from Shadow Bolt 686 (SpellVisualID 64).',
+    raw_overrides={'AttributesEx': 1024, 'ProcChance': 101, 'EquippedItemClass': -1, 'DefenseType': 1, 'PreventionType': 1, 'Speed': 20.0, 'SpellVisualID_1': 64, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Deals $s1 Shadow damage.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+infernal_immolation_200834 = spell(
+    id=200834,
+    name='Immolation',
+    school=School.FIRE,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    radius_yards=8.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=62, points_per_level=1.0355932203389831, die_sides=1, implicit_target_a=22, implicit_target_b=15),
+    ],
+    spell_icon_id=460,
+    notes='warlock-rework DEMONOLOGY §5.0/§7.4: pulsed every 1 s by the Infernal (npc_warl_infernal_guardian). eff0 via _scaling.sb_units(0.13, 60, 63, 63). implicit_target_a=22 (SRC_CASTER), b=15 (UNIT_SRC_AREA_ENEMY), radius 8 yd. SpellClassSet 0, no bits. AttributesEx=1024 (NO_THREAT). Owner Cataclysm % applied on the hit in spell_warl_guardian_hit_mods (§0.2.5), never bp0.',
+    raw_overrides={'AttributesEx': 1024, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'DefenseType': 1, 'PreventionType': 1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Deals $s1 Fire damage to nearby enemies.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+scripted_by(200824, 'spell_warl_guardian_hit_mods')
+scripted_by(200834, 'spell_warl_guardian_hit_mods')
+
+
+metamorphosis_54817 = spell(
+    id=54817,
+    name='Metamorphosis',
+    school=School.NORMAL,
+    attributes=400,
+    cast_time_ms=0,
+    cooldown_ms=180000,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-26, implicit_target_a=1, apply_aura=232, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-26, implicit_target_a=1, apply_aura=232, misc_value=12),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.MOD_ATTACK_POWER),
+    ],
+    spell_icon_id=3314,
+    notes='warlock-rework DEMONOLOGY §5.2: eff0/eff1 (232 misc 11 snare / 12 stun duration mod) stored -51 -> -26 (25% shorter, was 50%).',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 67108864, 'EffectSpellClassMaskB_2': 16384, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+)
+
+
+metamorphosis_54879 = spell(
+    id=54879,
+    name='Metamorphosis',
+    school=School.NORMAL,
+    attributes=400,
+    cast_time_ms=0,
+    cooldown_ms=180000,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=1, apply_aura=187, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=75, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=275),
+    ],
+    spell_icon_id=3314,
+    notes='warlock-rework DEMONOLOGY §0.2.3/§3.3/§11 Q2: eff0 (187, -6% melee crit taken) unchanged; eff1 (75, Demonic language) unchanged; eff2 (275) mask letter C -> META_ALLOWED (full mask, every warlock bit) - user 2026-09-27 "It should be every warlock spell."',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 67108864, 'EffectSpellClassMaskB_2': 16384, 'EffectSpellClassMaskC_1': m.META_ALLOWED[0], 'EffectSpellClassMaskC_2': m.META_ALLOWED[1], 'EffectSpellClassMaskC_3': m.META_ALLOWED[2], 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_Mask': 16712188, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+)
+
+
+dark_apotheosis_passive_200836 = spell(
+    id=200836,
+    name='Dark Apotheosis',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=275),
+    ],
+    spell_icon_id=0,
+    notes="warlock-rework DEMONOLOGY §5.2: hidden, linked from 200835 (type 2). SpellClassSet 5 (required - a family-0 aura 275 would admit every spell, not just warlock ones, SpellInfo.cpp:1352-1353). eff0 -20% damage done. eff1 MOD_IGNORE_SHAPESHIFT(275) mask letter B (=eff1, dbc-tools A/B/C=eff0/1/2 gotcha) = DA_ALLOWED (every warlock bit except Metamorphosis 47241's d3 0x2000 and DEMONIC_LEAP - a truly full mask would let those two skip CheckShapeshift and swap form mid-DA / work outside Metamorphosis, §5.2). custom_attr SPELL_ATTR0_CU_POSITIVE (the -20% would otherwise classify it negative, druid Bestial Fury precedent).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'EffectSpellClassMaskB_1': m.DA_ALLOWED[0], 'EffectSpellClassMaskB_2': m.DA_ALLOWED[1], 'EffectSpellClassMaskB_3': m.DA_ALLOWED[2], 'Name_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+custom_attr(dark_apotheosis_passive_200836, attributes=0x0E000000)
+
+
+metamorphosis_passive_200837 = spell(
+    id=200837,
+    name='Metamorphosis',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=107, misc_value=10),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=108, misc_value=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=108, misc_value=11),
+    ],
+    spell_icon_id=0,
+    notes='warlock-rework DEMONOLOGY §5.2/§7.13: hidden, linked from 47241 (type 2). SpellClassSet 5 (SpellMods would match family-0 otherwise). eff0 ADD_PCT_MODIFIER CASTING_TIME stored -101 (-100%), A_1=SHADOW_BOLT -> instant Shadow Bolt. eff1 ADD_PCT_MODIFIER DAMAGE stored 0 (script sets to Demonic Form eff1 value: 5/10/15), B_1=SHADOW_BOLT, B_3=HAND_OF_GULDAN. eff2 ADD_PCT_MODIFIER COOLDOWN stored 0 (script: -50 if Nemesis r3 63123), C_3=HAND_OF_GULDAN.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'EffectSpellClassMaskA_1': m.SHADOW_BOLT, 'EffectSpellClassMaskB_1': m.SHADOW_BOLT, 'EffectSpellClassMaskB_3': m.HAND_OF_GULDAN, 'EffectSpellClassMaskC_3': m.HAND_OF_GULDAN, 'Name_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+scripted_by(metamorphosis_passive_200837, 'spell_warl_demonology_form_passive')
+
+
+demonic_bulwark_form_200838 = spell(
+    id=200838,
+    name='Demonic Bulwark',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
+    ],
+    spell_icon_id=0,
+    notes='warlock-rework DEMONOLOGY §5.2/§7.13: hidden, linked from both 47241 and 200835 (type 2). eff0 stored 0, script sets -(Demonic Bulwark talent eff0: 3/6/10) via spell_warl_demonology_form_passive CalcAmount.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EffectChainAmplitude_1': 1.0},
+)
+scripted_by(200836, 'spell_warl_demonology_form_passive')
+scripted_by(200838, 'spell_warl_demonology_form_passive')
+
+
+demonic_potency_200840 = spell(
+    id=200840,
+    name='Demonic Potency',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=290),
+    ],
+    spell_icon_id=0,
+    notes="warlock-rework DEMONOLOGY §5.3/§7.1: hidden aura on every demon, applied via owner->AddAura(200840, demon) so the aura caster is the warlock. eff0 physical damage done, eff1 magic damage done, eff2 MOD_CRIT_PCT(290) crit. All stored 0, amounts from spell_warl_demon_aura's DoEffectCalcAmount (Warlock::ComputeDemonAuraAmount), canBeRecalculated=true, 5s periodic recalc + event pushes (§7.1).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+scripted_by(demonic_potency_200840, 'spell_warl_demon_aura')
+
+
+imp_gang_boss_aura_200841 = spell(
+    id=200841,
+    name='Imp Gang Boss',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=127),
+    ],
+    spell_icon_id=3171,
+    notes='warlock-rework DEMONOLOGY §5.3: hidden, self-cast by the Imp Gang Boss on spawn (DoCastSelf). +50% damage.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+fel_cruelty_buff_200842 = spell(
+    id=200842,
+    name='Fel Cruelty',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=6000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2375,
+    notes='warlock-rework DEMONOLOGY §5.3/§7.8: capstone buff, 6 s refresh, granted by the Fel Cruelty proc (talent 60088 r3, spell_warl_fel_cruelty). eff0 DUMMY stored 9 ("10%", read by Potency via spell_warl_demonic_potency_input apply/remove -> RefreshDemonicPotency).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your demons deal 10% more damage.', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your demons deal 10% more damage.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+grimoire_of_synergy_buff_200843 = spell(
+    id=200843,
+    name='Grimoire of Synergy',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=126),
+    ],
+    spell_icon_id=3217,
+    notes='warlock-rework DEMONOLOGY §5.3/§7.13: self buff, 15 s, granted by the Felguard proc (spell_warl_grimoire_of_synergy_pet). +10% spell damage.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spell damage increased by 10%.', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases spell damage by 10%.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+grimoire_of_synergy_felguard_200844 = spell(
+    id=200844,
+    name='Grimoire of Synergy',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=0,
+    notes='warlock-rework DEMONOLOGY §5.3/§7.1/§7.13: hidden, on the Felguard, if the owner has Grimoire of Synergy talent. eff0 DUMMY = the talent rank chance value, read by spell_warl_grimoire_of_synergy_pet CheckProc (roll_chance_f(eff0 x GetOwnerProcChanceMultiplier)). Additional binding (same id as spell_warl_demon_aura, which pushes it onto the Felguard) - spell_warl_grimoire_of_synergy_pet handles the proc itself.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EffectChainAmplitude_1': 1.0},
+)
+scripted_by(200844, 'spell_warl_demon_aura')
+scripted_by(200844, 'spell_warl_grimoire_of_synergy_pet')
+procs_on(
+    200844,
+    proc_flags=0x4 | 0x10,
+    spell_phase_mask=1,
+    chance=100,
+    cooldown_ms=20000,
+)
+
+
+demonic_pact_empower_200845 = spell(
+    id=200845,
+    name='Demonic Pact',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=45000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=126),
+    ],
+    spell_icon_id=3220,
+    notes='warlock-rework DEMONOLOGY §5.3/§7.13: self buff on the warlock, 45 s, granted by spell_warl_demonic_pact_demo alongside 48090. +5% spell damage.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spell damage increased by 5%.', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases spell damage by 5%.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+improved_soul_fire_shield_200846 = spell(
+    id=200846,
+    name='Improved Soul Fire',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=12000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.SCHOOL_ABSORB, misc_value=127),
+    ],
+    spell_icon_id=2352,
+    notes="warlock-rework DEMONOLOGY §5.3/§7.9: 12 s absorb shield, granted by spell_warl_soul_fire_demonology while in Dark Apotheosis. eff0 amount from script (3/6/10% of max HP x (1 + Decimation 10/20/30%)).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Absorbs damage.', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Absorbs $s1 damage.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+demonic_bulwark_debuff_200847 = spell(
+    id=200847,
+    name='Demonic Bulwark',
+    school=School.NORMAL,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    duration_ms=3000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=6, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=6, apply_aura=192),
+    ],
+    spell_icon_id=2365,
+    notes='warlock-rework DEMONOLOGY §5.3/§7.13: enemy debuff, 3 s (refreshed by each Immolation Aura pulse), granted by spell_warl_immolation_aura_tick if the caster has Demonic Bulwark talent. eff0/eff1 live -2/4/6% damage done, -7/14/20% attack speed (CastCustomSpell BP0=-eff1.GetAmount(), BP1=-eff2.GetAmount() of the talent rank - custom-BP rule).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Damage done and attack speed reduced.', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces damage done and attack speed.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+
+
+fel_immolation_heal_200848 = spell(
+    id=200848,
+    name='Fel Immolation',
+    school=School.NORMAL,
+    attributes=0,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.HEAL, base_points=0, implicit_target_a=1),
+    ],
+    spell_icon_id=2355,
+    notes='warlock-rework DEMONOLOGY §5.3/§7.13: self heal, cast by spell_warl_fel_immolation_leech when Fel Immolation is the active leech talent (SHARED §4). AttributesEx3 |= SUPPRESS_CASTER_PROCS - the heal itself must not re-trigger anything.',
+    raw_overrides={'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals $s1 damage.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'RangeIndex': 1, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+improved_healthstone_sp_200849 = spell(
+    id=200849,
+    name='Improved Healthstone',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=20000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_DONE, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_HEALING_DONE, misc_value=127),
+    ],
+    spell_icon_id=284,
+    notes='warlock-rework DEMONOLOGY §5.3/§6 (0,2): self buff, 20 s, granted by spell_warl_healthstone_sp when the caster has Improved Healthstone. BP = 10/20% of SP computed at cast (druid C1 flat-SP pattern, spell_dru_astral_surge_sp).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spell power increased.', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases spell power.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+
+
+fel_vitality_demon_200850 = spell(
+    id=200850,
+    name='Fel Vitality',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=5000),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=3),
+    ],
+    spell_icon_id=1982,
+    notes='warlock-rework DEMONOLOGY §5.3/§7.1: hidden, on main/enslaved demon + Dreadstalkers, if the owner has Fel Vitality. eff0 periodic 5s -> spell_warl_fel_vitality_regen (EnergizeBySpell missing mana %). eff1/eff2 Sta/Int % (10/20/30 for VW/FH/FG/Dreadstalkers, 0 otherwise).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+fel_bond_aura_200851 = spell(
+    id=200851,
+    name='Fel Bond',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=1),
+    ],
+    spell_icon_id=114,
+    notes="warlock-rework DEMONOLOGY §5.3/§7.1: hidden, on the warlock (owner copy) and the demon (demon copy), if the owner has Fel Bond or Demonic Resilience. Owner copy: eff0 +FelBond (Felguard/enslaved), eff1 -FelBond (Felguard/enslaved), eff2 -FelBond Voidwalker (Voidwalker). Demon copy: eff0 0 (demon damage is in Potency), eff1 -(FelBond Felguard/enslaved + Demonic Resilience 5/10/15), eff2 -FelBond Voidwalker.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+demonic_brutality_voidwalker_200852 = spell(
+    id=200852,
+    name='Demonic Brutality',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=133),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_RESISTANCE_PCT, misc_value=1),
+    ],
+    spell_icon_id=217,
+    notes='warlock-rework DEMONOLOGY §5.3/§7.1: hidden, on the Voidwalker, if the owner has Demonic Brutality talent. eff0 MOD_INCREASE_HEALTH_PERCENT(133) +10/20/30% health, eff1 MOD_RESISTANCE_PCT armor +10/20/30%.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+
+
+demonic_power_imp_200853 = spell(
+    id=200853,
+    name='Demonic Power',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=65),
+    ],
+    spell_icon_id=0,
+    notes="warlock-rework DEMONOLOGY §2.1/§11 Q7: hidden self-buff cast by a Wild Imp on itself at spawn, only if the owner has Destruction's Demonic Power (18126/18127). eff0 MOD_CASTING_SPEED_NOT_STACK(65), amount 5/14 by custom BP (live value) -> Fel Firebolt ~1.90/1.75 s. Scripted route (no family bit, SHARED §3/PLAN §9.1 default).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+demonic_versatility_200854 = spell(
+    id=200854,
+    name='Demonic Versatility',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_HEALING_DONE_PERCENT),
+    ],
+    spell_icon_id=0,
+    notes="warlock-rework DEMONOLOGY §2.1/§7.1/§11 Q16 (user: \"Versatility should also apply on demons\"): hidden aura on every demon 200840 goes on, always (no talent gate, no Demonology gate). V = owner->GetVersatilityPercentage(). eff0 = round(V), eff1 = -round(V/2) (players take V/2 less), eff2 = round(V) healing done. family 0, SpellClassSet default. custom_attr SPELL_ATTR0_CU_POSITIVE (eff1 negative would otherwise classify it negative, like 200836).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+custom_attr(demonic_versatility_200854, attributes=0x0E000000)
+scripted_by(200850, 'spell_warl_demon_aura')
+scripted_by(200851, 'spell_warl_demon_aura')
+scripted_by(200852, 'spell_warl_demon_aura')
+scripted_by(200854, 'spell_warl_demon_aura')
+scripted_by(200842, 'spell_warl_demonic_potency_input')
+scripted_by(200845, 'spell_warl_demonic_potency_input')
+
+
+dark_apotheosis_learner_200863 = spell(
+    id=200863,
+    name='Dark Apotheosis',
+    school=School.NORMAL,
+    attributes=8388992,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.LEARN_SPELL, die_sides=0, implicit_target_a=1, trigger_spell=200835),
+        Effect(type=EffectType.LEARN_SPELL, base_points=-1, implicit_target_a=1, trigger_spell=50589),
+        Effect(type=EffectType.LEARN_SPELL, base_points=-1, implicit_target_a=1, trigger_spell=200864),
+    ],
+    spell_icon_id=545,
+    notes='warlock-rework DEMONOLOGY §6 (0,3): talent rank of new talent 1282 (repurposed from Soul Link, same cell). LEARN carrier (59672 pattern) - attrs/AttributesEx copied from 59672. eff0 LEARN 200835 (form), eff1 LEARN 50589 (Immolation Aura), eff2 LEARN 200864 (demon abilities carrier).',
+    raw_overrides={'AttributesEx': 2147483648, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Shifts you into a demonic form until cancelled. While in this form you are immune to critical strikes from melee and ranged attacks, your armor from cloth and leather items is increased by $200835s2%, your threat generation is increased by $200835s3%, and your damage done is reduced by 20%. Grants Immolation Aura, Demon Charge, Demonic Taunt and Challenging Howl. Cannot be used with Metamorphosis.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1},
+)
+
+
+dark_apotheosis_demon_abilities_200864 = spell(
+    id=200864,
+    name='Dark Apotheosis',
+    school=School.NORMAL,
+    attributes=8388992,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.LEARN_SPELL, die_sides=0, implicit_target_a=1, trigger_spell=54785),
+        Effect(type=EffectType.LEARN_SPELL, base_points=-1, implicit_target_a=1, trigger_spell=200839),
+        Effect(type=EffectType.LEARN_SPELL, base_points=-1, implicit_target_a=1, trigger_spell=59671),
+    ],
+    spell_icon_id=545,
+    notes='warlock-rework DEMONOLOGY §6 (0,3): LEARN carrier (59673 pattern) - attrs copied from 59673. eff0 LEARN 54785 (Demon Charge), eff1 LEARN 200839 (Demonic Taunt), eff2 LEARN 59671 (Challenging Howl).',
+    raw_overrides={'AttributesEx': 2147483648, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Learns the abilities granted by Dark Apotheosis.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1},
+)
+
+
+legions_call_200905 = spell(
+    id=200905,
+    name="Legion's Call",
+    school=School.NORMAL,
+    attributes=8388992,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.LEARN_SPELL, die_sides=0, implicit_target_a=1, trigger_spell=200831),
+        Effect(type=EffectType.LEARN_SPELL, base_points=-1, implicit_target_a=1, trigger_spell=200833),
+    ],
+    spell_icon_id=460,
+    notes='warlock-rework DEMONOLOGY §6 (10,1): talent rank of new talent 60092, LEARN carrier (59672 pattern, attrs copied). eff0 LEARN 200831 (Summon Doomguard), eff1 LEARN 200833 (Summon Infernal). warlock_demonology_player_script removes/relearns stock 1122/18540 (§7.11, Warlock::SyncLegionsCall) - not a data effect.',
+    raw_overrides={'AttributesEx': 2147483648, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Ritual of Doom and Inferno are replaced by Summon Doomguard and Summon Infernal. Each summons a guardian that fights for you for 25 sec on its own 2 min cooldown. The Doomguard casts Doom Bolt at your target. The Infernal burns nearby enemies with Immolation Aura.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1},
+)
+
+
+# warlock-rework DEMONOLOGY §4.8 (user 2026-09-27, §11 Q14): all 24 Healthstone heals become
+# HEAL_PCT 50/55/60% by Improved Healthstone tier, in place (each spell is used by exactly one
+# item, no new ids, no item SQL). Every other field kept from the stock pull: die_sides 1,
+# target 1, SpellClassSet 5 + d1 HEALTHSTONE (Glyph of Healthstone 56224's +30% SpellMod still
+# reaches them), EffectBonusMultiplier 0 / no spell_bonus_data (no spell-power term), category 30.
+minor_healthstone_6262 = spell(
+    id=6262,
+    name='Minor Healthstone',
+    school=School.NORMAL,
+    category=30,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.HEAL_PCT, base_points=49, implicit_target_a=1),
+    ],
+    spell_icon_id=284,
+    notes='warlock-rework DEMONOLOGY §4.8: HEAL (flat) -> HEAL_PCT stored 49 (50% live), tier base.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 10, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 5479, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly restores 50% of your maximum health.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_1': 65536, 'DefenseType': 1, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+minor_healthstone_23468 = spell(
+    id=23468,
+    name='Minor Healthstone',
+    school=School.NORMAL,
+    category=30,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.HEAL_PCT, base_points=54, implicit_target_a=1),
+    ],
+    spell_icon_id=284,
+    notes='warlock-rework DEMONOLOGY §4.8: HEAL (flat) -> HEAL_PCT stored 54 (55% live), tier r1.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 10, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 5479, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly restores 55% of your maximum health.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_1': 65536, 'DefenseType': 1, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+minor_healthstone_23469 = spell(
+    id=23469,
+    name='Minor Healthstone',
+    school=School.NORMAL,
+    category=30,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.HEAL_PCT, base_points=59, implicit_target_a=1),
+    ],
+    spell_icon_id=284,
+    notes='warlock-rework DEMONOLOGY §4.8: HEAL (flat) -> HEAL_PCT stored 59 (60% live), tier r2.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 10, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 5479, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly restores 60% of your maximum health.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_1': 65536, 'DefenseType': 1, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+lesser_healthstone_6263 = spell(
+    id=6263,
+    name='Lesser Healthstone',
+    school=School.NORMAL,
+    category=30,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.HEAL_PCT, base_points=49, implicit_target_a=1),
+    ],
+    spell_icon_id=284,
+    notes='warlock-rework DEMONOLOGY §4.8: HEAL (flat) -> HEAL_PCT stored 49 (50% live), tier base.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 22, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 240, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly restores 50% of your maximum health.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_1': 65536, 'DefenseType': 1, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+lesser_healthstone_23470 = spell(
+    id=23470,
+    name='Lesser Healthstone',
+    school=School.NORMAL,
+    category=30,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.HEAL_PCT, base_points=54, implicit_target_a=1),
+    ],
+    spell_icon_id=284,
+    notes='warlock-rework DEMONOLOGY §4.8: HEAL (flat) -> HEAL_PCT stored 54 (55% live), tier r1.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 22, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 240, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly restores 55% of your maximum health.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_1': 65536, 'DefenseType': 1, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+lesser_healthstone_23471 = spell(
+    id=23471,
+    name='Lesser Healthstone',
+    school=School.NORMAL,
+    category=30,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.HEAL_PCT, base_points=59, implicit_target_a=1),
+    ],
+    spell_icon_id=284,
+    notes='warlock-rework DEMONOLOGY §4.8: HEAL (flat) -> HEAL_PCT stored 59 (60% live), tier r2.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 22, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 240, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly restores 60% of your maximum health.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_1': 65536, 'DefenseType': 1, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+healthstone_5720 = spell(
+    id=5720,
+    name='Healthstone',
+    school=School.NORMAL,
+    category=30,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.HEAL_PCT, base_points=49, implicit_target_a=1),
+    ],
+    spell_icon_id=284,
+    notes='warlock-rework DEMONOLOGY §4.8: HEAL (flat) -> HEAL_PCT stored 49 (50% live), tier base.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 34, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 240, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly restores 50% of your maximum health.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_1': 65536, 'DefenseType': 1, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+healthstone_23472 = spell(
+    id=23472,
+    name='Healthstone',
+    school=School.NORMAL,
+    category=30,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.HEAL_PCT, base_points=54, implicit_target_a=1),
+    ],
+    spell_icon_id=284,
+    notes='warlock-rework DEMONOLOGY §4.8: HEAL (flat) -> HEAL_PCT stored 54 (55% live), tier r1.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 34, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 240, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly restores 55% of your maximum health.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_1': 65536, 'DefenseType': 1, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+healthstone_23473 = spell(
+    id=23473,
+    name='Healthstone',
+    school=School.NORMAL,
+    category=30,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.HEAL_PCT, base_points=59, implicit_target_a=1),
+    ],
+    spell_icon_id=284,
+    notes='warlock-rework DEMONOLOGY §4.8: HEAL (flat) -> HEAL_PCT stored 59 (60% live), tier r2.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 34, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 240, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly restores 60% of your maximum health.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_1': 65536, 'DefenseType': 1, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+greater_healthstone_5723 = spell(
+    id=5723,
+    name='Greater Healthstone',
+    school=School.NORMAL,
+    category=30,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.HEAL_PCT, base_points=49, implicit_target_a=1),
+    ],
+    spell_icon_id=284,
+    notes='warlock-rework DEMONOLOGY §4.8: HEAL (flat) -> HEAL_PCT stored 49 (50% live), tier base.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 46, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 240, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly restores 50% of your maximum health.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_1': 65536, 'DefenseType': 1, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+greater_healthstone_23474 = spell(
+    id=23474,
+    name='Greater Healthstone',
+    school=School.NORMAL,
+    category=30,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.HEAL_PCT, base_points=54, implicit_target_a=1),
+    ],
+    spell_icon_id=284,
+    notes='warlock-rework DEMONOLOGY §4.8: HEAL (flat) -> HEAL_PCT stored 54 (55% live), tier r1.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 46, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 240, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly restores 55% of your maximum health.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_1': 65536, 'DefenseType': 1, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+greater_healthstone_23475 = spell(
+    id=23475,
+    name='Greater Healthstone',
+    school=School.NORMAL,
+    category=30,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.HEAL_PCT, base_points=59, implicit_target_a=1),
+    ],
+    spell_icon_id=284,
+    notes='warlock-rework DEMONOLOGY §4.8: HEAL (flat) -> HEAL_PCT stored 59 (60% live), tier r2.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 46, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 240, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly restores 60% of your maximum health.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_1': 65536, 'DefenseType': 1, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+major_healthstone_11732 = spell(
+    id=11732,
+    name='Major Healthstone',
+    school=School.NORMAL,
+    category=30,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.HEAL_PCT, base_points=49, implicit_target_a=1),
+    ],
+    spell_icon_id=284,
+    notes='warlock-rework DEMONOLOGY §4.8: HEAL (flat) -> HEAL_PCT stored 49 (50% live), tier base.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 58, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 240, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly restores 50% of your maximum health.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_1': 65536, 'DefenseType': 1, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+major_healthstone_23476 = spell(
+    id=23476,
+    name='Major Healthstone',
+    school=School.NORMAL,
+    category=30,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.HEAL_PCT, base_points=54, implicit_target_a=1),
+    ],
+    spell_icon_id=284,
+    notes='warlock-rework DEMONOLOGY §4.8: HEAL (flat) -> HEAL_PCT stored 54 (55% live), tier r1.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 58, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 240, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly restores 55% of your maximum health.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_1': 65536, 'DefenseType': 1, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+major_healthstone_23477 = spell(
+    id=23477,
+    name='Major Healthstone',
+    school=School.NORMAL,
+    category=30,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.HEAL_PCT, base_points=59, implicit_target_a=1),
+    ],
+    spell_icon_id=284,
+    notes='warlock-rework DEMONOLOGY §4.8: HEAL (flat) -> HEAL_PCT stored 59 (60% live), tier r2.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 58, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 240, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly restores 60% of your maximum health.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_1': 65536, 'DefenseType': 1, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+master_healthstone_27235 = spell(
+    id=27235,
+    name='Master Healthstone',
+    school=School.NORMAL,
+    category=30,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.HEAL_PCT, base_points=49, implicit_target_a=1),
+    ],
+    spell_icon_id=284,
+    notes='warlock-rework DEMONOLOGY §4.8: HEAL (flat) -> HEAL_PCT stored 49 (50% live), tier base.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 70, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 240, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly restores 50% of your maximum health.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_1': 65536, 'DefenseType': 1, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+master_healthstone_27236 = spell(
+    id=27236,
+    name='Master Healthstone',
+    school=School.NORMAL,
+    category=30,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.HEAL_PCT, base_points=54, implicit_target_a=1),
+    ],
+    spell_icon_id=284,
+    notes='warlock-rework DEMONOLOGY §4.8: HEAL (flat) -> HEAL_PCT stored 54 (55% live), tier r1.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 70, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 240, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly restores 55% of your maximum health.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_1': 65536, 'DefenseType': 1, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+master_healthstone_27237 = spell(
+    id=27237,
+    name='Master Healthstone',
+    school=School.NORMAL,
+    category=30,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.HEAL_PCT, base_points=59, implicit_target_a=1),
+    ],
+    spell_icon_id=284,
+    notes='warlock-rework DEMONOLOGY §4.8: HEAL (flat) -> HEAL_PCT stored 59 (60% live), tier r2.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 70, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 240, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly restores 60% of your maximum health.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_1': 65536, 'DefenseType': 1, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+master_healthstone_47874 = spell(
+    id=47874,
+    name='Master Healthstone',
+    school=School.NORMAL,
+    category=30,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.HEAL_PCT, base_points=49, implicit_target_a=1),
+    ],
+    spell_icon_id=284,
+    notes='warlock-rework DEMONOLOGY §4.8: HEAL (flat) -> HEAL_PCT stored 49 (50% live), tier base.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 73, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 240, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly restores 50% of your maximum health.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_1': 65536, 'DefenseType': 1, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+master_healthstone_47873 = spell(
+    id=47873,
+    name='Master Healthstone',
+    school=School.NORMAL,
+    category=30,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.HEAL_PCT, base_points=54, implicit_target_a=1),
+    ],
+    spell_icon_id=284,
+    notes='warlock-rework DEMONOLOGY §4.8: HEAL (flat) -> HEAL_PCT stored 54 (55% live), tier r1.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 73, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 240, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly restores 55% of your maximum health.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_1': 65536, 'DefenseType': 1, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+master_healthstone_47872 = spell(
+    id=47872,
+    name='Master Healthstone',
+    school=School.NORMAL,
+    category=30,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.HEAL_PCT, base_points=59, implicit_target_a=1),
+    ],
+    spell_icon_id=284,
+    notes='warlock-rework DEMONOLOGY §4.8: HEAL (flat) -> HEAL_PCT stored 59 (60% live), tier r2.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 73, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 240, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly restores 60% of your maximum health.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_1': 65536, 'DefenseType': 1, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+master_healthstone_47875 = spell(
+    id=47875,
+    name='Master Healthstone',
+    school=School.NORMAL,
+    category=30,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.HEAL_PCT, base_points=49, implicit_target_a=1),
+    ],
+    spell_icon_id=284,
+    notes='warlock-rework DEMONOLOGY §4.8: HEAL (flat) -> HEAL_PCT stored 49 (50% live), tier base.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 79, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 240, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly restores 50% of your maximum health.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_1': 65536, 'DefenseType': 1, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+master_healthstone_47876 = spell(
+    id=47876,
+    name='Master Healthstone',
+    school=School.NORMAL,
+    category=30,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.HEAL_PCT, base_points=54, implicit_target_a=1),
+    ],
+    spell_icon_id=284,
+    notes='warlock-rework DEMONOLOGY §4.8: HEAL (flat) -> HEAL_PCT stored 54 (55% live), tier r1.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 79, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 240, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly restores 55% of your maximum health.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_1': 65536, 'DefenseType': 1, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+master_healthstone_47877 = spell(
+    id=47877,
+    name='Master Healthstone',
+    school=School.NORMAL,
+    category=30,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.HEAL_PCT, base_points=59, implicit_target_a=1),
+    ],
+    spell_icon_id=284,
+    notes='warlock-rework DEMONOLOGY §4.8: HEAL (flat) -> HEAL_PCT stored 59 (60% live), tier r2.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 79, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 240, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Instantly restores 60% of your maximum health.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_1': 65536, 'DefenseType': 1, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+for _spell_id in (6262, 23468, 23469, 6263, 23470, 23471, 5720, 23472, 23473, 5723, 23474, 23475, 11732, 23476, 23477, 27235, 27236, 27237, 47874, 47873, 47872, 47875, 47876, 47877):
+    scripted_by(_spell_id, 'spell_warl_healthstone_sp')
+
+
+demonic_resolve_200860 = spell(
+    id=200860,
+    name='Demonic Resolve',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=306, misc_value=2097152),
+    ],
+    spell_icon_id=3430,
+    notes='warlock-rework DEMONOLOGY §6 (0,1): new talent (repurposed 1224, was Improved Health Funnel). eff0 MOD_CUSTOM_STAT_PCT(306) misc=1<<21 (Versatility) stored 0 (1% live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Versatility by $s1%.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+demonic_resolve_200861 = spell(
+    id=200861,
+    name='Demonic Resolve',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=306, misc_value=2097152),
+    ],
+    spell_icon_id=3430,
+    notes='warlock-rework DEMONOLOGY §6 (0,1): see rank 1 note (2% live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Versatility by $s1%.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+demonic_resolve_200862 = spell(
+    id=200862,
+    name='Demonic Resolve',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=306, misc_value=2097152),
+    ],
+    spell_icon_id=3430,
+    notes='warlock-rework DEMONOLOGY §6 (0,1): see rank 1 note (3% live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Versatility by $s1%.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+improved_hand_of_guldan_200865 = spell(
+    id=200865,
+    name='Improved Hand of Gul\'dan',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1001, implicit_target_a=1, apply_aura=107, misc_value=11),
+    ],
+    spell_icon_id=2354,
+    notes='warlock-rework DEMONOLOGY §6 (1,2): new talent 60080. eff0 ADD_PCT_MODIFIER DAMAGE stored 9 (10% live), A_3=HAND_OF_GULDAN. eff1 ADD_FLAT_MODIFIER COOLDOWN stored -1001 (-1000 ms live), B_3=HAND_OF_GULDAN. SpellClassSet 5 required (carries SpellMods).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Hand of Gul'dan by $s1% and reduces its cooldown by $/1000;s2 sec.", 'EffectSpellClassMaskA_3': m.HAND_OF_GULDAN, 'EffectSpellClassMaskB_3': m.HAND_OF_GULDAN, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+
+
+improved_hand_of_guldan_200866 = spell(
+    id=200866,
+    name='Improved Hand of Gul\'dan',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=-2001, implicit_target_a=1, apply_aura=107, misc_value=11),
+    ],
+    spell_icon_id=2354,
+    notes='warlock-rework DEMONOLOGY §6 (1,2): see rank 1 note (20% live, -2000 ms live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Hand of Gul'dan by $s1% and reduces its cooldown by $/1000;s2 sec.", 'EffectSpellClassMaskA_3': m.HAND_OF_GULDAN, 'EffectSpellClassMaskB_3': m.HAND_OF_GULDAN, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+
+
+imp_gang_boss_200867 = spell(
+    id=200867,
+    name='Imp Gang Boss',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=3171,
+    notes='warlock-rework DEMONOLOGY §6 (2,0): new talent 1243 (repurposed, was Improved Succubus, same cell). eff0 DUMMY stored 9 (10% live), read by spell_warl_hand_of_guldan (one roll per cast).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Hand of Gul'dan has a $s1% chance to summon an Imp Gang Boss in place of one Wild Imp. The Imp Gang Boss deals 50% more damage and spawns with 50% more energy.", 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+imp_gang_boss_200868 = spell(
+    id=200868,
+    name='Imp Gang Boss',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=3171,
+    notes='warlock-rework DEMONOLOGY §6 (2,0): see rank 1 note (20% live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Hand of Gul'dan has a $s1% chance to summon an Imp Gang Boss in place of one Wild Imp. The Imp Gang Boss deals 50% more damage and spawns with 50% more energy.", 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+legion_strength_200871 = spell(
+    id=200871,
+    name='Legion Strength',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2366,
+    notes='warlock-rework DEMONOLOGY §6 (3,0): new talent 60082. eff0 DUMMY stored 1 (2% live), read by spell_warl_shadow_bolt_demonology OnHit x Wild Imp count. Capstone clause added on this non-final rank (talent-tooltip-audit finding, 2026-09-28): PLAN §2 capstone format requires it gray-wrapped at every rank, not just the final one.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Shadow Bolt deals $s1% more damage for each Wild Imp you control.\n\n|cFF9D9D9DCapstone Bonus: Your Mastery increases the bonus per Wild Imp by a percentage equal to your Mastery.|r', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+legion_strength_200872 = spell(
+    id=200872,
+    name='Legion Strength',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2366,
+    notes='warlock-rework DEMONOLOGY §6 (3,0): see rank 1 note (3% live). Capstone clause added (talent-tooltip-audit finding, 2026-09-28).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Shadow Bolt deals $s1% more damage for each Wild Imp you control.\n\n|cFF9D9D9DCapstone Bonus: Your Mastery increases the bonus per Wild Imp by a percentage equal to your Mastery.|r', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+legion_strength_200873 = spell(
+    id=200873,
+    name='Legion Strength',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2366,
+    notes='warlock-rework DEMONOLOGY §6 (3,0): see rank 1 note (5% live); r3 eff1 DUMMY 0 = Mastery capstone marker.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Shadow Bolt deals $s1% more damage for each Wild Imp you control.\n\nCapstone Bonus: Your Mastery increases the bonus per Wild Imp by a percentage equal to your Mastery.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+
+
+fel_immolation_200874 = spell(
+    id=200874,
+    name='Fel Immolation',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108, misc_value=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2355,
+    notes='warlock-rework DEMONOLOGY §6 (4,3): new talent 60084. eff0 ADD_PCT_MODIFIER DAMAGE stored 4 (5% live), A_1=IMMOLATE. eff1 ADD_PCT_MODIFIER DOT stored 4 (5% live), B_1=IMMOLATE. eff2 DUMMY stored 2 (3% live leech, SHARED leech-talent rule, LeechTalent::FelImmolation). SpellClassSet 5 required.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Immolate and Immolation Aura by $s1%. Their periodic damage heals you for $s3% of the damage dealt.\n\n|cFF9D9D9DCapstone Bonus: While in Dark Apotheosis, casting Soul Fire on a target afflicted by your Immolate spreads your Immolate to up to 5 enemies within 8 yards.|r', 'EffectSpellClassMaskA_1': m.IMMOLATE, 'EffectSpellClassMaskB_1': m.IMMOLATE, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+fel_immolation_200875 = spell(
+    id=200875,
+    name='Fel Immolation',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2355,
+    notes='warlock-rework DEMONOLOGY §6 (4,3): see rank 1 note (10%/10%/6% live). Capstone clause added (talent-tooltip-audit finding, 2026-09-28).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Immolate and Immolation Aura by $s1%. Their periodic damage heals you for $s3% of the damage dealt.\n\n|cFF9D9D9DCapstone Bonus: While in Dark Apotheosis, casting Soul Fire on a target afflicted by your Immolate spreads your Immolate to up to 5 enemies within 8 yards.|r', 'EffectSpellClassMaskA_1': m.IMMOLATE, 'EffectSpellClassMaskB_1': m.IMMOLATE, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+fel_immolation_200876 = spell(
+    id=200876,
+    name='Fel Immolation',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108, misc_value=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2355,
+    notes='warlock-rework DEMONOLOGY §6 (4,3): see rank 1 note (15%/15%/9% live); capstone (final rank): while in Dark Apotheosis, Soul Fire on an Immolated target spreads Immolate to up to 5 enemies within 8 yd (spell_warl_soul_fire_demonology, §7.9).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Immolate and Immolation Aura by $s1%. Their periodic damage heals you for $s3% of the damage dealt.\n\nCapstone Bonus: While in Dark Apotheosis, casting Soul Fire on a target afflicted by your Immolate spreads your Immolate to up to 5 enemies within 8 yards.', 'EffectSpellClassMaskA_1': m.IMMOLATE, 'EffectSpellClassMaskB_1': m.IMMOLATE, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+scripted_by(fel_immolation_200874, 'spell_warl_fel_immolation_leech')
+scripted_by(fel_immolation_200875, 'spell_warl_fel_immolation_leech')
+scripted_by(fel_immolation_200876, 'spell_warl_fel_immolation_leech')
+for _fi_id in (200874, 200875, 200876):
+    procs_on(
+        _fi_id,
+        proc_flags=m.PROC_FLAG_DONE_PERIODIC | m.PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG,
+        family_name=5,
+        spell_type_mask=m.PROC_SPELL_TYPE_DAMAGE,
+        spell_phase_mask=m.PROC_SPELL_PHASE_HIT,
+        attributes_mask=m.PROC_ATTR_TRIGGERED_CAN_PROC,
+        chance=100,
+    )
+
+
+fel_bond_200877 = spell(
+    id=200877,
+    name='Fel Bond',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=107, misc_value=3),
+    ],
+    spell_icon_id=114,
+    notes='warlock-rework DEMONOLOGY §6 (5,1)/§2.2: new rank ids replacing Master Demonologist (1244 same cell) - stock spell_pet_auras keys on 23785/23822-25 for the old pet effects, so new ids leave them unreachable. eff0 DUMMY stored 2 (VW: 3% physical DR live). eff1 DUMMY stored 0 (Felguard/enslaved: 1% live). eff2 ADD_FLAT_MODIFIER EFFECT1(misc 3) stored 0 (1% live), C_3=DEMONIC_FRENZY (moved from Demonic Brutality stock eff2: +1/2/3% AP per Demonic Frenzy stack). SpellClassSet 5 required (eff2 is a SpellMod).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Grants you and your demon an effect while it is active. Voidwalker: You and your Voidwalker take $s1% less Physical damage. Felguard: You and your Felguard deal $s2% more damage and take $s2% less damage, and Demonic Frenzy grants $s3% more attack power. Enslaved demon: As Felguard.', 'EffectSpellClassMaskC_3': m.DEMONIC_FRENZY, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+fel_bond_200878 = spell(
+    id=200878,
+    name='Fel Bond',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=3),
+    ],
+    spell_icon_id=114,
+    notes='warlock-rework DEMONOLOGY §6 (5,1): see rank 1 note (6%/2%/2% live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Grants you and your demon an effect while it is active. Voidwalker: You and your Voidwalker take $s1% less Physical damage. Felguard: You and your Felguard deal $s2% more damage and take $s2% less damage, and Demonic Frenzy grants $s3% more attack power. Enslaved demon: As Felguard.', 'EffectSpellClassMaskC_3': m.DEMONIC_FRENZY, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+fel_bond_200879 = spell(
+    id=200879,
+    name='Fel Bond',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=107, misc_value=3),
+    ],
+    spell_icon_id=114,
+    notes='warlock-rework DEMONOLOGY §6 (5,1): see rank 1 note (10%/3%/3% live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Grants you and your demon an effect while it is active. Voidwalker: You and your Voidwalker take $s1% less Physical damage. Felguard: You and your Felguard deal $s2% more damage and take $s2% less damage, and Demonic Frenzy grants $s3% more attack power. Enslaved demon: As Felguard.', 'EffectSpellClassMaskC_3': m.DEMONIC_FRENZY, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+grimoire_of_synergy_200880 = spell(
+    id=200880,
+    name='Grimoire of Synergy',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=3217,
+    notes='warlock-rework DEMONOLOGY §6 (5,2): new talent 60085. eff0 DUMMY stored 4 (5% live), read by spell_warl_grimoire_of_synergy_pet CheckProc.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Felguard's attacks have a $s1% chance to increase your spell damage by 10% for 15 sec. This effect cannot occur more than once every 20 sec.", 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+grimoire_of_synergy_200881 = spell(
+    id=200881,
+    name='Grimoire of Synergy',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=3217,
+    notes='warlock-rework DEMONOLOGY §6 (5,2): see rank 1 note (10% live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Felguard's attacks have a $s1% chance to increase your spell damage by 10% for 15 sec. This effect cannot occur more than once every 20 sec.", 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+grimoire_of_synergy_200882 = spell(
+    id=200882,
+    name='Grimoire of Synergy',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=3217,
+    notes='warlock-rework DEMONOLOGY §6 (5,2): see rank 1 note (15% live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Felguard's attacks have a $s1% chance to increase your spell damage by 10% for 15 sec. This effect cannot occur more than once every 20 sec.", 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+demonic_calling_200883 = spell(
+    id=200883,
+    name='Demonic Calling',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=3221,
+    notes='warlock-rework DEMONOLOGY §6 (6,0): new talent 60086. eff0 DUMMY stored 4 (5% live), read by spell_warl_shadow_bolt_demonology AfterCast.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Shadow Bolt has a $s1% chance to reset the cooldown of your Hand of Gul'dan. This effect cannot occur more than once every 10 sec.", 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+demonic_calling_200884 = spell(
+    id=200884,
+    name='Demonic Calling',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=3221,
+    notes='warlock-rework DEMONOLOGY §6 (6,0): see rank 1 note (10% live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Shadow Bolt has a $s1% chance to reset the cooldown of your Hand of Gul'dan. This effect cannot occur more than once every 10 sec.", 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+demonic_calling_200885 = spell(
+    id=200885,
+    name='Demonic Calling',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=3221,
+    notes='warlock-rework DEMONOLOGY §6 (6,0): see rank 1 note (15% live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Shadow Bolt has a $s1% chance to reset the cooldown of your Hand of Gul'dan. This effect cannot occur more than once every 10 sec.", 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+improved_soul_fire_200886 = spell(
+    id=200886,
+    name='Improved Soul Fire',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=999, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2352,
+    notes='warlock-rework DEMONOLOGY §6 (6,2): new talent 60087. eff0 DUMMY stored 999 (1000 ms live). eff1 DUMMY stored 2 (3% live max HP shield in Dark Apotheosis).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Soul Fire reduces the remaining cooldown of your Metamorphosis by $/1000;s1 sec. While in Dark Apotheosis, your Soul Fire instead shields you, absorbing damage equal to $s2% of your maximum health for 12 sec.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+
+
+improved_soul_fire_200887 = spell(
+    id=200887,
+    name='Improved Soul Fire',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1999, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2352,
+    notes='warlock-rework DEMONOLOGY §6 (6,2): see rank 1 note (2000 ms/6% live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Soul Fire reduces the remaining cooldown of your Metamorphosis by $/1000;s1 sec. While in Dark Apotheosis, your Soul Fire instead shields you, absorbing damage equal to $s2% of your maximum health for 12 sec.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+
+
+improved_soul_fire_200888 = spell(
+    id=200888,
+    name='Improved Soul Fire',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2999, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2352,
+    notes='warlock-rework DEMONOLOGY §6 (6,2): see rank 1 note (3000 ms/10% live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Soul Fire reduces the remaining cooldown of your Metamorphosis by $/1000;s1 sec. While in Dark Apotheosis, your Soul Fire instead shields you, absorbing damage equal to $s2% of your maximum health for 12 sec.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+
+
+fel_cruelty_200890 = spell(
+    id=200890,
+    name='Fel Cruelty',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2375,
+    notes='warlock-rework DEMONOLOGY §6 (7,2)/SHARED §1.1: new talent 60088. eff0 placeholder APPLY_AURA DUMMY bp0/die0 - must be an aura or the rank never applies and the linked_spell type-2 link never fires. Crit-damage clause lives on the SHARED hidden passive 200704 via linked_spell (below), not on this rank.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 165% damage. This does not stack with other similar effects.\n\n|cFF9D9D9DCapstone Bonus: Critical strikes from your direct Shadow or Fire damage spells and your Bane of Doom increase the damage done by your demons by 10% for 6 sec.|r', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+)
+linked_spell(200890, 200704, type=2)
+
+
+fel_cruelty_200891 = spell(
+    id=200891,
+    name='Fel Cruelty',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2375,
+    notes='warlock-rework DEMONOLOGY §6 (7,2): see rank 1 note (180% live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 180% damage. This does not stack with other similar effects.\n\n|cFF9D9D9DCapstone Bonus: Critical strikes from your direct Shadow or Fire damage spells and your Bane of Doom increase the damage done by your demons by 10% for 6 sec.|r', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+)
+linked_spell(200891, 200705, type=2)
+
+
+fel_cruelty_200892 = spell(
+    id=200892,
+    name='Fel Cruelty',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200842),
+    ],
+    spell_icon_id=2375,
+    notes='warlock-rework DEMONOLOGY §6 (7,2): see rank 1 note (200% live, 33 stored -> 199.5% by construction, spec rounds display to 200%). r3 eff1 PROC_TRIGGER_SPELL -> 200842 (Fel Cruelty buff). Proc row + spell_warl_fel_cruelty CheckProc (§7.8/§8).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 200% damage. This does not stack with other similar effects.\n\nCapstone Bonus: Critical strikes from your direct Shadow or Fire damage spells and your Bane of Doom increase the damage done by your demons by 10% for 6 sec.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+linked_spell(200892, 200706, type=2)
+scripted_by(fel_cruelty_200892, 'spell_warl_fel_cruelty')
+procs_on(
+    fel_cruelty_200892,
+    proc_flags=m.PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG | m.PROC_FLAG_DONE_PERIODIC,
+    school_mask=36,
+    family_name=5,
+    spell_type_mask=m.PROC_SPELL_TYPE_DAMAGE,
+    spell_phase_mask=m.PROC_SPELL_PHASE_HIT,
+    hit_mask=m.PROC_HIT_CRITICAL,
+    chance=100,
+    disable_effects_mask=0x1,
+)
+
+
+demonic_bulwark_200893 = spell(
+    id=200893,
+    name='Demonic Bulwark',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2365,
+    notes='warlock-rework DEMONOLOGY §6 (7,3): new talent 60089. eff0 DUMMY stored 2 (3% live, form DR read by 200838). eff1 DUMMY stored 1 (2% live, Immolation Aura debuff damage). eff2 DUMMY stored 6 (7% live, Immolation Aura debuff attack speed).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the damage you take while in Metamorphosis or Dark Apotheosis by $s1%. Enemies hit by your Immolation Aura deal $s2% less damage and have their attack speed reduced by $s3%.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+demonic_bulwark_200894 = spell(
+    id=200894,
+    name='Demonic Bulwark',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=13, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2365,
+    notes='warlock-rework DEMONOLOGY §6 (7,3): see rank 1 note (6%/4%/14% live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the damage you take while in Metamorphosis or Dark Apotheosis by $s1%. Enemies hit by your Immolation Aura deal $s2% less damage and have their attack speed reduced by $s3%.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+demonic_bulwark_200895 = spell(
+    id=200895,
+    name='Demonic Bulwark',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2365,
+    notes='warlock-rework DEMONOLOGY §6 (7,3): see rank 1 note (10%/6%/20% live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the damage you take while in Metamorphosis or Dark Apotheosis by $s1%. Enemies hit by your Immolation Aura deal $s2% less damage and have their attack speed reduced by $s3%.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+improved_demonic_tactics_200896 = spell(
+    id=200896,
+    name='Improved Demonic Tactics',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=3177,
+    notes='warlock-rework DEMONOLOGY §6 (8,0)/PLAN §3.4: replaces stock 54347-9 with new ids (load-time rewrite) - 54347-9 stay unedited/orphaned. eff0 DUMMY stored 9 (10% live), read by Potency eff2 x owner Shadow spell crit (§11 Q18).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Wild Imps, Dreadstalkers, summoned demon and tamed pet by an amount equal to $s1% of your spell critical strike chance.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+improved_demonic_tactics_200897 = spell(
+    id=200897,
+    name='Improved Demonic Tactics',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=3177,
+    notes='warlock-rework DEMONOLOGY §6 (8,0): see rank 1 note (20% live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Wild Imps, Dreadstalkers, summoned demon and tamed pet by an amount equal to $s1% of your spell critical strike chance.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+improved_demonic_tactics_200898 = spell(
+    id=200898,
+    name='Improved Demonic Tactics',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=3177,
+    notes='warlock-rework DEMONOLOGY §6 (8,0): see rank 1 note (30% live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Wild Imps, Dreadstalkers, summoned demon and tamed pet by an amount equal to $s1% of your spell critical strike chance.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+fel_reprisal_200899 = spell(
+    id=200899,
+    name='Fel Reprisal',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=71165),
+    ],
+    spell_icon_id=2369,
+    notes='warlock-rework DEMONOLOGY §6 (8,3): new talent 60090. eff0 PROC_TRIGGER_SPELL -> 71165 (Molten Core). Proc row chance 10, cooldown 6000 (§8, spell_warl_fel_reprisal CheckProc gates on form 23 + Immolate-only for periodic).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While in Dark Apotheosis, taking damage or dealing periodic damage with Immolate has a $s1% chance to grant you Molten Core. This effect cannot occur more than once every 6 sec.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+fel_reprisal_200900 = spell(
+    id=200900,
+    name='Fel Reprisal',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=71165),
+    ],
+    spell_icon_id=2369,
+    notes='warlock-rework DEMONOLOGY §6 (8,3): see rank 1 note (20% chance).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While in Dark Apotheosis, taking damage or dealing periodic damage with Immolate has a $s1% chance to grant you Molten Core. This effect cannot occur more than once every 6 sec.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+fel_reprisal_200901 = spell(
+    id=200901,
+    name='Fel Reprisal',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=71165),
+    ],
+    spell_icon_id=2369,
+    notes='warlock-rework DEMONOLOGY §6 (8,3): see rank 1 note (30% chance).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While in Dark Apotheosis, taking damage or dealing periodic damage with Immolate has a $s1% chance to grant you Molten Core. This effect cannot occur more than once every 6 sec.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0},
+)
+scripted_by(fel_reprisal_200899, 'spell_warl_fel_reprisal')
+scripted_by(fel_reprisal_200900, 'spell_warl_fel_reprisal')
+scripted_by(fel_reprisal_200901, 'spell_warl_fel_reprisal')
+for _fr_id, _fr_chance in ((200899, 10), (200900, 20), (200901, 30)):
+    procs_on(
+        _fr_id,
+        proc_flags=1310720,
+        spell_type_mask=m.PROC_SPELL_TYPE_DAMAGE,
+        spell_phase_mask=m.PROC_SPELL_PHASE_HIT,
+        chance=_fr_chance,
+        cooldown_ms=6000,
+    )
+
+
+demonic_form_200902 = spell(
+    id=200902,
+    name='Demonic Form',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2299,
+    notes='warlock-rework DEMONOLOGY §6 (9,1): new talent 60091. eff0 DUMMY stored 1 (+2 live, 47241 eff2 armor/damage Meta bonus add-on). eff1 DUMMY stored 4 (5% live, SB/HoG damage bonus in Meta, 200837 eff1).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage bonuses Metamorphosis grants to you and your demons by $s1%, and the damage of your Shadow Bolt and Hand of Gul'dan while in Metamorphosis by $s2%.", 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+
+
+demonic_form_200903 = spell(
+    id=200903,
+    name='Demonic Form',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2299,
+    notes='warlock-rework DEMONOLOGY §6 (9,1): see rank 1 note (+4/10% live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage bonuses Metamorphosis grants to you and your demons by $s1%, and the damage of your Shadow Bolt and Hand of Gul'dan while in Metamorphosis by $s2%.", 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+
+
+demonic_form_200904 = spell(
+    id=200904,
+    name='Demonic Form',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2299,
+    notes='warlock-rework DEMONOLOGY §6 (9,1): see rank 1 note (+6/15% live).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage bonuses Metamorphosis grants to you and your demons by $s1%, and the damage of your Shadow Bolt and Hand of Gul'dan while in Metamorphosis by $s2%.", 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+
+
+# creature_template/creature_template_model (stage T1 DSL helpers, DEMONOLOGY.md §3.5 item 2) - the
+# five Demonology guardians, no hand-written pending_db_world SQL. Common: faction 35 (overwritten by
+# SummonGuardian for ALLY props at summon time), unit_class 1, unit_flags 33554434
+# (NOT_SELECTABLE | NON_ATTACKABLE, target-side only, tentacle precedent), type 3 (demon),
+# flags_extra 66 (CIVILIAN | NO_XP - never TRIGGER 0x80, invisible-model bug), DamageModifier 1,
+# BaseAttackTime 2000, RegenHealth 0, detection_range 0, levels 1/1 (set from the owner at summon).
+_GUARDIAN_COMMON = dict(
+    faction=35, unit_class=1, unit_flags=33554434, type=3, flags_extra=66,
+    DamageModifier=1, BaseAttackTime=2000, RegenHealth=0, detection_range=0,
+    minlevel=1, maxlevel=1,
+)
+
+creature_template(300150, 'Wild Imp', speed_run=1.14286, ScriptName='npc_warl_wild_imp', **_GUARDIAN_COMMON)
+creature_model(300150, display_id=16890, scale=1.0)
+
+creature_template(300151, 'Imp Gang Boss', speed_run=1.14286, ScriptName='npc_warl_wild_imp', **_GUARDIAN_COMMON)
+creature_model(300151, display_id=16890, scale=1.4)
+
+creature_template(300152, 'Dreadstalker', speed_walk=1.2, speed_run=1.6, ScriptName='npc_warl_dreadstalker', **_GUARDIAN_COMMON)
+creature_model(300152, display_id=1913, scale=1.0)
+
+creature_template(300153, 'Doomguard', ScriptName='npc_warl_doomguard_guardian', **_GUARDIAN_COMMON)
+creature_model(300153, display_id=1912, scale=1.0)
+
+creature_template(300154, 'Infernal', ScriptName='npc_warl_infernal_guardian', **_GUARDIAN_COMMON)
+creature_model(300154, display_id=169, scale=0.9)
+
+
+immolation_tick_50590 = spell(
+    id=50590,
+    name='Immolation',
+    school=School.FIRE,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=10, points_per_level=0.9559322033898305, implicit_target_a=18, implicit_target_b=16, radius_yards=8.0),
+    ],
+    spell_icon_id=937,
+    notes="warlock-rework DEMONOLOGY §4.0/§5.2/§7.13: BaseLevel/SpellLevel 60 -> 10 (B3). eff0 via _scaling.sb_units(0.12, 10, 58, 58). EffectBonusMultiplier_1 0.143 -> 0.1028 (also overridden by bonus_coefficients below - the stock spell_bonus_data row for 50590 is still live and wins over the DBC multiplier, Unit.cpp:8651-8678). ShapeshiftMask 0x200000 -> 0x600000 (Meta + DA, tidiness - the periodic-trigger cast is TRIGGERED_FULL_MASK which already ignores shapeshift requirements). spell_warl_immolation_aura_tick applies Fel Immolation's bonus and feeds Demonic Bulwark's debuff (§7.13).",
+    raw_overrides={'AttributesEx': 128, 'AttributesEx2': 541065216, 'AttributesEx3': 33554432, 'ShapeshiftMask': 6291456, 'CastingTimeIndex': 1, 'ProcChance': 101, 'BaseLevel': 10, 'SpellLevel': 10, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 11111, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Ignites the area surrounds you, causing $50590s1 Fire damage to all nearby enemies every $50589t1 sec.  Lasts $50589d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 0.1028, 'EffectBonusMultiplier_2': 1.0},
+)
+bonus_coefficients(immolation_tick_50590, direct=0.1028)
+scripted_by(immolation_tick_50590, 'spell_warl_immolation_aura_tick')

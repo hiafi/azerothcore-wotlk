@@ -109,14 +109,14 @@ AGONIZING_PAIN = 0x00080000  # bit 19 - 200728
 SPELL_LOCK = 0x00100000  # bit 20 - demon-only: stock pet spells Spell Lock 19244/19647
 PHANTOM_SINGULARITY_CAST = 0x00200000  # bit 21 - 200729 (the castable debuff), so Reach extends it
 
-# Demonology's d3 bits 22-27 and Destruction's d3 bits 28-31 + d3 bit 9 - named here so those
-# passes only import (PLAN §4.4); placeholders until each pass's own WP-0 assigns its real name.
-DEMONOLOGY_D3_BIT_22 = 0x00400000
-DEMONOLOGY_D3_BIT_23 = 0x00800000
-DEMONOLOGY_D3_BIT_24 = 0x01000000
-DEMONOLOGY_D3_BIT_25 = 0x02000000
-DEMONOLOGY_D3_BIT_26 = 0x04000000
-DEMONOLOGY_D3_BIT_27 = 0x08000000
+# Demonology's d3 bits 22-27 (DEMONOLOGY.md §2.4) and Destruction's d3 bits 28-31 + d3 bit 9 -
+# named here so those passes only import (PLAN §4.4).
+HAND_OF_GULDAN = 0x00400000  # bit 22 - 200820, 200821
+BANE_OF_DOOM = 0x00800000  # bit 23 - 200825
+UNENDING_RESOLVE = 0x01000000  # bit 24 - 200826
+SUMMON_DOOMGUARD = 0x02000000  # bit 25 - 200831
+SUMMON_INFERNAL = 0x04000000  # bit 26 - 200833
+DEMONIC_LEAP = 0x08000000  # bit 27 - 54786 (SpellClassSet 0 -> 5)
 DESTRUCTION_D3_BIT_9 = 0x200  # spare (§2.4)
 MOLTEN_BOLT = 0x10000000  # bit 28 (DESTRUCTION §2.4) - 200985; Emberstorm/Devastation/"Destruction
 # spells" SpellMods reach it
@@ -159,11 +159,10 @@ DESTRUCTION_CAST_SPELLS = (0x165, 0x200C0, 0)  # cast/channel: SB, Immolate, RoF
 EMBERSTORM_DAMAGE = (0x1E4, 0x200C0, 0x10000001)  # Immolate, RoF, Hellfire(5857), Shadowburn, SP;
 # Incinerate, Soul Fire, Chaos Bolt; Inferno Effect 22703, Molten Bolt. No Conflagrate (scripted, G1)
 EMBERSTORM_DOT = (0x4, 0, 0x2)  # Immolate DoT, Shadowflame DoT. No Hellfire (d1 0x40 = self dmg 1949)
-# HAND_OF_GULDAN (d3 0x00400000) and SUMMON_INFERNAL (d3 0x04000000) are Demonology's (S3) own d3
-# bits (DEMONOLOGY.md §2.4) - not yet declared as named constants here since Demonology hasn't run
-# its own WP-0 (Destruction (S2) runs first per PLAN B1). Their literal values are folded into
-# CATACLYSM_SPELLS/BANE_SPELLS below as-is (DESTRUCTION.md Review log item 13); Demonology's own
-# WP-0 must not re-derive these two composites, only add the named constants for its own use.
+# HAND_OF_GULDAN (d3 0x00400000) and SUMMON_INFERNAL (d3 0x04000000) are Demonology's (S3) own
+# named constants (DEMONOLOGY.md §2.4), already folded as literals into CATACLYSM_SPELLS/
+# BANE_SPELLS below by Destruction (DESTRUCTION.md Review log item 13) - Demonology's WP-0 does not
+# re-derive either composite.
 CATACLYSM_SPELLS = (0x60, 0x1000, 0x04400001)  # RoF, Hellfire; Shadowfury; Inferno Effect 22703;
 # Demonology's Hand of Gul'dan (d3 0x00400000) and Summon Infernal (d3 0x04000000)
 BANE_SPELLS = (0x5, 0x300C0, 0x00400002)  # SB, Immolate; Incinerate, Soul Fire, Shadowflame,
@@ -194,6 +193,18 @@ INSTANT_CAST_HELPER = (0, 0x20080, 0)  # 200713's scope: Soul Fire d2 0x80, Chao
 # Computed (not hand-computed hex) to avoid a transcription error - see the classmask-scoping gotcha
 # in apps/dbc-tools/README.md. MOLTEN_BOLT is not reintroduced (REACH_SPELLS's d3 has no bit 28).
 WARLOCK_PLAYER_DAMAGE_FULL = tuple(a | b for a, b in zip(WARLOCK_PLAYER_DAMAGE, REACH_SPELLS))
+
+# --- Composites (Demonology, DEMONOLOGY.md §3.3) ---
+# Metamorphosis 54879 eff2 aura 275, mask letter C (dbc-tools' A/B/C = eff0/1/2 gotcha) - superseded
+# 2026-09-27 (user, §11 Q2 "It should be every warlock spell"): the full mask, not a Fire/Shadow
+# list. Safe because aura 275 only admits spells that carry a family-5 bit - Dark Apotheosis 200835
+# has none, so its own StancesNot still refuses it in Metamorphosis (§11 Q22).
+META_ALLOWED = (0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF)
+
+# Dark Apotheosis passive 200836 eff1 aura 275, mask letter B (= eff1) - every warlock bit except
+# Metamorphosis 47241 (d3 0x2000) and Demonic Leap (DEMONIC_LEAP) - a truly full mask would let
+# those two skip CheckShapeshift and swap form mid-DA / work outside Metamorphosis (§5.2).
+DA_ALLOWED = (0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF & ~(0x2000 | DEMONIC_LEAP))
 
 # --- spell_proc constants (priest/druid precedent; values verified against SpellMgr.h:111-280) ---
 PROC_FLAG_KILL = 0x2

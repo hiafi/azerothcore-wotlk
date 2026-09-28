@@ -5,8 +5,8 @@ Split from a single source/classes/warlock.py via split_class_file.py (.agents/p
 """
 
 from lib.dsl.registry import granted_by_talent, tab
-from .warlock_spells import chaos_bolt_50796, chaos_rift_200978, conflagrate_17962, dark_soul_misery_200732, demonic_empowerment_47193, havoc_200974, haunt_48181, phantom_singularity_200729, shadowburn_17877, shadowfury_30283, soul_link_19028, summon_felguard_30146, unstable_affliction_30108
-from .warlock_trigger_spells import aftermath_18119, aftermath_18120, backlash_34935, backlash_34938, backlash_34939, molten_skin_63349, molten_skin_63350, molten_skin_63351, agonizing_pain_200754, agonizing_pain_200755, backdraft_47258, backdraft_47259, backdraft_47260, bane_17788, bane_17789, bane_17790, bane_17791, bane_17792, cataclysm_17778, cataclysm_17779, cataclysm_17780, compounding_darkness_200762, compounding_darkness_200763, compounding_darkness_200764, contagion_30060, contagion_30061, contagion_30062, contagion_30063, contagion_30064, creeping_agony_200751, creeping_agony_200752, creeping_agony_200753, dark_pact_18220, deaths_grasp_200742, deaths_grasp_200743, deaths_grasp_200744, death_s_embrace_47198, death_s_embrace_47199, death_s_embrace_47200, decimation_63156, decimation_63158, demonic_aegis_30143, demonic_aegis_30144, demonic_aegis_30145, demonic_brutality_18705, demonic_brutality_18706, demonic_brutality_18707, demonic_knowledge_35691, demonic_knowledge_35692, demonic_knowledge_35693, demonic_pact_47236, demonic_pact_47237, demonic_pact_47238, demonic_pact_47239, demonic_pact_47240, demonic_power_18126, demonic_power_18127, demonic_resilience_30319, demonic_resilience_30320, demonic_resilience_30321, demonic_tactics_30242, demonic_tactics_30245, demonic_tactics_30246, demonic_tactics_30247, demonic_tactics_30248, destructive_reach_17917, destructive_reach_17918, devastation_18130, emberstorm_17954, emberstorm_17955, emberstorm_17956, emberstorm_17957, emberstorm_17958, empowered_corruption_32381, empowered_corruption_32382, empowered_corruption_32383, empowered_imp_47220, empowered_imp_47221, empowered_imp_47223, eradication_47195, eradication_47196, eradication_47197, everlasting_affliction_47201, everlasting_affliction_47202, everlasting_affliction_47203, everlasting_affliction_47204, everlasting_affliction_47205, fatal_echoes_200756, fatal_echoes_200757, fatal_echoes_200758, fel_concentration_17783, fel_concentration_17784, fel_concentration_17785, fel_synergy_47230, fel_synergy_47231, fel_vitality_18731, fel_vitality_18743, fel_vitality_18744, fire_and_brimstone_47266, fire_and_brimstone_47267, fire_and_brimstone_47268, fire_and_brimstone_47269, fire_and_brimstone_47270, grim_reach_18218, grim_reach_18219, harvester_of_death_200745, harvester_of_death_200746, harvester_of_death_200747, improved_bane_of_agony_18827, improved_bane_of_agony_18829, improved_corruption_17810, improved_corruption_17811, improved_corruption_17812, improved_corruption_17813, improved_corruption_17814, improved_curses_18179, improved_curses_18180, improved_demonic_tactics_54347, improved_demonic_tactics_54348, improved_demonic_tactics_54349, improved_fear_53754, improved_fear_53759, improved_felhunter_54037, improved_felhunter_54038, improved_health_funnel_18703, improved_health_funnel_18704, improved_healthstone_18692, improved_healthstone_18693, improved_howl_of_terror_30054, improved_howl_of_terror_30057, improved_immolate_17815, improved_immolate_17833, improved_immolate_17834, improved_imp_18694, improved_imp_18695, improved_imp_18696, improved_life_tap_18182, improved_life_tap_18183, improved_life_tap_200765, improved_searing_pain_17927, improved_searing_pain_17929, improved_searing_pain_17930, improved_shadow_bolt_17793, improved_shadow_bolt_17796, improved_shadow_bolt_17801, improved_shadow_bolt_17802, improved_shadow_bolt_17803, improved_soul_leech_54117, improved_soul_leech_54118, improved_succubus_18754, improved_succubus_18755, improved_succubus_18756, intensity_18135, intensity_18136, lingering_agony_200749, lingering_agony_200750, malediction_32477, malediction_32483, malediction_32484, mana_feed_30326, master_conjuror_18767, master_conjuror_18768, master_summoner_18709, master_summoner_18710, metamorphosis_59672, molten_core_47245, molten_core_47246, molten_core_47247, nemesis_63117, nemesis_63121, nemesis_63123, nether_protection_30299, nether_protection_30301, nether_protection_30302, nightfall_18094, nightfall_18095, nightfall_200766, pandemic_58435, pandemic_200768, pyroclasm_18073, pyroclasm_18096, pyroclasm_63245, ruin_17959, ruin_59738, ruin_59739, ruin_59740, ruin_59741, shadow_and_flame_30288, shadow_and_flame_30289, shadow_and_flame_30290, shadow_and_flame_30291, shadow_and_flame_30292, shadow_embrace_32385, shadow_embrace_32387, shadow_embrace_32392, shadow_embrace_32393, shadow_embrace_32394, shadow_mastery_18271, shadow_mastery_18272, shadow_mastery_18273, shadow_mastery_18274, shadow_mastery_18275, shadow_pact_200739, shadow_pact_200740, shadow_pact_200741, siphon_life_63108, siphon_life_200767, siphon_power_18213, siphon_power_18372, soul_leech_30293, soul_leech_30295, soul_leech_30296, soul_siphon_17804, soul_siphon_17805, suppression_18174, suppression_18175, suppression_18176, unholy_power_18769, unholy_power_18770, unholy_power_18771, unholy_power_18772, unholy_power_18773, virulence_200759, virulence_200760, virulence_200761, impending_doom_200869, impending_doom_200870, volatility_200960, volatility_200961, volatility_200962, kindling_200963, kindling_200964, kindling_200965, hellstorm_200966, hellstorm_200967, hellstorm_200968, fury_of_the_void_200971, fury_of_the_void_200972, fury_of_the_void_200973, chaotic_resonance_200975, chaotic_resonance_200976, chaotic_resonance_200977, devastation_200969, devastation_200970
+from .warlock_spells import call_dreadstalkers_200829, chaos_bolt_50796, chaos_rift_200978, conflagrate_17962, dark_soul_misery_200732, demonic_empowerment_47193, havoc_200974, haunt_48181, implosion_200827, phantom_singularity_200729, shadowburn_17877, shadowfury_30283, summon_felguard_30146, unstable_affliction_30108
+from .warlock_trigger_spells import aftermath_18119, aftermath_18120, backlash_34935, backlash_34938, backlash_34939, molten_skin_63349, molten_skin_63350, molten_skin_63351, agonizing_pain_200754, agonizing_pain_200755, backdraft_47258, backdraft_47259, backdraft_47260, bane_17788, bane_17789, bane_17790, bane_17791, bane_17792, cataclysm_17778, cataclysm_17779, cataclysm_17780, compounding_darkness_200762, compounding_darkness_200763, compounding_darkness_200764, contagion_30060, contagion_30061, contagion_30062, contagion_30063, contagion_30064, creeping_agony_200751, creeping_agony_200752, creeping_agony_200753, dark_pact_18220, deaths_grasp_200742, deaths_grasp_200743, deaths_grasp_200744, death_s_embrace_47198, death_s_embrace_47199, death_s_embrace_47200, decimation_63156, decimation_63158, demonic_aegis_30143, demonic_aegis_30144, demonic_aegis_30145, demonic_brutality_18705, demonic_brutality_18706, demonic_brutality_18707, demonic_knowledge_35691, demonic_knowledge_35692, demonic_knowledge_35693, demonic_pact_47236, demonic_pact_47237, demonic_pact_47238, demonic_pact_47239, demonic_pact_47240, demonic_power_18126, demonic_power_18127, demonic_resilience_30319, demonic_resilience_30320, demonic_resilience_30321, demonic_tactics_30242, demonic_tactics_30245, demonic_tactics_30246, demonic_tactics_30247, demonic_tactics_30248, destructive_reach_17917, destructive_reach_17918, devastation_18130, emberstorm_17954, emberstorm_17955, emberstorm_17956, emberstorm_17957, emberstorm_17958, empowered_corruption_32381, empowered_corruption_32382, empowered_corruption_32383, empowered_imp_47220, empowered_imp_47221, empowered_imp_47223, eradication_47195, eradication_47196, eradication_47197, everlasting_affliction_47201, everlasting_affliction_47202, everlasting_affliction_47203, everlasting_affliction_47204, everlasting_affliction_47205, fatal_echoes_200756, fatal_echoes_200757, fatal_echoes_200758, fel_concentration_17783, fel_concentration_17784, fel_concentration_17785, fel_synergy_47230, fel_synergy_47231, fel_vitality_18731, fel_vitality_18743, fel_vitality_18744, fire_and_brimstone_47266, fire_and_brimstone_47267, fire_and_brimstone_47268, fire_and_brimstone_47269, fire_and_brimstone_47270, grim_reach_18218, grim_reach_18219, harvester_of_death_200745, harvester_of_death_200746, harvester_of_death_200747, improved_bane_of_agony_18827, improved_bane_of_agony_18829, improved_corruption_17810, improved_corruption_17811, improved_corruption_17812, improved_corruption_17813, improved_corruption_17814, improved_curses_18179, improved_curses_18180, improved_demonic_tactics_54347, improved_demonic_tactics_54348, improved_demonic_tactics_54349, improved_fear_53754, improved_fear_53759, improved_felhunter_54037, improved_felhunter_54038, improved_health_funnel_18703, improved_health_funnel_18704, improved_healthstone_18692, improved_healthstone_18693, improved_howl_of_terror_30054, improved_howl_of_terror_30057, improved_immolate_17815, improved_immolate_17833, improved_immolate_17834, improved_imp_18694, improved_imp_18695, improved_imp_18696, improved_life_tap_18182, improved_life_tap_18183, improved_life_tap_200765, improved_searing_pain_17927, improved_searing_pain_17929, improved_searing_pain_17930, improved_shadow_bolt_17793, improved_shadow_bolt_17796, improved_shadow_bolt_17801, improved_shadow_bolt_17802, improved_shadow_bolt_17803, improved_soul_leech_54117, improved_soul_leech_54118, improved_succubus_18754, improved_succubus_18755, improved_succubus_18756, intensity_18135, intensity_18136, lingering_agony_200749, lingering_agony_200750, malediction_32477, malediction_32483, malediction_32484, mana_feed_30326, master_conjuror_18767, master_conjuror_18768, master_summoner_18709, master_summoner_18710, metamorphosis_59672, molten_core_47245, molten_core_47246, molten_core_47247, nemesis_63117, nemesis_63121, nemesis_63123, nether_protection_30299, nether_protection_30301, nether_protection_30302, nightfall_18094, nightfall_18095, nightfall_200766, pandemic_58435, pandemic_200768, pyroclasm_18073, pyroclasm_18096, pyroclasm_63245, ruin_17959, ruin_59738, ruin_59739, ruin_59740, ruin_59741, shadow_and_flame_30288, shadow_and_flame_30289, shadow_and_flame_30290, shadow_and_flame_30291, shadow_and_flame_30292, shadow_embrace_32385, shadow_embrace_32387, shadow_embrace_32392, shadow_embrace_32393, shadow_embrace_32394, shadow_mastery_18271, shadow_mastery_18272, shadow_mastery_18273, shadow_mastery_18274, shadow_mastery_18275, shadow_pact_200739, shadow_pact_200740, shadow_pact_200741, siphon_life_63108, siphon_life_200767, siphon_power_18213, siphon_power_18372, soul_leech_30293, soul_leech_30295, soul_leech_30296, soul_siphon_17804, soul_siphon_17805, suppression_18174, suppression_18175, suppression_18176, unholy_power_18769, unholy_power_18770, unholy_power_18771, unholy_power_18772, unholy_power_18773, virulence_200759, virulence_200760, virulence_200761, impending_doom_200869, impending_doom_200870, volatility_200960, volatility_200961, volatility_200962, kindling_200963, kindling_200964, kindling_200965, hellstorm_200966, hellstorm_200967, hellstorm_200968, fury_of_the_void_200971, fury_of_the_void_200972, fury_of_the_void_200973, chaotic_resonance_200975, chaotic_resonance_200976, chaotic_resonance_200977, devastation_200969, devastation_200970, dark_apotheosis_learner_200863, decimation_200889, demonic_bulwark_200893, demonic_bulwark_200894, demonic_bulwark_200895, demonic_calling_200883, demonic_calling_200884, demonic_calling_200885, demonic_embrace_18697, demonic_embrace_18698, demonic_embrace_18699, demonic_form_200902, demonic_form_200903, demonic_form_200904, demonic_resolve_200860, demonic_resolve_200861, demonic_resolve_200862, fel_bond_200877, fel_bond_200878, fel_bond_200879, fel_cruelty_200890, fel_cruelty_200891, fel_cruelty_200892, fel_immolation_200874, fel_immolation_200875, fel_immolation_200876, fel_reprisal_200899, fel_reprisal_200900, fel_reprisal_200901, grimoire_of_synergy_200880, grimoire_of_synergy_200881, grimoire_of_synergy_200882, imp_gang_boss_200867, imp_gang_boss_200868, improved_demonic_tactics_200896, improved_demonic_tactics_200897, improved_demonic_tactics_200898, improved_hand_of_guldan_200865, improved_hand_of_guldan_200866, improved_soul_fire_200886, improved_soul_fire_200887, improved_soul_fire_200888, legion_strength_200871, legion_strength_200872, legion_strength_200873, legions_call_200905
 
 
 destruction_301_tab = tab(
@@ -339,7 +339,7 @@ granted_by_talent(
     id=1221,
     tab=demonology_303_tab,
     tier=0,
-    column=0,
+    column=2,
     ranks=[improved_healthstone_18692, improved_healthstone_18693],
     player_castable=False,
 )
@@ -349,7 +349,7 @@ granted_by_talent(
     id=1222,
     tab=demonology_303_tab,
     tier=0,
-    column=1,
+    column=0,
     ranks=[improved_imp_18694, improved_imp_18695, improved_imp_18696],
     player_castable=False,
 )
@@ -358,9 +358,9 @@ granted_by_talent(
 granted_by_talent(
     id=1223,
     tab=demonology_303_tab,
-    tier=0,
-    column=2,
-    ranks=[18697, 18698, 18699],
+    tier=6,
+    column=3,
+    ranks=[demonic_embrace_18697, demonic_embrace_18698, demonic_embrace_18699],
     player_castable=False,
 )
 
@@ -368,9 +368,9 @@ granted_by_talent(
 granted_by_talent(
     id=1224,
     tab=demonology_303_tab,
-    tier=1,
-    column=0,
-    ranks=[improved_health_funnel_18703, improved_health_funnel_18704],
+    tier=0,
+    column=1,
+    ranks=[demonic_resolve_200860, demonic_resolve_200861, demonic_resolve_200862],
     player_castable=False,
 )
 
@@ -378,8 +378,8 @@ granted_by_talent(
 granted_by_talent(
     id=1225,
     tab=demonology_303_tab,
-    tier=1,
-    column=1,
+    tier=2,
+    column=3,
     ranks=[demonic_brutality_18705, demonic_brutality_18706, demonic_brutality_18707],
     player_castable=False,
 )
@@ -398,18 +398,17 @@ granted_by_talent(
 granted_by_talent(
     id=1227,
     tab=demonology_303_tab,
-    tier=3,
-    column=2,
+    tier=1,
+    column=0,
     ranks=[master_summoner_18709, master_summoner_18710],
     player_castable=False,
-    depends_on={'talent_id': 1226, 'rank': 0},
 )
 
 
 granted_by_talent(
     id=1242,
     tab=demonology_303_tab,
-    tier=1,
+    tier=4,
     column=2,
     ranks=[fel_vitality_18731, fel_vitality_18743, fel_vitality_18744],
     player_castable=False,
@@ -421,7 +420,7 @@ granted_by_talent(
     tab=demonology_303_tab,
     tier=2,
     column=0,
-    ranks=[improved_succubus_18754, improved_succubus_18755, improved_succubus_18756],
+    ranks=[imp_gang_boss_200867, imp_gang_boss_200868],
     player_castable=False,
 )
 
@@ -431,16 +430,15 @@ granted_by_talent(
     tab=demonology_303_tab,
     tier=5,
     column=1,
-    ranks=[23785, 23822, 23823, 23824, 23825],
+    ranks=[fel_bond_200877, fel_bond_200878, fel_bond_200879],
     player_castable=False,
-    depends_on={'talent_id': 1262, 'rank': 4},
 )
 
 
 granted_by_talent(
     id=1261,
     tab=demonology_303_tab,
-    tier=4,
+    tier=3,
     column=2,
     ranks=[master_conjuror_18767, master_conjuror_18768],
     player_castable=False,
@@ -452,17 +450,16 @@ granted_by_talent(
     tab=demonology_303_tab,
     tier=3,
     column=1,
-    ranks=[unholy_power_18769, unholy_power_18770, unholy_power_18771, unholy_power_18772, unholy_power_18773],
+    ranks=[unholy_power_18769, unholy_power_18770, unholy_power_18771],
     player_castable=False,
-    depends_on={'talent_id': 1282, 'rank': 0},
 )
 
 
 granted_by_talent(
     id=1263,
     tab=demonology_303_tab,
-    tier=6,
-    column=2,
+    tier=1,
+    column=1,
     ranks=[demonic_knowledge_35691, demonic_knowledge_35692, demonic_knowledge_35693],
     player_castable=False,
 )
@@ -473,9 +470,9 @@ granted_by_talent(
     tab=demonology_303_tab,
     tier=4,
     column=0,
-    ranks=[mana_feed_30326],
-    player_castable=False,
-    depends_on={'talent_id': 1262, 'rank': 4},
+    ranks=[implosion_200827],
+    player_castable=True,
+    skill_line_ability_ids=[30476],
     flags=1,
 )
 
@@ -483,9 +480,9 @@ granted_by_talent(
 granted_by_talent(
     id=1282,
     tab=demonology_303_tab,
-    tier=2,
-    column=1,
-    ranks=[soul_link_19028],
+    tier=0,
+    column=3,
+    ranks=[dark_apotheosis_learner_200863],
     player_castable=False,
     flags=1,
 )
@@ -495,7 +492,7 @@ granted_by_talent(
     id=1283,
     tab=demonology_303_tab,
     tier=5,
-    column=2,
+    column=0,
     ranks=[molten_core_47245, molten_core_47246, molten_core_47247],
     player_castable=False,
 )
@@ -555,7 +552,7 @@ granted_by_talent(
 granted_by_talent(
     id=1671,
     tab=demonology_303_tab,
-    tier=2,
+    tier=3,
     column=3,
     ranks=[demonic_aegis_30143, demonic_aegis_30144, demonic_aegis_30145],
     player_castable=False,
@@ -565,7 +562,7 @@ granted_by_talent(
 granted_by_talent(
     id=1672,
     tab=demonology_303_tab,
-    tier=8,
+    tier=2,
     column=1,
     ranks=[summon_felguard_30146],
     player_castable=False,
@@ -578,7 +575,7 @@ granted_by_talent(
     tab=demonology_303_tab,
     tier=7,
     column=1,
-    ranks=[demonic_tactics_30242, demonic_tactics_30245, demonic_tactics_30246, demonic_tactics_30247, demonic_tactics_30248],
+    ranks=[demonic_tactics_30242, demonic_tactics_30245, demonic_tactics_30246],
     player_castable=False,
 )
 
@@ -627,8 +624,8 @@ granted_by_talent(
 granted_by_talent(
     id=1680,
     tab=demonology_303_tab,
-    tier=6,
-    column=0,
+    tier=5,
+    column=3,
     ranks=[demonic_resilience_30319, demonic_resilience_30320, demonic_resilience_30321],
     player_castable=False,
 )
@@ -707,11 +704,10 @@ granted_by_talent(
 granted_by_talent(
     id=1880,
     tab=demonology_303_tab,
-    tier=6,
+    tier=8,
     column=1,
     ranks=[demonic_empowerment_47193],
     player_castable=False,
-    depends_on={'talent_id': 1244, 'rank': 4},
     flags=1,
 )
 
@@ -721,16 +717,15 @@ granted_by_talent(
     tab=demonology_303_tab,
     tier=8,
     column=0,
-    ranks=[improved_demonic_tactics_54347, improved_demonic_tactics_54348, improved_demonic_tactics_54349],
+    ranks=[improved_demonic_tactics_200896, improved_demonic_tactics_200897, improved_demonic_tactics_200898],
     player_castable=False,
-    depends_on={'talent_id': 1673, 'rank': 4},
 )
 
 
 granted_by_talent(
     id=1883,
     tab=demonology_303_tab,
-    tier=0,
+    tier=1,
     column=3,
     ranks=[fel_synergy_47230, fel_synergy_47231],
     player_castable=False,
@@ -751,8 +746,8 @@ granted_by_talent(
     id=1885,
     tab=demonology_303_tab,
     tier=9,
-    column=1,
-    ranks=[demonic_pact_47236, demonic_pact_47237, demonic_pact_47238, demonic_pact_47239, demonic_pact_47240],
+    column=2,
+    ranks=[demonic_pact_47236, demonic_pact_47237, demonic_pact_47238],
     player_castable=False,
 )
 
@@ -760,7 +755,7 @@ granted_by_talent(
 granted_by_talent(
     id=1886,
     tab=demonology_303_tab,
-    tier=10,
+    tier=6,
     column=1,
     ranks=[metamorphosis_59672],
     player_castable=False,
@@ -864,8 +859,8 @@ granted_by_talent(
     id=2261,
     tab=demonology_303_tab,
     tier=7,
-    column=2,
-    ranks=[decimation_63156, decimation_63158],
+    column=0,
+    ranks=[decimation_63156, decimation_63158, decimation_200889],
     player_castable=False,
 )
 
@@ -984,5 +979,134 @@ granted_by_talent(
     ranks=[chaos_rift_200978],
     player_castable=True,
     skill_line_ability_ids=[30489],
+    flags=1,
+)
+
+
+# ---------------------------------------------------------------------------
+# warlock-rework DEMONOLOGY pass (S3) - 12 newly minted Demonology talents
+# (PLAN §4.2, DEMONOLOGY §1/§2.2/§6, §11 Q25 default: 60081 spare). All
+# depends_on=None (B6 - drop every arrow in all three trees).
+# ---------------------------------------------------------------------------
+
+granted_by_talent(
+    id=60080,
+    tab=demonology_303_tab,
+    tier=1,
+    column=2,
+    ranks=[improved_hand_of_guldan_200865, improved_hand_of_guldan_200866],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=60082,
+    tab=demonology_303_tab,
+    tier=3,
+    column=0,
+    ranks=[legion_strength_200871, legion_strength_200872, legion_strength_200873],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=60083,
+    tab=demonology_303_tab,
+    tier=4,
+    column=1,
+    ranks=[call_dreadstalkers_200829],
+    player_castable=True,
+    skill_line_ability_ids=[30477],
+    flags=1,
+)
+
+
+granted_by_talent(
+    id=60084,
+    tab=demonology_303_tab,
+    tier=4,
+    column=3,
+    ranks=[fel_immolation_200874, fel_immolation_200875, fel_immolation_200876],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=60085,
+    tab=demonology_303_tab,
+    tier=5,
+    column=2,
+    ranks=[grimoire_of_synergy_200880, grimoire_of_synergy_200881, grimoire_of_synergy_200882],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=60086,
+    tab=demonology_303_tab,
+    tier=6,
+    column=0,
+    ranks=[demonic_calling_200883, demonic_calling_200884, demonic_calling_200885],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=60087,
+    tab=demonology_303_tab,
+    tier=6,
+    column=2,
+    ranks=[improved_soul_fire_200886, improved_soul_fire_200887, improved_soul_fire_200888],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=60088,
+    tab=demonology_303_tab,
+    tier=7,
+    column=2,
+    ranks=[fel_cruelty_200890, fel_cruelty_200891, fel_cruelty_200892],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=60089,
+    tab=demonology_303_tab,
+    tier=7,
+    column=3,
+    ranks=[demonic_bulwark_200893, demonic_bulwark_200894, demonic_bulwark_200895],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=60090,
+    tab=demonology_303_tab,
+    tier=8,
+    column=3,
+    ranks=[fel_reprisal_200899, fel_reprisal_200900, fel_reprisal_200901],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=60091,
+    tab=demonology_303_tab,
+    tier=9,
+    column=1,
+    ranks=[demonic_form_200902, demonic_form_200903, demonic_form_200904],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=60092,
+    tab=demonology_303_tab,
+    tier=10,
+    column=1,
+    ranks=[legions_call_200905],
+    player_castable=False,
     flags=1,
 )

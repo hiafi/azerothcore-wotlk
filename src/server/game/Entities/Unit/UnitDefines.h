@@ -92,6 +92,7 @@ enum ShapeshiftForm
     FORM_TEST                           = 0x14,
     FORM_ZOMBIE                         = 0x15,
     FORM_METAMORPHOSIS                  = 0x16,
+    FORM_DARK_APOTHEOSIS                = 0x17, // Custom: warlock-rework Dark Apotheosis form (DEMONOLOGY §11 Q1)
     FORM_UNDEAD                         = 0x19,
     FORM_MASTER_ANGLER                  = 0x1A,
     FORM_FLIGHT_EPIC                    = 0x1B,

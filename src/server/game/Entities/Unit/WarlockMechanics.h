@@ -19,8 +19,10 @@
 #define __WARLOCKMECHANICS_H
 
 #include "Define.h"
+#include "ObjectGuid.h"
 #include "SharedDefines.h"
 #include "UnitDefines.h"
+#include <array>
 #include <deque>
 #include <functional>
 #include <initializer_list>
@@ -29,7 +31,7 @@
 
 class Aura;
 class AuraEffect;
-class ObjectGuid;
+class Creature;
 class Player;
 class Spell;
 class SpellInfo;
@@ -445,7 +447,9 @@ namespace Warlock
     constexpr uint32 SPELL_INCINERATE = 29722;
     constexpr uint32 SPELL_SHADOWFLAME = 47897;
     constexpr uint32 SPELL_IMMOLATE = 348;
-    constexpr uint32 SPELL_SHADOWBURN = 29341;
+    // SPELL_SHADOWBURN (= 29341) already declared above (Affliction WP-0) - do not redeclare
+    // (found by Demonology's WP-0: this duplicate constexpr definition in the same namespace is a
+    // hard compile error, undetected until now because neither pass has built yet).
     constexpr uint32 SPELL_SOUL_FIRE = 6353;
     constexpr uint32 SPELL_IMP_FIREBOLT = 3110;
     constexpr uint32 SPELL_BACKLASH_BUFF = 34936;                       // "Your next Shadow Bolt or Incinerate ..." -> retuned to Immolate only
@@ -524,6 +528,300 @@ namespace Warlock
     // currently cooling down (Player.cpp:11391).
     // ------------------------------------------------------------------
     void ReduceChaosBoltCooldown(Player* player, uint32 ms);
+
+    // ------------------------------------------------------------------
+    // Demonology pass (S3) additions - DEMONOLOGY.md §2/§3.4/§6/§7/§14. Append-only: WP-B fills in
+    // the bodies below and may add further Demonology-local helpers, but must not rename or change
+    // the signature of anything already declared without flagging it back (Affliction/Destruction
+    // WP-B precedent above).
+    // ------------------------------------------------------------------
+
+    // New spells this pass mints (DEMONOLOGY.md §2.1, spell block 200820-200959)
+    constexpr uint32 SPELL_HAND_OF_GULDAN = 200820;                     // baseline, learn 10
+    constexpr uint32 SPELL_HAND_OF_GULDAN_SPLASH = 200821;              // Metamorphosis only, no procs
+    constexpr uint32 SPELL_SUMMON_WILD_IMP = 200822;                    // triggered SUMMON 300150
+    constexpr uint32 SPELL_SUMMON_IMP_GANG_BOSS = 200823;               // triggered SUMMON 300151
+    constexpr uint32 SPELL_FEL_FIREBOLT = 200824;                       // Wild Imp AI cast
+    constexpr uint32 SPELL_BANE_OF_DOOM = 200825;                       // baseline, learn 20, bane slot
+    constexpr uint32 SPELL_UNENDING_RESOLVE = 200826;                   // baseline, learn 25
+    constexpr uint32 SPELL_IMPLOSION = 200827;                          // talent 1281 rank spell, castable
+    constexpr uint32 SPELL_IMPLOSION_EXPLOSION = 200828;                // cast by each imp
+    constexpr uint32 SPELL_CALL_DREADSTALKERS = 200829;                 // talent 60083 rank spell, castable
+    constexpr uint32 SPELL_DREADSTALKER_BITE = 200830;                  // Dreadstalker AI cast
+    constexpr uint32 SPELL_SUMMON_DOOMGUARD = 200831;                   // learned by Legion's Call
+    constexpr uint32 SPELL_DOOM_BOLT = 200832;                          // Doomguard AI cast
+    constexpr uint32 SPELL_SUMMON_INFERNAL = 200833;                    // learned by Legion's Call
+    constexpr uint32 SPELL_INFERNAL_IMMOLATION = 200834;                // Infernal AI pulse
+    constexpr uint32 SPELL_DARK_APOTHEOSIS = 200835;                    // form 23 toggle
+    constexpr uint32 SPELL_DARK_APOTHEOSIS_PASSIVE = 200836;            // hidden, linked from 200835
+    constexpr uint32 SPELL_METAMORPHOSIS_PASSIVE = 200837;              // hidden, linked from 47241
+    constexpr uint32 SPELL_DEMONIC_BULWARK_FORM = 200838;               // hidden, linked from 47241 and 200835
+    constexpr uint32 SPELL_DEMONIC_TAUNT = 200839;                      // Dark Apotheosis only
+    constexpr uint32 SPELL_DEMONIC_POTENCY = 200840;                    // hidden aura on every demon
+    constexpr uint32 SPELL_IMP_GANG_BOSS_AURA = 200841;                 // hidden +50% on 300151
+    constexpr uint32 SPELL_FEL_CRUELTY_BUFF = 200842;                   // warlock buff, feeds Potency
+    constexpr uint32 SPELL_GRIMOIRE_OF_SYNERGY_BUFF = 200843;           // warlock buff, +10% spell dmg
+    constexpr uint32 SPELL_GRIMOIRE_OF_SYNERGY_PET_AURA = 200844;       // hidden proc aura on the Felguard
+    constexpr uint32 SPELL_DEMONIC_PACT_EMPOWER = 200845;               // warlock buff, +5% spell dmg
+    constexpr uint32 SPELL_IMPROVED_SOUL_FIRE_SHIELD = 200846;          // absorb shield, 12 s
+    constexpr uint32 SPELL_DEMONIC_BULWARK_DEBUFF = 200847;             // Immolation Aura debuff, 3 s
+    constexpr uint32 SPELL_FEL_IMMOLATION_HEAL = 200848;                // self heal
+    constexpr uint32 SPELL_IMPROVED_HEALTHSTONE_SP = 200849;            // SP buff, 20 s
+    constexpr uint32 SPELL_FEL_VITALITY_DEMON = 200850;                 // hidden on main/enslaved demon + Dreadstalkers
+    constexpr uint32 SPELL_FEL_BOND_AURA = 200851;                      // hidden, on warlock and demon
+    constexpr uint32 SPELL_BRUTALITY_VOIDWALKER = 200852;               // hidden, Voidwalker HP%/armor%
+    constexpr uint32 SPELL_DEMONIC_POWER_IMP_HASTE = 200853;            // hidden self-buff on a Wild Imp
+    constexpr uint32 SPELL_DEMONIC_VERSATILITY = 200854;                // hidden aura on every demon
+    // 200855-200859 spare
+
+    // Talent rank spells (200860-200905, DEMONOLOGY.md §2.1/§6)
+    constexpr uint32 SPELL_DEMONIC_RESOLVE_R1 = 200860;                 // talent 1224 (repurposed), (0,1)
+    constexpr uint32 SPELL_DEMONIC_RESOLVE_R2 = 200861;
+    constexpr uint32 SPELL_DEMONIC_RESOLVE_R3 = 200862;
+    constexpr uint32 SPELL_DARK_APOTHEOSIS_LEARNER = 200863;            // talent 1282 (repurposed), (0,3)
+    constexpr uint32 SPELL_DARK_APOTHEOSIS_DEMON_ABILITIES = 200864;    // learn carrier: 54785, 200839, 59671
+    constexpr uint32 SPELL_IMPROVED_HAND_OF_GULDAN_R1 = 200865;         // talent 60080 (minted), (1,2)
+    constexpr uint32 SPELL_IMPROVED_HAND_OF_GULDAN_R2 = 200866;
+    constexpr uint32 SPELL_IMP_GANG_BOSS_R1 = 200867;                   // talent 1243 (repurposed), (2,0)
+    constexpr uint32 SPELL_IMP_GANG_BOSS_R2 = 200868;
+    constexpr uint32 SPELL_IMPENDING_DOOM_R1 = 200869;                  // talent 1226 (repurposed in S1), (2,2)
+    constexpr uint32 SPELL_IMPENDING_DOOM_R2 = 200870;                  // carries the capstone proc
+    constexpr uint32 SPELL_LEGION_STRENGTH_R1 = 200871;                 // talent 60082 (minted), (3,0)
+    constexpr uint32 SPELL_LEGION_STRENGTH_R2 = 200872;
+    constexpr uint32 SPELL_LEGION_STRENGTH_R3 = 200873;
+    constexpr uint32 SPELL_FEL_IMMOLATION_R1 = 200874;                  // talent 60084 (minted), (4,3)
+    constexpr uint32 SPELL_FEL_IMMOLATION_R2 = 200875;
+    constexpr uint32 SPELL_FEL_IMMOLATION_R3 = 200876;                  // capstone marker
+    constexpr uint32 SPELL_FEL_BOND_R1 = 200877;                        // talent 1244 (replaces Master Demonologist), (5,1)
+    constexpr uint32 SPELL_FEL_BOND_R2 = 200878;
+    constexpr uint32 SPELL_FEL_BOND_R3 = 200879;
+    constexpr uint32 SPELL_GRIMOIRE_OF_SYNERGY_R1 = 200880;             // talent 60085 (minted), (5,2)
+    constexpr uint32 SPELL_GRIMOIRE_OF_SYNERGY_R2 = 200881;
+    constexpr uint32 SPELL_GRIMOIRE_OF_SYNERGY_R3 = 200882;
+    constexpr uint32 SPELL_DEMONIC_CALLING_R1 = 200883;                 // talent 60086 (minted), (6,0)
+    constexpr uint32 SPELL_DEMONIC_CALLING_R2 = 200884;
+    constexpr uint32 SPELL_DEMONIC_CALLING_R3 = 200885;
+    constexpr uint32 SPELL_IMPROVED_SOUL_FIRE_R1 = 200886;              // talent 60087 (minted), (6,2)
+    constexpr uint32 SPELL_IMPROVED_SOUL_FIRE_R2 = 200887;
+    constexpr uint32 SPELL_IMPROVED_SOUL_FIRE_R3 = 200888;
+    constexpr uint32 SPELL_DECIMATION_R3 = 200889;                      // talent 2261, (7,0) - r1/r2 stay 63156/63158
+    constexpr uint32 SPELL_FEL_CRUELTY_R1 = 200890;                     // talent 60088 (minted), (7,2)
+    constexpr uint32 SPELL_FEL_CRUELTY_R2 = 200891;
+    constexpr uint32 SPELL_FEL_CRUELTY_R3 = 200892;                     // carries the capstone proc
+    constexpr uint32 SPELL_DEMONIC_BULWARK_R1 = 200893;                 // talent 60089 (minted), (7,3)
+    constexpr uint32 SPELL_DEMONIC_BULWARK_R2 = 200894;
+    constexpr uint32 SPELL_DEMONIC_BULWARK_R3 = 200895;
+    constexpr uint32 SPELL_IMPROVED_DEMONIC_TACTICS_R1 = 200896;        // talent 1882 - replaces 54347-9
+    constexpr uint32 SPELL_IMPROVED_DEMONIC_TACTICS_R2 = 200897;
+    constexpr uint32 SPELL_IMPROVED_DEMONIC_TACTICS_R3 = 200898;
+    constexpr uint32 SPELL_FEL_REPRISAL_R1 = 200899;                    // talent 60090 (minted), (8,3)
+    constexpr uint32 SPELL_FEL_REPRISAL_R2 = 200900;
+    constexpr uint32 SPELL_FEL_REPRISAL_R3 = 200901;
+    constexpr uint32 SPELL_DEMONIC_FORM_R1 = 200902;                    // talent 60091 (minted), (9,1)
+    constexpr uint32 SPELL_DEMONIC_FORM_R2 = 200903;
+    constexpr uint32 SPELL_DEMONIC_FORM_R3 = 200904;
+    constexpr uint32 SPELL_LEGIONS_CALL = 200905;                       // talent 60092 (minted), (10,1) learner
+    // 200906-200959 spare
+
+    // Stock ids this pass reuses (retuned) or references (DEMONOLOGY.md §2.1/§4/§9)
+    constexpr uint32 SPELL_METAMORPHOSIS = 47241;
+    constexpr uint32 SPELL_METAMORPHOSIS_STUN_SNARE = 54817;
+    constexpr uint32 SPELL_METAMORPHOSIS_SPELL_MASK_PASSIVE = 54879;
+    constexpr uint32 SPELL_METAMORPHOSIS_TALENT_RANK = 59672;           // talent 1886, (6,1)
+    constexpr uint32 SPELL_METAMORPHOSIS_LEARN_CARRIER = 59673;         // learns 50589 + 54786
+    constexpr uint32 SPELL_IMMOLATION_AURA = 50589;
+    constexpr uint32 SPELL_IMMOLATION_AURA_TICK = 50590;
+    constexpr uint32 SPELL_CHALLENGING_HOWL = 59671;                    // Dark Apotheosis only
+    constexpr uint32 SPELL_DEMON_CHARGE = 54785;                        // Dark Apotheosis only
+    constexpr uint32 SPELL_DEMON_CHARGE_STUN = 60995;
+    constexpr uint32 SPELL_DEMONIC_LEAP_SPELL = 54786;                  // "Demon Leap" retuned (B11)
+    constexpr uint32 SPELL_MOLTEN_CORE = 71165;                         // the only Molten Core buff from now on
+    constexpr uint32 SPELL_DECIMATION_BUFF = 63165;
+    constexpr uint32 SPELL_DEMONIC_PACT_RAID = 48090;
+    constexpr uint32 SPELL_DEMONIC_EMPOWERMENT_VOIDWALKER = 54443;      // unedited, stock 20 s
+    constexpr uint32 SPELL_DEMONIC_EMPOWERMENT_FELGUARD = 54508;        // unedited, stock 15 s
+    constexpr uint32 SPELL_DEMONIC_EMPOWERMENT = 47193;
+    constexpr uint32 SPELL_SOUL_LINK = 19028;                           // talent -> baseline at 20
+    constexpr uint32 SPELL_SOUL_LINK_SPLIT = 25228;
+    constexpr uint32 SPELL_CURSE_OF_DOOM = 603;                         // removed, untrained
+    constexpr uint32 SPELL_DEMONIC_KNOWLEDGE_INT = 35696;               // stock spell_pet_auras target
+    constexpr uint32 SPELL_ENSLAVE_DEMON = 1098;
+    constexpr uint32 SPELL_SACRIFICE = 7812;                            // Voidwalker Sacrifice absorb
+    constexpr uint32 SPELL_DEMONIC_PACT_PET_PROC_R1 = 53646;
+    constexpr uint32 SPELL_DEMONIC_PACT_PET_PROC_R2 = 54909;
+    constexpr uint32 SPELL_INFERNO = 1122;                              // replaced by Legion's Call
+    constexpr uint32 SPELL_RITUAL_OF_DOOM = 18540;                      // replaced by Legion's Call
+
+    // Talent ids this pass mints/repurposes (DEMONOLOGY.md §2.2)
+    constexpr uint32 TALENT_DEMONIC_RESOLVE = 1224;                     // repurposed Improved Health Funnel
+    constexpr uint32 TALENT_IMP_GANG_BOSS = 1243;                       // repurposed Improved Succubus
+    constexpr uint32 TALENT_DARK_APOTHEOSIS = 1282;                     // repurposed Soul Link
+    constexpr uint32 TALENT_IMPLOSION = 1281;                           // repurposed Mana Feed
+    constexpr uint32 TALENT_FEL_BOND = 1244;                            // replaces Master Demonologist
+    constexpr uint32 TALENT_IMPROVED_HAND_OF_GULDAN = 60080;            // minted
+    // TALENT_ROW_1226_IMPENDING_DOOM (= 1226) already declared above (Affliction WP-0)
+    constexpr uint32 TALENT_LEGION_STRENGTH = 60082;                    // minted
+    constexpr uint32 TALENT_CALL_DREADSTALKERS = 60083;                 // minted
+    constexpr uint32 TALENT_FEL_IMMOLATION = 60084;                     // minted
+    constexpr uint32 TALENT_GRIMOIRE_OF_SYNERGY = 60085;                // minted
+    constexpr uint32 TALENT_DEMONIC_CALLING = 60086;                    // minted
+    constexpr uint32 TALENT_IMPROVED_SOUL_FIRE = 60087;                 // minted
+    constexpr uint32 TALENT_FEL_CRUELTY = 60088;                        // minted
+    constexpr uint32 TALENT_DEMONIC_BULWARK = 60089;                    // minted
+    constexpr uint32 TALENT_FEL_REPRISAL = 60090;                       // minted
+    constexpr uint32 TALENT_DEMONIC_FORM = 60091;                       // minted
+    constexpr uint32 TALENT_LEGIONS_CALL = 60092;                       // minted
+    constexpr uint32 TALENT_METAMORPHOSIS = 1886;
+    constexpr uint32 TALENT_MOLTEN_CORE = 1283;
+    constexpr uint32 TALENT_DEMONIC_RESILIENCE = 1680;
+    constexpr uint32 TALENT_NEMESIS = 1884;
+    constexpr uint32 TALENT_DEMONIC_PACT = 1885;
+    constexpr uint32 TALENT_IMPROVED_DEMONIC_TACTICS = 1882;
+    constexpr uint32 TALENT_UNHOLY_POWER = 1262;
+    constexpr uint32 TALENT_DEMONIC_TACTICS = 1673;
+    constexpr uint32 TALENT_FEL_VITALITY = 1242;
+    constexpr uint32 TALENT_DECIMATION = 2261;
+    constexpr uint32 TALENT_DEMONIC_BRUTALITY = 1225;
+
+    // Rank arrays for C++ (DEMONOLOGY.md §6 "Rank arrays for C++") - talent id != spell id; every
+    // live talent read goes through the rank *spell* id, never the talent id.
+    constexpr std::array<uint32, 3> RANKS_IMPROVED_IMP = { 18694, 18695, 18696 };
+    constexpr std::array<uint32, 2> RANKS_IMPROVED_HEALTHSTONE = { 18692, 18693 };
+    constexpr std::array<uint32, 2> RANKS_MASTER_SUMMONER = { 18709, 18710 };
+    constexpr std::array<uint32, 2> RANKS_IMP_GANG_BOSS = { 200867, 200868 };
+    constexpr std::array<uint32, 2> RANKS_IMPENDING_DOOM = { 200869, 200870 };
+    constexpr std::array<uint32, 3> RANKS_DEMONIC_BRUTALITY = { 18705, 18706, 18707 };
+    constexpr std::array<uint32, 3> RANKS_LEGION_STRENGTH = { 200871, 200872, 200873 };
+    constexpr std::array<uint32, 3> RANKS_UNHOLY_POWER = { 18769, 18770, 18771 };
+    constexpr std::array<uint32, 3> RANKS_DEMONIC_AEGIS = { 30143, 30144, 30145 };
+    constexpr std::array<uint32, 3> RANKS_FEL_VITALITY = { 18731, 18743, 18744 };
+    constexpr std::array<uint32, 3> RANKS_FEL_IMMOLATION = { 200874, 200875, 200876 };
+    constexpr std::array<uint32, 3> RANKS_MOLTEN_CORE = { 47245, 47246, 47247 };
+    constexpr std::array<uint32, 3> RANKS_FEL_BOND = { 200877, 200878, 200879 };
+    constexpr std::array<uint32, 3> RANKS_GRIMOIRE_OF_SYNERGY = { 200880, 200881, 200882 };
+    constexpr std::array<uint32, 3> RANKS_DEMONIC_RESILIENCE = { 30319, 30320, 30321 };
+    constexpr std::array<uint32, 3> RANKS_DEMONIC_CALLING = { 200883, 200884, 200885 };
+    constexpr std::array<uint32, 3> RANKS_IMPROVED_SOUL_FIRE = { 200886, 200887, 200888 };
+    constexpr std::array<uint32, 3> RANKS_DECIMATION = { 63156, 63158, 200889 };
+    constexpr std::array<uint32, 3> RANKS_DEMONIC_TACTICS = { 30242, 30245, 30246 };
+    constexpr std::array<uint32, 3> RANKS_FEL_CRUELTY = { 200890, 200891, 200892 };
+    constexpr std::array<uint32, 3> RANKS_DEMONIC_BULWARK = { 200893, 200894, 200895 };
+    constexpr std::array<uint32, 3> RANKS_IMPROVED_DEMONIC_TACTICS = { 200896, 200897, 200898 };
+    constexpr std::array<uint32, 3> RANKS_NEMESIS = { 63117, 63121, 63123 };
+    constexpr std::array<uint32, 3> RANKS_FEL_REPRISAL = { 200899, 200900, 200901 };
+    constexpr std::array<uint32, 3> RANKS_DEMONIC_FORM = { 200902, 200903, 200904 };
+    constexpr std::array<uint32, 3> RANKS_DEMONIC_PACT = { 47236, 47237, 47238 };
+
+    // Demonic Resilience's two values with no free effect slot (DEMONOLOGY.md §6 (5,3)): demon
+    // damage-taken reduction and Soul Link share bonus, by rank (index 0 = rank 1).
+    constexpr std::array<uint8, 3> DEMONIC_RESILIENCE_DEMON_DR = { 5, 10, 15 };
+    constexpr std::array<uint8, 3> DEMONIC_RESILIENCE_SOUL_LINK = { 2, 4, 6 };
+
+    // creature_template 300150-300154 (DEMONOLOGY.md §2.6, declared via stage T1's DSL creature
+    // declarations, not hand-written SQL)
+    constexpr uint32 NPC_WILD_IMP = 300150;
+    constexpr uint32 NPC_IMP_GANG_BOSS = 300151;
+    constexpr uint32 NPC_DREADSTALKER = 300152;
+    constexpr uint32 NPC_DOOMGUARD_GUARDIAN = 300153;
+    constexpr uint32 NPC_INFERNAL_GUARDIAN = 300154;
+
+    // Wild Imp tuning (DEMONOLOGY.md §3.4)
+    constexpr uint8 WILD_IMP_CAP = 15;
+    constexpr int32 WILD_IMP_ENERGY = 100;
+    constexpr int32 IMP_GANG_BOSS_ENERGY = 150;
+    constexpr int32 FEL_FIREBOLT_ENERGY_COST = 20;
+
+    enum class WildImpDespawnReason : uint8
+    {
+        Energy,
+        Implosion,
+        Sacrifice,
+        Timeout
+    };
+
+    enum class DemonKind : uint8
+    {
+        None,
+        Imp,
+        Voidwalker,
+        Succubus,
+        Felhunter,
+        Felguard,
+        Enslaved,
+        WildImp,
+        ImpGangBoss,
+        Dreadstalker,
+        Doomguard,
+        Infernal
+    };
+
+    // Form 23 = the core enum value FORM_DARK_APOTHEOSIS (UnitDefines.h) - no local Warlock-scoped
+    // constant (it would shadow the core enum inside this namespace).
+    bool IsInMetamorphosis(Unit const* unit);                            // GetShapeshiftForm() == FORM_METAMORPHOSIS
+    bool IsInDarkApotheosis(Unit const* unit);                           // GetShapeshiftForm() == FORM_DARK_APOTHEOSIS
+    DemonKind GetDemonKind(Unit const* demon, Player const* owner);
+
+    // Wild Imps (Priest tentacle pattern: m_Controlled scan by entry, PriestMechanics.cpp:708-722).
+    // Both skip a "departing" imp (AI GetData(DATA_WILD_IMP_DEPARTING) == 1) - a despawning imp
+    // stays in m_Controlled until its delayed UnSummon / the map's remove list runs (§7.2).
+    std::vector<Creature*> GetWildImps(Player* owner);                   // copy - DespawnOrUnsummon mutates m_Controlled
+    uint32 CountWildImps(Player const* owner);                           // 300150 + 300151, departing excluded
+    bool TrySummonWildImp(Player* owner, Unit* target, bool gangBoss);   // cap, pending target, triggered cast
+    void OnWildImpDespawn(Player* owner, WildImpDespawnReason reason);   // Molten Core roll (Energy/Implosion)
+    void GrantMoltenCore(Player* owner, uint8 stacks);                   // CastSpell(owner, 71165, true) x stacks
+
+    // Summon hand-off (set just before a synchronous triggered/instant summon, read in IsSummonedBy)
+    struct PendingSummon
+    {
+        ObjectGuid target;
+        uint32 pairToken = 0;
+    };
+    void SetPendingSummon(Player* owner, PendingSummon const& pending);
+    PendingSummon GetPendingSummon(Player const* owner);
+    void ClearPendingSummon(Player* owner);
+    uint32 NextDreadstalkerPairToken(Player* owner);
+    void OnDreadstalkerDeparted(Player* owner, uint32 pairToken);        // 1 Molten Core per token
+
+    // Guardians (B21): the LIVE L0 base + round(coef x owner SP of the spell's school) - i.e.
+    // Effects[0].BasePoints + (Effects[0].DieSides ? 1 : 0) + round(coef x SP) - SetSpellValue's
+    // CalcBaseValue takes the 1 back off (SHARED §4 custom-base-points convention).
+    int32 ComputeGuardianBasePoints(Unit const* guardian, uint32 spellId, float spCoefficient);
+    Unit* SelectGuardianTarget(Creature* guardian, Player* owner, ObjectGuid preferred);   // §7.4
+
+    // Demonic Potency and the other hidden demon auras (§7.1)
+    int32 ComputeDemonAuraAmount(Player const* owner, Unit const* target, uint32 spellId, uint8 effIndex);
+    void RefreshDemonAuras(Player* owner, Unit* demon);                  // add/remove 200840/200844/200850/200851/200852/200854
+    void RefreshDemonicPotency(Player* owner);                           // RecalculateAmount on every demon's 200840 + 200854
+
+    void SyncLegionsCall(Player* player, bool losingTalent = false);     // §7.11
+    void ClearDemonologyPlayerState(ObjectGuid playerGuid);              // OnPlayerLogout
+
+    // ------------------------------------------------------------------
+    // WP-B addition, flagged in the final report (not part of §3.4's original frozen block): Wild
+    // Imp guardian AI action/data ids. DEMONOLOGY-WP-BRIEF.md asked for these as enums "local to
+    // pet_warlock_rework.cpp", but GetWildImps/CountWildImps/OnWildImpDespawn above (this same
+    // frozen header, WP-0's own comment) already name DATA_WILD_IMP_DEPARTING as something they
+    // read via the AI's GetData - and Implosion (spell_warlock_demonology.cpp) drives the AI's
+    // DoAction/SetGUID, while Demonic Empowerment reads GetData(DATA_WILD_IMP_ENERGY) - three
+    // separate translation units that all need the same numeric id. A same-file-only enum can't
+    // satisfy that, so these four constants live here instead; every other AI action/event/data id
+    // (EVENT_*, POINT_WILD_IMP_IMPLODE, the Dreadstalker/Doomguard/Infernal scheduling ids) stays a
+    // local enum inside pet_warlock_rework.cpp as the brief asked, since nothing outside that file
+    // touches them.
+    // ------------------------------------------------------------------
+    enum WildImpAIAction : int32
+    {
+        ACTION_WILD_IMP_IMPLODE = 1,
+        ACTION_WILD_IMP_SACRIFICE = 2
+    };
+
+    enum WildImpAIData : uint32
+    {
+        DATA_WILD_IMP_ENERGY = 1,
+        DATA_WILD_IMP_DEPARTING = 2
+    };
+
+    constexpr int32 GUID_SLOT_IMPLODE_TARGET = 1;
 }
 
 #endif
