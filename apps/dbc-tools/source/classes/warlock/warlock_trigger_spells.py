@@ -4,8 +4,9 @@ Warlock - spells that are never directly cast - proc/periodic-tick effects, trig
 Split from a single source/classes/warlock.py via split_class_file.py (.agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md) - see source/classes/README.md for the multi-file layout and lib/dsl/registry.py's load_class_package for how cross-file references (`from .warlock_...` below) resolve.
 """
 
-from lib.dsl import AuraType, DispelType, Effect, EffectType, PowerType, School
-from lib.dsl.registry import spell
+from lib.dsl import AuraType, DispelType, Effect, EffectType, PowerType, RANGE_SELF, School
+from lib.dsl.registry import bonus_coefficients, linked_spell, procs_on, scripted_by, spell, spell_group, spell_group_rule, unbind_script, unlink_spell
+from . import _masks as m
 
 
 life_tap_1454 = spell(
@@ -27,6 +28,8 @@ life_tap_1454 = spell(
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 6); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 8 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
     raw_overrides={'AttributesEx': 1024, 'AttributesEx2': 33554432, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 6, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Converts ${$m1+$SPI*1.5} health into ${$m1*$<mult>+$SPS*.5*$<mult>} mana.  Spell power increases the amount of mana returned.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 262144, 'SpellClassSet': 5, 'SpellDescriptionVariableID': 175, 'SpellLevel': 6, 'SpellVisualID_1': 1225, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+scripted_by(life_tap_1454, 'spell_warl_life_tap_affliction')
+unbind_script(-1454, 'spell_warl_life_tap')
 
 
 fire_shield_2947 = spell(
@@ -126,12 +129,13 @@ seed_of_corruption_27285 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=1109, points_per_level=52.3, die_sides=181, implicit_target_a=16, radius_yards=15.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=813, points_per_level=18.5, die_sides=181, implicit_target_a=16, radius_yards=15.0),
     ],
     spell_icon_id=1932,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 70); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 3 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 1, 'AttributesEx5': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 70, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Imbeds a demon seed in the enemy target, causing $27243o1 Shadow damage over $27243d.  When the target takes $27243s2 total damage or dies, the seed will inflict $27285s1 Shadow damage to all enemies within $27285a1 yards of the target.  Only one Corruption spell per Warlock can be active on any one target.', 'EffectBonusMultiplier_1': 0.28600001335144043, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 32784, 'SpellClassSet': 5, 'SpellLevel': 70, 'SpellVisualID_1': 7682, 'Targets': 64},
+    notes='warlock-rework AFFLICTION §4.1 B8 items 3/4b: coefficient restored to 0.2129 (was 0.286, its spell_bonus_data row was deleted); base rebased via B3 (V60=1110 min) with learn level moved 70->44 -> 814-994@44, 1110-1290@60, 1480-1660@80. SpellClassMask_2 keeps 0x10 (detonation, unaffected by the B16 Seed DoT rebit).',
+    raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 1, 'AttributesEx5': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 44, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Imbeds a demon seed in the enemy target, causing $27243o1 Shadow damage over $27243d.  When the target takes $27243s2 total damage or dies, the seed will inflict $27285s1 Shadow damage to all enemies within $27285a1 yards of the target.', 'EffectBonusMultiplier_1': 0.2129, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 32784, 'SpellClassSet': 5, 'SpellLevel': 44, 'SpellVisualID_1': 7682, 'Targets': 64},
 )
+scripted_by(seed_of_corruption_27285, 'spell_warl_seed_of_corruption_detonation_affliction')
 
 
 improved_death_coil_30049 = spell(
@@ -370,11 +374,12 @@ fel_concentration_17783 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=22, implicit_target_a=1, apply_aura=108, misc_value=9),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL),
+        Effect(type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=1, apply_aura=AuraType.REDUCE_PUSHBACK),
     ],
     spell_icon_id=76,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the pushback suffered from damaging attacks  while casting Drain Life, Drain Mana, Drain Soul, Unstable Affliction, and Haunt by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16408, 'EffectSpellClassMaskA_2': 262400, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (2,1): rewritten from a single pushback-reduction SpellMod into two plain player auras (haste + pushback reduction on every damaging cast, not classmask-scoped) - no classmask needed on either effect.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases spell, ranged and melee haste by $s1%.  Reduces pushback suffered from damaging attacks while casting by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Your periodic magic damage heals you for 20% of the damage done while casting any damaging spell. This heal cannot exceed 5% of your maximum health.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -390,11 +395,12 @@ fel_concentration_17784 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=45, implicit_target_a=1, apply_aura=108, misc_value=9),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL),
+        Effect(type=EffectType.APPLY_AURA, base_points=65, implicit_target_a=1, apply_aura=AuraType.REDUCE_PUSHBACK),
     ],
     spell_icon_id=76,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the pushback suffered from damaging attacks  while casting Drain Life, Drain Mana, Drain Soul, Unstable Affliction, and Haunt spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16408, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (2,1)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases spell, ranged and melee haste by $s1%.  Reduces pushback suffered from damaging attacks while casting by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Your periodic magic damage heals you for 20% of the damage done while casting any damaging spell. This heal cannot exceed 5% of your maximum health.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -410,12 +416,15 @@ fel_concentration_17785 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=69, implicit_target_a=1, apply_aura=108, misc_value=9),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.REDUCE_PUSHBACK),
     ],
     spell_icon_id=76,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the pushback suffered from damaging attacks  while casting Drain Life, Drain Mana, Drain Soul,  Unstable Affliction, and Haunt spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16408, 'EffectSpellClassMaskA_2': 262400, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (2,1) capstone: rank 3 also carries the periodic-damage-while-casting self heal (Warlock::LeechTalent::FelConcentration, spell_warl_fel_concentration_capstone on this id) - data only here, C++ is WP-B.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases spell, ranged and melee haste by $s1%.  Reduces pushback suffered from damaging attacks while casting by $s2%.\n\nCapstone Bonus: Your periodic magic damage heals you for 20% of the damage done while casting any damaging spell. This heal cannot exceed 5% of your maximum health.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+scripted_by(fel_concentration_17785, 'spell_warl_fel_concentration_capstone')
+procs_on(fel_concentration_17785, proc_flags=m.PROC_FLAG_DONE_PERIODIC, school_mask=126, spell_type_mask=m.PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, chance=100, cooldown_ms=0)
 
 
 bane_17788 = spell(
@@ -641,11 +650,11 @@ soul_siphon_17804 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=112, misc_value=4992),
+        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=0),
     ],
     spell_icon_id=546,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount drained by your Drain Life and Drain Soul spells by an additional $s1% for each of your Affliction effects on the target, up to a maximum of $s2% additional effect.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8, 'EffectSpellClassMaskB_1': 16392, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (2,3): eff2 (cap %, was the C3 stock-hardcode key OVERRIDE_CLASS_SCRIPTS misc 4992/4993) made inert -> plain DUMMY read by Warlock::GetSoulSiphonMultiplier; masks cleared (no SpellMod left on this talent).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount drained by your Drain Life and Drain Soul spells, and the damage of your Phantom Singularity, by an additional $s1% for each of your Affliction damage over time effects on the target, to a maximum of $s2% additional effect.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -662,11 +671,11 @@ soul_siphon_17805 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, base_points=17, implicit_target_a=1, apply_aura=112, misc_value=4993),
+        Effect(type=EffectType.APPLY_AURA, base_points=23, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=0),
     ],
     spell_icon_id=546,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount drained by your Drain Life and Drain Soul spells by an additional $s1% for each of your Affliction effects on the target, up to a maximum of $s2% additional effect.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8, 'EffectSpellClassMaskB_1': 16392, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (2,3): see rank 1s note.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount drained by your Drain Life and Drain Soul spells, and the damage of your Phantom Singularity, by an additional $s1% for each of your Affliction damage over time effects on the target, to a maximum of $s2% additional effect.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -1106,11 +1115,11 @@ nightfall_18094 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=164,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your Corruption and Drain Life spells a 2% chance to cause you to enter a Shadow Trance state after damaging the opponent.  The Shadow Trance state reduces the casting time of your next Shadow Bolt spell by $17941s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 2, 'ProcTypeMask': 327680, 'RangeIndex': 1, 'SpellClassSet': 5, 'SpellLevel': 1},
+    notes='warlock-rework AFFLICTION §6 (3,3) / §7.5: eff1 now carries the live Shadow Bolt damage bonus (5%, passed as BP2 by the Shadow Trance cast script); ProcChance raised 2->3.',
+    raw_overrides={'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Corruption, Drain Life, Drain Soul and Shadowflame spells have a $h% chance for your next Shadow Bolt or Seed of Corruption to become an instant cast and consume 50% less mana.  This Shadow Bolt deals $s1% more damage.  This effect can only occur every 5 sec.\n\n|cFF9D9D9DCapstone Bonus: Your Shadow Bolt causes your Unstable Affliction on the target to instantly deal one tick of its periodic damage.|r', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 3, 'ProcTypeMask': 327680, 'RangeIndex': 1, 'SpellClassSet': 5, 'SpellLevel': 1},
 )
 
 
@@ -1126,12 +1135,37 @@ nightfall_18095 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=164,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your Corruption and Drain Life spells a 4% chance to cause you to enter a Shadow Trance state after damaging the opponent.  The Shadow Trance state reduces the casting time of your next Shadow Bolt spell by $17941s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 4, 'ProcTypeMask': 327680, 'RangeIndex': 1, 'SpellClassSet': 5, 'SpellLevel': 1},
+    notes='warlock-rework AFFLICTION §6 (3,3): ProcChance raised 4->6.',
+    raw_overrides={'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Corruption, Drain Life, Drain Soul and Shadowflame spells have a $h% chance for your next Shadow Bolt or Seed of Corruption to become an instant cast and consume 50% less mana.  This Shadow Bolt deals $s1% more damage.  This effect can only occur every 5 sec.\n\n|cFF9D9D9DCapstone Bonus: Your Shadow Bolt causes your Unstable Affliction on the target to instantly deal one tick of its periodic damage.|r', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 6, 'ProcTypeMask': 327680, 'RangeIndex': 1, 'SpellClassSet': 5, 'SpellLevel': 1},
 )
+
+
+nightfall_200766 = spell(
+    id=200766,
+    name='Nightfall',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=164,
+    notes='warlock-rework AFFLICTION §6 (3,3): new rank 3 (talent 1002 rank count 2->3, PLAN §1); carries the "Unstable Affliction instant tick" capstone (spell_warl_shadow_bolt_affliction, §7.5).',
+    raw_overrides={'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Corruption, Drain Life, Drain Soul and Shadowflame spells have a $h% chance for your next Shadow Bolt or Seed of Corruption to become an instant cast and consume 50% less mana.  This Shadow Bolt deals $s1% more damage.  This effect can only occur every 5 sec.\n\nCapstone Bonus: Your Shadow Bolt causes your Unstable Affliction on the target to instantly deal one tick of its periodic damage.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 9, 'ProcTypeMask': 327680, 'RangeIndex': 1, 'SpellClassSet': 5, 'SpellLevel': 1},
+)
+scripted_by(nightfall_18094, 'spell_warl_nightfall_affliction')
+scripted_by(nightfall_18095, 'spell_warl_nightfall_affliction')
+scripted_by(nightfall_200766, 'spell_warl_nightfall_affliction')
+unbind_script(-18094, 'spell_warl_nightfall')
+procs_on(-18094, proc_flags=0x50000, family_name=5, family_mask=m.NIGHTFALL_TRIGGER, spell_type_mask=1, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, chance=0, cooldown_ms=5000)
 
 
 pyroclasm_18096 = spell(
@@ -1361,9 +1395,9 @@ suppression_18176 = spell(
 )
 
 
-improved_curse_of_weakness_18179 = spell(
+improved_curses_18179 = spell(
     id=18179,
-    name='Improved Curse of Weakness',
+    name='Improved Curses',
     school=School.NORMAL,
     attributes=464,
     cast_time_ms=0,
@@ -1373,17 +1407,19 @@ improved_curse_of_weakness_18179 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=12),
     ],
     spell_icon_id=543,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount of attack power reduced by your Curse of Weakness by $s1%.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 32768, 'EffectSpellClassMaskB_2': 2097152, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (1,2): renamed from Improved Curse of Weakness and widened to cover Curse of Exhaustion/Tongues/the Elements; eff1 op changed EFFECT1(3)->ALL_EFFECTS(8) so it scopes both of Curse of Weakness effects; eff2 (new) ALL_EFFECTS on Exhaustion+Tongues; eff3 (new) flat EFFECT2 bump on Curse of the Elements eff2. §11 Q6/table also grants Agony stack cap (+2/+5), read live by Warlock::GetAgonyStackCap - no data field for that clause.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the maximum stack count of your Bane of Agony by 2.  Increases the effect of your Curse of Weakness by $s1%, the effect of your Curse of Exhaustion and Curse of Tongues by $s2%, and the damage taken increase of your Curse of the Elements by $s3 percentage points.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.CURSE_OF_WEAKNESS, 'EffectSpellClassMaskB_1': m.IMPROVED_CURSES_EXH_TONGUES[0], 'EffectSpellClassMaskB_3': m.IMPROVED_CURSES_EXH_TONGUES[2], 'EffectSpellClassMaskC_2': m.CURSE_OF_THE_ELEMENTS, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
-improved_curse_of_weakness_18180 = spell(
+improved_curses_18180 = spell(
     id=18180,
-    name='Improved Curse of Weakness',
+    name='Improved Curses',
     school=School.NORMAL,
     attributes=464,
     cast_time_ms=0,
@@ -1393,11 +1429,13 @@ improved_curse_of_weakness_18180 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=12),
     ],
     spell_icon_id=543,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount of attack power reduced by your Curse of Weakness by $s1%.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 32768, 'EffectSpellClassMaskB_2': 2097152, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (1,2)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the maximum stack count of your Bane of Agony by 5.  Increases the effect of your Curse of Weakness by $s1%, the effect of your Curse of Exhaustion and Curse of Tongues by $s2%, and the damage taken increase of your Curse of the Elements by $s3 percentage points.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.CURSE_OF_WEAKNESS, 'EffectSpellClassMaskB_1': m.IMPROVED_CURSES_EXH_TONGUES[0], 'EffectSpellClassMaskB_3': m.IMPROVED_CURSES_EXH_TONGUES[2], 'EffectSpellClassMaskC_2': m.CURSE_OF_THE_ELEMENTS, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -1414,11 +1452,11 @@ improved_life_tap_18182 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=208,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount of Mana awarded by your Life Tap spell by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (1,1): bp raised 9->19 (10%->20%, PLAN §1 rank-count target 20/40/60%). C++ (spell_warl_life_tap_affliction) reads this by rank id.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the mana gained from your Life Tap by $s1%.  Your Life Tap restores 50% more mana when used below 50% mana.\n\n|cFF9D9D9DCapstone Bonus: Using Life Tap increases your spell power by 10% for 15 sec.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -1435,17 +1473,38 @@ improved_life_tap_18183 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=208,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount of Mana awarded by your Life Tap spell by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (1,1): bp raised 19->39 (20%->40%).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the mana gained from your Life Tap by $s1%.  Your Life Tap restores 50% more mana when used below 50% mana.\n\n|cFF9D9D9DCapstone Bonus: Using Life Tap increases your spell power by 10% for 15 sec.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
-improved_drain_soul_18213 = spell(
+improved_life_tap_200765 = spell(
+    id=200765,
+    name='Improved Life Tap',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=208,
+    notes='warlock-rework AFFLICTION §6 (1,1): new rank 3 (talent 1007 rank count 2->3, PLAN §1); capstone: casting Life Tap grants Improved Life Tap self buff 200726 (10% SP, 15s) - data only, C++ in spell_warl_life_tap_affliction.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the mana gained from your Life Tap by $s1%.  Your Life Tap restores 50% more mana when used below 50% mana.\n\nCapstone Bonus: Using Life Tap increases your spell power by 10% for 15 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+siphon_power_18213 = spell(
     id=18213,
-    name='Improved Drain Soul',
+    name='Siphon Power',
     school=School.NORMAL,
     attributes=464,
     cast_time_ms=0,
@@ -1457,11 +1516,11 @@ improved_drain_soul_18213 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=18),
         Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=108, misc_value=2),
-        Effect(type=EffectType.DUMMY, base_points=6, implicit_target_a=1),
+        Effect(type=EffectType.DUMMY, base_points=11, implicit_target_a=1),
     ],
     spell_icon_id=113,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Returns $s3% of your maximum mana if the target is killed by you while you drain its soul.  In addition, your Affliction spells generate $s2% less threat.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16384, 'EffectSpellClassMaskB_1': 2152252442, 'EffectSpellClassMaskB_2': 266011, 'EffectSpellClassMaskB_3': 256, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (1,3): renamed from Improved Drain Soul (kept); eff1 unchanged; eff2 mask widened to AFFLICTION_THREAT; eff3 bp raised 6->11 (12%, read by the stock -18213 KILL proc class, spell_warlock.cpp:1499).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Returns $s3% of your maximum mana if the target is killed by you while you drain its soul.  When a target dies while you are draining its soul, you gain 10% increased spell power for 15 sec.  Your Affliction spells generate $s2% less threat.\n\n|cFF9D9D9DCapstone Bonus: Inevitable Demise. Each time your Bane of Agony deals damage, the damage of your next Drain Life is increased by 5%, stacking up to 50 times.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16384, 'EffectSpellClassMaskB_1': m.AFFLICTION_THREAT[0], 'EffectSpellClassMaskB_2': m.AFFLICTION_THREAT[1], 'EffectSpellClassMaskB_3': m.AFFLICTION_THREAT[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -1477,12 +1536,13 @@ grim_reach_18218 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=5),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1614,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your Affliction spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2152252442, 'EffectSpellClassMaskA_2': 263955, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (3,1) / A3: range SpellMod removed from this rank (a range aura 107 cannot be spell_group-gated) - eff1 is now an inert DUMMY marker, the real +3 yd effect lives on the hidden shared passive 200707, joined via linked_spell below (type=2).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your damaging spells by $s1 yards.\n\n|cFF9D9D9DCapstone Bonus: Your periodic Shadow damage has a 5% chance to deal additional Shadow damage and increase the Shadow damage the target takes from you by 3% for 6 sec.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+linked_spell(grim_reach_18218.id, 200707, type=2)
 
 
 grim_reach_18219 = spell(
@@ -1497,12 +1557,15 @@ grim_reach_18219 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=5),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1614,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your Affliction spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2152252442, 'EffectSpellClassMaskA_2': 263955, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (3,1) capstone: rank 2 links to the shared +6 yd passive 200708 and carries the "periodic Shadow damage has a 5% chance to bolt+debuff" capstone proc (spell_warl_grim_reach_capstone, procs_on below).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your damaging spells by $s1 yards.\n\nCapstone Bonus: Your periodic Shadow damage has a 5% chance to deal additional Shadow damage and increase the Shadow damage the target takes from you by 3% for 6 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+linked_spell(grim_reach_18219.id, 200708, type=2)
+scripted_by(grim_reach_18219, 'spell_warl_grim_reach_capstone')
+procs_on(grim_reach_18219, proc_flags=m.PROC_FLAG_DONE_PERIODIC, school_mask=32, spell_type_mask=1, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, chance=5, cooldown_ms=0)
 
 
 shadow_mastery_18271 = spell(
@@ -1517,12 +1580,12 @@ shadow_mastery_18271 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108, misc_value=22),
     ],
     spell_icon_id=22,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage dealt or life drained by your Shadow spells and your Felhunter's Shadow Bite ability by $s1%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 524433, 'EffectSpellClassMaskA_2': 4528400, 'EffectSpellClassMaskB_1': 17418, 'EffectSpellClassMaskB_2': 275, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (5,1): eff1 bp 2->1 (2%), masks -> SHADOW_MASTERY_DIRECT (keeps the detonation bit 0x10, adds PS/TS/GR/AP bolts); eff2 bp 2->1, mask -> SHADOW_MASTERY_DOT (adds Curse of Doom, Seed DoT rebit, UA).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage dealt or life drained by your Shadow spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.SHADOW_MASTERY_DIRECT[0], 'EffectSpellClassMaskA_2': m.SHADOW_MASTERY_DIRECT[1], 'EffectSpellClassMaskA_3': m.SHADOW_MASTERY_DIRECT[2], 'EffectSpellClassMaskB_1': m.SHADOW_MASTERY_DOT[0], 'EffectSpellClassMaskB_2': m.SHADOW_MASTERY_DOT[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -1538,12 +1601,12 @@ shadow_mastery_18272 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=108, misc_value=22),
     ],
     spell_icon_id=22,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage dealt or life drained by your Shadow spells and your Felhunter's Shadow Bite ability by $s1%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 524433, 'EffectSpellClassMaskA_2': 4528400, 'EffectSpellClassMaskB_1': 17418, 'EffectSpellClassMaskB_2': 275, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (5,1): bp 5->3 (4%).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage dealt or life drained by your Shadow spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.SHADOW_MASTERY_DIRECT[0], 'EffectSpellClassMaskA_2': m.SHADOW_MASTERY_DIRECT[1], 'EffectSpellClassMaskA_3': m.SHADOW_MASTERY_DIRECT[2], 'EffectSpellClassMaskB_1': m.SHADOW_MASTERY_DOT[0], 'EffectSpellClassMaskB_2': m.SHADOW_MASTERY_DOT[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -1559,12 +1622,12 @@ shadow_mastery_18273 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108, misc_value=22),
     ],
     spell_icon_id=22,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage dealt or life drained by your Shadow spells and your Felhunter's Shadow Bite ability by $s1%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 524433, 'EffectSpellClassMaskA_2': 4528400, 'EffectSpellClassMaskB_1': 17418, 'EffectSpellClassMaskB_2': 275, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (5,1): bp 8->5 (6%).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage dealt or life drained by your Shadow spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.SHADOW_MASTERY_DIRECT[0], 'EffectSpellClassMaskA_2': m.SHADOW_MASTERY_DIRECT[1], 'EffectSpellClassMaskA_3': m.SHADOW_MASTERY_DIRECT[2], 'EffectSpellClassMaskB_1': m.SHADOW_MASTERY_DOT[0], 'EffectSpellClassMaskB_2': m.SHADOW_MASTERY_DOT[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -1632,9 +1695,9 @@ amplify_curse_18288 = spell(
 )
 
 
-improved_drain_soul_18372 = spell(
+siphon_power_18372 = spell(
     id=18372,
-    name='Improved Drain Soul',
+    name='Siphon Power',
     school=School.NORMAL,
     attributes=464,
     cast_time_ms=0,
@@ -1646,12 +1709,14 @@ improved_drain_soul_18372 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=18),
         Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=108, misc_value=2),
-        Effect(type=EffectType.DUMMY, base_points=14, implicit_target_a=1),
+        Effect(type=EffectType.DUMMY, base_points=24, implicit_target_a=1),
     ],
     spell_icon_id=113,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Returns $s3% of your maximum mana if the target is killed by you while you drain its soul.  In addition, your Affliction spells generate $s2% less threat.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16384, 'EffectSpellClassMaskB_1': 2152252442, 'EffectSpellClassMaskB_2': 266011, 'EffectSpellClassMaskB_3': 256, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (1,3) capstone: eff3 bp raised 14->24 (25%); linked_spell to the Inevitable Demise capstone passive 200769 below.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Returns $s3% of your maximum mana if the target is killed by you while you drain its soul.  When a target dies while you are draining its soul, you gain 10% increased spell power for 15 sec.  Your Affliction spells generate $s2% less threat.\n\nCapstone Bonus: Inevitable Demise. Each time your Bane of Agony deals damage, the damage of your next Drain Life is increased by 5%, stacking up to 50 times.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16384, 'EffectSpellClassMaskB_1': m.AFFLICTION_THREAT[0], 'EffectSpellClassMaskB_2': m.AFFLICTION_THREAT[1], 'EffectSpellClassMaskB_3': m.AFFLICTION_THREAT[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+linked_spell(siphon_power_18372.id, 200769, type=2)
+procs_on(-18213, proc_flags=m.PROC_FLAG_KILL, school_mask=32, family_name=5, family_mask=(0x4000, 0, 0), attributes_mask=m.PROC_ATTR_REQ_EXP_OR_HONOR, chance=0, cooldown_ms=0)
 
 
 improved_healthstone_18692 = spell(
@@ -2184,30 +2249,9 @@ unholy_power_18773 = spell(
 )
 
 
-improved_curse_of_agony_18827 = spell(
+improved_bane_of_agony_18827 = spell(
     id=18827,
-    name='Improved Curse of Agony',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    duration_ms=-1,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108, misc_value=22),
-    ],
-    spell_icon_id=544,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Curse of Agony by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
-)
-
-
-improved_curse_of_agony_18829 = spell(
-    id=18829,
-    name='Improved Curse of Agony',
+    name='Improved Bane of Agony',
     school=School.NORMAL,
     attributes=464,
     cast_time_ms=0,
@@ -2221,8 +2265,29 @@ improved_curse_of_agony_18829 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=22),
     ],
     spell_icon_id=544,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Curse of Agony by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (0,2): renamed from Improved Curse of Agony; bp raised 4->9 (10%). Capstone (r2): Bane of Agonys damage is increased by Mastery - script only (spell_warl_bane_of_agony DoEffectCalcAmount, HasAura(18829)).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage done by your Bane of Agony by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Bane of Agony's damage is increased by your Mastery.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+improved_bane_of_agony_18829 = spell(
+    id=18829,
+    name='Improved Bane of Agony',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=22),
+    ],
+    spell_icon_id=544,
+    notes='warlock-rework AFFLICTION §6 (0,2): bp raised 9->19 (20%).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage done by your Bane of Agony by $s1%.\n\nCapstone Bonus: Your Bane of Agony's damage is increased by your Mastery.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2280,13 +2345,11 @@ contagion_30060 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=108, misc_value=22),
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=107, misc_value=28),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1978,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of Curse of Agony, Corruption and Seed of Corruption by $s1% and reduces the chance your helpful Affliction spells and damage over time effects will be dispelled by an additional $s3%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1026, 'EffectSpellClassMaskA_2': 16, 'EffectSpellClassMaskB_2': 16, 'EffectSpellClassMaskC_1': 17418, 'EffectSpellClassMaskC_2': 275, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (6,0): rewritten from three SpellMod effects into a single DUMMY marker read by spell_warl_corruption_affliction (the empowered-6th-tick %, and the capstone spread condition at r3); no classmask needed.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Every 6th tick of your Corruption deals $s1% increased damage.\n\n|cFF9D9D9DCapstone Bonus: If a 6th tick occurs while you are draining the target's soul, the area becomes contaminated, spreading Corruption to all targets within 10 yards.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2302,13 +2365,11 @@ contagion_30061 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108, misc_value=22),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=107, misc_value=28),
+        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1978,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of Curse of Agony, Corruption and Seed of Corruption by $s1% and reduces the chance your helpful Affliction spells and damage over time effects  will be dispelled by an additional $s3%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1026, 'EffectSpellClassMaskA_2': 16, 'EffectSpellClassMaskB_2': 16, 'EffectSpellClassMaskC_1': 17418, 'EffectSpellClassMaskC_2': 275, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (6,0)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Every 6th tick of your Corruption deals $s1% increased damage.\n\n|cFF9D9D9DCapstone Bonus: If a 6th tick occurs while you are draining the target's soul, the area becomes contaminated, spreading Corruption to all targets within 10 yards.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2324,13 +2385,11 @@ contagion_30062 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=108, misc_value=22),
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=17, implicit_target_a=1, apply_aura=107, misc_value=28),
+        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1978,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of Curse of Agony, Corruption and Seed of Corruption by $s1% and reduces the chance your helpful Affliction spells and damage over time effects  will be dispelled by an additional $s3%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1026, 'EffectSpellClassMaskA_2': 16, 'EffectSpellClassMaskB_2': 16, 'EffectSpellClassMaskC_1': 17418, 'EffectSpellClassMaskC_2': 275, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (6,0) capstone: rank 3 carries the "6th tick while draining Drain Soul spreads Corruption" clause (spell_warl_corruption_affliction) - data only, C++ is WP-B.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Every 6th tick of your Corruption deals $s1% increased damage.\n\nCapstone Bonus: If a 6th tick occurs while you are draining the target's soul, the area becomes contaminated, spreading Corruption to all targets within 10 yards.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2869,11 +2928,11 @@ empowered_corruption_32381 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=24),
     ],
-    spell_icon_id=313,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Corruption spell by an amount equal to $*6;s1% of your spell power.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    spell_icon_id=97,
+    notes='warlock-rework AFFLICTION §6 (3,0): op changed ADD_FLAT_MODIFIER(107)->ADD_PCT_MODIFIER(108) BONUS_MULTIPLIER (10/20/30% of the coefficient, not a flat SP fraction); icon 313 (Improved Corruptions, a stock duplicate) -> 97 so the two talents dont share an icon (tooltip audit).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the spell damage scaling of your Corruption by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2889,11 +2948,11 @@ empowered_corruption_32382 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=107, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=24),
     ],
-    spell_icon_id=313,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Corruption spell by an amount equal to $*6;s1% of your spell power.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    spell_icon_id=97,
+    notes='warlock-rework AFFLICTION §6 (3,0)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the spell damage scaling of your Corruption by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2909,11 +2968,11 @@ empowered_corruption_32383 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=107, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=24),
     ],
-    spell_icon_id=313,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Corruption spell by an amount equal to $*6;s1% of your spell power.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    spell_icon_id=97,
+    notes='warlock-rework AFFLICTION §6 (3,0)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the spell damage scaling of your Corruption by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2933,7 +2992,7 @@ shadow_embrace_32385 = spell(
     ],
     spell_icon_id=2209,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Shadow Bolt and Haunt spells apply the Shadow Embrace effect, increasing all shadow periodic damage dealt to the target by you by $32386s1%, and reduces all periodic healing done to the target by $60448s1%. Lasts for $32386d. Stacks up to $32386u  times.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2, 'EffectSpellClassMaskB_1': 1026, 'EffectSpellClassMaskB_2': 17, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your direct damage Shadow spells, Drain Life and Drain Soul apply Shadow Embrace, increasing all periodic Shadow damage you deal to the target by $32386s1% per stack.  Lasts $32386d.  Stacks up to $32386u times.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 1026, 'EffectSpellClassMaskB_2': 17, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2953,7 +3012,7 @@ shadow_embrace_32387 = spell(
     ],
     spell_icon_id=2209,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Shadow Bolt and Haunt spells apply the Shadow Embrace effect, increasing all shadow periodic damage dealt to the target by you by $32388s1%, and reduces all periodic healing done to the target by $60465s1%. Lasts for $32388d. Stacks up to $32386u times.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2, 'EffectSpellClassMaskB_1': 1026, 'EffectSpellClassMaskB_2': 17, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your direct damage Shadow spells, Drain Life and Drain Soul apply Shadow Embrace, increasing all periodic Shadow damage you deal to the target by $32388s1% per stack.  Lasts $32388d.  Stacks up to $32386u times.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 1026, 'EffectSpellClassMaskB_2': 17, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -2973,8 +3032,12 @@ shadow_embrace_32392 = spell(
     ],
     spell_icon_id=2209,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Shadow Bolt and Haunt spells apply the Shadow Embrace effect, increasing all shadow periodic damage dealt to the target by you by $32389s1%, and reduces all periodic healing done to the target by $60466s1%. Lasts for $32389d. Stacks up to $32386u times.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2, 'EffectSpellClassMaskB_1': 1026, 'EffectSpellClassMaskB_2': 17, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your direct damage Shadow spells, Drain Life and Drain Soul apply Shadow Embrace, increasing all periodic Shadow damage you deal to the target by $32389s1% per stack.  Lasts $32389d.  Stacks up to $32386u times.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 1026, 'EffectSpellClassMaskB_2': 17, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+scripted_by(shadow_embrace_32385, 'spell_warl_shadow_embrace_affliction')
+scripted_by(shadow_embrace_32387, 'spell_warl_shadow_embrace_affliction')
+scripted_by(shadow_embrace_32392, 'spell_warl_shadow_embrace_affliction')
+procs_on(-32385, proc_flags=0x50000, school_mask=32, spell_type_mask=1, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, chance=100, cooldown_ms=0)
 
 
 shadow_embrace_32393 = spell(
@@ -3030,11 +3093,11 @@ malediction_32477 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=107, misc_value=7),
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=79, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=79, misc_value=127),
     ],
     spell_icon_id=542,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell damage by $s2%, and increases the periodic critical strike chance of your Corruption and Unstable Affliction spells by $s1%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2, 'EffectSpellClassMaskA_2': 256, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (7,1): eff2 misc 126 (magic damage) -> 127 (all damage, "increases all damage done"); eff1 mask widened to CORRUPTION_UA (d2 0x100 added).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all damage done by $s2%.  Increases the periodic critical strike chance of your Corruption and Unstable Affliction spells by $s1%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.CORRUPTION_UA[0], 'EffectSpellClassMaskA_2': m.CORRUPTION_UA[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -3051,11 +3114,11 @@ malediction_32483 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=107, misc_value=7),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=79, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=79, misc_value=127),
     ],
     spell_icon_id=542,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell damage by $s2%, and increases the periodic critical strike chance of your Corruption and Unstable Affliction spells by $s1%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2, 'EffectSpellClassMaskA_2': 256, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (7,1)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all damage done by $s2%.  Increases the periodic critical strike chance of your Corruption and Unstable Affliction spells by $s1%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.CORRUPTION_UA[0], 'EffectSpellClassMaskA_2': m.CORRUPTION_UA[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -3072,11 +3135,11 @@ malediction_32484 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=107, misc_value=7),
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=79, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=79, misc_value=127),
     ],
     spell_icon_id=542,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell damage by $s2%, and increases the periodic critical strike chance of your Corruption and Unstable Affliction spells by $s1%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2, 'EffectSpellClassMaskA_2': 256, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (7,1)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all damage done by $s2%.  Increases the periodic critical strike chance of your Corruption and Unstable Affliction spells by $s1%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.CORRUPTION_UA[0], 'EffectSpellClassMaskA_2': m.CORRUPTION_UA[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -3152,11 +3215,11 @@ eradication_47195 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=12, trigger_spell=64368),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=12, trigger_spell=64371),
     ],
     spell_icon_id=3316,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you deal damage with Corruption, you have $h% chance to increase your spell casting speed by $64368s1% for $64368d.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1026, 'EffectSpellClassMaskA_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 6, 'ProcTypeMask': 262144, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (6,3): every rank now triggers the same 64371 buff (was 64368/64370/64371, a stock quirk where only the buffs +20%/10s differed by name, not value); ProcChance 6->3.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you deal damage with Corruption, you have a $h% chance to increase your spell casting speed by $64371s1% for $64371d.  This effect can only occur every 5 sec.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1026, 'EffectSpellClassMaskA_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 3, 'ProcTypeMask': 262144, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -3172,11 +3235,11 @@ eradication_47196 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=12, trigger_spell=64370),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=12, trigger_spell=64371),
     ],
     spell_icon_id=3316,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you deal damage with Corruption, you have $h% chance to increase your spell casting speed by $64370s1% for $64370d.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1026, 'EffectSpellClassMaskA_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 6, 'ProcTypeMask': 262144, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (6,3): ProcChance 6->6 (unchanged at rank 2), trigger 64370->64371.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you deal damage with Corruption, you have a $h% chance to increase your spell casting speed by $64371s1% for $64371d.  This effect can only occur every 5 sec.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1026, 'EffectSpellClassMaskA_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 6, 'ProcTypeMask': 262144, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -3195,9 +3258,10 @@ eradication_47197 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=12, trigger_spell=64371),
     ],
     spell_icon_id=3316,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you deal damage with Corruption, you have $h% chance to increase your spell casting speed by $64371s1% for $64371d.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1026, 'EffectSpellClassMaskA_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 6, 'ProcTypeMask': 262144, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (6,3): ProcChance 6->9.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you deal damage with Corruption, you have a $h% chance to increase your spell casting speed by $64371s1% for $64371d.  This effect can only occur every 5 sec.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1026, 'EffectSpellClassMaskA_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 9, 'ProcTypeMask': 262144, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+procs_on(-47195, proc_flags=m.PROC_FLAG_DONE_PERIODIC, family_name=5, family_mask=(0x2, 0, 0), spell_type_mask=1, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, chance=0, cooldown_ms=5000)
 
 
 death_s_embrace_47198 = spell(
@@ -3216,8 +3280,8 @@ death_s_embrace_47198 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=112, misc_value=6928),
     ],
     spell_icon_id=3223,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount drained by your Drain Life by $s1% while your health is at or below 20% health, and increases the damage done by your Shadow spells by $s2% when your target is at or below 35% health.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8, 'EffectSpellClassMaskB_1': 533643, 'EffectSpellClassMaskB_2': 366867, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (8,3): eff2 mask widened to WARLOCK_SHADOW_DAMAGE',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount drained by your Drain Life by $s1% while your health is at or below 20% health.  Increases the damage done by your Shadow spells and abilities by $s2% when your target is at or below 35% health.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8, 'EffectSpellClassMaskB_1': m.WARLOCK_SHADOW_DAMAGE[0], 'EffectSpellClassMaskB_2': m.WARLOCK_SHADOW_DAMAGE[1], 'EffectSpellClassMaskB_3': m.WARLOCK_SHADOW_DAMAGE[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -3237,8 +3301,8 @@ death_s_embrace_47199 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=112, misc_value=6926),
     ],
     spell_icon_id=3223,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount drained by your Drain Life by $s1% while your health is at or below 20% health, and increases the damage done by your Shadow spells by $s2% when your target is at or below 35% health.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8, 'EffectSpellClassMaskB_1': 533643, 'EffectSpellClassMaskB_2': 366867, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (8,3): eff2 mask widened to WARLOCK_SHADOW_DAMAGE',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount drained by your Drain Life by $s1% while your health is at or below 20% health.  Increases the damage done by your Shadow spells and abilities by $s2% when your target is at or below 35% health.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8, 'EffectSpellClassMaskB_1': m.WARLOCK_SHADOW_DAMAGE[0], 'EffectSpellClassMaskB_2': m.WARLOCK_SHADOW_DAMAGE[1], 'EffectSpellClassMaskB_3': m.WARLOCK_SHADOW_DAMAGE[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -3258,8 +3322,8 @@ death_s_embrace_47200 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=112, misc_value=6917),
     ],
     spell_icon_id=3223,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount drained by your Drain Life by $s1% while your health is at or below 20% health, and increases the damage done by your Shadow spells by $s2% when your target is at or below 35% health.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8, 'EffectSpellClassMaskB_1': 533643, 'EffectSpellClassMaskB_2': 366867, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (8,3): eff2 mask widened to WARLOCK_SHADOW_DAMAGE',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount drained by your Drain Life by $s1% while your health is at or below 20% health.  Increases the damage done by your Shadow spells and abilities by $s2% when your target is at or below 35% health.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8, 'EffectSpellClassMaskB_1': m.WARLOCK_SHADOW_DAMAGE[0], 'EffectSpellClassMaskB_2': m.WARLOCK_SHADOW_DAMAGE[1], 'EffectSpellClassMaskB_3': m.WARLOCK_SHADOW_DAMAGE[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -3276,11 +3340,11 @@ everlasting_affliction_47201 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=47422),
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=107, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=24),
     ],
     spell_icon_id=3169,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Corruption and Unstable Affliction spells gain an additional $s2% of your bonus spell damage, and your Drain Life, Drain Soul, Shadow Bolt, and Haunt spells have a $h% chance to reset the duration of your Corruption spell on the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 273, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '1', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (9,1) / §7.3: eff2 op ADD_FLAT_MODIFIER(107)->ADD_PCT_MODIFIER(108), bp raised to 1 (2%), mask corrected to CORRUPTION_UA; ProcChance 20->33 (the stock load-time correction still OR-s Corruption into this effect index, SpellInfoCorrections.cpp, harmless). Trigger 47422 replaced with a pure RefreshDuration() (spell_warl_everlasting_affliction_refresh, unbind -47422 spell_warl_everlasting_affliction) - Howl of Terror added as a source (EVERLASTING_TRIGGER).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the spell damage scaling of your Corruption and Unstable Affliction by $s2%.  Your Drain Life, Drain Soul, Shadow Bolt, Haunt and Howl of Terror spells have a $h% chance to reset the duration of your Corruption spell on the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': m.CORRUPTION_UA[0], 'EffectSpellClassMaskB_2': m.CORRUPTION_UA[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '1', 'Name_Lang_Mask': 16712190, 'ProcChance': 33, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -3297,11 +3361,11 @@ everlasting_affliction_47202 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=47422),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=24),
     ],
     spell_icon_id=3169,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Corruption and Unstable Affliction spells gain an additional $s2% of your bonus spell damage, and your Drain Life, Drain Soul, Shadow Bolt, and Haunt spells have a $h% chance to reset the duration of your Corruption spell on the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 257, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '2', 'Name_Lang_Mask': 16712190, 'ProcChance': 40, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (9,1): bp raised to 3 (4%), ProcChance 40->66.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the spell damage scaling of your Corruption and Unstable Affliction by $s2%.  Your Drain Life, Drain Soul, Shadow Bolt, Haunt and Howl of Terror spells have a $h% chance to reset the duration of your Corruption spell on the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': m.CORRUPTION_UA[0], 'EffectSpellClassMaskB_2': m.CORRUPTION_UA[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '2', 'Name_Lang_Mask': 16712190, 'ProcChance': 66, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -3318,12 +3382,15 @@ everlasting_affliction_47203 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=47422),
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=107, misc_value=24),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=24),
     ],
     spell_icon_id=3169,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Corruption and Unstable Affliction spells gain an additional $s2% of your bonus spell damage, and your Drain Life, Drain Soul, Shadow Bolt, and Haunt spells have a $h% chance to reset the duration of your Corruption spell on the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 257, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '3', 'Name_Lang_Mask': 16712190, 'ProcChance': 60, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (9,1): bp raised to 5 (6%), ProcChance 60->100.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the spell damage scaling of your Corruption and Unstable Affliction by $s2%.  Your Drain Life, Drain Soul, Shadow Bolt, Haunt and Howl of Terror spells have a $h% chance to reset the duration of your Corruption spell on the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': m.CORRUPTION_UA[0], 'EffectSpellClassMaskB_2': m.CORRUPTION_UA[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+scripted_by(47422, 'spell_warl_everlasting_affliction_refresh')
+unbind_script(47422, 'spell_warl_everlasting_affliction')
+procs_on(-47201, proc_flags=0x10000, family_name=5, family_mask=m.EVERLASTING_TRIGGER, spell_type_mask=m.PROC_SPELL_TYPE_MASK_ALL, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, chance=0, cooldown_ms=0)
 
 
 everlasting_affliction_47204 = spell(
@@ -3861,13 +3928,12 @@ improved_felhunter_54037 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-2001, implicit_target_a=1, apply_aura=107, misc_value=11),
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108, misc_value=3),
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108, misc_value=12),
+        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=5000),
     ],
-    spell_icon_id=214,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Felhunter regains 4% of its maximum mana each time it hits with its Shadow Bite ability and the cooldown on that ability is reduced by ${$m1/-1000} sec.  In addition, increases the effect of your Felhunter's Fel Intelligence by $s2%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 4194304, 'EffectSpellClassMaskB_2': 33554432, 'EffectSpellClassMaskC_2': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    spell_icon_id=2027,
+    notes="warlock-rework AFFLICTION §6 (5,3): rewritten - icon 214->2027 (makes the stock icon-214 Shadow Bite mana hardcode inert, C13/B17c); eff1 now a plain -10% cooldown SpellMod on Devour Magic/Spell Lock (FELHUNTER_UTILITY); eff2 is a 5s tick read by spell_warl_improved_felhunter to apply the pet damage buff 200771; old Fel Intelligence effects dropped.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Felhunter by $s2%.  Reduces the cooldown of your Felhunter's Devour Magic and Spell Lock by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Felhunter's Shadow Bite cooldown is reduced by 4 sec, and it also restores 10% of its mana when used.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_3': m.FELHUNTER_UTILITY[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -3883,14 +3949,16 @@ improved_felhunter_54038 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=5000),
         Effect(type=EffectType.APPLY_AURA, base_points=-4001, implicit_target_a=1, apply_aura=107, misc_value=11),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=3),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=12),
     ],
-    spell_icon_id=214,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Felhunter regains 8% of its maximum mana each time it hits with its Shadow Bite ability and the cooldown on that ability is reduced by ${$m1/-1000} sec.  In addition, increases the effect of your Felhunter's Fel Intelligence by $s2%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 4194304, 'EffectSpellClassMaskB_2': 33554432, 'EffectSpellClassMaskC_2': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    spell_icon_id=2027,
+    notes='warlock-rework AFFLICTION §6 (5,3) capstone: eff3 (new) flat -4s cooldown on Shadow Bite (6s -> 2s); the 10% mana clause is spell_warl_shadow_bite_improved_felhunter (B17c, 54049-54053).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Felhunter by $s2%.  Reduces the cooldown of your Felhunter's Devour Magic and Spell Lock by $s1%.\n\nCapstone Bonus: Your Felhunter's Shadow Bite cooldown is reduced by 4 sec, and it also restores 10% of its mana when used.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_3': m.FELHUNTER_UTILITY[2], 'EffectSpellClassMaskC_2': m.SHADOW_BITE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
+scripted_by(improved_felhunter_54037, 'spell_warl_improved_felhunter')
+scripted_by(improved_felhunter_54038, 'spell_warl_improved_felhunter')
 
 
 improved_soul_leech_54117 = spell(
@@ -4007,12 +4075,31 @@ pandemic_58435 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=286, misc_value=12),
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=108, misc_value=15),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=22),
     ],
     spell_icon_id=2042,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Grants the periodic damage from your Corruption and Unstable Affliction spells the ability to critically hit for $s1% increased damage, and increases the critical strike damage bonus of your Haunt spell by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2, 'EffectSpellClassMaskA_2': 256, 'EffectSpellClassMaskB_1': 2, 'EffectSpellClassMaskB_2': 262400, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+    notes='warlock-rework AFFLICTION §6 (8,2): rewritten - stock periodic-crit (eff1) and crit-damage SpellMod (eff2, SYSTEM §14) both removed; single new eff1 is a flat +5% Unstable Affliction damage SpellMod (talent rank count 1->2, new rank 200768 below adds the carry-duration capstone).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Unstable Affliction by $s1%.  Applying Unstable Affliction during its final 5 sec adds the remaining time to its new duration.\n\n|cFF9D9D9DCapstone Bonus: Your Unstable Affliction's damage is increased by your Mastery.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 0, 'EffectSpellClassMaskA_2': 256, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+pandemic_200768 = spell(
+    id=200768,
+    name='Pandemic',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=22),
+    ],
+    spell_icon_id=2042,
+    notes='warlock-rework AFFLICTION §6 (8,2): new rank 2 (bp 4->9, 5%->10%); capstone: Unstable Afflictions damage is increased by Mastery (script only, spell_warl_unstable_affliction_affliction DoEffectCalcAmount, HasAura(200768)).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Unstable Affliction by $s1%.  Applying Unstable Affliction during its final 5 sec adds the remaining time to its new duration.\n\nCapstone Bonus: Your Unstable Affliction's damage is increased by your Mastery.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 0, 'EffectSpellClassMaskA_2': 256, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
 
@@ -4130,13 +4217,39 @@ siphon_life_63108 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108, misc_value=22),
     ],
     spell_icon_id=152,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you deal damage with your Corruption spell, you are instantly healed for $<percent>% of the damage done. In addition, the damage done by your Corruption, Seed of Corruption and Unstable Affliction damage over time effects is increased by $s2%.', 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 67108864, 'EffectSpellClassMaskB_1': 2, 'EffectSpellClassMaskB_2': 272, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 327680, 'RangeIndex': 1, 'SpellClassSet': 5, 'SpellDescriptionVariableID': 83},
+    notes='warlock-rework AFFLICTION §6 (4,0): bp 39/4 -> 1/1 (2%/2%); eff2 mask -> SIPHON_LIFE_DOT (adds Seed DoT, UA); ProcTypeMask 0x50000->0x40000 (periodic only, matches the leech-talent gate in spell_warl_siphon_life_affliction).',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you deal damage with your Corruption spell, you are instantly healed for $s1% of the damage done, to a maximum of 5% of your maximum health.  Your Corruption, Seed of Corruption and Unstable Affliction damage over time effects are increased by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskB_1': m.SIPHON_LIFE_DOT[0], 'EffectSpellClassMaskB_2': m.SIPHON_LIFE_DOT[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 262144, 'RangeIndex': 1, 'SpellClassSet': 5, 'SpellDescriptionVariableID': 83},
 )
+scripted_by(siphon_life_63108, 'spell_warl_siphon_life_affliction')
+unbind_script(63108, 'spell_warl_siphon_life')
+procs_on(siphon_life_63108, proc_flags=m.PROC_FLAG_DONE_PERIODIC, family_name=5, family_mask=(0x2, 0, 0), spell_type_mask=1, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, chance=100, cooldown_ms=0)
+
+
+siphon_life_200767 = spell(
+    id=200767,
+    name='Siphon Life',
+    school=School.NORMAL,
+    attributes=448,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=108, misc_value=22),
+    ],
+    spell_icon_id=152,
+    notes='warlock-rework AFFLICTION §6 (4,0): new rank 2 (talent 1041 rank count 1->2, PLAN §1); 4%/4%.',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you deal damage with your Corruption spell, you are instantly healed for $s1% of the damage done, to a maximum of 5% of your maximum health.  Your Corruption, Seed of Corruption and Unstable Affliction damage over time effects are increased by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskB_1': m.SIPHON_LIFE_DOT[0], 'EffectSpellClassMaskB_2': m.SIPHON_LIFE_DOT[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 262144, 'RangeIndex': 1, 'SpellClassSet': 5, 'SpellDescriptionVariableID': 83},
+)
+scripted_by(siphon_life_200767, 'spell_warl_siphon_life_affliction')
+procs_on(siphon_life_200767, proc_flags=m.PROC_FLAG_DONE_PERIODIC, family_name=5, family_mask=(0x2, 0, 0), spell_type_mask=1, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, chance=100, cooldown_ms=0)
 
 
 nemesis_63117 = spell(
@@ -4258,4 +4371,756 @@ pyroclasm_63245 = spell(
     spell_icon_id=1137,
     notes='pulled from existing data',
     raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you critically strike with Searing Pain or Conflagrate, your Fire and Shadow spell damage is increased by $63244s1% for $63244d.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 576, 'EffectSpellClassMaskA_2': 8388736, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+
+shadow_trance_17941 = spell(
+    id=17941,
+    name='Shadow Trance',
+    school=School.SHADOW,
+    dispel=DispelType.MAGIC,
+    attributes=151060480,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=10000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=10),
+        Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=0),
+    ],
+    spell_icon_id=164,
+    notes='warlock-rework AFFLICTION §7.5: Nightfall/Soulburn: Seed instant-cast buff, rewritten with 3 effects - eff1 -100% cast time (kept), new eff2 -50% cost, new eff3 0% damage bonus (BP2 overrides the live 5/10/15% from the granting Nightfall rank at cast, §7 header). All three masked SHADOW_TRANCE_CONSUMERS = (SHADOW_BOLT, SEED_OF_CORRUPTION_DOT, 0) except eff3 which stays Shadow Bolt only (letters A/B/C = effect index 1/2/3 per the EffectSpellClassMask gotcha - eff2s mask goes on the B letter, eff3s on C).',
+    raw_overrides={'AttributesEx4': 512, 'AttributesEx6': 64, 'CastingTimeIndex': 1, 'ProcChance': 101, 'ProcCharges': 1, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': m.SHADOW_TRANCE_CONSUMERS[0], 'EffectSpellClassMaskA_2': m.SHADOW_TRANCE_CONSUMERS[1], 'EffectSpellClassMaskB_1': m.SHADOW_TRANCE_CONSUMERS[0], 'EffectSpellClassMaskB_2': m.SHADOW_TRANCE_CONSUMERS[1], 'EffectSpellClassMaskC_1': m.SHADOW_BOLT, 'SpellVisualID_1': 5219, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Your next Shadow Bolt or Seed of Corruption becomes an instant cast and costs 50% less mana.  That Shadow Bolt deals increased damage.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Shadow Bolt or Seed of Corruption is instant and costs 50% less mana.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 5, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+procs_on(shadow_trance_17941, proc_flags=0x10000, family_name=5, family_mask=m.SHADOW_TRANCE_CONSUMERS, spell_type_mask=1, spell_phase_mask=m.PROC_SPELL_PHASE_CAST, attributes_mask=m.PROC_ATTR_REQ_SPELLMOD, chance=0, cooldown_ms=0)
+
+
+shadowburn_29341 = spell(
+    id=29341,
+    name='Shadowburn',
+    school=School.SHADOW,
+    attributes=134283264,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    duration_ms=5000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=6, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=1590,
+    notes='warlock-rework AFFLICTION §4.2 B9/§7.10: eff1 aura 86 (CHANNEL_DEATH_ITEM) replaced by DUMMY - shard generation moves to the Soul Shard buff (200709), granted by spell_warl_shadowburn_shard on kill.',
+    raw_overrides={'AttributesEx': 136, 'AttributesEx2': 4, 'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712174, 'Description_Lang_enUS': 'Instantly blasts the target with Shadow damage.  If the target dies within $29341d of Shadowburn, and yields experience or honor, you gain a Soul Shard.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'If target dies, casting warlock gets a Soul Shard.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+scripted_by(shadowburn_29341, 'spell_warl_shadowburn_shard')
+unbind_script(29341, 'spell_warl_shadowburn')
+
+
+shadow_embrace_32386 = spell(
+    id=32386,
+    name='Shadow Embrace',
+    school=School.SHADOW,
+    dispel=DispelType.MAGIC,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=6, apply_aura=271, misc_value=32),
+    ],
+    spell_icon_id=2209,
+    notes='warlock-rework AFFLICTION §4.6 row 8/§6 (4,3): duration 12->15s; mask -> SHADOW_PERIODIC; healing-reduction link to 60448 dropped (unlink_spell, §11 Q8) - tooltip no longer mentions it.',
+    raw_overrides={'AttributesEx3': 196736, 'CastingTimeIndex': 1, 'AuraInterruptFlags': 524288, 'ProcChance': 101, 'CumulativeAura': 3, 'EquippedItemClass': -1, 'EffectDieSides_2': 1, 'EffectBasePoints_2': -1, 'EffectSpellClassMaskA_1': m.SHADOW_PERIODIC[0], 'EffectSpellClassMaskA_2': m.SHADOW_PERIODIC[1], 'EffectSpellClassMaskA_3': m.SHADOW_PERIODIC[2], 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Your direct damage Shadow spells, Drain Life and Drain Soul apply Shadow Embrace, increasing all periodic Shadow damage you deal to the target by $32386s1% per stack. Lasts $d. Stacks up to $32386u times.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Periodic Shadow damage taken increased by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 5, 'SpellClassMask_1': 2147483648, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+unlink_spell(32386, 60448, 2)
+
+
+shadow_embrace_32388 = spell(
+    id=32388,
+    name='Shadow Embrace',
+    school=School.SHADOW,
+    dispel=DispelType.MAGIC,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=6, apply_aura=271, misc_value=32),
+    ],
+    spell_icon_id=2209,
+    notes='warlock-rework AFFLICTION §4.6 row 8/§6 (4,3): see rank 1s note.',
+    raw_overrides={'AttributesEx3': 196736, 'CastingTimeIndex': 1, 'AuraInterruptFlags': 524288, 'ProcChance': 101, 'CumulativeAura': 3, 'EquippedItemClass': -1, 'EffectDieSides_2': 1, 'EffectBasePoints_2': -1, 'EffectSpellClassMaskA_1': m.SHADOW_PERIODIC[0], 'EffectSpellClassMaskA_2': m.SHADOW_PERIODIC[1], 'EffectSpellClassMaskA_3': m.SHADOW_PERIODIC[2], 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Your direct damage Shadow spells, Drain Life and Drain Soul apply Shadow Embrace, increasing all periodic Shadow damage you deal to the target by $32388s1% per stack. Lasts $d. Stacks up to $32386u times.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Periodic Shadow damage taken increased by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 5, 'SpellClassMask_1': 2147483648, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+unlink_spell(32388, 60465, 2)
+
+
+shadow_embrace_32389 = spell(
+    id=32389,
+    name='Shadow Embrace',
+    school=School.SHADOW,
+    dispel=DispelType.MAGIC,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=6, apply_aura=271, misc_value=32),
+    ],
+    spell_icon_id=2209,
+    notes='warlock-rework AFFLICTION §4.6 row 9/§6 (4,3): stock inconsistency (this rank alone carried a different mask, (0x440E,0x111,0x2)) resolved onto the shared SHADOW_PERIODIC mask like ranks 1/2.',
+    raw_overrides={'AttributesEx3': 196736, 'CastingTimeIndex': 1, 'AuraInterruptFlags': 524288, 'ProcChance': 101, 'CumulativeAura': 3, 'EquippedItemClass': -1, 'EffectDieSides_2': 1, 'EffectBasePoints_2': -1, 'EffectSpellClassMaskA_1': m.SHADOW_PERIODIC[0], 'EffectSpellClassMaskA_2': m.SHADOW_PERIODIC[1], 'EffectSpellClassMaskA_3': m.SHADOW_PERIODIC[2], 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Your direct damage Shadow spells, Drain Life and Drain Soul apply Shadow Embrace, increasing all periodic Shadow damage you deal to the target by $32389s1% per stack. Lasts $d. Stacks up to $32386u times.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Periodic Shadow damage taken increased by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 5, 'SpellClassMask_1': 2147483648, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+unlink_spell(32389, 60466, 2)
+
+
+# ---------------------------------------------------------------------------
+# warlock-rework AFFLICTION pass - server-wide A1/A2 crit-damage exclusivity
+# group (PLAN A1/A2, SHARED §1.1, AFFLICTION §4.8). Warlock's 9 of 27 hidden
+# passives (Shadow Pact, Ruin, Fel Cruelty) live here - mage/priest/druid's
+# own 18 are declared in their own trigger-spell files by this same pass.
+# Ruin/Fel Cruelty's own talent ranks are Destruction's/Demonology's (not
+# built this pass) - these passive rows exist now so the group is complete
+# and those passes only need to add their own linked_spell() call.
+# ---------------------------------------------------------------------------
+
+def _crit_damage_passive(spell_id, name, stored_bp):
+    return spell(
+        id=spell_id, name=name, school=School.SHADOW, attributes=464,
+        cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+        range_yards=RANGE_SELF, duration_ms=-1,
+        effects=[Effect(type=EffectType.APPLY_AURA, base_points=stored_bp, implicit_target_a=1, apply_aura=AuraType.MOD_CRIT_DAMAGE_BONUS, misc_value=126)],
+        spell_icon_id=154,
+        notes='warlock-rework AFFLICTION §4.8 (A1/A2, SHARED §1.1): hidden crit-damage passive, no visible icon/tooltip; joins spell_group 1201 (rule 3, highest only); linked (type=2) from its talent rank.',
+        raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101},
+    )
+
+
+shadow_pact_crit_200698 = _crit_damage_passive(200698, 'Shadow Pact', 9)
+shadow_pact_crit_200699 = _crit_damage_passive(200699, 'Shadow Pact', 19)
+shadow_pact_crit_200700 = _crit_damage_passive(200700, 'Shadow Pact', 32)
+ruin_crit_200701 = _crit_damage_passive(200701, 'Ruin', 9)
+ruin_crit_200702 = _crit_damage_passive(200702, 'Ruin', 19)
+ruin_crit_200703 = _crit_damage_passive(200703, 'Ruin', 32)
+fel_cruelty_crit_200704 = _crit_damage_passive(200704, 'Fel Cruelty', 9)
+fel_cruelty_crit_200705 = _crit_damage_passive(200705, 'Fel Cruelty', 19)
+fel_cruelty_crit_200706 = _crit_damage_passive(200706, 'Fel Cruelty', 32)
+
+spell_group(
+    1201,
+    200680, 200681, 200682, 200683, 200684, 200685, 200686, 200687, 200688,
+    200689, 200690, 200691, 200692, 200693, 200694, 200695, 200696, 200697,
+    shadow_pact_crit_200698, shadow_pact_crit_200699, shadow_pact_crit_200700,
+    ruin_crit_200701, ruin_crit_200702, ruin_crit_200703,
+    fel_cruelty_crit_200704, fel_cruelty_crit_200705, fel_cruelty_crit_200706,
+)
+spell_group_rule(1201, 3, 'Spell crit damage talents - highest only (A1)')
+
+
+# ---------------------------------------------------------------------------
+# warlock-rework AFFLICTION pass - A3 Reach exclusivity passives (SHARED
+# §1.2). Both ranks of Grim Reach (this pass, warlock_trigger_spells.py
+# above) and Destructive Reach (Destruction, S2) link to these same two ids.
+# ---------------------------------------------------------------------------
+
+reach_200707 = spell(
+    id=200707, name='Reach', school=School.SHADOW, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=5)],
+    spell_icon_id=1614,
+    notes='warlock-rework AFFLICTION §5/§11 Q17 (A3, SHARED §1.2): hidden +3 yd range passive shared by Grim Reach r1 and Destructive Reach r1 (same caster, same spell id -> one aura, not additive). REACH_SPELLS = every warlock damaging spell with a target range.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EffectSpellClassMaskA_1': m.REACH_SPELLS[0], 'EffectSpellClassMaskA_2': m.REACH_SPELLS[1], 'EffectSpellClassMaskA_3': m.REACH_SPELLS[2]},
+)
+
+
+reach_200708 = spell(
+    id=200708, name='Reach', school=School.SHADOW, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=5)],
+    spell_icon_id=1614,
+    notes='warlock-rework AFFLICTION §5/§11 Q17 (A3, SHARED §1.2): hidden +6 yd range passive shared by Grim Reach r2 and Destructive Reach r2.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EffectSpellClassMaskA_1': m.REACH_SPELLS[0], 'EffectSpellClassMaskA_2': m.REACH_SPELLS[1], 'EffectSpellClassMaskA_3': m.REACH_SPELLS[2]},
+)
+
+
+# ---------------------------------------------------------------------------
+# warlock-rework AFFLICTION pass - Soul Shards / Soulburn shared plumbing
+# (SHARED §1.3, PLAN §6.4). Soulburn itself (200710, player-castable) is in
+# warlock_spells.py; these three are never directly cast.
+# ---------------------------------------------------------------------------
+
+soul_shard_buff_200709 = spell(
+    id=200709, name='Soul Shard', school=School.SHADOW, attributes=2147483648,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=120000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=1000),
+    ],
+    spell_icon_id=92,
+    notes='warlock-rework AFFLICTION §5/§7.10 (B9): stacking buff, max 5 (CumulativeAura); each shard independently expires 120s after being gained (Warlock::GrantSoulShard/ConsumeSoulShards, per-player deque); the 1s tick (eff2) resyncs the stack count. NO_AURA_CANCEL (raw attributes=0x80000000) - not player-cancellable; no ALLOW_AURA_WHILE_DEAD/DEATH_PERSISTENT so it is removed on death (§11 Q9, shards drop on death via Warlock::ClearSoulShards in the AfterEffectRemove(BY_DEATH) handler).',
+    raw_overrides={'AttributesEx4': 4, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Soul Shards, up to $u. Each shard fades 120 sec after it was gained.', 'CastingTimeIndex': 1, 'CumulativeAura': 5, 'DefenseType': 0, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Soul Shards.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 0, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellPriority': 50},
+)
+scripted_by(soul_shard_buff_200709, 'spell_warl_soul_shard_buff')
+
+
+soulburn_marker_200711 = spell(
+    id=200711, name='Soulburn', school=School.SHADOW, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=20000,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY)],
+    spell_icon_id=816,
+    notes='warlock-rework AFFLICTION §5/§7.11 (SHARED §1.3, corrected to 20s): the "next cast is empowered" marker applied by Soulburn (200710); consumed by Warlock::TryConsumeSoulburnMarker (Seed of Corruption/Haunt this pass; Destruction adds Chaos Bolt/Soul Fire in S2).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Seed of Corruption or Haunt is empowered.', 'CastingTimeIndex': 1, 'DefenseType': 0, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Soulburn marker.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 0, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellPriority': 50},
+)
+
+
+soulburn_haunt_debuff_200712 = spell(
+    id=200712, name='Soulburn: Haunt', school=School.SHADOW, dispel=DispelType.MAGIC,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=50000.0, duration_ms=12000,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=6, apply_aura=AuraType.MOD_DAMAGE_FROM_CASTER)],
+    spell_icon_id=3172,
+    notes='warlock-rework AFFLICTION §5/§7.13: applied by Haunt (48181) in addition to its own aura-271 effect only when Haunt consumes the Soulburn marker; the two live auras multiply to 44% (1.2 x 1.2, §0.2 item 5).',
+    raw_overrides={'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Damage taken from the Warlock's Shadow damage-over-time effects increased by $s1%.", 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Soulburn: Haunt.', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': m.SHADOW_PERIODIC[0], 'EffectSpellClassMaskA_2': m.SHADOW_PERIODIC[1], 'EffectSpellClassMaskA_3': m.SHADOW_PERIODIC[2], 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellPriority': 50},
+)
+
+
+# ---------------------------------------------------------------------------
+# warlock-rework AFFLICTION pass - Bane of Agony's stack aura (§5/§7.2). The
+# real Bane of Agony spell (980, renamed) is in warlock_spells.py; this is
+# the separate per-target stack tracker Warlock::AddAgonyStacks reads.
+# ---------------------------------------------------------------------------
+
+bane_of_agony_stacks_200720 = spell(
+    id=200720, name='Bane of Agony', school=School.SHADOW,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=50000.0, duration_ms=60000,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=6, apply_aura=AuraType.DUMMY)],
+    spell_icon_id=544,
+    notes='warlock-rework AFFLICTION §5/§7.2: per-caster stack tracker for Bane of Agony (980) - CumulativeAura 15 (max cap with Improved Curses r2), refreshed by Warlock::AddAgonyStacks on each Bane tick; DOT_STACKING_RULE (AttributesEx3 0x80) so stacks are tracked per caster.',
+    raw_overrides={'AttributesEx3': 128, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Bane of Agony damage increased by 10% per stack.', 'CastingTimeIndex': 1, 'CumulativeAura': 15, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Bane of Agony stacks.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellPriority': 50},
+)
+
+
+# ---------------------------------------------------------------------------
+# warlock-rework AFFLICTION pass - Tainted Soul (Shadow Pact r3 capstone,
+# §5/§6 (5,0)/§7.15).
+# ---------------------------------------------------------------------------
+
+tainted_soul_200721 = spell(
+    id=200721, name='Tainted Soul', school=School.SHADOW,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=50000.0, duration_ms=30000,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=6, apply_aura=AuraType.DUMMY)],
+    spell_icon_id=207,
+    notes='warlock-rework AFFLICTION §5/§7.15: per-caster stack tracker (CumulativeAura 10); Corruption applies 1 stack per crit tick, Bane of Agony/Unstable Affliction 2; erupts (200722) and clears at 10 stacks or on target death.',
+    raw_overrides={'AttributesEx3': 128, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Tainted Soul.', 'CastingTimeIndex': 1, 'CumulativeAura': 10, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Tainted Soul stacks.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellPriority': 50},
+)
+scripted_by(tainted_soul_200721, 'spell_warl_tainted_soul')
+
+
+tainted_soul_eruption_200722 = spell(
+    id=200722, name='Tainted Soul', school=School.SHADOW,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=50000.0, radius_yards=6.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=57, points_per_level=1.6666666666666667, implicit_target_a=87, implicit_target_b=16, radius_yards=6.0),
+        Effect(type=EffectType.DUMMY, base_points=100, die_sides=0, implicit_target_a=87),
+    ],
+    spell_icon_id=207,
+    notes='warlock-rework AFFLICTION §5/§7.15: eruption, anchored at Shadow Pact row-5 level 35 (58@35, 99@60, 133@80); eff2 carries the erupt-percent (100 on a stack-cap eruption, 10*stacks on a death eruption) as a raw (die_sides=0) value read via GetSpellValue()->EffectBasePoints[EFFECT_1], scaling eff1s dealt damage. Target-select trims to the source unit + up to 4 others within 6 yd (QA #13/#14).',
+    raw_overrides={'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Tainted Soul erupts, dealing Shadow damage to the target and up to 4 other enemies within 6 yards.', 'EffectBonusMultiplier_1': 0.4, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'MaxTargets': 5, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.TAINTED_SOUL, 'SpellClassSet': 5, 'SpellLevel': 35, 'BaseLevel': 35, 'SpellVisualID_1': 8339},
+)
+scripted_by(tainted_soul_eruption_200722, 'spell_warl_tainted_soul_eruption')
+
+
+inevitable_demise_200723 = spell(
+    id=200723, name='Inevitable Demise', school=School.SHADOW,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=30000,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.DUMMY)],
+    spell_icon_id=153,
+    notes='warlock-rework AFFLICTION §5/§6 (1,3) Siphon Power capstone: stacks up to 50 (CumulativeAura), 5% per stack, consumed entirely by the next Drain Life (Warlock::AffLocal Drain Life script, §7.19).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Drain Life deals $s1% more damage per stack.', 'CastingTimeIndex': 1, 'CumulativeAura': 50, 'DefenseType': 0, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Inevitable Demise.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 0, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellPriority': 50},
+)
+
+
+# ---------------------------------------------------------------------------
+# warlock-rework AFFLICTION pass - Grim Reach r2 capstone (§5/§6 (3,1)).
+# ---------------------------------------------------------------------------
+
+grim_reach_debuff_200724 = spell(
+    id=200724, name='Grim Reach', school=School.SHADOW, dispel=DispelType.MAGIC,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=50000.0, duration_ms=6000,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=6, apply_aura=AuraType.MOD_DAMAGE_FROM_CASTER)],
+    spell_icon_id=1614,
+    notes='warlock-rework AFFLICTION §5/§6 (3,1): capstone debuff, refreshes rather than stacking (no CumulativeAura); masked WARLOCK_SHADOW_DAMAGE.',
+    raw_overrides={'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Shadow damage taken from the Warlock increased by $s1%.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Grim Reach.', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': m.WARLOCK_SHADOW_DAMAGE[0], 'EffectSpellClassMaskA_2': m.WARLOCK_SHADOW_DAMAGE[1], 'EffectSpellClassMaskA_3': m.WARLOCK_SHADOW_DAMAGE[2], 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellPriority': 50},
+)
+
+
+grim_reach_bolt_200725 = spell(
+    id=200725, name='Grim Reach', school=School.SHADOW,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=50000.0,
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, base_points=49, points_per_level=3.5, implicit_target_a=6)],
+    spell_icon_id=1614,
+    notes='warlock-rework AFFLICTION §5/§6 (3,1): anchored at "50 at level 25, +3.5/level" -> 172@60, 242@80.',
+    raw_overrides={'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Grim Reach bolt.', 'EffectBonusMultiplier_1': 0.35, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.GRIM_REACH_BOLT, 'SpellClassSet': 5, 'SpellLevel': 25, 'BaseLevel': 25, 'SpellVisualID_1': 8339},
+)
+
+
+# ---------------------------------------------------------------------------
+# warlock-rework AFFLICTION pass - flat-SP % buffs shared by Improved Life
+# Tap r3 (§6 (1,1)) and Siphon Power (§6 (1,3)) - PLAN §1A / SYSTEMS §15a.
+# ---------------------------------------------------------------------------
+
+improved_life_tap_buff_200726 = spell(
+    id=200726, name='Improved Life Tap', school=School.SHADOW,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_DONE, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.MOD_HEALING_DONE, misc_value=126),
+    ],
+    spell_icon_id=208,
+    notes='warlock-rework AFFLICTION §5/§7.8 (druid C1 shape): DoEffectCalcAmount computes 10% of the casters current spell power at apply (spell_warl_spell_power_pct_buff) - coefficient-only by construction.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spell power increased by 10%.', 'CastingTimeIndex': 1, 'DefenseType': 0, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Using Life Tap increases your spell power by 10% for 15 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 0, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellPriority': 50},
+)
+
+
+siphon_power_buff_200727 = spell(
+    id=200727, name='Siphon Power', school=School.SHADOW,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_DONE, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.MOD_HEALING_DONE, misc_value=126),
+    ],
+    spell_icon_id=113,
+    notes='warlock-rework AFFLICTION §5/§7.8: granted on a kill while draining Drain Soul (Warlock talent 1101, no XP/honor gate, §11 Q18).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spell power increased by 10%.', 'CastingTimeIndex': 1, 'DefenseType': 0, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When a target dies while you are draining its soul, you gain 10% increased spell power for 15 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 0, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellPriority': 50},
+)
+scripted_by(improved_life_tap_buff_200726, 'spell_warl_spell_power_pct_buff')
+scripted_by(siphon_power_buff_200727, 'spell_warl_spell_power_pct_buff')
+
+
+# ---------------------------------------------------------------------------
+# warlock-rework AFFLICTION pass - Agonizing Pain bolt (§5/§6 (4,2)).
+# ---------------------------------------------------------------------------
+
+agonizing_pain_bolt_200728 = spell(
+    id=200728, name='Agonizing Pain', school=School.SHADOW,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=50000.0,
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, base_points=29, points_per_level=2.0, implicit_target_a=6)],
+    spell_icon_id=1939,
+    notes='warlock-rework AFFLICTION §5/§6 (4,2): anchored at "30 at level 30, +2/level" -> 90@60, 130@80; fires when Bane of Agony crits while already at max stacks (spell_warl_agonizing_pain).',
+    raw_overrides={'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Agonizing Pain.', 'EffectBonusMultiplier_1': 0.05, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.AGONIZING_PAIN, 'SpellClassSet': 5, 'SpellLevel': 30, 'BaseLevel': 30, 'SpellVisualID_1': 8339},
+)
+scripted_by(agonizing_pain_bolt_200728, 'spell_warl_agonizing_pain')
+
+
+# ---------------------------------------------------------------------------
+# warlock-rework AFFLICTION pass - Phantom Singularity damage/heal (§5/§6
+# (4,1)). The castable debuff (200729) is in warlock_spells.py.
+# ---------------------------------------------------------------------------
+
+phantom_singularity_damage_200730 = spell(
+    id=200730, name='Phantom Singularity', school=School.SHADOW,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=50000.0, radius_yards=10.0,
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, base_points=19, points_per_level=1.35, implicit_target_a=53, implicit_target_b=16, radius_yards=10.0)],
+    spell_icon_id=173,
+    notes='warlock-rework AFFLICTION §5/§7.17: anchored at "20/tick at level 30, +1.35/level" -> 60@60, 87@80; NOT SUPPRESS_CASTER_PROCS (must feed Shadow Pacts Tainted Soul proc, §7.15); each tick is a fresh cast (live SP/crit, not snapshotted).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Phantom Singularity damage.', 'EffectBonusMultiplier_1': 0.15, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.PHANTOM_SINGULARITY, 'SpellClassSet': 5, 'SpellLevel': 30, 'BaseLevel': 30, 'SpellVisualID_1': 8339},
+)
+scripted_by(phantom_singularity_damage_200730, 'spell_warl_phantom_singularity_damage')
+
+
+phantom_singularity_heal_200731 = spell(
+    id=200731, name='Phantom Singularity', school=School.SHADOW,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF,
+    effects=[Effect(type=EffectType.HEAL, base_points=0, implicit_target_a=1)],
+    spell_icon_id=173,
+    notes='warlock-rework AFFLICTION §5/§7.17: BP0 = 20% of the sum of the tick damage dealt this cast (script-computed); cannot crit.',
+    raw_overrides={'AttributesEx2': 536870912, 'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 0, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Phantom Singularity heal.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 0, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellPriority': 50},
+)
+
+
+# ---------------------------------------------------------------------------
+# warlock-rework AFFLICTION pass - Soul Swap copied marker (§5/§7.9). The two
+# castable Soul Swap spells (200733/200734) are in warlock_spells.py.
+# ---------------------------------------------------------------------------
+
+soul_swap_copied_200735 = spell(
+    id=200735, name='Soul Swap', school=School.SHADOW,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=10000,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY)],
+    spell_icon_id=2038,
+    notes='warlock-rework AFFLICTION §5/§7.9: marks that Soul Swap has a copy ready; Soul Swap: Exhale (200734) requires this via CasterAuraSpell.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Damage over time effects copied. Cast Soul Swap: Exhale on another target.', 'CastingTimeIndex': 1, 'DefenseType': 0, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Soul Swap.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 0, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellPriority': 50},
+)
+
+
+# ---------------------------------------------------------------------------
+# warlock-rework AFFLICTION pass - the 11 brand-new talents' rank spells
+# (§5/§6). All hidden (attributes=464, PASSIVE|DO_NOT_DISPLAY), duration -1,
+# same boilerplate as every other talent-rank spell already in this file.
+# ---------------------------------------------------------------------------
+
+# --- Shadow Pact (5,0), talent 60071 - crit clause via linked_spell to the shared 200698-200700 ---
+shadow_pact_200739 = spell(
+    id=200739, name='Shadow Pact', school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    duration_ms=-1,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY)],
+    spell_icon_id=154,
+    notes='warlock-rework AFFLICTION §6 (5,0): rank must stay an aura (not effect-type DUMMY) so linked_spell(type=2) to the hidden crit passive fires (§0.4 item 1).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 165% damage. This does not stack with other similar effects.\n\n|cFF9D9D9DCapstone Bonus: Tainted Soul. Your periodic damage critical strikes apply Tainted Soul to the target. Corruption applies 1 stack, Bane of Agony and Unstable Affliction apply 2. At 10 stacks, or when the target dies, Tainted Soul erupts for Shadow damage to the target and up to 5 enemies within 6 yards.|r', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+shadow_pact_200740 = spell(
+    id=200740, name='Shadow Pact', school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    duration_ms=-1,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY)],
+    spell_icon_id=154,
+    notes='warlock-rework AFFLICTION §6 (5,0)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 180% damage. This does not stack with other similar effects.\n\n|cFF9D9D9DCapstone Bonus: Tainted Soul. Your periodic damage critical strikes apply Tainted Soul to the target. Corruption applies 1 stack, Bane of Agony and Unstable Affliction apply 2. At 10 stacks, or when the target dies, Tainted Soul erupts for Shadow damage to the target and up to 5 enemies within 6 yards.|r', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+shadow_pact_200741 = spell(
+    id=200741, name='Shadow Pact', school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    duration_ms=-1,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY)],
+    spell_icon_id=154,
+    notes='warlock-rework AFFLICTION §6 (5,0) capstone: rank 3 carries the Tainted Soul proc (procs_on below).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 200% damage. This does not stack with other similar effects.\n\nCapstone Bonus: Tainted Soul. Your periodic damage critical strikes apply Tainted Soul to the target. Corruption applies 1 stack, Bane of Agony and Unstable Affliction apply 2. At 10 stacks, or when the target dies, Tainted Soul erupts for Shadow damage to the target and up to 5 enemies within 6 yards.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+linked_spell(shadow_pact_200739.id, 200698, type=2)
+linked_spell(shadow_pact_200740.id, 200699, type=2)
+linked_spell(shadow_pact_200741.id, 200700, type=2)
+scripted_by(shadow_pact_200741, 'spell_warl_shadow_pact_tainted_soul')
+procs_on(shadow_pact_200741, proc_flags=0x50000, family_name=5, family_mask=m.AFFLICTION_DOTS, hit_mask=m.PROC_HIT_CRITICAL, attributes_mask=m.PROC_ATTR_TRIGGERED_CAN_PROC, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, chance=100, cooldown_ms=0)
+
+
+# --- Death's Grasp (0,1), talent 1005 (repurposed Suppression) ---
+deaths_grasp_200742 = spell(
+    id=200742, name="Death's Grasp", school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_CASTING_SPEED_NOT_STACK)],
+    spell_icon_id=3139,
+    notes='warlock-rework AFFLICTION §6 (0,1): repurposed Suppression cell (18174-176 orphaned, left declared).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell haste by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+deaths_grasp_200743 = spell(
+    id=200743, name="Death's Grasp", school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_CASTING_SPEED_NOT_STACK)],
+    spell_icon_id=3139,
+    notes='warlock-rework AFFLICTION §6 (0,1)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell haste by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+deaths_grasp_200744 = spell(
+    id=200744, name="Death's Grasp", school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_CASTING_SPEED_NOT_STACK)],
+    spell_icon_id=3139,
+    notes='warlock-rework AFFLICTION §6 (0,1)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell haste by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+# --- Harvester of Death (0,3), talent 1668 (repurposed Improved Howl of Terror) ---
+harvester_of_death_200745 = spell(
+    id=200745, name='Harvester of Death', school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=-15001, implicit_target_a=1, apply_aura=107, misc_value=11)],
+    spell_icon_id=134,
+    notes='warlock-rework AFFLICTION §6 (0,3): repurposed Improved Howl of Terror cell (30054/57 orphaned, left declared); flat Death Coil cooldown reduction (category 633, 120s base -> 105/90/75s).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Death Coil by ${$m1/-1000} sec.\n\n|cFF9D9D9DCapstone Bonus: The damage and healing of your Death Coil is doubled when you are below 80% health. Reduces the cast time of your Fear by 0.2 sec, and the cast time and global cooldown of your Howl of Terror by 0.6 sec. Increases the damage your Howl of Terror victims can take before the effect breaks by 50%.|r', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': m.DEATH_COIL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+harvester_of_death_200746 = spell(
+    id=200746, name='Harvester of Death', school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=-30001, implicit_target_a=1, apply_aura=107, misc_value=11)],
+    spell_icon_id=134,
+    notes='warlock-rework AFFLICTION §6 (0,3)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Death Coil by ${$m1/-1000} sec.\n\n|cFF9D9D9DCapstone Bonus: The damage and healing of your Death Coil is doubled when you are below 80% health. Reduces the cast time of your Fear by 0.2 sec, and the cast time and global cooldown of your Howl of Terror by 0.6 sec. Increases the damage your Howl of Terror victims can take before the effect breaks by 50%.|r', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': m.DEATH_COIL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+harvester_of_death_200747 = spell(
+    id=200747, name='Harvester of Death', school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-45001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-601, implicit_target_a=1, apply_aura=107, misc_value=10),
+    ],
+    spell_icon_id=134,
+    notes='warlock-rework AFFLICTION §6 (0,3) capstone: eff2 flat -0.6s Howl of Terror cast time (floored at 1.0s GCD, §0.2 item 10); the rest of the capstone (Death Coil x2 below 80% health, +50% Howl break threshold) is the linked hidden passive 200748.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Death Coil by ${$m1/-1000} sec.\n\nCapstone Bonus: The damage and healing of your Death Coil is doubled when you are below 80% health. Reduces the cast time of your Fear by 0.2 sec, and the cast time and global cooldown of your Howl of Terror by 0.6 sec. Increases the damage your Howl of Terror victims can take before the effect breaks by 50%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': m.DEATH_COIL, 'EffectSpellClassMaskB_2': m.HOWL_OF_TERROR, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+linked_spell(harvester_of_death_200747.id, 200748, type=2)
+
+
+harvester_of_death_capstone_200748 = spell(
+    id=200748, name='Harvester of Death', school=School.SHADOW, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-201, implicit_target_a=1, apply_aura=107, misc_value=10),
+        Effect(type=EffectType.APPLY_AURA, base_points=-601, implicit_target_a=1, apply_aura=107, misc_value=21),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.OVERRIDE_CLASS_SCRIPTS, misc_value=7801),
+    ],
+    spell_icon_id=134,
+    notes='warlock-rework AFFLICTION §5/§6 (0,3) capstone hidden passive, linked from Harvester of Death r3 (200747): eff1 -0.2s Fear cast time; eff2 -0.6s Howl of Terror global cooldown (flat, floors at the 1.0s GCD minimum); eff3 reuses the stock "Glyph of Fear" misc 7801 CC-break-threshold cap (SpellAuraEffects.cpp) at +50%.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Harvester of Death.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': m.FEAR, 'EffectSpellClassMaskB_2': m.HOWL_OF_TERROR, 'EffectSpellClassMaskC_2': m.HOWL_OF_TERROR, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+# --- Lingering Agony (2,2), talent 2205 (repurposed Improved Fear) ---
+lingering_agony_200749 = spell(
+    id=200749, name='Lingering Agony', school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=2999, implicit_target_a=1, apply_aura=107, misc_value=1)],
+    spell_icon_id=1494,
+    notes='warlock-rework AFFLICTION §6 (2,2): repurposed Improved Fear cell (53754/59 orphaned, left declared); +3/6 sec duration on Bane of Agony and Unstable Affliction.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the duration of your Bane of Agony and Unstable Affliction by $/1000;s1 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': m.LINGERING_AGONY[0], 'EffectSpellClassMaskA_2': m.LINGERING_AGONY[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+lingering_agony_200750 = spell(
+    id=200750, name='Lingering Agony', school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=5999, implicit_target_a=1, apply_aura=107, misc_value=1)],
+    spell_icon_id=1494,
+    notes='warlock-rework AFFLICTION §6 (2,2)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the duration of your Bane of Agony and Unstable Affliction by $/1000;s1 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': m.LINGERING_AGONY[0], 'EffectSpellClassMaskA_2': m.LINGERING_AGONY[1], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+# --- Creeping Agony (3,2), talent 1061 (repurposed Amplify Curse) ---
+creeping_agony_200751 = spell(
+    id=200751, name='Creeping Agony', school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_CUSTOM_STAT_PCT, misc_value=1048576)],
+    spell_icon_id=1468,
+    notes='warlock-rework AFFLICTION §6 (3,2): repurposed Amplify Curse cell (18288 orphaned, left declared); +2/4/6% Mastery.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Mastery by $s1%.\n\n|cFF9D9D9DCapstone Bonus: When you cast Bane of Agony, it also applies to one nearby enemy in combat that does not already have Bane of Agony.|r', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+creeping_agony_200752 = spell(
+    id=200752, name='Creeping Agony', school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.MOD_CUSTOM_STAT_PCT, misc_value=1048576)],
+    spell_icon_id=1468,
+    notes='warlock-rework AFFLICTION §6 (3,2)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Mastery by $s1%.\n\n|cFF9D9D9DCapstone Bonus: When you cast Bane of Agony, it also applies to one nearby enemy in combat that does not already have Bane of Agony.|r', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+creeping_agony_200753 = spell(
+    id=200753, name='Creeping Agony', school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.MOD_CUSTOM_STAT_PCT, misc_value=1048576)],
+    spell_icon_id=1468,
+    notes='warlock-rework AFFLICTION §6 (3,2) capstone: rank 3 carries the Bane-of-Agony-spread clause (spell_warl_bane_of_agony AfterHit, §7.2) - data only.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Mastery by $s1%.\n\nCapstone Bonus: When you cast Bane of Agony, it also applies to one nearby enemy in combat that does not already have Bane of Agony.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+# --- Agonizing Pain (4,2), talent 60070 (minted) ---
+agonizing_pain_200754 = spell(
+    id=200754, name='Agonizing Pain', school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=32),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=1939,
+    notes='warlock-rework AFFLICTION §6 (4,2): eff1 +1/2% Shadow damage (§11 Q1, user); eff2 is a plain proc carrier (no roll - both clauses fire on every crit at both ranks).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Shadow damage by $s1%.  When your Bane of Agony critically strikes, it gains an additional stack.  While your Bane of Agony is at maximum stacks, its critical ticks deal an additional $200728s1 Shadow damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+agonizing_pain_200755 = spell(
+    id=200755, name='Agonizing Pain', school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=32),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=1939,
+    notes='warlock-rework AFFLICTION §6 (4,2)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Shadow damage by $s1%.  When your Bane of Agony critically strikes, it gains an additional stack.  While your Bane of Agony is at maximum stacks, its critical ticks deal an additional $200728s1 Shadow damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+scripted_by(agonizing_pain_200754, 'spell_warl_agonizing_pain')
+scripted_by(agonizing_pain_200755, 'spell_warl_agonizing_pain')
+procs_on(agonizing_pain_200754, proc_flags=m.PROC_FLAG_DONE_PERIODIC, family_name=5, family_mask=(m.BANE_OF_AGONY, 0, 0), hit_mask=m.PROC_HIT_CRITICAL, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, chance=100, cooldown_ms=0)
+procs_on(agonizing_pain_200755, proc_flags=m.PROC_FLAG_DONE_PERIODIC, family_name=5, family_mask=(m.BANE_OF_AGONY, 0, 0), hit_mask=m.PROC_HIT_CRITICAL, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, chance=100, cooldown_ms=0)
+
+
+# --- Fatal Echoes (6,2), talent 1022 (repurposed Dark Pact) ---
+fatal_echoes_200756 = spell(
+    id=200756, name='Fatal Echoes', school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=3)],
+    spell_icon_id=1933,
+    notes='warlock-rework AFFLICTION §6 (6,2): repurposed Dark Pact cell (18220 orphaned, left declared); +2/4/6% Intellect.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Intellect by $s1%.\n\n|cFF9D9D9DCapstone Bonus: When your Unstable Affliction expires, it has a 15% chance to refresh itself.|r', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+fatal_echoes_200757 = spell(
+    id=200757, name='Fatal Echoes', school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=3)],
+    spell_icon_id=1933,
+    notes='warlock-rework AFFLICTION §6 (6,2)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Intellect by $s1%.\n\n|cFF9D9D9DCapstone Bonus: When your Unstable Affliction expires, it has a 15% chance to refresh itself.|r', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+fatal_echoes_200758 = spell(
+    id=200758, name='Fatal Echoes', school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=3)],
+    spell_icon_id=1933,
+    notes='warlock-rework AFFLICTION §6 (6,2) capstone: rank 3 carries the "Unstable Affliction has a 15% chance to refresh itself on expiry" clause (spell_warl_unstable_affliction_affliction, §7.18) - data only.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Intellect by $s1%.\n\nCapstone Bonus: When your Unstable Affliction expires, it has a 15% chance to refresh itself.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+# --- Virulence (7,0), talent 60072 (minted) ---
+virulence_200759 = spell(
+    id=200759, name='Virulence', school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108, misc_value=22)],
+    spell_icon_id=1932,
+    notes='warlock-rework AFFLICTION §6 (7,0): +2/4/6% Corruption damage.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Corruption by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Seed of Corruption's detonation applies Corruption to every enemy it damages.|r", 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+virulence_200760 = spell(
+    id=200760, name='Virulence', school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=108, misc_value=22)],
+    spell_icon_id=1932,
+    notes='warlock-rework AFFLICTION §6 (7,0)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Corruption by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Seed of Corruption's detonation applies Corruption to every enemy it damages.|r", 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+virulence_200761 = spell(
+    id=200761, name='Virulence', school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108, misc_value=22)],
+    spell_icon_id=1932,
+    notes='warlock-rework AFFLICTION §6 (7,0) capstone: rank 3 carries the "Seed detonation applies Corruption" clause (Warlock::AddAura in the detonation AfterHit, §7.6) - data only.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Corruption by $s1%.\n\nCapstone Bonus: Your Seed of Corruption's detonation applies Corruption to every enemy it damages.", 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+# --- Compounding Darkness (7,2), talent 60073 (minted) ---
+compounding_darkness_200762 = spell(
+    id=200762, name='Compounding Darkness', school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.DUMMY)],
+    spell_icon_id=2901,
+    notes='warlock-rework AFFLICTION §6 (7,2): +3/6/9% Unstable Affliction damage per other Affliction DoT on the target (read by spell_warl_unstable_affliction_affliction).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Unstable Affliction deals $s1% increased damage for each of your other Affliction damage over time effects on the target.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+compounding_darkness_200763 = spell(
+    id=200763, name='Compounding Darkness', school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.DUMMY)],
+    spell_icon_id=2901,
+    notes='warlock-rework AFFLICTION §6 (7,2)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Unstable Affliction deals $s1% increased damage for each of your other Affliction damage over time effects on the target.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+compounding_darkness_200764 = spell(
+    id=200764, name='Compounding Darkness', school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=AuraType.DUMMY)],
+    spell_icon_id=2901,
+    notes='warlock-rework AFFLICTION §6 (7,2)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Unstable Affliction deals $s1% increased damage for each of your other Affliction damage over time effects on the target.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+
+
+# --- Inevitable Demise capstone hidden passive (§5/§6 (1,3)), linked from Siphon Power r2 (18372) ---
+inevitable_demise_capstone_200769 = spell(
+    id=200769, name='Inevitable Demise', school=School.SHADOW, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    duration_ms=-1,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200723)],
+    spell_icon_id=153,
+    notes='warlock-rework AFFLICTION §5/§6 (1,3): hidden passive, linked from Siphon Power r2 (18372); procs (below) grant a stack of Inevitable Demise (200723) on every Bane of Agony tick.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Inevitable Demise.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+procs_on(inevitable_demise_capstone_200769, proc_flags=m.PROC_FLAG_DONE_PERIODIC, family_name=5, family_mask=(m.BANE_OF_AGONY, 0, 0), spell_type_mask=1, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, chance=100, cooldown_ms=0)
+
+
+# --- Fel Concentration r3 capstone heal (§5/§6 (2,1)) ---
+fel_concentration_heal_200770 = spell(
+    id=200770, name='Fel Concentration', school=School.SHADOW,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF,
+    effects=[Effect(type=EffectType.HEAL, base_points=0, implicit_target_a=1)],
+    spell_icon_id=76,
+    notes='warlock-rework AFFLICTION §5/§7.19: BP0 = min(20% of the periodic damage dealt this tick, 5% max health) - only while the leech talent gate (Warlock::LeechTalent::FelConcentration) is active; cannot crit.',
+    raw_overrides={'AttributesEx2': 536870912, 'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 0, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Fel Concentration heal.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 0, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellPriority': 50},
+)
+scripted_by(fel_concentration_heal_200770, 'spell_warl_fel_concentration_capstone')
+
+
+# --- Improved Felhunter pet damage buff (§5/§6 (5,3)) ---
+improved_felhunter_pet_buff_200771 = spell(
+    id=200771, name='Improved Felhunter', school=School.SHADOW, attributes=128,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=50000.0, duration_ms=-1,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=5, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=127)],
+    spell_icon_id=2027,
+    notes='warlock-rework AFFLICTION §5/§6 (5,3): kept on the Felhunter by spell_warl_improved_felhunter (CastCustomSpell with BP0 = the ranks live 10/20%); hidden (attributes 0x80).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Felhunter damage increased by $s1%.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Improved Felhunter.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellPriority': 50},
+)
+
+
+# ---------------------------------------------------------------------------
+# warlock-rework AFFLICTION pass - talent row 1226 (Demonology tab (2,2))
+# repurposed IN PLACE as Impending Doom, per PLAN §11 Q7 / DEMONOLOGY.md §6
+# (user 2026-09-27): "S1 writes the row with ranks 200869/200870 (data
+# only); S3 adds spell_warl_impending_doom, the 200870 proc row and the
+# rest of §6's data, and must not re-create or move it." B13 (this pass)
+# already stops 1226 granting Fel Domination (now baseline, warlock_spells.py).
+# Exact data per DEMONOLOGY.md §6 (2,2): eff1 ADD_PCT_MODIFIER DOT stored
+# 9/19 (10/20%) masked to Demonology's still-unminted Bane of Doom bit
+# (d3 bit 23, _masks.py's DEMONOLOGY_D3_BIT_23 placeholder); r2 adds a DUMMY
+# capstone marker (its proc is S3's, not built here).
+# ---------------------------------------------------------------------------
+
+impending_doom_200869 = spell(
+    id=200869, name='Impending Doom', school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=22)],
+    spell_icon_id=170,
+    notes='warlock-rework AFFLICTION §11 Q7 (Demonology tab (2,2), talent 1226 repurposed in place): data only per DEMONOLOGY.md §6 - S3 (Demonology pass) adds the script/proc and completes the tooltip capstone text. Placeholder tooltip until then.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Bane of Doom by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_3': m.DEMONOLOGY_D3_BIT_23, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
+)
+impending_doom_200870 = spell(
+    id=200870, name='Impending Doom', school=School.NORMAL, attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=170,
+    notes='warlock-rework AFFLICTION §11 Q7: rank 2 capstone marker (eff2 DUMMY) - S3 binds the "critical strikes from Bane of Doom summon a Wild Imp" proc to this id.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Bane of Doom by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_3': m.DEMONOLOGY_D3_BIT_23, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )

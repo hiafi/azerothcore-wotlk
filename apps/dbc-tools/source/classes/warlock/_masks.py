@@ -1,0 +1,161 @@
+"""
+Warlock - named SpellFamilyFlags (SpellClassMask_{1,2,3} / EffectSpellClassMask{A,B,C}_{1,2,3})
+constants, plus `spell_proc` PROC_FLAG_*/PROC_SPELL_*/PROC_HIT_*/PROC_ATTR_* constants, shared
+across the Affliction/Destruction/Demonology rework passes.
+
+Leading underscore = not loaded as a class file by lib/dsl/registry.py's load_class_package (see
+source/classes/README.md), just an importable module - `from ._masks import CORRUPTION, ...`.
+
+Bit values below are the raw SpellFamilyFlags dword contents (already the "final" masked value a
+row's SpellClassMask_N / EffectSpellClassMaskX_N column would carry), not bit positions. Sourced
+from the existing stock warlock rows (re-verified against the dumps this session) and
+.agents/plans/warlock-rework/warlock-rework.PLAN.md §4.4 / SHARED.md §3 (dword-3 custom-spell bit
+allocation, one named constant per row; created in the Affliction pass's WP-0, extended - never
+retyped - by Destruction/Demonology).
+
+Created by Affliction WP-0 (AFFLICTION.md §3 item 2, PLAN §5/§6 item 3). Holds every stock
+constant every spec file needs plus every custom bit (including Destruction's and Demonology's,
+where already named - placeholders elsewhere, renamed by that pass), so later passes only import.
+"""
+
+# --- dword 1 (SpellClassMask_1 / EffectSpellClassMaskX_1) ---
+SHADOW_BOLT = 0x1
+CORRUPTION = 0x2
+IMMOLATE = 0x4
+DRAIN_LIFE = 0x8
+DRAIN_MANA = 0x10
+RAIN_OF_FIRE = 0x20
+HELLFIRE = 0x40
+SHADOWBURN = 0x80
+SEARING_PAIN = 0x100
+NPC_ONLY_D1_BIT9 = 0x200  # reclaimable - no player spell uses it
+BANE_OF_AGONY = 0x400  # was Curse of Agony; 980 only
+ENSLAVE_DEMON = 0x800
+IMP_FIREBOLT = 0x1000
+LASH_OF_PAIN = 0x2000
+DRAIN_SOUL = 0x4000
+CURSE_OF_WEAKNESS = 0x8000
+HEALTHSTONE = 0x10000
+SPELLSTONE = 0x20000
+LIFE_TAP = 0x40000
+DEATH_COIL = 0x80000
+CREATE_STONE = 0x100000
+FIRESTONE_ENCHANT = 0x200000
+CURSE_OF_EXHAUSTION = 0x400000
+BLOOD_PACT_FIRE_SHIELD = 0x800000
+HEALTH_FUNNEL = 0x1000000
+PET_ABILITIES = 0x2000000
+TAMED_PET_PASSIVE = 0x1C000000
+SUMMON_DEMON = 0x20000000
+SOOTHING_KISS_SEDUCTION = 0x40000000
+CURSE_OF_TONGUES_D1 = 0x80000000  # shared with Dark Pact and the Shadow Embrace debuffs - never
+# use this to mean Curse of Tongues; the real Curse of Tongues bit lives on dword 3 (0x800).
+
+# --- dword 2 (SpellClassMask_2 / EffectSpellClassMaskX_2) ---
+NPC_SIPHON_LIFE = 0x1
+CURSE_OF_DOOM = 0x2
+SEED_OF_CORRUPTION_DOT = 0x4  # new, B16 rebit - Seed DoT 27243 only
+HOWL_OF_TERROR = 0x8
+SEED_OF_CORRUPTION = 0x10  # detonation 27285 + NPC 43991 only, after B16 (DoT moved off this bit)
+DEMON_ARMOR = 0x20
+INCINERATE = 0x40
+SOUL_FIRE = 0x80
+UNSTABLE_AFFLICTION = 0x100
+CURSE_OF_THE_ELEMENTS = 0x200
+FEAR = 0x400
+SHADOWFURY = 0x1000
+SEED_DETONATION = 0x8000
+SHADOWFLAME = 0x10000
+CHAOS_BOLT = 0x20000
+HAUNT = 0x40000
+DEMONIC_PACT_AURA = 0x100000
+SHADOW_BITE = 0x400000
+CONFLAGRATE = 0x800000
+EMPOWERED_IMP_PASSIVE = 0x1000000
+FEL_INTELLIGENCE = 0x2000000
+USE_SOULSTONE = 0x4000000
+BANISH = 0x8000000
+FEL_ARMOR = 0x20000000
+RITUAL_OF_SOULS = 0x80000000
+
+# Reserve (free, PLAN §4.4) - not yet assigned to any spec:
+D2_RESERVE_11 = 0x800  # SHARED §3: pencilled for Wild Imp Fel Firebolt 200824 - round-2 resolved
+# to the scripted fallback instead (no family bit used); kept as a named reserve, not consumed.
+D2_RESERVE_19 = 0x80000
+D2_RESERVE_21 = 0x200000
+
+# --- dword 3 (SpellClassMask_3 / EffectSpellClassMaskX_3) ---
+INFERNO_EFFECT = 0x1
+SHADOWFLAME_DOT = 0x2
+UNENDING_BREATH = 0x4
+DEMONIC_FRENZY = 0x8
+DEMON_SKIN = 0x10
+DEMONIC_CIRCLE = 0x20
+WARLOCK_UTILITY = 0x40
+FEL_DOMINATION = 0x80
+PANDEMIC_DAMAGE = 0x100  # reclaimable once stock Pandemic 58691 is fully retired
+DEVOUR_MAGIC = 0x400
+CURSE_OF_TONGUES = 0x800
+DEMONIC_EMPOWERMENT = 0x1000
+METAMORPHOSIS = 0x2000
+SOUL_LINK_AURA = 0x4000
+DARK_PACT = 0x8000
+
+# Affliction's own d3 bits 16-21 (this pass, AFFLICTION.md §2.6):
+PHANTOM_SINGULARITY = 0x00010000  # bit 16 - 200730 (damage) only, the debuff 200729 carries no bit
+TAINTED_SOUL = 0x00020000  # bit 17 - 200722
+GRIM_REACH_BOLT = 0x00040000  # bit 18 - 200725
+AGONIZING_PAIN = 0x00080000  # bit 19 - 200728
+SPELL_LOCK = 0x00100000  # bit 20 - demon-only: stock pet spells Spell Lock 19244/19647
+PHANTOM_SINGULARITY_CAST = 0x00200000  # bit 21 - 200729 (the castable debuff), so Reach extends it
+
+# Demonology's d3 bits 22-27 and Destruction's d3 bits 28-31 + d3 bit 9 - named here so those
+# passes only import (PLAN §4.4); placeholders until each pass's own WP-0 assigns its real name.
+DEMONOLOGY_D3_BIT_22 = 0x00400000
+DEMONOLOGY_D3_BIT_23 = 0x00800000
+DEMONOLOGY_D3_BIT_24 = 0x01000000
+DEMONOLOGY_D3_BIT_25 = 0x02000000
+DEMONOLOGY_D3_BIT_26 = 0x04000000
+DEMONOLOGY_D3_BIT_27 = 0x08000000
+DESTRUCTION_D3_BIT_9 = 0x200
+DESTRUCTION_D3_BIT_28 = 0x10000000
+DESTRUCTION_D3_BIT_29 = 0x20000000
+DESTRUCTION_D3_BIT_30 = 0x40000000
+DESTRUCTION_D3_BIT_31 = 0x80000000
+
+# --- Composites (Affliction; each a (dword1, dword2, dword3) tuple for family_mask=) ---
+AFFLICTION_DOTS = (0x402, 0x100, PHANTOM_SINGULARITY)  # Corruption, Bane of Agony, UA, PS -
+# exactly the four DoTs Soul Siphon/Compounding Darkness count (spec §3)
+SHADOW_PERIODIC = (0x440A, 0x104, PHANTOM_SINGULARITY)  # Corruption, Drain Life, Bane, Drain
+# Soul; Seed DoT, UA; PS - Haunt eff3, Shadow Embrace debuffs, Soulburn: Haunt
+SHADOW_MASTERY_DIRECT = (0x80091, 0x51110, 0xF0000)  # SB, Drain Mana, Shadowburn, Death Coil;
+# Seed det, UA, Shadowfury, Shadowflame, Haunt; PS/TS/GR/AP bolts
+SHADOW_MASTERY_DOT = (0x440A, 0x106, 0)  # + Curse of Doom, Seed DoT, UA
+WARLOCK_SHADOW_DAMAGE = (0x8448B, 0x59116, 0xF0000)  # Grim Reach debuff 200724, Death's Embrace eff2
+REACH_SPELLS = (0x845AF, 0x8611C6, 0x40E00000)  # every warlock damaging spell with a target range
+# (§11 Q17, user): d1 SB, Corruption, Immolate, Drain Life, Rain of Fire, Shadowburn, Searing Pain,
+# Bane of Agony, Drain Soul, Death Coil; d2 Curse of Doom, Seed DoT, Incinerate, Soul Fire, UA,
+# Shadowfury, Chaos Bolt, Haunt, Conflagrate; d3 Phantom Singularity (cast), Hand of Gul'dan, Bane
+# of Doom, Chaos Rift.
+AFFLICTION_THREAT = (0x8048C41A, 0x4071E, 0xF0000)  # Siphon Power eff2
+NIGHTFALL_TRIGGER = (0x400A, SHADOWFLAME, SHADOWFLAME_DOT)  # = (0x400A, 0x10000, 0x2)
+SHADOW_TRANCE_CONSUMERS = (SHADOW_BOLT, SEED_OF_CORRUPTION_DOT, 0)  # = (0x1, 0x4, 0)
+EVERLASTING_TRIGGER = (0x4009, 0x40008, 0)  # SB, DL, DS; Haunt, Howl
+CORRUPTION_UA = (0x2, 0x100, 0)  # Malediction, Empowered Corruption (d1 part), EA eff2
+SIPHON_LIFE_DOT = (0x2, 0x104, 0)
+LINGERING_AGONY = (0x400, 0x100, 0)
+IMPROVED_CURSES_EXH_TONGUES = (0x400000, 0, CURSE_OF_TONGUES)
+FELHUNTER_UTILITY = (0, 0, SPELL_LOCK | DEVOUR_MAGIC)  # = (0, 0, 0x100400)
+
+# --- spell_proc constants (priest/druid precedent; values verified against SpellMgr.h:111-280) ---
+PROC_FLAG_KILL = 0x2
+PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG = 0x10000
+PROC_FLAG_DONE_PERIODIC = 0x40000
+PROC_SPELL_TYPE_DAMAGE = 1
+PROC_SPELL_TYPE_MASK_ALL = 7
+PROC_SPELL_PHASE_CAST = 1
+PROC_SPELL_PHASE_HIT = 2
+PROC_HIT_CRITICAL = 2
+PROC_ATTR_REQ_EXP_OR_HONOR = 0x1
+PROC_ATTR_TRIGGERED_CAN_PROC = 0x2
+PROC_ATTR_REQ_SPELLMOD = 0x8

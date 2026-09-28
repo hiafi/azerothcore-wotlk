@@ -64,7 +64,9 @@ spellradius:
 
 skilllineability:
   start: 30400
-  end: 30499
+  end: 30999  # extended by the warlock-rework Affliction pass (A6, PLAN §5/§9.6) - warlock
+  # took 30456-30499, leaving nothing spare; the stock base file tops out at 21980 and no custom
+  # SLA id existed above 30449 at the time, so 30500-30999 was free.
 
 # item_dbc rows for custom item_template entries above 56806 (the last real
 # client item - see DBCStores.cpp's own assert). Unlike every block above,

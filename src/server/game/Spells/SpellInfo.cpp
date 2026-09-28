@@ -28,6 +28,7 @@
 #include "SpellAuraDefines.h"
 #include "SpellAuraEffects.h"
 #include "SpellMgr.h"
+#include "WarlockMechanics.h" // Custom: warlock-rework B14 bane slot
 
 uint32 GetTargetFlagMask(SpellTargetObjectTypes objType)
 {
@@ -1460,6 +1461,10 @@ bool SpellInfo::IsAuraExclusiveBySpecificWith(SpellInfo const* spellInfo) const
 
 bool SpellInfo::IsAuraExclusiveBySpecificPerCasterWith(SpellInfo const* spellInfo) const
 {
+    // Custom: warlock-rework B14 - a bane and a curse from the same warlock coexist on one target
+    if (Warlock::IsBane(this) != Warlock::IsBane(spellInfo))
+        return false;
+
     SpellSpecificType spellSpec = GetSpellSpecific();
     switch (spellSpec)
     {

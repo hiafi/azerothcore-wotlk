@@ -34,6 +34,8 @@ void AddSC_priest_shadow_spell_scripts();
 void AddSC_rogue_spell_scripts();
 void AddSC_shaman_spell_scripts();
 void AddSC_warlock_spell_scripts();
+void AddSC_warlock_affliction_spell_scripts(); // Custom: warlock-rework Affliction pass
+void AddSC_warlock_hooks(); // Custom: warlock-rework shared ScriptMgr handlers
 void AddSC_warrior_spell_scripts();
 void AddSC_quest_spell_scripts();
 void AddSC_item_spell_scripts();
@@ -60,6 +62,8 @@ void AddSpellsScripts()
     AddSC_rogue_spell_scripts();
     AddSC_shaman_spell_scripts();
     AddSC_warlock_spell_scripts();
+    AddSC_warlock_affliction_spell_scripts(); // Custom: warlock-rework Affliction pass
+    AddSC_warlock_hooks(); // Custom: warlock-rework shared ScriptMgr handlers
     AddSC_warrior_spell_scripts();
     AddSC_quest_spell_scripts();
     AddSC_item_spell_scripts();

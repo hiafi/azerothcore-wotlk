@@ -4,9 +4,9 @@ Druid - spells that are never directly cast - proc/periodic-tick effects, trigge
 Split from a single source/classes/druid.py via split_class_file.py (.agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md) - see source/classes/README.md for the multi-file layout and lib/dsl/registry.py's load_class_package for how cross-file references (`from .druid_...` below) resolve.
 """
 
-from lib.dsl import AuraType, CombatRating, DispelType, Effect, EffectType, Mechanic, PowerType, School, SpellModOp
+from lib.dsl import RANGE_SELF, AuraType, CombatRating, DispelType, Effect, EffectType, Mechanic, PowerType, School, SpellModOp
 from lib.dsl.constants import ShapeshiftForm
-from lib.dsl.registry import bonus_coefficients, procs_on, scripted_by, skill_line_ability, spell
+from lib.dsl.registry import bonus_coefficients, linked_spell, procs_on, scripted_by, skill_line_ability, spell
 from ._masks import (
     BLOOM, CENARION_WARD, CENARION_WARD_HOT, CORE_HOT_CAST, CULTIVATION, DIRECT_NATURE_HEAL,
     DRUID_SPELL_DAMAGE, EMP_REJUV_COEFF, FORCE_OF_NATURE, FURY_OF_ELUNE, GENESIS_DOT, GENESIS_TICKS,
@@ -1052,12 +1052,13 @@ vengeance_16909 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108, misc_value=15),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=47,
-    notes='pulled from existing data; druid-rework BALANCE §6 row (6,3): trimmed 5->3 ranks, mask widened to DRUID_SPELL_DAMAGE (every druid magic-damage spell)',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes deal $s1% damage. Does not stack with similar effects.\n\n|cFF9D9D9DCapstone Bonus: Your direct Arcane and Nature critical strikes have a 15% chance to attract a Vengeful Soul, increasing your magic damage by 8% for 12 sec. When it ends, the Soul leaves your body and restores 10% of your missing mana. Only one Vengeful Soul can be attracted at a time, and a new proc refreshes it.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': DRUID_SPELL_DAMAGE[0], 'EffectSpellClassMaskA_2': DRUID_SPELL_DAMAGE[1], 'EffectSpellClassMaskA_3': DRUID_SPELL_DAMAGE[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (6,3): trimmed 5->3 ranks, mask widened to DRUID_SPELL_DAMAGE (every druid magic-damage spell). warlock-rework AFFLICTION §4.8 (A1/A2, server-wide): crit-damage SpellMod zeroed, mask cleared; linked to hidden passive 200695 (165%). Note: aura 163 (MOD_CRIT_DAMAGE_BONUS) reads only the caster, so this no longer reaches pet/guardian spells the old SpellMod-108 reached via GetSpellModOwner (accepted, A1).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 165% damage. This does not stack with other similar effects.\n\n|cFF9D9D9DCapstone Bonus: Your direct Arcane and Nature critical strikes have a 15% chance to attract a Vengeful Soul, increasing your magic damage by 8% for 12 sec. When it ends, the Soul leaves your body and restores 10% of your missing mana. Only one Vengeful Soul can be attracted at a time, and a new proc refreshes it.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
+linked_spell(vengeance_16909.id, 200695, type=2)
 
 
 vengeance_16910 = spell(
@@ -1072,12 +1073,13 @@ vengeance_16910 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=1, apply_aura=108, misc_value=15),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=47,
-    notes='pulled from existing data; druid-rework BALANCE §6 row (6,3)',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes deal $s1% damage. Does not stack with similar effects.\n\n|cFF9D9D9DCapstone Bonus: Your direct Arcane and Nature critical strikes have a 15% chance to attract a Vengeful Soul, increasing your magic damage by 8% for 12 sec. When it ends, the Soul leaves your body and restores 10% of your missing mana. Only one Vengeful Soul can be attracted at a time, and a new proc refreshes it.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': DRUID_SPELL_DAMAGE[0], 'EffectSpellClassMaskA_2': DRUID_SPELL_DAMAGE[1], 'EffectSpellClassMaskA_3': DRUID_SPELL_DAMAGE[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (6,3). warlock-rework AFFLICTION §4.8 (A1/A2): linked to hidden passive 200696 (180%).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 180% damage. This does not stack with other similar effects.\n\n|cFF9D9D9DCapstone Bonus: Your direct Arcane and Nature critical strikes have a 15% chance to attract a Vengeful Soul, increasing your magic damage by 8% for 12 sec. When it ends, the Soul leaves your body and restores 10% of your missing mana. Only one Vengeful Soul can be attracted at a time, and a new proc refreshes it.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
+linked_spell(vengeance_16910.id, 200696, type=2)
 
 
 vengeance_16911 = spell(
@@ -1092,13 +1094,14 @@ vengeance_16911 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=108, misc_value=15),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200343),
     ],
     spell_icon_id=47,
-    notes='pulled from existing data; druid-rework BALANCE §6 row (6,3): final rank, carries the Vengeful Soul capstone proc (200343 buff, procs_on(16911, ...) in druid_talents.py, spell_dru_vengeful_soul, WP-B)',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes deal $s1% damage. Does not stack with similar effects.\n\nCapstone Bonus: Your direct Arcane and Nature critical strikes have a 15% chance to attract a Vengeful Soul, increasing your magic damage by 8% for 12 sec. When it ends, the Soul leaves your body and restores 10% of your missing mana. Only one Vengeful Soul can be attracted at a time, and a new proc refreshes it.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': DRUID_SPELL_DAMAGE[0], 'EffectSpellClassMaskA_2': DRUID_SPELL_DAMAGE[1], 'EffectSpellClassMaskA_3': DRUID_SPELL_DAMAGE[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+    notes='pulled from existing data; druid-rework BALANCE §6 row (6,3): final rank, carries the Vengeful Soul capstone proc (200343 buff, procs_on(16911, ...) in druid_talents.py, spell_dru_vengeful_soul, WP-B). warlock-rework AFFLICTION §4.8 (A1/A2): eff1 crit-damage SpellMod zeroed, linked to hidden passive 200697 (199.5%); eff2 (Vengeful Soul proc trigger) untouched - its DisableEffectsMask 0x1 still validates because eff1 stays an aura.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 200% damage. This does not stack with other similar effects.\n\nCapstone Bonus: Your direct Arcane and Nature critical strikes have a 15% chance to attract a Vengeful Soul, increasing your magic damage by 8% for 12 sec. When it ends, the Soul leaves your body and restores 10% of your missing mana. Only one Vengeful Soul can be attracted at a time, and a new proc refreshes it.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
 )
+linked_spell(vengeance_16911.id, 200697, type=2)
 
 
 vengeance_16912 = spell(
@@ -7513,3 +7516,27 @@ primal_gore_200471 = spell(
     spell_icon_id=262, notes=_PRIMAL_GORE_NOTES + " Rank 3/3 (capstone, +100% of the extra = x1.50): eff1 DUMMY 100 = % of Mastery added to cat-form bleed damage (Druid::ApplyDoneDamagePctMods).",
     raw_overrides=_feral_talent_raw(_cap_final(_PRIMAL_GORE_TEXT, _PRIMAL_GORE_CLAUSE), EffectSpellClassMaskA_1=FERAL_BLEEDS[0], EffectSpellClassMaskA_2=FERAL_BLEEDS[1], EffectSpellClassMaskA_3=FERAL_BLEEDS[2]),
 )
+
+
+# ---------------------------------------------------------------------------
+# warlock-rework AFFLICTION pass - server-wide A1/A2 crit-damage exclusivity
+# group (PLAN A1/A2, SHARED §1.1, AFFLICTION §4.8): druid's 3 of 27 hidden
+# passives (Vengeance). Group 1201 itself and its rule are declared once, in
+# the warlock DSL (warlock_trigger_spells.py).
+# ---------------------------------------------------------------------------
+
+def _crit_damage_passive_200695(spell_id, stored_bp):
+    return spell(
+        id=spell_id, name='Vengeance', school=School.SHADOW, attributes=464,
+        cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+        range_yards=RANGE_SELF, duration_ms=-1,
+        effects=[Effect(type=EffectType.APPLY_AURA, base_points=stored_bp, implicit_target_a=1, apply_aura=AuraType.MOD_CRIT_DAMAGE_BONUS, misc_value=126)],
+        spell_icon_id=47,
+        notes='warlock-rework AFFLICTION §4.8 (A1/A2, SHARED §1.1): hidden crit-damage passive, no visible icon/tooltip; joins spell_group 1201 (rule 3, highest only, declared in the warlock DSL); linked (type=2) from its talent rank.',
+        raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 7, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'ProcChance': 101},
+    )
+
+
+vengeance_crit_200695 = _crit_damage_passive_200695(200695, 9)
+vengeance_crit_200696 = _crit_damage_passive_200695(200696, 19)
+vengeance_crit_200697 = _crit_damage_passive_200695(200697, 32)
