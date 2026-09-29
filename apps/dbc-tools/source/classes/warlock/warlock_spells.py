@@ -681,7 +681,7 @@ rain_of_fire_5740 = spell(
     mana_cost=0,
     mana_cost_pct=57,
     range_yards=30.0,
-    duration_ms=8000,
+    duration_ms=12000,
     effects=[
         Effect(type=EffectType.PERSISTENT_AREA_AURA, base_points=35, points_per_level=6.17, implicit_target_a=28, apply_aura=AuraType.DUMMY, radius_yards=8.0),
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=2000),
@@ -2243,6 +2243,7 @@ summon_infernal_200833 = spell(
     raw_overrides={'Targets': 64, 'CastingTimeIndex': 1, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectMiscValueB_1': 1021, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons an Infernal to fight for you for 26 sec, burning nearby enemies with Immolation Aura.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_3': m.SUMMON_INFERNAL, 'SpellVisualID_1': 4859, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'DefenseType': 1, 'PreventionType': 1, 'InterruptFlags': 15, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 skill_line_ability(id=30479, skill_line=354, spell_id=200833, class_mask=256)
+scripted_by(summon_infernal_200833, 'spell_warl_summon_infernal')
 
 
 demonic_taunt_200839 = spell(

@@ -1337,7 +1337,7 @@ devastation_200970 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=107, misc_value=7),
-        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL),
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200987),
     ],
     spell_icon_id=678,
     notes='warlock-rework DESTRUCTION §6 (4,2): new rank 3 (final), bp 5 (6%); eff1 PROC_TRIGGER_SPELL carrier for the Chaotic Inferno capstone (row in §8: DONE_SPELL_MAGIC_DMG_CLASS_NEG, fam 5 (0, 0x40, 0), CAST, chance 10). Plain capstone text (final rank).',
@@ -5912,7 +5912,7 @@ hellstorm_200968 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108),
         Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=108, misc_value=14),
-        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL),
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200989),
     ],
     spell_icon_id=2385,
     notes='warlock-rework DESTRUCTION §6 (2,2): r3 final rank, new eff2 PROC_TRIGGER_SPELL carrier for the Hellstorm-buff capstone (§8: fam 5 (0x20,0,0), HIT, attr TRIGGERED_CAN_PROC, chance 3, cooldown 10000, disable 0x3); spell_warl_hellstorm_proc (WP-B) CheckProc excludes overlap with 200989.',
@@ -6582,8 +6582,8 @@ fel_firebolt_200824 = spell(
         Effect(type=EffectType.SCHOOL_DAMAGE, base_points=10, points_per_level=0.9559322033898305, die_sides=1, implicit_target_a=6),
     ],
     spell_icon_id=2298,
-    notes='warlock-rework DEMONOLOGY §5.0/§0.1.6: cast by the Wild Imp (npc_warl_wild_imp). eff0 via _scaling.sb_units(0.12, 10, 58, 58). SpellClassSet 0, no bits (guardian leak rule); no spell_bonus_data - the AI passes bp0 = ComputeGuardianBasePoints(me, 200824, 0.1028f) live via CastCustomSpell (B21); Demonic Power +7/14% is applied on the HIT in spell_warl_guardian_hit_mods, never bp0 (§4.0). AttributesEx=1024 (NO_THREAT). Speed=20 (missile); SpellVisualID_1=3110 (Firebolt).',
-    raw_overrides={'AttributesEx': 1024, 'ProcChance': 101, 'EquippedItemClass': -1, 'DefenseType': 1, 'PreventionType': 1, 'Speed': 20.0, 'SpellVisualID_1': 3110, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Deals $s1 Fire damage.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+    notes='warlock-rework DEMONOLOGY §5.0/§0.1.6: cast by the Wild Imp (npc_warl_wild_imp). eff0 via _scaling.sb_units(0.12, 10, 58, 58). SpellClassSet 0, no bits (guardian leak rule); no spell_bonus_data - the AI passes bp0 = ComputeGuardianBasePoints(me, 200824, 0.1028f) live via CastCustomSpell (B21); Demonic Power +7/14% is applied on the HIT in spell_warl_guardian_hit_mods, never bp0 (§4.0). AttributesEx=1024 (NO_THREAT). Speed=20 (missile); SpellVisualID_1=67 = stock Firebolt 3110\'s visual (was 3110 - the spell id pasted as a visual id, so no missile showed).',
+    raw_overrides={'AttributesEx': 1024, 'ProcChance': 101, 'EquippedItemClass': -1, 'DefenseType': 1, 'PreventionType': 1, 'Speed': 20.0, 'SpellVisualID_1': 67, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Deals $s1 Fire damage.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
 
@@ -6721,7 +6721,7 @@ dark_apotheosis_passive_200836 = spell(
     id=200836,
     name='Dark Apotheosis',
     school=School.NORMAL,
-    attributes=464,
+    attributes=400,
     cast_time_ms=0,
     cooldown_ms=0,
     category_cooldown_ms=0,
@@ -6734,7 +6734,7 @@ dark_apotheosis_passive_200836 = spell(
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=275),
     ],
     spell_icon_id=0,
-    notes="warlock-rework DEMONOLOGY §5.2: hidden, linked from 200835 (type 2). SpellClassSet 5 (required - a family-0 aura 275 would admit every spell, not just warlock ones, SpellInfo.cpp:1352-1353). eff0 -20% damage done. eff1 MOD_IGNORE_SHAPESHIFT(275) mask letter B (=eff1, dbc-tools A/B/C=eff0/1/2 gotcha) = DA_ALLOWED (every warlock bit except Metamorphosis 47241's d3 0x2000 and DEMONIC_LEAP - a truly full mask would let those two skip CheckShapeshift and swap form mid-DA / work outside Metamorphosis, §5.2). custom_attr SPELL_ATTR0_CU_POSITIVE (the -20% would otherwise classify it negative, druid Bestial Fury precedent).",
+    notes="warlock-rework DEMONOLOGY §5.2: hidden, linked from 200835 (type 2). SpellClassSet 5 (required - a family-0 aura 275 would admit every spell, not just warlock ones, SpellInfo.cpp:1352-1353). eff0 -20% damage done. eff1 MOD_IGNORE_SHAPESHIFT(275) mask letter B (=eff1, dbc-tools A/B/C=eff0/1/2 gotcha) = DA_ALLOWED (every warlock bit except Metamorphosis 47241's d3 0x2000 and DEMONIC_LEAP - a truly full mask would let those two skip CheckShapeshift and swap form mid-DA / work outside Metamorphosis, §5.2). custom_attr SPELL_ATTR0_CU_POSITIVE (the -20% would otherwise classify it negative, druid Bestial Fury precedent). attributes 464 -> 400 (drop PASSIVE 0x40, = stock Metamorphosis passive 54879): a passive aura is never sent to the client (Aura::CanBeSentToClient), so the client never saw this aura 275, treated form 23 as a plain shapeshift and auto-cancelled Dark Apotheosis before casting any NOT_SHAPESHIFTED spell.",
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'EffectSpellClassMaskB_1': m.DA_ALLOWED[0], 'EffectSpellClassMaskB_2': m.DA_ALLOWED[1], 'EffectSpellClassMaskB_3': m.DA_ALLOWED[2], 'Name_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
 )
 custom_attr(dark_apotheosis_passive_200836, attributes=0x0E000000)

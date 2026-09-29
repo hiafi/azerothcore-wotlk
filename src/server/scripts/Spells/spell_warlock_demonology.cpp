@@ -36,9 +36,13 @@
 #include "Cell.h"
 #include "CellImpl.h"
 #include "Containers.h"
+#include "DBCStores.h"
 #include "GameTime.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
+#include "Map.h"
+#include "MotionMaster.h"
+#include "ObjectAccessor.h"
 #include "Pet.h"
 #include "Player.h"
 #include "Random.h"
@@ -52,6 +56,7 @@
 #include "SpellMgr.h"
 #include "SpellScript.h"
 #include "SpellScriptLoader.h"
+#include "TemporarySummon.h"
 #include "Trainer.h"
 #include "Unit.h"
 #include "WarlockMechanics.h"
@@ -72,6 +77,11 @@ namespace
     constexpr std::array<uint32, 3> RANKS_CATACLYSM = { 17778, 17779, 17780 }; // Destruction (§0.2 item 5)
     constexpr uint32 NPC_DEMON_VOIDWALKER = 1860;
     constexpr uint32 NPC_DEMON_FELGUARD = 17252;
+
+    // Summon Infernal's meteor (stock SpellVisual 4859 -> InstantAreaKit 9166 ->
+    // spells\infernal_impact_base.m2): its falling bone's translation track reaches the ground at
+    // 1000 ms of the model's 2500 ms animation.
+    constexpr uint32 INFERNAL_METEOR_IMPACT_MS = 1000;
 
     // Highest known rank's aura-effect amount / rank index - private copies of
     // WarlockMechanics.cpp's own helpers (internal linkage; every WP-B file that needs a "read live
@@ -254,6 +264,71 @@ class spell_warl_call_dreadstalkers : public SpellScript
     {
         BeforeCast += SpellCastFn(spell_warl_call_dreadstalkers::HandleBeforeCast);
         AfterCast += SpellCastFn(spell_warl_call_dreadstalkers::HandleAfterCast);
+    }
+};
+
+// ===========================================================================================
+// 200833 - Summon Infernal - DEMONOLOGY.md §5.1. The SUMMON effect lands on the spell's go, but
+// the meteor visual only hits the ground INFERNAL_METEOR_IMPACT_MS later, so the default summon is
+// deferred to the impact. The deferred summon mirrors Spell::SummonGuardian for one guardian
+// (the caster is always the level-capped player, so no summon-level override is needed).
+// ===========================================================================================
+class spell_warl_summon_infernal : public SpellScript
+{
+    PrepareSpellScript(spell_warl_summon_infernal);
+
+    bool Validate(SpellInfo const* spellInfo) override
+    {
+        return sSummonPropertiesStore.LookupEntry(spellInfo->Effects[EFFECT_0].MiscValueB) != nullptr;
+    }
+
+    void HandleSummon(SpellEffIndex effIndex)
+    {
+        PreventHitDefaultEffect(effIndex);
+
+        Player* player = GetCaster() ? GetCaster()->ToPlayer() : nullptr;
+        WorldLocation const* dest = GetHitDest();
+        if (!player || !dest)
+            return;
+
+        SpellInfo const* spellInfo = GetSpellInfo();
+        uint32 const spellId = spellInfo->Id;
+        uint32 const entry = spellInfo->Effects[effIndex].MiscValue;
+        SummonPropertiesEntry const* properties =
+            sSummonPropertiesStore.LookupEntry(spellInfo->Effects[effIndex].MiscValueB);
+        int32 duration = spellInfo->GetDuration();
+        player->ApplySpellMod(spellId, SPELLMOD_DURATION, duration);
+
+        ObjectGuid const playerGuid = player->GetGUID();
+        uint32 const instanceId = player->GetInstanceId();
+        WorldLocation const pos = *dest;
+
+        player->m_Events.AddEventAtOffset([playerGuid, instanceId, pos, entry, properties, duration, spellId]()
+        {
+            Player* self = ObjectAccessor::FindPlayer(playerGuid);
+            if (!self || !self->IsInWorld() || self->GetMapId() != pos.GetMapId() ||
+                self->GetInstanceId() != instanceId)
+                return;
+
+            TempSummon* summon = self->GetMap()->SummonCreature(entry, pos, properties, duration, self, spellId);
+            if (!summon)
+                return;
+
+            if (!summon->IsInCombat())
+            {
+                summon->GetMotionMaster()->Clear(false);
+                summon->GetMotionMaster()->MoveFollow(self, PET_FOLLOW_DIST, summon->GetFollowAngle(),
+                    MOTION_SLOT_ACTIVE);
+            }
+
+            if (properties->Category == SUMMON_CATEGORY_ALLY)
+                summon->SetFaction(self->GetFaction());
+        }, Milliseconds(INFERNAL_METEOR_IMPACT_MS));
+    }
+
+    void Register() override
+    {
+        OnEffectHit += SpellEffectFn(spell_warl_summon_infernal::HandleSummon, EFFECT_0, SPELL_EFFECT_SUMMON);
     }
 };
 
@@ -1331,6 +1406,7 @@ void AddSC_warlock_demonology_spell_scripts()
     RegisterSpellScript(spell_warl_hand_of_guldan_splash);
     RegisterSpellScript(spell_warl_implosion);
     RegisterSpellScript(spell_warl_call_dreadstalkers);
+    RegisterSpellScript(spell_warl_summon_infernal);
     RegisterSpellScript(spell_warl_shadow_bolt_demonology);
     RegisterSpellScript(spell_warl_soul_fire_demonology);
     RegisterSpellScript(spell_warl_metamorphosis_demo);
