@@ -973,7 +973,7 @@ class spell_warl_grim_reach_capstone : public AuraScript
 
     void Register() override
     {
-        OnProc += AuraProcFn(spell_warl_grim_reach_capstone::HandleProc);
+        OnEffectProc += AuraEffectProcFn(spell_warl_grim_reach_capstone::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
     }
 };
 
@@ -1004,7 +1004,7 @@ class spell_warl_shadow_pact_tainted_soul : public AuraScript
         }
     }
 
-    void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
+    void HandleProc(ProcEventInfo& eventInfo)
     {
         Unit* caster = GetTarget();
         Unit* target = eventInfo.GetProcTarget();
@@ -1105,7 +1105,7 @@ class spell_warl_agonizing_pain : public AuraScript
         return spellInfo && spellInfo->Id == Warlock::SPELL_BANE_OF_AGONY;
     }
 
-    void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
+    void HandleProc(ProcEventInfo& eventInfo)
     {
         Unit* caster = GetTarget();
         Unit* target = eventInfo.GetProcTarget();
@@ -1187,7 +1187,7 @@ class spell_warl_fel_concentration_capstone : public AuraScript
                castInfo->HasAura(SPELL_AURA_PERIODIC_LEECH);
     }
 
-    void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
+    void HandleProc(ProcEventInfo& eventInfo)
     {
         Unit* caster = GetTarget();
         DamageInfo const* damageInfo = eventInfo.GetDamageInfo();

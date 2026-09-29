@@ -1106,7 +1106,6 @@ INSERT INTO `spell_group_stack_rules` (`group_id`, `stack_rule`, `description`) 
 DELETE FROM `spell_custom_attr` WHERE (`spell_id`) IN ((200738));
 INSERT INTO `spell_custom_attr` (`spell_id`, `attributes`) VALUES
 (200738, 234881024);
-(200738, 234881024);
 
 -- warlock-rework B9 item_template updates (apps/item-tools, not DSL-declarable)
 -- warlock-rework B9 - Soul Pouch is an ordinary bag now (Soul Shard items removed)

@@ -663,12 +663,19 @@ class spell_warl_demon_aura : public AuraScript
 
     void Register() override
     {
+        // EFFECT_ALL/SPELL_AURA_ANY on all three hooks, matching DoEffectCalcAmount above - this one
+        // class is scripted_by'd onto 6 ids (200840, 200844, 200850, 200851, 200852, 200854) whose
+        // effect layouts differ (e.g. 200844's eff0 is DUMMY, not MOD_DAMAGE_PERCENT_DONE), so a
+        // fixed EFFECT_0/MOD_DAMAGE_PERCENT_DONE filter here left the engine unable to bind the
+        // periodic hooks at all for most of them ("did not match dbc effect data", found via boot
+        // log). CalcPeriodic/HandlePeriodic already gate on aurEff->GetEffIndex() == EFFECT_0 and
+        // GetSpellInfo()->Id == SPELL_DEMONIC_POTENCY internally, so widening the bind is safe.
         DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_warl_demon_aura::CalculateAmount, EFFECT_ALL,
             SPELL_AURA_ANY);
-        DoEffectCalcPeriodic += AuraEffectCalcPeriodicFn(spell_warl_demon_aura::CalcPeriodic, EFFECT_0,
-            SPELL_AURA_MOD_DAMAGE_PERCENT_DONE);
-        OnEffectPeriodic += AuraEffectPeriodicFn(spell_warl_demon_aura::HandlePeriodic, EFFECT_0,
-            SPELL_AURA_MOD_DAMAGE_PERCENT_DONE);
+        DoEffectCalcPeriodic += AuraEffectCalcPeriodicFn(spell_warl_demon_aura::CalcPeriodic, EFFECT_ALL,
+            SPELL_AURA_ANY);
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_warl_demon_aura::HandlePeriodic, EFFECT_ALL,
+            SPELL_AURA_ANY);
     }
 };
 

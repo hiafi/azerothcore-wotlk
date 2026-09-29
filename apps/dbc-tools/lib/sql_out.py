@@ -19,8 +19,10 @@ from .dbcfmt import DbcTable
 
 
 def _sql_literal(value) -> str:
-    if value is None or value == "":
+    if value is None:
         return "NULL"
+    if value == "":
+        return "''"
     if isinstance(value, float):
         return repr(value)
     if isinstance(value, int):

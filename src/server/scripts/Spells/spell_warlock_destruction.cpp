@@ -565,8 +565,10 @@ class spell_warl_hellstorm : public AuraScript
 
     void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-        Player* player = GetTarget() ? GetTarget()->ToPlayer() : nullptr;
-        if (player && player->HasAura(Warlock::SPELL_HELLFIRE))
+        // StartHellstormAcceleration itself checks for a live Hellfire periodic-trigger aura and
+        // no-ops otherwise (WarlockMechanics.cpp) - no need to duplicate that check here, which
+        // would require exposing the deliberately file-local SPELL_HELLFIRE constant.
+        if (Player* player = GetTarget() ? GetTarget()->ToPlayer() : nullptr)
             Warlock::StartHellstormAcceleration(player);
     }
 
