@@ -41,6 +41,7 @@
 #include "CreatureAI.h"
 #include "CreatureScript.h"
 #include "EventMap.h"
+#include "Log.h"
 #include "MotionMaster.h"
 #include "ObjectAccessor.h"
 #include "Pet.h"
@@ -111,8 +112,12 @@ namespace
     // ---- Dreadstalker (300152) tuning + local ids ----
     constexpr float DREADSTALKER_BITE_RANGE = 5.0f;
     constexpr uint32 DREADSTALKER_BITE_INTERVAL_MS = 2000;
+    constexpr uint32 DREADSTALKER_BITE_RETRY_MS = 250;
     constexpr uint32 DREADSTALKER_DEPART_MS = 12000;
     constexpr uint32 DREADSTALKER_RETARGET_INTERVAL_MS = 500;
+    // Below this the stalker is already on the target - just chase instead of charging.
+    constexpr float DREADSTALKER_MIN_CHARGE_DIST = 8.0f;
+    constexpr float DREADSTALKER_CHARGE_SPEED = 30.0f;
 
     enum DreadstalkerAIEvent : uint32
     {
@@ -123,7 +128,9 @@ namespace
 
     // ---- Doomguard (300153) tuning + local ids ----
     constexpr float DOOMGUARD_CHASE_RANGE = 30.0f;
+    constexpr float DOOMGUARD_CAST_RANGE = 40.0f;
     constexpr uint32 DOOMGUARD_CAST_INTERVAL_MS = 2500;
+    constexpr uint32 DOOMGUARD_CAST_RETRY_MS = 250;
     constexpr uint32 DOOMGUARD_RETARGET_INTERVAL_MS = 500;
 
     enum DoomguardAIEvent : uint32
@@ -141,6 +148,22 @@ namespace
         EVENT_INFERNAL_CHASE = 1,
         EVENT_INFERNAL_PULSE = 2
     };
+
+    // Doomguard/Infernal have no pending-summon target of their own: they take the owner's
+    // in-combat target (§11 Q10's no-pulling rule), falling back to whatever the owner had
+    // selected when summoning, so a guardian called onto a not-yet-pulled enemy engages at once.
+    ObjectGuid GetOwnerSelectedEnemy(Player const* owner)
+    {
+        Unit* selected = owner ? ObjectAccessor::GetUnit(*owner, owner->GetTarget()) : nullptr;
+        return selected && owner->IsValidAttackTarget(selected) ? selected->GetGUID() : ObjectGuid::Empty;
+    }
+
+    Unit* SelectOwnerOrSummonTarget(Creature* guardian, Player* owner, ObjectGuid summonTarget)
+    {
+        if (Unit* target = Warlock::SelectGuardianTarget(guardian, owner, ObjectGuid::Empty))
+            return target;
+        return Warlock::SelectGuardianTarget(guardian, owner, summonTarget);
+    }
 }
 
 /*
@@ -184,9 +207,11 @@ public:
         }
 
         // No MoveFollow/MoveChase here - Spell::SummonGuardian issues MoveFollow(owner) right after
-        // this hook returns (SpellEffects.cpp:6412-6417); the first real update tick below is what
-        // actually starts chasing a target.
-        _events.ScheduleEvent(EVENT_WILD_IMP_UPDATE, Milliseconds(WILD_IMP_UPDATE_INTERVAL_MS));
+        // this hook returns (SpellEffects.cpp:6412-6417), so track that as the starting state: the
+        // first update (next AI tick) then clears it when the target is in range, instead of the
+        // imp running back to the warlock between bolts.
+        _moveState = ImpMovementState::Following;
+        _events.ScheduleEvent(EVENT_WILD_IMP_UPDATE, 0ms);
         _events.ScheduleEvent(EVENT_WILD_IMP_EXPIRE, Milliseconds(WILD_IMP_EXPIRE_MS));
     }
 
@@ -342,6 +367,9 @@ private:
             if (!freeCast)
                 _energy -= int32(Warlock::FEL_FIREBOLT_ENERGY_COST);
         }
+        else
+            LOG_DEBUG("scripts.ai", "npc_warl_wild_imp: {} Fel Firebolt on {} failed ({})",
+                me->GetGUID().ToString(), target->GetGUID().ToString(), uint32(result));
     }
 
     void StartImplode()
@@ -400,8 +428,8 @@ private:
 
 /*
  * 300152 - Dreadstalker - DEMONOLOGY.md §7.4. Guardian; no movement order in IsSummonedBy (same
- * Spell::SummonGuardian timing note as the Wild Imp above) - the first MoveChase is issued from a
- * scheduled event ~100 ms later instead.
+ * Spell::SummonGuardian timing note as the Wild Imp above) - the first engage (charge + melee) is
+ * issued from the first AI tick instead. Melees its target on top of the scripted Bite.
  */
 class npc_warl_dreadstalker : public CreatureAI
 {
@@ -422,8 +450,8 @@ public:
         me->SetReactState(REACT_PASSIVE);
         Warlock::RefreshDemonAuras(owner, me);
 
-        _events.ScheduleEvent(EVENT_DREADSTALKER_CHASE, 100ms);
-        _events.ScheduleEvent(EVENT_DREADSTALKER_BITE, Milliseconds(DREADSTALKER_BITE_INTERVAL_MS));
+        _events.ScheduleEvent(EVENT_DREADSTALKER_CHASE, 0ms);
+        _events.ScheduleEvent(EVENT_DREADSTALKER_BITE, 0ms);
         _events.ScheduleEvent(EVENT_DREADSTALKER_DEPART, Milliseconds(DREADSTALKER_DEPART_MS));
     }
 
@@ -440,8 +468,8 @@ public:
                     _events.ScheduleEvent(EVENT_DREADSTALKER_CHASE, Milliseconds(DREADSTALKER_RETARGET_INTERVAL_MS));
                     break;
                 case EVENT_DREADSTALKER_BITE:
-                    DoBite();
-                    _events.ScheduleEvent(EVENT_DREADSTALKER_BITE, Milliseconds(DREADSTALKER_BITE_INTERVAL_MS));
+                    _events.ScheduleEvent(EVENT_DREADSTALKER_BITE, Milliseconds(DoBite() ?
+                        DREADSTALKER_BITE_INTERVAL_MS : DREADSTALKER_BITE_RETRY_MS));
                     break;
                 case EVENT_DREADSTALKER_DEPART:
                     if (Player* owner = GetOwnerPlayer())
@@ -452,6 +480,8 @@ public:
                     break;
             }
         }
+
+        DoMeleeAttackIfReady();
     }
 
 private:
@@ -473,35 +503,54 @@ private:
             _targetGUID = target->GetGUID();
             if (target->GetGUID() != _chasingGUID)
             {
+                me->Attack(target, true);
+                // Chase sits in the active slot under the charge (controlled slot), so it takes
+                // over the moment the charge lands - replacing SummonGuardian's MoveFollow(owner).
                 me->GetMotionMaster()->MoveChase(target);
+                if (!_charged)
+                {
+                    _charged = true;
+                    if (!me->IsWithinDist(target, DREADSTALKER_MIN_CHARGE_DIST))
+                    {
+                        float x, y, z;
+                        target->GetContactPoint(me, x, y, z);
+                        me->GetMotionMaster()->MoveCharge(x, y, z, DREADSTALKER_CHARGE_SPEED, EVENT_CHARGE,
+                            nullptr, true, 0.0f, target->GetGUID());
+                    }
+                }
                 _chasingGUID = target->GetGUID();
             }
         }
         else if (!_chasingGUID.IsEmpty())
         {
+            me->AttackStop();
             me->GetMotionMaster()->MoveFollow(owner, PET_FOLLOW_DIST, me->GetFollowAngle());
             _chasingGUID.Clear();
         }
     }
 
-    void DoBite()
+    // Returns whether Bite went out, so a stalker still closing in retries shortly instead of
+    // waiting a full bite interval after landing.
+    bool DoBite()
     {
         Player* owner = GetOwnerPlayer();
         if (!owner)
-            return;
+            return false;
 
         Unit* target = Warlock::SelectGuardianTarget(me, owner, _targetGUID);
         if (!target || !me->IsWithinDist(target, DREADSTALKER_BITE_RANGE))
-            return;
+            return false;
 
         _targetGUID = target->GetGUID();
         int32 const bp0 = Warlock::ComputeGuardianBasePoints(me, Warlock::SPELL_DREADSTALKER_BITE, 0.1568f);
         me->CastCustomSpell(target, Warlock::SPELL_DREADSTALKER_BITE, &bp0, nullptr, nullptr, true);
+        return true;
     }
 
     ObjectGuid _targetGUID;
     ObjectGuid _chasingGUID;
     uint32 _pairToken = 0;
+    bool _charged = false;
     EventMap _events;
 };
 
@@ -521,11 +570,13 @@ public:
         if (!owner)
             return;
 
+        _summonTargetGUID = GetOwnerSelectedEnemy(owner);
+
         me->SetReactState(REACT_PASSIVE);
         Warlock::RefreshDemonAuras(owner, me);
 
-        _events.ScheduleEvent(EVENT_DOOMGUARD_CHASE, 100ms);
-        _events.ScheduleEvent(EVENT_DOOMGUARD_CAST, Milliseconds(DOOMGUARD_CAST_INTERVAL_MS));
+        _events.ScheduleEvent(EVENT_DOOMGUARD_CHASE, 0ms);
+        _events.ScheduleEvent(EVENT_DOOMGUARD_CAST, 0ms);
     }
 
     void UpdateAI(uint32 diff) override
@@ -541,8 +592,8 @@ public:
                     _events.ScheduleEvent(EVENT_DOOMGUARD_CHASE, Milliseconds(DOOMGUARD_RETARGET_INTERVAL_MS));
                     break;
                 case EVENT_DOOMGUARD_CAST:
-                    DoCastDoomBolt();
-                    _events.ScheduleEvent(EVENT_DOOMGUARD_CAST, Milliseconds(DOOMGUARD_CAST_INTERVAL_MS));
+                    _events.ScheduleEvent(EVENT_DOOMGUARD_CAST, Milliseconds(DoCastDoomBolt() ?
+                        DOOMGUARD_CAST_INTERVAL_MS : DOOMGUARD_CAST_RETRY_MS));
                     break;
                 default:
                     break;
@@ -563,7 +614,7 @@ private:
         if (!owner)
             return;
 
-        Unit* target = Warlock::SelectGuardianTarget(me, owner, ObjectGuid::Empty);
+        Unit* target = SelectOwnerOrSummonTarget(me, owner, _summonTargetGUID);
         if (target)
         {
             if (target->GetGUID() != _chasingGUID)
@@ -579,23 +630,26 @@ private:
         }
     }
 
-    void DoCastDoomBolt()
+    // Returns whether the event should wait out a full cast (a bolt is in progress or just went
+    // out) rather than retry shortly (no target in range yet).
+    bool DoCastDoomBolt()
     {
         if (me->HasUnitState(UNIT_STATE_CASTING))
-            return;
+            return true;
 
         Player* owner = GetOwnerPlayer();
         if (!owner)
-            return;
+            return false;
 
-        Unit* target = Warlock::SelectGuardianTarget(me, owner, ObjectGuid::Empty);
-        if (!target || !me->IsWithinDist(target, 40.0f) || !me->IsWithinLOSInMap(target))
-            return;
+        Unit* target = SelectOwnerOrSummonTarget(me, owner, _summonTargetGUID);
+        if (!target || !me->IsWithinDist(target, DOOMGUARD_CAST_RANGE) || !me->IsWithinLOSInMap(target))
+            return false;
 
         int32 const bp0 = Warlock::ComputeGuardianBasePoints(me, Warlock::SPELL_DOOM_BOLT, 0.857f);
-        me->CastCustomSpell(target, Warlock::SPELL_DOOM_BOLT, &bp0, nullptr, nullptr, false);
+        return me->CastCustomSpell(target, Warlock::SPELL_DOOM_BOLT, &bp0, nullptr, nullptr, false) == SPELL_CAST_OK;
     }
 
+    ObjectGuid _summonTargetGUID;
     ObjectGuid _chasingGUID;
     EventMap _events;
 };
@@ -617,11 +671,13 @@ public:
         if (!owner)
             return;
 
+        _summonTargetGUID = GetOwnerSelectedEnemy(owner);
+
         me->SetReactState(REACT_PASSIVE);
         Warlock::RefreshDemonAuras(owner, me);
 
-        _events.ScheduleEvent(EVENT_INFERNAL_CHASE, 100ms);
-        _events.ScheduleEvent(EVENT_INFERNAL_PULSE, Milliseconds(INFERNAL_PULSE_INTERVAL_MS));
+        _events.ScheduleEvent(EVENT_INFERNAL_CHASE, 0ms);
+        _events.ScheduleEvent(EVENT_INFERNAL_PULSE, 0ms);
     }
 
     void UpdateAI(uint32 diff) override
@@ -659,7 +715,7 @@ private:
         if (!owner)
             return;
 
-        Unit* target = Warlock::SelectGuardianTarget(me, owner, ObjectGuid::Empty);
+        Unit* target = SelectOwnerOrSummonTarget(me, owner, _summonTargetGUID);
         if (target)
         {
             if (target->GetGUID() != _chasingGUID)
@@ -681,6 +737,7 @@ private:
         me->CastCustomSpell(me, Warlock::SPELL_INFERNAL_IMMOLATION, &bp0, nullptr, nullptr, true);
     }
 
+    ObjectGuid _summonTargetGUID;
     ObjectGuid _chasingGUID;
     EventMap _events;
 };

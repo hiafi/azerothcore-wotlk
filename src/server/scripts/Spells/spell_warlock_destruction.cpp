@@ -642,8 +642,20 @@ class spell_warl_chaos_bolt : public SpellScript
         if (GetSpell()->IsTriggered())
             return;
 
-        if (Player* player = GetCaster() ? GetCaster()->ToPlayer() : nullptr)
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+
+        if (Player* player = caster->ToPlayer())
             _soulburned = Warlock::TryConsumeSoulburnMarker(player);
+
+        // R2 Havoc duplication (§7.5) - launched alongside the primary bolt rather than on its
+        // impact, so both projectiles travel together. Only the primary (non-triggered) cast
+        // duplicates; the copy's own 30 yd + Reach range is enforced by the engine's range check.
+        Unit* primary = GetExplTargetUnit();
+        Unit* havoc = Warlock::GetHavocTarget(caster);
+        if (havoc && havoc != primary && havoc->IsAlive() && caster->IsWithinLOSInMap(havoc))
+            caster->CastSpell(havoc, Warlock::SPELL_CHAOS_BOLT_COPY, TRIGGERED_FULL_MASK);
     }
 
     void HandleAfterHit()
@@ -658,11 +670,6 @@ class spell_warl_chaos_bolt : public SpellScript
 
         Unit* havoc = Warlock::GetHavocTarget(caster);
         bool const havocValid = havoc && havoc != primary && havoc->IsAlive() && caster->IsWithinLOSInMap(havoc);
-
-        // R2 Havoc duplication (§7.5) - only the primary (non-triggered) cast duplicates; the
-        // copy's own 30 yd + Reach range is enforced by the engine's range check on the trigger.
-        if (havocValid)
-            caster->CastSpell(havoc, Warlock::SPELL_CHAOS_BOLT_COPY, TRIGGERED_FULL_MASK);
 
         // Chaotic Burn (§7.7) - primary target only; spell_warl_chaos_bolt_copy applies it to
         // Havoc/Soulburn extra targets.

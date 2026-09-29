@@ -25,7 +25,8 @@
  *
  * This pass (Affliction, S1) added:
  *   - UnitScript::ModifyPeriodicDamageAurasTick - Bane of Agony's live per-tick stack multiplier
- *     (AFFLICTION.md §7.2).
+ *     (AFFLICTION.md §7.2); since moved onto 980's own AuraScript when 980 became the stacking
+ *     aura (spell_warl_bane_of_agony_aura).
  *   - AllSpellScript::OnCalcMaxDuration - Pandemic's duration carry (AFFLICTION.md §7.4).
  *   - AllSpellScript::CanPrepare / OnSpellCast - the instant-cast priority arbiter
  *     (Warlock::OnPrepareGrantInstantCast / OnCastConsumeInstantCast); a no-op that pass (empty
@@ -92,29 +93,21 @@ namespace
     }
 }
 
-// AFFLICTION.md §7.2 - Bane of Agony's live per-tick stack multiplier. Destruction extends this
-// same handler with Nether Protection's periodic-taken DR (S2).
+// DESTRUCTION.md §7.12 - Nether Protection's periodic-taken DR (S2). Originally added for Bane of
+// Agony's stack multiplier, which now lives on spell_warl_bane_of_agony_aura.
 class WarlockHooksUnit : public UnitScript
 {
 public:
     WarlockHooksUnit() : UnitScript("WarlockHooksUnit", true, { UNITHOOK_MODIFY_PERIODIC_DAMAGE_AURAS_TICK }) { }
 
-    void ModifyPeriodicDamageAurasTick(Unit* target, Unit* attacker, uint32& damage,
+    void ModifyPeriodicDamageAurasTick(Unit* target, Unit* /*attacker*/, uint32& damage,
                                         SpellInfo const* spellInfo) override
     {
         if (!target || !spellInfo)
             return;
 
-        // AFFLICTION.md §7.2 - Bane of Agony's live per-tick stack multiplier (attacker side).
-        if (attacker && spellInfo->Id == Warlock::SPELL_BANE_OF_AGONY && GetWarlockPlayer(attacker))
-        {
-            uint8 const stacks = Warlock::GetAgonyStacks(target, attacker->GetGUID());
-            if (stacks)
-                damage = uint32(float(damage) * (1.0f + 0.1f * float(stacks)));
-        }
-
         // DESTRUCTION.md §7.12 - Nether Protection's periodic-taken reduction (victim side).
-        // `attacker` may be null here (don't dereference it) - this branch only needs the target.
+        // Only needs the target (the attacker may be null).
         if (Player* player = target->ToPlayer())
         {
             if (IsPeriodicDamageSpell(spellInfo) && (spellInfo->GetSchoolMask() & SPELL_SCHOOL_MASK_MAGIC))

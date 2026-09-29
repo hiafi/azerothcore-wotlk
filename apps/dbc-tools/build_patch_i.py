@@ -95,6 +95,21 @@ ICON_ID_FLOURISH = 90131  # shared by 200564 and its 200565/200603 buff/ground t
 # row pointing at the existing stock path. See STOCK_ALIAS_ICONS below.
 ICON_ID_INCINERATE_ALIAS = 90170
 
+# Warlock rework mined icons (DATA-INVENTORY: Aff 90150-90159, Demo 90160-90169, Destro 90171-90179).
+# 90151 (Soul Swap: Exhale) and 90161 (Wild Imp/Imp Gang Boss) stay reserved for the slots the spec
+# docs pre-assigned them; nothing mined for them yet.
+ICON_ID_SOUL_SWAP = 90150  # shared by 200733 and its 200735 copied-DoTs buff
+ICON_ID_SOUL_HARVEST = 90152  # shared by 200736 and its 200737 pet buff
+ICON_ID_BURNING_RUSH = 90153
+ICON_ID_DARK_SOUL_MISERY = 90154
+ICON_ID_SOULBURN = 90155  # shared by 200710 and its 200711 marker
+ICON_ID_HARVESTER_OF_DEATH = 90156  # talent ranks 200745-200747 and the 200748 capstone passive
+ICON_ID_HAND_OF_GULDAN = 90160  # shared by 200820 and its 200821 splash
+ICON_ID_DARK_APOTHEOSIS = 90162  # 200835, its 200863 talent learner and 200864 demon abilities
+ICON_ID_SUMMON_DOOMGUARD = 90163
+ICON_ID_CHAOS_RIFT = 90171
+ICON_ID_HAVOC = 90172
+
 ICONS = (
     (ICON_ID_ANGELIC_FEATHER, "Interface/icons/ability_priest_angelicfeather.blp"),
     (ICON_ID_DIVINE_STAR, "Interface/icons/spell_priest_divinestar.blp"),
@@ -112,6 +127,17 @@ ICONS = (
     (ICON_ID_SAVAGE_BITE, "Interface/icons/spell_druid_bearhug.blp"),
     (ICON_ID_BLOOM, "Interface/icons/ability_evoker_spiritbloom.blp"),
     (ICON_ID_FLOURISH, "Interface/icons/inv12_ability_druid_flourish_empowered.blp"),
+    (ICON_ID_SOUL_SWAP, "Interface/icons/ability_warlock_soulswap.blp"),
+    (ICON_ID_SOUL_HARVEST, "Interface/icons/sha_spell_shadow_shadesofdarkness_nightborne.blp"),
+    (ICON_ID_BURNING_RUSH, "Interface/icons/nhi_fire_flameshot.blp"),
+    (ICON_ID_DARK_SOUL_MISERY, "Interface/icons/spell_warlock_demonsoul.blp"),
+    (ICON_ID_SOULBURN, "Interface/icons/_Warlock_SoulBurn.blp"),
+    (ICON_ID_HARVESTER_OF_DEATH, "Interface/icons/_DeathCoil_Color_Green.blp"),
+    (ICON_ID_HAND_OF_GULDAN, "Interface/icons/ability_warlock_handofguldan.blp"),
+    (ICON_ID_DARK_APOTHEOSIS, "Interface/icons/spell_warlock_demonwrath.blp"),
+    (ICON_ID_SUMMON_DOOMGUARD, "Interface/icons/warlock_summon_doomguard.blp"),
+    (ICON_ID_CHAOS_RIFT, "Interface/icons/custom_T_Nhance_RPG_Icons_UnholyPortal.blp"),
+    (ICON_ID_HAVOC, "Interface/icons/ability_warlock_baneofhavoc.blp"),
 )
 
 # "Stock path, no blp" entries (warlock-rework DESTRUCTION §2.6/§11 Q19): a SpellIcon.dbc row that

@@ -45,6 +45,7 @@
 #include "SpellScript.h"
 #include "SpellScriptLoader.h"
 #include "Unit.h"
+#include <algorithm>
 #include <list>
 #include <vector>
 
@@ -168,21 +169,113 @@ class spell_warl_corruption_affliction : public AuraScript
 // ===========================================================================================
 // 980 - Bane of Agony (renamed Curse of Agony) - AFFLICTION.md §7.2
 // ===========================================================================================
+// The ramp lives on 980's own stack count (CumulativeAura 15; the live cap is GetAgonyStackCap),
+// so the target shows one debuff with the stack number on its icon. Stock stacking math is
+// linear (CalculateAmount multiplies by the stack count and SetStackAmount re-snapshots spell
+// power), so the aura keeps its own 1-stack snapshot and writes the ramped per-tick amount
+// itself before every tick.
+class spell_warl_bane_of_agony_aura : public AuraScript
+{
+    PrepareAuraScript(spell_warl_bane_of_agony_aura);
+
+public:
+    // Recast (spell_warl_bane_of_agony): the next CalculateAmount takes a fresh snapshot.
+    void Resnapshot() { _resnapshot = true; }
+
+    int32 GetSnapshot() const { return _snapshot; }
+
+    // Soul Swap exhale: carries the source's snapshot and ramp over to the fresh copy.
+    void RestoreSnapshot(int32 snapshot)
+    {
+        _snapshot = snapshot;
+        _resnapshot = false;
+        _ticked = true;
+    }
+
+private:
+    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
+    {
+        // Every stack change recalculates the amount; only a fresh application or a recast
+        // takes a new snapshot, so stacks never roll the caster's current spell power in.
+        if (_resnapshot)
+        {
+            Unit* caster = GetCaster();
+            if (caster && caster->HasAura(Warlock::SPELL_IMPROVED_BANE_OF_AGONY_R2))
+                if (Player* player = caster->ToPlayer())
+                    AddPct(amount, player->GetMasteryPercentage());
+
+            _snapshot = amount;
+            _resnapshot = false;
+        }
+
+        amount = _snapshot;
+    }
+
+    void HandlePeriodic(AuraEffect const* aurEff)
+    {
+        // A fresh application already shows 1 stack, so the first tick keeps it: tick k deals
+        // x(1 + 0.1 * min(k, cap)) and the icon shows the multiplier the tick used.
+        if (!_ticked)
+            _ticked = true;
+        else if (Unit* caster = GetCaster())
+            Warlock::AddAgonyStacks(caster, GetTarget(), 1);
+
+        // Runs before HandlePeriodicDamageAurasTick reads the amount (stock seed/Contagion
+        // precedent for the const_cast).
+        int32 const stacks = GetStackAmount();
+        const_cast<AuraEffect*>(aurEff)->SetAmount(_snapshot * (10 + stacks) / 10);
+    }
+
+    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_warl_bane_of_agony_aura::CalculateAmount, EFFECT_0,
+            SPELL_AURA_PERIODIC_DAMAGE);
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_warl_bane_of_agony_aura::HandlePeriodic, EFFECT_0,
+            SPELL_AURA_PERIODIC_DAMAGE);
+    }
+
+    int32 _snapshot = 0;
+    bool _resnapshot = true;
+    bool _ticked = false;
+};
+
 class spell_warl_bane_of_agony : public SpellScript
 {
     PrepareSpellScript(spell_warl_bane_of_agony);
 
+    void HandleBeforeHit(SpellMissInfo missInfo)
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetHitUnit();
+        if (missInfo != SPELL_MISS_NONE || !caster || !target)
+            return;
+
+        // A recast of a stacking aura adds a stack (Unit::_TryStackingOrRefreshingExistingAura);
+        // remember the count so AfterHit can undo it, and let the recast re-snapshot (R2).
+        if (Aura* bane = target->GetAura(Warlock::SPELL_BANE_OF_AGONY, caster->GetGUID()))
+        {
+            _stacksBeforeRecast = bane->GetStackAmount();
+            if (auto* script = bane->GetScript<spell_warl_bane_of_agony_aura>("spell_warl_bane_of_agony"))
+                script->Resnapshot();
+        }
+    }
+
     void HandleAfterHit()
     {
+        Unit* caster = GetCaster();
+        Unit* target = GetHitUnit();
+        if (!caster || !target)
+            return;
+
+        if (_stacksBeforeRecast)
+            if (Aura* bane = target->GetAura(Warlock::SPELL_BANE_OF_AGONY, caster->GetGUID()))
+                if (bane->GetStackAmount() != _stacksBeforeRecast)
+                    bane->SetStackAmount(_stacksBeforeRecast);
+
         // Creeping Agony capstone (r3): non-triggered casts only (§7.2's "spreads only if that
         // unit is being drained" clause distinguishes real casts from the copy's own spread, which
         // never re-triggers since AddAura is not a cast).
-        if (GetSpell()->IsTriggered())
-            return;
-
-        Unit* caster = GetCaster();
-        Unit* target = GetHitUnit();
-        if (!caster || !target || !caster->HasAura(Warlock::SPELL_CREEPING_AGONY_R3))
+        if (GetSpell()->IsTriggered() || !caster->HasAura(Warlock::SPELL_CREEPING_AGONY_R3))
             return;
 
         std::list<Unit*> nearby;
@@ -205,47 +298,11 @@ class spell_warl_bane_of_agony : public SpellScript
 
     void Register() override
     {
+        BeforeHit += BeforeSpellHitFn(spell_warl_bane_of_agony::HandleBeforeHit);
         AfterHit += SpellHitFn(spell_warl_bane_of_agony::HandleAfterHit);
     }
-};
 
-class spell_warl_bane_of_agony_aura : public AuraScript
-{
-    PrepareAuraScript(spell_warl_bane_of_agony_aura);
-
-    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
-    {
-        Unit* caster = GetCaster();
-        if (!caster || !caster->HasAura(Warlock::SPELL_IMPROVED_BANE_OF_AGONY_R2))
-            return;
-
-        if (Player* player = caster->ToPlayer())
-            AddPct(amount, player->GetMasteryPercentage());
-    }
-
-    void HandlePeriodic(AuraEffect const* /*aurEff*/)
-    {
-        if (Unit* caster = GetCaster())
-            Warlock::AddAgonyStacks(caster, GetTarget(), 1);
-    }
-
-    void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
-    {
-        Unit* caster = GetCaster();
-        Unit* target = GetTarget();
-        if (caster && target)
-            target->RemoveAura(Warlock::SPELL_BANE_OF_AGONY_STACKS, caster->GetGUID());
-    }
-
-    void Register() override
-    {
-        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_warl_bane_of_agony_aura::CalculateAmount, EFFECT_0,
-            SPELL_AURA_PERIODIC_DAMAGE);
-        OnEffectPeriodic += AuraEffectPeriodicFn(spell_warl_bane_of_agony_aura::HandlePeriodic, EFFECT_0,
-            SPELL_AURA_PERIODIC_DAMAGE);
-        AfterEffectRemove += AuraEffectRemoveFn(spell_warl_bane_of_agony_aura::HandleRemove, EFFECT_0,
-            SPELL_AURA_PERIODIC_DAMAGE, AURA_EFFECT_HANDLE_REAL);
-    }
+    uint8 _stacksBeforeRecast = 0;
 };
 
 // ===========================================================================================
@@ -258,8 +315,9 @@ class spell_warl_unstable_affliction_affliction : public AuraScript
 
     void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
     {
+        // GetTarget() is null in DoEffectCalcAmount (not an apply-state hook); the owner is the target.
         Unit* caster = GetCaster();
-        Unit* target = GetTarget();
+        Unit* target = GetUnitOwner();
         if (!caster || !target)
             return;
 
@@ -588,7 +646,7 @@ class spell_warl_drain_soul_affliction : public AuraScript
     void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
     {
         Unit* caster = GetCaster();
-        Unit* target = GetTarget();
+        Unit* target = GetUnitOwner();
         if (caster && target)
             amount = int32(float(amount) * Warlock::GetSoulSiphonMultiplier(caster, target));
     }
@@ -613,7 +671,7 @@ class spell_warl_drain_life_affliction : public AuraScript
     void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
     {
         Unit* caster = GetCaster();
-        Unit* target = GetTarget();
+        Unit* target = GetUnitOwner();
         if (!caster || !target)
             return;
 
@@ -1435,7 +1493,9 @@ class spell_warl_soul_swap : public SpellScript
             AuraEffect const* effect = bane->GetEffect(EFFECT_0);
             Warlock::SoulSwapEntry entry;
             entry.spellId = Warlock::SPELL_BANE_OF_AGONY;
-            entry.amount = effect ? effect->GetAmount() : 0;
+            // The 1-stack snapshot, not the live amount (which carries the ramp).
+            auto const* script = bane->GetScript<spell_warl_bane_of_agony_aura>("spell_warl_bane_of_agony");
+            entry.amount = script ? script->GetSnapshot() : (effect ? effect->GetAmount() : 0);
             entry.crit = effect ? effect->GetCritChance() : 0.0f;
             entry.pctMods = effect ? effect->GetPctMods() : 0.0f;
             entry.duration = bane->GetDuration();
@@ -1529,7 +1589,11 @@ class spell_warl_soul_swap_exhale : public SpellScript
             aura->SetDuration(entry.duration);
 
             if (entry.spellId == Warlock::SPELL_BANE_OF_AGONY)
-                Warlock::AddAgonyStacks(caster, target, entry.agonyStacks);
+            {
+                if (auto* script = aura->GetScript<spell_warl_bane_of_agony_aura>("spell_warl_bane_of_agony"))
+                    script->RestoreSnapshot(entry.amount);
+                aura->SetStackAmount(std::max<uint8>(1, entry.agonyStacks));
+            }
         }
 
         caster->RemoveAurasDueToSpell(Warlock::SPELL_SOUL_SWAP_COPIED_MARKER);
@@ -1585,12 +1649,19 @@ class spell_warl_soul_harvest : public SpellScript
             self->SetDuration(duration);
         }
 
+        // The pet half is its own self-targeted aura so Soul Harvest never needs a pet or pet range.
         if (Pet* pet = player->GetPet())
-            if (Aura* petAura = pet->GetAura(Warlock::SPELL_SOUL_HARVEST, caster->GetGUID()))
+        {
+            if (!pet->IsAlive())
+                return;
+
+            pet->CastSpell(pet, Warlock::SPELL_SOUL_HARVEST_PET, TRIGGERED_FULL_MASK, nullptr, nullptr, caster->GetGUID());
+            if (Aura* petAura = pet->GetAura(Warlock::SPELL_SOUL_HARVEST_PET, caster->GetGUID()))
             {
                 petAura->SetMaxDuration(duration);
                 petAura->SetDuration(duration);
             }
+        }
     }
 
     void Register() override

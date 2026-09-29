@@ -578,7 +578,7 @@ namespace Warlock
         if (!target)
             return 0;
 
-        Aura const* aura = target->GetAura(SPELL_BANE_OF_AGONY_STACKS, casterGuid);
+        Aura const* aura = target->GetAura(SPELL_BANE_OF_AGONY, casterGuid);
         return aura ? aura->GetStackAmount() : 0;
     }
 
@@ -587,21 +587,16 @@ namespace Warlock
         if (!caster || !target || !count)
             return;
 
-        uint8 const cap = GetAgonyStackCap(caster);
-        Aura* aura = target->GetAura(SPELL_BANE_OF_AGONY_STACKS, caster->GetGUID());
-        uint8 const current = aura ? aura->GetStackAmount() : 0;
-        uint8 const newStack = uint8(std::min<int32>(int32(cap), int32(current) + int32(count)));
-
-        if (!aura)
-            aura = caster->AddAura(SPELL_BANE_OF_AGONY_STACKS, target);
+        Aura* aura = target->GetAura(SPELL_BANE_OF_AGONY, caster->GetGUID());
         if (!aura)
             return;
 
-        aura->SetStackAmount(newStack);
-        // Data note (§5, 200720): "duration refreshed every stack" - harmless either way since the
-        // stack aura's 60 s duration always outlives Bane of Agony's own (<= 24 s + Lingering
-        // Agony), but keeping it explicit matches the written behaviour.
-        aura->RefreshDuration();
+        uint8 const current = aura->GetStackAmount();
+        uint8 const newStack = uint8(std::min<int32>(int32(GetAgonyStackCap(caster)), int32(current) + int32(count)));
+        // Never lowers the count (a cap that dropped mid-DoT just stops the ramp) and never
+        // refreshes the duration - the stacks are 980's own now.
+        if (newStack > current)
+            aura->SetStackAmount(newStack);
     }
 
     bool IsAfflictionDot(uint32 spellId)

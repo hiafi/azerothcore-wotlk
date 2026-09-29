@@ -22,7 +22,11 @@ and produces:
      client actually renders (name, icon, tooltip, talent frame).
   3. The same bytes copied into env/dist/data/dbc/ if that directory exists.
 
-Usage: python3 apps/dbc-tools/generate.py
+Usage: python3 apps/dbc-tools/generate.py [--no-prune]
+
+  --no-prune   skip the prune pass (rows an earlier run emitted that source/classes/*
+               no longer declares are left live instead of being deleted)
+  -h, --help   print this message and exit
 """
 
 from __future__ import annotations
@@ -38,6 +42,8 @@ sys.path.insert(0, str(TOOL_ROOT))
 from lib import build, dbcfile, dbcfmt, lint, patch_out, resolve, source, sql_out, state  # noqa: E402
 from lib import spell_tables, trainer_state  # noqa: E402
 from lib.dsl import registry as dsl_registry  # noqa: E402
+
+KNOWN_FLAGS = {"--no-prune"}
 from lib.reuse import ReuseContext  # noqa: E402
 
 SOURCE_DIR = TOOL_ROOT / "source"
@@ -137,6 +143,17 @@ def _merge_dsl_sources(spell_entries: list[dict], talents: dict, dsl_classes: di
 
 
 def main() -> int:
+    # No argparse - hand-checked so an unknown flag (e.g. --help before this existed) can't
+    # silently fall through into a full multi-minute run that writes a pending SQL migration.
+    args = sys.argv[1:]
+    if "-h" in args or "--help" in args:
+        print(__doc__.strip())
+        return 0
+    unknown = [a for a in args if a not in KNOWN_FLAGS]
+    if unknown:
+        print(f"generate.py: unknown argument(s): {' '.join(unknown)} (see --help)", file=sys.stderr)
+        return 2
+
     start = time.monotonic()
 
     def progress(label: str) -> None:

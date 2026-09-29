@@ -368,8 +368,8 @@ bane_of_agony_980 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=11, points_per_level=1.45, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
     ],
     spell_icon_id=544,
-    notes='warlock-rework AFFLICTION §4.5 B14: renamed from Curse of Agony (banes stay Dispel=Curse but leave the curse slot - B14); per-tick base rescaled via B3 to spec B5s numbers (V60=87) -> 12@8, 87@60, 116@80; the real stack-ramp lives on 200720 (Warlock::AddAgonyStacks), read live by warlock_hooks.cpp - this row stays a plain non-stacking snapshot so a recast re-snapshots cleanly (R2).',
-    raw_overrides={'AttributesEx3': 128, 'AttributesEx4': 1048576, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s1 Shadow damage every $t1 sec, increased by 10% per stack.', 'BaseLevel': 8, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Afflicts the target with agony, causing $o1 Shadow damage over $d.  Each tick adds a stack that increases its damage by 10%, up to 10 stacks.  Only one Bane per Warlock can be active on any one target.', 'EffectBonusMultiplier_1': 0.10000000149011612, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 1024, 'SpellClassSet': 5, 'SpellLevel': 8, 'SpellVisualID_1': 824, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='warlock-rework AFFLICTION §4.5 B14: renamed from Curse of Agony (banes stay Dispel=Curse but leave the curse slot - B14); per-tick base rescaled via B3 to spec B5s numbers (V60=87) -> 12@8, 87@60, 116@80; the stack ramp lives on this aura itself (CumulativeAura 15 = max cap with Improved Curses r2; live cap via Warlock::GetAgonyStackCap) so the target shows one debuff with a stack count - spell_warl_bane_of_agony_aura keeps its own 1-stack snapshot and writes snapshot x (1 + 0.1 x stacks) before each tick, and the SpellScript undoes the +1 stack a recast adds (recast still re-snapshots, R2). Replaces the old separate 200720 tracker.',
+    raw_overrides={'AttributesEx3': 128, 'AttributesEx4': 1048576, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s1 Shadow damage every $t1 sec, increased by 10% per stack.', 'BaseLevel': 8, 'CastingTimeIndex': 1, 'CumulativeAura': 15, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Afflicts the target with agony, causing $o1 Shadow damage over $d.  Each tick adds a stack that increases its damage by 10%, up to 10 stacks.  Only one Bane per Warlock can be active on any one target.', 'EffectBonusMultiplier_1': 0.10000000149011612, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 1024, 'SpellClassSet': 5, 'SpellLevel': 8, 'SpellVisualID_1': 824, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 scripted_by(bane_of_agony_980, 'spell_warl_bane_of_agony')
 unbind_script(-980, 'spell_warl_curse_of_agony')
@@ -1142,6 +1142,50 @@ ritual_of_souls_29893 = spell(
 trained_by(ritual_of_souls_29893, trainer_id=214, req_level=48, money_cost=14000)
 
 
+ritual_of_doom_18540 = spell(
+    id=18540,
+    name='Ritual of Doom',
+    school=32,
+    attributes=33619968,
+    cast_time_ms=10000,
+    cooldown_ms=1800000,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=80,
+    range_yards=30.0,
+    duration_ms=60000,
+    effects=[
+        Effect(type=50, implicit_target_a=47, misc_value=177193, radius_yards=5.0),
+    ],
+    spell_icon_id=99,
+    notes='warlock-rework: migrated from legacy npc.csv; reagent 16583 (Demonic Figurine) stripped',
+    raw_overrides={'AttributesEx': 131077, 'AttributesEx5': 8192, 'CastingTimeIndex': 7, 'InterruptFlags': 31, 'ChannelInterruptFlags': 48142, 'ProcChance': 101, 'BaseLevel': 60, 'SpellLevel': 60, 'Reagent_1': 0, 'ReagentCount_1': 0, 'EquippedItemClass': -1, 'SpellVisualID_1': 4963, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': "Begins a ritual that sacrifices a random participant's health to summon a doomguard. Requires the caster and 4 additional party members to complete the ritual.  In order to participate, all players must right-click the portal and not move until the ritual is complete.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'SpellClassSet': 5, 'SpellClassMask_3': 64, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_2': 1.0},
+)
+
+
+inferno_1122 = spell(
+    id=1122,
+    name='Inferno',
+    school=32,
+    attributes=65536,
+    category=731,
+    cast_time_ms=1500,
+    cooldown_ms=0,
+    category_cooldown_ms=600000,
+    mana_cost=0,
+    mana_cost_pct=80,
+    range_yards=30.0,
+    duration_ms=60000,
+    effects=[
+        Effect(type=28, base_points=49, points_per_level=1.0, implicit_target_a=16, misc_value=89, radius_yards=10.0),
+        Effect(type=64, base_points=-1, implicit_target_a=87, trigger_spell=22703),
+    ],
+    spell_icon_id=460,
+    notes='warlock-rework: migrated from legacy generic.csv; reagent 5565 (Infernal Stone) stripped',
+    raw_overrides={'AttributesEx': 131073, 'AttributesEx2': 524288, 'AttributesEx4': 65536, 'ShapeshiftMask': 2097152, 'Targets': 64, 'CastingTimeIndex': 16, 'InterruptFlags': 15, 'ProcChance': 101, 'BaseLevel': 50, 'SpellLevel': 50, 'Reagent_1': 0, 'ReagentCount_1': 0, 'EquippedItemClass': -1, 'EffectMiscValueB_1': 711, 'SpellVisualID_1': 4859, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Summon', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a meteor from the Twisting Nether, causing $22699s1 Fire damage and stunning all enemy targets in the area for $20310d.  An Infernal rises from the crater, under the command of the caster for $20882d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
 intercept_30151 = spell(
     id=30151,
     name='Intercept',
@@ -1773,7 +1817,7 @@ soulburn_200710 = spell(
     effects=[
         Effect(type=EffectType.TRIGGER_SPELL, implicit_target_a=1, trigger_spell=200711),
     ],
-    spell_icon_id=816,
+    spell_icon_id=90155,
     notes='warlock-rework AFFLICTION §5/§7.11 (SHARED §1.3, PLAN B10): baseline for every warlock, learn level 12, 5s cooldown, off the GCD (StartRecoveryCategory/Time 0), castable while another cast/channel is in progress (AttributesEx4 0x80 ALLOW_CAST_WHILE_CASTING), usable while shapeshifted (no NOT_SHAPESHIFTED, so attributes=0 rather than the usual 65536), consumes 1 Soul Shard (script-enforced, no reagent). Data only - Warlock::TryConsumeSoulburnMarker/CheckCast are WP-B.',
     raw_overrides={'AttributesEx4': 128, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 12, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Consumes a Soul Shard, empowering your next Seed of Corruption or Haunt for 20 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellLevel': 12, 'SpellPriority': 50, 'SpellVisualID_1': 816, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
 )
@@ -1820,7 +1864,7 @@ dark_soul_misery_200732 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL),
     ],
-    spell_icon_id=2211,
+    spell_icon_id=90154,
     notes='warlock-rework AFFLICTION §5/§6 (8,1 - talent 60074): off the GCD (§11 Q11, user), Cooldown Haste eligible (>=30s base). Data only.',
     raw_overrides={'AttributesEx5': 8192, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Haste increased by $s1%.', 'BaseLevel': 50, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your haste by $s1% for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellLevel': 50, 'SpellVisualID_1': 8339, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
 )
@@ -1840,7 +1884,7 @@ soul_swap_200733 = spell(
     effects=[
         Effect(type=EffectType.DUMMY, implicit_target_a=6),
     ],
-    spell_icon_id=2038,
+    spell_icon_id=90150,
     notes='warlock-rework AFFLICTION §5/§6/§7.9: baseline learn level 40, no cooldown, on the GCD; copies Corruption/Bane of Agony/Unstable Affliction from the target (default answer, §11 Q3). Data only - C++ in spell_warl_soul_swap.',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Copies your Corruption, Bane of Agony and Unstable Affliction from the target, preserving their power and duration. For 10 sec afterwards, the next target you cast Soul Swap: Exhale on is afflicted by the copied effects. Cannot Soul Swap to the same target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellLevel': 40, 'SpellVisualID_1': 8339, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -1886,11 +1930,10 @@ soul_harvest_200736 = spell(
     duration_ms=10000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=126),
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=5, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=127),
     ],
-    spell_icon_id=130,
-    notes='warlock-rework AFFLICTION §5/§6/§7.19: baseline learn level 60, off the GCD (§11 Q11, user); duration set by script (§7.19) up to a max of 24s; joins stock group 1107 "Temporary Damage Increases" for its does-not-stack rule (§11 Q12, no new group id).',
-    raw_overrides={'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Magic damage increased by $s1%.', 'BaseLevel': 60, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Consumes the lingering souls of nearby enemies you are fighting, increasing your and your pet's magic damage done by 15% for up to 24 sec, based on the number of enemies affected by your Corruption, Bane of Agony, Unstable Affliction, Shadow Word: Pain or Devouring Plague.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellLevel': 60, 'SpellVisualID_1': 7963, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
+    spell_icon_id=90152,
+    notes='warlock-rework AFFLICTION §5/§6/§7.19: baseline learn level 60, off the GCD (§11 Q11, user); duration set by script (§7.19) up to a max of 24s; joins stock group 1107 "Temporary Damage Increases" for its does-not-stack rule (§11 Q12, no new group id). Self-cast only: the pet half is the separate aura 200737 applied by the script when a pet exists (a TARGET_UNIT_PET effect here made the cast fail with no pet / pet out of range - playtest 2026-09-28).',
+    raw_overrides={'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Magic damage increased by $s1%.', 'BaseLevel': 60, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Consumes the lingering souls of nearby enemies you are fighting, increasing your and your pet's magic damage done by 15% for up to 24 sec, based on the number of enemies affected by your Corruption, Bane of Agony, Unstable Affliction, Shadow Word: Pain or Devouring Plague.", 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellLevel': 60, 'SpellVisualID_1': 7963, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
 )
 trained_by(soul_harvest_200736, trainer_id=214, req_level=60, money_cost=26000)
 skill_line_ability(id=30468, skill_line=355, spell_id=soul_harvest_200736.id, class_mask=256)
@@ -1915,9 +1958,9 @@ burning_rush_200738 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.MOD_INCREASE_SPEED),
         Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.MOD_MINIMUM_SPEED),
     ],
-    spell_icon_id=2355,
-    notes='warlock-rework AFFLICTION §5/§6/§7.19 (PLAN B12): toggle - baseline learn level 20; self-damage does not break CC (AttributesEx4 0x4000 DAMAGE_DOESNT_BREAK_AURAS) and cannot crit (AttributesEx2 0x20000000); self-damage suppresses casterprocs (AttributesEx3 0x10000); right-click cancellable via custom_attr below. No cast-while-moving (B12 dropped that clause).',
-    raw_overrides={'AttributesEx2': 536870912, 'AttributesEx3': 65536, 'AttributesEx4': 16384, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Draining health to move faster.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Drains 5% of your maximum health every 2 sec to increase your movement speed by 50%. This damage does not break crowd control, and movement impairing effects may not reduce you below 100% normal speed. Cast again to cancel.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellLevel': 20, 'SpellVisualID_1': 5926, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    spell_icon_id=90153,
+    notes='warlock-rework AFFLICTION §5/§6/§7.19 (PLAN B12): toggle - baseline learn level 20; self-damage does not break CC (AttributesEx4 0x4000 DAMAGE_DOESNT_BREAK_AURAS) and cannot crit (AttributesEx2 0x20000000); self-damage suppresses casterprocs (AttributesEx3 0x10000); right-click cancellable via custom_attr below. No cast-while-moving (B12 dropped that clause). SpellVisualID_1 5926 -> 90026: the speed ribbon of stock SV 5926 plus a StateKit of flames at the feet while toggled on (patch_warlock_vfx_models.py).',
+    raw_overrides={'AttributesEx2': 536870912, 'AttributesEx3': 65536, 'AttributesEx4': 16384, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Draining health to move faster.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Drains 5% of your maximum health every 2 sec to increase your movement speed by 50%. This damage does not break crowd control, and movement impairing effects may not reduce you below 100% normal speed. Cast again to cancel.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellLevel': 20, 'SpellVisualID_1': 90026, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 trained_by(burning_rush_200738, trainer_id=214, req_level=20, money_cost=2000)
 skill_line_ability(id=30469, skill_line=354, spell_id=burning_rush_200738.id, class_mask=256)
@@ -1946,7 +1989,7 @@ havoc_200974 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=1, implicit_target_a=6, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=2366,
+    spell_icon_id=90172,
     notes='warlock-rework DESTRUCTION §5 (8,1) NEW talent 60102, level 50: single-target debuff - AttributesEx5 |= 0x20 (SPELL_ATTR5_LIMIT_N, one Havoc per caster, a new target removes the old - Mass Entanglement bugs-and-fixes precedent). SpellClassMask_3 = HAVOC (§2.4 - only mattered for the old narrow Metamorphosis mask, now harmless since that mask is full). Duplication itself is spell_warl_chaos_bolt (WP-B, §7.5); the Rift AI also duplicates Rift Bolts onto the Havoc target (§7.2).',
     raw_overrides={'AttributesEx5': 32, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Your enemy's Chaos Bolts also strike this target.", 'BaseLevel': 50, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Marks an enemy with Havoc for $d. Your Chaos Bolts cast at another enemy also strike the Havoc target. Only one Havoc can be active at a time.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.HAVOC, 'SpellClassSet': 5, 'SpellLevel': 50, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -1966,7 +2009,7 @@ chaos_rift_200978 = spell(
     effects=[
         Effect(type=77, die_sides=0, implicit_target_a=1),
     ],
-    spell_icon_id=2371,
+    spell_icon_id=90171,
     notes='warlock-rework DESTRUCTION §5 (10,1) NEW talent 60104, level 60: SCRIPT_EFFECT summons creature 300170 beside the caster (spell_warl_chaos_rift, WP-B, §7.2). SpellClassMask_3 = CHAOS_RIFT (§2.4, harmless). Cooldown Haste eligible (>=30s base rule, PLAN §3.12).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Tears open a Chaos Rift beside you for 12 sec. Every 2 sec, the Rift fires a Chaos Bolt at a viable enemy for 50% of Chaos Bolt's damage.", 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.CHAOS_RIFT, 'SpellClassSet': 5, 'SpellLevel': 60, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -1974,8 +2017,10 @@ scripted_by(chaos_rift_200978, 'spell_warl_chaos_rift')
 
 
 # creature_template/creature_template_model (stage T1 DSL helpers, DESTRUCTION.md §0.5 Q12/§2.6) -
-# Chaos Rift 300170, no hand-written pending_db_world SQL. Display 30039 (Jaraxxus's Nether Portal,
-# creature 34825) at scale 0.4 (tune in playtest, §11 Q18); unit_flags 33554434
+# Chaos Rift 300170, no hand-written pending_db_world SQL. Display 27735
+# (SPELLS\Creature_SpellPortal_LargeShadow.mdx, the portal Jaraxxus's Nether Portal draws) at scale
+# 0.5 (x the display's own 3.0; tune in playtest, §11 Q18). Not Jaraxxus's creature display 30039:
+# that is InvisibleStalker.mdx, and 34825's portal is only its addon aura 66263's StateKit; unit_flags 33554434
 # (NOT_SELECTABLE | NON_ATTACKABLE, Tentacle of Madness 300102 precedent); flags_extra 66 (no
 # TRIGGER bit - that flag makes a creature invisible, bugs-and-fixes); faction 35 and level 1 in
 # the template, overwritten by the owner's own faction/level at summon (npc_warl_chaos_rift,
@@ -1990,7 +2035,7 @@ creature_template(
     flags_extra=66,
     ScriptName='npc_warl_chaos_rift',
 )
-creature_model(300170, display_id=30039, scale=0.4)
+creature_model(300170, display_id=27735, scale=0.5)
 
 
 immolation_aura_50589 = spell(
@@ -2100,9 +2145,9 @@ dark_apotheosis_200835 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=199, implicit_target_a=1, apply_aura=AuraType.MOD_BASE_RESISTANCE_PCT, misc_value=1),
         Effect(type=EffectType.APPLY_AURA, base_points=299, implicit_target_a=1, apply_aura=AuraType.MOD_THREAT, misc_value=127),
     ],
-    spell_icon_id=545,
-    notes='warlock-rework DEMONOLOGY §5.2: toggle form (form 23), learned by talent learner 200863. ShapeshiftExclude=0x200000 (form 22 Metamorphosis bit - cannot be cast while in Metamorphosis, §11 Q22). linked to 200836 (passive), 200838 (Demonic Bulwark form) and crit-immunity 200000, all type 2; the Immolation Aura twin-removal link (-200835 -> -50589) is declared on 50589 itself above.',
-    raw_overrides={'AttributesEx': 131072, 'ShapeshiftExclude': 2097152, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Shifts you into a demonic form until cancelled. While in this form you are immune to critical strikes from melee and ranged attacks, your armor from cloth and leather items is increased by $s2%, your threat generation is increased by $s3%, and your damage done is reduced by 20%. Grants Immolation Aura, Demon Charge, Demonic Taunt and Challenging Howl. Cannot be used with Metamorphosis.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Demonic form. Immune to critical strikes. Armor and threat increased, damage done reduced.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+    spell_icon_id=90162,
+    notes='warlock-rework DEMONOLOGY §5.2: toggle form (form 23), learned by talent learner 200863. SpellVisualID_1 12118 = the transform burst of Metamorphosis 47241 (metamorphosis.mdx); the demon model itself comes from shapeshift_form(23) below. ShapeshiftExclude=0x200000 (form 22 Metamorphosis bit - cannot be cast while in Metamorphosis, §11 Q22). linked to 200836 (passive), 200838 (Demonic Bulwark form) and crit-immunity 200000, all type 2; the Immolation Aura twin-removal link (-200835 -> -50589) is declared on 50589 itself above.',
+    raw_overrides={'AttributesEx': 131072, 'ShapeshiftExclude': 2097152, 'SpellVisualID_1': 12118, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Shifts you into a demonic form until cancelled. While in this form you are immune to critical strikes from melee and ranged attacks, your armor from cloth and leather items is increased by $s2%, your threat generation is increased by $s3%, and your damage done is reduced by 20%. Grants Immolation Aura, Demon Charge, Demonic Taunt and Challenging Howl. Cannot be used with Metamorphosis.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Demonic form. Immune to critical strikes. Armor and threat increased, damage done reduced.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 scripted_by(dark_apotheosis_200835, 'spell_warl_dark_apotheosis')
 skill_line_ability(id=30475, skill_line=354, spell_id=200835, class_mask=256)
@@ -2171,7 +2216,7 @@ summon_doomguard_200831 = spell(
     effects=[
         Effect(type=EffectType.SUMMON, implicit_target_a=32, misc_value=300153),
     ],
-    spell_icon_id=99,
+    spell_icon_id=90163,
     notes='warlock-rework DEMONOLOGY §5.1: learned by Legion\'s Call 200905 (not the trainer). SpellClassSet 5, SpellClassMask_3 = SUMMON_DOOMGUARD (Nemesis). No NOT_SHAPESHIFTED. props 1021, target 32 (DEST_CASTER_SUMMON).',
     raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectMiscValueB_1': 1021, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Doomguard to fight for you for 26 sec, casting Doom Bolt at your target.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_3': m.SUMMON_DOOMGUARD, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'DefenseType': 1, 'PreventionType': 1, 'InterruptFlags': 15, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
@@ -2194,8 +2239,8 @@ summon_infernal_200833 = spell(
         Effect(type=EffectType.SUMMON, implicit_target_a=87, misc_value=300154),
     ],
     spell_icon_id=460,
-    notes='warlock-rework DEMONOLOGY §5.1/§0.2.5: learned by Legion\'s Call 200905. Ground-target (Targets 0x40, implicit_target_a=87 DEST_DEST). No impact damage/stun (spec §5). SpellClassSet 5, SpellClassMask_3 = SUMMON_INFERNAL (Nemesis, Destro Cataclysm mask-only join). Separate cooldown category from Doomguard (no shared category).',
-    raw_overrides={'Targets': 64, 'CastingTimeIndex': 1, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectMiscValueB_1': 1021, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons an Infernal to fight for you for 26 sec, burning nearby enemies with Immolation Aura.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_3': m.SUMMON_INFERNAL, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'DefenseType': 1, 'PreventionType': 1, 'InterruptFlags': 15, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+    notes='warlock-rework DEMONOLOGY §5.1/§0.2.5: learned by Legion\'s Call 200905. Ground-target (Targets 0x40, implicit_target_a=87 DEST_DEST). No impact damage/stun (spec §5). SpellVisualID_1 4859 = stock Inferno (1122) visual, the green meteor on its InstantAreaKit. SpellClassSet 5, SpellClassMask_3 = SUMMON_INFERNAL (Nemesis, Destro Cataclysm mask-only join). Separate cooldown category from Doomguard (no shared category).',
+    raw_overrides={'Targets': 64, 'CastingTimeIndex': 1, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectMiscValueB_1': 1021, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons an Infernal to fight for you for 26 sec, burning nearby enemies with Immolation Aura.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'SpellClassMask_3': m.SUMMON_INFERNAL, 'SpellVisualID_1': 4859, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'DefenseType': 1, 'PreventionType': 1, 'InterruptFlags': 15, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 skill_line_ability(id=30479, skill_line=354, spell_id=200833, class_mask=256)
 
@@ -2238,9 +2283,9 @@ hand_of_guldan_200820 = spell(
         Effect(type=EffectType.SCHOOL_DAMAGE, base_points=54, points_per_level=5.177966101694915, die_sides=4, implicit_target_a=6),
         Effect(type=EffectType.DUMMY, base_points=2, implicit_target_a=6),
     ],
-    spell_icon_id=2340,
-    notes="warlock-rework DEMONOLOGY §4.1: baseline castable, learn 10 (B20). Shadowflame (School.SHADOW|FIRE=36). eff0 SCHOOL_DAMAGE via _scaling.sb_units(0.65, 10, 313, 316) (@60 313-316, @80 417-420). eff1 DUMMY stored 2 (= 3 Wild Imps, $s2, live=stored+1 via default die_sides=1). NOT_SHAPESHIFTED (Metamorphosis/Dark Apotheosis admit it via their own aura-275 masks). Icon fallback 2340 (mined 90160 not built this pass, optional per §2.5).",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Calls down a demonic meteor on the target, dealing $s1 Shadowflame damage and summoning $s2 Wild Imps. While you are in Metamorphosis, it also deals $200821s1 Shadowflame damage to all other enemies within 8 yards of the target. Wild Imps cast Fel Firebolt at your target and last up to 60 sec.", 'EffectBonusMultiplier_1': 0.5571, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.HAND_OF_GULDAN, 'SpellClassSet': 5, 'BaseLevel': 10, 'SpellLevel': 10, 'Speed': 0.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    spell_icon_id=90160,
+    notes="warlock-rework DEMONOLOGY §4.1: baseline castable, learn 10 (B20). Shadowflame (School.SHADOW|FIRE=36). eff0 SCHOOL_DAMAGE via _scaling.sb_units(0.65, 10, 313, 316) (@60 313-316, @80 417-420). eff1 DUMMY stored 2 (= 3 Wild Imps, $s2, live=stored+1 via default die_sides=1). NOT_SHAPESHIFTED (Metamorphosis/Dark Apotheosis admit it via their own aura-275 masks). Icon fallback 2340 (mined 90160 not built this pass, optional per §2.5). SpellVisualID_1 90025 = Ascension's falling fel meteor + crater (patch_warlock_vfx_models.py).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Calls down a demonic meteor on the target, dealing $s1 Shadowflame damage and summoning $s2 Wild Imps. While you are in Metamorphosis, it also deals $200821s1 Shadowflame damage to all other enemies within 8 yards of the target. Wild Imps cast Fel Firebolt at your target and last up to 60 sec.", 'EffectBonusMultiplier_1': 0.5571, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.HAND_OF_GULDAN, 'SpellClassSet': 5, 'SpellVisualID_1': 90025, 'BaseLevel': 10, 'SpellLevel': 10, 'Speed': 0.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 trained_by(hand_of_guldan_200820, 214, 10, 600)
 trained_by(hand_of_guldan_200820, 215, 10, 600)
@@ -2304,5 +2349,8 @@ scripted_by(unending_resolve_200826, 'spell_warl_unending_resolve')
 # 0xd8 (0x80 CAN_USE_ITEMS | 0x40 CAN_USE_EQUIPPED_ITEMS | 0x8 CAN_NPC_INTERACT | 0x10), per the
 # "known gap" note (DEMONOLOGY-WP-BRIEF): client-side SpellShapeshiftForm.dbc row 23 is NOT shipped
 # in the patch this pass (shapeshift_form() is server-only, registry.py - no client patch is
-# produced for this table); this is a playtest-time verification item (§11 Q26).
-shapeshift_form(23, flags1=0xd8)
+# produced for this table); this is a playtest-time verification item (§11 Q26). modelID_A 25277 =
+# Metamorphosis form 22's own display (DemonForm.mdx, the only stock display on that model) - the
+# server sets the display from this row (Unit::GetModelForForm; horde falls back to modelID_A), so
+# no client row is needed for the model either.
+shapeshift_form(23, flags1=0xd8, modelID_A=25277)

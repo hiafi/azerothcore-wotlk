@@ -55,7 +55,7 @@ namespace Warlock
     // ------------------------------------------------------------------
     // New spells this pass mints (AFFLICTION.md §2.1, spell block 200720-200819)
     // ------------------------------------------------------------------
-    constexpr uint32 SPELL_BANE_OF_AGONY_STACKS = 200720;
+    // 200720 (the old separate Bane of Agony stack tracker) is retired - 980 stacks itself.
     constexpr uint32 SPELL_TAINTED_SOUL = 200721;
     constexpr uint32 SPELL_TAINTED_SOUL_ERUPTION = 200722;
     constexpr uint32 SPELL_INEVITABLE_DEMISE = 200723;
@@ -72,7 +72,7 @@ namespace Warlock
     constexpr uint32 SPELL_SOUL_SWAP_EXHALE = 200734;
     constexpr uint32 SPELL_SOUL_SWAP_COPIED_MARKER = 200735;
     constexpr uint32 SPELL_SOUL_HARVEST = 200736;
-    // 200737 spare (reserved: separate pet aura for Soul Harvest, AFFLICTION.md §5)
+    constexpr uint32 SPELL_SOUL_HARVEST_PET = 200737; // pet half of Soul Harvest (keeps 200736 self-cast only)
     constexpr uint32 SPELL_BURNING_RUSH = 200738;
 
     // Shadow Pact r1/r2/r3 (talent 60071) - hidden crit passives linked from these
@@ -332,10 +332,12 @@ namespace Warlock
     // SPELL_IMPROVED_CURSES_R2 (only the higher rank's bonus applies - it's a single talent).
     uint8 GetAgonyStackCap(Unit const* caster);
 
-    // Live stack count of the caster's SPELL_BANE_OF_AGONY_STACKS (200720) on `target`.
+    // Live stack count of the caster's SPELL_BANE_OF_AGONY (980, a stacking aura) on `target`;
+    // 0 when absent.
     uint8 GetAgonyStacks(Unit const* target, ObjectGuid casterGuid);
 
-    // Adds `count` stacks to the caster's 200720 on `target`, capped by GetAgonyStackCap.
+    // Adds `count` stacks to the caster's 980 on `target` (no-op without it), capped by
+    // GetAgonyStackCap.
     void AddAgonyStacks(Unit* caster, Unit* target, uint8 count);
 
     // True for the four DoTs Soul Siphon/Compounding Darkness count: Corruption (172), Bane of

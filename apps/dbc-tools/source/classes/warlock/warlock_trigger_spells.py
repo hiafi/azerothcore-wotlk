@@ -4441,10 +4441,10 @@ decimation_63156 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108, misc_value=0),
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, die_sides=0, implicit_target_a=1, apply_aura=231, trigger_spell=63165),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=1, implicit_target_a=1, apply_aura=231, trigger_spell=63165),
     ],
     spell_icon_id=184,
-    notes="warlock-rework DEMONOLOGY §6 (7,0): same cell, ranks extended to 3 (new 200889 below). eff0 (PROC_TRIGGER -> 63165/63167) -> ADD_PCT_MODIFIER DAMAGE stored 4 (5% live), A_2=SOUL_FIRE. eff1 (DUMMY health threshold) -> DUMMY stored 9 (10% live, Improved Soul Fire absorb +%). New eff2 APPLY_AURA PROC_TRIGGER_SPELL_WITH_VALUE(231) -> 63165, base_points=1 (die_sides=0, literal live value - custom-BP rule exception, §0.1.6/§7.13). Proc row on this id: unbind stock -63156 (spell_warl_decimation), new procs_on (§8).",
+    notes="warlock-rework DEMONOLOGY §6 (7,0): same cell, ranks extended to 3 (new 200889 below). eff0 (PROC_TRIGGER -> 63165/63167) -> ADD_PCT_MODIFIER DAMAGE stored 4 (5% live), A_2=SOUL_FIRE. eff1 (DUMMY health threshold) -> DUMMY stored 9 (10% live, Improved Soul Fire absorb +%). New eff2 APPLY_AURA PROC_TRIGGER_SPELL_WITH_VALUE(231) -> 63165, stored 0 (1 imp live; die_sides=1 so the client tooltip shows a single value, not bp+1 to bp). Proc row on this id: unbind stock -63156 (spell_warl_decimation), new procs_on (§8).",
     raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Soul Fire by $s1% and the absorb granted by Improved Soul Fire by $s2%. Your Soul Fire critical strikes cause your next Hand of Gul'dan within 15 sec to summon $s3 additional Wild Imps.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': m.SOUL_FIRE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
 
@@ -4463,7 +4463,7 @@ decimation_63158 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=0),
         Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, base_points=2, die_sides=0, implicit_target_a=1, apply_aura=231, trigger_spell=63165),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, die_sides=1, implicit_target_a=1, apply_aura=231, trigger_spell=63165),
     ],
     spell_icon_id=184,
     notes='warlock-rework DEMONOLOGY §6 (7,0): see rank 1 note (10%/20% live, 2 imps).',
@@ -4485,7 +4485,7 @@ decimation_200889 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108, misc_value=0),
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, die_sides=0, implicit_target_a=1, apply_aura=231, trigger_spell=63165),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, die_sides=1, implicit_target_a=1, apply_aura=231, trigger_spell=63165),
     ],
     spell_icon_id=184,
     notes='warlock-rework DEMONOLOGY §6 (7,0): new rank 3, clone of 63158 with r3 values (15%/30% live, 3 imps). SpellClassSet 5 (inherited, required for the eff0 SpellMod).',
@@ -4737,7 +4737,7 @@ soulburn_marker_200711 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=RANGE_SELF, duration_ms=20000,
     effects=[Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY)],
-    spell_icon_id=816,
+    spell_icon_id=90155,
     notes='warlock-rework AFFLICTION §5/§7.11 (SHARED §1.3, corrected to 20s): the "next cast is empowered" marker applied by Soulburn (200710); consumed by Warlock::TryConsumeSoulburnMarker (Seed of Corruption/Haunt this pass; Destruction adds Chaos Bolt/Soul Fire in S2).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Seed of Corruption or Haunt is empowered.', 'CastingTimeIndex': 1, 'DefenseType': 0, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Soulburn marker.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 0, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellPriority': 50},
 )
@@ -4754,21 +4754,16 @@ soulburn_haunt_debuff_200712 = spell(
 )
 
 
-# ---------------------------------------------------------------------------
-# warlock-rework AFFLICTION pass - Bane of Agony's stack aura (§5/§7.2). The
-# real Bane of Agony spell (980, renamed) is in warlock_spells.py; this is
-# the separate per-target stack tracker Warlock::AddAgonyStacks reads.
-# ---------------------------------------------------------------------------
-
-bane_of_agony_stacks_200720 = spell(
-    id=200720, name='Bane of Agony', school=School.SHADOW,
+soul_harvest_pet_200737 = spell(
+    id=200737, name='Soul Harvest', school=School.SHADOW,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
-    range_yards=50000.0, duration_ms=60000,
-    effects=[Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=6, apply_aura=AuraType.DUMMY)],
-    spell_icon_id=544,
-    notes='warlock-rework AFFLICTION §5/§7.2: per-caster stack tracker for Bane of Agony (980) - CumulativeAura 15 (max cap with Improved Curses r2), refreshed by Warlock::AddAgonyStacks on each Bane tick; DOT_STACKING_RULE (AttributesEx3 0x80) so stacks are tracked per caster.',
-    raw_overrides={'AttributesEx3': 128, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Bane of Agony damage increased by 10% per stack.', 'CastingTimeIndex': 1, 'CumulativeAura': 15, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Bane of Agony stacks.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellPriority': 50},
+    range_yards=RANGE_SELF, duration_ms=10000,
+    effects=[Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=127)],
+    spell_icon_id=90152,
+    notes="warlock-rework AFFLICTION §5/§7.19: the pet half of Soul Harvest (200736), split out of 200736's old TARGET_UNIT_PET effect so Soul Harvest is castable with no pet / pet at any distance. The pet self-casts it (triggered, original caster = the warlock) from spell_warl_soul_harvest; duration set by that script to match the warlock's buff.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Damage increased by $s1%.', 'CastingTimeIndex': 1, 'DefenseType': 0, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Soul Harvest (pet).', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellPriority': 50},
 )
+spell_group(1107, soul_harvest_pet_200737)
 
 
 # ---------------------------------------------------------------------------
@@ -4810,7 +4805,7 @@ inevitable_demise_200723 = spell(
     effects=[Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.DUMMY)],
     spell_icon_id=153,
     notes='warlock-rework AFFLICTION §5/§6 (1,3) Siphon Power capstone: stacks up to 50 (CumulativeAura), 5% per stack, consumed entirely by the next Drain Life (Warlock::AffLocal Drain Life script, §7.19).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Drain Life deals $s1% more damage per stack.', 'CastingTimeIndex': 1, 'CumulativeAura': 50, 'DefenseType': 0, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Inevitable Demise.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 0, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellPriority': 50},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Drain Life deals $s1% more damage.', 'CastingTimeIndex': 1, 'CumulativeAura': 50, 'DefenseType': 0, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Inevitable Demise.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 0, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellPriority': 50},
 )
 
 
@@ -4929,7 +4924,7 @@ soul_swap_copied_200735 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=RANGE_SELF, duration_ms=10000,
     effects=[Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY)],
-    spell_icon_id=2038,
+    spell_icon_id=90150,
     notes='warlock-rework AFFLICTION §5/§7.9: marks that Soul Swap has a copy ready; Soul Swap: Exhale (200734) requires this via CasterAuraSpell.',
     raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Damage over time effects copied. Cast Soul Swap: Exhale on another target.', 'CastingTimeIndex': 1, 'DefenseType': 0, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Soul Swap.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 0, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellPriority': 50},
 )
@@ -5008,7 +5003,7 @@ harvester_of_death_200745 = spell(
     id=200745, name='Harvester of Death', school=School.NORMAL, attributes=464,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
     effects=[Effect(type=EffectType.APPLY_AURA, base_points=-15001, implicit_target_a=1, apply_aura=107, misc_value=11)],
-    spell_icon_id=134,
+    spell_icon_id=90156,
     notes='warlock-rework AFFLICTION §6 (0,3): repurposed Improved Howl of Terror cell (30054/57 orphaned, left declared); flat Death Coil cooldown reduction (category 633, 120s base -> 105/90/75s).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Death Coil by ${$m1/-1000} sec.\n\n|cFF9D9D9DCapstone Bonus: The damage and healing of your Death Coil is doubled when you are below 80% health. Reduces the cast time of your Fear by 0.2 sec, and the cast time and global cooldown of your Howl of Terror by 0.6 sec. Increases the damage your Howl of Terror victims can take before the effect breaks by 50%.|r', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': m.DEATH_COIL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
@@ -5016,7 +5011,7 @@ harvester_of_death_200746 = spell(
     id=200746, name='Harvester of Death', school=School.NORMAL, attributes=464,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
     effects=[Effect(type=EffectType.APPLY_AURA, base_points=-30001, implicit_target_a=1, apply_aura=107, misc_value=11)],
-    spell_icon_id=134,
+    spell_icon_id=90156,
     notes='warlock-rework AFFLICTION §6 (0,3)',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Death Coil by ${$m1/-1000} sec.\n\n|cFF9D9D9DCapstone Bonus: The damage and healing of your Death Coil is doubled when you are below 80% health. Reduces the cast time of your Fear by 0.2 sec, and the cast time and global cooldown of your Howl of Terror by 0.6 sec. Increases the damage your Howl of Terror victims can take before the effect breaks by 50%.|r', 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': m.DEATH_COIL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
@@ -5027,7 +5022,7 @@ harvester_of_death_200747 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-45001, implicit_target_a=1, apply_aura=107, misc_value=11),
         Effect(type=EffectType.APPLY_AURA, base_points=-601, implicit_target_a=1, apply_aura=107, misc_value=10),
     ],
-    spell_icon_id=134,
+    spell_icon_id=90156,
     notes='warlock-rework AFFLICTION §6 (0,3) capstone: eff2 flat -0.6s Howl of Terror cast time (floored at 1.0s GCD, §0.2 item 10); the rest of the capstone (Death Coil x2 below 80% health, +50% Howl break threshold) is the linked hidden passive 200748.',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Death Coil by ${$m1/-1000} sec.\n\nCapstone Bonus: The damage and healing of your Death Coil is doubled when you are below 80% health. Reduces the cast time of your Fear by 0.2 sec, and the cast time and global cooldown of your Howl of Terror by 0.6 sec. Increases the damage your Howl of Terror victims can take before the effect breaks by 50%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': m.DEATH_COIL, 'EffectSpellClassMaskB_2': m.HOWL_OF_TERROR, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
@@ -5043,7 +5038,7 @@ harvester_of_death_capstone_200748 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-601, implicit_target_a=1, apply_aura=107, misc_value=21),
         Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.OVERRIDE_CLASS_SCRIPTS, misc_value=7801),
     ],
-    spell_icon_id=134,
+    spell_icon_id=90156,
     notes='warlock-rework AFFLICTION §5/§6 (0,3) capstone hidden passive, linked from Harvester of Death r3 (200747): eff1 -0.2s Fear cast time; eff2 -0.6s Howl of Terror global cooldown (flat, floors at the 1.0s GCD minimum); eff3 reuses the stock "Glyph of Fear" misc 7801 CC-break-threshold cap (SpellAuraEffects.cpp) at +50%.',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Harvester of Death.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': m.FEAR, 'EffectSpellClassMaskB_2': m.HOWL_OF_TERROR, 'EffectSpellClassMaskC_2': m.HOWL_OF_TERROR, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 5},
 )
@@ -6207,8 +6202,8 @@ molten_bolt_200985 = spell(
         Effect(type=EffectType.SCHOOL_DAMAGE, base_points=6, points_per_level=0.671667, implicit_target_a=6),
     ],
     spell_icon_id=2298,
-    notes='warlock-rework DESTRUCTION §5: 10% of the rebased Incinerate (bp 6, ppl 0.671667, Base/SpellLevel 10 - Kindling sits in tier 0): 7@10, 16@24, 40@60, 54@80 (10% of Incinerates 403@60/538@80). Speed 0 (instant hit, no missile travel time - triggered by the Molten Bolts aura, no family bit so it never rolls procs itself).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 10, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals $s1 Fire damage.', 'EffectBonusMultiplier_1': 0.0714, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 0.0, 'SpellClassMask_3': m.MOLTEN_BOLT, 'SpellClassSet': 5, 'SpellLevel': 10, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
+    notes='warlock-rework DESTRUCTION §5: 10% of the rebased Incinerate (bp 6, ppl 0.671667, Base/SpellLevel 10 - Kindling sits in tier 0): 7@10, 16@24, 40@60, 54@80 (10% of Incinerates 403@60/538@80). Speed 16 + SpellVisualID_1 67 = Firebolt 3110 of the Imp (small fire missile 365 from the warlock to the target; was Speed 0/no visual, so the volley was invisible). Triggered by the Molten Bolts aura on the target, cast by the warlock (target 6 -> NeedsExplicitUnitTarget -> NeedsToBeTriggeredByCaster), no family bit so it never rolls procs itself.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 10, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals $s1 Fire damage.', 'EffectBonusMultiplier_1': 0.0714, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 16.0, 'SpellVisualID_1': 67, 'SpellClassMask_3': m.MOLTEN_BOLT, 'SpellClassSet': 5, 'SpellLevel': 10, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
 )
 
 
@@ -6523,7 +6518,7 @@ hand_of_guldan_splash_200821 = spell(
     effects=[
         Effect(type=EffectType.SCHOOL_DAMAGE, base_points=27, points_per_level=2.588983050847458, die_sides=2, implicit_target_a=53, implicit_target_b=16),
     ],
-    spell_icon_id=2340,
+    spell_icon_id=90160,
     notes='warlock-rework DEMONOLOGY §4.1/§7.3: Metamorphosis-only AoE splash, triggered by spell_warl_hand_of_guldan (CastSpell TRIGGERED_FULL_MASK, not a LEARN chain). SUPPRESS_CASTER_PROCS (AttributesEx3=65536) - never procs the caster twice. eff0 via _scaling.sb_units(0.325, 10, 157, 158). implicit_target_a=53 (DEST_TARGET_ENEMY), b=16 (UNIT_DEST_AREA_ENEMY); OnObjectAreaTargetSelect removes the primary target and non-combat units (PLAN §2 propagation rule, spell_warl_hand_of_guldan_splash). SpellClassSet 5, SpellClassMask_3=HAND_OF_GULDAN (shared with 200820, Starfire-cleave precedent).',
     raw_overrides={'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals $s1 Shadowflame damage.', 'EffectBonusMultiplier_1': 0.2785, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.HAND_OF_GULDAN, 'SpellClassSet': 5, 'BaseLevel': 10, 'SpellLevel': 10, 'Speed': 0.0, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
 )
@@ -7150,7 +7145,7 @@ dark_apotheosis_learner_200863 = spell(
         Effect(type=EffectType.LEARN_SPELL, base_points=-1, implicit_target_a=1, trigger_spell=50589),
         Effect(type=EffectType.LEARN_SPELL, base_points=-1, implicit_target_a=1, trigger_spell=200864),
     ],
-    spell_icon_id=545,
+    spell_icon_id=90162,
     notes='warlock-rework DEMONOLOGY §6 (0,3): talent rank of new talent 1282 (repurposed from Soul Link, same cell). LEARN carrier (59672 pattern) - attrs/AttributesEx copied from 59672. eff0 LEARN 200835 (form), eff1 LEARN 50589 (Immolation Aura), eff2 LEARN 200864 (demon abilities carrier).',
     raw_overrides={'AttributesEx': 2147483648, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Shifts you into a demonic form until cancelled. While in this form you are immune to critical strikes from melee and ranged attacks, your armor from cloth and leather items is increased by $200835s2%, your threat generation is increased by $200835s3%, and your damage done is reduced by 20%. Grants Immolation Aura, Demon Charge, Demonic Taunt and Challenging Howl. Cannot be used with Metamorphosis.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1},
 )
@@ -7172,7 +7167,7 @@ dark_apotheosis_demon_abilities_200864 = spell(
         Effect(type=EffectType.LEARN_SPELL, base_points=-1, implicit_target_a=1, trigger_spell=200839),
         Effect(type=EffectType.LEARN_SPELL, base_points=-1, implicit_target_a=1, trigger_spell=59671),
     ],
-    spell_icon_id=545,
+    spell_icon_id=90162,
     notes='warlock-rework DEMONOLOGY §6 (0,3): LEARN carrier (59673 pattern) - attrs copied from 59673. eff0 LEARN 54785 (Demon Charge), eff1 LEARN 200839 (Demonic Taunt), eff2 LEARN 59671 (Challenging Howl).',
     raw_overrides={'AttributesEx': 2147483648, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Learns the abilities granted by Dark Apotheosis.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1},
 )
@@ -8596,13 +8591,13 @@ _GUARDIAN_COMMON = dict(
 )
 
 creature_template(300150, 'Wild Imp', speed_run=1.14286, ScriptName='npc_warl_wild_imp', **_GUARDIAN_COMMON)
-creature_model(300150, display_id=16890, scale=1.0)
+creature_model(300150, display_id=16890, scale=0.3)
 
 creature_template(300151, 'Imp Gang Boss', speed_run=1.14286, ScriptName='npc_warl_wild_imp', **_GUARDIAN_COMMON)
 creature_model(300151, display_id=16890, scale=1.4)
 
 creature_template(300152, 'Dreadstalker', speed_walk=1.2, speed_run=1.6, ScriptName='npc_warl_dreadstalker', **_GUARDIAN_COMMON)
-creature_model(300152, display_id=1913, scale=1.0)
+creature_model(300152, display_id=1913, scale=0.8)
 
 creature_template(300153, 'Doomguard', ScriptName='npc_warl_doomguard_guardian', **_GUARDIAN_COMMON)
 creature_model(300153, display_id=1912, scale=1.0)
