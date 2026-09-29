@@ -1,3 +1,4 @@
+-- DB update 2026_09_27_04 -> 2026_09_29_00
 -- warlock-rework (Affliction/Destruction/Demonology passes, squashed)
 -- talent reset for every Warlock (PLAN B5)
 UPDATE `characters` SET `at_login` = `at_login` | 4 WHERE `class` = 9;

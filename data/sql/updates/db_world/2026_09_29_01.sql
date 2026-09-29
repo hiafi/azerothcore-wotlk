@@ -1,3 +1,4 @@
+-- DB update 2026_09_29_00 -> 2026_09_29_01
 -- warlock-rework B9 item_template updates (apps/item-tools, not DSL-declarable)
 -- warlock-rework B9 - Soul Pouch is an ordinary bag now (Soul Shard items removed)
 UPDATE `item_template` SET `BagFamily` = 0 WHERE `entry` = 21340 AND `BagFamily` = 4;

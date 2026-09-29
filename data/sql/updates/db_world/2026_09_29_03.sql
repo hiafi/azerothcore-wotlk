@@ -1,3 +1,4 @@
+-- DB update 2026_09_29_02 -> 2026_09_29_03
 -- Training dummies take real damage (never lethal) and refill to full every 3 sec, so leech and
 -- damage-based self-heals (Drain Life, ...) work on them. The stock npc_training_dummy zeroes all
 -- damage; npc_custom_training_dummy (src/server/scripts/Custom/custom_training_dummy.cpp) replaces
