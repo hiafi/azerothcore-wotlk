@@ -112,12 +112,26 @@ def _skip_ws_and_comments(text: str, i: int) -> int:
     return i
 
 
+# `INSERT ... VALUES (...) ON DUPLICATE KEY UPDATE ...;` - the do-not-delete-table upsert shape
+# `sql_out.render_upsert_block` emits (see data/sql/updates/db_world/2026_09_23_12.sql's
+# `creature_template` block: a real, hand-written INSERT of this exact shape). `_read_tuples`
+# treats it as an alternate tuple-list terminator, same as a bare ';' - the UPDATE clause's own
+# `` `col` = VALUES(`col`) `` pairs are never read; only the VALUES(...) tuples matter, which
+# matches how the statement actually behaves against a brand-new row.
+_ON_DUPLICATE_RE = re.compile(r"ON\s+DUPLICATE\s+KEY\s+UPDATE", re.IGNORECASE)
+
+
 def _read_tuples(
     text: str, start: int, variables: dict[str, int] | None = None
 ) -> tuple[list[list], int]:
     """Parse a comma-separated list of parenthesized value-tuples starting at
-    `text[start]` (which must be '('), stopping at the terminating ';'.
-    Returns (tuples, index_just_past_the_semicolon)."""
+    `text[start]` (which must be '('), stopping at the terminating ';' - or,
+    for an `INSERT ... ON DUPLICATE KEY UPDATE` upsert, at the `ON DUPLICATE
+    KEY UPDATE` clause that follows the last tuple (see `_ON_DUPLICATE_RE`),
+    in which case the whole clause is skipped to the statement's real
+    terminating ';' via `_skip_statement` - safe because this repo's upsert
+    shape never has an embedded ';' inside that clause. Returns (tuples,
+    index_just_past_the_semicolon)."""
     tuples = []
     i = start
     n = len(text)
@@ -147,6 +161,8 @@ def _read_tuples(
             continue
         if text[i] == ";":
             return tuples, i + 1
+        if _ON_DUPLICATE_RE.match(text, i):
+            return tuples, _skip_statement(text, i)
     raise ValueError("unterminated INSERT statement (no trailing ';' found)")
 
 
@@ -239,17 +255,10 @@ _CREATE_TABLE_RE_TEMPLATE = r"CREATE TABLE\s+`{table}`\s*\("
 _COLUMN_LINE_RE = re.compile(r"^\s*`(?P<name>\w+)`\s+\w")
 
 
-def parse_create_table_columns(path: Path, table_name: str) -> tuple[str, ...]:
-    """Extracts a table's column names, in file-column order, straight from
-    its own `CREATE TABLE` statement - for a wide table (creature_template
-    is ~70 columns) whose base dump uses a bare `INSERT INTO x VALUES (...)`
-    with no explicit column list (see read_table_rows), so parsing it
-    correctly at all needs the complete, exactly-ordered column list as the
-    fallback - and hand-transcribing that (the way lib/dbcfmt.py does for
-    DBC tables, which are a curated *subset* of a much narrower table) would
-    be its own source of transcription bugs for a table this wide. Skips
-    non-column lines (`PRIMARY KEY (...)`, `KEY ...`, `CONSTRAINT ...`) since
-    none of them start with a backtick-quoted-name-then-type pattern."""
+def _create_table_body(path: Path, table_name: str) -> str:
+    """The text strictly between a `CREATE TABLE \\`table_name\\` (` and its matching closing `)`
+    - shared by `parse_create_table_columns` and `parse_create_table_defaults`, which both need to
+    walk the same column-definition lines but extract a different piece of each one."""
     text = Path(path).read_text(encoding="utf-8")
     m = re.search(_CREATE_TABLE_RE_TEMPLATE.format(table=re.escape(table_name)), text, re.IGNORECASE)
     if not m:
@@ -262,13 +271,98 @@ def parse_create_table_columns(path: Path, table_name: str) -> tuple[str, ...]:
         elif text[i] == ")":
             depth -= 1
         i += 1
-    body = text[m.end():i - 1]
+    return text[m.end():i - 1]
+
+
+def parse_create_table_columns(path: Path, table_name: str) -> tuple[str, ...]:
+    """Extracts a table's column names, in file-column order, straight from
+    its own `CREATE TABLE` statement - for a wide table (creature_template
+    is ~70 columns) whose base dump uses a bare `INSERT INTO x VALUES (...)`
+    with no explicit column list (see read_table_rows), so parsing it
+    correctly at all needs the complete, exactly-ordered column list as the
+    fallback - and hand-transcribing that (the way lib/dbcfmt.py does for
+    DBC tables, which are a curated *subset* of a much narrower table) would
+    be its own source of transcription bugs for a table this wide. Skips
+    non-column lines (`PRIMARY KEY (...)`, `KEY ...`, `CONSTRAINT ...`) since
+    none of them start with a backtick-quoted-name-then-type pattern."""
     columns = []
-    for line in body.splitlines():
+    for line in _create_table_body(path, table_name).splitlines():
         cm = _COLUMN_LINE_RE.match(line)
         if cm:
             columns.append(cm.group("name"))
     return tuple(columns)
+
+
+# Captures a column's type keyword (right after its backtick-quoted name) and its DEFAULT literal
+# (a quoted string or bare NULL) - `[^,]*?` skips over `unsigned`/`NOT NULL`/`CHARACTER SET ...`
+# etc without crossing into a following column's line (this schema never puts a comma inside a
+# type or its modifiers before DEFAULT). A trailing `COMMENT '...'` after the DEFAULT value is
+# simply never reached by this capture group, so it doesn't need to be skipped separately.
+_COLUMN_DEFAULT_RE = re.compile(
+    r"^\s*`(?P<name>\w+)`\s+(?P<type>[a-zA-Z]+)\b[^,]*?DEFAULT\s+(?P<default>'(?:[^'\\]|\\.)*'|NULL)",
+    re.IGNORECASE,
+)
+_INT_COLUMN_TYPES = {"int", "tinyint", "smallint", "mediumint", "bigint"}
+_FLOAT_COLUMN_TYPES = {"float", "double", "decimal"}
+
+
+def _typed_default(type_name: str, raw_literal: str) -> object:
+    if raw_literal.upper() == "NULL":
+        return None
+    value = raw_literal[1:-1].replace("''", "'")  # strip the quotes; unescape a doubled quote
+    type_name = type_name.lower()
+    if type_name in _INT_COLUMN_TYPES:
+        return int(value)
+    if type_name in _FLOAT_COLUMN_TYPES:
+        return float(value)
+    return value  # char/varchar/text/enum/... (or an unrecognized type) - keep as text
+
+
+def parse_create_table_defaults(path: Path, table_name: str) -> dict[str, object]:
+    """Extracts each column's own schema `DEFAULT` (typed as int/float/str/`None`), from the same
+    `CREATE TABLE` `parse_create_table_columns` reads - for a helper like
+    `lib.dsl.registry.creature_template()` that builds a *full* row and needs "what would this
+    column be if nothing set it" for every column it wasn't explicitly given, without hand-
+    transcribing ~54 defaults (the same transcription-bug argument `parse_create_table_columns`'s
+    own docstring makes for the column list itself). A column with no `DEFAULT` clause at all is
+    simply absent from the returned dict - `creature_template`'s own `CREATE TABLE` gives every
+    column one, so this hasn't come up in practice; a caller with a real "no known default" case
+    decides what that means rather than this function guessing.
+
+    `DEFAULT 'x'` is always quoted in a `SHOW CREATE TABLE`-style dump even for a numeric column
+    (`` `entry` int unsigned NOT NULL DEFAULT '0' ``) - the column's own type keyword, captured
+    right after its name, is what decides whether that quoted text becomes a Python `int`/`float`
+    or stays a plain string; `DEFAULT NULL` is always `None` regardless of type."""
+    defaults: dict[str, object] = {}
+    for line in _create_table_body(path, table_name).splitlines():
+        m = _COLUMN_DEFAULT_RE.match(line)
+        if m:
+            defaults[m.group("name")] = _typed_default(m.group("type"), m.group("default"))
+    return defaults
+
+
+_COLUMN_TYPE_RE = re.compile(r"^\s*`(?P<name>\w+)`\s+(?P<type>[a-zA-Z]+)\b")
+
+
+def parse_create_table_string_columns(path: Path, table_name: str) -> frozenset[str]:
+    """Column names whose SQL type is a string family (`char`/`varchar`/`text`/`enum`/...),
+    independent of whether they have a `DEFAULT` clause at all (unlike `parse_create_table_defaults`,
+    which can't tell "no default" apart from "this column's default is `NULL`, but it's still a
+    string column" - `creature_template`'s `subname`/`IconName` are exactly that: `char(100)
+    DEFAULT NULL`). Built for a caller that needs to construct a synthetic `dbcfmt.DbcTable` for
+    `sql_dump.apply_statements`/`apply_composite_key_statements` (e.g.
+    `trainer_state.load_replayed_table_rows`) - those need to know which columns default to `''`
+    rather than `0` when a statement leaves them unset, and guessing from a `DEFAULT` value alone
+    would misclassify exactly this case."""
+    names = set()
+    for line in _create_table_body(path, table_name).splitlines():
+        m = _COLUMN_TYPE_RE.match(line)
+        if not m:
+            continue
+        type_name = m.group("type").lower()
+        if type_name not in _INT_COLUMN_TYPES and type_name not in _FLOAT_COLUMN_TYPES:
+            names.add(m.group("name"))
+    return frozenset(names)
 
 
 def read_table_rows(path: Path, table_name: str, columns: tuple[str, ...]) -> list[dict]:
@@ -333,6 +427,46 @@ _DELETE_WHERE_TUPLE_IN_RE = re.compile(
     r"WHERE\s*\(\s*(?P<cols>`\w+`(?:\s*,\s*`\w+`)*)\s*\)\s+IN\s*\(",
     re.IGNORECASE,
 )
+
+# A broad catch-all WHERE, used only as the last fallback in `_apply_update`/`_apply_composite_update`
+# after the specific single-condition shapes above have already failed to match - captures
+# everything between WHERE and the statement's terminating ';' for `parse_and_equality_conditions`
+# to split further. Safe to be this permissive only because it's tried last: this repo's real
+# WHERE clauses never embed a literal ';' inside a string value here, so the first ';' really is
+# the statement end.
+_WHERE_ANY_RE = re.compile(r"WHERE\s+(?P<conds>.+?);", re.IGNORECASE | re.DOTALL)
+
+# `` `col` = value `` - one conjunct of the AND-chain `parse_and_equality_conditions` splits on.
+_AND_EQ_COND_RE = re.compile(
+    r"`(?P<col>\w+)`\s*=\s*(?P<val>-?\d+(?:\.\d+)?|'(?:[^'\\]|\\.)*'|NULL)", re.IGNORECASE
+)
+
+
+def parse_and_equality_conditions(where_text: str) -> list[tuple[str, object]] | None:
+    """Splits a WHERE clause's `` `col1` = v1 AND `col2` = v2 ... `` into `[(col, value), ...]` -
+    the one conjunctive-equality shape this repo's hand-written creature migrations actually use
+    for a point fix after the original INSERT: a defensive "only if it still has the value I
+    expect" guard (e.g. `UPDATE creature_template SET flags_extra = 66 WHERE entry = 300001 AND
+    flags_extra = 194;`, `data/sql/updates/db_world/2026_09_01_01.sql` - Frozen Orb 300001's real
+    history). Returns `None` if any conjunct isn't a plain `` `col` = value `` (an `OR`, a range,
+    a subquery, ...) so the caller can degrade safely instead of guessing. Order is preserved, but
+    callers should look conditions up by column name - the row's actual key isn't always first."""
+    conditions = []
+    for part in re.split(r"(?i)\bAND\b", where_text):
+        m = _AND_EQ_COND_RE.fullmatch(part.strip())
+        if not m:
+            return None
+        raw = m.group("val")
+        if raw.upper() == "NULL":
+            value: object = None
+        elif raw.startswith("'"):
+            value = raw[1:-1].replace("''", "'")
+        elif "." in raw:
+            value = float(raw)
+        else:
+            value = int(raw)
+        conditions.append((m.group("col"), value))
+    return conditions
 
 
 def _read_key_tuples(
@@ -547,7 +681,15 @@ def _apply_update(
     module's "degrade safely" contract) - safe (never wrote wrong data,
     per `apply_statements`'s own docstring) but left `state.py`'s
     reconstruction of "what's live" stale for every ID past the first,
-    surfacing as a spurious drift report from `generate.py`."""
+    surfacing as a spurious drift report from `generate.py`.
+
+    A third shape, `WHERE \\`col\\` = n AND \\`other\\` = v` (one row, a defensive "only if it
+    still has the value I expect" guard) falls back to `parse_and_equality_conditions` - real
+    precedent: Frozen Orb 300001's `flags_extra`/`CreatureDisplayID` point fixes in
+    `data/sql/updates/db_world/2026_09_01_01.sql`. Only the condition naming `table.index_column`
+    is used to find the row; a condition on any other column is the guard and isn't re-checked - a
+    replay processes migrations exactly once, in file order, so by the time it reaches this
+    statement the guard is expected to already hold."""
     assignments, pos = _read_set_assignments(text, pos, variables)
     if not assignments:
         return _skip_statement(text, pos)
@@ -556,10 +698,15 @@ def _apply_update(
         ids, end = [int(m.group("id"))], m.end()
     else:
         m = _WHERE_IN_RE.match(text, pos)
-        if not m:
-            return _skip_statement(text, pos)
-        ids = _parse_id_list(m.group("ids"))
-        end = m.end()
+        if m:
+            ids, end = _parse_id_list(m.group("ids")), m.end()
+        else:
+            m = _WHERE_ANY_RE.match(text, pos)
+            conditions = parse_and_equality_conditions(m.group("conds")) if m else None
+            by_col = dict(conditions) if conditions else {}
+            if m is None or table.index_column not in by_col:
+                return _skip_statement(text, pos)
+            ids, end = [by_col[table.index_column]], m.end()
     for id_ in ids:
         row = rows.get(id_)
         if row is None:
@@ -584,10 +731,12 @@ def apply_statements(rows: dict[int, dict], table: DbcTable, sql_text: str) -> N
 
     Not a general SQL parser: it covers the two DELETE shapes and the one
     INSERT shape `sql_out.py` emits, plus the hand-written `DELETE ... WHERE
-    \\`col\\` = n` and `UPDATE ... SET col = val, ... WHERE \\`col\\` = n`
-    shapes seen in this repo's migration history. A statement it doesn't
-    recognize (a compound WHERE, a table this replay wasn't told to expect,
-    a malformed row) is silently skipped rather than raising - safe because
+    \\`col\\` = n`, `UPDATE ... SET col = val, ... WHERE \\`col\\` = n` and
+    `UPDATE ... WHERE \\`col\\` = n AND \\`other\\` = v` (a defensive guard -
+    see `_apply_update`'s docstring) shapes seen in this repo's migration
+    history. A statement it doesn't recognize (an OR'd or ranged WHERE, a
+    table this replay wasn't told to expect, a malformed row) is silently
+    skipped rather than raising - safe because
     the emitted SQL always comes from source CSV/YAML data
     (`resolve.resolve_rows`'s `build_one(entry)`), never from `rows` itself;
     an imperfect replay can only leave an ID looking "changed" when it
@@ -608,5 +757,135 @@ def apply_statements(rows: dict[int, dict], table: DbcTable, sql_text: str) -> N
                 pos = _apply_delete(rows, sql_text, m.end())
             else:
                 pos = _apply_update(rows, table, sql_text, m.end(), variables)
+        except Exception:
+            pos = _skip_statement(sql_text, m.end())
+
+
+# ---------------------------------------------------------------------------
+# `apply_statements`'s composite-key cousin: a table keyed on more than one column (e.g.
+# creature_template_model's (CreatureID, Idx)) has no single `table.index_column` for
+# `_apply_insert`/`_apply_delete`/`_apply_update` to key `rows` by. Built for the same reason as
+# the AND-guard fallback above: creature_template_model's real migration history has genuine
+# hand-written UPDATEs and single-column DELETEs after the original INSERT (Frozen Orb 300001's
+# CreatureDisplayID went through several revisions this way, data/sql/updates/db_world/
+# 2026_09_01_01.sql) - a plain union of INSERTs (trainer_state.load_table_rows) keeps reporting
+# the *original* INSERT's values as live forever.
+# ---------------------------------------------------------------------------
+
+
+def _apply_composite_delete(
+    rows: dict[tuple, dict], key_columns: tuple[str, ...], text: str, pos: int,
+) -> int:
+    m = _DELETE_WHERE_TUPLE_IN_RE.match(text, pos)
+    if m:
+        delete_cols = tuple(c.strip(" `") for c in m.group("cols").split(","))
+        tuples, end = _read_key_tuples(text, m.end())
+        end = _skip_statement(text, end)
+        if delete_cols == key_columns:
+            for values in tuples:
+                rows.pop(tuple(values), None)
+            return end
+        try:
+            idx = [key_columns.index(c) for c in delete_cols]
+        except ValueError:
+            return end  # a column we don't key on - can't tell what it removes
+        for values in tuples:
+            wanted = tuple(values)
+            for key in [k for k in rows if tuple(k[i] for i in idx) == wanted]:
+                rows.pop(key, None)
+        return end
+    m = _WHERE_IN_RE.match(text, pos)
+    if m:
+        col = re.search(r"`(\w+)`", m.group(0)).group(1)
+        if col in key_columns:
+            idx = key_columns.index(col)
+            wanted = set(_parse_id_list(m.group("ids")))
+            for key in [k for k in rows if k[idx] in wanted]:
+                rows.pop(key, None)
+        return m.end()
+    m = _WHERE_EQ_RE.match(text, pos)
+    if m:
+        col = re.search(r"`(\w+)`", m.group(0)).group(1)
+        if col in key_columns:
+            idx = key_columns.index(col)
+            value = int(m.group("id"))
+            for key in [k for k in rows if k[idx] == value]:
+                rows.pop(key, None)
+        return m.end()
+    return _skip_statement(text, pos)
+
+
+def _apply_composite_update(
+    rows: dict[tuple, dict], key_columns: tuple[str, ...], text: str, pos: int,
+    variables: dict[str, int] | None = None,
+) -> int:
+    assignments, pos = _read_set_assignments(text, pos, variables)
+    if not assignments:
+        return _skip_statement(text, pos)
+    m = _WHERE_ANY_RE.match(text, pos)
+    if not m:
+        return _skip_statement(text, pos)
+    end = m.end()
+    conditions = parse_and_equality_conditions(m.group("conds"))
+    if conditions is None:
+        return end
+    by_col = dict(conditions)
+    key_filter = {c: by_col[c] for c in key_columns if c in by_col}
+    if not key_filter:
+        return end  # nothing here narrows to a specific key - can't tell which row(s) this affects
+    for row in rows.values():
+        if all(row.get(c) == v for c, v in key_filter.items()):
+            row.update(assignments)
+    return end
+
+
+def apply_composite_key_statements(
+    rows: dict[tuple, dict], columns: tuple[str, ...], key_columns: tuple[str, ...],
+    table_name: str, sql_text: str,
+) -> None:
+    """`apply_statements`'s composite-key cousin - see this section's module-level comment for why
+    it exists. Handles exactly the statement shapes this repo's real migrations and `sql_out.py`'s
+    own renderers use for such a table:
+      - `INSERT INTO \\`table\\` (cols...) VALUES (...), ...;` - explicit or full column list.
+      - `DELETE FROM \\`table\\` WHERE (\\`a\\`, \\`b\\`) IN ((v1, v2), ...);` -
+        `sql_out.render_generic_table_block`'s own key-exact shape.
+      - `DELETE FROM \\`table\\` WHERE \\`col\\` = n` / `WHERE \\`col\\` IN (...)` - a single
+        column naming one member of `key_columns` (e.g. "delete every model of this creature",
+        every `Idx`) - the prefix case, same idea as `spell_tables._matching_keys`.
+      - `UPDATE \\`table\\` SET ... WHERE <AND-ed \\`col\\` = value conditions>;` - a point fix.
+        A condition naming a `key_columns` member narrows which stored row(s) it applies to; a
+        condition on any other column is a defensive "only if it still has this value" guard and
+        isn't re-checked, same reasoning as `_apply_update`'s own AND-guard fallback.
+    An unrecognized shape is skipped, never guessed at - same "degrade safely" contract as
+    `apply_statements`."""
+    pos = 0
+    variables: dict[str, int] = {}
+    while True:
+        m = _next_statement(sql_text, pos, table_name)
+        if m is None:
+            return
+        try:
+            if m.group("set_name") is not None:
+                variables[m.group("set_name")] = int(m.group("set_value"))
+                pos = m.end()
+            elif m.group("ins_table") is not None:
+                explicit = (
+                    [c.strip(" `") for c in m.group("cols").split(",")] if m.group("cols") else None
+                )
+                cols = explicit or list(columns)
+                tuples, pos = _read_tuples(sql_text, m.end(), variables)
+                for values in tuples:
+                    if len(values) != len(cols):
+                        continue
+                    row = dict(zip(cols, values))
+                    try:
+                        key = tuple(row[c] for c in key_columns)
+                    except KeyError:
+                        continue
+                    rows[key] = row
+            elif m.group("del_table") is not None:
+                pos = _apply_composite_delete(rows, key_columns, sql_text, m.end())
+            else:
+                pos = _apply_composite_update(rows, key_columns, sql_text, m.end(), variables)
         except Exception:
             pos = _skip_statement(sql_text, m.end())

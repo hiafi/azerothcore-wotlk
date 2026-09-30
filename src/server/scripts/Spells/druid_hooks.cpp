@@ -225,7 +225,8 @@ public:
             // mirrors SpellInfo::CalcPowerCost's own pre-SpellMod baseline (SpellInfo.cpp:~2873).
             int32 const rawCost = int32(CalculatePct(player->GetCreateMana(), spell->m_spellInfo->ManaCostPercentage));
             int32 const reduction = int32(CalculatePct(rawCost, 25));
-            int32 const basePoints = -reduction - 1; // die_sides=1 sign convention
+            // Live value: SetSpellValue's CalcBaseValue already takes the die_sides=1 point off.
+            int32 const basePoints = -reduction;
             player->CastCustomSpell(player, Druid::SPELL_DEEP_ROOTS_COST_REDUCTION, &basePoints, nullptr, nullptr,
                                      true);
         }

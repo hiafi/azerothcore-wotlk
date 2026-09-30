@@ -4,8 +4,8 @@ Priest - spells that are never directly cast - proc/periodic-tick effects, trigg
 Split from a single source/classes/priest.py via split_class_file.py (.agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md) - see source/classes/README.md for the multi-file layout and lib/dsl/registry.py's load_class_package for how cross-file references (`from .priest_...` below) resolve.
 """
 
-from lib.dsl import ApplyAura, AuraType, DispelType, Effect, EffectType, Mechanic, School, SpellModOp
-from lib.dsl.registry import bonus_coefficients, procs_on, scripted_by, spell
+from lib.dsl import RANGE_SELF, ApplyAura, AuraType, DispelType, Effect, EffectType, Mechanic, School, SpellModOp
+from lib.dsl.registry import bonus_coefficients, linked_spell, procs_on, scripted_by, spell
 from . import _masks
 
 # Proc flags/phases used by the procs_on() calls below - src/server/game/Spells/SpellMgr.h's
@@ -3016,12 +3016,13 @@ shadow_power_33221 = spell(
     range_yards=0.0,
     effects=[
         None,
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108, misc_value=15),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2179,
-    notes='Priest Shadow rework (SHADOW.md (6,2)): see the block comment above for the full retune.',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal $s2% damage. This does not stack with other similar effects.\n\n|cFF9D9D9DCapstone Bonus: Your Shadow and Holy periodic damage effects have a 30% chance to make the target vulnerable to your power, increasing their Magic damage taken from you by 8% for 4 seconds.|r', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskB_1': 8396800, 'EffectSpellClassMaskB_2': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
+    notes='Priest Shadow rework (SHADOW.md (6,2)): see the block comment above for the full retune. warlock-rework AFFLICTION §4.8 (A1/A2, server-wide): crit-damage SpellMod (eff2/letter B) zeroed, mask cleared; linked to hidden passive 200689 (165%). Tooltip fixed: the old $s2% substitution was the raw SpellMod value, not the true 165/180/200%.',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 165% damage. This does not stack with other similar effects.\n\n|cFF9D9D9DCapstone Bonus: Your Shadow and Holy periodic damage effects have a 30% chance to make the target vulnerable to your power, increasing their Magic damage taken from you by 8% for 4 seconds.|r', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
+linked_spell(shadow_power_33221.id, 200689, type=2)
 
 
 shadow_power_33222 = spell(
@@ -3037,13 +3038,14 @@ shadow_power_33222 = spell(
     range_yards=0.0,
     effects=[
         None,
-        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=1, apply_aura=108, misc_value=15),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2179,
     notes='Priest Shadow rework (SHADOW.md (6,2)): see shadow_power_33221 (rank 1) for the full '
-          'retune rationale.',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal $s2% damage. This does not stack with other similar effects.\n\n|cFF9D9D9DCapstone Bonus: Your Shadow and Holy periodic damage effects have a 30% chance to make the target vulnerable to your power, increasing their Magic damage taken from you by 8% for 4 seconds.|r', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskB_1': 8396800, 'EffectSpellClassMaskB_2': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
+          'retune rationale. warlock-rework AFFLICTION §4.8 (A1/A2): linked to hidden passive 200690 (180%).',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 180% damage. This does not stack with other similar effects.\n\n|cFF9D9D9DCapstone Bonus: Your Shadow and Holy periodic damage effects have a 30% chance to make the target vulnerable to your power, increasing their Magic damage taken from you by 8% for 4 seconds.|r', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
+linked_spell(shadow_power_33222.id, 200690, type=2)
 
 
 shadow_power_33223 = spell(
@@ -3059,15 +3061,17 @@ shadow_power_33223 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=200259),
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=108, misc_value=15),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2179,
     notes='Priest Shadow rework (SHADOW.md (6,2)): final rank only - new eff1 PROC_TRIGGER_SPELL '
           '(letter A) -> Vulnerability (200259, declared later in this file), driven by the '
           'procs_on() call below (chance=30, PROC_FLAG_DONE_PERIODIC, school_mask=Holy|Shadow). '
-          'The +8% itself is applied in Priest::ApplyDoneDamagePctMods (WP-B), caster-specific.',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal $s2% damage. This does not stack with other similar effects.\n\nCapstone Bonus: Your Shadow and Holy periodic damage effects have a 30% chance to make the target vulnerable to your power, increasing their Magic damage taken from you by 8% for 4 seconds.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
+          'The +8% itself is applied in Priest::ApplyDoneDamagePctMods (WP-B), caster-specific. '
+          'warlock-rework AFFLICTION §4.8 (A1/A2): eff2/letter B crit-damage SpellMod zeroed, linked to hidden passive 200691 (199.5%).',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 200% damage. This does not stack with other similar effects.\n\nCapstone Bonus: Your Shadow and Holy periodic damage effects have a 30% chance to make the target vulnerable to your power, increasing their Magic damage taken from you by 8% for 4 seconds.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 6},
 )
+linked_spell(shadow_power_33223.id, 200691, type=2)
 procs_on(shadow_power_33223, PROC_FLAG_DONE_PERIODIC, school_mask=School.HOLY | School.SHADOW,
          spell_phase_mask=PROC_SPELL_PHASE_HIT, chance=30)
 # shadow_power_33224/33225 (old ranks 4/5) are now orphaned - Shadow Power is a 3-rank talent in
@@ -6949,13 +6953,14 @@ holy_wrath_200210 = spell(
     attributes=464,
     cast_time_ms=0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CRIT_DAMAGE_BONUS),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2168,
-    notes='HOLY.md 7,3: rank 1 - spell criticals deal 165% damage (SPELLMOD_CRIT_DAMAGE_BONUS +30%, '
-          'base_points=29), scoped to Smite|HF|Holy Nova dmg|Penance dmg bolt|Chastise|Halo|Divine Star.',
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell criticals deal $s1% damage.\n\n|cFF9D9D9DCapstone Bonus: Direct damaging criticals increase the crit chance of your next Holy spell by 4%, stacking up to 5 times, once per sec. Damaging Holy criticals have a chance to increase magic damage done by 5% for 8 sec.|r', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _HOLY_WRATH_DMG_MASK[0], 'EffectSpellClassMaskA_3': _HOLY_WRATH_DMG_MASK[2], 'EffectChainAmplitude_1': 1.0},
+    notes='HOLY.md 7,3: rank 1 - spell criticals deal 165% damage, scoped to Smite|HF|Holy Nova dmg|Penance dmg bolt|Chastise|Halo|Divine Star. '
+          'warlock-rework AFFLICTION §4.8 (A1/A2, server-wide): crit-damage SpellMod zeroed, mask cleared; linked to hidden passive 200692 (165%, unchanged - already in sync).',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 165% damage. This does not stack with other similar effects.\n\n|cFF9D9D9DCapstone Bonus: Direct damaging criticals increase the crit chance of your next Holy spell by 4%, stacking up to 5 times, once per sec. Damaging Holy criticals have a chance to increase magic damage done by 5% for 8 sec.|r', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
 )
+linked_spell(holy_wrath_200210.id, 200692, type=2)
 
 
 holy_wrath_200211 = spell(
@@ -6965,12 +6970,13 @@ holy_wrath_200211 = spell(
     attributes=464,
     cast_time_ms=0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CRIT_DAMAGE_BONUS),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2168,
-    notes='HOLY.md 7,3: rank 2, criticals deal 180% (base_points=59).',
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell criticals deal $s1% damage.\n\n|cFF9D9D9DCapstone Bonus: Direct damaging criticals increase the crit chance of your next Holy spell by 4%, stacking up to 5 times, once per sec. Damaging Holy criticals have a chance to increase magic damage done by 5% for 8 sec.|r', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _HOLY_WRATH_DMG_MASK[0], 'EffectSpellClassMaskA_3': _HOLY_WRATH_DMG_MASK[2], 'EffectChainAmplitude_1': 1.0},
+    notes='HOLY.md 7,3: rank 2, criticals deal 180%. warlock-rework AFFLICTION §4.8: linked to hidden passive 200693.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 180% damage. This does not stack with other similar effects.\n\n|cFF9D9D9DCapstone Bonus: Direct damaging criticals increase the crit chance of your next Holy spell by 4%, stacking up to 5 times, once per sec. Damaging Holy criticals have a chance to increase magic damage done by 5% for 8 sec.|r', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
 )
+linked_spell(holy_wrath_200211.id, 200693, type=2)
 
 
 holy_wrath_200212 = spell(
@@ -6980,17 +6986,18 @@ holy_wrath_200212 = spell(
     attributes=464,
     cast_time_ms=0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CRIT_DAMAGE_BONUS),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2168,
-    notes='HOLY.md 7,3: rank 3 (final kept rank), criticals deal 200% (base_points=99), plus the '
+    notes='HOLY.md 7,3: rank 3 (final kept rank), criticals deal 200%, plus the '
           'capstone (eff2 hidden DUMMY marker, read by spell_pri_holy_wrath_capstone). procs_on '
           'below has no spell_proc Cooldown - the 1 s crit-stack gate and the separate magic-damage '
           'roll are both script-side so they gate independently. Tooltip capstone line, final rank '
-          'plain color.',
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell criticals deal $s1% damage.\n\nCapstone Bonus: Direct damaging criticals increase the crit chance of your next Holy spell by 4%, stacking up to 5 times, once per sec. Damaging Holy criticals have a chance to increase magic damage done by 5% for 8 sec.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _HOLY_WRATH_DMG_MASK[0], 'EffectSpellClassMaskA_3': _HOLY_WRATH_DMG_MASK[2], 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+          'plain color. warlock-rework AFFLICTION §4.8: eff1 crit-damage SpellMod zeroed, linked to hidden passive 200694; eff2 (capstone marker) untouched.',
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 200% damage. This does not stack with other similar effects.\n\nCapstone Bonus: Direct damaging criticals increase the crit chance of your next Holy spell by 4%, stacking up to 5 times, once per sec. Damaging Holy criticals have a chance to increase magic damage done by 5% for 8 sec.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
 )
+linked_spell(holy_wrath_200212.id, 200694, type=2)
 procs_on(holy_wrath_200212, PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG, hit_mask=PROC_HIT_CRITICAL,
          spell_phase_mask=PROC_SPELL_PHASE_HIT, chance=100)
 scripted_by(holy_wrath_200212, 'spell_pri_holy_wrath_capstone')
@@ -8098,3 +8105,30 @@ tentacle_scaling_200272 = spell(
     raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Snapshot of the owning priest\'s spell power, critical strike and haste.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Inherited caster stats.', 'EquippedItemClass': -1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 scripted_by(tentacle_scaling_200272, 'spell_pri_tentacle_scaling')
+
+
+# ---------------------------------------------------------------------------
+# warlock-rework AFFLICTION pass - server-wide A1/A2 crit-damage exclusivity
+# group (PLAN A1/A2, SHARED §1.1, AFFLICTION §4.8): priest's 6 of 27 hidden
+# passives (Shadow Power, Holy Wrath). Group 1201 itself and its rule are
+# declared once, in the warlock DSL (warlock_trigger_spells.py).
+# ---------------------------------------------------------------------------
+
+def _crit_damage_passive_200689(spell_id, name, stored_bp):
+    return spell(
+        id=spell_id, name=name, school=School.SHADOW, attributes=464,
+        cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+        range_yards=RANGE_SELF, duration_ms=-1,
+        effects=[Effect(type=EffectType.APPLY_AURA, base_points=stored_bp, implicit_target_a=1, apply_aura=AuraType.MOD_CRIT_DAMAGE_BONUS, misc_value=126)],
+        spell_icon_id=2179,
+        notes='warlock-rework AFFLICTION §4.8 (A1/A2, SHARED §1.1): hidden crit-damage passive, no visible icon/tooltip; joins spell_group 1201 (rule 3, highest only, declared in the warlock DSL); linked (type=2) from its talent rank.',
+        raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 6, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'ProcChance': 101},
+    )
+
+
+shadow_power_crit_200689 = _crit_damage_passive_200689(200689, 'Shadow Power', 9)
+shadow_power_crit_200690 = _crit_damage_passive_200689(200690, 'Shadow Power', 19)
+shadow_power_crit_200691 = _crit_damage_passive_200689(200691, 'Shadow Power', 32)
+holy_wrath_crit_200692 = _crit_damage_passive_200689(200692, 'Holy Wrath', 9)
+holy_wrath_crit_200693 = _crit_damage_passive_200689(200693, 'Holy Wrath', 19)
+holy_wrath_crit_200694 = _crit_damage_passive_200689(200694, 'Holy Wrath', 32)

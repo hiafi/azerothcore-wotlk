@@ -24,7 +24,7 @@ wrong one.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from pathlib import Path
 
@@ -49,6 +49,23 @@ SPELL_CUSTOM_ATTR_COLUMNS = ("spell_id", "attributes")
 # spellshapeshiftform_dbc is DBC-backed (unlike the other four, plain world-DB tables) - reuse
 # lib.dbcfmt's own column list rather than re-transcribing it a second time.
 SPELLSHAPESHIFTFORM_COLUMNS = dbcfmt.SPELLSHAPESHIFTFORM.columns
+
+# T1 (.agents/plans/warlock-rework/warlock-rework.T1-HANDOFF.md): creature_template/
+# creature_template_model - a rework's own NPCs, previously always a hand-written migration (e.g.
+# Tentacle of Madness, data/sql/updates/db_world/2026_09_23_12.sql). creature_template is ~54
+# columns wide and on the SQL linter's do-not-delete list (apps/codestyle/codestyle-sql.py's
+# `not_delete`) - unlike every column tuple above, this one is parsed from the base dump's own
+# CREATE TABLE rather than hand-transcribed (see sql_dump.parse_create_table_columns's own
+# docstring on why that matters for a table this wide), and its per-column DEFAULTs are parsed the
+# same way for lib.dsl.registry.creature_template()'s "full row" building. creature_template_model
+# is narrow (6 columns, no other table reuses them) and stays a hand-typed tuple like every table
+# above.
+CREATURE_TEMPLATE_PATH = trainer_state.BASE_SQL_DIR / "creature_template.sql"
+CREATURE_TEMPLATE_COLUMNS = sql_dump.parse_create_table_columns(CREATURE_TEMPLATE_PATH, "creature_template")
+CREATURE_TEMPLATE_DEFAULTS = sql_dump.parse_create_table_defaults(CREATURE_TEMPLATE_PATH, "creature_template")
+CREATURE_TEMPLATE_MODEL_COLUMNS = (
+    "CreatureID", "Idx", "CreatureDisplayID", "DisplayScale", "Probability", "VerifiedBuild",
+)
 
 
 # First line of every file `generate.py` writes (its `header`). This is the
@@ -177,6 +194,12 @@ class TableSpec:
     columns: tuple[str, ...]
     key_columns: tuple[str, ...]
     registry_key: str  # the lib.dsl.registry.Registry attribute holding declared rows
+    # Real per-column schema DEFAULT, for a table where that isn't 0/NULL for every column (e.g.
+    # creature_template's minlevel=1, speed_run=1.14286, ...) - see _same_row's docstring for why
+    # a table needing this must pass its own, or comparing a declaration against a migration that
+    # omitted one of these columns silently mis-detects "unchanged". Empty for every table where
+    # 0/NULL is already correct (unaffected - see _same_row's fallback).
+    defaults: dict = field(default_factory=dict)
 
 
 SPELL_TABLES = (
@@ -209,13 +232,22 @@ def _normalise(value):
     return str(value)
 
 
-def _same_row(existing: dict, declared: dict, columns: tuple[str, ...]) -> bool:
+def _same_row(existing: dict, declared: dict, spec: TableSpec) -> bool:
     """A column a hand-written migration left out entirely took the table's
-    DEFAULT - `0` for every numeric column in these three tables, `NULL` for
-    the one text column (`spell_bonus_data.comments`) - so a missing key on
-    the live side compares as that default, not as "unknown"."""
-    for c in columns:
-        default = 0 if isinstance(declared.get(c), (int, float)) else None
+    own schema DEFAULT - `0`/`NULL` for every column in the original three tables (and the five
+    WP-T ones after them), so the old fallback (0 for a numeric declared value, else `None`)
+    happened to always be right for those. `creature_template` breaks that assumption - many of
+    its columns default to something else (`minlevel`/`maxlevel` 1, `speed_run` 1.14286,
+    `RegenHealth` 1, ...), confirmed as a live case via code review (2026-09-28): three module SQL
+    files really do INSERT `creature_template` with a partial column list omitting one of these.
+    `spec.defaults` (its real per-column schema DEFAULT, when the caller has one - see
+    `TableSpec`'s own comment) is checked first; the old 0/None guess is still the fallback for
+    every table that never needed anything else."""
+    for c in spec.columns:
+        if c in spec.defaults:
+            default = spec.defaults[c]
+        else:
+            default = 0 if isinstance(declared.get(c), (int, float)) else None
         if _normalise(existing.get(c, default)) != _normalise(declared.get(c)):
             return False
     return True
@@ -231,7 +263,9 @@ class SpellTableIndex:
         existing: dict[str, list[dict]],
         emitted: dict[str, list[dict]] | None = None,
         base: dict[str, list[dict]] | None = None,
+        tables: tuple[TableSpec, ...] = SPELL_TABLES,
     ):
+        self._tables = tables
         self._by_key: dict[str, dict[tuple, dict]] = {}
         # Key sets for the prune pass: `_emitted` is what past runs of this
         # tool wrote (the only rows it may remove), `_base` is stock content
@@ -239,7 +273,7 @@ class SpellTableIndex:
         # the old two-argument way simply has nothing to prune.
         self._emitted: dict[str, set[tuple]] = {}
         self._base: dict[str, set[tuple]] = {}
-        for spec in SPELL_TABLES:
+        for spec in tables:
             keyed: dict[tuple, dict] = {}
             for row in existing.get(spec.name, []):
                 key = self._key(spec, row)
@@ -282,7 +316,7 @@ class SpellTableIndex:
         for row in declared:
             key = tuple(_normalise(row[c]) for c in spec.key_columns)
             existing = keyed.get(key)
-            if existing is not None and _same_row(existing, row, spec.columns):
+            if existing is not None and _same_row(existing, row, spec):
                 continue
             out.append(row)
         return out
@@ -410,8 +444,116 @@ def render_blocks(index: SpellTableIndex, dsl_classes: dict[str, list[dict]]) ->
     return blocks
 
 
-def count_declared(dsl_classes: dict[str, list[dict]]) -> dict[str, int]:
-    return {spec.name: len(dsl_classes.get(spec.registry_key, [])) for spec in SPELL_TABLES}
+def count_declared(
+    dsl_classes: dict[str, list[dict]], tables: tuple[TableSpec, ...] = SPELL_TABLES,
+) -> dict[str, int]:
+    return {spec.name: len(dsl_classes.get(spec.registry_key, [])) for spec in tables}
+
+
+# ---------------------------------------------------------------------------
+# T1 (.agents/plans/warlock-rework/warlock-rework.T1-HANDOFF.md): creature_template/
+# creature_template_model. Kept out of SPELL_TABLES/render_prune_blocks entirely, deliberately -
+# creature_template is on the SQL linter's do-not-delete list, so it's never DELETE-then-INSERT'd
+# the way every SPELL_TABLES entry is (see lib.dsl.registry.creature_template()'s docstring and
+# lib.sql_out.render_upsert_block), and pruning only creature_template_model would leave a creature
+# without a model. render_creature_retirement_report below reuses SpellTableIndex.rows_to_prune's
+# orphan detection (same "emitted earlier, not declared now" computation render_prune_blocks uses)
+# but only ever reports an orphan - it never turns one into a DELETE.
+# ---------------------------------------------------------------------------
+
+# creature_template_model's own real schema defaults (data/sql/base/db_world/
+# creature_template_model.sql's CREATE TABLE) - hand-typed like its column tuple above (6 columns,
+# narrow and stable), NOT lib.dsl.registry.creature_model()'s friendlier probability=1.0 default
+# (that one's deliberately different from the schema's 0 - see that helper's docstring). _same_row
+# needs the real schema value here: what a migration that omitted this column would actually have.
+CREATURE_TEMPLATE_MODEL_DEFAULTS = {"Idx": 0, "DisplayScale": 1.0, "Probability": 0.0, "VerifiedBuild": None}
+
+CREATURE_TABLES = (
+    TableSpec(
+        "creature_template", CREATURE_TEMPLATE_COLUMNS, ("entry",), "creature_templates",
+        defaults=CREATURE_TEMPLATE_DEFAULTS,
+    ),
+    TableSpec(
+        "creature_template_model", CREATURE_TEMPLATE_MODEL_COLUMNS, ("CreatureID", "Idx"),
+        "creature_template_models", defaults=CREATURE_TEMPLATE_MODEL_DEFAULTS,
+    ),
+)
+
+
+def load_creature_table_index() -> SpellTableIndex:
+    """Loading the base creature_template dump (~30k rows, 5MB) again here (trainer_state.py's
+    TrainerIndex already parsed it once, for a different purpose - npcflag/spawn lookups) is
+    acceptable per the T1 handoff, rather than plumbing that already-parsed list through just to
+    avoid a second pass.
+
+    Uses `trainer_state.load_replayed_table_rows`, not `load_table_rows` - a real bug, found via
+    code review (2026-09-28): `load_table_rows` unions every INSERT ever seen and never replays an
+    UPDATE/DELETE, which stays correct for the other declared tables (their real migration history
+    is always DELETE-then-INSERT) but is wrong for creature_template/creature_template_model - both
+    have genuine hand-written point-fix UPDATEs after the original INSERT (Frozen Orb 300001's
+    `flags_extra` 194->66 and `CreatureDisplayID` through several revisions,
+    `data/sql/updates/db_world/2026_09_01_01.sql`). A union view kept reporting those *original*
+    values as live forever, so a later re-declaration matching the stale value would have compared
+    as unchanged and silently never re-applied the real fix. See
+    `lib.trainer_state.load_replayed_table_rows`'s own docstring."""
+    return SpellTableIndex(
+        {
+            spec.name: trainer_state.load_replayed_table_rows(spec.name, spec.columns, spec.key_columns)
+            for spec in CREATURE_TABLES
+        },
+        emitted={spec.name: load_generated_table_rows(spec.name, spec.key_columns) for spec in CREATURE_TABLES},
+        base={spec.name: load_base_table_rows(spec.name) for spec in CREATURE_TABLES},
+        tables=CREATURE_TABLES,
+    )
+
+
+def render_creature_blocks(index: SpellTableIndex, dsl_classes: dict[str, list[dict]]) -> list[str]:
+    """One pre-rendered SQL block per `CREATURE_TABLES` entry with something new/changed to emit,
+    in `CREATURE_TABLES` order (creature_template before creature_template_model, per the T1
+    handoff) - `creature_template` renders as an upsert (`sql_out.render_upsert_block`, no DELETE
+    ever), `creature_template_model` as the same DELETE-then-INSERT every other declared table
+    here gets (`sql_out.render_generic_table_block`) - deleting a specific (CreatureID, Idx) model
+    row it's about to re-insert is fine; it's *creature_template* the linter refuses to see
+    DELETEd, and *dropping a declaration* that neither table ever prunes for (see this module's
+    docstring above)."""
+    blocks = []
+    for spec in CREATURE_TABLES:
+        rows = index.rows_to_emit(spec, dsl_classes.get(spec.registry_key, []))
+        if not rows:
+            continue
+        if spec.name == "creature_template":
+            block = sql_out.render_upsert_block(spec.name, spec.columns, spec.key_columns, rows)
+        else:
+            block = sql_out.render_generic_table_block(spec.name, spec.columns, spec.key_columns, rows)
+        if block:
+            blocks.append(block)
+    return blocks
+
+
+def render_creature_retirement_report(
+    index: SpellTableIndex, dsl_classes: dict[str, list[dict]]
+) -> list[str]:
+    """Report-only counterpart to `render_prune_blocks` for `CREATURE_TABLES`: a creature row a
+    past run emitted that source no longer declares is never turned into a DELETE (see this
+    module's docstring above) - just reported, for a human to remove by hand if they actually want
+    it gone. Reuses `SpellTableIndex.rows_to_prune`'s orphan computation (circuit breaker + base-
+    overlap refusal included) purely for "what's no longer declared"; nothing here ever renders a
+    SQL block."""
+    report: list[str] = []
+    for spec in CREATURE_TABLES:
+        result = index.rows_to_prune(spec, dsl_classes.get(spec.registry_key, []))
+        if result.breaker_tripped:
+            report.append(
+                f"creature: SKIPPED checking {spec.name} for retired entries - it has rows from "
+                f"previous runs but this run declared none. Check source/classes/* loaded."
+            )
+            continue
+        for key in (*result.keys, *result.base_blocked):
+            report.append(
+                f"creature: {spec.name} {_key_text(spec.key_columns, key)} is no longer declared - "
+                f"left in place; {spec.name} is never auto-deleted, remove by hand if wanted."
+            )
+    return report
 
 
 # ---------------------------------------------------------------------------

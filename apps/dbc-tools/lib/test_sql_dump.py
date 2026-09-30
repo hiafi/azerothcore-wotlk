@@ -135,9 +135,28 @@ class ApplyStatementsTest(unittest.TestCase):
         sql_dump.apply_statements(rows, TABLE, "DELETE FROM `other_dbc` WHERE `ID` IN (1);")
         self.assertEqual(rows, {1: {"ID": 1}})
 
-    def test_unrecognized_where_clause_is_skipped_not_raised(self):
+    def test_and_guarded_where_clause_is_applied(self):
+        # `WHERE `ID` = 1 AND `Name` = 'x'` - a defensive "only if it still has the value I
+        # expect" guard, real precedent in this repo's own migration history (Frozen Orb 300001's
+        # flags_extra/CreatureDisplayID point fixes, data/sql/updates/db_world/2026_09_01_01.sql).
+        # The condition naming the index column (`ID`) picks the row; the other condition is the
+        # guard and isn't re-checked - a replay processes migrations exactly once, in file order.
         rows = {1: {"ID": 1, "Value": 10}}
         sql = "UPDATE `widget_dbc` SET `Value` = 99 WHERE `ID` = 1 AND `Name` = 'x';"
+        sql_dump.apply_statements(rows, TABLE, sql)
+        self.assertEqual(rows[1], {"ID": 1, "Value": 99})
+
+    def test_unrecognized_where_clause_is_skipped_not_raised(self):
+        # No condition here names the index column at all - genuinely unrecognized, must degrade
+        # safely rather than guess which row(s) `Name` refers to.
+        rows = {1: {"ID": 1, "Value": 10}}
+        sql = "UPDATE `widget_dbc` SET `Value` = 99 WHERE `Name` = 'x' AND `Other` = 1;"
+        sql_dump.apply_statements(rows, TABLE, sql)  # must not raise
+        self.assertEqual(rows[1], {"ID": 1, "Value": 10})
+
+    def test_or_where_clause_is_skipped_not_raised(self):
+        rows = {1: {"ID": 1, "Value": 10}}
+        sql = "UPDATE `widget_dbc` SET `Value` = 99 WHERE `ID` = 1 OR `ID` = 2;"
         sql_dump.apply_statements(rows, TABLE, sql)  # must not raise
         self.assertEqual(rows[1], {"ID": 1, "Value": 10})
 
@@ -202,6 +221,70 @@ class ReadTableRowsTest(unittest.TestCase):
         self.assertEqual(rows, [{"A": 16, "B": 0x1E5, "C": 0}])
 
 
+class UpsertParsingTest(unittest.TestCase):
+    """`_read_tuples`'s `ON DUPLICATE KEY UPDATE` terminator - the
+    `sql_out.render_upsert_block` shape for a do-not-delete table like
+    `creature_template` (data/sql/updates/db_world/2026_09_23_12.sql), which
+    `trainer_state.load_table_rows` used to silently skip as unparseable."""
+
+    def test_read_table_rows_single_row_upsert(self):
+        sql = (
+            "INSERT INTO `t` (`entry`, `name`) VALUES (1, 'Foo') "
+            "ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);\n"
+        )
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "x.sql"
+            path.write_text(sql)
+            rows = sql_dump.read_table_rows(path, "t", ())
+        self.assertEqual(rows, [{"entry": 1, "name": "Foo"}])
+
+    def test_read_table_rows_multi_row_upsert(self):
+        sql = (
+            "INSERT INTO `t` (`entry`, `name`) VALUES (1, 'Foo'), (2, 'Bar') "
+            "ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);\n"
+        )
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "x.sql"
+            path.write_text(sql)
+            rows = sql_dump.read_table_rows(path, "t", ())
+        self.assertEqual(rows, [{"entry": 1, "name": "Foo"}, {"entry": 2, "name": "Bar"}])
+
+    def test_read_table_statements_yields_single_insert_event(self):
+        sql = (
+            "INSERT INTO `t` (`entry`, `name`) VALUES (1, 'Foo'), (2, 'Bar') "
+            "ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);\n"
+        )
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "x.sql"
+            path.write_text(sql)
+            events = list(sql_dump.read_table_statements(path, "t", ()))
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0][0], "insert")
+        self.assertEqual(events[0][1], [{"entry": 1, "name": "Foo"}, {"entry": 2, "name": "Bar"}])
+
+    def test_real_creature_template_migration_parses(self):
+        # data/sql/updates/db_world/2026_09_23_12.sql's exact creature_template INSERT
+        # (entry 300102) - confirms the real hand-written target file parses, not just a
+        # synthetic fixture.
+        path = (
+            Path(__file__).resolve().parents[3]
+            / "data" / "sql" / "updates" / "db_world" / "2026_09_23_12.sql"
+        )
+        rows = sql_dump.read_table_rows(path, "creature_template", ())
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["entry"], 300102)
+
+    def test_malformed_trailer_after_tuple_still_raises(self):
+        # Neither ',', ';', nor 'ON DUPLICATE KEY UPDATE' - genuinely malformed, must not be
+        # silently swallowed by the new upsert handling.
+        sql = "INSERT INTO `t` (`entry`, `name`) VALUES (1, 'Foo') GARBAGE HERE;\n"
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "x.sql"
+            path.write_text(sql)
+            with self.assertRaises(ValueError):
+                sql_dump.read_table_rows(path, "t", ())
+
+
 class ParseCreateTableColumnsTest(unittest.TestCase):
     def test_extracts_columns_in_order(self):
         sql = (
@@ -240,6 +323,61 @@ class ParseCreateTableColumnsTest(unittest.TestCase):
             path.write_text("CREATE TABLE `other` (`x` int);\n")
             with self.assertRaises(ValueError):
                 sql_dump.parse_create_table_columns(path, "nonexistent")
+
+
+# A small CREATE TABLE mirroring creature_template's own defaulting quirks - a numeric column
+# whose quoted DEFAULT must become a Python int/float, and a nullable string column (subname-like:
+# DEFAULT NULL, but still a string type) that a default-value-only classifier would misread as
+# numeric since NULL carries no type information of its own.
+CREATURE_LIKE_SQL = (
+    "CREATE TABLE `creature_like` (\n"
+    "  `entry` int unsigned NOT NULL DEFAULT '0',\n"
+    "  `speed_run` float NOT NULL DEFAULT '1.14286',\n"
+    "  `minlevel` tinyint unsigned NOT NULL DEFAULT '1',\n"
+    "  `subname` char(100) DEFAULT NULL,\n"
+    "  `AIName` char(64) NOT NULL DEFAULT '',\n"
+    "  `speed_walk` float NOT NULL DEFAULT '1' COMMENT 'Result of 2.5/2.5, most common value',\n"
+    "  PRIMARY KEY (`entry`)\n"
+    ") ENGINE=InnoDB;\n"
+)
+
+
+class ParseCreateTableDefaultsTest(unittest.TestCase):
+    def _defaults(self) -> dict:
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "creature_like.sql"
+            path.write_text(CREATURE_LIKE_SQL)
+            return sql_dump.parse_create_table_defaults(path, "creature_like")
+
+    def test_numeric_defaults_are_typed_not_strings(self):
+        defaults = self._defaults()
+        self.assertEqual(defaults["entry"], 0)
+        self.assertIsInstance(defaults["entry"], int)
+        self.assertEqual(defaults["speed_run"], 1.14286)
+        self.assertIsInstance(defaults["speed_run"], float)
+        self.assertEqual(defaults["minlevel"], 1)
+
+    def test_null_default_is_none(self):
+        self.assertIsNone(self._defaults()["subname"])
+
+    def test_empty_string_default_is_empty_string_not_none(self):
+        self.assertEqual(self._defaults()["AIName"], "")
+
+    def test_trailing_comment_does_not_leak_into_the_default(self):
+        self.assertEqual(self._defaults()["speed_walk"], 1.0)
+
+
+class ParseCreateTableStringColumnsTest(unittest.TestCase):
+    def test_classifies_by_sql_type_not_by_default_value(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "creature_like.sql"
+            path.write_text(CREATURE_LIKE_SQL)
+            string_columns = sql_dump.parse_create_table_string_columns(path, "creature_like")
+        # subname is DEFAULT NULL but still char(100) - a classifier keyed off the default value
+        # alone (None looks like "could be anything") would miss it; the SQL type must decide.
+        self.assertEqual(string_columns, frozenset({"subname", "AIName"}))
+        self.assertNotIn("entry", string_columns)
+        self.assertNotIn("speed_run", string_columns)
 
 
 class ReadTableStatementsTest(unittest.TestCase):
@@ -298,6 +436,79 @@ class ReadTableStatementsTest(unittest.TestCase):
             "DELETE FROM `spell_proc` WHERE (`SpellId`) IN ((-47516), (-14531));",
             table="spell_proc", columns=("SpellId",))
         self.assertEqual(events[0][1][1], [(-47516,), (-14531,)])
+
+
+MODEL_COLUMNS = ("CreatureID", "Idx", "CreatureDisplayID", "DisplayScale", "Probability", "VerifiedBuild")
+MODEL_KEY = ("CreatureID", "Idx")
+
+
+class ApplyCompositeKeyStatementsTest(unittest.TestCase):
+    """`apply_composite_key_statements` - `apply_statements`'s cousin for a table keyed on more
+    than one column, needed because creature_template_model's real migration history (like
+    creature_template's) has genuine hand-written UPDATEs/single-column DELETEs after the original
+    INSERT - a plain union of INSERTs (trainer_state.load_table_rows) keeps reporting the
+    *original* INSERT's values forever. See T1's code-review follow-up."""
+
+    def _replay(self, sql: str) -> dict:
+        rows: dict = {}
+        sql_dump.apply_composite_key_statements(rows, MODEL_COLUMNS, MODEL_KEY, "creature_template_model", sql)
+        return rows
+
+    def test_insert_then_and_guarded_update_reflects_the_new_value(self):
+        rows = self._replay(
+            "INSERT INTO `creature_template_model` (`CreatureID`, `Idx`, `CreatureDisplayID`, "
+            "`DisplayScale`, `Probability`, `VerifiedBuild`) VALUES (300001, 0, 1126, 1, 1, 0);\n"
+            "UPDATE `creature_template_model` SET `CreatureDisplayID` = 25144 "
+            "WHERE `CreatureID` = 300001 AND `CreatureDisplayID` = 1126;\n"
+        )
+        self.assertEqual(rows[(300001, 0)]["CreatureDisplayID"], 25144)
+
+    def test_real_frozen_orb_revision_chain_ends_at_the_true_final_value(self):
+        # The exact statement shapes from data/sql/updates/db_world/2026_09_01_01.sql - a plain
+        # union of INSERTs would report the original 1126, not the true final 90001.
+        rows = self._replay(
+            "INSERT INTO `creature_template_model` (`CreatureID`, `Idx`, `CreatureDisplayID`, "
+            "`DisplayScale`, `Probability`, `VerifiedBuild`) VALUES (300001, 0, 1126, 1, 1, 0);\n"
+            "UPDATE `creature_template_model` SET `CreatureDisplayID` = 25144 "
+            "WHERE `CreatureID` = 300001 AND `CreatureDisplayID` = 1126;\n"
+            "DELETE FROM `creature_template_model` WHERE `CreatureID` = 300001;\n"
+            "INSERT INTO `creature_template_model` (`CreatureID`, `Idx`, `CreatureDisplayID`, "
+            "`DisplayScale`, `Probability`, `VerifiedBuild`) VALUES (300001, 0, 26753, 1, 1, 0);\n"
+            "UPDATE `creature_template_model` SET `CreatureDisplayID` = 90001 "
+            "WHERE `CreatureID` = 300001 AND `CreatureDisplayID` = 26753;\n"
+            "UPDATE `creature_template_model` SET `CreatureDisplayID` = 26753 "
+            "WHERE `CreatureID` = 300001 AND `CreatureDisplayID` = 90001;\n"
+            "UPDATE `creature_template_model` SET `CreatureDisplayID` = 90001 "
+            "WHERE `CreatureID` = 300001 AND `CreatureDisplayID` = 26753;\n"
+        )
+        self.assertEqual(rows[(300001, 0)]["CreatureDisplayID"], 90001)
+
+    def test_delete_by_full_key_tuple_removes_only_that_row(self):
+        rows = self._replay(
+            "INSERT INTO `creature_template_model` (`CreatureID`, `Idx`, `CreatureDisplayID`, "
+            "`DisplayScale`, `Probability`, `VerifiedBuild`) VALUES "
+            "(300102, 0, 15788, 1, 1, 0), (300102, 1, 15789, 1, 1, 0);\n"
+            "DELETE FROM `creature_template_model` WHERE (`CreatureID`, `Idx`) IN ((300102, 0));\n"
+        )
+        self.assertEqual(set(rows), {(300102, 1)})
+
+    def test_delete_by_single_column_removes_every_matching_idx(self):
+        rows = self._replay(
+            "INSERT INTO `creature_template_model` (`CreatureID`, `Idx`, `CreatureDisplayID`, "
+            "`DisplayScale`, `Probability`, `VerifiedBuild`) VALUES "
+            "(300102, 0, 15788, 1, 1, 0), (300102, 1, 15789, 1, 1, 0), (300103, 0, 1, 1, 1, 0);\n"
+            "DELETE FROM `creature_template_model` WHERE `CreatureID` = 300102;\n"
+        )
+        self.assertEqual(set(rows), {(300103, 0)})
+
+    def test_update_naming_no_key_column_is_skipped_not_guessed(self):
+        rows = self._replay(
+            "INSERT INTO `creature_template_model` (`CreatureID`, `Idx`, `CreatureDisplayID`, "
+            "`DisplayScale`, `Probability`, `VerifiedBuild`) VALUES (300102, 0, 15788, 1, 1, 0);\n"
+            "UPDATE `creature_template_model` SET `DisplayScale` = 0.5 "
+            "WHERE `Probability` = 1 AND `VerifiedBuild` = 0;\n"
+        )
+        self.assertEqual(rows[(300102, 0)]["DisplayScale"], 1)  # unchanged - can't be sure which row(s)
 
 
 if __name__ == "__main__":

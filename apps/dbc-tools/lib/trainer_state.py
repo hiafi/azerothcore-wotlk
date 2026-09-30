@@ -202,18 +202,68 @@ def load_keyed_table_rows(table_name: str, columns: tuple[str, ...]) -> dict[int
     INSERT/UPDATE/DELETE in apply order (base dump, promoted, pending, module
     SQL) via `sql_dump.apply_statements` instead of unioning INSERTs - so an
     `UPDATE ... SET TrainerId = @TrainerId+12 WHERE CreatureId IN (...)`
-    actually moves the rows it names. `columns[0]` is the key."""
-    table = DbcTable(
-        name=table_name, dbc_filename="", sql_table=table_name,
-        fmt="n" + "i" * (len(columns) - 1), columns=tuple(columns),
-    )
-    rows: dict[int, dict] = {}
+    actually moves the rows it names. `columns[0]` is the key.
+
+    The synthetic `DbcTable`'s `fmt` is derived from the table's own `CREATE TABLE` (`sql_dump.
+    parse_create_table_string_columns`) rather than assumed all-numeric - `creature_default_trainer`
+    (this function's original caller) happens to have none, but a caller with a real string column
+    (e.g. `creature_template`'s `name`/`ScriptName`/...) would otherwise have every missing/NULL
+    string value default to `0` instead of `''` (`sql_dump._fill_defaults`/`_apply_update`'s own
+    NULL handling both key off `fmt`), a wrong value that then compares as different from a
+    genuinely-unset declared string field."""
     base_path = BASE_SQL_DIR / f"{table_name}.sql"
+    string_columns = (
+        sql_dump.parse_create_table_string_columns(base_path, table_name) if base_path.is_file() else frozenset()
+    )
+    fmt = "n" + "".join("s" if c in string_columns else "i" for c in columns[1:])
+    table = DbcTable(name=table_name, dbc_filename="", sql_table=table_name, fmt=fmt, columns=tuple(columns))
+    rows: dict[int, dict] = {}
     if base_path.is_file():
         sql_dump.apply_statements(rows, table, base_path.read_text(encoding="utf-8"))
     for path in _migration_files_mentioning(table_name):
         sql_dump.apply_statements(rows, table, path.read_text(encoding="utf-8"))
     return rows
+
+
+def load_replayed_table_rows(
+    table_name: str, columns: tuple[str, ...], key_columns: tuple[str, ...],
+) -> list[dict]:
+    """True live state for `table_name`, replaying INSERT/UPDATE/DELETE in apply order across the
+    base dump and every migration/module file that mentions it - unlike `load_table_rows`'s plain
+    union of every INSERT ever seen, this actually reflects a later hand-written UPDATE or DELETE.
+
+    Built for `creature_template`/`creature_template_model` (`lib/spell_tables.py`'s
+    `CREATURE_TABLES`): their real migration history has genuine hand-written point fixes after
+    the original INSERT - Frozen Orb 300001's `flags_extra` (194 -> 66) and `CreatureDisplayID`
+    (through several revisions) both changed this way in `data/sql/updates/db_world/
+    2026_09_01_01.sql` - so `load_table_rows`'s union kept reporting the *original* INSERT's
+    values as live forever, which made a re-declaration matching that stale value look unchanged
+    and silently skip re-emitting the real fix (found via code review, 2026-09-28).
+
+    Always uses `sql_dump.apply_composite_key_statements` (even for a single-column key, e.g.
+    `creature_template`'s bare `("entry",)`) rather than `load_keyed_table_rows`/`apply_statements`
+    - deliberately, not just for one code path instead of two: `apply_statements`'s INSERT handling
+    calls `_fill_defaults`, which backfills a column a partial-column-list INSERT omitted with a
+    blanket `0`/`''` *immediately*, so the key is never actually missing from the row dict by the
+    time a caller sees it - defeating `lib.spell_tables.TableSpec.defaults`'s whole point (a
+    missing key falling back to the column's *real* schema default, not a blanket `0`). This
+    matters for exactly the same reason the AND-guard/composite-key work above does: three real
+    module SQL files (`mod-transmog`, `mod-mythic-plus` x2) INSERT `creature_template` with a
+    partial column list, so this isn't a hypothetical (found via code review, 2026-09-28).
+    `apply_composite_key_statements`'s own INSERT handling never calls `_fill_defaults` - a column
+    a statement didn't mention simply isn't in the row dict, exactly what `TableSpec.defaults`
+    needs to see."""
+    rows: dict[tuple, dict] = {}
+    base_path = BASE_SQL_DIR / f"{table_name}.sql"
+    if base_path.is_file():
+        sql_dump.apply_composite_key_statements(
+            rows, columns, key_columns, table_name, base_path.read_text(encoding="utf-8")
+        )
+    for path in _migration_files_mentioning(table_name):
+        sql_dump.apply_composite_key_statements(
+            rows, columns, key_columns, table_name, path.read_text(encoding="utf-8")
+        )
+    return list(rows.values())
 
 
 class TrainerIndex:

@@ -7,7 +7,7 @@ Split from a single source/classes/mage.py via split_class_file.py (.agents/plan
 from lib.dsl import (
     RANGE_SELF, AuraType, CombatRating, DispelType, Effect, EffectType, Mechanic, PowerType, School, SpellModOp,
 )
-from lib.dsl.registry import bonus_coefficients, procs_on, scripted_by, spell
+from lib.dsl.registry import bonus_coefficients, linked_spell, procs_on, scripted_by, spell
 
 
 arcane_missile_7268 = spell(
@@ -855,12 +855,13 @@ ice_shards_11207 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=108, misc_value=15),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1236,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike damage bonus of your Frost spells by $s1%. |cFF9D9D9DAt max rank, increases damage against frozen targets by 6%.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 131808, 'EffectSpellClassMaskA_2': 1052672, 'EffectSpellClassMaskA_3': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warlock-rework AFFLICTION §4.8 (A1/A2): crit-damage SpellMod zeroed, masks cleared; linked to hidden passive 200683 (165%). The max-rank "damage against frozen targets" sentence is kept verbatim (mage owner call).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 165% damage. This does not stack with other similar effects. |cFF9D9D9DAt max rank, increases damage against frozen targets by 6%.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
+linked_spell(ice_shards_11207.id, 200683, type=2)
 
 
 alacrity_11210 = spell(
@@ -1856,12 +1857,13 @@ ice_shards_12672 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=69, implicit_target_a=1, apply_aura=108, misc_value=15),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1236,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike damage bonus of your Frost spells by $s1%. |cFF9D9D9DAt max rank, increases damage against frozen targets by 6%.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 131808, 'EffectSpellClassMaskA_2': 1052672, 'EffectSpellClassMaskA_3': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warlock-rework AFFLICTION §4.8 (A1/A2): linked to hidden passive 200684 (180%).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 180% damage. This does not stack with other similar effects. |cFF9D9D9DAt max rank, increases damage against frozen targets by 6%.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
+linked_spell(ice_shards_12672.id, 200684, type=2)
 
 
 arcane_meditation_12839 = spell(
@@ -2122,13 +2124,14 @@ ice_shards_15047 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=108, misc_value=15),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1236,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike damage bonus of your Frost spells by $s1%.  Increases damage against frozen targets by 6%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 131808, 'EffectSpellClassMaskA_2': 1052672, 'EffectSpellClassMaskA_3': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warlock-rework AFFLICTION §4.8 (A1/A2): eff1 crit-damage SpellMod zeroed, linked to hidden passive 200685 (199.5%); eff2 (real +6% vs frozen) untouched.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 200% damage. This does not stack with other similar effects.  Increases damage against frozen targets by 6%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
+linked_spell(ice_shards_15047.id, 200685, type=2)
 
 
 arcane_instability_15058 = spell(
@@ -3339,72 +3342,6 @@ pyromaniac_34296 = spell(
 )
 
 
-backlash_34935 = spell(
-    id=34935,
-    name='Backlash',
-    school=School.FIRE,
-    attributes=262352,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    duration_ms=-1,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=34936),
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=57),
-    ],
-    spell_icon_id=2130,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your critical strike chance with spells by an additional $s2% and gives you a $h% chance when hit by a physical attack to reduce the cast time of your next Shadow Bolt or Incinerate spell by $34936s1%.  This effect lasts $34936d and will not occur more than once every 8 seconds.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194325, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 8, 'ProcTypeMask': 680, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
-)
-
-
-backlash_34938 = spell(
-    id=34938,
-    name='Backlash',
-    school=School.FIRE,
-    attributes=262352,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    duration_ms=-1,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=34936),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=57),
-    ],
-    spell_icon_id=2130,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your critical strike chance with spells by an additional $s2% and gives you a $h% chance when hit by a physical attack to reduce the cast time of your next Shadow Bolt or Incinerate spell by $34936s1%.  This effect lasts $34936d and will not occur more than once every 8 seconds.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194325, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 16, 'ProcTypeMask': 680, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
-)
-
-
-backlash_34939 = spell(
-    id=34939,
-    name='Backlash',
-    school=School.FIRE,
-    attributes=262352,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    duration_ms=-1,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=34936),
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=57),
-    ],
-    spell_icon_id=2130,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your critical strike chance with spells by an additional $s2% and gives you a $h% chance when hit by a physical attack to reduce the cast time of your next Shadow Bolt or Incinerate spell by $34936s1%.  This effect lasts $34936d and will not occur more than once every 8 seconds.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194325, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 25, 'ProcTypeMask': 680, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
-)
-
-
 spell_power_35578 = spell(
     id=35578,
     name='Spell Power',
@@ -3417,12 +3354,13 @@ spell_power_35578 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=108, misc_value=15),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2281,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases critical strike damage bonus of all spells by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Dealing direct critical damage with a spell while your mana is below 50% taps into raw power, restoring 1% of your total mana each second and increasing your magic damage by 10% and Arcane damage by another 5%. This effect lasts for 10 seconds and can only occur once every 30 seconds.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 551686903, 'EffectSpellClassMaskA_2': 102472, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warlock-rework AFFLICTION §4.8 (A1/A2, server-wide): crit-damage SpellMod (ADD_PCT_MODIFIER CRIT_DAMAGE_BONUS) zeroed to an inert DUMMY (die_sides=0 so CalcValue does not add 1 back) and masks cleared - the real +165% crit damage now comes from the hidden passive 200680, linked (type=2) below. Joins spell_group 1201 (rule 3, highest-only) with every other spell crit-damage talent.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 165% damage. This does not stack with other similar effects.\n\n|cFF9D9D9DCapstone Bonus: Dealing direct critical damage with a spell while your mana is below 50% taps into raw power, restoring 1% of your total mana each second and increasing your magic damage by 10% and Arcane damage by another 5%. This effect lasts for 10 seconds and can only occur once every 30 seconds.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
+linked_spell(spell_power_35578.id, 200680, type=2)
 
 
 spell_power_35581 = spell(
@@ -3437,12 +3375,13 @@ spell_power_35581 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=74, implicit_target_a=1, apply_aura=108, misc_value=15),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2281,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases critical strike damage bonus of all spells by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Dealing direct critical damage with a spell while your mana is below 50% taps into raw power, restoring 1% of your total mana each second and increasing your magic damage by 10% and Arcane damage by another 5%. This effect lasts for 10 seconds and can only occur once every 30 seconds.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 551686903, 'EffectSpellClassMaskA_2': 102472, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='warlock-rework AFFLICTION §4.8 (A1/A2): see rank 1s note; linked to hidden passive 200681 (180%).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 180% damage. This does not stack with other similar effects.\n\n|cFF9D9D9DCapstone Bonus: Dealing direct critical damage with a spell while your mana is below 50% taps into raw power, restoring 1% of your total mana each second and increasing your magic damage by 10% and Arcane damage by another 5%. This effect lasts for 10 seconds and can only occur once every 30 seconds.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
+linked_spell(spell_power_35581.id, 200681, type=2)
 
 
 arcane_flows_44378 = spell(
@@ -3682,13 +3621,14 @@ burnout_44449 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CRIT_DAMAGE_BONUS),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2998,
-    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (6,0) rank 1: 3 ranks (was 5). SPELLMOD_CRIT_DAMAGE_BONUS +40% on the crit bonus half: 1.5 -> 1.70x. EFFECT_1 DUMMY is the capstone marker (1 on rank 3 only) for Phase 3's Burnout scripts. Ranks 4-5 (44471/44472) are no longer granted.",
-    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 170% damage.\n\n|cFF9D9D9DCapstone Bonus: Dealing direct Fire damage to targets afflicted by your Ignite increases your spell damage by 6% for 8 sec. Dealing direct magic non-Fire damage to targets affected by your Ignite causes an explosion, dealing damage to all nearby enemies. Both effects require the final rank of Ignite.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 551686903, 'EffectSpellClassMaskA_2': 233544, 'EffectSpellClassMaskC_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 81920, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (6,0) rank 1: 3 ranks (was 5). EFFECT_1 DUMMY is the capstone marker (1 on rank 3 only) for Phase 3's Burnout scripts. Ranks 4-5 (44471/44472) are no longer granted. warlock-rework AFFLICTION §4.8 (A1/A2): crit-damage SpellMod (eff1) zeroed and masks cleared - was 170/185/200% (out of sync with A2), now 165/180/200% via the hidden passive 200686.",
+    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 165% damage. This does not stack with other similar effects.\n\n|cFF9D9D9DCapstone Bonus: Dealing direct Fire damage to targets afflicted by your Ignite increases your spell damage by 6% for 8 sec. Dealing direct magic non-Fire damage to targets affected by your Ignite causes an explosion, dealing damage to all nearby enemies. Both effects require the final rank of Ignite.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 81920, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
+linked_spell(burnout_44449.id, 200686, type=2)
 
 
 burnout_44469 = spell(
@@ -3703,13 +3643,14 @@ burnout_44469 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=69, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CRIT_DAMAGE_BONUS),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2998,
-    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (6,0) rank 2: 3 ranks (was 5). SPELLMOD_CRIT_DAMAGE_BONUS +70% on the crit bonus half: 1.5 -> 1.85x. EFFECT_1 DUMMY is the capstone marker (1 on rank 3 only) for Phase 3's Burnout scripts. Ranks 4-5 (44471/44472) are no longer granted.",
-    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 185% damage.\n\n|cFF9D9D9DCapstone Bonus: Dealing direct Fire damage to targets afflicted by your Ignite increases your spell damage by 6% for 8 sec. Dealing direct magic non-Fire damage to targets affected by your Ignite causes an explosion, dealing damage to all nearby enemies. Both effects require the final rank of Ignite.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 551686903, 'EffectSpellClassMaskA_2': 233544, 'EffectSpellClassMaskC_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 81920, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (6,0) rank 2: 3 ranks (was 5). EFFECT_1 DUMMY is the capstone marker (1 on rank 3 only) for Phase 3's Burnout scripts. Ranks 4-5 (44471/44472) are no longer granted. warlock-rework AFFLICTION §4.8 (A1/A2): linked to hidden passive 200687 (180%).",
+    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 180% damage. This does not stack with other similar effects.\n\n|cFF9D9D9DCapstone Bonus: Dealing direct Fire damage to targets afflicted by your Ignite increases your spell damage by 6% for 8 sec. Dealing direct magic non-Fire damage to targets affected by your Ignite causes an explosion, dealing damage to all nearby enemies. Both effects require the final rank of Ignite.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 81920, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
+linked_spell(burnout_44469.id, 200687, type=2)
 
 
 burnout_44470 = spell(
@@ -3724,13 +3665,14 @@ burnout_44470 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CRIT_DAMAGE_BONUS),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.APPLY_AURA, base_points=1, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2998,
-    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (6,0) rank 3: 3 ranks (was 5). SPELLMOD_CRIT_DAMAGE_BONUS +100% on the crit bonus half: 1.5 -> 2.00x. EFFECT_1 DUMMY is the capstone marker (1 on rank 3 only) for Phase 3's Burnout scripts. Ranks 4-5 (44471/44472) are no longer granted.",
-    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 200% damage.\n\nCapstone Bonus: Dealing direct Fire damage to targets afflicted by your Ignite increases your spell damage by 6% for 8 sec. Dealing direct magic non-Fire damage to targets affected by your Ignite causes an explosion, dealing damage to all nearby enemies. Both effects require the final rank of Ignite.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 551686903, 'EffectSpellClassMaskA_2': 233544, 'EffectSpellClassMaskC_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 81920, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (6,0) rank 3: 3 ranks (was 5). EFFECT_1 DUMMY is the capstone marker (1 on rank 3 only) for Phase 3's Burnout scripts. Ranks 4-5 (44471/44472) are no longer granted. warlock-rework AFFLICTION §4.8 (A1/A2): eff0 crit-damage SpellMod zeroed, linked to hidden passive 200688 (199.5%); eff1 (the real capstone marker) untouched.",
+    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 200% damage. This does not stack with other similar effects.\n\nCapstone Bonus: Dealing direct Fire damage to targets afflicted by your Ignite increases your spell damage by 6% for 8 sec. Dealing direct magic non-Fire damage to targets affected by your Ignite causes an explosion, dealing damage to all nearby enemies. Both effects require the final rank of Ignite.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 81920, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
+linked_spell(burnout_44470.id, 200688, type=2)
 
 
 burnout_44471 = spell(
@@ -5023,13 +4965,14 @@ spell_power_200077 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=108, misc_value=15),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2281,
-    notes="Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 4) - new spell, 3rd rank of Spell Power (id 1826), minted from source/ids.yaml's reserved spell block. Mirrors ranks 1-2's structure exactly.",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases critical strike damage bonus of all spells by $s1%.\n\nCapstone Bonus: Dealing direct critical damage with a spell while your mana is below 50% taps into raw power, restoring 1% of your total mana each second and increasing your magic damage by 10% and Arcane damage by another 5%. This effect lasts for 10 seconds and can only occur once every 30 seconds.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 551686903, 'EffectSpellClassMaskA_2': 102472, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'ProcTypeMask': 65536, 'ProcCharges': 0},
+    notes="Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 4) - new spell, 3rd rank of Spell Power (id 1826), minted from source/ids.yaml's reserved spell block. warlock-rework AFFLICTION §4.8 (A1/A2): eff1 crit-damage SpellMod zeroed, linked to hidden passive 200682 (199.5%); eff2 (the capstone marker, read by icon) is untouched.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spell critical strikes now deal 200% damage. This does not stack with other similar effects.\n\nCapstone Bonus: Dealing direct critical damage with a spell while your mana is below 50% taps into raw power, restoring 1% of your total mana each second and increasing your magic damage by 10% and Arcane damage by another 5%. This effect lasts for 10 seconds and can only occur once every 30 seconds.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'ProcTypeMask': 65536, 'ProcCharges': 0},
 )
+linked_spell(spell_power_200077.id, 200682, type=2)
 
 
 spell_power_200080 = spell(
@@ -5815,6 +5758,12 @@ scripted_by(flame_throwing_12353, 'spell_mage_flame_throwing_capstone')
 scripted_by(-burnout_44449.id, 'spell_mage_burnout_capstone')
 scripted_by(-playing_with_fire_31638.id, 'spell_mage_playing_with_fire')
 scripted_by(blazing_speed_200107, 'spell_mage_blazing_speed_capstone')
+# warlock-rework AFFLICTION §7 header / SHARED §4 (leech-talent exclusivity, additive binding -
+# this class lives in warlock_hooks.cpp, WP-B): gates Blazing Speed's aura-295 leech amount to 0
+# unless it is the players highest-% leech talent (Warlock::GetActiveLeechTalent).
+scripted_by(blazing_speed_31641, 'spell_leech_talent_gate')
+scripted_by(blazing_speed_31642, 'spell_leech_talent_gate')
+scripted_by(blazing_speed_200107, 'spell_leech_talent_gate')
 scripted_by(meteor_impact_200096, 'spell_mage_meteor_impact')
 
 
@@ -6049,3 +5998,33 @@ procs_on(stoking_the_fire_200126, proc_flags=65536, school_mask=4, spell_type_ma
 scripted_by(stoking_the_fire_200124, 'spell_mage_stoking_the_fire')
 scripted_by(stoking_the_fire_200125, 'spell_mage_stoking_the_fire')
 scripted_by(stoking_the_fire_200126, 'spell_mage_stoking_the_fire')
+
+
+# ---------------------------------------------------------------------------
+# warlock-rework AFFLICTION pass - server-wide A1/A2 crit-damage exclusivity
+# group (PLAN A1/A2, SHARED §1.1, AFFLICTION §4.8): mage's 9 of 27 hidden
+# passives (Arcane Spell Power, Ice Shards, Burnout). Group 1201 itself and
+# its rule are declared once, in the warlock DSL (warlock_trigger_spells.py).
+# ---------------------------------------------------------------------------
+
+def _crit_damage_passive_200680(spell_id, name, stored_bp):
+    return spell(
+        id=spell_id, name=name, school=School.SHADOW, attributes=464,
+        cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+        range_yards=RANGE_SELF, duration_ms=-1,
+        effects=[Effect(type=EffectType.APPLY_AURA, base_points=stored_bp, implicit_target_a=1, apply_aura=AuraType.MOD_CRIT_DAMAGE_BONUS, misc_value=126)],
+        spell_icon_id=2281,
+        notes='warlock-rework AFFLICTION §4.8 (A1/A2, SHARED §1.1): hidden crit-damage passive, no visible icon/tooltip; joins spell_group 1201 (rule 3, highest only, declared in the warlock DSL); linked (type=2) from its talent rank.',
+        raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 3, 'EffectChainAmplitude_1': 1.0, 'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101},
+    )
+
+
+arcane_spell_power_crit_200680 = _crit_damage_passive_200680(200680, 'Spell Power', 9)
+arcane_spell_power_crit_200681 = _crit_damage_passive_200680(200681, 'Spell Power', 19)
+arcane_spell_power_crit_200682 = _crit_damage_passive_200680(200682, 'Spell Power', 32)
+ice_shards_crit_200683 = _crit_damage_passive_200680(200683, 'Ice Shards', 9)
+ice_shards_crit_200684 = _crit_damage_passive_200680(200684, 'Ice Shards', 19)
+ice_shards_crit_200685 = _crit_damage_passive_200680(200685, 'Ice Shards', 32)
+burnout_crit_200686 = _crit_damage_passive_200680(200686, 'Burnout', 9)
+burnout_crit_200687 = _crit_damage_passive_200680(200687, 'Burnout', 19)
+burnout_crit_200688 = _crit_damage_passive_200680(200688, 'Burnout', 32)

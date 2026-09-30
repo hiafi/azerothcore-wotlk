@@ -2038,6 +2038,7 @@ void AuraEffect::HandleAuraModShapeshift(AuraApplication const* aurApp, uint8 mo
         case FORM_TEST:                                     // 0x14
         case FORM_ZOMBIE:                                   // 0x15
         case FORM_METAMORPHOSIS:                            // 0x16
+        case FORM_DARK_APOTHEOSIS:                          // 0x17 Custom: warlock-rework Dark Apotheosis form (DEMONOLOGY §11 Q1)
         case FORM_UNDEAD:                                   // 0x19
         case FORM_MASTER_ANGLER:                            // 0x1A
         case FORM_FLIGHT_EPIC:                              // 0x1B

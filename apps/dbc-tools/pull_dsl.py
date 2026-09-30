@@ -30,7 +30,7 @@ TOOL_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOL_ROOT))
 
 from csv_to_dsl import _slug, _spell_call_lines  # noqa: E402
-from lib import dbcfmt, reverse, source, state, trainer_state  # noqa: E402
+from lib import dbcfmt, reverse, source, spell_tables, state, trainer_state  # noqa: E402
 from lib.dsl import registry as dsl_registry  # noqa: E402
 
 SOURCE_DIR = TOOL_ROOT / "source"
@@ -43,16 +43,22 @@ def main(argv: list[str]) -> int:
                     help="run backfill_constants' int->enum rewrite over the output too")
     args = ap.parse_args(argv)
 
+    creature_table_index = spell_tables.load_creature_table_index()
     dsl = dsl_registry.load_classes_dir(
         SOURCE_DIR / "classes", ids_cfg=source.load_ids(SOURCE_DIR / "ids.yaml"),
         trainer_index=trainer_state.load_trainer_index(),
         # Needed the moment any class file declares spell_group()/spell_group_rule() on a stock
-        # id, or shapeshift_form() - without these this loader raises RuntimeError the same as
-        # generate.py's own load_classes_dir call would with them omitted (review, 2026-09-23:
-        # this call site and verify_dsl_migration.py/split_class_file.py's were the only ones not
-        # wired up when the two params were added).
+        # id, or shapeshift_form(), or creature_template() (T1) - without these this loader raises
+        # RuntimeError the same as generate.py's own load_classes_dir call would with them omitted
+        # (review, 2026-09-23: this call site and verify_dsl_migration.py/split_class_file.py's
+        # were the only ones not wired up when the two params were added; the three creature_*
+        # params had the same gap until 2026-09-28, found when a warlock class file with T1's
+        # creature_template() call made every pull_dsl.py invocation fail to load the DSL).
         existing_group_ids={int(row["id"]) for row in trainer_state.load_table_rows("spell_group")},
         shapeshift_index=state.load_stock_rows(dbcfmt.SPELLSHAPESHIFTFORM),
+        existing_creature_rows={int(r["entry"]): r for r in creature_table_index.live_rows("creature_template")},
+        creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
+        creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS,
     )
     declared = {e["id"] for e in dsl["spells"]}
     # The legacy CSVs (source/spells/npc.csv, generic.csv) still count - generate.py refuses an

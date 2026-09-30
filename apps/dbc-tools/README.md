@@ -348,6 +348,55 @@ apply order - the hand-written `data/sql/updates/db_world/2026_09_23_02.sql` thi
 had the same limit - so a removal that has to hold on every realm and every phase means editing the
 phase file itself.
 
+### Declaring a creature (T1)
+
+A `source/classes/*.py` file can also declare a rework's own NPC - `creature_template` +
+`creature_template_model` - instead of a hand-written migration (the previous precedent, Tentacle
+of Madness, is `data/sql/updates/db_world/2026_09_23_12.sql`):
+
+```python
+from lib.dsl.registry import creature_template, creature_model
+
+# creature_template - ObjectMgr::LoadCreatureTemplates. `entry` must be a fresh id from
+# source/ids.yaml's `creature` block (300000-300999), or an id that already exists (overriding a
+# live custom entry, e.g. re-declaring 300102, is legitimate). Builds a FULL row: every real
+# creature_template column gets a value - whatever you pass here, then a small set of defaults
+# that differ from the schema's own DEFAULT because the engine rejects/rewrites the schema default
+# at boot (unit_class 0 -> 1, BaseAttackTime/RangeAttackTime 0 -> 2000 - see
+# lib/dsl/registry.py's _CREATURE_TEMPLATE_DEFAULT_OVERRIDES for the reasons), then the table's
+# real schema DEFAULT for everything else. An unknown column name raises.
+creature_template(
+    300170, "Chaos Rift",
+    faction=35, unit_flags=33554434, unit_flags2=2048, flags_extra=66,
+    ScriptName="npc_warl_chaos_rift",
+)
+
+# creature_template_model - ObjectMgr::LoadCreatureTemplateModels. `probability` defaults to 1.0,
+# not the schema's 0 (a lone model at 0 total probability gets reset to 1.0 anyway by
+# ObjectMgr::CheckCreatureTemplate, but that's a footgun once a second model is added later).
+creature_model(300170, display_id=11686)
+```
+
+Emission differs from every other declared table here: `creature_template` is on the SQL linter's
+do-not-delete list (`apps/codestyle/codestyle-sql.py`'s `not_delete`), so it's **never**
+DELETE-then-INSERT'd - a changed or new row is emitted as an upsert instead (`INSERT ... ON
+DUPLICATE KEY UPDATE <every non-key column> = VALUES(<column>);`, never a `DELETE`).
+`creature_template_model` (keyed on `CreatureID, Idx`) still gets the normal DELETE-then-INSERT
+every other table here does - only `creature_template` itself needs the upsert.
+
+**Neither table is ever pruned.** Dropping a `creature_template`/`creature_model` declaration from
+source does not delete anything - `creature_template` can't be (the do-not-delete list), and
+pruning only the model row would leave a creature with no visible model. `generate.py` prints one
+`creature: ... is no longer declared - left in place` line per retired entry instead, for a human
+to remove by hand if they actually want it gone.
+
+Three `WARNING:` lints run automatically: a declared `creature_template` with `flags_extra`
+including `CREATURE_FLAG_EXTRA_TRIGGER` (0x80) that also has a model (forces the model invisible
+for every non-GM observer - `docs/bugs-and-fixes.md`'s `CREATURE_FLAG_EXTRA_TRIGGER` entry); a
+declared `creature_template_model` whose `CreatureDisplayID` has no `creature_model_info` row
+anywhere; and a declared `creature_template` with no `creature_template_model` row anywhere
+(declared or live).
+
 ## Known limitations
 
 - `spell_icon_id` takes a raw `SpellIconID` integer, not a texture-path

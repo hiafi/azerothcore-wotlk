@@ -422,6 +422,80 @@ def _spell_linked_engine_key(trigger: int, type_: int) -> int:
     return trigger + offset if trigger > 0 else trigger - offset
 
 
+# T1 (.agents/plans/warlock-rework/warlock-rework.T1-HANDOFF.md): creature_template/
+# creature_template_model lints.
+
+# UnitDefines.h CREATURE_FLAG_EXTRA_TRIGGER - forces UNIT_FIELD_DISPLAYID to the invisible model
+# for every non-GM observer (Unit::BuildValuesUpdateForPlayerWithFlag), silently hiding whatever
+# creature_template_model actually declares. Shipped once - see docs/bugs-and-fixes.md's
+# CREATURE_FLAG_EXTRA_TRIGGER entry (Tentacle of Madness's first draft).
+CREATURE_FLAG_EXTRA_TRIGGER = 0x80
+
+
+def check_creature_trigger_flag_with_model(
+    creature_templates: list[dict], has_model: set[int],
+) -> list[str]:
+    """Flags a declared `creature_template` whose `flags_extra` includes
+    `CREATURE_FLAG_EXTRA_TRIGGER` while it also has a model (declared this run or already live) -
+    the combination that made Tentacle of Madness's real model invisible to every non-GM observer
+    the first time it shipped (see `CREATURE_FLAG_EXTRA_TRIGGER`'s comment). `has_model` is the
+    union of declared + live `creature_template_model` `CreatureID`s - see `generate.py`'s wiring."""
+    warnings: list[str] = []
+    for row in creature_templates:
+        entry = row["entry"]
+        if entry not in has_model:
+            continue
+        if int(row.get("flags_extra") or 0) & CREATURE_FLAG_EXTRA_TRIGGER:
+            warnings.append(
+                f"creature_template {entry} ({row.get('name', '?')}): flags_extra includes "
+                f"CREATURE_FLAG_EXTRA_TRIGGER (0x80) and has a creature_template_model row - "
+                f"Unit::BuildValuesUpdateForPlayerWithFlag force-overrides UNIT_FIELD_DISPLAYID to "
+                f"the invisible model for every non-GM observer whenever TRIGGER is set, bypassing "
+                f"creature_template_model entirely (docs/bugs-and-fixes.md's "
+                f"CREATURE_FLAG_EXTRA_TRIGGER entry)."
+            )
+    return warnings
+
+
+def check_creature_model_display_id(
+    creature_models: list[dict], known_display_ids: set[int],
+) -> list[str]:
+    """Flags a declared `creature_template_model` row whose `CreatureDisplayID` has no
+    `creature_model_info` row anywhere (base dump or migrations - `known_display_ids`, see
+    `generate.py`'s wiring) - `ObjectMgr::LoadCreatureModelInfo`-derived data (bounding radius,
+    combat reach) the engine expects for every display id a creature can wear."""
+    warnings: list[str] = []
+    for row in creature_models:
+        display_id = row["CreatureDisplayID"]
+        if display_id not in known_display_ids:
+            warnings.append(
+                f"creature_template_model: CreatureID {row['CreatureID']} declares "
+                f"CreatureDisplayID {display_id}, which has no creature_model_info row in the "
+                f"base dump or migrations - the model may render with a wrong bounding "
+                f"radius/combat reach, or fail to load."
+            )
+    return warnings
+
+
+def check_creature_without_model(
+    creature_templates: list[dict], has_model: set[int],
+) -> list[str]:
+    """Flags a declared `creature_template` entry with no `creature_template_model` row anywhere
+    (declared this run or already live - `has_model`, see `generate.py`'s wiring) -
+    `ObjectMgr::CheckCreatureTemplate` logs "does not have any existing display id" for exactly
+    this and the creature has no visible model at all."""
+    warnings: list[str] = []
+    for row in creature_templates:
+        entry = row["entry"]
+        if entry not in has_model:
+            warnings.append(
+                f"creature_template {entry} ({row.get('name', '?')}): no creature_template_model "
+                f"row anywhere (declared or live) - ObjectMgr::CheckCreatureTemplate logs 'does "
+                f"not have any existing display id' and the creature has no visible model."
+            )
+    return warnings
+
+
 def check_linked_spell_key_collisions(rows: list[dict]) -> list[str]:
     """Flags any two `spell_linked_spell` rows (declared this run, live/stock, or a mix - `rows`
     is whatever the caller wants checked together, see `generate.py`'s wiring for "declared +

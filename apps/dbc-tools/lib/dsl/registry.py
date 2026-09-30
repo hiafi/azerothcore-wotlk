@@ -116,6 +116,14 @@ class Registry:
     linked_spell_removals: list[dict] = field(default_factory=list)
     spell_group_removals: list[dict] = field(default_factory=list)
     trainer_removals: list[dict] = field(default_factory=list)
+    # T1 (.agents/plans/warlock-rework/warlock-rework.T1-HANDOFF.md): two world-DB tables outside
+    # the spell system entirely - creature_template/creature_template_model, for a rework's own
+    # NPCs (e.g. a talent's summoned add). Unlike every table above, creature_template is on the
+    # SQL linter's do-not-delete list (apps/codestyle/codestyle-sql.py's `not_delete`), so it's
+    # never diffed as DELETE-then-INSERT the way the others are - see creature_template()'s
+    # docstring and lib/spell_tables.py's CREATURE_TABLES for the upsert-only emission this implies.
+    creature_templates: list[dict] = field(default_factory=list)
+    creature_template_models: list[dict] = field(default_factory=list)
 
 
 MERGE_KEYS = (
@@ -123,6 +131,7 @@ MERGE_KEYS = (
     "spell_script_names", "spell_bonus_data", "spell_procs",
     "linked_spells", "spell_groups", "spell_group_rules", "custom_attrs", "shapeshift_forms",
     "script_removals", "linked_spell_removals", "spell_group_removals", "trainer_removals",
+    "creature_templates", "creature_template_models",
 )
 
 # The registry a class file's spell()/talent()/tab()/skill_line_ability()
@@ -139,6 +148,12 @@ _active_ids_cfg: dict | None = None
 _active_trainer_index = None  # lib.trainer_state.TrainerIndex | None - see trained_by()
 _active_group_ids: set[int] | None = None  # existing spell_group ids, base dump + migrations - see spell_group()
 _active_shapeshift_index: dict[int, dict] | None = None  # stock SpellShapeshiftForm rows by ID - see shapeshift_form()
+_active_creature_rows: dict[int, dict] | None = None  # live creature_template rows by entry - see creature_template()
+# creature_template's full column list/defaults, from the base dump's own CREATE TABLE (parsed by
+# the caller, not here - see creature_template()'s docstring for why this module never imports
+# sql_dump/trainer_state itself, the same reasoning as _active_trainer_index/_active_shapeshift_index).
+_active_creature_columns: tuple[str, ...] | None = None
+_active_creature_defaults: dict[str, object] | None = None
 
 
 def _require_active() -> Registry:
@@ -685,6 +700,181 @@ def shapeshift_form(form_id: int, **changed_columns) -> dict:
     return row
 
 
+# ---------------------------------------------------------------------------
+# T1 (.agents/plans/warlock-rework/warlock-rework.T1-HANDOFF.md): creature_template/
+# creature_template_model - a rework's own NPCs (e.g. a talent's summoned add), previously always a
+# hand-written migration (data/sql/updates/db_world/2026_09_23_12.sql, Tentacle of Madness - the
+# shape both helpers below reproduce). creature_template is on the SQL linter's do-not-delete list
+# (apps/codestyle/codestyle-sql.py's `not_delete`), so unlike every table above this one is never
+# emitted as DELETE-then-INSERT - see lib/spell_tables.py's CREATURE_TABLES/render_creature_blocks
+# for the upsert-only path this implies, and lib/sql_out.py's render_upsert_block for the rendering.
+# ---------------------------------------------------------------------------
+
+# Columns where the CREATE TABLE's own DEFAULT is what ObjectMgr::CheckCreatureTemplate (ObjectMgr.cpp)
+# rejects or silently rewrites at every boot, so a declaration that doesn't mention the column
+# would otherwise ship a value the engine never actually uses:
+#   - unit_class: schema DEFAULT is 0; CheckCreatureTemplate treats 0 as invalid ("has invalid
+#     unit_class") and rewrites it to 1 (CLASS_WARRIOR) every time creature_template loads.
+#   - BaseAttackTime / RangeAttackTime: schema DEFAULT is 0; CheckCreatureTemplate silently
+#     substitutes BASE_ATTACK_TIME (2000) for either column whenever it's exactly 0.
+# VerifiedBuild is always 0 here (T1 handoff) rather than the schema's DEFAULT NULL - every other
+# helper in this module writes 0 for it too (see trained_by/scripted_by/bonus_coefficients/...).
+_CREATURE_TEMPLATE_DEFAULT_OVERRIDES = {
+    "unit_class": 1,
+    "BaseAttackTime": 2000,
+    "RangeAttackTime": 2000,
+    "VerifiedBuild": 0,
+}
+
+
+def _require_creature_columns() -> tuple[str, ...]:
+    if _active_creature_columns is None:
+        raise RuntimeError(
+            "creature_template() needs creature_template's full column list (parsed from "
+            "data/sql/base/db_world/creature_template.sql's own CREATE TABLE - too wide, ~54 "
+            "columns, to safely hand-transcribe) - pass it through registry.load_class_file(path, "
+            "creature_columns=...) / load_classes_dir(dir_path, creature_columns=...) "
+            "(generate.py already does)."
+        )
+    return _active_creature_columns
+
+
+def _require_creature_defaults() -> dict[str, object]:
+    if _active_creature_defaults is None:
+        raise RuntimeError(
+            "creature_template() needs creature_template's per-column DEFAULT values (parsed from "
+            "the same CREATE TABLE as creature_columns) - pass them through "
+            "registry.load_class_file(path, creature_defaults=...) / "
+            "load_classes_dir(dir_path, creature_defaults=...) (generate.py already does)."
+        )
+    return _active_creature_defaults
+
+
+def _require_creature_rows() -> dict[int, dict]:
+    if _active_creature_rows is None:
+        raise RuntimeError(
+            "creature_template() needs the live creature_template rows (base dump + migrations, "
+            "keyed by entry) both to tell a legitimate override of an already-existing row apart "
+            "from a typo'd entry outside source/ids.yaml's creature block, and to preserve that "
+            "row's untouched columns on an override - pass them through "
+            "registry.load_class_file(path, existing_creature_rows=...) / "
+            "load_classes_dir(dir_path, existing_creature_rows=...) (generate.py already does)."
+        )
+    return _active_creature_rows
+
+
+def _validate_creature_entry(entry: int) -> None:
+    """A `creature_template` entry must be a fresh mint from `source/ids.yaml`'s `creature` block,
+    or an entry that already exists (base dump or migrations) - re-declaring a live custom entry
+    (e.g. 300102, Tentacle of Madness) to override it is legitimate, the same "add a member to an
+    existing group" exception `spell_group()`'s `_validate_group_id` makes."""
+    ids_cfg = _active_ids_cfg
+    if ids_cfg is not None:
+        r = ids_cfg.get("creature")
+        if r and r["start"] <= entry <= r["end"]:
+            return
+    if entry in _require_creature_rows():
+        return
+    raise ValueError(
+        f"creature_template({entry}, ...): entry {entry} is neither inside source/ids.yaml's "
+        f"creature reserved block nor an entry that already exists in the base dump/migrations - "
+        f"mint a new one from that block, or double check the id if you meant to override an "
+        f"existing creature."
+    )
+
+
+def creature_template(entry: int, name: str, **columns) -> dict:
+    """Declares one `creature_template` row (`ObjectMgr::LoadCreatureTemplates`) - a rework's own
+    NPC, e.g. a talent's summoned add (Tentacle of Madness, `data/sql/updates/db_world/
+    2026_09_23_12.sql`, is the row this helper reproduces). `entry` must be a fresh id from
+    `source/ids.yaml`'s `creature` block, or an entry that already exists (see
+    `_validate_creature_entry`) - overriding a live custom entry is a legitimate re-declaration.
+
+    Builds a **full** row: every column in creature_template's real column list (parsed from its
+    own `CREATE TABLE`, never hand-transcribed - see `_require_creature_columns`) gets a value, so
+    the emitted `INSERT` always has every column, matching `sql_out.render_upsert_block`'s
+    "declared row replaces whatever's live" upsert semantics. A column's value is, in order:
+    `name` (the required parameter) for the `name` column; whatever `columns` passes explicitly;
+    **the entry's current live value, if `entry` already exists** (an override that doesn't
+    mention a column must not reset it - see the note below); `_CREATURE_TEMPLATE_DEFAULT_OVERRIDES`
+    for the handful of columns whose schema DEFAULT the engine rejects or silently rewrites at boot
+    (see that dict's own comment, and only reached for genuinely new content, since an existing row
+    already has *some* value there); otherwise the column's real schema DEFAULT. An unknown column
+    name in `columns` raises `KeyError` naming it - a typo here must not silently produce a
+    spurious extra column or get ignored.
+
+    **Overriding an existing entry never wipes a column you didn't mention.** `shapeshift_form()`
+    already has to solve this same problem (a full-row override starting from the stock DBC row) -
+    this mirrors it: `entry`'s current live row (from `existing_creature_rows`, see
+    `_require_creature_rows`) is the starting point for every column you don't pass explicitly,
+    not the schema default. Get this wrong (as this helper originally did - found via code review,
+    2026-09-28) and re-declaring Tentacle of Madness (300102) to fix just its `ScriptName` would
+    have reset its faction, levels, flags and every modifier back to schema defaults, with no
+    warning - `_validate_creature_entry` explicitly allows overriding *any* existing entry in the
+    block (a real collision with e.g. Frozen Orb 300001, not just an intentional override of your
+    own past declaration, is accepted the same way), so this isn't a rare edge case.
+
+    Unlike every other table this module declares, `creature_template` is on the SQL linter's
+    do-not-delete list (`apps/codestyle/codestyle-sql.py`'s `not_delete`) - it is never emitted as
+    a DELETE-then-INSERT, and a declaration removed from source is never pruned either (see
+    `lib/spell_tables.py`'s `CREATURE_TABLES`/`render_creature_retirement_report` - it's reported
+    for a human to remove by hand instead)."""
+    all_columns = _require_creature_columns()
+    schema_defaults = _require_creature_defaults()
+    _validate_creature_entry(entry)
+    unknown = [c for c in columns if c not in all_columns]
+    if unknown:
+        raise KeyError(
+            f"creature_template({entry}): no such column(s): {', '.join(sorted(unknown))} - see "
+            f"data/sql/base/db_world/creature_template.sql's CREATE TABLE for the real names"
+        )
+    live_row = _require_creature_rows().get(entry)
+    row: dict = {}
+    for column in all_columns:
+        if column == "entry":
+            continue
+        if column == "name":
+            row[column] = name
+        elif column in columns:
+            row[column] = columns[column]
+        elif live_row is not None and column in live_row:
+            row[column] = live_row[column]
+        elif column in _CREATURE_TEMPLATE_DEFAULT_OVERRIDES:
+            row[column] = _CREATURE_TEMPLATE_DEFAULT_OVERRIDES[column]
+        else:
+            row[column] = schema_defaults.get(column)
+    row["entry"] = entry
+    row["id"] = entry
+    _require_active().creature_templates.append(row)
+    return row
+
+
+def creature_model(
+    entry: int, display_id: int, scale: float = 1.0, idx: int = 0, probability: float = 1.0,
+) -> dict:
+    """Declares one `creature_template_model` row (`ObjectMgr::LoadCreatureTemplateModels`) for
+    `entry` (an id `creature_template()` declared, or a bare int for an existing creature). Unlike
+    `creature_template()`, this is a plain, narrow table (6 columns, none reused elsewhere) - no
+    `**columns` escape hatch, just the columns a design doc actually needs.
+
+    `probability` defaults to `1.0`, not the schema's own `0` - `ObjectMgr::CheckCreatureTemplate`
+    resets *every* model's probability to `1.0` when the models on a creature sum to exactly `0`
+    (`totalProbability <= 0.0f` branch, harmless for one model but a real footgun once a second
+    model is added later with its own nonzero weight and the first one's `0` no longer reads as
+    "equal chance"). `VerifiedBuild` is always 0, same convention as every other helper here."""
+    row = {
+        "id": f"{entry}:{idx}",
+        "CreatureID": entry,
+        "Idx": idx,
+        "CreatureDisplayID": display_id,
+        "DisplayScale": float(scale),
+        "Probability": float(probability),
+        "VerifiedBuild": 0,
+    }
+    _require_active().creature_template_models.append(row)
+    return row
+
+
 # SPELL_ATTR0_PASSIVE (src/server/shared/SharedDefines.h) - "Spell is
 # automatically cast on self by core", never player-cast from a Spellbook.
 _SPELL_ATTR0_PASSIVE = 0x00000040
@@ -883,6 +1073,8 @@ def _exec_fresh_module(mod_name: str, path: Path, package: str | None = None):
 def load_class_file(
     path: Path, ids_cfg: dict | None = None, trainer_index=None,
     existing_group_ids: set[int] | None = None, shapeshift_index: dict | None = None,
+    existing_creature_rows: dict[int, dict] | None = None, creature_columns: tuple[str, ...] | None = None,
+    creature_defaults: dict[str, object] | None = None,
 ) -> Registry:
     """Imports one `source/classes/<class>.py` file fresh and returns
     everything it registered via `spell()`/`talent()`/`tab()`/
@@ -901,14 +1093,20 @@ def load_class_file(
     duck-typed reasoning) is only needed for `spell_group()`/
     `spell_group_rule()` - see `_require_group_ids`. `shapeshift_index` (a
     plain `dict[int, dict]`) is only needed for `shapeshift_form()` - see
-    `_require_shapeshift_index`."""
+    `_require_shapeshift_index`. `existing_creature_rows`/`creature_columns`/
+    `creature_defaults` are only needed for `creature_template()` - see
+    `_require_creature_ids`/`_require_creature_columns`/`_require_creature_defaults`."""
     global _active, _active_ids_cfg, _active_trainer_index, _active_group_ids, _active_shapeshift_index
+    global _active_creature_rows, _active_creature_columns, _active_creature_defaults
     registry = Registry()
     _active = registry
     _active_ids_cfg = ids_cfg
     _active_trainer_index = trainer_index
     _active_group_ids = existing_group_ids
     _active_shapeshift_index = shapeshift_index
+    _active_creature_rows = existing_creature_rows
+    _active_creature_columns = creature_columns
+    _active_creature_defaults = creature_defaults
     mod_name = f"dsl_class_{path.stem}"
     try:
         _exec_fresh_module(mod_name, path)
@@ -918,6 +1116,9 @@ def load_class_file(
         _active_trainer_index = None
         _active_group_ids = None
         _active_shapeshift_index = None
+        _active_creature_rows = None
+        _active_creature_columns = None
+        _active_creature_defaults = None
         sys.modules.pop(mod_name, None)
     return registry
 
@@ -925,6 +1126,8 @@ def load_class_file(
 def load_class_package(
     dir_path: Path, ids_cfg: dict | None = None, trainer_index=None,
     existing_group_ids: set[int] | None = None, shapeshift_index: dict | None = None,
+    existing_creature_rows: dict[int, dict] | None = None, creature_columns: tuple[str, ...] | None = None,
+    creature_defaults: dict[str, object] | None = None,
 ) -> Registry:
     """Imports every `*.py` file inside `dir_path` (a `source/classes/<class>/`
     directory - the multi-file layout, one class split across e.g.
@@ -949,6 +1152,7 @@ def load_class_package(
     the single-file case. Files starting with `_` are skipped, same
     convention as `load_classes_dir`."""
     global _active, _active_ids_cfg, _active_trainer_index, _active_group_ids, _active_shapeshift_index
+    global _active_creature_rows, _active_creature_columns, _active_creature_defaults
     pkg_name = f"dsl_classpkg_{dir_path.name}_{next(_package_load_counter)}"
     pkg_spec = importlib.util.spec_from_loader(pkg_name, loader=None, is_package=True)
     pkg_module = importlib.util.module_from_spec(pkg_spec)
@@ -959,6 +1163,9 @@ def load_class_package(
     _active_trainer_index = trainer_index
     _active_group_ids = existing_group_ids
     _active_shapeshift_index = shapeshift_index
+    _active_creature_rows = existing_creature_rows
+    _active_creature_columns = creature_columns
+    _active_creature_defaults = creature_defaults
     sys.modules[pkg_name] = pkg_module
     # A sibling's own `from .other import x` is resolved by Python's *standard* import
     # machinery (not our `_exec_fresh_module`, which only covers the files this loop reaches
@@ -982,6 +1189,9 @@ def load_class_package(
         _active_trainer_index = None
         _active_group_ids = None
         _active_shapeshift_index = None
+        _active_creature_rows = None
+        _active_creature_columns = None
+        _active_creature_defaults = None
         # Remove every module this call put in sys.modules - not just the ones our own loop
         # inserted directly, but also any sibling pulled in by another file's own relative
         # import (that insertion happens inside `exec`, via Python's normal import machinery,
@@ -995,6 +1205,8 @@ def load_class_package(
 def load_classes_dir(
     dir_path: Path, ids_cfg: dict | None = None, trainer_index=None,
     existing_group_ids: set[int] | None = None, shapeshift_index: dict | None = None,
+    existing_creature_rows: dict[int, dict] | None = None, creature_columns: tuple[str, ...] | None = None,
+    creature_defaults: dict[str, object] | None = None,
 ) -> dict[str, list[dict]]:
     """Merge every `source/classes/*` entry's registered spells/talents/
     tabs/skill_line_abilities/trainer_spells into one dict, in sorted-name
@@ -1016,8 +1228,9 @@ def load_classes_dir(
     `Registry.spells` etc. would otherwise pick them up as a fifth
     "class").
 
-    `ids_cfg`/`trainer_index`/`existing_group_ids`/`shapeshift_index` are
-    passed straight through to every `load_class_file`/`load_class_package`
+    `ids_cfg`/`trainer_index`/`existing_group_ids`/`shapeshift_index`/
+    `existing_creature_rows`/`creature_columns`/`creature_defaults` are passed
+    straight through to every `load_class_file`/`load_class_package`
     call - see their docstrings."""
     merged: dict[str, list[dict]] = {key: [] for key in MERGE_KEYS}
     if not dir_path.is_dir():
@@ -1029,6 +1242,8 @@ def load_classes_dir(
         kwargs = dict(
             ids_cfg=ids_cfg, trainer_index=trainer_index,
             existing_group_ids=existing_group_ids, shapeshift_index=shapeshift_index,
+            existing_creature_rows=existing_creature_rows, creature_columns=creature_columns,
+            creature_defaults=creature_defaults,
         )
         if path.is_dir():
             registry = load_class_package(path, **kwargs)
