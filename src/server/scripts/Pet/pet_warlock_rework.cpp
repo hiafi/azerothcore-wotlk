@@ -143,6 +143,11 @@ namespace
     // ---- Infernal (300154) tuning + local ids ----
     constexpr uint32 INFERNAL_PULSE_INTERVAL_MS = 1000;
     constexpr uint32 INFERNAL_RETARGET_INTERVAL_MS = 500;
+    // Melee swing (2 s, creature_template BaseAttackTime) = two Immolation ticks at level 80
+    // (DEMONOLOGY.md §4.0: 83 + 0.1114 x SP per tick), +/- 10%.
+    constexpr float INFERNAL_MELEE_BASE_DAMAGE = 166.0f;
+    constexpr float INFERNAL_MELEE_SP_COEFFICIENT = 0.2228f;
+    constexpr float INFERNAL_MELEE_SPREAD = 0.1f;
 
     enum InfernalAIEvent : uint32
     {
@@ -656,9 +661,10 @@ private:
 };
 
 /*
- * 300154 - Infernal - DEMONOLOGY.md §7.4. Never melees (no DoMeleeAttackIfReady anywhere in this
- * AI); pulses a self-centred Immolation AoE every second, multiplied by the owner's Cataclysm rank
- * in spell_warl_guardian_hit_mods (spell_warlock_demonology.cpp), never here.
+ * 300154 - Infernal - DEMONOLOGY.md §7.4. Melees its target and pulses a self-centred Immolation
+ * AoE every second, multiplied by the owner's Cataclysm rank in spell_warl_guardian_hit_mods
+ * (spell_warlock_demonology.cpp), never here. Its weapon damage follows the owner's spell power,
+ * refreshed with every pulse.
  */
 class npc_warl_infernal_guardian : public CreatureAI
 {
@@ -676,6 +682,7 @@ public:
 
         me->SetReactState(REACT_PASSIVE);
         Warlock::RefreshDemonAuras(owner, me);
+        UpdateMeleeDamage();
 
         _events.ScheduleEvent(EVENT_INFERNAL_CHASE, 0ms);
         _events.ScheduleEvent(EVENT_INFERNAL_PULSE, 0ms);
@@ -701,6 +708,8 @@ public:
                     break;
             }
         }
+
+        DoMeleeAttackIfReady();
     }
 
 private:
@@ -719,14 +728,22 @@ private:
         Unit* target = SelectOwnerOrSummonTarget(me, owner, _summonTargetGUID);
         if (target)
         {
-            if (target->GetGUID() != _chasingGUID)
+            // ChaseMovementGenerator pauses while GetVictim() != its target, so Attack() also has
+            // to (re)set the victim whenever something cleared it.
+            if (target->GetGUID() != _chasingGUID || me->GetVictim() != target)
             {
+                me->Attack(target, true);
+                // A chase that starts already in range sends no spline of its own, so the follow
+                // spline still in flight would carry the Infernal back to the owner, and the chase
+                // only re-paths once the target moves (never, for a training dummy).
+                me->StopMoving();
                 me->GetMotionMaster()->MoveChase(target);
                 _chasingGUID = target->GetGUID();
             }
         }
         else if (!_chasingGUID.IsEmpty())
         {
+            me->AttackStop();
             me->GetMotionMaster()->MoveFollow(owner, PET_FOLLOW_DIST, me->GetFollowAngle());
             _chasingGUID.Clear();
         }
@@ -734,8 +751,23 @@ private:
 
     void DoPulse()
     {
+        UpdateMeleeDamage();
+
         int32 const bp0 = Warlock::ComputeGuardianBasePoints(me, Warlock::SPELL_INFERNAL_IMMOLATION, 0.1114f);
         me->CastCustomSpell(me, Warlock::SPELL_INFERNAL_IMMOLATION, &bp0, nullptr, nullptr, true);
+    }
+
+    void UpdateMeleeDamage()
+    {
+        Player* owner = GetOwnerPlayer();
+        if (!owner)
+            return;
+
+        int32 const sp = std::max(0, owner->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_FIRE));
+        float const damage = INFERNAL_MELEE_BASE_DAMAGE + INFERNAL_MELEE_SP_COEFFICIENT * float(sp);
+        me->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, damage * (1.0f - INFERNAL_MELEE_SPREAD));
+        me->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, damage * (1.0f + INFERNAL_MELEE_SPREAD));
+        me->UpdateDamagePhysical(BASE_ATTACK);
     }
 
     ObjectGuid _summonTargetGUID;

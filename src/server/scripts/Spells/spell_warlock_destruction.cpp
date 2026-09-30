@@ -77,6 +77,11 @@ namespace
     constexpr uint32 EVENT_CHAOS_RIFT_BOLT = 1;
     constexpr uint32 EVENT_CHAOS_RIFT_DESPAWN = 2;
     constexpr uint32 CHAOS_RIFT_DURATION_MS = 12000;
+    // Stock "Open Portal" - a DUMMY aura whose StateKit plays Creature_SpellPortal_LargeShadow
+    // (effect scale 0.5). As a StateKit effect the model plays its Stand opening once, then holds
+    // open on anim 158; worn as the creature's own display it loops the opening instead. The Rift
+    // itself is an InvisibleStalker, like Jaraxxus's Nether Portal 34825.
+    constexpr uint32 SPELL_CHAOS_RIFT_PORTAL_VISUAL = 45977;
     constexpr float CHAOS_RIFT_RANGE = 40.0f;
 
     // Shared by spell_warl_chaos_bolt (primary target) and spell_warl_chaos_bolt_copy (Havoc/
@@ -325,6 +330,13 @@ public:
         for (uint32 k = 1; k <= bolts; ++k)
             _events.ScheduleEvent(EVENT_CHAOS_RIFT_BOLT, Milliseconds(k * _interval));
         _events.ScheduleEvent(EVENT_CHAOS_RIFT_DESPAWN, Milliseconds(CHAOS_RIFT_DURATION_MS + 1));
+
+        // The spell's own 10 s duration would end the portal before the Rift's 12 s lifetime.
+        if (Aura* portal = me->AddAura(SPELL_CHAOS_RIFT_PORTAL_VISUAL, me))
+        {
+            portal->SetMaxDuration(-1);
+            portal->SetDuration(-1);
+        }
     }
 
     void UpdateAI(uint32 diff) override
@@ -344,8 +356,7 @@ public:
             if (eventId == EVENT_CHAOS_RIFT_BOLT)
                 FireBolt(owner);
             else if (eventId == EVENT_CHAOS_RIFT_DESPAWN)
-                me->DespawnOrUnsummon();
-        }
+                me->DespawnOrUnsummon();        }
     }
 
 private:

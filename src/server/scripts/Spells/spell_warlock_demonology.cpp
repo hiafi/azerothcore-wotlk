@@ -60,6 +60,7 @@
 #include "Trainer.h"
 #include "Unit.h"
 #include "WarlockMechanics.h"
+#include "WorldPacket.h"
 #include <algorithm>
 #include <array>
 #include <list>
@@ -299,15 +300,17 @@ class spell_warl_summon_infernal : public SpellScript
         int32 duration = spellInfo->GetDuration();
         player->ApplySpellMod(spellId, SPELLMOD_DURATION, duration);
 
+        // The spell's dest only carries coordinates (its m_mapId stays MAPID_INVALID), so the map is
+        // captured from the caster.
         ObjectGuid const playerGuid = player->GetGUID();
+        uint32 const mapId = player->GetMapId();
         uint32 const instanceId = player->GetInstanceId();
-        WorldLocation const pos = *dest;
+        Position const pos = *dest;
 
-        player->m_Events.AddEventAtOffset([playerGuid, instanceId, pos, entry, properties, duration, spellId]()
+        player->m_Events.AddEventAtOffset([playerGuid, mapId, instanceId, pos, entry, properties, duration, spellId]()
         {
             Player* self = ObjectAccessor::FindPlayer(playerGuid);
-            if (!self || !self->IsInWorld() || self->GetMapId() != pos.GetMapId() ||
-                self->GetInstanceId() != instanceId)
+            if (!self || !self->IsInWorld() || self->GetMapId() != mapId || self->GetInstanceId() != instanceId)
                 return;
 
             TempSummon* summon = self->GetMap()->SummonCreature(entry, pos, properties, duration, self, spellId);
@@ -323,6 +326,18 @@ class spell_warl_summon_infernal : public SpellScript
 
             if (properties->Category == SUMMON_CATEGORY_ALLY)
                 summon->SetFaction(self->GetFaction());
+
+            // The spell's own SPELL_SUMMON combat-log line (Spell::ExecuteLogEffectSummonObject)
+            // was skipped along with the default effect; damage meters need it to credit the
+            // Infernal's damage to its owner. Same layout as Spell::SendLogExecute.
+            WorldPacket data(SMSG_SPELLLOGEXECUTE, 8 + 4 + 4 + 4 + 4 + 8);
+            data << self->GetPackGUID();
+            data << uint32(spellId);
+            data << uint32(1);                      // effect count
+            data << uint32(SPELL_EFFECT_SUMMON);
+            data << uint32(1);                      // target count
+            data << summon->GetPackGUID();
+            self->SendMessageToSet(&data, true);
         }, Milliseconds(INFERNAL_METEOR_IMPACT_MS));
     }
 

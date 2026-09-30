@@ -1990,8 +1990,8 @@ havoc_200974 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=1, implicit_target_a=6, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=90172,
-    notes='warlock-rework DESTRUCTION §5 (8,1) NEW talent 60102, level 50: single-target debuff - AttributesEx5 |= 0x20 (SPELL_ATTR5_LIMIT_N, one Havoc per caster, a new target removes the old - Mass Entanglement bugs-and-fixes precedent). SpellClassMask_3 = HAVOC (§2.4 - only mattered for the old narrow Metamorphosis mask, now harmless since that mask is full). Duplication itself is spell_warl_chaos_bolt (WP-B, §7.5); the Rift AI also duplicates Rift Bolts onto the Havoc target (§7.2).',
-    raw_overrides={'AttributesEx5': 32, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Your enemy's Chaos Bolts also strike this target.", 'BaseLevel': 50, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Marks an enemy with Havoc for $d. Your Chaos Bolts cast at another enemy also strike the Havoc target. Only one Havoc can be active at a time.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.HAVOC, 'SpellClassSet': 5, 'SpellLevel': 50, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='warlock-rework DESTRUCTION §5 (8,1) NEW talent 60102, level 50: single-target debuff - AttributesEx5 |= 0x20 (SPELL_ATTR5_LIMIT_N, one Havoc per caster, a new target removes the old - Mass Entanglement bugs-and-fixes precedent). SpellClassMask_3 = HAVOC (§2.4 - only mattered for the old narrow Metamorphosis mask, now harmless since that mask is full). Duplication itself is spell_warl_chaos_bolt (WP-B, §7.5); the Rift AI also duplicates Rift Bolts onto the Havoc target (§7.2). SpellVisualID_1 8761 = stock Felfire Proc: the Chaos Bolt fel hand Precast/Cast kits 7085/7086 + fel burst on the target head, no missile.',
+    raw_overrides={'AttributesEx5': 32, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Your enemy's Chaos Bolts also strike this target.", 'BaseLevel': 50, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Marks an enemy with Havoc for $d. Your Chaos Bolts cast at another enemy also strike the Havoc target. Only one Havoc can be active at a time.', 'EffectChainAmplitude_1': 1.0, 'SpellVisualID_1': 8761, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.HAVOC, 'SpellClassSet': 5, 'SpellLevel': 50, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -2010,17 +2010,20 @@ chaos_rift_200978 = spell(
         Effect(type=77, die_sides=0, implicit_target_a=1),
     ],
     spell_icon_id=90171,
-    notes='warlock-rework DESTRUCTION §5 (10,1) NEW talent 60104, level 60: SCRIPT_EFFECT summons creature 300170 beside the caster (spell_warl_chaos_rift, WP-B, §7.2). SpellClassMask_3 = CHAOS_RIFT (§2.4, harmless). Cooldown Haste eligible (>=30s base rule, PLAN §3.12).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Tears open a Chaos Rift beside you for 12 sec. Every 2 sec, the Rift fires a Chaos Bolt at a viable enemy for 50% of Chaos Bolt's damage.", 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.CHAOS_RIFT, 'SpellClassSet': 5, 'SpellLevel': 60, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='warlock-rework DESTRUCTION §5 (10,1) NEW talent 60104, level 60: SCRIPT_EFFECT summons creature 300170 beside the caster (spell_warl_chaos_rift, WP-B, §7.2). SpellClassMask_3 = CHAOS_RIFT (§2.4, harmless). Cooldown Haste eligible (>=30s base rule, PLAN §3.12). SpellVisualID_1 10677 = stock Demonic Circle: Summon (Shadow Uber hand Precast/Cast, omni).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Tears open a Chaos Rift beside you for 12 sec. Every 2 sec, the Rift fires a Chaos Bolt at a viable enemy for 50% of Chaos Bolt's damage.", 'EffectChainAmplitude_1': 1.0, 'SpellVisualID_1': 10677, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.CHAOS_RIFT, 'SpellClassSet': 5, 'SpellLevel': 60, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 scripted_by(chaos_rift_200978, 'spell_warl_chaos_rift')
 
 
 # creature_template/creature_template_model (stage T1 DSL helpers, DESTRUCTION.md §0.5 Q12/§2.6) -
-# Chaos Rift 300170, no hand-written pending_db_world SQL. Display 27735
-# (SPELLS\Creature_SpellPortal_LargeShadow.mdx, the portal Jaraxxus's Nether Portal draws) at scale
-# 0.5 (x the display's own 3.0; tune in playtest, §11 Q18). Not Jaraxxus's creature display 30039:
-# that is InvisibleStalker.mdx, and 34825's portal is only its addon aura 66263's StateKit; unit_flags 33554434
+# Chaos Rift 300170, no hand-written pending_db_world SQL. Display 11686 (InvisibleStalker, model
+# scale 1.0): the portal is not the body but the stock "Open Portal" aura 45977 the AI puts on it,
+# whose StateKit plays SPELLS\Creature_SpellPortal_LargeShadow at effect scale 0.5 - the way
+# Jaraxxus's Nether Portal 34825 (stalker + aura 66263) and every other stock user shows that model.
+# Worn as a display (27735) the model looped its Stand opening; a StateKit plays it once, then Hold.
+# scale 0.6 x 0.5 = 0.3, what the user asked for as "0.1" on 27735's 3.0 display scale (playtest
+# 2026-09-29). unit_flags 33554434
 # (NOT_SELECTABLE | NON_ATTACKABLE, Tentacle of Madness 300102 precedent); flags_extra 66 (no
 # TRIGGER bit - that flag makes a creature invisible, bugs-and-fixes); faction 35 and level 1 in
 # the template, overwritten by the owner's own faction/level at summon (npc_warl_chaos_rift,
@@ -2035,7 +2038,7 @@ creature_template(
     flags_extra=66,
     ScriptName='npc_warl_chaos_rift',
 )
-creature_model(300170, display_id=27735, scale=0.5)
+creature_model(300170, display_id=11686, scale=0.6)
 
 
 immolation_aura_50589 = spell(
