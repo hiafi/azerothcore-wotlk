@@ -69,11 +69,11 @@ hurricane_42231 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=99, points_per_level=8.775, implicit_target_a=76, implicit_target_b=16, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=102.8, potency_kind='direct', implicit_target_a=76, implicit_target_b=16, radius_yards=8.0),
     ],
     spell_icon_id=220,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 136, 'AttributesEx2': 1073741824, 'AttributesEx3': 1073741824, 'AttributesEx5': 1024, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Creates a violent storm in the target area causing $42231s1 Nature damage to enemies every $16914t3 sec, and increasing the time between attacks of enemies by $16914s2%.  Lasts $16914d.  Druid must channel to maintain the spell.', 'EffectBonusMultiplier_1': 0.1289999932050705, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 135, 'SpellClassMask_1': 4194304, 'SpellClassSet': 7, 'SpellLevel': 40, 'SpellPriority': 50, 'SpellVisualID_1': 9491, 'StartRecoveryCategory': 133},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P5 (druid pass): converted to sp_potency=102.8 (potency-report default, base/coef already agreed).',
+    raw_overrides={'AttributesEx': 136, 'AttributesEx2': 1073741824, 'AttributesEx3': 1073741824, 'AttributesEx5': 1024, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Creates a violent storm in the target area causing {pot1} Nature damage to enemies every $16914t3 sec, and increasing the time between attacks of enemies by $16914s2%.  Lasts $16914d.  Druid must channel to maintain the spell.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 135, 'SpellClassMask_1': 4194304, 'SpellClassSet': 7, 'SpellLevel': 40, 'SpellPriority': 50, 'SpellVisualID_1': 9491, 'StartRecoveryCategory': 133},
 )
 
 
@@ -88,11 +88,11 @@ tranquility_44203 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.HEAL, base_points=350, points_per_level=53.68, implicit_target_a=76, implicit_target_b=34, radius_yards=30.0),
+        Effect(type=EffectType.HEAL, sp_potency=185.1, potency_kind='heal', implicit_target_a=76, implicit_target_b=34, radius_yards=30.0),
     ],
     spell_icon_id=220,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 30); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx2': 1610612740, 'AttributesEx3': 1073742336, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals all nearby group members for $740s1 every $740t2 seconds for $740d.  Druid must channel to maintain the spell.', 'EffectBonusMultiplier_1': 0.5379999876022339, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 135, 'SpellClassMask_1': 128, 'SpellClassSet': 7, 'SpellLevel': 30, 'SpellPriority': 50, 'StartRecoveryCategory': 133},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 30); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P5 (druid pass): converted to sp_potency=185.1 (potency-report default, base/coef already agreed).',
+    raw_overrides={'AttributesEx2': 1610612740, 'AttributesEx3': 1073742336, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals all nearby group members for {pot1} every $740t2 seconds for $740d.  Druid must channel to maintain the spell.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 135, 'SpellClassMask_1': 128, 'SpellClassSet': 7, 'SpellLevel': 30, 'SpellPriority': 50, 'StartRecoveryCategory': 133},
 )
 
 
@@ -211,12 +211,12 @@ starfall_50288 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=144, points_per_level=20.9, die_sides=23, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=58.3, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.TRIGGER_SPELL, die_sides=0, implicit_target_a=6, trigger_spell=50294),
     ],
     spell_icon_id=2854,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 128, 'AttributesEx2': 1073741828, 'AttributesEx3': 1049089, 'AttributesEx4': 128, 'AttributesEx5': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'You summon a flurry of stars from the sky on all targets within 30 yards of the caster, each dealing $50288s1 Arcane damage. Also causes $50294s1 Arcane damage to all other enemies within $50294a1 yards of the enemy target. Maximum 20 stars. Lasts $48505d.', 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You summon a flurry of stars from the sky on all targets within 30 yards of the caster, each dealing $50288s1 Arcane damage. Also causes $50294s1 Arcane damage to all other enemies within $50294a1 yards of the enemy target. Maximum 20 stars. Lasts $48505d.', 'EffectBonusMultiplier_1': 0.30000001192092896, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_2': 8388608, 'SpellClassSet': 7, 'SpellLevel': 60, 'SpellVisualID_1': 11040},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P5 (druid pass): converted to sp_potency=58.3 (potency-report default, base/coef already agreed).',
+    raw_overrides={'AttributesEx': 128, 'AttributesEx2': 1073741828, 'AttributesEx3': 1049089, 'AttributesEx4': 128, 'AttributesEx5': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'You summon a flurry of stars from the sky on all targets within 30 yards of the caster, each dealing {pot1} Arcane damage. Also causes $50294s1 Arcane damage to all other enemies within $50294a1 yards of the enemy target. Maximum 20 stars. Lasts $48505d.', 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You summon a flurry of stars from the sky on all targets within 30 yards of the caster, each dealing {pot1} Arcane damage. Also causes $50294s1 Arcane damage to all other enemies within $50294a1 yards of the enemy target. Maximum 20 stars. Lasts $48505d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_2': 8388608, 'SpellClassSet': 7, 'SpellLevel': 60, 'SpellVisualID_1': 11040},
 )
 
 
@@ -232,11 +232,11 @@ starfall_50294 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=25, points_per_level=3.75, implicit_target_a=53, implicit_target_b=16, radius_yards=5.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=9.7, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=5.0),
     ],
     spell_icon_id=2854,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'You summon a flurry of stars from the sky on all targets within 30 yards of the caster, each dealing $50288s1 Arcane damage. Also causes $50294s1 Arcane damage to all other enemies within $50294a1 yards of the enemy target. Maximum 20 stars. Lasts $48505d.', 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You summon a flurry of stars from the sky on all targets within 30 yards of the caster, each dealing $50288s1 Arcane damage. Also causes $50294s1 Arcane damage to all other enemies within $50294a1 yards of the enemy target. Maximum 20 stars. Lasts $48505d.', 'EffectBonusMultiplier_1': 0.12999999523162842, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 8388608, 'SpellClassSet': 7, 'SpellLevel': 60, 'StartRecoveryCategory': 133},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P5 (druid pass): converted to sp_potency=9.7 (potency-report default, base/coef already agreed).',
+    raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'You summon a flurry of stars from the sky on all targets within 30 yards of the caster, each dealing $50288s1 Arcane damage. Also causes {pot1} Arcane damage to all other enemies within $50294a1 yards of the enemy target. Maximum 20 stars. Lasts $48505d.', 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You summon a flurry of stars from the sky on all targets within 30 yards of the caster, each dealing $50288s1 Arcane damage. Also causes {pot1} Arcane damage to all other enemies within $50294a1 yards of the enemy target. Maximum 20 stars. Lasts $48505d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 8388608, 'SpellClassSet': 7, 'SpellLevel': 60, 'StartRecoveryCategory': 133},
 )
 
 
@@ -298,12 +298,12 @@ typhoon_61391 = spell(
     duration_ms=6000,
     effects=[
         Effect(type=EffectType.KNOCK_BACK, base_points=69, implicit_target_a=104, misc_value=150, radius_yards=30.0),
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=287, points_per_level=20.5, implicit_target_a=104, radius_yards=30.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=291.6, potency_kind='direct', implicit_target_a=104, radius_yards=30.0),
         Effect(type=EffectType.APPLY_AURA, base_points=-51, mechanic=Mechanic.SNARE, implicit_target_a=104, apply_aura=AuraType.MOD_DECREASE_SPEED, radius_yards=30.0),
     ],
     spell_icon_id=15,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §4: BaseLevel/SpellLevel 50->36, eff2 retuned to match 50516',
-    raw_overrides={'AttributesEx': 128, 'AttributesEx2': 524288, 'AttributesEx3': 512, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Dazed.', 'BaseLevel': 36, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You summon a violent Typhoon that does $s2 Nature damage when in contact with hostile targets, knocking them back and dazing them for $d.', 'EffectBonusMultiplier_2': 0.19300000369548798, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ShapeshiftExclude': 2, 'ShapeshiftMask': 1073741824, 'Speed': 30.0, 'SpellClassMask_2': 16777216, 'SpellClassSet': 7, 'SpellLevel': 36, 'SpellVisualID_1': 10437},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §4: BaseLevel/SpellLevel 50->36, eff2 retuned to match 50516. Potency system P5 (druid pass): converted to sp_potency=291.6 (potency-report default, base/coef already agreed).',
+    raw_overrides={'AttributesEx': 128, 'AttributesEx2': 524288, 'AttributesEx3': 512, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Dazed.', 'BaseLevel': 36, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You summon a violent Typhoon that does {pot2} Nature damage when in contact with hostile targets, knocking them back and dazing them for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ShapeshiftExclude': 2, 'ShapeshiftMask': 1073741824, 'Speed': 30.0, 'SpellClassMask_2': 16777216, 'SpellClassSet': 7, 'SpellLevel': 36, 'SpellVisualID_1': 10437},
 )
 
 
@@ -5048,13 +5048,12 @@ lunar_flare_200341 = spell(
     mana_cost_pct=0,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=11, points_per_level=0.8333333333333334, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=18.3, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=225,
-    notes='NEW (druid-rework BALANCE §6 row 1,2 capstone hit): scales with level (PLAN B3), learn level 15 (Improved Moonfire\'s tier), level-60 value 50 -> ppl 50/60; cast by spell_dru_improved_moonfire_capstone (WP-B)',
-    raw_overrides={'BaseLevel': 15, 'SpellLevel': 15, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'AttributesEx2': 536870912, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes $s1 Arcane damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+    notes='NEW (druid-rework BALANCE §6 row 1,2 capstone hit): scales with level (PLAN B3), learn level 15 (Improved Moonfire\'s tier), level-60 value 50 -> ppl 50/60; cast by spell_dru_improved_moonfire_capstone (WP-B). Potency system P5 (druid pass): converted to sp_potency=18.3 (potency-report default, base/coef already agreed); the old bonus_coefficients(direct=0.1) spell_bonus_data override is retired in favor of the generated DBC coefficient.',
+    raw_overrides={'BaseLevel': 15, 'SpellLevel': 15, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'AttributesEx2': 536870912, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot1} Arcane damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
-bonus_coefficients(lunar_flare_200341, direct=0.1)
 
 
 nature_s_splendor_200324 = spell(
@@ -5266,11 +5265,11 @@ insect_swarm_200352 = spell(
     range_yards=50000.0,  # script-cast on a unit: RangeIndex 0 = 0yd, fails CheckRange
     duration_ms=14000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=23, points_per_level=2.5, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=34.8, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
     ],
     spell_icon_id=1771,
-    notes='NEW (druid-rework BALANCE §6 row 3,1 capstone copy): clone of 5570\'s eff1 only (same base/ppl/coefficient), shares Insect Swarm\'s family bit (INSECT_SWARM), no script binding - propagation is linear only (spell_dru_swarming_rot never re-triggers off a copy)',
-    raw_overrides={'BaseLevel': 20, 'SpellLevel': 20, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'SpellClassMask_1': INSECT_SWARM, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The enemy target is swarmed by insects, causing $o1 Nature damage over $d.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s1 Nature damage every $t1 sec.', 'EffectBonusMultiplier_1': 0.20000000298023224, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+    notes="NEW (druid-rework BALANCE §6 row 3,1 capstone copy): clone of 5570's eff1 only (same base/ppl/coefficient), shares Insect Swarm's family bit (INSECT_SWARM), no script binding - propagation is linear only (spell_dru_swarming_rot never re-triggers off a copy). Potency system P5 (druid pass): converted to sp_potency=34.8, same as 5570 (not mismatched; potency-report base-damage default).",
+    raw_overrides={'BaseLevel': 20, 'SpellLevel': 20, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'SpellClassMask_1': INSECT_SWARM, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The enemy target is swarmed by insects, causing {pot1.total} Nature damage over $d.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} Nature damage every $t1 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
 
@@ -5588,13 +5587,12 @@ starfire_cleave_200337 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,  # script-cast on a unit: RangeIndex 0 = 0yd, fails CheckRange
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=59, die_sides=15, points_per_level=7.15, implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=185.4, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
     ],
     spell_icon_id=1485,
-    notes='NEW (druid-rework BALANCE §4 "Starfire cleave"): half of 2912\'s own base/ppl (120/29/14.3 -> 59/15/7.15); shares Starfire\'s family bit deliberately (Tentacle Mind Flay precedent); scripted_by(spell_dru_starfall_aoe) reuses the stock area-target filter that drops GetExplTargetUnit() (see druid_talents.py); cast by spell_dru_starfire_cleave AfterHit on 2912 (WP-B)',
-    raw_overrides={'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'MaxTargets': 2, 'EquippedItemClass': -1, 'SpellClassMask_1': STARFIRE, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes $s1 Arcane damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+    notes='NEW (druid-rework BALANCE §4 "Starfire cleave"): half of 2912\'s own base/ppl (120/29/14.3 -> 59/15/7.15); shares Starfire\'s family bit deliberately (Tentacle Mind Flay precedent); scripted_by(spell_dru_starfall_aoe) reuses the stock area-target filter that drops GetExplTargetUnit() (see druid_talents.py); cast by spell_dru_starfire_cleave AfterHit on 2912 (WP-B). Potency system P5 (druid pass): converted to sp_potency=185.4 (potency-report default, base/coef already agreed); the old bonus_coefficients(direct=0.5) spell_bonus_data override is retired in favor of the generated DBC coefficient. This spell previously had no explicit BaseLevel/SpellLevel/MaxLevel (defaulted to 0) since it is never learned or cast directly - potency requires SpellLevel set (BaseLevel must equal it, "Caveats and checks"), so added BaseLevel=SpellLevel=20/MaxLevel=80 matching Starfire 2912\'s own SpellLevel (this is conceptually half of that spell).',
+    raw_overrides={'BaseLevel': 20, 'SpellLevel': 20, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'MaxTargets': 2, 'EquippedItemClass': -1, 'SpellClassMask_1': STARFIRE, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot1} Arcane damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
-bonus_coefficients(starfire_cleave_200337, direct=0.5)
 
 
 fury_of_elune_beam_200338 = spell(
@@ -5609,13 +5607,12 @@ fury_of_elune_beam_200338 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,  # script-cast on a unit: RangeIndex 0 = 0yd, fails CheckRange
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=39, points_per_level=0.6666666666666666, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=15.0, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=90111,
-    notes='NEW (druid-rework BALANCE §5 "Fury of Elune"): live damage every 0.5s tick, scales with level (learn 60, level-60 value 40 -> ppl 40/60); cast by the 200336 AuraScript\'s OnEffectPeriodic (WP-B); SpellVisualID_1 90020 (patch_druid_vfx_models.py): stock Moonfire impact + Fury of Elune damage-impact sound on every tick, under the beam 200336 carries',
-    raw_overrides={'BaseLevel': 60, 'SpellLevel': 60, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'SpellClassMask_3': FURY_OF_ELUNE, 'SpellVisualID_1': 90020, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes $s1 Astral damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+    notes='NEW (druid-rework BALANCE §5 "Fury of Elune"): live damage every 0.5s tick, scales with level (learn 60, level-60 value 40 -> ppl 40/60); cast by the 200336 AuraScript\'s OnEffectPeriodic (WP-B); SpellVisualID_1 90020 (patch_druid_vfx_models.py): stock Moonfire impact + Fury of Elune damage-impact sound on every tick, under the beam 200336 carries. Potency system P5 (druid pass): converted to sp_potency=15.0 (potency-report default, base/coef already agreed); the old bonus_coefficients(direct=0.1) spell_bonus_data override is retired in favor of the generated DBC coefficient.',
+    raw_overrides={'BaseLevel': 60, 'SpellLevel': 60, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'SpellClassMask_3': FURY_OF_ELUNE, 'SpellVisualID_1': 90020, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot1} Astral damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
-bonus_coefficients(fury_of_elune_beam_200338, direct=0.1)
 
 
 fury_of_elune_splash_200339 = spell(
@@ -5630,13 +5627,12 @@ fury_of_elune_splash_200339 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,  # script-cast on a unit: RangeIndex 0 = 0yd, fails CheckRange
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=19, points_per_level=0.3333333333333333, implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=7.5, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
     ],
     spell_icon_id=90111,
-    notes='NEW (druid-rework BALANCE §5): half of 200338, scripted_by(spell_dru_starfall_aoe) filters the primary target out (see druid_talents.py)',
-    raw_overrides={'BaseLevel': 60, 'SpellLevel': 60, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'SpellClassMask_3': FURY_OF_ELUNE, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes $s1 Astral damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+    notes='NEW (druid-rework BALANCE §5): half of 200338, scripted_by(spell_dru_starfall_aoe) filters the primary target out (see druid_talents.py). Potency system P5 (druid pass): converted to sp_potency=7.5 (potency-report default, base/coef already agreed); the old bonus_coefficients(direct=0.05) spell_bonus_data override is retired in favor of the generated DBC coefficient.',
+    raw_overrides={'BaseLevel': 60, 'SpellLevel': 60, 'MaxLevel': 80, 'DefenseType': 1, 'SpellClassSet': 7, 'ProcChance': 101, 'SpellClassMask_3': FURY_OF_ELUNE, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot1} Astral damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
-bonus_coefficients(fury_of_elune_splash_200339, direct=0.05)
 
 
 celestial_alignment_200340 = spell(
@@ -5776,13 +5772,12 @@ bloom_jump_200561 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.HEAL, base_points=162, points_per_level=4.16667, die_sides=1, implicit_target_a=21),
+        Effect(type=EffectType.HEAL, sp_potency=23.6, potency_kind='heal', implicit_target_a=21),
     ],
     spell_icon_id=90130,
-    notes="druid-rework RESTO §6 'Bloom (200560 castable, 200561 jump)': the jump copy Druid::StartBloomJumps casts on each wave's targets - identical formula/mask to 200560, no cost/cooldown, range_yards=100 (script-cast, docs/bugs-and-fixes.md 'works on yourself only'), AttributesEx3 |= 0x200 (NOT_A_PROC, so triggered jumps can still roll Living Seed/Omen of Clarity/Natural Perfection/Nature's Grace). A lobbed projectile (Speed 25, SpellVisualID_1 90024: the Bloom orb with no CastKit) - StartBloomJumps casts it from the previous target with the druid as original caster, so the orb bounces target to target while the heal, crit and procs stay the druid's.",
-    raw_overrides={'AttributesEx3': 512, 'BaseLevel': 39, 'SpellLevel': 39, 'MaxLevel': 80, 'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'SpellClassMask_3': BLOOM, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for $s1.', 'EffectBonusMultiplier_1': 0.75, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'SpellVisualID_1': 90024, 'Speed': 25.0},
+    notes="druid-rework RESTO §6 'Bloom (200560 castable, 200561 jump)': the jump copy Druid::StartBloomJumps casts on each wave's targets - identical formula/mask to 200560, no cost/cooldown, range_yards=100 (script-cast, docs/bugs-and-fixes.md 'works on yourself only'), AttributesEx3 |= 0x200 (NOT_A_PROC, so triggered jumps can still roll Living Seed/Omen of Clarity/Natural Perfection/Nature's Grace). A lobbed projectile (Speed 25, SpellVisualID_1 90024: the Bloom orb with no CastKit) - StartBloomJumps casts it from the previous target with the druid as original caster, so the orb bounces target to target while the heal, crit and procs stay the druid's. Potency system P5 (druid pass): converted to sp_potency=23.6, same as 200560 (potency-report default, base/coef already agreed); the old bonus_coefficients(direct=0.75) spell_bonus_data override (and the redundant hand-set EffectBonusMultiplier_1) are retired in favor of the generated DBC coefficient.",
+    raw_overrides={'AttributesEx3': 512, 'BaseLevel': 39, 'SpellLevel': 39, 'MaxLevel': 80, 'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'SpellClassMask_3': BLOOM, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for {pot1}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'SpellVisualID_1': 90024, 'Speed': 25.0},
 )
-bonus_coefficients(bloom_jump_200561, direct=0.75)
 
 
 cenarion_ward_heal_200563 = spell(
@@ -5798,13 +5793,12 @@ cenarion_ward_heal_200563 = spell(
     range_yards=100.0,
     duration_ms=6000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=210, points_per_level=5.5556, die_sides=1, implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=2000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=23.6, potency_kind='heal_periodic', implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=2000),
     ],
     spell_icon_id=198,
-    notes="druid-rework RESTO §6 'Cenarion Ward (200562 ward, 200563 heal)': the released heal over time - a core HoT and a Harmony stack, unlike the ward itself. spell_dru_cenarion_ward's OnEffectProc casts this with the ORIGINAL caster preserved as the aura caster (CastSpell aurEff/originalCaster overload), so it counts toward Harmony and scales off the druid's own spell power. range_yards=100 (script-cast).",
-    raw_overrides={'BaseLevel': 38, 'SpellLevel': 38, 'MaxLevel': 80, 'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'SpellClassMask_3': CENARION_WARD_HOT, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for $o1 over $d.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals $s1 damage every $t1 seconds.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes="druid-rework RESTO §6 'Cenarion Ward (200562 ward, 200563 heal)': the released heal over time - a core HoT and a Harmony stack, unlike the ward itself. spell_dru_cenarion_ward's OnEffectProc casts this with the ORIGINAL caster preserved as the aura caster (CastSpell aurEff/originalCaster overload), so it counts toward Harmony and scales off the druid's own spell power. range_yards=100 (script-cast, plain CastSpell - no CastCustomSpell override, so the potency hook applies normally). Potency system P5 (druid pass): converted to sp_potency=23.6 (potency-report default, base/coef already agreed); the old bonus_coefficients(dot=1.0) spell_bonus_data override (and the redundant hand-set EffectBonusMultiplier_1) are retired in favor of the generated DBC coefficient.",
+    raw_overrides={'BaseLevel': 38, 'SpellLevel': 38, 'MaxLevel': 80, 'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'SpellClassMask_3': CENARION_WARD_HOT, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for {pot1.total} over $d.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals {pot1} damage every $t1 seconds.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
-bonus_coefficients(cenarion_ward_heal_200563, dot=1.0)
 
 
 flourish_ground_200603 = spell(
@@ -5885,13 +5879,12 @@ cultivation_200567 = spell(
     range_yards=100.0,
     duration_ms=6000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=14, points_per_level=0.8333, die_sides=1, implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=2000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=3.5, potency_kind='heal_periodic', implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=2000),
     ],
     spell_icon_id=3282,
-    notes="druid-rework RESTO §8 (1,0) 'Nature's Mending' capstone: applied by spell_dru_rejuvenation's OnEffectPeriodic when the caster knows 200582 and the target is below 50% health. A core HoT and a Harmony stack, but Harmony itself is never enabled for it. range_yards=100 (script-cast).",
-    raw_overrides={'BaseLevel': 17, 'SpellLevel': 17, 'MaxLevel': 80, 'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'SpellClassMask_3': CULTIVATION, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for $o1 over $d.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals $s1 damage every $t1 seconds.', 'EffectBonusMultiplier_1': 0.1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes="druid-rework RESTO §8 (1,0) 'Nature's Mending' capstone: applied by spell_dru_rejuvenation's OnEffectPeriodic when the caster knows 200582 and the target is below 50% health. A core HoT and a Harmony stack, but Harmony itself is never enabled for it. range_yards=100 (script-cast, plain CastSpell - no CastCustomSpell override, so the potency hook applies normally). Potency system P5 (druid pass): converted to sp_potency=3.5 (potency-report default, base/coef already agreed); the old bonus_coefficients(dot=0.1) spell_bonus_data override (and the redundant hand-set EffectBonusMultiplier_1) are retired in favor of the generated DBC coefficient.",
+    raw_overrides={'BaseLevel': 17, 'SpellLevel': 17, 'MaxLevel': 80, 'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'SpellClassMask_3': CULTIVATION, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for {pot1.total} over $d.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals {pot1} damage every $t1 seconds.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
-bonus_coefficients(cultivation_200567, dot=0.1)
 
 
 germination_200568 = spell(
@@ -5908,11 +5901,11 @@ germination_200568 = spell(
     range_yards=40.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=7, points_per_level=3.8214285714285716, implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=3000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=10.5, potency_kind='heal_periodic', implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=3000),
     ],
     spell_icon_id=1216,
-    notes="druid-rework RESTO §8 (7,1) 'Proliferation' capstone: a second, distinct Rejuvenation aura - identical effect/coefficient to 774, deliberately sharing REJUVENATION's family bit (dword1 0x10, not a new bit) so every Rejuvenation SpellMod reaches it too; code tells the two apart by spell id, not by mask. Applied by spell_dru_rejuvenation via PreventHitAura+CastSpell when the target already has 774 (or refreshed directly when both exist), always TRIGGERED so cost/cast time never matter - mana_cost_pct 0 (not 18 like 774) purely to keep generate.py's looks_player_castable lint from flagging this hidden-only spell as missing a SkillLineAbility row (it is never learned or cast directly).",
-    raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx4': 1048576, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals $s1 damage every $t1 seconds.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A second Rejuvenation, counted separately.', 'EffectBonusMultiplier_1': 0.376, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 2, 'SpellClassMask_1': REJUVENATION, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 176, 'SpellLevel': 4, 'SpellVisualID_1': 32, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes="druid-rework RESTO §8 (7,1) 'Proliferation' capstone: a second, distinct Rejuvenation aura - identical effect/coefficient to 774, deliberately sharing REJUVENATION's family bit (dword1 0x10, not a new bit) so every Rejuvenation SpellMod reaches it too; code tells the two apart by spell id, not by mask. Applied by spell_dru_rejuvenation via PreventHitAura+CastSpell when the target already has 774 (or refreshed directly when both exist), always TRIGGERED so cost/cast time never matter - mana_cost_pct 0 (not 18 like 774) purely to keep generate.py's looks_player_castable lint from flagging this hidden-only spell as missing a SkillLineAbility row (it is never learned or cast directly). Potency system P5 (druid pass): converted to sp_potency=10.5, same as 774 (potency-report default, base/coef already agreed).",
+    raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx4': 1048576, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals {pot1} damage every $t1 seconds.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A second Rejuvenation, counted separately.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 2, 'SpellClassMask_1': REJUVENATION, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 176, 'SpellLevel': 4, 'SpellVisualID_1': 32, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -5928,10 +5921,17 @@ yseras_gift_heal_200569 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.HEAL, base_points=0, implicit_target_a=21),
+        Effect(
+            type=EffectType.HEAL, base_points=0, implicit_target_a=21,
+            potency_excluded="script-driven: amount is computed entirely in spell_dru_yseras_gift "
+            "(a percent of the druid's own max health) and passed as BP0 via CastCustomSpell, which "
+            "always wins over CalcValue/the potency hook (D2). Giving this effect a potency value "
+            "would be dead data the hook never reaches - same category as the Warlock pilot's "
+            "percent-of-max-health exclusions (potency-system.PROGRESS.md P4).",
+        ),
     ],
     spell_icon_id=2067,
-    notes="druid-rework RESTO §8 (1,2) 'Ysera's Gift': amount computed entirely in spell_dru_yseras_gift (% of the druid's own max health) and passed as BP0 via CastCustomSpell - bonus_coefficients(direct=0) so percent healing mods still apply even though the base is 0. DmgClass MAGIC so it can crit. Never a direct Nature heal (Heal::IsDirectNatureHeal's never-list) and never a Harmony stack. range_yards=100 (script-cast, self or an ally).",
+    notes="druid-rework RESTO §8 (1,2) 'Ysera's Gift': amount computed entirely in spell_dru_yseras_gift (% of the druid's own max health) and passed as BP0 via CastCustomSpell - bonus_coefficients(direct=0) so percent healing mods still apply even though the base is 0. DmgClass MAGIC so it can crit. Never a direct Nature heal (Heal::IsDirectNatureHeal's never-list) and never a Harmony stack. range_yards=100 (script-cast, self or an ally). Potency system P5 (druid pass): NOT converted - script-driven percent-of-max-health effect (F8/D2), same category as the Warlock pilot's percent-of-max-health exclusions. The bonus_coefficients(direct=0) call is untouched (not a potency mechanism - it exists so percent healing mods still apply to the 0 base).",
     raw_overrides={'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'SpellClassMask_3': YSERAS_GIFT, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals for $s1.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 bonus_coefficients(yseras_gift_heal_200569, direct=0)
@@ -6036,10 +6036,17 @@ tree_of_life_rejuv_heal_200574 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.HEAL, base_points=0, implicit_target_a=21),
+        Effect(
+            type=EffectType.HEAL, base_points=0, implicit_target_a=21,
+            potency_excluded="script-driven: amount = the Rejuvenation aura's own tick amount x total "
+            "ticks x 25%, computed in Druid::OnRejuvenationApplied and passed as BP0 via "
+            "CastCustomSpell, which always wins over CalcValue/the potency hook (D2). Same category "
+            "as Ysera's Gift (200569) above and the Warlock pilot's percent-of-other-effect "
+            "exclusions (potency-system.PROGRESS.md P4).",
+        ),
     ],
     spell_icon_id=2257,
-    notes="druid-rework RESTO §8 (8,1) 'Tree of Life' instant Rejuvenation heal: amount = the Rejuvenation aura's own tick amount x total ticks x 25%, computed in Druid::OnRejuvenationApplied and passed as BP0. AttributesEx3 |= 0x20000000 (IGNORE_CASTER_MODIFIERS) so the caster's healing-done mods (already folded into the computed amount) aren't applied a second time. Never a direct Nature heal. RESTO's 'DmgClass NONE so it cannot crit' can't be set directly (this pipeline's Spell.dbc struct has no writable DmgClass column) - fixed instead (WP-C) with the dedicated AttributesEx2 |= SPELL_ATTR2_CANT_CRIT (0x20000000, SharedDefines.h:473), which achieves the same 'never crits' behaviour as a real spell attribute rather than needing a C++ workaround in the CastCustomSpell call.",
+    notes="druid-rework RESTO §8 (8,1) 'Tree of Life' instant Rejuvenation heal: amount = the Rejuvenation aura's own tick amount x total ticks x 25%, computed in Druid::OnRejuvenationApplied and passed as BP0. AttributesEx3 |= 0x20000000 (IGNORE_CASTER_MODIFIERS) so the caster's healing-done mods (already folded into the computed amount) aren't applied a second time. Never a direct Nature heal. RESTO's 'DmgClass NONE so it cannot crit' can't be set directly (this pipeline's Spell.dbc struct has no writable DmgClass column) - fixed instead (WP-C) with the dedicated AttributesEx2 |= SPELL_ATTR2_CANT_CRIT (0x20000000, SharedDefines.h:473), which achieves the same 'never crits' behaviour as a real spell attribute rather than needing a C++ workaround in the CastCustomSpell call. Potency system P5 (druid pass): NOT converted - script-driven percent-of-another-effect's-total (F8/D2), same category as Ysera's Gift above.",
     raw_overrides={'AttributesEx2': 536870912, 'AttributesEx3': 536870912, 'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for $s1.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
