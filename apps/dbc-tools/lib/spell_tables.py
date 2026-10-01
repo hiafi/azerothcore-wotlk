@@ -616,6 +616,10 @@ REMOVAL_TABLES = (
         "trainer_removals", "trainer_spell", ("TrainerId", "SpellId"),
         "trainer_spells", "a rework retires this trainer grant",
     ),
+    RemovalSpec(
+        "bonus_removals", "spell_bonus_data", ("entry",),
+        "spell_bonus_data", "the spell switched to a generated potency coefficient",
+    ),
 )
 
 
@@ -783,8 +787,8 @@ def render_removal_blocks(
             report.append(f"removal: {spec.table_name} {_key_text(spec.key_columns, key)} - {spec.why}")
         comment = (
             f"-- Declared removal: {len(to_emit)} {spec.table_name} row(s) no longer wanted - "
-            f"{spec.why} (unbind_script()/unlink_spell()/leave_spell_group()/untrain(), "
-            f"source/classes/*)."
+            f"{spec.why} (unbind_script()/unlink_spell()/leave_spell_group()/untrain()/"
+            f"unbind_bonus_coefficients(), source/classes/*)."
         )
         blocks.append(sql_out.render_delete_only_block(spec.table_name, spec.key_columns, to_emit, comment))
     return blocks, report

@@ -87,6 +87,12 @@ class PotencyEffect:
     kind: str = KIND_DIRECT
     t_ms: float = 1500.0
     weapon_potency: float | None = None
+    # Drives the base-damage line (F, hence EffectBasePoints/EffectRealPointsPerLevel/the
+    # correction row) in place of sp_potency + ap_potency, when the base the spell should deal
+    # needs to differ from what its SP/AP coefficients alone would imply. sp_coefficient/
+    # ap_coefficient are always computed from sp_potency/ap_potency directly - this only
+    # overrides what feeds the shared base-damage formula, never the per-stat scaling.
+    base_potency: float | None = None
 
 
 @dataclass(frozen=True)
@@ -118,17 +124,21 @@ def resolve(effect: PotencyEffect, spell_level: int, r: float = DEFAULT_R) -> Re
     if effect.kind not in VALID_KINDS:
         raise ValueError(f"potency_kind={effect.kind!r} must be one of {VALID_KINDS}")
     total = effect.sp_potency + effect.ap_potency
-    if total <= 0:
+    if total <= 0 and effect.base_potency is None:
         raise ValueError(
             "a potency effect needs sp_potency + ap_potency > 0 (set weapon_potency instead for "
-            "a weapon strike)"
+            "a weapon strike, or base_potency to drive the base from a number other than the SP/AP "
+            "coefficients)"
         )
     t = effect.t_ms / 1000.0
     is_direct = effect.kind == KIND_DIRECT
     is_heal_like = effect.kind in HEAL_LIKE_KINDS
 
-    # "Base damage comes from both" (Hybrid spells): F is built from total potency (P_sp + P_ap).
-    f = total * t / 1.5
+    # "Base damage comes from both" (Hybrid spells): F is built from total potency (P_sp + P_ap) -
+    # unless base_potency says otherwise, for the rare spell whose base shouldn't equal what its
+    # SP/AP coefficients alone imply.
+    base_total = effect.base_potency if effect.base_potency is not None else total
+    f = base_total * t / 1.5
     if is_heal_like:
         f *= HEAL_BASE_MULT
     if is_direct:
@@ -167,7 +177,7 @@ def resolve(effect: PotencyEffect, spell_level: int, r: float = DEFAULT_R) -> Re
         tooltip_low_slope=tooltip_low_slope,
         tooltip_high_offset=tooltip_high_offset,
         t_seconds=t,
-        total_potency=total,
+        total_potency=base_total,
         kind=effect.kind,
     )
 
@@ -218,20 +228,49 @@ def simulate_value(resolved: ResolvedPotency, level: int, spell_level: int, roll
     return value * roll
 
 
+def _stat_bonus_term(resolved: ResolvedPotency, ticks: float) -> str:
+    """The caster's live spell-power/attack-power contribution, as a `${...}`-safe term - found
+    missing 2026-10-01 (P5): `{pot1}`'s nested-`$max()` formula only ever encoded the level-scaled
+    base, so a converted spell's tooltip undershot real combat damage by exactly its SP/AP bonus.
+    `$SP`/`$AP` (current effective spell/attack power) confirmed live, by a scratch-spell round
+    trip, to work inside a raw `${...}` math block - see potency-system.PROGRESS.md's P5 section.
+    Scales by `ticks` (same as the base terms) so a `.total` placeholder sums the per-tick bonus
+    over every tick; never by `scale` (the direct-effect ±variance roll), since the live hook only
+    randomizes the base value - the SP/AP bonus is added afterwards, unrolled, by a separate,
+    later step (`Unit::SpellDamageBonusDone`), so both sides of a `{X} to {1.1X}` range must carry
+    the identical bonus."""
+    terms = []
+    if resolved.sp_coefficient:
+        terms.append(f"{_fmt(resolved.sp_coefficient * ticks)}*$SP")
+    if resolved.ap_coefficient:
+        terms.append(f"{_fmt(resolved.ap_coefficient * ticks)}*$AP")
+    return "+".join(terms)
+
+
 def tooltip_expression(resolved: ResolvedPotency, *, ticks: float = 1.0, scale: float = 1.0) -> str:
     """The inside of one `${...}` block - the validated nested-`$max()` expression
     ("Tooltip"). `scale` is 1.0 for the minimum side of a direct effect's range, `1 +
     variance_pct/100` for the maximum side. `ticks` multiplies every linear coefficient by the
     tick count for a periodic effect's `.total` placeholder (see `expand_placeholders`) - the
     HIGH_OFFSET x-intercept doesn't change under a uniform scale, only the two slopes/intercepts
-    that get scaled by it do."""
+    that get scaled by it do.
+
+    The SP/AP bonus (`_stat_bonus_term`) is added into *every* branch of the outer `$max()` rather
+    than appended once to the result - `max(a, b) + c == max(a + c, b + c)` for any constant `c`,
+    and a top-level `+` outside every `$max()`/`$min()` call silently drops everything after it on
+    this fork's client (confirmed live, P0). Distributing the addition into each branch keeps the
+    whole expression inside one top-level `$max()` call, sidestepping the bug the same way the
+    base formula already does."""
     low_intercept = resolved.tooltip_low_intercept * ticks * scale
     low_slope = resolved.tooltip_low_slope * ticks * scale
     real_ppl = resolved.points_per_level * ticks * scale
     high_offset = resolved.tooltip_high_offset
+    bonus = _stat_bonus_term(resolved, ticks)
+    bonus_suffix = f"+{bonus}" if bonus else ""
+    zero_branch = bonus if bonus else "0"
     return (
-        f"$max($max(0,{_fmt(low_intercept)}+{_fmt(low_slope)}*$PL),"
-        f"{_fmt(real_ppl)}*$max(0,$PL-{_fmt(high_offset)}))"
+        f"$max($max({zero_branch},{_fmt(low_intercept)}+{_fmt(low_slope)}*$PL{bonus_suffix}),"
+        f"{_fmt(real_ppl)}*$max(0,$PL-{_fmt(high_offset)}){bonus_suffix})"
     )
 
 

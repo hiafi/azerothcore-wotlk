@@ -64,6 +64,11 @@ class Effect:
     potency_kind: str | None = None  # one of lib.potency.VALID_KINDS; default KIND_DIRECT
     weapon_potency: float | None = None
     time_basis_ms: int | None = None  # "Time basis" override, e.g. an off-GCD proc payout
+    # Drives the base-damage line in place of sp_potency + ap_potency, for the rare effect whose
+    # base shouldn't equal what its SP/AP coefficients alone would imply - see lib.potency.resolve.
+    # Never changes sp_coefficient/ap_coefficient, only EffectBasePoints/RealPointsPerLevel/the
+    # correction row.
+    base_potency: float | None = None
     # Set instead of sp_potency/ap_potency/weapon_potency on a damage/heal/absorb effect whose real
     # value is computed entirely by its own SpellScript at runtime, bypassing CalcValue - a
     # percent-of-other-damage effect (docs/potency-system.md's "Out of scope by design": "Ignite,
@@ -77,7 +82,10 @@ class Effect:
 
     @property
     def has_potency(self) -> bool:
-        return bool(self.sp_potency or self.ap_potency or self.weapon_potency is not None)
+        return bool(
+            self.sp_potency or self.ap_potency or self.weapon_potency is not None
+            or self.base_potency is not None
+        )
 
     def to_dict(self) -> dict:
         if self.potency_excluded and self.has_potency:
@@ -280,6 +288,7 @@ class Spell:
                     )
                 pe = _potency.PotencyEffect(
                     sp_potency=effect.sp_potency, ap_potency=effect.ap_potency, kind=kind, t_ms=t_ms,
+                    base_potency=effect.base_potency,
                 )
             resolved = _potency.resolve(pe, spell_level=int(spell_level))
             resolved_by_index[index] = resolved

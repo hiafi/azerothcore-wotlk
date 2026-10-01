@@ -5,7 +5,7 @@ Split from a single source/classes/warlock.py via split_class_file.py (.agents/p
 """
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, RANGE_SELF, School
-from lib.dsl.registry import bonus_coefficients, creature_model, creature_template, custom_attr, linked_spell, procs_on, scripted_by, spell, spell_group, spell_group_rule, unbind_script, unlink_spell
+from lib.dsl.registry import bonus_coefficients, creature_model, creature_template, custom_attr, linked_spell, procs_on, scripted_by, spell, spell_group, spell_group_rule, unbind_bonus_coefficients, unbind_script, unlink_spell
 from . import _masks as m
 
 
@@ -66,11 +66,11 @@ hellfire_effect_5857 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=82, points_per_level=7.4, implicit_target_a=18, implicit_target_b=16, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=114.0, potency_kind='direct', implicit_target_a=18, implicit_target_b=16, radius_yards=10.0),
     ],
     spell_icon_id=937,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 30); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 136, 'AttributesEx2': 1610612736, 'AttributesEx3': 33554432, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Ignites the area surrounding the caster, causing $1949s2 Fire damage to $ghimself:herself; and $5857s1 Fire damage to all nearby enemies every $1949t2 sec.  Lasts $1949d.', 'EffectBonusMultiplier_1': 0.14300000667572021, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 64, 'SpellClassSet': 5, 'SpellLevel': 30, 'SpellVisualID_1': 781},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 30). Potency system P4 (warlock pilot): converted to sp_potency=114.0 (user-reviewed, mismatched row).',
+    raw_overrides={'AttributesEx': 136, 'AttributesEx2': 1610612736, 'AttributesEx3': 33554432, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Ignites the area surrounding the caster, causing $1949s2 Fire damage to $ghimself:herself; and {pot1} Fire damage to all nearby enemies every $1949t2 sec.  Lasts $1949d.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 64, 'SpellClassSet': 5, 'SpellLevel': 30, 'SpellVisualID_1': 781},
 )
 
 
@@ -129,11 +129,11 @@ seed_of_corruption_27285 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=813, points_per_level=18.5, die_sides=181, implicit_target_a=16, radius_yards=15.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=440.0, potency_kind='direct', implicit_target_a=16, radius_yards=15.0),
     ],
     spell_icon_id=1932,
-    notes='warlock-rework AFFLICTION §4.1 B8 items 3/4b: coefficient restored to 0.2129 (was 0.286, its spell_bonus_data row was deleted); base rebased via B3 (V60=1110 min) with learn level moved 70->44 -> 814-994@44, 1110-1290@60, 1480-1660@80. SpellClassMask_2 keeps 0x10 (detonation, unaffected by the B16 Seed DoT rebit).',
-    raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 1, 'AttributesEx5': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 44, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Imbeds a demon seed in the enemy target, causing $27243o1 Shadow damage over $27243d.  When the target takes $27243s2 total damage or dies, the seed will inflict $27285s1 Shadow damage to all enemies within $27285a1 yards of the target.', 'EffectBonusMultiplier_1': 0.2129, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 32784, 'SpellClassSet': 5, 'SpellLevel': 44, 'SpellVisualID_1': 7682, 'Targets': 64},
+    notes='warlock-rework AFFLICTION §4.1 B8 items 3/4b. SpellClassMask_2 keeps 0x10 (detonation, unaffected by the B16 Seed DoT rebit). Potency system P4 (warlock pilot): converted to sp_potency=440.0 (user-reviewed, mismatched row).',
+    raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 1, 'AttributesEx5': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Imbeds a demon seed in the enemy target, causing $27243o1 Shadow damage over $27243d.  When the target takes $27243s2 total damage or dies, the seed will inflict {pot1} Shadow damage to all enemies within $27285a1 yards of the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 32784, 'SpellClassSet': 5, 'SpellLevel': 44, 'SpellVisualID_1': 7682, 'Targets': 64},
 )
 scripted_by(seed_of_corruption_27285, 'spell_warl_seed_of_corruption_detonation_affliction')
 
@@ -191,7 +191,14 @@ rain_of_fire_42223 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=0, points_per_level=0.0, implicit_target_a=87, implicit_target_b=16, radius_yards=8.0),
+        Effect(
+            type=EffectType.SCHOOL_DAMAGE, base_points=0, points_per_level=0.0, implicit_target_a=87,
+            implicit_target_b=16, radius_yards=8.0,
+            potency_excluded="dead DBC fields - the AuraScript on 5740 passes the whole snapshot as "
+            "CustomSpellValues BP0 every tick (SetSpellValue bypasses CalcValue, so the potency hook "
+            "would never even fire here regardless). The real scaling source is spell 5740's eff0 "
+            "(see its notes=), converted there instead.",
+        ),
     ],
     spell_icon_id=547,
     notes="warlock-rework DESTRUCTION §4.2 (B18 + R5 + C5, spell_warl_rain_of_fire_tick / AuraScript on 5740, WP-B): bp/ppl zeroed - the AuraScript passes the whole snapshot as CustomSpellValues BP0 every tick (Spell::SetSpellValue already applies the die_sides convention, so the script passes the intended value, not value-1). implicit_target_a 76 (DEST_CHANNEL_TARGET, no longer exists once RoF isn't a channel) -> 87 (TARGET_DEST_DEST); B 16 and range 100 kept. AttributesEx3 |= 0x20000000 (IGNORE_CASTER_MODIFIERS - fixed per-tick base; blocks every SpellMod except SPELLMOD_DURATION, taken-side mods unaffected). EffectBonusMultiplier_1 -> 0.1716 (documentation only, inert under the attribute). No SUPPRESS_CASTER_PROCS - RoF hits must still proc Molten Skin and Hellstorm (their spell_proc rows carry PROC_ATTR_TRIGGERED_CAN_PROC).",
@@ -212,11 +219,11 @@ seed_of_corruption_43991 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=1109, points_per_level=52.3, die_sides=181, implicit_target_a=31, radius_yards=15.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=440.0, potency_kind='direct', implicit_target_a=31, radius_yards=15.0),
     ],
     spell_icon_id=1932,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 70); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 3 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 65537, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 70, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712188, 'EffectBonusMultiplier_1': 0.21400000154972076, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 32784, 'SpellClassSet': 5, 'SpellLevel': 70, 'SpellVisualID_1': 7682, 'Targets': 64},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 70). Potency system P4 (warlock pilot): converted to sp_potency=440.0 (user-reviewed, mismatched row).',
+    raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 65537, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 32784, 'SpellClassSet': 5, 'SpellLevel': 70, 'SpellVisualID_1': 7682, 'Targets': 64},
 )
 
 
@@ -4788,12 +4795,12 @@ tainted_soul_eruption_200722 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=50000.0, radius_yards=6.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=57, points_per_level=1.6666666666666667, implicit_target_a=87, implicit_target_b=16, radius_yards=6.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=40.0, potency_kind='direct', implicit_target_a=87, implicit_target_b=16, radius_yards=6.0),
         Effect(type=EffectType.DUMMY, base_points=100, die_sides=0, implicit_target_a=87),
     ],
     spell_icon_id=207,
-    notes='warlock-rework AFFLICTION §5/§7.15: eruption, anchored at Shadow Pact row-5 level 35 (58@35, 99@60, 133@80); eff2 carries the erupt-percent (100 on a stack-cap eruption, 10*stacks on a death eruption) as a raw (die_sides=0) value read via GetSpellValue()->EffectBasePoints[EFFECT_1], scaling eff1s dealt damage. Target-select trims to the source unit + up to 4 others within 6 yd (QA #13/#14).',
-    raw_overrides={'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Tainted Soul erupts, dealing Shadow damage to the target and up to 4 other enemies within 6 yards.', 'EffectBonusMultiplier_1': 0.4, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'MaxTargets': 5, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.TAINTED_SOUL, 'SpellClassSet': 5, 'SpellLevel': 35, 'BaseLevel': 35, 'SpellVisualID_1': 8339},
+    notes='warlock-rework AFFLICTION §5/§7.15: eruption, anchored at Shadow Pact row-5 level 35; eff2 carries the erupt-percent (100 on a stack-cap eruption, 10*stacks on a death eruption) as a raw (die_sides=0) value read via GetSpellValue()->EffectBasePoints[EFFECT_1], scaling eff1s dealt damage (F8: multiplies the already-potency-scaled amount, doesn\'t discard it - stays hand-set, not potency). Target-select trims to the source unit + up to 4 others within 6 yd (QA #13/#14). Potency system P4 (warlock pilot): eff0 converted to sp_potency=40.0 (user-reviewed, mismatched row).',
+    raw_overrides={'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Tainted Soul erupts, dealing Shadow damage to the target and up to 4 other enemies within 6 yards.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'MaxTargets': 5, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.TAINTED_SOUL, 'SpellClassSet': 5, 'SpellLevel': 35, 'SpellVisualID_1': 8339},
 )
 scripted_by(tainted_soul_eruption_200722, 'spell_warl_tainted_soul_eruption')
 
@@ -4828,10 +4835,10 @@ grim_reach_bolt_200725 = spell(
     id=200725, name='Grim Reach', school=School.SHADOW,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=50000.0,
-    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, base_points=49, points_per_level=3.5, implicit_target_a=6)],
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=64.3, potency_kind='direct', implicit_target_a=6)],
     spell_icon_id=1614,
-    notes='warlock-rework AFFLICTION §5/§6 (3,1): anchored at "50 at level 25, +3.5/level" -> 172@60, 242@80.',
-    raw_overrides={'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Grim Reach bolt.', 'EffectBonusMultiplier_1': 0.35, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.GRIM_REACH_BOLT, 'SpellClassSet': 5, 'SpellLevel': 25, 'BaseLevel': 25, 'SpellVisualID_1': 8339},
+    notes='warlock-rework AFFLICTION §5/§6 (3,1). Potency system P4 (warlock pilot): converted to sp_potency=64.3 (user-reviewed, mismatched row).',
+    raw_overrides={'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Grim Reach bolt.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.GRIM_REACH_BOLT, 'SpellClassSet': 5, 'SpellLevel': 25, 'SpellVisualID_1': 8339},
 )
 
 
@@ -4878,10 +4885,10 @@ agonizing_pain_bolt_200728 = spell(
     id=200728, name='Agonizing Pain', school=School.SHADOW,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=50000.0,
-    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, base_points=29, points_per_level=2.0, implicit_target_a=6)],
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=35.0, potency_kind='direct', implicit_target_a=6)],
     spell_icon_id=1939,
-    notes='warlock-rework AFFLICTION §5/§6 (4,2): anchored at "30 at level 30, +2/level" -> 90@60, 130@80; fires when Bane of Agony crits while already at max stacks (spell_warl_agonizing_pain).',
-    raw_overrides={'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Agonizing Pain.', 'EffectBonusMultiplier_1': 0.05, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.AGONIZING_PAIN, 'SpellClassSet': 5, 'SpellLevel': 30, 'BaseLevel': 30, 'SpellVisualID_1': 8339},
+    notes='warlock-rework AFFLICTION §5/§6 (4,2): fires when Bane of Agony crits while already at max stacks (spell_warl_agonizing_pain). Potency system P4 (warlock pilot): converted to sp_potency=35.0 (user-reviewed, mismatched row).',
+    raw_overrides={'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Agonizing Pain.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.AGONIZING_PAIN, 'SpellClassSet': 5, 'SpellLevel': 30, 'SpellVisualID_1': 8339},
 )
 scripted_by(agonizing_pain_bolt_200728, 'spell_warl_agonizing_pain')
 
@@ -4895,10 +4902,10 @@ phantom_singularity_damage_200730 = spell(
     id=200730, name='Phantom Singularity', school=School.SHADOW,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=50000.0, radius_yards=10.0,
-    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, base_points=19, points_per_level=1.35, implicit_target_a=53, implicit_target_b=16, radius_yards=10.0)],
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=25.0, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=10.0)],
     spell_icon_id=173,
-    notes='warlock-rework AFFLICTION §5/§7.17: anchored at "20/tick at level 30, +1.35/level" -> 60@60, 87@80; NOT SUPPRESS_CASTER_PROCS (must feed Shadow Pacts Tainted Soul proc, §7.15); each tick is a fresh cast (live SP/crit, not snapshotted).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Phantom Singularity damage.', 'EffectBonusMultiplier_1': 0.15, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.PHANTOM_SINGULARITY, 'SpellClassSet': 5, 'SpellLevel': 30, 'BaseLevel': 30, 'SpellVisualID_1': 8339},
+    notes='warlock-rework AFFLICTION §5/§7.17: NOT SUPPRESS_CASTER_PROCS (must feed Shadow Pacts Tainted Soul proc, §7.15); each tick is a fresh cast (live SP/crit, not snapshotted). Potency system P4 (warlock pilot): converted to sp_potency=25.0 (user-reviewed, mismatched row).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Phantom Singularity damage.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.PHANTOM_SINGULARITY, 'SpellClassSet': 5, 'SpellLevel': 30, 'SpellVisualID_1': 8339},
 )
 scripted_by(phantom_singularity_damage_200730, 'spell_warl_phantom_singularity_damage')
 
@@ -4907,9 +4914,15 @@ phantom_singularity_heal_200731 = spell(
     id=200731, name='Phantom Singularity', school=School.SHADOW,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=RANGE_SELF,
-    effects=[Effect(type=EffectType.HEAL, base_points=0, implicit_target_a=1)],
+    effects=[
+        Effect(
+            type=EffectType.HEAL, base_points=0, implicit_target_a=1,
+            potency_excluded="percent-of-other-damage: BP0 = 20% of the sum of the tick damage "
+            "dealt this cast (script-computed, CastCustomSpell) - see this spell's notes=.",
+        ),
+    ],
     spell_icon_id=173,
-    notes='warlock-rework AFFLICTION §5/§7.17: BP0 = 20% of the sum of the tick damage dealt this cast (script-computed); cannot crit.',
+    notes='warlock-rework AFFLICTION §5/§7.17: BP0 = 20% of the sum of the tick damage dealt this cast (script-computed); cannot crit. Potency system P4 (warlock pilot): NOT converted, see eff0.',
     raw_overrides={'AttributesEx2': 536870912, 'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 0, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Phantom Singularity heal.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 0, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellPriority': 50},
 )
 
@@ -5218,9 +5231,16 @@ fel_concentration_heal_200770 = spell(
     id=200770, name='Fel Concentration', school=School.SHADOW,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=RANGE_SELF,
-    effects=[Effect(type=EffectType.HEAL, base_points=0, implicit_target_a=1)],
+    effects=[
+        Effect(
+            type=EffectType.HEAL, base_points=0, implicit_target_a=1,
+            potency_excluded="percent-of-other-damage/max-health: BP0 = min(20% of the periodic "
+            "damage dealt this tick, 5% max health), script-computed (CastCustomSpell) - see this "
+            "spell's notes=.",
+        ),
+    ],
     spell_icon_id=76,
-    notes='warlock-rework AFFLICTION §5/§7.19: BP0 = min(20% of the periodic damage dealt this tick, 5% max health) - only while the leech talent gate (Warlock::LeechTalent::FelConcentration) is active; cannot crit.',
+    notes='warlock-rework AFFLICTION §5/§7.19: BP0 = min(20% of the periodic damage dealt this tick, 5% max health) - only while the leech talent gate (Warlock::LeechTalent::FelConcentration) is active; cannot crit. Potency system P4 (warlock pilot): NOT converted, see eff0.',
     raw_overrides={'AttributesEx2': 536870912, 'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 0, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Fel Concentration heal.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 0, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellPriority': 50},
 )
 scripted_by(fel_concentration_heal_200770, 'spell_warl_fel_concentration_capstone')
@@ -5557,11 +5577,11 @@ shadowflame_47960 = spell(
     range_yards=100.0,
     duration_ms=8000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=113, points_per_level=2.266667, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=40.0, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
     ],
     spell_icon_id=3317,
-    notes='warlock-rework DESTRUCTION §4.1 (B3 rebase, matches 47897s learn level 75->50): bp/ppl rescaled so the level-60 value is unchanged (114 @50, 136 @60, 182 @80, +34% vs todays @80); MaxLevel 83->80 (matches the class-wide 80 cap); coefficient (spell_bonus_data dot 0.0667) unchanged/undeclared - its row survives live (only 47897s own row was deleted by 2026_09_01_26.sql).',
-    raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 262144, 'CastingTimeIndex': 1, 'InterruptFlags': 15, 'ProcChance': 101, 'MaxLevel': 80, 'BaseLevel': 50, 'SpellLevel': 50, 'EquippedItemClass': -1, 'EffectDieSides_2': 1, 'EffectBasePoints_2': -1, 'ImplicitTargetA_3': 6, 'SpellVisualID_1': 11247, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Targets in a cone in front of the caster take $47897s1 Shadow damage and an additional $47960o1 Fire damage over $47960d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s1 Fire damage every $t1 seconds.', 'AuraDescription_Lang_Mask': 16712190, 'StartRecoveryTime': 1500, 'SpellClassSet': 5, 'SpellClassMask_3': 2, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_2': 0.10700000077486038},
+    notes='warlock-rework DESTRUCTION §4.1 (B3 rebase, matches 47897s learn level 75->50). Potency system P4 (warlock pilot): converted to sp_potency=40.0 (user-reviewed, mismatched row) - its 0.0667 coefficient was a never-declared stock spell_bonus_data row (D1, same situation as Haunt 48181), not a DSL-authored one; confirm generate.py prunes it so the new DBC coefficient actually wins.',
+    raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 262144, 'CastingTimeIndex': 1, 'InterruptFlags': 15, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectDieSides_2': 1, 'EffectBasePoints_2': -1, 'ImplicitTargetA_3': 6, 'SpellVisualID_1': 11247, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Targets in a cone in front of the caster take $47897s1 Shadow damage and an additional {pot1.total} Fire damage over $47960d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} Fire damage every $t1 seconds.', 'AuraDescription_Lang_Mask': 16712190, 'StartRecoveryTime': 1500, 'SpellClassSet': 5, 'SpellClassMask_3': 2, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'SpellLevel': 50},
 )
 
 
@@ -6072,11 +6092,11 @@ rift_bolt_200979 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=418, points_per_level=6.975, die_sides=113, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=106.5, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=3178,
-    notes='warlock-rework DESTRUCTION §5/§7.2: 50% of the rebased Chaos Bolt (bp 418, ppl 6.975, die 113, Base/SpellLevel 60 - the Rift exists only from level 60; 419-531 @60, 558-670 @80 = half of Chaos Bolts own 837-1061/1116-1340). Cast by npc_warl_chaos_rift with the warlock as original caster (WP-B). range_yards 100 - the AI pre-filters to 40yd. Shares Chaos Bolts d2 0x20000 so Bane/Chaotic Resonance/Mastery reach it (G3); AttributesEx3 ALWAYS_HIT|SUPPRESS_CASTER_PROCS, AttributesEx4 as 50796 (absorb-pierce/resist-ignore inherited via 58284s SpellInfoCorrections).',
-    raw_overrides={'AttributesEx3': 327680, 'AttributesEx4': 2048, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 19, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals $s1 Shadowflame damage. Cannot be resisted, and pierces through all absorption effects.', 'EffectBonusMultiplier_1': 0.357, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_2': m.CHAOS_BOLT, 'SpellClassSet': 5, 'SpellLevel': 60, 'SpellVisualID_1': 11240, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
+    notes='warlock-rework DESTRUCTION §5/§7.2: Cast by npc_warl_chaos_rift with the warlock as original caster (WP-B) - F8/research-confirmed: SP/level resolve via original-caster, same mechanism as a guardian/totem crediting its owner. range_yards 100 - the AI pre-filters to 40yd. Shares Chaos Bolts d2 0x20000 so Bane/Chaotic Resonance/Mastery reach it (G3); AttributesEx3 ALWAYS_HIT|SUPPRESS_CASTER_PROCS, AttributesEx4 as 50796 (absorb-pierce/resist-ignore inherited via 58284s SpellInfoCorrections). Potency system P4 (warlock pilot): converted to sp_potency=106.5 (user-reviewed, mismatched row).',
+    raw_overrides={'AttributesEx3': 327680, 'AttributesEx4': 2048, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 19, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1} Shadowflame damage. Cannot be resisted, and pierces through all absorption effects.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_2': m.CHAOS_BOLT, 'SpellClassSet': 5, 'SpellLevel': 60, 'SpellVisualID_1': 11240, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
 )
 scripted_by(rift_bolt_200979, 'spell_warl_chaos_bolt_mastery')
 
@@ -6093,11 +6113,11 @@ chaos_bolt_copy_200980 = spell(
     mana_cost_pct=0,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=557, points_per_level=13.95, die_sides=225, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=213.0, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=3178,
-    notes='warlock-rework DESTRUCTION §5/§7.5/§7.6: identical damage data to the rebased Chaos Bolt 50796 (bp 557, ppl 13.95, die 225, Base/SpellLevel 40, EffectBonusMultiplier 0.714). Cast for the Havoc duplicate and Soulburn: Chaos Bolts extra targets (WP-B); range_yards 30 so Destructive Reach and the engine range check enforce "within range". Shares Chaos Bolts d2 0x20000; triggered + SUPPRESS_CASTER_PROCS so it never re-rolls Soulburn/Chaotic Inferno/Intensity/Soul Leech/Chaos Echo (G3).',
-    raw_overrides={'AttributesEx3': 327680, 'AttributesEx4': 2048, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 19, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals $s1 Shadowflame damage. Cannot be resisted, and pierces through all absorption effects.', 'EffectBonusMultiplier_1': 0.7139999866485596, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_2': m.CHAOS_BOLT, 'SpellClassSet': 5, 'SpellLevel': 40, 'SpellVisualID_1': 11240, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
+    notes='warlock-rework DESTRUCTION §5/§7.5/§7.6: Cast for the Havoc duplicate and Soulburn: Chaos Bolts extra targets (WP-B); range_yards 30 so Destructive Reach and the engine range check enforce "within range". Shares Chaos Bolts d2 0x20000; triggered + SUPPRESS_CASTER_PROCS so it never re-rolls Soulburn/Chaotic Inferno/Intensity/Soul Leech/Chaos Echo (G3). Potency system P4 (warlock pilot): converted to sp_potency=213.0 (user-reviewed, mismatched row) - same value as Chaos Bolt 50796 by design.',
+    raw_overrides={'AttributesEx3': 327680, 'AttributesEx4': 2048, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 19, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1} Shadowflame damage. Cannot be resisted, and pierces through all absorption effects.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_2': m.CHAOS_BOLT, 'SpellClassSet': 5, 'SpellLevel': 40, 'SpellVisualID_1': 11240, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
 )
 scripted_by(chaos_bolt_copy_200980, 'spell_warl_chaos_bolt_copy', 'spell_warl_chaos_bolt_mastery')
 
@@ -6114,11 +6134,11 @@ chaos_echo_200981 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=557, points_per_level=13.95, die_sides=225, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=213.0, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=3178,
-    notes='warlock-rework DESTRUCTION §5/§7.7 (Chaotic Resonance r3 200977): full-Chaos-Bolt-strength echo (200980s data, range widened to 100 since the echo re-targets the same unit, not a fresh cast). Shares Chaos Bolts d2 0x20000; SUPPRESS_CASTER_PROCS + triggered - never applies Chaotic Burn, never re-rolls Chaos Echo, never consumes Soulburn/Chaotic Inferno, never starts Chaos Bolts cooldown (QA #28).',
-    raw_overrides={'AttributesEx3': 327680, 'AttributesEx4': 2048, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 19, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals $s1 Shadowflame damage. Cannot be resisted, and pierces through all absorption effects.', 'EffectBonusMultiplier_1': 0.7139999866485596, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_2': m.CHAOS_BOLT, 'SpellClassSet': 5, 'SpellLevel': 40, 'SpellVisualID_1': 11240, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
+    notes='warlock-rework DESTRUCTION §5/§7.7 (Chaotic Resonance r3 200977): full-Chaos-Bolt-strength echo (range widened to 100 since the echo re-targets the same unit, not a fresh cast). Shares Chaos Bolts d2 0x20000; SUPPRESS_CASTER_PROCS + triggered - never applies Chaotic Burn, never re-rolls Chaos Echo, never consumes Soulburn/Chaotic Inferno, never starts Chaos Bolts cooldown (QA #28). Potency system P4 (warlock pilot): converted to sp_potency=213.0 (user-reviewed, mismatched row).',
+    raw_overrides={'AttributesEx3': 327680, 'AttributesEx4': 2048, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 19, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1} Shadowflame damage. Cannot be resisted, and pierces through all absorption effects.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_2': m.CHAOS_BOLT, 'SpellClassSet': 5, 'SpellLevel': 40, 'SpellVisualID_1': 11240, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
 )
 scripted_by(chaos_echo_200981, 'spell_warl_chaos_bolt_mastery')
 
@@ -6135,11 +6155,11 @@ chaos_echo_200982 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=418, points_per_level=6.975, die_sides=113, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=106.5, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=3178,
-    notes='warlock-rework DESTRUCTION §5/§7.2/§7.7: Rift-Bolt-strength echo (200979s data, range_yards 100). Fired by npc_warl_chaos_rift for every bolt when the caster has Chaotic Resonance r3 (WP-B).',
-    raw_overrides={'AttributesEx3': 327680, 'AttributesEx4': 2048, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 19, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals $s1 Shadowflame damage. Cannot be resisted, and pierces through all absorption effects.', 'EffectBonusMultiplier_1': 0.357, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_2': m.CHAOS_BOLT, 'SpellClassSet': 5, 'SpellLevel': 60, 'SpellVisualID_1': 11240, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
+    notes='warlock-rework DESTRUCTION §5/§7.2/§7.7: Rift-Bolt-strength echo (range_yards 100). Fired by npc_warl_chaos_rift for every bolt when the caster has Chaotic Resonance r3 (WP-B). Potency system P4 (warlock pilot): converted to sp_potency=106.5 (user-reviewed, mismatched row).',
+    raw_overrides={'AttributesEx3': 327680, 'AttributesEx4': 2048, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 19, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1} Shadowflame damage. Cannot be resisted, and pierces through all absorption effects.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_2': m.CHAOS_BOLT, 'SpellClassSet': 5, 'SpellLevel': 60, 'SpellVisualID_1': 11240, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
 )
 scripted_by(chaos_echo_200982, 'spell_warl_chaos_bolt_mastery')
 
@@ -6158,10 +6178,16 @@ chaotic_burn_200983 = spell(
     range_yards=100.0,
     dispel=DispelType.MAGIC,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+        Effect(
+            type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=6,
+            apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000,
+            potency_excluded="percent-of-other-damage: fixed base points from the script "
+            "(CastCustomSpell BP0 = perTick) - 3 ticks at 0 haste = 25% of the Chaos Bolt hit that "
+            "applied it. See this spell's notes=.",
+        ),
     ],
     spell_icon_id=2299,
-    notes="warlock-rework DESTRUCTION §5/§7.7: fixed base points from the script (CastCustomSpell BP0 = perTick, §7.7) - 3 ticks at 0 haste = 25% of the Chaos Bolt hit that applied it. No family bits (its own spell, not Chaos Bolts family). AttributesEx2 CANT_CRIT (already carries the triggering hits crit, §11 Q4) + AttributesEx3 IGNORE_CASTER_MODIFIERS (fixed base points). Base/SpellLevel 40.",
+    notes="warlock-rework DESTRUCTION §5/§7.7: fixed base points from the script (CastCustomSpell BP0 = perTick, §7.7) - 3 ticks at 0 haste = 25% of the Chaos Bolt hit that applied it. No family bits (its own spell, not Chaos Bolts family). AttributesEx2 CANT_CRIT (already carries the triggering hits crit, §11 Q4) + AttributesEx3 IGNORE_CASTER_MODIFIERS (fixed base points). Base/SpellLevel 40. Potency system P4 (warlock pilot): NOT converted, see eff0.",
     raw_overrides={'AttributesEx2': 536870912, 'AttributesEx3': 536870912, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s1 Shadowflame damage every $t1 sec.', 'BaseLevel': 40, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': '$o1 Shadowflame damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 5, 'SpellLevel': 40},
 )
 
@@ -6199,11 +6225,11 @@ molten_bolt_200985 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=6, points_per_level=0.671667, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=15.0, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=2298,
-    notes='warlock-rework DESTRUCTION §5: 10% of the rebased Incinerate (bp 6, ppl 0.671667, Base/SpellLevel 10 - Kindling sits in tier 0): 7@10, 16@24, 40@60, 54@80 (10% of Incinerates 403@60/538@80). Speed 16 + SpellVisualID_1 67 = Firebolt 3110 of the Imp (small fire missile 365 from the warlock to the target; was Speed 0/no visual, so the volley was invisible). Triggered by the Molten Bolts aura on the target, cast by the warlock (target 6 -> NeedsExplicitUnitTarget -> NeedsToBeTriggeredByCaster), no family bit so it never rolls procs itself.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 10, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals $s1 Fire damage.', 'EffectBonusMultiplier_1': 0.0714, 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 16.0, 'SpellVisualID_1': 67, 'SpellClassMask_3': m.MOLTEN_BOLT, 'SpellClassSet': 5, 'SpellLevel': 10, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
+    notes='warlock-rework DESTRUCTION §5: originally derived as 10% of the rebased Incinerate, but baked as its own static DBC fields (no runtime script override) - safe to convert like any other direct effect. Speed 16 + SpellVisualID_1 67 = Firebolt 3110 of the Imp (small fire missile 365 from the warlock to the target; was Speed 0/no visual, so the volley was invisible). Triggered by the Molten Bolts aura on the target, cast by the warlock (target 6 -> NeedsExplicitUnitTarget -> NeedsToBeTriggeredByCaster), no family bit so it never rolls procs itself. Potency system P4 (warlock pilot): converted to sp_potency=15.0 (user-reviewed, mismatched row).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1} Fire damage.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 16.0, 'SpellVisualID_1': 67, 'SpellClassMask_3': m.MOLTEN_BOLT, 'SpellClassSet': 5, 'SpellLevel': 10, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
 )
 
 
@@ -6220,10 +6246,15 @@ immolate_eruption_200986 = spell(
     range_yards=100.0,
     radius_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=0, implicit_target_a=53, implicit_target_b=16, radius_yards=5.0),
+        Effect(
+            type=EffectType.SCHOOL_DAMAGE, base_points=0, implicit_target_a=53, implicit_target_b=16,
+            radius_yards=5.0,
+            potency_excluded="percent-of-other-damage: fixed base points from the script "
+            "(CastCustomSpell BP0 = the tick snapshot / 2) - see this spell's notes=.",
+        ),
     ],
     spell_icon_id=31,
-    notes='warlock-rework DESTRUCTION §5/§7.10 (Improved Immolate r3 capstone): fixed base points from the script (CastCustomSpell BP0 = the tick snapshot / 2, §7.10). AttributesEx3 IGNORE_CASTER_MODIFIERS|SUPPRESS_CASTER_PROCS (fixed damage, no procs). OnObjectAreaTargetSelect drops units not IsInCombatWith(caster); the source target is included (C3, QA #25).',
+    notes='warlock-rework DESTRUCTION §5/§7.10 (Improved Immolate r3 capstone): fixed base points from the script (CastCustomSpell BP0 = the tick snapshot / 2, §7.10). AttributesEx3 IGNORE_CASTER_MODIFIERS|SUPPRESS_CASTER_PROCS (fixed damage, no procs). OnObjectAreaTargetSelect drops units not IsInCombatWith(caster); the source target is included (C3, QA #25). Potency system P4 (warlock pilot): NOT converted, see eff0.',
     raw_overrides={'AttributesEx3': 536936448, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals $s1 Fire damage to all enemies within 5 yards of the target that are in combat with you.', 'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 5, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
 )
 scripted_by(immolate_eruption_200986, 'spell_warl_immolate_eruption')
@@ -6516,11 +6547,11 @@ hand_of_guldan_splash_200821 = spell(
     range_yards=100.0,
     radius_yards=8.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=27, points_per_level=2.588983050847458, die_sides=2, implicit_target_a=53, implicit_target_b=16),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=55.0, potency_kind='direct', implicit_target_a=53, implicit_target_b=16),
     ],
     spell_icon_id=90160,
-    notes='warlock-rework DEMONOLOGY §4.1/§7.3: Metamorphosis-only AoE splash, triggered by spell_warl_hand_of_guldan (CastSpell TRIGGERED_FULL_MASK, not a LEARN chain). SUPPRESS_CASTER_PROCS (AttributesEx3=65536) - never procs the caster twice. eff0 via _scaling.sb_units(0.325, 10, 157, 158). implicit_target_a=53 (DEST_TARGET_ENEMY), b=16 (UNIT_DEST_AREA_ENEMY); OnObjectAreaTargetSelect removes the primary target and non-combat units (PLAN §2 propagation rule, spell_warl_hand_of_guldan_splash). SpellClassSet 5, SpellClassMask_3=HAND_OF_GULDAN (shared with 200820, Starfire-cleave precedent).',
-    raw_overrides={'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals $s1 Shadowflame damage.', 'EffectBonusMultiplier_1': 0.2785, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.HAND_OF_GULDAN, 'SpellClassSet': 5, 'BaseLevel': 10, 'SpellLevel': 10, 'Speed': 0.0, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
+    notes='warlock-rework DEMONOLOGY §4.1/§7.3: Metamorphosis-only AoE splash, triggered by spell_warl_hand_of_guldan (CastSpell TRIGGERED_FULL_MASK, not a LEARN chain) - player-cast (original caster is the player), not a pet/guardian spell, despite firing from a trigger. SUPPRESS_CASTER_PROCS (AttributesEx3=65536) - never procs the caster twice. implicit_target_a=53 (DEST_TARGET_ENEMY), b=16 (UNIT_DEST_AREA_ENEMY); OnObjectAreaTargetSelect removes the primary target and non-combat units (PLAN §2 propagation rule, spell_warl_hand_of_guldan_splash). SpellClassSet 5, SpellClassMask_3=HAND_OF_GULDAN (shared with 200820, Starfire-cleave precedent). Potency system P4 (warlock pilot): converted to sp_potency=55.0 (user-reviewed, mismatched row) - replaces the old _scaling.sb_units(0.325, 10, 157, 158) SB-units derivation.',
+    raw_overrides={'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1} Shadowflame damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.HAND_OF_GULDAN, 'SpellClassSet': 5, 'SpellLevel': 10, 'Speed': 0.0, 'StartRecoveryCategory': 0, 'StartRecoveryTime': 0},
 )
 scripted_by(hand_of_guldan_splash_200821, 'spell_warl_hand_of_guldan_splash')
 
@@ -6938,10 +6969,15 @@ improved_soul_fire_shield_200846 = spell(
     range_yards=0.0,
     duration_ms=12000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.SCHOOL_ABSORB, misc_value=127),
+        Effect(
+            type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1,
+            apply_aura=AuraType.SCHOOL_ABSORB, misc_value=127,
+            potency_excluded="percent-of-max-health (Healthstones-category): 3/6/10% of max HP x "
+            "(1 + Decimation 10/20/30%), script-computed - see this spell's notes=.",
+        ),
     ],
     spell_icon_id=2352,
-    notes="warlock-rework DEMONOLOGY §5.3/§7.9: 12 s absorb shield, granted by spell_warl_soul_fire_demonology while in Dark Apotheosis. eff0 amount from script (3/6/10% of max HP x (1 + Decimation 10/20/30%)).",
+    notes="warlock-rework DEMONOLOGY §5.3/§7.9: 12 s absorb shield, granted by spell_warl_soul_fire_demonology while in Dark Apotheosis. eff0 amount from script (3/6/10% of max HP x (1 + Decimation 10/20/30%)). Potency system P4 (warlock pilot): NOT converted, see eff0.",
     raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Absorbs damage.', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Absorbs $s1 damage.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EffectChainAmplitude_1': 1.0},
 )
 
@@ -6980,10 +7016,15 @@ fel_immolation_heal_200848 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.HEAL, base_points=0, implicit_target_a=1),
+        Effect(
+            type=EffectType.HEAL, base_points=0, implicit_target_a=1,
+            potency_excluded="percent-of-other-damage: spell_warl_fel_immolation_leech computes "
+            "heal = CalculatePct(Immolate/Immolation-Aura damage dealt, aurEff->GetAmount()) - "
+            "spell_warlock_demonology.cpp.",
+        ),
     ],
     spell_icon_id=2355,
-    notes='warlock-rework DEMONOLOGY §5.3/§7.13: self heal, cast by spell_warl_fel_immolation_leech when Fel Immolation is the active leech talent (SHARED §4). AttributesEx3 |= SUPPRESS_CASTER_PROCS - the heal itself must not re-trigger anything.',
+    notes='warlock-rework DEMONOLOGY §5.3/§7.13: self heal, cast by spell_warl_fel_immolation_leech when Fel Immolation is the active leech talent (SHARED §4). AttributesEx3 |= SUPPRESS_CASTER_PROCS - the heal itself must not re-trigger anything. Potency system P4 (warlock pilot): NOT converted, see eff0.',
     raw_overrides={'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals $s1 damage.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'RangeIndex': 1, 'EffectChainAmplitude_1': 1.0},
 )
 
@@ -8618,11 +8659,13 @@ immolation_tick_50590 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=10, points_per_level=0.9559322033898305, implicit_target_a=18, implicit_target_b=16, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=21.7, potency_kind='direct', implicit_target_a=18, implicit_target_b=16, radius_yards=8.0),
     ],
     spell_icon_id=937,
-    notes="warlock-rework DEMONOLOGY §4.0/§5.2/§7.13: BaseLevel/SpellLevel 60 -> 10 (B3). eff0 via _scaling.sb_units(0.12, 10, 58, 58). EffectBonusMultiplier_1 0.143 -> 0.1028 (also overridden by bonus_coefficients below - the stock spell_bonus_data row for 50590 is still live and wins over the DBC multiplier, Unit.cpp:8651-8678). ShapeshiftMask 0x200000 -> 0x600000 (Meta + DA, tidiness - the periodic-trigger cast is TRIGGERED_FULL_MASK which already ignores shapeshift requirements). spell_warl_immolation_aura_tick applies Fel Immolation's bonus and feeds Demonic Bulwark's debuff (§7.13).",
-    raw_overrides={'AttributesEx': 128, 'AttributesEx2': 541065216, 'AttributesEx3': 33554432, 'ShapeshiftMask': 6291456, 'CastingTimeIndex': 1, 'ProcChance': 101, 'BaseLevel': 10, 'SpellLevel': 10, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 11111, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Ignites the area surrounds you, causing $50590s1 Fire damage to all nearby enemies every $50589t1 sec.  Lasts $50589d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 0.1028, 'EffectBonusMultiplier_2': 1.0},
+    notes="warlock-rework DEMONOLOGY §4.0/§5.2/§7.13: BaseLevel/SpellLevel 60 -> 10 (B3). ShapeshiftMask 0x200000 -> 0x600000 (Meta + DA, tidiness - the periodic-trigger cast is TRIGGERED_FULL_MASK which already ignores shapeshift requirements). spell_warl_immolation_aura_tick applies Fel Immolation's bonus and feeds Demonic Bulwark's debuff (§7.13). Potency system P4 (warlock pilot): converted to sp_potency=21.7 (user-reviewed, mismatched row) - the old bonus_coefficients() call below is removed (registry.spell() refuses it alongside a potency effect); its spell_bonus_data row was the previously-live coefficient (0.1028, won over the DBC field per D1) and must be pruned by generate.py's diffing now that it's no longer declared - confirm at the gates step.",
+    raw_overrides={'AttributesEx': 128, 'AttributesEx2': 541065216, 'AttributesEx3': 33554432, 'ShapeshiftMask': 6291456, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 11111, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Ignites the area surrounds you, causing {pot1} Fire damage to all nearby enemies every $50589t1 sec.  Lasts $50589d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 5, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_2': 1.0, 'SpellLevel': 10},
 )
-bonus_coefficients(immolation_tick_50590, direct=0.1028)
 scripted_by(immolation_tick_50590, 'spell_warl_immolation_aura_tick')
+unbind_bonus_coefficients(immolation_tick_50590)  # P4: retires the live stock spell_bonus_data row
+# (0.1028) the old bonus_coefficients() call above used to maintain - the generated potency
+# coefficient now lives in the DBC field instead; left live, the stock row would keep winning.

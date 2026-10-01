@@ -117,6 +117,9 @@ class Registry:
     linked_spell_removals: list[dict] = field(default_factory=list)
     spell_group_removals: list[dict] = field(default_factory=list)
     trainer_removals: list[dict] = field(default_factory=list)
+    # Potency system (docs/potency-system.md, PLAN P4): the counterpart to spell_bonus_data above -
+    # see unbind_bonus_coefficients() below.
+    bonus_removals: list[dict] = field(default_factory=list)
     # T1 (.agents/plans/warlock-rework/warlock-rework.T1-HANDOFF.md): two world-DB tables outside
     # the spell system entirely - creature_template/creature_template_model, for a rework's own
     # NPCs (e.g. a talent's summoned add). Unlike every table above, creature_template is on the
@@ -149,6 +152,7 @@ MERGE_KEYS = (
     "spell_script_names", "spell_bonus_data", "spell_procs",
     "linked_spells", "spell_groups", "spell_group_rules", "custom_attrs", "shapeshift_forms",
     "script_removals", "linked_spell_removals", "spell_group_removals", "trainer_removals",
+    "bonus_removals",
     "creature_templates", "creature_template_models",
     "potency_corrections",
     "consts",
@@ -365,6 +369,21 @@ def bonus_coefficients(
         "comments": comment,
     }
     _require_active().spell_bonus_data.append(row)
+    return row
+
+
+def unbind_bonus_coefficients(spell: model.Spell | int) -> dict:
+    """Declares a removal of `spell`'s `spell_bonus_data` row - the counterpart to
+    `bonus_coefficients()`, for retiring a stock (or previously hand-written/DSL-declared)
+    coefficient row the automatic prune pass can't reach because the base dump also owns that key
+    (`lib/spell_tables.py`'s `render_prune_blocks`: "the stock dump owns this key too... Resolve by
+    hand" - this is that hand resolution). Needed when a spell switches to a potency effect: the
+    DBC's own `EffectBonusMultiplier_N` is freshly generated and correct, but a still-live
+    `spell_bonus_data` row would keep overriding it (`Unit.cpp`'s `SpellBonusData` lookup always
+    wins over the DBC field - D1), silently keeping the spell on its old, pre-potency coefficient."""
+    spell_id = _spell_id_of(spell)
+    row = {"id": str(spell_id), "entry": spell_id}
+    _require_active().bonus_removals.append(row)
     return row
 
 

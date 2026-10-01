@@ -43,6 +43,25 @@ class SpellPotencyResolutionTest(unittest.TestCase):
         self.assertEqual(row["variance_pct"], 10.0)
         self.assertIsNone(s.potency_bonus_row)  # no ap_potency on this spell
 
+    def test_base_potency_overrides_base_without_touching_coefficient(self):
+        default = model.Spell(
+            id=90008, name="Test Base Bolt (default)", cast_time_ms=1500,
+            effects=[model.Effect(type=2, sp_potency=50, potency_kind=potency.KIND_DIRECT)],
+            raw_overrides={"SpellLevel": 1},
+        ).to_entry()
+        overridden = model.Spell(
+            id=90009, name="Test Base Bolt (overridden)", cast_time_ms=1500,
+            effects=[model.Effect(
+                type=2, sp_potency=50, potency_kind=potency.KIND_DIRECT, base_potency=120,
+            )],
+            raw_overrides={"SpellLevel": 1},
+        ).to_entry()
+        self.assertNotEqual(overridden["effect1"]["base_points"], default["effect1"]["base_points"])
+        self.assertAlmostEqual(
+            overridden["raw_overrides"]["EffectBonusMultiplier_1"],
+            default["raw_overrides"]["EffectBonusMultiplier_1"], places=6,
+        )
+
     def test_missing_spell_level_raises(self):
         s = model.Spell(
             id=90001, name="Bad Bolt", cast_time_ms=1500,
@@ -114,8 +133,9 @@ class SpellPotencyResolutionTest(unittest.TestCase):
         entry = s.to_entry()
         text = entry["raw_overrides"]["Description_Lang_enUS"]
         self.assertNotIn("{pot1}", text)
-        self.assertIn("${$max($max(0,", text)
-        self.assertIn(" to ${$max($max(0,", text)
+        self.assertIn("${$max($max(", text)
+        self.assertIn(" to ${$max($max(", text)
+        self.assertIn("*$SP", text)
 
     def test_mismatched_direct_sp_coefficient_across_effects_raises(self):
         # Both effects carry ap_potency but at different cast-time-derived coefficients - D6 says

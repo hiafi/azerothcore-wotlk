@@ -196,6 +196,73 @@ class WeaponPotencyTest(unittest.TestCase):
             potency.resolve(effect, spell_level=1)
 
 
+class BasePotencyOverrideTest(unittest.TestCase):
+    """`base_potency` drives EffectBasePoints/RealPointsPerLevel/the correction row in place of
+    sp_potency + ap_potency, without changing either coefficient - for a spell whose intended base
+    damage doesn't equal what its SP/AP coefficients alone would imply."""
+
+    def test_none_falls_back_to_sp_plus_ap(self):
+        with_override = potency.resolve(
+            potency.PotencyEffect(sp_potency=60, ap_potency=40, kind=potency.KIND_DIRECT, t_ms=1500),
+            spell_level=1,
+        )
+        without_override = potency.resolve(
+            potency.PotencyEffect(
+                sp_potency=60, ap_potency=40, kind=potency.KIND_DIRECT, t_ms=1500, base_potency=None,
+            ),
+            spell_level=1,
+        )
+        self.assertEqual(with_override, without_override)
+
+    def test_overrides_base_without_changing_coefficients(self):
+        baseline = potency.resolve(
+            potency.PotencyEffect(sp_potency=60, ap_potency=40, kind=potency.KIND_DIRECT, t_ms=1500),
+            spell_level=1,
+        )
+        overridden = potency.resolve(
+            potency.PotencyEffect(
+                sp_potency=60, ap_potency=40, kind=potency.KIND_DIRECT, t_ms=1500, base_potency=100,
+            ),
+            spell_level=1,
+        )
+        # sp_potency=60, ap_potency=40 sums to the same 100 base_potency here on purpose, so the
+        # base comes out identical - this test is about the coefficients staying put, not the base.
+        self.assertEqual(overridden.base_points, baseline.base_points)
+        self.assertEqual(overridden.sp_coefficient, baseline.sp_coefficient)
+        self.assertEqual(overridden.ap_coefficient, baseline.ap_coefficient)
+
+        # Now actually diverge the base from the SP/AP sum - only the base-driven fields move.
+        diverged = potency.resolve(
+            potency.PotencyEffect(
+                sp_potency=60, ap_potency=40, kind=potency.KIND_DIRECT, t_ms=1500, base_potency=200,
+            ),
+            spell_level=1,
+        )
+        self.assertNotEqual(diverged.base_points, baseline.base_points)
+        self.assertAlmostEqual(diverged.level60_value, baseline.level60_value * 2, places=6)
+        self.assertEqual(diverged.sp_coefficient, baseline.sp_coefficient)
+        self.assertEqual(diverged.ap_coefficient, baseline.ap_coefficient)
+        self.assertEqual(diverged.total_potency, 200)
+
+    def test_base_potency_alone_satisfies_the_positivity_check(self):
+        # No sp_potency/ap_potency at all - a pure level-scaling line with zero stat scaling -
+        # must not raise just because sp_potency + ap_potency is 0.
+        resolved = potency.resolve(
+            potency.PotencyEffect(kind=potency.KIND_DIRECT, t_ms=1500, base_potency=50),
+            spell_level=1,
+        )
+        self.assertEqual(resolved.sp_coefficient, 0.0)
+        self.assertEqual(resolved.ap_coefficient, 0.0)
+        # base_points itself is negative at low SpellLevel by design (same as any potency effect -
+        # see the Frostbolt reference row, base_points=-165 at SpellLevel 1); what matters is the
+        # baked level-60 value, which must be positive and proportional to base_potency=50.
+        self.assertGreater(resolved.level60_value, 0)
+
+    def test_still_rejects_all_zero(self):
+        with self.assertRaises(ValueError):
+            potency.resolve(potency.PotencyEffect(kind=potency.KIND_DIRECT, t_ms=1500), spell_level=1)
+
+
 class TooltipExpressionTest(unittest.TestCase):
     """Frostbolt's worked example from docs/potency-system.md's "Tooltip" section:
     `${$max($max(0,31.5476+3.1190*$PL),11.4286*$max(0,$PL-15.375))}` (minimum side). The doc's own
@@ -225,21 +292,54 @@ class TooltipExpressionTest(unittest.TestCase):
     def test_expand_placeholders_range(self):
         text = "Deals {pot1} damage."
         out = potency.expand_placeholders(text, {1: self.resolved})
-        self.assertTrue(out.startswith("Deals ${$max($max(0,"))
-        self.assertIn("} to ${$max($max(0,", out)
+        self.assertTrue(out.startswith("Deals ${$max($max("))
+        self.assertIn("} to ${$max($max(", out)
+        # sp_potency=100 on this effect means every branch carries the live SP bonus term (P5).
+        self.assertIn("*$SP", out)
 
     def test_expand_placeholders_total_scales_linearly(self):
         dot_effect = potency.PotencyEffect(sp_potency=23, kind=potency.KIND_PERIODIC, t_ms=3000)
         dot = potency.resolve(dot_effect, spell_level=1)
         per_tick_expr = potency.tooltip_expression(dot)
         total_expr = potency.tooltip_expression(dot, ticks=6)
-        # Every linear coefficient in the total variant is exactly 6x the per-tick one.
-        per_tick_numbers = [float(x) for x in re_findall_numbers(per_tick_expr)]
-        total_numbers = [float(x) for x in re_findall_numbers(total_expr)]
-        # HIGH_OFFSET (last number) doesn't scale; the rest (intercept, slope, real_ppl) do.
-        for i in range(len(per_tick_numbers) - 1):
-            self.assertAlmostEqual(total_numbers[i], per_tick_numbers[i] * 6, places=3)
-        self.assertAlmostEqual(total_numbers[-1], per_tick_numbers[-1], places=3)
+        # Every per-tick rate (intercept, slope, real_ppl, SP bonus) is exactly 6x in the total
+        # variant; HIGH_OFFSET is an x-intercept, not a rate, so it doesn't scale.
+        self.assertIn(potency._fmt(dot.tooltip_low_intercept * 6), total_expr)
+        self.assertIn(potency._fmt(dot.tooltip_low_slope * 6), total_expr)
+        self.assertIn(potency._fmt(dot.points_per_level * 6), total_expr)
+        self.assertIn(potency._fmt(dot.sp_coefficient * 6) + "*$SP", total_expr)
+        self.assertIn(potency._fmt(dot.tooltip_high_offset), per_tick_expr)
+        self.assertIn(potency._fmt(dot.tooltip_high_offset), total_expr)
+        self.assertIn(potency._fmt(dot.sp_coefficient) + "*$SP", per_tick_expr)
+
+    def test_attack_power_bonus_term(self):
+        """Hunter/Rogue/Warrior-style AP potency gets a `$AP`-based term the same way SP does -
+        same scratch-spell confirmation (P5) covered both tokens, not just `$SP`."""
+        effect = potency.PotencyEffect(ap_potency=100, kind=potency.KIND_DIRECT, t_ms=3000)
+        resolved = potency.resolve(effect, spell_level=1)
+        expr = potency.tooltip_expression(resolved)
+        self.assertIn(potency._fmt(resolved.ap_coefficient) + "*$AP", expr)
+        self.assertNotIn("$SP", expr)
+
+    def test_stat_bonus_distributed_into_every_max_branch(self):
+        """The SP/AP bonus must land inside every branch of the outer `$max()`, never appended
+        once after it closes - a top-level `+` outside every `$max()`/`$min()` call is silently
+        dropped on this fork's client (P0), so `max(a, b) + c` has to be written as
+        `max(a + c, b + c)` instead (see `tooltip_expression`'s docstring)."""
+        expr = potency.tooltip_expression(self.resolved)
+        self.assertTrue(expr.startswith("$max("))
+        self.assertTrue(expr.endswith(")"))
+        # Every character after the expression's own outermost `$max(...)` closes would be exactly
+        # the silently-dropped top-level `+` this test guards against - there must be none.
+        depth = 0
+        for i, ch in enumerate(expr):
+            if ch == "(":
+                depth += 1
+            elif ch == ")":
+                depth -= 1
+                if depth == 0:
+                    self.assertEqual(i, len(expr) - 1)
+                    break
 
 
 def re_findall_numbers(expr: str) -> list[str]:

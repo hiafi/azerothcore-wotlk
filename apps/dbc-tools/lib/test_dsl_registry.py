@@ -644,6 +644,14 @@ class ScriptAndTrainerRemovalTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             _load_wp_t('from lib.dsl.registry import untrain\nuntrain(50464, [])\n')
 
+    def test_unbind_bonus_coefficients_declares_removal(self):
+        reg = _load_wp_t(
+            'from lib.dsl.registry import unbind_bonus_coefficients\n'
+            'unbind_bonus_coefficients(172)\n'
+        )
+        (row,) = reg.bonus_removals
+        self.assertEqual(row["entry"], 172)
+
 
 class ShapeshiftFormTest(unittest.TestCase):
     def test_full_row_override_keeps_stock_columns_and_changes_named_ones(self):
