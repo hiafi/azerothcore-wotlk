@@ -22,6 +22,7 @@ void AddSC_custom_pve_always_hit();
 void AddSC_custom_healing_dummy();
 void AddSC_custom_training_dummy();
 void AddSC_custom_shapeshift_appearance();
+void AddSC_custom_spell_potency();
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
@@ -32,4 +33,5 @@ void AddCustomScripts()
     AddSC_custom_healing_dummy();
     AddSC_custom_training_dummy();
     AddSC_custom_shapeshift_appearance();
+    AddSC_custom_spell_potency();
 }

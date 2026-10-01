@@ -322,7 +322,10 @@ class RegistryTest(unittest.TestCase):
 
     def test_load_classes_dir_missing_directory_returns_empty(self):
         merged = registry.load_classes_dir(Path("/nonexistent/does/not/exist"))
-        self.assertEqual(merged, {key: [] for key in registry.MERGE_KEYS})
+        expected = {key: [] for key in registry.MERGE_KEYS}
+        expected["spell_var_names"] = {}
+        expected["creature_var_names"] = {}
+        self.assertEqual(merged, expected)
 
     def test_load_classes_dir_duplicate_id_across_files_raises(self):
         with tempfile.TemporaryDirectory() as d:

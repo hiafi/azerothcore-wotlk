@@ -1455,8 +1455,18 @@ conflagrate_17962 = spell(
     range_yards=30.0,
     duration_ms=6000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=6),
-        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+        Effect(
+            type=EffectType.SCHOOL_DAMAGE, implicit_target_a=6,
+            potency_excluded='percent-of-other-damage: spell_warl_conflagrate computes this from '
+            "live Immolate/Shadowflame DoT totals via ComputeFullDurationTotal and pushes it "
+            'through SetSpellValue - see this spell\'s notes= and docs/potency-system.md\'s "Out '
+            'of scope by design".',
+        ),
+        Effect(
+            type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=6,
+            apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000,
+            potency_excluded='percent-of-other-damage - same derivation as effect 1, see above.',
+        ),
     ],
     spell_icon_id=12,
     notes='warlock-rework DESTRUCTION §0.1.2/§6/§9 (C12 made inert): TargetAuraState 14->0 (client patch too) removes the stock consume-branch and its CheckTarget requirement; spell_warl_conflagrate (WP-B) rewrites the damage entirely from live Immolate/Shadowflame snapshots (§7.3). EffectBasePoints_3 39->84 (the 85% periodic share, raw $s3 stat used only for tooltip substitution - the actual per-tick amount is set by the script via SetSpellValue).',

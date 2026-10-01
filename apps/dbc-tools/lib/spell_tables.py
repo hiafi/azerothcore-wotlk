@@ -35,6 +35,14 @@ from . import dbcfmt, sql_dump, sql_out, trainer_state
 # bookkeeping (see Registry's docstring).
 SPELL_SCRIPT_NAMES_COLUMNS = ("spell_id", "ScriptName")
 SPELL_BONUS_DATA_COLUMNS = ("entry", "direct_bonus", "dot_bonus", "ap_bonus", "ap_dot_bonus", "comments")
+# Potency system (docs/potency-system.md, PLAN P1/P2): spell_potency_correction, the one
+# hand-written CREATE TABLE this whole DSL is allowed (pending_db_world's P1 migration;
+# `.agents/docs/systems/dbc-tools.md` - every other declared table here is otherwise generator-
+# owned from day one). `cp_*` are reserved for P7's finishers, always 0 until then.
+SPELL_POTENCY_CORRECTION_COLUMNS = (
+    "spell_id", "effect_index", "correction_per_level", "breakpoint_level", "variance_pct",
+    "cp_line", "cp_correction_per_level", "cp_ap", "comment",
+)
 SPELL_PROC_COLUMNS = (
     "SpellId", "SchoolMask", "SpellFamilyName", "SpellFamilyMask0", "SpellFamilyMask1",
     "SpellFamilyMask2", "ProcFlags", "SpellTypeMask", "SpellPhaseMask", "HitMask",
@@ -216,6 +224,10 @@ SPELL_TABLES = (
     ),
     TableSpec("spell_custom_attr", SPELL_CUSTOM_ATTR_COLUMNS, ("spell_id",), "custom_attrs"),
     TableSpec("spellshapeshiftform_dbc", SPELLSHAPESHIFTFORM_COLUMNS, ("ID",), "shapeshift_forms"),
+    TableSpec(
+        "spell_potency_correction", SPELL_POTENCY_CORRECTION_COLUMNS,
+        ("spell_id", "effect_index"), "potency_corrections",
+    ),
 )
 
 

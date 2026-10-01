@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import importlib.util
 import itertools
+import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -124,6 +125,23 @@ class Registry:
     # docstring and lib/spell_tables.py's CREATURE_TABLES for the upsert-only emission this implies.
     creature_templates: list[dict] = field(default_factory=list)
     creature_template_models: list[dict] = field(default_factory=list)
+    # Potency system (docs/potency-system.md, PLAN P2): auto-emitted by spell() whenever a
+    # declared Spell had any effect with sp_potency/ap_potency - see model.Spell._resolve_potency
+    # and spell_bonus_data's own entry just above (potency reuses that exact table/mechanism for
+    # its half of D1; this is the new spell_potency_correction table P1 added).
+    potency_corrections: list[dict] = field(default_factory=list)
+    # P2b (D8 tier 3 - docs/potency-system.md's "Script numbers"): const(name, value, doc) entries
+    # for hidden script numbers that belong in the generated per-class C++ header, not a potency
+    # effect's base points (tier 2) or a plain potency effect (tier 1). See const() below and
+    # lib/header_gen.py, which turns these (plus spell/creature ids - see spell_var_names/
+    # creature_var_names) into the header text.
+    consts: list[dict] = field(default_factory=list)
+    # P2b: {id: python_variable_name}, found by introspecting each loaded module's own namespace
+    # after it finishes executing - see _collect_var_names(). Not in MERGE_KEYS: these are dicts,
+    # not lists, and merged by lib.header_gen's caller with a plain dict.update() (ids are already
+    # guaranteed unique by the DuplicateIdError check every other table gets).
+    spell_var_names: dict[int, str] = field(default_factory=dict)
+    creature_var_names: dict[int, str] = field(default_factory=dict)
 
 
 MERGE_KEYS = (
@@ -132,6 +150,8 @@ MERGE_KEYS = (
     "linked_spells", "spell_groups", "spell_group_rules", "custom_attrs", "shapeshift_forms",
     "script_removals", "linked_spell_removals", "spell_group_removals", "trainer_removals",
     "creature_templates", "creature_template_models",
+    "potency_corrections",
+    "consts",
 )
 
 # The registry a class file's spell()/talent()/tab()/skill_line_ability()
@@ -172,7 +192,16 @@ def spell(**kwargs) -> model.Spell:
     itself (not the entry dict) so a talent declaration can reference its
     `.id` (`ranks=[frostbolt.id]`)."""
     s = model.Spell(**kwargs)
-    _require_active().spells.append(s.to_entry())
+    entry = s.to_entry()
+    registry = _require_active()
+    registry.spells.append(entry)
+    # Potency system (docs/potency-system.md, PLAN P2): to_entry() stashes these on `s` when the
+    # spell has any potency effect - see model.Spell._resolve_potency. Declared the same automatic
+    # way as every other table this module manages, so authoring a potency effect can't forget the
+    # row the way a hand-written bonus_coefficients()/migration call could.
+    if s.potency_bonus_row is not None:
+        registry.spell_bonus_data.append(s.potency_bonus_row)
+    registry.potency_corrections.extend(s.potency_correction_rows)
     return s
 
 
@@ -319,6 +348,13 @@ def bonus_coefficients(
     when a `Spell` object was passed."""
     if comment is None and isinstance(spell, model.Spell):
         comment = spell.name
+    if isinstance(spell, model.Spell) and (spell.potency_bonus_row is not None or spell.potency_correction_rows):
+        raise ValueError(
+            f"bonus_coefficients({spell.id}, ...): this spell already has a potency effect, which "
+            f"auto-emits its own spell_bonus_data row (docs/potency-system.md, PLAN P2 step 2) - "
+            f"a hand-written bonus_coefficients() call would silently race it. Set sp_potency/"
+            f"ap_potency on the effect instead."
+        )
     row = {
         "id": _spell_id_of(spell),
         "entry": _spell_id_of(spell),
@@ -586,6 +622,35 @@ def custom_attr(spell: model.Spell | int, attributes: int) -> dict:
     spell_id = _spell_id_of(spell)
     row = {"id": spell_id, "spell_id": spell_id, "attributes": int(attributes)}
     _require_active().custom_attrs.append(row)
+    return row
+
+
+_VALID_CONST_CPP_TYPES = ("int32", "uint32", "uint8", "uint16", "float", "Milliseconds")
+_CONST_NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
+
+
+def const(name: str, value: int | float, doc: str = "", cpp_type: str | None = None) -> dict:
+    """P2b (D8 tier 3 - docs/potency-system.md's "Script numbers"): declares one hidden script
+    number for the generated per-class C++ header (`lib/header_gen.py`, `generate.py --check`) -
+    "internal timers, ranges, hidden multipliers" that aren't a potency effect (tier 1) or a value
+    a tooltip shows / a talent can modify (tier 2, which belongs in an effect's base points
+    instead, read with `GetAmount()`/`CalcValue()`). Unlike `spell()`/`talent()`/
+    `creature_template()`, the header's constant name is `name` itself, not inferred from the
+    Python variable this call is assigned to - there's no DBC id to derive a shorter name from, so
+    the author just names it (`"WARLOCK_SOUL_SHARD_CAP"`, not `SPELL_`/`NPC_`-prefixed since it
+    isn't one). `cpp_type` defaults from `value`'s own Python type (`int` -> `int32`, `float` ->
+    `float`) - pass it explicitly for anything else (`uint32`, `Milliseconds`, ...)."""
+    if not _CONST_NAME_RE.match(name):
+        raise ValueError(
+            f"const({name!r}, ...): name must be SCREAMING_SNAKE_CASE (matches {_CONST_NAME_RE.pattern}) "
+            f"- it becomes the generated header's constant name verbatim."
+        )
+    if cpp_type is None:
+        cpp_type = "float" if isinstance(value, float) else "int32"
+    elif cpp_type not in _VALID_CONST_CPP_TYPES:
+        raise ValueError(f"const({name!r}): cpp_type must be one of {_VALID_CONST_CPP_TYPES}, got {cpp_type!r}")
+    row = {"id": name, "name": name, "value": value, "doc": doc, "cpp_type": cpp_type}
+    _require_active().consts.append(row)
     return row
 
 
@@ -1070,6 +1135,27 @@ def _exec_fresh_module(mod_name: str, path: Path, package: str | None = None):
     return module
 
 
+def _collect_var_names(module, registry: Registry) -> None:
+    """P2b: fills `registry.spell_var_names`/`creature_var_names` from the already-executed
+    `module`'s own top-level namespace - `shadow_bolt_686 = spell(id=686, ...)` binds the real
+    `model.Spell` object to that name, so `vars(module)` is the ground truth for "what did the
+    author call this", no AST parsing needed. `spell()` returns the `Spell` object itself (matched
+    here by `isinstance` + `.id`); `creature_template()` returns the *exact same dict* it already
+    appended to `registry.creature_templates` (matched by identity, since a dict has no type to
+    `isinstance`-check and no stable field this function should assume - `id(obj)` against that
+    list is exact and needs no guessing). `talent()`'s own `Talent.dbc` row id is deliberately not
+    collected - see `lib/header_gen.py`'s module docstring for why a script never wants that id at
+    all (it wants a specific rank's spell id, already covered by the spell-id case above)."""
+    creature_row_ids = {id(row): row["entry"] for row in registry.creature_templates}
+    for name, obj in vars(module).items():
+        if name.startswith("_"):
+            continue
+        if isinstance(obj, model.Spell):
+            registry.spell_var_names.setdefault(obj.id, name)
+        elif isinstance(obj, dict) and id(obj) in creature_row_ids:
+            registry.creature_var_names.setdefault(creature_row_ids[id(obj)], name)
+
+
 def load_class_file(
     path: Path, ids_cfg: dict | None = None, trainer_index=None,
     existing_group_ids: set[int] | None = None, shapeshift_index: dict | None = None,
@@ -1109,7 +1195,8 @@ def load_class_file(
     _active_creature_defaults = creature_defaults
     mod_name = f"dsl_class_{path.stem}"
     try:
-        _exec_fresh_module(mod_name, path)
+        module = _exec_fresh_module(mod_name, path)
+        _collect_var_names(module, registry)
     finally:
         _active = None
         _active_ids_cfg = None
@@ -1180,8 +1267,12 @@ def load_class_package(
                 continue
             mod_name = f"{pkg_name}.{path.stem}"
             if mod_name in sys.modules:
-                continue  # a sibling file's own relative import already pulled this one in
-            _exec_fresh_module(mod_name, path, package=pkg_name)
+                # A sibling file's own relative import already pulled this one in - still need
+                # its namespace for _collect_var_names (P2b), just not a second exec.
+                _collect_var_names(sys.modules[mod_name], registry)
+                continue
+            module = _exec_fresh_module(mod_name, path, package=pkg_name)
+            _collect_var_names(module, registry)
     finally:
         sys.dont_write_bytecode = dont_write_bytecode
         _active = None
@@ -1233,6 +1324,11 @@ def load_classes_dir(
     straight through to every `load_class_file`/`load_class_package`
     call - see their docstrings."""
     merged: dict[str, list[dict]] = {key: [] for key in MERGE_KEYS}
+    # P2b: {id: var_name}, merged across every class - see _collect_var_names(). Not part of
+    # MERGE_KEYS (dicts, not lists); ids are already unique by construction (DuplicateIdError
+    # would have fired on the matching spells/creature_templates entry first).
+    merged["spell_var_names"] = {}
+    merged["creature_var_names"] = {}
     if not dir_path.is_dir():
         return merged
     seen: dict[str, dict[object, str]] = {key: {} for key in MERGE_KEYS}
@@ -1249,6 +1345,7 @@ def load_classes_dir(
             registry = load_class_package(path, **kwargs)
         else:
             registry = load_class_file(path, **kwargs)
+        class_name = path.stem  # "warlock" for warlock.py or the warlock/ package directory
         for key in MERGE_KEYS:
             for entry in getattr(registry, key):
                 # `_dedup_id` is the escape hatch for a table whose real SQL column is itself
@@ -1262,5 +1359,11 @@ def load_classes_dir(
                         f"{seen[key][dedup_id]!r} and {path.name!r}"
                     )
                 seen[key][dedup_id] = path.name
+                # Bookkeeping only (never a real column) - lib.potency_sheet groups the generated
+                # docs/potency/<class>.md sheet by this. Harmless for every other consumer: SQL
+                # emission only ever reads the columns a TableSpec/build_*_row names explicitly.
+                entry.setdefault("_source_class", class_name)
                 merged[key].append(entry)
+        merged["spell_var_names"].update(registry.spell_var_names)
+        merged["creature_var_names"].update(registry.creature_var_names)
     return merged

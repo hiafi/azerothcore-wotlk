@@ -40,10 +40,16 @@ TOOL_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOL_ROOT))
 
 from lib import build, dbcfile, dbcfmt, lint, patch_out, resolve, source, sql_out, state  # noqa: E402
-from lib import spell_tables, trainer_state  # noqa: E402
+from lib import header_gen, potency_sheet, spell_tables, trainer_state  # noqa: E402
 from lib.dsl import registry as dsl_registry  # noqa: E402
 
-KNOWN_FLAGS = {"--no-prune"}
+KNOWN_FLAGS = {"--no-prune", "--check"}
+
+# PLAN P2b step 4: adopted class by class, inside each class's own pass - not a side effect of
+# every generate.py run. Extend this tuple when a pass is ready to start generating/relying on its
+# own Generated/<Class>Data.h (warlock first, in P4).
+CLASSES_WITH_GENERATED_HEADERS = ("warlock",)
+GENERATED_HEADER_DIR = REPO_ROOT / "src" / "server" / "game" / "Entities" / "Unit" / "Generated"
 from lib.reuse import ReuseContext  # noqa: E402
 
 SOURCE_DIR = TOOL_ROOT / "source"
@@ -227,6 +233,36 @@ def main() -> int:
             f"abilitie(s), {len(dsl_classes['trainer_spells'])} trainer spell grant(s), "
             + ", ".join(f"{n} {name}" for name, n in creature_counts.items())
         )
+    # Potency system (docs/potency-system.md "Potency sheet", PLAN P2 step 6): one docs/potency/
+    # <class>.md per class with at least one potency effect - local and not committed, like the
+    # rest of docs/ (rewritten every run, same as the DSL's own `_potency` stash this reads).
+    potency_sheets = potency_sheet.write_sheets(dsl_classes, REPO_ROOT / "docs" / "potency")
+    if potency_sheets:
+        print(f"note: wrote {len(potency_sheets)} potency sheet(s) to docs/potency/")
+    # Generated per-class C++ constants header (docs/potency-system.md "Script numbers" tier 3,
+    # PLAN P2b) - unlike the potency sheet above, this file IS committed (the CMake build doesn't
+    # run Python), so it's only written for classes that have opted in
+    # (CLASSES_WITH_GENERATED_HEADERS) rather than for every class with any spell at all.
+    if "--check" in sys.argv:
+        # A fast, read-only staleness gate (PLAN P2b step 3) - everything below this point (SQL
+        # diffing, DBC state, the client patch) is irrelevant to "is the committed header stale",
+        # so --check returns here instead of running the rest of the ~130s pipeline.
+        header_problems = header_gen.check_headers(
+            dsl_classes, GENERATED_HEADER_DIR, CLASSES_WITH_GENERATED_HEADERS
+        )
+        if header_problems:
+            for problem in header_problems:
+                print(f"ERROR: {problem}")
+            return 1
+        print(f"note: generated header(s) up to date for {', '.join(CLASSES_WITH_GENERATED_HEADERS)}")
+        progress("--check done")
+        return 0
+    else:
+        written_headers = header_gen.write_headers(
+            dsl_classes, GENERATED_HEADER_DIR, CLASSES_WITH_GENERATED_HEADERS
+        )
+        if written_headers:
+            print(f"note: wrote {len(written_headers)} generated header(s): {', '.join(written_headers)}")
     for warning in lint.check_linked_spell_key_collisions(
         spell_table_index.live_rows("spell_linked_spell") + dsl_classes["linked_spells"]
     ):
