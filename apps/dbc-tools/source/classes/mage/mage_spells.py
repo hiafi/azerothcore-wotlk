@@ -5,7 +5,7 @@ Split from a single source/classes/mage.py via split_class_file.py (.agents/plan
 """
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, School, SpellModOp
-from lib.dsl.registry import bonus_coefficients, scripted_by, skill_line_ability, spell, trained_by
+from lib.dsl.registry import bonus_coefficients, scripted_by, skill_line_ability, spell, trained_by, unbind_bonus_coefficients
 from .mage_trigger_spells import arcane_blast_debuff, arcane_missile_7268, blizzard_42208, meteor_impact_200096, molten_armor_34913
 
 
@@ -70,12 +70,12 @@ frostbolt_116 = spell(
     duration_ms=5000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-41, mechanic=Mechanic.SNARE, implicit_target_a=6, apply_aura=AuraType.MOD_DECREASE_SPEED),
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=17, points_per_level=7.5464, die_sides=3, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=123.6, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=AuraType.MOD_HEALING_PCT, misc_value=127),
     ],
     spell_icon_id=188,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx6': 2097152, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement slowed by $s1%.', 'BaseLevel': 4, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches a bolt of frost at the enemy, causing ${$m2*$<mult>} to ${$M2*$<mult>} Frost damage and slowing movement speed by $s1% for $d.', 'EffectBonusMultiplier_2': 0.8569999933242798, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 28.0, 'SpellClassMask_1': 32, 'SpellClassSet': 3, 'SpellDescriptionVariableID': 167, 'SpellLevel': 4, 'SpellPriority': 50, 'SpellVisualID_1': 13, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | potency system P5 (Mage pass, anchor spell): converted to sp_potency=123.6 (mage-potency-proposals.txt - the live 2.0s cast time this spell carries from an earlier Frost Mage rework, not the design doc\'s 3.0s/100-potency hypothetical, is real, documented tuning drift, not a bug - see docs/potency-system.md\'s reference table note).',
+    raw_overrides={'AttributesEx6': 2097152, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement slowed by $s1%.', 'BaseLevel': 4, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches a bolt of frost at the enemy, causing {pot2} Frost damage and slowing movement speed by $s1% for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 28.0, 'SpellClassMask_1': 32, 'SpellClassSet': 3, 'SpellDescriptionVariableID': 167, 'SpellLevel': 4, 'SpellPriority': 50, 'SpellVisualID_1': 13, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -119,12 +119,12 @@ cone_of_cold_120 = spell(
     duration_ms=8000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-51, mechanic=Mechanic.SNARE, implicit_target_a=104, apply_aura=AuraType.MOD_DECREASE_SPEED, radius_yards=10.0),
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=195, points_per_level=14.1176, die_sides=21, implicit_target_a=104, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=256.1, potency_kind='direct', implicit_target_a=104, radius_yards=10.0),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=104, apply_aura=AuraType.MOD_HEALING_PCT, misc_value=127, radius_yards=10.0),
     ],
     spell_icon_id=35,
-    notes='EDITED for docs/frost-mage-redesign.md sec 2 (Cone of Cold): 2x damage, 2x spell power coefficient. base_points/die_sides/points_per_level and the legacy EffectBonusMultiplier_2 raw field all doubled in place (this spell predates spell_bonus_data and still uses the per-effect DBC coefficient, so doubling it there - not adding a spell_bonus_data row - is the minimal correct edit). single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 26); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement slowed by $s1%.', 'BaseLevel': 26, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Targets in a cone in front of the caster take ${$m2*$<mult>} to ${$M2*$<mult>} Frost damage and are slowed by $s1% for $d.', 'EffectBonusMultiplier_2': 0.428, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 512, 'SpellClassSet': 3, 'SpellDescriptionVariableID': 167, 'SpellLevel': 26, 'SpellPriority': 50, 'SpellVisualID_1': 1007, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='EDITED for docs/frost-mage-redesign.md sec 2 (Cone of Cold): 2x damage, 2x spell power coefficient (both baked into the 256.1 potency now). single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 26); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | potency system P5 (Mage pass): converted to sp_potency=256.1 (mage-potency-proposals.txt).',
+    raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement slowed by $s1%.', 'BaseLevel': 26, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Targets in a cone in front of the caster take {pot2} Frost damage and are slowed by $s1% for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 512, 'SpellClassSet': 3, 'SpellDescriptionVariableID': 167, 'SpellLevel': 26, 'SpellPriority': 50, 'SpellVisualID_1': 1007, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -143,12 +143,12 @@ frost_nova_122 = spell(
     range_yards=0.0,
     duration_ms=8000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=18, points_per_level=6.92, die_sides=3, implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=136.8, potency_kind='direct', implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, mechanic=Mechanic.ROOT, implicit_target_a=22, implicit_target_b=15, apply_aura=AuraType.MOD_ROOT, radius_yards=10.0),
     ],
     spell_icon_id=193,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 10); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 136, 'AttributesEx4': 1073741824, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Frozen in place.', 'AuraInterruptFlags': 4718592, 'BaseLevel': 10, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts enemies near the caster for ${$m1*$<mult>} to ${$M1*$<mult>} Frost damage and freezes them in place for up to $d.  Damage caused may interrupt the effect.', 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_1': 0.19300000369548798, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 664232, 'RangeIndex': 1, 'SpellClassMask_1': 64, 'SpellClassSet': 3, 'SpellDescriptionVariableID': 167, 'SpellLevel': 10, 'SpellPriority': 50, 'SpellVisualID_1': 17, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 10); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | potency system P5 (Mage pass): converted to sp_potency=136.8 (mage-potency-proposals.txt).',
+    raw_overrides={'AttributesEx': 136, 'AttributesEx4': 1073741824, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Frozen in place.', 'AuraInterruptFlags': 4718592, 'BaseLevel': 10, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts enemies near the caster for {pot1} Frost damage and freezes them in place for up to $d.  Damage caused may interrupt the effect.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 664232, 'RangeIndex': 1, 'SpellClassMask_1': 64, 'SpellClassSet': 3, 'SpellDescriptionVariableID': 167, 'SpellLevel': 10, 'SpellPriority': 50, 'SpellVisualID_1': 17, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -187,12 +187,12 @@ fireball_133 = spell(
     range_yards=35.0,
     duration_ms=4000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=13, points_per_level=9.2712, die_sides=9, implicit_target_a=6),
-        Effect(type=EffectType.APPLY_AURA, points_per_level=0.2881, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=126.7, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=4.8, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
     ],
     spell_icon_id=185,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s2 Fire damage every $t2 seconds.', 'BaseLevel': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Hurls a fiery ball that causes $s1 Fire damage and an additional $o2 Fire damage over $d.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 24.0, 'SpellClassMask_1': 1, 'SpellClassMask_3': 8, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 67, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | potency system P5 (Mage pass): eff1 converted to sp_potency=126.7 (mage-potency-proposals.txt), eff2 to sp_potency=4.8 (potency-report default, base/coef already agreed).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot2} Fire damage every $t2 seconds.', 'BaseLevel': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Hurls a fiery ball that causes {pot1} Fire damage and an additional {pot2.total} Fire damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 24.0, 'SpellClassMask_1': 1, 'SpellClassMask_3': 8, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 67, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -273,12 +273,12 @@ fire_ward_543 = spell(
     range_yards=0.0,
     duration_ms=30000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=164, points_per_level=17.75, implicit_target_a=1, apply_aura=69, misc_value=4),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=82.6, potency_kind='absorb', implicit_target_a=1, apply_aura=69, misc_value=4),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=74, misc_value=4),
     ],
     spell_icon_id=16,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Absorbs Fire damage.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Absorbs $s1 Fire damage.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_2': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 8, 'SpellClassMask_3': 8, 'SpellClassSet': 3, 'SpellLevel': 20, 'SpellVisualID_1': 290, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | potency system P5 (Mage pass): converted to sp_potency=82.6 (potency-report default, base/coef already agreed).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Absorbs Fire damage.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Absorbs {pot1} Fire damage.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_2': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 8, 'SpellClassMask_3': 8, 'SpellClassSet': 3, 'SpellLevel': 20, 'SpellVisualID_1': 290, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -425,11 +425,11 @@ arcane_explosion_1449 = spell(
     mana_cost_pct=22,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=31, points_per_level=11.0, die_sides=5, implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=201.9, potency_kind='direct', implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
     ],
     spell_icon_id=122,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 14); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 14, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes an explosion of arcane magic around the caster, causing $s1 Arcane damage to all targets within $a1 yards.', 'EffectBonusMultiplier_1': 0.21400000154972076, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 4096, 'SpellClassSet': 3, 'SpellLevel': 14, 'SpellVisualID_1': 965, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 14); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | potency system P5 (Mage pass): converted to sp_potency=201.9 (mage-potency-proposals.txt).',
+    raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 14, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes an explosion of arcane magic around the caster, causing {pot1} Arcane damage to all targets within $a1 yards.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 4096, 'SpellClassSet': 3, 'SpellLevel': 14, 'SpellVisualID_1': 965, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -536,12 +536,12 @@ flamestrike_2120 = spell(
     range_yards=30.0,
     duration_ms=8000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=51, points_per_level=7.4955, die_sides=17, implicit_target_a=16, radius_yards=5.0),
-        Effect(type=EffectType.PERSISTENT_AREA_AURA, base_points=11, points_per_level=1.6591, implicit_target_a=28, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000, radius_yards=5.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=109.1, potency_kind='direct', implicit_target_a=16, radius_yards=5.0),
+        Effect(type=EffectType.PERSISTENT_AREA_AURA, sp_potency=23.8, potency_kind='periodic', implicit_target_a=28, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000, radius_yards=5.0),
     ],
     spell_icon_id=37,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 16); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 268435592, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s2 Fire damage every $t2 seconds.', 'BaseLevel': 16, 'CastingTimeIndex': 5, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Calls down a pillar of fire, burning all enemies within the area for $s1 Fire damage and an additional $o2 Fire damage over $d.', 'EffectBonusMultiplier_1': 0.24300000071525574, 'EffectBonusMultiplier_2': 0.12200000137090683, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 4, 'SpellClassSet': 3, 'SpellLevel': 16, 'SpellPriority': 50, 'SpellVisualID_1': 10383, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Targets': 64},
+    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 16); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | potency system P5 (Mage pass): eff1 converted to sp_potency=109.1 (mage-potency-proposals.txt); eff2 (PERSISTENT_AREA_AURA burn) is invisible to potency_report.py\'s classifier (it only scans EffectType.APPLY_AURA, same gap P4 found on Rain of Fire) - converted by hand to sp_potency=23.8, the base-damage-implied potency from its live 11+1.6591/lvl @ 2s (V60=85) vs its live 0.122 coefficient (21.3-implied) - not independently user-reviewed, flag for review.',
+    raw_overrides={'AttributesEx': 268435592, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot2} Fire damage every $t2 seconds.', 'BaseLevel': 16, 'CastingTimeIndex': 5, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Calls down a pillar of fire, burning all enemies within the area for {pot1} Fire damage and an additional {pot2.total} Fire damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 4, 'SpellClassSet': 3, 'SpellLevel': 16, 'SpellPriority': 50, 'SpellVisualID_1': 10383, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Targets': 64},
 )
 
 
@@ -558,11 +558,11 @@ fire_blast_2136 = spell(
     mana_cost_pct=21,
     range_yards=20.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=23, points_per_level=16.6852, die_sides=9, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=347.3, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=12,
-    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 sec 3.1: category cooldown 12 sec (was 8). 'Always critically strikes' is Mage::ApplySpellCritChanceMods (Phase 3) - there is no DBC attribute for a guaranteed crit.",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 6, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the enemy for $s1 Fire damage. Always critically strikes.', 'EffectBonusMultiplier_1': 0.42899999022483826, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2, 'SpellClassSet': 3, 'SpellLevel': 6, 'SpellPriority': 50, 'SpellVisualID_1': 143, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 sec 3.1: category cooldown 12 sec (was 8). 'Always critically strikes' is Mage::ApplySpellCritChanceMods (Phase 3) - there is no DBC attribute for a guaranteed crit. Potency system P5 (Mage pass): converted to sp_potency=347.3 (mage-potency-proposals.txt).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 6, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the enemy for {pot1} Fire damage. Always critically strikes.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2, 'SpellClassSet': 3, 'SpellLevel': 6, 'SpellPriority': 50, 'SpellVisualID_1': 143, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -600,11 +600,11 @@ scorch_2948 = spell(
     mana_cost_pct=8,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=52, points_per_level=4.8474, die_sides=13, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=90.8, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=816,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 22); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 22, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Scorch the enemy for $s1 Fire damage.', 'EffectBonusMultiplier_1': 0.42899999022483826, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 16, 'SpellClassSet': 3, 'SpellLevel': 22, 'SpellPriority': 50, 'SpellVisualID_1': 945, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 22); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | potency system P5 (Mage pass): converted to sp_potency=90.8 (mage-potency-proposals.txt).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 22, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Scorch the enemy for {pot1} Fire damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 16, 'SpellClassSet': 3, 'SpellLevel': 22, 'SpellPriority': 50, 'SpellVisualID_1': 945, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -813,12 +813,12 @@ frost_ward_6143 = spell(
     range_yards=0.0,
     duration_ms=30000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=164, points_per_level=18.6842, implicit_target_a=1, apply_aura=69, misc_value=16),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=82.5, potency_kind='absorb', implicit_target_a=1, apply_aura=69, misc_value=16),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=74, misc_value=16),
     ],
     spell_icon_id=501,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 22); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Absorbs Frost damage.', 'BaseLevel': 22, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Absorbs $s1 Frost damage.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_2': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 256, 'SpellClassMask_3': 8, 'SpellClassSet': 3, 'SpellLevel': 22, 'SpellVisualID_1': 291, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 22); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | potency system P5 (Mage pass): converted to sp_potency=82.5 (potency-report default, base/coef already agreed).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Absorbs Frost damage.', 'BaseLevel': 22, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Absorbs {pot1} Frost damage.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_2': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 256, 'SpellClassMask_3': 8, 'SpellClassSet': 3, 'SpellLevel': 22, 'SpellVisualID_1': 291, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1112,7 +1112,7 @@ frostbolt_25304 = spell(
     duration_ms=9000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-41, mechanic=Mechanic.SNARE, implicit_target_a=6, apply_aura=AuraType.MOD_DECREASE_SPEED),
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=514, points_per_level=3.200000047683716, die_sides=41, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=514, points_per_level=3.200000047683716, die_sides=41, implicit_target_a=6, potency_excluded='legacy rank-capped: superseded rank (MaxLevel 64) kept only because item_spellid2 still casts this exact id - potency forces MaxLevel=0, which would silently uncap it (potency system P5, same category as P4 warlock precedent).'),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=AuraType.MOD_HEALING_PCT, misc_value=127),
     ],
     spell_icon_id=188,
@@ -1134,8 +1134,8 @@ fireball_25306 = spell(
     range_yards=35.0,
     duration_ms=8000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=595, points_per_level=3.799999952316284, die_sides=165, implicit_target_a=6),
-        Effect(type=EffectType.APPLY_AURA, base_points=18, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=595, points_per_level=3.799999952316284, die_sides=165, implicit_target_a=6, potency_excluded='legacy rank-capped: superseded rank (MaxLevel 64) kept only because item_spellid2 still casts this exact id - potency forces MaxLevel=0, which would silently uncap it (potency system P5, same category as P4 warlock precedent).'),
+        Effect(type=EffectType.APPLY_AURA, base_points=18, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000, potency_excluded='legacy rank-capped: same reason as this spell\'s direct effect above.'),
     ],
     spell_icon_id=185,
     notes='pulled from existing data | superseded rank kept in mage.csv: still referenced by item_spellid2, not creature-only',
@@ -1264,7 +1264,7 @@ frost_ward_28609 = spell(
     range_yards=0.0,
     duration_ms=30000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=874, implicit_target_a=1, apply_aura=69, misc_value=16),
+        Effect(type=EffectType.APPLY_AURA, base_points=874, implicit_target_a=1, apply_aura=69, misc_value=16, potency_excluded='legacy rank-capped: superseded rank (MaxLevel 69) kept only because item_spellid2 still casts this exact id - potency forces MaxLevel=0, which would silently uncap it (potency system P5, same category as P4 warlock precedent).'),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=74, misc_value=16),
     ],
     spell_icon_id=501,
@@ -1326,12 +1326,12 @@ arcane_blast = spell(
     mana_cost_pct=7,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=60, points_per_level=15.4, die_sides=137, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=201.6, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.TRIGGER_SPELL, die_sides=0, implicit_target_a=1, trigger_spell=arcane_blast_debuff.id),
     ],
     spell_icon_id=2294,
-    notes='Arcane Mage rework (docs/arcane-mage-rework-design.md): learn level dropped 64->10 ("Now learnable at level 10"). Placeholder scaling curve rebased to the new low anchor - base_points 60 (live 61) at level 10, points_per_level 15.4 so the value at level 80 (~1139) roughly matches the pre-rework level-84 total (842 + 16*18.55 ~= 1139) rather than being invented from scratch. Flagged in Open Items as needing real tuning during the Phase 4 playtest, per the user\'s resolution ("placeholder now, tune via playtest").',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 10, 'CastingTimeIndex': 19, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the target with energy, dealing $s1 Arcane damage.  Each time you cast Arcane Blast, the damage of all Arcane spells is increased by $36032s1% and mana cost of Arcane Blast is increased by $36032s2%.  Effect stacks up to $36032u times and lasts $36032d or until any Arcane damage spell except Arcane Blast is cast.', 'EffectBonusMultiplier_1': 0.7139999866485596, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 536870912, 'EffectSpellClassMaskC_1': 536870912, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 536870912, 'SpellClassSet': 3, 'SpellLevel': 10, 'SpellVisualID_1': 7749, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='Arcane Mage rework (docs/arcane-mage-rework-design.md): learn level dropped 64->10 ("Now learnable at level 10"). Placeholder scaling curve rebased to the new low anchor, now fully replaced by potency\'s own level curve. Potency system P5 (Mage pass): converted to sp_potency=201.6 (mage-potency-proposals.txt) - resolves the "needs real tuning" open item via the project-wide potency formula rather than further hand-tuning.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 10, 'CastingTimeIndex': 19, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the target with energy, dealing {pot1} Arcane damage.  Each time you cast Arcane Blast, the damage of all Arcane spells is increased by $36032s1% and mana cost of Arcane Blast is increased by $36032s2%.  Effect stacks up to $36032u times and lasts $36032d or until any Arcane damage spell except Arcane Blast is cast.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 536870912, 'EffectSpellClassMaskC_1': 536870912, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 536870912, 'SpellClassSet': 3, 'SpellLevel': 10, 'SpellVisualID_1': 7749, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1347,11 +1347,11 @@ ice_lance_30455 = spell(
     mana_cost_pct=6,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=45, points_per_level=2.5, die_sides=10, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=60.7, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=186,
-    notes='EDITED for docs/frost-mage-redesign.md sec 2 (Ice Lance): "Now learnable at level 15, will need to create scaling for it." BaseLevel/SpellLevel 66->15; base_points/points_per_level rescaled to keep the same level-80 ceiling the old 66-anchored single-rank bootstrap landed on (~217 before spell power) - a real balance pass should replace this placeholder slope. single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 66); RealPointsPerLevel from rank1→top rank\'s own top level (82, chain has a gap at 60) slope (anchor rank 42914, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (42914, rank 3); MaxLevel set to 80',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 15, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals ${$m1*$<mult>} to ${$M1*$<mult>} Frost damage to an enemy target.  Causes triple damage against Frozen targets.', 'EffectBonusMultiplier_1': 0.14300000667572021, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 38.0, 'SpellClassMask_1': 131072, 'SpellClassSet': 3, 'SpellDescriptionVariableID': 167, 'SpellLevel': 15, 'SpellVisualID_1': 7906, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='EDITED for docs/frost-mage-redesign.md sec 2 (Ice Lance): "Now learnable at level 15, will need to create scaling for it." BaseLevel/SpellLevel 66->15; base_points/points_per_level rescaled to keep the same level-80 ceiling the old 66-anchored single-rank bootstrap landed on (~217 before spell power) - a real balance pass should replace this placeholder slope. single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 66); RealPointsPerLevel from rank1→top rank\'s own top level (82, chain has a gap at 60) slope (anchor rank 42914, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (42914, rank 3); MaxLevel set to 80 | potency system P5 (Mage pass): converted to sp_potency=60.7 (mage-potency-proposals.txt).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 15, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1} Frost damage to an enemy target.  Causes triple damage against Frozen targets.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 38.0, 'SpellClassMask_1': 131072, 'SpellClassSet': 3, 'SpellDescriptionVariableID': 167, 'SpellLevel': 15, 'SpellVisualID_1': 7906, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 # Only on a stock TrainerId no NPC uses; 212 is the live Mage trainer (docs/spell_learn_level.md).
 trained_by(ice_lance_30455, trainer_id=212, req_level=15, money_cost=900)
@@ -1645,12 +1645,12 @@ frostfire_bolt_44614 = spell(
     duration_ms=9000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-41, mechanic=Mechanic.SNARE, implicit_target_a=6, apply_aura=AuraType.MOD_DECREASE_SPEED),
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=628, points_per_level=12.3333, die_sides=103, implicit_target_a=6),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, points_per_level=1.1111, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=152.5, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=3.7, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
     ],
     spell_icon_id=2946,
-    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 75); RealPointsPerLevel from rank1→top rank's own top level (84, chain has a gap at 60) slope (anchor rank 47610, rank 2); coefficient/mana_cost_pct from max rank (47610, rank 2); MaxLevel set to 80. PLAN A9 (druid-rework code review finding #9): cast_time_ms was already 2500 but raw CastingTimeIndex (14, 3000ms) was still winning underneath - dropped so there's no behaviour change from what the DSL claimed.",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement slowed by $s1%.  $s3 Frostfire damage every $t3 sec.', 'BaseLevel': 75, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Launches a bolt of frostfire at the enemy, causing ${$m2*$<mult>} to ${$M2*$<mult>} Frostfire damage, slowing movement speed by $s1% and causing an additional $o3 Frostfire damage over $d. This spell will be checked against the lower of the target's Frost and Fire resists.", 'EffectBonusMultiplier_2': 0.8569999933242798, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 28.0, 'SpellClassMask_2': 4096, 'SpellClassMask_3': 8, 'SpellClassSet': 3, 'SpellDescriptionVariableID': 167, 'SpellLevel': 75, 'SpellPriority': 50, 'SpellVisualID_1': 12253, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 75); RealPointsPerLevel from rank1→top rank's own top level (84, chain has a gap at 60) slope (anchor rank 47610, rank 2); coefficient/mana_cost_pct from max rank (47610, rank 2); MaxLevel set to 80. PLAN A9 (druid-rework code review finding #9): cast_time_ms was already 2500 but raw CastingTimeIndex (14, 3000ms) was still winning underneath - dropped so there's no behaviour change from what the DSL claimed. | potency system P5 (Mage pass): eff2 converted to sp_potency=152.5 (mage-potency-proposals.txt), eff3 to sp_potency=3.7 (potency-report default, base/coef already agreed).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement slowed by $s1%.  {pot3} Frostfire damage every $t3 sec.', 'BaseLevel': 75, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Launches a bolt of frostfire at the enemy, causing {pot2} Frostfire damage, slowing movement speed by $s1% and causing an additional {pot3.total} Frostfire damage over $d. This spell will be checked against the lower of the target's Frost and Fire resists.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 28.0, 'SpellClassMask_2': 4096, 'SpellClassMask_3': 8, 'SpellClassSet': 3, 'SpellDescriptionVariableID': 167, 'SpellLevel': 75, 'SpellPriority': 50, 'SpellVisualID_1': 12253, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1971,12 +1971,12 @@ arcane_ward_200068 = spell(
     range_yards=0.0,
     duration_ms=30000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=164, points_per_level=17.75, implicit_target_a=1, apply_aura=69, misc_value=64),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=82.6, potency_kind='absorb', implicit_target_a=1, apply_aura=69, misc_value=64),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=74, misc_value=64),
     ],
     spell_icon_id=1918,
-    notes='Arcane Mage rework (docs/arcane-mage-rework-design.md, New Spells): "Baseline for all Mages. Mirrors Fire Ward and Frost Ward in level learned, cooldown, absorb amount and rank progression, applied to the Arcane school." Row is a straight copy of Fire Ward (543)\'s structure/numbers with school and effect misc_value (school-absorb target mask) swapped from Fire (4) to Arcane (64) - single rank, matching Fire Ward\'s own single-rank-bootstrap shape (BaseLevel/SpellLevel 20, MaxLevel 80). effect2 (Reflect Spells School, base_points -1 -> live 0%) is inert dead data inherited unchanged from Fire Ward\'s own pulled row - not this rework\'s concern to fix. SpellIconID 1918 (Spell_Arcane_ArcaneResilience, talent-tooltip-audit 2026-09-17: was 72/Spell_Nature_GuardianWard, a generic placeholder used because no dedicated "Arcane Ward" icon was known to exist in the client) - Fire (16)/Frost (14) already use their own school-specific icons, this now does too.',
-    raw_overrides={'BaseLevel': 20, 'SpellLevel': 20, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'DefenseType': 1, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellClassMask_1': 8, 'SpellClassMask_3': 8, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Absorbs $s1 Arcane damage.  Lasts $d.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Absorbs Arcane damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_2': 1.0},
+    notes='Arcane Mage rework (docs/arcane-mage-rework-design.md, New Spells): "Baseline for all Mages. Mirrors Fire Ward and Frost Ward in level learned, cooldown, absorb amount and rank progression, applied to the Arcane school." Row is a straight copy of Fire Ward (543)\'s structure/numbers with school and effect misc_value (school-absorb target mask) swapped from Fire (4) to Arcane (64) - single rank, matching Fire Ward\'s own single-rank-bootstrap shape (BaseLevel/SpellLevel 20, MaxLevel 80). effect2 (Reflect Spells School, base_points -1 -> live 0%) is inert dead data inherited unchanged from Fire Ward\'s own pulled row - not this rework\'s concern to fix. SpellIconID 1918 (Spell_Arcane_ArcaneResilience, talent-tooltip-audit 2026-09-17: was 72/Spell_Nature_GuardianWard, a generic placeholder used because no dedicated "Arcane Ward" icon was known to exist in the client) - Fire (16)/Frost (14) already use their own school-specific icons, this now does too. Potency system P5 (Mage pass): converted to sp_potency=82.6 (potency-report default, matching Fire/Frost Ward\'s own default), same as its two sibling Wards.',
+    raw_overrides={'BaseLevel': 20, 'SpellLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellClassMask_1': 8, 'SpellClassMask_3': 8, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Absorbs {pot1} Arcane damage.  Lasts $d.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Absorbs Arcane damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_2': 1.0},
 )
 
 
@@ -2038,12 +2038,12 @@ blast_wave_11113 = spell(
     range_yards=0.0,
     duration_ms=6000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=153, points_per_level=10.2667, die_sides=33, implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=178.7, potency_kind='direct', implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
         Effect(type=EffectType.APPLY_AURA, base_points=-51, mechanic=Mechanic.SNARE, implicit_target_a=22, implicit_target_b=15, apply_aura=AuraType.MOD_DECREASE_SPEED, radius_yards=10.0),
     ],
     spell_icon_id=292,
-    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 sec 3.2: knockback effect (stock Effect_3) removed, daze kept, self-centered 10 yd, 30 sec cooldown unchanged. spell_mage_blast_wave's glyph-knockback hook now simply never fires.",
-    raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Dazed.', 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A wave of flame radiates outward from the caster, damaging all enemies caught within the blast for $s1 Fire damage and dazing them for $d.', 'EffectBonusMultiplier_1': 0.19300000369548798, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 64, 'SpellClassSet': 3, 'SpellLevel': 30, 'SpellPriority': 50, 'SpellVisualID_1': 963, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 sec 3.2: knockback effect (stock Effect_3) removed, daze kept, self-centered 10 yd, 30 sec cooldown unchanged. spell_mage_blast_wave's glyph-knockback hook now simply never fires. Potency system P5 (Mage pass): converted to sp_potency=178.7 (mage-potency-proposals.txt).",
+    raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Dazed.', 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A wave of flame radiates outward from the caster, damaging all enemies caught within the blast for {pot1} Fire damage and dazing them for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 64, 'SpellClassSet': 3, 'SpellLevel': 30, 'SpellPriority': 50, 'SpellVisualID_1': 963, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -2061,12 +2061,12 @@ pyroblast_11366 = spell(
     range_yards=35.0,
     duration_ms=12000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=140, points_per_level=12.105, die_sides=47, implicit_target_a=6),
-        Effect(type=EffectType.APPLY_AURA, base_points=13, points_per_level=1.075, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=72.7, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=10.7, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
     ],
     spell_icon_id=184,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s2 Fire damage every $t2 seconds.', 'BaseLevel': 20, 'CastingTimeIndex': 6, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Hurls an immense fiery boulder that causes $s1 Fire damage and an additional $o2 Fire damage over $d.', 'EffectBonusMultiplier_1': 1.149999976158142, 'EffectBonusMultiplier_2': 0.05000000074505806, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 24.0, 'SpellClassMask_1': 4194304, 'SpellClassMask_3': 8, 'SpellClassSet': 3, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 2253, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | potency system P5 (Mage pass): eff1 converted to sp_potency=72.7, eff2 to sp_potency=10.7 (both mage-potency-proposals.txt).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot2} Fire damage every $t2 seconds.', 'BaseLevel': 20, 'CastingTimeIndex': 6, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Hurls an immense fiery boulder that causes {pot1} Fire damage and an additional {pot2.total} Fire damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 24.0, 'SpellClassMask_1': 4194304, 'SpellClassMask_3': 8, 'SpellClassSet': 3, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 2253, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -2085,13 +2085,16 @@ ice_barrier_11426 = spell(
     range_yards=0.0,
     duration_ms=60000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1999, implicit_target_a=1, apply_aura=69, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=188.8, potency_kind='absorb', implicit_target_a=1, apply_aura=69, misc_value=127),
     ],
     spell_icon_id=32,
-    coeff_weight=1.0,
-    notes='EDITED for docs/frost-mage-redesign.md sec 2 (Ice Barrier): "Flat absorb value replaced with a scaling formula: 2000 base plus 1.0 spell power coefficient, modified by Versatility." base_points -> 1999 (2000, -1 convention), old per-level-only growth (points_per_level 19.4) zeroed out now that spell power coefficient carries scaling instead. Coefficient applied via spell_bonus_data (direct_bonus=1.0) in the accompanying pending SQL, same mechanism as Glacial Spike/Flurry. "Modified by Versatility" is not verified here - per project memory Versatility is already wired as a general stat, but confirm it actually touches SPELL_AURA_SCHOOL_ABSORB during playtest; if not, that\'s a small follow-up, not a data change. single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Absorbs damage.', 'BaseLevel': 40, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly shields you, absorbing $s1 damage.  Lasts $d.  While the shield holds, spellcasting will not be delayed by damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 1, 'SpellClassMask_3': 8, 'SpellClassSet': 3, 'SpellLevel': 40, 'SpellPriority': 50, 'SpellVisualID_1': 4302, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='EDITED for docs/frost-mage-redesign.md sec 2 (Ice Barrier): "Flat absorb value replaced with a scaling formula: 2000 base plus 1.0 spell power coefficient, modified by Versatility." "Modified by Versatility" is not verified here - per project memory Versatility is already wired as a general stat, but confirm it actually touches SPELL_AURA_SCHOOL_ABSORB during playtest; if not, that\'s a small follow-up, not a data change. single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | potency system P5 (Mage pass): converted to sp_potency=188.8 (mage-potency-proposals.txt); dropped the dead `coeff_weight=1.0` kwarg (lib/build.py: coeff_weight is passthrough-only, never wired into spell_bonus_data by this build - the real live 1.0 coefficient this spell carries came from a hand-written pending SQL row at entry 11426, not from this field; see unbind_bonus_coefficients() call below if that row still conflicts with the generated EffectBonusMultiplier_1).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Absorbs damage.', 'BaseLevel': 40, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly shields you, absorbing {pot1} damage.  Lasts $d.  While the shield holds, spellcasting will not be delayed by damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 1, 'SpellClassMask_3': 8, 'SpellClassSet': 3, 'SpellLevel': 40, 'SpellPriority': 50, 'SpellVisualID_1': 4302, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+unbind_bonus_coefficients(ice_barrier_11426)  # P5: retires the live spell_bonus_data row (direct_bonus=1.0,
+# originally inserted by a hand-written pending SQL, per this spell's own notes) that would otherwise
+# keep overriding the freshly generated EffectBonusMultiplier_1 (D1) - same pattern as P4's Corruption/
+# Metamorphosis unbind. If generate.py confirms no such row is actually live, this call is a harmless no-op.
 
 
 dragon_s_breath_31661 = spell(
@@ -2109,13 +2112,13 @@ dragon_s_breath_31661 = spell(
     range_yards=0.0,
     duration_ms=5000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=369, points_per_level=9.04, die_sides=61, implicit_target_a=104, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=183.2, potency_kind='direct', implicit_target_a=104, radius_yards=10.0),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, mechanic=Mechanic.DISORIENTED, implicit_target_a=104, apply_aura=AuraType.MOD_CONFUSE, radius_yards=10.0),
         Effect(type=EffectType.APPLY_AURA, base_points=-51, mechanic=Mechanic.SNARE, implicit_target_a=104, apply_aura=AuraType.MOD_DECREASE_SPEED, radius_yards=10.0),
     ],
     spell_icon_id=1548,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Disoriented.', 'AuraInterruptFlags': 4718592, 'BaseLevel': 50, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Targets in a cone in front of the caster take $s1 Fire damage and are Disoriented for $d.  Any direct damaging attack will revive targets.  Turns off your attack when used.', 'EffectBonusMultiplier_1': 0.19300000369548798, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcCharges': 1, 'ProcTypeMask': 139944, 'RangeIndex': 1, 'SpellClassMask_1': 8388608, 'SpellClassSet': 3, 'SpellLevel': 50, 'SpellPriority': 50, 'SpellVisualID_1': 7860, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | potency system P5 (Mage pass): converted to sp_potency=183.2 (mage-potency-proposals.txt).',
+    raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Disoriented.', 'AuraInterruptFlags': 4718592, 'BaseLevel': 50, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Targets in a cone in front of the caster take {pot1} Fire damage and are Disoriented for $d.  Any direct damaging attack will revive targets.  Turns off your attack when used.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcCharges': 1, 'ProcTypeMask': 139944, 'RangeIndex': 1, 'SpellClassMask_1': 8388608, 'SpellClassSet': 3, 'SpellLevel': 50, 'SpellPriority': 50, 'SpellVisualID_1': 7860, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -2132,11 +2135,11 @@ arcane_barrage_44425 = spell(
     mana_cost_pct=18,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=385, points_per_level=22.5385, die_sides=85, implicit_target_a=6, chain_targets=5),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=160.0, potency_kind='direct', implicit_target_a=6, chain_targets=5),
     ],
     spell_icon_id=3376,
-    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1→top rank's own top level (86, chain has a gap at 60) slope (anchor rank 44781, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (44781, rank 3); MaxLevel set to 80",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches several missiles at the enemy target, causing $s1 Arcane damage. Each stack of Arcane Blast on you causes Arcane Barrage to hit an additional target. Consumes all stacks of Arcane Blast and restores 2.5% of your maximum mana per stack consumed.', 'EffectBonusMultiplier_1': 0.7139999866485596, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 24.0, 'SpellClassMask_2': 32768, 'SpellClassSet': 3, 'SpellLevel': 60, 'SpellPriority': 50, 'SpellVisualID_1': 9947, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1→top rank's own top level (86, chain has a gap at 60) slope (anchor rank 44781, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (44781, rank 3); MaxLevel set to 80 | potency system P5 (Mage pass): converted to sp_potency=160.0 (potency-report default, base/coef already agreed).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches several missiles at the enemy target, causing {pot1} Arcane damage. Each stack of Arcane Blast on you causes Arcane Barrage to hit an additional target. Consumes all stacks of Arcane Blast and restores 2.5% of your maximum mana per stack consumed.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 24.0, 'SpellClassMask_2': 32768, 'SpellClassSet': 3, 'SpellLevel': 60, 'SpellPriority': 50, 'SpellVisualID_1': 9947, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -2154,12 +2157,12 @@ living_bomb_44457 = spell(
     range_yards=35.0,
     duration_ms=12000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=152, points_per_level=7.3846, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=28.6, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
         Effect(type=EffectType.APPLY_AURA, base_points=44460, implicit_target_a=6, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=3000,
-    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1→top rank's own top level (86, chain has a gap at 60) slope (anchor rank 55360, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (55360, rank 3); MaxLevel set to 80 | effect2 (explosion spell-ID reference) excluded from the formula -- see Gotchas: embedded spell-ID base_points",
-    raw_overrides={'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Causes $s1 Fire damage every $t1 sec.  After $d or when the spell is dispelled, the target explodes causing $44461s1 Fire damage to all enemies within $44461a1 yards.', 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The target becomes a Living Bomb, taking $o1 Fire damage over $d.  After $d or when the spell is dispelled, the target explodes dealing $44461s1 Fire damage to all enemies within $44461a1 yards.', 'EffectBonusMultiplier_1': 0.20000000298023224, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 12582935, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 131072, 'SpellClassMask_3': 8, 'SpellClassSet': 3, 'SpellLevel': 60, 'SpellPriority': 50, 'SpellVisualID_1': 10692, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1→top rank's own top level (86, chain has a gap at 60) slope (anchor rank 55360, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (55360, rank 3); MaxLevel set to 80 | effect2 (explosion spell-ID reference) excluded from the formula -- see Gotchas: embedded spell-ID base_points | potency system P5 (Mage pass): eff1 (DoT) converted to sp_potency=28.6 (mage-potency-proposals.txt); eff2 is a native DUMMY spell-id reference read by spell_mage_living_bomb::AfterRemove via caster->CastSpell(target, uint32(aurEff->GetAmount()), true, ...) - no custom bp, so it isn't a potency candidate itself (it just names which spell - 44461 - to cast on expire/dispel).",
+    raw_overrides={'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Causes {pot1} Fire damage every $t1 sec.  After $d or when the spell is dispelled, the target explodes causing $44461s1 Fire damage to all enemies within $44461a1 yards.', 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The target becomes a Living Bomb, taking {pot1.total} Fire damage over $d.  After $d or when the spell is dispelled, the target explodes dealing $44461s1 Fire damage to all enemies within $44461a1 yards.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 12582935, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 131072, 'SpellClassMask_3': 8, 'SpellClassSet': 3, 'SpellLevel': 60, 'SpellPriority': 50, 'SpellVisualID_1': 10692, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -2407,8 +2410,10 @@ trained_by(meteor_200095, trainer_id=212, req_level=58, money_cost=200000)
 # Meteor is a brand-new baseline (non-talent) player-cast spell with a fully custom ID, so it needs
 # this row like Arcane's baseline 200067-200070 (skilllineability 30403-30406) did.
 skill_line_ability(id=30410, skill_line=8, spell_id=200095, class_mask=128)
-bonus_coefficients(meteor_impact_200096, direct=0.3, dot=0.15,
-                   comment='Mage - Meteor impact / ground burn (fire-mage-rework.md sec 2; dot is per tick, same convention as Flamestrike)')
+unbind_bonus_coefficients(meteor_impact_200096)  # P5: meteor_impact_200096's eff1 (direct) and eff2
+# (PERSISTENT_AREA_AURA burn) both convert to potency below (mage_trigger_spells.py), which emits
+# each effect's own EffectBonusMultiplier_N directly (pure SP, no ap_potency) - retires the explicit
+# bonus_coefficients(direct=0.3, dot=0.15) row above that would otherwise keep winning (D1).
 
 
 flashpoint_200111 = spell(
@@ -2441,8 +2446,8 @@ flashpoint_damage_200119 = spell(
     range_yards=50000.0,
     radius_yards=8.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=6),
-        Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=6, potency_excluded='script-driven + percent-of-other-damage: spell_mage_flashpoint sets this effect\'s bp via SPELLVALUE_BASE_POINT0 to 5x the consumed Ignite bank at cast time (D2) - the DBC base is dead/unused (potency system P5).'),
+        Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=53, implicit_target_b=16, radius_yards=8.0, potency_excluded='script-driven + percent-of-other-damage: spell_mage_flashpoint sets this effect\'s bp via SPELLVALUE_BASE_POINT1 to half the Ignite-bank amount above (D2) - the DBC base is dead/unused (potency system P5).'),
     ],
     spell_icon_id=1197,
     notes="Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 3 (10,1) - the actual detonation, cast by spell_mage_flashpoint (200111's SpellScript). EFFECT_0 = 5x the consumed Ignite bank on the explicit target (SPELLVALUE_BASE_POINT0); EFFECT_1 = half that (2.5x) to enemies within 8 yd of the target (SPELLVALUE_BASE_POINT1), same target-centered AoE pair as Living Bomb's explosion (44461) and this rework's own Burnout explosion (200116) - naturally also hits the primary target at 0 yards, matching 'dealing 5x...and half that amount to all enemies within 8 yards' read as inclusive. 'This damage cannot be a critical strike' (sec 10,1) -> CANT_CRIT; damage is the already-fully-modified banked amount -> IGNORE_CASTER_MODIFIERS + ALWAYS_HIT, same reasoning as the Ignite tick vehicle (200098).",
