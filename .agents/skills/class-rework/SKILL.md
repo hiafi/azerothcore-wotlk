@@ -37,8 +37,16 @@ way round.
 - New spell IDs come from `apps/dbc-tools/source/ids.yaml`'s reserved block; add rows to
   `source/spells/<class>.csv` (learned-outright) or `<class>_talents.csv` (talent-point-granted).
   Never pick numbers ad hoc — see `apps/dbc-tools/README.md`'s "Source files".
+  - **A new damage, heal, or absorb effect's number is a potency value
+    (`sp_potency=`/`ap_potency=`/`potency_kind=`), not a hand-set `base_points=`/
+    `points_per_level=`/`die_sides=`** — read `.agents/docs/systems/potency.md` before writing one;
+    it covers the DSL fields, what's deliberately excluded (script-driven values, percent-of-other-
+    damage effects, legacy rank-capped spells, pet/guardian casts), and the `{potN}`-style tooltip
+    placeholders a potency effect's description needs (skipping them isn't cosmetic — the tooltip
+    comes out missing the caster's live spell power/attack power entirely, not just simplified).
   - **Sign convention:** stored `base_points` is the live value minus 1 (die_sides=1 makes the
-    engine add 1 back); a "-30%" reduction is stored as `-31`. This applies to **static rows** only.
+    engine add 1 back); a "-30%" reduction is stored as `-31`. This applies to effects that aren't
+    potency (buffs, procs, stat mods, thresholds, flat percentages) and to **static rows** only.
     Values a script passes in depend on the API:
     - `CastCustomSpell`, `CastSpell` with `CustomSpellValues`, `SPELLVALUE_BASE_POINTn`: pass the
       **live** value (`-30` for -30%). `Spell::SetSpellValue` already runs it through
@@ -152,6 +160,8 @@ membership).
 
 ## Related docs
 
+- `.agents/docs/systems/potency.md` — how a damage/heal/absorb effect's numbers should be authored
+  (Phase 1), from the Warlock pilot (P4) onward.
 - `docs/dbc-build-pipeline.md` — why DBCs are generated artifacts, not hand-edited.
 - `apps/dbc-tools/README.md` — full pipeline usage (pulling existing data, the web UI, known
   limitations).

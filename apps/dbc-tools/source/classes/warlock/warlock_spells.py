@@ -2085,7 +2085,7 @@ scripted_by(chaos_rift_200978, 'spell_warl_chaos_rift')
 # TRIGGER bit - that flag makes a creature invisible, bugs-and-fixes); faction 35 and level 1 in
 # the template, overwritten by the owner's own faction/level at summon (npc_warl_chaos_rift,
 # WP-B); type 10 (not a demon, so no talent affecting demons touches it).
-creature_template(
+chaos_rift_300170 = creature_template(
     300170, 'Chaos Rift',
     minlevel=1, maxlevel=1,
     faction=35,

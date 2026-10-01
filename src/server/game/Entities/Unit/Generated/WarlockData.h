@@ -533,4 +533,12 @@ namespace WarlockData
     constexpr uint32 SPELL_HELLSTORM_200989 = 200989; // hellstorm_200989
     constexpr uint32 SPELL_FIRE_AND_BRIMSTONE_200990 = 200990; // fire_and_brimstone_200990
     constexpr uint32 SPELL_DESTRUCTIVE_REACH_CRIT = 200991; // destructive_reach_crit_200991
+
+    // Creature (NPC) ids
+    constexpr uint32 NPC_WILD_IMP = 300150; // wild_imp_300150
+    constexpr uint32 NPC_IMP_GANG_BOSS = 300151; // imp_gang_boss_300151
+    constexpr uint32 NPC_DREADSTALKER = 300152; // dreadstalker_300152
+    constexpr uint32 NPC_DOOMGUARD_GUARDIAN = 300153; // doomguard_guardian_300153
+    constexpr uint32 NPC_INFERNAL_GUARDIAN = 300154; // infernal_guardian_300154
+    constexpr uint32 NPC_CHAOS_RIFT = 300170; // chaos_rift_300170
 }

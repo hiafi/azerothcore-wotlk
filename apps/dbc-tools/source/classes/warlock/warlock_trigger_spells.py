@@ -8631,19 +8631,19 @@ _GUARDIAN_COMMON = dict(
     minlevel=1, maxlevel=1,
 )
 
-creature_template(300150, 'Wild Imp', speed_run=1.14286, ScriptName='npc_warl_wild_imp', **_GUARDIAN_COMMON)
+wild_imp_300150 = creature_template(300150, 'Wild Imp', speed_run=1.14286, ScriptName='npc_warl_wild_imp', **_GUARDIAN_COMMON)
 creature_model(300150, display_id=16890, scale=0.3)
 
-creature_template(300151, 'Imp Gang Boss', speed_run=1.14286, ScriptName='npc_warl_wild_imp', **_GUARDIAN_COMMON)
+imp_gang_boss_300151 = creature_template(300151, 'Imp Gang Boss', speed_run=1.14286, ScriptName='npc_warl_wild_imp', **_GUARDIAN_COMMON)
 creature_model(300151, display_id=16890, scale=1.4)
 
-creature_template(300152, 'Dreadstalker', speed_walk=1.2, speed_run=1.6, ScriptName='npc_warl_dreadstalker', **_GUARDIAN_COMMON)
+dreadstalker_300152 = creature_template(300152, 'Dreadstalker', speed_walk=1.2, speed_run=1.6, ScriptName='npc_warl_dreadstalker', **_GUARDIAN_COMMON)
 creature_model(300152, display_id=1913, scale=0.8)
 
-creature_template(300153, 'Doomguard', ScriptName='npc_warl_doomguard_guardian', **_GUARDIAN_COMMON)
+doomguard_guardian_300153 = creature_template(300153, 'Doomguard', ScriptName='npc_warl_doomguard_guardian', **_GUARDIAN_COMMON)
 creature_model(300153, display_id=1912, scale=1.0)
 
-creature_template(300154, 'Infernal', ScriptName='npc_warl_infernal_guardian', **_GUARDIAN_COMMON)
+infernal_guardian_300154 = creature_template(300154, 'Infernal', ScriptName='npc_warl_infernal_guardian', **_GUARDIAN_COMMON)
 creature_model(300154, display_id=169, scale=0.9)
 
 
