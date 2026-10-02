@@ -6032,3 +6032,136 @@ ice_shards_crit_200685 = _crit_damage_passive_200680(200685, 'Ice Shards', 32)
 burnout_crit_200686 = _crit_damage_passive_200680(200686, 'Burnout', 9)
 burnout_crit_200687 = _crit_damage_passive_200680(200687, 'Burnout', 19)
 burnout_crit_200688 = _crit_damage_passive_200680(200688, 'Burnout', 32)
+
+
+# ---------------------------------------------------------------------------
+# Potency system P8 (pets, guardians, totems): Water Elemental's own
+# spellbook casts. Summon Water Elemental (31687) is the real player ability
+# (mage_spells.py); these are what NPC_WATER_ELEMENTAL_PERM/_TEMP cast via
+# the stock PetAI/spellbook path - no custom AI file exists for the Water
+# Elemental (pet_mage.cpp only has Mirror Image), no CastCustomSpell bp.
+# SUMMON_PET type, so always exactly the owner's level
+# (Pet::SynchronizeLevelWithOwner(), same guarantee as a Warlock pet).
+# ---------------------------------------------------------------------------
+waterbolt_31707 = spell(
+    id=31707,
+    name='Waterbolt',
+    school=School.FROST,
+    attributes=65536,
+    cast_time_ms=2500,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=1,
+    range_yards=45.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=91.3, potency_kind='direct', implicit_target_a=6),
+    ],
+    spell_icon_id=176,
+    notes="pulled from existing data. Potency system P8: Water Elemental's own spellbook cast (no "
+          "custom AI file; stock PetAI casts it via the pet's spellbook; SUMMON_PET type so always "
+          "exactly the owner's level). Base-implied sp_potency=91.3 from the flat (no "
+          "RealPointsPerLevel) V60 average of 407 (255 base + int((60-50)*11.5)=115 + die_sides=73 "
+          "mean 37); the live EffectBonusMultiplier_1 (0.833) implied a notably higher 116.6 - base "
+          "wins by default (docs/potency-system.md).",
+    raw_overrides={'CastingTimeIndex': 20, 'InterruptFlags': 15, 'ProcChance': 101, 'BaseLevel': 50, 'SpellLevel': 50, 'Speed': 16.0, 'EquippedItemClass': -1, 'SpellVisualID_1': 7875, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Deals {pot1} Frost damage to the target.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'SpellClassSet': 5, 'SpellClassMask_1': 4096, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+# Water Elemental's PBAoE root. Checked against the "pure CC, no real damage" assumption this
+# stage was handed and found FALSE: effect 0 is a real SCHOOL_DAMAGE PBAoE -
+# spell_mage_water_elemental_freeze's own comment (spell_mage.cpp) says "Effect 0's damage always
+# lands regardless of freeze immunity, matching the live spell description". Effect 1 is the root
+# (SPELL_AURA_MOD_ROOT) and is left untouched, not a potency effect.
+freeze_33395 = spell(
+    id=33395,
+    name='Freeze',
+    school=School.FROST,
+    dispel=DispelType.MAGIC,
+    attributes=1073807360,
+    category=35,
+    cast_time_ms=0,
+    cooldown_ms=30000,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=25,
+    range_yards=45.0,
+    duration_ms=8000,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=37.4, potency_kind='direct', implicit_target_a=16, radius_yards=8.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, mechanic=Mechanic.ROOT, implicit_target_a=16, apply_aura=AuraType.MOD_ROOT, radius_yards=8.0),
+    ],
+    spell_icon_id=193,
+    notes="pulled from existing data (frost-mage-redesign.md sec 2's cooldown edit, 25->30s, is "
+          "already baked into the live row this was pulled from). Potency system P8: base-implied "
+          "sp_potency=37.4 from the flat (no RealPointsPerLevel) V60 average of 100 (73 base + "
+          "int((60-50)*2.0)=20 + die_sides=13 mean 7); the live EffectBonusMultiplier_1 (0.029) "
+          "implied a far lower 6.8 - base wins by default.",
+    raw_overrides={'AttributesEx': 131208, 'AttributesEx4': 160, 'Targets': 64, 'CastingTimeIndex': 1, 'InterruptFlags': 8, 'ProcTypeMask': 664232, 'ProcChance': 100, 'BaseLevel': 50, 'SpellLevel': 50, 'EquippedItemClass': -1, 'SpellVisualID_1': 8058, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Blasts enemies in a $a1 yard radius for {pot1} Frost damage and freezes them in place for up to $d.  Damage caused may interrupt the effect.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Frozen in place.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 3, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+# ---------------------------------------------------------------------------
+# Potency system P8: Mirror Image's own spell copies (caster = the image
+# itself, cast via plain me->CastSpell in npc_pet_mage_mirror_image /
+# CasterAI, pet_mage.cpp). Not SUMMON_PET/SUMMON_GUARDIAN - the images are
+# Minion-typed temp summons created by the Mirror Image spells themselves
+# (58831/58833/58834/65047, SPELL_EFFECT_SUMMON) through Spell::SummonGuardian,
+# whose default summonLevel = caster->GetLevel() (no per-spell exception in
+# SpellEffects.cpp's summonLevel switch, and this isn't an item cast) - so
+# the images ARE reliably summoned at exactly the caster's own level, same
+# guarantee as a SUMMON_PET, just via a different code path. "Clone Me!"
+# (45204, AuraEffect::HandleAuraCloneCaster) only clones display/scale -
+# it has nothing to do with level.
+# ---------------------------------------------------------------------------
+mirror_image_frostbolt_59638 = spell(
+    id=59638,
+    name='Frostbolt',
+    school=School.FROST,
+    dispel=DispelType.MAGIC,
+    attributes=65536,
+    cast_time_ms=3000,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=90,
+    mana_cost_pct=0,
+    range_yards=40.0,
+    duration_ms=4000,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=31.0, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.APPLY_AURA, base_points=-51, mechanic=Mechanic.SNARE, implicit_target_a=6, apply_aura=AuraType.MOD_DECREASE_SPEED),
+    ],
+    spell_icon_id=188,
+    notes="pulled from existing data. Potency system P8: npc_pet_mage_mirror_image's own Frostbolt "
+          "copy (caster = the image, plain me->CastSpell, no custom bp). Base-implied sp_potency=31.0 "
+          "from the flat (no RealPointsPerLevel) V60 average of 166 (162 base + die_sides=7 mean 4); "
+          "the live EffectBonusMultiplier_1 (0.3) implies a close 35.0 - no real mismatch here, unlike "
+          "Waterbolt/Freeze/Gargoyle Strike.",
+    raw_overrides={'FacingCasterFlags': 1, 'CastingTimeIndex': 14, 'InterruptFlags': 15, 'ProcChance': 101, 'BaseLevel': 20, 'SpellLevel': 20, 'Speed': 24.0, 'EquippedItemClass': -1, 'SpellVisualID_1': 13, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Inflicts Frost damage to an enemy and reduces its movement speed for $d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Reduced movement speed.', 'AuraDescription_Lang_Mask': 16712190, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+mirror_image_fire_blast_59637 = spell(
+    id=59637,
+    name='Fire Blast',
+    school=School.FIRE,
+    attributes=65536,
+    category=19,
+    cast_time_ms=0,
+    cooldown_ms=6000,
+    category_cooldown_ms=0,
+    mana_cost=120,
+    mana_cost_pct=0,
+    range_yards=20.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=34.8, potency_kind='direct', implicit_target_a=6),
+    ],
+    spell_icon_id=12,
+    notes="pulled from existing data. Potency system P8: npc_pet_mage_mirror_image's own Fire Blast "
+          "copy (caster = the image, plain me->CastSpell, no custom bp). Base-implied sp_potency=34.8 "
+          "from the flat (no RealPointsPerLevel) V60 average of 93 (87 base + die_sides=11 mean 6); "
+          "the live EffectBonusMultiplier_1 (0.15) implies a close 35.0 - no real mismatch.",
+    raw_overrides={'FacingCasterFlags': 1, 'CastingTimeIndex': 1, 'InterruptFlags': 8, 'ProcChance': 101, 'BaseLevel': 20, 'SpellLevel': 20, 'EquippedItemClass': -1, 'SpellVisualID_1': 143, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Inflicts Fire damage to an enemy.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 3, 'SpellClassMask_1': 131074, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)

@@ -108,12 +108,12 @@ consume_shadows_17767 = spell(
     range_yards=0.0,
     duration_ms=6000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=104, points_per_level=17.019354835633308, implicit_target_a=1, apply_aura=AuraType.PERIODIC_HEAL, amplitude=2000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=58.0, potency_kind='heal_periodic', implicit_target_a=1, apply_aura=AuraType.PERIODIC_HEAL, amplitude=2000),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=54501),
     ],
     spell_icon_id=207,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 18); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 131136, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals $s1 damage every $t1 seconds and greatly increasing stealth detection to all nearby friendly targets within $54501a yards.', 'BaseLevel': 18, 'CastingTimeIndex': 1, 'ChannelInterruptFlags': 31772, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The Voidwalker consumes nearby shadows to bolster its form, recovering $o1 health over $d and greatly increasing stealth detection to all nearby friendly targets within $54501a yards. Cannot be used while in combat.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 33554432, 'SpellClassSet': 5, 'SpellLevel': 18, 'SpellVisualID_1': 4779, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes="pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 18); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P8 (warlock pets): cast by the Voidwalker (pet AI, stock spellbook path). eff0 converted to sp_potency=58.0 (potency-report base-implied default, T=2s per-tick, no mismatch); eff1 (stealth-detection proc trigger) is a flat constant, untouched.",
+    raw_overrides={'AttributesEx': 131136, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals {pot1} damage every $t1 seconds and greatly increasing stealth detection to all nearby friendly targets within $54501a yards.', 'CastingTimeIndex': 1, 'ChannelInterruptFlags': 31772, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The Voidwalker consumes nearby shadows to bolster its form, recovering {pot1.total} health over $d and greatly increasing stealth detection to all nearby friendly targets within $54501a yards. Cannot be used while in combat.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 33554432, 'SpellClassSet': 5, 'SpellLevel': 18, 'SpellVisualID_1': 4779, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -6610,11 +6610,11 @@ fel_firebolt_200824 = spell(
     mana_cost_pct=0,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=10, points_per_level=0.9559322033898305, die_sides=1, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=19.1, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=2298,
-    notes='warlock-rework DEMONOLOGY §5.0/§0.1.6: cast by the Wild Imp (npc_warl_wild_imp). eff0 via _scaling.sb_units(0.12, 10, 58, 58). SpellClassSet 0, no bits (guardian leak rule); no spell_bonus_data - the AI passes bp0 = ComputeGuardianBasePoints(me, 200824, 0.1028f) live via CastCustomSpell (B21); Demonic Power +7/14% is applied on the HIT in spell_warl_guardian_hit_mods, never bp0 (§4.0). AttributesEx=1024 (NO_THREAT). Speed=20 (missile); SpellVisualID_1=67 = stock Firebolt 3110\'s visual (was 3110 - the spell id pasted as a visual id, so no missile showed).',
-    raw_overrides={'AttributesEx': 1024, 'ProcChance': 101, 'EquippedItemClass': -1, 'DefenseType': 1, 'PreventionType': 1, 'Speed': 20.0, 'SpellVisualID_1': 67, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Deals $s1 Fire damage.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+    notes="warlock-rework DEMONOLOGY §5.0/§0.1.6: cast by the Wild Imp (npc_warl_wild_imp). SpellClassSet 0, no bits (guardian leak rule); Demonic Power +7/14% is applied on the HIT in spell_warl_guardian_hit_mods, never the base points (§4.0). AttributesEx=1024 (NO_THREAT). Speed=20 (missile); SpellVisualID_1=67 = stock Firebolt 3110's visual (was 3110 - the spell id pasted as a visual id, so no missile showed). Potency system P8 (warlock guardians, user-approved 2026-10-02): moved from the bespoke Warlock::ComputeGuardianBasePoints(guardian, spellId, spCoefficient) owner-SP-coefficient formula (eff0 was previously via _scaling.sb_units(0.12, 10, 58, 58)) to the standard potency curve - converted to sp_potency=19.1 (potency-report base-implied default, T=2s cast, no mismatch). pet_warlock_rework.cpp's call site switched from me->CastCustomSpell(target, ..., &bp0, ...) to a plain me->CastSpell(target, ..., false) so the generated EffectBonusMultiplier_1/correction row apply through the normal CalcValue hook with the Wild Imp as caster (its level is owner-synced at summon, Spell::SummonGuardian). This is a real rebalance, not a preserved total - SpellLevel=1 (no player learn level; pure guardian-cast).",
+    raw_overrides={'AttributesEx': 1024, 'ProcChance': 101, 'EquippedItemClass': -1, 'DefenseType': 1, 'PreventionType': 1, 'Speed': 20.0, 'SpellVisualID_1': 67, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Deals {pot1} Fire damage.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'SpellLevel': 1},
 )
 
 
@@ -6631,11 +6631,11 @@ implosion_explosion_200828 = spell(
     range_yards=100.0,
     radius_yards=8.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=43, points_per_level=1.4338983050847457, die_sides=1, implicit_target_a=53, implicit_target_b=16),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=48.6, potency_kind='direct', implicit_target_a=53, implicit_target_b=16),
     ],
     spell_icon_id=2356,
-    notes='warlock-rework DEMONOLOGY §5.0/§7.2/§7.3: cast by each Wild Imp on landing (MovementInform after MoveJump, §11 Q13). eff0 via _scaling.sb_units(0.18, 30, 87, 87). implicit_target_a=53 (DEST_TARGET_ENEMY), b=16 (UNIT_DEST_AREA_ENEMY), radius 8 yd - hits the primary too. SpellClassSet 0, no bits. AttributesEx=1024 (NO_THREAT).',
-    raw_overrides={'AttributesEx': 1024, 'CastingTimeIndex': 1, 'ProcChance': 101, 'EquippedItemClass': -1, 'DefenseType': 1, 'PreventionType': 1, 'Speed': 0.0, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Deals $s1 Shadowflame damage to all enemies within 8 yards.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+    notes="warlock-rework DEMONOLOGY §5.0/§7.2/§7.3: cast by each Wild Imp on landing (MovementInform after MoveJump, §11 Q13). implicit_target_a=53 (DEST_TARGET_ENEMY), b=16 (UNIT_DEST_AREA_ENEMY), radius 8 yd - hits the primary too. SpellClassSet 0, no bits. AttributesEx=1024 (NO_THREAT). Potency system P8 (warlock guardians, user-approved 2026-10-02): moved from the bespoke Warlock::ComputeGuardianBasePoints owner-SP-coefficient formula (eff0 was previously via _scaling.sb_units(0.18, 30, 87, 87)) to the standard potency curve - converted to sp_potency=48.6 (potency-report base-implied default, T=1.5s instant floor, no mismatch). pet_warlock_rework.cpp's Explode() switched from a CustomSpellValues(SPELLVALUE_BASE_POINT0) cast to a plain targeted me->CastSpell(targets, explosionInfo, nullptr, TRIGGERED_FULL_MASK) so the generated EffectBonusMultiplier_1/correction row apply through the normal CalcValue hook with the exploding Wild Imp as caster. This is a real rebalance, not a preserved total - SpellLevel=1 (no player learn level; pure guardian-cast).",
+    raw_overrides={'AttributesEx': 1024, 'CastingTimeIndex': 1, 'ProcChance': 101, 'EquippedItemClass': -1, 'DefenseType': 1, 'PreventionType': 1, 'Speed': 0.0, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Deals {pot1} Shadowflame damage to all enemies within 8 yards.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'SpellLevel': 1},
 )
 
 
@@ -6651,11 +6651,11 @@ dreadstalker_bite_200830 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=44, points_per_level=1.4577966101694916, die_sides=2, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=49.5, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=4062,
-    notes='warlock-rework DEMONOLOGY §5.0: cast by each Dreadstalker every 2 s (npc_warl_dreadstalker). eff0 via _scaling.sb_units(0.183, 30, 88, 89). SpellClassSet 0, no bits. AttributesEx=1024 (NO_THREAT).',
-    raw_overrides={'AttributesEx': 1024, 'CastingTimeIndex': 1, 'ProcChance': 101, 'EquippedItemClass': -1, 'DefenseType': 1, 'PreventionType': 1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Deals $s1 Shadow damage.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+    notes="warlock-rework DEMONOLOGY §5.0: cast by each Dreadstalker every 2 s (npc_warl_dreadstalker). SpellClassSet 0, no bits. AttributesEx=1024 (NO_THREAT). Potency system P8 (warlock guardians, user-approved 2026-10-02): moved from the bespoke Warlock::ComputeGuardianBasePoints owner-SP-coefficient formula (eff0 was previously via _scaling.sb_units(0.183, 30, 88, 89)) to the standard potency curve - converted to sp_potency=49.5 (potency-report base-implied default, T=1.5s instant floor, no mismatch). pet_warlock_rework.cpp's DoBite() switched from me->CastCustomSpell(target, ..., &bp0, ...) to a plain me->CastSpell(target, ..., true) so the generated EffectBonusMultiplier_1/correction row apply through the normal CalcValue hook with the Dreadstalker as caster. This is a real rebalance, not a preserved total - SpellLevel=1 (no player learn level; pure guardian-cast).",
+    raw_overrides={'AttributesEx': 1024, 'CastingTimeIndex': 1, 'ProcChance': 101, 'EquippedItemClass': -1, 'DefenseType': 1, 'PreventionType': 1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Deals {pot1} Shadow damage.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'SpellLevel': 1},
 )
 
 
@@ -6671,11 +6671,11 @@ doom_bolt_200832 = spell(
     mana_cost_pct=0,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=481, points_per_level=7.966101694915254, die_sides=5, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=215.6, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=99,
-    notes='warlock-rework DEMONOLOGY §5.0: cast by the Doomguard (npc_warl_doomguard_guardian). eff0 via _scaling.sb_units(1.00, 60, 482, 486). SpellClassSet 0, no bits. AttributesEx=1024 (NO_THREAT). Speed=20; visual from Shadow Bolt 686 (SpellVisualID 64).',
-    raw_overrides={'AttributesEx': 1024, 'ProcChance': 101, 'EquippedItemClass': -1, 'DefenseType': 1, 'PreventionType': 1, 'Speed': 20.0, 'SpellVisualID_1': 64, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Deals $s1 Shadow damage.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+    notes="warlock-rework DEMONOLOGY §5.0: cast by the Doomguard (npc_warl_doomguard_guardian). SpellClassSet 0, no bits. AttributesEx=1024 (NO_THREAT). Speed=20; visual from Shadow Bolt 686 (SpellVisualID 64). Potency system P8 (warlock guardians, user-approved 2026-10-02): moved from the bespoke Warlock::ComputeGuardianBasePoints owner-SP-coefficient formula (eff0 was previously via _scaling.sb_units(1.00, 60, 482, 486)) to the standard potency curve - converted to sp_potency=215.6 (potency-report base-implied default, T=2.5s cast, no mismatch). pet_warlock_rework.cpp's DoCastDoomBolt() switched from me->CastCustomSpell(target, ..., &bp0, ...) to a plain me->CastSpell(target, ..., false) so the generated EffectBonusMultiplier_1/correction row apply through the normal CalcValue hook with the Doomguard as caster. This is a real rebalance, not a preserved total - SpellLevel=1 (no player learn level; pure guardian-cast).",
+    raw_overrides={'AttributesEx': 1024, 'ProcChance': 101, 'EquippedItemClass': -1, 'DefenseType': 1, 'PreventionType': 1, 'Speed': 20.0, 'SpellVisualID_1': 64, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Deals {pot1} Shadow damage.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'SpellLevel': 1},
 )
 
 
@@ -6692,11 +6692,11 @@ infernal_immolation_200834 = spell(
     range_yards=0.0,
     radius_yards=8.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=62, points_per_level=1.0355932203389831, die_sides=1, implicit_target_a=22, implicit_target_b=15),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=46.7, potency_kind='direct', implicit_target_a=22, implicit_target_b=15),
     ],
     spell_icon_id=460,
-    notes='warlock-rework DEMONOLOGY §5.0/§7.4: pulsed every 1 s by the Infernal (npc_warl_infernal_guardian). eff0 via _scaling.sb_units(0.13, 60, 63, 63). implicit_target_a=22 (SRC_CASTER), b=15 (UNIT_SRC_AREA_ENEMY), radius 8 yd. SpellClassSet 0, no bits. AttributesEx=1024 (NO_THREAT). Owner Cataclysm % applied on the hit in spell_warl_guardian_hit_mods (§0.2.5), never bp0.',
-    raw_overrides={'AttributesEx': 1024, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'DefenseType': 1, 'PreventionType': 1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Deals $s1 Fire damage to nearby enemies.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+    notes="warlock-rework DEMONOLOGY §5.0/§7.4: pulsed every 1 s by the Infernal (npc_warl_infernal_guardian). implicit_target_a=22 (SRC_CASTER), b=15 (UNIT_SRC_AREA_ENEMY), radius 8 yd. SpellClassSet 0, no bits. AttributesEx=1024 (NO_THREAT). Owner Cataclysm % applied on the hit in spell_warl_guardian_hit_mods (§0.2.5), never the base points. Potency system P8 (warlock guardians, user-approved 2026-10-02): moved from the bespoke Warlock::ComputeGuardianBasePoints owner-SP-coefficient formula (eff0 was previously via _scaling.sb_units(0.13, 60, 63, 63)) to the standard potency curve - converted to sp_potency=46.7 (potency-report base-implied default, T=1.5s instant floor, no mismatch). pet_warlock_rework.cpp's DoPulse() switched from me->CastCustomSpell(me, ..., &bp0, ...) to a plain me->CastSpell(me, ..., true) so the generated EffectBonusMultiplier_1/correction row apply through the normal CalcValue hook with the Infernal as caster. This is a real rebalance, not a preserved total - SpellLevel=1 (no player learn level; pure guardian-cast).",
+    raw_overrides={'AttributesEx': 1024, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'DefenseType': 1, 'PreventionType': 1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Deals {pot1} Fire damage to nearby enemies.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'SpellLevel': 1},
 )
 scripted_by(200824, 'spell_warl_guardian_hit_mods')
 scripted_by(200834, 'spell_warl_guardian_hit_mods')

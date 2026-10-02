@@ -1227,6 +1227,19 @@ class spell_sha_stoneclaw_totem : public SpellScript
     {
         Unit* target = GetHitUnit();
 
+        // Custom: potency-system - P8 (docs/potency-system.md). GetEffectValue() below reads this
+        // spell's (55328's) own EFFECT_0, which now carries a potency row. That cast is never
+        // customized (Totem::InitSummon's self-cast has no CustomSpellValues), so
+        // SpellEffectInfo::CalcValue's `bp == BasePoints` check already holds and the potency hook
+        // (SpellPotency::Apply) already ran before this line executes - GetEffectValue() returns the
+        // fully corrected value. It is then handed to SPELL_SHAMAN_STONECLAW_TOTEM (55277) as a
+        // custom bp, which is the real D2 escape hatch: 55277's OWN potency hook is permanently
+        // skipped (it never carries a declared row either), but that's fine because the value
+        // flowing into it already has the correction baked in. Do NOT add a second
+        // SpellPotency::Apply() call here - the value is already corrected once, and applying it
+        // again would double the low-level correction and the +/-10% variance roll (see
+        // spell_warr_bloodthirst::HandleDamage in spell_warrior.cpp for the same established
+        // principle on an already-converted spell).
         // Cast Absorb on totems
         for (uint8 slot = SUMMON_SLOT_TOTEM_FIRE; slot < MAX_TOTEM_SLOT; ++slot)
         {

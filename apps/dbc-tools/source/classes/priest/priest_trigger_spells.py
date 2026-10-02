@@ -5,7 +5,7 @@ Split from a single source/classes/priest.py via split_class_file.py (.agents/pl
 """
 
 from lib.dsl import RANGE_SELF, ApplyAura, AuraType, DispelType, Effect, EffectType, Mechanic, School, SpellModOp
-from lib.dsl.registry import bonus_coefficients, linked_spell, procs_on, scripted_by, spell
+from lib.dsl.registry import bonus_coefficients, linked_spell, procs_on, scripted_by, spell, unbind_bonus_coefficients
 from . import _masks
 
 # Proc flags/phases used by the procs_on() calls below - src/server/game/Spells/SpellMgr.h's
@@ -6844,22 +6844,33 @@ holy_concentration_buff_200201 = spell(
 
 
 # --- 6,1 Lightwell auto-heal --------------------------------------------------------------
+# Potency system P8: migrated off the legacy bonus_coefficients() mechanism (base_points=289 flat
+# + direct=0.4 bonus_coefficients, never level-scaled) to sp_potency=. Base-implied sp_potency=27.4
+# from the flat V60 average of 290 (289 base + die_sides=1's +1), matching the already-computed
+# mage/priest-potency-report.md row for 200202 exactly (base-implied 27.4 / coefficient-implied
+# 49.6, flagged YES mismatch - base wins by default per docs/potency-system.md). This drops the SP
+# coefficient from 0.4 to ~0.221 (sp_potency/100 * (1.5/3.5) * 1.88) while keeping the level-60
+# base heal at ~290, same tradeoff every other project-wide base-vs-coefficient mismatch resolved
+# this way. T=1.5s (cast_time_ms=0 floors to the GCD/off-trigger basis - this is an AI-ticked
+# instant heal, not a periodic aura, so kind='heal' not 'heal_periodic'). SpellLevel=0 matches the
+# live row (never had a real BaseLevel/SpellLevel set).
 lightwell_heal_200202 = spell(
     id=200202,
     name='Lightwell',
     school=School.HOLY,
     cast_time_ms=0,
     effects=[
-        Effect(type=EffectType.HEAL, base_points=289, die_sides=1, implicit_target_a=1),
+        Effect(type=EffectType.HEAL, sp_potency=27.4, potency_kind='heal', implicit_target_a=1),
     ],
     spell_icon_id=1878,
     notes='HOLY.md 6,1/baseline edits: the Lightwell object\'s own auto-heal, cast by '
           'npc_pet_pri_lightwell (WP-B, pet_priest.cpp) once per sec at the party/raid member most '
-          'in need within 20 yds. 290 (base_points=289) + 0.4 SP (bonus_coefficients below) - PLAN '
-          "§2's default (spec text gives no coefficient).",
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for $s1.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
+          "in need within 20 yds. Potency system P8: migrated from base_points=289 flat + "
+          "bonus_coefficients(direct=0.4) to sp_potency=27.4 (base-implied, preserving the ~290 "
+          "level-60 heal; see comment above) - no stock-dump conflict at this custom id, so the "
+          "prune pass retires the old spell_bonus_data row without needing unbind_bonus_coefficients().",
+    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for {pot1}.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0, 'SpellLevel': 0},
 )
-bonus_coefficients(lightwell_heal_200202, direct=0.4)
 
 
 # --- 6,2 Blessed Warding (REPURPOSED talent 411, was Spell Warding) ---------------------

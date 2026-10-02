@@ -4372,3 +4372,50 @@ desolation_66817 = spell(
     notes='pulled from existing data',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Blood Strikes cause you to deal $66803s1% additional damage with all attacks for the next $66803d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassMask_1': 128, 'SpellClassSet': 15, 'SpellPriority': 50, 'StartRecoveryCategory': 133},
 )
+
+
+# ---------------------------------------------------------------------------
+# Potency system P8 (pets, guardians, totems): Ebon Gargoyle's own attack,
+# npc_pet_dk_ebon_gargoyle (ScriptedAI, pet_dk.cpp) via plain DoCastVictim -
+# caster = the gargoyle, which Summon Gargoyle (49206/50514, SPELL_EFFECT_SUMMON)
+# spawns at exactly the owner's level through Spell::SummonGuardian's default
+# summonLevel = caster->GetLevel() (no per-spell exception for this summon id).
+#
+# Wrinkle: spell_pet_dk_gargoyle_strike (SpellScript, same file) reads
+# GetEffectValue() in OnEffectLaunchTarget - i.e. AFTER CalcValue()/this hook
+# has already run - and adds a flat (casterLevel-60)*3 on top via
+# SetEffectValue(), only when the caster is level >= 60. This is purely
+# additive on whatever CalcValue() produces (not a base-point override), so it
+# composes cleanly with potency and needs zero script changes - just a note
+# that the live post-conversion number above level 60 will read a bit higher
+# than the raw potency value below implies.
+# ---------------------------------------------------------------------------
+gargoyle_strike_51963 = spell(
+    id=51963,
+    name='Gargoyle Strike',
+    school=School.NATURE,
+    attributes=589824,
+    cast_time_ms=2000,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=40.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=16.8, potency_kind='direct', implicit_target_a=6),
+    ],
+    spell_icon_id=213,
+    notes="pulled from existing data. Potency system P8: Ebon Gargoyle's own attack (DoCastVictim, "
+          "no custom bp). Base-implied sp_potency=16.8 from the flat (no RealPointsPerLevel) V60 "
+          "average of 60 (50 base + die_sides=19 mean 10); the live EffectBonusMultiplier_1 (0.453) "
+          "implies a far higher 79.3 - base wins by default (docs/potency-system.md). The '0.453' "
+          "coefficient lives in the SP (direct_bonus) column, not AP, even though the spell's own "
+          "flavor text says 'modified by attack power' - Pet.cpp's NPC_EBON_GARGOYLE case adds "
+          "SPELL_DK_PET_SCALING_01/02/03 auras that convert the owner's attack power into the "
+          "gargoyle's own effective spell power stat, so Unit::SpellDamageBonusDone's SP path is "
+          "what the engine actually reads for this creature; ap_potency/ap_bonus would instead read "
+          "the AP path, which this pet's damage formula never uses, silently zeroing its scaling. "
+          "Kept as sp_potency to match the live mechanism exactly (docs/potency-system.md's pets "
+          "section: 'the stock inheritance of owner spell power and attack power stays as is').",
+    raw_overrides={'FacingCasterFlags': 1, 'CastingTimeIndex': 5, 'InterruptFlags': 15, 'ProcChance': 101, 'BaseLevel': 55, 'SpellLevel': 55, 'DurationIndex': 0, 'Speed': 20.0, 'EquippedItemClass': -1, 'SpellVisualID_1': 4379, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Inflicts Nature damage to an enemy.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)

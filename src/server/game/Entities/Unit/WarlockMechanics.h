@@ -797,10 +797,9 @@ namespace Warlock
     uint32 NextDreadstalkerPairToken(Player* owner);
     void OnDreadstalkerDeparted(Player* owner, uint32 pairToken);        // 1 Molten Core per token
 
-    // Guardians (B21): the LIVE L0 base + round(coef x owner SP of the spell's school) - i.e.
-    // Effects[0].BasePoints + (Effects[0].DieSides ? 1 : 0) + round(coef x SP) - SetSpellValue's
-    // CalcBaseValue takes the 1 back off (SHARED §4 custom-base-points convention).
-    int32 ComputeGuardianBasePoints(Unit const* guardian, uint32 spellId, float spCoefficient);
+    // Guardians (B21): ComputeGuardianBasePoints() removed - potency-system P8 (2026-10-02) moved
+    // every guardian-cast spell that used it to the standard potency curve (plain CastSpell,
+    // SpellPotency::Apply() via CalcValue()) instead (docs/potency-system.md).
     Unit* SelectGuardianTarget(Creature* guardian, Player* owner, ObjectGuid preferred);   // §7.4
 
     // Demonic Potency and the other hidden demon auras (§7.1)

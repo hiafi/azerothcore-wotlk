@@ -383,11 +383,11 @@ attack_3606 = spell(
     mana_cost_pct=0,
     range_yards=20.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=8, points_per_level=1.1571428571428573, die_sides=3, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=17.1, implicit_target_a=6),
     ],
     spell_icon_id=680,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 10); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 10 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 10, 'CastingTimeIndex': 24, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals Fire damage to the target.', 'EffectBonusMultiplier_1': 0.16699999570846558, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 19.0, 'SpellClassMask_1': 1073741824, 'SpellClassSet': 11, 'SpellLevel': 10, 'SpellVisualID_1': 67},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 10); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 10 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P8 (2026-10-02): converted to sp_potency=17.1 (base-implied, docs/potency-system.PLAN.md P8, shaman-potency-report.md) - Searing Totem\'s own periodic attack, cast via the generic TotemAI::UpdateAI loop (me->CastSpell(victim, me->ToTotem()->GetSpell(), false)), plain cast, no custom bp. Totems are always exactly the owner\'s level (Totem::InitStats), so no lag-mechanism caveat applies.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 24, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1} Fire damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 19.0, 'SpellClassMask_1': 1073741824, 'SpellClassSet': 11, 'SpellLevel': 10, 'SpellVisualID_1': 67},
 )
 
 
