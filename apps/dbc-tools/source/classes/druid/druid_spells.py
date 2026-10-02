@@ -6,7 +6,7 @@ Split from a single source/classes/druid.py via split_class_file.py (.agents/pla
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, School, SpellModOp
 from lib.dsl.constants import ShapeshiftForm
-from lib.dsl.registry import bonus_coefficients, scripted_by, skill_line_ability, spell, trained_by
+from lib.dsl.registry import bonus_coefficients, scripted_by, skill_line_ability, spell, trained_by, unbind_bonus_coefficients
 from ._masks import BLOOM, CENARION_WARD, MASS_ENTANGLEMENT, STARSURGE
 from ._masks import BERSERK_COST, IRONFUR, PULVERIZE, THRASH, UPHEAVAL  # druid-rework Feral pass
 from .druid_trigger_spells import (
@@ -1333,27 +1333,76 @@ lifebloom_33763 = spell(
     duration_ms=7000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, sp_potency=5.7, potency_kind='heal_periodic', implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=1000),
-        # Potency system P5 (druid pass): NOT converted, investigated and deliberately left as-is.
-        # This DUMMY slot's own base_points/points_per_level (252/9.7) is a flat base amount a
-        # script (spell_dru_lifebloom_resto::AfterRemove/HandleDispel, Druid::TriggerLifebloomBloom)
-        # reads via CalcValue() and forwards as the raw healAmount into a SEPARATE, undeclared stock
-        # spell (SPELL_LIFEBLOOM_BLOOM = 33778, DruidMechanics.h) via CastCustomSpell - D2 says a
-        # script-supplied base point skips the hook, so a potency value here would be dead data. This
-        # differs from the Rain of Fire (P4) relocation precedent: there, the DUMMY effect's CalcValue
-        # *was* the fully-scaled final tick value (coefficient and all) relayed verbatim. Here the
-        # real SP coefficient the heal eventually gets applied separately, on 33778's own
-        # EffectBonusMultiplier, via caster->SpellHealingBonusDone(target, finalHeal=33778, ...) -
-        # a two-hop relay through a spell this pass's scope (druid_spells.py/druid_trigger_spells.py/
-        # druid_talents.py) never declares. Converting it correctly would mean authoring a brand new
-        # spell() for 33778 (not just repointing an existing declaration, unlike Rain of Fire) - flagged
-        # for the user/a future stage rather than invented here.
+        # Potency system P5 follow-up (2026-10-01): this DUMMY slot's own base_points/points_per_level
+        # (252/9.7) are now VESTIGIAL - kept only because Druid::TriggerLifebloomBloom's
+        # AfterEffectRemove/AfterDispel hooks are registered against EFFECT_1/SPELL_AURA_DUMMY and need
+        # a real effect of that shape to bind to; its value is no longer read for the heal amount.
+        # 33778 (the "bloom", previously an undeclared stock spell relayed into via CastCustomSpell) is
+        # now a real potency-driven spell() of its own (lifebloom_bloom_33778, below) - TriggerLifebloomBloom
+        # was changed to read 33778's own CalcValue() instead of this slot's GetAmount(). See that
+        # declaration's notes for the full trace/design.
         Effect(type=EffectType.APPLY_AURA, base_points=252, points_per_level=9.7, implicit_target_a=21, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2101,
-    notes="druid-rework RESTO §7: mana_cost_pct 28->14; BaseLevel/SpellLevel 64->26; re-anchored level recipe (Q19, proportional to the existing L80 values: tick 40/46/53 at 60/70/80, bloom 582/679/776) - stored/ppl per RESTO §7's table (tick bp=17 ppl=0.6625, bloom bp=252 ppl=9.7); tooltip drops the mana-return mention and states the one-target rule (mana return removed in spell_dru_lifebloom, WP-B; the second Lifebloom removal itself is Druid::OnLifebloomApplied, WP-B). Potency system P5 (druid pass): eff1 (the tick) converted to sp_potency=5.7 (potency-report default, base/coef already agreed); eff2 (the bloom-on-fall-off base, relayed into stock spell 33778) deliberately NOT converted - see the effect-level comment above.",
-    raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals {pot1} every second and $s2 when effect finishes or is dispelled.', 'BaseLevel': 26, 'CastingTimeIndex': 1, 'CumulativeAura': 3, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for {pot1.total} over $d.  When Lifebloom completes its duration or is dispelled, the target instantly heals themself for $s2.  This effect can stack up to $u times on the same target.  May be active on one target at a time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 2, 'SpellClassMask_2': 16, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 176, 'SpellLevel': 26, 'SpellVisualID_1': 8145, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},  # ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7
+    notes="druid-rework RESTO §7: mana_cost_pct 28->14; BaseLevel/SpellLevel 64->26; re-anchored level recipe (Q19, proportional to the existing L80 values: tick 40/46/53 at 60/70/80, bloom 582/679/776) - stored/ppl per RESTO §7's table (tick bp=17 ppl=0.6625, bloom bp=252 ppl=9.7); tooltip drops the mana-return mention and states the one-target rule (mana return removed in spell_dru_lifebloom, WP-B; the second Lifebloom removal itself is Druid::OnLifebloomApplied, WP-B). Potency system P5 (druid pass): eff1 (the tick) converted to sp_potency=5.7 (potency-report default, base/coef already agreed). Potency system P5 follow-up: eff2 (the bloom-on-fall-off base) is now vestigial - the real bloom heal is declared on 33778 itself (lifebloom_bloom_33778, below); this slot's own base_points/ppl are dead data, kept only for the AfterRemove/AfterDispel hook's structural requirement. Tooltip's old self-reference ($s2) repointed to the real source ($33778s1).",
+    raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals {pot1} every second and $s2 when effect finishes or is dispelled.', 'BaseLevel': 26, 'CastingTimeIndex': 1, 'CumulativeAura': 3, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for {pot1.total} over $d.  When Lifebloom completes its duration or is dispelled, the target instantly heals themself for $33778s1.  This effect can stack up to $u times on the same target.  May be active on one target at a time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 2, 'SpellClassMask_2': 16, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 176, 'SpellLevel': 26, 'SpellVisualID_1': 8145, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},  # ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7
 )
 trained_by(lifebloom_33763, trainer_id=216, req_level=26, money_cost=5000)
+
+
+lifebloom_bloom_33778 = spell(
+    id=33778,
+    name='Lifebloom',
+    school=School.NATURE,
+    # Stock attributes (150994944 = SPELL_ATTR0_ALLOW_WHILE_MOUNTED | SPELL_ATTR0_ALLOW_WHILE_SITTING),
+    # deliberately NOT the usual 65536/SPELL_ATTR0_NOT_SHAPESHIFTED every other declared spell here
+    # uses - this spell is always force-cast by Druid::TriggerLifebloomBloom (DruidMechanics.cpp) when
+    # Lifebloom falls off or is dispelled, and must never fail because the target happens to be
+    # mounted or sitting at that moment.
+    attributes=150994944,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.HEAL, sp_potency=81.3, base_potency=54.9, potency_kind='heal', implicit_target_a=1),
+    ],
+    spell_icon_id=962,
+    notes="Potency system P5 follow-up (2026-10-01): promoted out of source/spells/npc.csv's inert "
+          "reference-only bucket into a real, actively-generated declaration (was previously "
+          "'pulled from existing data', never regenerated). This is Lifebloom's (33763) burst "
+          "'bloom' heal, fired by Druid::TriggerLifebloomBloom (DruidMechanics.cpp) when Lifebloom "
+          "falls off or is dispelled - traced in full before converting: TriggerLifebloomBloom used "
+          "to read a FLAT, unscaled base value from 33763's own eff2 DUMMY slot "
+          "(bloomEffect->GetAmount(), base_points=252/ppl=9.7, no SP applied), then separately called "
+          "caster->SpellHealingBonusDone(target, finalHeal=33778, ...) to apply SP bonus using "
+          "33778's OWN coefficient - sourced from a stock spell_bonus_data row "
+          "(33778, direct_bonus=0.655, 'Druid - Lifebloom DH'), not the DBC itself (whose own "
+          "EffectBonusMultiplier was 0.0). Base (on 33763) and coefficient (on 33778) were split "
+          "across two different spells, which doesn't fit potency's one-effect/one-value model, so "
+          "both numbers are now reproduced on THIS spell's own single effect instead: base_potency=54.9 "
+          "reproduces the real pre-SP level-60 value (582, from the rework's own re-anchored level "
+          "recipe) exactly; sp_potency=81.3 reproduces the real coefficient (0.655) exactly - the two "
+          "disagree by ~48% as a single potency value (54.9 alone gives 0.44 coefficient, 81.3 alone "
+          "overshoots the base to 861 @ 60), the same kind of independently-tuned-numbers mismatch "
+          "seen elsewhere this project, resolved here via base_potency since both real numbers were "
+          "worth keeping exactly rather than picking one. SpellLevel=26 (not this spell's own stock "
+          "64) matches Lifebloom's own re-anchored learn level - CalcValue() clamps any caster below "
+          "BaseLevel up to BaseLevel before scaling, so leaving SpellLevel at 64 would have frozen "
+          "every sub-64 Druid's bloom at its flat base with zero level scaling, a real regression. "
+          "unbind_bonus_coefficients() below retires the stock spell_bonus_data row so the generated "
+          "EffectBonusMultiplier_1 actually takes effect (D1: a live spell_bonus_data row always wins "
+          "over the DBC field). TriggerLifebloomBloom's C++ was updated to read this spell's own "
+          "CalcValue() instead of 33763's DUMMY slot, and to pass EFFECT_0 (not the old EFFECT_1) to "
+          "SpellHealingBonusDone, matching this spell's real (and only) effect index - see "
+          "DruidMechanics.cpp. The ×stack and ×Harmony multipliers TriggerLifebloomBloom applies on "
+          "top are untouched by any of this (they're applied after SpellHealingBonusDone returns, "
+          "same as before). 33763's own eff2 DUMMY slot is now vestigial - see its own updated notes.",
+    raw_overrides={'AttributesEx': 1056, 'AttributesEx2': 268451840, 'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target over 7 sec.  When Lifebloom completes its duration or is dispelled, the target instantly heals themself.  This effect can stack up to 3 times on the same target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 5, 'ShapeshiftExclude': 1073741824, 'SpellClassSet': 7, 'SpellLevel': 26, 'SpellVisualID_1': 8101, 'TargetCreatureType': 767},
+)
+unbind_bonus_coefficients(lifebloom_bloom_33778)
 
 
 cyclone_33786 = spell(

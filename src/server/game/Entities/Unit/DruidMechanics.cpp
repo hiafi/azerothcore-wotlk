@@ -566,15 +566,27 @@ namespace Druid
         if (!bloomEffect)
             return;
 
-        int32 const stack = lifebloom->GetStackAmount();
-        int32 healAmount = bloomEffect->GetAmount();
         SpellInfo const* finalHeal = sSpellMgr->GetSpellInfo(SPELL_LIFEBLOOM_BLOOM);
         if (!finalHeal)
             return;
 
+        int32 const stack = lifebloom->GetStackAmount();
+        // Custom: potency-system (P5-Druid follow-up) - finalHeal's own EFFECT_0 is now sp_potency-
+        // driven (level-scaled base + low-level correction, via the standard CalcValue()/
+        // SpellPotency::Apply hook), replacing a hand-set base_points/points_per_level pair that used
+        // to live on Lifebloom's own DUMMY slot (bloomEffect) instead - see lifebloom_bloom_33778's
+        // notes (druid_spells.py). bloomEffect is kept only because CastCustomSpell below still needs
+        // a real AuraEffect* to attribute this heal to.
+        int32 healAmount = finalHeal->Effects[EFFECT_0].CalcValue(caster);
+
         if (caster)
         {
-            healAmount = int32(caster->SpellHealingBonusDone(target, finalHeal, healAmount, HEAL, EFFECT_1, 0.0f,
+            // EFFECT_0, not the old EFFECT_1 - finalHeal's real (and only) effect is now index 0, and
+            // unbind_bonus_coefficients() retires the stock spell_bonus_data row that used to make the
+            // index passed here irrelevant (D1: a live spell_bonus_data row wins regardless of index;
+            // once it's gone, Unit::SpellHealingBonusDone falls back to spellProto->Effects[effIndex]
+            // .BonusMultiplier, keyed by exactly this index).
+            healAmount = int32(caster->SpellHealingBonusDone(target, finalHeal, healAmount, HEAL, EFFECT_0, 0.0f,
                                                                stack));
 
             // Harmony (RESTO §4): the bloom benefits at Empowered Rejuvenation's rate.
