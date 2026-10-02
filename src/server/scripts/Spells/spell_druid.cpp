@@ -21,6 +21,7 @@
 #include "Player.h"
 #include "SpellAuraEffects.h"
 #include "SpellMgr.h"
+#include "SpellPotency.h" // Custom: potency-system
 #include "SpellScript.h"
 #include "SpellScriptLoader.h"
 /*
@@ -891,13 +892,12 @@ class spell_dru_rip : public AuraScript
         return caster && caster->IsPlayer();
     }
 
-    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    void CalculateAmount(AuraEffect const* aurEff, int32& amount, bool& canBeRecalculated)
     {
         canBeRecalculated = false;
 
         if (Unit* caster = GetCaster())
         {
-            // 0.01 * $AP * cp
             uint8 cp = caster->ToPlayer()->GetComboPoints();
 
             // Idol of Feral Shadows. Can't be handled as SpellMod due its dependency from CPs
@@ -907,7 +907,12 @@ class spell_dru_rip : public AuraScript
             else if (AuraEffect const* idol2 = caster->GetAuraEffect(SPELL_DRUID_IDOL_OF_WORSHIP, EFFECT_0))
                 amount += cp * idol2->GetAmount();
 
-            amount += int32(CalculatePct(caster->GetTotalAttackPowerValue(BASE_ATTACK), cp));
+            // Custom: potency-system - docs/potency-system.md's "Implementation catches": once Rip
+            // has a potency row, the generated cp_ap coefficient (spell_potency_correction, applied
+            // in SpellPotency::Apply) is the only per-combo-point attack-power term, so this one
+            // (0.01 * $AP * cp) drops to avoid double counting.
+            if (!SpellPotency::HasRow(aurEff->GetId(), aurEff->GetEffIndex()))
+                amount += int32(CalculatePct(caster->GetTotalAttackPowerValue(BASE_ATTACK), cp));
         }
     }
 

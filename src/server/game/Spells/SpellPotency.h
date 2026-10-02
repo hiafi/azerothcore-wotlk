@@ -55,6 +55,14 @@ namespace SpellPotency
     /// effect (most spells have none). `caster` supplies the level the correction uses - the
     /// caller already guards this against a null caster.
     float Apply(uint32 spellId, uint8 effIndex, Unit const* caster, float value);
+
+    /// True when (spellId, effIndex) has a loaded `spell_potency_correction` row - i.e. this effect
+    /// has been converted to the potency system. Used to gate the hard-coded, spell-ID-keyed
+    /// attack-power math still living in SpellEffects.cpp (docs/potency-system.md's "Implementation
+    /// catches") so it only runs for spells the potency system hasn't reached yet; once a spell
+    /// converts, its generated spell_bonus_data ap_bonus/ap_dot_bonus coefficient is the only one
+    /// that should apply, and this hard-coded addition would otherwise double it.
+    bool HasRow(uint32 spellId, uint8 effIndex);
 }
 
 #endif

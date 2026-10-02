@@ -181,19 +181,84 @@ class WeaponPotencyTest(unittest.TestCase):
     def test_whole_percent(self):
         effect = potency.PotencyEffect(weapon_potency=100)
         r = potency.resolve(effect, spell_level=1)
-        self.assertEqual(r.base_points, 100)
         self.assertEqual(r.points_per_level, 0.0)
         self.assertIsNone(r.correction_per_level)
+        # base_points is 99, not 100: die_sides=1 means the live engine always adds its own "+1" at
+        # cast time (same convention every potency effect uses), so the stored value must be one
+        # less than the intended whole-number percent. Checking the raw field alone previously
+        # missed a real off-by-one bug here - assert the actual simulated live value instead.
+        self.assertEqual(r.base_points, 99)
+        self.assertEqual(potency.simulate_value(r, level=60, spell_level=1), 100.0)
+        self.assertEqual(potency.simulate_value(r, level=1, spell_level=1), 100.0)  # no level scaling at all
 
     def test_fractional_rejected(self):
         effect = potency.PotencyEffect(weapon_potency=75.5)
         with self.assertRaises(ValueError):
             potency.resolve(effect, spell_level=1)
 
-    def test_combined_with_sp_potency_rejected(self):
-        effect = potency.PotencyEffect(sp_potency=10, weapon_potency=100)
+    def test_ap_potency_rejected(self):
+        """"The flat part carries no attack power coefficient... a designer who wants more scaling
+        raises the weapon percent instead" - ap_potency can never combine with weapon_potency,
+        regardless of whether a flat sp_potency bonus is also present."""
+        effect = potency.PotencyEffect(ap_potency=10, weapon_potency=100)
         with self.assertRaises(ValueError):
             potency.resolve(effect, spell_level=1)
+        effect = potency.PotencyEffect(sp_potency=5, ap_potency=10, weapon_potency=100)
+        with self.assertRaises(ValueError):
+            potency.resolve(effect, spell_level=1)
+
+    def test_flat_bonus_too_high_rejected(self):
+        """"Kept low (10 or less)" - enforced, not just documented."""
+        effect = potency.PotencyEffect(sp_potency=10.1, weapon_potency=100)
+        with self.assertRaises(ValueError):
+            potency.resolve(effect, spell_level=1)
+
+    def test_flat_bonus_exactly_at_cap_allowed(self):
+        effect = potency.PotencyEffect(sp_potency=potency.WEAPON_FLAT_BONUS_MAX, weapon_potency=100)
+        potency.resolve(effect, spell_level=1)  # must not raise
+
+
+class WeaponPotencyWithFlatBonusTest(unittest.TestCase):
+    """"Decided, implementation: one hit through the weapon effect" - a weapon_potency effect's
+    flat sp_potency bonus (docs/potency-system.md's Mortal Strike-style case) lands on the SAME
+    EffectBasePoints/EffectRealPointsPerLevel pair as the weapon percent itself."""
+
+    def setUp(self):
+        self.wp = 100
+        self.flat_alone = potency.resolve(
+            potency.PotencyEffect(sp_potency=10, kind=potency.KIND_DIRECT, t_ms=1500), spell_level=1,
+        )
+        self.combined = potency.resolve(
+            potency.PotencyEffect(sp_potency=10, weapon_potency=self.wp), spell_level=1,
+        )
+
+    def test_live_value_is_weapon_percent_plus_the_flat_bonus_alone(self):
+        """The doc's own worked numbers: "about 27 damage at 60 and 39 at 80" for a 10-potency flat
+        bonus - verified here by equivalence to the SAME flat bonus resolved on its own (no weapon
+        component), not by re-deriving the formula a second time."""
+        for level in (1, 25, 60, 70, 80):
+            expected = self.wp + potency.simulate_value(self.flat_alone, level, spell_level=1)
+            actual = potency.simulate_value(self.combined, level, spell_level=1)
+            self.assertEqual(actual, expected, f"mismatch at level {level}")
+
+    def test_no_attack_power_coefficient(self):
+        self.assertEqual(self.combined.ap_coefficient, 0.0)
+
+    def test_spell_power_coefficient_matches_the_flat_bonus_alone(self):
+        self.assertEqual(self.combined.sp_coefficient, self.flat_alone.sp_coefficient)
+
+    def test_no_variance_roll(self):
+        """"Weapon damage rolls its own range, so there is no variance roll" - even though a plain
+        KIND_DIRECT effect (what the flat bonus resolves as on its own) normally gets one."""
+        self.assertEqual(self.combined.variance_pct, 0.0)
+        self.assertNotEqual(self.flat_alone.variance_pct, 0.0)  # sanity: direct kind DOES roll alone
+
+    def test_correction_row_present(self):
+        """Unlike a pure weapon-percent effect (no correction row at all), the flat bonus still
+        needs one - it's "ordinary spell potency on C(L)"."""
+        self.assertIsNotNone(self.combined.correction_per_level)
+        self.assertEqual(self.combined.correction_per_level, self.flat_alone.correction_per_level)
+        self.assertEqual(self.combined.breakpoint_level, self.flat_alone.breakpoint_level)
 
 
 class BasePotencyOverrideTest(unittest.TestCase):

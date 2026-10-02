@@ -257,12 +257,16 @@ anti_magic_shell_48707 = spell(
     range_yards=0.0,
     duration_ms=5000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=74, mechanic=26, implicit_target_a=1, apply_aura=69, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=7.1, potency_kind='absorb', mechanic=26, implicit_target_a=1, apply_aura=69, misc_value=126),
         Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=267, misc_value=126),
     ],
     spell_icon_id=99,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx4': 64, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spell damage reduced by $s1%.\r\nImmune to magic debuffs.', 'BaseLevel': 46, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Surrounds the Death Knight in an Anti-Magic Shell, absorbing $48707s1% of the damage dealt by harmful spells (up to a maximum of $s2% of the Death Knight's health) and preventing application of harmful magical effects.  Damage absorbed by Anti-Magic Shell energizes the Death Knight with additional runic power.  Lasts $48707d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 522, 'SpellClassMask_1': 131072, 'SpellClassSet': 15, 'SpellLevel': 46, 'SpellVisualID_1': 11869},
+    notes=(
+        'pulled from existing data; potency-system (PLAN P7 Death Knight pass, 2026-10-01): '
+        'converted eff1 (SCHOOL_ABSORB) to sp_potency=7.1 (deathknight-potency-report.md\'s '
+        'base-damage-implied default; old EffectBonusMultiplier was 0, no mismatch).'
+    ),
+    raw_overrides={'AttributesEx4': 64, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spell damage reduced by $s1%.\r\nImmune to magic debuffs.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Surrounds the Death Knight in an Anti-Magic Shell, absorbing $48707s1% of the damage dealt by harmful spells (up to a maximum of $s2% of the Death Knight's health) and preventing application of harmful magical effects.  Damage absorbed by Anti-Magic Shell energizes the Death Knight with additional runic power.  Lasts $48707d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 522, 'SpellClassMask_1': 131072, 'SpellClassSet': 15, 'SpellLevel': 46, 'SpellVisualID_1': 11869},
 )
 
 
@@ -280,11 +284,15 @@ death_pact_48743 = spell(
     effects=[
         Effect(type=EffectType.DUMMY, die_sides=0, implicit_target_a=1),
         Effect(type=1, base_points=-1, implicit_target_a=18, implicit_target_b=31, radius_yards=100.0),
-        Effect(type=EffectType.HEAL, base_points=39, implicit_target_a=1),
+        Effect(type=EffectType.HEAL, sp_potency=3.8, potency_kind='heal', implicit_target_a=1),
     ],
     spell_icon_id=169,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 656384, 'AttributesEx2': 536870916, 'AttributesEx3': 1048576, 'AttributesEx4': 16, 'AttributesEx5': 2097152, 'AuraDescription_Lang_Mask': 16712172, 'BaseLevel': 38, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Sacrifices an undead minion, healing the Death Knight for $s3% of $Ghis:her; maximum health.  This heal cannot be a critical.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 541, 'SpellClassMask_1': 524288, 'SpellClassSet': 15, 'SpellLevel': 38, 'SpellVisualID_1': 11150, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes=(
+        'pulled from existing data; potency-system (PLAN P7 Death Knight pass, 2026-10-01): '
+        'converted eff3 (HEAL) to sp_potency=3.8 (deathknight-potency-report.md\'s '
+        'base-damage-implied default; old EffectBonusMultiplier was 0, no mismatch).'
+    ),
+    raw_overrides={'AttributesEx': 656384, 'AttributesEx2': 536870916, 'AttributesEx3': 1048576, 'AttributesEx4': 16, 'AttributesEx5': 2097152, 'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Sacrifices an undead minion, healing the Death Knight for $s3% of $Ghis:her; maximum health.  This heal cannot be a critical.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 541, 'SpellClassMask_1': 524288, 'SpellClassSet': 15, 'SpellLevel': 38, 'SpellVisualID_1': 11150, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -351,11 +359,26 @@ rune_strike_56815 = spell(
     range_yards=5.0,
     effects=[
         Effect(type=EffectType.WEAPON_DAMAGE, base_points=-1, implicit_target_a=6),
-        Effect(type=31, base_points=149, implicit_target_a=6),
+        Effect(type=31, weapon_potency=149, implicit_target_a=6),
     ],
     spell_icon_id=3007,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AttributesEx4': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 14, 'CasterAuraSpell': 56817, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Strike the target for $s2% weapon damage plus ${$m2*$AP*$m3/10000}.  Only usable after the Death Knight dodges or parries.  Can't be dodged, blocked, or parried.  This attack causes a high amount of threat.", 'EffectBasePoints_3': 9, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RangeIndex': 2, 'SpellClassMask_2': 536870912, 'SpellClassSet': 15, 'SpellLevel': 14, 'SpellVisualID_1': 39},
+    notes=(
+        'pulled from existing data; potency-system (PLAN P7 Death Knight pass, PLAN F11 '
+        'hard-coded-AP audit, 2026-10-01): eff2 (WEAPON_PERCENT_DAMAGE) converted to '
+        'weapon_potency=149 (same pre-existing off-by-one fix as Mangle/Swipe/Shred - '
+        'base_points=149 with the default die_sides=1 was actually dealing 150% live; '
+        'weapon_potency\'s own -1/+1 convention lands on the intended 149%). '
+        'SpellEffects.cpp\'s hard-coded Rune Strike bonus (spell_bonus += 0.15*AP, in '
+        'Spell::EffectWeaponDmg\'s SPELLFAMILY_DEATHKNIGHT case) is now gated behind '
+        'SpellPotency::HasRow() and DROPPED once converted, not replaced - '
+        'docs/potency-system.md\'s "Weapon attacks": explicit attack-power bonuses on '
+        'weapon strikes are removed, not folded into weapon_potency ("a designer who wants '
+        'more scaling raises the weapon percent instead"), same treatment as Ferocious '
+        'Bite/Eviscerate\'s own dropped AP terms in P6. The hidden tier-2 EffectBasePoints_3=9 '
+        'constant (used only by the now-dropped tooltip approximation $m2*$AP*$m3/10000, which '
+        'never matched the real 0.15*AP hard-code even before this change) is removed as dead.'
+    ),
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AttributesEx4': 512, 'AuraDescription_Lang_Mask': 16712188, 'CasterAuraSpell': 56817, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Strike the target for $s2% weapon damage.  Only usable after the Death Knight dodges or parries.  Can't be dodged, blocked, or parried.  This attack causes a high amount of threat.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RangeIndex': 2, 'SpellClassMask_2': 536870912, 'SpellClassSet': 15, 'SpellLevel': 14, 'SpellVisualID_1': 39},
 )
 
 
@@ -419,11 +442,20 @@ frost_strike_49143 = spell(
     range_yards=5.0,
     effects=[
         Effect(type=121, base_points=86, points_per_level=6.52, implicit_target_a=6),
-        Effect(type=31, base_points=54, implicit_target_a=6),
+        Effect(type=31, weapon_potency=54, implicit_target_a=6),
     ],
     spell_icon_id=2740,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 55); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly strike the enemy, causing $s2% weapon damage plus ${$m1*$m2/100} as Frost damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_2': 4, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 621, 'SpellClassMask_2': 4, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellVisualID_1': 11612, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
+        'from rank 1 (learn level 55); RealPointsPerLevel from rank1->covers-60-overridden '
+        '(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/'
+        'mana_cost_pct from max rank. potency-system (PLAN P7 Death Knight pass, 2026-10-01): '
+        'eff2 (WEAPON_PERCENT_DAMAGE) converted to weapon_potency=54 (same off-by-one fix as '
+        'Mangle/Swipe/Shred - base_points=54 was dealing 55% live). The flat eff1 '
+        '(NORMALIZED_WEAPON_DMG) is left hand-set, same reasoning as the Feral pass\'s Mangle/'
+        'Swipe/Shred: far larger than weapon_potency\'s WEAPON_FLAT_BONUS_MAX=10 budget.'
+    ),
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly strike the enemy, causing $s2% weapon damage plus ${$m1*$m2/100} as Frost damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_2': 4, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 621, 'SpellClassMask_2': 4, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellVisualID_1': 11612, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -463,11 +495,20 @@ howling_blast_49184 = spell(
     range_yards=20.0,
     effects=[
         Effect(type=EffectType.DUMMY, base_points=149, implicit_target_a=6),
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=197, points_per_level=12.8, die_sides=17, implicit_target_a=53, implicit_target_b=16, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=100.9, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=10.0),
     ],
     spell_icon_id=2131,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 55); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 134217864, 'AttributesEx6': 1024, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blast the target with a frigid wind dealing $s2 Frost damage to all enemies within 10 yards.', 'EffectBasePoints_3': 49, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 14684919, 'EffectSpellClassMaskB_1': 12589815, 'EffectSpellClassMaskC_1': 4194437, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RuneCostID': 647, 'SpellClassMask_2': 2, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50, 'SpellVisualID_1': 11617, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
+        'from rank 1 (learn level 55); RealPointsPerLevel from rank1->covers-60-overridden '
+        '(undershoot-vs-top-rank) (anchor rank 4 @ level 80); coefficient/cast_time_ms/'
+        'mana_cost_pct from max rank. potency-system (PLAN P7 Death Knight pass, 2026-10-01): '
+        'eff2 (SCHOOL_DAMAGE) converted to ap_potency=100.9 (deathknight-potency-report.md / '
+        'deathknight-potency-proposals.txt - mismatch row, old AP-coefficient-implied potency '
+        'was 46.7, the base-damage-implied 100.9 wins per the user-reviewed proposal). DieSides '
+        '17 replaced by the system-standard +-5% roll.'
+    ),
+    raw_overrides={'AttributesEx': 134217864, 'AttributesEx6': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blast the target with a frigid wind dealing $s2 Frost damage to all enemies within 10 yards.', 'EffectBasePoints_3': 49, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 14684919, 'EffectSpellClassMaskB_1': 12589815, 'EffectSpellClassMaskC_1': 4194437, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RuneCostID': 647, 'SpellClassMask_2': 2, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50, 'SpellVisualID_1': 11617, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 

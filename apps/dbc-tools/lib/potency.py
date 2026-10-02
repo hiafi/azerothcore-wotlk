@@ -62,6 +62,9 @@ DIRECT_VARIANCE_PCT = 10.0
 # - see docs/potency-system.md's "Attack power abilities" section for the full writeup.
 DEFAULT_R = 1.0
 
+# "Weapon attacks" - "the flat part of a strike... kept low (10 or less)."
+WEAPON_FLAT_BONUS_MAX = 10.0
+
 
 def c_of_level(level: float) -> float:
     """C(L), the level constant per potency point ("Level scaling")."""
@@ -93,6 +96,10 @@ class PotencyEffect:
     # ap_coefficient are always computed from sp_potency/ap_potency directly - this only
     # overrides what feeds the shared base-damage formula, never the per-stat scaling.
     base_potency: float | None = None
+    # "Weapon attacks": a weapon-percent effect may also carry a small flat sp_potency bonus
+    # (WEAPON_FLAT_BONUS_MAX or less) on the SAME effect - "one hit through the weapon effect".
+    # ap_potency can't combine with weapon_potency ("the flat part carries no attack power
+    # coefficient... a designer who wants more scaling raises the weapon percent instead").
 
 
 @dataclass(frozen=True)
@@ -120,7 +127,7 @@ def resolve(effect: PotencyEffect, spell_level: int, r: float = DEFAULT_R) -> Re
     """The "dbc-tools generator" table, in order. `spell_level` is the effect's own spell's
     `SpellLevel` (== `BaseLevel` - "BaseLevel must equal SpellLevel", "Caveats and checks")."""
     if effect.weapon_potency is not None:
-        return _resolve_weapon(effect)
+        return _resolve_weapon(effect, spell_level)
     if effect.kind not in VALID_KINDS:
         raise ValueError(f"potency_kind={effect.kind!r} must be one of {VALID_KINDS}")
     total = effect.sp_potency + effect.ap_potency
@@ -182,33 +189,77 @@ def resolve(effect: PotencyEffect, spell_level: int, r: float = DEFAULT_R) -> Re
     )
 
 
-def _resolve_weapon(effect: PotencyEffect) -> ResolvedPotency:
+def _resolve_weapon(effect: PotencyEffect, spell_level: int) -> ResolvedPotency:
     """"Weapon attacks": the weapon percent effect's base points are the potency itself, with
     EffectRealPointsPerLevel 0 and no correction row - gear already scales weapon damage through
-    item level and attack power, so weapon potency never touches C(L)."""
-    if effect.sp_potency or effect.ap_potency:
+    item level and attack power, so weapon potency never touches C(L).
+
+    A small flat bonus (`sp_potency`, `WEAPON_FLAT_BONUS_MAX` or less) can ride on the same
+    effect - "the flat part of a strike uses ordinary spell potency on C(L) with T = 1.5", it
+    "carries no attack power coefficient" (so `ap_potency` is rejected here outright), and "weapon
+    damage rolls its own range, so there is no variance roll" even though a plain direct effect
+    normally gets one. "Decided, implementation: one hit through the weapon effect" - both pieces
+    land on the SAME `EffectBasePoints`/`EffectRealPointsPerLevel` pair, which is why they can
+    simply be added: the weapon's own implicit "+1" (every potency effect's `die_sides=1` roll adds
+    exactly 1 at cast time) and the flat part's own "-1" convention (baked into its `base_points` by
+    the main `resolve()` path) cancel out exactly once there's only one die_sides=1 roll total for
+    the merged effect - verified numerically in `test_potency.py`'s
+    `WeaponPotencyWithFlatBonusTest`, not just derived algebraically."""
+    if effect.ap_potency:
         raise ValueError(
-            "weapon_potency can't be combined with sp_potency/ap_potency on the same effect "
-            "(\"Hybrid spells\": weapon potency is a separate third kind)"
+            "weapon_potency's flat bonus carries no attack power coefficient (\"Weapon attacks\": "
+            "a designer who wants more scaling raises the weapon percent instead) - set ap_potency "
+            "to 0"
         )
     wp = effect.weapon_potency
     if wp != round(wp):
         raise ValueError(f"weapon_potency must be a whole number, got {wp!r} (\"Keep weapon potency whole\")")
+
+    if not effect.sp_potency:
+        return ResolvedPotency(
+            # The live engine always adds the die_sides=1 roll's "+1" back at cast time, so the
+            # stored value must be one less than the intended whole-number percent (verified against
+            # simulate_value() - a bare `base_points=int(round(wp))` here was off by exactly 1).
+            base_points=int(round(wp)) - 1,
+            points_per_level=0.0,
+            die_sides=1,
+            sp_coefficient=0.0,
+            ap_coefficient=0.0,
+            correction_per_level=None,
+            breakpoint_level=0,
+            variance_pct=0.0,
+            level60_value=float(wp),
+            tooltip_low_intercept=0.0,
+            tooltip_low_slope=0.0,
+            tooltip_high_offset=0.0,
+            t_seconds=0.0,
+            total_potency=wp,
+            kind="weapon",
+        )
+
+    if effect.sp_potency > WEAPON_FLAT_BONUS_MAX:
+        raise ValueError(
+            f"weapon_potency's flat bonus must be {WEAPON_FLAT_BONUS_MAX:g} or less, got "
+            f"{effect.sp_potency!r} (\"Weapon attacks\": \"kept low (10 or less)\")"
+        )
+    flat = resolve(
+        PotencyEffect(sp_potency=effect.sp_potency, kind=KIND_DIRECT, t_ms=1500.0), spell_level=spell_level,
+    )
     return ResolvedPotency(
-        base_points=int(round(wp)),
-        points_per_level=0.0,
+        base_points=int(round(wp)) + flat.base_points,
+        points_per_level=flat.points_per_level,
         die_sides=1,
-        sp_coefficient=0.0,
+        sp_coefficient=flat.sp_coefficient,
         ap_coefficient=0.0,
-        correction_per_level=None,
-        breakpoint_level=0,
-        variance_pct=0.0,
-        level60_value=float(wp),
-        tooltip_low_intercept=0.0,
-        tooltip_low_slope=0.0,
-        tooltip_high_offset=0.0,
-        t_seconds=0.0,
-        total_potency=wp,
+        correction_per_level=flat.correction_per_level,
+        breakpoint_level=flat.breakpoint_level,
+        variance_pct=0.0,  # "no variance roll" - weapon damage already rolls its own range
+        level60_value=float(wp) + flat.level60_value,
+        tooltip_low_intercept=flat.tooltip_low_intercept,
+        tooltip_low_slope=flat.tooltip_low_slope,
+        tooltip_high_offset=flat.tooltip_high_offset,
+        t_seconds=flat.t_seconds,
+        total_potency=wp,  # the weapon percent stays the headline number; the flat bonus is a detail
         kind="weapon",
     )
 

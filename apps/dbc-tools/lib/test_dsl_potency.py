@@ -118,11 +118,90 @@ class SpellPotencyResolutionTest(unittest.TestCase):
             raw_overrides={"SpellLevel": 1},
         )
         entry = s.to_entry()
-        self.assertEqual(entry["effect1"]["base_points"], 100)
+        # 99, not 100: die_sides=1 means the live engine adds its own "+1" at cast time (every
+        # potency effect's convention) - simulate_value (lib/test_potency.py's WeaponPotencyTest)
+        # confirms this reproduces a live value of exactly 100.
+        self.assertEqual(entry["effect1"]["base_points"], 99)
         self.assertEqual(entry["effect1"]["points_per_level"], 0.0)
         self.assertEqual(s.potency_correction_rows, [])
         self.assertIsNone(s.potency_bonus_row)
         self.assertNotIn("EffectBonusMultiplier_1", entry["raw_overrides"])
+
+    def test_weapon_potency_with_flat_bonus_emits_correction_and_dbc_coefficient(self):
+        """Unlike a pure weapon_potency effect, a weapon_potency + flat sp_potency bonus DOES need
+        a correction row and a real EffectBonusMultiplier_1 - the flat part is "ordinary spell
+        potency on C(L)" riding on the same effect ("Weapon attacks")."""
+        s = model.Spell(
+            id=90010, name="Test Weapon Strike (flat bonus)", cast_time_ms=0,
+            effects=[model.Effect(type=38, weapon_potency=100, sp_potency=10)],
+            raw_overrides={"SpellLevel": 1},
+        )
+        entry = s.to_entry()
+        self.assertEqual(len(s.potency_correction_rows), 1)
+        row = s.potency_correction_rows[0]
+        self.assertEqual(row["variance_pct"], 0.0)  # "no variance roll" even though direct kind
+        self.assertIsNone(s.potency_bonus_row)  # no ap_potency involved - DBC field wins, not spell_bonus_data
+        self.assertIn("EffectBonusMultiplier_1", entry["raw_overrides"])
+        self.assertGreater(entry["raw_overrides"]["EffectBonusMultiplier_1"], 0.0)
+        # The exact numeric equivalence (100 + a 10-potency flat direct effect's own live value, at
+        # every level) is proven once in lib/test_potency.py's WeaponPotencyWithFlatBonusTest - this
+        # test only needs to confirm the DSL wiring (correction row + DBC coefficient) is reachable.
+
+    def test_finisher_emits_cp_correction_columns_and_zeroes_points_per_combo(self):
+        """cp_sp_potency/cp_ap_potency (PLAN P6 step 4, "Combo points don't scale with level") land
+        in the correction row's cp_line/cp_correction_per_level/cp_ap - not the DBC, which has no
+        per-level field for EffectPointsPerCombo_N at all - and that DBC field is always forced to 0
+        so SpellPotency::Apply()'s combo-point term is the only one applied, never both."""
+        s = model.Spell(
+            id=90011, name="Test Finisher", cast_time_ms=0,
+            effects=[model.Effect(type=2, ap_potency=19.5, cp_ap_potency=30.8, implicit_target_a=6)],
+            raw_overrides={"SpellLevel": 1},
+        )
+        entry = s.to_entry()
+        self.assertEqual(entry["raw_overrides"]["EffectPointsPerCombo_1"], 0)
+        self.assertEqual(len(s.potency_correction_rows), 1)
+        row = s.potency_correction_rows[0]
+        self.assertGreater(row["cp_line"], 0.0)
+        self.assertGreater(row["cp_correction_per_level"], 0.0)
+        self.assertGreater(row["cp_ap"], 0.0)
+
+    def test_finisher_flat_ap_potency_still_emits_bonus_row(self):
+        s = model.Spell(
+            id=90012, name="Test Finisher (flat ap_bonus)", cast_time_ms=0,
+            effects=[model.Effect(type=2, ap_potency=19.5, cp_ap_potency=30.8, implicit_target_a=6)],
+            raw_overrides={"SpellLevel": 1},
+        )
+        s.to_entry()
+        self.assertIsNotNone(s.potency_bonus_row)
+        self.assertAlmostEqual(s.potency_bonus_row["ap_bonus"], 19.5 / 100.0 * (1.5 / 3.5), places=4)
+
+    def test_finisher_cp_base_potency_decouples_line_from_ap_coefficient(self):
+        """cp_base_potency (PLAN P6 step 5, Ferocious Bite) overrides cp_line independently of
+        cp_ap - a bare cp_ap_potency ties the two at a fixed ratio (C60 / ((1/100)*(t/3.5)/r)),
+        which doesn't match every stock finisher's own flat/AP split (docs/potency-system.md's
+        worked Ferocious Bite derivation: 36 flat vs 0.07 AP per combo point don't share that
+        ratio). cp_ap_potency=16.333 alone should give cp_ap=0.07; cp_base_potency=13.458 should
+        then independently pin cp_line to 36, matching lib.potency.resolve's own base_potency
+        override for the flat line."""
+        s = model.Spell(
+            id=90014, name="Test Finisher (cp_base_potency)", cast_time_ms=0,
+            effects=[model.Effect(type=2, base_potency=31.0, cp_ap_potency=16.333, cp_base_potency=13.458, implicit_target_a=6)],
+            raw_overrides={"SpellLevel": 1},
+        )
+        entry = s.to_entry()
+        self.assertEqual(entry["raw_overrides"]["EffectPointsPerCombo_1"], 0)
+        row = s.potency_correction_rows[0]
+        self.assertAlmostEqual(row["cp_ap"], 0.07, places=3)
+        self.assertAlmostEqual(row["cp_line"], 36.0, delta=0.1)
+
+    def test_cp_potency_rejects_combination_with_weapon_potency(self):
+        s = model.Spell(
+            id=90013, name="Bad Weapon Finisher", cast_time_ms=0,
+            effects=[model.Effect(type=38, weapon_potency=100, cp_ap_potency=10)],
+            raw_overrides={"SpellLevel": 1},
+        )
+        with self.assertRaises(ValueError):
+            s.to_entry()
 
     def test_description_placeholder_expansion(self):
         s = model.Spell(

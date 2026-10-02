@@ -225,11 +225,12 @@ fire_nova_8349 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=47, points_per_level=12.426470588235293, die_sides=9, implicit_target_a=87, implicit_target_b=16, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=242.2, potency_kind='direct', implicit_target_a=87, implicit_target_b=16, radius_yards=10.0),
     ],
     spell_icon_id=33,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 12); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 136, 'AttributesEx2': 1073741824, 'AttributesEx3': 1073741824, 'AttributesEx5': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 12, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Causes the shaman's active Fire totem to emit a wave of flames, inflicting $s1 Fire damage to enemies within $a1 yards of the totem.", 'EffectBonusMultiplier_1': 0.21400000154972076, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 2147745792, 'SpellClassSet': 11, 'SpellLevel': 12, 'SpellVisualID_1': 14908, 'Targets': 64},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 12); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
+          'Potency system P7-Shaman: converted to sp_potency=242.2 (shaman-potency-proposals.txt, mismatched row). Cast by the player: spell_sha_fire_nova::HandleDummy (spell_shaman.cpp) runs `caster->CastSpell(totem, ..., true)` on the Fire Nova player spell (1535) with the totem only as the target, not the caster, and with no custom base points - so this is an ordinary player-attributed potency conversion, not a D2 script-bp case.',
+    raw_overrides={'AttributesEx': 136, 'AttributesEx2': 1073741824, 'AttributesEx3': 1073741824, 'AttributesEx5': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 12, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Causes the shaman's active Fire totem to emit a wave of flames, inflicting {pot1} Fire damage to enemies within $a1 yards of the totem.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 2147745792, 'SpellClassSet': 11, 'SpellLevel': 12, 'SpellVisualID_1': 14908, 'Targets': 64},
 )
 
 
@@ -349,11 +350,12 @@ lightning_shield_26364 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=12, points_per_level=5.097222222222222, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=103.9, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=62,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 8); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 11 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx2': 805306372, 'AttributesEx3': 512, 'AttributesEx4': 16384, 'AttributesEx5': 393224, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 8, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Casts a bolt of lightning at the target for $s1 Nature damage.', 'EffectBonusMultiplier_1': 0.2669999897480011, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 1024, 'SpellClassSet': 11, 'SpellLevel': 8},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 8); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 11 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
+          'Potency system P7-Shaman: converted to sp_potency=103.9 (shaman-potency-proposals.txt, mismatched row). Cast by the player via lightning_shield_324\'s own PROC_TRIGGER_SPELL aura (triggered off the player\'s own buff, not a totem/pet), so this is an ordinary player-attributed potency conversion, not a D2 script-bp case (lightning_shield_324 casts it with no CastCustomSpell override).',
+    raw_overrides={'AttributesEx2': 805306372, 'AttributesEx3': 512, 'AttributesEx4': 16384, 'AttributesEx5': 393224, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 8, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Casts a bolt of lightning at the target for {pot1} Nature damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 1024, 'SpellClassSet': 11, 'SpellLevel': 8},
 )
 
 
@@ -496,10 +498,18 @@ lightning_bolt_45284 = spell(
     mana_cost_pct=0,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=6, points_per_level=4.455696202531645, implicit_target_a=6),
+        Effect(
+            type=EffectType.SCHOOL_DAMAGE, base_points=6, points_per_level=4.455696202531645, implicit_target_a=6,
+            potency_excluded="percent-of-other-damage: spell_sha_lightning_overload::HandleProc (spell_shaman.cpp) "
+            "always overrides this via CastCustomSpell(..., SPELLVALUE_BASE_POINT0, damage, ...) where damage is "
+            "half (and, on a crit, quartered) of the triggering Lightning Bolt/Chain Lightning hit's own already-"
+            "rolled damage - this spell's own DBC base points are dead/tooltip-only, never read by CalcValue "
+            "at runtime, same category as Warlock's Conflagrate/Ignite-style exclusions.",
+        ),
     ],
     spell_icon_id=62,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 14 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 14 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
+          "Potency system P7-Shaman: NOT converted despite shaman-potency-report.md proposing 100.6 - this is the Lightning Overload talent's free-cast copy, whose damage is always script-computed as half the triggering hit's damage (see eff0's reason), not an independent potency value.",
     raw_overrides={'AttributesEx': 1024, 'AttributesEx4': 128, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Casts a bolt of lightning at the target for $s1 Nature damage.', 'EffectBonusMultiplier_1': 0.3569999933242798, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_1': 1, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellVisualID_1': 173},
 )
 
@@ -516,10 +526,18 @@ chain_lightning_45297 = spell(
     mana_cost_pct=0,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=95, points_per_level=8.145833333333334, die_sides=13, implicit_target_a=6, chain_targets=3),
+        Effect(
+            type=EffectType.SCHOOL_DAMAGE, base_points=95, points_per_level=8.145833333333334, die_sides=13, implicit_target_a=6, chain_targets=3,
+            potency_excluded="percent-of-other-damage: spell_sha_lightning_overload::HandleProc (spell_shaman.cpp) "
+            "always overrides this via CastCustomSpell(..., SPELLVALUE_BASE_POINT0, damage, ...) where damage is "
+            "half (and, on a crit, quartered) of the triggering Lightning Bolt/Chain Lightning hit's own already-"
+            "rolled damage - this spell's own DBC base points are dead/tooltip-only, never read by CalcValue "
+            "at runtime, same category as Warlock's Conflagrate/Ignite-style exclusions.",
+        ),
     ],
     spell_icon_id=165,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 32); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 8 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 32); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 8 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
+          "Potency system P7-Shaman: NOT converted despite shaman-potency-report.md proposing 123.4 - this is the Lightning Overload talent's free-cast copy, whose damage is always script-computed as half the triggering hit's damage (see eff0's reason), not an independent potency value.",
     raw_overrides={'AttributesEx': 1024, 'AttributesEx4': 128, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 32, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Hurls a lightning bolt at the enemy, dealing $s1 Nature damage and then jumping to additional nearby enemies.  Each jump reduces the damage by 30%.  Affects $x1 total targets.', 'EffectBonusMultiplier_1': 0.2854999899864197, 'EffectChainAmplitude_1': 0.699999988079071, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2, 'SpellClassSet': 11, 'SpellLevel': 32, 'SpellVisualID_1': 36},
 )
 
@@ -558,11 +576,12 @@ earthliving_51945 = spell(
     range_yards=40.0,
     duration_ms=12000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=28, points_per_level=2.68, implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=3000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=5.1, potency_kind='heal_periodic', implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=3000),
     ],
     spell_icon_id=3060,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 30); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx3': 128, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals $s1 damage every $t1 seconds.', 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for $o1 over $d.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 0.17100000381469727, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 524288, 'SpellClassSet': 11, 'SpellLevel': 30, 'SpellVisualID_1': 11443, 'StartRecoveryCategory': 133},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 30); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
+          'Potency system P7-Shaman: converted to sp_potency=5.1 (shaman-potency-proposals.txt, mismatched row). Cast by the player via earthliving_weapon_passive_51940\'s own PROC_TRIGGER_SPELL aura (triggered off the player\'s own weapon-enchant buff, not a totem/pet).',
+    raw_overrides={'AttributesEx3': 128, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals {pot1} damage every $t1 seconds.', 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for {pot1.total} over $d.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 524288, 'SpellClassSet': 11, 'SpellLevel': 30, 'SpellVisualID_1': 11443, 'StartRecoveryCategory': 133},
 )
 
 
@@ -3272,11 +3291,19 @@ astral_shift_51474 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=69, misc_value=127),
+        Effect(
+            type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=69, misc_value=127,
+            potency_excluded="percent-of-other-damage: despite the SCHOOL_ABSORB aura type, spell_sha_astral_shift "
+            "(spell_shaman.cpp) reads this effect's base points as a flat PERCENT (via CalcValue in its own "
+            "Load()) and applies it as CalculatePct(damage, absorbPct) in its Absorb() hook - not a flat HP "
+            "absorb amount. Converting it to potency would scale the percentage itself by level/C(L), which "
+            "is wrong for a fixed damage-reduction percent; same category as Warlock's percent-of-other-damage "
+            "exclusions despite the DBC aura type looking like an ordinary absorb.",
+        ),
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=52179),
     ],
     spell_icon_id=3066,
-    notes='pulled from existing data',
+    notes="pulled from existing data. Potency system P7-Shaman: NOT converted despite shaman-potency-report.md classifying eff0 as a non-mismatched 'absorb' row (potency 0.9) - it's really a flat damage-reduction percent, not an absorb amount, see eff0's reason.",
     raw_overrides={'AttributesEx3': 67108864, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When stunned, feared or silenced you  shift into the Astral Plane reducing all damage taken by $s1% for the duration of the stun, fear or silence effect.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194325, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 174624, 'RangeIndex': 1, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
@@ -3293,11 +3320,16 @@ astral_shift_51478 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=69, misc_value=127),
+        Effect(
+            type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=69, misc_value=127,
+            potency_excluded="percent-of-other-damage: same reason as astral_shift_51474's eff0 - "
+            "spell_sha_astral_shift (spell_shaman.cpp) reads this as a flat PERCENT via CalcValue, not a "
+            "flat HP absorb amount.",
+        ),
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=52179),
     ],
     spell_icon_id=3066,
-    notes='pulled from existing data',
+    notes="pulled from existing data. Potency system P7-Shaman: NOT converted, same reason as astral_shift_51474 - see eff0's reason.",
     raw_overrides={'AttributesEx3': 67108864, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When stunned, feared or silenced you  shift into the Astral Plane reducing all damage taken by $s1% for the duration of the stun, fear or silence effect.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194325, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 174624, 'RangeIndex': 1, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 

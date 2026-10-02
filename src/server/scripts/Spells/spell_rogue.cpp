@@ -22,6 +22,7 @@
 #include "PriestMechanics.h"
 #include "SpellAuraEffects.h"
 #include "SpellMgr.h"
+#include "SpellPotency.h" // Custom: potency-system
 #include "SpellScript.h"
 #include "SpellScriptLoader.h"
 /*
@@ -566,7 +567,7 @@ class spell_rog_rupture : public AuraScript
         return caster && caster->IsPlayer();
     }
 
-    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    void CalculateAmount(AuraEffect const* aurEff, int32& amount, bool& canBeRecalculated)
     {
         if (Unit* caster = GetCaster())
         {
@@ -586,7 +587,13 @@ class spell_rog_rupture : public AuraScript
             if (cp > 5)
                 cp = 5;
 
-            amount += int32(caster->GetTotalAttackPowerValue(BASE_ATTACK) * attackpowerPerCombo[cp]);
+            // Custom: potency-system - docs/potency-system.md's "Implementation catches": once
+            // Rupture has a potency row, the generated cp_ap coefficient
+            // (spell_potency_correction, applied in SpellPotency::Apply) is the only per-combo-
+            // point attack-power term, so this one (the attackpowerPerCombo[] lookup) drops to
+            // avoid double counting.
+            if (!SpellPotency::HasRow(aurEff->GetId(), aurEff->GetEffIndex()))
+                amount += int32(caster->GetTotalAttackPowerValue(BASE_ATTACK) * attackpowerPerCombo[cp]);
         }
     }
 

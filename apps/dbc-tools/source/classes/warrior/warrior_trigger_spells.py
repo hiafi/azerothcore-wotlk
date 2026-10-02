@@ -190,11 +190,23 @@ victory_rush_34428 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=44, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=64.6, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=2053,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx4': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 6, 'CasterAuraState': 10, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly attack the target causing ${$AP*$m1/100} damage.  Can only be used within $32216d after you kill an enemy that yields experience or honor.  Damage is based on your attack power.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 327680, 'SpellClassMask_2': 256, 'SpellClassSet': 4, 'SpellLevel': 6, 'SpellPriority': 50, 'SpellVisualID_1': 372, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes=(
+        'pulled from existing data. Potency system P7 (warrior pass, F11 audit): Victory Rush is '
+        'NOT in warrior-potency-report.md (it has no spell_bonus_data row, so classify_effect\'s '
+        'generic SP/AP split never applied) - its real damage model is hard-coded in '
+        'SpellEffects.cpp\'s SPELLFAMILY_WARRIOR case ("// Victory Rush": '
+        'ApplyPct(damage, GetTotalAttackPowerValue(BASE_ATTACK)), keyed on SpellFamilyFlags[1]&0x100), '
+        'i.e. live damage = GetEffectValue()% of attack power, not a flat+coefficient model. Live '
+        'EffectBasePoints=44 with DieSides=1 means GetEffectValue()=45, so the live percentage is '
+        'actually 45% AP (matches real stock Victory Rush, not drifted). ap_potency=64.6 reproduces '
+        'the exact same total (450 at level 60/1000 AP: base 164.5 + 0.2767*AP) via the normal '
+        'ap_potency formula instead of a hard-coded percent multiply; the ApplyPct(damage, AP) line '
+        'is now gated behind SpellPotency::HasRow() (SpellEffects.cpp).'
+    ),
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx4': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 6, 'CasterAuraState': 10, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly attack the target causing {pot1} damage.  Can only be used within $32216d after you kill an enemy that yields experience or honor.  Damage is based on your attack power.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 327680, 'SpellClassMask_2': 256, 'SpellClassSet': 4, 'SpellLevel': 6, 'SpellPriority': 50, 'SpellVisualID_1': 372, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -208,7 +220,15 @@ storm_s_bulwark_200028 = spell(
     mana_cost=0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=69, misc_value=127),
+        Effect(
+            type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=69, misc_value=127,
+            potency_excluded="percent-of-max-health: every caller (spell_warr_incite, "
+            "spell_warr_thunder_clap's Storm's Bulwark-talent branch, and any future Shockwave/"
+            "Reprisal source) computes amount as a percentage of the caster's max health times "
+            "mastery, then pushes it in via GrantStormsBulwark()'s CastCustomSpell - base_points "
+            "is always 0 on the real cast (see this spell's own notes=), so the DBC fields are "
+            "dead per D2/docs/potency-system.md's 'Out of scope by design'.",
+        ),
     ],
     spell_icon_id=1941,
     notes="New for the Protection Warrior rework (docs/prot_warrior_rework.md, New Spells/Auras: Storm's Bulwark). Absorbs damage of any school (misc_value 127 = all schools, SPELL_AURA_SCHOOL_ABSORB). Multiple sources stack additively into one pool capped at 50% of max HP and refresh the 15s duration via the GrantStormsBulwark() helper in spell_warrior.cpp; base_points is always 0 here since the real amount is supplied per-cast as custom basepoints. Self-cast only (implicit_target_a 1), so the null range_yards is safe (see docs/dbc-build-pipeline.md's range_yards gotcha for non-self casts). Which talents grant it (Incite, Reprisal, the Storm's Bulwark talent, Shockwave) and their mastery scaling are phase 2/3 work; this spell is only the shared absorb pool they all feed.",
@@ -247,7 +267,15 @@ bloodstorm_200030 = spell(
     range_yards=10.0,
     duration_ms=9000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(
+            type=EffectType.APPLY_AURA, mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000,
+            potency_excluded="percent-of-other-damage: spell_warr_thunder_clap::HandleDamageEffect "
+            "computes the per-tick amount as a percentage (Blood and Thunder's talent rank) of "
+            "Thunder Clap's own real hit damage (CalculatePct(GetHitDamage(), ...)/3), then pushes "
+            "it in via CastCustomSpell - base_points is always 0 on the real cast (see this "
+            "spell's own notes=), so the DBC fields are dead per D2/docs/potency-system.md's 'Out "
+            "of scope by design' (same category as Ignite/Deep Wounds/Conflagrate).",
+        ),
     ],
     spell_icon_id=2774,
     notes="New for the Protection Warrior rework (docs/prot_warrior_rework.md, New Spells/Auras: Bloodstorm). Bleed DoT dealing 15/30% of Thunder Clap's damage over 9s, ticking every 3s (matches Rend's tick cadence). base_points is always 0 here since the real per-tick amount is supplied per-cast as custom basepoints once the total is split across ticks. A separate effect from Rend (distinct spell id, no CumulativeAura) and stacks alongside it; not applied or refreshed by the Thunderstruck echo. range_yards set explicitly to 10.0 (covers Thunder Clap's own 8yd radius) since this is cast on an enemy target - leaving it null maps to RangeIndex 0, which silently fails non-self casts (see docs/dbc-build-pipeline.md). Applying it from Thunder Clap when Blood and Thunder is talented, and excluding the Thunderstruck echo cast, is phase 3 work - this spell is just the DoT itself.",
@@ -3558,10 +3586,20 @@ thunder_clap_echo_200065 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=6, points_per_level=1.9256756756756757, implicit_target_a=22, implicit_target_b=15, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=44.9, potency_kind='direct', implicit_target_a=22, implicit_target_b=15, radius_yards=8.0),
     ],
     spell_icon_id=1936,
-    notes="Protection Warrior rework phase 3 (docs/prot_warrior_rework.md): Thunderstruck capstone echo - ~50% of Thunder Clap's own damage formula, fired by 200066's native periodic trigger; deliberately damage-only (no slow, no Blood and Thunder/Storm's Bulwark re-trigger). Fixed 2026-09-03: effect1 was type 6 (APPLY_AURA) / apply_aura 2 (SPELL_AURA_MOD_POSSESS) instead of type 2 (SCHOOL_DAMAGE) - caused the echo to possess the target instead of damaging it.",
+    notes=(
+        "Protection Warrior rework phase 3 (docs/prot_warrior_rework.md): Thunderstruck capstone "
+        "echo - ~50% of Thunder Clap's own damage formula, fired by 200066's native periodic "
+        "trigger; deliberately damage-only (no slow, no Blood and Thunder/Storm's Bulwark "
+        "re-trigger). Fixed 2026-09-03: effect1 was type 6 (APPLY_AURA) / apply_aura 2 "
+        "(SPELL_AURA_MOD_POSSESS) instead of type 2 (SCHOOL_DAMAGE) - caused the echo to possess "
+        "the target instead of damaging it. Potency system P7 (warrior pass): converted to "
+        "ap_potency=44.9 (warrior-potency-report.md base-implied default, non-mismatched; this is "
+        "a normal, fully DBC-driven effect - not script-computed, unlike Bloodstorm - so no "
+        "exclusion or F11 gate needed)."
+    ),
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': '', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': '', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Thunder Clap Echo', 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 128, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 

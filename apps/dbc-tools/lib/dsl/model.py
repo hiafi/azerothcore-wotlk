@@ -55,10 +55,12 @@ class Effect:
     radius_yards: float | None = None
     # Potency system (docs/potency-system.md, PLAN P2) - when either is nonzero (or
     # weapon_potency is set), base_points/points_per_level/die_sides below are *generated* by
-    # Spell.to_entry() from these, not hand-authored - see that method's potency pass. At most one
-    # of (sp_potency and/or ap_potency) or weapon_potency may be used on one effect ("Hybrid
-    # spells": weapon potency is a separate third kind that can't combine with attack power
-    # potency on one effect).
+    # Spell.to_entry() from these, not hand-authored - see that method's potency pass.
+    # ap_potency can't combine with weapon_potency on one effect ("Weapon attacks": "the flat part
+    # carries no attack power coefficient... a designer who wants more scaling raises the weapon
+    # percent instead"). sp_potency CAN combine with weapon_potency, but only as a small flat bonus
+    # (lib.potency.WEAPON_FLAT_BONUS_MAX or less, "kept low (10 or less)") riding on the same hit -
+    # "Decided, implementation: one hit through the weapon effect".
     sp_potency: float = 0.0
     ap_potency: float = 0.0
     potency_kind: str | None = None  # one of lib.potency.VALID_KINDS; default KIND_DIRECT
@@ -79,13 +81,39 @@ class Effect:
     # this is the human's one-line declaration that it's deliberately out of scope, not an
     # unreviewed row, and why (freeform reason string, required - shows up nowhere else).
     potency_excluded: str | None = None
+    # Finishers (docs/potency-system.md's "Combo points don't scale with level" / PLAN P6 step 4) -
+    # a per-combo-point potency, resolved the same way as sp_potency/ap_potency (same C(L), same
+    # time basis as this effect's own sp_potency/ap_potency) but landing in the
+    # spell_potency_correction row's cp_line/cp_correction_per_level/cp_ap columns instead of
+    # EffectBasePoints/spell_bonus_data - the DBC's own EffectPointsPerCombo_N has no per-level
+    # field, so it's always zeroed (forced to 0 in raw_overrides) once either is set, and
+    # SpellPotency::Apply() adds `comboPoints * (the per-combo-point line, with its own low-level
+    # correction, plus cp_ap * attack power)` on top of the flat sp_potency/ap_potency above. Never
+    # combines with weapon_potency - no finisher is a weapon strike.
+    cp_sp_potency: float = 0.0
+    cp_ap_potency: float = 0.0
+    # PLAN P6 step 5 (Feral pass, Ferocious Bite): mirrors base_potency, but for the per-combo-point
+    # line instead of the flat one - overrides what feeds cp_line (spell_potency_correction) without
+    # touching cp_ap (still derived straight from cp_ap_potency). Needed when a finisher's stock
+    # per-combo flat/AP split doesn't sit at the ratio one cp_ap_potency value alone implies
+    # (cp_line/cp_ap is always C60/((1/100)*(t/3.5)/r) for a bare cp_ap_potency - a fixed ratio,
+    # since both come from the same number - so a stock split at a different ratio, like Ferocious
+    # Bite's 36 flat vs 0.07 AP per combo point, needs this second lever, the same way base_potency
+    # exists for the flat line). See docs/potency-system.md's "Attack power abilities" worked
+    # derivation for Ferocious Bite's own numbers.
+    cp_base_potency: float | None = None
 
     @property
     def has_potency(self) -> bool:
         return bool(
             self.sp_potency or self.ap_potency or self.weapon_potency is not None
-            or self.base_potency is not None
+            or self.base_potency is not None or self.cp_sp_potency or self.cp_ap_potency
+            or self.cp_base_potency is not None
         )
+
+    @property
+    def has_cp_potency(self) -> bool:
+        return bool(self.cp_sp_potency or self.cp_ap_potency or self.cp_base_potency is not None)
 
     def to_dict(self) -> dict:
         if self.potency_excluded and self.has_potency:
@@ -274,7 +302,16 @@ class Spell:
                     f"generated for a potency effect - don't set them by hand (PLAN P2 step 2)."
                 )
             if effect.weapon_potency is not None:
-                pe = _potency.PotencyEffect(weapon_potency=effect.weapon_potency)
+                if effect.has_cp_potency:
+                    raise ValueError(
+                        f"spell {self.id} effect {index}: cp_sp_potency/cp_ap_potency can't combine "
+                        f"with weapon_potency - no finisher is a weapon strike."
+                    )
+                # A weapon effect's own flat bonus (if any) is always a one-shot direct hit -
+                # "Weapon attacks" describes no periodic weapon-potency shape.
+                is_periodic_like = False
+                t_ms = None
+                pe = _potency.PotencyEffect(weapon_potency=effect.weapon_potency, sp_potency=effect.sp_potency)
             else:
                 kind = effect.potency_kind or _potency.KIND_DIRECT
                 is_periodic_like = kind in _potency.PERIODIC_LIKE_KINDS
@@ -292,6 +329,25 @@ class Spell:
                 )
             resolved = _potency.resolve(pe, spell_level=int(spell_level))
             resolved_by_index[index] = resolved
+
+            cp_resolved = None
+            if effect.has_cp_potency:
+                # Same time basis as this effect's own sp_potency/ap_potency (the cast time for a
+                # direct finisher, the tick amplitude for a periodic one like Rip) - "the same line
+                # and correction" as the flat part, just per combo point. Always resolved as
+                # KIND_PERIODIC regardless of the parent effect's own kind: a combo point's worth of
+                # damage gets no DieSides roll and no DIRECT_MIN_DIVISOR averaging-up ("no variance
+                # roll" - the roll in SpellPotency::Apply only ever touches the flat part, never the
+                # per-combo-point addition, matching where stock's own PointsPerComboPoint line
+                # lands in CalcValue: after the roll).
+                cp_resolved = _potency.resolve(
+                    _potency.PotencyEffect(
+                        sp_potency=effect.cp_sp_potency, ap_potency=effect.cp_ap_potency,
+                        kind=_potency.KIND_PERIODIC, t_ms=t_ms, base_potency=effect.cp_base_potency,
+                    ),
+                    spell_level=int(spell_level),
+                )
+                raw_overrides[f"EffectPointsPerCombo_{index}"] = 0
             d["base_points"] = resolved.base_points
             d["points_per_level"] = resolved.points_per_level
             d["die_sides"] = resolved.die_sides
@@ -303,8 +359,10 @@ class Spell:
             d["_potency"] = dataclasses.asdict(resolved)
             d["_potency"]["spell_level"] = int(spell_level)
 
-            if effect.weapon_potency is not None:
-                continue  # "no correction row", no DBC/spell_bonus_data coefficient either
+            if effect.weapon_potency is not None and not effect.sp_potency:
+                continue  # pure weapon percent: "no correction row", no DBC/spell_bonus_data
+                          # coefficient either - a weapon_potency WITH a flat sp_potency bonus falls
+                          # through below instead, since the flat part needs both ("Weapon attacks")
 
             raw_overrides[f"EffectBonusMultiplier_{index}"] = resolved.sp_coefficient
             if is_periodic_like and self.duration_ms and pe.t_ms:
@@ -317,10 +375,13 @@ class Spell:
                 "correction_per_level": resolved.correction_per_level,
                 "breakpoint_level": resolved.breakpoint_level,
                 "variance_pct": resolved.variance_pct,
-                "cp_line": 0.0,
-                "cp_correction_per_level": 0.0,
-                "cp_ap": 0.0,
-                "comment": f"potency {resolved.total_potency:g}, {resolved.t_seconds:g}s",
+                "cp_line": cp_resolved.level60_value if cp_resolved else 0.0,
+                "cp_correction_per_level": cp_resolved.correction_per_level if cp_resolved else 0.0,
+                "cp_ap": cp_resolved.ap_coefficient if cp_resolved else 0.0,
+                "comment": (
+                    f"potency {resolved.total_potency:g}, {resolved.t_seconds:g}s"
+                    + (f", cp {cp_resolved.total_potency:g}" if cp_resolved else "")
+                ),
             })
             (dot_sp_coeffs if is_periodic_like else direct_sp_coeffs).append(resolved.sp_coefficient)
             if effect.ap_potency:

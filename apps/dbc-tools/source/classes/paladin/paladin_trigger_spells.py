@@ -297,11 +297,11 @@ holy_shock_25912 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=313, points_per_level=24.55, die_sides=27, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=305.8, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=156,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx3': 512, 'AttributesEx4': 1, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the target with Holy energy, causing $25912s1 Holy damage to an enemy, or $25914s1 healing to an ally.', 'EffectBonusMultiplier_1': 0.42899999022483826, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2097152, 'SpellClassSet': 10, 'SpellLevel': 40, 'SpellVisualID_1': 128, 'StartRecoveryCategory': 133},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=305.8 (paladin-potency-proposals.txt, mismatched row).',
+    raw_overrides={'AttributesEx3': 512, 'AttributesEx4': 1, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the target with Holy energy, causing {pot1} Holy damage to an enemy, or $25914s1 healing to an ally.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2097152, 'SpellClassSet': 10, 'SpellLevel': 40, 'SpellVisualID_1': 128, 'StartRecoveryCategory': 133},
 )
 
 
@@ -317,11 +317,11 @@ holy_shock_25914 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.HEAL, base_points=480, points_per_level=48.0, die_sides=39, implicit_target_a=21),
+        Effect(type=EffectType.HEAL, sp_potency=137.8, potency_kind='heal', implicit_target_a=21),
     ],
     spell_icon_id=156,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx3': 512, 'AttributesEx4': 1, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the target with Holy energy, causing $25912s1 Holy damage to an enemy, or $25914s1 healing to an ally.', 'EffectBonusMultiplier_1': 0.8069999814033508, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 65536, 'SpellClassSet': 10, 'SpellLevel': 40, 'SpellVisualID_1': 135, 'StartRecoveryCategory': 133},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=137.8 (paladin-potency-proposals.txt, mismatched row).',
+    raw_overrides={'AttributesEx3': 512, 'AttributesEx4': 1, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the target with Holy energy, causing $25912s1 Holy damage to an enemy, or {pot1} healing to an ally.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 65536, 'SpellClassSet': 10, 'SpellLevel': 40, 'SpellVisualID_1': 135, 'StartRecoveryCategory': 133},
 )
 
 
@@ -1830,11 +1830,24 @@ ardent_defender_31850 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=69, misc_value=127),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(
+            type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=69, misc_value=127,
+            potency_excluded="percent-of-other-damage: Effects[EFFECT_0].CalcValue() is read directly as "
+            "a flat percent (absorbPct) by spell_pal_ardent_defender::Absorb (CalculatePct(damageToReduce, "
+            "absorbPct)), not a damage/absorb amount the potency hook could price - the effect's own "
+            "amount is actually set to -1 (unlimited) by DoEffectCalcAmount, so this base_points value "
+            "never reaches CalcValue's potency path at all. Same category as the Warlock pilot's "
+            "Healthstones/Conflagrate percent-of-other-damage exclusions.",
+        ),
+        Effect(
+            type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY,
+            potency_excluded="percent-of-max-health: Effects[EFFECT_1].CalcValue() is read directly as a "
+            "flat percent (healPct) by spell_pal_ardent_defender::Absorb (CountPctFromMaxHealth(healPct * "
+            "pctFromDefense)), not a heal amount - same category as Warlock's Healthstones exclusion.",
+        ),
     ],
     spell_icon_id=2135,
-    notes='pulled from existing data',
+    notes='pulled from existing data. Potency system P7 (paladin pass): NOT converted - both effects are read as flat percentages by spell_pal_ardent_defender (src/server/scripts/Spells/spell_paladin.cpp), not damage/heal amounts; see each effect\'s own potency_excluded=.',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Damage that takes you below 35% health is reduced by $s1%.  In addition, attacks which would otherwise kill you cause you to be healed by up to $s2% of your maximum health (amount healed based on defense).  This healing effect cannot occur more often than once every $66233d.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194304, 'EffectSpellClassMaskB_1': 4194304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
@@ -1851,11 +1864,19 @@ ardent_defender_31851 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=12, implicit_target_a=1, apply_aura=69, misc_value=127),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(
+            type=EffectType.APPLY_AURA, base_points=12, implicit_target_a=1, apply_aura=69, misc_value=127,
+            potency_excluded="percent-of-other-damage: same shape as Ardent Defender rank 1 (31850) - see "
+            "its eff0 potency_excluded= for the full reasoning.",
+        ),
+        Effect(
+            type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY,
+            potency_excluded="percent-of-max-health: same shape as Ardent Defender rank 1 (31850) - see "
+            "its eff1 potency_excluded= for the full reasoning.",
+        ),
     ],
     spell_icon_id=2135,
-    notes='pulled from existing data',
+    notes='pulled from existing data. Potency system P7 (paladin pass): NOT converted - see Ardent Defender rank 1 (31850)\'s notes= and each effect\'s own potency_excluded=.',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Damage that takes you below 35% health is reduced by $s1%.  In addition, attacks which would otherwise kill you cause you to be healed by up to $s2% of your maximum health (amount healed based on defense).  This healing effect cannot occur more often than once every $66233d.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194304, 'EffectSpellClassMaskB_1': 4194304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
@@ -1872,11 +1893,19 @@ ardent_defender_31852 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=69, misc_value=127),
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(
+            type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=69, misc_value=127,
+            potency_excluded="percent-of-other-damage: same shape as Ardent Defender rank 1 (31850) - see "
+            "its eff0 potency_excluded= for the full reasoning.",
+        ),
+        Effect(
+            type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY,
+            potency_excluded="percent-of-max-health: same shape as Ardent Defender rank 1 (31850) - see "
+            "its eff1 potency_excluded= for the full reasoning.",
+        ),
     ],
     spell_icon_id=2135,
-    notes='pulled from existing data',
+    notes='pulled from existing data. Potency system P7 (paladin pass): NOT converted - see Ardent Defender rank 1 (31850)\'s notes= and each effect\'s own potency_excluded=.',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Damage that takes you below 35% health is reduced by $s1%.  In addition, attacks which would otherwise kill you cause you to be healed by up to $s2% of your maximum health (amount healed based on defense).  This healing effect cannot occur more often than once every $66233d.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194304, 'EffectSpellClassMaskB_1': 4194304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 

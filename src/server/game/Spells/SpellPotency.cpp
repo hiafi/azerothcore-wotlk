@@ -33,6 +33,15 @@ namespace
         float CorrectionPerLevel = 0.0f;
         uint8 BreakpointLevel = 0;
         float VariancePct = 0.0f;
+        // Finishers (docs/potency-system.md's "Combo points don't scale with level" / PLAN P6 step
+        // 4) - CpLine is a flat per-combo-point value (no per-level field of its own, unlike the
+        // main line above - the DBC's EffectPointsPerCombo_N has none either), CpCorrectionPerLevel
+        // its own low-level top-up (same shape as CorrectionPerLevel/BreakpointLevel, just scaled
+        // per combo point), CpAp the attack-power coefficient per combo point. All three are 0 for
+        // every non-finisher row.
+        float CpLine = 0.0f;
+        float CpCorrectionPerLevel = 0.0f;
+        float CpAp = 0.0f;
     };
 
     /// (spellId, effIndex) packed into one key - effIndex only ever needs 2 bits (MAX_SPELL_EFFECTS
@@ -55,7 +64,8 @@ void SpellPotency::Load()
     // reads (e.g. cs_npc.cpp) - adding a new PreparedStatement entry would mean editing the
     // upstream-owned WorldDatabase statement enum for no real benefit here.
     QueryResult result = WorldDatabase.Query(
-        "SELECT spell_id, effect_index, correction_per_level, breakpoint_level, variance_pct FROM spell_potency_correction");
+        "SELECT spell_id, effect_index, correction_per_level, breakpoint_level, variance_pct, "
+        "cp_line, cp_correction_per_level, cp_ap FROM spell_potency_correction");
     if (!result)
     {
         LOG_INFO("server.loading", "Loaded 0 spell potency correction rows.");
@@ -73,6 +83,9 @@ void SpellPotency::Load()
         row.CorrectionPerLevel = fields[2].Get<float>();
         row.BreakpointLevel = fields[3].Get<uint8>();
         row.VariancePct = fields[4].Get<float>();
+        row.CpLine = fields[5].Get<float>();
+        row.CpCorrectionPerLevel = fields[6].Get<float>();
+        row.CpAp = fields[7].Get<float>();
 
         g_potencyCorrections[PotencyKey(spellId, effIndex)] = row;
         ++count;
@@ -143,5 +156,26 @@ float SpellPotency::Apply(uint32 spellId, uint8 effIndex, Unit const* caster, fl
         return value;
 
     PotencyCorrectionRow const& row = it->second;
-    return ApplyCorrection(value, caster->GetLevel(), row.CorrectionPerLevel, row.BreakpointLevel, row.VariancePct);
+    value = ApplyCorrection(value, caster->GetLevel(), row.CorrectionPerLevel, row.BreakpointLevel, row.VariancePct);
+
+    // Finishers (docs/potency-system.md's "Combo points don't scale with level" / PLAN P6 step 4):
+    // CpLine/CpCorrectionPerLevel/CpAp are 0 for every non-finisher row, so this is a no-op there.
+    // The per-combo-point line gets the same low-level correction shape as the flat line above, via
+    // the same ApplyCorrection helper - but no variance roll (variance_pct 0.0f here), matching
+    // where stock's own PointsPerComboPoint line lands in CalcValue: after the roll, never rolled
+    // itself. The DBC's EffectPointsPerCombo_N is generated as 0 for a converted finisher, so this
+    // entirely replaces it rather than adding on top.
+    if (uint8 comboPoints = caster->GetComboPoints())
+    {
+        float perPoint = ApplyCorrection(row.CpLine, caster->GetLevel(), row.CpCorrectionPerLevel, row.BreakpointLevel, 0.0f);
+        perPoint += row.CpAp * caster->GetTotalAttackPowerValue(BASE_ATTACK);
+        value += perPoint * float(comboPoints);
+    }
+
+    return value;
+}
+
+bool SpellPotency::HasRow(uint32 spellId, uint8 effIndex)
+{
+    return g_potencyCorrections.find(PotencyKey(spellId, effIndex)) != g_potencyCorrections.end();
 }
