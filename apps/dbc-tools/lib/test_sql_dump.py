@@ -48,6 +48,18 @@ class ApplyStatementsTest(unittest.TestCase):
         sql_dump.apply_statements(rows, TABLE, "DELETE FROM `widget_dbc` WHERE (`ID` = 42);")
         self.assertEqual(rows, {})
 
+    def test_delete_single_column_tuple_form_removes_rows(self):
+        """The shape lib/spell_tables.py emits (`WHERE (`entry`) IN ((1), (3))`), which used to be
+        skipped, leaving deleted spell_bonus_data rows looking live."""
+        rows = {1: {"ID": 1}, 2: {"ID": 2}, 3: {"ID": 3}}
+        sql_dump.apply_statements(rows, TABLE, "DELETE FROM `widget_dbc` WHERE (`ID`) IN ((1), (3));\nSELECT 1;")
+        self.assertEqual(set(rows), {2})
+
+    def test_delete_multi_column_tuple_form_is_left_alone(self):
+        rows = {1: {"ID": 1}}
+        sql_dump.apply_statements(rows, TABLE, "DELETE FROM `widget_dbc` WHERE (`ID`, `Value`) IN ((1, 2));")
+        self.assertEqual(set(rows), {1})
+
     def test_insert_adds_and_overwrites_by_id(self):
         rows: dict = {}
         sql = (

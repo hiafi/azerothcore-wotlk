@@ -89,5 +89,15 @@ class ClientPatchLintTest(unittest.TestCase):
         self.assertEqual(lint.check_client_patch(shipping, {}, None), [])
 
 
+
+class PotencyBonusOverrideLintTest(unittest.TestCase):
+    def test_only_live_undeclared_unremoved_rows_are_errors(self):
+        potency = {1: "Overridden", 2: "Generated row", 3: "Unbound", 4: "No row"}
+        live = {1: {"direct_bonus": 0.5, "dot_bonus": 0}, 2: {}, 3: {}, 99: {}}
+        errors = lint.check_potency_bonus_overrides(potency, {2}, {3}, live)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("spell 1 (Overridden)", errors[0])
+        self.assertIn("unbind_bonus_coefficients", errors[0])
+
 if __name__ == "__main__":
     unittest.main()

@@ -33,6 +33,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .. import potency as _potency
 from . import model, tooltip
 from .tooltip import has_aura, knows, product, talent_mult  # noqa: F401 - re-exported for class files
 
@@ -665,6 +666,30 @@ def tooltip_vars(entry_id: int, comment: str, **variables) -> tooltip.TooltipVar
     entry = tooltip.render_entry(entry_id, variables)
     _require_active().tooltip_vars.append({"id": entry_id, "Variables": entry.text, "comment": comment})
     return entry
+
+
+def pot_text(
+    source: model.Spell, effect: int = 1, variant: str | None = None, var: str | None = None,
+) -> str:
+    """Another spell's `{potN}` text (`variant` "avg" or "total" for `{potN.avg}`/`{potN.total}`,
+    `var` for the `{potN*var}` multiply by a tooltip variable of the *describing* spell's
+    `tooltip_vars=`), for a description that shows a trigger spell's value: `$<id>s<n>` can't
+    show a potency value (the client never sees the low-level correction, and a converted
+    BasePoints is often negative). Built from `source`'s own declaration, so retuning it updates
+    this text too.
+
+        "...causing them to absorb " + pot_text(stoneclaw_totem_absorb_55328) + " damage."
+    """
+    if variant not in (None, "avg", "total"):
+        raise ValueError(f"pot_text(): variant must be None, 'avg' or 'total', got {variant!r}")
+    effect_dict = source.to_entry().get(f"effect{effect}") or {}
+    pot = dict(effect_dict.get("_potency") or {})
+    if not pot:
+        raise ValueError(f"pot_text(): spell {source.id} effect {effect} has no potency set")
+    ticks = pot.pop("ticks", 1.0)
+    pot.pop("spell_level", None)
+    placeholder = "{pot1" + (f".{variant}" if variant else "") + (f"*{var}" if var else "") + "}"
+    return _potency.expand_placeholders(placeholder, {1: _potency.ResolvedPotency(**pot)}, {1: ticks})
 
 
 def custom_attr(spell: model.Spell | int, attributes: int) -> dict:

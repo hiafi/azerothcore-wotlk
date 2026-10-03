@@ -5,7 +5,9 @@ Split from a single source/classes/shaman.py via split_class_file.py (.agents/pl
 """
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, School
-from lib.dsl.registry import spell, trained_by
+from lib.dsl.registry import pot_text, spell, trained_by
+
+from .shaman_trigger_spells import stoneclaw_totem_absorb_55328
 
 
 water_breathing_131 = spell(
@@ -472,7 +474,7 @@ stoneclaw_totem_5730 = spell(
     ],
     spell_icon_id=689,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 8); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 10 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Taunting creatures.', 'BaseLevel': 8, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Stoneclaw Totem with $s1 health at the feet of the caster for $d that taunts creatures within $5729a1 yards to attack it.  Enemies attacking the Stoneclaw Totem have a $5728h% chance to be stunned for $39796d. Stoneclaw totem also protects all your totems, causing them to absorb $55328s1 damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 81, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 2, 'SpellClassMask_1': 8, 'SpellClassSet': 11, 'SpellLevel': 8, 'SpellVisualID_1': 362, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Taunting creatures.', 'BaseLevel': 8, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Stoneclaw Totem with $s1 health at the feet of the caster for $d that taunts creatures within $5729a1 yards to attack it.  Enemies attacking the Stoneclaw Totem have a $5728h% chance to be stunned for $39796d. Stoneclaw totem also protects all your totems, causing them to absorb ' + pot_text(stoneclaw_totem_absorb_55328) + ' damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 81, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 2, 'SpellClassMask_1': 8, 'SpellClassSet': 11, 'SpellLevel': 8, 'SpellVisualID_1': 362, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 

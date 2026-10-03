@@ -1661,6 +1661,7 @@ nourish_50464 = spell(
     notes='pulled from existing data. Potency system P5 (druid pass): converted to sp_potency=192.1 (potency-report default, base/coef already agreed).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 80, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for {pot1}. Heals for an additional 20% if you have a Rejuvenation, Regrowth, Lifebloom, or Wild Growth effect active on the target.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 85, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 1073741981, 'SpellClassMask_2': 33554432, 'SpellClassSet': 7, 'SpellLevel': 80, 'SpellVisualID_1': 11570, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+unbind_bonus_coefficients(nourish_50464)  # stale spell_bonus_data row overrode the potency coefficient (D1)
 
 
 revive_50769 = spell(

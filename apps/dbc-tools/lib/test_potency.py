@@ -425,6 +425,26 @@ class TooltipExpressionTest(unittest.TestCase):
         self.assertIn(potency._fmt(resolved.ap_coefficient) + "*$AP", expr)
         self.assertNotIn("$SP", expr)
 
+    def test_ranged_spells_use_rap(self):
+        """The server adds ranged attack power to a Hunter shot (Unit::SpellDamageBonusDone's
+        IsRangedWeaponSpell check), so its tooltip must read `$RAP`; a Hunter melee strike and a
+        non-Hunter spell stay on `$AP`."""
+        from lib.dsl import model
+
+        def desc(raw, attributes=0):
+            return model.Spell(
+                id=90002, name="Test Shot", attributes=attributes,
+                effects=[model.Effect(type=2, ap_potency=50, potency_kind="direct")],
+                raw_overrides={"SpellLevel": 1, "Description_Lang_enUS": "Deals {pot1}.", **raw},
+            ).to_entry()["raw_overrides"]["Description_Lang_enUS"]
+
+        self.assertIn("*$RAP", desc({"SpellClassSet": 9, "DefenseType": 3}))  # Arcane Shot
+        self.assertIn("*$RAP", desc({"EquippedItemSubclass": 1 << 16, "DefenseType": 3}))  # thrown
+        self.assertIn("*$RAP", desc({"DefenseType": 3}, attributes=0x2))  # USES_RANGED_SLOT
+        self.assertNotIn("$RAP", desc({"SpellClassSet": 9, "DefenseType": 2}))  # Mongoose Bite
+        self.assertNotIn("$RAP", desc({"SpellClassSet": 9, "SpellClassMask_2": 0x10000000, "DefenseType": 3}))
+        self.assertNotIn("$RAP", desc({"SpellClassSet": 4, "DefenseType": 2}))  # a Warrior strike
+
     def test_stat_bonus_distributed_into_every_max_branch(self):
         """The SP/AP bonus must land inside every branch of the outer `$max()`, never appended
         once after it closes - a top-level `+` outside every `$max()`/`$min()` call is silently

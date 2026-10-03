@@ -450,8 +450,19 @@ def main() -> int:
     )
     for note in tooltip_notes:
         print(f"note: {note}")
-    if tooltip_errors:
-        for error in tooltip_errors:
+    # D1: a live spell_bonus_data row silently overrides an SP-only potency spell's coefficient
+    # (lint.check_potency_bonus_overrides). Same stop-before-SQL treatment as the tooltip errors.
+    spell_names = {e["id"]: e["name"] for e in spell_entries}
+    bonus_errors = lint.check_potency_bonus_overrides(
+        {r["spell_id"]: spell_names.get(r["spell_id"], "?") for r in dsl_classes["potency_corrections"]},
+        {int(r["entry"]) for r in dsl_classes["spell_bonus_data"]},
+        {int(r["entry"]) for r in dsl_classes["bonus_removals"]},
+        trainer_state.load_keyed_table_rows(
+            "spell_bonus_data", ("entry", "direct_bonus", "dot_bonus", "ap_bonus", "ap_dot_bonus", "comments"),
+        ),
+    )
+    if tooltip_errors or bonus_errors:
+        for error in tooltip_errors + bonus_errors:
             print(f"ERROR: {error}")
         return 1
     client_spell_resolved = resolve.resolve_rows(

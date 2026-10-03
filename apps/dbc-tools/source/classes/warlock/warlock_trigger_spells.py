@@ -5583,6 +5583,7 @@ shadowflame_47960 = spell(
     notes='warlock-rework DESTRUCTION §4.1 (B3 rebase, matches 47897s learn level 75->50). Potency system P4 (warlock pilot): converted to sp_potency=40.0 (user-reviewed, mismatched row) - its 0.0667 coefficient was a never-declared stock spell_bonus_data row (D1, same situation as Haunt 48181), not a DSL-authored one; confirm generate.py prunes it so the new DBC coefficient actually wins.',
     raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 262144, 'CastingTimeIndex': 1, 'InterruptFlags': 15, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectDieSides_2': 1, 'EffectBasePoints_2': -1, 'ImplicitTargetA_3': 6, 'SpellVisualID_1': 11247, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Targets in a cone in front of the caster take $47897s1 Shadow damage and an additional {pot1.total} Fire damage over $47960d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} Fire damage every $t1 seconds.', 'AuraDescription_Lang_Mask': 16712190, 'StartRecoveryTime': 1500, 'SpellClassSet': 5, 'SpellClassMask_3': 2, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'SpellLevel': 50},
 )
+unbind_bonus_coefficients(shadowflame_47960)  # stale spell_bonus_data row overrode the potency coefficient (D1)
 
 
 aftermath_18118 = spell(

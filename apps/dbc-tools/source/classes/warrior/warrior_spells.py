@@ -1125,7 +1125,7 @@ bloodthirst_23881 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=64.6, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=65.0, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.DUMMY),
     ],
     spell_icon_id=38,
@@ -1144,7 +1144,9 @@ bloodthirst_23881 = spell(
         'elsewhere). The hard-coded ApplyPct(damage, AP) line is now gated behind '
         'SpellPotency::HasRow() (spell_warrior.cpp). Effect 2 (the DUMMY, feeding the Bloodthirst '
         'heal-charge mechanism via a separate, undeclared spell 23880/23885) is untouched - it '
-        'only ever reads its own CalcValue, unaffected by effect 1\'s conversion.'
+        'only ever reads its own CalcValue, unaffected by effect 1\'s conversion. '
+        'User decision 2026-10-02: ap_potency 65.0 (was 64.6; the other candidates were 70.4 to keep '
+        'the drifted live values, and the base-implied 18.7).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly attack the target causing {pot1} damage.  In addition, the next $23885n successful melee attacks will restore $m2% of max health.  This effect lasts $23885d.  Damage is based on your attack power.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_2': 1024, 'SpellClassSet': 4, 'SpellLevel': 40, 'SpellPriority': 50, 'SpellVisualID_1': 372, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )

@@ -31,6 +31,27 @@ def _int(value) -> int | None:
     return None if value is None else int(value)
 
 
+SPELLFAMILY_HUNTER = 9
+SPELL_DAMAGE_CLASS_MELEE = 2
+SPELL_ATTR0_USES_RANGED_SLOT = 0x2
+ITEM_SUBCLASS_MASK_WEAPON_RANGED = (1 << 2) | (1 << 3) | (1 << 18) | (1 << 16)  # bow, gun, crossbow, thrown
+
+
+def uses_ranged_attack_power(attributes: int, raw_overrides: dict) -> bool:
+    """True when the server adds ranged attack power, not melee, to this spell's AP coefficient:
+    `SpellInfo::IsRangedWeaponSpell()` (a Hunter-family spell, a ranged-weapon requirement, or
+    SPELL_ATTR0_USES_RANGED_SLOT) and not a melee damage class (Unit::SpellDamageBonusDone /
+    SpellHealingBonusDone). A spell row is built from its declaration alone, so every field read
+    here is in `raw_overrides` or it's 0."""
+    family_flags_2 = raw_overrides.get("SpellClassMask_2", 0) or 0
+    ranged = (
+        (raw_overrides.get("SpellClassSet", 0) == SPELLFAMILY_HUNTER and not family_flags_2 & 0x10000000)
+        or (raw_overrides.get("EquippedItemSubclass", 0) or 0) & ITEM_SUBCLASS_MASK_WEAPON_RANGED
+        or (attributes or 0) & SPELL_ATTR0_USES_RANGED_SLOT
+    )
+    return bool(ranged) and raw_overrides.get("DefenseType", 0) != SPELL_DAMAGE_CLASS_MELEE
+
+
 @dataclass
 class Effect:
     """One `effectN` slot. Field names/defaults mirror the JSON schema
@@ -337,6 +358,8 @@ class Spell:
                     base_potency=effect.base_potency,
                 )
             resolved = _potency.resolve(pe, spell_level=int(spell_level))
+            if resolved.ap_coefficient and uses_ranged_attack_power(int(self.attributes or 0), raw_overrides):
+                resolved = dataclasses.replace(resolved, ap_token=_potency.RANGED_AP_TOKEN)
             resolved_by_index[index] = resolved
 
             cp_resolved = None

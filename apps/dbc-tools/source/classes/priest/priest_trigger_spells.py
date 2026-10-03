@@ -4840,6 +4840,7 @@ divine_hymn_64844 = spell(
           'Potency system P5-Priest: eff0 (heal) converted to sp_potency=18.9 (user-reviewed, mismatched row) - replaces the hand-set EffectBonusMultiplier_1=0.2/coeff_weight=0.2 tuning; eff1 (healing-taken buff) is a flat percent, untouched. SpellLevel/BaseLevel set to 60 (matching parent cast spell 64843\'s own level) since potency requires one and this trigger-only spell never had one before.',
     raw_overrides={'AttributesEx': 136, 'AttributesEx2': 1073741828, 'AttributesEx4': 128, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Healing received increased by $s2%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_3': 4, 'SpellClassSet': 6, 'SpellLevel': 60, 'SpellVisualID_1': 13751, 'CumulativeAura': 5},
 )
+unbind_bonus_coefficients(divine_hymn_64844)  # stale spell_bonus_data row overrode the potency coefficient (D1)
 
 
 # --- Pulled from stock data via pull_dsl.py for the Disc pass (priest-rework.DISC.md WP-0
@@ -6297,7 +6298,7 @@ prayer_of_mending_33110 = spell(
     range_yards=50000.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=0.1, potency_kind='heal', implicit_target_a=1),
+        Effect(type=EffectType.HEAL, sp_potency=100.0, potency_kind='heal', implicit_target_a=1),
     ],
     spell_icon_id=2219,
     notes='pulled from existing data. '
@@ -6307,9 +6308,14 @@ prayer_of_mending_33110 = spell(
           'only multiplies it by percent buffs (T9 2pc, Twin Discipline, Spiritual Healing, Divine '
           'Providence) before SetEffectValue() - it never overrides the base with a CastCustomSpell '
           'value, so this is not a D2/F8 exclusion despite initially looking like one (33110 itself is '
-          'plain-cast via 33076/41635\'s native proc-trigger chain, not CastCustomSpell).',
+          'plain-cast via 33076/41635\'s native proc-trigger chain, not CastCustomSpell). '
+          'Open-decision review 2026-10-02 (user, option B): sp_potency 0.1 -> 100. At 0.1 the heal '
+          'only worked through a stale spell_bonus_data row (direct 0.8057); 100 keeps that SP '
+          'coefficient and adds a real base heal (about 1059 per bounce at 60, stock 3.3.5 is 800), '
+          'and the stale row is unbound below.',
     raw_overrides={'AttributesEx': 1024, 'AttributesEx2': 4, 'AttributesEx3': 1073741824, 'TargetCreatureType': 767, 'CastingTimeIndex': 1, 'ProcChance': 101, 'BaseLevel': 1, 'SpellLevel': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 1714, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Places a spell on the target that heals them the next time they take damage.  When the heal occurs, Prayer of Mending jumps to a party or raid member within $41635a1 yards. Jumps up to $48113n times and lasts $48111d after each jump. This spell can only be placed on one target at a time.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 6, 'SpellClassMask_2': 32, 'DefenseType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
 )
+unbind_bonus_coefficients(prayer_of_mending_33110)
 
 
 # spirit_of_redemption_27827 is the stock on-death "FORM_SPIRITOFREDEMPTION" spell

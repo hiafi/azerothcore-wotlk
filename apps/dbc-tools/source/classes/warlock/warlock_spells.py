@@ -767,10 +767,10 @@ shadow_ward_6229 = spell(
     range_yards=0.0,
     duration_ms=30000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, sp_potency=193.1, potency_kind='absorb', implicit_target_a=1, apply_aura=69, misc_value=32),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=99.3, base_potency=193.1, potency_kind='absorb', implicit_target_a=1, apply_aura=69, misc_value=32),
     ],
     spell_icon_id=207,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 32). Potency system P4 (warlock pilot): converted to sp_potency=193.1 (potency-report default, base/coef already agreed).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 32). Potency system P4 (warlock pilot): converted to sp_potency=193.1 (potency-report default, base/coef already agreed). 2026-10-03 (user): spell-power coefficient set to 0.8 (sp_potency, 99.3), base kept via base_potency. spell_warl_shadow_ward now reads the generated EffectBonusMultiplier instead of a hard-coded coefficient, so this is the one that applies.',
     raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Absorbs Shadow damage.', 'BaseLevel': 32, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Absorbs {pot1} shadow damage.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_3': 64, 'SpellClassSet': 5, 'SpellLevel': 32, 'SpellVisualID_1': 343, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1463,6 +1463,7 @@ haunt_48181 = spell(
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60). Potency system P4 (warlock pilot): converted to sp_potency=164.0 (user-reviewed, mismatched row) - its 0.429 coefficient was a never-declared stock spell_bonus_data row (D1), not a DSL-authored one; confirm generate.py prunes it so the new DBC coefficient actually wins.',
     raw_overrides={'AttributesEx3': 67108992, 'AttributesEx5': 32, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Damage taken from Shadow damage-over-time effects increased by $s3%.', 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You send a ghostly soul into the target, dealing {pot1} Shadow damage and increasing all damage done by your Shadow damage-over-time effects on the target by $s3% for $d. When the Haunt spell ends or is dispelled, the soul returns to you, healing you for $s2% of the damage it did to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_1': m.SHADOW_PERIODIC[0], 'EffectSpellClassMaskC_2': m.SHADOW_PERIODIC[1], 'EffectSpellClassMaskC_3': m.SHADOW_PERIODIC[2], 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_2': 262144, 'SpellClassSet': 5, 'SpellLevel': 60, 'SpellVisualID_1': 10731, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+unbind_bonus_coefficients(haunt_48181)  # stale spell_bonus_data row overrode the potency coefficient (D1)
 scripted_by(haunt_48181, 'spell_warl_haunt_soulburn')
 
 

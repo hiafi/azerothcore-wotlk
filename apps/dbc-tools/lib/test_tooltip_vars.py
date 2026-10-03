@@ -201,5 +201,29 @@ class PotencyPlaceholderTest(unittest.TestCase):
         self.assertIn("has no SpellDescriptionVariableID", errors[0])
 
 
+class PotTextTest(unittest.TestCase):
+    """registry.pot_text: another spell's {pot1} text, for a description that shows a trigger
+    spell's value (Stoneclaw Totem 5730 showing 55328's absorb)."""
+
+    def _absorb(self, **effect):
+        return model.Spell(
+            id=90001, name="Test Absorb", duration_ms=15000,
+            effects=[model.Effect(type=77, potency_kind="absorb", **effect)],
+            raw_overrides={"SpellLevel": 1, "Description_Lang_enUS": "Absorbs {pot1} damage."},
+        )
+
+    def test_matches_the_source_spells_own_placeholder(self):
+        source = self._absorb(base_potency=50.0)
+        own = source.to_entry()["raw_overrides"]["Description_Lang_enUS"]
+        self.assertEqual(f"Absorbs {registry.pot_text(source)} damage.", own)
+        self.assertNotIn("$SP", registry.pot_text(source))  # base_potency only: no SP term
+
+    def test_rejects_an_effect_without_potency_and_a_bad_variant(self):
+        with self.assertRaises(ValueError):
+            registry.pot_text(self._absorb(base_potency=50.0), effect=2)
+        with self.assertRaises(ValueError):
+            registry.pot_text(self._absorb(base_potency=50.0), variant="max")
+
+
 if __name__ == "__main__":
     unittest.main()

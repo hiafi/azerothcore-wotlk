@@ -5,7 +5,7 @@ Split from a single source/classes/deathknight.py via split_class_file.py (.agen
 """
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, School
-from lib.dsl.registry import spell
+from lib.dsl.registry import spell, unbind_bonus_coefficients
 
 
 plague_strike_45462 = spell(
@@ -4419,3 +4419,4 @@ gargoyle_strike_51963 = spell(
           "section: 'the stock inheritance of owner spell power and attack power stays as is').",
     raw_overrides={'FacingCasterFlags': 1, 'CastingTimeIndex': 5, 'InterruptFlags': 15, 'ProcChance': 101, 'BaseLevel': 55, 'SpellLevel': 55, 'DurationIndex': 0, 'Speed': 20.0, 'EquippedItemClass': -1, 'SpellVisualID_1': 4379, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Inflicts Nature damage to an enemy.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
+unbind_bonus_coefficients(gargoyle_strike_51963)  # stale spell_bonus_data row overrode the potency coefficient (D1)

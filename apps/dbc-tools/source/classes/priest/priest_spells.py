@@ -5,7 +5,7 @@ Split from a single source/classes/priest.py via split_class_file.py (.agents/pl
 """
 
 from lib.dsl import ApplyAura, AuraType, DispelType, Effect, EffectType, Mechanic, School, SpellModOp
-from lib.dsl.registry import scripted_by, skill_line_ability, spell, trained_by, unbind_bonus_coefficients, untrain
+from lib.dsl.registry import pot_text, scripted_by, skill_line_ability, spell, trained_by, unbind_bonus_coefficients, untrain
 from . import _masks
 from .priest_trigger_spells import (
     angelic_feather_buff_200131,
@@ -14,6 +14,7 @@ from .priest_trigger_spells import (
     divine_star_pulse_200134,
     halo_pulse_200136,
     leap_of_faith_jump_200138,
+    lightwell_heal_200202,
     mind_sear_49821,
     prayer_of_mending_41635,
     void_eruption_buff_200140,
@@ -242,6 +243,7 @@ shadow_word_pain_589 = spell(
           'Potency system P5-Priest: converted to sp_potency=23.7 (potency-report default, base/coef already agreed).',
     raw_overrides={'AttributesEx2': 524288, 'AttributesEx4': 1048576, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} Shadow damage every $t1 seconds.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A word of darkness that causes {pot1.total} Shadow damage over $d.', 'EffectBasePoints_2': -1, 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ShapeshiftMask': 134217728, 'SpellClassMask_1': 32768, 'SpellClassMask_3': 1024, 'SpellClassSet': 6, 'SpellLevel': 4, 'SpellVisualID_1': 71, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+unbind_bonus_coefficients(shadow_word_pain_589)  # stale spell_bonus_data row overrode the potency coefficient (D1)
 # Priest Shadow rework (SHADOW.md "Scripts on stock spells"): row unchanged - OnEffectPeriodic
 # tentacle spawn roll (ignoring the shared ICD) while Surrender to Madness is active.
 scripted_by(shadow_word_pain_589, 'spell_pri_shadow_word_pain_surrender')
@@ -1313,8 +1315,12 @@ lightwell_724 = spell(
           "290. No other spell has a dynamic {pot}-style placeholder that reaches across spells "
           "(lib.potency.expand_placeholders only resolves {pot1-3} within the declaring spell), so "
           "the number is dropped rather than left wrong; the heal count (10) and target selection "
-          "are unaffected, this is a tooltip-only change.",
-    raw_overrides={'AttributesEx': 131072, 'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Creates a Holy Lightwell that lasts $d. Once per sec, it heals the party or raid member within 20 yds most in need, for up to 10 heals.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 1141, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_1': 1073741824, 'SpellClassSet': 6, 'SpellDescriptionVariableID': 162, 'SpellLevel': 40, 'SpellVisualID_1': 7550, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Targets': 64},
+          "are unaffected, this is a tooltip-only change. "
+          "2026-10-03 (user): the number is back, through pot_text(lightwell_heal_200202), which "
+          "renders 200202's own {pot1} text. The Lightwell is a totem-type summon "
+          "(SUMMON_TYPE_LIGHTWELL -> UNIT_MASK_TOTEM), so its heal uses the priest's spell power "
+          "and level, and the tooltip's $SP term is accurate.",
+    raw_overrides={'AttributesEx': 131072, 'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Creates a Holy Lightwell that lasts $d. Once per sec, it heals the party or raid member within 20 yds most in need for ' + pot_text(lightwell_heal_200202) + ', for up to 10 heals.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 1141, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_1': 1073741824, 'SpellClassSet': 6, 'SpellDescriptionVariableID': 162, 'SpellLevel': 40, 'SpellVisualID_1': 7550, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Targets': 64},
 )
 
 

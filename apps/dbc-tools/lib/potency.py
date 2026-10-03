@@ -35,6 +35,9 @@ HEAL_LIKE_KINDS = (KIND_HEAL, KIND_HEAL_PERIODIC, KIND_ABSORB)
 # min-to-max roll, "because an aura rolls its amount once at application" ("Damage range").
 PERIODIC_LIKE_KINDS = (KIND_PERIODIC, KIND_HEAL_PERIODIC)
 
+AP_TOKEN = "$AP"
+RANGED_AP_TOKEN = "$RAP"  # stock token (stock Steady Shot's tooltip uses it)
+
 # ---------------------------------------------------------------------------
 # Level scaling ("Level scaling") - C(L) is two straight segments meeting at level 25.
 # ---------------------------------------------------------------------------
@@ -121,6 +124,10 @@ class ResolvedPotency:
     t_seconds: float
     total_potency: float
     kind: str
+    # The tooltip token for the caster's attack power: "$AP", or "$RAP" for a spell the server
+    # scales with ranged attack power. resolve() has no spell context, so model.Spell sets it
+    # (Spell._resolve_potency, uses_ranged_attack_power).
+    ap_token: str = AP_TOKEN
 
 
 def resolve(effect: PotencyEffect, spell_level: int, r: float = DEFAULT_R) -> ResolvedPotency:
@@ -294,7 +301,7 @@ def _stat_bonus_term(resolved: ResolvedPotency, ticks: float) -> str:
     if resolved.sp_coefficient:
         terms.append(f"{_fmt(resolved.sp_coefficient * ticks)}*$SP")
     if resolved.ap_coefficient:
-        terms.append(f"{_fmt(resolved.ap_coefficient * ticks)}*$AP")
+        terms.append(f"{_fmt(resolved.ap_coefficient * ticks)}*{resolved.ap_token}")
     return "+".join(terms)
 
 

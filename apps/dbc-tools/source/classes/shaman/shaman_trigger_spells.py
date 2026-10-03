@@ -5,7 +5,7 @@ Split from a single source/classes/shaman.py via split_class_file.py (.agents/pl
 """
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, School
-from lib.dsl.registry import spell, trained_by
+from lib.dsl.registry import spell, trained_by, unbind_bonus_coefficients
 
 
 lightning_shield_324 = spell(
@@ -4417,7 +4417,7 @@ stoneclaw_totem_absorb_55328 = spell(
     range_yards=50000.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.SCRIPT_EFFECT, sp_potency=1.9, potency_kind='absorb', implicit_target_a=27),
+        Effect(type=EffectType.SCRIPT_EFFECT, base_potency=50.0, potency_kind='absorb', implicit_target_a=27),
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=689,
@@ -4445,7 +4445,12 @@ stoneclaw_totem_absorb_55328 = spell(
         "system.md 'Healing'). sp_potency=1.9 is base-implied from the current flat EffectBasePoints "
         "of 20 (no RealPointsPerLevel at all before this conversion): 20 / (3.96 x C(60)) = 1.888, "
         "rounded. 55277 itself is left undeclared/untouched (always script-bp-driven, no tooltip of "
-        "its own worth migrating, and not named in the P8 task scope)."
+        "its own worth migrating, and not named in the P8 task scope). "
+        "Stoneclaw review 2026-10-03 (user): sp_potency=1.9 -> base_potency=50, no SP. 1.9 was "
+        "base-implied from rank 1's flat 20 read as a level-60 value (3/20/29 at 8/60/80 vs stock "
+        "ranks' 21/330/1085). No sp_potency: EFFECT_0 is a SCRIPT_EFFECT and SCHOOL_ABSORB gets no "
+        "engine spell-power bonus, so a coefficient here would never apply (stock had none either). "
+        "Stoneclaw Totem 5730's description shows this value through pot_text()."
     ),
     raw_overrides={'AttributesEx': 128, 'AttributesEx2': 335544324, 'CastingTimeIndex': 1, 'ProcChance': 101, 'EquippedItemClass': -1, 'SpellVisualID_1': 370, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Taunting creatures.', 'AuraDescription_Lang_Mask': 16712190, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'SpellLevel': 1},
 )
@@ -4514,6 +4519,7 @@ fire_elemental_fire_nova_12470 = spell(
     ),
     raw_overrides={'AttributesEx': 136, 'CastingTimeIndex': 5, 'InterruptFlags': 9, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 963, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Inflicts {pot1} Fire damage to nearby enemies.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'BaseLevel': 20, 'SpellLevel': 20},
 )
+unbind_bonus_coefficients(fire_elemental_fire_nova_12470)  # stale spell_bonus_data row overrode the potency coefficient (D1)
 
 
 fire_elemental_fire_blast_57984 = spell(
@@ -4545,6 +4551,7 @@ fire_elemental_fire_blast_57984 = spell(
     ),
     raw_overrides={'FacingCasterFlags': 1, 'CastingTimeIndex': 1, 'InterruptFlags': 8, 'ProcChance': 101, 'EquippedItemClass': -1, 'SpellVisualID_1': 143, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Inflicts {pot1} Fire damage to an enemy.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 3, 'SpellClassMask_1': 131074, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'BaseLevel': 20, 'SpellLevel': 20},
 )
+unbind_bonus_coefficients(fire_elemental_fire_blast_57984)  # stale spell_bonus_data row overrode the potency coefficient (D1)
 
 
 fire_elemental_fire_shield_13377 = spell(
@@ -4611,3 +4618,4 @@ fire_elemental_fire_shield_pulse_13376 = spell(
     ),
     raw_overrides={'AttributesEx': 136, 'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 1465, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Deals {pot1} Fire damage to all nearby enemies.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'BaseLevel': 1, 'SpellLevel': 1},
 )
+unbind_bonus_coefficients(fire_elemental_fire_shield_pulse_13376)  # stale spell_bonus_data row overrode the potency coefficient (D1)

@@ -38,6 +38,12 @@ Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=140.0, potency_kind='direct', i
   `'absorb'`. Defaults to `'direct'` if omitted. `'direct'` is the only kind that gets the ±10%
   variance roll (`DIRECT_VARIANCE_PCT` in `lib/potency.py`) — periodic/heal/absorb effects roll
   once and every subsequent tick/instance repeats that value, same as stock DieSides-1 auras.
+  **An absorb's spell power is added by its script, never by the engine** (`SCHOOL_ABSORB` has no
+  bonus case in `AuraEffect::CalculateAmount`). The script must read the generated coefficient,
+  `GetSpellInfo()->Effects[i].BonusMultiplier`, not a literal. Power Word: Shield, Fire/Frost Ward,
+  Ice Barrier and Shadow Ward do; Sacred Shield and Mana Shield still use literals and aren't
+  converted. An absorb applied through a `SCRIPT_EFFECT` (Stoneclaw Totem) gets no spell power at
+  all, so give it `base_potency` only.
 - **`weapon_potency`** (float, mutually exclusive with `sp_potency`/`ap_potency`) — a weapon-percent
   effect's own, simpler path: no level scaling, no correction row, the value is the percent itself
   (must be a whole number). Can't currently be combined with a flat SP/AP bonus riding the same
@@ -119,11 +125,18 @@ this fork's client — confirmed empirically (a scratch spell's bare `$s1` showe
 `EffectBasePoints+1`, zero stat contribution) — so a spell left on `$s1` after conversion will show
 a tooltip number far below real combat damage, not just a "slightly simplified" one.
 
-**Cross-spell references stay as native tokens.** `{potN}` only resolves within the spell being
-declared — it can't reach another spell's effect. Where native text references another spell by id
-(`$42223s1`, two spells sharing one description like Seed of Corruption's DoT/detonation pair),
-leave that token as-is; it keeps working once *that* spell's own DBC data is correct, and each
-side's own self-reference is what gets the `{potN}` treatment.
+**Cross-spell references to a potency effect use `pot_text()`.** `{potN}` only resolves within
+the spell being declared. A native `$<id>s<n>` token pointing at a *converted* effect shows that
+effect's raw BasePoints, which is often negative after conversion, with no low-level correction and
+no SP/AP (Create Lightwell 724 showed -100; Stoneclaw Totem 5730 showed the same for 55328). Import
+the target spell and splice in `registry.pot_text(target, effect=N)` (optionally `variant="avg"` or
+`"total"`). It returns that effect's `{potN}` text, built from the target's own declaration so it
+can't drift: `'... absorb ' + pot_text(stoneclaw_totem_absorb_55328) + ' damage.'`. A token pointing
+at an *unconverted* effect is fine as-is.
+
+**Ranged spells read `$RAP`.** The generator writes `$RAP` instead of `$AP` when the server adds
+ranged attack power (`model.uses_ranged_attack_power`: Hunter family, a ranged-weapon
+requirement or SPELL_ATTR0_USES_RANGED_SLOT, and not a melee damage class). Nothing to set by hand.
 
 **`$SP`/`$AP` are real, confirmed-live tokens** for "caster's current effective spell power/attack
 power," usable inside a raw `${...}` math expression — this is what `{potN}`'s generated formula

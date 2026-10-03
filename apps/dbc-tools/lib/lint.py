@@ -636,3 +636,29 @@ def check_client_patch(
             warnings.append(f"{dropped} was in the last client patch build and isn't in this one - clients "
                             f"fall back to stock for it")
     return warnings
+
+
+def check_potency_bonus_overrides(
+    potency_spells: dict[int, str], generated_bonus_ids: set[int], removed_bonus_ids: set[int],
+    live_bonus_rows: dict[int, dict],
+) -> list[str]:
+    """Errors for potency spells whose coefficient never takes effect (D1, docs/bugs-and-fixes.md
+    2026-10-02). A `spell_bonus_data` row always beats the DBC's `EffectBonusMultiplier_N`, and the
+    generator only writes its own row when a spell has AP potency. An SP-only potency spell with a
+    stock or hand-written row left live keeps scaling with that old coefficient: 28 P5-P8
+    conversions shipped like this.
+
+    `potency_spells`: id -> name for every spell with a potency effect. `generated_bonus_ids`: ids
+    whose row the DSL declares (the generator's own D1 rows). `removed_bonus_ids`: ids with an
+    `unbind_bonus_coefficients()`. `live_bonus_rows`: `spell_bonus_data` with every migration's
+    INSERT/UPDATE/DELETE replayed (`trainer_state.load_keyed_table_rows`), so a row a later
+    migration deleted doesn't count."""
+    errors = []
+    for spell_id in sorted(set(potency_spells) & set(live_bonus_rows) - generated_bonus_ids - removed_bonus_ids):
+        row = live_bonus_rows[spell_id]
+        errors.append(
+            f"spell {spell_id} ({potency_spells[spell_id]}): a live spell_bonus_data row (direct "
+            f"{row.get('direct_bonus')}, dot {row.get('dot_bonus')}) overrides its generated potency "
+            f"coefficient - add unbind_bonus_coefficients(...) next to its declaration (D1)"
+        )
+    return errors
