@@ -122,6 +122,10 @@ class Registry:
     # Potency system (docs/potency-system.md, PLAN P4): the counterpart to spell_bonus_data above -
     # see unbind_bonus_coefficients() below.
     bonus_removals: list[dict] = field(default_factory=list)
+    # Paladin T1 (.agents/plans/paladin-rework/paladin-rework.T1-HANDOFF.md): spell_category()'s
+    # spellcategory_dbc rows (a declared table, server-only) and remove_spell_proc()'s removals.
+    spell_categories: list[dict] = field(default_factory=list)
+    proc_removals: list[dict] = field(default_factory=list)
     # T1 (.agents/plans/warlock-rework/warlock-rework.T1-HANDOFF.md): two world-DB tables outside
     # the spell system entirely - creature_template/creature_template_model, for a rework's own
     # NPCs (e.g. a talent's summoned add). Unlike every table above, creature_template is on the
@@ -158,7 +162,7 @@ MERGE_KEYS = (
     "spell_script_names", "spell_bonus_data", "spell_procs",
     "linked_spells", "spell_groups", "spell_group_rules", "custom_attrs", "shapeshift_forms",
     "script_removals", "linked_spell_removals", "spell_group_removals", "trainer_removals",
-    "bonus_removals",
+    "bonus_removals", "proc_removals", "spell_categories",
     "creature_templates", "creature_template_models",
     "potency_corrections",
     "consts",
@@ -742,6 +746,60 @@ def unbind_script(spell: model.Spell | int, script_name: str) -> dict:
     spell_id = _spell_id_of(spell)
     row = {"id": f"{spell_id}:{script_name}", "spell_id": spell_id, "ScriptName": script_name}
     _require_active().script_removals.append(row)
+    return row
+
+
+def remove_spell_proc(spell: model.Spell | int) -> dict:
+    """Declares a removal of `spell`'s `spell_proc` row - the counterpart to `procs_on()`, for
+    retiring a stock (or previously hand-written) row the automatic prune pass can't reach because
+    the base dump owns the key. Negative ids are allowed: `-<id>` is the stock "this spell and every
+    rank in its chain" convention (`SpellMgr::LoadSpellProcs`'s explicit-row loop expands it), and
+    removing it removes the row for all ranks.
+
+    WARNING - removing the row does not always stop a spell from procing. With no `spell_proc`
+    row `SpellMgr` builds a default one per spell id from the DBC's own `ProcFlags` (the spell_dbc
+    column `ProcTypeMask`; `SpellMgr.cpp` ~1953-1983, 2159-2292) - but only when the spell has a
+    trigger aura AND non-zero DBC flags. Keeping an explicit row with `ProcFlags` 0 does not help:
+    a zero there inherits the DBC's flags (~2078-2084). So e.g. -31871 (DBC flags 0) and Redoubt
+    20128/20131/20132 (not a trigger aura) are fully disabled by the removal alone, while a spell
+    with a trigger aura and non-zero flags needs its `ProcTypeMask` zeroed (every rank -
+    `raw_overrides={"ProcTypeMask": 0}`). `generate.py` prints a WARNING (full run only, not
+    `--check`) for a removed row, every rank of a negative id, whose spell still has non-zero
+    `ProcTypeMask`; it is conservative and ignores the trigger-aura condition."""
+    spell_id = _spell_id_of(spell)
+    row = {"id": str(spell_id), "SpellId": spell_id}
+    _require_active().proc_removals.append(row)
+    return row
+
+
+def spell_category(category_id: int, flags: int = 0, comment: str = "") -> dict:
+    """Declares a `spellcategory_dbc` row (`SpellCategory.dbc`, server-side overlay table) for a
+    custom spell `Category` - e.g. a cooldown shared by several auras (`category=1300`,
+    `category_cooldown_ms=15000` on each spell). `category_id` must be inside `source/ids.yaml`'s
+    `spellcategory` block (stock ids top out at 1253). Without this row `SpellInfo::GetCategory()`
+    is 0 (`SpellInfo.cpp` looks `Category` up in `sSpellCategoryStore`) and the category cooldown
+    silently never exists - `generate.py` refuses a spell whose `Category` is in the block but
+    undeclared (`lib.lint.check_undeclared_spell_categories`). `flags` is `SpellCategoryEntry::Flags`.
+    Server-only: no client `SpellCategory.dbc` row is generated. Whether the client's sibling-cooldown
+    sweep needs one is unverified, and the mitigation is an open decision - see README.md. `comment` is for the
+    reader only and is not emitted."""
+    ids_cfg = _active_ids_cfg
+    block = (ids_cfg or {}).get("spellcategory")
+    if not block:
+        raise ValueError(
+            f"spell_category({category_id}, ...): needs source/ids.yaml's `spellcategory` block - "
+            f"pass ids_cfg through registry.load_class_file(path, ids_cfg=...) (generate.py already does)"
+        )
+    if not block["start"] <= category_id <= block["end"]:
+        raise ValueError(
+            f"spell_category({category_id}, ...): id is outside source/ids.yaml's spellcategory "
+            f"reserved block ({block['start']}-{block['end']}) - stock SpellCategory ids must not be "
+            f"overridden by accident; widen the block deliberately if you need more"
+        )
+    if isinstance(flags, bool) or not isinstance(flags, int) or not 0 <= flags <= 0xFFFFFFFF:
+        raise ValueError(f"spell_category({category_id}, ...): flags must be a uint32, got {flags!r}")
+    row = {"id": category_id, "ID": category_id, "Flags": flags, "comment": comment}
+    _require_active().spell_categories.append(row)
     return row
 
 

@@ -177,5 +177,84 @@ class WpTCodestyleShapeTest(unittest.TestCase):
         _assert_codestyle_shape(self, text)
 
 
+REPO_ROOT = Path(__file__).resolve().parents[3]
+LINTER_PATH = REPO_ROOT / "apps" / "codestyle" / "codestyle-sql.py"
+MULTILINE_TEXT = (
+    "Increases your armor by $s2. $\n"
+    "Increases your resistance to spells by $s1.\n"
+    "  1 point: ${($m1+$b1*1)*$<dur>} damage over $d. \n"
+    "(cloth), (leather) items; Bear Form; it's \\n literally\r\n"
+    "(not a tuple row);"
+)
+
+
+def _real_linter():
+    """The real apps/codestyle/codestyle-sql.py, imported by path (its hyphen rules out `import`)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("codestyle_sql_under_test", LINTER_PATH)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class MultilineStringLintTest(unittest.TestCase):
+    """A string with embedded line breaks (a spell Description/ToolTip) must render on ONE physical
+    line, as `\\n` escapes, so apps/codestyle/codestyle-sql.py passes the generated file."""
+
+    def test_literal_escapes_line_breaks_and_round_trips(self):
+        from lib import sql_dump
+        literal = sql_out._sql_literal(MULTILINE_TEXT)
+        self.assertNotIn("\n", literal)
+        self.assertNotIn("\r", literal)
+        self.assertEqual(sql_dump._read_value(literal, 0)[0], MULTILINE_TEXT)
+
+    def test_reader_still_parses_old_literal_multiline_form(self):
+        from lib import sql_dump
+        self.assertEqual(sql_dump._read_value("'a\nb'", 0)[0], "a\nb")
+        self.assertEqual(sql_dump._read_value("'it''s \\\\ \\' x'", 0)[0], "it's \\ ' x")
+
+    @unittest.skipUnless(LINTER_PATH.exists(), "linter not present")
+    def test_generated_file_passes_real_linter(self):
+        import tempfile
+        from lib import dbcfmt
+        rows = [
+            {"ID": 200001, "Description_Lang_enUS": MULTILINE_TEXT, "AuraDescription_Lang_enUS": MULTILINE_TEXT},
+            {"ID": 200002, "Description_Lang_enUS": "plain", "AuraDescription_Lang_enUS": None},
+        ]
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "rev_1.sql"
+            self.assertTrue(sql_out.emit_pending_sql(
+                out, [(dbcfmt.SPELL, {"start": 200000, "end": 200099}, rows, [])], "-- header"))
+            text = out.read_text(encoding="utf-8")
+            self.assertIn("(cloth), (leather) items", text)  # the multi-line text really got emitted
+            linter = _real_linter()
+            with out.open(encoding="utf-8") as f:
+                linter.multiple_blank_lines_check(f, str(out))
+                linter.trailing_whitespace_check(f, str(out))
+                linter.sql_check(f, str(out))
+                linter.insert_delete_safety_check(f, str(out))
+                linter.semicolon_check(f, str(out))
+                linter.backtick_check(f, str(out))
+            self.assertFalse(linter.error_handler, linter.results)
+
+    @unittest.skipUnless(LINTER_PATH.exists(), "linter not present")
+    def test_control_old_literal_newline_form_fails_real_linter(self):
+        """Guards the test above against going vacuous: the pre-fix rendering must still fail."""
+        import tempfile
+        from lib import dbcfmt
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "rev_1.sql"
+            sql_out.emit_pending_sql(
+                out, [(dbcfmt.SPELL, {"start": 200000, "end": 200099},
+                       [{"ID": 200001, "Description_Lang_enUS": "x"}], [])], "-- header")
+            out.write_text(out.read_text(encoding="utf-8").replace("'x'", "'a\n(cloth) b \nc'", 1),
+                           encoding="utf-8")
+            linter = _real_linter()
+            with out.open(encoding="utf-8") as f:
+                linter.trailing_whitespace_check(f, str(out))
+                linter.backtick_check(f, str(out))
+            self.assertTrue(linter.error_handler)
+
+
 if __name__ == "__main__":
     unittest.main()

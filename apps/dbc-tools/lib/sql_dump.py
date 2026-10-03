@@ -36,6 +36,10 @@ _INSERT_HEAD_RE = re.compile(
 _VAR_EXPR_RE = re.compile(r"(?P<name>@\w+)(?:\s*(?P<op>[+-])\s*(?P<num>\d+))?")
 
 
+# MySQL's backslash escapes inside a string literal; any other `\x` is just `x`.
+_MYSQL_ESCAPES = {"n": "\n", "r": "\r", "t": "\t", "0": "\0", "b": "\b", "Z": "\x1a"}
+
+
 def _read_value(
     text: str, i: int, terminators: str = ",)", variables: dict[str, int] | None = None
 ) -> tuple[object, int]:
@@ -67,7 +71,10 @@ def _read_value(
         buf = []
         while True:
             if text[j] == "\\":
-                buf.append(text[j + 1])
+                escaped = text[j + 1]
+                if escaped in "%_":  # MySQL keeps the backslash for these two (LIKE wildcards)
+                    buf.append("\\")
+                buf.append(_MYSQL_ESCAPES.get(escaped, escaped))
                 j += 2
                 continue
             if text[j] == "'":

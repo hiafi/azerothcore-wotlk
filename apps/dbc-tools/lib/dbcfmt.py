@@ -456,6 +456,20 @@ GAMEOBJECTDISPLAYINFO = DbcTable(
     read_as_string=frozenset({"ModelName"}),
 )
 
+# SpellCategory.dbc - one Flags column per Spell.dbc `Category` id (stock IDs up to 1253; the
+# ids.yaml `spellcategory` block 1300-1309 is for custom categories). Paladin T1: spell_category()
+# declares the row; the server side goes out through spell_tables.py's SPELL_TABLES
+# (`spellcategory_dbc`) and generate.py merges the same declared rows over
+# var/extractors/dbc/SpellCategory.dbc into patch-Z.mpq, so the client knows the category too.
+# Deliberately NOT in ALL_TABLES / SECONDARY_TABLES: that would emit the SQL a second time.
+SPELLCATEGORY = DbcTable(
+    name="SpellCategory",
+    dbc_filename="SpellCategory.dbc",
+    sql_table="spellcategory_dbc",
+    fmt="ni",
+    columns=("ID", "Flags"),
+)
+
 # Not part of ALL_TABLES - patched directly by the one-off VFX scripts (patch_druid_vfx_models.py
 # first) when a mined SpellVisualKit.SoundID has no stock row. Server-loaded (DBCStores.cpp:
 # LOAD_DBC(sSoundEntriesStore, "SoundEntries.dbc", "soundentries_dbc")), but nothing server-side

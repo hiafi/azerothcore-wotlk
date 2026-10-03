@@ -54,6 +54,9 @@ SPELL_LINKED_SPELL_COLUMNS = ("spell_trigger", "spell_effect", "type", "comment"
 SPELL_GROUP_COLUMNS = ("id", "spell_id")
 SPELL_GROUP_STACK_RULES_COLUMNS = ("group_id", "stack_rule", "description")
 SPELL_CUSTOM_ATTR_COLUMNS = ("spell_id", "attributes")
+# Paladin T1: spellcategory_dbc is a pure server-side overlay (empty base table) - see
+# lib.dsl.registry.spell_category().
+SPELLCATEGORY_COLUMNS = ("ID", "Flags")
 # spellshapeshiftform_dbc is DBC-backed (unlike the other four, plain world-DB tables) - reuse
 # lib.dbcfmt's own column list rather than re-transcribing it a second time.
 SPELLSHAPESHIFTFORM_COLUMNS = dbcfmt.SPELLSHAPESHIFTFORM.columns
@@ -224,6 +227,7 @@ SPELL_TABLES = (
     ),
     TableSpec("spell_custom_attr", SPELL_CUSTOM_ATTR_COLUMNS, ("spell_id",), "custom_attrs"),
     TableSpec("spellshapeshiftform_dbc", SPELLSHAPESHIFTFORM_COLUMNS, ("ID",), "shapeshift_forms"),
+    TableSpec("spellcategory_dbc", SPELLCATEGORY_COLUMNS, ("ID",), "spell_categories"),
     TableSpec(
         "spell_potency_correction", SPELL_POTENCY_CORRECTION_COLUMNS,
         ("spell_id", "effect_index"), "potency_corrections",
@@ -423,6 +427,17 @@ def render_prune_blocks(
     return blocks, report
 
 
+def pruned_keys(index: SpellTableIndex, dsl_classes: dict[str, list[dict]], table_name: str) -> set[tuple]:
+    """Keys of `table_name` that `render_prune_blocks` will DELETE this run (empty when the table's
+    breaker tripped; stock-dump-owned keys are never in it). Lets a lint treat a row as gone when
+    this same run's output deletes it - see `lint.check_potency_bonus_overrides`."""
+    for spec in SPELL_TABLES:
+        if spec.name == table_name:
+            result = index.rows_to_prune(spec, dsl_classes.get(spec.registry_key, []))
+            return set() if result.breaker_tripped else set(result.keys)
+    return set()
+
+
 def _key_text(key_columns: tuple[str, ...], key: tuple) -> str:
     """`(spell_id=17322, ScriptName='spell_pri_shadow_reach')` - for humans.
     Key parts arrive `_normalise`d, so ints are floats by the time we see
@@ -620,6 +635,10 @@ REMOVAL_TABLES = (
         "bonus_removals", "spell_bonus_data", ("entry",),
         "spell_bonus_data", "the spell switched to a generated potency coefficient",
     ),
+    RemovalSpec(
+        "proc_removals", "spell_proc", ("SpellId",),
+        "spell_procs", "a rework retires this proc (zero the DBC ProcTypeMask too - see remove_spell_proc())",
+    ),
 )
 
 
@@ -788,7 +807,7 @@ def render_removal_blocks(
         comment = (
             f"-- Declared removal: {len(to_emit)} {spec.table_name} row(s) no longer wanted - "
             f"{spec.why} (unbind_script()/unlink_spell()/leave_spell_group()/untrain()/"
-            f"unbind_bonus_coefficients(), source/classes/*)."
+            f"unbind_bonus_coefficients()/remove_spell_proc(), source/classes/*)."
         )
         blocks.append(sql_out.render_delete_only_block(spec.table_name, spec.key_columns, to_emit, comment))
     return blocks, report

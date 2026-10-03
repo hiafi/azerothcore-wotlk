@@ -30,6 +30,12 @@
 #                 clear gap. See apps/dbc-tools/lib/dsl/registry.py's spell_group()/
 #                 spell_group_rule() - adding a *member* to a stock group (e.g. 1054, 1016) is
 #                 legitimate and doesn't need an id from this block at all.
+#   - spellcategory: spellcategory_dbc is a pure server-side overlay (empty base table); stock
+#                 SpellCategory ids top out at 1253 (the DBC's own highest ID row, which is what
+#                 DBCStructure.h's SpellCategoryEntry / sSpellCategoryStore read), and 1300-1309
+#                 appeared nowhere in spell_dbc.Category, spellcategory_dbc or any migration when
+#                 this block was cut, so it keeps a clear gap above stock. See apps/dbc-tools/lib/
+#                 dsl/registry.py's spell_category() (Paladin T1).
 #
 # `reuse.py` only mints a new ID from these blocks when nothing existing
 # (base DBC or current overlay) already matches what's being asked for.
@@ -115,3 +121,12 @@ creature:
 spelldescriptionvariables:
   start: 1000
   end: 1999
+
+# spellcategory_dbc ids for spell_category() (Paladin T1, .agents/plans/paladin-rework/
+# paladin-rework.T1-HANDOFF.md) - a shared category cooldown across several spells (the paladin
+# auras' 15 s one, 1300). Stock ids top out at 1253 and 1300-1309 are unused anywhere (checked
+# against spell_dbc.Category, spellcategory_dbc base + updates, and every migration), so this is a
+# ten-id block clear of stock. Server-only: no client SpellCategory.dbc row is generated.
+spellcategory:
+  start: 1300
+  end: 1309

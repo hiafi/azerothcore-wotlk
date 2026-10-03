@@ -50,6 +50,21 @@ deleting the Disc pass's file: 10 Disc spells lost their script bindings, procs 
 **before** running `generate.py`, never after; and treat an `R` on a `rev_*.sql` in `git status` as
 a red flag to diff the `spell_script_names`/`spell_proc` blocks.
 
+## SQL lint: generated output
+
+`python3 apps/codestyle/codestyle-sql.py` lints every `pending_db_*/*.sql`, so generated files must
+pass it. Cause of the old failures (hundreds per file, e.g. 145 backtick hits in each, 759 in the
+Item.dbc one): spell `Description`/`AuraDescription` strings with embedded line breaks were written as
+literal multi-line strings. The linter works line by line, so every continuation line was read as
+SQL ("Missing backticks around (cloth)"), a tooltip line ending in a space tripped the trailing-
+whitespace check, and a row whose string continued on the next line was judged the final row
+("Missing semicolon"). The linter is right to be line-based; the fix is in the generator.
+`sql_out._sql_literal` now writes `\n`/`\r` inside a string as the escape (MySQL decodes it to the
+same bytes), so a row is one physical line. `sql_dump._read_value` decodes MySQL escapes, so it reads
+both the new files and the older literal-multi-line ones. Rule for any new emitter: never put a raw
+line break inside a quoted SQL literal. Already-committed `rev_*.sql` files keep the old form and
+still fail the linter (never delete them, see above); only a file generated after this change is clean.
+
 ## The prune pass: removing a `scripted_by()` / `procs_on()` from source
 
 Deleting a declaration from `source/classes/*` does **not**, on its own, delete the row. The delta
@@ -229,6 +244,33 @@ accounted for:
   gained a `defaults` field (`CREATURE_TEMPLATE_DEFAULTS`/`CREATURE_TEMPLATE_MODEL_DEFAULTS`) that
   `_same_row` checks before falling back to the old 0/`None` guess; every other table's `TableSpec`
   leaves it empty and is unaffected.
+
+## Paladin T1: `spell_category()` and `remove_spell_proc()`
+
+`spell_category(id, flags)` declares a `spellcategory_dbc` row (a `SPELL_TABLES` entry, so diff/prune
+like `custom_attr`); ids come from `ids.yaml`'s `spellcategory` block (1300-1309, stock max 1253).
+The same declared rows also go into the client patch: `generate.py` merges them over the stock
+`var/extractors/dbc/SpellCategory.dbc` (`dbcfmt.SPELLCATEGORY`, fmt `ni`, not in `ALL_TABLES`/
+`SECONDARY_TABLES` so the SQL is not emitted twice) into patch-Z.mpq, and stops with an error if
+categories are declared but that stock file is missing (extract it from the highest-numbered
+`patch-enUS*` MPQ that holds it, flattened, like `Item.dbc` above). The server blocks category siblings
+(same `SpellFamilyName`) but sends them to the client only for spells with
+`SPELL_ATTR0_CU_FORCE_SEND_CATEGORY_COOLDOWNS` (`custom_attr` 0x10000000; core sets it only for Aimed
+Shot); the client's sweep comes from its `Spell.dbc` `Category`/`CategoryRecoveryTime` plus the shipped
+row. An in-game `.cooldown` plus visual sweep check on a sibling remains advisable.
+`lint.check_undeclared_spell_categories` makes `generate.py` error on a spell using a block
+category nobody declared (the server would silently drop the cooldown).
+
+`remove_spell_proc(spell)` is a `REMOVAL_TABLES` entry on `spell_proc` (negative ids = whole rank
+chain). Trap: `SpellMgr` builds a default row per spell id only when the spell has a trigger aura AND
+non-zero DBC `ProcTypeMask`; an explicit row with ProcFlags 0 inherits them too. So -31871 (flags 0)
+and Redoubt 20128/20131/20132 are disabled by the removal alone, but a trigger-aura spell with flags
+needs `ProcTypeMask` zeroed on every rank. `lint.check_removed_proc_flags` warns per rank (a negative
+id expands over the Talent.dbc rank chain: DSL talent ranks first, else existing `SpellRank_1..9`),
+conservatively ignoring the trigger-aura condition. Both new checks run on a full `generate.py` run
+only, not `--check`.
+`lint.check_removed_proc_flags` warns while `abs(id)`'s `ProcTypeMask` is non-zero (other ranks of a
+negative id are not checked).
 
 ## Watch out: one client DBC, one patch archive
 

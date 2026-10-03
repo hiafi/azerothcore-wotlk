@@ -348,6 +348,38 @@ apply order - the hand-written `data/sql/updates/db_world/2026_09_23_02.sql` thi
 had the same limit - so a removal that has to hold on every realm and every phase means editing the
 phase file itself.
 
+### Spell categories and `spell_proc` removals (Paladin T1)
+
+```python
+from lib.dsl.registry import remove_spell_proc, spell_category
+
+# spellcategory_dbc - id from ids.yaml's `spellcategory` block (1300-1309; stock tops out at
+# 1253). A spell then shares the cooldown with `category=1300, category_cooldown_ms=15000`.
+# generate.py stops with an error for a spell whose Category (typed `category` or a raw
+# `Category` override) is in that block but has no spell_category() - without the server row
+# SpellInfo::GetCategory() is 0 and the category cooldown silently never exists.
+spell_category(1300, comment="paladin auras, 15 s shared cooldown")
+
+# spell_proc removal (negative id = every rank of the chain). Removing the row does not always stop
+# the proc: with no row SpellMgr builds a default one only when the spell has a trigger aura AND
+# non-zero DBC ProcFlags (spell_dbc column `ProcTypeMask`), and an explicit row with ProcFlags 0
+# inherits them too. So -31871 (DBC flags 0) and Redoubt 20128/20131/20132 are fully disabled by the
+# removal alone; a trigger-aura spell with flags needs `ProcTypeMask` zeroed on every rank.
+# generate.py prints a WARNING for each rank still non-zero (conservative: it ignores the
+# trigger-aura condition). Full generate.py run only - not under --check.
+remove_spell_proc(-53695)
+```
+
+**Client row.** `spell_category()` writes both halves: the server `spellcategory_dbc` SQL (a
+`SPELL_TABLES` delta, so diff/prune like `custom_attr`) and a client `SpellCategory.dbc` row merged
+over the stock file into patch-Z on every build (like `tooltip_vars`). The stock file must be at
+`var/extractors/dbc/SpellCategory.dbc` (extract `DBFilesClient/SpellCategory.dbc` from the
+highest-numbered client `patch-enUS*` MPQ holding it, flattened - same as `Item.dbc`); `generate.py`
+errors out if categories are declared and it is missing. The server still sends sibling cooldowns to
+the client only for spells with `custom_attr` 0x10000000 (FORCE_SEND_CATEGORY_COOLDOWNS), so the
+client's sweep relies on `Spell.dbc` `Category`/`CategoryRecoveryTime` plus this row. Still check a
+sibling's sweep in-game, not only `.cooldown` (which reads server state).
+
 ### Declaring a creature (T1)
 
 A `source/classes/*.py` file can also declare a rework's own NPC - `creature_template` +
