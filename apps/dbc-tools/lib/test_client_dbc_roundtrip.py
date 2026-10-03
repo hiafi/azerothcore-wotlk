@@ -98,6 +98,14 @@ class PotencyBonusOverrideLintTest(unittest.TestCase):
         self.assertEqual(len(errors), 1)
         self.assertIn("spell 1 (Overridden)", errors[0])
         self.assertIn("unbind_bonus_coefficients", errors[0])
+    def test_row_pruned_in_the_same_run_is_not_an_error(self):
+        potency = {1: "Pruned", 2: "Stays live"}
+        live = {1: {"direct_bonus": 0.5}, 2: {"direct_bonus": 0.4}}
+        errors = lint.check_potency_bonus_overrides(potency, set(), set(), live, {1})
+        self.assertEqual(len(errors), 1)
+        self.assertIn("spell 2 (Stays live)", errors[0])
+        self.assertEqual(len(lint.check_potency_bonus_overrides(potency, set(), set(), live)), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

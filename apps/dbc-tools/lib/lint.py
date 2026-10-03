@@ -640,7 +640,7 @@ def check_client_patch(
 
 def check_potency_bonus_overrides(
     potency_spells: dict[int, str], generated_bonus_ids: set[int], removed_bonus_ids: set[int],
-    live_bonus_rows: dict[int, dict],
+    live_bonus_rows: dict[int, dict], pruned_bonus_ids: set[int] = frozenset(),
 ) -> list[str]:
     """Errors for potency spells whose coefficient never takes effect (D1, docs/bugs-and-fixes.md
     2026-10-02). A `spell_bonus_data` row always beats the DBC's `EffectBonusMultiplier_N`, and the
@@ -652,9 +652,12 @@ def check_potency_bonus_overrides(
     whose row the DSL declares (the generator's own D1 rows). `removed_bonus_ids`: ids with an
     `unbind_bonus_coefficients()`. `live_bonus_rows`: `spell_bonus_data` with every migration's
     INSERT/UPDATE/DELETE replayed (`trainer_state.load_keyed_table_rows`), so a row a later
-    migration deleted doesn't count."""
+    migration deleted doesn't count. `pruned_bonus_ids`: ids whose live row this same run's prune
+    pass DELETEs (no longer declared), so the row is gone once the output is applied; rows that
+    stay live are still errors."""
     errors = []
-    for spell_id in sorted(set(potency_spells) & set(live_bonus_rows) - generated_bonus_ids - removed_bonus_ids):
+    exempt = generated_bonus_ids | removed_bonus_ids | set(pruned_bonus_ids)
+    for spell_id in sorted(set(potency_spells) & set(live_bonus_rows) - exempt):
         row = live_bonus_rows[spell_id]
         errors.append(
             f"spell {spell_id} ({potency_spells[spell_id]}): a live spell_bonus_data row (direct "
@@ -662,3 +665,90 @@ def check_potency_bonus_overrides(
             f"coefficient - add unbind_bonus_coefficients(...) next to its declaration (D1)"
         )
     return errors
+
+
+def check_undeclared_spell_categories(
+    entries: list[dict], declared_ids: set[int], block: dict | None,
+) -> list[str]:
+    """Errors for a spell whose `Category` is inside `source/ids.yaml`'s `spellcategory` block but
+    has no `spell_category()` declaration. Without the `spellcategory_dbc` row the server's
+    `SpellInfo::GetCategory()` is 0 and the category cooldown silently never exists (Paladin T1).
+
+    The effective Category is what `lib/build.py` writes: a raw `Category` override wins over the
+    typed `category` field. Pass the *full* declared spell population (a spell the resolve pass
+    drops as unchanged still needs its row). Stock categories (outside the block) are never
+    checked. `block` None (no `spellcategory` block configured) checks nothing."""
+    if not block:
+        return []
+    errors = []
+    for entry in entries:
+        raw = entry.get("raw_overrides") or {}
+        category = int(raw.get("Category", entry.get("category", 0)) or 0)
+        if block["start"] <= category <= block["end"] and category not in declared_ids:
+            errors.append(
+                f"spell {entry['id']} ({entry.get('name', '?')}): Category {category} is in the "
+                f"spellcategory reserved block but no spell_category({category}) is declared - the "
+                f"server would ignore its category cooldown (SpellInfo::GetCategory() 0)"
+            )
+    return errors
+
+
+def build_talent_rank_chains(
+    existing_talents: dict, talent_entries: list[dict]
+) -> dict[int, list[int]]:
+    """Spell id -> its talent rank chain (low to high), for `check_removed_proc_flags`. Existing
+    Talent.dbc rows (`SpellRank_1..9`) first; DSL/YAML talent entries (`rank_spell_ids`) override,
+    so post-rework ranks win."""
+    chains: dict[int, list[int]] = {}
+    for row in existing_talents.values():
+        chain = [int(row.get(f"SpellRank_{i}") or 0) for i in range(1, 10)]
+        chain = [r for r in chain if r]
+        for rank_id in chain:
+            chains[rank_id] = chain
+    for entry in talent_entries:
+        chain = [int(r) for r in (entry.get("rank_spell_ids") or [])[:9] if r]
+        for rank_id in chain:
+            chains[rank_id] = chain
+    return chains
+
+
+def check_removed_proc_flags(
+    removal_ids: list[int],
+    spell_rows: dict[int, dict],
+    rank_chains: dict[int, list[int]] | None = None,
+) -> list[str]:
+    """Warnings for a `remove_spell_proc()` whose spell still has non-zero DBC `ProcTypeMask`
+    (the spell_dbc column holding `ProcFlags`). Removing the `spell_proc` row alone does not
+    necessarily stop the proc: `SpellMgr` builds a default row per spell id from the DBC flags
+    (and an explicit row with ProcFlags 0 inherits them) - but only when the spell has a trigger
+    aura AND non-zero flags. This check is conservative: it ignores the trigger-aura condition, so
+    it can warn on a spell the removal alone already disables. Silent once the flags are zeroed.
+
+    `removal_ids`: the declared ids. A negative id means the whole rank chain, so every rank is
+    checked and the warning names the offending rank id. `rank_chains`: spell id -> the talent rank
+    chain containing it (low to high); chains come from Talent.dbc (`SpellMgr::LoadSpellTalentRanks`),
+    not spell_ranks - generate.py builds it from the DSL talent entries (post-rework ranks win),
+    falling back to the existing talent rows' SpellRank_1..9. A negative id absent from it checks
+    only `abs(id)`. `spell_rows`: spell_dbc rows by ID, already overlaid with this run's built
+    rows. An id with no row anywhere is skipped."""
+    rank_chains = rank_chains or {}
+    warnings = []
+    for removal_id in removal_ids:
+        base = abs(int(removal_id))
+        ids = list(rank_chains.get(base) or [base]) if int(removal_id) < 0 else [base]
+        if base not in ids:
+            ids.insert(0, base)
+        for spell_id in ids:
+            row = spell_rows.get(spell_id)
+            if row is None:
+                continue
+            flags = int(row.get("ProcTypeMask", 0) or 0)
+            if flags:
+                warnings.append(
+                    f"remove_spell_proc({removal_id}): spell {spell_id} still has DBC "
+                    f"ProcTypeMask {flags} - SpellMgr will build a default spell_proc row from it "
+                    f"(if the spell has a trigger aura), so the proc is NOT disabled. Zero "
+                    f"ProcTypeMask (raw_overrides={{'ProcTypeMask': 0}}) on this spell "
+                    f"(and every rank) if the intent is no proc."
+                )
+    return warnings

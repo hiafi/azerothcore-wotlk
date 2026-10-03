@@ -1,3 +1,4 @@
+-- DB update 2026_09_05_38 -> 2026_10_03_00
 -- Custom: potency-system - low-level correction + variance roll (docs/potency-system.md).
 -- Loaded by SpellPotency::Load() (src/server/game/Spells/SpellPotency.cpp) via
 -- OnLoadCustomDatabaseTable, applied in SpellEffectInfo::CalcValue (SpellInfo.cpp).

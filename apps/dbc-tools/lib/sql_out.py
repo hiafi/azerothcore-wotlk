@@ -27,7 +27,18 @@ def _sql_literal(value) -> str:
         return repr(value)
     if isinstance(value, int):
         return str(value)
-    escaped = str(value).replace("\\", "\\\\").replace("'", "''")
+    # Line breaks inside a string are written as the `\n` / `\r` escapes (what MySQL decodes them
+    # to anyway), so one SQL row is always one physical line. A literal break inside the string
+    # makes apps/codestyle/codestyle-sql.py read every continuation line as SQL (backtick and
+    # semicolon false positives, trailing whitespace on a tooltip line); see the dbc-tools doc,
+    # "SQL lint: generated output". `sql_dump._read_value` decodes both this and the old form.
+    escaped = (
+        str(value)
+        .replace("\\", "\\\\")
+        .replace("'", "''")
+        .replace("\r", "\\r")
+        .replace("\n", "\\n")
+    )
     return f"'{escaped}'"
 
 

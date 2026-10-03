@@ -79,6 +79,27 @@ def _tooltip_var_rows(dsl_rows: list[dict]) -> dict[int, dict]:
     return {e["id"]: {"ID": e["id"], "Variables": e["Variables"]} for e in dsl_rows}
 
 
+def _spell_category_rows(dsl_rows: list[dict]) -> dict[int, dict]:
+    """Declared spell_category() entries as SpellCategory.dbc rows, keyed by ID. The server half is
+    the SPELL_TABLES `spellcategory_dbc` delta (spell_tables.py); this is the client half, merged over
+    the stock file into the patch on every build like tooltip_vars (Paladin T1, plan defect P1)."""
+    return {int(r["ID"]): {"ID": int(r["ID"]), "Flags": int(r["Flags"])} for r in dsl_rows}
+
+
+def _spell_category_base_error(rows: dict[int, dict], base_dir: Path) -> str | None:
+    """Declared categories need the stock SpellCategory.dbc as the patch's base layer; without it
+    the client would not know the category (sibling spells stay clickable). None when fine."""
+    path = base_dir / dbcfmt.SPELLCATEGORY.dbc_filename
+    if rows and not path.is_file():
+        return (
+            f"spell_category() declared ({', '.join(str(i) for i in sorted(rows))}) but no stock "
+            f"{dbcfmt.SPELLCATEGORY.dbc_filename} at {path} - extract DBFilesClient/"
+            f"{dbcfmt.SPELLCATEGORY.dbc_filename} from the highest-numbered client patch-enUS MPQ that "
+            f"holds it into that directory (see .agents/docs/systems/dbc-tools.md)"
+        )
+    return None
+
+
 def _trainer_spells_to_emit(dsl_rows: list[dict], trainer_index: trainer_state.TrainerIndex) -> list[dict]:
     """Drops any declared trainer_spell row that's already live with
     identical values — same "no-op rerun stays a no-op" property the DBC
@@ -310,7 +331,8 @@ def main() -> int:
         prune_blocks, prune_report = spell_tables.render_prune_blocks(spell_table_index, dsl_classes)
     for line in prune_report:
         print(line)
-    # Declared removals (unbind_script/unlink_spell/leave_spell_group/untrain) - a row this tool
+    # Declared removals (unbind_script/unlink_spell/leave_spell_group/untrain/remove_spell_proc/
+    # unbind_bonus_coefficients) - a row this tool
     # never emitted itself (stock data, or an older hand-written migration), so the prune pass
     # above can't reach it. See lib/spell_tables.py's "Declared removals" section. Reuses
     # spell_table_index's/trainer_index's already-loaded live data for the three REMOVAL_TABLES
@@ -412,6 +434,17 @@ def main() -> int:
     # wrongly concluded all nine PLAN A9 spells were already fixed).
     for warning in lint.check_raw_override_typed_mismatch(spell_entries, existing_secondary_by_id):
         print(f"WARNING: {warning}")
+    # Paladin T1: remove_spell_proc() on a spell whose DBC ProcTypeMask is still non-zero doesn't
+    # disable the proc (SpellMgr builds a default row from it). Stock spells outside source come
+    # from existing_spells (base Spell.dbc + promoted SQL); this run's built rows overlay them.
+    # Talent rank chains (Talent.dbc, not spell_ranks); DSL/YAML ranks override existing rows.
+    rank_chains = lint.build_talent_rank_chains(existing_talents, talents["talents"])
+    for warning in lint.check_removed_proc_flags(
+        [int(r["SpellId"]) for r in dsl_classes["proc_removals"]],
+        {**existing_spells, **{int(r["ID"]): r for r in spell_rows}},
+        rank_chains,
+    ):
+        print(f"WARNING: {warning}")
     # Same full-population scan: RangeIndex 0 on a spell aimed at another unit fails CheckRange
     # silently (Fury of Elune's beam did no damage - docs/bugs-and-fixes.md).
     for warning in lint.check_zero_range_unit_target(spell_entries):
@@ -453,6 +486,12 @@ def main() -> int:
     # D1: a live spell_bonus_data row silently overrides an SP-only potency spell's coefficient
     # (lint.check_potency_bonus_overrides). Same stop-before-SQL treatment as the tooltip errors.
     spell_names = {e["id"]: e["name"] for e in spell_entries}
+    # Rows this run's own prune pass deletes are not live in the output (squashing the earlier
+    # generated files would otherwise trip D1 on every previously-pruned row).
+    pruned_bonus_ids = (
+        set() if "--no-prune" in sys.argv
+        else {int(k[0]) for k in spell_tables.pruned_keys(spell_table_index, dsl_classes, "spell_bonus_data")}
+    )
     bonus_errors = lint.check_potency_bonus_overrides(
         {r["spell_id"]: spell_names.get(r["spell_id"], "?") for r in dsl_classes["potency_corrections"]},
         {int(r["entry"]) for r in dsl_classes["spell_bonus_data"]},
@@ -460,9 +499,20 @@ def main() -> int:
         trainer_state.load_keyed_table_rows(
             "spell_bonus_data", ("entry", "direct_bonus", "dot_bonus", "ap_bonus", "ap_dot_bonus", "comments"),
         ),
+        pruned_bonus_ids,
     )
-    if tooltip_errors or bonus_errors:
-        for error in tooltip_errors + bonus_errors:
+    # Paladin T1: a spell using a custom (spellcategory-block) Category with no spell_category()
+    # declaration silently loses its category cooldown on the server.
+    category_errors = lint.check_undeclared_spell_categories(
+        spell_entries, {int(r["ID"]) for r in dsl_classes["spell_categories"]}, ids_cfg.get("spellcategory"),
+    )
+    category_base_error = _spell_category_base_error(
+        _spell_category_rows(dsl_classes["spell_categories"]), BASE_DBC_DIR,
+    )
+    if category_base_error:
+        category_errors.append(category_base_error)
+    if tooltip_errors or bonus_errors or category_errors:
+        for error in tooltip_errors + bonus_errors + category_errors:
             print(f"ERROR: {error}")
         return 1
     client_spell_resolved = resolve.resolve_rows(
@@ -554,6 +604,7 @@ def main() -> int:
         dbcfmt.SKILLLINEABILITY: {r["ID"]: r for r in client_skilllineability_rows},
         dbcfmt.ITEM: {r["ID"]: r for r in client_item_rows},
         dbcfmt.SPELLDESCRIPTIONVARIABLES: _tooltip_var_rows(dsl_classes["tooltip_vars"]),
+        dbcfmt.SPELLCATEGORY: _spell_category_rows(dsl_classes["spell_categories"]),
     }
     for name, table in SECONDARY_TABLES.items():
         # Same reserved_rows switch as the SQL block above - the client patch must carry every
