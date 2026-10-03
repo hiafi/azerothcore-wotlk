@@ -1705,13 +1705,15 @@ class spell_mage_fire_frost_ward : public spell_mage_incanters_absorbtion_base_A
         return ValidateSpellInfo({ SPELL_MAGE_FROST_WARDING_TRIGGERED, SPELL_MAGE_FROST_WARDING_R1 });
     }
 
-    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    void CalculateAmount(AuraEffect const* aurEff, int32& amount, bool& canBeRecalculated)
     {
         canBeRecalculated = false;
         if (Unit* caster = GetCaster())
         {
-            // +80.68% from sp bonus
-            float bonus = 0.8068f;
+            // Custom: potency-system - was a hard-coded 0.8068. SCHOOL_ABSORB gets no engine
+            // spell-power bonus, so this is the only place the coefficient applies; read the
+            // generated EffectBonusMultiplier (sp_potency in apps/dbc-tools) instead.
+            float bonus = GetSpellInfo()->Effects[aurEff->GetEffIndex()].BonusMultiplier;
 
             bonus *= caster->SpellBaseDamageBonusDone(GetSpellInfo()->GetSchoolMask());
             bonus *= caster->CalculateLevelPenalty(GetSpellInfo());
@@ -1811,12 +1813,15 @@ namespace
     // case and every SpellBonusEntry consumer in Unit.cpp, so a manual bonus here has always been
     // the *only* source of Ice Barrier's spell power scaling, not a second one stacked on top of
     // spell_bonus_data as the last handoff worried - that entry is simply inert for this aura
-    // type). Retuned to the spec's plain 1.0 coefficient and factored out of its two previously
-    // duplicated copies (spell_mage_ice_barrier_aura and spell_mage_ice_barrier both had their own
-    // identical copy) into this one shared helper.
+    // type). Factored out of its two previously duplicated copies (spell_mage_ice_barrier_aura and
+    // spell_mage_ice_barrier both had their own identical copy) into this one shared helper.
+    // Custom: potency-system - the coefficient was a hard-coded 1.0; it now reads the generated
+    // EffectBonusMultiplier (sp_potency in apps/dbc-tools, 1.5 as of 2026-10-03), so the value the
+    // tooltip shows is the one that applies.
     int32 ApplyIceBarrierSpellPowerBonus(Unit* caster, int32 amount, SpellInfo const* spellInfo, AuraEffect const* aurEff)
     {
-        float bonus = 1.0f * caster->SpellBaseDamageBonusDone(spellInfo->GetSchoolMask());
+        float bonus = spellInfo->Effects[aurEff->GetEffIndex()].BonusMultiplier;
+        bonus *= caster->SpellBaseDamageBonusDone(spellInfo->GetSchoolMask());
 
         // Glyph of Ice Barrier: its weird having a SPELLMOD_ALL_EFFECTS here but its blizzards doing :)
         // Glyph of Ice Barrier is only applied at the spell damage bonus because it was already applied to the base value in CalculateSpellDamage

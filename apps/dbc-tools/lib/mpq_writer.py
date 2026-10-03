@@ -87,3 +87,12 @@ def write_mpq(path: Path, files: dict[str, bytes]) -> None:
             cwd=tmp_path,
             check=True,
         )
+
+
+def list_mpq(path: Path) -> set[str]:
+    """File names (basename only, e.g. "Talent.dbc") inside an existing MPQ, via `smpq -l`. Used
+    to compare a new client patch with the previous build (lint.check_client_patch)."""
+    result = subprocess.run([_find_smpq(), "-l", str(Path(path).resolve())],
+                            capture_output=True, text=True, check=True)
+    return {line.split()[-1].replace("\\", "/").rsplit("/", 1)[-1]
+            for line in result.stdout.splitlines() if line.strip()}

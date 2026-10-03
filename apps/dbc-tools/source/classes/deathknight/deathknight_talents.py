@@ -14,7 +14,7 @@ blood_398_tab = tab(
     name='Blood',
     class_mask=32,
     spell_icon_id=2636,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 4294707199, 'BackgroundFile': 231},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': -260097, 'BackgroundFile': 'DeathKnightBlood'},
 )
 
 
@@ -24,7 +24,7 @@ frost_399_tab = tab(
     class_mask=32,
     order_index=1,
     spell_icon_id=2632,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 543},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'DeathKnightFrost'},
 )
 
 
@@ -34,7 +34,7 @@ unholy_400_tab = tab(
     class_mask=32,
     order_index=2,
     spell_icon_id=2633,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 766},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'DeathKnightUnholy'},
 )
 
 

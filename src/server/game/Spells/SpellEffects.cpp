@@ -52,6 +52,7 @@
 #include "SpellAuraEffects.h"
 #include "SpellAuras.h"
 #include "SpellMgr.h"
+#include "SpellPotency.h" // Custom: potency-system
 #include "TemporarySummon.h"
 #include "Totem.h"
 #include "Transport.h"
@@ -368,14 +369,34 @@ void Spell::EffectSchoolDMG(SpellEffIndex effIndex)
                         damage += int32(unitCaster->ApplyEffectModifiers(m_spellInfo, effIndex, float(block_value)));
                     }
                     // Victory Rush
+                    //
+                    // Custom: potency-system - docs/potency-system.md's "Implementation catches"
+                    // (F11, PLAN P7 warrior pass). Victory Rush's damage was hard-coded as
+                    // GetEffectValue()% of attack power; once it has a potency row, `damage`
+                    // (from this effect's own CalcValue) already IS the full ap_potency-derived
+                    // total (base + ap_coefficient * AP), so this ApplyPct would double-count
+                    // attack power on top of that.
                     else if (m_spellInfo->SpellFamilyFlags[1] & 0x100)
-                        ApplyPct(damage, unitCaster->GetTotalAttackPowerValue(BASE_ATTACK));
+                    {
+                        if (!SpellPotency::HasRow(m_spellInfo->Id, effIndex))
+                            ApplyPct(damage, unitCaster->GetTotalAttackPowerValue(BASE_ATTACK));
+                    }
                     // Shockwave
+                    //
+                    // Custom: potency-system - same F11 catch. Shockwave's own SCHOOL_DAMAGE
+                    // effect (effIndex here) has no real base_points of its own (-1, a
+                    // placeholder); the real percent lived on the DUMMY effect (index 2) and was
+                    // applied as CalculatePct(AP, pct) on top. Once the SCHOOL_DAMAGE effect has a
+                    // potency row, `damage` already IS the full ap_potency-derived total, so the
+                    // DUMMY-effect percent lookup is skipped entirely to avoid double-counting.
                     else if (m_spellInfo->Id == 46968)
                     {
-                        int32 pct = unitCaster->CalculateSpellDamage(unitTarget, m_spellInfo, 2);
-                        if (pct > 0)
-                            damage += int32(CalculatePct(unitCaster->GetTotalAttackPowerValue(BASE_ATTACK), pct));
+                        if (!SpellPotency::HasRow(m_spellInfo->Id, effIndex))
+                        {
+                            int32 pct = unitCaster->CalculateSpellDamage(unitTarget, m_spellInfo, 2);
+                            if (pct > 0)
+                                damage += int32(CalculatePct(unitCaster->GetTotalAttackPowerValue(BASE_ATTACK), pct));
+                        }
                         break;
                     }
                     break;
@@ -491,12 +512,29 @@ void Spell::EffectSchoolDMG(SpellEffIndex effIndex)
                     // Ferocious Bite
                     if (unitCaster->IsPlayer() && (m_spellInfo->SpellFamilyFlags[0] & 0x000800000) && m_spellInfo->SpellVisual[0] == 6587)
                     {
+                        // Custom: potency-system - gated per-effect (docs/potency-system.md's
+                        // "Implementation catches"). PLAN P6 step 5 (Feral pass): Ferocious Bite's
+                        // flat hit is now a potency effect (base_potency, no ap_potency - the flat
+                        // CalcValue average never scaled with AP even in stock), and its per-combo
+                        // AP term (ap*combo*0.07) is now generated via cp_ap_potency
+                        // (spell_potency_correction's cp_ap, applied in SpellPotency::Apply), so
+                        // the hard-coded `ap*0.07` below is dropped once converted to avoid double
+                        // counting. The energy-conversion AP bonus (ap/410 per bonus energy point)
+                        // is dropped entirely rather than replaced - a deliberate P6 step 5 choice
+                        // (docs/potency-system.md's Ferocious Bite writeup): the bonus energy spent
+                        // is player-variable (0-29), so there's no single "current total" to
+                        // reproduce the way there was for the flat/per-combo parts. The
+                        // energy-spend-to-damage conversion itself (ModifyPower, DamageMultiplier)
+                        // is a resource mechanic, not attack-power math, and runs unconditionally
+                        // either way.
+                        bool const potencyConverted = SpellPotency::HasRow(m_spellInfo->Id, effIndex);
                         // converts each extra point of energy into ($f1+$AP/410) additional damage
                         float ap = unitCaster->GetTotalAttackPowerValue(BASE_ATTACK);
-                        float multiple = ap / 410 + m_spellInfo->Effects[effIndex].DamageMultiplier;
+                        float multiple = m_spellInfo->Effects[effIndex].DamageMultiplier + (potencyConverted ? 0.0f : ap / 410);
                         int32 energy = -(unitCaster->ModifyPower(POWER_ENERGY, -30));
                         damage += int32(energy * multiple);
-                        damage += int32(CalculatePct(unitCaster->GetComboPoints() * ap, 7));
+                        if (!potencyConverted)
+                            damage += int32(CalculatePct(unitCaster->GetComboPoints() * ap, 7));
                     }
                     // Wrath
                     else if (m_spellInfo->SpellFamilyFlags[0] & 0x00000001)
@@ -505,6 +543,22 @@ void Spell::EffectSchoolDMG(SpellEffIndex effIndex)
                         if (AuraEffect const* aurEff = unitCaster->GetDummyAuraEffect(SPELLFAMILY_DRUID, 1771, 0))
                             if (unitTarget->GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_DRUID, 0x00200000, 0, 0))
                                 AddPct(damage, aurEff->GetAmount());
+                    }
+                    // Shred, Maul - Rend and Tear
+                    //
+                    // Custom: potency-system - PLAN P6 step 5 follow-up (2026-10-01, "the open
+                    // design question", revised): Shred and Maul moved off the weapon-damage
+                    // effect types entirely (ordinary ap_potency SCHOOL_DAMAGE effects instead,
+                    // since Cat/Bear form damage was already a pure function of level and attack
+                    // power, not real weapon itemization - see docs/potency-system.md). The
+                    // original "Shred, Maul - Rend and Tear" bonus (bonus damage vs bleeding
+                    // targets) lived only in Spell::EffectWeaponDmg, keyed by the same
+                    // SpellFamilyFlags check below, and would otherwise have silently stopped
+                    // applying to them - ported here so the talent still works.
+                    else if (m_spellInfo->SpellFamilyFlags[0] & 0x00008800 && unitTarget->HasAuraState(AURA_STATE_BLEEDING))
+                    {
+                        if (AuraEffect const* rendAndTear = unitCaster->GetDummyAuraEffect(SPELLFAMILY_DRUID, 2859, 0))
+                            AddPct(damage, rendAndTear->GetAmount());
                     }
                     break;
                 }
@@ -551,8 +605,24 @@ void Spell::EffectSchoolDMG(SpellEffIndex effIndex)
                                         for (uint32 i = 0; i < doses; ++i)
                                             unitTarget->RemoveAuraFromStack(spellId, unitCaster->GetGUID());
 
-                                    damage *= doses;
-                                    damage += int32(player->GetTotalAttackPowerValue(BASE_ATTACK) * 0.09f * combo);
+                                    // Custom: potency-system - docs/potency-system.md's
+                                    // "Implementation catches". Once Envenom has a potency row,
+                                    // SpellPotency::Apply() has already folded the *entire*
+                                    // per-dose/per-combo-point damage (both the level-scaled base
+                                    // and the attack-power term) into `damage` via its cp_base/
+                                    // cp_ap combo-point embed, computed inside CalcValue before
+                                    // this family-specific code runs. Both of the two lines below
+                                    // have to be gated together, not just the AP add: Envenom has
+                                    // no flat (non-combo) component at all, so leaving `damage *=
+                                    // doses` active on top of the already-combo-scaled potency
+                                    // value would double the combo scaling (doses ~= combo in the
+                                    // normal case), not just double-count the AP term the way a
+                                    // lone AP-line gate does for Eviscerate/Rupture.
+                                    if (!SpellPotency::HasRow(m_spellInfo->Id, effIndex))
+                                    {
+                                        damage *= doses;
+                                        damage += int32(player->GetTotalAttackPowerValue(BASE_ATTACK) * 0.09f * combo);
+                                    }
                                 }
 
                                 // Eviscerate and Envenom Bonus Damage (item set effect)
@@ -568,8 +638,17 @@ void Spell::EffectSchoolDMG(SpellEffIndex effIndex)
                         {
                             if (uint32 combo = unitCaster->ToPlayer()->GetComboPoints())
                             {
-                                float ap = unitCaster->GetTotalAttackPowerValue(BASE_ATTACK);
-                                damage += int32(ap * combo * 0.07f);
+                                // Custom: potency-system - docs/potency-system.md's "Implementation
+                                // catches": once Eviscerate has a potency row, the generated cp_ap
+                                // coefficient (spell_potency_correction, applied in
+                                // SpellPotency::Apply) is the only per-combo-point attack-power
+                                // term, so this one (ap * combo * 0.07) drops to avoid double
+                                // counting.
+                                if (!SpellPotency::HasRow(m_spellInfo->Id, effIndex))
+                                {
+                                    float ap = unitCaster->GetTotalAttackPowerValue(BASE_ATTACK);
+                                    damage += int32(ap * combo * 0.07f);
+                                }
 
                                 // Eviscerate and Envenom Bonus Damage (item set effect)
                                 if (unitCaster->HasAura(37169))
@@ -3773,7 +3852,16 @@ void Spell::EffectWeaponDmg(SpellEffIndex effIndex)
                 // Rune Strike
                 if (m_spellInfo->SpellFamilyFlags[1] & 0x20000000)
                 {
-                    spell_bonus += int32(0.15f * unitCaster->GetTotalAttackPowerValue(BASE_ATTACK));
+                    // Custom: potency-system - PLAN F11 hard-coded-AP audit (P7 Death Knight
+                    // pass). Rune Strike's weapon-percent effect (EFFECT_1) is now a
+                    // weapon_potency effect (docs/potency-system.md's "Weapon attacks": explicit
+                    // attack-power bonuses on weapon strikes are removed, not folded into
+                    // weapon_potency - "a designer who wants more scaling raises the weapon
+                    // percent instead"), so this hard-coded 0.15*AP bonus is dropped once
+                    // converted, not replaced - same treatment as Eviscerate/Ferocious Bite's own
+                    // dropped AP terms in P6.
+                    if (!SpellPotency::HasRow(m_spellInfo->Id, effIndex))
+                        spell_bonus += int32(0.15f * unitCaster->GetTotalAttackPowerValue(BASE_ATTACK));
                 }
 
                 break;

@@ -1008,8 +1008,17 @@ class spell_pri_penance : public SpellScript
 // -17 - Power Word: Shield
 static int32 CalculateSpellAmount(Unit* caster, int32 amount, SpellInfo const* spellInfo, AuraEffect const* aurEff)
 {
-    // +80.68% from sp bonus
-    float bonus = 0.8068f;
+    // Custom: potency-system (P5-Priest) - this used to be a hardcoded "+80.68% from sp bonus"
+    // literal, duplicating the spell's own potency-derived EffectBonusMultiplier_N by hand (exactly
+    // the kind of drift the potency system exists to prevent - see docs/bugs-and-fixes.md's
+    // spell_bonus_data staleness entry). Read the live, generated coefficient instead, so a future
+    // change to this spell's sp_potency= in the DSL can't silently desync from this C++ literal.
+    // SCHOOL_ABSORB auras get no automatic spell-power bonus from the engine (confirmed:
+    // SpellAuraEffects.cpp's AuraEffect::CalculateAmount switch has no case for SPELL_AURA_SCHOOL_ABSORB
+    // the way it does for SPELL_AURA_PERIODIC_HEAL/_DAMAGE), so this hand-rolled multiplication by
+    // SpellBaseHealingBonusDone is still the only place the coefficient is ever applied - it can't be
+    // deleted outright without zeroing Power Word: Shield's spell power scaling entirely.
+    float bonus = spellInfo->Effects[aurEff->GetEffIndex()].BonusMultiplier;
 
     // Borrowed Time
     if (AuraEffect const* borrowedTime = caster->GetDummyAuraEffect(SPELLFAMILY_PRIEST, PRIEST_ICON_ID_BORROWED_TIME, EFFECT_1))

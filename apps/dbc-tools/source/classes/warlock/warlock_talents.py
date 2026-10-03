@@ -16,7 +16,7 @@ destruction_301_tab = tab(
     order_index=2,
     spell_icon_id=547,
     skill_line=593,  # warlock-rework AFFLICTION §3 item 4 (PLAN §2) - all three tabs set here
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 690},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'WarlockDestruction'},
 )
 
 
@@ -26,7 +26,7 @@ affliction_302_tab = tab(
     class_mask=256,
     spell_icon_id=88,
     skill_line=355,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 161},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'WarlockCurses'},
 )
 
 
@@ -37,7 +37,7 @@ demonology_303_tab = tab(
     order_index=1,
     spell_icon_id=90,
     skill_line=354,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 459},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'WarlockSummoning'},
 )
 
 

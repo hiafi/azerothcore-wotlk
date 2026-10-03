@@ -97,13 +97,27 @@ docker logs ac-worldserver --since 5m 2>&1 | grep -iE "did not match dbc effect 
 
 A new spell/talent's **name, icon, tooltip, or talent-tree position** needs the client-side DBC
 patch too, not just the SQL (see `apps/dbc-tools/README.md`'s "Why this works the way it does") —
-pure server-side tuning (damage, proc chance, a C++ hook's behavior) does not. If this deploy
-included client-visible changes and a `patch-service` instance is running for this environment
-(`docker ps --filter name=patch-` — gitignored, per-operator, not always present), trigger an
-immediate manifest refresh rather than waiting for its timer:
+pure server-side tuning (damage, proc chance, a C++ hook's behavior) does not. **A tooltip's
+displayed *numbers* count as client-visible too**, not just its name/icon/position — any
+`EffectBasePoints`/`EffectRealPointsPerLevel`/`EffectBonusMultiplier`/description-text change
+(e.g. a potency conversion) needs this step. If this deploy included client-visible changes and a
+`patch-service` instance is running for this environment (`docker ps --filter name=patch-` —
+gitignored, per-operator, not always present), trigger an immediate manifest refresh rather than
+waiting for its timer:
 
 ```bash
-python3 apps/patch-service/manifest_gen.py
+docker exec patch-manifest-gen python3 /manifest_gen.py
+```
+
+**Must run inside that container, not on the host** — `manifest_gen.py` defaults `PATCH_ROOT` to
+the current directory, so a host-side run from the repo silently walks the whole checkout instead
+of the real patch directory and writes a bogus `manifest.txt` into the repo root; the real
+`patch-root/manifest.txt` is root-owned by the container besides. See `docs/bugs-and-fixes.md`'s
+entry on this (found 2026-10-01) before trying the host-side command again. Confirm it worked:
+
+```bash
+sha256sum patch-root/Data/patch-Z.mpq   # compare against the patch-Z.mpq line in:
+grep patch-Z patch-root/manifest.txt
 ```
 
 Skip this step entirely if no `patch-` containers are running, or the change was server-only.

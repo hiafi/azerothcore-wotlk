@@ -69,7 +69,7 @@ feral_combat_281_tab = tab(
     order_index=1,
     spell_icon_id=107,
     skill_line=134,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 431},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'DruidFeralCombat'},
 )
 
 
@@ -80,7 +80,7 @@ restoration_282_tab = tab(
     order_index=2,
     spell_icon_id=962,
     skill_line=573,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 661},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'DruidRestoration'},
 )
 
 
@@ -90,7 +90,7 @@ balance_283_tab = tab(
     class_mask=1024,
     spell_icon_id=225,
     skill_line=574,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 137},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'DruidBalance'},
 )
 
 

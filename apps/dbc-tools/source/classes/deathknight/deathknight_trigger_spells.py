@@ -5,7 +5,7 @@ Split from a single source/classes/deathknight.py via split_class_file.py (.agen
 """
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, School
-from lib.dsl.registry import spell
+from lib.dsl.registry import spell, unbind_bonus_coefficients
 
 
 plague_strike_45462 = spell(
@@ -22,12 +22,21 @@ plague_strike_45462 = spell(
     range_yards=5.0,
     effects=[
         Effect(type=121, base_points=124, points_per_level=10.12, implicit_target_a=6),
-        Effect(type=31, base_points=49, implicit_target_a=6),
+        Effect(type=31, weapon_potency=49, implicit_target_a=6),
         Effect(type=EffectType.TRIGGER_SPELL, die_sides=0, implicit_target_a=6, trigger_spell=55078),
     ],
     spell_icon_id=2719,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 55); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 1, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A vicious strike that deals $<weapon>% weapon damage plus $<bonus> and infects the target with Blood Plague, a disease dealing Shadow damage over time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 221, 'SpellClassMask_1': 1, 'SpellClassSet': 15, 'SpellDescriptionVariableID': 81, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 11624, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
+        'from rank 1 (learn level 55); RealPointsPerLevel from rank1->covers-60-overridden '
+        '(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/'
+        'mana_cost_pct from max rank. potency-system (PLAN P7 Death Knight pass, 2026-10-01): '
+        'eff2 (WEAPON_PERCENT_DAMAGE) converted to weapon_potency=49 (same off-by-one fix as '
+        'Mangle/Swipe/Shred - base_points=49 was dealing 50% live). The flat eff1 '
+        '(NORMALIZED_WEAPON_DMG) is left hand-set, same reasoning as the Feral pass\'s Mangle/'
+        'Swipe/Shred: far larger than weapon_potency\'s WEAPON_FLAT_BONUS_MAX=10 budget.'
+    ),
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A vicious strike that deals $<weapon>% weapon damage plus $<bonus> and infects the target with Blood Plague, a disease dealing Shadow damage over time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 221, 'SpellClassMask_1': 1, 'SpellClassSet': 15, 'SpellDescriptionVariableID': 81, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 11624, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -45,12 +54,21 @@ icy_touch_45477 = spell(
     mana_cost_pct=0,
     range_yards=20.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=126, points_per_level=4.0, die_sides=11, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=136.1, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.TRIGGER_SPELL, points_per_level=4.36, die_sides=0, implicit_target_a=6, trigger_spell=55095),
     ],
     spell_icon_id=2721,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 55); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx5': 32, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Melee and ranged attack speed reduced by $55095s2%.', 'BaseLevel': 2, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Chills the target for $m1 to $M1 Frost damage and  infects them with Frost Fever, a disease that deals periodic damage and reduces melee and ranged attack speed by $55095s2% for $55095d.  Very high threat when in Frost Presence.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 14684919, 'EffectSpellClassMaskB_1': 12589815, 'EffectSpellClassMaskC_1': 4194437, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'ImplicitTargetA_3': 6, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RuneCostID': 241, 'SpellClassMask_1': 2, 'SpellClassSet': 15, 'SpellLevel': 2, 'SpellPriority': 50, 'SpellVisualID_1': 11152, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
+        'from rank 1 (learn level 55); RealPointsPerLevel from rank1->covers-60-overridden '
+        '(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/'
+        'mana_cost_pct from max rank. potency-system (PLAN P7 Death Knight pass, 2026-10-01): '
+        'eff1 (SCHOOL_DAMAGE) converted to ap_potency=136.1 (deathknight-potency-report.md / '
+        'deathknight-potency-proposals.txt - mismatch row, old AP-coefficient-implied potency '
+        'was 23.3, the base-damage-implied 136.1 wins per the user-reviewed proposal). DieSides '
+        '11 replaced by the system-standard +-5% roll.'
+    ),
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx5': 32, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Melee and ranged attack speed reduced by $55095s2%.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Chills the target for $m1 to $M1 Frost damage and  infects them with Frost Fever, a disease that deals periodic damage and reduces melee and ranged attack speed by $55095s2% for $55095d.  Very high threat when in Frost Presence.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 14684919, 'EffectSpellClassMaskB_1': 12589815, 'EffectSpellClassMaskC_1': 4194437, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'ImplicitTargetA_3': 6, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RuneCostID': 241, 'SpellClassMask_1': 2, 'SpellClassSet': 15, 'SpellLevel': 2, 'SpellPriority': 50, 'SpellVisualID_1': 11152, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -93,11 +111,20 @@ blood_strike_45902 = spell(
     range_yards=5.0,
     effects=[
         Effect(type=121, base_points=259, points_per_level=20.16, implicit_target_a=6),
-        Effect(type=31, base_points=39, implicit_target_a=6),
+        Effect(type=31, weapon_potency=39, implicit_target_a=6),
     ],
     spell_icon_id=2624,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 55); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly strike the enemy, causing $s2% weapon damage plus $<bonus>, total damage increased by ${$m3/2}.1% for each of your diseases on the target.', 'EffectBasePoints_3': 24, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 301, 'SpellClassMask_1': 4194304, 'SpellClassSet': 15, 'SpellDescriptionVariableID': 102, 'SpellLevel': 1, 'SpellVisualID_1': 11148, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
+        'from rank 1 (learn level 55); RealPointsPerLevel from rank1->covers-60-overridden '
+        '(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/'
+        'mana_cost_pct from max rank. potency-system (PLAN P7 Death Knight pass, 2026-10-01): '
+        'eff2 (WEAPON_PERCENT_DAMAGE) converted to weapon_potency=39 (same off-by-one fix as '
+        'Mangle/Swipe/Shred - base_points=39 was dealing 40% live). The flat eff1 '
+        '(NORMALIZED_WEAPON_DMG) is left hand-set, same reasoning as the Feral pass\'s Mangle/'
+        'Swipe/Shred: far larger than weapon_potency\'s WEAPON_FLAT_BONUS_MAX=10 budget.'
+    ),
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly strike the enemy, causing $s2% weapon damage plus $<bonus>, total damage increased by ${$m3/2}.1% for each of your diseases on the target.', 'EffectBasePoints_3': 24, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 301, 'SpellClassMask_1': 4194304, 'SpellClassSet': 15, 'SpellDescriptionVariableID': 102, 'SpellLevel': 1, 'SpellVisualID_1': 11148, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -114,11 +141,20 @@ blood_boil_48721 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=88, points_per_level=4.136363636363637, die_sides=19, implicit_target_a=18, implicit_target_b=16, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=92.0, potency_kind='direct', implicit_target_a=18, implicit_target_b=16, radius_yards=10.0),
     ],
     spell_icon_id=2725,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 58); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 24, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Boils the blood of all enemies within $a1 yards, dealing $s1 Shadow damage.  Deals additional damage to targets infected with Blood Plague or Frost Fever.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 22, 'ImplicitTargetA_3': 22, 'ImplicitTargetB_2': 15, 'ImplicitTargetB_3': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 523, 'SpellClassMask_1': 262144, 'SpellClassSet': 15, 'SpellLevel': 24, 'SpellVisualID_1': 11117, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
+        'from rank 1 (learn level 58); RealPointsPerLevel from rank1->covers-60-overridden '
+        '(undershoot-vs-top-rank) (anchor rank 4 @ level 80); coefficient/cast_time_ms/'
+        'mana_cost_pct from max rank. potency-system (PLAN P7 Death Knight pass, 2026-10-01): '
+        'eff1 (SCHOOL_DAMAGE) converted to ap_potency=92.0 (deathknight-potency-report.md / '
+        'deathknight-potency-proposals.txt - mismatch row, old AP-coefficient-implied potency '
+        'was 14.0, the base-damage-implied 92.0 wins per the user-reviewed proposal). DieSides '
+        '19 replaced by the system-standard +-5% roll.'
+    ),
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Boils the blood of all enemies within $a1 yards, dealing $s1 Shadow damage.  Deals additional damage to targets infected with Blood Plague or Frost Fever.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 22, 'ImplicitTargetA_3': 22, 'ImplicitTargetB_2': 15, 'ImplicitTargetB_3': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 523, 'SpellClassMask_1': 262144, 'SpellClassSet': 15, 'SpellLevel': 24, 'SpellVisualID_1': 11117, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -136,12 +172,21 @@ obliterate_49020 = spell(
     range_yards=5.0,
     effects=[
         Effect(type=121, base_points=247, points_per_level=17.68421052631579, implicit_target_a=6),
-        Effect(type=31, base_points=79, implicit_target_a=6),
+        Effect(type=31, weapon_potency=79, implicit_target_a=6),
         Effect(type=EffectType.DUMMY, base_points=24, implicit_target_a=6),
     ],
     spell_icon_id=2639,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 61); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 36, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A brutal instant attack that deals $s2% weapon damage plus ${$m1*$m2/100}, total damage increased ${$m3/2}.1% per each of your diseases on the target, but consumes the diseases.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 587, 'SpellClassMask_2': 131072, 'SpellClassSet': 15, 'SpellLevel': 36, 'SpellVisualID_1': 11613, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
+        'from rank 1 (learn level 61); RealPointsPerLevel from rank1->top-rank-fallback (anchor '
+        'rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank. '
+        'potency-system (PLAN P7 Death Knight pass, 2026-10-01): eff2 (WEAPON_PERCENT_DAMAGE) '
+        'converted to weapon_potency=79 (same off-by-one fix as Mangle/Swipe/Shred - '
+        'base_points=79 was dealing 80% live). The flat eff1 (NORMALIZED_WEAPON_DMG) and the '
+        'disease-bonus eff3 (DUMMY) are left hand-set, same reasoning as the Feral pass\'s '
+        'Mangle/Swipe/Shred: far larger than weapon_potency\'s WEAPON_FLAT_BONUS_MAX=10 budget.'
+    ),
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A brutal instant attack that deals $s2% weapon damage plus ${$m1*$m2/100}, total damage increased ${$m3/2}.1% per each of your diseases on the target, but consumes the diseases.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 587, 'SpellClassMask_2': 131072, 'SpellClassSet': 15, 'SpellLevel': 36, 'SpellVisualID_1': 11613, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -202,12 +247,23 @@ death_strike_49998 = spell(
     range_yards=5.0,
     effects=[
         Effect(type=121, base_points=111, points_per_level=7.708333333333333, implicit_target_a=6),
-        Effect(type=31, base_points=74, implicit_target_a=6),
+        Effect(type=31, weapon_potency=74, implicit_target_a=6),
         Effect(type=EffectType.DUMMY, base_points=405, points_per_level=37.666666666666664, implicit_target_a=6),
     ],
     spell_icon_id=2751,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 56); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712172, 'BaseLevel': 10, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A deadly attack that deals $s2% weapon damage plus ${$m1*$m2/100} and heals the Death Knight for $F% of $Ghis:her; maximum health for each of $Ghis:her; diseases on the target.', 'EffectChainAmplitude_1': 5.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RangeIndex': 2, 'RuneCostID': 797, 'SpellClassMask_1': 16, 'SpellClassSet': 15, 'SpellLevel': 10, 'SpellPriority': 50, 'SpellVisualID_1': 11831, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
+        'from rank 1 (learn level 56); RealPointsPerLevel from rank1->covers-60-overridden '
+        '(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/'
+        'mana_cost_pct from max rank. potency-system (PLAN P7 Death Knight pass, 2026-10-01): '
+        'eff2 (WEAPON_PERCENT_DAMAGE) converted to weapon_potency=74 (same off-by-one fix as '
+        'Mangle/Swipe/Shred - base_points=74 was dealing 75% live). The flat eff1 '
+        '(NORMALIZED_WEAPON_DMG) and the max-health-heal eff3 (DUMMY, read by '
+        'spell_dk_death_strike::HandleDummy via a DamageMultiplier field, not this base_points '
+        'at all) are left hand-set - the heal is a percent-of-max-health effect, out of scope '
+        'by design (docs/potency-system.md).'
+    ),
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A deadly attack that deals $s2% weapon damage plus ${$m1*$m2/100} and heals the Death Knight for $F% of $Ghis:her; maximum health for each of $Ghis:her; diseases on the target.', 'EffectChainAmplitude_1': 5.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RangeIndex': 2, 'RuneCostID': 797, 'SpellClassMask_1': 16, 'SpellClassSet': 15, 'SpellLevel': 10, 'SpellPriority': 50, 'SpellVisualID_1': 11831, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -380,11 +436,19 @@ will_of_the_necropolis_52284 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, points_per_level=0.16666666666666666, implicit_target_a=1, apply_aura=69, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=1.4, potency_kind='absorb', implicit_target_a=1, apply_aura=69, misc_value=127),
     ],
     spell_icon_id=857,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'TEST', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'EffectBasePoints_2': -1, 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 921, 'SpellClassSet': 15},
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
+        'from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ '
+        'level 60); coefficient/cast_time_ms/mana_cost_pct from max rank. potency-system (PLAN '
+        'P7 Death Knight pass, 2026-10-01): converted eff1 (SCHOOL_ABSORB) to sp_potency=1.4 '
+        '(deathknight-potency-report.md\'s base-damage-implied default; old '
+        'EffectBonusMultiplier was 0, no mismatch). Added explicit SpellLevel=0 to '
+        'raw_overrides, required by the potency generator (previously implicit/absent).'
+    ),
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'TEST', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'EffectBasePoints_2': -1, 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 921, 'SpellClassSet': 15, 'SpellLevel': 0},
 )
 
 
@@ -404,11 +468,20 @@ plague_strike_59133 = spell(
     duration_ms=12000,
     effects=[
         Effect(type=121, base_points=36, points_per_level=6.08, implicit_target_a=6),
-        Effect(type=EffectType.APPLY_AURA, base_points=72, points_per_level=-0.92, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=12.9, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000, misc_value=127),
     ],
     spell_icon_id=2719,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 55); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AttributesEx6': 4096, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Deals $o2 Shadow damage over $d.', 'BaseLevel': 55, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A vicious strike that deals weapon damage plus $s1 modified by attack power and plagues the target, dealing $o2 Shadow damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RangeIndex': 2, 'RuneCostID': 1426, 'SpellClassMask_1': 1, 'SpellClassMask_2': 2048, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50, 'SpellVisualID_1': 11624, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
+        'from rank 1 (learn level 55); RealPointsPerLevel from rank1->covers-60-overridden '
+        '(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/'
+        'mana_cost_pct from max rank. potency-system (PLAN P7 Death Knight pass, 2026-10-01): '
+        'eff2 (APPLY_AURA/PERIODIC_DAMAGE, amplitude=3000) converted to sp_potency=12.9, '
+        'potency_kind=\'periodic\' (deathknight-potency-report.md\'s base-damage-implied '
+        'default, no mismatch). eff1 (NORMALIZED_WEAPON_DMG) is left hand-set - no sibling '
+        'WEAPON_PERCENT_DAMAGE effect exists on this spell to apply weapon_potency to.'
+    ),
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AttributesEx6': 4096, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Deals $o2 Shadow damage over $d.', 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A vicious strike that deals weapon damage plus $s1 modified by attack power and plagues the target, dealing $o2 Shadow damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RangeIndex': 2, 'RuneCostID': 1426, 'SpellClassMask_1': 1, 'SpellClassMask_2': 2048, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50, 'SpellVisualID_1': 11624, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -469,12 +542,22 @@ death_strike_66188 = spell(
     range_yards=100.0,
     effects=[
         Effect(type=121, base_points=55, points_per_level=1.5333333333333334, implicit_target_a=6),
-        Effect(type=31, base_points=74, implicit_target_a=6),
+        Effect(type=31, weapon_potency=74, implicit_target_a=6),
         Effect(type=EffectType.DUMMY, base_points=1309, implicit_target_a=6),
     ],
     spell_icon_id=2751,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 5 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 134217728, 'AttributesEx3': 17039360, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A deadly attack that deals $s2% offhand weapon damage plus a bonus and heals the Death Knight for $F% of $Ghis:her; maximum health for each of $Ghis:her; diseases on the target.', 'EffectChainAmplitude_1': 5.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RuneCostID': 782, 'SpellClassMask_1': 16, 'SpellClassSet': 15, 'SpellPriority': 50, 'SpellVisualID_1': 11831, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
+        'from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 5 @ '
+        'level 60); coefficient/cast_time_ms/mana_cost_pct from max rank. potency-system (PLAN '
+        'P7 Death Knight pass, 2026-10-01): Threat of Thassarian off-hand copy of Death Strike '
+        '(49998). eff2 (WEAPON_PERCENT_DAMAGE) converted to weapon_potency=74 (same off-by-one '
+        'fix as Mangle/Swipe/Shred - base_points=74 was dealing 75% live). The flat eff1 and '
+        'the max-health-heal eff3 (DUMMY) are left hand-set, same reasoning as 49998. Added '
+        'explicit SpellLevel=0 to raw_overrides, required by the potency generator '
+        '(previously implicit/absent).'
+    ),
+    raw_overrides={'AttributesEx': 134217728, 'AttributesEx3': 17039360, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A deadly attack that deals $s2% offhand weapon damage plus a bonus and heals the Death Knight for $F% of $Ghis:her; maximum health for each of $Ghis:her; diseases on the target.', 'EffectChainAmplitude_1': 5.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RuneCostID': 782, 'SpellClassMask_1': 16, 'SpellClassSet': 15, 'SpellLevel': 0, 'SpellPriority': 50, 'SpellVisualID_1': 11831, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -492,11 +575,20 @@ frost_strike_66196 = spell(
     range_yards=100.0,
     effects=[
         Effect(type=121, base_points=42, points_per_level=1.3666666666666667, implicit_target_a=6),
-        Effect(type=31, base_points=54, implicit_target_a=6),
+        Effect(type=31, weapon_potency=54, implicit_target_a=6),
     ],
     spell_icon_id=2740,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 6 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 134217728, 'AttributesEx3': 17039360, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly strike the enemy, causing $s2% offhand weapon damage plus a bonus as Frost damage.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskC_2': 4, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'ImplicitTargetA_3': 6, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RuneCostID': 1824, 'SpellClassMask_2': 4, 'SpellClassSet': 15, 'SpellVisualID_1': 11612, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
+        'from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 6 @ '
+        'level 60); coefficient/cast_time_ms/mana_cost_pct from max rank. potency-system (PLAN '
+        'P7 Death Knight pass, 2026-10-01): Threat of Thassarian off-hand copy of Frost Strike '
+        '(49143). eff2 (WEAPON_PERCENT_DAMAGE) converted to weapon_potency=54 (same off-by-one '
+        'fix as Mangle/Swipe/Shred - base_points=54 was dealing 55% live). The flat eff1 is '
+        'left hand-set, same reasoning as 49143. Added explicit SpellLevel=0 to raw_overrides, '
+        'required by the potency generator (previously implicit/absent).'
+    ),
+    raw_overrides={'AttributesEx': 134217728, 'AttributesEx3': 17039360, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly strike the enemy, causing $s2% offhand weapon damage plus a bonus as Frost damage.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskC_2': 4, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'ImplicitTargetA_3': 6, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RuneCostID': 1824, 'SpellClassMask_2': 4, 'SpellClassSet': 15, 'SpellLevel': 0, 'SpellVisualID_1': 11612, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -514,12 +606,22 @@ obliterate_66198 = spell(
     range_yards=100.0,
     effects=[
         Effect(type=121, base_points=123, points_per_level=2.8, implicit_target_a=6),
-        Effect(type=31, base_points=79, implicit_target_a=6),
+        Effect(type=31, weapon_potency=79, implicit_target_a=6),
         Effect(type=EffectType.DUMMY, base_points=24, implicit_target_a=6),
     ],
     spell_icon_id=2639,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 4 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 134217728, 'AttributesEx3': 17039360, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A brutal instant attack that deals $s2% offhand weapon damage plus a bonus, total damage increased ${$m3/2}.1% per each of your diseases on the target, but consumes the diseases.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RuneCostID': 2330, 'SpellClassMask_2': 131072, 'SpellClassSet': 15, 'SpellVisualID_1': 11613, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
+        'from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 4 @ '
+        'level 60); coefficient/cast_time_ms/mana_cost_pct from max rank. potency-system (PLAN '
+        'P7 Death Knight pass, 2026-10-01): Threat of Thassarian off-hand copy of Obliterate '
+        '(49020). eff2 (WEAPON_PERCENT_DAMAGE) converted to weapon_potency=79 (same off-by-one '
+        'fix as Mangle/Swipe/Shred - base_points=79 was dealing 80% live). The flat eff1 and '
+        'the disease-bonus eff3 (DUMMY) are left hand-set, same reasoning as 49020. Added '
+        'explicit SpellLevel=0 to raw_overrides, required by the potency generator '
+        '(previously implicit/absent).'
+    ),
+    raw_overrides={'AttributesEx': 134217728, 'AttributesEx3': 17039360, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A brutal instant attack that deals $s2% offhand weapon damage plus a bonus, total damage increased ${$m3/2}.1% per each of your diseases on the target, but consumes the diseases.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RuneCostID': 2330, 'SpellClassMask_2': 131072, 'SpellClassSet': 15, 'SpellLevel': 0, 'SpellVisualID_1': 11613, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -538,11 +640,21 @@ blood_strike_66215 = spell(
     range_yards=100.0,
     effects=[
         Effect(type=121, base_points=129, points_per_level=4.2, implicit_target_a=6),
-        Effect(type=31, base_points=39, implicit_target_a=6),
+        Effect(type=31, weapon_potency=39, implicit_target_a=6),
     ],
     spell_icon_id=2624,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 6 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 134217728, 'AttributesEx3': 17039360, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly strike the enemy, causing $s2% offhand weapon damage plus a bonus, total damage increased by ${$m3/2}.1% for each of your diseases on the target.', 'EffectBasePoints_3': 24, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RuneCostID': 1844, 'SpellClassMask_1': 4194304, 'SpellClassSet': 15, 'SpellVisualID_1': 11148, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
+        'from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 6 @ '
+        'level 60); coefficient/cast_time_ms/mana_cost_pct from max rank. potency-system (PLAN '
+        'P7 Death Knight pass, 2026-10-01): Threat of Thassarian off-hand copy of Blood Strike '
+        '(45902). eff2 (WEAPON_PERCENT_DAMAGE) converted to weapon_potency=39 (same off-by-one '
+        'fix as Mangle/Swipe/Shred - base_points=39 was dealing 40% live). The flat eff1 and '
+        'the disease-bonus eff3 (free-slot constant) are left hand-set, same reasoning as '
+        '45902. Added explicit SpellLevel=0 to raw_overrides, required by the potency '
+        'generator (previously implicit/absent).'
+    ),
+    raw_overrides={'AttributesEx': 134217728, 'AttributesEx3': 17039360, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly strike the enemy, causing $s2% offhand weapon damage plus a bonus, total damage increased by ${$m3/2}.1% for each of your diseases on the target.', 'EffectBasePoints_3': 24, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RuneCostID': 1844, 'SpellClassMask_1': 4194304, 'SpellClassSet': 15, 'SpellLevel': 0, 'SpellVisualID_1': 11148, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -561,11 +673,20 @@ heart_strike_55050 = spell(
     range_yards=5.0,
     effects=[
         Effect(type=121, base_points=249, points_per_level=19.44, implicit_target_a=6, chain_targets=2),
-        Effect(type=31, base_points=49, implicit_target_a=6, chain_targets=2),
+        Effect(type=31, weapon_potency=49, implicit_target_a=6, chain_targets=2),
     ],
     spell_icon_id=3145,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 55); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 4096, 'AttributesEx3': 1024, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly strike the target and his nearest ally, causing $m2% weapon damage plus $<bonus> on the primary target, and ${$m2/2}% weapon damage plus ${$<bonus>/2} on the secondary target.  Each target takes $m3% additional damage for each of your diseases active on that target$?s58616[, and movement speed is reduced by by $58617s1% for $58617d.][.]', 'EffectBasePoints_3': 9, 'EffectChainAmplitude_1': 0.5, 'EffectChainAmplitude_2': 0.5, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'ImplicitTargetA_3': 25, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 1142, 'SpellClassMask_1': 16777216, 'SpellClassSet': 15, 'SpellDescriptionVariableID': 166, 'SpellLevel': 55, 'SpellVisualID_1': 11148, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
+        'from rank 1 (learn level 55); RealPointsPerLevel from rank1->covers-60-overridden '
+        '(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/'
+        'mana_cost_pct from max rank. potency-system (PLAN P7 Death Knight pass, 2026-10-01): '
+        'eff2 (WEAPON_PERCENT_DAMAGE) converted to weapon_potency=49 (same off-by-one fix as '
+        'Mangle/Swipe/Shred - base_points=49 was dealing 50% live). The flat eff1 '
+        '(NORMALIZED_WEAPON_DMG) and the hidden tier-2 eff3 (disease-bonus constant) are left '
+        'hand-set, same reasoning as the Feral pass\'s Mangle/Swipe/Shred.'
+    ),
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 4096, 'AttributesEx3': 1024, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly strike the target and his nearest ally, causing $m2% weapon damage plus $<bonus> on the primary target, and ${$m2/2}% weapon damage plus ${$<bonus>/2} on the secondary target.  Each target takes $m3% additional damage for each of your diseases active on that target$?s58616[, and movement speed is reduced by by $58617s1% for $58617d.][.]', 'EffectBasePoints_3': 9, 'EffectChainAmplitude_1': 0.5, 'EffectChainAmplitude_2': 0.5, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'ImplicitTargetA_3': 25, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 1142, 'SpellClassMask_1': 16777216, 'SpellClassSet': 15, 'SpellDescriptionVariableID': 166, 'SpellLevel': 55, 'SpellVisualID_1': 11148, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -583,12 +704,21 @@ scourge_strike_55090 = spell(
     range_yards=5.0,
     effects=[
         Effect(type=121, base_points=339, points_per_level=18.4, implicit_target_a=6),
-        Effect(type=31, base_points=69, implicit_target_a=6),
+        Effect(type=31, weapon_potency=69, implicit_target_a=6),
         Effect(type=EffectType.DUMMY, base_points=11, implicit_target_a=6),
     ],
     spell_icon_id=3143,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 55); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'CumulativeAura': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An unholy strike that deals $s2% of weapon damage as Physical damage plus ${$m1*$m2/100}.  In addition, for each of your diseases on your target, you deal an additional $s3% of the Physical damage done as Shadow damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 1145, 'SpellClassMask_2': 134217728, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50, 'SpellVisualID_1': 11832, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
+        'from rank 1 (learn level 55); RealPointsPerLevel from rank1->covers-60-overridden '
+        '(undershoot-vs-top-rank) (anchor rank 4 @ level 80); coefficient/cast_time_ms/'
+        'mana_cost_pct from max rank. potency-system (PLAN P7 Death Knight pass, 2026-10-01): '
+        'eff2 (WEAPON_PERCENT_DAMAGE) converted to weapon_potency=69 (same off-by-one fix as '
+        'Mangle/Swipe/Shred - base_points=69 was dealing 70% live). The flat eff1 '
+        '(NORMALIZED_WEAPON_DMG) and the disease-to-shadow-damage eff3 (DUMMY) are left '
+        'hand-set, same reasoning as the Feral pass\'s Mangle/Swipe/Shred.'
+    ),
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'CumulativeAura': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An unholy strike that deals $s2% of weapon damage as Physical damage plus ${$m1*$m2/100}.  In addition, for each of your diseases on your target, you deal an additional $s3% of the Physical damage done as Shadow damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 1145, 'SpellClassMask_2': 134217728, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50, 'SpellVisualID_1': 11832, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -4242,3 +4372,51 @@ desolation_66817 = spell(
     notes='pulled from existing data',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Blood Strikes cause you to deal $66803s1% additional damage with all attacks for the next $66803d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassMask_1': 128, 'SpellClassSet': 15, 'SpellPriority': 50, 'StartRecoveryCategory': 133},
 )
+
+
+# ---------------------------------------------------------------------------
+# Potency system P8 (pets, guardians, totems): Ebon Gargoyle's own attack,
+# npc_pet_dk_ebon_gargoyle (ScriptedAI, pet_dk.cpp) via plain DoCastVictim -
+# caster = the gargoyle, which Summon Gargoyle (49206/50514, SPELL_EFFECT_SUMMON)
+# spawns at exactly the owner's level through Spell::SummonGuardian's default
+# summonLevel = caster->GetLevel() (no per-spell exception for this summon id).
+#
+# Wrinkle: spell_pet_dk_gargoyle_strike (SpellScript, same file) reads
+# GetEffectValue() in OnEffectLaunchTarget - i.e. AFTER CalcValue()/this hook
+# has already run - and adds a flat (casterLevel-60)*3 on top via
+# SetEffectValue(), only when the caster is level >= 60. This is purely
+# additive on whatever CalcValue() produces (not a base-point override), so it
+# composes cleanly with potency and needs zero script changes - just a note
+# that the live post-conversion number above level 60 will read a bit higher
+# than the raw potency value below implies.
+# ---------------------------------------------------------------------------
+gargoyle_strike_51963 = spell(
+    id=51963,
+    name='Gargoyle Strike',
+    school=School.NATURE,
+    attributes=589824,
+    cast_time_ms=2000,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=40.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=16.8, potency_kind='direct', implicit_target_a=6),
+    ],
+    spell_icon_id=213,
+    notes="pulled from existing data. Potency system P8: Ebon Gargoyle's own attack (DoCastVictim, "
+          "no custom bp). Base-implied sp_potency=16.8 from the flat (no RealPointsPerLevel) V60 "
+          "average of 60 (50 base + die_sides=19 mean 10); the live EffectBonusMultiplier_1 (0.453) "
+          "implies a far higher 79.3 - base wins by default (docs/potency-system.md). The '0.453' "
+          "coefficient lives in the SP (direct_bonus) column, not AP, even though the spell's own "
+          "flavor text says 'modified by attack power' - Pet.cpp's NPC_EBON_GARGOYLE case adds "
+          "SPELL_DK_PET_SCALING_01/02/03 auras that convert the owner's attack power into the "
+          "gargoyle's own effective spell power stat, so Unit::SpellDamageBonusDone's SP path is "
+          "what the engine actually reads for this creature; ap_potency/ap_bonus would instead read "
+          "the AP path, which this pet's damage formula never uses, silently zeroing its scaling. "
+          "Kept as sp_potency to match the live mechanism exactly (docs/potency-system.md's pets "
+          "section: 'the stock inheritance of owner spell power and attack power stays as is').",
+    raw_overrides={'FacingCasterFlags': 1, 'CastingTimeIndex': 5, 'InterruptFlags': 15, 'ProcChance': 101, 'BaseLevel': 55, 'SpellLevel': 55, 'DurationIndex': 0, 'Speed': 20.0, 'EquippedItemClass': -1, 'SpellVisualID_1': 4379, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Inflicts Nature damage to an enemy.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+unbind_bonus_coefficients(gargoyle_strike_51963)  # stale spell_bonus_data row overrode the potency coefficient (D1)

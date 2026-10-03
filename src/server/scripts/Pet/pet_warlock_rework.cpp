@@ -358,12 +358,14 @@ private:
         }
 
         // Demonic Power's +7/14% (§11 Q7 default) is applied to the hit in
-        // spell_warl_guardian_hit_mods, never to bp0 here (§4.0 custom-BP rule). Real (non-
-        // triggered) cast - Fel Firebolt has its own fixed 2000 ms cast time (§5.0) and
+        // spell_warl_guardian_hit_mods, never to the base points here (§4.0 custom-BP rule). Real
+        // (non-triggered) cast - Fel Firebolt has its own fixed 2000 ms cast time (§5.0) and
         // `triggered=true` would bypass it (TRIGGERED_CAST_DIRECTLY, part of TRIGGERED_FULL_MASK).
-        int32 const bp0 = Warlock::ComputeGuardianBasePoints(me, Warlock::SPELL_FEL_FIREBOLT, 0.1028f);
-        SpellCastResult const result =
-            me->CastCustomSpell(target, Warlock::SPELL_FEL_FIREBOLT, &bp0, nullptr, nullptr, false);
+        // Custom: potency-system - P8 (2026-10-02): plain cast, not CastCustomSpell, so the
+        // engine's normal CalcValue() runs SpellPotency::Apply() with the Wild Imp as caster
+        // (docs/potency-system.md). The old ComputeGuardianBasePoints() owner-SP-coefficient
+        // formula is gone.
+        SpellCastResult const result = me->CastSpell(target, Warlock::SPELL_FEL_FIREBOLT, false);
 
         if (result == SPELL_CAST_OK)
         {
@@ -407,15 +409,14 @@ private:
 
         if (SpellInfo const* explosionInfo = sSpellMgr->AssertSpellInfo(Warlock::SPELL_IMPLOSION_EXPLOSION))
         {
-            int32 const bp0 = Warlock::ComputeGuardianBasePoints(me, Warlock::SPELL_IMPLOSION_EXPLOSION, 0.1543f);
-
+            // Custom: potency-system - P8 (2026-10-02): plain cast, not a CustomSpellValues
+            // base-point override, so the engine's normal CalcValue() runs SpellPotency::Apply()
+            // with the exploding Wild Imp as caster (docs/potency-system.md). The old
+            // ComputeGuardianBasePoints() owner-SP-coefficient formula is gone.
             SpellCastTargets targets;
             targets.SetDst(_implodeTargetPos);
 
-            CustomSpellValues values;
-            values.AddSpellMod(SPELLVALUE_BASE_POINT0, bp0);
-
-            me->CastSpell(targets, explosionInfo, &values, TRIGGERED_FULL_MASK);
+            me->CastSpell(targets, explosionInfo, nullptr, TRIGGERED_FULL_MASK);
         }
 
         Warlock::OnWildImpDespawn(GetOwnerPlayer(), Warlock::WildImpDespawnReason::Implosion);
@@ -548,8 +549,11 @@ private:
             return false;
 
         _targetGUID = target->GetGUID();
-        int32 const bp0 = Warlock::ComputeGuardianBasePoints(me, Warlock::SPELL_DREADSTALKER_BITE, 0.1568f);
-        me->CastCustomSpell(target, Warlock::SPELL_DREADSTALKER_BITE, &bp0, nullptr, nullptr, true);
+        // Custom: potency-system - P8 (2026-10-02): plain cast, not CastCustomSpell, so the
+        // engine's normal CalcValue() runs SpellPotency::Apply() with the Dreadstalker as caster
+        // (docs/potency-system.md). The old ComputeGuardianBasePoints() owner-SP-coefficient
+        // formula is gone.
+        me->CastSpell(target, Warlock::SPELL_DREADSTALKER_BITE, true);
         return true;
     }
 
@@ -651,8 +655,11 @@ private:
         if (!target || !me->IsWithinDist(target, DOOMGUARD_CAST_RANGE) || !me->IsWithinLOSInMap(target))
             return false;
 
-        int32 const bp0 = Warlock::ComputeGuardianBasePoints(me, Warlock::SPELL_DOOM_BOLT, 0.857f);
-        return me->CastCustomSpell(target, Warlock::SPELL_DOOM_BOLT, &bp0, nullptr, nullptr, false) == SPELL_CAST_OK;
+        // Custom: potency-system - P8 (2026-10-02): plain cast, not CastCustomSpell, so the
+        // engine's normal CalcValue() runs SpellPotency::Apply() with the Doomguard as caster
+        // (docs/potency-system.md). The old ComputeGuardianBasePoints() owner-SP-coefficient
+        // formula is gone.
+        return me->CastSpell(target, Warlock::SPELL_DOOM_BOLT, false) == SPELL_CAST_OK;
     }
 
     ObjectGuid _summonTargetGUID;
@@ -753,8 +760,11 @@ private:
     {
         UpdateMeleeDamage();
 
-        int32 const bp0 = Warlock::ComputeGuardianBasePoints(me, Warlock::SPELL_INFERNAL_IMMOLATION, 0.1114f);
-        me->CastCustomSpell(me, Warlock::SPELL_INFERNAL_IMMOLATION, &bp0, nullptr, nullptr, true);
+        // Custom: potency-system - P8 (2026-10-02): plain cast, not CastCustomSpell, so the
+        // engine's normal CalcValue() runs SpellPotency::Apply() with the Infernal as caster
+        // (docs/potency-system.md). The old ComputeGuardianBasePoints() owner-SP-coefficient
+        // formula is gone.
+        me->CastSpell(me, Warlock::SPELL_INFERNAL_IMMOLATION, true);
     }
 
     void UpdateMeleeDamage()

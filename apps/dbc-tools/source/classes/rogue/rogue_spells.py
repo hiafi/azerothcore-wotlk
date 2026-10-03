@@ -73,13 +73,19 @@ garrote_703 = spell(
     range_yards=5.0,
     duration_ms=18000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, points_per_level=1.108695652173913, mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.APPLY_AURA, mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000, ap_potency=13.3, potency_kind='periodic'),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=6),
         Effect(type=EffectType.TRIGGER_SPELL, die_sides=0, implicit_target_a=6, trigger_spell=1330),
     ],
     spell_icon_id=498,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 14); RealPointsPerLevel from rank1→level-60 slope (anchor 11290, rank 6); coefficient/cast_time_ms/mana_cost_pct from max rank (48676, rank 10); MaxLevel set to 80; flat energy cost kept as-is (Rogue is Energy-based, not Mana); effect3 (Garrote - Silence trigger, spell 1330) added: absent from rank 1, introduced at rank 7 (26839) and present at every rank through max; preserved on the survivor per explicit decision, flat (single-rank data point, no growth to derive a slope from)',
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 1048576, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s1 damage every $t1 seconds.', 'BaseLevel': 14, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Garrote the enemy, causing ${($m1+$AP*0.07)*6} damage over $d, increased by your attack power.  Must be stealthed and behind the target.  Awards $s2 combo $lpoint:points;.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 536870912, 'SpellClassMask_1': 256, 'SpellClassSet': 8, 'SpellLevel': 14, 'SpellVisualID_1': 757, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    notes=(
+        'single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 14); RealPointsPerLevel from rank1→level-60 slope (anchor 11290, rank 6); coefficient/cast_time_ms/mana_cost_pct from max rank (48676, rank 10); flat energy cost kept as-is (Rogue is Energy-based, not Mana); effect3 (Garrote - Silence trigger, spell 1330) added: absent from rank 1, introduced at rank 7 (26839) and present at every rank through max; preserved on the survivor per explicit decision, flat (single-rank data point, no growth to derive a slope from). '
+        'potency-system (PLAN P7-Rogue): converted to ap_potency=13.3 (periodic, matching the live, '
+        'already-mismatched ap_dot_bonus=0.070 coefficient\'s base-implied potency from '
+        'rogue-potency-report.md/rogue-potency-proposals.txt) - reproduces the pre-conversion V60 of '
+        '71 exactly (simulate_value).'
+    ),
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 1048576, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} damage every $t1 seconds.', 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Garrote the enemy, causing {pot1.total} damage over $d, increased by your attack power.  Must be stealthed and behind the target.  Awards $s2 combo $lpoint:points;.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 536870912, 'SpellClassMask_1': 256, 'SpellClassSet': 8, 'SpellLevel': 14, 'SpellVisualID_1': 757, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -166,13 +172,20 @@ gouge_1776 = spell(
     range_yards=5.0,
     duration_ms=4000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=0.4, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, die_sides=0, mechanic=Mechanic.KNOCKOUT, implicit_target_a=6, apply_aura=AuraType.MOD_STUN),
     ],
     spell_icon_id=245,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 134479872, 'AttributesEx3': 1032, 'AttributesEx4': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Incapacitated.', 'AuraInterruptFlags': 2, 'BaseLevel': 6, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes ${1+0.21*$AP} damage, incapacitating the opponent for $d, and turns off your attack.  Target must be facing you.  Any damage caused will revive the target.  Awards $s2 combo $lpoint:points;.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 8, 'SpellClassSet': 8, 'SpellLevel': 6, 'SpellVisualID_1': 256, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    notes=(
+        'pulled from existing data. '
+        'potency-system (PLAN P7-Rogue): converted to ap_potency=0.4 (direct, matching the live, '
+        'already-mismatched ap_bonus=0.210 coefficient\'s base-implied potency from '
+        'rogue-potency-report.md/rogue-potency-proposals.txt - Gouge\'s damage is a token amount, '
+        'the stun is the real effect) - reproduces the pre-conversion V60 of 1 exactly '
+        '(simulate_value).'
+    ),
+    raw_overrides={'AttributesEx': 134479872, 'AttributesEx3': 1032, 'AttributesEx4': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Incapacitated.', 'AuraInterruptFlags': 2, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot1} damage, incapacitating the opponent for $d, and turns off your attack.  Target must be facing you.  Any damage caused will revive the target.  Awards $s2 combo $lpoint:points;.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 8, 'SpellClassSet': 8, 'SpellLevel': 6, 'SpellVisualID_1': 256, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -304,12 +317,34 @@ rupture_1943 = spell(
     range_yards=5.0,
     duration_ms=6000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=7, points_per_level=1.3, mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+        Effect(type=EffectType.APPLY_AURA, mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000, base_potency=16.8, cp_base_potency=0.561, cp_ap_potency=1.3125, potency_kind='periodic'),
         Effect(type=EffectType.DUMMY, die_sides=0, implicit_target_a=1),
     ],
     spell_icon_id=500,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope (anchor 11275, rank 6); coefficient/cast_time_ms/mana_cost_pct from max rank (48672, rank 9); MaxLevel set to 80; flat energy cost kept as-is (Rogue is Energy-based, not Mana)',
-    raw_overrides={'AttributesEx': 1049088, 'AttributesEx3': 1024, 'AttributesEx4': 8, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Causes damage every $t1 seconds.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Finishing move that causes damage over time, increased by your attack power.  Lasts longer per combo point:\r\n   1 point  : ${($m1+$b1*1+0.015*$AP)*4} damage over $<dur1> secs\r\n   2 points: ${($m1+$b1*2+0.024*$AP)*5} damage over $<dur2> secs\r\n   3 points: ${($m1+$b1*3+0.03*$AP)*6} damage over $<dur3> secs\r\n   4 points: ${($m1+$b1*4+0.03428571*$AP)*7} damage over $<dur4> secs\r\n   5 points: ${($m1+$b1*5+0.0375*$AP)*8} damage over $<dur5> secs', 'DurationIndex': 553, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectPointsPerCombo_1': 2.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 1048576, 'SpellClassSet': 8, 'SpellDescriptionVariableID': 63, 'SpellLevel': 20, 'SpellVisualID_1': 250, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    notes=(
+        'single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope (anchor 11275, rank 6); coefficient/cast_time_ms/mana_cost_pct from max rank (48672, rank 9); flat energy cost kept as-is (Rogue is Energy-based, not Mana). '
+        'potency-system (PLAN P7-Rogue, finisher - same shape as P6\'s Rip): the flat per-tick line '
+        '(no AP) is base_potency=16.8 (periodic, matching the base-implied potency from '
+        'rogue-potency-report.md) - reproduces the pre-conversion per-tick flat value exactly (60, '
+        'via simulate_value; there is no spell_bonus_data row for 1943, confirmed by the report). '
+        'Rupture DOES have real AP scaling, but as a SCRIPT (spell_rog_rupture::CalculateAmount, '
+        'src/server/scripts/Spells/spell_rogue.cpp - a per-combo-tier attackpowerPerCombo[] lookup '
+        'added once per application, not a repeating per-combo-point multiply, found only by '
+        'grepping spell_rogue.cpp directly - it does not show up in spell_bonus_data or '
+        'SpellEffects.cpp\'s F11 audit list), matching the real 0.0375*AP rate at 5 combo points. '
+        'cp_base_potency=0.561 reproduces the DBC\'s own flat EffectPointsPerCombo_1=2.0 '
+        'per-combo-point-per-tick line to within 0.05%. cp_ap_potency=1.3125 gives an ap_coefficient '
+        'of exactly 0.0075, so that 5 combo points\' worth (SpellPotency::Apply multiplies by '
+        'comboPoints) reproduces the script\'s AP*0.0375 term at the 5-combo-point reference '
+        'exactly, same "fit the linear cp_ap shape to the 5-combo reference, accept drift at other '
+        'combo counts" approach Rip\'s own non-linear-lookup replacement used (PLAN P6 step 4). '
+        'Total at level 60/5 combo/1000 AP: 60 (flat) + 5*(2.0+0.0075*1000) = 107.5, matching the '
+        'pre-conversion total (60 flat + 5*2.0 DBC combo line + 1000*0.0375 script AP term = 107.5) '
+        'exactly. EffectPointsPerCombo_1 is generated as 0; spell_rog_rupture\'s own AP addition is '
+        'gated behind SpellPotency::HasRow() (src/server/scripts/Spells/spell_rogue.cpp) so it does '
+        'not double count on top of the new cp_ap coefficient.'
+    ),
+    raw_overrides={'AttributesEx': 1049088, 'AttributesEx3': 1024, 'AttributesEx4': 8, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Causes damage every $t1 seconds.', 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Finishing move that causes damage over time, increased by your attack power.  Lasts longer per combo point:\r\n   1 point  : ${($m1+$b1*1+0.015*$AP)*4} damage over $<dur1> secs\r\n   2 points: ${($m1+$b1*2+0.024*$AP)*5} damage over $<dur2> secs\r\n   3 points: ${($m1+$b1*3+0.03*$AP)*6} damage over $<dur3> secs\r\n   4 points: ${($m1+$b1*4+0.03428571*$AP)*7} damage over $<dur4> secs\r\n   5 points: ${($m1+$b1*5+0.0375*$AP)*8} damage over $<dur5> secs', 'DurationIndex': 553, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 1048576, 'SpellClassSet': 8, 'SpellDescriptionVariableID': 63, 'SpellLevel': 20, 'SpellVisualID_1': 250, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -374,12 +409,20 @@ eviscerate_2098 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, points_per_level=0.8983050847457628, die_sides=5, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=19.5, cp_ap_potency=30.8, implicit_target_a=6),
         Effect(type=EffectType.DUMMY, die_sides=0, implicit_target_a=1),
     ],
     spell_icon_id=514,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1→level-60 slope (anchor 31016, rank 9); coefficient/cast_time_ms/mana_cost_pct from max rank (48668, rank 12); MaxLevel set to 80; flat energy cost kept as-is (Rogue is Energy-based, not Mana)',
-    raw_overrides={'AttributesEx': 1049088, 'AttributesEx3': 1024, 'AttributesEx4': 8, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Finishing move that causes damage per combo point:\r\n   1 point  : ${$m1+(($b1*1)+$AP*0.03)*$<mult>}-${$M1+(($b1*1)+$AP*0.07)*$<mult>} damage\r\n   2 points: ${$m1+(($b1*2)+$AP*0.06)*$<mult>}-${$M1+(($b1*2)+$AP*0.14)*$<mult>} damage\r\n   3 points: ${$m1+(($b1*3)+$AP*0.09)*$<mult>}-${$M1+(($b1*3)+$AP*0.21)*$<mult>} damage\r\n   4 points: ${$m1+(($b1*4)+$AP*0.12)*$<mult>}-${$M1+(($b1*4)+$AP*0.28)*$<mult>} damage\r\n   5 points: ${$m1+(($b1*5)+$AP*0.15)*$<mult>}-${$M1+(($b1*5)+$AP*0.35)*$<mult>} damage', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectPointsPerCombo_1': 5.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 8519680, 'SpellClassSet': 8, 'SpellDescriptionVariableID': 169, 'SpellLevel': 1, 'SpellVisualID_1': 671, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    notes=(
+        'potency-system (PLAN P6 step 4, finishers - proof case): converted from the single-rank '
+        'bootstrap (BasePoints/BaseLevel/SpellLevel kept from rank 1, learn level 1). ap_potency=19.5 '
+        'is the flat one-shot part (about 11% of the whole, matching stock\'s own flat/per-combo '
+        'split - docs/potency-system.md\'s "Combo points don\'t scale with level"), cp_ap_potency='
+        '30.8 is per combo point; together they reproduce the pre-conversion total at level 60, 5 '
+        'combo points, 1000 attack power (1208) to within 0.2%. EffectPointsPerCombo_1 is generated '
+        'as 0 - SpellPotency::Apply() adds the per-combo-point term instead.'
+    ),
+    raw_overrides={'AttributesEx': 1049088, 'AttributesEx3': 1024, 'AttributesEx4': 8, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Finishing move that causes damage per combo point:\r\n   1 point  : ${$m1+(($b1*1)+$AP*0.03)*$<mult>}-${$M1+(($b1*1)+$AP*0.07)*$<mult>} damage\r\n   2 points: ${$m1+(($b1*2)+$AP*0.06)*$<mult>}-${$M1+(($b1*2)+$AP*0.14)*$<mult>} damage\r\n   3 points: ${$m1+(($b1*3)+$AP*0.09)*$<mult>}-${$M1+(($b1*3)+$AP*0.21)*$<mult>} damage\r\n   4 points: ${$m1+(($b1*4)+$AP*0.12)*$<mult>}-${$M1+(($b1*4)+$AP*0.28)*$<mult>} damage\r\n   5 points: ${$m1+(($b1*5)+$AP*0.15)*$<mult>}-${$M1+(($b1*5)+$AP*0.35)*$<mult>} damage', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 8519680, 'SpellClassSet': 8, 'SpellDescriptionVariableID': 169, 'SpellLevel': 1, 'SpellVisualID_1': 671, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -1024,7 +1067,13 @@ eviscerate_31016 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=53, die_sides=109, implicit_target_a=6),
+        Effect(
+            type=EffectType.SCHOOL_DAMAGE, base_points=53, die_sides=109, implicit_target_a=6,
+            potency_excluded='legacy rank-capped: superseded max-rank (MaxLevel implicitly uncapped would make '
+            'this stronger than the single-rank bootstrap 2098 at some levels) kept only for an item_template '
+            'RequiredSpell reference, same bucket as the Warlock P4 precedent for a superseded rank kept only '
+            'for an item reference (PLAN P4). Not touched, not uncapped.',
+        ),
         Effect(type=EffectType.DUMMY, die_sides=0, implicit_target_a=1),
     ],
     spell_icon_id=514,
@@ -1071,13 +1120,30 @@ envenom_32645 = spell(
     range_yards=5.0,
     duration_ms=1000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=117, points_per_level=5.444444444444445, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_potency=0.0, cp_base_potency=44.112, cp_ap_potency=21.0, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, base_points=74, implicit_target_a=1, apply_aura=108, misc_value=26),
         Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=107, misc_value=18),
     ],
     spell_icon_id=2237,
-    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 62); RealPointsPerLevel from rank1→top rank's own top level (80, rank1 learn level ≥ 60) slope (anchor 57993, rank 4); coefficient/cast_time_ms/mana_cost_pct from max rank (57993, rank 4); MaxLevel set to 80; flat energy cost kept as-is (Rogue is Energy-based, not Mana)",
-    raw_overrides={'AttributesEx': 1049088, 'AttributesEx3': 1024, 'AttributesEx4': 9, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Chance to apply Deadly Poison increased by $s3% and frequency of applying Instant Poison increased by $s2%.', 'BaseLevel': 62, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Finishing move that consumes your Deadly Poison doses on the target and deals instant poison damage.  Following the Envenom attack you have an additional $s3% chance to apply Deadly Poison and a $s2% increased frequency of applying Instant Poison for 1 sec plus an additional 1 sec per combo point.  One dose is consumed for each combo point:\r\n  1 dose:  ${($m1-1)*1+$AP*0.09} damage\r\n  2 doses: ${($m1-1)*2+$AP*0.18} damage\r\n  3 doses: ${($m1-1)*3+$AP*0.27} damage\r\n  4 doses: ${($m1-1)*4+$AP*0.36} damage\r\n  5 doses: ${($m1-1)*5+$AP*0.45} damage', 'DurationIndex': 285, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 8192, 'EffectSpellClassMaskC_1': 65536, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 8388608, 'SpellClassMask_2': 8, 'SpellClassSet': 8, 'SpellLevel': 62, 'SpellVisualID_1': 8144, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000, 'TargetAuraState': 16},
+    notes=(
+        "single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 62); RealPointsPerLevel from rank1→top rank's own top level (80, rank1 learn level ≥ 60) slope (anchor 57993, rank 4); coefficient/cast_time_ms/mana_cost_pct from max rank (57993, rank 4); flat energy cost kept as-is (Rogue is Energy-based, not Mana). "
+        "potency-system (PLAN P7-Rogue, F11 hard-coded-AP audit): Envenom is entirely per-dose/"
+        "per-combo-point damage (SpellEffects.cpp's Rogue case: `damage *= doses; damage += "
+        "AP*0.09*combo;`, no flat one-shot component), so base_potency=0.0 (explicit, not None - "
+        "see lib.potency.resolve's total>0-or-base_potency-not-None check) with ALL scaling in "
+        "cp_base_potency/cp_ap_potency. cp_base_potency=44.112 reproduces the old per-dose "
+        "CalcValue native (118, at level 62 - SpellLevel/BaseLevel=62, so the preservation target "
+        "is computed at level 62 like Druid Maim's own precedent, not the generic level-60 "
+        "anchor). cp_ap_potency=21.0 gives an ap_coefficient of exactly 0.09, reproducing the old "
+        "hard-coded AP*0.09*combo term exactly. Together: 5*(118+0.09*1000) = 1040, matching the "
+        "pre-conversion total at level 62/5 combo(doses)/1000 AP exactly. Both the doses "
+        "multiplication and the AP addition are gated behind SpellPotency::HasRow() in "
+        "SpellEffects.cpp (not just the AP line - see the SpellEffects.cpp comment and "
+        "p7-rogue-SUMMARY.md for why both had to move together: SpellPotency::Apply() already "
+        "multiplies the per-combo-point line by comboPoints internally, so leaving the old "
+        "`damage *= doses` active on top would double-count the combo scaling)."
+    ),
+    raw_overrides={'AttributesEx': 1049088, 'AttributesEx3': 1024, 'AttributesEx4': 9, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Chance to apply Deadly Poison increased by $s3% and frequency of applying Instant Poison increased by $s2%.', 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Finishing move that consumes your Deadly Poison doses on the target and deals instant poison damage.  Following the Envenom attack you have an additional $s3% chance to apply Deadly Poison and a $s2% increased frequency of applying Instant Poison for 1 sec plus an additional 1 sec per combo point.  One dose is consumed for each combo point:\r\n  1 dose:  ${($m1-1)*1+$AP*0.09} damage\r\n  2 doses: ${($m1-1)*2+$AP*0.18} damage\r\n  3 doses: ${($m1-1)*3+$AP*0.27} damage\r\n  4 doses: ${($m1-1)*4+$AP*0.36} damage\r\n  5 doses: ${($m1-1)*5+$AP*0.45} damage', 'DurationIndex': 285, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 8192, 'EffectSpellClassMaskC_1': 65536, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 8388608, 'SpellClassMask_2': 8, 'SpellClassSet': 8, 'SpellLevel': 62, 'SpellVisualID_1': 8144, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000, 'TargetAuraState': 16},
 )
 
 

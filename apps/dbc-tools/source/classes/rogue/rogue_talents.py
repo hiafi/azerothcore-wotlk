@@ -15,7 +15,7 @@ combat_181_tab = tab(
     class_mask=8,
     order_index=1,
     spell_icon_id=243,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 365},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'RogueCombat'},
 )
 
 
@@ -24,7 +24,7 @@ assassination_182_tab = tab(
     name='Assassination',
     class_mask=8,
     spell_icon_id=514,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 50},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'RogueAssassination'},
 )
 
 
@@ -34,7 +34,7 @@ subtlety_183_tab = tab(
     class_mask=8,
     order_index=2,
     spell_icon_id=250,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 597},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'RogueSubtlety'},
 )
 
 

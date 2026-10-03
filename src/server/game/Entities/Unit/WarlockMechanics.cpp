@@ -1029,27 +1029,14 @@ namespace Warlock
     }
 
     // ------------------------------------------------------------------
-    // Guardian base points / targeting (B21, §7.4)
+    // Guardian targeting (B21, §7.4)
     // ------------------------------------------------------------------
-    int32 ComputeGuardianBasePoints(Unit const* guardian, uint32 spellId, float spCoefficient)
-    {
-        if (!guardian)
-            return 0;
-
-        SpellInfo const* spellInfo = sSpellMgr->AssertSpellInfo(spellId);
-        if (!spellInfo)
-            return 0;
-
-        Unit* owner = guardian->GetOwner();
-        int32 sp = 0;
-        if (owner)
-            sp = std::max(0, owner->SpellBaseDamageBonusDone(spellInfo->GetSchoolMask()));
-
-        int32 const base = spellInfo->Effects[EFFECT_0].BasePoints;
-        int32 const dieBonus = spellInfo->Effects[EFFECT_0].DieSides ? 1 : 0;
-        return base + dieBonus + int32(std::lround(spCoefficient * float(sp)));
-    }
-
+    // Custom: potency-system - P8 (2026-10-02): ComputeGuardianBasePoints() (the bespoke
+    // owner-SP-coefficient formula this comment block used to also hold) was removed - its only
+    // 5 callers (Fel Firebolt, Implosion, Dreadstalker Bite, Doom Bolt, Infernal Immolation in
+    // src/server/scripts/Pet/pet_warlock_rework.cpp) all moved to the standard potency curve
+    // (plain CastSpell, SpellPotency::Apply() via the normal CalcValue() hook) instead
+    // (docs/potency-system.md).
     Unit* SelectGuardianTarget(Creature* guardian, Player* owner, ObjectGuid preferred)
     {
         if (!guardian || !owner)

@@ -664,6 +664,15 @@ def _apply_delete(rows: dict[int, dict], text: str, pos: int) -> int:
     if m:
         rows.pop(int(m.group("id")), None)
         return m.end()
+    # The tuple form lib/spell_tables.py emits for every declared table, here with a single key
+    # column: `WHERE (`entry`) IN ((200134), (200136));`. Skipping it left deleted spell_bonus_data
+    # rows looking live (docs/bugs-and-fixes.md, 2026-10-02).
+    m = _DELETE_WHERE_TUPLE_IN_RE.match(text, pos)
+    if m and "," not in m.group("cols"):
+        tuples, end = _read_key_tuples(text, m.end())
+        for values in tuples:
+            rows.pop(int(values[0]), None)
+        return _skip_statement(text, end)
     return _skip_statement(text, pos)
 
 

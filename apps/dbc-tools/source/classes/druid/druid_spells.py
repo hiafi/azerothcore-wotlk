@@ -6,7 +6,7 @@ Split from a single source/classes/druid.py via split_class_file.py (.agents/pla
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, School, SpellModOp
 from lib.dsl.constants import ShapeshiftForm
-from lib.dsl.registry import bonus_coefficients, scripted_by, skill_line_ability, spell, trained_by
+from lib.dsl.registry import bonus_coefficients, scripted_by, skill_line_ability, spell, trained_by, unbind_bonus_coefficients
 from ._masks import BLOOM, CENARION_WARD, MASS_ENTANGLEMENT, STARSURGE
 from ._masks import BERSERK_COST, IRONFUR, PULVERIZE, THRASH, UPHEAVAL  # druid-rework Feral pass
 from .druid_trigger_spells import (
@@ -55,11 +55,11 @@ entangling_roots_339 = spell(
     duration_ms=12000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=AuraType.MOD_ROOT),
-        Effect(type=EffectType.APPLY_AURA, base_points=4, points_per_level=0.4807692307692308, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=5.6, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
     ],
     spell_icon_id=20,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 8); RealPointsPerLevel from rank1->covers-60 (anchor rank 6 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx4': 536872960, 'AttributesEx5': 32, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Rooted.  Causes $s2 Nature damage every $t2 seconds.', 'AuraInterruptFlags': 4718592, 'BaseLevel': 8, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Roots the target in place and causes $o2 Nature damage over $d.  Damage caused may interrupt the effect.', 'EffectBonusMultiplier_2': 0.10000000149011612, 'EffectBonusMultiplier_3': 0.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 664232, 'ShapeshiftExclude': 0, 'SpellClassMask_1': 512, 'SpellClassSet': 7, 'SpellLevel': 8, 'SpellVisualID_1': 38, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 8); RealPointsPerLevel from rank1->covers-60 (anchor rank 6 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P5 (druid pass): converted to sp_potency=5.6 (potency-report default, base/coef already agreed).',
+    raw_overrides={'AttributesEx4': 536872960, 'AttributesEx5': 32, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Rooted.  Causes {pot2} Nature damage every $t2 seconds.', 'AuraInterruptFlags': 4718592, 'BaseLevel': 8, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Roots the target in place and causes {pot2.total} Nature damage over $d.  Damage caused may interrupt the effect.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 664232, 'ShapeshiftExclude': 0, 'SpellClassMask_1': 512, 'SpellClassSet': 7, 'SpellLevel': 8, 'SpellVisualID_1': 38, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -173,11 +173,11 @@ rejuvenation_774 = spell(
     range_yards=40.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=7, points_per_level=3.8214285714285716, implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=3000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=10.5, potency_kind='heal_periodic', implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=3000),
     ],
     spell_icon_id=64,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1->covers-60 (anchor rank 11 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx4': 1048576, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals $s1 damage every $t1 seconds.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for ${$m1*5*$<mult>} over $d.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 0.37599998712539673, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 2, 'SpellClassMask_1': 16, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 176, 'SpellLevel': 4, 'SpellVisualID_1': 32, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},  # ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1->covers-60 (anchor rank 11 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P5 (druid pass): converted to sp_potency=10.5 (potency-report default, base/coef already agreed).',
+    raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx4': 1048576, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals {pot1} damage every $t1 seconds.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for {pot1.total} over $d.', 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 2, 'SpellClassMask_1': 16, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 176, 'SpellLevel': 4, 'SpellVisualID_1': 32, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},  # ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7
 )
 
 
@@ -195,11 +195,18 @@ swipe_bear_779 = spell(
     mana_cost_pct=0,
     range_yards=8.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=8, points_per_level=1.546875, implicit_target_a=22, implicit_target_b=15, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=28.8, potency_kind='direct', implicit_target_a=22, implicit_target_b=15, radius_yards=8.0),
     ],
     spell_icon_id=1562,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 16); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 8 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 512, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 16, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Swipe nearby enemies, inflicting $s1 damage.  Damage increased by attack power.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'ShapeshiftMask': 144, 'SpellClassMask_2': 1048576, 'SpellClassSet': 7, 'SpellLevel': 16, 'SpellVisualID_1': 189, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes=(
+        "potency-system (PLAN P6 step 5, Feral pass): converted from the single-rank bootstrap "
+        "(BasePoints/BaseLevel/SpellLevel kept from rank 1, learn level 16). ap_potency=28.8 is the "
+        "druid-potency-report.md base-implied default (ap-only row, old coefficient 0/0.063, "
+        "mismatched vs the base-implied 28.8 - base wins per the established P5 convention); "
+        "AP coefficient moves 0.063 -> 0.123, base V60 77 -> ~77 (essentially unchanged, by "
+        "construction)."
+    ),
+    raw_overrides={'AttributesEx': 512, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 16, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Swipe nearby enemies, inflicting {pot1} damage.  Damage increased by attack power.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'ShapeshiftMask': 144, 'SpellClassMask_2': 1048576, 'SpellClassSet': 7, 'SpellLevel': 16, 'SpellVisualID_1': 189, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -262,11 +269,21 @@ rip_1079 = spell(
     range_yards=5.0,
     duration_ms=12000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=2, points_per_level=0.55, mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+        Effect(type=EffectType.APPLY_AURA, mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000, ap_potency=2.7, cp_ap_potency=1.5, potency_kind='periodic'),
     ],
     spell_icon_id=108,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 1049088, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Bleed damage every $t1 seconds.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Finishing move that causes damage over time.  Damage increases per combo point and by your attack power:\r\n   1 point: ${($m1+$b1*1+0.01*$AP)*$<dur>} damage over $d.\r\n   2 points: ${($m1+$b1*2+0.02*$AP)*$<dur>} damage over $d.\r\n   3 points: ${($m1+$b1*3+0.03*$AP)*$<dur>} damage over $d.\r\n   4 points: ${($m1+$b1*4+0.04*$AP)*$<dur>} damage over $d.\r\n   5 points: ${($m1+$b1*5+0.05*$AP)*$<dur>} damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectPointsPerCombo_1': 4.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_1': 8388608, 'SpellClassMask_3': 2097152, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 165, 'SpellLevel': 20, 'SpellVisualID_1': 3941, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    notes=(
+        'potency-system (PLAN P6 step 4, finishers): converted from the single-rank bootstrap '
+        '(BasePoints/BaseLevel/SpellLevel kept from rank 1, learn level 20). ap_potency=2.7 is the '
+        'flat per-tick part, cp_ap_potency=1.5 is per combo point per tick; together they reproduce '
+        'the pre-conversion per-tick total at level 60, 5 combo points, 1000 attack power (95, '
+        'summing the stock EffectPointsPerCombo=4 flat per-combo-point line and the '
+        'spell_dru_rip::CalculateAmount script\'s 0.01*AP-per-combo-point term) to within 2%. '
+        'EffectPointsPerCombo_1 is generated as 0; spell_dru_rip\'s own AP addition is gated behind '
+        'SpellPotency::HasRow() (src/server/scripts/Spells/spell_druid.cpp) so it does not double '
+        'count on top of the new cp_ap coefficient.'
+    ),
+    raw_overrides={'AttributesEx': 1049088, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Bleed damage every $t1 seconds.', 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Finishing move that causes damage over time.  Damage increases per combo point and by your attack power:\r\n   1 point: ${($m1+$b1*1+0.01*$AP)*$<dur>} damage over $d.\r\n   2 points: ${($m1+$b1*2+0.02*$AP)*$<dur>} damage over $d.\r\n   3 points: ${($m1+$b1*3+0.03*$AP)*$<dur>} damage over $d.\r\n   4 points: ${($m1+$b1*4+0.04*$AP)*$<dur>} damage over $d.\r\n   5 points: ${($m1+$b1*5+0.05*$AP)*$<dur>} damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_1': 8388608, 'SpellClassMask_3': 2097152, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 165, 'SpellLevel': 20, 'SpellVisualID_1': 3941, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -330,13 +347,21 @@ rake_1822 = spell(
     range_yards=5.0,
     duration_ms=9000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=16, points_per_level=2.8392857142857144, mechanic=15, implicit_target_a=6),
-        Effect(type=EffectType.APPLY_AURA, base_points=29, points_per_level=5.857142857142857, mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=44.5, potency_kind='direct', mechanic=15, implicit_target_a=6),
+        Effect(type=EffectType.APPLY_AURA, ap_potency=44.9, potency_kind='periodic', mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=6),
     ],
     spell_icon_id=494,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 24); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 8, 'AttributesEx4': 1048576, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Bleeding for $s2 damage every $t2 seconds.', 'BaseLevel': 24, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Rake the target for ${$AP/100+$m1} bleed damage and an additional ${$m2*3+$AP*0.18} damage over $d.  Awards $s3 combo $lpoint:points;.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_1': 4096, 'SpellClassSet': 7, 'SpellLevel': 24, 'SpellVisualID_1': 750, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    notes=(
+        "potency-system (PLAN P6 step 5, Feral pass): converted from the single-rank bootstrap "
+        "(BasePoints/BaseLevel/SpellLevel kept from rank 1, learn level 24). Both effects are "
+        "ap-only (old coefficients 0/0.010 direct, 0/0.060 periodic) - ap_potency=44.5 (direct) and "
+        "44.9 (periodic) are druid-potency-report.md's base-implied defaults, matching the "
+        "established P5 convention for a mismatched ap-only row; AP coefficients move 0.010 -> "
+        "0.191 (direct) and 0.060 -> 0.385 (periodic tick), base V60s essentially unchanged by "
+        "construction."
+    ),
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 8, 'AttributesEx4': 1048576, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot2} damage every $t2 seconds.', 'BaseLevel': 24, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Rake the target, causing {pot1} damage and an additional {pot2.total} damage over $d.  Awards $s3 combo $lpoint:points;.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_1': 4096, 'SpellClassSet': 7, 'SpellLevel': 24, 'SpellVisualID_1': 750, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -462,11 +487,11 @@ starfire_2912 = spell(
     mana_cost_pct=16,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=120, points_per_level=14.3, die_sides=29, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=158.6, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=1485,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60 (anchor rank 7 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §0.13 (A9): cast 3.5s->2.5s (Starlight Wrath\'s stock cast-cut is gone, §6 row 0,1), raw CastingTimeIndex dropped (resolves via the plain 2500ms row, 30002); now cleaves (spell_dru_starfire_cleave AfterHit casts 200337, WP-B)',
-    raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes $s1 Arcane damage to the target.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 4, 'SpellClassSet': 7, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 1264, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60 (anchor rank 7 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §0.13 (A9): cast 3.5s->2.5s (Starlight Wrath\'s stock cast-cut is gone, §6 row 0,1), raw CastingTimeIndex dropped (resolves via the plain 2500ms row, 30002); now cleaves (spell_dru_starfire_cleave AfterHit casts 200337, WP-B). Potency system P5 (druid pass): converted to sp_potency=158.6 (potency-report default, base/coef already agreed).',
+    raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot1} Arcane damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 4, 'SpellClassSet': 7, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 1264, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 scripted_by(starfire_2912, 'spell_dru_starfire_cleave')
 
@@ -483,11 +508,11 @@ wrath_5176 = spell(
     mana_cost_pct=11,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=16, points_per_level=5.111864397081278, die_sides=3, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=119.3, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=263,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60 (anchor rank 8 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §0.13 (A9): cast_time_ms now says the 1500ms it already resolved to; raw CastingTimeIndex dropped (resolves via the plain 1500ms row, 30004)',
-    raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes $s1 Nature damage to the target.', 'EffectBonusMultiplier_1': 0.5709999799728394, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 1073741824, 'Speed': 20.0, 'SpellClassMask_1': 1, 'SpellClassSet': 7, 'SpellLevel': 1, 'SpellVisualID_1': 3860, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60 (anchor rank 8 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §0.13 (A9): cast_time_ms now says the 1500ms it already resolved to; raw CastingTimeIndex dropped (resolves via the plain 1500ms row, 30004). Potency system P5 (druid pass): converted to sp_potency=119.3 (potency-report default, base/coef already agreed).',
+    raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot1} Nature damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 1073741824, 'Speed': 20.0, 'SpellClassMask_1': 1, 'SpellClassSet': 7, 'SpellLevel': 1, 'SpellVisualID_1': 3860, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -503,11 +528,11 @@ healing_touch_5185 = spell(
     mana_cost_pct=33,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, base_points=36, points_per_level=47.144303792639626, die_sides=15, implicit_target_a=21),
+        Effect(type=EffectType.HEAL, sp_potency=160.0, potency_kind='heal', implicit_target_a=21),
     ],
     spell_icon_id=962,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 15 @ level 80); coefficient/mana_cost_pct from max rank; MaxLevel set to 80. PLAN A9 (BALANCE §0.13): cast_time_ms=2500, raw CastingTimeIndex (16, 1500ms) dropped so it no longer wins over the typed field. ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7 (B6 heal-cancel hook needs the heal to be castable in Moonkin at all).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for $<min> to $<max>.', 'EffectBonusMultiplier_1': 1.6100000143051147, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'SpellClassMask_1': 32, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 28, 'SpellLevel': 1, 'SpellVisualID_1': 58, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 15 @ level 80); coefficient/mana_cost_pct from max rank; MaxLevel set to 80. PLAN A9 (BALANCE §0.13): cast_time_ms=2500, raw CastingTimeIndex (16, 1500ms) dropped so it no longer wins over the typed field. ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7 (B6 heal-cancel hook needs the heal to be castable in Moonkin at all). Potency system P5 (druid pass): converted to sp_potency=160.0 (potency-report default, base/coef already agreed); description dropped the stock $<min>/$<max> SpellDescriptionVariable range (heal kind has no variance roll, so it is now a single value) for {pot1}.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for {pot1}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'SpellClassMask_1': 32, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 28, 'SpellLevel': 1, 'SpellVisualID_1': 58, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -617,13 +642,22 @@ shred_5221 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_DAMAGE, base_points=14, points_per_level=4.689655172413793, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=108.3, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=6),
-        Effect(type=31, base_points=224, implicit_target_a=6),
     ],
     spell_icon_id=147,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 22); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; Claw 1082 retired, Shred takes its place: energy 60 -> 40, learned at 20 (Claw\'s level; BaseLevel/SpellLevel 22 -> 20, eff0 base 23 -> 14 keeps the level-80 value at ~295), no behind-the-target requirement (tooltip + custom_attr(shred_5221, 0) in druid_talents.py)',
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 1048576, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Shred the target, causing $s3% damage plus 54 to the target.  Awards $s2 combo $lpoint:points;.  Effects which increase Bleed damage also increase Shred damage.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_1': 32768, 'SpellClassSet': 7, 'SpellLevel': 20, 'SpellVisualID_1': 3950, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 22); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; Claw 1082 retired, Shred takes its place: energy 60 -> 40, learned at 20 (Claw\'s level; BaseLevel/SpellLevel 22 -> 20, eff0 base 23 -> 14 keeps the level-80 value at ~295), no behind-the-target requirement (tooltip + custom_attr(shred_5221, 0) in druid_talents.py). '
+          'potency-system (PLAN P6 step 5 follow-up, 2026-10-01, "the open design question", REVISED): moved off the weapon-damage effect '
+          'entirely (user call, 2026-10-01) rather than converting the flat bonus into weapon_potency - Cat/Bear form damage is already a pure '
+          'function of level (capped at 60) and attack power (Player::CalculateMinMaxDamage), not real weapon itemization, so modeling it as an '
+          'ordinary ap_potency SCHOOL_DAMAGE effect (like Pulverize/Savage Bite/Rake/Ferocious Bite already do) gives exact control with no '
+          'reference-DPS assumption and no percent-value cosmetic concerns. ap_potency=108.3 exactly reproduces the prior total at level 60/1000 '
+          'AP (753.6, using the already-fixed 224% weapon_potency\'s total - see potency-system.PROGRESS.md\'s "P6 step 5 follow-up" for the '
+          'engine-formula derivation of that number) - restoring Shred to its full exact-preserving value (the 450%-rounding compromise is now '
+          'moot, since there\'s no percent to round). Dropping SPELL_EFFECT_WEAPON_PERCENT_DAMAGE/WEAPON_DAMAGE removes this spell from '
+          'Spell::EffectWeaponDmg entirely, which was the only place "Shred, Maul - Rend and Tear" (SpellFamilyFlags[0] & 0x8800, bonus damage '
+          'vs bleeding targets) lived - ported into Spell::EffectSchoolDMG\'s own Druid case (SpellEffects.cpp) so the talent keeps working.',
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 1048576, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Shred the target, causing {pot1} damage.  Awards $s2 combo $lpoint:points;.  Effects which increase Bleed damage also increase Shred damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_1': 32768, 'SpellClassSet': 7, 'SpellLevel': 20, 'SpellVisualID_1': 3950, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -711,13 +745,20 @@ ravage_6785 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_DAMAGE, base_points=41, points_per_level=8.708333333333334, implicit_target_a=6),
-        Effect(type=31, base_points=384, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=232.0, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=6),
     ],
     spell_icon_id=1531,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 32); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework FERAL §7 notes: attributes drop SPELL_ATTR0_ONLY_STEALTHED (0x20000) - the client checks it itself; spell_dru_ravage requires stealth unless Stampede (Cat) 200434 is up; energy 60 -> 40',
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 1048576, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 32, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Ravage the target, causing $s2% damage plus ${$m1*$m2/100} to the target.  Must be prowling and behind the target.  Awards $s3 combo $lpoint:points;.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_1': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_1': 65536, 'SpellClassSet': 7, 'SpellLevel': 32, 'SpellPriority': 50, 'SpellVisualID_1': 2275, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 32); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework FERAL §7 notes: attributes drop SPELL_ATTR0_ONLY_STEALTHED (0x20000) - the client checks it itself; spell_dru_ravage requires stealth unless Stampede (Cat) 200434 is up; energy 60 -> 40. '
+          'potency-system (P6 step 5 follow-up, 2026-10-01): moved off the weapon-damage effects entirely (same reasoning as Maul/Shred - Cat '
+          'Form damage is already a pure function of level and attack power, not real itemization). This was found not yet mentioned in any '
+          'prior pass: eff1 was a flat WEAPON_DAMAGE bonus (41 + 8.71/level), eff2 was a hand-set WEAPON_PERCENT_DAMAGE at base_points=384 - '
+          'with the default die_sides=1, that was actually dealing 385% live, the same pre-existing off-by-one Mangle/Swipe/Shred had, never '
+          'caught before now. Replaced both with one SCHOOL_DAMAGE effect, ap_potency=232.0, exactly reproducing the old total (1614.8 at '
+          'level 60/1000 AP). Checked SpellFamilyFlags (SpellClassMask_1=65536, no SpellClassMask_2) against Spell::EffectWeaponDmg\'s two '
+          'Druid-specific special cases (Mangle (Cat): CP at flags[1]&0x400, Shred/Maul\'s Rend and Tear at flags[0]&0x8800) - neither matches, '
+          'so no behavior needed porting, unlike Shred/Maul.',
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 1048576, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 32, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Ravage the target, causing {pot1} damage.  Must be prowling and behind the target.  Awards $s2 combo $lpoint:points;.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_1': 65536, 'SpellClassSet': 7, 'SpellLevel': 32, 'SpellPriority': 50, 'SpellVisualID_1': 2275, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -734,11 +775,21 @@ maul_6807 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=17, points_per_level=8.0, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=123.8, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=261,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 10); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 10 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework FERAL §5: no longer on-next-swing (attributes 1044 -> 262160: drops ON_NEXT_SWING/ON_NEXT_SWING_NO_DAMAGE, adds DO_NOT_SHEATH), bear GCD, 5 sec cooldown (below 30 sec, so no Cooldown Haste), 25 rage, eff0 WEAPON_DAMAGE -> NORMALIZED_WEAPON_DMG; spell_dru_maul grants Swell in Bestial Fury',
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 4096, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 10, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A strong attack that deals weapon damage plus $s1 and causes a high amount of threat.  While Bestial Fury is active, Maul grants 1 stack of Swell and has a 15% chance to grant Tooth and Claw.  Effects which increase Bleed damage also increase Maul damage.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 144, 'SpellClassMask_1': 2048, 'SpellClassSet': 7, 'SpellLevel': 10, 'SpellVisualID_1': 166, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 10); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 10 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework FERAL §5: no longer on-next-swing (attributes 1044 -> 262160: drops ON_NEXT_SWING/ON_NEXT_SWING_NO_DAMAGE, adds DO_NOT_SHEATH), bear GCD, 5 sec cooldown (below 30 sec, so no Cooldown Haste), 25 rage; spell_dru_maul grants Swell in Bestial Fury. '
+          'potency-system (P6 step 5 follow-up, 2026-10-01, "the open design question", REVISED): moved off the weapon-damage effect entirely '
+          '(user call, 2026-10-01) rather than converting the flat bonus into weapon_potency - Cat/Bear form damage is already a pure function '
+          'of level (capped at 60) and attack power (Player::CalculateMinMaxDamage), not real weapon itemization, so modeling it as an ordinary '
+          'ap_potency SCHOOL_DAMAGE effect (like Pulverize/Savage Bite/Rake/Ferocious Bite already do) gives exact control with no reference-DPS '
+          'assumption needed. ap_potency=123.8 exactly reproduces the prior total at level 60/1000 AP/2H weapon (861.6 - see '
+          'potency-system.PROGRESS.md\'s "P6 step 5 follow-up" for the engine-formula derivation of that number, which no longer matters for '
+          'Maul\'s own live behavior now that it isn\'t a weapon effect, only as the preservation target). Dropping '
+          'SPELL_EFFECT_NORMALIZED_WEAPON_DMG/WEAPON_PERCENT_DAMAGE removes this spell from Spell::EffectWeaponDmg entirely, which was the only '
+          'place "Shred, Maul - Rend and Tear" (SpellFamilyFlags[0] & 0x8800, bonus damage vs bleeding targets) lived - ported into '
+          'Spell::EffectSchoolDMG\'s own Druid case (SpellEffects.cpp) so the talent keeps working.',
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 4096, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 10, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A strong attack that deals {pot1} damage and causes a high amount of threat.  While Bestial Fury is active, Maul grants 1 stack of Swell and has a 15% chance to grant Tooth and Claw.  Effects which increase Bleed damage also increase Maul damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 144, 'SpellClassMask_1': 2048, 'SpellClassSet': 7, 'SpellLevel': 10, 'SpellVisualID_1': 166, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 scripted_by(maul_6807, 'spell_dru_maul')  # druid-rework FERAL §5: AfterCast AddSwell(1) in Bestial Fury
 
@@ -757,12 +808,12 @@ moonfire_8921 = spell(
     range_yards=30.0,
     duration_ms=12000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, points_per_level=2.5789473684210527, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=6, points_per_level=5.25, die_sides=3, implicit_target_a=6),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=27.7, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=112.9, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=225,
-    notes="pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 14 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §0.13: duration 9s->12s (WotLK max rank; the single-rank bootstrap kept rank 1's 9s DurationIndex), 4 ticks at 3s; druid-rework FERAL §5 / §0.9: ShapeshiftExclude gains cat, bear and dire bear (0x91) so the client also refuses/auto-unshifts",
-    raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s1 Arcane damage every $t1 seconds.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Burns the enemy for $s2 Arcane damage and then an additional ${$m1*3*$<mult>} Arcane damage over $d.', 'EffectBonusMultiplier_1': 0.12999999523162842, 'EffectBonusMultiplier_2': 0.15000000596046448, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': SS_FERAL, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 2, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 176, 'SpellLevel': 4, 'SpellVisualID_1': 1263, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes="pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 14 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §0.13: duration 9s->12s (WotLK max rank; the single-rank bootstrap kept rank 1's 9s DurationIndex), 4 ticks at 3s; druid-rework FERAL §5 / §0.9: ShapeshiftExclude gains cat, bear and dire bear (0x91) so the client also refuses/auto-unshifts. Potency system P5 (druid pass): converted to sp_potency=27.7 (eff1, periodic) / 112.9 (eff2, direct) (potency-report default, base/coef already agreed).",
+    raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} Arcane damage every $t1 seconds.', 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Burns the enemy for {pot2} Arcane damage and then an additional {pot1.total} Arcane damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': SS_FERAL, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 2, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 176, 'SpellLevel': 4, 'SpellVisualID_1': 1263, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -780,12 +831,12 @@ regrowth_8936 = spell(
     range_yards=40.0,
     duration_ms=21000,
     effects=[
-        Effect(type=EffectType.HEAL, base_points=83, points_per_level=31.957352932761697, die_sides=15, implicit_target_a=21),
-        Effect(type=EffectType.APPLY_AURA, base_points=13, points_per_level=4.720588235294118, implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=3000),
+        Effect(type=EffectType.HEAL, sp_potency=153.3, potency_kind='heal', implicit_target_a=21),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=11.3, potency_kind='heal_periodic', implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=3000),
     ],
     spell_icon_id=197,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 12); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 12 @ level 80); coefficient/mana_cost_pct from max rank; MaxLevel set to 80. PLAN A9 (BALANCE §0.13): cast_time_ms=1500, raw CastingTimeIndex (5, 2000ms) dropped. ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7. druid-rework FERAL §5 / §0.9: ShapeshiftMask gains cat, bear and dire bear (0x91) next to tree; moonkin stays castable via ALLOW_WHILE_NOT_SHAPESHIFTED (AttributesEx2 0x80000).',
-    raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx4': 1048576, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals $s2 every $t2 seconds.', 'BaseLevel': 12, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for $s1 and another ${$m2*7*$<mult>} over $d.', 'EffectBonusMultiplier_1': 0.5379999876022339, 'EffectBonusMultiplier_2': 0.18799999356269836, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': SS_TREE | SS_FERAL, 'SpellClassMask_1': 64, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 176, 'SpellLevel': 12, 'SpellVisualID_1': 58, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 12); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 12 @ level 80); coefficient/mana_cost_pct from max rank; MaxLevel set to 80. PLAN A9 (BALANCE §0.13): cast_time_ms=1500, raw CastingTimeIndex (5, 2000ms) dropped. ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7. druid-rework FERAL §5 / §0.9: ShapeshiftMask gains cat, bear and dire bear (0x91) next to tree; moonkin stays castable via ALLOW_WHILE_NOT_SHAPESHIFTED (AttributesEx2 0x80000). Potency system P5 (druid pass): converted to sp_potency=153.3 (eff1, heal) / 11.3 (eff2, heal_periodic) (potency-report default, base/coef already agreed).',
+    raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx4': 1048576, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals {pot2} every $t2 seconds.', 'BaseLevel': 12, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for {pot1} and another {pot2.total} over $d.', 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': SS_TREE | SS_FERAL, 'SpellClassMask_1': 64, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 176, 'SpellLevel': 12, 'SpellVisualID_1': 58, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -949,11 +1000,11 @@ entangling_roots_19975 = spell(
     duration_ms=12000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=AuraType.MOD_ROOT),
-        Effect(type=EffectType.APPLY_AURA, base_points=4, points_per_level=0.4807692307692308, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=5.6, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
     ],
     spell_icon_id=20,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 8); RealPointsPerLevel from rank1->covers-60 (anchor rank 6 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx4': 536872960, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Rooted.  Causes $s2 Nature damage every $t2 seconds.', 'AuraInterruptFlags': 4718592, 'BaseLevel': 8, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Roots the target in place and causes $o2 Nature damage over $d.  Damage caused may interrupt the effect.  Only useable outdoors.', 'EffectBonusMultiplier_2': 0.10000000149011612, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 664232, 'SpellClassMask_1': 512, 'SpellClassSet': 7, 'SpellLevel': 8, 'SpellVisualID_1': 38, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 8); RealPointsPerLevel from rank1->covers-60 (anchor rank 6 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P5 (druid pass): converted to sp_potency=5.6 (potency-report default, base/coef already agreed).',
+    raw_overrides={'AttributesEx4': 536872960, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Rooted.  Causes {pot2} Nature damage every $t2 seconds.', 'AuraInterruptFlags': 4718592, 'BaseLevel': 8, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Roots the target in place and causes {pot2.total} Nature damage over $d.  Damage caused may interrupt the effect.  Only useable outdoors.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 664232, 'SpellClassMask_1': 512, 'SpellClassSet': 7, 'SpellLevel': 8, 'SpellVisualID_1': 38, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1041,11 +1092,40 @@ ferocious_bite_22568 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=13, points_per_level=2.2083333333333335, die_sides=17, implicit_target_a=6),
+        Effect(
+            type=EffectType.SCHOOL_DAMAGE, base_potency=31.0, cp_ap_potency=16.333, cp_base_potency=13.458,
+            potency_kind='direct', implicit_target_a=6,
+        ),
     ],
     spell_icon_id=1680,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 32); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 8 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 1049088, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 32, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Finishing move that causes damage per combo point and converts each extra point of energy (up to a maximum of $s2 extra energy) into ${$f1+$AP/410}.1 additional damage.  Damage is increased by your attack power.\r\n   1 point  : ${$m1+$b1*1+0.07*$AP}-${$M1+$b1*1+0.07*$AP} damage\r\n   2 points: ${$m1+$b1*2+0.14*$AP}-${$M1+$b1*2+0.14*$AP} damage\r\n   3 points: ${$m1+$b1*3+0.21*$AP}-${$M1+$b1*3+0.21*$AP} damage\r\n   4 points: ${$m1+$b1*4+0.28*$AP}-${$M1+$b1*4+0.28*$AP} damage\r\n   5 points: ${$m1+$b1*5+0.35*$AP}-${$M1+$b1*5+0.35*$AP} damage', 'EffectBasePoints_2': 29, 'EffectBonusMultiplier_1': 0.0, 'EffectChainAmplitude_1': 0.699999988079071, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectPointsPerCombo_1': 36.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_1': 8388608, 'SpellClassSet': 7, 'SpellLevel': 32, 'SpellVisualID_1': 6587, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    notes=(
+        'potency-system (PLAN P6 step 5, Feral pass): converted from the single-rank bootstrap '
+        '(BasePoints/BaseLevel/SpellLevel kept from rank 1, learn level 32). base_potency=31.0 '
+        'reproduces the pre-conversion CalcValue-only average at level 60 (83, die_sides=17 '
+        'included - potency-report default, V60/C60); it carries no sp_potency/ap_potency since '
+        "the flat hit never scaled with either stat even in stock. cp_ap_potency=16.333 alone would "
+        'give the right AP coefficient (0.07, matching the old hard-coded ap*combo*0.07 term) but '
+        'the wrong cp_line (43.7 instead of 36, since a bare cp_ap_potency ties the two at a fixed '
+        "ratio - docs/potency-system.md's worked derivation) - cp_base_potency=13.458 (new field, "
+        'PLAN P6 step 5, mirroring base_potency for the per-combo line) independently pins cp_line '
+        'back to 36, matching the old EffectPointsPerCombo_1=36. Together these reproduce the old '
+        'per-combo contribution (36 + 0.07*AP) exactly. EffectPointsPerCombo_1 is generated as 0; '
+        "the SpellEffects.cpp hard-coded ap*combo*0.07 term is gated behind SpellPotency::HasRow() "
+        '(already done in P6 step 3/4, confirmed still correct here). The energy-conversion AP bonus '
+        '(ap/410 per bonus energy point, 0-29 player-variable) is DROPPED entirely rather than '
+        'replaced - no single "current total" to preserve since the bonus energy spent varies by '
+        'player/rotation; this is a real, intentional reduction in Ferocious Bite\'s average damage '
+        '(up to ~7% of attack power in the rare case of a full 29-energy dump) in exchange for a '
+        'clean coefficient - see the C++ comment at its gate for the parallel writeup. DieSides 17 '
+        "(a much wider roll than every other potency effect's standard +-5%) is replaced by the "
+        'system-standard +-5% roll, same system-wide tradeoff already accepted for every other '
+        'converted direct effect (not Feral-specific). Tooltip: dropped "+$AP/410" from the energy-'
+        'conversion sentence (actively wrong now that the term is gone); the per-combo-point bullet '
+        'list is left referencing $b1/0.07*$AP as stale text, same as Eviscerate/Rip in P6 step 4 - '
+        'not re-derived into {pot1}-style placeholders (tooltip placeholder migration for finishers '
+        'is still an open item, see docs/potency-system.md\'s action items).'
+    ),
+    raw_overrides={'AttributesEx': 1049088, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 32, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Finishing move that causes damage per combo point and converts each extra point of energy (up to a maximum of $s2 extra energy) into $f1.1 additional damage.  Damage is increased by your attack power.\r\n   1 point  : ${$m1+$b1*1+0.07*$AP}-${$M1+$b1*1+0.07*$AP} damage\r\n   2 points: ${$m1+$b1*2+0.14*$AP}-${$M1+$b1*2+0.14*$AP} damage\r\n   3 points: ${$m1+$b1*3+0.21*$AP}-${$M1+$b1*3+0.21*$AP} damage\r\n   4 points: ${$m1+$b1*4+0.28*$AP}-${$M1+$b1*4+0.28*$AP} damage\r\n   5 points: ${$m1+$b1*5+0.35*$AP}-${$M1+$b1*5+0.35*$AP} damage', 'EffectBasePoints_2': 29, 'EffectBonusMultiplier_1': 0.0, 'EffectChainAmplitude_1': 0.699999988079071, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_1': 8388608, 'SpellClassSet': 7, 'SpellLevel': 32, 'SpellVisualID_1': 6587, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -1064,12 +1144,25 @@ maim_22570 = spell(
     range_yards=5.0,
     duration_ms=0,
     effects=[
-        Effect(type=EffectType.WEAPON_DAMAGE, base_points=44, points_per_level=1.1666666666666667, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=25.5, cp_base_potency=31.402, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, die_sides=0, mechanic=Mechanic.STUN, implicit_target_a=6, apply_aura=AuraType.MOD_STUN),
     ],
     spell_icon_id=1681,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 62); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 2 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 5505024, 'AttributesEx4': 8388608, 'AttributesEx7': 2048, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Stunned.', 'BaseLevel': 62, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Finishing move that causes damage and stuns the target.  Non-player victim spellcasting is also interrupted for $32747d.  Causes more damage and lasts longer per combo point:\r\n   1 point  : ${$b1*1+$m1+$mw}-${$b1*1+$M1+$MW} damage, 1 sec\r\n   2 points: ${$b1*2+$m1+$mw}-${$b1*2+$M1+$MW} damage, 2 sec\r\n   3 points: ${$b1*3+$m1+$mw}-${$b1*3+$M1+$MW} damage, 3 sec\r\n   4 points: ${$b1*4+$m1+$mw}-${$b1*4+$M1+$MW} damage, 4 sec\r\n   5 points: ${$b1*5+$m1+$mw}-${$b1*5+$M1+$MW} damage, 5 sec', 'DurationIndex': 187, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectPointsPerCombo_1': 84.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_2': 128, 'SpellClassSet': 7, 'SpellLevel': 62, 'SpellVisualID_1': 8148, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 62); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 2 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
+          'potency-system (P6 step 5 follow-up, 2026-10-01): a previously-unconverted finisher, found during the Maul/Shred/Ravage/Mangle audit '
+          '- not in any prior pass\'s report. eff1 was WEAPON_DAMAGE (44 + 1.1667/level) with EffectPointsPerCombo_1=84 (a genuine combo-point '
+          'finisher, same category as Eviscerate/Rip/Ferocious Bite), SpellLevel=62 - the first potency-converted ability whose SpellLevel sits '
+          'above the system\'s usual 60 reference (its own rank 1 really was learned at 62; a level-60 character cannot cast this at all, so the '
+          'preservation target below is evaluated at level 62, not 60). Moved off WEAPON_DAMAGE to SCHOOL_DAMAGE (same reasoning as Maul/Shred/ '
+          'Ravage/Mangle); ap_potency=25.5 (flat, no combo) reproduces the old flat hit + Cat Form\'s own raw weapon roll at level 62 (179.4); '
+          'cp_base_potency=31.402 (no cp_ap_potency - the old EffectPointsPerCombo=84 carried no attack-power term at all) reproduces the old '
+          'per-combo-point line exactly (cp_line=84.0, cp_ap=0.0). Checked SpellFamilyFlags (SpellClassMask_2=128) against both of '
+          'Spell::EffectWeaponDmg\'s Druid-specific special cases - matches neither, so no behavior needed porting. The stun aura (eff2) and '
+          'its "lasts longer per combo point" tooltip claim are untouched and out of scope here - found no script anywhere keyed to this '
+          'spell\'s id that actually scales the aura\'s DurationIndex=187 by combo points, so that claim may already be purely cosmetic/stock '
+          'tooltip text with no live effect; flagging it, not fixing it, since it is a pre-existing question unrelated to this effect\'s own '
+          'damage potency.',
+    raw_overrides={'AttributesEx': 5505024, 'AttributesEx4': 8388608, 'AttributesEx7': 2048, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Stunned.', 'BaseLevel': 62, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Finishing move that causes damage and stuns the target.  Non-player victim spellcasting is also interrupted for $32747d.  Causes more damage and lasts longer per combo point:\r\n   1 point  : ${$b1*1+$m1+$mw}-${$b1*1+$M1+$MW} damage, 1 sec\r\n   2 points: ${$b1*2+$m1+$mw}-${$b1*2+$M1+$MW} damage, 2 sec\r\n   3 points: ${$b1*3+$m1+$mw}-${$b1*3+$M1+$MW} damage, 3 sec\r\n   4 points: ${$b1*4+$m1+$mw}-${$b1*4+$M1+$MW} damage, 4 sec\r\n   5 points: ${$b1*5+$m1+$mw}-${$b1*5+$M1+$MW} damage, 5 sec', 'DurationIndex': 187, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_2': 128, 'SpellClassSet': 7, 'SpellLevel': 62, 'SpellVisualID_1': 8148, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -1130,10 +1223,17 @@ healing_touch_25297 = spell(
     mana_cost_pct=33,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, base_points=1943, points_per_level=6.199999809265137, die_sides=351, implicit_target_a=21),
+        Effect(
+            type=EffectType.HEAL, base_points=1943, points_per_level=6.199999809265137, die_sides=351, implicit_target_a=21,
+            potency_excluded="superseded rank, kept only because an item_template row casts this exact "
+            "spell id (see this spell's notes=) - potency forces MaxLevel=0 (uncapped) for the whole "
+            "spell, which would silently remove this rank's historical MaxLevel=65 power ceiling. Same "
+            "category as the Warlock pilot's Immolate Rank 3/8 exclusions (potency-system.PROGRESS.md "
+            "P4); conservative default per P5 - exclude, keep as-is.",
+        ),
     ],
     spell_icon_id=962,
-    notes='pulled from existing data; step-7: superseded rank, kept (referenced by item_template spellid)',
+    notes='pulled from existing data; step-7: superseded rank, kept (referenced by item_template spellid). Potency system P5 (druid pass): NOT converted - MaxLevel=65 is this rank\'s own historical power cap, and potency forces MaxLevel=0 spell-wide; conservative default (P4 precedent) is to exclude and keep this rank exactly as-is rather than uncap it.',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 14, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for $<min> to $<max>.', 'EffectBonusMultiplier_1': 1.6100000143051147, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 65, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 11', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 1073741824, 'SpellClassMask_1': 32, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 28, 'SpellLevel': 60, 'SpellVisualID_1': 58, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1150,10 +1250,17 @@ starfire_25298 = spell(
     mana_cost_pct=16,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=692, points_per_level=3.0999999046325684, die_sides=125, implicit_target_a=6),
+        Effect(
+            type=EffectType.SCHOOL_DAMAGE, base_points=692, points_per_level=3.0999999046325684, die_sides=125, implicit_target_a=6,
+            potency_excluded="superseded rank, kept only because an item_template row casts this exact "
+            "spell id (see this spell's notes=) - potency forces MaxLevel=0 (uncapped) for the whole "
+            "spell, which would silently remove this rank's historical MaxLevel=66 power ceiling. Same "
+            "category as the Warlock pilot's Shadow Bolt Rank 10 exclusion (potency-system.PROGRESS.md "
+            "P4); conservative default per P5 - exclude, keep as-is.",
+        ),
     ],
     spell_icon_id=1485,
-    notes='pulled from existing data; step-7: superseded rank, kept (referenced by item_template spellid)',
+    notes='pulled from existing data; step-7: superseded rank, kept (referenced by item_template spellid). Potency system P5 (druid pass): NOT converted - MaxLevel=66 is this rank\'s own historical power cap, and potency forces MaxLevel=0 spell-wide; conservative default (P4 precedent) is to exclude and keep this rank exactly as-is rather than uncap it.',
     raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 22, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes $s1 Arcane damage to the target.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 66, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 7', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 2, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 4, 'SpellClassSet': 7, 'SpellLevel': 60, 'SpellPriority': 50, 'SpellVisualID_1': 1264, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1172,10 +1279,17 @@ rejuvenation_25299 = spell(
     range_yards=40.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=221, implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=3000),
+        Effect(
+            type=EffectType.APPLY_AURA, base_points=221, implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=3000,
+            potency_excluded="superseded rank, kept only because an item_template row casts this exact "
+            "spell id (see this spell's notes=) - potency forces MaxLevel=0 (uncapped) for the whole "
+            "spell, which would silently remove this rank's historical MaxLevel=65 power ceiling. Same "
+            "category as the Warlock pilot's Corruption rank exclusion (potency-system.PROGRESS.md P4); "
+            "conservative default per P5 - exclude, keep as-is.",
+        ),
     ],
     spell_icon_id=64,
-    notes='pulled from existing data; step-7: superseded rank, kept (referenced by item_template spellid)',
+    notes='pulled from existing data; step-7: superseded rank, kept (referenced by item_template spellid). Potency system P5 (druid pass): NOT converted - MaxLevel=65 is this rank\'s own historical power cap, and potency forces MaxLevel=0 spell-wide; conservative default (P4 precedent) is to exclude and keep this rank exactly as-is rather than uncap it.',
     raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx4': 1048576, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals $s1 damage every $t1 seconds.', 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for ${$m1*5*$<mult>} over $d.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 0.37599998712539673, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 65, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 11', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 1073741824, 'ShapeshiftMask': 2, 'SpellClassMask_1': 16, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 176, 'SpellLevel': 60, 'SpellVisualID_1': 32, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1283,17 +1397,25 @@ lacerate_33745 = spell(
     range_yards=5.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, points_per_level=0.9, mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=30, points_per_level=3.9, implicit_target_a=6),
+        Effect(type=EffectType.APPLY_AURA, ap_potency=8.6, potency_kind='periodic', mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=69.9, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=2246,
-    notes='druid-rework FERAL §5: CumulativeAura 5 -> 3, cost 15 -> 10 rage, BaseLevel/SpellLevel 66 -> 20 (trainer 216 level 20) re-anchored so level 80 keeps the ~64 tick and the hit is ~3x (31 + 3.9/level = 265 at 80); coefficients 0.04 AP direct / 0.01 AP per tick (bonus_coefficients); spell_dru_lacerate (Flesh Render)',
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 128, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s1 damage every $t sec', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'CumulativeAura': 3, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Lacerates the enemy target, dealing $s2 damage and making them bleed for $o damage over $d and causing a high amount of threat.  Damage increased by attack power.  This effect stacks up to $u times on the same target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 144, 'SpellClassMask_2': 256, 'SpellClassSet': 7, 'SpellLevel': 20, 'SpellVisualID_1': 8146, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes=(
+        "druid-rework FERAL §5: CumulativeAura 5 -> 3, cost 15 -> 10 rage, BaseLevel/SpellLevel 66 -> "
+        "20 (trainer 216 level 20); spell_dru_lacerate (Flesh Render). potency-system (PLAN P6 step "
+        "5, Feral pass): both effects are ap-only (old coefficients 0/0.010 periodic, 0/0.040 "
+        "direct, via the hand-written bonus_coefficients() below, now removed) - ap_potency=8.6 "
+        "(periodic tick) and 69.9 (direct hit) are druid-potency-report.md's base-implied defaults, "
+        "matching the established P5 convention for a mismatched ap-only row; AP coefficients move "
+        "0.010 -> 0.074 (periodic) and 0.040 -> 0.300 (direct), base V60s essentially unchanged by "
+        "construction."
+    ),
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 128, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} damage every $t sec', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'CumulativeAura': 3, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Lacerates the enemy target, dealing {pot2} damage and making them bleed for {pot1.total} damage over $d and causing a high amount of threat.  This effect stacks up to $u times on the same target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 144, 'SpellClassMask_2': 256, 'SpellClassSet': 7, 'SpellLevel': 20, 'SpellVisualID_1': 8146, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 # druid-rework FERAL §5 / §0.1: learned at 20 on the live druid trainer 216 (the stock row sits on the dead
 # trainer 33 at 66; mod-progression phase_07 re-inserts (216, 33745) at 66 - known WP-T limitation).
 trained_by(lacerate_33745, trainer_id=216, req_level=20, money_cost=2000)
-bonus_coefficients(lacerate_33745, ap=0.04, ap_dot=0.01)
 scripted_by(lacerate_33745, 'spell_dru_lacerate')  # Flesh Render's extra application
 
 
@@ -1311,14 +1433,77 @@ lifebloom_33763 = spell(
     range_yards=40.0,
     duration_ms=7000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=17, points_per_level=0.6625, implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=1000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=5.7, potency_kind='heal_periodic', implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=1000),
+        # Potency system P5 follow-up (2026-10-01): this DUMMY slot's own base_points/points_per_level
+        # (252/9.7) are now VESTIGIAL - kept only because Druid::TriggerLifebloomBloom's
+        # AfterEffectRemove/AfterDispel hooks are registered against EFFECT_1/SPELL_AURA_DUMMY and need
+        # a real effect of that shape to bind to; its value is no longer read for the heal amount.
+        # 33778 (the "bloom", previously an undeclared stock spell relayed into via CastCustomSpell) is
+        # now a real potency-driven spell() of its own (lifebloom_bloom_33778, below) - TriggerLifebloomBloom
+        # was changed to read 33778's own CalcValue() instead of this slot's GetAmount(). See that
+        # declaration's notes for the full trace/design.
         Effect(type=EffectType.APPLY_AURA, base_points=252, points_per_level=9.7, implicit_target_a=21, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2101,
-    notes="druid-rework RESTO §7: mana_cost_pct 28->14; BaseLevel/SpellLevel 64->26; re-anchored level recipe (Q19, proportional to the existing L80 values: tick 40/46/53 at 60/70/80, bloom 582/679/776) - stored/ppl per RESTO §7's table (tick bp=17 ppl=0.6625, bloom bp=252 ppl=9.7); tooltip drops the mana-return mention and states the one-target rule (mana return removed in spell_dru_lifebloom, WP-B; the second Lifebloom removal itself is Druid::OnLifebloomApplied, WP-B).",
-    raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals $s1 every second and $s2 when effect finishes or is dispelled.', 'BaseLevel': 26, 'CastingTimeIndex': 1, 'CumulativeAura': 3, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for ${$m1*7*$<mult>} over $d.  When Lifebloom completes its duration or is dispelled, the target instantly heals themself for $s2.  This effect can stack up to $u times on the same target.  May be active on one target at a time.', 'EffectBonusMultiplier_1': 0.09520000219345093, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 2, 'SpellClassMask_2': 16, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 176, 'SpellLevel': 26, 'SpellVisualID_1': 8145, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},  # ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7
+    notes="druid-rework RESTO §7: mana_cost_pct 28->14; BaseLevel/SpellLevel 64->26; re-anchored level recipe (Q19, proportional to the existing L80 values: tick 40/46/53 at 60/70/80, bloom 582/679/776) - stored/ppl per RESTO §7's table (tick bp=17 ppl=0.6625, bloom bp=252 ppl=9.7); tooltip drops the mana-return mention and states the one-target rule (mana return removed in spell_dru_lifebloom, WP-B; the second Lifebloom removal itself is Druid::OnLifebloomApplied, WP-B). Potency system P5 (druid pass): eff1 (the tick) converted to sp_potency=5.7 (potency-report default, base/coef already agreed). Potency system P5 follow-up: eff2 (the bloom-on-fall-off base) is now vestigial - the real bloom heal is declared on 33778 itself (lifebloom_bloom_33778, below); this slot's own base_points/ppl are dead data, kept only for the AfterRemove/AfterDispel hook's structural requirement. Tooltip's old self-reference ($s2) repointed to the real source ($33778s1).",
+    raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals {pot1} every second and $s2 when effect finishes or is dispelled.', 'BaseLevel': 26, 'CastingTimeIndex': 1, 'CumulativeAura': 3, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for {pot1.total} over $d.  When Lifebloom completes its duration or is dispelled, the target instantly heals themself for $33778s1.  This effect can stack up to $u times on the same target.  May be active on one target at a time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 2, 'SpellClassMask_2': 16, 'SpellClassSet': 7, 'SpellDescriptionVariableID': 176, 'SpellLevel': 26, 'SpellVisualID_1': 8145, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},  # ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7
 )
 trained_by(lifebloom_33763, trainer_id=216, req_level=26, money_cost=5000)
+
+
+lifebloom_bloom_33778 = spell(
+    id=33778,
+    name='Lifebloom',
+    school=School.NATURE,
+    # Stock attributes (150994944 = SPELL_ATTR0_ALLOW_WHILE_MOUNTED | SPELL_ATTR0_ALLOW_WHILE_SITTING),
+    # deliberately NOT the usual 65536/SPELL_ATTR0_NOT_SHAPESHIFTED every other declared spell here
+    # uses - this spell is always force-cast by Druid::TriggerLifebloomBloom (DruidMechanics.cpp) when
+    # Lifebloom falls off or is dispelled, and must never fail because the target happens to be
+    # mounted or sitting at that moment.
+    attributes=150994944,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.HEAL, sp_potency=81.3, base_potency=54.9, potency_kind='heal', implicit_target_a=1),
+    ],
+    spell_icon_id=962,
+    notes="Potency system P5 follow-up (2026-10-01): promoted out of source/spells/npc.csv's inert "
+          "reference-only bucket into a real, actively-generated declaration (was previously "
+          "'pulled from existing data', never regenerated). This is Lifebloom's (33763) burst "
+          "'bloom' heal, fired by Druid::TriggerLifebloomBloom (DruidMechanics.cpp) when Lifebloom "
+          "falls off or is dispelled - traced in full before converting: TriggerLifebloomBloom used "
+          "to read a FLAT, unscaled base value from 33763's own eff2 DUMMY slot "
+          "(bloomEffect->GetAmount(), base_points=252/ppl=9.7, no SP applied), then separately called "
+          "caster->SpellHealingBonusDone(target, finalHeal=33778, ...) to apply SP bonus using "
+          "33778's OWN coefficient - sourced from a stock spell_bonus_data row "
+          "(33778, direct_bonus=0.655, 'Druid - Lifebloom DH'), not the DBC itself (whose own "
+          "EffectBonusMultiplier was 0.0). Base (on 33763) and coefficient (on 33778) were split "
+          "across two different spells, which doesn't fit potency's one-effect/one-value model, so "
+          "both numbers are now reproduced on THIS spell's own single effect instead: base_potency=54.9 "
+          "reproduces the real pre-SP level-60 value (582, from the rework's own re-anchored level "
+          "recipe) exactly; sp_potency=81.3 reproduces the real coefficient (0.655) exactly - the two "
+          "disagree by ~48% as a single potency value (54.9 alone gives 0.44 coefficient, 81.3 alone "
+          "overshoots the base to 861 @ 60), the same kind of independently-tuned-numbers mismatch "
+          "seen elsewhere this project, resolved here via base_potency since both real numbers were "
+          "worth keeping exactly rather than picking one. SpellLevel=26 (not this spell's own stock "
+          "64) matches Lifebloom's own re-anchored learn level - CalcValue() clamps any caster below "
+          "BaseLevel up to BaseLevel before scaling, so leaving SpellLevel at 64 would have frozen "
+          "every sub-64 Druid's bloom at its flat base with zero level scaling, a real regression. "
+          "unbind_bonus_coefficients() below retires the stock spell_bonus_data row so the generated "
+          "EffectBonusMultiplier_1 actually takes effect (D1: a live spell_bonus_data row always wins "
+          "over the DBC field). TriggerLifebloomBloom's C++ was updated to read this spell's own "
+          "CalcValue() instead of 33763's DUMMY slot, and to pass EFFECT_0 (not the old EFFECT_1) to "
+          "SpellHealingBonusDone, matching this spell's real (and only) effect index - see "
+          "DruidMechanics.cpp. The ×stack and ×Harmony multipliers TriggerLifebloomBloom applies on "
+          "top are untouched by any of this (they're applied after SpellHealingBonusDone returns, "
+          "same as before). 33763's own eff2 DUMMY slot is now vestigial - see its own updated notes.",
+    raw_overrides={'AttributesEx': 1056, 'AttributesEx2': 268451840, 'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target over 7 sec.  When Lifebloom completes its duration or is dispelled, the target instantly heals themself.  This effect can stack up to 3 times on the same target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 5, 'ShapeshiftExclude': 1073741824, 'SpellClassSet': 7, 'SpellLevel': 26, 'SpellVisualID_1': 8101, 'TargetCreatureType': 767},
+)
+unbind_bonus_coefficients(lifebloom_bloom_33778)
 
 
 cyclone_33786 = spell(
@@ -1359,13 +1544,23 @@ mangle_cat_33876 = spell(
     range_yards=5.0,
     duration_ms=60000,
     effects=[
-        Effect(type=EffectType.WEAPON_DAMAGE, base_points=70, points_per_level=3.5375, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=99.1, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=6, apply_aura=255, misc_value=15),
-        Effect(type=31, base_points=199, implicit_target_a=6),
+        Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=6),
     ],
     spell_icon_id=2312,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; learn level 50 -> 20 (trainer 216) re-anchored per PLAN B3 so level 80 keeps its flat bonus (99 + 6.133/level from 50 = 283): ppl 283/80 = 3.5375, bp 3.5375 x 20 - 1 ~= 70 (71 at 20, 177 at 50, 283 at 80)',
-    raw_overrides={'AttributesEx': 134218240, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'All bleed effects cause $s2% additional damage.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Mangle the target for $s3% normal damage plus ${$m1*$m3/100} and causes the target to take $s2% additional damage from bleed effects for $d.  Awards $34071s1 combo $lpoint:points;.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_2': 1024, 'SpellClassSet': 7, 'SpellLevel': 20, 'SpellVisualID_1': 8634, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; learn level 50 -> 20 (trainer 216) re-anchored per PLAN B3 so level 80 keeps its flat bonus (99 + 6.133/level from 50 = 283): ppl 283/80 = 3.5375, bp 3.5375 x 20 - 1 ~= 70 (71 at 20, 177 at 50, 283 at 80). '
+          'potency-system (P6 step 5 follow-up, 2026-10-01, REVISED): moved off the weapon-damage effects entirely (user call) rather than the '
+          'weapon_potency fix from earlier this session - eff1 (flat WEAPON_DAMAGE, ~283 at 80) and the old eff3 (WEAPON_PERCENT_DAMAGE, already '
+          'fixed to weapon_potency=199 earlier this session) are now one SCHOOL_DAMAGE effect, ap_potency=99.1, exactly reproducing the old '
+          'total (689.4 at level 60/1000 AP). Mangle (Cat) also relied on Spell::EffectWeaponDmg\'s own "Mangle (Cat): CP" special case '
+          '(SpellFamilyFlags[1]&0x400, a hard-coded AddComboPointGain(target,1) call) for its combo point - that only fires for weapon-type '
+          'effects, so moving off them would have silently dropped it. Rather than porting the hard-coded call, added a plain '
+          'EffectType.ADD_COMBO_POINTS effect instead (eff3) - functionally identical (Spell::EffectAddComboPoints also just calls '
+          'AddComboPointGain, with its own CalcValue, defaulting to 1 via the same die_sides=1 "+1" roll every potency effect already relies '
+          'on), and no core C++ edit needed. Mangle (Bear) does not award combo points (its own SpellFamilyFlags don\'t match this case) so '
+          'doesn\'t need this addition - see its own declaration.',
+    raw_overrides={'AttributesEx': 134218240, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'All bleed effects cause $s2% additional damage.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Mangle the target for {pot1} damage and causes the target to take $s2% additional damage from bleed effects for $d.  Awards $s3 combo $lpoint:points;.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_2': 1024, 'SpellClassSet': 7, 'SpellLevel': 20, 'SpellVisualID_1': 8634, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 trained_by(mangle_cat_33876, trainer_id=216, req_level=20, money_cost=2000)  # druid-rework FERAL §5: talent -> baseline
 
@@ -1385,13 +1580,19 @@ mangle_bear_33878 = spell(
     range_yards=5.0,
     duration_ms=60000,
     effects=[
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=31, points_per_level=3.25, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=104.4, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=6, apply_aura=255, misc_value=15),
-        Effect(type=31, base_points=114, implicit_target_a=6),
     ],
     spell_icon_id=2312,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework FERAL §5: now baseline (trainer 216 level 50), ShapeshiftMask 128 -> 144 (both bears), eff0 WEAPON_DAMAGE -> NORMALIZED_WEAPON_DMG keeping 74 / 6.1667; learn level 50 -> 10 (trainer 216) re-anchored per PLAN B3 so level 80 keeps its flat bonus (75 + 6.167/level from 50 = 260): ppl 260/80 = 3.25, bp 3.25 x 10 - 1 ~= 31 (32 at 10, 162 at 50, 260 at 80)',
-    raw_overrides={'AttributesEx': 134218240, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'All bleed effects cause $s2% additional damage.', 'BaseLevel': 10, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Mangle the target for $s3% normal damage plus ${$m1*$m3/100} and causes the target to take $s2% additional damage from bleed effects for $d.  While Bestial Fury is active, has a 15% chance to grant Tooth and Claw.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': SS_ANY_BEAR, 'SpellClassMask_2': 64, 'SpellClassSet': 7, 'SpellLevel': 10, 'SpellVisualID_1': 6586, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework FERAL §5: now baseline (trainer 216 level 50), ShapeshiftMask 128 -> 144 (both bears), eff0 WEAPON_DAMAGE -> NORMALIZED_WEAPON_DMG keeping 74 / 6.1667; learn level 50 -> 10 (trainer 216) re-anchored per PLAN B3 so level 80 keeps its flat bonus (75 + 6.167/level from 50 = 260): ppl 260/80 = 3.25, bp 3.25 x 10 - 1 ~= 31 (32 at 10, 162 at 50, 260 at 80). '
+          'potency-system (P6 step 5 follow-up, 2026-10-01, REVISED): moved off the weapon-damage effects entirely (user call), same treatment '
+          'as Mangle (Cat) - eff1 (flat NORMALIZED_WEAPON_DMG, ~260 at 80) and the old eff3 (WEAPON_PERCENT_DAMAGE, already fixed to '
+          'weapon_potency=114 earlier this session) are now one SCHOOL_DAMAGE effect, ap_potency=104.4, exactly reproducing the old total '
+          '(726.9 at level 60/1000 AP, using the normalized-weapon-type (2H) raw roll - Bear Form abilities use the weapon-type-based speed '
+          'constant, not the form\'s own swing timer, for a normalized effect). Unlike Mangle (Cat), this one does not award combo points '
+          '(Bear Form has none) - its own SpellFamilyFlags (SpellClassMask_2=64) don\'t match Spell::EffectWeaponDmg\'s "Mangle (Cat): CP" '
+          'check (flags[1]&0x400), confirmed before concluding no addition was needed here.',
+    raw_overrides={'AttributesEx': 134218240, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'All bleed effects cause $s2% additional damage.', 'BaseLevel': 10, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Mangle the target for {pot1} damage and causes the target to take $s2% additional damage from bleed effects for $d.  While Bestial Fury is active, has a 15% chance to grant Tooth and Claw.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': SS_ANY_BEAR, 'SpellClassMask_2': 64, 'SpellClassSet': 7, 'SpellLevel': 10, 'SpellVisualID_1': 6586, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 trained_by(mangle_bear_33878, trainer_id=216, req_level=10, money_cost=600)  # druid-rework FERAL §5: talent -> baseline
 
@@ -1454,12 +1655,13 @@ nourish_50464 = spell(
     mana_cost_pct=18,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, base_points=1882, points_per_level=9.699999809265137, die_sides=305, implicit_target_a=21),
+        Effect(type=EffectType.HEAL, sp_potency=192.1, potency_kind='heal', implicit_target_a=21),
     ],
     spell_icon_id=2863,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 80, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for $s1. Heals for an additional 20% if you have a Rejuvenation, Regrowth, Lifebloom, or Wild Growth effect active on the target.', 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_1': 0.671999990940094, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 85, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 1073741981, 'SpellClassMask_2': 33554432, 'SpellClassSet': 7, 'SpellLevel': 80, 'SpellVisualID_1': 11570, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data. Potency system P5 (druid pass): converted to sp_potency=192.1 (potency-report default, base/coef already agreed).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 80, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for {pot1}. Heals for an additional 20% if you have a Rejuvenation, Regrowth, Lifebloom, or Wild Growth effect active on the target.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'MaxLevel': 85, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 1073741981, 'SpellClassMask_2': 33554432, 'SpellClassSet': 7, 'SpellLevel': 80, 'SpellVisualID_1': 11570, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+unbind_bonus_coefficients(nourish_50464)  # stale spell_bonus_data row overrode the potency coefficient (D1)
 
 
 revive_50769 = spell(
@@ -1522,10 +1724,16 @@ swipe_cat_62078 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=31, base_points=249, implicit_target_a=6, chain_targets=1000),
+        Effect(type=31, weapon_potency=249, implicit_target_a=6, chain_targets=1000),
     ],
     spell_icon_id=1562,
-    notes='pulled from existing data',
+    notes=(
+        "pulled from existing data. potency-system (PLAN P6 step 5, Feral pass): pure "
+        "WEAPON_PERCENT_DAMAGE, no flat effect - converted to weapon_potency=249 (previously "
+        "base_points=249 with the default die_sides=1, i.e. actually dealing 250% live - the same "
+        "pre-existing off-by-one Mangle (Cat)/(Bear) had; weapon_potency's own -1/+1 convention "
+        "lands on the intended 249%). No behavior change beyond that 1-point fix."
+    ),
     raw_overrides={'AttributesEx': 512, 'AttributesEx2': 4096, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 71, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Swipe nearby enemies, inflicting $s1% weapon damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 1, 'SpellClassMask_3': 1024, 'SpellClassSet': 7, 'SpellLevel': 71, 'SpellVisualID_1': 13170, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
@@ -1544,11 +1752,11 @@ insect_swarm_5570 = spell(
     range_yards=30.0,
     duration_ms=14000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=23, points_per_level=2.5, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=34.8, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
     ],
     spell_icon_id=1771,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60 (anchor rank 5 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §6 row (2,1): duration 12s->14s (7 ticks), hit-reduction eff2 dropped (12.12); scripted_by(spell_dru_insect_swarm_cast) removes the caster\'s Swarming Rot copy (200352) on a real cast',
-    raw_overrides={'AttributesEx2': 524288, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s1 Nature damage every $t1 sec.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The enemy target is swarmed by insects, causing $o1 Nature damage over $d.', 'EffectBonusMultiplier_1': 0.20000000298023224, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 2097152, 'SpellClassSet': 7, 'SpellLevel': 20, 'SpellVisualID_1': 7333, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60 (anchor rank 5 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80; druid-rework BALANCE §6 row (2,1): duration 12s->14s (7 ticks), hit-reduction eff2 dropped (12.12); scripted_by(spell_dru_insect_swarm_cast) removes the caster\'s Swarming Rot copy (200352) on a real cast. Potency system P5 (druid pass): converted to sp_potency=34.8 (not mismatched; potency-report base-damage default).',
+    raw_overrides={'AttributesEx2': 524288, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} Nature damage every $t1 sec.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The enemy target is swarmed by insects, causing {pot1.total} Nature damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 1073741824, 'SpellClassMask_1': 2097152, 'SpellClassSet': 7, 'SpellLevel': 20, 'SpellVisualID_1': 7333, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1567,12 +1775,12 @@ wild_growth_48438 = spell(
     range_yards=40.0,
     duration_ms=7000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=97, points_per_level=5.4, implicit_target_a=63, implicit_target_b=31, apply_aura=AuraType.PERIODIC_HEAL, amplitude=1000, radius_yards=15.0),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=13.9, potency_kind='heal_periodic', implicit_target_a=63, implicit_target_b=31, apply_aura=AuraType.PERIODIC_HEAL, amplitude=1000, radius_yards=15.0),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=87, implicit_target_b=31, apply_aura=AuraType.DUMMY, radius_yards=15.0),
     ],
     spell_icon_id=2864,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx4': 1048576, 'AttributesEx5': 4194304, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals $s1 damage every $t1 second.', 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals up to $s3 friendly party or raid members within $a1 yards of the target for $o1 over $d. The amount healed is applied quickly at first, and slows down as the Wild Growth reaches its full duration.', 'EffectBasePoints_3': 4, 'EffectBonusMultiplier_1': 0.11500000208616257, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_2': 67108864, 'SpellClassSet': 7, 'SpellLevel': 60, 'SpellPriority': 50, 'SpellVisualID_1': 11568, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P5 (druid pass): converted to sp_potency=13.9 (potency-report default, base/coef already agreed).',
+    raw_overrides={'AttributesEx2': 524288, 'AttributesEx3': 128, 'AttributesEx4': 1048576, 'AttributesEx5': 4194304, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals {pot1} damage every $t1 second.', 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals up to $s3 friendly party or raid members within $a1 yards of the target for {pot1.total} over $d. The amount healed is applied quickly at first, and slows down as the Wild Growth reaches its full duration.', 'EffectBasePoints_3': 4, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 134217728, 'ShapeshiftMask': 2147483648, 'SpellClassMask_2': 67108864, 'SpellClassSet': 7, 'SpellLevel': 60, 'SpellPriority': 50, 'SpellVisualID_1': 11568, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1658,13 +1866,12 @@ swiftmend_18562 = spell(
     mana_cost_pct=16,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, base_points=189, points_per_level=10.0, implicit_target_a=21),
+        Effect(type=EffectType.HEAL, sp_potency=56.6, potency_kind='heal', implicit_target_a=21),
     ],
     spell_icon_id=1917,
-    notes="druid-rework RESTO §7/§8 (2,2): moved (6,1)->(2,2); no longer consumes a heal over time effect - extends Rejuvenation/Germination, Regrowth and Lifebloom by 6 sec instead (spell_dru_swiftmend, WP-B); cooldown 15000->25000 (below the Cooldown Haste floor); heal recipe v60=600 at learn level 19 (600/700/800 at 60/70/80, stored bp=189 ppl=10); TargetAuraState 15->0 (retires the core consume branch, CORE-AUDIT row 19); bonus_coefficients(direct=1.4); tooltip rewritten.",
-    raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 19, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Requires Rejuvenation, Regrowth or Lifebloom on the target. Heals the target for $s1 and extends the duration of your Rejuvenation, Regrowth and Lifebloom on that target by 6 sec.  The extension may exceed their normal maximum duration.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 2, 'SpellClassMask_2': 2, 'SpellClassSet': 7, 'SpellLevel': 19, 'SpellVisualID_1': 3884, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'TargetAuraState': 0},  # ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7
+    notes="druid-rework RESTO §7/§8 (2,2): moved (6,1)->(2,2); no longer consumes a heal over time effect - extends Rejuvenation/Germination, Regrowth and Lifebloom by 6 sec instead (spell_dru_swiftmend, WP-B); cooldown 15000->25000 (below the Cooldown Haste floor); heal recipe v60=600 at learn level 19 (600/700/800 at 60/70/80, stored bp=189 ppl=10); TargetAuraState 15->0 (retires the core consume branch, CORE-AUDIT row 19); tooltip rewritten. Potency system P5 (druid pass): converted to sp_potency=56.6 (potency-report default, base/coef already agreed); the old bonus_coefficients(direct=1.4) spell_bonus_data override is retired in favor of the generated DBC coefficient.",
+    raw_overrides={'AttributesEx2': 524288, 'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 19, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Requires Rejuvenation, Regrowth or Lifebloom on the target. Heals the target for {pot1} and extends the duration of your Rejuvenation, Regrowth and Lifebloom on that target by 6 sec.  The extension may exceed their normal maximum duration.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftExclude': 0, 'ShapeshiftMask': 2, 'SpellClassMask_2': 2, 'SpellClassSet': 7, 'SpellLevel': 19, 'SpellVisualID_1': 3884, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'TargetAuraState': 0},  # ShapeshiftExclude Moonkin bit dropped - PLAN §11.5 / code review finding #7
 )
-bonus_coefficients(swiftmend_18562, direct=1.4)
 scripted_by(swiftmend_18562, 'spell_dru_swiftmend')
 
 
@@ -1775,16 +1982,15 @@ starsurge_200333 = spell(
     mana_cost_pct=5,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=72, points_per_level=3.3333333333333335, die_sides=1, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=74.4, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=1957,
-    notes='NEW (druid-rework BALANCE §5 "Starsurge"): scales with level (PLAN B3), learn level 22, level-60 value 200 -> ppl 200/60; on the Cooldown Haste allow list (A3); shares icon 1957 with Genesis talent (spell vs talent, accepted 12.14); a projectile at Speed 35 (Ice Lance is 38) with Ascension\'s own Starsurge missile/hand-flare/impact art, SpellVisualID_1 90018 (patch_druid_vfx_models.py), replacing the borrowed Starfire visual 1264',
-    raw_overrides={'BaseLevel': 22, 'SpellLevel': 22, 'MaxLevel': 80, 'FacingCasterFlags': 1, 'PreventionType': 1, 'DefenseType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'SpellClassMask_3': STARSURGE, 'ShapeshiftMask': 1073741824, 'SpellVisualID_1': 90018, 'Speed': 35.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches a surge of stellar energies at the target, dealing $s1 Astral damage.', 'EquippedItemClass': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+    notes='NEW (druid-rework BALANCE §5 "Starsurge"): scales with level (PLAN B3), learn level 22, level-60 value 200 -> ppl 200/60; on the Cooldown Haste allow list (A3); shares icon 1957 with Genesis talent (spell vs talent, accepted 12.14); a projectile at Speed 35 (Ice Lance is 38) with Ascension\'s own Starsurge missile/hand-flare/impact art, SpellVisualID_1 90018 (patch_druid_vfx_models.py), replacing the borrowed Starfire visual 1264. Potency system P5 (druid pass): converted to sp_potency=74.4 (potency-report default, base/coef already agreed); the old bonus_coefficients(direct=0.5) spell_bonus_data override is retired in favor of the generated DBC coefficient.',
+    raw_overrides={'BaseLevel': 22, 'SpellLevel': 22, 'MaxLevel': 80, 'FacingCasterFlags': 1, 'PreventionType': 1, 'DefenseType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'SpellClassMask_3': STARSURGE, 'ShapeshiftMask': 1073741824, 'SpellVisualID_1': 90018, 'Speed': 35.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches a surge of stellar energies at the target, dealing {pot1} Astral damage.', 'EquippedItemClass': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 trained_by(starsurge_200333, trainer_id=216, req_level=22, money_cost=3000)
 skill_line_ability(id=30424, skill_line=574, spell_id=starsurge_200333.id, class_mask=1024)
 scripted_by(starsurge_200333, 'spell_dru_starsurge')
-bonus_coefficients(starsurge_200333, direct=0.5)
 
 
 mass_entanglement_200334 = spell(
@@ -1902,14 +2108,13 @@ bloom_200560 = spell(
     mana_cost_pct=5,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, base_points=162, points_per_level=4.16667, die_sides=1, implicit_target_a=21),
+        Effect(type=EffectType.HEAL, sp_potency=23.6, potency_kind='heal', implicit_target_a=21),
     ],
     spell_icon_id=90130,
-    notes="druid-rework RESTO §6 'Bloom (200560 castable, 200561 jump)': talent (6,1). Level recipe v60=250, learn level 39 (250/292/333 at 60/70/80, stored bp=162, ppl=4.16667). CheckCast requires the explicit target to carry the caster's Rejuvenation or Germination; AfterHit starts Druid::StartBloomJumps (0.3 s waves, up to 3 new targets each within 20 yd/LoS of the previous wave, lowest HP% first, no target cap, visited-once). Direct Nature healing spell. A lobbed projectile (Speed 25, SpellVisualID_1 90023 from patch_druid_vfx_models.py: green orb on a high parabola, stock Nourish flower on landing); AfterHit runs on landing, so the jumps start from there.",
-    raw_overrides={'BaseLevel': 39, 'SpellLevel': 39, 'MaxLevel': 80, 'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'SpellClassMask_3': BLOOM, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target affected by your Rejuvenation for $s1. After a short delay it jumps to 3 nearby allies affected by your Rejuvenation. This repeats until no valid targets remain in range. Each target can be healed only once per cast.', 'EffectBonusMultiplier_1': 0.75, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'SpellVisualID_1': 90023, 'Speed': 25.0},
+    notes="druid-rework RESTO §6 'Bloom (200560 castable, 200561 jump)': talent (6,1). Level recipe v60=250, learn level 39 (250/292/333 at 60/70/80, stored bp=162, ppl=4.16667). CheckCast requires the explicit target to carry the caster's Rejuvenation or Germination; AfterHit starts Druid::StartBloomJumps (0.3 s waves, up to 3 new targets each within 20 yd/LoS of the previous wave, lowest HP% first, no target cap, visited-once). Direct Nature healing spell. A lobbed projectile (Speed 25, SpellVisualID_1 90023 from patch_druid_vfx_models.py: green orb on a high parabola, stock Nourish flower on landing); AfterHit runs on landing, so the jumps start from there. Potency system P5 (druid pass): converted to sp_potency=23.6 (potency-report default, base/coef already agreed); the old bonus_coefficients(direct=0.75) spell_bonus_data override (and the redundant hand-set EffectBonusMultiplier_1) are retired in favor of the generated DBC coefficient.",
+    raw_overrides={'BaseLevel': 39, 'SpellLevel': 39, 'MaxLevel': 80, 'DefenseType': 1, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 7, 'SpellClassMask_3': BLOOM, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target affected by your Rejuvenation for {pot1}. After a short delay it jumps to 3 nearby allies affected by your Rejuvenation. This repeats until no valid targets remain in range. Each target can be healed only once per cast.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'SpellVisualID_1': 90023, 'Speed': 25.0},
 )
 scripted_by(bloom_200560, 'spell_dru_bloom')
-bonus_coefficients(bloom_200560, direct=0.75)
 
 
 cenarion_ward_200562 = spell(
@@ -2115,7 +2320,7 @@ pulverize_200421 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=59, points_per_level=5.0, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=93.5, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.DUMMY, base_points=19, implicit_target_a=6),
     ],
     spell_icon_id=102,
@@ -2123,17 +2328,21 @@ pulverize_200421 = spell(
           "(60 + 5/level from level 22, ~350 at 80, +0.30 AP - 2.5x Upheaval, keeping Upheaval at 40% of Pulverize), "
           "eff1 20 = +% damage per Lacerate application consumed; spell_dru_pulverize requires 3 Lacerate "
           "stacks, multiplies by (1 + 0.20 x stacks) x (1 + 0.25 x Swell), then resets Lacerate to 1 and consumes up to 2 "
-          "Swell. Learned at 22 (§13 Q11). Visual: Mangle (Bear)'s.",
+          "Swell. Learned at 22 (§13 Q11). Visual: Mangle (Bear)'s. potency-system (PLAN P6 step 5, Feral pass): "
+          "eff0 is ap-only (old coefficient 0/0.30) - ap_potency=93.5 is druid-potency-report.md's base-implied "
+          "default, matching the P5 convention; AP coefficient moves 0.30 -> 0.401, base V60 250 -> ~250 "
+          "(essentially unchanged by construction). Upheaval/Thrash (structurally identical bear AoE abilities with "
+          "the same bonus_coefficients(ap=...) pattern) were left unconverted - not named in this pass's scope, "
+          "flagged for a follow-up.",
     raw_overrides=_feral_new_raw(
-        "Requires 3 applications of Lacerate on the target.  Deals $s1 damage, increased by attack power and by $s2% "
+        "Requires 3 applications of Lacerate on the target.  Deals {pot1} damage, increased by $s2% "
         "for each application of your Lacerate on the target, then consumes Lacerate and reapplies it with 1 "
         "application.  "
         "Consumes up to 2 stacks of Swell, increasing damage by 25% per stack consumed.",
         **_BEAR_ATTACK_RAW, BaseLevel=22, SpellLevel=22, MaxLevel=80, SpellClassMask_3=PULVERIZE,
-        SpellVisualID_1=6586, DurationIndex=0, EffectBonusMultiplier_1=1.0,
+        SpellVisualID_1=6586, DurationIndex=0,
     ),
 )
-bonus_coefficients(pulverize_200421, ap=0.30)
 trained_by(pulverize_200421, trainer_id=216, req_level=22, money_cost=3000)
 skill_line_ability(id=30435, skill_line=134, spell_id=pulverize_200421.id, class_mask=1024)
 scripted_by(pulverize_200421, 'spell_dru_pulverize')
@@ -2152,23 +2361,26 @@ upheaval_200422 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=24, points_per_level=2.5, implicit_target_a=22, implicit_target_b=15, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=33.6, potency_kind='direct', implicit_target_a=22, implicit_target_b=15, radius_yards=8.0),
     ],
     spell_icon_id=66,
     notes="NEW (druid-rework FERAL §4 'Upheaval', §11.4, WP-BRIEF §3): physical SCHOOL_DAMAGE, not a weapon attack "
-          "(25 + 2.5/level from level 34, ~140 at 80, +0.12 AP - roughly the old 60% normalized weapon damage, 40% of "
-          "Pulverize's 150%) to up to 10 enemies within 8 yd; spell_dru_upheaval keeps the 10 closest, applies "
+          "to up to 10 enemies within 8 yd; spell_dru_upheaval keeps the 10 closest, applies "
           "sqrt(5/N) past 5 and (1 + 0.25 x Swell), consumes up to 2 Swell once per cast. Upheaval-only family bit "
-          "(reclaimed dword 3 0x20000, CORE-AUDIT row 23). Learned at 34. Visual: Swipe (Bear)'s.",
+          "(reclaimed dword 3 0x20000, CORE-AUDIT row 23). Learned at 34. Visual: Swipe (Bear)'s. "
+          "potency-system (PLAN P6 step 5 follow-up, 2026-10-01): ap-only (old coefficient 0/0.12, via the removed "
+          "bonus_coefficients() below) - ap_potency=33.6 is druid-potency-report.md's base-implied default, matching "
+          "the established P5/Feral convention; AP coefficient moves 0.12 -> 0.144, base V60 90 -> ~86 (essentially "
+          "unchanged by construction). Same structural follow-up as Pulverize/Savage Bite/Lacerate, just not named in "
+          "the original pass's scope.",
     raw_overrides=_feral_new_raw(
-        "Slams the ground, dealing $s1 damage to up to $i enemies within $a1 yards.  Damage increased by attack power.  "
+        "Slams the ground, dealing {pot1} damage to up to $i enemies within $a1 yards.  "
         "When more than 5 enemies are hit, the damage to each is reduced.  Consumes up to 2 stacks of Swell, increasing damage by 25% per "
         "stack consumed.",
         **_BEAR_ATTACK_RAW, BaseLevel=34, SpellLevel=34, MaxLevel=80, MaxTargets=10, SpellClassMask_3=UPHEAVAL,
-        SpellVisualID_1=189, DurationIndex=0, EffectBonusMultiplier_1=1.0,
+        SpellVisualID_1=189, DurationIndex=0,
     ),
 )
-bonus_coefficients(upheaval_200422, ap=0.12)
 trained_by(upheaval_200422, trainer_id=216, req_level=34, money_cost=10000)
 skill_line_ability(id=30436, skill_line=134, spell_id=upheaval_200422.id, class_mask=1024)
 scripted_by(upheaval_200422, 'spell_dru_upheaval')
@@ -2189,29 +2401,34 @@ thrash_200423 = spell(
     duration_ms=12000,
     effects=[
         # All three effects share targets and radius so spell_dru_thrash's EFFECT_ALL target hook sees one list.
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=30, points_per_level=2.6, implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
-        Effect(type=EffectType.APPLY_AURA, base_points=10, points_per_level=0.85, mechanic=15, implicit_target_a=22, implicit_target_b=15, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=40.7, potency_kind='direct', implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
+        Effect(type=EffectType.APPLY_AURA, ap_potency=6.7, potency_kind='periodic', mechanic=15, implicit_target_a=22, implicit_target_b=15, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000, radius_yards=10.0),
         Effect(type=EffectType.APPLY_AURA, base_points=-6, implicit_target_a=22, implicit_target_b=15, apply_aura=AuraType.MOD_RESISTANCE_PCT, misc_value=1, radius_yards=10.0),
     ],
     spell_icon_id=496,
-    notes="NEW (druid-rework FERAL §4 'Thrash', §11.2, WP-BRIEF §3): one spell = 10 yd AoE hit (31 + 2.6/level from "
-          "level 30, ~161 at 80, +0.10 AP) + 12 sec bleed, 4 ticks (11 + 0.85/level, ~53 per tick at 80, +0.03 AP per "
-          "tick) + the -5% armor Faerie Fire (Feral) used to carry (spell_group 1016 keeps it from stacking with caster "
-          "Faerie Fire). 6 sec cooldown (below 30 sec, no Cooldown Haste). spell_dru_thrash grants 1 Swell when it hits "
-          "3+ targets in Bestial Fury. Learned at 30. Visual: Swipe (Bear)'s.",
+    notes="NEW (druid-rework FERAL §4 'Thrash', §11.2, WP-BRIEF §3): one spell = 10 yd AoE hit + 12 sec bleed, 4 "
+          "ticks + the -5% armor Faerie Fire (Feral) used to carry (spell_group 1016 keeps it from stacking with "
+          "caster Faerie Fire). 6 sec cooldown (below 30 sec, no Cooldown Haste). spell_dru_thrash grants 1 Swell "
+          "when it hits 3+ targets in Bestial Fury. Learned at 30. Visual: Swipe (Bear)'s. potency-system (PLAN P6 "
+          "step 5 follow-up, 2026-10-01): both effects are ap-only (old coefficients 0/0.10 direct, 0/0.03 "
+          "periodic, via the removed EffectBonusMultiplier_N overrides below) - ap_potency=40.7 (direct) and 6.7 "
+          "(periodic) are druid-potency-report.md's base-implied defaults, matching the established P5/Feral "
+          "convention; AP coefficients move 0.10 -> 0.175 (direct) and 0.03 -> 0.058 (periodic tick), base V60s "
+          "essentially unchanged by construction. The third effect (armor reduction debuff) has no damage/heal "
+          "component and is left untouched. Same structural follow-up as Pulverize/Savage Bite/Lacerate, just not "
+          "named in the original pass's scope.",
     raw_overrides=_feral_new_raw(
-        "Deals $s1 damage to enemies within $a1 yards and causes them to bleed for $o2 damage over $d.  Also reduces "
-        "their armor by $s3% for $d.  Damage increased by attack power.  While Bestial Fury is active, hitting 3 or "
-        "more targets grants 1 stack of Swell.",
-        "Bleeding for $s2 damage every $t2 sec.  Armor reduced by $s3%.",
+        "Deals {pot1} damage to enemies within $a1 yards and causes them to bleed for {pot2.total} damage over $d.  "
+        "Also reduces their armor by $s3% for $d.  While Bestial Fury is active, hitting 3 or more targets grants 1 "
+        "stack of Swell.",
+        "{pot2} damage every $t2 sec.  Armor reduced by $s3%.",
         **_BEAR_ATTACK_RAW, BaseLevel=30, SpellLevel=30, MaxLevel=80, SpellClassMask_3=THRASH,
-        SpellVisualID_1=189, EffectBonusMultiplier_1=1.0, EffectBonusMultiplier_2=1.0,
+        SpellVisualID_1=189,
     ),
 )
 trained_by(thrash_200423, trainer_id=216, req_level=30, money_cost=6000)
 skill_line_ability(id=30437, skill_line=134, spell_id=thrash_200423.id, class_mask=1024)
 scripted_by(thrash_200423, 'spell_dru_thrash')
-bonus_coefficients(thrash_200423, ap=0.10, ap_dot=0.03)
 
 
 bestial_fury_200425 = spell(
@@ -2270,7 +2487,7 @@ savage_bite_200439 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=98, points_per_level=8.3333, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=155.1, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=90122,  # spell_druid_bearhug, build_patch_i.py
     notes="NEW (docs/reworks/druid-feral-addition.md §2, FERAL-ADDENDUM §3.3): physical SCHOOL_DAMAGE, not a weapon "
@@ -2287,15 +2504,18 @@ savage_bite_200439 = spell(
           "clauses). spell_dru_savage_bite consumes 1 Tooth and Claw charge and casts Nurturing Instinct's buff, "
           "same as a Predator's-Swiftness Regrowth. Icon 90122 (spell_druid_bearhug, mined by build_patch_i.py). "
           "Trainer-taught, not talent-granted (user override: simpler than a Bestial-Fury learner spell) - any druid "
-          "can learn it, but it does nothing without the Bestial Fury talent.",
+          "can learn it, but it does nothing without the Bestial Fury talent. potency-system (PLAN P6 step 5, Feral "
+          "pass): ap-only (old coefficient 0/0.50) - ap_potency=155.1 is druid-potency-report.md's base-implied "
+          "default, matching the P5 convention (and still landing at almost exactly Pulverize's 93.5 x 5/3 = 155.8, "
+          "preserving the intended ratio); AP coefficient moves 0.50 -> 0.665, base V60 415 -> ~415 (essentially "
+          "unchanged by construction).",
     raw_overrides=_feral_new_raw(
-        "Requires Tooth and Claw.  Deals $s1 damage, increased by attack power.  Consumes 1 charge of Tooth and "
+        "Requires Tooth and Claw.  Deals {pot1} damage.  Consumes 1 charge of Tooth and "
         "Claw.",
         **_BEAR_ATTACK_RAW, BaseLevel=22, SpellLevel=22, MaxLevel=80, SpellClassMask_3=PULVERIZE,
-        SpellVisualID_1=6586, DurationIndex=0, EffectBonusMultiplier_1=1.0, CasterAuraSpell=200438,
+        SpellVisualID_1=6586, DurationIndex=0, CasterAuraSpell=200438,
     ),
 )
-bonus_coefficients(savage_bite_200439, ap=0.50)
 trained_by(savage_bite_200439, trainer_id=216, req_level=10, money_cost=600)
 trained_by(savage_bite_200439, trainer_id=217, req_level=10, money_cost=600)
 skill_line_ability(id=30439, skill_line=134, spell_id=savage_bite_200439.id, class_mask=1024)

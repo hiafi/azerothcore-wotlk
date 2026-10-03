@@ -15,7 +15,7 @@ discipline_201_tab = tab(
     class_mask=16,
     spell_icon_id=685,
     skill_line=613,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 80},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'PriestDiscipline'},
 )
 
 
@@ -26,7 +26,7 @@ holy_202_tab = tab(
     order_index=1,
     spell_icon_id=2873,
     skill_line=56,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 377},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'PriestHoly'},
 )
 
 
@@ -37,7 +37,7 @@ shadow_203_tab = tab(
     order_index=2,
     spell_icon_id=234,
     skill_line=78,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 618},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'PriestShadow'},
 )
 
 

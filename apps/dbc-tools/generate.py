@@ -39,11 +39,17 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 TOOL_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOL_ROOT))
 
-from lib import build, dbcfile, dbcfmt, lint, patch_out, resolve, source, sql_out, state  # noqa: E402
-from lib import spell_tables, trainer_state  # noqa: E402
+from lib import build, dbcfile, dbcfmt, lint, mpq_writer, patch_out, resolve, source, sql_out, state  # noqa: E402
+from lib import header_gen, potency_sheet, spell_tables, trainer_state  # noqa: E402
 from lib.dsl import registry as dsl_registry  # noqa: E402
 
-KNOWN_FLAGS = {"--no-prune"}
+KNOWN_FLAGS = {"--no-prune", "--check"}
+
+# PLAN P2b step 4: adopted class by class, inside each class's own pass - not a side effect of
+# every generate.py run. Extend this tuple when a pass is ready to start generating/relying on its
+# own Generated/<Class>Data.h (warlock first, in P4).
+CLASSES_WITH_GENERATED_HEADERS = ("warlock",)
+GENERATED_HEADER_DIR = REPO_ROOT / "src" / "server" / "game" / "Entities" / "Unit" / "Generated"
 from lib.reuse import ReuseContext  # noqa: E402
 
 SOURCE_DIR = TOOL_ROOT / "source"
@@ -64,6 +70,13 @@ TRAINER_SPELL_COLUMNS = (
     "TrainerId", "SpellId", "MoneyCost", "ReqSkillLine", "ReqSkillRank",
     "ReqAbility1", "ReqAbility2", "ReqAbility3", "ReqLevel", "VerifiedBuild",
 )
+
+
+def _tooltip_var_rows(dsl_rows: list[dict]) -> dict[int, dict]:
+    """Declared tooltip_vars() entries as SpellDescriptionVariables.dbc rows, keyed by ID. Client-only
+    (potency-system.PLAN.md P9): no SQL state to diff against, so every declared row goes into every
+    patch build, merged over the stock file like the other client tables."""
+    return {e["id"]: {"ID": e["id"], "Variables": e["Variables"]} for e in dsl_rows}
 
 
 def _trainer_spells_to_emit(dsl_rows: list[dict], trainer_index: trainer_state.TrainerIndex) -> list[dict]:
@@ -227,6 +240,36 @@ def main() -> int:
             f"abilitie(s), {len(dsl_classes['trainer_spells'])} trainer spell grant(s), "
             + ", ".join(f"{n} {name}" for name, n in creature_counts.items())
         )
+    # Potency system (docs/potency-system.md "Potency sheet", PLAN P2 step 6): one docs/potency/
+    # <class>.md per class with at least one potency effect - local and not committed, like the
+    # rest of docs/ (rewritten every run, same as the DSL's own `_potency` stash this reads).
+    potency_sheets = potency_sheet.write_sheets(dsl_classes, REPO_ROOT / "docs" / "potency")
+    if potency_sheets:
+        print(f"note: wrote {len(potency_sheets)} potency sheet(s) to docs/potency/")
+    # Generated per-class C++ constants header (docs/potency-system.md "Script numbers" tier 3,
+    # PLAN P2b) - unlike the potency sheet above, this file IS committed (the CMake build doesn't
+    # run Python), so it's only written for classes that have opted in
+    # (CLASSES_WITH_GENERATED_HEADERS) rather than for every class with any spell at all.
+    if "--check" in sys.argv:
+        # A fast, read-only staleness gate (PLAN P2b step 3) - everything below this point (SQL
+        # diffing, DBC state, the client patch) is irrelevant to "is the committed header stale",
+        # so --check returns here instead of running the rest of the ~130s pipeline.
+        header_problems = header_gen.check_headers(
+            dsl_classes, GENERATED_HEADER_DIR, CLASSES_WITH_GENERATED_HEADERS
+        )
+        if header_problems:
+            for problem in header_problems:
+                print(f"ERROR: {problem}")
+            return 1
+        print(f"note: generated header(s) up to date for {', '.join(CLASSES_WITH_GENERATED_HEADERS)}")
+        progress("--check done")
+        return 0
+    else:
+        written_headers = header_gen.write_headers(
+            dsl_classes, GENERATED_HEADER_DIR, CLASSES_WITH_GENERATED_HEADERS
+        )
+        if written_headers:
+            print(f"note: wrote {len(written_headers)} generated header(s): {', '.join(written_headers)}")
     for warning in lint.check_linked_spell_key_collisions(
         spell_table_index.live_rows("spell_linked_spell") + dsl_classes["linked_spells"]
     ):
@@ -392,6 +435,36 @@ def main() -> int:
     stock_talenttabs = state.load_stock_rows(dbcfmt.TALENTTAB)
     stock_skilllineabilities = state.load_stock_rows(dbcfmt.SKILLLINEABILITY)
     stock_items = state.load_stock_rows(dbcfmt.ITEM)
+    # P9 (potency-system.PLAN.md, D12): SpellDescriptionVariables references - a tooltip variable
+    # the spell's entry doesn't define renders as a literal `$<var>` in the client. Errors stop the
+    # run here, before any SQL or patch is written.
+    stock_tooltip_vars = None
+    if (BASE_DBC_DIR / dbcfmt.SPELLDESCRIPTIONVARIABLES.dbc_filename).is_file():
+        stock_tooltip_vars = {
+            entry_id: row["Variables"]
+            for entry_id, row in state.load_stock_rows(dbcfmt.SPELLDESCRIPTIONVARIABLES).items()
+        }
+    tooltip_errors, tooltip_notes = lint.check_tooltip_vars(
+        spell_entries, dsl_classes["tooltip_vars"], stock_tooltip_vars,
+        set(stock_spells) | set(existing_spells) | {e["id"] for e in spell_entries},
+    )
+    for note in tooltip_notes:
+        print(f"note: {note}")
+    # D1: a live spell_bonus_data row silently overrides an SP-only potency spell's coefficient
+    # (lint.check_potency_bonus_overrides). Same stop-before-SQL treatment as the tooltip errors.
+    spell_names = {e["id"]: e["name"] for e in spell_entries}
+    bonus_errors = lint.check_potency_bonus_overrides(
+        {r["spell_id"]: spell_names.get(r["spell_id"], "?") for r in dsl_classes["potency_corrections"]},
+        {int(r["entry"]) for r in dsl_classes["spell_bonus_data"]},
+        {int(r["entry"]) for r in dsl_classes["bonus_removals"]},
+        trainer_state.load_keyed_table_rows(
+            "spell_bonus_data", ("entry", "direct_bonus", "dot_bonus", "ap_bonus", "ap_dot_bonus", "comments"),
+        ),
+    )
+    if tooltip_errors or bonus_errors:
+        for error in tooltip_errors + bonus_errors:
+            print(f"ERROR: {error}")
+        return 1
     client_spell_resolved = resolve.resolve_rows(
         spell_entries, ids_cfg["spell"], stock_spells,
         lambda e: build.build_spell_row(e, scratch_reuse),
@@ -480,6 +553,7 @@ def main() -> int:
         dbcfmt.TALENTTAB: {r["ID"]: r for r in client_talenttab_rows},
         dbcfmt.SKILLLINEABILITY: {r["ID"]: r for r in client_skilllineability_rows},
         dbcfmt.ITEM: {r["ID"]: r for r in client_item_rows},
+        dbcfmt.SPELLDESCRIPTIONVARIABLES: _tooltip_var_rows(dsl_classes["tooltip_vars"]),
     }
     for name, table in SECONDARY_TABLES.items():
         # Same reserved_rows switch as the SQL block above - the client patch must carry every
@@ -505,15 +579,18 @@ def main() -> int:
         base_rows = dbcfile.read_dbc(dbc_path, table)
         merged = {row[table.index_column]: row for row in base_rows}
         merged.update(new_rows)
-        all_rows = list(merged.values())
-        if table is dbcfmt.TALENT:
-            # Talent.dbc's physical row order is load-bearing to the client - see
-            # dbcfile.order_talent_rows's docstring.
-            all_rows = dbcfile.order_talent_rows(all_rows, base_rows)
-            dbc_files[table.dbc_filename] = dbcfile.pack_dbc_bytes(table, all_rows, sort=False)
-        else:
-            dbc_files[table.dbc_filename] = dbcfile.pack_dbc_bytes(table, all_rows)
+        # Talent.dbc's and TalentTab.dbc's physical row order is load-bearing to the client - see
+        # dbcfile.pack_client_dbc.
+        dbc_files[table.dbc_filename] = dbcfile.pack_client_dbc(table, list(merged.values()), base_rows)
 
+    # Flag client tables that need an in-game look, and tables that appeared in or dropped out of
+    # the patch since the last build (lint.check_client_patch).
+    previous_patch = mpq_writer.list_mpq(patch_out.MPQ_PATH) if patch_out.MPQ_PATH.is_file() else None
+    shipping = {
+        table.name: rows for table, rows in new_rows_by_table.items() if table.dbc_filename in dbc_files
+    }
+    for warning in lint.check_client_patch(shipping, {"TalentTab": stock_talenttabs}, previous_patch):
+        print(f"WARNING: patch: {warning}")
     if dbc_files:
         report = patch_out.write_patch(dbc_files)
         print(f"patch: loose files -> {patch_out.LOOSE_DIR}")

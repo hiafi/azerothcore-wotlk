@@ -14,7 +14,7 @@ beast_mastery_361_tab = tab(
     name='Beast Mastery',
     class_mask=4,
     spell_icon_id=255,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 189},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'HunterBeastMastery'},
 )
 
 
@@ -24,7 +24,7 @@ survival_362_tab = tab(
     class_mask=4,
     order_index=2,
     spell_icon_id=257,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 718},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'HunterSurvival'},
 )
 
 
@@ -34,7 +34,7 @@ marksmanship_363_tab = tab(
     class_mask=4,
     order_index=1,
     spell_icon_id=126,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 489},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'HunterMarksmanship'},
 )
 
 

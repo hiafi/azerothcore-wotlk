@@ -28,6 +28,7 @@
 #include "SpellAuraDefines.h"
 #include "SpellAuraEffects.h"
 #include "SpellMgr.h"
+#include "SpellPotency.h" // Custom: potency-system
 #include "WarlockMechanics.h" // Custom: warlock-rework B14 bane slot
 
 uint32 GetTargetFlagMask(SpellTargetObjectTypes objType)
@@ -450,6 +451,13 @@ int32 SpellEffectInfo::CalcValue(WorldObject const* caster, int32 const* bp, Uni
     }
 
     float value = float(basePoints);
+
+    // Custom: potency-system - low-level correction + variance roll (docs/potency-system.md).
+    // Skipped when the caller supplied its own base points (a script's CastCustomSpell/
+    // SPELLVALUE_BASE_POINT0) rather than the effect's own BasePoints, so a value a script already
+    // computed is never scaled twice.
+    if (casterUnit && (!bp || *bp == BasePoints))
+        value = SpellPotency::Apply(_spellInfo->Id, EffectIndex, casterUnit, value);
 
     // random damage
     if (casterUnit)

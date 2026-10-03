@@ -500,6 +500,11 @@ class RemovalBlocksTest(unittest.TestCase):
             + "INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES "
             "(69366, 'spell_dru_moonkin_form_passive');\n"
         )
+        (base / "spell_bonus_data.sql").write_text(
+            BASE_SQL["spell_bonus_data"]
+            + "INSERT INTO `spell_bonus_data` (`entry`, `direct_bonus`, `dot_bonus`, `ap_bonus`, "
+            "`ap_dot_bonus`, `comments`) VALUES (172, 0, 0.1333, 0, 0, 'Corruption');\n"
+        )
         # The removal typo guard reads mod-progression phase SQL too - point it at an empty
         # modules dir so the real repo's phase files can't leak into these tests.
         modules = Path(self._tmp.name) / "modules"
@@ -544,6 +549,18 @@ class RemovalBlocksTest(unittest.TestCase):
         )
         self.assertTrue(any("removal: spell_script_names" in l and "69366" in l for l in report))
         self.assertFalse(any(l.startswith("WARNING:") for l in report))
+
+    def test_bonus_coefficients_removal_is_emitted_and_reported(self):
+        # P4 (potency system, warlock pilot): unbind_bonus_coefficients() retiring a live stock
+        # spell_bonus_data row - the "Resolve by hand" case render_prune_blocks's base-blocked
+        # warning points at.
+        dsl = _load_wp_t_class(
+            'from lib.dsl.registry import unbind_bonus_coefficients\nunbind_bonus_coefficients(172)\n'
+        )
+        blocks, report = spell_tables.render_removal_blocks(dsl)
+        self.assertTrue(any("DELETE FROM `spell_bonus_data` WHERE (`entry`) IN ((172));" in b for b in blocks))
+        self.assertTrue(any("removal: spell_bonus_data" in l and "172" in l for l in report))
+        self.assertFalse(any(l.startswith("WARNING:") and "spell_bonus_data" in l for l in report))
 
     def test_removal_emitted_once_then_silent_on_rerun(self):
         blocks, _ = spell_tables.render_removal_blocks(_load_wp_t_class())

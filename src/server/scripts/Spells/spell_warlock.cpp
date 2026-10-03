@@ -1129,13 +1129,15 @@ class spell_warl_shadow_ward : public AuraScript
 {
     PrepareAuraScript(spell_warl_shadow_ward);
 
-    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    void CalculateAmount(AuraEffect const* aurEff, int32& amount, bool& canBeRecalculated)
     {
         canBeRecalculated = false;
         if (Unit* caster = GetCaster())
         {
-            // +80.68% from sp bonus
-            float bonus = 0.8068f;
+            // Custom: potency-system - was a hard-coded 0.8068. SCHOOL_ABSORB gets no engine
+            // spell-power bonus, so this is the only place the coefficient applies; read the
+            // generated EffectBonusMultiplier (sp_potency in apps/dbc-tools) instead.
+            float bonus = GetSpellInfo()->Effects[aurEff->GetEffIndex()].BonusMultiplier;
 
             bonus *= caster->SpellBaseDamageBonusDone(GetSpellInfo()->GetSchoolMask());
             bonus *= caster->CalculateLevelPenalty(GetSpellInfo());

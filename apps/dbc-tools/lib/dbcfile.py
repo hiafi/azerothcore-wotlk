@@ -179,6 +179,24 @@ def pack_dbc_bytes(table: DbcTable, rows: list[dict], *, sort: bool = True) -> b
     return header + bytes(body) + string_pool
 
 
+def pack_client_dbc(table: DbcTable, rows: list[dict], base_rows: list[dict]) -> bytes:
+    """Packs a full client DBC (stock merged with custom rows) in the physical row order the client
+    needs. Most tables are read by ID, but two are read in file order:
+
+    - Talent.dbc: per-tab blocks in stock order, rows by (TierID, ColumnIndex) - order_talent_rows.
+    - TalentTab.dbc: stock is ordered by (OrderIndex, ID) and the client lists a class's tabs in
+      file order, so an ID sort shows a mage Fire -> Frost -> Arcane (docs/bugs-and-fixes.md,
+      2026-10-02).
+
+    lib/test_client_dbc_roundtrip.py checks that every client table repacks its stock file
+    byte-identically through here, which also catches a string column read as an int."""
+    if table.name == "Talent":
+        return pack_dbc_bytes(table, order_talent_rows(rows, base_rows), sort=False)
+    if table.name == "TalentTab":
+        return pack_dbc_bytes(table, sorted(rows, key=lambda r: (r["OrderIndex"], r["ID"])), sort=False)
+    return pack_dbc_bytes(table, rows)
+
+
 def write_dbc(path: Path, table: DbcTable, rows: list[dict]) -> None:
     """Write rows (sorted by index column) as a binary WDBC file."""
     path = Path(path)

@@ -19,6 +19,7 @@
 #include "SpellAuraEffects.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
+#include "SpellPotency.h" // Custom: potency-system
 #include "SpellScript.h"
 #include "SpellScriptLoader.h"
 /*
@@ -572,7 +573,12 @@ class spell_warr_bloodthirst : public SpellScript
     void HandleDamage(SpellEffIndex effIndex)
     {
         int32 damage = GetEffectValue();
-        ApplyPct(damage, GetCaster()->GetTotalAttackPowerValue(BASE_ATTACK));
+        // Custom: potency-system - docs/potency-system.md's "Implementation catches" (F11).
+        // Bloodthirst's damage was hard-coded as GetEffectValue()% of attack power; once it has a
+        // potency row, GetEffectValue() already IS the full ap_potency-derived total (base +
+        // ap_coefficient * AP), so this ApplyPct would double-count attack power on top of that.
+        if (!SpellPotency::HasRow(GetSpellInfo()->Id, effIndex))
+            ApplyPct(damage, GetCaster()->GetTotalAttackPowerValue(BASE_ATTACK));
 
         if (Unit* target = GetHitUnit())
         {

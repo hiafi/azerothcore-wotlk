@@ -14,7 +14,7 @@ arms_161_tab = tab(
     name='Arms',
     class_mask=1,
     spell_icon_id=514,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 24},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'WarriorArms'},
 )
 
 
@@ -24,7 +24,7 @@ protection_163_tab = tab(
     class_mask=1,
     order_index=2,
     spell_icon_id=1463,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 570},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'WarriorProtection'},
 )
 
 
@@ -34,7 +34,7 @@ fury_164_tab = tab(
     class_mask=1,
     order_index=1,
     spell_icon_id=561,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 346},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'WarriorFury'},
 )
 
 

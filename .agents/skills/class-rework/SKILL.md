@@ -2,7 +2,7 @@
 name: class-rework
 description: Run this repo's phased process for reworking a class's abilities/talent tree — design doc, dbc-tools data, C++ hooks, build/deploy, playtest guide. Use when the user asks to rework, retune, or overhaul a class's talents/abilities.
 metadata:
-  version: "1.0"
+  version: "1.1"
 ---
 
 # Class rework
@@ -37,8 +37,16 @@ way round.
 - New spell IDs come from `apps/dbc-tools/source/ids.yaml`'s reserved block; add rows to
   `source/spells/<class>.csv` (learned-outright) or `<class>_talents.csv` (talent-point-granted).
   Never pick numbers ad hoc — see `apps/dbc-tools/README.md`'s "Source files".
+  - **A new damage, heal, or absorb effect's number is a potency value
+    (`sp_potency=`/`ap_potency=`/`potency_kind=`), not a hand-set `base_points=`/
+    `points_per_level=`/`die_sides=`** — read `.agents/docs/systems/potency.md` before writing one;
+    it covers the DSL fields, what's deliberately excluded (script-driven values, percent-of-other-
+    damage effects, legacy rank-capped spells, pet/guardian casts), and the `{potN}`-style tooltip
+    placeholders a potency effect's description needs (skipping them isn't cosmetic — the tooltip
+    comes out missing the caster's live spell power/attack power entirely, not just simplified).
   - **Sign convention:** stored `base_points` is the live value minus 1 (die_sides=1 makes the
-    engine add 1 back); a "-30%" reduction is stored as `-31`. This applies to **static rows** only.
+    engine add 1 back); a "-30%" reduction is stored as `-31`. This applies to effects that aren't
+    potency (buffs, procs, stat mods, thresholds, flat percentages) and to **static rows** only.
     Values a script passes in depend on the API:
     - `CastCustomSpell`, `CastSpell` with `CustomSpellValues`, `SPELLVALUE_BASE_POINTn`: pass the
       **live** value (`-30` for -30%). `Spell::SetSpellValue` already runs it through
@@ -74,6 +82,14 @@ data that's close but not quite right.
   which IDs it's minting vs. editing, and `WARNING:` lines from `lib/lint.py` about classmask
   scoping are real bugs, not noise (see the README's `EffectSpellClassMaskA/B/C` gotcha — this
   exact mistake has shipped more than once).
+- **A talent that raises another spell's damage or healing by a percent** (`MOD_DAMAGE_PERCENT_DONE`,
+  a `SPELLMOD_DAMAGE` effect, and the like) never shows on that spell's tooltip by itself. Combat
+  includes it, the preview doesn't. Add the talent to the affected spells' `tooltip_vars` entry
+  with `talent_mult(...)`, counting each of its effects that applies, and make sure those spells'
+  descriptions use `{potN*var}`. Spells that still carry a stock `SpellDescriptionVariableID`
+  (167 for Frost, and so on) need moving to the class's own entry, because stock chains check the
+  old talent ranks and values. Ask the user which talents count: cross-tree ones are a design call.
+  See `.agents/docs/systems/potency.md`, "Showing a talent's bonus on a tooltip".
 - Talent tab placement (tier/column) needs a free slot — check the live tab's existing entries in
   `source/talents/<class>.yaml` before assigning one, not just the next unused-looking number.
 - `apps/dbc-tools/lib/test_sql_dump.py` and `apps/codestyle/codestyle-sql.py` clean before moving
@@ -152,6 +168,8 @@ membership).
 
 ## Related docs
 
+- `.agents/docs/systems/potency.md` — how a damage/heal/absorb effect's numbers should be authored
+  (Phase 1), from the Warlock pilot (P4) onward.
 - `docs/dbc-build-pipeline.md` — why DBCs are generated artifacts, not hand-edited.
 - `apps/dbc-tools/README.md` — full pipeline usage (pulling existing data, the web UI, known
   limitations).

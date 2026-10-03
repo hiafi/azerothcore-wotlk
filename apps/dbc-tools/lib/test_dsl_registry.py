@@ -322,7 +322,10 @@ class RegistryTest(unittest.TestCase):
 
     def test_load_classes_dir_missing_directory_returns_empty(self):
         merged = registry.load_classes_dir(Path("/nonexistent/does/not/exist"))
-        self.assertEqual(merged, {key: [] for key in registry.MERGE_KEYS})
+        expected = {key: [] for key in registry.MERGE_KEYS}
+        expected["spell_var_names"] = {}
+        expected["creature_var_names"] = {}
+        self.assertEqual(merged, expected)
 
     def test_load_classes_dir_duplicate_id_across_files_raises(self):
         with tempfile.TemporaryDirectory() as d:
@@ -640,6 +643,14 @@ class ScriptAndTrainerRemovalTest(unittest.TestCase):
     def test_untrain_requires_at_least_one_trainer(self):
         with self.assertRaises(ValueError):
             _load_wp_t('from lib.dsl.registry import untrain\nuntrain(50464, [])\n')
+
+    def test_unbind_bonus_coefficients_declares_removal(self):
+        reg = _load_wp_t(
+            'from lib.dsl.registry import unbind_bonus_coefficients\n'
+            'unbind_bonus_coefficients(172)\n'
+        )
+        (row,) = reg.bonus_removals
+        self.assertEqual(row["entry"], 172)
 
 
 class ShapeshiftFormTest(unittest.TestCase):

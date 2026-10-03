@@ -2,7 +2,7 @@
 name: talent-tooltip-audit
 description: Audit one class/spec's talent tree — tooltip text against its design doc, duplicate talent icons within the spec, and the buffs talents apply. Use when the user asks to audit, check, or find bugs in a class/spec's talent tooltips, icons, or the buffs talents grant, or to verify talents match a design doc.
 metadata:
-  version: "1.2"
+  version: "1.3"
 ---
 
 # Talent tooltip audit
@@ -125,6 +125,18 @@ For each talent (and each buff it applies) found in both the roster and the doc,
 - **Missing mechanic content** named in the doc but absent from the tooltip (e.g. a resource-gain
   clause, a proc condition) — flag even if you're not fixing the mechanic itself, since a
   tooltip claiming something untrue is as much a bug as one omitting something true.
+- **Bonus visible on the spells it affects.** A talent that raises damage or healing by a
+  percent (aura 79 `MOD_DAMAGE_PERCENT_DONE` on a school mask, or a percent `SPELLMOD_DAMAGE` on a
+  classmask) never shows on the affected spells' tooltips by itself. For each such talent, list the
+  spells it affects (school for aura 79; the classmask for a SpellMod, see the
+  `classmask-scope-audit` skill) and check each one:
+  - does it set `tooltip_vars=` to an entry whose variables include this talent's rank spells
+    (`talent_mult([...])`, rendered as `$?s<rank id>`), reading the effect that carries the bonus?
+  - does its description use that variable (`{potN*mult}`, or `$<mult>` inside `${...}` math)?
+  A spell still on a stock `SpellDescriptionVariableID` (such as 167, Frost) is a finding of its
+  own: stock chains check old talent ranks and values. Which talents *should* count (cross-tree
+  ones especially) is a design call, so report the gap and don't decide it. Background:
+  `.agents/docs/systems/potency.md`, "Showing a talent's bonus on a tooltip".
 - **Icon direction**, if the design doc or a project todo list names a specific icon for this
   talent or buff — cross-check against Step 3's icon pool instead of re-deriving it.
 
@@ -190,8 +202,11 @@ Two parts. First the findings list, most-actionable first:
 3. **Broken tokens** — talent or buff, rank(s), the broken token, suggested replacement.
 4. **Capstone formatting** — talent, rank(s), which Step 5 check failed, exact string found vs.
    expected.
-5. **Unverified mechanic claims** — talent, the claim, and that it needs a code-side check.
-6. **Doc/data talents that don't match up** — a talent in the roster with no matching section in
+5. **Talent bonus missing from affected tooltips** — talent, the affected spell(s), and whether
+   the spell has no `tooltip_vars`, an entry that leaves this talent out, a description that
+   never uses the variable, or a stale stock entry id.
+6. **Unverified mechanic claims** — talent, the claim, and that it needs a code-side check.
+7. **Doc/data talents that don't match up** — a talent in the roster with no matching section in
    the doc (may just mean the doc is out of date, not that the talent is wrong — say so), or a doc
    section naming a talent not found in this spec's roster (wrong tab/spec, or a stale doc name).
 

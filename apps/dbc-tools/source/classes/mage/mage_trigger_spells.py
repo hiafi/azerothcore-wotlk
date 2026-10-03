@@ -7,7 +7,26 @@ Split from a single source/classes/mage.py via split_class_file.py (.agents/plan
 from lib.dsl import (
     RANGE_SELF, AuraType, CombatRating, DispelType, Effect, EffectType, Mechanic, PowerType, School, SpellModOp,
 )
-from lib.dsl.registry import bonus_coefficients, linked_spell, procs_on, scripted_by, spell
+from lib.dsl.registry import (
+    bonus_coefficients, linked_spell, procs_on, product, scripted_by, spell, talent_mult, tooltip_vars,
+    unbind_bonus_coefficients,
+)
+
+# Frost-tree talent bonuses shown on Frost spell tooltips (potency-system.PLAN.md P9.4). SpellMods
+# never move a tooltip, so this replaces stock entry 167, which hard-coded five 1-5% Arctic Winds
+# ranks the rework no longer has. Each rank's value is read from the rank spell itself, so retuning
+# the talent updates the tooltips. Rank ids are ints because Blizzard's tick (42208, just below)
+# needs this before the rank spells are declared further down this file:
+# piercing_ice_11151/12952/12953 (+2/4/6% Frost) and arctic_winds_31674/31675/31676 (effect 1 +1/2/3%
+# all damage, effect 2 +1/2/3% Frost - both apply to Frost spells). Cross-tree talents (Playing with
+# Fire, Arcane Empowerment, Magic Absorption) are left out on purpose (user, 2026-10-02).
+frost_talent_tooltip = tooltip_vars(
+    1000, "Frost-tree talent multiplier for Frost spell tooltips",
+    piercing=talent_mult([11151, 12952, 12953]),
+    arctic_all=talent_mult([31674, 31675, 31676], effect=1),
+    arctic_frost=talent_mult([31674, 31675, 31676], effect=2),
+    mult=product("piercing", "arctic_all", "arctic_frost"),
+)
 
 
 arcane_missile_7268 = spell(
@@ -22,11 +41,11 @@ arcane_missile_7268 = spell(
     mana_cost_pct=0,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=23, points_per_level=3.3, implicit_target_a=77),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=72.9, potency_kind='direct', implicit_target_a=77),
     ],
     spell_icon_id=225,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 8); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | Bugfix (playtest report, 2026-09-08): SpellVisualID_1 was left at rank 1\'s own value (268) instead of being carried over from the max rank\'s damage sub-spell (25346, mage.csv/npc.csv - SpellVisualID_1 270) like every other field in this bootstrap was - "arcane missiles has the rank 1 model instead of the max rank model for its missiles". Fixed to 270.',
-    raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 8, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches Arcane Missiles at the enemy, causing $7268s1 Arcane damage every $5143t2 sec for $5143d.', 'EffectBonusMultiplier_1': 0.28600001335144043, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 8, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_1': 2097152, 'SpellClassSet': 3, 'SpellLevel': 8, 'SpellPriority': 50, 'SpellVisualID_1': 270},
+    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 8); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | Bugfix (playtest report, 2026-09-08): SpellVisualID_1 was left at rank 1\'s own value (268) instead of being carried over from the max rank\'s damage sub-spell (25346, mage.csv/npc.csv - SpellVisualID_1 270) like every other field in this bootstrap was - "arcane missiles has the rank 1 model instead of the max rank model for its missiles". Fixed to 270. Potency system P5 (Mage pass): converted to sp_potency=72.9 (potency-report default, base/coef already agreed).',
+    raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 8, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches Arcane Missiles at the enemy, causing {pot1} Arcane damage every $5143t2 sec for $5143d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_1': 2097152, 'SpellClassSet': 3, 'SpellLevel': 8, 'SpellPriority': 50, 'SpellVisualID_1': 270},
 )
 
 
@@ -89,11 +108,11 @@ molten_armor_34913 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=74, points_per_level=5.2778, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=28.0, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=2307,
-    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 62); RealPointsPerLevel from rank1→top rank's own top level (80, chain has a gap at 60) slope (anchor rank 43044, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (43044, rank 3); MaxLevel set to 80",
-    raw_overrides={'AttributesEx': 168, 'AttributesEx2': 16388, 'AttributesEx4': 16512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 62, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes $34913s1 Fire damage when hit, increases your chance to critically hit with spells by $30482s3% of your Spirit, and reduces the chance you are critically hit by $30482s2%.  Only one type of Armor spell can be active on the Mage at any time.  Lasts $30482d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_2': 8, 'SpellClassSet': 3, 'SpellLevel': 62},
+    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 62); RealPointsPerLevel from rank1→top rank's own top level (80, chain has a gap at 60) slope (anchor rank 43044, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (43044, rank 3); MaxLevel set to 80 | potency system P5 (Mage pass): converted to sp_potency=28.0 (potency-report default, base/coef already agreed).",
+    raw_overrides={'AttributesEx': 168, 'AttributesEx2': 16388, 'AttributesEx4': 16512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 62, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot1} Fire damage when hit, increases your chance to critically hit with spells by $30482s3% of your Spirit, and reduces the chance you are critically hit by $30482s2%.  Only one type of Armor spell can be active on the Mage at any time.  Lasts $30482d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_2': 8, 'SpellClassSet': 3, 'SpellLevel': 62},
 )
 
 
@@ -108,11 +127,12 @@ blizzard_42208 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=35, points_per_level=4.4, implicit_target_a=76, implicit_target_b=16, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=79.3, potency_kind='direct', implicit_target_a=76, implicit_target_b=16, radius_yards=8.0),
     ],
     spell_icon_id=285,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 136, 'AttributesEx2': 1073741824, 'AttributesEx3': 1073741824, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Ice shards pelt the target area doing ${$42208m1*8*$<mult>} Frost damage over $10d.', 'EffectBonusMultiplier_1': 0.14300000667572021, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 135, 'SpellClassMask_1': 524416, 'SpellClassSet': 3, 'SpellDescriptionVariableID': 167, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 9487, 'StartRecoveryCategory': 133},
+    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | potency system P5 (Mage pass): converted to sp_potency=79.3 (mage-potency-proposals.txt). Description_Lang_enUS deliberately left on its native `${$42208m1*8*$<mult>}` hand-written expression rather than {pot1} - this spell is a pure internal trigger (never learned/shown in any UI), and the text is identical to - and only reachable through - blizzard_10\'s own cross-spell reference to this id, which per the cross-spell-reference rule (docs/potency-system.md) stays native regardless; the underlying $42208m1/$M1 DBC fields this text reads are still correctly generated by potency, so the real (reachable) Blizzard tooltip is unaffected. Flagged for review as a deliberately conservative, low-risk no-op rather than risking a malformed custom ${...} expression for text with no live audience.',
+    tooltip_vars=frost_talent_tooltip,
+    raw_overrides={'AttributesEx': 136, 'AttributesEx2': 1073741824, 'AttributesEx3': 1073741824, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Ice shards pelt the target area doing ${$42208m1*8*$<mult>} Frost damage over $10d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 135, 'SpellClassMask_1': 524416, 'SpellClassSet': 3, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 9487, 'StartRecoveryCategory': 133},
 )
 
 
@@ -150,11 +170,11 @@ living_bomb_44461 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=305, points_per_level=14.7692, implicit_target_a=53, implicit_target_b=16, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=114.4, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=10.0),
     ],
     spell_icon_id=3000,
-    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1→top rank's own top level (86, chain has a gap at 60) slope (anchor rank 55362, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (55362, rank 3); MaxLevel set to 80",
-    raw_overrides={'AttributesEx2': 1073741824, 'AttributesEx5': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The target becomes a Living Bomb, taking $44457o1 Fire damage over $44457d.  After $44457d or when the spell is dispelled, the target explodes dealing $44461s1 Fire damage to all enemies within $44461a1 yards.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 0.4000000059604645, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 12582935, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_2': 65536, 'SpellClassSet': 3, 'SpellLevel': 60, 'SpellPriority': 50, 'SpellVisualID_1': 10693},
+    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1→top rank's own top level (86, chain has a gap at 60) slope (anchor rank 55362, rank 3); coefficient/cast_time_ms/mana_cost_pct from max rank (55362, rank 3); MaxLevel set to 80 | potency system P5 (Mage pass): converted to sp_potency=114.4 (mage-potency-proposals.txt) - cast natively via spell_mage_living_bomb::AfterRemove's caster->CastSpell(target, id, true) (no custom bp), so it's a genuine potency candidate, not script-driven.",
+    raw_overrides={'AttributesEx2': 1073741824, 'AttributesEx5': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The target becomes a Living Bomb, taking $44457o1 Fire damage over $44457d.  After $44457d or when the spell is dispelled, the target explodes dealing {pot1} Fire damage to all enemies within $44461a1 yards.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 12582935, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_2': 65536, 'SpellClassSet': 3, 'SpellLevel': 60, 'SpellPriority': 50, 'SpellVisualID_1': 10693},
 )
 
 
@@ -242,13 +262,18 @@ glacial_spike_impact_200027 = spell(
     mana_cost=0,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=1499, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=560.7, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=1236,
-    coeff_weight=1.2,
-    notes="Frost Mage rework (docs/frost-mage-redesign.md sec 1, Glacial Spike): the real, damage-dealing leg - same flat 1500 base Frost damage (EffectBasePoints stored as 1499) with a 1.2 spell power coefficient this row carried under ID 200002 before the original ramp redesign (see that row's notes and docs/frost-mage-handoff.md's art-pass discussion). The spell_bonus_data row (direct_bonus=1.2) moved here from 200002 - see the accompanying pending_db_world SQL. Fired via caster->CastSpell(target, 200027, true) from spell_mage_glacial_spike::LaunchImpact (spell_mage.cpp) immediately when the player's 2.5s cast completes - no post-cast delay (2026-09-18: previously ~800ms after cast completion, via an intermediate 200025->200026 cosmetic ramp; removed once the icicles-converging visual moved onto 200002's own CastKit, see 200002's notes). Icicle consumption, Fingers-of-Frost-charge consumption, and the Arctic Winds R3 shatter-cleave (spell_mage_glacial_spike_impact::ConsumeIciclesAndFrostCharge) all live here, since this is the stage that represents the spell actually landing - not yet implemented is Arctic Winds R3's cleave depending on the Row 9 Arctic Winds talent, same TODO as before. SpellIconID 1236 (Spell_Frost_IceShard, from apps/dbc-tools/var/spell_icon_names.csv). Speed 60 (doubled from 30 on 2026-09-18 playtest feedback - the missile visibly travels too slowly at 30). SpellVisualID_1 90008 (patch_mage_vfx_models.py): HasMissile/MissileModel=cfx_mage_iciclemastery_launchedmissile (the actual spike in flight - not from the cfx_mage_glacialspike_* asset family; both cfx_mage_glacialspike_launchedmissile and cfx_mage_glacialspike_dummyholdmissile were tried first and rejected on 2026-09-18 playtest feedback for looking like mostly particle effects with little solid mesh live. iciclemastery_launchedmissile was found by browsing patch-N.MPQ for any Spike/Glacial/Icicle-named model and user-confirmed correct after inspecting it in a model viewer) + ImpactKit wrapping cfx_mage_glacialspike_impactchest for the hit. See docs/reworks/fire-mage-meteor-vfx.md.",
-    raw_overrides={'SpellClassSet': 3, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'EquippedItemClass': -1, 'PreventionType': 1, 'ProcChance': 101, 'SpellPriority': 50, 'Description_Lang_enUS': 'Consumes all Icicles to hurl a massive spike of ice at the target, dealing Frost damage.', 'DefenseType': 1, 'Speed': 60.0, 'SpellVisualID_1': 90008},
+    notes="Frost Mage rework (docs/frost-mage-redesign.md sec 1, Glacial Spike): the real, damage-dealing leg - same flat 1500 base Frost damage (EffectBasePoints stored as 1499) with a 1.2 spell power coefficient this row carried under ID 200002 before the original ramp redesign (see that row's notes and docs/frost-mage-handoff.md's art-pass discussion). Fired via caster->CastSpell(target, 200027, true) from spell_mage_glacial_spike::LaunchImpact (spell_mage.cpp) immediately when the player's 2.5s cast completes - no post-cast delay (2026-09-18: previously ~800ms after cast completion, via an intermediate 200025->200026 cosmetic ramp; removed once the icicles-converging visual moved onto 200002's own CastKit, see 200002's notes). Icicle consumption, Fingers-of-Frost-charge consumption, and the Arctic Winds R3 shatter-cleave (spell_mage_glacial_spike_impact::ConsumeIciclesAndFrostCharge) all live here, since this is the stage that represents the spell actually landing - not yet implemented is Arctic Winds R3's cleave depending on the Row 9 Arctic Winds talent, same TODO as before. SpellIconID 1236 (Spell_Frost_IceShard, from apps/dbc-tools/var/spell_icon_names.csv). Speed 60 (doubled from 30 on 2026-09-18 playtest feedback - the missile visibly travels too slowly at 30). SpellVisualID_1 90008 (patch_mage_vfx_models.py): HasMissile/MissileModel=cfx_mage_iciclemastery_launchedmissile (the actual spike in flight - not from the cfx_mage_glacialspike_* asset family; both cfx_mage_glacialspike_launchedmissile and cfx_mage_glacialspike_dummyholdmissile were tried first and rejected on 2026-09-18 playtest feedback for looking like mostly particle effects with little solid mesh live. iciclemastery_launchedmissile was found by browsing patch-N.MPQ for any Spike/Glacial/Icicle-named model and user-confirmed correct after inspecting it in a model viewer) + ImpactKit wrapping cfx_mage_glacialspike_impactchest for the hit. See docs/reworks/fire-mage-meteor-vfx.md. | potency system P5 (Mage pass): converted to sp_potency=560.7 (mage-potency-proposals.txt); dropped the dead `coeff_weight=1.2` kwarg (lib/build.py: never wired into spell_bonus_data by this build); added SpellLevel=1 (required for potency, matching this file's other trigger-only spells - none was set before, so BaseLevel/SpellLevel previously defaulted to 0).",
+    raw_overrides={'SpellClassSet': 3, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'EquippedItemClass': -1, 'PreventionType': 1, 'ProcChance': 101, 'SpellPriority': 50, 'Description_Lang_enUS': 'Consumes all Icicles to hurl a massive spike of ice at the target, dealing Frost damage.', 'DefenseType': 1, 'Speed': 60.0, 'SpellVisualID_1': 90008, 'SpellLevel': 1},
 )
+unbind_bonus_coefficients(glacial_spike_impact_200027)  # P5: retires the live spell_bonus_data row
+# (direct_bonus=1.2, inserted by the hand-written pending SQL this spell's own notes describe, moved
+# here from 200002) that would otherwise keep overriding the freshly generated EffectBonusMultiplier_1
+# (D1) - this is a fully custom spell id (no stock dump collision), so this may turn out to be a
+# harmless no-op if generate.py's own prune pass can already delete the row unassisted; confirm via
+# its output (same check this comment's sibling calls below need).
 
 
 flurry_bolt_200037 = spell(
@@ -262,12 +287,11 @@ flurry_bolt_200037 = spell(
     mana_cost=0,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=99, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=37.4, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=187,
-    coeff_weight=0.3,
-    notes="Frost Mage rework - internal plumbing spell, not player-facing (never cast by a player directly). One of 3 sequential bolts fired by spell_mage_flurry::FireBolts (spell_mage.cpp) - cast via caster->CastSpell(target, 200037, true) at 0ms/200ms/400ms after Flurry's (200004) own cast completes, target re-resolved by GUID + ObjectAccessor for the 2nd/3rd bolt same as Glacial Spike's old ramp did (see FireBolts' own comment). Same per-bolt numbers as the pre-redesign 200004 (100 base each, EffectBasePoints stored as 99, 0.3 spell power coefficient via this row's own spell_bonus_data), just split into 3 separately-cast, separately-scaled, separately-timed instances instead of 3 simultaneous effects on one entry - total damage output unchanged, only the pacing/visual changed (2026-09-18 playtest feedback: wanted a genuine burst of 3 sequential bolts, not one bolt worth of triple damage). Shattering Cold (200003) is applied once, right after the 3rd/last bolt is cast (not from this row) - FireBolts casts it in the same scheduled callback as the final bolt, preserving 'Flurry's own bolts do not benefit from Shattering Cold' on a best-effort/cast-order basis; note this has no live consumer yet (FrostMageRework::IsFrozenFor/HasShatteringCold, spell_mage.cpp, are currently uncalled - see docs/frost-mage-implementation-plan.md), so nothing currently depends on this ordering being exact down to travel-time precision. SpellIconID 187 (Spell_Frost_ChillingBlast, apps/dbc-tools/var/spell_icon_names.csv). SpellVisualID_1 90010 (patch_mage_vfx_models.py): HasMissile/MissileModel=cfx_mage_flurry_missile + ImpactKit wrapping cfx_mage_flurry_impactchest - the missile/impact visual 200004's own SpellVisualID_1 (90009) used to carry, moved here since this is what actually travels and hits now. See docs/reworks/fire-mage-meteor-vfx.md.",
-    raw_overrides={'SpellClassSet': 3, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'EquippedItemClass': -1, 'PreventionType': 1, 'ProcChance': 101, 'SpellPriority': 50, 'Description_Lang_enUS': 'Internal: one bolt of Flurry.', 'Speed': 38.0, 'DefenseType': 1, 'SpellVisualID_1': 90010},
+    notes="Frost Mage rework - internal plumbing spell, not player-facing (never cast by a player directly). One of 3 sequential bolts fired by spell_mage_flurry::FireBolts (spell_mage.cpp) - cast via caster->CastSpell(target, 200037, true) at 0ms/200ms/400ms after Flurry's (200004) own cast completes, target re-resolved by GUID + ObjectAccessor for the 2nd/3rd bolt same as Glacial Spike's old ramp did (see FireBolts' own comment). Same per-bolt numbers as the pre-redesign 200004 (100 base each, EffectBasePoints stored as 99), just split into 3 separately-cast, separately-scaled, separately-timed instances instead of 3 simultaneous effects on one entry - total damage output unchanged, only the pacing/visual changed (2026-09-18 playtest feedback: wanted a genuine burst of 3 sequential bolts, not one bolt worth of triple damage). Shattering Cold (200003) is applied once, right after the 3rd/last bolt is cast (not from this row) - FireBolts casts it in the same scheduled callback as the final bolt, preserving 'Flurry's own bolts do not benefit from Shattering Cold' on a best-effort/cast-order basis; note this has no live consumer yet (FrostMageRework::IsFrozenFor/HasShatteringCold, spell_mage.cpp, are currently uncalled - see docs/frost-mage-implementation-plan.md), so nothing currently depends on this ordering being exact down to travel-time precision. SpellIconID 187 (Spell_Frost_ChillingBlast, apps/dbc-tools/var/spell_icon_names.csv). SpellVisualID_1 90010 (patch_mage_vfx_models.py): HasMissile/MissileModel=cfx_mage_flurry_missile + ImpactKit wrapping cfx_mage_flurry_impactchest - the missile/impact visual 200004's own SpellVisualID_1 (90009) used to carry, moved here since this is what actually travels and hits now. See docs/reworks/fire-mage-meteor-vfx.md. | potency system P5 (Mage pass): converted to sp_potency=37.4 (potency-report default). Dropped the dead `coeff_weight=0.3` kwarg - lib/build.py: never wired into spell_bonus_data by this build, and the report's own live-DB read confirms the coefficient was in fact 0.000 live (not the 0.3 the old notes/coeff_weight claimed) - the pending SQL this row's notes describe as carrying 'this row's own spell_bonus_data' apparently never survived to the current DB state (same squash-drop risk class as docs/bugs-and-fixes.md's pending-SQL-squash entry); potency conversion fixes this going forward regardless of root cause. Added SpellLevel=1 (required for potency; none was set before).",
+    raw_overrides={'SpellClassSet': 3, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'EquippedItemClass': -1, 'PreventionType': 1, 'ProcChance': 101, 'SpellPriority': 50, 'Description_Lang_enUS': 'Internal: one bolt of Flurry.', 'Speed': 38.0, 'DefenseType': 1, 'SpellVisualID_1': 90010, 'SpellLevel': 1},
 )
 
 
@@ -321,14 +345,14 @@ frozen_orb_pulse_200008 = spell(
     radius_yards=10.0,
     duration_ms=4000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=199, implicit_target_a=16),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=74.8, potency_kind='direct', implicit_target_a=16),
         Effect(type=EffectType.APPLY_AURA, base_points=-31, mechanic=Mechanic.SNARE, implicit_target_a=16, apply_aura=AuraType.MOD_DECREASE_SPEED),
     ],
     spell_icon_id=2132,
-    coeff_weight=0.15,
-    notes='Frost Mage rework (docs/frost-mage-redesign.md sec 1, Frozen Orb\'s pulse): "Every 1 sec, deals 200 Frost damage plus 0.15 spell power coefficient to all enemies within 10 yards, and applies a chill reducing movement speed by 30% for 4 sec." Two effects on one row, same shape as the real Cone of Cold (120): SCHOOL_DAMAGE (base_points 199, -1 convention) + APPLY_AURA MOD_DECREASE_SPEED (base_points -31, -1 convention for -30%, EffectMechanic MECHANIC_SNARE=11), both TARGET_UNIT_DEST_AREA_ENEMY (16, not the SRC variant this row originally shipped with - see "Cast by" below for why). Neither effect JSON sets its own "radius_yards" key (build.py only falls back to the row\'s top-level radius_yards when the per-effect key is absent, not when it\'s present-but-null - learned the hard way diffing a hand-built row against generate.py\'s actual output), so both inherit the row\'s radius_yards (10, -> EffectRadiusIndex 13, the same row Cone of Cold\'s own radius already reuses) and duration_ms (4000, -> DurationIndex 35, the same row Shattering Cold/200003 already reuses). Coefficient (0.15) goes through spell_bonus_data like every other new spell this session - see the accompanying pending SQL. Cast by the OWNING PLAYER (not the orb) at an explicit dest = the orb\'s live position, once per second, from npc_mage_frozen_orb::UpdateAI (spell_mage.cpp) - a deliberate change from the original SRC-based "orb self-casts via a periodic aura (200009)" design, which silently attributed all damage/threat/combat-log entries to the orb instead of the player (root-caused via live playtest: FoF procced and the pulse showed in the combat log, but never in the player\'s own damage meter). TARGET_UNIT_DEST_AREA_ENEMY lets the player be the actual spell caster (correct attribution *and* correct spell-power scaling off the player\'s own stats) while still centering the AoE on the orb\'s moving position rather than the stationary player. 200009 (Frozen Orb Periodic) is no longer cast by anything - left as an orphaned row rather than deleted, see spell_mage.cpp\'s own notes. spell_mage_frozen_orb_pulse (spell_mage.cpp) still exists for BoostChillEffect (Chilled to the Bone) and to tell the orb\'s AI a pulse landed (halts movement, starts the FoF grant chain) - it does not touch the damage/slow itself, both of which are native DBC effects needing no script. Attributes=0 and no player-facing name/description text (Description_Lang_Mask=0) - never cast directly by a player action, never shown in a spellbook/tooltip.',
-    raw_overrides={'SpellClassSet': 0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 0, 'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Movement speed reduced.', 'EquippedItemClass': -1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellPriority': 50},
+    notes='Frost Mage rework (docs/frost-mage-redesign.md sec 1, Frozen Orb\'s pulse): "Every 1 sec, deals 200 Frost damage plus 0.15 spell power coefficient to all enemies within 10 yards, and applies a chill reducing movement speed by 30% for 4 sec." Two effects on one row, same shape as the real Cone of Cold (120): SCHOOL_DAMAGE (base_points 199, -1 convention) + APPLY_AURA MOD_DECREASE_SPEED (base_points -31, -1 convention for -30%, EffectMechanic MECHANIC_SNARE=11), both TARGET_UNIT_DEST_AREA_ENEMY (16, not the SRC variant this row originally shipped with - see "Cast by" below for why). Neither effect JSON sets its own "radius_yards" key (build.py only falls back to the row\'s top-level radius_yards when the per-effect key is absent, not when it\'s present-but-null - learned the hard way diffing a hand-built row against generate.py\'s actual output), so both inherit the row\'s radius_yards (10, -> EffectRadiusIndex 13, the same row Cone of Cold\'s own radius already reuses) and duration_ms (4000, -> DurationIndex 35, the same row Shattering Cold/200003 already reuses). Cast by the OWNING PLAYER (not the orb) at an explicit dest = the orb\'s live position, once per second, from npc_mage_frozen_orb::UpdateAI (spell_mage.cpp) - a deliberate change from the original SRC-based "orb self-casts via a periodic aura (200009)" design, which silently attributed all damage/threat/combat-log entries to the orb instead of the player (root-caused via live playtest: FoF procced and the pulse showed in the combat log, but never in the player\'s own damage meter). TARGET_UNIT_DEST_AREA_ENEMY lets the player be the actual spell caster (correct attribution *and* correct spell-power scaling off the player\'s own stats) while still centering the AoE on the orb\'s moving position rather than the stationary player. 200009 (Frozen Orb Periodic) is no longer cast by anything - left as an orphaned row rather than deleted, see spell_mage.cpp\'s own notes. spell_mage_frozen_orb_pulse (spell_mage.cpp) still exists for BoostChillEffect (Chilled to the Bone) and to tell the orb\'s AI a pulse landed (halts movement, starts the FoF grant chain) - it does not touch the damage/slow itself, both of which are native DBC effects needing no script. Attributes=0 and no player-facing name/description text (Description_Lang_Mask=0) - never cast directly by a player action, never shown in a spellbook/tooltip. | potency system P5 (Mage pass): converted to sp_potency=74.8 (mage-potency-proposals.txt). Dropped the dead `coeff_weight=0.15` kwarg (lib/build.py: never wired into spell_bonus_data by this build - the report\'s own live-DB read confirms the coefficient was 0.000 live, not the 0.15 these old notes claimed; same pending-SQL-squash-drop pattern noted on Flurry Bolt (200037)). Added SpellLevel=1 (required for potency; none was set before). No Description/AuraDescription text change - this spell has Description_Lang_Mask=0 and no description key at all (never shown in any UI).',
+    raw_overrides={'SpellClassSet': 0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 0, 'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Movement speed reduced.', 'EquippedItemClass': -1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellPriority': 50, 'SpellLevel': 1},
 )
+unbind_bonus_coefficients(frozen_orb_pulse_200008)  # stale spell_bonus_data row overrode the potency coefficient (D1)
 
 
 frozen_orb_periodic_200009 = spell(
@@ -3148,7 +3172,7 @@ arctic_winds_31674 = spell(
     ],
     spell_icon_id=2131,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all damage you deal by $s1% and Frost damage you deal by $s3%. |cFF9D9D9DAt max rank, your Glacial Spike shatters on impact, striking up to 5 additional enemies within 8 yards.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all damage you deal by $s1% and Frost damage you deal by $s2%. |cFF9D9D9DAt max rank, your Glacial Spike shatters on impact, striking up to 5 additional enemies within 8 yards.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3},
 )
 
 
@@ -3170,7 +3194,7 @@ arctic_winds_31675 = spell(
     ],
     spell_icon_id=2131,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all damage you deal by $s1% and Frost damage you deal by $s3%. |cFF9D9D9DAt max rank, your Glacial Spike shatters on impact, striking up to 5 additional enemies within 8 yards.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all damage you deal by $s1% and Frost damage you deal by $s2%. |cFF9D9D9DAt max rank, your Glacial Spike shatters on impact, striking up to 5 additional enemies within 8 yards.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3},
 )
 
 
@@ -3193,7 +3217,7 @@ arctic_winds_31676 = spell(
     ],
     spell_icon_id=2131,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all damage you deal by $s1% and Frost damage you deal by $s3%.  Your Glacial Spike shatters on impact, striking up to 5 additional enemies within 8 yards.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all damage you deal by $s1% and Frost damage you deal by $s2%.  Your Glacial Spike shatters on impact, striking up to 5 additional enemies within 8 yards.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 3},
 )
 
 
@@ -4281,14 +4305,14 @@ icy_bite_200013 = spell(
     range_yards=40.0,
     duration_ms=3000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=49, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=18.7, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, base_points=-21, mechanic=Mechanic.SNARE, implicit_target_a=6, apply_aura=AuraType.MOD_HEALING_PCT, misc_value=127),
     ],
     spell_icon_id=189,
-    coeff_weight=0.15,
-    notes="Frost Mage rework (docs/frost-mage-redesign.md sec 4 Row 2, Biting Cold capstone). Triggered only (spell_mage_biting_cold, spell_mage.cpp) - never learned directly, same shape as Frozen Orb Pulse/Periodic (200008/200009). effect1: SPELL_EFFECT_SCHOOL_DAMAGE, 50 base + spell_bonus_data coeff_weight 0.15 (modest - a bonus proc, not a primary nuke; first-pass tuning value). effect2: SPELL_AURA_MOD_DECREASE_SPEED, mechanic 11 (MECHANIC_SNARE, matches Frostbolt's own slow so it also satisfies Unit::HasAuraWithMechanic(MECHANIC_SNARE) checks - including Biting Cold's own base effect), 20% slow for 3 sec, first-pass tuning value. Cast via caster->CastSpell(bounceTarget, 200013, true) so damage/threat attribute to the mage, not an unnamed source.",
+    notes="Frost Mage rework (docs/frost-mage-redesign.md sec 4 Row 2, Biting Cold capstone). Triggered only (spell_mage_biting_cold, spell_mage.cpp) - never learned directly, same shape as Frozen Orb Pulse/Periodic (200008/200009). effect1: SPELL_EFFECT_SCHOOL_DAMAGE, 50 base (first-pass tuning value - a bonus proc, not a primary nuke). effect2: SPELL_AURA_MOD_DECREASE_SPEED, mechanic 11 (MECHANIC_SNARE, matches Frostbolt's own slow so it also satisfies Unit::HasAuraWithMechanic(MECHANIC_SNARE) checks - including Biting Cold's own base effect), 20% slow for 3 sec, first-pass tuning value. Cast via caster->CastSpell(bounceTarget, 200013, true) so damage/threat attribute to the mage, not an unnamed source. | potency system P5 (Mage pass): converted to sp_potency=18.7 (mage-potency-proposals.txt). Dropped the dead `coeff_weight=0.15` kwarg (lib/build.py: never wired into spell_bonus_data by this build - the report's own live-DB read confirms the coefficient was 0.000 live, not the claimed 0.15).",
     raw_overrides={'SpellClassSet': 3, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Frost damage and a chill effect, bitten into a nearby enemy by Biting Cold.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'SpellLevel': 1, 'AuraDescription_Lang_enUS': 'Movement slowed by 30% and time between attacks increased by 25%.', 'AuraDescription_Lang_Mask': 16712190},
 )
+unbind_bonus_coefficients(icy_bite_200013)  # stale spell_bonus_data row overrode the potency coefficient (D1)
 
 
 icy_shatter_200014 = spell(
@@ -4302,13 +4326,16 @@ icy_shatter_200014 = spell(
     mana_cost_pct=0,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=1499, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=560.7, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=1236,
-    coeff_weight=1.2,
-    notes="Frost Mage rework (docs/frost-mage-redesign.md sec 4 Row 9 / sec 1 Glacial Spike, Arctic Winds capstone). Triggered only (spell_mage_glacial_spike::ConsumeIciclesAndFrostCharge, spell_mage.cpp) - never learned directly, same shape as Icy Bite (200013). Mirrors Glacial Spike's (200002) own damage exactly - 1500 base + 1.2 SP coeff (spell_bonus_data, same as 200002) - rather than re-triggering Glacial Spike itself against each additional target, which would re-run icicle/Fingers-of-Frost consumption per hit. Cast via caster->CastSpell(shatterTarget, 200014, true) for up to 5 nearby enemies within 8 yards, gated on Arctic Winds rank 3 (talent 1738, icon 2131 EFFECT_2).",
+    notes="Frost Mage rework (docs/frost-mage-redesign.md sec 4 Row 9 / sec 1 Glacial Spike, Arctic Winds capstone). Triggered only (spell_mage_glacial_spike::ConsumeIciclesAndFrostCharge, spell_mage.cpp) - never learned directly, same shape as Icy Bite (200013). Mirrors Glacial Spike's (200002) own damage exactly - 1500 base + 1.2 SP coeff, same as 200027 - rather than re-triggering Glacial Spike itself against each additional target, which would re-run icicle/Fingers-of-Frost consumption per hit. Cast via caster->CastSpell(shatterTarget, 200014, true) for up to 5 nearby enemies within 8 yards, gated on Arctic Winds rank 3 (talent 1738, icon 2131 EFFECT_2). | potency system P5 (Mage pass): converted to sp_potency=560.7 (mage-potency-proposals.txt, same value as 200027 - they're deliberately identical). Dropped the dead `coeff_weight=1.2` kwarg (lib/build.py: never wired into spell_bonus_data by this build).",
     raw_overrides={'SpellClassSet': 3, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Frost damage, shattered onto a nearby enemy by Glacial Spike.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'SpellLevel': 1},
 )
+unbind_bonus_coefficients(icy_shatter_200014)  # P5: unlike its coeff_weight-only siblings (200008/
+# 200013/200019/200037, all live at 0.000 despite similar claims), this spell's report row shows a
+# genuinely live 1.200 coefficient (same situation as 200027/11426) - retire it so the freshly
+# generated EffectBonusMultiplier_1 isn't silently overridden (D1).
 
 
 permafrost_200015 = spell(
@@ -4394,13 +4421,13 @@ frozen_core_piercing_cold_200019 = spell(
     range_yards=40.0,
     duration_ms=8000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=79, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=22.4, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000),
     ],
     spell_icon_id=2132,
-    coeff_weight=0.05,
-    notes='Frost Mage rework (docs/frost-mage-redesign.md sec 4 Row 5, Frozen Core capstone). Triggered only (spell_mage_frozen_core, spell_mage.cpp) on an Ice Lance critical strike against a frozen target. 80 base damage/tick (EffectBasePoints stored 79) + 0.05 SP coeff/tick (spell_bonus_data dot_bonus), 4 ticks over 8 sec -- modest, first-pass tuning value like this session\'s other new proc-only spells. \'Does not stack, refreshes on reapplication\' is free from native single-target same-spell-ID reapplication, no extra data needed. Playtest bugfix (2026-08-27, user call): range_yards was left blank, which reuse.py\'s range_index() defaults to RangeIndex 0 (self-only/no-range sentinel) - same root cause as the Shattering Cold bug found the same session. Since this is cast at the enemy target (not self), that silently blocked the DoT from ever landing. Set to 40 to match the other enemy-targeted triggered spells in this file (Glacial Spike, Shattering Cold, Flurry, Icy Bite/Shatter). Playtest bugfix #2 (2026-08-28, user call, "DoT lands on the caster, not the target"): effect1\'s implicit_target_a was 1 (TARGET_UNIT_CASTER/self) - wrong for an effect meant to land on the enemy target that caster->CastSpell(target, ...) in spell_mage_frozen_core (spell_mage.cpp) explicitly passes in; a self-implicit-target effect ignores the explicit CastSpell target and always resolves to the caster regardless. Set to 6 (TARGET_UNIT_TARGET_ENEMY) to match every other enemy-targeted triggered spell in this file.',
+    notes='Frost Mage rework (docs/frost-mage-redesign.md sec 4 Row 5, Frozen Core capstone). Triggered only (spell_mage_frozen_core, spell_mage.cpp) on an Ice Lance critical strike against a frozen target. 80 base damage/tick (EffectBasePoints stored 79), 4 ticks over 8 sec -- modest, first-pass tuning value like this session\'s other new proc-only spells. \'Does not stack, refreshes on reapplication\' is free from native single-target same-spell-ID reapplication, no extra data needed. Playtest bugfix (2026-08-27, user call): range_yards was left blank, which reuse.py\'s range_index() defaults to RangeIndex 0 (self-only/no-range sentinel) - same root cause as the Shattering Cold bug found the same session. Since this is cast at the enemy target (not self), that silently blocked the DoT from ever landing. Set to 40 to match the other enemy-targeted triggered spells in this file (Glacial Spike, Shattering Cold, Flurry, Icy Bite/Shatter). Playtest bugfix #2 (2026-08-28, user call, "DoT lands on the caster, not the target"): effect1\'s implicit_target_a was 1 (TARGET_UNIT_CASTER/self) - wrong for an effect meant to land on the enemy target that caster->CastSpell(target, ...) in spell_mage_frozen_core (spell_mage.cpp) explicitly passes in; a self-implicit-target effect ignores the explicit CastSpell target and always resolves to the caster regardless. Set to 6 (TARGET_UNIT_TARGET_ENEMY) to match every other enemy-targeted triggered spell in this file. | potency system P5 (Mage pass): converted to sp_potency=22.4 (mage-potency-proposals.txt). Dropped the dead `coeff_weight=0.05` kwarg (lib/build.py: never wired into spell_bonus_data by this build - the report\'s own live-DB read confirms the coefficient was 0.000 live, not the claimed 0.05).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': "Frost damage over time, pierced into the target's core.", 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Frost damage over time, pierced into the target's core.", 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
+unbind_bonus_coefficients(frozen_core_piercing_cold_200019)  # stale spell_bonus_data row overrode the potency coefficient (D1)
 
 
 improved_cone_of_cold_200020 = spell(
@@ -5282,12 +5309,12 @@ meteor_impact_200096 = spell(
     radius_yards=8.0,
     duration_ms=4000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=751, points_per_level=14.1, die_sides=41, implicit_target_a=16, radius_yards=8.0),
-        Effect(type=EffectType.PERSISTENT_AREA_AURA, base_points=160, points_per_level=3.3, implicit_target_a=28, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=299.1, potency_kind='direct', implicit_target_a=16, radius_yards=8.0),
+        Effect(type=EffectType.PERSISTENT_AREA_AURA, sp_potency=93.6, potency_kind='periodic', implicit_target_a=28, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000, radius_yards=8.0),
     ],
     spell_icon_id=1516,
-    notes="Fire Mage rework sec 2 - Meteor's impact + ground burn, cast by spell_mage_meteor 3 sec after the player's Meteor (200095). Same shape as Flamestrike (2120): effect1 direct damage to every enemy in the 8yd area, effect2 a 4-sec persistent ground aura ticking every 1 sec. Budget (user call, 2026-09-15): ~2x Flamestrike - direct 751+14.1/lvl (die 41) vs Flamestrike's 51+7.4955/lvl anchored at Meteor's own SpellLevel 58, so ~780 at 60 / ~1060 at 80 vs Flamestrike's ~381 / ~531; burn 160+3.3/lvl per 1-sec tick x4 vs Flamestrike's 84->117 per 2-sec tick x4. Coefficients (spec: 0.3 direct / 0.15 burn) are in spell_bonus_data via bonus_coefficients() in mage_spells.py - dot_bonus is applied PER TICK by Unit::SpellDamageBonusDone, the same convention Flamestrike's own 0.122 row uses. Only the impact can crit -> only the impact banks Ignite (sec 4.1a); the burn is periodic and never does. SpellVisualID_1 90003 (patch_mage_vfx_models.py) - superseded the earlier Flamestrike reuse (10383) now that a purpose-built Ascension model exists: InstantAreaKit + PersistentAreaKit both point at the same kit wrapping mage_meteor_impactstate_world, so the burst and the 4-sec ground-burn's own visual are the same asset (its name suggests it's already a combined burst+decal, not two separate assets - see docs/reworks/fire-mage-meteor-vfx.md).",
-    raw_overrides={'BaseLevel': 58, 'SpellLevel': 58, 'MaxLevel': 80, 'CastingTimeIndex': 1, 'DefenseType': 1, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 3, 'SpellClassMask_3': 32, 'SpellPriority': 50, 'SpellVisualID_1': 90003, 'Targets': 64, 'AttributesEx': 268435592, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals $s1 Fire damage to all enemies in the area and burns the ground for $o2 Fire damage over $d.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s2 Fire damage every $t2 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+    notes="Fire Mage rework sec 2 - Meteor's impact + ground burn, cast by spell_mage_meteor 3 sec after the player's Meteor (200095). Same shape as Flamestrike (2120): effect1 direct damage to every enemy in the 8yd area, effect2 a 4-sec persistent ground aura ticking every 1 sec. Budget (user call, 2026-09-15): ~2x Flamestrike - direct 751+14.1/lvl (die 41) vs Flamestrike's 51+7.4955/lvl anchored at Meteor's own SpellLevel 58; burn 160+3.3/lvl per 1-sec tick x4 vs Flamestrike's 84->117 per 2-sec tick x4. Only the impact can crit -> only the impact banks Ignite (sec 4.1a); the burn is periodic and never does. SpellVisualID_1 90003 (patch_mage_vfx_models.py) - superseded the earlier Flamestrike reuse (10383) now that a purpose-built Ascension model exists: InstantAreaKit + PersistentAreaKit both point at the same kit wrapping mage_meteor_impactstate_world, so the burst and the 4-sec ground-burn's own visual are the same asset (its name suggests it's already a combined burst+decal, not two separate assets - see docs/reworks/fire-mage-meteor-vfx.md). | potency system P5 (Mage pass): eff1 converted to sp_potency=299.1 (mage-potency-proposals.txt). eff2 (PERSISTENT_AREA_AURA burn) is invisible to potency_report.py's classifier (same gap P4 found on Rain of Fire, also hit on Flamestrike eff2 this stage) - converted by hand to sp_potency=93.6, the base-damage-implied potency from its live 160+3.3/lvl @ 1s tick (V60=167) vs its old explicit 0.15 dot_bonus (52.5-implied) - a notably large (~78%) disagreement, well above every other row this stage, flagged prominently for review since it wasn't independently user-reviewed and the two source numbers disagree far more than usual.",
+    raw_overrides={'BaseLevel': 58, 'SpellLevel': 58, 'CastingTimeIndex': 1, 'DefenseType': 1, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassSet': 3, 'SpellClassMask_3': 32, 'SpellPriority': 50, 'SpellVisualID_1': 90003, 'Targets': 64, 'AttributesEx': 268435592, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1} Fire damage to all enemies in the area and burns the ground for {pot2.total} Fire damage over $d.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot2} Fire damage every $t2 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
 
@@ -5710,7 +5737,7 @@ burnout_explosion_200116 = spell(
     range_yards=50000.0,
     radius_yards=8.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=53, implicit_target_b=16, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=53, implicit_target_b=16, radius_yards=8.0, potency_excluded='script-driven + percent-of-other-damage: spell_mage_burnout_capstone::HandleProc casts this via CastCustomSpell(..., SPELLVALUE_BASE_POINT0, CalculatePct(Mage::GetIgniteRemaining(...), 50), ...) (D2) - the DBC base is dead/unused (potency system P5).'),
     ],
     spell_icon_id=2998,
     notes="Fire Mage rework Phase 3 (6,0) capstone - 'Dealing direct magic non-Fire damage to targets affected by your Ignite causes an explosion.' User call 2026-09-15: 50% of the target's remaining Ignite bank (Mage::GetIgniteRemaining), bank NOT consumed. CANT_CRIT + IGNORE_CASTER_MODIFIERS + ALWAYS_HIT, same reasoning as Flashpoint (200119)/the Ignite tick vehicle (200098): the bank already prices in crit rate/damage once, letting the explosion crit (and feed Ignite again) would double it. Target-centered AoE (A=53 TARGET_DEST_TARGET_ENEMY, B=16 TARGET_UNIT_DEST_AREA_ENEMY), same pair as Living Bomb's own explosion (44461). 6 sec ICD is the caster-side marker 200117, not on this spell.",
@@ -6028,3 +6055,139 @@ ice_shards_crit_200685 = _crit_damage_passive_200680(200685, 'Ice Shards', 32)
 burnout_crit_200686 = _crit_damage_passive_200680(200686, 'Burnout', 9)
 burnout_crit_200687 = _crit_damage_passive_200680(200687, 'Burnout', 19)
 burnout_crit_200688 = _crit_damage_passive_200680(200688, 'Burnout', 32)
+
+
+# ---------------------------------------------------------------------------
+# Potency system P8 (pets, guardians, totems): Water Elemental's own
+# spellbook casts. Summon Water Elemental (31687) is the real player ability
+# (mage_spells.py); these are what NPC_WATER_ELEMENTAL_PERM/_TEMP cast via
+# the stock PetAI/spellbook path - no custom AI file exists for the Water
+# Elemental (pet_mage.cpp only has Mirror Image), no CastCustomSpell bp.
+# SUMMON_PET type, so always exactly the owner's level
+# (Pet::SynchronizeLevelWithOwner(), same guarantee as a Warlock pet).
+# ---------------------------------------------------------------------------
+waterbolt_31707 = spell(
+    id=31707,
+    name='Waterbolt',
+    school=School.FROST,
+    attributes=65536,
+    cast_time_ms=2500,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=1,
+    range_yards=45.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=91.3, potency_kind='direct', implicit_target_a=6),
+    ],
+    spell_icon_id=176,
+    notes="pulled from existing data. Potency system P8: Water Elemental's own spellbook cast (no "
+          "custom AI file; stock PetAI casts it via the pet's spellbook; SUMMON_PET type so always "
+          "exactly the owner's level). Base-implied sp_potency=91.3 from the flat (no "
+          "RealPointsPerLevel) V60 average of 407 (255 base + int((60-50)*11.5)=115 + die_sides=73 "
+          "mean 37); the live EffectBonusMultiplier_1 (0.833) implied a notably higher 116.6 - base "
+          "wins by default (docs/potency-system.md).",
+    raw_overrides={'CastingTimeIndex': 20, 'InterruptFlags': 15, 'ProcChance': 101, 'BaseLevel': 50, 'SpellLevel': 50, 'Speed': 16.0, 'EquippedItemClass': -1, 'SpellVisualID_1': 7875, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Deals {pot1} Frost damage to the target.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'SpellClassSet': 5, 'SpellClassMask_1': 4096, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+unbind_bonus_coefficients(waterbolt_31707)  # stale spell_bonus_data row overrode the potency coefficient (D1)
+
+
+# Water Elemental's PBAoE root. Checked against the "pure CC, no real damage" assumption this
+# stage was handed and found FALSE: effect 0 is a real SCHOOL_DAMAGE PBAoE -
+# spell_mage_water_elemental_freeze's own comment (spell_mage.cpp) says "Effect 0's damage always
+# lands regardless of freeze immunity, matching the live spell description". Effect 1 is the root
+# (SPELL_AURA_MOD_ROOT) and is left untouched, not a potency effect.
+freeze_33395 = spell(
+    id=33395,
+    name='Freeze',
+    school=School.FROST,
+    dispel=DispelType.MAGIC,
+    attributes=1073807360,
+    category=35,
+    cast_time_ms=0,
+    cooldown_ms=30000,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=25,
+    range_yards=45.0,
+    duration_ms=8000,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=37.4, potency_kind='direct', implicit_target_a=16, radius_yards=8.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, mechanic=Mechanic.ROOT, implicit_target_a=16, apply_aura=AuraType.MOD_ROOT, radius_yards=8.0),
+    ],
+    spell_icon_id=193,
+    notes="pulled from existing data (frost-mage-redesign.md sec 2's cooldown edit, 25->30s, is "
+          "already baked into the live row this was pulled from). Potency system P8: base-implied "
+          "sp_potency=37.4 from the flat (no RealPointsPerLevel) V60 average of 100 (73 base + "
+          "int((60-50)*2.0)=20 + die_sides=13 mean 7); the live EffectBonusMultiplier_1 (0.029) "
+          "implied a far lower 6.8 - base wins by default.",
+    raw_overrides={'AttributesEx': 131208, 'AttributesEx4': 160, 'Targets': 64, 'CastingTimeIndex': 1, 'InterruptFlags': 8, 'ProcTypeMask': 664232, 'ProcChance': 100, 'BaseLevel': 50, 'SpellLevel': 50, 'EquippedItemClass': -1, 'SpellVisualID_1': 8058, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Blasts enemies in a $a1 yard radius for {pot1} Frost damage and freezes them in place for up to $d.  Damage caused may interrupt the effect.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Frozen in place.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 3, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+# ---------------------------------------------------------------------------
+# Potency system P8: Mirror Image's own spell copies (caster = the image
+# itself, cast via plain me->CastSpell in npc_pet_mage_mirror_image /
+# CasterAI, pet_mage.cpp). Not SUMMON_PET/SUMMON_GUARDIAN - the images are
+# Minion-typed temp summons created by the Mirror Image spells themselves
+# (58831/58833/58834/65047, SPELL_EFFECT_SUMMON) through Spell::SummonGuardian,
+# whose default summonLevel = caster->GetLevel() (no per-spell exception in
+# SpellEffects.cpp's summonLevel switch, and this isn't an item cast) - so
+# the images ARE reliably summoned at exactly the caster's own level, same
+# guarantee as a SUMMON_PET, just via a different code path. "Clone Me!"
+# (45204, AuraEffect::HandleAuraCloneCaster) only clones display/scale -
+# it has nothing to do with level.
+# ---------------------------------------------------------------------------
+mirror_image_frostbolt_59638 = spell(
+    id=59638,
+    name='Frostbolt',
+    school=School.FROST,
+    dispel=DispelType.MAGIC,
+    attributes=65536,
+    cast_time_ms=3000,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=90,
+    mana_cost_pct=0,
+    range_yards=40.0,
+    duration_ms=4000,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=31.0, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.APPLY_AURA, base_points=-51, mechanic=Mechanic.SNARE, implicit_target_a=6, apply_aura=AuraType.MOD_DECREASE_SPEED),
+    ],
+    spell_icon_id=188,
+    notes="pulled from existing data. Potency system P8: npc_pet_mage_mirror_image's own Frostbolt "
+          "copy (caster = the image, plain me->CastSpell, no custom bp). Base-implied sp_potency=31.0 "
+          "from the flat (no RealPointsPerLevel) V60 average of 166 (162 base + die_sides=7 mean 4); "
+          "the live EffectBonusMultiplier_1 (0.3) implies a close 35.0 - no real mismatch here, unlike "
+          "Waterbolt/Freeze/Gargoyle Strike.",
+    raw_overrides={'FacingCasterFlags': 1, 'CastingTimeIndex': 14, 'InterruptFlags': 15, 'ProcChance': 101, 'BaseLevel': 20, 'SpellLevel': 20, 'Speed': 24.0, 'EquippedItemClass': -1, 'SpellVisualID_1': 13, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Inflicts Frost damage to an enemy and reduces its movement speed for $d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Reduced movement speed.', 'AuraDescription_Lang_Mask': 16712190, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+unbind_bonus_coefficients(mirror_image_frostbolt_59638)  # stale spell_bonus_data row overrode the potency coefficient (D1)
+
+
+mirror_image_fire_blast_59637 = spell(
+    id=59637,
+    name='Fire Blast',
+    school=School.FIRE,
+    attributes=65536,
+    category=19,
+    cast_time_ms=0,
+    cooldown_ms=6000,
+    category_cooldown_ms=0,
+    mana_cost=120,
+    mana_cost_pct=0,
+    range_yards=20.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=34.8, potency_kind='direct', implicit_target_a=6),
+    ],
+    spell_icon_id=12,
+    notes="pulled from existing data. Potency system P8: npc_pet_mage_mirror_image's own Fire Blast "
+          "copy (caster = the image, plain me->CastSpell, no custom bp). Base-implied sp_potency=34.8 "
+          "from the flat (no RealPointsPerLevel) V60 average of 93 (87 base + die_sides=11 mean 6); "
+          "the live EffectBonusMultiplier_1 (0.15) implies a close 35.0 - no real mismatch.",
+    raw_overrides={'FacingCasterFlags': 1, 'CastingTimeIndex': 1, 'InterruptFlags': 8, 'ProcChance': 101, 'BaseLevel': 20, 'SpellLevel': 20, 'EquippedItemClass': -1, 'SpellVisualID_1': 143, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Inflicts Fire damage to an enemy.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 3, 'SpellClassMask_1': 131074, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+unbind_bonus_coefficients(mirror_image_fire_blast_59637)  # stale spell_bonus_data row overrode the potency coefficient (D1)

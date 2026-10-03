@@ -61,13 +61,19 @@ deadly_poison_2818 = spell(
     range_yards=100.0,
     duration_ms=12000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, points_per_level=0.6, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000, ap_potency=4.5, potency_kind='periodic'),
         None,
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=197),
     ],
     spell_icon_id=513,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 30); RealPointsPerLevel from rank1→level-60 slope (anchor 25349, rank 5); coefficient/cast_time_ms/mana_cost_pct from max rank (57970, rank 9); MaxLevel set to 80; flat energy cost kept as-is (Rogue is Energy-based, not Mana)',
-    raw_overrides={'AttributesEx': 131208, 'AttributesEx2': 16777220, 'AttributesEx3': 128, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Target takes $s1 Nature damage every $t1 seconds.', 'BaseLevel': 30, 'CastingTimeIndex': 1, 'CumulativeAura': 5, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a $2823h% chance of poisoning the enemy for ${$2818m1*4+0.12*$AP} Nature damage over $2818d.  Stacks up to 5 times on a single target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_1': 65536, 'SpellClassMask_2': 524288, 'SpellClassSet': 8, 'SpellLevel': 30, 'SpellVisualID_1': 5100},
+    notes=(
+        'single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 30); RealPointsPerLevel from rank1→level-60 slope (anchor 25349, rank 5); coefficient/cast_time_ms/mana_cost_pct from max rank (57970, rank 9); flat energy cost kept as-is (Rogue is Energy-based, not Mana). '
+        'potency-system (PLAN P7-Rogue): converted to ap_potency=4.5 (periodic, matching the live, '
+        'already-mismatched ap_dot_bonus=0.030 coefficient\'s base-implied potency from '
+        'rogue-potency-report.md/rogue-potency-proposals.txt) - reproduces the pre-conversion V60 '
+        'of 24 exactly (simulate_value).'
+    ),
+    raw_overrides={'AttributesEx': 131208, 'AttributesEx2': 16777220, 'AttributesEx3': 128, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Target takes {pot1} Nature damage every $t1 seconds.', 'CastingTimeIndex': 1, 'CumulativeAura': 5, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a $2823h% chance of poisoning the enemy for {pot1.total} Nature damage over $2818d.  Stacks up to 5 times on a single target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_1': 65536, 'SpellClassMask_2': 524288, 'SpellClassSet': 8, 'SpellLevel': 30, 'SpellVisualID_1': 5100},
 )
 
 
@@ -104,11 +110,17 @@ instant_poison_8680 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=12, points_per_level=1.575, die_sides=5, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=29.2, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=247,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope (anchor 11337, rank 6); coefficient/cast_time_ms/mana_cost_pct from max rank (57965, rank 9); MaxLevel set to 80; flat energy cost kept as-is (Rogue is Energy-based, not Mana)',
-    raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a $8679h% chance of poisoning the enemy which instantly inflicts ${$8680m1+0.10*$AP} Nature damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_1': 8192, 'SpellClassSet': 8, 'SpellLevel': 20, 'SpellVisualID_1': 5100},
+    notes=(
+        'single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope (anchor 11337, rank 6); coefficient/cast_time_ms/mana_cost_pct from max rank (57965, rank 9); flat energy cost kept as-is (Rogue is Energy-based, not Mana). '
+        'potency-system (PLAN P7-Rogue): converted to ap_potency=29.2 (direct, the base-implied '
+        'potency from rogue-potency-report.md/rogue-potency-proposals.txt, mismatched against the '
+        'live ap_bonus=0.100 coefficient\'s implied 23.3) - new base 74 (down from the old V60 78, '
+        'the same base-potency/mismatch drift every other converted class accepts).'
+    ),
+    raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a $8679h% chance of poisoning the enemy which instantly inflicts {pot1} Nature damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_1': 8192, 'SpellClassSet': 8, 'SpellLevel': 20, 'SpellVisualID_1': 5100},
 )
 
 
@@ -151,12 +163,20 @@ wound_poison_13218 = spell(
     duration_ms=15000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=6, apply_aura=AuraType.MOD_HEALING_PCT, misc_value=127),
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=16, points_per_level=1.2857142857142858, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=19.8, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=197),
     ],
     spell_icon_id=1496,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 32); RealPointsPerLevel from rank1→level-60 slope (anchor 13224, rank 4); coefficient/cast_time_ms/mana_cost_pct from max rank (57975, rank 7); MaxLevel set to 80; flat energy cost kept as-is (Rogue is Energy-based, not Mana)',
-    raw_overrides={'AttributesEx': 136, 'AttributesEx2': 16777216, 'AttributesEx3': 131072, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'All healing effects reduced by $s1%.', 'BaseLevel': 32, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a $13219h% chance of poisoning the enemy, causing ${$13218m2+0.04*$AP} Nature damage and reducing all healing effects used on them by $13218s1% for $13218d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 32768, 'RangeIndex': 2, 'SpellClassMask_1': 268435456, 'SpellClassMask_2': 524288, 'SpellClassSet': 8, 'SpellLevel': 32, 'SpellVisualID_1': 5100},
+    notes=(
+        'single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 32); RealPointsPerLevel from rank1→level-60 slope (anchor 13224, rank 4); coefficient/cast_time_ms/mana_cost_pct from max rank (57975, rank 7); flat energy cost kept as-is (Rogue is Energy-based, not Mana). '
+        'potency-system (PLAN P7-Rogue): converted effect2 (the damage effect) to ap_potency=19.8 '
+        '(direct, the base-implied potency from rogue-potency-report.md/'
+        'rogue-potency-proposals.txt, mismatched against the live ap_bonus=0.040 coefficient\'s '
+        'implied 9.3) - new base 50 (down from the old V60 53, the same base-potency/mismatch '
+        'drift every other converted class accepts). effect1 (healing-reduction debuff) and '
+        'effect3 are untouched.'
+    ),
+    raw_overrides={'AttributesEx': 136, 'AttributesEx2': 16777216, 'AttributesEx3': 131072, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'All healing effects reduced by $s1%.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a $13219h% chance of poisoning the enemy, causing {pot2} Nature damage and reducing all healing effects used on them by $13218s1% for $13218d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 32768, 'RangeIndex': 2, 'SpellClassMask_1': 268435456, 'SpellClassMask_2': 524288, 'SpellClassSet': 8, 'SpellLevel': 32, 'SpellVisualID_1': 5100},
 )
 
 
@@ -193,12 +213,22 @@ anesthetic_poison_26688 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_points=133, points_per_level=7.0, die_sides=39, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_potency=57.2, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.DISPEL, implicit_target_a=6, misc_value=9),
     ],
     spell_icon_id=110,
-    notes="single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 68); RealPointsPerLevel from rank1→top rank's own top level (80, rank1 learn level ≥ 60) slope (anchor 57981, rank 2); coefficient/cast_time_ms/mana_cost_pct from max rank (57981, rank 2); MaxLevel set to 80; flat energy cost kept as-is (Rogue is Energy-based, not Mana)",
-    raw_overrides={'AttributesEx': 1160, 'AttributesEx2': 16777216, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 68, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.  Each strike has a $26785h% chance of poisoning the enemy which instantly inflicts $26688s1 Nature damage and dispels $26688s2 Enrage effect, but causes no additional threat.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_2': 16, 'SpellClassSet': 8, 'SpellLevel': 68, 'SpellVisualID_1': 5100},
+    notes=(
+        "single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 68); RealPointsPerLevel from rank1→top rank's own top level (80, rank1 learn level ≥ 60) slope (anchor 57981, rank 2); coefficient/cast_time_ms/mana_cost_pct from max rank (57981, rank 2); flat energy cost kept as-is (Rogue is Energy-based, not Mana). "
+        "potency-system (PLAN P7-Rogue): converted to base_potency=57.2 (direct, the base-implied "
+        "potency from rogue-potency-report.md - not ap_potency, unlike the other Rogue poisons: "
+        "Anesthetic Poison's own tooltip text never mentions $AP at all, unlike Deadly/Instant/"
+        "Wound Poison's explicit '+0.1x*$AP' terms, and it has no live spell_bonus_data row either "
+        "- this poison genuinely never scaled with attack power, by original design, not by "
+        "oversight) - reproduces the pre-conversion average of 153 at its SpellLevel of 68 "
+        "(die_sides=39's old average roll of 20, matching potency_report.py's own "
+        "native_level60_value averaging)."
+    ),
+    raw_overrides={'AttributesEx': 1160, 'AttributesEx2': 16777216, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.  Each strike has a $26785h% chance of poisoning the enemy which instantly inflicts {pot1} Nature damage and dispels $26688s2 Enrage effect, but causes no additional threat.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_2': 16, 'SpellClassSet': 8, 'SpellLevel': 68, 'SpellVisualID_1': 5100},
 )
 
 
@@ -2169,7 +2199,16 @@ cheat_death_31228 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=1, apply_aura=69, misc_value=127),
+        Effect(
+            type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=1, apply_aura=69, misc_value=127,
+            potency_excluded='not a damage/absorb value despite the SCHOOL_ABSORB(69) aura type and the '
+            'P3 report classifying it as "absorb": spell_rog_cheat_death::CalculateAmount '
+            '(src/server/scripts/Spells/spell_rogue.cpp) sets amount=-1 (unlimited) unconditionally and '
+            'reads this effect\'s own CalcValue() as absorbChance, a roll_chance_i() PROC CHANCE PERCENT, '
+            'not a shield size - the real absorbed amount is computed dynamically in Absorb() from the '
+            'incoming hit and the target\'s current health, with no dependency on this value at all. Same '
+            'out-of-scope category as "proc chances" (docs/potency-system.md\'s "Out of scope by design").',
+        ),
     ],
     spell_icon_id=2109,
     notes='pulled from existing data',
@@ -2189,7 +2228,11 @@ cheat_death_31229 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=65, implicit_target_a=1, apply_aura=69, misc_value=127),
+        Effect(
+            type=EffectType.APPLY_AURA, base_points=65, implicit_target_a=1, apply_aura=69, misc_value=127,
+            potency_excluded='not a damage/absorb value - same as 31228, this effect\'s own CalcValue() is '
+            'read as a proc-chance percent by spell_rog_cheat_death::CalculateAmount, not a shield size.',
+        ),
     ],
     spell_icon_id=2109,
     notes='pulled from existing data',
@@ -2209,7 +2252,11 @@ cheat_death_31230 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=69, misc_value=127),
+        Effect(
+            type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=69, misc_value=127,
+            potency_excluded='not a damage/absorb value - same as 31228, this effect\'s own CalcValue() is '
+            'read as a proc-chance percent by spell_rog_cheat_death::CalculateAmount, not a shield size.',
+        ),
     ],
     spell_icon_id=2109,
     notes='pulled from existing data',
