@@ -33,7 +33,8 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import model
+from . import model, tooltip
+from .tooltip import has_aura, knows, product, talent_mult  # noqa: F401 - re-exported for class files
 
 # Unique-ifies the synthetic package name `load_class_package` registers in
 # `sys.modules` per call, so two loads of the same class directory in one
@@ -139,6 +140,10 @@ class Registry:
     # lib/header_gen.py, which turns these (plus spell/creature ids - see spell_var_names/
     # creature_var_names) into the header text.
     consts: list[dict] = field(default_factory=list)
+    # P9 (potency-system.PLAN.md): SpellDescriptionVariables.dbc rows, `{"id": int, "Variables": str}`,
+    # filled by the tooltip_vars() helper (P9.2). Client-only (no SQL), so generate.py only merges
+    # them into the client patch; the DuplicateIdError merge check below stops two files minting one id.
+    tooltip_vars: list[dict] = field(default_factory=list)
     # P2b: {id: python_variable_name}, found by introspecting each loaded module's own namespace
     # after it finishes executing - see _collect_var_names(). Not in MERGE_KEYS: these are dicts,
     # not lists, and merged by lib.header_gen's caller with a plain dict.update() (ids are already
@@ -156,6 +161,7 @@ MERGE_KEYS = (
     "creature_templates", "creature_template_models",
     "potency_corrections",
     "consts",
+    "tooltip_vars",
 )
 
 # The registry a class file's spell()/talent()/tab()/skill_line_ability()
@@ -628,6 +634,37 @@ def spell_group_rule(group_id: int, stack_rule: int, description: str = "") -> d
     }
     _require_active().spell_group_rules.append(row)
     return row
+
+
+def tooltip_vars(entry_id: int, comment: str, **variables) -> tooltip.TooltipVars:
+    """Declares one `SpellDescriptionVariables.dbc` entry (potency-system.PLAN.md P9): named
+    variables a spell's tooltip reads as `$<name>`. Pass the result to `spell(tooltip_vars=...)`;
+    one entry can serve many spells. `entry_id` must come from `source/ids.yaml`'s
+    `spelldescriptionvariables` block (D9: explicit ids, never a stock id - stock entries are
+    shared by dozens of stock spells). Each variable is a builder from `lib/dsl/tooltip.py`
+    (`talent_mult`, `knows`, `has_aura`, `product`) or a raw right-hand side such as `"${$m1*2}"`,
+    rendered in declaration order - see `tooltip.render_entry` for what it rejects. `comment` is
+    for the reader only; the DBC has no column for it.
+
+        frost_talents = tooltip_vars(
+            1000, "Frost damage talents shown on Frost spell tooltips",
+            piercing=talent_mult(piercing_ice),
+            arctic=talent_mult(arctic_winds, effect=2),
+            mult=product("piercing", "arctic"),
+        )
+    """
+    ids_cfg = _active_ids_cfg
+    if ids_cfg is not None:
+        block = ids_cfg.get("spelldescriptionvariables")
+        if not block or not block["start"] <= entry_id <= block["end"]:
+            raise ValueError(
+                f"tooltip_vars({entry_id}, ...): id must come from source/ids.yaml's "
+                f"spelldescriptionvariables block"
+                + (f" ({block['start']}-{block['end']})" if block else "")
+            )
+    entry = tooltip.render_entry(entry_id, variables)
+    _require_active().tooltip_vars.append({"id": entry_id, "Variables": entry.text, "comment": comment})
+    return entry
 
 
 def custom_attr(spell: model.Spell | int, attributes: int) -> dict:

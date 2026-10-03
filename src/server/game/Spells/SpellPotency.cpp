@@ -114,11 +114,15 @@ void SpellPotency::Validate()
             continue;
         }
 
-        if (spellInfo->BaseLevel != spellInfo->SpellLevel)
+        // CalcValue anchors the native line at max(BaseLevel, SpellLevel), so only a SpellLevel above
+        // BaseLevel shifts it. A lower one is harmless: SpellInfoCorrections zeroes SpellLevel on some
+        // stock spells (Divine Hymn 64844, Lifebloom's bloom 33778).
+        if (spellInfo->SpellLevel > spellInfo->BaseLevel)
         {
-            LOG_ERROR("sql.sql", "spell_potency_correction's spell {} has BaseLevel ({}) != SpellLevel ({}); "
-                "the correction formula assumes they're equal (docs/potency-system.md's 'Caveats and checks').",
-                spellId, spellInfo->BaseLevel, spellInfo->SpellLevel);
+            LOG_ERROR("sql.sql", "spell_potency_correction's spell {} has SpellLevel ({}) > BaseLevel ({}); "
+                "CalcValue anchors the native line at SpellLevel, so the correction formula is off "
+                "(docs/potency-system.md's 'Caveats and checks').",
+                spellId, spellInfo->SpellLevel, spellInfo->BaseLevel);
         }
 
         if (spellInfo->MaxLevel != 0)

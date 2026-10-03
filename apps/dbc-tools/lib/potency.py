@@ -331,7 +331,9 @@ def _fmt(x: float) -> str:
     return f"{x:.4f}".rstrip("0").rstrip(".") or "0"
 
 
-_PLACEHOLDER_RE = re.compile(r"\{pot(?P<index>[123])(?:\.(?P<variant>avg|total))?\}")
+_PLACEHOLDER_RE = re.compile(
+    r"\{pot(?P<index>[123])(?:\.(?P<variant>avg|total))?(?:\*(?P<var>[a-z][a-z0-9_]*))?\}"
+)
 
 
 def expand_placeholders(
@@ -344,25 +346,39 @@ def expand_placeholders(
     expression - PLAN P2 step 3. `{pot1}` is the range (`${min} to ${max}` for a direct effect
     with a variance roll, a single `${value}` for anything else), `{pot1.avg}` the average as one
     `${...}`, `{pot1.total}` the periodic sum over its effect's tick count (duration / amplitude -
-    `ticks_by_index`, supplied by the caller since this module doesn't see `duration_ms`)."""
+    `ticks_by_index`, supplied by the caller since this module doesn't see `duration_ms`).
+
+    Any of the three takes a `*name` suffix (`{pot2*mult}`, `{pot2.total*mult}`) that multiplies
+    every displayed value by the spell's tooltip variable `$<name>` (PLAN P9.3): a talent's percent
+    bonus, which SpellMods never show. The multiply goes after the expression's single outer
+    `$max(...)`, the form the P9.0 spike confirmed. The variable comes from the spell's
+    `tooltip_vars=`, and `lint.check_tooltip_vars` errors if it isn't defined there."""
     ticks_by_index = ticks_by_index or {}
 
     def _sub(m: re.Match) -> str:
         idx = int(m.group("index"))
         variant = m.group("variant")
+        mult = f"*$<{m.group('var')}>" if m.group("var") else ""
         resolved = resolved_by_index.get(idx)
         if resolved is None:
             raise ValueError(f"{{pot{idx}}} used in a description, but effect {idx} has no potency set")
         if variant == "total":
             n = ticks_by_index.get(idx, 1.0)
-            return f"${{{tooltip_expression(resolved, ticks=n)}}}"
+            return f"${{{tooltip_expression(resolved, ticks=n)}{mult}}}"
         if variant == "avg":
             avg_scale = 1.0 + (resolved.variance_pct / 200.0 if resolved.variance_pct else 0.0)
-            return f"${{{tooltip_expression(resolved, scale=avg_scale)}}}"
+            return f"${{{tooltip_expression(resolved, scale=avg_scale)}{mult}}}"
         if resolved.variance_pct:
             lo = tooltip_expression(resolved, scale=1.0)
             hi = tooltip_expression(resolved, scale=1.0 + resolved.variance_pct / 100.0)
-            return f"${{{lo}}} to ${{{hi}}}"
-        return f"${{{tooltip_expression(resolved)}}}"
+            return f"${{{lo}{mult}}} to ${{{hi}{mult}}}"
+        return f"${{{tooltip_expression(resolved)}{mult}}}"
 
-    return _PLACEHOLDER_RE.sub(_sub, text)
+    expanded = _PLACEHOLDER_RE.sub(_sub, text)
+    leftover = re.search(r"\{pot[^}]*\}?", expanded)
+    if leftover:
+        raise ValueError(
+            f"unrecognized potency placeholder {leftover.group(0)!r} - expected {{potN}}, "
+            f"{{potN.avg}} or {{potN.total}}, optionally with a lowercase *variable suffix"
+        )
+    return expanded

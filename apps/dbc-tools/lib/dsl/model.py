@@ -213,6 +213,8 @@ class Spell:
     coeff_weight: float | None = None
     raw_overrides: dict | None = None
     notes: str | None = None
+    # P9: a `tooltip_vars(...)` result (lib/dsl/tooltip.py's TooltipVars); sets SpellDescriptionVariableID.
+    tooltip_vars: object | None = None
 
     def __post_init__(self) -> None:
         # Populated by _resolve_potency() during to_entry() - lib.dsl.registry.spell() reads
@@ -229,6 +231,13 @@ class Spell:
                 f"{len(self.effects)}"
             )
         raw_overrides = dict(self.raw_overrides) if self.raw_overrides else {}
+        if self.tooltip_vars is not None:
+            if "SpellDescriptionVariableID" in raw_overrides:
+                raise ValueError(
+                    f"spell {self.id} ({self.name}): set either tooltip_vars= or raw_overrides' "
+                    f"SpellDescriptionVariableID, not both"
+                )
+            raw_overrides["SpellDescriptionVariableID"] = self.tooltip_vars.id
         effect_dicts = [(e.to_dict() if e is not None else None) for e in self.effects]
         effect_dicts += [None, None, None]
         if any(e is not None and e.has_potency for e in self.effects):

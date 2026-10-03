@@ -15,7 +15,7 @@ retribution_381_tab = tab(
     class_mask=2,
     order_index=2,
     spell_icon_id=555,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 745},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'PaladinCombat'},
 )
 
 
@@ -24,7 +24,7 @@ holy_382_tab = tab(
     name='Holy',
     class_mask=2,
     spell_icon_id=70,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 213},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'PaladinHoly'},
 )
 
 
@@ -34,7 +34,7 @@ protection_383_tab = tab(
     class_mask=2,
     order_index=1,
     spell_icon_id=291,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 519},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'PaladinProtection'},
 )
 
 

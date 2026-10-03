@@ -297,10 +297,10 @@ holy_shock_25912 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=305.8, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=250.0, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=156,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=305.8 (paladin-potency-proposals.txt, mismatched row).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=250.0 (paladin-potency-proposals.txt, user value; was 305.8 from a stale worktree copy of the proposals file, corrected 2026-10-02).',
     raw_overrides={'AttributesEx3': 512, 'AttributesEx4': 1, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the target with Holy energy, causing {pot1} Holy damage to an enemy, or $25914s1 healing to an ally.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2097152, 'SpellClassSet': 10, 'SpellLevel': 40, 'SpellVisualID_1': 128, 'StartRecoveryCategory': 133},
 )
 
@@ -317,10 +317,10 @@ holy_shock_25914 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=137.8, potency_kind='heal', implicit_target_a=21),
+        Effect(type=EffectType.HEAL, sp_potency=125.0, potency_kind='heal', implicit_target_a=21),
     ],
     spell_icon_id=156,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=137.8 (paladin-potency-proposals.txt, mismatched row).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=125.0 (paladin-potency-proposals.txt, user value; was 137.8 from a stale worktree copy of the proposals file, corrected 2026-10-02).',
     raw_overrides={'AttributesEx3': 512, 'AttributesEx4': 1, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the target with Holy energy, causing $25912s1 Holy damage to an enemy, or {pot1} healing to an ally.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 65536, 'SpellClassSet': 10, 'SpellLevel': 40, 'SpellVisualID_1': 135, 'StartRecoveryCategory': 133},
 )
 

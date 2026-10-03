@@ -11,6 +11,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from lib.dsl.constants import RANGE_SELF, RANGE_SELF_INDEX
+from lib.dsl import tooltip
 from lib.dsl.registry import looks_player_castable
 
 # SpellModOp values (SpellDefines.h) that only ever make sense scoped to
@@ -521,4 +522,117 @@ def check_linked_spell_key_collisions(rows: list[dict]) -> list[str]:
             f"runtime; only one is ever seen for that key. A type=0 trigger inside "
             f"source/ids.yaml's custom spell block (200000-209999) is the usual cause."
         )
+    return warnings
+
+
+_NO_TOOLTIP_VARS = (0, 4294967295, -1)  # stock uses both 0 and -1 for "no entry"
+_TOOLTIP_TEXT_KEYS = ("Description_Lang_enUS", "AuraDescription_Lang_enUS")
+
+
+def check_tooltip_vars(
+    spell_entries: list[dict], declared: list[dict], stock_entries: dict[int, str] | None,
+    known_spell_ids: set[int],
+) -> tuple[list[str], list[str]]:
+    """potency-system.PLAN.md P9, D12 - SpellDescriptionVariables.dbc references. Returns
+    `(errors, notes)`:
+
+    - error: tooltip text uses `$<var>` but the spell has no entry, its entry doesn't exist, or the
+      entry doesn't define that variable (the client shows the literal `$<var>`)
+    - error: a declared entry names a spell (`$?s<id>`, `$?a<id>`, `$<id>m1`) that is neither stock
+      nor declared anywhere
+    - note: spells that carry an entry their text never uses (harmless; one summary line)
+
+    `stock_entries` is None when var/extractors/dbc/SpellDescriptionVariables.dbc isn't extracted;
+    then spells pointing at stock entries are skipped rather than reported. Duplicate ids, bad
+    names and `$<id>s<n>` reads are rejected earlier, at declaration (registry/tooltip.py)."""
+    entries: dict[int, str] = dict(stock_entries or {})
+    entries.update({e["id"]: e["Variables"] for e in declared})
+    declared_ids = {e["id"] for e in declared}
+    errors: list[str] = []
+    unused: list[int] = []
+
+    for entry in spell_entries:
+        raw = entry.get("raw_overrides") or {}
+        entry_id = int(raw.get("SpellDescriptionVariableID") or 0)
+        uses = set()
+        for key in _TOOLTIP_TEXT_KEYS:
+            uses |= set(tooltip.VAR_REF.findall(raw.get(key) or ""))
+        label = f"spell {entry['id']} ({entry.get('name', '?')})"
+        if entry_id in _NO_TOOLTIP_VARS:
+            if uses:
+                errors.append(f"{label}: tooltip uses {_vars(uses)} but the spell has no "
+                              f"SpellDescriptionVariableID - add tooltip_vars=")
+            continue
+        if entry_id not in entries:
+            if uses and (stock_entries is not None or entry_id in declared_ids):
+                errors.append(f"{label}: SpellDescriptionVariableID {entry_id} doesn't exist, but the "
+                              f"tooltip uses {_vars(uses)}")
+            continue
+        missing = uses - tooltip.defined_names(entries[entry_id])
+        if missing:
+            errors.append(f"{label}: tooltip uses {_vars(missing)}, which SpellDescriptionVariables "
+                          f"entry {entry_id} doesn't define")
+        if not uses:
+            unused.append(entry["id"])
+
+    for e in declared:
+        refs = {int(i) for i in tooltip.SPELL_CONDITION_REF.findall(e["Variables"])}
+        refs |= {int(i) for i, _ in tooltip.SPELL_VALUE_REF.findall(e["Variables"])}
+        for spell_id in sorted(refs - known_spell_ids):
+            errors.append(f"tooltip_vars({e['id']}): references spell {spell_id}, which is neither a "
+                          f"stock spell nor declared anywhere")
+
+    notes = []
+    if unused:
+        notes.append(f"{len(unused)} spell(s) carry a SpellDescriptionVariableID their tooltip never "
+                     f"uses (harmless): {', '.join(map(str, sorted(unused)))}")
+    return errors, notes
+
+
+def _vars(names: set[str]) -> str:
+    return ", ".join(f"$<{n}>" for n in sorted(names))
+
+
+# Client tables whose every change needs an in-game look: the client draws something global from
+# them, so a bad row breaks every class, not just the spell being worked on.
+_REVIEW_WHEN_SHIPPED = {
+    "TalentTab": "every class's talent frame (tab order, tab backgrounds)",
+}
+
+
+def check_client_patch(
+    shipping: dict[str, dict[int, dict]], stock: dict[str, dict[int, dict]], previous_files: set[str] | None,
+) -> list[str]:
+    """Warnings about what the client patch is about to carry (docs/bugs-and-fixes.md, 2026-10-02:
+    one run shipped a TalentTab.dbc nobody meant to change, and it broke every talent frame).
+
+    `shipping`: table name -> {id: row} for the custom/changed rows going into patch-Z.mpq.
+    `stock`: table name -> stock rows, for the tables in _REVIEW_WHEN_SHIPPED.
+    `previous_files`: file names in the last build's patch-Z.mpq, or None on a first build.
+
+    - a table in _REVIEW_WHEN_SHIPPED is shipping: list each row and the columns it changes, so a
+      spurious diff (a signedness or string-offset artifact) is obvious
+    - a table is new to the patch, or has dropped out of it, compared with the last build"""
+    warnings = []
+    for name, rows in sorted(shipping.items()):
+        if name not in _REVIEW_WHEN_SHIPPED:
+            continue
+        base = stock.get(name, {})
+        changes = []
+        for row_id, row in sorted(rows.items()):
+            if row_id not in base:
+                changes.append(f"{row_id} (new)")
+                continue
+            cols = [c for c, v in row.items() if base[row_id].get(c) != v]
+            changes.append(f"{row_id} ({', '.join(f'{c}: {base[row_id].get(c)!r} -> {row[c]!r}' for c in cols)})")
+        warnings.append(f"{name}.dbc ships in the client patch, which changes {_REVIEW_WHEN_SHIPPED[name]} - "
+                        f"check it in-game after deploying. Rows differing from stock: {'; '.join(changes)}")
+    if previous_files is not None:
+        now = {f"{name}.dbc" for name in shipping}
+        for added in sorted(now - previous_files):
+            warnings.append(f"{added} is new in the client patch (not in the last build) - "
+                            f"{len(shipping[added[:-4]])} custom/changed row(s); make sure that's intended")
+        for dropped in sorted(f for f in previous_files - now if f.endswith(".dbc")):
+            warnings.append(f"{dropped} was in the last client patch build and isn't in this one - clients "
+                            f"fall back to stock for it")
     return warnings

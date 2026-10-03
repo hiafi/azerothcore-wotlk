@@ -106,3 +106,12 @@ spell_group:
 creature:
   start: 300000
   end: 300999
+
+# SpellDescriptionVariables.dbc entries for tooltip_vars() (potency-system.PLAN.md P9, D9: explicit
+# ids, like spell_group). Client-only table with no SQL overlay, so there is no live state to
+# auto-allocate against. The stock file (var/extractors/dbc/SpellDescriptionVariables.dbc, from
+# patch-enUS-3.MPQ) has 30 rows with ids 1-181, so 1000+ leaves a clear gap. The P9.0 spike used
+# 1990/1991 as throwaway scratch ids; they were never committed.
+spelldescriptionvariables:
+  start: 1000
+  end: 1999

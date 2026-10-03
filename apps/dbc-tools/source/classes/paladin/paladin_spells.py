@@ -66,10 +66,10 @@ holy_light_635 = spell(
     mana_cost_pct=29,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=207.8, potency_kind='heal', implicit_target_a=21),
+        Effect(type=EffectType.HEAL, sp_potency=150.0, potency_kind='heal', implicit_target_a=21),
     ],
     spell_icon_id=70,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 13 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=207.8 (paladin-potency-proposals.txt, mismatched row).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 13 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=150.0 (paladin-potency-proposals.txt, user value; was 207.8 from a stale worktree copy of the proposals file, corrected 2026-10-02).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 20, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for {pot1}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2147483648, 'SpellClassSet': 10, 'SpellLevel': 1, 'SpellVisualID_1': 2936, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -111,10 +111,10 @@ exorcism_879 = spell(
     mana_cost_pct=8,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=135.9, ap_potency=135.9, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=140.0, ap_potency=140.0, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=292,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=135.9 / ap_potency=135.9 (paladin-potency-proposals.txt total 271.8, split evenly - matches the pre-existing 0.15/0.15 equal SP/AP coefficient split); also fixes PLAN F13 (the single-rank migration had zeroed this spell\'s spell_bonus_data direct_bonus, killing its live SP scaling - this conversion restores it as a side effect, same as docs/potency-system.md\'s "Known live bug" note).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=140.0 / ap_potency=140.0 (paladin-potency-proposals.txt total 280.0, user value; was 271.8 from a stale worktree copy, corrected 2026-10-02; split evenly - matches the pre-existing 0.15/0.15 equal SP/AP coefficient split); also fixes PLAN F13 (the single-rank migration had zeroed this spell\'s spell_bonus_data direct_bonus, killing its live SP scaling - this conversion restores it as a side effect, same as docs/potency-system.md\'s "Known live bug" note).',
     raw_overrides={'AttributesEx': 512, 'AttributesEx6': 33554432, 'AttributesEx7': 32768, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot1} Holy damage to an enemy target.  If the target is Undead or Demon, it will always critically hit.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 2, 'SpellClassSet': 10, 'SpellLevel': 20, 'SpellVisualID_1': 324, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -226,11 +226,11 @@ holy_wrath_2812 = spell(
     range_yards=0.0,
     duration_ms=3000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=122.25, ap_potency=122.25, potency_kind='direct', implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=125.0, ap_potency=125.0, potency_kind='direct', implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, mechanic=Mechanic.STUN, implicit_target_a=22, implicit_target_b=15, apply_aura=AuraType.MOD_STUN, radius_yards=10.0),
     ],
     spell_icon_id=158,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=122.25 / ap_potency=122.25 (paladin-potency-proposals.txt total 244.5, split evenly - matches the pre-existing 0.07/0.07 equal SP/AP coefficient split); also fixes PLAN F13 (zeroed direct_bonus restored as a side effect of the conversion).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=125.0 / ap_potency=125.0 (paladin-potency-proposals.txt total 250.0, user value; was 244.5 from a stale worktree copy, corrected 2026-10-02; split evenly - matches the pre-existing 0.07/0.07 equal SP/AP coefficient split); also fixes PLAN F13 (zeroed direct_bonus restored as a side effect of the conversion).',
     raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Stunned.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Sends bolts of holy power in all directions, causing {pot1} Holy damage and stunning all Undead and Demon targets within $a1 yds for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'Speed': 20.0, 'SpellClassMask_2': 2097152, 'SpellClassSet': 10, 'SpellLevel': 50, 'SpellPriority': 50, 'SpellVisualID_1': 126, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'TargetCreatureType': 36},
 )
 
@@ -337,10 +337,10 @@ flash_of_light_19750 = spell(
     mana_cost_pct=7,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=52.7, potency_kind='heal', implicit_target_a=21),
+        Effect(type=EffectType.HEAL, sp_potency=75.0, potency_kind='heal', implicit_target_a=21),
     ],
     spell_icon_id=242,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=52.7 (paladin-potency-proposals.txt, mismatched row).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=75.0 (paladin-potency-proposals.txt, user value; was 52.7 from a stale worktree copy of the proposals file, corrected 2026-10-02).',
     raw_overrides={'AttributesEx6': 33554432, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for {pot1}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 1073741824, 'SpellClassSet': 10, 'SpellLevel': 20, 'SpellVisualID_1': 6623, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -471,10 +471,10 @@ hammer_of_wrath_24275 = spell(
     mana_cost_pct=12,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=134.4, ap_potency=134.4, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=150.0, ap_potency=150.0, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=42,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 44); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=134.4 / ap_potency=134.4 (paladin-potency-proposals.txt total 268.8, split evenly - matches the pre-existing 0.15/0.15 equal SP/AP coefficient split); also fixes PLAN F13 (zeroed direct_bonus restored as a side effect of the conversion).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 44); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=150.0 / ap_potency=150.0 (paladin-potency-proposals.txt total 300.0, user value; was 268.8 from a stale worktree copy, corrected 2026-10-02; split evenly - matches the pre-existing 0.15/0.15 equal SP/AP coefficient split); also fixes PLAN F13 (zeroed direct_bonus restored as a side effect of the conversion).',
     raw_overrides={'AttributesEx4': 512, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Hurls a hammer that strikes an enemy for {pot1} Holy damage.  Only usable on enemies that have 20% or less health.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 50.0, 'SpellClassMask_2': 128, 'SpellClassSet': 10, 'SpellLevel': 44, 'SpellVisualID_1': 7250, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'TargetAuraState': 2},
 )
 

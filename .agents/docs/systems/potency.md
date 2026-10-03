@@ -142,6 +142,55 @@ needing to add a constant to an already-`$max()`-wrapped expression is the ident
 `$max()` rather than appending it after the call closes. If you ever hand-write a `${...}`
 expression for a potency effect, keep the entire thing inside one top-level `$max()`/`$min()` call.
 
+## Showing a talent's bonus on a tooltip: `tooltip_vars` (P9)
+
+SpellMods and `MOD_DAMAGE_PERCENT_DONE` auras never move a tooltip. Combat damage includes them, the
+preview doesn't. The only way to show a "+X% damage" talent on the spells it affects is a
+`SpellDescriptionVariables.dbc` entry, the stock mechanism behind Frostbolt's Piercing Ice chain
+(entry 167). Declare one with `tooltip_vars()` and multiply the potency placeholder by it:
+
+```python
+frost_talent_tooltip = tooltip_vars(
+    1000, "Frost-tree talent multiplier for Frost spell tooltips",
+    piercing=talent_mult([11151, 12952, 12953]),               # +2/4/6% Frost, effect 1
+    arctic_all=talent_mult([31674, 31675, 31676], effect=1),   # +1/2/3% all damage
+    arctic_frost=talent_mult([31674, 31675, 31676], effect=2),  # +1/2/3% Frost
+    mult=product("piercing", "arctic_all", "arctic_frost"),
+)
+frostbolt_116 = spell(..., tooltip_vars=frost_talent_tooltip,
+                      raw_overrides={..., 'Description_Lang_enUS': '... causing {pot2*mult} Frost damage ...'})
+```
+
+The live precedent is `mage_trigger_spells.py`; the API is in `apps/dbc-tools/README.md`'s
+"Declaring tooltip variables (P9)" section.
+
+- **One entry per spell, shared freely.** A spell has one `SpellDescriptionVariableID`, so every
+  variable it uses lives in that one entry. Declare it once per group of spells that share the
+  same talents (all Frost spells, say) and pass the handle to each one.
+- **`talent_mult` reads the talent's own value** (`$<rank>m<effect>`), so retuning a talent rank
+  updates every tooltip that shows it. Count every effect of a talent that applies: Arctic Winds
+  needs both its all-damage and its Frost effect. Which talents count is a design call. The Frost
+  pilot took Frost-tree talents only, and left out cross-tree ones (Playing with Fire, Arcane
+  Empowerment) by the user's choice; ask, don't assume.
+- **`{potN*var}`** (also `.avg` / `.total`) multiplies the whole potency range by `$<var>`.
+- **Ids** come from `ids.yaml`'s `spelldescriptionvariables` block (1000–1999), never a stock id:
+  stock entries are shared by dozens of stock spells. When a reworked spell still carries a stock
+  id (`SpellDescriptionVariableID: 167` in `raw_overrides`), its chain probably checks talent
+  ranks or values the rework changed. Move the spell to its own entry.
+
+Client rules (P9.0 spike, `docs/potency-system.md`'s "Tooltip" section). Builders and
+`tooltip_vars()` enforce the first two:
+
+- Inside an entry, read another spell as `$<id>m<n>`. **`$<id>s<n>` stops the variable resolving**:
+  it shows as a literal `$<name>`, or as 0 inside math.
+- Variables may only reference variables defined earlier in the entry.
+- A bare `$<var>` in tooltip text displays as a whole number (1.06 shows "1"). Use it inside math.
+- `$<var>` in AuraDescription (buff text) is untested, and no stock spell does it. The pilot kept
+  Frostfire Bolt's buff text unmultiplied.
+
+`generate.py` errors before writing any SQL when a tooltip uses a `$<var>` its entry doesn't
+define (stock entries included), and when an entry names a spell that doesn't exist.
+
 ## Deploying a change
 
 Pure data (no C++): `generate.py` → `docker compose up ac-db-import` → restart `ac-worldserver`
@@ -149,6 +198,14 @@ Pure data (no C++): `generate.py` → `docker compose up ac-db-import` → resta
 skill's Step 5 before trying to force an immediate client-patch refresh by hand — the obvious
 `python3 apps/patch-service/manifest_gen.py` invocation silently operates on the wrong directory and
 writes nothing useful; it has to run inside the `patch-manifest-gen` container.
+
+A tooltip-only change (description text, `tooltip_vars`, `{potN}` placeholders) is client-only:
+the server never reads tooltip text or `SpellDescriptionVariableID`, so the regenerated
+`patch-Z.mpq` alone takes effect, with no DB import or restart. Testers have to re-run
+`patch-client.bat` **after** `manifest.txt` has picked up the new hash. A client patched before
+that still runs the previous build, and the P9.4 check first read "the talents do nothing" this
+way. Read `generate.py`'s `WARNING: patch:` lines before deploying, too: they flag a
+`TalentTab.dbc` or another table that unexpectedly entered or left the patch.
 
 ## Generated header (`WarlockData.h`-style, PLAN P2b)
 

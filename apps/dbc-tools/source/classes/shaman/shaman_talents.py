@@ -14,7 +14,7 @@ elemental_261_tab = tab(
     name='Elemental',
     class_mask=64,
     spell_icon_id=62,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 107},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'ShamanElementalCombat'},
 )
 
 
@@ -24,7 +24,7 @@ restoration_262_tab = tab(
     class_mask=64,
     order_index=2,
     spell_icon_id=13,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 643},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'ShamanRestoration'},
 )
 
 
@@ -34,7 +34,7 @@ enhancement_263_tab = tab(
     class_mask=64,
     order_index=1,
     spell_icon_id=19,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 400},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'ShamanEnhancement'},
 )
 
 

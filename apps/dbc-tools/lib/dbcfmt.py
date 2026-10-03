@@ -194,7 +194,13 @@ TALENTTAB = DbcTable(
         "ID", _locale_cols("Name"), "SpellIconID", "RaceMask", "ClassMask",
         "PetTalentMask", "OrderIndex", "BackgroundFile",
     ),
-    read_as_string=frozenset(f"Name_Lang_{loc}" for loc in LOCALE_SUFFIXES),
+    # The SQL overlay's mask columns are signed `int`; Blood's (398) stock RaceMask 0xFFFC07FF read
+    # unsigned (4294707199) is rejected there (ERROR 1264 Out of range).
+    signed=frozenset(("RaceMask", "ClassMask", "PetTalentMask")),
+    # BackgroundFile is the talent frame's texture name ("MageFire"). Read as an int it was a
+    # string-block offset, and a repack pointed it at the wrong string: every class's talent
+    # background went blank (docs/bugs-and-fixes.md, 2026-10-02).
+    read_as_string=frozenset(f"Name_Lang_{loc}" for loc in LOCALE_SUFFIXES) | {"BackgroundFile"},
 )
 
 SPELLCASTTIMES = DbcTable(
@@ -223,6 +229,11 @@ SPELLRANGE = DbcTable(
     columns=_cols(
         "ID", ("RangeMin", 2), ("RangeMax", 2), "Flags",
         _locale_cols("DisplayName"), _locale_cols("DisplayNameShort"),
+    ),
+    # The range text tooltips show ("Melee Range", "40 yd"). Read as ints these were string-block
+    # offsets that a repack would point at the wrong string (same bug as TALENTTAB's BackgroundFile).
+    read_as_string=frozenset(
+        f"{base}_Lang_{loc}" for base in ("DisplayName", "DisplayNameShort") for loc in LOCALE_SUFFIXES
     ),
 )
 
@@ -406,6 +417,21 @@ SPELLICON = DbcTable(
     sql_table="",  # no SQL overlay - client-only table, nothing server-side reads it
     fmt="ns",
     columns=_cols("ID", "TextureFilename"),
+)
+
+# SpellDescriptionVariables.dbc - the named tooltip variables (`$mult=$?s11151[${1.02}][${1}]`) a
+# spell's SpellDescriptionVariableID points at (potency-system.PLAN.md P9). Client-only like
+# SPELLICON: AC never loads it (DBCStructure.h has the field commented out, no LOAD_DBC), so there's
+# no SQL overlay. Two columns, no locale variants. The stock file (patch-enUS-3.MPQ) has 30 rows,
+# IDs 1-181, lines separated by "\r\n". Declared rows come from the DSL's tooltip_vars() and
+# generate.py merges them over var/extractors/dbc/SpellDescriptionVariables.dbc into patch-Z.mpq.
+# Not in ALL_TABLES: nothing here is diffed against SQL state.
+SPELLDESCRIPTIONVARIABLES = DbcTable(
+    name="SpellDescriptionVariables",
+    dbc_filename="SpellDescriptionVariables.dbc",
+    sql_table="",  # no SQL overlay - client-only table, nothing server-side reads it
+    fmt="ns",
+    columns=_cols("ID", "Variables"),
 )
 
 # Not part of ALL_TABLES, same reasoning/pattern as CREATUREMODELDATA/CREATUREDISPLAYINFO above -

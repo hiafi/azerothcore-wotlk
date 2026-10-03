@@ -37,7 +37,7 @@ and for a no-root fallback if `sudo` isn't available.
 
 Optional but needed for real client-patch output: extract `Spell.dbc`,
 `Talent.dbc`, `TalentTab.dbc`, `SpellCastTimes.dbc`, `SpellDuration.dbc`,
-`SpellRange.dbc`, `SpellRadius.dbc`, `Item.dbc` from your client's
+`SpellRange.dbc`, `SpellRadius.dbc`, `Item.dbc`, `SpellDescriptionVariables.dbc` from your client's
 `DBFilesClient\` (inside the locale MPQs — specifically the highest-numbered
 patch, e.g. `Data/enUS/patch-enUS-3.MPQ`; earlier patches in the same
 directory also contain these files but are shadowed/stale) into
@@ -396,6 +396,53 @@ for every non-GM observer - `docs/bugs-and-fixes.md`'s `CREATURE_FLAG_EXTRA_TRIG
 declared `creature_template_model` whose `CreatureDisplayID` has no `creature_model_info` row
 anywhere; and a declared `creature_template` with no `creature_template_model` row anywhere
 (declared or live).
+
+### Declaring tooltip variables (P9)
+
+SpellMods never show up in a tooltip, so stock shows a talent's percent bonus through a
+`SpellDescriptionVariables.dbc` entry: named variables the spell's text reads as `$<name>`, keyed
+by the spell's `SpellDescriptionVariableID` (Frostbolt's stock entry 167 checks which Piercing Ice
+rank you know). `tooltip_vars()` declares one; pass the result to `spell(tooltip_vars=...)`, and one
+entry can serve many spells:
+
+```python
+from lib.dsl.registry import has_aura, knows, product, talent_mult, tooltip_vars
+
+# Explicit id from source/ids.yaml's `spelldescriptionvariables` block (1000-1999), never a stock
+# id: stock entries are shared by dozens of stock spells.
+frost_talents = tooltip_vars(
+    1000, "Frost damage talents shown on Frost spell tooltips",
+    piercing=talent_mult(piercing_ice),            # 1 + highest known rank's effect 1 value / 100
+    arctic=talent_mult(arctic_winds, effect=2),    # reads effect 2 instead
+    mult=product("piercing", "arctic"),
+)
+
+frostbolt_116 = spell(
+    id=116, ..., tooltip_vars=frost_talents,
+    # {potN*var}: the potency range (or .avg/.total) times the variable - see lib/potency.py
+    raw_overrides={..., 'Description_Lang_enUS': 'Deals {pot2*mult} Frost damage ...'},
+)
+```
+
+- `talent_mult(talent, effect=1)` takes a `talent(...)` object or its rank spells in rank order,
+  and reads each rank's value from the rank spell (`$<id>m<n>`), so retuning the talent updates
+  the tooltip. It also defines helper variables `<name>1` .. `<name><n-1>`.
+- `knows(spell, then, else_=1)` / `has_aura(spell, then, else_=1)`: one condition. Branches are a
+  number or an expression as written inside `${...}`, e.g. `"$<base>*1.2"`.
+- `product("a", "b", 1.1)` multiplies earlier variables and/or numbers.
+- A raw right-hand side string also works (`base="${$m1*2}"`).
+
+Client rules (P9.0 spike, `docs/potency-system.md`'s "Tooltip" section), enforced at declaration:
+inside an entry, read another spell's value as `$<id>m<n>`, never `$<id>s<n>`, which stops the
+variable resolving; reference only variables defined earlier; names are lowercase. A bare `$<var>`
+in tooltip text displays as a whole number, so show a multiplier inside math: `${100*$<mult>}`.
+
+`generate.py` also checks every spell (stock entries included): a `$<var>` in Description or
+AuraDescription that the spell's entry doesn't define, or a variable with no entry at all, is an
+`ERROR:` and stops the run before any SQL is written. So is a spell id in a declared entry that
+exists nowhere. A spell carrying an entry it never uses is only a `note:`. Entries are
+client-only (no SQL table): they ship in `patch-Z.mpq`, merged over
+`var/extractors/dbc/SpellDescriptionVariables.dbc`, which must be extracted (see Setup).
 
 ## Known limitations
 

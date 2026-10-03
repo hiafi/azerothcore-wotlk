@@ -9,6 +9,7 @@ re-derived - if a doc retune changes a table, the matching test here should fail
 is also reflected wherever this module's constants live.
 """
 
+import re
 import unittest
 
 from lib import potency
@@ -361,6 +362,44 @@ class TooltipExpressionTest(unittest.TestCase):
         self.assertIn("} to ${$max($max(", out)
         # sp_potency=100 on this effect means every branch carries the live SP bonus term (P5).
         self.assertIn("*$SP", out)
+
+    @staticmethod
+    def _evaluate(placeholder_output: str, level: int, mult: float, sp: float = 0.0) -> list[int]:
+        """Evaluates each `${...}` the way the client does, for the tokens potency emits."""
+        values = []
+        for expr in re.findall(r"\$\{(.*?)\}(?: to |$)", placeholder_output):
+            py = (expr.replace("$max(", "max(").replace("$PL", str(level)).replace("$SP", str(sp))
+                  .replace("$<mult>", str(mult)))
+            values.append(round(eval(py, {"max": max})))  # noqa: S307 - generated test input only
+        return values
+
+    def test_expand_placeholders_variable_suffix(self):
+        """PLAN P9.3: `{pot1*mult}` multiplies both ends of the range by `$<mult>`, after the outer
+        `$max(...)` (the form P9.0 confirmed). 37/117/541 are the P9.0 in-game readings for this
+        Frostbolt reference row with a rank-3 (x1.06) talent, at levels 1/25/60."""
+        out = potency.expand_placeholders("{pot1*mult}", {1: self.resolved})
+        self.assertEqual(out.count(")*$<mult>}"), 2)
+        for level, expected_min in ((1, 37), (25, 117), (60, 541)):
+            with self.subTest(level=level):
+                self.assertEqual(self._evaluate(out, level, 1.06)[0], expected_min)
+        plain = potency.expand_placeholders("{pot1}", {1: self.resolved})
+        self.assertEqual(self._evaluate(plain, 60, 1.0), self._evaluate(out, 60, 1.0))
+
+    def test_variable_suffix_on_avg_and_total(self):
+        dot = potency.resolve(potency.PotencyEffect(sp_potency=23, kind=potency.KIND_PERIODIC, t_ms=3000),
+                              spell_level=1)
+        total = potency.expand_placeholders("{pot1.total*mult}", {1: dot}, {1: 6})
+        plain_total = potency.expand_placeholders("{pot1.total}", {1: dot}, {1: 6})
+        self.assertTrue(total.endswith(")*$<mult>}"))
+        self.assertAlmostEqual(self._evaluate(total, 60, 1.5)[0], 1.5 * self._evaluate(plain_total, 60, 1.0)[0],
+                               delta=1.0)
+        avg = potency.expand_placeholders("{pot1.avg*crit_bonus}", {1: self.resolved})
+        self.assertTrue(avg.endswith(")*$<crit_bonus>}"))
+
+    def test_unrecognized_placeholder_raises(self):
+        for bad in ("{pot1*Mult}", "{pot1.tot}", "{pot4}", "{pot1*}"):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                potency.expand_placeholders(f"Deals {bad} damage.", {1: self.resolved})
 
     def test_expand_placeholders_total_scales_linearly(self):
         dot_effect = potency.PotencyEffect(sp_potency=23, kind=potency.KIND_PERIODIC, t_ms=3000)

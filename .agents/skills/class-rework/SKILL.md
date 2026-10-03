@@ -2,7 +2,7 @@
 name: class-rework
 description: Run this repo's phased process for reworking a class's abilities/talent tree — design doc, dbc-tools data, C++ hooks, build/deploy, playtest guide. Use when the user asks to rework, retune, or overhaul a class's talents/abilities.
 metadata:
-  version: "1.0"
+  version: "1.1"
 ---
 
 # Class rework
@@ -82,6 +82,14 @@ data that's close but not quite right.
   which IDs it's minting vs. editing, and `WARNING:` lines from `lib/lint.py` about classmask
   scoping are real bugs, not noise (see the README's `EffectSpellClassMaskA/B/C` gotcha — this
   exact mistake has shipped more than once).
+- **A talent that raises another spell's damage or healing by a percent** (`MOD_DAMAGE_PERCENT_DONE`,
+  a `SPELLMOD_DAMAGE` effect, and the like) never shows on that spell's tooltip by itself. Combat
+  includes it, the preview doesn't. Add the talent to the affected spells' `tooltip_vars` entry
+  with `talent_mult(...)`, counting each of its effects that applies, and make sure those spells'
+  descriptions use `{potN*var}`. Spells that still carry a stock `SpellDescriptionVariableID`
+  (167 for Frost, and so on) need moving to the class's own entry, because stock chains check the
+  old talent ranks and values. Ask the user which talents count: cross-tree ones are a design call.
+  See `.agents/docs/systems/potency.md`, "Showing a talent's bonus on a tooltip".
 - Talent tab placement (tier/column) needs a free slot — check the live tab's existing entries in
   `source/talents/<class>.yaml` before assigning one, not just the next unused-looking number.
 - `apps/dbc-tools/lib/test_sql_dump.py` and `apps/codestyle/codestyle-sql.py` clean before moving

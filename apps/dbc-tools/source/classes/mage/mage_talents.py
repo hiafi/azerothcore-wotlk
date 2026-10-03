@@ -16,7 +16,7 @@ fire_41_tab = tab(
     order_index=1,
     spell_icon_id=183,
     skill_line=8,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 332},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'MageFire'},
 )
 
 
@@ -27,7 +27,7 @@ frost_61_tab = tab(
     order_index=2,
     spell_icon_id=188,
     skill_line=6,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 560},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'MageFrost'},
 )
 
 
@@ -37,7 +37,7 @@ arcane_81_tab = tab(
     class_mask=128,
     spell_icon_id=125,
     skill_line=237,
-    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 8},
+    raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'MageArcane'},
 )
 
 
