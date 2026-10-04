@@ -7,7 +7,7 @@ Split from a single source/classes/paladin.py via split_class_file.py (.agents/p
 from lib.dsl import AuraType, DispelType, Effect, EffectType, RANGE_SELF, School, SpellModOp
 from lib.dsl.registry import leave_spell_group, linked_spell, pot_text, procs_on, product, remove_spell_proc, scripted_by, spell, spell_group, talent_mult, tooltip_vars, trained_by, unbind_script, untrain
 from . import _masks as m
-from .paladin_holy_spells import holy_heal_tooltip
+from .paladin_holy_spells import concentration_tooltip, holy_heal_tooltip
 
 
 def _mask(effect_index: int, mask: tuple) -> dict:
@@ -491,8 +491,9 @@ concentration_aura_19746 = spell(
     ],
     spell_icon_id=1487,
     notes='pulled from existing data | paladin-rework S1 SHARED Part C C1.2/C1.3: button; eff0 aura 149 (pushback) -> 85 MOD_POWER_REGEN misc 0 bp 99 (live 100 = 1.00% in hundredths, scaled to mp5 by spell_pal_concentration_aura); effect index 0 keeps d0 b17.',
+    tooltip_vars=concentration_tooltip,
     category=1300,
-    raw_overrides={'ActiveIconID': 122, 'AttributesEx2': 17, 'AttributesEx3': 1114112, 'AttributesEx4': 2097152, 'AttributesEx7': 4, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Mana regeneration increased.', 'BaseLevel': 22, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Restores $/100;s1% of the Paladin's base mana every 5 sec to party and raid members within $a1 yards. Activating it also restores $/100;201164s1% of their maximum mana every 5 sec for $201164d. Players may only have one Aura on them per Paladin at any one time.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 131072, 'SpellClassMask_3': 32, 'SpellClassSet': 10, 'SpellLevel': 22, 'SpellVisualID_1': 5139, 'StanceBarOrder': 2, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'ActiveIconID': 122, 'AttributesEx2': 17, 'AttributesEx3': 1114112, 'AttributesEx4': 2097152, 'AttributesEx7': 4, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Mana regeneration increased.', 'BaseLevel': 22, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Restores ${$s1*$<ic>/100}% of the Paladin's base mana every 5 sec to party and raid members within $a1 yards. Activating it also restores ${$201164s1*$<ic>/100}% of their maximum mana every 5 sec for $201164d. Players may only have one Aura on them per Paladin at any one time.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 131072, 'SpellClassMask_3': 32, 'SpellClassSet': 10, 'SpellLevel': 22, 'SpellVisualID_1': 5139, 'StanceBarOrder': 2, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 

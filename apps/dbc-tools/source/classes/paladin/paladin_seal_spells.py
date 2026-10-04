@@ -24,6 +24,7 @@ from lib.dsl.registry import (
 )
 
 from . import _masks as m
+from .paladin_holy_spells import concentration_tooltip
 
 
 # --- Spell.dbc flag values used below (SharedDefines.h) -------------------------------------------------------
@@ -790,8 +791,9 @@ concentration_burst_201164 = spell(
     range_yards=50000.0, duration_ms=10000,
     effects=[_burst_effect(_AURA_MOD_POWER_REGEN, 249, misc_value=0)],
     spell_icon_id=1487,
+    tooltip_vars=concentration_tooltip,
     notes='paladin-rework SHARED C1.4: Concentration Aura press burst, 2.5% of each target\'s maximum mana per 5 s for 10 s (starting guess). Stored amount 250 = hundredths of a percent; spell_pal_concentration_burst scales it by the target\'s max mana. Effect indexes 1-2 empty (Holy (3,0)\'s EFFECT2 / EFFECT3 mods must find nothing). Bits AB + d2 b26, never d0 b17.',
-    raw_overrides=_burst_raw("Restores $/100;s1% of maximum mana every 5 sec for $d.", "Mana regeneration increased.", m.AURA_BURST | m.LOADTIME_IMP_CONCENTRATION, 22),
+    raw_overrides=_burst_raw("Restores ${$s1*$<ic>/100}% of maximum mana every 5 sec for $d.", "Mana regeneration increased.", m.AURA_BURST | m.LOADTIME_IMP_CONCENTRATION, 22),
 )
 
 scripted_by(resistance_burst_201162, 'spell_pal_resistance_burst')

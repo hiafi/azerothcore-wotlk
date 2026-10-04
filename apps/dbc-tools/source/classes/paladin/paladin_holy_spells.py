@@ -157,6 +157,14 @@ holy_heal_tooltip = tooltip_vars(
     lh=product("hl", "illum"),
 )
 
+# 1106: Concentration Aura 19746 and Concentration Burst 201164 (HOLY §5.2). Improved Concentration Aura 20254-6 eff0
+# is an ADD_PCT_MODIFIER EFFECT1 +10/20/30%, which never moves a tooltip's $s1. Bare ids: the rank spells are
+# declared in paladin_trigger_spells.py, which imports this module.
+concentration_tooltip = tooltip_vars(
+    1106, "Improved Concentration Aura multiplier for Concentration Aura and Concentration Burst tooltips",
+    ic=talent_mult([20254, 20255, 20256]),
+)
+
 
 # ===========================================================================================================
 # §4.3 - Light's Hammer 201200-201202 + hidden snapshot sources 201281 / 201282 (Rain of Fire C5 pattern).
