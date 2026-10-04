@@ -110,6 +110,26 @@ ICON_ID_SUMMON_DOOMGUARD = 90163
 ICON_ID_CHAOS_RIFT = 90171
 ICON_ID_HAVOC = 90172
 
+# Paladin rework shared block (paladin-rework.SHARED.md B0 / B1, A2 icons 90180-90189; 90183-90189 spare).
+# All three are "stock path, no blp" aliases (see STOCK_ALIAS_ICONS), so each gets its own SpellIcon.dbc
+# id without changing the texture:
+#   90180 - Primed: Righteousness 201063. Part A forbids SpellIcon 25 on it (icon-25 hardcode, SIC:5314),
+#           so it aliases the same texture under a new id.
+#   90181 - Deliverance 201061. No fitting art in the Ascension patch-I (no "deliverance" icon), so it
+#           aliases the stock blue Judgement texture (SpellIcon 3014) to look distinct from Judgement's 205.
+#   90182 - the two Vengeance unleash DoTs 201071 / 201077: alias of the stock icon-2292 texture, so
+#           they honour Part A's "avoid SpellIcon 2292" literally (the JoV +10%/stack hardcode keys on 2292).
+ICON_ID_PRIMED_RIGHTEOUSNESS_ALIAS = 90180
+ICON_ID_DELIVERANCE_ALIAS = 90181
+ICON_ID_VENGEANCE_DOT_ALIAS = 90182
+
+# Paladin rework Retribution (paladin-rework.RETRIBUTION.md §2.6): block 90210-90219, 90215-90219 spare.
+ICON_ID_BLADE_OF_JUSTICE = 90210  # 201400, echoes 201401-201409
+ICON_ID_WAKE_OF_ASHES = 90211  # 201413, 201414
+ICON_ID_EXECUTION_SENTENCE = 90212  # 201410-201412
+ICON_ID_SANCTIFIED_SEALS = 90213  # Sanctified Seals ranks
+ICON_ID_BLADE_OF_WRATH = 90214  # Blade of Wrath ranks and 201429
+
 ICONS = (
     (ICON_ID_ANGELIC_FEATHER, "Interface/icons/ability_priest_angelicfeather.blp"),
     (ICON_ID_DIVINE_STAR, "Interface/icons/spell_priest_divinestar.blp"),
@@ -138,6 +158,11 @@ ICONS = (
     (ICON_ID_SUMMON_DOOMGUARD, "Interface/icons/warlock_summon_doomguard.blp"),
     (ICON_ID_CHAOS_RIFT, "Interface/icons/custom_T_Nhance_RPG_Icons_UnholyPortal.blp"),
     (ICON_ID_HAVOC, "Interface/icons/ability_warlock_baneofhavoc.blp"),
+    (ICON_ID_BLADE_OF_JUSTICE, "Interface/icons/ability_paladin_bladeofjustice.blp"),
+    (ICON_ID_WAKE_OF_ASHES, "Interface/icons/inv_sword_2h_artifactashbringerfire_d_03.blp"),
+    (ICON_ID_EXECUTION_SENTENCE, "Interface/icons/spell_paladin_executionsentence.blp"),
+    (ICON_ID_SANCTIFIED_SEALS, "Interface/icons/ability_paladin_empoweredsealsrighteous.blp"),
+    (ICON_ID_BLADE_OF_WRATH, "Interface/icons/ability_paladin_bladeofjusticeblue.blp"),
 )
 
 # "Stock path, no blp" entries (warlock-rework DESTRUCTION §2.6/§11 Q19): a SpellIcon.dbc row that
@@ -147,6 +172,9 @@ ICONS = (
 # ICONS's archive-relative paths; build_spellicon_rows() below merges both tuples into the DBC.
 STOCK_ALIAS_ICONS = (
     (ICON_ID_INCINERATE_ALIAS, "Interface\\Icons\\Spell_Fire_Burnout"),
+    (ICON_ID_PRIMED_RIGHTEOUSNESS_ALIAS, "Interface\\Icons\\Ability_ThunderBolt"),
+    (ICON_ID_DELIVERANCE_ALIAS, "Interface\\Icons\\Ability_Paladin_JudgementBlue"),
+    (ICON_ID_VENGEANCE_DOT_ALIAS, "Interface\\Icons\\Spell_Holy_SealOfVengeance"),
 )
 
 

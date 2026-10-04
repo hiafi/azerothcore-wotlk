@@ -4,8 +4,376 @@ Paladin - spells that are never directly cast - proc/periodic-tick effects, trig
 Split from a single source/classes/paladin.py via split_class_file.py (.agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md) - see source/classes/README.md for the multi-file layout and lib/dsl/registry.py's load_class_package for how cross-file references (`from .paladin_...` below) resolve.
 """
 
-from lib.dsl import AuraType, DispelType, Effect, EffectType, School
-from lib.dsl.registry import spell
+from lib.dsl import AuraType, DispelType, Effect, EffectType, RANGE_SELF, School
+from lib.dsl.registry import leave_spell_group, linked_spell, pot_text, procs_on, product, remove_spell_proc, scripted_by, spell, spell_group, talent_mult, tooltip_vars, trained_by, unbind_script, untrain
+from . import _masks as m
+
+
+# Ret talents scaling Ret-owned spells on their tooltips (RETRIBUTION §5.3, P9 tooltip_vars). SpellMods never move a
+# tooltip, so each entry reads the always-on percent talents from their rank spells (bare ids: the rank spells are
+# declared further down this file, some of them after the spells that use these entries).
+# 1120: Blade of Justice. Strength of Faith 201446-8 e1, Smite Evil 31866-8 e2 (aura 79), Blade of Wrath 201457-9 e1.
+ret_blade_of_justice_tooltip = tooltip_vars(
+    1120, "Ret talents on Blade of Justice",
+    sof=talent_mult([201446, 201447, 201448], effect=1),
+    smite=talent_mult([31866, 31867, 31868], effect=2),
+    wrath=talent_mult([201457, 201458, 201459], effect=1),
+    mult=product("sof", "smite", "wrath"),
+)
+
+# 1121: Execution Sentence 201410 (A1's castable), burst 201411, splash 201412. mult = direct strikes (SPELLMOD_DAMAGE),
+# dot = the DoT (SPELLMOD_DOT, reads Sanctity e2 and The Art of War e3).
+ret_execution_sentence_tooltip = tooltip_vars(
+    1121, "Ret talents on Execution Sentence",
+    sof=talent_mult([201446, 201447, 201448], effect=1),
+    smite=talent_mult([31866, 31867, 31868], effect=2),
+    sanc=talent_mult([32043, 35396, 35397], effect=1),
+    aow=talent_mult([53486, 53488, 201472], effect=1),
+    sancdot=talent_mult([32043, 35396, 35397], effect=2),
+    aowdot=talent_mult([53486, 53488, 201472], effect=3),
+    mult=product("sof", "smite", "sanc", "aow"),
+    dot=product("sof", "smite", "sancdot", "aowdot"),
+)
+
+# 1122: Wake of Ashes 201413 (A1's castable). Purify the Unclean 201451-3 e1, Sanctity of Battle e1.
+ret_wake_of_ashes_tooltip = tooltip_vars(
+    1122, "Ret talents on Wake of Ashes",
+    sof=talent_mult([201446, 201447, 201448], effect=1),
+    smite=talent_mult([31866, 31867, 31868], effect=2),
+    purify=talent_mult([201451, 201452, 201453], effect=1),
+    sanc=talent_mult([32043, 35396, 35397], effect=1),
+    mult=product("sof", "smite", "purify", "sanc"),
+)
+
+
+righteousness_echo_201401 = spell(
+    id=201401, name='Righteousness Echo', school=School.HOLY,
+    attributes=2359296,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=50000.0,
+    effects=[
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=60.0, implicit_target_a=6),
+    ],
+    spell_icon_id=90210,
+    notes='paladin-rework S1 RETRIBUTION §4.2: Blade of Justice echo = the seal ability-form passive (B1.4) at x3 weapon potency; SUPPRESS_CASTER_PROCS so it never procs a seal passive or a talent. Righteousness: 60 weapon.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Strikes the target with the power of your seal.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'SpellClassMask_3': m.SEAL_PASSIVE, 'DefenseType': 2, 'AttributesEx3': 327680, 'AttributesEx2': 4, 'SpellLevel': 30},
+)
+
+
+command_echo_201402 = spell(
+    id=201402, name='Command Echo', school=School.HOLY | School.FIRE,
+    attributes=2359296,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=50000.0,
+    effects=[
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6, chain_targets=3),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=30.0, implicit_target_a=6, chain_targets=3),
+    ],
+    spell_icon_id=90210,
+    notes='paladin-rework S1 RETRIBUTION §4.2: Blade of Justice echo = the seal ability-form passive (B1.4) at x3 weapon potency; SUPPRESS_CASTER_PROCS so it never procs a seal passive or a talent. Command: 30 weapon, target + 2 chained enemies; P | C.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Strikes the target with the power of your seal.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'SpellClassMask_3': m.SEAL_PASSIVE | m.SEAL_PASSIVE_COMMAND, 'DefenseType': 2, 'AttributesEx3': 327680, 'AttributesEx2': 4, 'SpellLevel': 30},
+)
+
+
+vengeance_echo_201403 = spell(
+    id=201403, name='Vengeance Echo', school=School.HOLY | School.SHADOW,
+    attributes=2359296,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=50000.0,
+    effects=[
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=30.0, implicit_target_a=6),
+    ],
+    spell_icon_id=90210,
+    notes='paladin-rework S1 RETRIBUTION §4.2: Blade of Justice echo = the seal ability-form passive (B1.4) at x3 weapon potency; SUPPRESS_CASTER_PROCS so it never procs a seal passive or a talent. Vengeance: the script then applies Echoing Vengeance 201407.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Strikes the target with the power of your seal.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'SpellClassMask_3': m.SEAL_PASSIVE, 'DefenseType': 2, 'AttributesEx3': 327680, 'AttributesEx2': 4, 'SpellLevel': 30},
+)
+
+
+justice_echo_201404 = spell(
+    id=201404, name='Justice Echo', school=School.HOLY | School.FROST,
+    attributes=2359296,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=50000.0,
+    effects=[
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=30.0, implicit_target_a=6),
+    ],
+    spell_icon_id=90210,
+    notes='paladin-rework S1 RETRIBUTION §4.2: Blade of Justice echo = the seal ability-form passive (B1.4) at x3 weapon potency; SUPPRESS_CASTER_PROCS so it never procs a seal passive or a talent. Justice: the script then casts the 0.5 s stun 201096 on non-player-controlled targets without Justice Recovery 201106.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Strikes the target with the power of your seal.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'SpellClassMask_3': m.SEAL_PASSIVE, 'DefenseType': 2, 'AttributesEx3': 327680, 'AttributesEx2': 4, 'SpellLevel': 30},
+)
+
+
+light_echo_201405 = spell(
+    id=201405, name='Light Echo', school=School.HOLY,
+    attributes=2359296,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=50000.0,
+    effects=[
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=15.0, implicit_target_a=6),
+    ],
+    spell_icon_id=90210,
+    notes='paladin-rework S1 RETRIBUTION §4.2: Blade of Justice echo = the seal ability-form passive (B1.4) at x3 weapon potency; SUPPRESS_CASTER_PROCS so it never procs a seal passive or a talent. Light: the script then casts Echoing Light 201408.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Strikes the target with the power of your seal.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'SpellClassMask_3': m.SEAL_PASSIVE, 'DefenseType': 2, 'AttributesEx3': 327680, 'AttributesEx2': 4, 'SpellLevel': 30},
+)
+
+
+wisdom_echo_201406 = spell(
+    id=201406, name='Wisdom Echo', school=School.HOLY | School.ARCANE,
+    attributes=2359296,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=50000.0,
+    effects=[
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=15.0, implicit_target_a=6),
+    ],
+    spell_icon_id=90210,
+    notes='paladin-rework S1 RETRIBUTION §4.2: Blade of Justice echo = the seal ability-form passive (B1.4) at x3 weapon potency; SUPPRESS_CASTER_PROCS so it never procs a seal passive or a talent. Wisdom: the script then casts Echoing Wisdom 201409 and energizes 60% of base mana.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Strikes the target with the power of your seal.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'SpellClassMask_3': m.SEAL_PASSIVE, 'DefenseType': 2, 'AttributesEx3': 327680, 'AttributesEx2': 4, 'SpellLevel': 30},
+)
+
+
+echoing_vengeance_201407 = spell(
+    id=201407, name='Echoing Vengeance', school=School.HOLY | School.SHADOW,
+    dispel=DispelType.MAGIC,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=50000.0, duration_ms=5000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, sp_potency=5.4, ap_potency=5.4, potency_kind='periodic', implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000),
+    ],
+    spell_icon_id=90210,
+    notes='paladin-rework S1 RETRIBUTION §4.2: DoT of the Vengeance echo, 5 s, 36 total; icon 90210 (never 2292) and no d1 bits (JoV hardcode); a new application from the same caster replaces the old one.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Burns the target with twilight fire.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Taking {pot1} Twilight damage every $t1 sec.", 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'SpellClassMask_3': m.SEAL_PASSIVE, 'DefenseType': 1, 'AttributesEx2': 4, 'SpellLevel': 30},
+)
+
+
+echoing_light_201408 = spell(
+    id=201408, name='Echoing Light', school=School.HOLY,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=50000.0,
+    effects=[
+        Effect(type=EffectType.HEAL, implicit_target_a=21, potency_excluded='percent of base health (R "Values outside potency"); BP from spell_pal_blade_of_justice'),
+    ],
+    spell_icon_id=90210,
+    notes="paladin-rework S1 RETRIBUTION §4.2: heal for 60% of the paladin's base health (script SPELLVALUE_BASE_POINT0) on self + the 3 most injured allies; no spell_bonus_data row, EffectBonusMultiplier 0.",
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Heals the target for 60% of the Paladin's base health.", 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'DefenseType': 1, 'AttributesEx3': 65536, 'AttributesEx2': 4, 'EffectBonusMultiplier_1': 0.0, 'SpellLevel': 30},
+)
+
+
+echoing_wisdom_201409 = spell(
+    id=201409, name='Echoing Wisdom', school=School.HOLY | School.ARCANE,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=50000.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=6, potency_excluded='percent of max mana (R); BP from spell_pal_blade_of_justice'),
+    ],
+    spell_icon_id=90210,
+    notes="paladin-rework S1 RETRIBUTION §4.2: Divine damage for 1.5% of the paladin's max mana (script SPELLVALUE_BASE_POINT0); no spell_bonus_data row, EffectBonusMultiplier 0.",
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Deals damage equal to 1.5% of the Paladin's maximum mana.", 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'DefenseType': 1, 'AttributesEx3': 65536, 'AttributesEx2': 4, 'EffectBonusMultiplier_1': 0.0, 'SpellLevel': 30},
+)
+
+
+vindication_strike_201420 = spell(
+    id=201420, name='Vindication', school=School.HOLY,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=50000.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=20.0, ap_potency=20.0, potency_kind='direct', implicit_target_a=6),
+    ],
+    spell_icon_id=1798,
+    notes='paladin-rework S1 RETRIBUTION §4.5: the Vindication proc hit (rank eff0 triggers it), no family bits. Never use 26017/67 (C12 key).',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Deals {pot1} Holy damage.", 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'DefenseType': 1, 'SpellLevel': 25},
+)
+
+
+vindication_buff_201421 = spell(
+    id=201421, name='Vindication', school=School.HOLY,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=10000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_CUSTOM_STAT_PCT, misc_value=1 << 20),
+    ],
+    spell_icon_id=1798,
+    notes='paladin-rework S1 RETRIBUTION §4.5: +3% Mastery (aura 306, misc 1<<20) for 10 s, triggered by the rank eff1 (refresh).',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Mastery.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Mastery increased by $s1%.', 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101},
+)
+
+
+benediction_buff_201422 = spell(
+    id=201422, name='Benediction', school=School.HOLY,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=20000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=0),
+    ],
+    spell_icon_id=101,
+    notes='paladin-rework S1 RETRIBUTION §4.6: +X% Strength for 20 s; the amount is set by spell_pal_benediction from the rank eff1 (SPELLVALUE_BASE_POINT0).',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Strength.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Strength increased by $s1%.', 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101},
+)
+
+
+eye_for_an_eye_buff_201423 = spell(
+    id=201423, name='Eye for an Eye', school=School.HOLY,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=10000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=0),
+    ],
+    spell_icon_id=1820,
+    notes='paladin-rework S1 RETRIBUTION §4.6: capstone buff, -20% damage taken and +10% Strength for 10 s.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces damage taken and increases your Strength.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Damage taken reduced by 20%. Strength increased by 10%.', 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101},
+)
+
+
+sanctity_of_battle_empower_201424 = spell(
+    id=201424, name='Sanctity of Battle', school=School.HOLY,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.ABILITY_IGNORE_AURASTATE),
+        Effect(type=EffectType.APPLY_AURA, base_points=34, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=7),
+    ],
+    spell_icon_id=3106,
+    notes='paladin-rework S1 RETRIBUTION §4.6: 15 s empower, 1 charge; Hammer of Wrath at any health +35% (eff0/eff1 scoped to HoW), Flash of Light guaranteed crit (eff2); the charge is spent by Player::RemoveSpellMods when HoW or Flash of Light uses a mod (ProcTypeMask 0, no spell_proc row, warlock 200991 precedent). Divine Storm +50% and its consumption are scripted (spell_pal_divine_storm_ret).',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your next Hammer of Wrath, Flash of Light or Divine Storm is empowered.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Hammer of Wrath can be used at any health and deals 35% more damage, your next Flash of Light is a critical strike, or your next Divine Storm deals 50% more damage.', 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'ProcCharges': 1, 'ProcTypeMask': 0, 'EffectSpellClassMaskA_2': m.HAMMER_OF_WRATH, 'EffectSpellClassMaskB_2': m.HAMMER_OF_WRATH, 'EffectSpellClassMaskC_1': m.FLASH_OF_LIGHT},
+)
+
+
+improved_judgements_marker_201425 = spell(
+    id=201425, name='Improved Judgements', school=School.HOLY,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=20000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=205,
+    notes='paladin-rework S1 RETRIBUTION §4.6: marker, your next stack grant gives +1 (consumed by Paladin::ModifyStackGainRet); 20 s is a starting guess.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your next stack-building ability grants an additional stack.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next ability that grants seal stacks grants 1 additional stack.', 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'ProcTypeMask': 0},
+)
+
+
+swift_retribution_buff_201426 = spell(
+    id=201426, name='Swift Retribution', school=School.HOLY,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=10000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL),
+    ],
+    spell_icon_id=3028,
+    notes='paladin-rework S1 RETRIBUTION §4.6: self haste per stack (rank 1); CumulativeAura 3, amounts scale with stacks.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your haste.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Haste increased by $s1%.', 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'CumulativeAura': 3},
+)
+
+
+swift_retribution_buff_201427 = spell(
+    id=201427, name='Swift Retribution', school=School.HOLY,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=10000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL),
+    ],
+    spell_icon_id=3028,
+    notes='paladin-rework S1 RETRIBUTION §4.6: self haste per stack (rank 2); CumulativeAura 3, amounts scale with stacks.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your haste.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Haste increased by $s1%.', 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'CumulativeAura': 3},
+)
+
+
+swift_retribution_buff_201428 = spell(
+    id=201428, name='Swift Retribution', school=School.HOLY,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=10000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=0),
+    ],
+    spell_icon_id=3028,
+    notes='paladin-rework S1 RETRIBUTION §4.6: self haste per stack (rank 3); CumulativeAura 3, amounts scale with stacks. Rank 3 adds +5% Exorcism per stack (Holy Fire/Smite dropped, §0.1 item 8).',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your haste.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Haste increased by $s1%. Exorcism damage increased by $s2%.', 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'CumulativeAura': 3, 'EffectSpellClassMaskB_2': m.EXORCISM},
+)
+
+
+blade_of_wrath_mastery_201429 = spell(
+    id=201429, name='Blade of Wrath', school=School.HOLY,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=10000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=20, apply_aura=AuraType.MOD_CUSTOM_STAT_PCT, misc_value=1 << 20, radius_yards=30.0),
+    ],
+    spell_icon_id=90214,
+    notes='paladin-rework S1 RETRIBUTION §4.6: party +2% Mastery for 10 s within 30 yd; proc-triggered by the rank 3 passive 201459 (CAST phase row).',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the Mastery of your party members.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Mastery increased by $s1%.', 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101},
+)
+
+
+crusaders_aegis_shield_201430 = spell(
+    id=201430, name="Crusader's Aegis", school=School.HOLY,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=10000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, sp_potency=300.0, potency_kind='absorb', implicit_target_a=20, apply_aura=AuraType.SCHOOL_ABSORB, misc_value=127, radius_yards=30.0),
+    ],
+    spell_icon_id=2820,
+    notes='paladin-rework S1 RETRIBUTION §4.6: party absorb (300 healing potency) for 10 s within 30 yd, cast when Avenging Wrath is cast (201462 CAST row). SCHOOL_ABSORB gets no engine SP bonus: spell_pal_crusaders_aegis_absorb adds Paladin::CalculateAbsorbBonus.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Absorbs {pot1} damage.", 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Absorbs {pot1} damage.", 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'SpellLevel': 50},
+)
+
+
+crusade_ramp_201431 = spell(
+    id=201431, name='Crusade', school=School.HOLY,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=127),
+    ],
+    spell_icon_id=2171,
+    notes='paladin-rework S1 RETRIBUTION §4.6: ramp, +2% damage per seal stack gained while Avenging Wrath is up (cap 15%); the amount is set by script; removed with Avenging Wrath through linked_spell(-31884, -201431).',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your damage.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Damage increased by $s1%.', 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101},
+)
+
+
+pursuit_of_justice_speed_201432 = spell(
+    id=201432, name='Pursuit of Justice', school=School.HOLY,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.MOD_SPEED_NOT_STACK),
+    ],
+    spell_icon_id=1797,
+    notes='paladin-rework S1 RETRIBUTION §4.6: +10/20% movement speed while Seal of Justice is active (amount from the rank eff1, set by script); removed with the seal.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your movement speed.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement speed increased by $s1%.', 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101},
+)
+
+
+pursuit_of_justice_freedom_201433 = spell(
+    id=201433, name='Pursuit of Justice', school=School.HOLY,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=50000.0, duration_ms=6000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=21, apply_aura=AuraType.MOD_INCREASE_SPEED),
+    ],
+    spell_icon_id=1797,
+    notes='paladin-rework S1 RETRIBUTION §4.6 (fixed in review-2): +30% speed on the Hand of Freedom target (self or ally), 6 s; target A 21 and range 50000.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your movement speed.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement speed increased by $s1%.', 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101},
+)
+
+
+sheath_of_light_capstone_201434 = spell(
+    id=201434, name='Sheath of Light', school=School.HOLY,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=3030,
+    notes='paladin-rework S1 RETRIBUTION §4.6/§4.11: hidden passive linked to Sheath of Light rank 3 (53503); carries the Flash-of-Light-on-self mana proc (the chain -53501 already has a stock row, so a positive row on a rank would be dropped).',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Flash of Light on yourself restores mana.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101},
+)
 
 
 vindication_67 = spell(
@@ -33,10 +401,10 @@ devotion_aura_465 = spell(
     id=465,
     name='Devotion Aura',
     school=School.HOLY,
-    attributes=151322624,
+    attributes=151322640,
     cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
+    cooldown_ms=60000,
+    category_cooldown_ms=15000,
     mana_cost=0,
     mana_cost_pct=0,
     range_yards=0.0,
@@ -45,8 +413,9 @@ devotion_aura_465 = spell(
         Effect(type=65, base_points=54, points_per_level=14.556962025316455, implicit_target_a=1, apply_aura=22, misc_value=1, radius_yards=40.0),
     ],
     spell_icon_id=291,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 10 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'ActiveIconID': 122, 'AttributesEx2': 17, 'AttributesEx3': 1114112, 'AttributesEx4': 3145728, 'AttributesEx7': 4, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases armor by $s1.', 'BaseLevel': 1, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives $s1 additional armor to party and raid members within $a1 yards.  Players may only have one Aura on them per Paladin at any one time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 64, 'SpellClassMask_3': 32, 'SpellClassSet': 10, 'SpellLevel': 1, 'SpellVisualID_1': 160, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 10 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | paladin-rework S1 SHARED Part C C1.2: button (60 s RecoveryTime, Category 1300 / 15 s, IS_ABILITY flat GCD).',
+    category=1300,
+    raw_overrides={'ActiveIconID': 122, 'AttributesEx2': 17, 'AttributesEx3': 1114112, 'AttributesEx4': 3145728, 'AttributesEx7': 4, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases armor by $s1.', 'BaseLevel': 1, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives $s1 additional armor to party and raid members within $a1 yards. Activating it also reduces damage taken by party and raid members within $a1 yards by $201161s2% for $201161d. Players may only have one Aura on them per Paladin at any one time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 64, 'SpellClassMask_3': 32, 'SpellClassSet': 10, 'SpellLevel': 1, 'SpellVisualID_1': 160, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -76,10 +445,10 @@ retribution_aura_7294 = spell(
     id=7294,
     name='Retribution Aura',
     school=School.HOLY,
-    attributes=151322624,
+    attributes=151322640,
     cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
+    cooldown_ms=60000,
+    category_cooldown_ms=15000,
     mana_cost=0,
     mana_cost_pct=0,
     range_yards=0.0,
@@ -90,8 +459,9 @@ retribution_aura_7294 = spell(
         Effect(type=65, base_points=-1, implicit_target_a=1, apply_aura=193, misc_value=127, radius_yards=40.0),
     ],
     spell_icon_id=555,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 16); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'ActiveIconID': 122, 'AttributesEx2': 17, 'AttributesEx3': 1114112, 'AttributesEx4': 3145728, 'AttributesEx6': 1073741824, 'AttributesEx7': 4, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Does $s1 Holy damage to anyone who strikes you.', 'BaseLevel': 16, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes $s1 Holy damage to any enemy that strikes a party or raid member within $a1 yards.  Players may only have one Aura on them per Paladin at any one time.', 'EffectBonusMultiplier_1': 0.032999999821186066, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 8, 'SpellClassMask_3': 32, 'SpellClassSet': 10, 'SpellLevel': 16, 'SpellVisualID_1': 682, 'StanceBarOrder': 1, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 16); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | paladin-rework S1 SHARED Part C C1.2: button (60 s RecoveryTime, Category 1300 / 15 s, IS_ABILITY flat GCD).',
+    category=1300,
+    raw_overrides={'ActiveIconID': 122, 'AttributesEx2': 17, 'AttributesEx3': 1114112, 'AttributesEx4': 3145728, 'AttributesEx6': 1073741824, 'AttributesEx7': 4, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Does $s1 Holy damage to anyone who strikes you.', 'BaseLevel': 16, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes $s1 Holy damage to any enemy that strikes a party or raid member within $a1 yards. Activating it also increases the Mastery of party and raid members within $a1 yards by $201160s1% for $201160d. Players may only have one Aura on them per Paladin at any one time.', 'EffectBonusMultiplier_1': 0.032999999821186066, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 8, 'SpellClassMask_3': 32, 'SpellClassSet': 10, 'SpellLevel': 16, 'SpellVisualID_1': 682, 'StanceBarOrder': 1, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -99,41 +469,43 @@ concentration_aura_19746 = spell(
     id=19746,
     name='Concentration Aura',
     school=School.HOLY,
-    attributes=151322624,
+    attributes=151322640,
     cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
+    cooldown_ms=60000,
+    category_cooldown_ms=15000,
     mana_cost=0,
     mana_cost_pct=0,
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=65, base_points=34, implicit_target_a=1, apply_aura=149, misc_value=127, radius_yards=40.0),
+        Effect(type=65, base_points=99, implicit_target_a=1, apply_aura=85, misc_value=0, radius_yards=40.0),
     ],
     spell_icon_id=1487,
-    notes='pulled from existing data',
-    raw_overrides={'ActiveIconID': 122, 'AttributesEx2': 17, 'AttributesEx3': 1114112, 'AttributesEx4': 2097152, 'AttributesEx7': 4, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Reduces casting or channeling time lost when damaged by $s1%.', 'BaseLevel': 22, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'All party or raid members within $a1 yards lose $s1% less casting or channeling time when damaged.  Players may only have one Aura on them per Paladin at any one time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 131072, 'SpellClassMask_3': 32, 'SpellClassSet': 10, 'SpellLevel': 22, 'SpellVisualID_1': 5139, 'StanceBarOrder': 2, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data | paladin-rework S1 SHARED Part C C1.2/C1.3: button; eff0 aura 149 (pushback) -> 85 MOD_POWER_REGEN misc 0 bp 99 (live 100 = 1.00% in hundredths, scaled to mp5 by spell_pal_concentration_aura); effect index 0 keeps d0 b17.',
+    category=1300,
+    raw_overrides={'ActiveIconID': 122, 'AttributesEx2': 17, 'AttributesEx3': 1114112, 'AttributesEx4': 2097152, 'AttributesEx7': 4, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Mana regeneration increased.', 'BaseLevel': 22, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Restores $/100;s1% of the Paladin's base mana every 5 sec to party and raid members within $a1 yards. Activating it also restores $/100;201164s1% of their maximum mana every 5 sec for $201164d. Players may only have one Aura on them per Paladin at any one time.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 131072, 'SpellClassMask_3': 32, 'SpellClassSet': 10, 'SpellLevel': 22, 'SpellVisualID_1': 5139, 'StanceBarOrder': 2, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
-shadow_resistance_aura_19876 = spell(
+resistance_aura_19876 = spell(
     id=19876,
-    name='Shadow Resistance Aura',
+    name='Resistance Aura',
     school=School.HOLY,
-    attributes=151322624,
+    attributes=151322640,
     cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
+    cooldown_ms=60000,
+    category_cooldown_ms=15000,
     mana_cost=0,
     mana_cost_pct=0,
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=65, base_points=29, points_per_level=1.9230769230769231, implicit_target_a=1, apply_aura=143, misc_value=32, radius_yards=40.0),
+        Effect(type=65, base_points=29, points_per_level=1.9230769230769231, implicit_target_a=1, apply_aura=143, misc_value=52, radius_yards=40.0),
     ],
     spell_icon_id=140,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 28); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'ActiveIconID': 122, 'AttributesEx2': 17, 'AttributesEx3': 1114112, 'AttributesEx4': 3145728, 'AttributesEx7': 4, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases Shadow resistance by $s1.', 'BaseLevel': 28, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives $s1 additional Shadow resistance to all party and raid members within $a1 yards.  Players may only have one Aura on them per Paladin at any one time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 67108864, 'SpellClassMask_2': 16, 'SpellClassMask_3': 32, 'SpellClassSet': 10, 'SpellLevel': 28, 'SpellVisualID_1': 321, 'StanceBarOrder': 3, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 28); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | paladin-rework S1 SHARED Part C C1.2/C1.3: button; Shadow Resistance Aura -> Resistance Aura (misc 32 -> 52, all three schools); d0 b26 and d1 b4 reclaimed (stripped; d2 0x20 kept).',
+    category=1300,
+    raw_overrides={'ActiveIconID': 122, 'AttributesEx2': 17, 'AttributesEx3': 1114112, 'AttributesEx4': 3145728, 'AttributesEx7': 4, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases Shadow, Frost and Fire resistance by $s1.', 'BaseLevel': 28, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives $s1 additional Shadow, Frost and Fire resistance to all party and raid members within $a1 yards. Activating it also gives them an absorb of magic damage equal to $201162s1% of their maximum health for $201162d. Players may only have one Aura on them per Paladin at any one time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_3': 32, 'SpellClassSet': 10, 'SpellLevel': 28, 'SpellVisualID_1': 321, 'StanceBarOrder': 3, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -252,13 +624,13 @@ heart_of_the_crusader_21183 = spell(
     mana_cost=0,
     mana_cost_pct=0,
     range_yards=100.0,
-    duration_ms=20000,
+    duration_ms=15000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, points_per_level=0.03389830508474576, implicit_target_a=6, apply_aura=197),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=6, apply_aura=197),
     ],
     spell_icon_id=237,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx2': 268435460, 'AttributesEx3': 262656, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases chance of critical strikes against the target by $s1%.', 'BaseLevel': 1, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'In addition to the normal effect, your Judgement spells will also increase the critical strike chance of all attacks made against that target by an additional $20335s1%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_1': 536870912, 'SpellClassSet': 10, 'SpellLevel': 1},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | paladin-rework S1 RETRIBUTION §4.8: debuff duration 20 s -> 15 s. Rank 1 points_per_level 0.0339 removed: it gave +2 by level 60 (3%), not the promised 1%.',
+    raw_overrides={'AttributesEx2': 268435460, 'AttributesEx3': 262656, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases chance of critical strikes against the target by $s1%.', 'BaseLevel': 1, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'In addition to the normal effect, your Judgement and Deliverance will also increase the critical strike chance of all attacks made against that target by an additional $20335s1%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_1': 536870912, 'SpellClassSet': 10, 'SpellLevel': 1},
 )
 
 
@@ -278,10 +650,11 @@ righteous_fury_25780 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=79, implicit_target_a=1, apply_aura=AuraType.MOD_THREAT, misc_value=2),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.MOD_THREAT, misc_value=127),
     ],
     spell_icon_id=301,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases the threat generated by your Holy spells by $s1%.', 'BaseLevel': 16, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the threat generated by your Holy spells by $s1%.  Lasts $d.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 1, 'SpellClassSet': 10, 'SpellLevel': 16, 'SpellVisualID_1': 298, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data | paladin-rework S1 SHARED Part C C3: new eff2 MOD_THREAT misc 127 bp 14 (+15% all schools) folded in from Tenacity.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Holy threat increased by $s1%, all threat by $s3%.', 'BaseLevel': 16, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the threat generated by your Holy spells by $s1% and all threat you generate by $s3%. While active, melee and ranged attacks against you cannot critically strike.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 1, 'SpellClassSet': 10, 'SpellLevel': 16, 'SpellVisualID_1': 298, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -329,10 +702,10 @@ crusader_aura_32223 = spell(
     id=32223,
     name='Crusader Aura',
     school=School.HOLY,
-    attributes=151322624,
+    attributes=151322640,
     cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
+    cooldown_ms=60000,
+    category_cooldown_ms=15000,
     mana_cost=0,
     mana_cost_pct=0,
     range_yards=0.0,
@@ -343,8 +716,9 @@ crusader_aura_32223 = spell(
         Effect(type=35, base_points=19, implicit_target_a=1, apply_aura=210, radius_yards=40.0),
     ],
     spell_icon_id=2291,
-    notes='pulled from existing data',
-    raw_overrides={'ActiveIconID': 122, 'AttributesEx2': 17, 'AttributesEx3': 1114112, 'AttributesEx4': 3145728, 'AttributesEx6': 4096, 'AttributesEx7': 4, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Mounted speed increased by $s1%.  This does not stack with other movement speed increasing effects.', 'BaseLevel': 62, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the mounted speed by $s1% for all party and raid members within $a1 yards.  Players may only have one Aura on them per Paladin at any one time.  This does not stack with other movement speed increasing effects.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 67108864, 'SpellClassMask_2': 16, 'SpellClassMask_3': 32, 'SpellClassSet': 10, 'SpellLevel': 62, 'SpellVisualID_1': 321, 'StanceBarOrder': 7, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes="pulled from existing data | paladin-rework S1 SHARED Part C C1.2/C1.3: button; learn level 62 -> 20 (trainer row is the Part C castables owner's); d0 b26 and d1 b4 reclaimed.",
+    category=1300,
+    raw_overrides={'ActiveIconID': 122, 'AttributesEx2': 17, 'AttributesEx3': 1114112, 'AttributesEx4': 3145728, 'AttributesEx6': 4096, 'AttributesEx7': 4, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Mounted speed increased by $s1%.  This does not stack with other movement speed increasing effects.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the mounted speed by $s1% for all party and raid members within $a1 yards. Activating it also increases their movement speed by $201163s1% for $201163d. Players may only have one Aura on them per Paladin at any one time.  This does not stack with other movement speed increasing effects.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_3': 32, 'SpellClassSet': 10, 'SpellLevel': 20, 'SpellVisualID_1': 321, 'StanceBarOrder': 7, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -420,11 +794,12 @@ benediction_20101 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=108, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=101,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of all instant cast spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 469335991, 'EffectSpellClassMaskA_2': 1199550414, 'EffectSpellClassMaskA_3': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (0,3): eff0 ADD_PCT COST -> DUMMY (10/20/30% base mana, misc 0, trigger 0, masks cleared), new eff1 DUMMY (+5/10/15% Strength); spell_proc -20101 below.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Killing an enemy that yields experience or honor restores $s1% of your base mana and increases your Strength by $s2% for 20 sec. This effect cannot occur more than once every 5 sec.\n\n|cFF9D9D9DCapstone Bonus: Party members within 30 yards below 50% mana also regain 10% of their base mana.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -440,11 +815,12 @@ benediction_20102 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-5, implicit_target_a=1, apply_aura=108, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=101,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of all instant cast spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 469335991, 'EffectSpellClassMaskA_2': 1199550414, 'EffectSpellClassMaskA_3': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (0,3): eff0 ADD_PCT COST -> DUMMY (10/20/30% base mana, misc 0, trigger 0, masks cleared), new eff1 DUMMY (+5/10/15% Strength); spell_proc -20101 below.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Killing an enemy that yields experience or honor restores $s1% of your base mana and increases your Strength by $s2% for 20 sec. This effect cannot occur more than once every 5 sec.\n\n|cFF9D9D9DCapstone Bonus: Party members within 30 yards below 50% mana also regain 10% of their base mana.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -460,11 +836,12 @@ benediction_20103 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=1, apply_aura=108, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=101,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of all instant cast spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 469335991, 'EffectSpellClassMaskA_2': 1199550414, 'EffectSpellClassMaskA_3': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (0,3): eff0 ADD_PCT COST -> DUMMY (10/20/30% base mana, misc 0, trigger 0, masks cleared), new eff1 DUMMY (+5/10/15% Strength); spell_proc -20101 below.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Killing an enemy that yields experience or honor restores $s1% of your base mana and increases your Strength by $s2% for 20 sec. This effect cannot occur more than once every 5 sec.\n\nCapstone Bonus: Party members within 30 yards below 50% mana also regain 10% of their base mana.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -480,11 +857,11 @@ benediction_20104 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-9, implicit_target_a=1, apply_aura=108, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=101,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of all instant cast spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 469335991, 'EffectSpellClassMaskA_2': 1199550414, 'EffectSpellClassMaskA_3': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 4', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §3 item 11: orphaned rank; eff0 ADD_PCT COST (mask deleted = wildcard on every paladin spell cost) -> maskless DUMMY like 20101-20103.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of all instant cast spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 4', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -500,11 +877,11 @@ benediction_20105 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=108, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=101,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of all instant cast spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 469335991, 'EffectSpellClassMaskA_2': 1199550414, 'EffectSpellClassMaskA_3': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 5', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §3 item 11: orphaned rank; eff0 ADD_PCT COST (mask deleted = wildcard on every paladin spell cost) -> maskless DUMMY like 20101-20103.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of all instant cast spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 5', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -521,11 +898,11 @@ improved_devotion_aura_20138 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=16, implicit_target_a=1, apply_aura=108, misc_value=3),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=12),
+        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=12),
     ],
     spell_icon_id=291,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the armor bonus of your Devotion Aura by $s1% and increases the amount healed on any target affected by any of your Auras by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EffectSpellClassMaskB_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 SHARED Part C C1.7: eff1 EFFECT2 +2/4/6 healing -> -2/-4/-6 (stored -3/-5/-7): lands on the Devotion burst 201161 (d2 b25 retarget).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the armor bonus of your Devotion Aura by $s1% and the damage reduction of its active effect by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EffectSpellClassMaskB_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -542,11 +919,11 @@ improved_devotion_aura_20139 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=33, implicit_target_a=1, apply_aura=108, misc_value=3),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=107, misc_value=12),
+        Effect(type=EffectType.APPLY_AURA, base_points=-5, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=12),
     ],
     spell_icon_id=291,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the armor bonus of your Devotion Aura by $s1% and increases the amount healed on any target affected by any of your Auras by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EffectSpellClassMaskB_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 SHARED Part C C1.7: eff1 EFFECT2 +2/4/6 healing -> -2/-4/-6 (stored -3/-5/-7): lands on the Devotion burst 201161 (d2 b25 retarget).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the armor bonus of your Devotion Aura by $s1% and the damage reduction of its active effect by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EffectSpellClassMaskB_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -563,11 +940,11 @@ improved_devotion_aura_20140 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=108, misc_value=3),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=107, misc_value=12),
+        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=12),
     ],
     spell_icon_id=291,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the armor bonus of your Devotion Aura by $s1% and increases the amount healed on any target affected by any of your Auras by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EffectSpellClassMaskB_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 SHARED Part C C1.7: eff1 EFFECT2 +2/4/6 healing -> -2/-4/-6 (stored -3/-5/-7): lands on the Devotion burst 201161 (d2 b25 retarget).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the armor bonus of your Devotion Aura by $s1% and the damage reduction of its active effect by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EffectSpellClassMaskB_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -1148,8 +1525,8 @@ heart_of_the_crusader_20335 = spell(
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=12),
     ],
     spell_icon_id=237,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'In addition to the normal effect, your Judgement spells will also increase the critical strike chance of all attacks made against that target by an additional $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 536870912, 'EffectSpellClassMaskB_1': 536870912, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (1,0): text only on ranks 1-2',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Judgement and Deliverance increase the critical strike chance of all attacks against their targets by $s1% for 15 sec. Does not stack with other similar effects.\n\n|cFF9D9D9DCapstone Bonus: Your seals trigger a 1 sec global cooldown instead of 1.5 sec.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 536870912, 'EffectSpellClassMaskB_1': 536870912, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -1168,8 +1545,8 @@ heart_of_the_crusader_20336 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=12),
     ],
     spell_icon_id=237,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'In addition to the normal effect, your Judgement spells will also increase the critical strike chance of all attacks made against that target by an additional $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 536870912, 'EffectSpellClassMaskB_1': 536870912, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (1,0): text only on ranks 1-2',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Judgement and Deliverance increase the critical strike chance of all attacks against their targets by $s1% for 15 sec. Does not stack with other similar effects.\n\n|cFF9D9D9DCapstone Bonus: Your seals trigger a 1 sec global cooldown instead of 1.5 sec.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 536870912, 'EffectSpellClassMaskB_1': 536870912, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -1186,10 +1563,12 @@ heart_of_the_crusader_20337 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=12),
+        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=-501, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=21),
     ],
     spell_icon_id=237,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'In addition to the normal effect, your Judgement spells will also increase the critical strike chance of all attacks made against that target by an additional $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 536870912, 'EffectSpellClassMaskB_1': 536870912, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (1,0): rank 3 adds eff2 ADD_FLAT GLOBAL_COOLDOWN -501 (-0.5 s) scoped to ALL_PLAYER_SEALS (eff index 2, SIC:4978-5000 rewrites eff1); A_1/B_1 kept for the debuff spells.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Judgement and Deliverance increase the critical strike chance of all attacks against their targets by $s1% for 15 sec. Does not stack with other similar effects.\n\nCapstone Bonus: Your seals trigger a 1 sec global cooldown instead of 1.5 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 536870912, 'EffectSpellClassMaskB_1': 536870912, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassSet': 10, 'EffectSpellClassMaskC_1': m.ALL_PLAYER_SEALS[0], 'EffectSpellClassMaskC_2': m.ALL_PLAYER_SEALS[1]},
 )
 
 
@@ -1368,11 +1747,12 @@ improved_judgements_25956 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=22),
     ],
     spell_icon_id=205,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Decreases the cooldown of your Judgement spells by $/1000;s1 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8388608, 'EffectSpellClassMaskA_3': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (4,0): eff0 ADD_FLAT COOLDOWN -> ADD_PCT DAMAGE scoped to JUDGEMENT_ALL (U|J|Dv); new eff1 ADD_PCT DOT on U (the Vengeance unleash DoT).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Judgement and Deliverance by $s1%, and your Exorcism triggers your active seal's effect.\n\n|cFF9D9D9DCapstone Bonus: When your Judgement or Deliverance releases a Primed seal, your next ability that grants seal stacks grants 1 additional stack.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, 'EffectSpellClassMaskA_1': m.JUDGEMENT_ALL[0], 'EffectSpellClassMaskA_3': m.JUDGEMENT_ALL[2], 'EffectSpellClassMaskB_1': m.UNLEASH},
 )
 
 
@@ -1388,11 +1768,12 @@ improved_judgements_25957 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-2001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=22),
     ],
     spell_icon_id=205,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Decreases the cooldown of your Judgement spells by $/1000;s1 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8388608, 'EffectSpellClassMaskA_3': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (4,0): eff0 ADD_FLAT COOLDOWN -> ADD_PCT DAMAGE scoped to JUDGEMENT_ALL (U|J|Dv); new eff1 ADD_PCT DOT on U (the Vengeance unleash DoT).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Judgement and Deliverance by $s1%, and your Exorcism triggers your active seal's effect.\n\n|cFF9D9D9DCapstone Bonus: When your Judgement or Deliverance releases a Primed seal, your next ability that grants seal stacks grants 1 additional stack.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, 'EffectSpellClassMaskA_1': m.JUDGEMENT_ALL[0], 'EffectSpellClassMaskA_3': m.JUDGEMENT_ALL[2], 'EffectSpellClassMaskB_1': m.UNLEASH},
 )
 
 
@@ -1988,12 +2369,12 @@ sanctified_retribution_31869 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=107, misc_value=12),
-        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=108, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=12),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=3),
     ],
     spell_icon_id=502,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage caused by Retribution Aura by $s2% and all damage caused by friendly targets affected by any of your Auras is increased by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8, 'EffectSpellClassMaskB_1': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (4,3): eff0 EFFECT2 bp 0 (+1% party damage via 63531) scoped to d2 0x8000000 (SIC re-applies it on 31869 only; new ranks author it), eff1 PCT EFFECT1 +50% Retribution Aura damage; stale A_1 deleted.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Retribution Aura by $s2%, and all damage dealt by friendly targets affected by any of your auras by $s1%. Does not stack with other similar effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, 'EffectSpellClassMaskA_3': m.LOADTIME_SANCTIFIED_RETRIBUTION, 'EffectSpellClassMaskB_1': m.RETRIBUTION_AURA},
 )
 
 
@@ -2012,8 +2393,8 @@ judgements_of_the_wise_31876 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=3017,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your damaging Judgement spells have a $h% chance to grant the Replenishment effect to up to 10 party or raid members mana regeneration equal to 1% of their maximum mana per 5 sec for $57669d, and to immediately grant you $31930s1% of your base mana.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 33, 'ProcTypeMask': 272, 'RangeIndex': 1, 'SpellClassSet': 10, 'SpellVisualID_1': 11906},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (6,0): DBC ProcChance 33/66 -> 50/100.',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your damaging Judgement and Deliverance seal releases have a $h% chance to grant Replenishment to up to 10 party or raid members, restoring 1% of their maximum mana every 5 sec for $57669d, and to restore $31930s1% of your base mana. Once per cast.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 50, 'ProcTypeMask': 272, 'RangeIndex': 1, 'SpellClassSet': 10, 'SpellVisualID_1': 11906},
 )
 
 
@@ -2032,8 +2413,8 @@ judgements_of_the_wise_31877 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=3017,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your damaging Judgement spells have a $h% chance to grant the Replenishment effect to up to 10 party or raid members mana regeneration equal to 1% of their maximum mana per 5 sec for $57669d, and to immediately grant you $31930s1% of your base mana.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 66, 'ProcTypeMask': 272, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (6,0): DBC ProcChance 33/66 -> 50/100.',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your damaging Judgement and Deliverance seal releases have a $h% chance to grant Replenishment to up to 10 party or raid members, restoring 1% of their maximum mana every 5 sec for $57669d, and to restore $31930s1% of your base mana. Once per cast.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 272, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2069,12 +2450,12 @@ fanaticism_31879 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=107, misc_value=7),
-        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=AuraType.MOD_THREAT, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=12),
     ],
     spell_icon_id=2169,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of all Judgements capable of a critical hit by $s1% and reduces threat caused by all actions by $s2% except when under the effects of Righteous Fury.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8388608, 'EffectSpellClassMaskA_3': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (8,0): eff0 crit on JUDGEMENT_ALL, eff1 threat -> ADD_FLAT EFFECT2 on Execution Sentence (its aura-271 effect).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Judgement and Deliverance by $s1%, and your seal effects and seal releases deal $s2% more damage to the target of your Execution Sentence.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, 'EffectSpellClassMaskA_1': m.JUDGEMENT_ALL[0], 'EffectSpellClassMaskA_3': m.JUDGEMENT_ALL[2], 'EffectSpellClassMaskB_3': m.EXECUTION_SENTENCE},
 )
 
 
@@ -2090,12 +2471,12 @@ fanaticism_31880 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=107, misc_value=7),
-        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=AuraType.MOD_THREAT, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=13, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=12),
     ],
     spell_icon_id=2169,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of all Judgements capable of a critical hit by $s1% and reduces threat caused by all actions by $s2% except when under the effects of Righteous Fury.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8388608, 'EffectSpellClassMaskA_3': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (8,0): eff0 crit on JUDGEMENT_ALL, eff1 threat -> ADD_FLAT EFFECT2 on Execution Sentence (its aura-271 effect).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Judgement and Deliverance by $s1%, and your seal effects and seal releases deal $s2% more damage to the target of your Execution Sentence.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, 'EffectSpellClassMaskA_1': m.JUDGEMENT_ALL[0], 'EffectSpellClassMaskA_3': m.JUDGEMENT_ALL[2], 'EffectSpellClassMaskB_3': m.EXECUTION_SENTENCE},
 )
 
 
@@ -2111,12 +2492,12 @@ fanaticism_31881 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=17, implicit_target_a=1, apply_aura=107, misc_value=7),
-        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=AuraType.MOD_THREAT, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=12),
     ],
     spell_icon_id=2169,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of all Judgements capable of a critical hit by $s1% and reduces threat caused by all actions by $s2% except when under the effects of Righteous Fury.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8388608, 'EffectSpellClassMaskA_3': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (8,0): eff0 crit on JUDGEMENT_ALL, eff1 threat -> ADD_FLAT EFFECT2 on Execution Sentence (its aura-271 effect).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Judgement and Deliverance by $s1%, and your seal effects and seal releases deal $s2% more damage to the target of your Execution Sentence.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, 'EffectSpellClassMaskA_1': m.JUDGEMENT_ALL[0], 'EffectSpellClassMaskA_3': m.JUDGEMENT_ALL[2], 'EffectSpellClassMaskB_3': m.EXECUTION_SENTENCE},
 )
 
 
@@ -2132,13 +2513,13 @@ sanctity_of_battle_32043 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=57),
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=52),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=201424),
     ],
-    spell_icon_id=237,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to critically hit with all spells and attacks by $s1% and increases the damage caused by Exorcism and Crusader Strike by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 536870912, 'EffectSpellClassMaskB_2': 32770, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassSet': 10},
+    spell_icon_id=3106,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (3,2): eff0 -> ADD_PCT DAMAGE (SANCTITY_DAMAGE), eff1 -> ADD_PCT DOT (SANCTITY_DOT), eff2 -> PROC_TRIGGER 201424; icon 237 -> 3106; DBC ProcChance 33/66/100.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your abilities by $s1%:\nExorcism\nCrusader Strike\nDivine Storm\nExecution Sentence\nConsecration\nWake of Ashes\n\nYour Exorcism damage has a $h% chance to empower you for 15 sec: your next Hammer of Wrath can be used at any health and deals 35% more damage, your next Flash of Light is a critical strike, or your next Divine Storm deals 50% more damage. The first of these you use consumes the effect.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassSet': 10, 'EffectSpellClassMaskA_1': m.SANCTITY_DAMAGE[0], 'EffectSpellClassMaskA_2': m.SANCTITY_DAMAGE[1], 'EffectSpellClassMaskA_3': m.SANCTITY_DAMAGE[2], 'EffectSpellClassMaskB_1': m.SANCTITY_DOT[0], 'EffectSpellClassMaskB_3': m.SANCTITY_DOT[2], 'ProcChance': 33},
 )
 
 
@@ -2174,13 +2555,13 @@ sanctity_of_battle_35396 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=57),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=52),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=201424),
     ],
-    spell_icon_id=237,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to critically hit with all spells and attacks by $s1% and increases the damage caused by Exorcism and Crusader Strike by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 536870912, 'EffectSpellClassMaskB_2': 32770, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassSet': 10},
+    spell_icon_id=3106,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (3,2): eff0 -> ADD_PCT DAMAGE (SANCTITY_DAMAGE), eff1 -> ADD_PCT DOT (SANCTITY_DOT), eff2 -> PROC_TRIGGER 201424; icon 237 -> 3106; DBC ProcChance 33/66/100.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your abilities by $s1%:\nExorcism\nCrusader Strike\nDivine Storm\nExecution Sentence\nConsecration\nWake of Ashes\n\nYour Exorcism damage has a $h% chance to empower you for 15 sec: your next Hammer of Wrath can be used at any health and deals 35% more damage, your next Flash of Light is a critical strike, or your next Divine Storm deals 50% more damage. The first of these you use consumes the effect.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassSet': 10, 'EffectSpellClassMaskA_1': m.SANCTITY_DAMAGE[0], 'EffectSpellClassMaskA_2': m.SANCTITY_DAMAGE[1], 'EffectSpellClassMaskA_3': m.SANCTITY_DAMAGE[2], 'EffectSpellClassMaskB_1': m.SANCTITY_DOT[0], 'EffectSpellClassMaskB_3': m.SANCTITY_DOT[2], 'ProcChance': 66},
 )
 
 
@@ -2196,13 +2577,13 @@ sanctity_of_battle_35397 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=57),
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=52),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=201424),
     ],
-    spell_icon_id=237,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to critically hit with all spells and attacks by $s1% and increases the damage caused by Exorcism and Crusader Strike by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 536870912, 'EffectSpellClassMaskB_2': 32770, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassSet': 10},
+    spell_icon_id=3106,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (3,2): eff0 -> ADD_PCT DAMAGE (SANCTITY_DAMAGE), eff1 -> ADD_PCT DOT (SANCTITY_DOT), eff2 -> PROC_TRIGGER 201424; icon 237 -> 3106; DBC ProcChance 33/66/100.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your abilities by $s1%:\nExorcism\nCrusader Strike\nDivine Storm\nExecution Sentence\nConsecration\nWake of Ashes\n\nYour Exorcism damage has a $h% chance to empower you for 15 sec: your next Hammer of Wrath can be used at any health and deals 35% more damage, your next Flash of Light is a critical strike, or your next Divine Storm deals 50% more damage. The first of these you use consumes the effect.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassSet': 10, 'EffectSpellClassMaskA_1': m.SANCTITY_DAMAGE[0], 'EffectSpellClassMaskA_2': m.SANCTITY_DAMAGE[1], 'EffectSpellClassMaskA_3': m.SANCTITY_DAMAGE[2], 'EffectSpellClassMaskB_1': m.SANCTITY_DOT[0], 'EffectSpellClassMaskB_3': m.SANCTITY_DOT[2], 'ProcChance': 100},
 )
 
 
@@ -2218,13 +2599,13 @@ sanctified_wrath_53375 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-30001, implicit_target_a=1, apply_aura=107, misc_value=11),
-        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=107, misc_value=7),
-        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=0),
     ],
     spell_icon_id=3029,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of Hammer of Wrath by $s2%, reduces the cooldown of Avenging Wrath by $/1000;s1 secs and while affected by Avenging Wrath $s3% of all damage caused bypasses damage reduction effects.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 8192, 'EffectSpellClassMaskB_2': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (7,2): eff0 -> Hammer of Wrath crit, eff1 -> Exorcism cooldown PCT, eff2 (stock Avenging Wrath rider key) -> Exorcism damage PCT; spell_pal_avenging_wrath is unbound from 31884 by the Avenging Wrath owner (RETRIBUTION §0.2 item 9).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of Hammer of Wrath by $s1%, increases the damage of Exorcism by $s3% and reduces its cooldown by $s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, 'EffectSpellClassMaskA_2': m.HAMMER_OF_WRATH, 'EffectSpellClassMaskB_2': m.EXORCISM, 'EffectSpellClassMaskC_2': m.EXORCISM},
 )
 
 
@@ -2240,13 +2621,13 @@ sanctified_wrath_53376 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-60001, implicit_target_a=1, apply_aura=107, misc_value=11),
-        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=107, misc_value=7),
-        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=-41, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=0),
     ],
     spell_icon_id=3029,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of Hammer of Wrath by $s2%, reduces the cooldown of Avenging Wrath by $/1000;s1 secs and while affected by Avenging Wrath $s3% of all damage caused bypasses damage reduction effects.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 8192, 'EffectSpellClassMaskB_2': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (7,2): eff0 -> Hammer of Wrath crit, eff1 -> Exorcism cooldown PCT, eff2 (stock Avenging Wrath rider key) -> Exorcism damage PCT; spell_pal_avenging_wrath is unbound from 31884 by the Avenging Wrath owner (RETRIBUTION §0.2 item 9).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of Hammer of Wrath by $s1%, increases the damage of Exorcism by $s3% and reduces its cooldown by $s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, 'EffectSpellClassMaskA_2': m.HAMMER_OF_WRATH, 'EffectSpellClassMaskB_2': m.EXORCISM, 'EffectSpellClassMaskC_2': m.EXORCISM},
 )
 
 
@@ -2263,10 +2644,11 @@ swift_retribution_53379 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=107, misc_value=23),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=201426),
     ],
     spell_icon_id=3028,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your auras also increase casting, ranged and melee attack speeds by $s1%.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (8,2): eff0 unchanged (63531 party haste, SIC retarget), new eff1 PROC_TRIGGER -> the self haste stack buff.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your auras increase the casting, melee and ranged attack speed of party and raid members by $s1%. Does not stack with other similar effects. Your Crusader Strike and Judgement increase your haste by $201426s1% for 10 sec, stacking up to 3 times.\n\n|cFF9D9D9DCapstone Bonus: Each stack also increases the damage of your Exorcism by 5%.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2285,8 +2667,8 @@ righteous_vengeance_53380 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=15),
     ],
     spell_icon_id=3025,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your Judgement, Crusader Strike and Divine Storm spells deal a critical strike, your target will take $s1% additional damage over $61840d.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 8388608, 'EffectSpellClassMaskA_2': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 69904, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (9,1): description only (the proc row -53380 is rekeyed below).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your Judgement, Deliverance, Crusader Strike, Divine Storm, Hammer of Wrath, Exorcism, Hammer of the Righteous or Shield of Righteousness deal a critical strike, the target takes $s1% of the damage dealt as additional Holy damage over $61840d. Remaining damage from a previous effect is added to a new one.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 8388608, 'EffectSpellClassMaskA_2': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 69904, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2305,8 +2687,8 @@ righteous_vengeance_53381 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=15),
     ],
     spell_icon_id=3025,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your Judgement, Crusader Strike and Divine Storm spells deal a critical strike, your target will take $s1% additional damage over $61840d.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 8388608, 'EffectSpellClassMaskA_2': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 69904, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (9,1): description only (the proc row -53380 is rekeyed below).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your Judgement, Deliverance, Crusader Strike, Divine Storm, Hammer of Wrath, Exorcism, Hammer of the Righteous or Shield of Righteousness deal a critical strike, the target takes $s1% of the damage dealt as additional Holy damage over $61840d. Remaining damage from a previous effect is added to a new one.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 8388608, 'EffectSpellClassMaskA_2': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 69904, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2325,8 +2707,8 @@ righteous_vengeance_53382 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=15),
     ],
     spell_icon_id=3025,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your Judgement, Crusader Strike and Divine Storm spells deal a critical strike, your target will take $s1% additional damage over $61840d.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 8388608, 'EffectSpellClassMaskA_2': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 69904, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (9,1): description only (the proc row -53380 is rekeyed below).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your Judgement, Deliverance, Crusader Strike, Divine Storm, Hammer of Wrath, Exorcism, Hammer of the Righteous or Shield of Righteousness deal a critical strike, the target takes $s1% of the damage dealt as additional Holy damage over $61840d. Remaining damage from a previous effect is added to a new one.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 8388608, 'EffectSpellClassMaskA_2': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 69904, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2343,10 +2725,11 @@ swift_retribution_53484 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=23),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=201427),
     ],
     spell_icon_id=3028,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your auras also increase casting, ranged and melee attack speeds by $s1%.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (8,2): eff0 unchanged (63531 party haste, SIC retarget), new eff1 PROC_TRIGGER -> the self haste stack buff.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your auras increase the casting, melee and ranged attack speed of party and raid members by $s1%. Does not stack with other similar effects. Your Crusader Strike and Judgement increase your haste by $201427s1% for 10 sec, stacking up to 3 times.\n\n|cFF9D9D9DCapstone Bonus: Each stack also increases the damage of your Exorcism by 5%.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2362,12 +2745,13 @@ the_art_of_war_53486 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=53489),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=59578),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=22),
     ],
     spell_icon_id=3034,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Judgement, Crusader Strike and Divine Storm abilities by $s1% and when your melee attacks critically hit the cast time of your next Flash of Light or Exorcism is reduced by ${$53489m1/-1000}.2 sec.', 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 8388608, 'EffectSpellClassMaskA_2': 163840, 'EffectSpellClassMaskA_3': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 4116, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (7,1): eff0 ADD_PCT DAMAGE (AOW_DAMAGE), eff1 triggers 59578 on every rank, new eff2 ADD_PCT DOT (AOW_DOT); DBC ProcChance 10/20/30.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Judgement, Deliverance, Crusader Strike, Execution Sentence and Divine Storm by $s1%. Damage from these and your main-hand auto attacks has a $h% chance to make your next Flash of Light or Exorcism instant within 20 sec; Divine Storm rolls at half the chance on each target hit. This effect cannot occur more than once every 6 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 4116, 'RangeIndex': 1, 'SpellClassSet': 10, 'EffectSpellClassMaskA_1': m.AOW_DAMAGE[0], 'EffectSpellClassMaskA_2': m.AOW_DAMAGE[1], 'EffectSpellClassMaskA_3': m.AOW_DAMAGE[2], 'EffectSpellClassMaskC_1': m.AOW_DOT[0], 'EffectSpellClassMaskC_3': m.AOW_DOT[2]},
 )
 
 
@@ -2383,12 +2767,13 @@ the_art_of_war_53488 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=59578),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=22),
     ],
     spell_icon_id=3034,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Judgement, Crusader Strike and Divine Storm abilities by $s1% and when your melee attacks critically hit your next Flash of Light  or Exorcism spell becomes instant cast.', 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 8388608, 'EffectSpellClassMaskA_2': 163840, 'EffectSpellClassMaskA_3': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 4116, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (7,1): eff0 ADD_PCT DAMAGE (AOW_DAMAGE), eff1 triggers 59578 on every rank, new eff2 ADD_PCT DOT (AOW_DOT); DBC ProcChance 10/20/30.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Judgement, Deliverance, Crusader Strike, Execution Sentence and Divine Storm by $s1%. Damage from these and your main-hand auto attacks has a $h% chance to make your next Flash of Light or Exorcism instant within 20 sec; Divine Storm rolls at half the chance on each target hit. This effect cannot occur more than once every 6 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 4116, 'RangeIndex': 1, 'SpellClassSet': 10, 'EffectSpellClassMaskA_1': m.AOW_DAMAGE[0], 'EffectSpellClassMaskA_2': m.AOW_DAMAGE[1], 'EffectSpellClassMaskA_3': m.AOW_DAMAGE[2], 'EffectSpellClassMaskC_1': m.AOW_DOT[0], 'EffectSpellClassMaskC_3': m.AOW_DOT[2]},
 )
 
 
@@ -2409,8 +2794,8 @@ sheath_of_light_53501 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=238, misc_value=127),
     ],
     spell_icon_id=3030,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell power by an amount equal to $s1% of your attack power and your critical healing spells heal the target for $s2% of the healed amount over 12 seconds.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (4,2): description only.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell power by an amount equal to $s1% of your attack power, and your critical heals heal the target for an additional $s2% of the healed amount over 12 sec. A new effect replaces the old one.\n\n|cFF9D9D9DCapstone Bonus: Your Flash of Light on yourself restores 8% of your base mana. This effect cannot occur more than once every 10 sec.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2431,8 +2816,8 @@ sheath_of_light_53502 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=238, misc_value=127),
     ],
     spell_icon_id=3030,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell power by an amount equal to $s1% of your attack power and your critical healing spells heal the target for $s2% of the healed amount over 12 seconds.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (4,2): description only.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell power by an amount equal to $s1% of your attack power, and your critical heals heal the target for an additional $s2% of the healed amount over 12 sec. A new effect replaces the old one.\n\n|cFF9D9D9DCapstone Bonus: Your Flash of Light on yourself restores 8% of your base mana. This effect cannot occur more than once every 10 sec.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2453,8 +2838,8 @@ sheath_of_light_53503 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=238, misc_value=127),
     ],
     spell_icon_id=3030,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell power by an amount equal to $s1% of your attack power and your critical healing spells heal the target for $s2% of the healed amount over 12 seconds.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (4,2): description only.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell power by an amount equal to $s1% of your attack power, and your critical heals heal the target for an additional $s2% of the healed amount over 12 sec. A new effect replaces the old one.\n\nCapstone Bonus: Your Flash of Light on yourself restores 8% of your base mana. This effect cannot occur more than once every 10 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2790,10 +3175,11 @@ swift_retribution_53648 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=107, misc_value=23),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=201428),
     ],
     spell_icon_id=3028,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your auras also increase casting, ranged and melee attack speeds by $s1%.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (8,2): eff0 unchanged (63531 party haste, SIC retarget), new eff1 PROC_TRIGGER -> the self haste stack buff.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your auras increase the casting, melee and ranged attack speed of party and raid members by $s1%. Does not stack with other similar effects. Your Crusader Strike and Judgement increase your haste by $201428s1% for 10 sec, stacking up to 3 times.\n\nCapstone Bonus: Each stack also increases the damage of your Exorcism by 5%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2902,8 +3288,8 @@ judgements_of_the_just_53695 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=499, implicit_target_a=1, apply_aura=107, misc_value=1),
     ],
     spell_icon_id=3015,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Hammer of Justice by $/1000;s2 sec, increases the duration of your Seal of Justice effect by $/1000;S3 sec and your Judgement spells also reduce the melee attack speed of the target by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_3': 64, 'EffectSpellClassMaskB_1': 2048, 'EffectSpellClassMaskC_1': 512, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 69904, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 SHARED B7: Judgements of the Just removed, ProcTypeMask 69904 -> 0 so SpellMgr builds no default row once remove_spell_proc(-53695) deletes the stock one.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Hammer of Justice by $/1000;s2 sec, increases the duration of your Seal of Justice effect by $/1000;S3 sec and your Judgement spells also reduce the melee attack speed of the target by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_3': 64, 'EffectSpellClassMaskB_1': 2048, 'EffectSpellClassMaskC_1': 512, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2924,8 +3310,8 @@ judgements_of_the_just_53696 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=999, implicit_target_a=1, apply_aura=107, misc_value=1),
     ],
     spell_icon_id=3015,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Hammer of Justice by $/1000;s2 sec, increases the duration of your Seal of Justice effect by $/1000;S3 sec and your Judgement spells also reduce the melee attack speed of the target by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_3': 64, 'EffectSpellClassMaskB_1': 2048, 'EffectSpellClassMaskC_1': 512, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 69904, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 SHARED B7: Judgements of the Just removed, ProcTypeMask 69904 -> 0 so SpellMgr builds no default row once remove_spell_proc(-53695) deletes the stock one.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Hammer of Justice by $/1000;s2 sec, increases the duration of your Seal of Justice effect by $/1000;S3 sec and your Judgement spells also reduce the melee attack speed of the target by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_3': 64, 'EffectSpellClassMaskB_1': 2048, 'EffectSpellClassMaskC_1': 512, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -3059,3 +3445,1260 @@ judgements_of_the_pure_54155 = spell(
     notes='pulled from existing data',
     raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Seal and Judgement spells by $s2%, and your Judgement spells increase your casting and melee haste by $54153s1% for $54153d.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2149580800, 'EffectSpellClassMaskA_2': 65536, 'EffectSpellClassMaskB_1': 33555456, 'EffectSpellClassMaskB_2': 541068800, 'EffectSpellClassMaskB_3': 24, 'EffectSpellClassMaskC_1': 41943040, 'EffectSpellClassMaskC_2': 536873984, 'EffectSpellClassMaskC_3': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 5', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 69904, 'RangeIndex': 1, 'SpellClassSet': 10, 'SpellVisualID_1': 12015},
 )
+
+
+sacred_shield_58597 = spell(
+    id=58597,
+    name='Sacred Shield',
+    school=School.HOLY,
+    dispel=DispelType.MAGIC,
+    attributes=134283264,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    duration_ms=6000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, sp_potency=60.0, potency_kind='absorb', implicit_target_a=21, apply_aura=AuraType.SCHOOL_ABSORB, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=21, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=3026,
+    notes='pulled from existing data | paladin-rework S1 SHARED B5.11: eff0 converted to sp_potency 60 absorb, learn 60; spell_pal_sacred_shield replaced by spell_pal_sacred_shield_absorb (generated coefficient through Paladin::CalculateAbsorbBonus).',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 60, 'EquippedItemClass': -1, 'SpellVisualID_1': 12581, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': "Each time the target takes damage they gain a Sacred Shield, absorbing {pot1} damage and increasing the paladin's chance to critically hit with Flash of Light by $s2% for up to $d. They cannot gain this effect more than once every 6 sec.  Lasts $d.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Absorbs damage and increases the casting paladin's chance to critically hit with Flash of Light by $s2%.", 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 10, 'SpellClassMask_2': 524288, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+forbearance_25771 = spell(
+    id=25771,
+    name='Forbearance',
+    school=School.HOLY,
+    mechanic=25,
+    attributes=603979776,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    duration_ms=120000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=25, apply_aura=AuraType.MECHANIC_IMMUNITY, misc_value=25),
+    ],
+    spell_icon_id=236,
+    notes='pulled from existing data | paladin-rework S1 SHARED Part C C2.1: Forbearance no longer mentions Divine Protection.',
+    raw_overrides={'AttributesEx': 196744, 'AttributesEx2': 4, 'AttributesEx5': 4, 'CastingTimeIndex': 1, 'ProcChance': 101, 'EquippedItemClass': -1, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Once protected, the target cannot be protected by Divine Shield or Hand of Protection again for $25771d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Cannot be protected by Divine Shield or Hand of Protection.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 10, 'SpellClassMask_3': 128, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+vengeance_20049 = spell(
+    id=20049,
+    name='Vengeance',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=20050),
+    ],
+    spell_icon_id=84,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (5,2): description only.',
+    raw_overrides={'AttributesEx3': 67633152, 'CastingTimeIndex': 1, 'ProcTypeMask': 69972, 'ProcChance': 100, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your critical strikes increase your Holy damage and the damage of your Crusader Strike and Divine Storm by $20050s1% for $20050d. Stacks up to $20050u times.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+vengeance_20056 = spell(
+    id=20056,
+    name='Vengeance',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=20052),
+    ],
+    spell_icon_id=84,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (5,2): description only.',
+    raw_overrides={'AttributesEx3': 67633152, 'CastingTimeIndex': 1, 'ProcTypeMask': 69972, 'ProcChance': 100, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your critical strikes increase your Holy damage and the damage of your Crusader Strike and Divine Storm by $20052s1% for $20052d. Stacks up to $20052u times.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+vengeance_20057 = spell(
+    id=20057,
+    name='Vengeance',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=20053),
+    ],
+    spell_icon_id=84,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (5,2): description only.',
+    raw_overrides={'AttributesEx3': 67633152, 'CastingTimeIndex': 1, 'ProcTypeMask': 69972, 'ProcChance': 100, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your critical strikes increase your Holy damage and the damage of your Crusader Strike and Divine Storm by $20053s1% for $20053d. Stacks up to $20053u times.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+two_handed_weapon_specialization_20111 = spell(
+    id=20111,
+    name='Two-Handed Weapon Specialization',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.MOD_WEAPON_CRIT_PERCENT),
+    ],
+    spell_icon_id=1635,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (5,1): eff0 bp 1/3/5 -> 0/1/2, new eff1 MOD_WEAPON_CRIT_PERCENT 0/1/2; the two-hander requirement (EquippedItem*) gates both.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 1, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 354, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the physical damage you deal and your melee critical strike chance by $s1% while wielding a two-handed weapon.\n\n|cFF9D9D9DCapstone Bonus: Your Crusader Strike and Divine Storm deal 2% more damage for each seal stack you hold.|r', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'StanceBarOrder': 4294967295, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+two_handed_weapon_specialization_20112 = spell(
+    id=20112,
+    name='Two-Handed Weapon Specialization',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_WEAPON_CRIT_PERCENT),
+    ],
+    spell_icon_id=1635,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (5,1): eff0 bp 1/3/5 -> 0/1/2, new eff1 MOD_WEAPON_CRIT_PERCENT 0/1/2; the two-hander requirement (EquippedItem*) gates both.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 1, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 354, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the physical damage you deal and your melee critical strike chance by $s1% while wielding a two-handed weapon.\n\n|cFF9D9D9DCapstone Bonus: Your Crusader Strike and Divine Storm deal 2% more damage for each seal stack you hold.|r', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'StanceBarOrder': 4294967295, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+two_handed_weapon_specialization_20113 = spell(
+    id=20113,
+    name='Two-Handed Weapon Specialization',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_WEAPON_CRIT_PERCENT),
+    ],
+    spell_icon_id=1635,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (5,1): eff0 bp 1/3/5 -> 0/1/2, new eff1 MOD_WEAPON_CRIT_PERCENT 0/1/2; the two-hander requirement (EquippedItem*) gates both.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 1, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 354, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the physical damage you deal and your melee critical strike chance by $s1% while wielding a two-handed weapon.\n\nCapstone Bonus: Your Crusader Strike and Divine Storm deal 2% more damage for each seal stack you hold.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'StanceBarOrder': 4294967295, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+conviction_20117 = spell(
+    id=20117,
+    name='Conviction',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.MOD_CRIT_PCT),
+        None,
+    ],
+    spell_icon_id=204,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (2,0): eff0 aura 52 -> MOD_CRIT_PCT (290); eff1 stripped on r1/r2, DUMMY proc carrier on r3 (trigger 0, misc 0; spell_pal_conviction prevents).',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 1, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to get a critical strike with all spells and attacks by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Critical strikes from your Crusader Strike, Hammer of Wrath, Exorcism and Divine Storm grant 2 seal stacks instead of 1. Divine Storm counts a critical strike on any target.|r', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+conviction_20118 = spell(
+    id=20118,
+    name='Conviction',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_CRIT_PCT),
+        None,
+    ],
+    spell_icon_id=204,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (2,0): eff0 aura 52 -> MOD_CRIT_PCT (290); eff1 stripped on r1/r2, DUMMY proc carrier on r3 (trigger 0, misc 0; spell_pal_conviction prevents).',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 1, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to get a critical strike with all spells and attacks by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Critical strikes from your Crusader Strike, Hammer of Wrath, Exorcism and Divine Storm grant 2 seal stacks instead of 1. Divine Storm counts a critical strike on any target.|r', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+conviction_20119 = spell(
+    id=20119,
+    name='Conviction',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_CRIT_PCT),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=204,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (2,0): eff0 aura 52 -> MOD_CRIT_PCT (290); eff1 stripped on r1/r2, DUMMY proc carrier on r3 (trigger 0, misc 0; spell_pal_conviction prevents).',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 1, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to get a critical strike with all spells and attacks by $s1%.\n\nCapstone Bonus: Critical strikes from your Crusader Strike, Hammer of Wrath, Exorcism and Divine Storm grant 2 seal stacks instead of 1. Divine Storm counts a critical strike on any target.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+eye_for_an_eye_9799 = spell(
+    id=9799,
+    name='Eye for an Eye',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.MOD_CUSTOM_STAT_PCT, misc_value=1 << 21),
+    ],
+    spell_icon_id=1820,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (3,3): eff0 DUMMY -> MOD_CUSTOM_STAT_PCT misc 1<<21 (Versatility); the proc row -9799 is rekeyed below.',
+    raw_overrides={'AttributesEx3': 67108864, 'AttributesEx4': 524288, 'CastingTimeIndex': 1, 'ProcTypeMask': 664232, 'ProcChance': 100, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Versatility by $s1%.\n\n|cFF9D9D9DCapstone Bonus: When damage brings you below 50% health, you take 20% less damage and your Strength is increased by 10% for 10 sec. This effect cannot occur more than once every 60 sec.|r', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+eye_for_an_eye_25988 = spell(
+    id=25988,
+    name='Eye for an Eye',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_CUSTOM_STAT_PCT, misc_value=1 << 21),
+    ],
+    spell_icon_id=1820,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (3,3): eff0 DUMMY -> MOD_CUSTOM_STAT_PCT misc 1<<21 (Versatility); the proc row -9799 is rekeyed below.',
+    raw_overrides={'AttributesEx3': 67108864, 'AttributesEx4': 524288, 'CastingTimeIndex': 1, 'ProcTypeMask': 664232, 'ProcChance': 100, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Versatility by $s1%.\n\n|cFF9D9D9DCapstone Bonus: When damage brings you below 50% health, you take 20% less damage and your Strength is increased by 10% for 10 sec. This effect cannot occur more than once every 60 sec.|r', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+vindication_9452 = spell(
+    id=9452,
+    name='Vindication',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=201420),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=201421),
+    ],
+    spell_icon_id=1798,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (3,1): eff0 now triggers the hit 201420, new eff1 triggers the Mastery buff 201421; DBC ProcChance 5/10/15, ProcTypeMask 0x14.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 20, 'ProcChance': 5, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your melee attacks have a $h% chance to deal ' + pot_text(vindication_strike_201420) + ' Holy damage to the target and increase your Mastery by 3% for 10 sec. This effect cannot occur more than once every 4 sec.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+vindication_26016 = spell(
+    id=26016,
+    name='Vindication',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=201420),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=201421),
+    ],
+    spell_icon_id=1798,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (3,1): eff0 now triggers the hit 201420, new eff1 triggers the Mastery buff 201421; DBC ProcChance 5/10/15, ProcTypeMask 0x14.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 20, 'ProcChance': 10, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your melee attacks have a $h% chance to deal ' + pot_text(vindication_strike_201420) + ' Holy damage to the target and increase your Mastery by 3% for 10 sec. This effect cannot occur more than once every 4 sec.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+pursuit_of_justice_26022 = spell(
+    id=26022,
+    name='Pursuit of Justice',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=AuraType.MOD_MOUNTED_SPEED_NOT_STACK),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        None,
+    ],
+    spell_icon_id=1797,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (2,3): eff0 aura 31 -> MOD_MOUNTED_SPEED_NOT_STACK (172), eff1 DUMMY 10/20 (read by spell_pal_pursuit_of_justice_seal), disarm eff2 removed.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your mounted speed by $s1%, and your movement speed by $s2% while Seal of Justice is active. Does not stack with other movement speed increasing effects.\n\n|cFF9D9D9DCapstone Bonus: Your Hand of Freedom also removes all stun effects from the target and increases its movement speed by 30% for its duration.|r', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+)
+
+
+pursuit_of_justice_26023 = spell(
+    id=26023,
+    name='Pursuit of Justice',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.MOD_MOUNTED_SPEED_NOT_STACK),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        None,
+    ],
+    spell_icon_id=1797,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (2,3): eff0 aura 31 -> MOD_MOUNTED_SPEED_NOT_STACK (172), eff1 DUMMY 10/20 (read by spell_pal_pursuit_of_justice_seal), disarm eff2 removed.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your mounted speed by $s1%, and your movement speed by $s2% while Seal of Justice is active. Does not stack with other movement speed increasing effects.\n\nCapstone Bonus: Your Hand of Freedom also removes all stun effects from the target and increases its movement speed by 30% for its duration.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+)
+
+
+smite_evil_31866 = spell(
+    id=31866,
+    name='Smite Evil',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_DONE_VERSUS, misc_value=108),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=127),
+    ],
+    spell_icon_id=203,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (1,2): stock Crusade rank spells renamed Smite Evil, icon 2171 -> 203, effects unchanged.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all damage you deal by $s2%, and all damage you deal to Humanoids, Demons, Undead and Elementals by an additional $s1%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+)
+
+
+smite_evil_31867 = spell(
+    id=31867,
+    name='Smite Evil',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_DONE_VERSUS, misc_value=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=127),
+    ],
+    spell_icon_id=203,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (1,2): stock Crusade rank spells renamed Smite Evil, icon 2171 -> 203, effects unchanged.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all damage you deal by $s2%, and all damage you deal to Humanoids, Demons, Undead and Elementals by an additional $s1%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+)
+
+
+smite_evil_31868 = spell(
+    id=31868,
+    name='Smite Evil',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_DONE_VERSUS, misc_value=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=127),
+    ],
+    spell_icon_id=203,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (1,2): stock Crusade rank spells renamed Smite Evil, icon 2171 -> 203, effects unchanged.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all damage you deal by $s2%, and all damage you deal to Humanoids, Demons, Undead and Elementals by an additional $s1%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+)
+
+
+divine_purpose_31871 = spell(
+    id=31871,
+    name='Divine Purpose',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-30001, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=16, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=3),
+        None,
+    ],
+    spell_icon_id=2170,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (5,3): eff0 -> ADD_FLAT COOLDOWN on Divine Shield, eff1 -> ADD_FLAT EFFECT1 (damage penalty), old HoF-stun eff2 -> None; SpellClassSet 0 -> 10 (a family-0 SpellMod matches every spell); ProcTypeMask 0 so SpellMgr builds no replacement for the removed -31871 row.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Divine Shield by 30 sec and its damage penalty to 33%.\n\n|cFF9D9D9DCapstone Bonus: Damage that would kill you casts Divine Shield on you instead, if you know it, it is not on cooldown and you are not affected by Forbearance.|r', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectSpellClassMaskA_3': m.DIVINE_SHIELD, 'EffectSpellClassMaskB_3': m.DIVINE_SHIELD, 'SpellClassSet': 10, 'ProcTypeMask': 0},
+)
+
+
+divine_purpose_31872 = spell(
+    id=31872,
+    name='Divine Purpose',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-60001, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=3),
+        None,
+    ],
+    spell_icon_id=2170,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §5 (5,3): eff0 -> ADD_FLAT COOLDOWN on Divine Shield, eff1 -> ADD_FLAT EFFECT1 (damage penalty), old HoF-stun eff2 -> None; SpellClassSet 0 -> 10 (a family-0 SpellMod matches every spell); ProcTypeMask 0 so SpellMgr builds no replacement for the removed -31871 row.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Divine Shield by 1 min and its damage penalty to 17%.\n\n|cFF9D9D9DCapstone Bonus: Damage that would kill you casts Divine Shield on you instead, if you know it, it is not on cooldown and you are not affected by Forbearance.|r', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectSpellClassMaskA_3': m.DIVINE_SHIELD, 'EffectSpellClassMaskB_3': m.DIVINE_SHIELD, 'SpellClassSet': 10, 'ProcTypeMask': 0},
+)
+
+
+vengeance_20050 = spell(
+    id=20050,
+    name='Vengeance',
+    school=School.NORMAL,
+    dispel=DispelType.MAGIC,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=0),
+    ],
+    spell_icon_id=84,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §4.8: duration 30 -> 15 s, eff0 aura 79 misc 3 -> 2 (Holy only), new eff1 ADD_PCT DAMAGE on Crusader Strike / Divine Storm.',
+    raw_overrides={'AttributesEx4': 64, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'CumulativeAura': 3, 'EquippedItemClass': -1, 'SpellVisualID_1': 6597, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Increases your Holy damage and the damage of your Crusader Strike and Divine Storm by $s1% for $d. Stacks up to $u times.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Holy damage and the damage of your Crusader Strike and Divine Storm increased by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 10, 'SpellClassMask_2': 2147500032, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectSpellClassMaskB_2': m.VENGEANCE_STRIKES[1]},
+)
+
+
+vengeance_20052 = spell(
+    id=20052,
+    name='Vengeance',
+    school=School.NORMAL,
+    dispel=DispelType.MAGIC,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=0),
+    ],
+    spell_icon_id=84,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §4.8: duration 30 -> 15 s, eff0 aura 79 misc 3 -> 2 (Holy only), new eff1 ADD_PCT DAMAGE on Crusader Strike / Divine Storm.',
+    raw_overrides={'AttributesEx4': 64, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'CumulativeAura': 3, 'EquippedItemClass': -1, 'SpellVisualID_1': 6597, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Increases your Holy damage and the damage of your Crusader Strike and Divine Storm by $s1% for $d. Stacks up to $u times.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Holy damage and the damage of your Crusader Strike and Divine Storm increased by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 10, 'SpellClassMask_2': 2147500032, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectSpellClassMaskB_2': m.VENGEANCE_STRIKES[1]},
+)
+
+
+vengeance_20053 = spell(
+    id=20053,
+    name='Vengeance',
+    school=School.NORMAL,
+    dispel=DispelType.MAGIC,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=0),
+    ],
+    spell_icon_id=84,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §4.8: duration 30 -> 15 s, eff0 aura 79 misc 3 -> 2 (Holy only), new eff1 ADD_PCT DAMAGE on Crusader Strike / Divine Storm.',
+    raw_overrides={'AttributesEx4': 64, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'CumulativeAura': 3, 'EquippedItemClass': -1, 'SpellVisualID_1': 6597, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Increases your Holy damage and the damage of your Crusader Strike and Divine Storm by $s1% for $d. Stacks up to $u times.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Holy damage and the damage of your Crusader Strike and Divine Storm increased by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 10, 'SpellClassMask_2': 2147500032, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectSpellClassMaskB_2': m.VENGEANCE_STRIKES[1]},
+)
+
+
+the_art_of_war_59578 = spell(
+    id=59578,
+    name='The Art of War',
+    school=School.NORMAL,
+    dispel=DispelType.MAGIC,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=20000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=10),
+    ],
+    spell_icon_id=3034,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §4.8: duration 15 -> 20 s; description and subtext no longer quote the old rank-2 damage text.',
+    raw_overrides={'AttributesEx4': 576, 'AttributesEx6': 64, 'CastingTimeIndex': 1, 'ProcTypeMask': 81920, 'ProcChance': 100, 'ProcCharges': 1, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EffectBasePoints_2': -1, 'EffectBasePoints_3': -1, 'EffectSpellClassMaskA_1': 1073741824, 'EffectSpellClassMaskA_2': 2, 'SpellVisualID_1': 11955, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your next Flash of Light or Exorcism is instant cast.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Flash of Light or Exorcism spell is instant cast.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 10, 'SpellClassMask_3': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+)
+
+
+righteous_vengeance_61840 = spell(
+    id=61840,
+    name='Righteous Vengeance',
+    school=School.HOLY,
+    dispel=DispelType.MAGIC,
+    attributes=16,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    duration_ms=8000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000, potency_excluded="percent of crit damage (B15 rollover)"),
+    ],
+    spell_icon_id=3025,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §4.8/§0.2 item 5: AttributesEx3 |= SPELL_ATTR3_IGNORE_CASTER_MODIFIERS (the rollover amount is already a percent of a fully modified crit).',
+    raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 537133056, 'AttributesEx4': 9437440, 'AttributesEx6': 536870912, 'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 5652, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Your critical strikes cause the opponent to take holy damage.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Taking holy damage.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 10, 'SpellClassMask_1': 536870912, 'DefenseType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+heart_of_the_crusader_54498 = spell(
+    id=54498,
+    name='Heart of the Crusader',
+    school=School.HOLY,
+    attributes=327680,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=6, apply_aura=AuraType.MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE),
+    ],
+    spell_icon_id=237,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §4.8: debuff duration 20 s -> 15 s.',
+    raw_overrides={'AttributesEx2': 268435460, 'AttributesEx3': 262656, 'CastingTimeIndex': 1, 'ProcChance': 101, 'BaseLevel': 1, 'SpellLevel': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'In addition to the normal effect, your Judgement and Deliverance will also increase the critical strike chance of all attacks made against that target by an additional $20336s1%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases chance of critical strikes against the target by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 10, 'SpellClassMask_1': 536870912, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+heart_of_the_crusader_54499 = spell(
+    id=54499,
+    name='Heart of the Crusader',
+    school=School.HOLY,
+    attributes=327680,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=6, apply_aura=AuraType.MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE),
+    ],
+    spell_icon_id=237,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §4.8: debuff duration 20 s -> 15 s.',
+    raw_overrides={'AttributesEx2': 268435460, 'AttributesEx3': 262656, 'CastingTimeIndex': 1, 'ProcChance': 101, 'BaseLevel': 1, 'SpellLevel': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'In addition to the normal effect, your Judgement and Deliverance will also increase the critical strike chance of all attacks made against that target by an additional $20337s1%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases chance of critical strikes against the target by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 10, 'SpellClassMask_1': 536870912, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+judgements_of_the_wise_31930 = spell(
+    id=31930,
+    name='Judgements of the Wise',
+    school=School.HOLY,
+    attributes=537133056,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    effects=[
+        Effect(type=EffectType.ENERGIZE, base_points=14, implicit_target_a=1),
+    ],
+    spell_icon_id=3017,
+    notes='pulled from existing data | paladin-rework S1 RETRIBUTION §4.8: eff0 ENERGIZE 24 -> 14 (15% of base mana, the % is hardcoded by id, C28).',
+    raw_overrides={'AttributesEx2': 536870916, 'CastingTimeIndex': 1, 'SpellLevel': 1, 'DurationIndex': 0, 'EquippedItemClass': -1, 'SpellVisualID_1': 11906, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Gain $s1% of your base mana.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+# ---------------------------------------------------------------------------
+# paladin-rework S1 RETRIBUTION - new talent rank spells (RETRIBUTION §2.1 / §5). Every rank is a hidden passive
+# (attributes 464, duration -1, target 1, SpellClassSet 10 so an aura-107/108 carrier never leaks into other families).
+# paladin_talents.py imports these by variable name.
+# ---------------------------------------------------------------------------
+
+zeal_201440 = spell(
+    id=201440, name='Zeal', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.MOD_CUSTOM_STAT_PCT, misc_value=1 << 20),
+    ],
+    spell_icon_id=2268,
+    notes='paladin-rework S1 RETRIBUTION §5 (0,0): +1/2/3% Mastery (aura 306, misc 1<<20).',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Mastery by $s1%.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101},
+)
+
+
+zeal_201441 = spell(
+    id=201441, name='Zeal', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_CUSTOM_STAT_PCT, misc_value=1 << 20),
+    ],
+    spell_icon_id=2268,
+    notes='paladin-rework S1 RETRIBUTION §5 (0,0): +1/2/3% Mastery (aura 306, misc 1<<20).',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Mastery by $s1%.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101},
+)
+
+
+zeal_201442 = spell(
+    id=201442, name='Zeal', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_CUSTOM_STAT_PCT, misc_value=1 << 20),
+    ],
+    spell_icon_id=2268,
+    notes='paladin-rework S1 RETRIBUTION §5 (0,0): +1/2/3% Mastery (aura 306, misc 1<<20).',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Mastery by $s1%.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101},
+)
+
+
+divine_might_201443 = spell(
+    id=201443, name='Divine Might', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=0),
+    ],
+    spell_icon_id=239,
+    notes='paladin-rework S1 RETRIBUTION §5 (0,1): +1/2/3% Strength.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Strength by $s1%.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101},
+)
+
+
+divine_might_201444 = spell(
+    id=201444, name='Divine Might', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=0),
+    ],
+    spell_icon_id=239,
+    notes='paladin-rework S1 RETRIBUTION §5 (0,1): +1/2/3% Strength.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Strength by $s1%.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101},
+)
+
+
+divine_might_201445 = spell(
+    id=201445, name='Divine Might', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=0),
+    ],
+    spell_icon_id=239,
+    notes='paladin-rework S1 RETRIBUTION §5 (0,1): +1/2/3% Strength.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Strength by $s1%.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101},
+)
+
+
+strength_of_faith_201446 = spell(
+    id=201446, name='Strength of Faith', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=7),
+    ],
+    spell_icon_id=2844,
+    notes='paladin-rework S1 RETRIBUTION §5 (0,2): +1/2/3% all damage (aura 79) and +1/2/3% crit on RET_HOLY_DAMAGE (eff1).',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all damage you deal by $s1% and the critical strike chance of your Holy spells and abilities by $s2%.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101, 'EffectSpellClassMaskB_1': m.RET_HOLY_DAMAGE[0], 'EffectSpellClassMaskB_2': m.RET_HOLY_DAMAGE[1], 'EffectSpellClassMaskB_3': m.RET_HOLY_DAMAGE[2]},
+)
+
+
+strength_of_faith_201447 = spell(
+    id=201447, name='Strength of Faith', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=7),
+    ],
+    spell_icon_id=2844,
+    notes='paladin-rework S1 RETRIBUTION §5 (0,2): +1/2/3% all damage (aura 79) and +1/2/3% crit on RET_HOLY_DAMAGE (eff1).',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all damage you deal by $s1% and the critical strike chance of your Holy spells and abilities by $s2%.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101, 'EffectSpellClassMaskB_1': m.RET_HOLY_DAMAGE[0], 'EffectSpellClassMaskB_2': m.RET_HOLY_DAMAGE[1], 'EffectSpellClassMaskB_3': m.RET_HOLY_DAMAGE[2]},
+)
+
+
+strength_of_faith_201448 = spell(
+    id=201448, name='Strength of Faith', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=7),
+    ],
+    spell_icon_id=2844,
+    notes='paladin-rework S1 RETRIBUTION §5 (0,2): +1/2/3% all damage (aura 79) and +1/2/3% crit on RET_HOLY_DAMAGE (eff1).',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all damage you deal by $s1% and the critical strike chance of your Holy spells and abilities by $s2%.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101, 'EffectSpellClassMaskB_1': m.RET_HOLY_DAMAGE[0], 'EffectSpellClassMaskB_2': m.RET_HOLY_DAMAGE[1], 'EffectSpellClassMaskB_3': m.RET_HOLY_DAMAGE[2]},
+)
+
+
+improved_crusader_strike_201449 = spell(
+    id=201449, name='Improved Crusader Strike', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=0),
+    ],
+    spell_icon_id=2309,
+    notes='paladin-rework S1 RETRIBUTION §5 (1,1): +5/10% Crusader Strike damage.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Crusader Strike by $s1%.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101, 'EffectSpellClassMaskA_2': m.CRUSADER_STRIKE},
+)
+
+
+improved_crusader_strike_201450 = spell(
+    id=201450, name='Improved Crusader Strike', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=0),
+    ],
+    spell_icon_id=2309,
+    notes='paladin-rework S1 RETRIBUTION §5 (1,1): +5/10% Crusader Strike damage.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Crusader Strike by $s1%.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101, 'EffectSpellClassMaskA_2': m.CRUSADER_STRIKE},
+)
+
+
+purify_the_unclean_201451 = spell(
+    id=201451, name='Purify the Unclean', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=22),
+    ],
+    spell_icon_id=300,
+    notes='paladin-rework S1 RETRIBUTION §5 (3,0): +3/6/9% damage (PURIFY_DAMAGE) and DoT (PURIFY_DOT: Consecration snapshots through SPELLMOD_DOT).',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Seal of Command, Divine Storm, Consecration, Holy Wrath, Deliverance and Wake of Ashes by $s1%.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101, 'EffectSpellClassMaskA_1': m.PURIFY_DAMAGE[0], 'EffectSpellClassMaskA_2': m.PURIFY_DAMAGE[1], 'EffectSpellClassMaskA_3': m.PURIFY_DAMAGE[2], 'EffectSpellClassMaskB_1': m.PURIFY_DOT[0]},
+)
+
+
+purify_the_unclean_201452 = spell(
+    id=201452, name='Purify the Unclean', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=22),
+    ],
+    spell_icon_id=300,
+    notes='paladin-rework S1 RETRIBUTION §5 (3,0): +3/6/9% damage (PURIFY_DAMAGE) and DoT (PURIFY_DOT: Consecration snapshots through SPELLMOD_DOT).',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Seal of Command, Divine Storm, Consecration, Holy Wrath, Deliverance and Wake of Ashes by $s1%.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101, 'EffectSpellClassMaskA_1': m.PURIFY_DAMAGE[0], 'EffectSpellClassMaskA_2': m.PURIFY_DAMAGE[1], 'EffectSpellClassMaskA_3': m.PURIFY_DAMAGE[2], 'EffectSpellClassMaskB_1': m.PURIFY_DOT[0]},
+)
+
+
+purify_the_unclean_201453 = spell(
+    id=201453, name='Purify the Unclean', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=22),
+    ],
+    spell_icon_id=300,
+    notes='paladin-rework S1 RETRIBUTION §5 (3,0): +3/6/9% damage (PURIFY_DAMAGE) and DoT (PURIFY_DOT: Consecration snapshots through SPELLMOD_DOT).',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Seal of Command, Divine Storm, Consecration, Holy Wrath, Deliverance and Wake of Ashes by $s1%.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101, 'EffectSpellClassMaskA_1': m.PURIFY_DAMAGE[0], 'EffectSpellClassMaskA_2': m.PURIFY_DAMAGE[1], 'EffectSpellClassMaskA_3': m.PURIFY_DAMAGE[2], 'EffectSpellClassMaskB_1': m.PURIFY_DOT[0]},
+)
+
+
+sanctified_seals_201454 = spell(
+    id=201454, name='Sanctified Seals', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=90213,
+    notes='paladin-rework S1 RETRIBUTION §5 (5,0): DUMMY 2/4/6%, read by Paladin::GetSanctifiedSealsPct (unleash-only scaler); ProcTypeMask 0 so no proc row is built.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage, healing and other effects your Judgement and Deliverance release from a Primed seal by $s1%.\n\n|cFF9D9D9DCapstone Bonus: This bonus is increased by your Mastery, and your Seal of Light's Holy damage bonus gains an additional 6.25% of your Mastery per seal stack.|r", 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101, 'ProcTypeMask': 0},
+)
+
+
+sanctified_seals_201455 = spell(
+    id=201455, name='Sanctified Seals', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=90213,
+    notes='paladin-rework S1 RETRIBUTION §5 (5,0): DUMMY 2/4/6%, read by Paladin::GetSanctifiedSealsPct (unleash-only scaler); ProcTypeMask 0 so no proc row is built.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage, healing and other effects your Judgement and Deliverance release from a Primed seal by $s1%.\n\n|cFF9D9D9DCapstone Bonus: This bonus is increased by your Mastery, and your Seal of Light's Holy damage bonus gains an additional 6.25% of your Mastery per seal stack.|r", 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101, 'ProcTypeMask': 0},
+)
+
+
+sanctified_seals_201456 = spell(
+    id=201456, name='Sanctified Seals', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=90213,
+    notes='paladin-rework S1 RETRIBUTION §5 (5,0): DUMMY 2/4/6%, read by Paladin::GetSanctifiedSealsPct (unleash-only scaler); ProcTypeMask 0 so no proc row is built.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage, healing and other effects your Judgement and Deliverance release from a Primed seal by $s1%.\n\nCapstone Bonus: This bonus is increased by your Mastery, and your Seal of Light's Holy damage bonus gains an additional 6.25% of your Mastery per seal stack.", 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101, 'ProcTypeMask': 0},
+)
+
+
+blade_of_wrath_201457 = spell(
+    id=201457, name='Blade of Wrath', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=0),
+    ],
+    spell_icon_id=90214,
+    notes='paladin-rework S1 RETRIBUTION §5 (6,3): +5/10/15% Blade of Justice damage; rank 3 adds eff1 PROC_TRIGGER -> the party Mastery buff 201429 (CAST-phase row 201459).',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Blade of Justice by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Blade of Justice increases the Mastery of you and your party members within 30 yards by 2% for 10 sec.|r', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101, 'EffectSpellClassMaskA_3': m.BLADE_OF_JUSTICE},
+)
+
+
+blade_of_wrath_201458 = spell(
+    id=201458, name='Blade of Wrath', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=0),
+    ],
+    spell_icon_id=90214,
+    notes='paladin-rework S1 RETRIBUTION §5 (6,3): +5/10/15% Blade of Justice damage; rank 3 adds eff1 PROC_TRIGGER -> the party Mastery buff 201429 (CAST-phase row 201459).',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Blade of Justice by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Blade of Justice increases the Mastery of you and your party members within 30 yards by 2% for 10 sec.|r', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101, 'EffectSpellClassMaskA_3': m.BLADE_OF_JUSTICE},
+)
+
+
+blade_of_wrath_201459 = spell(
+    id=201459, name='Blade of Wrath', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=201429),
+    ],
+    spell_icon_id=90214,
+    notes='paladin-rework S1 RETRIBUTION §5 (6,3): +5/10/15% Blade of Justice damage; rank 3 adds eff1 PROC_TRIGGER -> the party Mastery buff 201429 (CAST-phase row 201459).',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Blade of Justice by $s1%.\n\nCapstone Bonus: Your Blade of Justice increases the Mastery of you and your party members within 30 yards by 2% for 10 sec.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101, 'EffectSpellClassMaskA_3': m.BLADE_OF_JUSTICE},
+)
+
+
+crusaders_aegis_201460 = spell(
+    id=201460, name="Crusader's Aegis", school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=3),
+    ],
+    spell_icon_id=2820,
+    notes="paladin-rework S1 RETRIBUTION §5 (8,3): +3/6/10 on Avenging Wrath's +20% (EFFECT1); rank 3 adds eff1 PROC_TRIGGER -> the party absorb 201430 (CAST-phase row 201462).",
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage bonus of your Avenging Wrath by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Casting Avenging Wrath shields you and your party members within 30 yards, absorbing ' + pot_text(crusaders_aegis_shield_201430) + ' damage for 10 sec.|r', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101, 'EffectSpellClassMaskA_2': m.AVENGING_WRATH},
+)
+
+
+crusaders_aegis_201461 = spell(
+    id=201461, name="Crusader's Aegis", school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=3),
+    ],
+    spell_icon_id=2820,
+    notes="paladin-rework S1 RETRIBUTION §5 (8,3): +3/6/10 on Avenging Wrath's +20% (EFFECT1); rank 3 adds eff1 PROC_TRIGGER -> the party absorb 201430 (CAST-phase row 201462).",
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage bonus of your Avenging Wrath by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Casting Avenging Wrath shields you and your party members within 30 yards, absorbing ' + pot_text(crusaders_aegis_shield_201430) + ' damage for 10 sec.|r', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101, 'EffectSpellClassMaskA_2': m.AVENGING_WRATH},
+)
+
+
+crusaders_aegis_201462 = spell(
+    id=201462, name="Crusader's Aegis", school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=201430),
+    ],
+    spell_icon_id=2820,
+    notes="paladin-rework S1 RETRIBUTION §5 (8,3): +3/6/10 on Avenging Wrath's +20% (EFFECT1); rank 3 adds eff1 PROC_TRIGGER -> the party absorb 201430 (CAST-phase row 201462).",
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage bonus of your Avenging Wrath by $s1%.\n\nCapstone Bonus: Casting Avenging Wrath shields you and your party members within 30 yards, absorbing ' + pot_text(crusaders_aegis_shield_201430) + ' damage for 10 sec.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101, 'EffectSpellClassMaskA_2': m.AVENGING_WRATH},
+)
+
+
+crusade_201463 = spell(
+    id=201463, name='Crusade', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-10001, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=11),
+    ],
+    spell_icon_id=2171,
+    notes='paladin-rework S1 RETRIBUTION §5 (9,0): -10/-20/-30 s Avenging Wrath cooldown; rank 3 (201465) is read by id for the ramp and Radiant Glory.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Avenging Wrath by $/1000;s1 sec.\n\n|cFF9D9D9DCapstone Bonus: Each seal stack you gain while Avenging Wrath is active increases your damage by 2%, up to 15%, until it ends. Wake of Ashes activates Avenging Wrath for 6 sec, or extends an active one by 6 sec.|r', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'ProcChance': 101, 'EffectSpellClassMaskA_2': m.AVENGING_WRATH},
+)
+
+
+crusade_201464 = spell(
+    id=201464, name='Crusade', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-20001, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=11),
+    ],
+    spell_icon_id=2171,
+    notes='paladin-rework S1 RETRIBUTION §5 (9,0): -10/-20/-30 s Avenging Wrath cooldown; rank 3 (201465) is read by id for the ramp and Radiant Glory.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Avenging Wrath by $/1000;s1 sec.\n\n|cFF9D9D9DCapstone Bonus: Each seal stack you gain while Avenging Wrath is active increases your damage by 2%, up to 15%, until it ends. Wake of Ashes activates Avenging Wrath for 6 sec, or extends an active one by 6 sec.|r', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101, 'EffectSpellClassMaskA_2': m.AVENGING_WRATH},
+)
+
+
+crusade_201465 = spell(
+    id=201465, name='Crusade', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-30001, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=11),
+    ],
+    spell_icon_id=2171,
+    notes='paladin-rework S1 RETRIBUTION §5 (9,0): -10/-20/-30 s Avenging Wrath cooldown; rank 3 (201465) is read by id for the ramp and Radiant Glory.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Avenging Wrath by $/1000;s1 sec.\n\nCapstone Bonus: Each seal stack you gain while Avenging Wrath is active increases your damage by 2%, up to 15%, until it ends. Wake of Ashes activates Avenging Wrath for 6 sec, or extends an active one by 6 sec.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101, 'EffectSpellClassMaskA_2': m.AVENGING_WRATH},
+)
+
+
+vindication_201466 = spell(
+    id=201466, name='Vindication', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=201420),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=201421),
+    ],
+    spell_icon_id=1798,
+    notes='paladin-rework S1 RETRIBUTION §5 (3,1): new rank 3 (clone of 26016): 15% chance.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your melee attacks have a $h% chance to deal ' + pot_text(vindication_strike_201420) + ' Holy damage to the target and increase your Mastery by 3% for 10 sec. This effect cannot occur more than once every 4 sec.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 15, 'ProcTypeMask': 20},
+)
+
+
+eye_for_an_eye_201467 = spell(
+    id=201467, name='Eye for an Eye', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_CUSTOM_STAT_PCT, misc_value=1 << 21),
+    ],
+    spell_icon_id=1820,
+    notes='paladin-rework S1 RETRIBUTION §5 (3,3): new rank 3 (clone of 25988): +3% Versatility; the capstone is gated by rank 3 in spell_pal_eye_for_an_eye_ret.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Versatility by $s1%.\n\nCapstone Bonus: When damage brings you below 50% health, you take 20% less damage and your Strength is increased by 10% for 10 sec. This effect cannot occur more than once every 60 sec.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 100, 'AttributesEx3': 67108864, 'AttributesEx4': 524288, 'ProcTypeMask': 664232},
+)
+
+
+improved_judgements_201468 = spell(
+    id=201468, name='Improved Judgements', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER),
+        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=22),
+    ],
+    spell_icon_id=205,
+    notes='paladin-rework S1 RETRIBUTION §5 (4,0): new rank 3 (clone of 25957): +9% Judgement/Deliverance damage; the capstone is Paladin::OnJudgementCastRet.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the damage of your Judgement and Deliverance by $s1%, and your Exorcism triggers your active seal's effect.\n\nCapstone Bonus: When your Judgement or Deliverance releases a Primed seal, your next ability that grants seal stacks grants 1 additional stack.", 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101, 'EffectSpellClassMaskA_1': m.JUDGEMENT_ALL[0], 'EffectSpellClassMaskA_3': m.JUDGEMENT_ALL[2], 'EffectSpellClassMaskB_1': m.UNLEASH},
+)
+
+
+swift_retribution_aura_201165 = spell(
+    id=201165, name='Swift Retribution', school=School.HOLY, attributes=151322880,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=0.0, duration_ms=-1,
+    effects=[
+        None,
+        None,
+        Effect(type=EffectType.APPLY_AREA_AURA_RAID, base_points=-1, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL, radius_yards=40.0),
+    ],
+    spell_icon_id=3028,
+    notes='paladin-rework follow-up: the haste half of the old shared 63531, split out so Swift Retribution shows its own aura on the target (63531 is Sanctified Retribution only). Clone of 63531 (hidden attribute 0x80 cleared): haste on effect INDEX 2 so the talent\'s SPELLMOD_EFFECT3 mod (misc 23) finds it, family d2 0x8000000 (LOADTIME_SANCTIFIED_RETRIBUTION) written as data instead of the SpellInfoCorrections fix 63531 needs. Applied by spell_pal_swift_retribution; target filter is spell_pal_sanctified_retribution_effect.',
+    raw_overrides={'AttributesEx2': 17, 'AttributesEx3': 1114112, 'AttributesEx4': 2097152, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Haste increased by the paladin's Swift Retribution. Does not stack with the same effect from other paladins.", 'BaseLevel': 1, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Haste increased by the paladin's Swift Retribution. Does not stack with the same effect from other paladins.", 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, 'SpellClassMask_3': m.LOADTIME_SANCTIFIED_RETRIBUTION, 'SpellLevel': 1},
+)
+scripted_by(swift_retribution_aura_201165, 'spell_pal_sanctified_retribution_effect')
+# Stock group 1053 {63531} is nested in both 1054 (Haste Buffs) and 1056 (Damage Done Buffs) because 63531 used to carry
+# both effects. Now 63531 is damage only (stays in 1056 through 1053) and 201165 is haste only (1054 directly), so the
+# two talents' auras apply together and each only competes with its own kind of raid buff.
+leave_spell_group(1054, -1053)
+spell_group(1054, swift_retribution_aura_201165)
+
+
+sanctified_retribution_201469 = spell(
+    id=201469, name='Sanctified Retribution', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=12),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=3),
+    ],
+    spell_icon_id=502,
+    notes='paladin-rework S1 RETRIBUTION §5 (4,3): new rank 2 (clone of 31869): +2% party damage via 63531 (authored on d2 0x8000000), +100% Retribution Aura damage.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Retribution Aura by $s2%, and all damage dealt by friendly targets affected by any of your auras by $s1%. Does not stack with other similar effects.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'ProcChance': 101, 'EffectSpellClassMaskA_3': m.LOADTIME_SANCTIFIED_RETRIBUTION, 'EffectSpellClassMaskB_1': m.RETRIBUTION_AURA},
+)
+
+
+sanctified_retribution_201470 = spell(
+    id=201470, name='Sanctified Retribution', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=12),
+        Effect(type=EffectType.APPLY_AURA, base_points=149, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=3),
+    ],
+    spell_icon_id=502,
+    notes='paladin-rework S1 RETRIBUTION §5 (4,3): new rank 3 (clone of 31869): +3% party damage via 63531 (authored on d2 0x8000000), +150% Retribution Aura damage.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Retribution Aura by $s2%, and all damage dealt by friendly targets affected by any of your auras by $s1%. Does not stack with other similar effects.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101, 'EffectSpellClassMaskA_3': m.LOADTIME_SANCTIFIED_RETRIBUTION, 'EffectSpellClassMaskB_1': m.RETRIBUTION_AURA},
+)
+
+
+divine_purpose_201471 = spell(
+    id=201471, name='Divine Purpose', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-90001, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.SCHOOL_ABSORB, misc_value=127),
+    ],
+    spell_icon_id=2170,
+    notes='paladin-rework S1 RETRIBUTION §5 (5,3): new rank 3 (clone of 31872): -90 s Divine Shield cooldown, no damage penalty, eff2 unlimited SCHOOL_ABSORB (the lethal-save absorb, spell_pal_divine_purpose_ret); SpellClassSet 10, ProcTypeMask 0.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Divine Shield by 1.5 min and removes its damage penalty.\n\nCapstone Bonus: Damage that would kill you casts Divine Shield on you instead, if you know it, it is not on cooldown and you are not affected by Forbearance.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 101, 'ProcTypeMask': 0, 'EffectSpellClassMaskA_3': m.DIVINE_SHIELD, 'EffectSpellClassMaskB_3': m.DIVINE_SHIELD},
+)
+
+
+the_art_of_war_201472 = spell(
+    id=201472, name='The Art of War', school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
+    range_yards=RANGE_SELF, duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=59578),
+        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=22),
+    ],
+    spell_icon_id=3034,
+    notes='paladin-rework S1 RETRIBUTION §5 (7,1): new rank 3 (clone of 53488): +9% damage, 30% proc chance, DoT part on AOW_DOT.',
+    raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Judgement, Deliverance, Crusader Strike, Execution Sentence and Divine Storm by $s1%. Damage from these and your main-hand auto attacks has a $h% chance to make your next Flash of Light or Exorcism instant within 20 sec; Divine Storm rolls at half the chance on each target hit. This effect cannot occur more than once every 6 sec.', 'AuraDescription_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'ProcChance': 30, 'ProcTypeMask': 4116, 'EffectSpellClassMaskA_1': m.AOW_DAMAGE[0], 'EffectSpellClassMaskA_2': m.AOW_DAMAGE[1], 'EffectSpellClassMaskA_3': m.AOW_DAMAGE[2], 'EffectSpellClassMaskC_1': m.AOW_DOT[0], 'EffectSpellClassMaskC_3': m.AOW_DOT[2]},
+)
+
+
+
+# ---------------------------------------------------------------------------
+# paladin-rework S1 RETRIBUTION - spell_proc rows (§7), removals, script bindings, links.
+# Flags: DONE_MELEE_AUTO 0x4, DONE_SPELL_MELEE 0x10, DONE_SPELL_RANGED 0x100, DONE_SPELL_NONE_NEG 0x1000,
+# DONE_SPELL_MAGIC_NEG 0x10000, DONE_SPELL_NONE_POS 0x400, DONE_SPELL_MAGIC_POS 0x4000, TAKEN_DAMAGE 0x100000, KILL 0x2.
+# Every row with a spell flag sets a phase (phase 0 never fires). Chance 0 = the rank's DBC ProcChance.
+# ---------------------------------------------------------------------------
+
+# Heart of the Crusader: own hits of Judgement / Deliverance, every cast, each Deliverance target. eff1 is the SIC-forced DUMMY with
+# TriggerSpell 21183/54498/54499 (the stock handler only prevents EFFECT_0), so it is disabled too (0x6).
+procs_on(-20335, proc_flags=0x10 | 0x100 | 0x10000, family_name=10, family_mask=m.JUDGEMENT_CASTS,
+         spell_type_mask=m.PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, disable_effects_mask=0x6, chance=100)
+# Judgements of the Wise: damaging unleash only (U); type 0 so the aura-only Vengeance unleashes count; triggered casts allowed.
+procs_on(-31876, proc_flags=0x10 | 0x100 | 0x10000, family_name=10, family_mask=(m.UNLEASH, 0, 0),
+         spell_phase_mask=m.PROC_SPELL_PHASE_HIT, attributes_mask=m.PROC_ATTR_TRIGGERED_CAN_PROC, chance=0)
+# Righteous Vengeance: per critting hit, per target, no guard.
+procs_on(-53380, proc_flags=0x10 | 0x100 | 0x1000 | 0x10000, family_name=10, family_mask=m.RV_PROC,
+         spell_type_mask=m.PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, hit_mask=m.PROC_HIT_CRITICAL,
+         attributes_mask=m.PROC_ATTR_TRIGGERED_CAN_PROC, chance=100)
+# The Art of War: own hits + Crusader Strike / Divine Storm / Execution Sentence + main-hand autos, 6 s ICD; eff0/eff2 are SpellMods (0x5).
+procs_on(-53486, proc_flags=0x4 | 0x10 | 0x100 | 0x10000, family_name=10, family_mask=m.AOW_PROC,
+         spell_type_mask=m.PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=m.PROC_SPELL_PHASE_HIT,
+         attributes_mask=m.PROC_ATTR_TRIGGERED_CAN_PROC, disable_effects_mask=0x5, chance=0, cooldown_ms=6000)
+# Vindication: melee attacks, flat 5/10/15% (no PPM), 4 s ICD.
+procs_on(-9452, proc_flags=0x4 | 0x10, family_name=0, spell_type_mask=m.PROC_SPELL_TYPE_DAMAGE,
+         spell_phase_mask=m.PROC_SPELL_PHASE_HIT, ppm=0.0, chance=0, cooldown_ms=4000)
+# Eye for an Eye: damage taken (normal + crit), 60 s ICD; the rank-3 gate lives in spell_pal_eye_for_an_eye_ret.
+procs_on(-9799, proc_flags=0x100000, attributes_mask=m.PROC_ATTR_TRIGGERED_CAN_PROC, chance=100, cooldown_ms=60000)
+# Conviction capstone (rank 3 only; no Conviction chain row exists): crits of CS / HoW / Exorcism / DS.
+procs_on(conviction_20119, proc_flags=0x10 | 0x100 | 0x10000, family_name=10, family_mask=m.CONVICTION_PROC,
+         spell_type_mask=m.PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=m.PROC_SPELL_PHASE_HIT, hit_mask=m.PROC_HIT_CRITICAL,
+         disable_effects_mask=0x1, chance=100)
+# Sanctity of Battle: Exorcism damage, 33/66/100% from the rank's DBC ProcChance; eff0/eff1 are SpellMods (0x3).
+procs_on(-32043, proc_flags=0x10000, family_name=10, family_mask=(0, m.EXORCISM, 0), spell_type_mask=m.PROC_SPELL_TYPE_DAMAGE,
+         spell_phase_mask=m.PROC_SPELL_PHASE_HIT, disable_effects_mask=0x3, chance=0)
+# Swift Retribution: once per Crusader Strike / Judgement cast (CAST phase also fires on a missed cast, accepted: RETRIBUTION §10 Q17).
+procs_on(-53379, proc_flags=0x10 | 0x100 | 0x1000 | 0x10000, family_name=10, family_mask=m.SWIFT_RET_PROC,
+         spell_phase_mask=m.PROC_SPELL_PHASE_CAST, disable_effects_mask=0x1, chance=100)
+# Benediction: kills that yield experience or honor (PROC_ATTR_REQ_EXP_OR_HONOR 0x1), 5 s ICD; eff1 is a DUMMY read by script (0x2).
+procs_on(-20101, proc_flags=0x2, attributes_mask=0x1, disable_effects_mask=0x2, chance=100, cooldown_ms=5000)
+# Sheath of Light capstone helper 201434: Flash of Light heals (the chain -53501 keeps its stock crit-heal row for the HoT path).
+procs_on(sheath_of_light_capstone_201434, proc_flags=0x4000, family_name=10, family_mask=(m.FLASH_OF_LIGHT, 0, 0), spell_type_mask=2,
+         spell_phase_mask=m.PROC_SPELL_PHASE_HIT, chance=100, cooldown_ms=10000)
+# Blade of Wrath rank 3: every Blade of Justice cast (CAST phase, fires on a missed cast too, accepted).
+procs_on(blade_of_wrath_201459, proc_flags=0x10000, family_name=10, family_mask=(0, 0, m.BLADE_OF_JUSTICE),
+         spell_phase_mask=m.PROC_SPELL_PHASE_CAST, disable_effects_mask=0x1, chance=100)
+# Crusader's Aegis rank 3: a self-cast Avenging Wrath (triggered Avenging Wrath from Radiant Glory cannot proc it).
+procs_on(crusaders_aegis_201462, proc_flags=0x400 | 0x4000, family_name=10, family_mask=(0, m.AVENGING_WRATH, 0),
+         spell_phase_mask=m.PROC_SPELL_PHASE_CAST, disable_effects_mask=0x1, chance=100)
+
+# Level-60 set bonuses (user ruling): Judgement Armor 8pc 23591 and Battlegear of Eternal Justice 3pc 26135 keyed on Judgement / Deliverance
+# casts (J | Dv own hits). CAST phase = one proc per cast, so Deliverance's five own hits cannot fire it five times (fires on a missed cast too,
+# like Swift Retribution). Stock rows: family 10 d0 U, ProcFlags 16, phase HIT, attr 2, chance from the spell (0); effects/triggers untouched.
+for _set_bonus in (23591, 26135):
+    procs_on(_set_bonus, proc_flags=0x10 | 0x100 | 0x10000, family_name=10, family_mask=m.JUDGEMENT_CASTS,
+             spell_phase_mask=m.PROC_SPELL_PHASE_CAST, attributes_mask=m.PROC_ATTR_TRIGGERED_CAN_PROC, chance=0)
+
+# Divine Purpose: the stock HoF stun-removal row goes (the ranks' DBC ProcTypeMask is already 0, so SpellMgr builds no replacement).
+remove_spell_proc(-31871)
+# Judgements of the Just (SHARED B7, user ruling F9): the talent no longer exists. ProcTypeMask is 0 on 53695/53696 above.
+remove_spell_proc(-53695)
+
+# Script bindings for spells declared in this file (RETRIBUTION §5.2, SHARED C1.6 / C1.7). The 201411 / 201412 / 201414 helpers, 20185 / 20186, Sacred Shield's bindings, spell_category(1300) and the -31884 link are paladin_spells.py's.
+scripted_by(conviction_20119, 'spell_pal_conviction')
+# Heart of the Crusader: the stock class resolves GetSpellWithRank(21183, rank) and the 21183 chain was deleted by the single-rank rollout, so ranks 2/3
+# never cast their own debuff; the fork class casts 21183 / 54498 / 54499 by talent rank (user ruling, script route).
+unbind_script(-20335, 'spell_pal_heart_of_the_crusader')
+scripted_by(-20335, 'spell_pal_heart_of_the_crusader_ret')
+scripted_by(-9452, 'spell_pal_vindication')
+scripted_by(-53486, 'spell_pal_art_of_war')
+scripted_by(-31876, 'spell_pal_judgements_of_the_wise_guard')
+scripted_by(-20101, 'spell_pal_benediction')
+unbind_script(-9799, 'spell_pal_eye_for_an_eye')
+scripted_by(-9799, 'spell_pal_eye_for_an_eye_ret')
+unbind_script(-31871, 'spell_pal_divine_purpose')
+scripted_by(divine_purpose_201471, 'spell_pal_divine_purpose_ret')
+scripted_by(sheath_of_light_capstone_201434, 'spell_pal_sheath_of_light_capstone')
+unbind_script(31869, 'spell_pal_sanctified_retribution')
+scripted_by(-31869, 'spell_pal_sanctified_retribution')
+scripted_by(crusaders_aegis_shield_201430, 'spell_pal_crusaders_aegis_absorb')
+linked_spell(53503, sheath_of_light_capstone_201434.id, 2)
+
+# SHARED Part C: the five aura buttons (C1.6), the Concentration scaler, Improved Devotion Aura retarget (C1.7).
+for _aura in (devotion_aura_465, retribution_aura_7294, concentration_aura_19746, resistance_aura_19876, crusader_aura_32223):
+    scripted_by(_aura, 'spell_pal_aura_press')
+scripted_by(concentration_aura_19746, 'spell_pal_concentration_aura')
+unbind_script(-20138, 'spell_pal_improved_devotion_aura')
+unbind_script(63514, 'spell_pal_improved_devotion_aura_effect')
+# C1.3: Crusader Aura becomes a level-20 trainer spell (SpellLevel/BaseLevel 62 -> 20 above); Frost / Fire Resistance Aura retire (PLAN #62: DSL and DBC
+# rows stay, the characters migration C1.8 handles saved auras).
+trained_by(crusader_aura_32223, trainer_id=202, req_level=20, money_cost=4000)
+untrain(frost_resistance_aura_19888, trainer_ids=[202])
+untrain(fire_resistance_aura_19891, trainer_ids=[202])
+
+
+# ---------------------------------------------------------------------------
+# TEMPORARY SHIM - delete once paladin_talents.py imports the renamed variables (A3 / WP-A3). The three stock Crusade
+# rank spells became Smite Evil (smite_evil_31866 / 31867 / 31868, RETRIBUTION §2.1) and 19876 lost "Shadow"
+# (resistance_aura_19876); the talents file still imports the old names. Module __getattr__ (PEP 562) serves them without
+# declaring a second variable for the same spell (a second name would win the PaladinData.h short name).
+# ---------------------------------------------------------------------------
+_LEGACY_NAMES = {
+    'crusade_31866': 'smite_evil_31866',
+    'crusade_31867': 'smite_evil_31867',
+    'crusade_31868': 'smite_evil_31868',
+    'shadow_resistance_aura_19876': 'resistance_aura_19876',
+}
+
+
+def __getattr__(name):
+    if name in _LEGACY_NAMES:
+        return globals()[_LEGACY_NAMES[name]]
+    raise AttributeError(name)

@@ -38,6 +38,9 @@ void AddSC_warlock_affliction_spell_scripts(); // Custom: warlock-rework Afflict
 void AddSC_warlock_destruction_spell_scripts(); // Custom: warlock-rework Destruction pass
 void AddSC_warlock_demonology_spell_scripts(); // Custom: warlock-rework Demonology pass
 void AddSC_warlock_hooks(); // Custom: warlock-rework shared ScriptMgr handlers
+void AddSC_paladin_seal_spell_scripts(); // Custom: paladin-rework (Retribution)
+void AddSC_paladin_retribution_spell_scripts(); // Custom: paladin-rework (Retribution)
+void AddSC_paladin_hooks(); // Custom: paladin-rework (Retribution)
 void AddSC_warrior_spell_scripts();
 void AddSC_quest_spell_scripts();
 void AddSC_item_spell_scripts();
@@ -68,6 +71,9 @@ void AddSpellsScripts()
     AddSC_warlock_destruction_spell_scripts(); // Custom: warlock-rework Destruction pass
     AddSC_warlock_demonology_spell_scripts(); // Custom: warlock-rework Demonology pass
     AddSC_warlock_hooks(); // Custom: warlock-rework shared ScriptMgr handlers
+    AddSC_paladin_seal_spell_scripts(); // Custom: paladin-rework (Retribution)
+    AddSC_paladin_retribution_spell_scripts(); // Custom: paladin-rework (Retribution)
+    AddSC_paladin_hooks(); // Custom: paladin-rework (Retribution)
     AddSC_warrior_spell_scripts();
     AddSC_quest_spell_scripts();
     AddSC_item_spell_scripts();

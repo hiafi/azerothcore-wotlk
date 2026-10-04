@@ -145,6 +145,7 @@ class AuraType(IntEnum):
     EFFECT_IMMUNITY = 37  # druid-rework RESTO §0.13 (Tranquil Focus, Nature's Focus capstone)
     MOD_STAT = 29
     MOD_INCREASE_SPEED = 31
+    MOD_INCREASE_MOUNTED_SPEED = 32  # paladin-rework RETRIBUTION §3 item 2 (verified against SpellAuraDefines.h) - Pursuit of Justice
     MOD_DECREASE_SPEED = 33
     MOD_INCREASE_HEALTH = 34  # druid-rework PLAN §6.4
     MOD_SHAPESHIFT = 36  # druid-rework FERAL §0.16 (Bestial Fury is a form)
@@ -180,6 +181,10 @@ class AuraType(IntEnum):
     MOD_MELEE_HASTE = 138  # druid-rework PLAN §6.4
     MOD_SPEED_ALWAYS = 129
     MOD_CRIT_DAMAGE_BONUS = 163
+    MOD_DAMAGE_DONE_VERSUS = 168  # paladin-rework RETRIBUTION §3 item 2 (verified against SpellAuraDefines.h)
+    MOD_SPEED_NOT_STACK = 171  # paladin-rework RETRIBUTION §3 item 2 (verified against SpellAuraDefines.h)
+    MOD_MOUNTED_SPEED_NOT_STACK = 172  # paladin-rework RETRIBUTION §3 item 2 (verified against SpellAuraDefines.h)
+    MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE = 197  # paladin-rework RETRIBUTION §3 item 2 (verified against SpellAuraDefines.h)
     MOD_SPELL_DAMAGE_OF_STAT_PERCENT = 174
     MOD_SPELL_HEALING_OF_STAT_PERCENT = 175
     MOD_BASE_RESISTANCE_PCT = 142  # druid-rework PLAN §6.4 / BALANCE §3.3
@@ -192,9 +197,12 @@ class AuraType(IntEnum):
     MOD_MANA_REGEN_FROM_STAT = 219  # druid-rework PLAN §6.4 / BALANCE §3.3
     MOD_RATING_FROM_STAT = 220
     PERIODIC_DUMMY = 226
+    MOD_SPELL_DAMAGE_OF_ATTACK_POWER = 237  # paladin-rework RETRIBUTION §3 item 2 (verified against SpellAuraDefines.h)
+    MOD_SPELL_HEALING_OF_ATTACK_POWER = 238  # paladin-rework RETRIBUTION §3 item 2 (verified against SpellAuraDefines.h)
     MOD_AOE_DAMAGE_AVOIDANCE = 229  # druid-rework PLAN §6.4
     PROC_TRIGGER_SPELL_WITH_VALUE = 231  # druid-rework PLAN §6.4 / BALANCE §3.3 (not 227, that's the PERIODIC variant)
     MOD_HOT_PCT = 259  # druid-rework PLAN §6.4
+    ABILITY_IGNORE_AURASTATE = 262  # paladin-rework RETRIBUTION §3 item 2 (verified against SpellAuraDefines.h)
     MOD_HEALING_RECEIVED = 283  # SpellAuraDefines.h: "Possibly only for some spell family class spells"
     ABILITY_PERIODIC_CRIT = 286  # druid-rework PLAN §6.4
     MOD_CRIT_PCT = 290

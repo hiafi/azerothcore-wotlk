@@ -48,7 +48,7 @@ KNOWN_FLAGS = {"--no-prune", "--check"}
 # PLAN P2b step 4: adopted class by class, inside each class's own pass - not a side effect of
 # every generate.py run. Extend this tuple when a pass is ready to start generating/relying on its
 # own Generated/<Class>Data.h (warlock first, in P4).
-CLASSES_WITH_GENERATED_HEADERS = ("warlock",)
+CLASSES_WITH_GENERATED_HEADERS = ("warlock", "paladin")
 GENERATED_HEADER_DIR = REPO_ROOT / "src" / "server" / "game" / "Entities" / "Unit" / "Generated"
 from lib.reuse import ReuseContext  # noqa: E402
 
@@ -275,6 +275,10 @@ def main() -> int:
         # A fast, read-only staleness gate (PLAN P2b step 3) - everything below this point (SQL
         # diffing, DBC state, the client patch) is irrelevant to "is the committed header stale",
         # so --check returns here instead of running the rest of the ~130s pipeline.
+        for warning in header_gen.collect_warnings(dsl_classes, CLASSES_WITH_GENERATED_HEADERS):
+            print(f"WARNING: {warning}")
+        for warning in lint.check_range_on_nonself_helpers(dsl_classes["spells"]):
+            print(f"WARNING: {warning}")
         header_problems = header_gen.check_headers(
             dsl_classes, GENERATED_HEADER_DIR, CLASSES_WITH_GENERATED_HEADERS
         )
@@ -286,6 +290,8 @@ def main() -> int:
         progress("--check done")
         return 0
     else:
+        for warning in header_gen.collect_warnings(dsl_classes, CLASSES_WITH_GENERATED_HEADERS):
+            print(f"WARNING: {warning}")
         written_headers = header_gen.write_headers(
             dsl_classes, GENERATED_HEADER_DIR, CLASSES_WITH_GENERATED_HEADERS
         )
@@ -447,7 +453,16 @@ def main() -> int:
         print(f"WARNING: {warning}")
     # Same full-population scan: RangeIndex 0 on a spell aimed at another unit fails CheckRange
     # silently (Fury of Elune's beam did no damage - docs/bugs-and-fixes.md).
-    for warning in lint.check_zero_range_unit_target(spell_entries):
+    zero_range_warnings = lint.check_zero_range_unit_target(spell_entries)
+    for warning in zero_range_warnings:
+        print(f"WARNING: {warning}")
+    # X1 (paladin-rework SHARED B6 item 7): the broader custom-id (>= 200000) variant - non-self
+    # means anything but the caster, dest/area targets included. Ids the check above already
+    # reported are skipped so a spell never prints twice.
+    already_reported = {
+        int(w.split()[1]) for w in zero_range_warnings
+    }
+    for warning in lint.check_range_on_nonself_helpers(spell_entries, skip_ids=already_reported):
         print(f"WARNING: {warning}")
     talent_rows = [build.build_talent_row(e) for e in talent_resolved.entries]
     talenttab_rows = [build.build_talenttab_row(e) for e in talenttab_resolved.entries]
