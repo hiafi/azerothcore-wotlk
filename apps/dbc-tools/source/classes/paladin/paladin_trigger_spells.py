@@ -8,6 +8,7 @@ from lib.dsl import AuraType, DispelType, Effect, EffectType, RANGE_SELF, School
 from lib.dsl.registry import leave_spell_group, linked_spell, pot_text, procs_on, product, remove_spell_proc, scripted_by, spell, spell_group, talent_mult, tooltip_vars, trained_by, unbind_script, untrain
 from . import _masks as m
 from .paladin_holy_spells import concentration_tooltip, holy_heal_tooltip
+from .paladin_prot_spells import shroud_of_light_heal_201366
 
 
 def _mask(effect_index: int, mask: tuple) -> dict:
@@ -913,8 +914,8 @@ improved_devotion_aura_20138 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=12),
     ],
     spell_icon_id=291,
-    notes='pulled from existing data | paladin-rework S1 SHARED Part C C1.7: eff1 EFFECT2 +2/4/6 healing -> -2/-4/-6 (stored -3/-5/-7): lands on the Devotion burst 201161 (d2 b25 retarget).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the armor bonus of your Devotion Aura by $s1% and the damage reduction of its active effect by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EffectSpellClassMaskB_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 SHARED Part C C1.7: eff1 EFFECT2 +2/4/6 healing -> -2/-4/-6 (stored -3/-5/-7): lands on the Devotion burst 201161 (d2 b25 retarget). | paladin-rework S3 PROTECTION §3 item 6: stale B_1 deleted; eff1 mask (0, 0, LOADTIME_IMP_DEVOTION) client-row fix (A_1 kept)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the armor bonus of your Devotion Aura by $s1% and the damage reduction of its active effect by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, 'EffectSpellClassMaskB_3': m.LOADTIME_IMP_DEVOTION},
 )
 
 
@@ -934,8 +935,8 @@ improved_devotion_aura_20139 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-5, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=12),
     ],
     spell_icon_id=291,
-    notes='pulled from existing data | paladin-rework S1 SHARED Part C C1.7: eff1 EFFECT2 +2/4/6 healing -> -2/-4/-6 (stored -3/-5/-7): lands on the Devotion burst 201161 (d2 b25 retarget).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the armor bonus of your Devotion Aura by $s1% and the damage reduction of its active effect by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EffectSpellClassMaskB_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 SHARED Part C C1.7: eff1 EFFECT2 +2/4/6 healing -> -2/-4/-6 (stored -3/-5/-7): lands on the Devotion burst 201161 (d2 b25 retarget). | paladin-rework S3 PROTECTION §3 item 6: stale B_1 deleted; eff1 mask (0, 0, LOADTIME_IMP_DEVOTION) client-row fix (A_1 kept)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the armor bonus of your Devotion Aura by $s1% and the damage reduction of its active effect by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, 'EffectSpellClassMaskB_3': m.LOADTIME_IMP_DEVOTION},
 )
 
 
@@ -955,8 +956,8 @@ improved_devotion_aura_20140 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=12),
     ],
     spell_icon_id=291,
-    notes='pulled from existing data | paladin-rework S1 SHARED Part C C1.7: eff1 EFFECT2 +2/4/6 healing -> -2/-4/-6 (stored -3/-5/-7): lands on the Devotion burst 201161 (d2 b25 retarget).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the armor bonus of your Devotion Aura by $s1% and the damage reduction of its active effect by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EffectSpellClassMaskB_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S1 SHARED Part C C1.7: eff1 EFFECT2 +2/4/6 healing -> -2/-4/-6 (stored -3/-5/-7): lands on the Devotion burst 201161 (d2 b25 retarget). | paladin-rework S3 PROTECTION §3 item 6: stale B_1 deleted; eff1 mask (0, 0, LOADTIME_IMP_DEVOTION) client-row fix (A_1 kept)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the armor bonus of your Devotion Aura by $s1% and the damage reduction of its active effect by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, 'EffectSpellClassMaskB_3': m.LOADTIME_IMP_DEVOTION},
 )
 
 
@@ -2186,13 +2187,13 @@ sacred_duty_31848 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-30001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-20001, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=11),
         None,
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=137, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=2),
     ],
     spell_icon_id=81,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Stamina by $s3%, reduces the cooldown of your Divine Shield and Divine Protection spells by $/1000;S1 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194304, 'EffectSpellClassMaskB_1': 4194304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5 (5,2): cooldown -30/-60 s -> -20 s; stale B_1 deleted (A_1 kept)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Stamina by $s3% and reduces the cooldown of your Divine Shield and Divine Protection by $/1000;S1 sec.\n\n|cFF9D9D9DCapstone Bonus: Your Divine Protection also grants 5 stacks of Bulwark.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2208,13 +2209,13 @@ sacred_duty_31849 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-60001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-30001, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=11),
         None,
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=137, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=2),
     ],
     spell_icon_id=81,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Stamina by $s3%, reduces the cooldown of your Divine Shield and Divine Protection spells by $/1000;S1 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194304, 'EffectSpellClassMaskB_1': 4194304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5 (5,2): cooldown -30/-60 s -> -30 s; stale B_1 deleted (A_1 kept); r2 capstone via spell_pal_divine_protection_prot',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Stamina by $s3% and reduces the cooldown of your Divine Shield and Divine Protection by $/1000;S1 sec.\n\nCapstone Bonus: Your Divine Protection also grants 5 stacks of Bulwark.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2231,24 +2232,21 @@ ardent_defender_31850 = spell(
     range_yards=0.0,
     effects=[
         Effect(
-            type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=69, misc_value=127,
-            potency_excluded="percent-of-other-damage: Effects[EFFECT_0].CalcValue() is read directly as "
-            "a flat percent (absorbPct) by spell_pal_ardent_defender::Absorb (CalculatePct(damageToReduce, "
-            "absorbPct)), not a damage/absorb amount the potency hook could price - the effect's own "
-            "amount is actually set to -1 (unlimited) by DoEffectCalcAmount, so this base_points value "
-            "never reaches CalcValue's potency path at all. Same category as the Warlock pilot's "
-            "Healthstones/Conflagrate percent-of-other-damage exclusions.",
+            type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=69, misc_value=127,
+            potency_excluded="percent-of-other-damage: eff0 is read as a flat percent by spell_pal_ardent_defender_prot (the below-35% damage reduction); its amount is set to -1 (unlimited) by the script, so the value never reaches the potency path.",
         ),
         Effect(
-            type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY,
-            potency_excluded="percent-of-max-health: Effects[EFFECT_1].CalcValue() is read directly as a "
-            "flat percent (healPct) by spell_pal_ardent_defender::Absorb (CountPctFromMaxHealth(healPct * "
-            "pctFromDefense)), not a heal amount - same category as Warlock's Healthstones exclusion.",
+            type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=1, apply_aura=AuraType.DUMMY,
+            potency_excluded="percent: eff1 is the lethal-save chance read as a flat percent by spell_pal_ardent_defender_prot, not a heal amount.",
+        ),
+        Effect(
+            type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=AuraType.DUMMY,
+            potency_excluded="percent-of-max-health: eff2 is the 40% max-health heal read as a flat percent by spell_pal_ardent_defender_prot (cast through 66235 with SPELLVALUE_BASE_POINT0), not a heal amount.",
         ),
     ],
     spell_icon_id=2135,
-    notes='pulled from existing data. Potency system P7 (paladin pass): NOT converted - both effects are read as flat percentages by spell_pal_ardent_defender (src/server/scripts/Spells/spell_paladin.cpp), not damage/heal amounts; see each effect\'s own potency_excluded=.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Damage that takes you below 35% health is reduced by $s1%.  In addition, attacks which would otherwise kill you cause you to be healed by up to $s2% of your maximum health (amount healed based on defense).  This healing effect cannot occur more often than once every $66233d.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194304, 'EffectSpellClassMaskB_1': 4194304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes="pulled from existing data. Potency system P7 (paladin pass): NOT converted - both effects are read as flat percentages by spell_pal_ardent_defender (src/server/scripts/Spells/spell_paladin.cpp), not damage/heal amounts; see each effect's own potency_excluded=. | paladin-rework S3 PROTECTION §4.12 (6,2): below-35% DR bp 1, lethal-save chance bp 32, new eff2 40% max-health heal; stale A_1/B_1 deleted; spell_pal_ardent_defender unbound, _prot bound below",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While you are below 35% health, all damage you take is reduced by $s1%. An attack that would otherwise kill you has a $s2% chance to be fully absorbed, healing you for $s3% of your maximum health and increasing the healing you receive by $201375s1% for $201375d. This cannot occur more than once every 2 min, and shares that cooldown with Cheat Death and Spirit of Redemption.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2265,19 +2263,21 @@ ardent_defender_31851 = spell(
     range_yards=0.0,
     effects=[
         Effect(
-            type=EffectType.APPLY_AURA, base_points=12, implicit_target_a=1, apply_aura=69, misc_value=127,
-            potency_excluded="percent-of-other-damage: same shape as Ardent Defender rank 1 (31850) - see "
-            "its eff0 potency_excluded= for the full reasoning.",
+            type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=69, misc_value=127,
+            potency_excluded="percent-of-other-damage: eff0 is read as a flat percent by spell_pal_ardent_defender_prot (the below-35% damage reduction); its amount is set to -1 (unlimited) by the script, so the value never reaches the potency path.",
         ),
         Effect(
-            type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY,
-            potency_excluded="percent-of-max-health: same shape as Ardent Defender rank 1 (31850) - see "
-            "its eff1 potency_excluded= for the full reasoning.",
+            type=EffectType.APPLY_AURA, base_points=65, implicit_target_a=1, apply_aura=AuraType.DUMMY,
+            potency_excluded="percent: eff1 is the lethal-save chance read as a flat percent by spell_pal_ardent_defender_prot, not a heal amount.",
+        ),
+        Effect(
+            type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=AuraType.DUMMY,
+            potency_excluded="percent-of-max-health: eff2 is the 40% max-health heal read as a flat percent by spell_pal_ardent_defender_prot (cast through 66235 with SPELLVALUE_BASE_POINT0), not a heal amount.",
         ),
     ],
     spell_icon_id=2135,
-    notes='pulled from existing data. Potency system P7 (paladin pass): NOT converted - see Ardent Defender rank 1 (31850)\'s notes= and each effect\'s own potency_excluded=.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Damage that takes you below 35% health is reduced by $s1%.  In addition, attacks which would otherwise kill you cause you to be healed by up to $s2% of your maximum health (amount healed based on defense).  This healing effect cannot occur more often than once every $66233d.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194304, 'EffectSpellClassMaskB_1': 4194304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes="pulled from existing data. Potency system P7 (paladin pass): NOT converted - see Ardent Defender rank 1 (31850)'s notes= and each effect's own potency_excluded=. | paladin-rework S3 PROTECTION §4.12 (6,2): below-35% DR bp 3, lethal-save chance bp 65, new eff2 40% max-health heal; stale A_1/B_1 deleted; spell_pal_ardent_defender unbound, _prot bound below",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While you are below 35% health, all damage you take is reduced by $s1%. An attack that would otherwise kill you has a $s2% chance to be fully absorbed, healing you for $s3% of your maximum health and increasing the healing you receive by $201375s1% for $201375d. This cannot occur more than once every 2 min, and shares that cooldown with Cheat Death and Spirit of Redemption.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2294,19 +2294,21 @@ ardent_defender_31852 = spell(
     range_yards=0.0,
     effects=[
         Effect(
-            type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=69, misc_value=127,
-            potency_excluded="percent-of-other-damage: same shape as Ardent Defender rank 1 (31850) - see "
-            "its eff0 potency_excluded= for the full reasoning.",
+            type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=69, misc_value=127,
+            potency_excluded="percent-of-other-damage: eff0 is read as a flat percent by spell_pal_ardent_defender_prot (the below-35% damage reduction); its amount is set to -1 (unlimited) by the script, so the value never reaches the potency path.",
         ),
         Effect(
-            type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY,
-            potency_excluded="percent-of-max-health: same shape as Ardent Defender rank 1 (31850) - see "
-            "its eff1 potency_excluded= for the full reasoning.",
+            type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY,
+            potency_excluded="percent: eff1 is the lethal-save chance read as a flat percent by spell_pal_ardent_defender_prot, not a heal amount.",
+        ),
+        Effect(
+            type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=AuraType.DUMMY,
+            potency_excluded="percent-of-max-health: eff2 is the 40% max-health heal read as a flat percent by spell_pal_ardent_defender_prot (cast through 66235 with SPELLVALUE_BASE_POINT0), not a heal amount.",
         ),
     ],
     spell_icon_id=2135,
-    notes='pulled from existing data. Potency system P7 (paladin pass): NOT converted - see Ardent Defender rank 1 (31850)\'s notes= and each effect\'s own potency_excluded=.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Damage that takes you below 35% health is reduced by $s1%.  In addition, attacks which would otherwise kill you cause you to be healed by up to $s2% of your maximum health (amount healed based on defense).  This healing effect cannot occur more often than once every $66233d.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194304, 'EffectSpellClassMaskB_1': 4194304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes="pulled from existing data. Potency system P7 (paladin pass): NOT converted - see Ardent Defender rank 1 (31850)'s notes= and each effect's own potency_excluded=. | paladin-rework S3 PROTECTION §4.12 (6,2): below-35% DR bp 5, lethal-save chance bp 99, new eff2 40% max-health heal; stale A_1/B_1 deleted; spell_pal_ardent_defender unbound, _prot bound below",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While you are below 35% health, all damage you take is reduced by $s1%. An attack that would otherwise kill you has a $s2% chance to be fully absorbed, healing you for $s3% of your maximum health and increasing the healing you receive by $201375s1% for $201375d. This cannot occur more than once every 2 min, and shares that cooldown with Cheat Death and Spirit of Redemption.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2322,13 +2324,13 @@ combat_expertise_31858 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=240),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=137, misc_value=2),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=290),
+        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=290),
     ],
     spell_icon_id=2143,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your expertise by $s1, total Stamina and chance to critically hit by $s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194304, 'EffectSpellClassMaskB_1': 4194304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5 (0,3): eff0 expertise -> None; eff2 crit bp 1/3/5 -> 0/1/2; stale A_1/B_1 deleted',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Stamina by $s2% and your critical strike chance with all attacks, spells and heals by $s3%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2344,13 +2346,13 @@ combat_expertise_31859 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=240),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=137, misc_value=2),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=290),
+        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=290),
     ],
     spell_icon_id=2143,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your expertise by $s1, total Stamina and chance to critically hit by $s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194304, 'EffectSpellClassMaskB_1': 4194304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5 (0,3): eff0 expertise -> None; eff2 crit bp 1/3/5 -> 0/1/2; stale A_1/B_1 deleted',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Stamina by $s2% and your critical strike chance with all attacks, spells and heals by $s3%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2366,13 +2368,13 @@ combat_expertise_31860 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=240),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=137, misc_value=2),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=290),
+        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=290),
     ],
     spell_icon_id=2143,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your expertise by $s1, total Stamina and chance to critically hit by $s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194304, 'EffectSpellClassMaskB_1': 4194304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5 (0,3): eff0 expertise -> None; eff2 crit bp 1/3/5 -> 0/1/2; stale A_1/B_1 deleted',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Stamina by $s2% and your critical strike chance with all attacks, spells and heals by $s3%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2899,8 +2901,8 @@ divine_guardian_53527 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=108, misc_value=1),
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=3),
     ],
-    spell_icon_id=3837,
-    notes='pulled from existing data',
+    spell_icon_id=2873,
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §2.4: icon 3837 -> 2873 (Divine Sacrifice shares 3837)',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When Divine Sacrifice is activated, your party and raid members within $70940a1 yards take $s1% reduced damage for $70940d.  In addition, increases the duration of your Sacred Shield by $s2% and the amount absorbed by $s3%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_3': 4, 'EffectSpellClassMaskB_2': 524288, 'EffectSpellClassMaskC_2': 524288, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
@@ -2921,8 +2923,8 @@ divine_guardian_53530 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=108, misc_value=1),
         Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=3),
     ],
-    spell_icon_id=3837,
-    notes='pulled from existing data',
+    spell_icon_id=2873,
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §2.4: icon 3837 -> 2873 (Divine Sacrifice shares 3837)',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When Divine Sacrifice is activated, your party and raid members within $70940a1 yards take $s1% reduced damage for $70940d.  In addition, increases the duration of your Sacred Shield by $s2% and the amount absorbed by $s3%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_3': 4, 'EffectSpellClassMaskB_2': 524288, 'EffectSpellClassMaskC_2': 524288, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
@@ -3127,13 +3129,11 @@ touched_by_the_light_53590 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=174, misc_value=126),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=50, misc_value=126),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=175),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=0),
     ],
     spell_icon_id=3024,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell power by an amount equal to $s1% of your Strength and increases the amount healed by your critical heals by $s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2048, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §4.4 (5,0): all effects new (eff0 DUMMY next-self-heal bp, eff2 dropped); A_1 deleted; ProcChance/ProcTypeMask; spell_proc -53590 below',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you receive effective direct healing from another player, you have a $h% chance to gain Touched by the Light for 20 sec, increasing your next direct heal on yourself by $s1%. While it is active, directly healing yourself grants Shroud of Light: the next direct damage you take heals you for ' + pot_text(shroud_of_light_heal_201366) + '. Shroud of Light cannot occur more than once every 8 sec.\n\n|cFF9D9D9DCapstone Bonus: Blocking an attack grants a stack of Bulwark, stacking up to 5 times and lasting 20 sec. Your next Holy Light consumes all stacks; if cast on yourself, its healing is increased by 5% per stack, further increased by your Mastery.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 11, 'RangeIndex': 1, 'SpellClassSet': 10, 'ProcTypeMask': 34816},
 )
 
 
@@ -3149,13 +3149,11 @@ touched_by_the_light_53591 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=174, misc_value=126),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=50, misc_value=126),
-        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=175),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=0),
     ],
     spell_icon_id=3024,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell power by an amount equal to $s1% of your Strength and increases the amount healed by your critical heals by $s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2048, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §4.4 (5,0): all effects new (eff0 DUMMY next-self-heal bp, eff2 dropped); A_1 deleted; ProcChance/ProcTypeMask; spell_proc -53590 below',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you receive effective direct healing from another player, you have a $h% chance to gain Touched by the Light for 20 sec, increasing your next direct heal on yourself by $s1%. While it is active, directly healing yourself grants Shroud of Light: the next direct damage you take heals you for ' + pot_text(shroud_of_light_heal_201366) + '. Shroud of Light cannot occur more than once every 8 sec.\n\n|cFF9D9D9DCapstone Bonus: Blocking an attack grants a stack of Bulwark, stacking up to 5 times and lasting 20 sec. Your next Holy Light consumes all stacks; if cast on yourself, its healing is increased by 5% per stack, further increased by your Mastery.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 22, 'RangeIndex': 1, 'SpellClassSet': 10, 'ProcTypeMask': 34816},
 )
 
 
@@ -3171,13 +3169,12 @@ touched_by_the_light_53592 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=1, apply_aura=174, misc_value=126),
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=50, misc_value=126),
-        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=1, apply_aura=175),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=266, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=0),
     ],
     spell_icon_id=3024,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell power by an amount equal to $s1% of your Strength and increases the amount healed by your critical heals by $s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2048, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §4.4 (5,0): all effects new (eff0 DUMMY next-self-heal bp, r3 eff1 DUMMY Mastery k 266, eff2 dropped); A_1 deleted; ProcChance/ProcTypeMask; spell_proc -53590 below',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you receive effective direct healing from another player, you have a $h% chance to gain Touched by the Light for 20 sec, increasing your next direct heal on yourself by $s1%. While it is active, directly healing yourself grants Shroud of Light: the next direct damage you take heals you for ' + pot_text(shroud_of_light_heal_201366) + '. Shroud of Light cannot occur more than once every 8 sec.\n\nCapstone Bonus: Blocking an attack grants a stack of Bulwark, stacking up to 5 times and lasting 20 sec. Your next Holy Light consumes all stacks; if cast on yourself, its healing is increased by 5% per stack, further increased by your Mastery.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 33, 'RangeIndex': 1, 'SpellClassSet': 10, 'ProcTypeMask': 34816},
 )
 
 
@@ -3351,8 +3348,8 @@ shield_of_the_templar_53709 = spell(
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=63529),
     ],
     spell_icon_id=3016,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces all damage taken by $s2% and grants your Avenger's Shield a $h% chance to silence your targets for $63529d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16384, 'EffectSpellClassMaskA_2': 1048640, 'EffectSpellClassMaskB_1': 16384, 'EffectSpellClassMaskB_2': 1048640, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 33, 'ProcTypeMask': 65792, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5.1 (9,0): tooltip only',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces all damage you take by $s2% and gives your Avenger's Shield a $h% chance to silence its targets for $63529d.\n\n|cFF9D9D9DCapstone Bonus: Being healed by others reduces the remaining cooldown of your Divine Protection by 1 sec. This effect cannot occur more than once every sec.|r", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16384, 'EffectSpellClassMaskA_2': 1048640, 'EffectSpellClassMaskB_1': 16384, 'EffectSpellClassMaskB_2': 1048640, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 33, 'ProcTypeMask': 65792, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -3373,8 +3370,8 @@ shield_of_the_templar_53710 = spell(
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=63529),
     ],
     spell_icon_id=3016,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces all damage taken by $s2% and grants your Avenger's Shield a $h% chance to silence your targets for $63529d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16384, 'EffectSpellClassMaskA_2': 1048640, 'EffectSpellClassMaskB_1': 16384, 'EffectSpellClassMaskB_2': 1048640, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 66, 'ProcTypeMask': 65792, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5.1 (9,0): tooltip only',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces all damage you take by $s2% and gives your Avenger's Shield a $h% chance to silence its targets for $63529d.\n\n|cFF9D9D9DCapstone Bonus: Being healed by others reduces the remaining cooldown of your Divine Protection by 1 sec. This effect cannot occur more than once every sec.|r", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16384, 'EffectSpellClassMaskA_2': 1048640, 'EffectSpellClassMaskB_1': 16384, 'EffectSpellClassMaskB_2': 1048640, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 66, 'ProcTypeMask': 65792, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -3395,8 +3392,8 @@ shield_of_the_templar_53711 = spell(
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=63529),
     ],
     spell_icon_id=3016,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces all damage taken by $s2% and grants your Avenger's Shield a $h% chance to silence your targets for $63529d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16384, 'EffectSpellClassMaskA_2': 1048640, 'EffectSpellClassMaskB_1': 16384, 'EffectSpellClassMaskB_2': 1048640, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65792, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5.1 (9,0): tooltip only',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces all damage you take by $s2% and gives your Avenger's Shield a $h% chance to silence its targets for $63529d.\n\nCapstone Bonus: Being healed by others reduces the remaining cooldown of your Divine Protection by 1 sec. This effect cannot occur more than once every sec.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16384, 'EffectSpellClassMaskA_2': 1048640, 'EffectSpellClassMaskB_1': 16384, 'EffectSpellClassMaskB_2': 1048640, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65792, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -5030,3 +5027,471 @@ scripted_by(holy_shock_25914, 'spell_pal_holy_shock_hit')
 scripted_by(light_s_grace_31833, 'spell_pal_lights_grace_holy')
 scripted_by(light_s_grace_31835, 'spell_pal_lights_grace_holy')
 scripted_by(light_s_grace_31836, 'spell_pal_lights_grace_holy')
+
+
+# paladin-rework S3 Protection (PROTECTION §3 item 2): straight pulls of the bare-int talent ranks (live values, unedited here;
+# WP-A edits them). Orphaned ranks 4-5 are not pulled.
+divine_strength_20262 = spell(
+    id=20262,
+    name='Divine Strength',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE),
+    ],
+    spell_icon_id=148,
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5 (0,2): stored bp 2/5/8 = 3/6/9% (unchanged)',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Strength by $s1%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+divine_strength_20263 = spell(
+    id=20263,
+    name='Divine Strength',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE),
+    ],
+    spell_icon_id=148,
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5 (0,2): stored bp 2/5/8 = 3/6/9% (unchanged)',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Strength by $s1%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+divine_strength_20264 = spell(
+    id=20264,
+    name='Divine Strength',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE),
+    ],
+    spell_icon_id=148,
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5 (0,2): stored bp 2/5/8 = 3/6/9% (unchanged)',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Strength by $s1%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+anticipation_20096 = spell(
+    id=20096,
+    name='Anticipation',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.MOD_DODGE_PERCENT, misc_value=95),
+    ],
+    spell_icon_id=331,
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5 (1,2): tooltip',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 1, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to dodge by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Dodging or parrying an attack grants a stack of Bulwark.|r', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+anticipation_20097 = spell(
+    id=20097,
+    name='Anticipation',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_DODGE_PERCENT, misc_value=95),
+    ],
+    spell_icon_id=331,
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5 (1,2): tooltip',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 1, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to dodge by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Dodging or parrying an attack grants a stack of Bulwark.|r', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+anticipation_20098 = spell(
+    id=20098,
+    name='Anticipation',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_DODGE_PERCENT, misc_value=95),
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=201361),
+    ],
+    spell_icon_id=331,
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5/§7 (1,2): r3 new eff1 PROC_TRIGGER_SPELL -> 201361; spell_proc row 20098 below',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 1, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to dodge by $s1%.\n\nCapstone Bonus: Dodging or parrying an attack grants a stack of Bulwark.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+toughness_20143 = spell(
+    id=20143,
+    name='Tenacity',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_BASE_RESISTANCE_PCT, misc_value=1),
+    ],
+    spell_icon_id=52,
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5 (2,3): renamed Tenacity; slow-duration eff1 (aura 232) removed',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 1, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your armor value from items by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your armor is increased by an amount equal to your Strength.|r', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+toughness_20144 = spell(
+    id=20144,
+    name='Tenacity',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.MOD_BASE_RESISTANCE_PCT, misc_value=1),
+    ],
+    spell_icon_id=52,
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5 (2,3): renamed Tenacity; slow-duration eff1 (aura 232) removed',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 1, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your armor value from items by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your armor is increased by an amount equal to your Strength.|r', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+toughness_20145 = spell(
+    id=20145,
+    name='Tenacity',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.MOD_BASE_RESISTANCE_PCT, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.MOD_RESISTANCE_OF_STAT_PERCENT, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=1000),
+    ],
+    spell_icon_id=52,
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5 (2,3): renamed Tenacity; slow-duration eff1 (aura 232) removed; r3 eff1 armor-from-Strength (182, misc 1, miscB 0, bp 99), eff2 1 s PERIODIC_DUMMY armor refresh',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 1, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your armor value from items by $s1%.\n\nCapstone Bonus: Your armor is increased by an amount equal to your Strength.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+redoubt_20127 = spell(
+    id=20127,
+    name='Redoubt',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=20128),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_BLOCK_PERCENT),
+    ],
+    spell_icon_id=28,
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5 (5,1): eff1 block value (150) -> MOD_BLOCK_PERCENT bp 2; DBC ProcChance 10 -> 15; spell_proc -20127 below',
+    raw_overrides={'AttributesEx3': 2, 'AttributesEx4': 524288, 'CastingTimeIndex': 1, 'ProcTypeMask': 680, 'ProcChance': 15, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to block by $s2%. Blocking an attack has a $h% chance to increase your Strength by $20128s1% and reduce all damage you take by $20128s2% for $20128d. This effect cannot occur more than once every 10 sec.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+redoubt_20130 = spell(
+    id=20130,
+    name='Redoubt',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=20131),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.MOD_BLOCK_PERCENT),
+    ],
+    spell_icon_id=28,
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5 (5,1): eff1 block value (150) -> MOD_BLOCK_PERCENT bp 5; DBC ProcChance 10 -> 15; spell_proc -20127 below',
+    raw_overrides={'AttributesEx3': 2, 'AttributesEx4': 524288, 'CastingTimeIndex': 1, 'ProcTypeMask': 680, 'ProcChance': 15, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to block by $s2%. Blocking an attack has a $h% chance to increase your Strength by $20131s1% and reduce all damage you take by $20131s2% for $20131d. This effect cannot occur more than once every 10 sec.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+redoubt_20135 = spell(
+    id=20135,
+    name='Redoubt',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=20132),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.MOD_BLOCK_PERCENT),
+    ],
+    spell_icon_id=28,
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5 (5,1): eff1 block value (150) -> MOD_BLOCK_PERCENT bp 9; DBC ProcChance 10 -> 15; spell_proc -20127 below',
+    raw_overrides={'AttributesEx3': 2, 'AttributesEx4': 524288, 'CastingTimeIndex': 1, 'ProcTypeMask': 680, 'ProcChance': 15, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to block by $s2%. Blocking an attack has a $h% chance to increase your Strength by $20132s1% and reduce all damage you take by $20132s2% for $20132d. This effect cannot occur more than once every 10 sec.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+redoubt_20128 = spell(
+    id=20128,
+    name='Redoubt',
+    school=School.NORMAL,
+    attributes=150994944,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=10000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
+    ],
+    spell_icon_id=28,
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5 (5,1): eff0 block% -> Strength total% bp 1, new eff1 damage taken -2%; ProcCharges 5 -> 0, ProcTypeMask 680 -> 0; stock spell_proc row removed below',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 0, 'ProcChance': 100, 'ProcCharges': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 3442, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Increases your Strength by $s1% and reduces all damage you take by $s2%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Strength increased by $s1%. Damage taken reduced by $s2%.', 'AuraDescription_Lang_Mask': 16712190, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+redoubt_20131 = spell(
+    id=20131,
+    name='Redoubt',
+    school=School.NORMAL,
+    attributes=150994944,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=10000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=-5, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
+    ],
+    spell_icon_id=28,
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5 (5,1): eff0 block% -> Strength total% bp 3, new eff1 damage taken -4%; ProcCharges 5 -> 0, ProcTypeMask 680 -> 0; stock spell_proc row removed below',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 0, 'ProcChance': 100, 'ProcCharges': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 3442, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Increases your Strength by $s1% and reduces all damage you take by $s2%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Strength increased by $s1%. Damage taken reduced by $s2%.', 'AuraDescription_Lang_Mask': 16712190, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+redoubt_20132 = spell(
+    id=20132,
+    name='Redoubt',
+    school=School.NORMAL,
+    attributes=150994944,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=10000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE, misc_value=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
+    ],
+    spell_icon_id=28,
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5 (5,1): eff0 block% -> Strength total% bp 5, new eff1 damage taken -6%; ProcCharges 5 -> 0, ProcTypeMask 680 -> 0; stock spell_proc row removed below',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 0, 'ProcChance': 100, 'ProcCharges': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 3442, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Increases your Strength by $s1% and reduces all damage you take by $s2%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Strength increased by $s1%. Damage taken reduced by $s2%.', 'AuraDescription_Lang_Mask': 16712190, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+one_handed_weapon_specialization_20196 = spell(
+    id=20196,
+    name='Blessed Weapons',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=127),
+    ],
+    spell_icon_id=1461,
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5 (7,0): renamed Blessed Weapons (one-handed weapon requirement kept)',
+    raw_overrides={'AttributesEx5': 65536, 'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 1, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 41105, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all damage you deal by $s1% while a one-handed melee weapon is equipped.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+one_handed_weapon_specialization_20197 = spell(
+    id=20197,
+    name='Blessed Weapons',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=127),
+    ],
+    spell_icon_id=1461,
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5 (7,0): renamed Blessed Weapons (one-handed weapon requirement kept)',
+    raw_overrides={'AttributesEx5': 65536, 'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 1, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 41105, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all damage you deal by $s1% while a one-handed melee weapon is equipped.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+one_handed_weapon_specialization_20198 = spell(
+    id=20198,
+    name='Blessed Weapons',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=127),
+    ],
+    spell_icon_id=1461,
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5 (7,0): renamed Blessed Weapons (one-handed weapon requirement kept)',
+    raw_overrides={'AttributesEx5': 65536, 'CastingTimeIndex': 1, 'ProcChance': 101, 'SpellLevel': 1, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 41105, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all damage you deal by $s1% while a one-handed melee weapon is equipped.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+divinity_63646 = spell(
+    id=63646,
+    name='Divinity',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.MOD_HEALING_PCT, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.MOD_SPELL_HEALING_OF_STAT_PERCENT, misc_value=2),
+    ],
+    spell_icon_id=2266,
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5 (6,0): eff0 healing taken bp 3; eff1 healing done% -> healing power from Stamina (175, misc 2) bp 19',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all healing you receive by $s1% and your healing power by $s2% of your Stamina.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+divinity_63647 = spell(
+    id=63647,
+    name='Divinity',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=AuraType.MOD_HEALING_PCT, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=AuraType.MOD_SPELL_HEALING_OF_STAT_PERCENT, misc_value=2),
+    ],
+    spell_icon_id=2266,
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5 (6,0): eff0 healing taken bp 7; eff1 healing done% -> healing power from Stamina (175, misc 2) bp 39',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all healing you receive by $s1% and your healing power by $s2% of your Stamina.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+divinity_63648 = spell(
+    id=63648,
+    name='Divinity',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=AuraType.MOD_HEALING_PCT, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=1, apply_aura=AuraType.MOD_SPELL_HEALING_OF_STAT_PERCENT, misc_value=2),
+    ],
+    spell_icon_id=2266,
+    notes='pulled from existing data | paladin-rework S3 PROTECTION §5 (6,0): eff0 healing taken bp 11; eff1 healing done% -> healing power from Stamina (175, misc 2) bp 59',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all healing you receive by $s1% and your healing power by $s2% of your Stamina.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+# paladin-rework S3 Protection (PROTECTION §7 / §5.2): proc rows, script bindings, stock-row removals for the ranks edited above.
+# Flags: TAKEN melee auto 0x8, TAKEN spell melee 0x20, TAKEN ranged auto 0x80, TAKEN spell ranged 0x200 (0x2A8 together);
+# TAKEN none pos 0x800, TAKEN magic pos 0x8000 (0x8800); HitMask DODGE 0x10, PARRY 0x20, BLOCK 0x40. Phase CAST 1 / HIT 2.
+
+# Anticipation r3: dodge or parry -> 201361 (Bulwark grant). Positive row on r3 only: the chain -20096 has none and the DBC ProcTypeMask is 0.
+procs_on(20098, proc_flags=0x28, spell_phase_mask=2, hit_mask=0x30, chance=100, disable_effects_mask=0x1)
+
+# Touched by the Light: effective direct heals from others (any TAKEN positive heal). AttributesMask 0x2 (TRIGGERED_CAN_PROC) so triggered heals
+# from others (Beacon copies, Prayer of Mending, ...) roll; DisableEffectsMask 0x6 = r3 eff1 (Mastery k DUMMY) and the empty eff2. Chance 0 = DBC 11/22/33.
+procs_on(-53590, proc_flags=0x8800, spell_type_mask=2, spell_phase_mask=2, attributes_mask=0x2, disable_effects_mask=0x6)
+
+# Redoubt: block -> buff. Replaces the DBC-auto row (stock 10% on any hit); 10 s internal cooldown; DisableEffectsMask 0x2 = eff1 block% aura.
+procs_on(-20127, proc_flags=0x2A8, spell_phase_mask=2, hit_mask=0x40, cooldown_ms=10000, disable_effects_mask=0x2)
+
+# The Redoubt buffs lose their charges and DBC ProcTypeMask above; their stock HitMask-64 rows go (T1 helper, PROTECTION §3 item 11).
+remove_spell_proc(20128)
+remove_spell_proc(20131)
+remove_spell_proc(20132)
+
+scripted_by(touched_by_the_light_53590, 'spell_pal_touched_by_the_light')
+scripted_by(touched_by_the_light_53591, 'spell_pal_touched_by_the_light')
+scripted_by(touched_by_the_light_53592, 'spell_pal_touched_by_the_light')
+scripted_by(toughness_20145, 'spell_pal_tenacity_capstone')
+
+# Ardent Defender: the stock class (fork-edited) is unbound, never deleted from spell_paladin.cpp; the Protection replacement binds each rank.
+unbind_script(-31850, 'spell_pal_ardent_defender')
+scripted_by(ardent_defender_31850, 'spell_pal_ardent_defender_prot')
+scripted_by(ardent_defender_31851, 'spell_pal_ardent_defender_prot')
+scripted_by(ardent_defender_31852, 'spell_pal_ardent_defender_prot')

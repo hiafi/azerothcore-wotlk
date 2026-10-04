@@ -22,6 +22,7 @@ from lib.dsl.registry import (
 
 from . import _masks as m
 from .paladin_holy_spells import holy_heal_tooltip
+from .paladin_prot_spells import prot_holy_shield_tooltip, prot_sor_tooltip
 from .paladin_trigger_spells import holy_shock_25912, holy_shock_25914, sacred_shield_58597
 
 
@@ -696,7 +697,7 @@ greater_blessing_of_sanctuary_25899 = spell(
     ],
     spell_icon_id=1804,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx6': 67108864, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Damage taken reduced by up to $s1%, strength and stamina increased by $s2%, and blocked, parried, and dodged melee attacks cause a gain $57319s1% of maximum displayed mana.', 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives all members of the raid or group that share the same class with the target the Greater Blessing of Sanctuary, reducing damage taken from all sources by $s1% for $d and increasing strength and stamina by $s2%.  In addition, when the target blocks, parries, or dodges a melee attack the target will gain $57319s1% of maximum displayed mana.  Players may only have one Blessing on them per Paladin at any one time.', 'EffectBasePoints_2': 9, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 40, 'ReagentCount_1': 0, 'Reagent_1': 0, 'SpellClassMask_1': 268435456, 'SpellClassSet': 10, 'SpellLevel': 60, 'SpellVisualID_1': 7323, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx6': 67108864, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Damage taken reduced by 3%, Strength and Stamina increased by $s2%, and blocked, parried or dodged melee attacks grant 6% of base mana.', 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives all members of the raid or group that share the same class with the target the Greater Blessing of Sanctuary, reducing damage taken from all sources by 3% for $d and increasing Strength and Stamina by $s2%. In addition, when the target blocks, parries or dodges a melee attack it gains 6% of its base mana.  Players may only have one Blessing on them per Paladin at any one time.', 'EffectBasePoints_2': 9, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 40, 'ReagentCount_1': 0, 'Reagent_1': 0, 'SpellClassMask_1': 268435456, 'SpellClassSet': 10, 'SpellLevel': 60, 'SpellVisualID_1': 7323, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -883,8 +884,9 @@ shield_of_righteousness_53600 = spell(
         Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=145.8, potency_kind='direct', implicit_target_a=6, chain_targets=1),
     ],
     spell_icon_id=3031,
+    tooltip_vars=prot_sor_tooltip,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 75); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 2 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=145.8 (potency-report base-damage default; not mismatched - this flat bonus never had an SP coefficient at all live, so the new 0.625 coefficient is a real, intended gain from "move to the formula", docs/potency-system.md D4). Only this flat $s1 bonus effect is touched - the separate block-value-based effect (EffectBasePoints_2=99, not modeled by this Effect() list) is untouched.',
-    raw_overrides={'AttributesEx': 512, 'AttributesEx4': 262144, 'AttributesEx6': 256, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Slam the target with your shield, causing Holy damage based on your block value plus an additional {pot1}.', 'EffectBasePoints_2': 99, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_2': 1048576, 'SpellClassSet': 10, 'SpellLevel': 48, 'SpellVisualID_1': 11792, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx': 512, 'AttributesEx4': 262144, 'AttributesEx6': 256, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Slam the target with your shield, causing Holy damage based on your block value plus an additional {pot1*il}.', 'EffectBasePoints_2': 99, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_2': 1048576, 'SpellClassSet': 10, 'SpellLevel': 48, 'SpellVisualID_1': 11792, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1014,7 +1016,7 @@ holy_shield_20925 = spell(
     category=931,
     cast_time_ms=0,
     cooldown_ms=0,
-    category_cooldown_ms=8000,
+    category_cooldown_ms=15000,
     mana_cost=0,
     mana_cost_pct=10,
     range_yards=0.0,
@@ -1022,12 +1024,13 @@ holy_shield_20925 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=51),
         Effect(type=EffectType.APPLY_AURA, sp_potency=35.0, ap_potency=35.0, potency_kind='direct', implicit_target_a=1, apply_aura=43),
-        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=189, misc_value=16),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, die_sides=0, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=126),
     ],
     spell_icon_id=453,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
+    tooltip_vars=prot_holy_shield_tooltip,
+    notes='paladin-rework S3 PROTECTION 4.1: category cooldown 15 s, SpellLevel 30, eff2 -> aura 87 misc 126 (Consecrated Shield carrier, amount 0), tooltip var 1136. pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
     'Potency system P7 (paladin pass), PLAN F13 fix: effect 2 (the "damage when blocked" proc) is an APPLY_AURA whose aura type is PROC_TRIGGER_DAMAGE (43), not one of the PERIODIC_DAMAGE/PERIODIC_HEAL/SCHOOL_ABSORB shapes potency_report.py\'s classify_effect() recognizes, so this row never appeared in paladin-potency-report.md even though it is one of the six F13 "mixed" rows (data/sql/updates/db_world/2026_09_01_26.sql:444 zeroed its spell_bonus_data direct_bonus, same bug as Exorcism/Holy Wrath/Hammer of Wrath/Avenger\'s Shield/Consecration). Coefficient-implied potency was 21.0 SP + 13.1 AP = 34.1 total against the base-implied 65.8 (V60=176 at level 60, T=1.5s) - since this row never made it into paladin-potency-report.md for the user to review alongside the other five F13 spells, the user set it directly to an even 35/35 (70 total) rather than either derived value. Full potency conversion chosen over a narrower spell_bonus_data-only fix since the effect shape fully supports it.',
-    raw_overrides={'AttributesEx3': 2, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Block chance increased by $s1%.  {pot2} Holy damage dealt to attacker when blocked.  $n charges.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases chance to block by $s1% for $d and deals {pot2} Holy damage for each attack blocked while active.  Each block expends a charge.  $n charges.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcCharges': 8, 'ProcTypeMask': 680, 'RangeIndex': 1, 'SpellClassMask_2': 64, 'SpellClassSet': 10, 'SpellLevel': 40, 'SpellVisualID_1': 5620, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx3': 2, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Block chance increased by $s1%.  {pot2} Holy damage dealt to attacker when blocked.  $n charges.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases chance to block by $s1% for $d and deals {pot2*ld} Holy damage for each attack blocked while active. Each block expends a charge. $n charges.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcCharges': 8, 'ProcTypeMask': 680, 'RangeIndex': 1, 'SpellClassMask_2': 64, 'SpellClassSet': 10, 'SpellLevel': 30, 'SpellVisualID_1': 5620, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1051,7 +1054,7 @@ avenger_s_shield_31935 = spell(
     ],
     spell_icon_id=2172,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=132.35 / ap_potency=132.35 (paladin-potency-proposals.txt total 264.7, split evenly - matches the pre-existing 0.07/0.07 equal SP/AP coefficient split); also fixes PLAN F13 (zeroed direct_bonus restored as a side effect of the conversion).',
-    raw_overrides={'AttributesEx4': 262144, 'AttributesEx6': 256, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Dazed.', 'CastingTimeIndex': 1, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Hurls a holy shield at the enemy, dealing {pot1} Holy damage, Dazing them and then jumping to additional nearby enemies.  Affects $x1 total targets.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 35.0, 'SpellClassMask_1': 16384, 'SpellClassSet': 10, 'SpellLevel': 50, 'SpellVisualID_1': 7886, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx4': 262144, 'AttributesEx6': 256, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Dazed.', 'CastingTimeIndex': 1, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Hurls a holy shield at the enemy, dealing {pot1} Holy damage, Dazing them and then jumping to additional nearby enemies.  Affects $x1 total targets.  Lasts $d. Grants 2 stacks of Bulwark.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 4, 'EquippedItemSubclass': 64, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 35.0, 'SpellClassMask_1': 16384, 'SpellClassSet': 10, 'SpellLevel': 40, 'SpellVisualID_1': 7886, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1136,13 +1139,13 @@ blessing_of_sanctuary_20911 = spell(
     mana_cost=0,
     mana_cost_pct=7,
     range_yards=30.0,
-    duration_ms=600000,
+    duration_ms=1800000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-4, implicit_target_a=21, apply_aura=AuraType.DUMMY, misc_value=127),
     ],
     spell_icon_id=19,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx6': 67108864, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Damage taken reduced by up to $s1%, strength and stamina increased by $s2%, and blocked, parried, and dodged melee attacks cause a gain $57319s1% of maximum displayed mana.', 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Places a Blessing on the friendly target, reducing damage taken from all sources by $s1% for $d and increasing strength and stamina by $s2%.  In addition, when the target blocks, parries, or dodges a melee attack the target will gain $57319s1% of maximum displayed mana.  Players may only have one Blessing on them per Paladin at any one time.', 'EffectBasePoints_2': 9, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 40, 'SpellClassMask_1': 268435456, 'SpellClassSet': 10, 'SpellLevel': 30, 'SpellVisualID_1': 7323, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data | paladin-rework S3 PROTECTION 4.1: duration 30 min, tooltips state 3% DR / 6% base mana (replacement script spell_pal_blessing_of_sanctuary_prot)',
+    raw_overrides={'AttributesEx6': 67108864, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Damage taken reduced by 3%, Strength and Stamina increased by $s2%, and blocked, parried or dodged melee attacks grant 6% of base mana.', 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Places a Blessing on the friendly target, reducing damage taken from all sources by 3% and increasing Strength and Stamina by $s2% for $d. In addition, when the target blocks, parries or dodges a melee attack it gains 6% of its base mana. Players may only have one Blessing on them per Paladin at any one time.', 'EffectBasePoints_2': 9, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 40, 'SpellClassMask_1': 268435456, 'SpellClassSet': 10, 'SpellLevel': 30, 'SpellVisualID_1': 7323, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1274,24 +1277,12 @@ hammer_of_the_righteous_53595 = spell(
     mana_cost_pct=6,
     range_yards=5.0,
     effects=[
-        Effect(
-            type=EffectType.SCHOOL_DAMAGE, implicit_target_a=6, chain_targets=3,
-            potency_excluded="this SCHOOL_DAMAGE effect has no real base_points/points_per_level in "
-            "source at all (V60=1, i.e. only the DieSides=1 '+1' roll - dead/placeholder data). The "
-            "ability's real damage ('$s3 times your main hand damage per second') lives in the "
-            "un-modeled effect 2 (EffectBasePoints_2=119, a weapon-percent-shaped value) and effect 3 "
-            "(EffectBasePoints_3=3, the per-second multiplier), neither of which this Effect() list "
-            "represents or the sp_potency/ap_potency/weapon_potency DSL covers as currently built. "
-            "Also MaxLevel=59 here (not 80, unlike every converted spell in this pass) - a real level "
-            "cap potency would force to 0 (uncapped), a second, independent reason to exclude per the "
-            "legacy-MaxLevel-capped precedent (Warlock Immolate Rank 3/8, this file's Holy Light "
-            "25292). Left entirely unconverted; a real weapon-ability conversion, if ever wanted, "
-            "belongs with Feral-style weapon_potency work, not this pass - see p7-paladin-SUMMARY.md.",
-        ),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6, chain_targets=3),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=75, implicit_target_a=6, chain_targets=3),
     ],
     spell_icon_id=3023,
-    notes='pulled from existing data. Potency system P7 (paladin pass): NOT converted - see the effect\'s own potency_excluded= for why (dead/placeholder base_points plus a real MaxLevel=59 cap).',
-    raw_overrides={'AttributesEx': 512, 'AttributesEx4': 262144, 'AttributesEx6': 256, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 50, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Hammer the current target and up to ${$x1-1} additional nearby targets, causing $s3 times your main hand damage per second as Holy damage.', 'EffectBasePoints_2': 119, 'EffectBasePoints_3': 3, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 41105, 'FacingCasterFlags': 1, 'MaxLevel': 59, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'Speed': 35.0, 'SpellClassMask_2': 262144, 'SpellClassSet': 10, 'SpellLevel': 50, 'SpellVisualID_1': 11927, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data. paladin-rework S3 PROTECTION 4.1: eff0 NORMALIZED_WEAPON_DMG + eff1 WEAPON_PERCENT_DAMAGE weapon_potency 75 (Crusader Strike shape, both chain 3), no direct-damage effect left (stock main-hand DPS hardcode inert), stale effect-2/3 keys + MaxLevel 59 / BaseLevel 50 removed, SpellLevel 20 (generator sets BaseLevel/MaxLevel).',
+    raw_overrides={'AttributesEx': 512, 'AttributesEx4': 262144, 'AttributesEx6': 256, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Hammer the current target and up to ${$x2-1} additional nearby targets, causing $s2% weapon damage as Holy damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 41105, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'Speed': 35.0, 'SpellClassMask_2': 262144, 'SpellClassSet': 10, 'SpellLevel': 20, 'SpellVisualID_1': 11927, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1311,8 +1302,8 @@ divine_sacrifice_64205 = spell(
         Effect(type=35, base_points=29, implicit_target_a=1, apply_aura=81, misc_value=127, radius_yards=30.0),
     ],
     spell_icon_id=3837,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 131072, 'AttributesEx3': 67108864, 'AttributesEx7': 1073741824, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s1% of all damage taken by party members redirected to the Paladin.', 'AuraInterruptFlags': 4718592, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "$s1% of all damage taken by party members within $a1 yards is redirected to the Paladin (up to a maximum of $s3% of the Paladin's health times the number of party members).  Damage which reduces the Paladin below $s2% health will break the effect.  Lasts $d.", 'EffectBasePoints_2': 19, 'EffectBasePoints_3': 39, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EffectMultipleValue_1': 1.0, 'EffectSpellClassMaskA_1': 2048, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 699048, 'RangeIndex': 1, 'SpellClassMask_3': 4, 'SpellClassSet': 10, 'SpellVisualID_1': 13597, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data | paladin-rework S3 PROTECTION 4.1: stale EffectSpellClassMaskA_1 0x800 dropped (aura 81 ignores it; EffectBasePoints_2/_3 kept for the script), SpellLevel 50 (non-potency, consistency)',
+    raw_overrides={'AttributesEx': 131072, 'AttributesEx3': 67108864, 'AttributesEx7': 1073741824, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s1% of all damage taken by party members redirected to the Paladin.', 'AuraInterruptFlags': 4718592, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "$s1% of all damage taken by party members within $a1 yards is redirected to you, up to $s3% of your maximum health. Damage that reduces you below $s2% health breaks the effect. Every 5% of your maximum health redirected grants a stack of Bulwark. Lasts $d.", 'EffectBasePoints_2': 19, 'EffectBasePoints_3': 39, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EffectMultipleValue_1': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 699048, 'RangeIndex': 1, 'SpellClassMask_3': 4, 'SpellClassSet': 10, 'SpellLevel': 50, 'SpellVisualID_1': 13597, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1830,6 +1821,19 @@ unbind_script(divine_storm_53385, 'spell_pal_divine_storm')
 scripted_by(divine_storm_53385, 'spell_pal_divine_storm_ret')
 scripted_by(consecration_26573, 'spell_pal_consecration')
 scripted_by(holy_wrath_2812, 'spell_pal_holy_wrath')
+
+# --- Protection (S3 PROTECTION 2.7 / 5.2): scripted_by / unbind_script ---------------------------------
+scripted_by(avenger_s_shield_31935, 'spell_pal_avengers_shield_prot')  # beside spell_pal_seal_builder above
+scripted_by(635, 'spell_pal_holy_light_bulwark')  # Holy Light: declared elsewhere, no stock binding, no data change here
+scripted_by(divine_protection_498, 'spell_pal_divine_protection_prot')
+unbind_script(divine_sacrifice_64205, 'spell_pal_divine_sacrifice')
+scripted_by(divine_sacrifice_64205, 'spell_pal_divine_sacrifice_prot')
+for _sanctuary in (blessing_of_sanctuary_20911, greater_blessing_of_sanctuary_25899):
+    unbind_script(_sanctuary, 'spell_pal_blessing_of_sanctuary')  # spell_gen_damage_reduction_aura stays bound
+    scripted_by(_sanctuary, 'spell_pal_blessing_of_sanctuary_prot')
+scripted_by(consecration_tick_201140, 'spell_pal_improved_consecration_slow')
+for _command_unleash in (201070, 201076):  # declared in paladin_seal_spells.py; bound there to spell_pal_seal_unleash
+    scripted_by(_command_unleash, 'spell_pal_improved_soc_dot')
 
 # Holy Shock (S2 HOLY 4.1): stock spell_pal_holy_shock replaced by the fork class; S1's spell_pal_seal_builder binding above stays.
 unbind_script(-20473, 'spell_pal_holy_shock')

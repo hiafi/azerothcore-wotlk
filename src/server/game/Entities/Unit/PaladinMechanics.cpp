@@ -18,12 +18,14 @@
 #include "PaladinMechanics.h"
 #include "Creature.h"
 #include "DBCStores.h"
+#include "DynamicObject.h"
 #include "GameTime.h"
 #include "HealMechanics.h"
 #include "Log.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
 #include "Random.h"
+#include "Spell.h"
 #include "SpellAuraEffects.h"
 #include "SpellAuras.h"
 #include "SpellDefines.h"
@@ -1492,5 +1494,124 @@ namespace Paladin
                 return effect->GetAmount();
 
         return 0;
+    }
+
+    // ---- Protection (PROTECTION.md §2.8) ----
+
+    uint8 GetBulwarkStacks(Player const* player)
+    {
+        if (!player)
+            return 0;
+
+        Aura const* aura = player->GetAura(PaladinData::SPELL_BULWARK);
+        return aura ? aura->GetStackAmount() : 0;
+    }
+
+    bool KnowsRadiantBulwark(Player const* player)
+    {
+        return player && (player->HasAura(PaladinData::SPELL_RADIANT_BULWARK)
+            || player->HasAura(PaladinData::SPELL_RADIANT_BULWARK_201344)
+            || player->HasAura(PaladinData::SPELL_RADIANT_BULWARK_201345));
+    }
+
+    void GrantBulwark(Player* player, uint8 count, bool setTo)
+    {
+        if (!player || !count)
+            return;
+
+        uint8 const wanted = std::min<uint8>(setTo ? BULWARK_MAX_STACKS : count, BULWARK_MAX_STACKS);
+
+        if (Aura* aura = player->GetAura(PaladinData::SPELL_BULWARK))
+        {
+            if (setTo)
+            {
+                aura->SetStackAmount(BULWARK_MAX_STACKS);
+                aura->RefreshDuration();
+            }
+            else
+            {
+                // ModStackAmount clamps to the aura's cap and refreshes the duration when the new count >= the old
+                aura->ModStackAmount(int32(count));
+            }
+        }
+        else
+        {
+            player->CastCustomSpell(PaladinData::SPELL_BULWARK, SPELLVALUE_AURA_STACK, int32(wanted), player,
+                TRIGGERED_FULL_MASK);
+        }
+
+        if (GetBulwarkStacks(player) == BULWARK_MAX_STACKS && KnowsRadiantBulwark(player))
+            player->CastSpell(player, PaladinData::SPELL_RADIANT_BULWARK_BUFF, TRIGGERED_FULL_MASK);
+    }
+
+    void ConsumeBulwark(Player* player)
+    {
+        if (!player)
+            return;
+
+        player->RemoveAurasDueToSpell(PaladinData::SPELL_RADIANT_BULWARK_BUFF);
+        player->RemoveAurasDueToSpell(PaladinData::SPELL_BULWARK);
+    }
+
+    float GetBulwarkHealMultiplier(Player const* player, uint8 stacks)
+    {
+        if (!player || !stacks)
+            return 1.0f;
+
+        // k lives only on Touched by the Light r3 (eff1 DUMMY, stored 266 = 2.67)
+        AuraEffect const* kEffect = player->GetAuraEffect(PaladinData::SPELL_TOUCHED_BY_THE_LIGHT_53592, EFFECT_1);
+        if (!kEffect)
+            return 1.0f;
+
+        float const k = float(kEffect->GetAmount()) / 100.0f;
+        float const mastery = player->GetMasteryPercentage();
+        return 1.0f + (BULWARK_HEAL_PCT_PER_STACK / 100.0f) * float(stacks) * (1.0f + k * mastery / 100.0f);
+    }
+
+    bool TryStartInternalCooldown(Player* player, uint32 markerId, uint32 icdMs)
+    {
+        if (!player || player->HasSpellCooldown(markerId))
+            return false;
+
+        player->AddSpellCooldown(markerId, 0, icdMs);
+        return true;
+    }
+
+    void RegisterProtectionHooks()
+    {
+        static bool registered = false;
+        if (registered)
+            return;
+
+        registered = true;
+
+        RegisterConsecrationAppliedHook([](Unit* caster, DynamicObject* dynObj, int32 tickBasePoints)
+        {
+            if (!caster || !dynObj || !caster->IsPlayer())
+                return;
+
+            if (!caster->HasAura(PaladinData::SPELL_IMPROVED_CONSECRATION)
+                && !caster->HasAura(PaladinData::SPELL_IMPROVED_CONSECRATION_201324)
+                && !caster->HasAura(PaladinData::SPELL_IMPROVED_CONSECRATION_201325))
+                return;
+
+            SpellInfo const* tickInfo = sSpellMgr->GetSpellInfo(PaladinData::SPELL_CONSECRATION_TICK);
+            if (!tickInfo)
+                return;
+
+            // The hook gets the raw snapshot; the real tick passes snapshot * GetFinalTickBonusMultiplier() of the
+            // Consecration aura effect (periodic eff1). At apply time the tick number is 0, so that is 1.0, but read
+            // it through the same effect so the two paths cannot drift.
+            AuraEffect const* periodic = caster->GetAuraEffect(PaladinData::SPELL_CONSECRATION, EFFECT_1);
+            float const multiplier = periodic ? periodic->GetFinalTickBonusMultiplier() : 1.0f;
+
+            SpellCastTargets targets;
+            targets.SetDst(*dynObj);
+
+            CustomSpellValues values;
+            values.AddSpellMod(SPELLVALUE_BASE_POINT0, int32(float(tickBasePoints) * multiplier));
+
+            caster->CastSpell(targets, tickInfo, &values, TRIGGERED_FULL_MASK, nullptr, periodic);
+        });
     }
 }

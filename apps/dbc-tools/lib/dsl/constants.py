@@ -150,7 +150,9 @@ class AuraType(IntEnum):
     MOD_INCREASE_HEALTH = 34  # druid-rework PLAN §6.4
     MOD_SHAPESHIFT = 36  # druid-rework FERAL §0.16 (Bestial Fury is a form)
     PROC_TRIGGER_SPELL = 42
+    PROC_TRIGGER_DAMAGE = 43  # paladin-rework PROTECTION §3 item 5 (verified against SpellAuraDefines.h)
     MOD_DODGE_PERCENT = 49  # druid-rework PLAN §6.4
+    MOD_BLOCK_PERCENT = 51  # paladin-rework PROTECTION §3 item 5 (verified against SpellAuraDefines.h)
     MOD_WEAPON_CRIT_PERCENT = 52  # druid-rework PLAN §6.4
     PERIODIC_LEECH = 53
     TRANSFORM = 56
@@ -189,8 +191,10 @@ class AuraType(IntEnum):
     MOD_SPELL_HEALING_OF_STAT_PERCENT = 175
     MOD_BASE_RESISTANCE_PCT = 142  # druid-rework PLAN §6.4 / BALANCE §3.3
     REDUCE_PUSHBACK = 149  # druid-rework PLAN §6.4 / BALANCE §3.3
+    MOD_SHIELD_BLOCKVALUE_PCT = 150  # paladin-rework PROTECTION §3 item 5 (verified against SpellAuraDefines.h)
     MOD_ATTACK_POWER_PCT = 166  # druid-rework PLAN §6.4
     MOD_RATING = 189
+    MOD_RESISTANCE_OF_STAT_PERCENT = 182  # paladin-rework PROTECTION §3 item 5 (verified against SpellAuraDefines.h)
     HASTE_ALL = 193  # SPELL_AURA_MELEE_SLOW in C++ (misnamed) - applies cast+melee+ranged haste in one effect (Bloodlust's own aura, SpellAuraEffects.cpp:4762) - PLAN §1's "generalized spell haste" mechanism
     MOD_DAMAGE_FROM_CASTER = 271  # warlock-rework AFFLICTION §3 item 3 - target-side, per-caster, live per tick (Haunt, Grim Reach debuff, Soulburn: Haunt)
     MOD_RAGE_FROM_DAMAGE_DEALT = 213  # druid-rework PLAN §6.4

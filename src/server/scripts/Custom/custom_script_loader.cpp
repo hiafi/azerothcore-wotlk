@@ -23,6 +23,7 @@ void AddSC_custom_healing_dummy();
 void AddSC_custom_training_dummy();
 void AddSC_custom_shapeshift_appearance();
 void AddSC_custom_spell_potency();
+void AddSC_custom_weapon_proficiency();
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
@@ -34,4 +35,5 @@ void AddCustomScripts()
     AddSC_custom_training_dummy();
     AddSC_custom_shapeshift_appearance();
     AddSC_custom_spell_potency();
+    AddSC_custom_weapon_proficiency();
 }

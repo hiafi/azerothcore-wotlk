@@ -6,9 +6,11 @@ Split from a single source/classes/paladin.py via split_class_file.py (.agents/p
 
 from lib.dsl.registry import granted_by_talent, scripted_by, tab
 from .paladin_spells import avenger_s_shield_31935, beacon_of_light_53563, blade_of_justice_201400, blessing_of_sanctuary_20911, divine_illumination_31842, divine_sacrifice_64205, divine_storm_53385, execution_sentence_201410, hammer_of_the_righteous_53595, holy_shield_20925, holy_shock_20473, seal_of_vengeance_31801, wake_of_ashes_201413
-from .paladin_trigger_spells import ardent_defender_31850, ardent_defender_31851, ardent_defender_31852, benediction_20101, benediction_20102, benediction_20103, blade_of_wrath_201457, blade_of_wrath_201458, blade_of_wrath_201459, blessed_hands_53660, blessed_hands_53661, combat_expertise_31858, combat_expertise_31859, combat_expertise_31860, conviction_20117, conviction_20118, conviction_20119, crusade_201463, crusade_201464, crusade_201465, crusaders_aegis_201460, crusaders_aegis_201461, crusaders_aegis_201462, divine_guardian_53527, divine_guardian_53530, divine_intellect_20257, divine_intellect_20258, divine_intellect_20259, divine_might_201443, divine_might_201444, divine_might_201445, divine_purpose_201471, divine_purpose_31871, divine_purpose_31872, enlightened_judgements_53556, enlightened_judgements_53557, eye_for_an_eye_201467, eye_for_an_eye_25988, eye_for_an_eye_9799, fanaticism_31879, fanaticism_31880, fanaticism_31881, guarded_by_the_light_53583, guarded_by_the_light_53585, guardian_s_favor_20174, guardian_s_favor_20175, healing_light_20237, healing_light_20238, healing_light_20239, heart_of_the_crusader_20335, heart_of_the_crusader_20336, heart_of_the_crusader_20337, holy_guidance_31837, holy_guidance_31838, holy_guidance_31839, holy_power_5923, holy_power_5924, holy_power_5925, illumination_20210, illumination_20212, illumination_20213, improved_blessing_of_might_20042, improved_blessing_of_might_20045, improved_blessing_of_wisdom_20244, improved_blessing_of_wisdom_20245, improved_concentration_aura_20254, improved_concentration_aura_20255, improved_concentration_aura_20256, improved_crusader_strike_201449, improved_crusader_strike_201450, improved_devotion_aura_20138, improved_devotion_aura_20139, improved_devotion_aura_20140, improved_hammer_of_justice_20487, improved_hammer_of_justice_20488, improved_judgements_201468, improved_judgements_25956, improved_judgements_25957, improved_lay_on_hands_20234, improved_lay_on_hands_20235, improved_righteous_fury_20468, improved_righteous_fury_20469, improved_righteous_fury_20470, infusion_of_light_53569, infusion_of_light_53576, judgements_of_the_just_53695, judgements_of_the_just_53696, judgements_of_the_pure_53671, judgements_of_the_pure_53673, judgements_of_the_pure_54151, judgements_of_the_wise_31876, judgements_of_the_wise_31877, light_s_grace_31833, light_s_grace_31835, light_s_grace_31836, pure_of_heart_31822, pure_of_heart_31823, purify_the_unclean_201451, purify_the_unclean_201452, purify_the_unclean_201453, purifying_power_31825, purifying_power_31826, pursuit_of_justice_26022, pursuit_of_justice_26023, righteous_vengeance_53380, righteous_vengeance_53381, righteous_vengeance_53382, sacred_cleansing_53551, sacred_cleansing_53552, sacred_cleansing_53553, sacred_duty_31848, sacred_duty_31849, sanctified_light_20359, sanctified_light_20360, sanctified_light_20361, sanctified_retribution_201469, sanctified_retribution_201470, sanctified_retribution_31869, sanctified_seals_201454, sanctified_seals_201455, sanctified_seals_201456, sanctified_wrath_53375, sanctified_wrath_53376, sanctity_of_battle_32043, sanctity_of_battle_35396, sanctity_of_battle_35397, sheath_of_light_53501, sheath_of_light_53502, sheath_of_light_53503, shield_of_the_templar_53709, shield_of_the_templar_53710, shield_of_the_templar_53711, smite_evil_31866, smite_evil_31867, smite_evil_31868, spiritual_attunement_31785, spiritual_attunement_33776, spiritual_focus_20205, spiritual_focus_20206, spiritual_focus_20207, stoicism_31844, stoicism_31845, stoicism_53519, strength_of_faith_201446, strength_of_faith_201447, strength_of_faith_201448, swift_retribution_53379, swift_retribution_53484, swift_retribution_53648, the_art_of_war_201472, the_art_of_war_53486, the_art_of_war_53488, touched_by_the_light_53590, touched_by_the_light_53591, touched_by_the_light_53592, two_handed_weapon_specialization_20111, two_handed_weapon_specialization_20112, two_handed_weapon_specialization_20113, unyielding_faith_25836, unyielding_faith_9453, vengeance_20049, vengeance_20056, vengeance_20057, vindication_201466, vindication_26016, vindication_9452, zeal_201440, zeal_201441, zeal_201442
+from .paladin_trigger_spells import anticipation_20096, anticipation_20097, anticipation_20098, ardent_defender_31850, ardent_defender_31851, ardent_defender_31852, benediction_20101, benediction_20102, benediction_20103, blade_of_wrath_201457, blade_of_wrath_201458, blade_of_wrath_201459, blessed_hands_53660, blessed_hands_53661, combat_expertise_31858, combat_expertise_31859, combat_expertise_31860, conviction_20117, conviction_20118, conviction_20119, crusade_201463, crusade_201464, crusade_201465, crusaders_aegis_201460, crusaders_aegis_201461, crusaders_aegis_201462, divine_guardian_53527, divine_guardian_53530, divine_intellect_20257, divine_intellect_20258, divine_intellect_20259, divine_might_201443, divine_might_201444, divine_might_201445, divine_purpose_201471, divine_purpose_31871, divine_purpose_31872, divine_strength_20262, divine_strength_20263, divine_strength_20264, divinity_63646, divinity_63647, divinity_63648, enlightened_judgements_53556, enlightened_judgements_53557, eye_for_an_eye_201467, eye_for_an_eye_25988, eye_for_an_eye_9799, fanaticism_31879, fanaticism_31880, fanaticism_31881, guarded_by_the_light_53583, guarded_by_the_light_53585, guardian_s_favor_20174, guardian_s_favor_20175, healing_light_20237, healing_light_20238, healing_light_20239, heart_of_the_crusader_20335, heart_of_the_crusader_20336, heart_of_the_crusader_20337, holy_guidance_31837, holy_guidance_31838, holy_guidance_31839, holy_power_5923, holy_power_5924, holy_power_5925, illumination_20210, illumination_20212, illumination_20213, improved_blessing_of_might_20042, improved_blessing_of_might_20045, improved_blessing_of_wisdom_20244, improved_blessing_of_wisdom_20245, improved_concentration_aura_20254, improved_concentration_aura_20255, improved_concentration_aura_20256, improved_crusader_strike_201449, improved_crusader_strike_201450, improved_devotion_aura_20138, improved_devotion_aura_20139, improved_devotion_aura_20140, improved_hammer_of_justice_20487, improved_hammer_of_justice_20488, improved_judgements_201468, improved_judgements_25956, improved_judgements_25957, improved_lay_on_hands_20234, improved_lay_on_hands_20235, improved_righteous_fury_20468, improved_righteous_fury_20469, improved_righteous_fury_20470, infusion_of_light_53569, infusion_of_light_53576, judgements_of_the_just_53695, judgements_of_the_just_53696, judgements_of_the_pure_53671, judgements_of_the_pure_53673, judgements_of_the_pure_54151, judgements_of_the_wise_31876, judgements_of_the_wise_31877, light_s_grace_31833, light_s_grace_31835, light_s_grace_31836, one_handed_weapon_specialization_20196, one_handed_weapon_specialization_20197, one_handed_weapon_specialization_20198, pure_of_heart_31822, pure_of_heart_31823, purify_the_unclean_201451, purify_the_unclean_201452, purify_the_unclean_201453, purifying_power_31825, purifying_power_31826, pursuit_of_justice_26022, pursuit_of_justice_26023, redoubt_20127, redoubt_20130, redoubt_20135, righteous_vengeance_53380, righteous_vengeance_53381, righteous_vengeance_53382, sacred_cleansing_53551, sacred_cleansing_53552, sacred_cleansing_53553, sacred_duty_31848, sacred_duty_31849, sanctified_light_20359, sanctified_light_20360, sanctified_light_20361, sanctified_retribution_201469, sanctified_retribution_201470, sanctified_retribution_31869, sanctified_seals_201454, sanctified_seals_201455, sanctified_seals_201456, sanctified_wrath_53375, sanctified_wrath_53376, sanctity_of_battle_32043, sanctity_of_battle_35396, sanctity_of_battle_35397, sheath_of_light_53501, sheath_of_light_53502, sheath_of_light_53503, shield_of_the_templar_53709, shield_of_the_templar_53710, shield_of_the_templar_53711, smite_evil_31866, smite_evil_31867, smite_evil_31868, spiritual_attunement_31785, spiritual_attunement_33776, spiritual_focus_20205, spiritual_focus_20206, spiritual_focus_20207, stoicism_31844, stoicism_31845, stoicism_53519, strength_of_faith_201446, strength_of_faith_201447, strength_of_faith_201448, swift_retribution_53379, swift_retribution_53484, swift_retribution_53648, the_art_of_war_201472, the_art_of_war_53486, the_art_of_war_53488, touched_by_the_light_53590, touched_by_the_light_53591, touched_by_the_light_53592, toughness_20143, toughness_20144, toughness_20145, two_handed_weapon_specialization_20111, two_handed_weapon_specialization_20112, two_handed_weapon_specialization_20113, unyielding_faith_25836, unyielding_faith_9453, vengeance_20049, vengeance_20056, vengeance_20057, vindication_201466, vindication_26016, vindication_9452, zeal_201440, zeal_201441, zeal_201442
 from .paladin_holy_ranks import a_new_dawn_r1_201240, a_new_dawn_r2_201241, a_new_dawn_r3_201242, blessed_crusade_r1_201257, blessed_crusade_r2_201258, blessed_crusade_r3_201259, blessed_hands_talent_r3_201278, dawn_before_dusk_talent_r1_201262, dawn_before_dusk_talent_r2_201263, dawn_before_dusk_talent_r3_201264, enduring_light_r1_201243, enduring_light_r2_201244, enduring_light_r3_201245, glimmer_of_light_talent_r1_201268, glimmer_of_light_talent_r2_201269, glimmer_of_light_talent_r3_201270, illuminated_steel_r1_201246, illuminated_steel_r2_201247, illuminated_steel_r3_201248, light_s_fervor_r1_201260, light_s_fervor_r2_201261, merciful_strikes_talent_r1_201249, merciful_strikes_talent_r2_201250, merciful_strikes_talent_r3_201251, overflowing_light_talent_r1_201274, overflowing_light_talent_r2_201275, overflowing_light_talent_r3_201276, pure_of_heart_talent_r3_201279, radiant_exorcism_talent_r1_201265, radiant_exorcism_talent_r2_201266, radiant_exorcism_talent_r3_201267, shock_and_awe_talent_r1_201271, shock_and_awe_talent_r2_201272, shock_and_awe_talent_r3_201273, sunlight_talent_r1_201254, sunlight_talent_r2_201255, sunlight_talent_r3_201256, unyielding_faith_r3_201277, zealous_exorcism_r1_201252, zealous_exorcism_r2_201253
 from .paladin_holy_spells import divine_toll_201203, light_s_hammer_201200
+from .paladin_prot_ranks import avenging_light_201353, avenging_light_201354, avenging_light_201355, bulwark_of_faith_201346, bulwark_of_faith_201347, consecrated_shield_201335, consecrated_shield_201336, improved_auras_201320, improved_auras_201321, improved_auras_201322, improved_blessing_of_sanctuary_201337, improved_blessing_of_sanctuary_201338, improved_consecration_201323, improved_consecration_201324, improved_consecration_201325, improved_hammer_of_the_righteous_201331, improved_hammer_of_the_righteous_201332, improved_seal_of_command_201329, improved_seal_of_command_201330, inner_light_201348, inner_light_201349, inner_light_201350, lights_defender_201351, lights_defender_201352, lights_reservoir_201333, lights_reservoir_201334, radiant_bulwark_201343, radiant_bulwark_201344, radiant_bulwark_201345, sanctified_resolve_201326, sanctified_resolve_201327, sanctified_resolve_201328, shield_discipline_201339, shield_discipline_201340, vengeful_bulwark_201341, vengeful_bulwark_201342
+from .paladin_prot_spells import guardian_of_ancient_kings_201356
 
 
 retribution_381_tab = tab(
@@ -37,17 +39,146 @@ protection_383_tab = tab(
     name='Protection',
     class_mask=2,
     order_index=1,
+    skill_line=267,
     spell_icon_id=291,
     raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'PaladinProtection'},
 )
 
 
+# ---------------------------------------------------------------------------
+# Protection tab 383 - paladin-rework S3 (PROTECTION §2.2 / §5). 36 talents, 84 points, no prerequisite arrows (B6).
+# Kept+moved, repurposed in place (1748, 1425, 1521, 1426, 2194, 2200, 1423, 2195) and minted (60125-60132, 60150, 60151).
+# Castable-teaching rows keep flags=1 (2196, 1430, 1431, 1754, 2280, 60151); 60151 bundles SkillLineAbility 30520.
+# ---------------------------------------------------------------------------
+
+
 granted_by_talent(
-    id=1421,
+    id=60125,
     tab=protection_383_tab,
-    tier=7,
+    tier=0,
     column=0,
-    ranks=[20127, 20130, 20135],
+    ranks=[improved_auras_201320, improved_auras_201321, improved_auras_201322],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=60126,
+    tab=protection_383_tab,
+    tier=0,
+    column=1,
+    ranks=[improved_consecration_201323, improved_consecration_201324, improved_consecration_201325],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=2185,
+    tab=protection_383_tab,
+    tier=0,
+    column=2,
+    ranks=[divine_strength_20262, divine_strength_20263, divine_strength_20264],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=1753,
+    tab=protection_383_tab,
+    tier=0,
+    column=3,
+    ranks=[combat_expertise_31858, combat_expertise_31859, combat_expertise_31860],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=1748,
+    tab=protection_383_tab,
+    tier=1,
+    column=0,
+    ranks=[sanctified_resolve_201326, sanctified_resolve_201327, sanctified_resolve_201328],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=1425,
+    tab=protection_383_tab,
+    tier=1,
+    column=1,
+    ranks=[improved_seal_of_command_201329, improved_seal_of_command_201330],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=1629,
+    tab=protection_383_tab,
+    tier=1,
+    column=2,
+    ranks=[anticipation_20096, anticipation_20097, anticipation_20098],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=2282,
+    tab=protection_383_tab,
+    tier=1,
+    column=3,
+    ranks=[spiritual_attunement_31785, spiritual_attunement_33776],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=2196,
+    tab=protection_383_tab,
+    tier=2,
+    column=1,
+    ranks=[hammer_of_the_righteous_53595],
+    player_castable=False,
+    flags=1,
+)
+
+
+granted_by_talent(
+    id=1501,
+    tab=protection_383_tab,
+    tier=2,
+    column=2,
+    ranks=[improved_righteous_fury_20468, improved_righteous_fury_20469, improved_righteous_fury_20470],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=1423,
+    tab=protection_383_tab,
+    tier=2,
+    column=3,
+    ranks=[toughness_20143, toughness_20144, toughness_20145],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=60127,
+    tab=protection_383_tab,
+    tier=3,
+    column=0,
+    ranks=[improved_hammer_of_the_righteous_201331, improved_hammer_of_the_righteous_201332],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=1521,
+    tab=protection_383_tab,
+    tier=3,
+    column=1,
+    ranks=[lights_reservoir_201333, lights_reservoir_201334],
     player_castable=False,
 )
 
@@ -63,22 +194,24 @@ granted_by_talent(
 
 
 granted_by_talent(
-    id=1423,
+    id=1431,
     tab=protection_383_tab,
-    tier=2,
-    column=2,
-    ranks=[20143, 20144, 20145, 20146, 20147],
+    tier=4,
+    column=0,
+    ranks=[blessing_of_sanctuary_20911],
     player_castable=False,
+    flags=1,
 )
 
 
 granted_by_talent(
-    id=1425,
+    id=1430,
     tab=protection_383_tab,
-    tier=1,
+    tier=4,
     column=1,
-    ranks=[guardian_s_favor_20174, guardian_s_favor_20175],
+    ranks=[holy_shield_20925],
     player_castable=False,
+    flags=1,
 )
 
 
@@ -87,90 +220,37 @@ granted_by_talent(
     tab=protection_383_tab,
     tier=4,
     column=2,
-    ranks=[20177, 20179, 20181, 20180, 20182],
+    ranks=[consecrated_shield_201335, consecrated_shield_201336],
     player_castable=False,
 )
 
 
 granted_by_talent(
-    id=1429,
-    tab=protection_383_tab,
-    tier=5,
-    column=2,
-    ranks=[20196, 20197, 20198],
-    player_castable=False,
-)
-
-
-granted_by_talent(
-    id=1430,
-    tab=protection_383_tab,
-    tier=6,
-    column=1,
-    ranks=[holy_shield_20925],
-    player_castable=False,
-    depends_on={'talent_id': 1431, 'rank': 0},
-    flags=1,
-)
-
-
-granted_by_talent(
-    id=1431,
+    id=60128,
     tab=protection_383_tab,
     tier=4,
-    column=1,
-    ranks=[blessing_of_sanctuary_20911],
-    player_castable=False,
-    flags=1,
-)
-
-
-granted_by_talent(
-    id=1442,
-    tab=protection_383_tab,
-    tier=0,
-    column=1,
-    ranks=[63646, 63647, 63648, 63649, 63650],
+    column=3,
+    ranks=[improved_blessing_of_sanctuary_201337, improved_blessing_of_sanctuary_201338],
     player_castable=False,
 )
 
 
 granted_by_talent(
-    id=1501,
+    id=2195,
     tab=protection_383_tab,
-    tier=2,
-    column=1,
-    ranks=[improved_righteous_fury_20468, improved_righteous_fury_20469, improved_righteous_fury_20470],
-    player_castable=False,
-)
-
-
-granted_by_talent(
-    id=1521,
-    tab=protection_383_tab,
-    tier=3,
-    column=1,
-    ranks=[improved_hammer_of_justice_20487, improved_hammer_of_justice_20488],
-    player_castable=False,
-)
-
-
-granted_by_talent(
-    id=1629,
-    tab=protection_383_tab,
-    tier=1,
-    column=2,
-    ranks=[20096, 20097, 20098, 20099, 20100],
-    player_castable=False,
-)
-
-
-granted_by_talent(
-    id=1748,
-    tab=protection_383_tab,
-    tier=1,
+    tier=5,
     column=0,
-    ranks=[stoicism_31844, stoicism_31845, stoicism_53519],
+    ranks=[touched_by_the_light_53590, touched_by_the_light_53591, touched_by_the_light_53592],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=1421,
+    tab=protection_383_tab,
+    tier=5,
+    column=1,
+    ranks=[redoubt_20127, redoubt_20130, redoubt_20135],
     player_castable=False,
 )
 
@@ -179,9 +259,40 @@ granted_by_talent(
     id=1750,
     tab=protection_383_tab,
     tier=5,
-    column=0,
+    column=2,
     ranks=[sacred_duty_31848, sacred_duty_31849],
     player_castable=False,
+)
+
+
+granted_by_talent(
+    id=60129,
+    tab=protection_383_tab,
+    tier=5,
+    column=3,
+    ranks=[shield_discipline_201339, shield_discipline_201340],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=1442,
+    tab=protection_383_tab,
+    tier=6,
+    column=0,
+    ranks=[divinity_63646, divinity_63647, divinity_63648],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=1754,
+    tab=protection_383_tab,
+    tier=6,
+    column=1,
+    ranks=[avenger_s_shield_31935],
+    player_castable=False,
+    flags=1,
 )
 
 
@@ -196,34 +307,43 @@ granted_by_talent(
 
 
 granted_by_talent(
-    id=1753,
+    id=1429,
     tab=protection_383_tab,
     tier=7,
-    column=2,
-    ranks=[combat_expertise_31858, combat_expertise_31859, combat_expertise_31860],
+    column=0,
+    ranks=[one_handed_weapon_specialization_20196, one_handed_weapon_specialization_20197, one_handed_weapon_specialization_20198],
     player_castable=False,
 )
 
 
 granted_by_talent(
-    id=1754,
+    id=60130,
+    tab=protection_383_tab,
+    tier=7,
+    column=1,
+    ranks=[vengeful_bulwark_201341, vengeful_bulwark_201342],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=60131,
+    tab=protection_383_tab,
+    tier=8,
+    column=0,
+    ranks=[radiant_bulwark_201343, radiant_bulwark_201344, radiant_bulwark_201345],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=2280,
     tab=protection_383_tab,
     tier=8,
     column=1,
-    ranks=[avenger_s_shield_31935],
+    ranks=[divine_sacrifice_64205],
     player_castable=False,
-    depends_on={'talent_id': 1430, 'rank': 0},
     flags=1,
-)
-
-
-granted_by_talent(
-    id=2185,
-    tab=protection_383_tab,
-    tier=0,
-    column=2,
-    ranks=[20262, 20263, 20264, 20265, 20266],
-    player_castable=False,
 )
 
 
@@ -232,38 +352,17 @@ granted_by_talent(
     tab=protection_383_tab,
     tier=8,
     column=2,
-    ranks=[guarded_by_the_light_53583, guarded_by_the_light_53585],
+    ranks=[bulwark_of_faith_201346, bulwark_of_faith_201347],
     player_castable=False,
 )
 
 
 granted_by_talent(
-    id=2195,
+    id=60132,
     tab=protection_383_tab,
     tier=8,
-    column=0,
-    ranks=[touched_by_the_light_53590, touched_by_the_light_53591, touched_by_the_light_53592],
-    player_castable=False,
-)
-
-
-granted_by_talent(
-    id=2196,
-    tab=protection_383_tab,
-    tier=10,
-    column=1,
-    ranks=[hammer_of_the_righteous_53595],
-    player_castable=False,
-    flags=1,
-)
-
-
-granted_by_talent(
-    id=2200,
-    tab=protection_383_tab,
-    tier=9,
-    column=2,
-    ranks=[judgements_of_the_just_53695, judgements_of_the_just_53696],
+    column=3,
+    ranks=[inner_light_201348, inner_light_201349, inner_light_201350],
     player_castable=False,
 )
 
@@ -272,42 +371,51 @@ granted_by_talent(
     id=2204,
     tab=protection_383_tab,
     tier=9,
-    column=1,
+    column=0,
     ranks=[shield_of_the_templar_53709, shield_of_the_templar_53710, shield_of_the_templar_53711],
     player_castable=False,
-    depends_on={'talent_id': 1754, 'rank': 0},
 )
 
 
 granted_by_talent(
-    id=2280,
+    id=60150,
     tab=protection_383_tab,
-    tier=2,
-    column=0,
-    ranks=[divine_sacrifice_64205],
+    tier=9,
+    column=1,
+    ranks=[lights_defender_201351, lights_defender_201352],
     player_castable=False,
-    flags=1,
+)
+
+
+granted_by_talent(
+    id=2200,
+    tab=protection_383_tab,
+    tier=9,
+    column=2,
+    ranks=[avenging_light_201353, avenging_light_201354, avenging_light_201355],
+    player_castable=False,
 )
 
 
 granted_by_talent(
     id=2281,
     tab=protection_383_tab,
-    tier=3,
-    column=0,
+    tier=9,
+    column=3,
     ranks=[divine_guardian_53527, divine_guardian_53530],
     player_castable=False,
-    depends_on={'talent_id': 2280, 'rank': 0},
 )
 
 
 granted_by_talent(
-    id=2282,
+    id=60151,
     tab=protection_383_tab,
-    tier=6,
+    tier=10,
     column=0,
-    ranks=[spiritual_attunement_31785, spiritual_attunement_33776],
-    player_castable=False,
+    ranks=[guardian_of_ancient_kings_201356],
+    player_castable=True,
+    skill_line_ability_ids=[30520],
+    flags=1,
 )
 
 

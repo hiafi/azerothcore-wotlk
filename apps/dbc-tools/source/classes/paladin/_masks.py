@@ -153,6 +153,12 @@ JUDGEMENT_OWN_HITS = (0, 0, 0x10008)  # J | Dv: Judgements of the Pure own-hit c
 MERCIFUL_WINDOW = (0, 0x8000, 0x8)  # CS | J (Deliverance excluded)
 ALL_PALADIN = (0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF)  # Unyielding Faith crit: every paladin spell/ability, never autos
 
+# Protection composites (PROTECTION.md §2.6). CU = UNLEASH_COMMAND, AB = AURA_BURST, Improved SoC = COMMAND_ALL.
+# Lay on Hands (d0 0x8000) is deliberately NOT in PROT_SELF_DIRECT_HEALS (PLAN #82 / PROTECTION §11 Q11): LoH ignores
+# healing modifiers, so it would spend Touched by the Light's charge unboosted.
+PROT_SELF_DIRECT_HEALS = (0xC0000000, 0x10000, 0)  # Holy Light, Flash of Light, Holy Shock heal (TbtL buff + row)
+HL_FOL = (0xC0000000, 0, 0)  # Holy Light | Flash of Light (Light's Reservoir row)
+
 # --- spell_proc constants (SpellMgr.h:113-277) ---
 PROC_FLAG_DONE_MELEE_AUTO_ATTACK = 0x4
 PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS = 0x10

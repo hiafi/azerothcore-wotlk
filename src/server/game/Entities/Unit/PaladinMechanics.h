@@ -257,6 +257,29 @@ namespace Paladin
     float     GetSpellCritFromIntellectOnly(Player* player);
     void      RefreshIlluminatedSteel(Player* player);       // paladin_hooks.cpp OnPlayerAfterUpdateMaxPower
     int32     GetRankAmount(Unit const* caster, std::initializer_list<uint32> rankSpellIdsHighFirst, uint8 effIndex);
+
+    // ------------------------------------------------------------------
+    // Protection section (PROTECTION.md §2.8). WP-0 declares; WP-B2 fills the bodies.
+    // ------------------------------------------------------------------
+    constexpr uint8  BULWARK_MAX_STACKS         = 5;
+    constexpr float  BULWARK_HEAL_PCT_PER_STACK = 5.0f;    // P §5
+    constexpr uint32 SHROUD_OF_LIGHT_ICD_MS     = 8000;    // P (5,0)
+
+    // The Bulwark aura (201360) stack count IS the state (0 = no aura); no map, nothing to clear on logout.
+    uint8 GetBulwarkStacks(Player const* player);
+    // +count (cap 5) and refresh to 20 s; setTo = set the stack count to `count` (Sacred Duty capstone).
+    // At 5 stacks and any Radiant Bulwark rank known: (re)apply 201362. Non-player: never called (CR3).
+    void  GrantBulwark(Player* player, uint8 count, bool setTo = false);
+    // Removes 201362 then 201360 (Holy Light consumption).
+    void  ConsumeBulwark(Player* player);
+    // 1 + 0.05*n*(1 + k*M/100), k = 53592 eff1 live amount / 100 (2.67), M = GetMasteryPercentage()
+    // read live. Returns 1.0 when n == 0 or Touched by the Light r3 (53592) is not known.
+    float GetBulwarkHealMultiplier(Player const* player, uint8 stacks);
+    bool  KnowsRadiantBulwark(Player const* player);       // any of 201343-201345
+    // DruidMechanics::TryStartInternalCooldown shape (DruidMechanics.cpp:211-218): marker spell cooldown.
+    bool  TryStartInternalCooldown(Player* player, uint32 markerId, uint32 icdMs);
+    // Calls Paladin::RegisterConsecrationAppliedHook(...) once (Improved Consecration instant tick, §6.3).
+    void  RegisterProtectionHooks();
 }
 
 #endif
