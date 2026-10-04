@@ -21,6 +21,8 @@ from lib.dsl.registry import (
 )
 
 from . import _masks as m
+from .paladin_holy_spells import holy_heal_tooltip
+from .paladin_trigger_spells import holy_shock_25912, holy_shock_25914, sacred_shield_58597
 
 
 # paladin-rework S1 (SHARED C2.1 / C2.2a): -30% damage taken, 2 min cooldown, no Forbearance cause/check
@@ -84,11 +86,12 @@ holy_light_635 = spell(
     mana_cost_pct=29,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=150.0, potency_kind='heal', implicit_target_a=21),
+        Effect(type=EffectType.HEAL, sp_potency=135.0, potency_kind='heal', implicit_target_a=21),
     ],
     spell_icon_id=70,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 13 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=150.0 (paladin-potency-proposals.txt, user value; was 207.8 from a stale worktree copy of the proposals file, corrected 2026-10-02).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 20, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for {pot1}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2147483648, 'SpellClassSet': 10, 'SpellLevel': 1, 'SpellVisualID_1': 2936, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    tooltip_vars=holy_heal_tooltip,
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 13 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=135.0 (paladin-potency-proposals.txt, user value; was 207.8 from a stale worktree copy of the proposals file, corrected 2026-10-02). | paladin-rework S2 HOLY 4.1: sp_potency 150 -> 135 (2,383 at 60); description {pot1} -> {pot1*hl} (entry 1105 owned by paladin_holy_spells.py).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 20, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for {pot1*hl}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2147483648, 'SpellClassSet': 10, 'SpellLevel': 1, 'SpellVisualID_1': 2936, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -357,11 +360,12 @@ flash_of_light_19750 = spell(
     mana_cost_pct=7,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=75.0, potency_kind='heal', implicit_target_a=21),
+        Effect(type=EffectType.HEAL, sp_potency=90.0, potency_kind='heal', implicit_target_a=21),
     ],
     spell_icon_id=242,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=75.0 (paladin-potency-proposals.txt, user value; was 52.7 from a stale worktree copy of the proposals file, corrected 2026-10-02).',
-    raw_overrides={'AttributesEx6': 33554432, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for {pot1}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 1073741824, 'SpellClassSet': 10, 'SpellLevel': 20, 'SpellVisualID_1': 6623, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    tooltip_vars=holy_heal_tooltip,
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=90.0 (paladin-potency-proposals.txt, user value; was 52.7 from a stale worktree copy of the proposals file, corrected 2026-10-02). | paladin-rework S2 HOLY 4.1: sp_potency 75 -> 90 (953 at 60); description {pot1*hl} (entry 1105 owned by paladin_holy_spells.py).',
+    raw_overrides={'AttributesEx6': 33554432, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for {pot1*hl}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 1073741824, 'SpellClassSet': 10, 'SpellLevel': 20, 'SpellVisualID_1': 6623, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -902,8 +906,8 @@ sacred_shield_53601 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=21, apply_aura=AuraType.DUMMY, misc_value=127, trigger_spell=58597),
     ],
     spell_icon_id=3033,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx5': 32, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Each time the target takes damage they gain a Sacred Shield, absorbing damage and increasing the paladin's chance to critically hit with Flash of Light by $58597s2%.   The target cannot gain this effect more than once every $s2 sec.", 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Each time the target takes damage they gain a Sacred Shield, absorbing damage and increasing the paladin's chance to critically hit with Flash of Light by $58597s2% for up to $58597d.  They cannot gain this effect more than once every $s2 sec.  Lasts $d.  This spell cannot be on more than one target at any one time.", 'EffectBasePoints_2': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 1081344, 'SpellClassMask_2': 524288, 'SpellClassSet': 10, 'SpellLevel': 60, 'SpellVisualID_1': 11956, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data | paladin-rework S2 HOLY 4.1: tooltip polish, absorb amount via pot_text(58597) (no talent multiplier); $58597s2% kept (Q13 default keeps eff1)',
+    raw_overrides={'AttributesEx5': 32, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Each time the target takes damage they gain a Sacred Shield, absorbing " + pot_text(sacred_shield_58597) + " damage and increasing the paladin's chance to critically hit with Flash of Light by $58597s2%.   The target cannot gain this effect more than once every $s2 sec.", 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Each time the target takes damage they gain a Sacred Shield, absorbing " + pot_text(sacred_shield_58597) + " damage and increasing the paladin's chance to critically hit with Flash of Light by $58597s2% for up to $58597d.  They cannot gain this effect more than once every $s2 sec.  Lasts $d.  This spell cannot be on more than one target at any one time.", 'EffectBasePoints_2': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 1081344, 'SpellClassMask_2': 524288, 'SpellClassSet': 10, 'SpellLevel': 60, 'SpellVisualID_1': 11956, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -989,14 +993,15 @@ holy_shock_20473 = spell(
     cooldown_ms=0,
     category_cooldown_ms=6000,
     mana_cost=0,
-    mana_cost_pct=18,
+    mana_cost_pct=10,
     range_yards=20.0,
     effects=[
         Effect(type=EffectType.DUMMY, die_sides=0, implicit_target_a=25),
     ],
     spell_icon_id=156,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx3': 196608, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the target with Holy energy, causing $25912s1 Holy damage to an enemy, or $25914s1 healing to an ally.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 161, 'SpellClassMask_1': 2097152, 'SpellClassSet': 10, 'SpellLevel': 40, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    tooltip_vars=holy_heal_tooltip,
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | paladin-rework S2 HOLY 4.1: mana_cost_pct 18 -> 10, SpellLevel/BaseLevel 40 -> 30; description via pot_text(25912/25914, var="shock") (entry 1105 owned by paladin_holy_spells.py)',
+    raw_overrides={'AttributesEx3': 196608, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 30, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the target with Holy energy, causing ' + pot_text(holy_shock_25912, var="shock") + ' Holy damage to an enemy, or ' + pot_text(holy_shock_25914, var="shock") + ' healing to an ally.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 161, 'SpellClassMask_1': 2097152, 'SpellClassSet': 10, 'SpellLevel': 30, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1252,8 +1257,8 @@ beacon_of_light_53563 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=57, apply_aura=AuraType.PERIODIC_TRIGGER_SPELL, amplitude=1500, trigger_spell=53651),
     ],
     spell_icon_id=3032,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 131072, 'AttributesEx4': 524288, 'AttributesEx5': 544, 'AttributesEx6': 4, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Beacon of Light.', 'AuraInterruptFlags': 524288, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The target becomes a Beacon of Light to all members of your party or raid within a 60 yard radius.  Any heals you cast on party or raid members will also heal the Beacon for $s1% of the amount healed.  Only one target can be the Beacon of Light at a time. Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 16777216, 'SpellClassSet': 10, 'SpellLevel': 60, 'SpellVisualID_1': 11876, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data | paladin-rework S2 HOLY 4.1: SpellLevel/BaseLevel 60 -> 50',
+    raw_overrides={'AttributesEx': 131072, 'AttributesEx4': 524288, 'AttributesEx5': 544, 'AttributesEx6': 4, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Beacon of Light.', 'AuraInterruptFlags': 524288, 'BaseLevel': 50, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The target becomes a Beacon of Light to all members of your party or raid within a 60 yard radius.  Any heals you cast on party or raid members will also heal the Beacon for $s1% of the amount healed.  Only one target can be the Beacon of Light at a time. Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 16777216, 'SpellClassSet': 10, 'SpellLevel': 50, 'SpellVisualID_1': 11876, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1825,6 +1830,10 @@ unbind_script(divine_storm_53385, 'spell_pal_divine_storm')
 scripted_by(divine_storm_53385, 'spell_pal_divine_storm_ret')
 scripted_by(consecration_26573, 'spell_pal_consecration')
 scripted_by(holy_wrath_2812, 'spell_pal_holy_wrath')
+
+# Holy Shock (S2 HOLY 4.1): stock spell_pal_holy_shock replaced by the fork class; S1's spell_pal_seal_builder binding above stays.
+unbind_script(-20473, 'spell_pal_holy_shock')
+scripted_by(20473, 'spell_pal_holy_shock_holy')
 
 # Sacred Shield (B5.11): the absorb spell 58597 is declared in paladin_trigger_spells.py (data edit is not this file's);
 # the stock 75%-healing-power literal script is replaced by spell_pal_sacred_shield_absorb. 53601's own stock class stays.

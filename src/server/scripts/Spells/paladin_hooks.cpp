@@ -17,7 +17,7 @@
 
 /*
  * Paladin rework - ScriptMgr handlers (paladin-rework.SHARED.md A4 / B6 item 4): logout cleanup
- * of the per-player seal/Ret/Holy state. Holy adds its own handlers in S2. Every handler checks
+ * of the per-player seal/Ret/Holy state. Holy adds the Illuminated Steel refresh (S2). Every handler checks
  * for a paladin first (these run for every class).
  */
 
@@ -28,12 +28,21 @@
 class PaladinHooksPlayer : public PlayerScript
 {
 public:
-    PaladinHooksPlayer() : PlayerScript("PaladinHooksPlayer", { PLAYERHOOK_ON_LOGOUT }) { }
+    PaladinHooksPlayer() : PlayerScript("PaladinHooksPlayer",
+        { PLAYERHOOK_ON_LOGOUT, PLAYERHOOK_ON_AFTER_UPDATE_MAX_POWER }) { }
 
     void OnPlayerLogout(Player* player) override
     {
         if (player && player->getClass() == CLASS_PALADIN)
             Paladin::ClearState(player);
+    }
+
+    // Illuminated Steel (HOLY.md §6.5): fires on every Intellect change (StatSystem.cpp UpdateMaxPower), after
+    // SetStat, so the new Intellect is readable. `value` is left untouched.
+    void OnPlayerAfterUpdateMaxPower(Player* player, Powers& power, float& /*value*/) override
+    {
+        if (player && player->getClass() == CLASS_PALADIN && power == POWER_MANA)
+            Paladin::RefreshIlluminatedSteel(player);
     }
 };
 

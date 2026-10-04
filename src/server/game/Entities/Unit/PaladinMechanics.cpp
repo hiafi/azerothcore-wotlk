@@ -17,7 +17,9 @@
 
 #include "PaladinMechanics.h"
 #include "Creature.h"
+#include "DBCStores.h"
 #include "GameTime.h"
+#include "HealMechanics.h"
 #include "Log.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
@@ -26,6 +28,7 @@
 #include "SpellAuras.h"
 #include "SpellDefines.h"
 #include "SpellInfo.h"
+#include "SpellMgr.h"
 #include "Unit.h"
 #include "WorldSession.h"
 #include <algorithm>
@@ -181,6 +184,22 @@ namespace Paladin
             auto const itr = retStates.find(low);
             return itr != retStates.end() ? &itr->second : nullptr;
         }
+
+        // Holy per-player state (HOLY.md §2.8). Keyed by guid; guarded by its own mutex because maps update on
+        // several threads (Druid Barkskin precedent, DruidMechanics.cpp:71-78). Never held across CastSpell /
+        // RemoveAura: a Glimmer removal re-enters OnGlimmerRemoved, so guids are copied out first.
+        struct HolyState
+        {
+            ShockType lastShockType = ShockType::None;
+            std::deque<std::pair<ObjectGuid, uint32>> glimmers;   // (target guid, marker spell id), oldest first
+            int32 storedHealPulse = 0;
+            int32 storedDamagePulse = 0;
+            bool hasPulsed = false;
+            ObjectGuid lastGlimmerTarget;                         // reference victim for the stored damage pulse
+        };
+
+        std::mutex holyLock;
+        std::unordered_map<ObjectGuid, HolyState> holyStates;
 
         void ResetPrimed(SealState& state)
         {
@@ -379,10 +398,7 @@ namespace Paladin
         return roll_chance_f(std::min(100.0f, chance));
     }
 
-    // Holy section bodies are written in S2 (HOLY.md); the Retribution pass leaves these as the
-    // frozen no-ops so ClearState() and the dispatcher's call site already exist.
-    void OnJudgementCastHoly(Player* /*player*/, Unit* /*target*/, bool /*deliverance*/, uint32 /*ownHitDamage*/) { }
-    void ClearHolyState(Player* /*player*/) { }
+    // OnJudgementCastHoly / ClearHolyState: bodies in the Holy section at the end of this file.
 
     void ClearStateRet(Player* player)
     {
@@ -953,5 +969,528 @@ namespace Paladin
 
         std::lock_guard<std::mutex> lock(stateLock);
         retStates.erase(player->GetGUID().GetCounter());
+    }
+
+    // ------------------------------------------------------------------
+    // Holy section (HOLY.md §2.8, §6.1, §6.2, §6.4, §6.5)
+    // ------------------------------------------------------------------
+    namespace
+    {
+        using GlimmerEntry = std::pair<ObjectGuid, uint32>;
+
+        constexpr float SHOCK_GLIMMER_R3_FALLBACK_PCT = 15.0f;   // r3's DUMMY live value (bp 14), used if unreadable
+        constexpr float AWE_CHANCE_PCT = 25.0f;                  // Shock and Awe r3 capstone (HOLY §5 row 7,3)
+        constexpr float MERCIFUL_RANGE = 40.0f;                  // HOLY §6.4 item 3
+        constexpr uint8 MERCIFUL_MAX_TARGETS = 3;
+        constexpr uint8 MERCIFUL_CANDIDATES = 100;               // SelectMostInjured trims before the injured filter
+
+        bool KnowsGlimmer(Player const* player)
+        {
+            return player && (player->HasAura(PaladinData::SPELL_GLIMMER_OF_LIGHT_TALENT_R1)
+                || player->HasAura(PaladinData::SPELL_GLIMMER_OF_LIGHT_TALENT_R2)
+                || player->HasAura(PaladinData::SPELL_GLIMMER_OF_LIGHT_TALENT_R3));
+        }
+
+        uint32 GetShockSpellId(ShockType type)
+        {
+            return type == ShockType::Damage ? PaladinData::SPELL_HOLY_SHOCK_25912
+                                              : PaladinData::SPELL_HOLY_SHOCK_25914;
+        }
+
+        std::vector<GlimmerEntry> CopyGlimmers(ObjectGuid casterGuid)
+        {
+            std::lock_guard<std::mutex> lock(holyLock);
+            auto const itr = holyStates.find(casterGuid);
+            if (itr == holyStates.end())
+                return { };
+
+            return std::vector<GlimmerEntry>(itr->second.glimmers.begin(), itr->second.glimmers.end());
+        }
+
+        void EraseGlimmerEntries(ObjectGuid casterGuid, std::vector<GlimmerEntry> const& gone)
+        {
+            if (gone.empty())
+                return;
+
+            std::lock_guard<std::mutex> lock(holyLock);
+            auto const itr = holyStates.find(casterGuid);
+            if (itr == holyStates.end())
+                return;
+
+            auto& deque = itr->second.glimmers;
+            deque.erase(std::remove_if(deque.begin(), deque.end(), [&](GlimmerEntry const& entry)
+            {
+                return std::find(gone.begin(), gone.end(), entry) != gone.end();
+            }), deque.end());
+        }
+
+        // Drops entries whose unit left the world or no longer carries the caster's marker (§6.2 pruning)
+        void PruneGlimmers(Player const* caster)
+        {
+            std::vector<GlimmerEntry> const entries = CopyGlimmers(caster->GetGUID());
+            std::vector<GlimmerEntry> gone;
+            for (GlimmerEntry const& entry : entries)
+            {
+                Unit* unit = ObjectAccessor::GetUnit(*caster, entry.first);
+                if (!unit || !unit->IsInWorld() || !unit->HasAura(entry.second, caster->GetGUID()))
+                    gone.push_back(entry);
+            }
+
+            EraseGlimmerEntries(caster->GetGUID(), gone);
+        }
+
+        void CastPulse(Player* caster, Unit* target, ShockType type, int32 value, bool forcedCrit)
+        {
+            if (!target || value <= 0)
+                return;
+
+            CustomSpellValues values;
+            values.AddSpellMod(SPELLVALUE_BASE_POINT0, value);
+            if (forcedCrit)
+                values.AddSpellMod(SPELLVALUE_FORCED_CRIT_RESULT, 1);
+
+            caster->CastCustomSpell(type == ShockType::Damage ? PaladinData::SPELL_GLIMMER_OF_LIGHT_DAMAGE_PULSE
+                                                               : PaladinData::SPELL_GLIMMER_OF_LIGHT_HEAL_PULSE,
+                values, target, TRIGGERED_FULL_MASK);
+        }
+
+        ShockType GlimmerType(uint32 markerSpellId)
+        {
+            return markerSpellId == PaladinData::SPELL_GLIMMER_OF_LIGHT_ENEMY ? ShockType::Damage : ShockType::Heal;
+        }
+    }
+
+    void SetLastShockType(Player* player, ShockType type)
+    {
+        if (!player)
+            return;
+
+        std::lock_guard<std::mutex> lock(holyLock);
+        holyStates[player->GetGUID()].lastShockType = type;
+    }
+
+    ShockType GetLastShockType(Player const* player)
+    {
+        if (!player)
+            return ShockType::None;
+
+        std::lock_guard<std::mutex> lock(holyLock);
+        auto const itr = holyStates.find(player->GetGUID());
+        return itr != holyStates.end() ? itr->second.lastShockType : ShockType::None;
+    }
+
+    void ApplyGlimmer(Player* caster, Unit* target)
+    {
+        if (!caster || !target || !KnowsGlimmer(caster))
+            return;
+
+        uint32 const marker = caster->IsFriendlyTo(target) ? PaladinData::SPELL_GLIMMER_OF_LIGHT_ALLY
+                                                           : PaladinData::SPELL_GLIMMER_OF_LIGHT_ENEMY;
+        ObjectGuid const casterGuid = caster->GetGUID();
+        ObjectGuid const targetGuid = target->GetGUID();
+
+        PruneGlimmers(caster);
+
+        // Make room first: evict the oldest entries (the ones that would expire first) while at the cap and
+        // the target is new. The locked section only edits the deque; the aura removal runs after unlocking
+        // (it re-enters OnGlimmerRemoved).
+        std::vector<GlimmerEntry> evicted;
+        {
+            std::lock_guard<std::mutex> lock(holyLock);
+            HolyState& state = holyStates[casterGuid];
+            bool const present = std::any_of(state.glimmers.begin(), state.glimmers.end(),
+                [&](GlimmerEntry const& entry) { return entry.first == targetGuid && entry.second == marker; });
+            while (!present && state.glimmers.size() >= GLIMMER_CAP)
+            {
+                evicted.push_back(state.glimmers.front());
+                state.glimmers.pop_front();
+            }
+        }
+
+        for (GlimmerEntry const& entry : evicted)
+            if (Unit* unit = ObjectAccessor::GetUnit(*caster, entry.first))
+                unit->RemoveAura(entry.second, casterGuid);
+
+        caster->CastSpell(target, marker, TRIGGERED_FULL_MASK);
+
+        // A missed / immune marker must not leave a ghost entry (HOLY §2.8)
+        if (!target->GetAura(marker, casterGuid))
+            return;
+
+        std::lock_guard<std::mutex> lock(holyLock);
+        HolyState& state = holyStates[casterGuid];
+        auto& deque = state.glimmers;
+        deque.erase(std::remove_if(deque.begin(), deque.end(), [&](GlimmerEntry const& entry)
+        {
+            return entry.first == targetGuid && entry.second == marker;
+        }), deque.end());
+        deque.emplace_back(targetGuid, marker);
+        state.lastGlimmerTarget = targetGuid;
+    }
+
+    void OnGlimmerRemoved(ObjectGuid casterGuid, ObjectGuid targetGuid, uint32 markerSpellId)
+    {
+        // Find-only: logout erases the state before the aura removals (CR5)
+        EraseGlimmerEntries(casterGuid, { GlimmerEntry(targetGuid, markerSpellId) });
+    }
+
+    uint8 GetGlimmerCount(Player const* caster)
+    {
+        if (!caster)
+            return 0;
+
+        PruneGlimmers(caster);
+
+        std::lock_guard<std::mutex> lock(holyLock);
+        auto const itr = holyStates.find(caster->GetGUID());
+        return itr != holyStates.end() ? uint8(itr->second.glimmers.size()) : 0;
+    }
+
+    float GetGlimmerShockMultiplier(Player const* player)
+    {
+        if (!player)
+            return 1.0f;
+
+        AuraEffect const* r3 = player->GetAuraEffect(PaladinData::SPELL_GLIMMER_OF_LIGHT_TALENT_R3, EFFECT_0);
+        if (!r3)
+            return 1.0f;
+
+        float const bonusPct = r3->GetAmount() > 0 ? float(r3->GetAmount()) : SHOCK_GLIMMER_R3_FALLBACK_PCT;
+        return 1.0f + (bonusPct + player->GetMasteryPercentage()) / 100.0f;
+    }
+
+    int32 ComputeShockValue(Player* caster, Unit* target, ShockType type, bool crit)
+    {
+        if (!caster || !target || type == ShockType::None)
+            return 0;
+
+        SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(GetShockSpellId(type));
+        if (!spellInfo)
+            return 0;
+
+        int32 const base = spellInfo->Effects[EFFECT_0].CalcValue(caster);
+        uint32 value = type == ShockType::Heal
+            ? caster->SpellHealingBonusDone(target, spellInfo, uint32(std::max(base, 0)), HEAL, EFFECT_0)
+            : caster->SpellDamageBonusDone(target, spellInfo, uint32(std::max(base, 0)), SPELL_DIRECT_DAMAGE,
+                EFFECT_0);
+
+        value = uint32(float(value) * GetGlimmerShockMultiplier(caster));
+
+        if (crit)
+            value = type == ShockType::Heal ? Unit::SpellCriticalHealingBonus(caster, spellInfo, value, target)
+                                            : Unit::SpellCriticalDamageBonus(caster, spellInfo, value, target);
+
+        return int32(value);
+    }
+
+    bool RollShockCrit(Player* caster, Unit* target, ShockType type)
+    {
+        if (!caster || !target || type == ShockType::None)
+            return false;
+
+        SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(GetShockSpellId(type));
+        if (!spellInfo)
+            return false;
+
+        SpellSchoolMask const school = spellInfo->GetSchoolMask();
+        float chance = caster->SpellDoneCritChance(target, spellInfo, school, BASE_ATTACK, false);
+        chance = target->SpellTakenCritChance(caster, spellInfo, school, chance, BASE_ATTACK, false);
+        return roll_chance_f(std::max(0.0f, chance));
+    }
+
+    void PulseGlimmers(Player* caster, bool crit, float pctOfShock)
+    {
+        if (!caster || !KnowsGlimmer(caster))
+            return;
+
+        PruneGlimmers(caster);
+        std::vector<GlimmerEntry> const entries = CopyGlimmers(caster->GetGUID());
+        float const factor = pctOfShock / 100.0f;
+
+        // Fixed reference victims for the stored values (HOLY §2.8, review-2 H-m4): heal = the caster; damage
+        // = the Shock's own target when hostile, else the first live enemy Glimmer, else the caster. The
+        // Shock's target is the target of the latest ApplyGlimmer (the resolver and Divine Toll apply the
+        // Glimmer right before pulsing).
+        Unit* damageRef = nullptr;
+        {
+            ObjectGuid lastTarget;
+            {
+                std::lock_guard<std::mutex> lock(holyLock);
+                auto const itr = holyStates.find(caster->GetGUID());
+                if (itr != holyStates.end())
+                    lastTarget = itr->second.lastGlimmerTarget;
+            }
+
+            if (lastTarget)
+                if (Unit* unit = ObjectAccessor::GetUnit(*caster, lastTarget))
+                    if (unit->IsAlive() && !caster->IsFriendlyTo(unit))
+                        damageRef = unit;
+
+            if (!damageRef)
+                for (GlimmerEntry const& entry : entries)
+                    if (entry.second == PaladinData::SPELL_GLIMMER_OF_LIGHT_ENEMY)
+                        if (Unit* unit = ObjectAccessor::GetUnit(*caster, entry.first))
+                            if (unit->IsAlive())
+                            {
+                                damageRef = unit;
+                                break;
+                            }
+
+            if (!damageRef)
+                damageRef = caster;
+        }
+
+        int32 const storedHeal = int32(factor * float(ComputeShockValue(caster, caster, ShockType::Heal, crit)));
+        int32 const storedDamage =
+            int32(factor * float(ComputeShockValue(caster, damageRef, ShockType::Damage, crit)));
+
+        {
+            std::lock_guard<std::mutex> lock(holyLock);
+            HolyState& state = holyStates[caster->GetGUID()];
+            state.storedHealPulse = storedHeal;
+            state.storedDamagePulse = storedDamage;
+            state.hasPulsed = true;
+        }
+
+        // No combat / CC filter (user ruling 2026-10-03, PLAN §1F F12); each unit is re-resolved at cast time
+        for (GlimmerEntry const& entry : entries)
+        {
+            Unit* unit = ObjectAccessor::GetUnit(*caster, entry.first);
+            if (!unit || !unit->IsInWorld() || !unit->IsAlive())
+                continue;
+
+            ShockType const type = GlimmerType(entry.second);
+            int32 const value = int32(factor * float(ComputeShockValue(caster, unit, type, crit)));
+            CastPulse(caster, unit, type, value, crit);
+        }
+    }
+
+    void PulseGlimmersFromStored(Player* caster, float pctOfStored)
+    {
+        if (!caster || pctOfStored <= 0.0f || !KnowsGlimmer(caster))
+            return;
+
+        int32 storedHeal = 0;
+        int32 storedDamage = 0;
+        {
+            std::lock_guard<std::mutex> lock(holyLock);
+            auto const itr = holyStates.find(caster->GetGUID());
+            if (itr == holyStates.end() || !itr->second.hasPulsed)
+                return;
+
+            storedHeal = itr->second.storedHealPulse;
+            storedDamage = itr->second.storedDamagePulse;
+        }
+
+        PruneGlimmers(caster);
+        float const factor = pctOfStored / 100.0f;
+        for (GlimmerEntry const& entry : CopyGlimmers(caster->GetGUID()))
+        {
+            Unit* unit = ObjectAccessor::GetUnit(*caster, entry.first);
+            if (!unit || !unit->IsInWorld() || !unit->IsAlive())
+                continue;
+
+            ShockType const type = GlimmerType(entry.second);
+            int32 const value = int32(factor * float(type == ShockType::Damage ? storedDamage : storedHeal));
+            CastPulse(caster, unit, type, value, false);
+        }
+    }
+
+    void AddDawnBeforeDuskStack(Player* caster)
+    {
+        if (!caster)
+            return;
+
+        uint32 buff = 0;
+        if (caster->HasAura(PaladinData::SPELL_DAWN_BEFORE_DUSK_TALENT_R3))
+            buff = PaladinData::SPELL_DAWN_BEFORE_DUSK_BUFF_R3;
+        else if (caster->HasAura(PaladinData::SPELL_DAWN_BEFORE_DUSK_TALENT_R2))
+            buff = PaladinData::SPELL_DAWN_BEFORE_DUSK_BUFF_R2;
+        else if (caster->HasAura(PaladinData::SPELL_DAWN_BEFORE_DUSK_TALENT_R1))
+            buff = PaladinData::SPELL_DAWN_BEFORE_DUSK_BUFF_R1;
+        else
+            return;
+
+        Aura* aura = caster->GetAura(buff, caster->GetGUID());
+        if (!aura)
+            caster->CastSpell(caster, buff, TRIGGERED_FULL_MASK);
+        else if (aura->GetStackAmount() >= 3)
+            caster->RemoveAura(buff, caster->GetGUID());   // the next cast at 3 stacks resets to 0
+        else
+            aura->ModStackAmount(1);                       // also refreshes the 30 s
+    }
+
+    void RunShockCastHooks(Player* caster, ShockType type)
+    {
+        if (!caster || type == ShockType::None)
+            return;
+
+        // Dawn before Dusk: the stack is added after this Shock's own crit was rolled (read-before-add)
+        AddDawnBeforeDuskStack(caster);
+
+        // Merciful Strikes window (refreshes on recast)
+        if (caster->HasAura(PaladinData::SPELL_MERCIFUL_STRIKES_TALENT_R3))
+            caster->CastSpell(caster, PaladinData::SPELL_MERCIFUL_STRIKES_WINDOW_R3, TRIGGERED_FULL_MASK);
+        else if (caster->HasAura(PaladinData::SPELL_MERCIFUL_STRIKES_TALENT_R2))
+            caster->CastSpell(caster, PaladinData::SPELL_MERCIFUL_STRIKES_WINDOW_R2, TRIGGERED_FULL_MASK);
+        else if (caster->HasAura(PaladinData::SPELL_MERCIFUL_STRIKES_TALENT_R1))
+            caster->CastSpell(caster, PaladinData::SPELL_MERCIFUL_STRIKES_WINDOW_R1, TRIGGERED_FULL_MASK);
+
+        if (type == ShockType::Damage)
+        {
+            // Shock and Awe: AP from Intellect + threat cut buff by rank
+            if (caster->HasAura(PaladinData::SPELL_SHOCK_AND_AWE_TALENT_R3))
+                caster->CastSpell(caster, PaladinData::SPELL_SHOCK_AND_AWE_BUFF_R3, TRIGGERED_FULL_MASK);
+            else if (caster->HasAura(PaladinData::SPELL_SHOCK_AND_AWE_TALENT_R2))
+                caster->CastSpell(caster, PaladinData::SPELL_SHOCK_AND_AWE_BUFF_R2, TRIGGERED_FULL_MASK);
+            else if (caster->HasAura(PaladinData::SPELL_SHOCK_AND_AWE_TALENT_R1))
+                caster->CastSpell(caster, PaladinData::SPELL_SHOCK_AND_AWE_BUFF_R1, TRIGGERED_FULL_MASK);
+
+            // Awe (r3 capstone): 25% for an instant, +30% Exorcism
+            if (caster->HasAura(PaladinData::SPELL_SHOCK_AND_AWE_TALENT_R3)
+                && RollScriptedChance(caster, AWE_CHANCE_PCT))
+                caster->CastSpell(caster, PaladinData::SPELL_AWE, TRIGGERED_FULL_MASK);
+        }
+        else
+        {
+            // Infusion of Light: rank eff1 = proc percent; buff 53672 (r1) / 54149 (r2)
+            bool const rank2 = caster->HasAura(PaladinData::SPELL_INFUSION_OF_LIGHT_53576);
+            int32 const pct = GetRankAmount(caster,
+                { PaladinData::SPELL_INFUSION_OF_LIGHT_53576, PaladinData::SPELL_INFUSION_OF_LIGHT }, EFFECT_0);
+            if (pct > 0 && RollScriptedChance(caster, float(pct)))
+                caster->CastSpell(caster, rank2 ? PaladinData::SPELL_INFUSION_OF_LIGHT_54149
+                                                : PaladinData::SPELL_INFUSION_OF_LIGHT_53672, TRIGGERED_FULL_MASK);
+        }
+    }
+
+    void ApplyHolyGuidance(Player* caster, Unit* target, ShockType type)
+    {
+        if (!caster || !target || type == ShockType::None)
+            return;
+
+        // r3 capstone: enemies get the +5% crit-taken debuff (all attackers), allies the +5% crit on the
+        // paladin's heals (aura 308). Casting refreshes a live one.
+        if (!caster->HasAura(PaladinData::SPELL_HOLY_GUIDANCE_31839))
+            return;
+
+        caster->CastSpell(target, type == ShockType::Damage ? PaladinData::SPELL_HOLY_GUIDANCE_EXPOSED
+                                                            : PaladinData::SPELL_HOLY_GUIDANCE_GUIDED,
+            TRIGGERED_FULL_MASK);
+    }
+
+    void CastSplitHeal(Player* caster, uint32 healSpellId, std::vector<Unit*> const& targets, int32 total)
+    {
+        if (!caster || targets.empty() || total <= 0)
+            return;
+
+        int32 const each = total / int32(targets.size());
+        if (each <= 0)
+            return;
+
+        for (Unit* target : targets)
+        {
+            if (!target)
+                continue;
+
+            CustomSpellValues values;
+            values.AddSpellMod(SPELLVALUE_BASE_POINT0, each);
+            caster->CastCustomSpell(healSpellId, values, target, TRIGGERED_FULL_MASK);
+        }
+    }
+
+    void OnJudgementCastHoly(Player* player, Unit* /*target*/, bool deliverance, uint32 ownHitDamage)
+    {
+        // `target` may be null or a corpse (S1 killing-blow rulings); every part here is caster-anchored.
+        if (!player)
+            return;
+
+        // Judgements of the Pure haste, by rank (every cast, D4)
+        if (player->HasAura(PaladinData::SPELL_JUDGEMENTS_OF_THE_PURE_54151))
+            player->CastSpell(player, PaladinData::SPELL_JUDGEMENTS_OF_THE_PURE_53657, TRIGGERED_FULL_MASK);
+        else if (player->HasAura(PaladinData::SPELL_JUDGEMENTS_OF_THE_PURE_53673))
+            player->CastSpell(player, PaladinData::SPELL_JUDGEMENTS_OF_THE_PURE_53656, TRIGGERED_FULL_MASK);
+        else if (player->HasAura(PaladinData::SPELL_JUDGEMENTS_OF_THE_PURE_53671))
+            player->CastSpell(player, PaladinData::SPELL_JUDGEMENTS_OF_THE_PURE, TRIGGERED_FULL_MASK);
+
+        // Enlightened Judgements: eff2 (EFFECT_1) = pulse % of the stored value; no-op until a Shock pulsed
+        int32 const pulsePct = GetRankAmount(player,
+            { PaladinData::SPELL_ENLIGHTENED_JUDGEMENTS_53557, PaladinData::SPELL_ENLIGHTENED_JUDGEMENTS },
+            EFFECT_1);
+        if (pulsePct > 0)
+            PulseGlimmersFromStored(player, float(pulsePct));
+
+        // Merciful Strikes heal: Judgement's own hit only (never Deliverance, never the unleash)
+        if (deliverance || !ownHitDamage)
+            return;
+
+        int32 const healPct = GetRankAmount(player,
+            { PaladinData::SPELL_MERCIFUL_STRIKES_TALENT_R3, PaladinData::SPELL_MERCIFUL_STRIKES_TALENT_R2,
+              PaladinData::SPELL_MERCIFUL_STRIKES_TALENT_R1 }, EFFECT_1);
+        if (healPct <= 0)
+            return;
+
+        // SelectMostInjured has no injured filter and trims to `count` first, so over-ask and filter here
+        std::vector<Unit*> candidates;
+        Heal::SelectMostInjured(player, player, MERCIFUL_RANGE, MERCIFUL_CANDIDATES, candidates);
+        std::vector<Unit*> targets;
+        for (Unit* unit : candidates)
+        {
+            if (targets.size() >= MERCIFUL_MAX_TARGETS)
+                break;
+
+            if (unit && unit->IsAlive() && unit->GetHealth() < unit->GetMaxHealth())
+                targets.push_back(unit);
+        }
+
+        CastSplitHeal(player, PaladinData::SPELL_MERCIFUL_STRIKES_HEAL, targets,
+            int32(float(ownHitDamage) * float(healPct) / 100.0f));
+    }
+
+    void ClearHolyState(Player* player)
+    {
+        if (!player)
+            return;
+
+        std::lock_guard<std::mutex> lock(holyLock);
+        holyStates.erase(player->GetGUID());
+    }
+
+    float GetSpellCritFromIntellectOnly(Player* player)
+    {
+        if (!player)
+            return 0.0f;
+
+        // GetSpellCritFromIntellect adds the class base crit (Player.cpp ~5372); subtract it (HOLY §6.5)
+        float const total = player->GetSpellCritFromIntellect();
+        GtChanceToSpellCritBaseEntry const* critBase = sGtChanceToSpellCritBaseStore.LookupEntry(CLASS_PALADIN - 1);
+        return total - (critBase ? 100.0f * critBase->base : 0.0f);
+    }
+
+    void RefreshIlluminatedSteel(Player* player)
+    {
+        if (!player)
+            return;
+
+        for (uint32 rank : { PaladinData::SPELL_ILLUMINATED_STEEL_R3, PaladinData::SPELL_ILLUMINATED_STEEL_R2,
+                 PaladinData::SPELL_ILLUMINATED_STEEL_R1 })
+        {
+            if (AuraEffect* effect = player->GetAuraEffect(rank, EFFECT_0))
+            {
+                effect->RecalculateAmount();
+                return;
+            }
+        }
+    }
+
+    int32 GetRankAmount(Unit const* caster, std::initializer_list<uint32> rankSpellIdsHighFirst, uint8 effIndex)
+    {
+        if (!caster)
+            return 0;
+
+        for (uint32 id : rankSpellIdsHighFirst)
+            if (AuraEffect const* effect = caster->GetAuraEffect(id, effIndex))
+                return effect->GetAmount();
+
+        return 0;
     }
 }

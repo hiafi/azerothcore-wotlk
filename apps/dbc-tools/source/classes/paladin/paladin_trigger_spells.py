@@ -4,9 +4,18 @@ Paladin - spells that are never directly cast - proc/periodic-tick effects, trig
 Split from a single source/classes/paladin.py via split_class_file.py (.agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md) - see source/classes/README.md for the multi-file layout and lib/dsl/registry.py's load_class_package for how cross-file references (`from .paladin_...` below) resolve.
 """
 
-from lib.dsl import AuraType, DispelType, Effect, EffectType, RANGE_SELF, School
+from lib.dsl import AuraType, DispelType, Effect, EffectType, RANGE_SELF, School, SpellModOp
 from lib.dsl.registry import leave_spell_group, linked_spell, pot_text, procs_on, product, remove_spell_proc, scripted_by, spell, spell_group, talent_mult, tooltip_vars, trained_by, unbind_script, untrain
 from . import _masks as m
+from .paladin_holy_spells import holy_heal_tooltip
+
+
+def _mask(effect_index: int, mask: tuple) -> dict:
+    """The `EffectSpellClassMask{A,B,C}_{1,2,3}` raw_overrides of one effect: the LETTER is the effect (1-based `effect_index`
+    -> A/B/C), the NUMBER the dword of the (d0, d1, d2) `mask` (dbcfmt.py:127-139, dbc-tools.md gotcha). Paladin Holy rework
+    (HOLY.md 3 item 10): every mask edit goes through here so a stale hand-typed key can't override the constant."""
+    letter = 'ABC'[effect_index - 1]
+    return {f'EffectSpellClassMask{letter}_{dword + 1}': value for dword, value in enumerate(mask) if value}
 
 
 # Ret talents scaling Ret-owned spells on their tooltips (RETRIBUTION §5.3, P9 tooltip_vars). SpellMods never move a
@@ -673,8 +682,9 @@ holy_shock_25912 = spell(
         Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=250.0, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=156,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=250.0 (paladin-potency-proposals.txt, user value; was 305.8 from a stale worktree copy of the proposals file, corrected 2026-10-02).',
-    raw_overrides={'AttributesEx3': 512, 'AttributesEx4': 1, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the target with Holy energy, causing {pot1} Holy damage to an enemy, or $25914s1 healing to an ally.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2097152, 'SpellClassSet': 10, 'SpellLevel': 40, 'SpellVisualID_1': 128, 'StartRecoveryCategory': 133},
+    tooltip_vars=holy_heal_tooltip,
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=250.0 (paladin-potency-proposals.txt, user value; was 305.8 from a stale worktree copy of the proposals file, corrected 2026-10-02). | paladin-rework S2 HOLY 4.1: SpellLevel 40 -> 30; description quotes only its own value ({pot1*shock}, entry 1105 owned by paladin_holy_spells.py); NOT_A_PROC (AttributesEx3 0x200) kept for the resolver',
+    raw_overrides={'AttributesEx3': 512, 'AttributesEx4': 1, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the target with Holy energy, causing {pot1*shock} Holy damage.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 2097152, 'SpellClassSet': 10, 'SpellLevel': 30, 'SpellVisualID_1': 128, 'StartRecoveryCategory': 133},
 )
 
 
@@ -690,11 +700,12 @@ holy_shock_25914 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=125.0, potency_kind='heal', implicit_target_a=21),
+        Effect(type=EffectType.HEAL, sp_potency=150.0, potency_kind='heal', implicit_target_a=21),
     ],
     spell_icon_id=156,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=125.0 (paladin-potency-proposals.txt, user value; was 137.8 from a stale worktree copy of the proposals file, corrected 2026-10-02).',
-    raw_overrides={'AttributesEx3': 512, 'AttributesEx4': 1, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the target with Holy energy, causing $25912s1 Holy damage to an enemy, or {pot1} healing to an ally.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 65536, 'SpellClassSet': 10, 'SpellLevel': 40, 'SpellVisualID_1': 135, 'StartRecoveryCategory': 133},
+    tooltip_vars=holy_heal_tooltip,
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=125.0 (paladin-potency-proposals.txt, user value; was 137.8 from a stale worktree copy of the proposals file, corrected 2026-10-02). | paladin-rework S2 HOLY 4.1: sp_potency 125 -> 150 (A2), SpellLevel 40 -> 30; description quotes only its own value ({pot1*shock}); NOT_A_PROC kept for the resolver',
+    raw_overrides={'AttributesEx3': 512, 'AttributesEx4': 1, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blasts the target with Holy energy, healing an ally for {pot1*shock}.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 65536, 'SpellClassSet': 10, 'SpellLevel': 30, 'SpellVisualID_1': 135, 'StartRecoveryCategory': 133},
 )
 
 
@@ -734,11 +745,11 @@ judgements_of_the_pure_53655 = spell(
     range_yards=0.0,
     duration_ms=60000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=2, points_per_level=0.2, implicit_target_a=1, apply_aura=193, misc_value=5),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL, misc_value=5),
     ],
     spell_icon_id=3018,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 5 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Casting and melee speed increased by $s1%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Seal and Judgement spells by $53671s2%, and your Judgement spells increase your casting and melee haste by $53655s1% for $53655d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8388608, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, 'SpellVisualID_1': 12015},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 5 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | paladin-rework S2 HOLY 4.1: HASTE_ALL bp 1 (+2%), points_per_level 0.2 -> 0; stale eff1 class mask d0 0x800000 cleared; cast by Paladin::OnJudgementCastHoly',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Melee, ranged and casting speed increased by $s1%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Melee, ranged and casting speed increased by $s1% for $d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, 'SpellVisualID_1': 12015},
 )
 
 
@@ -1002,11 +1013,12 @@ spiritual_focus_20205 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=13, implicit_target_a=1, apply_aura=108, misc_value=9),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL),
+        Effect(type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=1, apply_aura=AuraType.REDUCE_PUSHBACK, misc_value=127),
     ],
     spell_icon_id=1499,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the pushback suffered from damaging attacks while casting Flash of Light and Holy Light by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3221225472, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (0,1): eff1 SPELLMOD misc 9 -> HASTE_ALL bp 0, new eff2 REDUCE_PUSHBACK misc 127 bp 32 (all spells, Q8); stale class mask A_1 deleted',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases your melee, ranged and spell haste by $s1%, and reduces the pushback you suffer from damaging attacks while casting by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Taking damage while casting Holy Light increases that Holy Light's critical strike chance by 30%. This effect cannot occur more than once every 10 sec.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -1022,11 +1034,12 @@ spiritual_focus_20206 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=27, implicit_target_a=1, apply_aura=108, misc_value=9),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL),
+        Effect(type=EffectType.APPLY_AURA, base_points=65, implicit_target_a=1, apply_aura=AuraType.REDUCE_PUSHBACK, misc_value=127),
     ],
     spell_icon_id=1499,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the pushback suffered from damaging attacks while casting Flash of Light and Holy Light by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3221225472, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (0,1): eff1 SPELLMOD misc 9 -> HASTE_ALL bp 1, new eff2 REDUCE_PUSHBACK misc 127 bp 65 (all spells, Q8); stale class mask A_1 deleted',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases your melee, ranged and spell haste by $s1%, and reduces the pushback you suffer from damaging attacks while casting by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Taking damage while casting Holy Light increases that Holy Light's critical strike chance by 30%. This effect cannot occur more than once every 10 sec.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -1042,11 +1055,12 @@ spiritual_focus_20207 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=41, implicit_target_a=1, apply_aura=108, misc_value=9),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.REDUCE_PUSHBACK, misc_value=127),
     ],
     spell_icon_id=1499,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the pushback suffered from damaging attacks while casting Flash of Light and Holy Light by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3221225472, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (0,1): eff1 SPELLMOD misc 9 -> HASTE_ALL bp 2, new eff2 REDUCE_PUSHBACK misc 127 bp 99 (all spells, Q8); stale class mask A_1 deleted; r3 capstone proc row (7) + spell_pal_spiritual_focus_capstone',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases your melee, ranged and spell haste by $s1%, and reduces the pushback you suffer from damaging attacks while casting by $s2%.\n\nCapstone Bonus: Taking damage while casting Holy Light increases that Holy Light's critical strike chance by 30%. This effect cannot occur more than once every 10 sec.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -1103,11 +1117,12 @@ illumination_20210 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=18350),
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=112, misc_value=2689),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=112, misc_value=2689),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=241,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'After getting a critical effect from your Flash of Light, Holy Light, or Holy Shock heal spell you have a $h% chance to gain mana equal to $s2% of the base cost of the spell.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 3221225472, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 17408, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes="pulled from existing data | paladin-rework S2 HOLY 5 (2,0): ProcChance 20 -> 33, eff2 bp 29 -> 49 (50% of base cost), new eff3 ADD_PCT DAMAGE 10% on Light's Hammer; stock row -20210 unchanged",
+    raw_overrides={'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the effectiveness of your Light's Hammer by $s3%. Your critical heals from Flash of Light, Holy Light and Holy Shock have a $h% chance to restore mana equal to $s2% of the spell's base cost.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 3221225472, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 33, 'ProcTypeMask': 17408, 'RangeIndex': 1, 'SpellClassSet': 10, **_mask(3, (0, 0, m.LIGHTS_HAMMER))},
 )
 
 
@@ -1124,11 +1139,12 @@ illumination_20212 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=18350),
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=112, misc_value=2689),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=112, misc_value=2689),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=241,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'After getting a critical effect from your Flash of Light, Holy Light, or Holy Shock heal spell you have a $h% chance to gain mana equal to $s2% of the base cost of the spell.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 3221225472, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 40, 'ProcTypeMask': 17408, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes="pulled from existing data | paladin-rework S2 HOLY 5 (2,0): ProcChance 40 -> 66, eff2 bp 29 -> 49 (50% of base cost), new eff3 ADD_PCT DAMAGE 20% on Light's Hammer; stock row -20210 unchanged",
+    raw_overrides={'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the effectiveness of your Light's Hammer by $s3%. Your critical heals from Flash of Light, Holy Light and Holy Shock have a $h% chance to restore mana equal to $s2% of the spell's base cost.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 3221225472, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 66, 'ProcTypeMask': 17408, 'RangeIndex': 1, 'SpellClassSet': 10, **_mask(3, (0, 0, m.LIGHTS_HAMMER))},
 )
 
 
@@ -1145,11 +1161,12 @@ illumination_20213 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=18350),
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=112, misc_value=2689),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=112, misc_value=2689),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=241,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'After getting a critical effect from your Flash of Light, Holy Light, or Holy Shock heal spell you have a $h% chance to gain mana equal to $s2% of the base cost of the spell.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 3221225472, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 60, 'ProcTypeMask': 17408, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes="pulled from existing data | paladin-rework S2 HOLY 5 (2,0): ProcChance 60 -> 100, eff2 bp 29 -> 49 (50% of base cost), new eff3 ADD_PCT DAMAGE 30% on Light's Hammer; stock row -20210 unchanged",
+    raw_overrides={'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the effectiveness of your Light's Hammer by $s3%. Your critical heals from Flash of Light, Holy Light and Holy Shock have a $h% chance to restore mana equal to $s2% of the spell's base cost.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 3221225472, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 17408, 'RangeIndex': 1, 'SpellClassSet': 10, **_mask(3, (0, 0, m.LIGHTS_HAMMER))},
 )
 
 
@@ -1250,11 +1267,11 @@ improved_lay_on_hands_20234 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=lay_on_hands_20233.id),
-        Effect(type=EffectType.APPLY_AURA, base_points=-120001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-60001, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COOLDOWN),
     ],
     spell_icon_id=79,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Grants the target of your Lay on Hands spell $20233s1% reduced physical damage taken for $20233d.  In addition, the cooldown for your Lay on Hands spell is reduced by ${$m2/-60000} min.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 32768, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5.2 (2,2): eff1 cooldown -120001 -> -60001 (-1 min on the 5 min base); mask key B_1 0x8000 left (matches)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Grants the target of your Lay on Hands spell $20233s1% reduced physical damage taken for $20233d.  In addition, the cooldown for your Lay on Hands spell is reduced by ${$m2/-60000} min.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 32768, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -1271,11 +1288,11 @@ improved_lay_on_hands_20235 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=20236),
-        Effect(type=EffectType.APPLY_AURA, base_points=-240001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-120001, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COOLDOWN),
     ],
     spell_icon_id=79,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Grants the target of your Lay on Hands spell $20236s1% reduced physical damage taken for $20236d.  In addition, the cooldown for your Lay on Hands spell is reduced by ${$m2/-60000} min.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 32768, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5.2 (2,2): eff1 cooldown -240001 -> -120001 (-2 min on the 5 min base); mask key B_1 0x8000 left (matches)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Grants the target of your Lay on Hands spell $20236s1% reduced physical damage taken for $20236d.  In addition, the cooldown for your Lay on Hands spell is reduced by ${$m2/-60000} min.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 32768, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -1294,8 +1311,8 @@ healing_light_20237 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=108),
     ],
     spell_icon_id=70,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by your Holy Light, Flash of Light and the effectiveness of Holy Shock spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3223322624, 'EffectSpellClassMaskA_2': 65536, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes="pulled from existing data | paladin-rework S2 HOLY 5 (1,0): mask -> HEALING_LIGHT (adds Light's Hammer d2 b14); raw mask keys rewritten from the constant (HOLY 3 item 10)",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the effectiveness of your Holy Light, Flash of Light, Holy Shock and Light's Hammer by $s1%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, **_mask(1, m.HEALING_LIGHT)},
 )
 
 
@@ -1314,8 +1331,8 @@ healing_light_20238 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=108),
     ],
     spell_icon_id=70,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by your Holy Light, Flash of Light and the effectiveness of Holy Shock spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3223322624, 'EffectSpellClassMaskA_2': 65536, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes="pulled from existing data | paladin-rework S2 HOLY 5 (1,0): mask -> HEALING_LIGHT (adds Light's Hammer d2 b14); raw mask keys rewritten from the constant (HOLY 3 item 10)",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the effectiveness of your Holy Light, Flash of Light, Holy Shock and Light's Hammer by $s1%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, **_mask(1, m.HEALING_LIGHT)},
 )
 
 
@@ -1334,8 +1351,8 @@ healing_light_20239 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=108),
     ],
     spell_icon_id=70,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by your Holy Light, Flash of Light and the effectiveness of Holy Shock spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3223322624, 'EffectSpellClassMaskA_2': 65536, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes="pulled from existing data | paladin-rework S2 HOLY 5 (1,0): mask -> HEALING_LIGHT (adds Light's Hammer d2 b14); raw mask keys rewritten from the constant (HOLY 3 item 10)",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the effectiveness of your Holy Light, Flash of Light, Holy Shock and Light's Hammer by $s1%.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, **_mask(1, m.HEALING_LIGHT)},
 )
 
 
@@ -1393,13 +1410,13 @@ improved_concentration_aura_20254 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=107, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.EFFECT1),
         Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=107, misc_value=12),
         Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=107, misc_value=23),
     ],
     spell_icon_id=1487,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effect of your Concentration Aura by an additional $s1% and while any Aura is active reduces the duration of any Silence or Interrupt effect used against an affected group member by $s2%.  The duration reduction does not stack with any other effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 131072, 'EffectSpellClassMaskB_1': 131072, 'EffectSpellClassMaskC_1': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5.2 (3,0): eff0 ADD_FLAT EFFECT1 -> ADD_PCT EFFECT1 +10% on CONCENTRATION_SCOPE (19746 d0 b17 + burst 201164 d2 b26); eff1/eff2 stock (SIC forces them onto d2 b26)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the mana restored by your Concentration Aura and its burst by $s1%, and reduces the duration of Silence and Interrupt effects on party and raid members affected by your Concentration Aura by $s2%. The duration reduction does not stack with other similar effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 131072, 'EffectSpellClassMaskC_1': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, **_mask(1, m.CONCENTRATION_SCOPE)},
 )
 
 
@@ -1415,13 +1432,13 @@ improved_concentration_aura_20255 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=107, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.EFFECT1),
         Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=107, misc_value=12),
         Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=107, misc_value=23),
     ],
     spell_icon_id=1487,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effect of your Concentration Aura by an additional $s1% and while any Aura is active reduces the duration of any Silence or Interrupt effect used against an affected group member by $s2%.  The duration reduction does not stack with any other effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 131072, 'EffectSpellClassMaskB_1': 131072, 'EffectSpellClassMaskC_1': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5.2 (3,0): eff0 ADD_FLAT EFFECT1 -> ADD_PCT EFFECT1 +20% on CONCENTRATION_SCOPE (19746 d0 b17 + burst 201164 d2 b26); eff1/eff2 stock (SIC forces them onto d2 b26)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the mana restored by your Concentration Aura and its burst by $s1%, and reduces the duration of Silence and Interrupt effects on party and raid members affected by your Concentration Aura by $s2%. The duration reduction does not stack with other similar effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 131072, 'EffectSpellClassMaskC_1': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, **_mask(1, m.CONCENTRATION_SCOPE)},
 )
 
 
@@ -1437,13 +1454,13 @@ improved_concentration_aura_20256 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=107, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.EFFECT1),
         Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=107, misc_value=12),
         Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=107, misc_value=23),
     ],
     spell_icon_id=1487,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effect of your Concentration Aura by an additional $s1% and while any Aura is active reduces the duration of any Silence or Interrupt effect used against an affected group member by $s2%.  The duration reduction does not stack with any other effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 131072, 'EffectSpellClassMaskB_1': 131072, 'EffectSpellClassMaskC_1': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5.2 (3,0): eff0 ADD_FLAT EFFECT1 -> ADD_PCT EFFECT1 +30% on CONCENTRATION_SCOPE (19746 d0 b17 + burst 201164 d2 b26); eff1/eff2 stock (SIC forces them onto d2 b26)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the mana restored by your Concentration Aura and its burst by $s1%, and reduces the duration of Silence and Interrupt effects on party and raid members affected by your Concentration Aura by $s2%. The duration reduction does not stack with other similar effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 131072, 'EffectSpellClassMaskC_1': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, **_mask(1, m.CONCENTRATION_SCOPE)},
 )
 
 
@@ -1584,11 +1601,12 @@ sanctified_light_20359 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CRIT_DAMAGE_BONUS),
     ],
     spell_icon_id=299,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical effect chance of your Holy Light and Holy Shock spells by $s1%.', 'EffectBasePoints_2': 32, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 2149580800, 'EffectSpellClassMaskA_2': 65536, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (4,2): crit mask -> HOLY_HEAL_CASTS_AND_SHOCK (adds Flash of Light); new eff2 ADD_PCT CRIT_DAMAGE_BONUS on HOLY_HEALS; stale A_1/A_2 and orphan eff2 BasePoints/DieSides deleted',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Holy Light, Flash of Light and Holy Shock by $s1%, and your critical heals from Holy Light, Flash of Light and Holy Shock heal for an additional ${$m2/2}%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, **_mask(1, m.HOLY_HEAL_CASTS_AND_SHOCK), **_mask(2, m.HOLY_HEALS)},
 )
 
 
@@ -1604,11 +1622,12 @@ sanctified_light_20360 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CRIT_DAMAGE_BONUS),
     ],
     spell_icon_id=299,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical effect chance of your Holy Light and Holy Shock spells by $s1%.', 'EffectBasePoints_2': 65, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 2149580800, 'EffectSpellClassMaskA_2': 65536, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (4,2): crit mask -> HOLY_HEAL_CASTS_AND_SHOCK (adds Flash of Light); new eff2 ADD_PCT CRIT_DAMAGE_BONUS on HOLY_HEALS; stale A_1/A_2 and orphan eff2 BasePoints/DieSides deleted',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Holy Light, Flash of Light and Holy Shock by $s1%, and your critical heals from Holy Light, Flash of Light and Holy Shock heal for an additional ${$m2/2}%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, **_mask(1, m.HOLY_HEAL_CASTS_AND_SHOCK), **_mask(2, m.HOLY_HEALS)},
 )
 
 
@@ -1624,11 +1643,12 @@ sanctified_light_20361 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CRIT_DAMAGE_BONUS),
     ],
     spell_icon_id=299,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical effect chance of your Holy Light and Holy Shock spells by $s1%.', 'EffectBasePoints_2': 99, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 2149580800, 'EffectSpellClassMaskA_2': 65536, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (4,2): crit mask -> HOLY_HEAL_CASTS_AND_SHOCK (adds Flash of Light); new eff2 ADD_PCT CRIT_DAMAGE_BONUS on HOLY_HEALS; stale A_1/A_2 and orphan eff2 BasePoints/DieSides deleted',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Holy Light, Flash of Light and Holy Shock by $s1%, and your critical heals from Holy Light, Flash of Light and Holy Shock heal for an additional ${$m2/2}%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, **_mask(1, m.HOLY_HEAL_CASTS_AND_SHOCK), **_mask(2, m.HOLY_HEALS)},
 )
 
 
@@ -1809,13 +1829,11 @@ pure_of_heart_31822 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-16, implicit_target_a=1, apply_aura=246, misc_value=2),
-        Effect(type=EffectType.APPLY_AURA, base_points=-16, implicit_target_a=1, apply_aura=246, misc_value=3),
-        Effect(type=EffectType.APPLY_AURA, base_points=-16, implicit_target_a=1, apply_aura=246, misc_value=4),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2142,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the duration of Curse, Disease and Poison effects by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 67240008, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (4,0): eff1 -> DUMMY bp 19 (mana % of Intellect, TUNE); stock eff2/eff3 and the stale mask removed; r3 is 201279',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your Purify or Cleanse removes a Disease or Poison effect, you restore mana equal to $s1% of your Intellect every sec for 5 sec.\n\n|cFF9D9D9DCapstone Bonus: The duration of Disease effects on you is reduced by 30%.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -1831,13 +1849,11 @@ pure_of_heart_31823 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=246, misc_value=2),
-        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=246, misc_value=3),
-        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=246, misc_value=4),
+        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2142,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the duration of Curse, Disease and Poison effects by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 67240008, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (4,0): eff1 -> DUMMY bp 39 (mana % of Intellect, TUNE); stock eff2/eff3 and the stale mask removed; r3 is 201279',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your Purify or Cleanse removes a Disease or Poison effect, you restore mana equal to $s1% of your Intellect every sec for 5 sec.\n\n|cFF9D9D9DCapstone Bonus: The duration of Disease effects on you is reduced by 30%.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -1853,12 +1869,13 @@ purifying_power_31825 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-6, implicit_target_a=1, apply_aura=108, misc_value=14),
-        Effect(type=EffectType.APPLY_AURA, base_points=-18, implicit_target_a=1, apply_aura=108, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-16, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COST),
+        Effect(type=EffectType.APPLY_AURA, base_points=-26, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COOLDOWN),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=2173,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Cleanse, Purify and Consecration spells by $s1% and reduces the cooldown of your Exorcism and Holy Wrath spells by $s2%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4128, 'EffectSpellClassMaskB_2': 2097154, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (5,3): cost -15/-30% on Cleanse/Purify/Consecration/Holy Wrath, Holy Wrath cooldown -25/-50% (Exorcism dropped: stale B_2 0x200002 rewritten), new eff3 Holy Wrath damage +10/+20%; Consecration +dmg is linked passive 201239/201280 (paladin_holy_spells.py); stray row-level SpellClassMask_1 4096 on 31826 deleted (31825 lacks it)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Holy Wrath and Consecration by $s3%, reduces the cooldown of your Holy Wrath by $s2%, and reduces the mana cost of your Cleanse, Purify, Holy Wrath and Consecration by $s1%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, **_mask(1, (0x1020, 0x200000, 0)), **_mask(2, (0, m.HOLY_WRATH, 0)), **_mask(3, (0, m.HOLY_WRATH, 0))},
 )
 
 
@@ -1874,12 +1891,13 @@ purifying_power_31826 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=108, misc_value=14),
-        Effect(type=EffectType.APPLY_AURA, base_points=-34, implicit_target_a=1, apply_aura=108, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COST),
+        Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COOLDOWN),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=2173,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Cleanse, Purify and Consecration spells by $s1% and reduces the cooldown of your Exorcism and Holy Wrath spells by $s2%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4128, 'EffectSpellClassMaskB_2': 2097154, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 4096, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (5,3): cost -15/-30% on Cleanse/Purify/Consecration/Holy Wrath, Holy Wrath cooldown -25/-50% (Exorcism dropped: stale B_2 0x200002 rewritten), new eff3 Holy Wrath damage +10/+20%; Consecration +dmg is linked passive 201239/201280 (paladin_holy_spells.py); stray row-level SpellClassMask_1 4096 on 31826 deleted (31825 lacks it)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Holy Wrath and Consecration by $s3%, reduces the cooldown of your Holy Wrath by $s2%, and reduces the mana cost of your Cleanse, Purify, Holy Wrath and Consecration by $s1%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10, **_mask(1, (0x1020, 0x200000, 0)), **_mask(2, (0, m.HOLY_WRATH, 0)), **_mask(3, (0, m.HOLY_WRATH, 0))},
 )
 
 
@@ -1959,11 +1977,11 @@ light_s_grace_31833 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=31834),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY, trigger_spell=0),
     ],
     spell_icon_id=2141,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your Holy Light spell a $h% chance to reduce the cast time of your next Holy Light spell by $/1000;31834S1 sec.  This effect lasts $31834d.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': 4128, 'EffectSpellClassMaskB_2': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 33, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (6,0): eff1 PROC_TRIGGER_SPELL 31834 -> DUMMY bp 0, trigger_spell 0 / misc 0 (X5), ProcChance -> 100, stale masks deleted; row -31833 rewritten (CAST phase)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Holy Light increases the healing of your next Flash of Light by 10%, and your Flash of Light increases the healing of your next Holy Light by 5%. Each effect lasts 15 sec.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -1980,11 +1998,11 @@ light_s_grace_31835 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=31834),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY, trigger_spell=0),
     ],
     spell_icon_id=2141,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your Holy Light spell a $h% chance to reduce the cast time of your next Holy Light spell by $/1000;31834S1 sec.  This effect lasts $31834d.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectSpellClassMaskA_1': 4128, 'EffectSpellClassMaskB_2': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 66, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (6,0): eff1 PROC_TRIGGER_SPELL 31834 -> DUMMY bp 0, trigger_spell 0 / misc 0 (X5), ProcChance -> 100, stale masks deleted; row -31833 rewritten (CAST phase)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Holy Light increases the healing of your next Flash of Light by 20%, and your Flash of Light increases the healing of your next Holy Light by 10%. Each effect lasts 15 sec.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2000,11 +2018,11 @@ light_s_grace_31836 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=31834),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY, trigger_spell=0),
     ],
     spell_icon_id=2141,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your Holy Light spell a $h% chance to reduce the cast time of your next Holy Light spell by $/1000;31834S1 sec.  This effect lasts $31834d.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4128, 'EffectSpellClassMaskB_2': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (6,0): eff1 PROC_TRIGGER_SPELL 31834 -> DUMMY bp 0, trigger_spell 0 / misc 0 (X5), ProcChance -> 100, stale masks deleted; row -31833 rewritten (CAST phase)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Holy Light increases the healing of your next Flash of Light by 30%, and your Flash of Light increases the healing of your next Holy Light by 15%. Each effect lasts 15 sec.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2020,12 +2038,12 @@ holy_guidance_31837 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=174, misc_value=126),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=175, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.MOD_SPELL_DAMAGE_OF_STAT_PERCENT, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.MOD_SPELL_HEALING_OF_STAT_PERCENT, misc_value=3),
     ],
     spell_icon_id=2139,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell power by $s1% of your total Intellect.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 3, 'EffectSpellClassMaskA_1': 67240008, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (7,2): eff1 misc 126 -> 2 (Holy); stray mask A_1 deleted; EffectMiscValueB_1 3 (the Intellect stat selector of aura 174) deliberately kept',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Holy spell power and your healing power by $s1% of your Intellect.\n\n|cFF9D9D9DCapstone Bonus: Your Holy Shock increases the critical strike chance of all attacks against an enemy target by 5%, or the critical strike chance of your heals on a friendly target by 5%, for 20 sec.|r', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 3, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2041,12 +2059,12 @@ holy_guidance_31838 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=174, misc_value=126),
-        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=175, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=AuraType.MOD_SPELL_DAMAGE_OF_STAT_PERCENT, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=AuraType.MOD_SPELL_HEALING_OF_STAT_PERCENT, misc_value=3),
     ],
     spell_icon_id=2139,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell power by $s1% of your total Intellect.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 3, 'EffectSpellClassMaskA_1': 67240008, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (7,2): eff1 misc 126 -> 2 (Holy); stray mask A_1 deleted; EffectMiscValueB_1 3 (the Intellect stat selector of aura 174) deliberately kept',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Holy spell power and your healing power by $s1% of your Intellect.\n\n|cFF9D9D9DCapstone Bonus: Your Holy Shock increases the critical strike chance of all attacks against an enemy target by 5%, or the critical strike chance of your heals on a friendly target by 5%, for 20 sec.|r', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 3, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2062,12 +2080,12 @@ holy_guidance_31839 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=174, misc_value=126),
-        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=175, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=AuraType.MOD_SPELL_DAMAGE_OF_STAT_PERCENT, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=AuraType.MOD_SPELL_HEALING_OF_STAT_PERCENT, misc_value=3),
     ],
     spell_icon_id=2139,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell power by $s1% of your total Intellect.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 3, 'EffectSpellClassMaskA_1': 67240008, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (7,2): eff1 misc 126 -> 2 (Holy); stray mask A_1 deleted; EffectMiscValueB_1 3 (the Intellect stat selector of aura 174) deliberately kept',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Holy spell power and your healing power by $s1% of your Intellect.\n\nCapstone Bonus: Your Holy Shock increases the critical strike chance of all attacks against an enemy target by 5%, or the critical strike chance of your heals on a friendly target by 5%, for 20 sec.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 3, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2923,8 +2941,8 @@ sacred_cleansing_53551 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=7, trigger_spell=53659),
     ],
     spell_icon_id=3019,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Cleanse spell has a $h% chance to increase the target's resistance to Disease, Magic and Poison by $53659s1% for $53659d.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2149580800, 'EffectSpellClassMaskA_2': 65536, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (7,0): DBC ProcChance 10 -> 33; stock row -53551 kept; buff 53659 8 s',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Cleanse and Purify have a $h% chance to increase the target's resistance to Disease, Magic and Poison by $53659s1% for $53659d.\n\n|cFF9D9D9DCapstone Bonus: When your Cleanse removes an effect, it also places your Glimmer of Light on the target, if you know Glimmer of Light.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2149580800, 'EffectSpellClassMaskA_2': 65536, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 33, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2943,8 +2961,8 @@ sacred_cleansing_53552 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=7, trigger_spell=53659),
     ],
     spell_icon_id=3019,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Cleanse spell has a $h% chance to increase the target's resistance to Disease, Magic and Poison by $53659s1% for $53659d.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2149580800, 'EffectSpellClassMaskA_2': 65536, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (7,0): DBC ProcChance 20 -> 66; stock row -53551 kept; buff 53659 8 s',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Cleanse and Purify have a $h% chance to increase the target's resistance to Disease, Magic and Poison by $53659s1% for $53659d.\n\n|cFF9D9D9DCapstone Bonus: When your Cleanse removes an effect, it also places your Glimmer of Light on the target, if you know Glimmer of Light.|r", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2149580800, 'EffectSpellClassMaskA_2': 65536, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 66, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2963,8 +2981,8 @@ sacred_cleansing_53553 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=7, trigger_spell=53659),
     ],
     spell_icon_id=3019,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Cleanse spell has a $h% chance to increase the target's resistance to Disease, Magic and Poison by $53659s1% for $53659d.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2149580800, 'EffectSpellClassMaskA_2': 65536, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 30, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (7,0): DBC ProcChance 30 -> 100; stock row -53551 kept; buff 53659 8 s',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Cleanse and Purify have a $h% chance to increase the target's resistance to Disease, Magic and Poison by $53659s1% for $53659d.\n\nCapstone Bonus: When your Cleanse removes an effect, it also places your Glimmer of Light on the target, if you know Glimmer of Light.", 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2149580800, 'EffectSpellClassMaskA_2': 65536, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -2980,13 +2998,12 @@ enlightened_judgements_53556 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=107, misc_value=5),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=54),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=55),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.RANGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=3020,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your Judgement of Light and Judgement of Wisdom spells by $s1 yards and increases your chance to hit by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 5, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (9,3): range mod U -> JUDGEMENT_OWN_HITS (J+Dv), eff2 hit chance -> DUMMY bp 49/99 (pulse %), eff3 removed',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your Judgement and Deliverance by $s1 yards. Your Judgement and Deliverance make each of your Glimmers of Light pulse for $s2% of the value of your last Glimmer pulse of its kind.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 5, 'RangeIndex': 1, 'SpellClassSet': 10, **_mask(1, m.JUDGEMENT_OWN_HITS)},
 )
 
 
@@ -3002,13 +3019,12 @@ enlightened_judgements_53557 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=107, misc_value=5),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=54),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=55),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.RANGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=3020,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your Judgement of Light and Judgement of Wisdom spells by $s1 yards and increases your chance to hit by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 5, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (9,3): range mod U -> JUDGEMENT_OWN_HITS (J+Dv), eff2 hit chance -> DUMMY bp 49/99 (pulse %), eff3 removed',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your Judgement and Deliverance by $s1 yards. Your Judgement and Deliverance make each of your Glimmers of Light pulse for $s2% of the value of your last Glimmer pulse of its kind.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 5, 'RangeIndex': 1, 'SpellClassSet': 10, **_mask(1, m.JUDGEMENT_OWN_HITS)},
 )
 
 
@@ -3024,11 +3040,12 @@ infusion_of_light_53569 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=5, trigger_spell=53672),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY, trigger_spell=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=3021,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Holy Shock critical hits reduce the cast time of your next Flash of Light by ${$53672m2/-1000}.2 sec or increase the critical chance of your next Holy Light by $53672s1%.  In addition, causes your Flash of Light to heal targets with Sacred Shield for an additional $s3% over $66922d.', 'EffectBasePoints_3': 49, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 81920, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (9,1): eff1 PROC_TRIGGER_SPELL -> DUMMY bp 19/39 (Shock proc %, TUNE) with trigger_spell 0 / misc 0 (X5); new real eff2 DUMMY bp 49/99 (Flash HoT %) replaces the orphan eff3 raw keys; row -53569 rewritten (DisableEffectsMask 0x2)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your healing Holy Shock has a $s1% chance to grant Infusion of Light for 15 sec, reducing the cast time of your next Flash of Light by 50% or increasing the critical strike chance of your next Holy Light by 10%. In addition, your Flash of Light heals targets with Sacred Shield for an additional $s2% over $66922d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 81920, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -3044,11 +3061,12 @@ infusion_of_light_53576 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=23, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=5, trigger_spell=54149),
+        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=AuraType.DUMMY, trigger_spell=0),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=3021,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Holy Shock critical hits reduce the cast time of your next Flash of Light by ${$54149m2/-1000}.1 sec or increase the critical chance of your next Holy Light by $54149s1%.  In addition, causes your Flash of Light to heal targets with Sacred Shield for an additional $s3% over $66922d.', 'EffectBasePoints_3': 99, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 81920, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (9,1): eff1 PROC_TRIGGER_SPELL -> DUMMY bp 19/39 (Shock proc %, TUNE) with trigger_spell 0 / misc 0 (X5); new real eff2 DUMMY bp 49/99 (Flash HoT %) replaces the orphan eff3 raw keys; row -53569 rewritten (DisableEffectsMask 0x2)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your healing Holy Shock has a $s1% chance to grant Infusion of Light for 15 sec, reducing the cast time of your next Flash of Light by 100% or increasing the critical strike chance of your next Holy Light by 20%. In addition, your Flash of Light heals targets with Sacred Shield for an additional $s2% over $66922d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 81920, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -3195,13 +3213,13 @@ blessed_hands_53660 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-16, implicit_target_a=1, apply_aura=108, misc_value=14),
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=107, misc_value=3),
-        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=108, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COST),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.EFFECT1),
+        Effect(type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.EFFECT1),
     ],
     spell_icon_id=3022,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of Hand of Freedom, Hand of Sacrifice and Hand of Salvation by $s1%, increases the effectiveness of Hand of Salvation by $s3% and the effectiveness of Hand of Sacrifice by an additional $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8464, 'EffectSpellClassMaskB_1': 8192, 'EffectSpellClassMaskC_1': 256, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (3,1): 3 ranks (r3 is 201278); cost -10%, Sacrifice +3, Salvation +33% (Q7 TUNE); masks already per-effect (A_1/B_1/C_1 kept)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Hand of Freedom, Hand of Sacrifice and Hand of Salvation by $s1%, increases the effectiveness of your Hand of Salvation by $s3% and the effectiveness of your Hand of Sacrifice by an additional $s2%.\n\n|cFF9D9D9DCapstone Bonus: While one of your Hand spells is on a target, your healing done to that target is increased by 15%.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8464, 'EffectSpellClassMaskB_1': 8192, 'EffectSpellClassMaskC_1': 256, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -3217,13 +3235,13 @@ blessed_hands_53661 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=108, misc_value=14),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=107, misc_value=3),
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=108, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.COST),
+        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.EFFECT1),
+        Effect(type=EffectType.APPLY_AURA, base_points=65, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.EFFECT1),
     ],
     spell_icon_id=3022,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of Hand of Freedom, Hand of Sacrifice and Hand of Salvation by $s1%, increases the effectiveness of Hand of Salvation by $s3% and the effectiveness of Hand of Sacrifice by an additional $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8464, 'EffectSpellClassMaskB_1': 8192, 'EffectSpellClassMaskC_1': 256, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (3,1): 3 ranks (r3 is 201278); cost -20%, Sacrifice +7, Salvation +66% (Q7 TUNE); masks already per-effect (A_1/B_1/C_1 kept)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Hand of Freedom, Hand of Sacrifice and Hand of Salvation by $s1%, increases the effectiveness of your Hand of Salvation by $s3% and the effectiveness of your Hand of Sacrifice by an additional $s2%.\n\n|cFF9D9D9DCapstone Bonus: While one of your Hand spells is on a target, your healing done to that target is increased by 15%.|r', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8464, 'EffectSpellClassMaskB_1': 8192, 'EffectSpellClassMaskC_1': 256, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 10},
 )
 
 
@@ -3239,13 +3257,13 @@ judgements_of_the_pure_53671 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=7, trigger_spell=judgements_of_the_pure_53655.id),
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
+        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=3018,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Seal and Judgement spells by $s2%, and your Judgement spells increase your casting and melee haste by $53655s1% for $53655d.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2149580800, 'EffectSpellClassMaskA_2': 65536, 'EffectSpellClassMaskB_1': 33555456, 'EffectSpellClassMaskB_2': 541068800, 'EffectSpellClassMaskB_3': 24, 'EffectSpellClassMaskC_1': 41943040, 'EffectSpellClassMaskC_2': 536873984, 'EffectSpellClassMaskC_3': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 69904, 'RangeIndex': 1, 'SpellClassSet': 10, 'SpellVisualID_1': 12015},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (8,3): eff1 seal damage / eff2 seal DoT on SEAL_DAMAGE (U+P), eff3 own hits on JUDGEMENT_OWN_HITS (J+Dv); all eight stale mask keys deleted; DBC ProcTypeMask -> 0 and ProcChance 101 (CR4) with remove_spell_proc(-53671)',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Seals, including the Seal power unleashed by your Judgement and Deliverance, by $s1%, and the direct damage of your Judgement and Deliverance by $s3%. Your Judgement and Deliverance increase your melee, ranged and casting speed by $53655s1% for 1 min.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 10, 'SpellVisualID_1': 12015, **_mask(1, m.SEAL_DAMAGE), **_mask(2, m.SEAL_DAMAGE), **_mask(3, m.JUDGEMENT_OWN_HITS)},
 )
 
 
@@ -3261,13 +3279,13 @@ judgements_of_the_pure_53673 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=7, trigger_spell=53656),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
+        Effect(type=EffectType.APPLY_AURA, base_points=15, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=3018,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Seal and Judgement spells by $s2%, and your Judgement spells increase your casting and melee haste by $53656s1% for $53656d.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2149580800, 'EffectSpellClassMaskA_2': 65536, 'EffectSpellClassMaskB_1': 33555456, 'EffectSpellClassMaskB_2': 541068800, 'EffectSpellClassMaskB_3': 24, 'EffectSpellClassMaskC_1': 41943040, 'EffectSpellClassMaskC_2': 536873984, 'EffectSpellClassMaskC_3': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 69904, 'RangeIndex': 1, 'SpellClassSet': 10, 'SpellVisualID_1': 12015},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (8,3): eff1 seal damage / eff2 seal DoT on SEAL_DAMAGE (U+P), eff3 own hits on JUDGEMENT_OWN_HITS (J+Dv); all eight stale mask keys deleted; DBC ProcTypeMask -> 0 and ProcChance 101 (CR4) with remove_spell_proc(-53671)',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Seals, including the Seal power unleashed by your Judgement and Deliverance, by $s1%, and the direct damage of your Judgement and Deliverance by $s3%. Your Judgement and Deliverance increase your melee, ranged and casting speed by $53656s1% for 1 min.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 10, 'SpellVisualID_1': 12015, **_mask(1, m.SEAL_DAMAGE), **_mask(2, m.SEAL_DAMAGE), **_mask(3, m.JUDGEMENT_OWN_HITS)},
 )
 
 
@@ -3393,13 +3411,13 @@ judgements_of_the_pure_54151 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=7, trigger_spell=53657),
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108, misc_value=22),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DOT),
+        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.DAMAGE),
     ],
     spell_icon_id=3018,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Seal and Judgement spells by $s2%, and your Judgement spells increase your casting and melee haste by $53657s1% for $53657d.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2149580800, 'EffectSpellClassMaskA_2': 65536, 'EffectSpellClassMaskB_1': 33555456, 'EffectSpellClassMaskB_2': 541068800, 'EffectSpellClassMaskB_3': 24, 'EffectSpellClassMaskC_1': 25165824, 'EffectSpellClassMaskC_2': 536873984, 'EffectSpellClassMaskC_3': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 69904, 'RangeIndex': 1, 'SpellClassSet': 10, 'SpellVisualID_1': 12015},
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (8,3): eff1 seal damage / eff2 seal DoT on SEAL_DAMAGE (U+P), eff3 own hits on JUDGEMENT_OWN_HITS (J+Dv); all eight stale mask keys deleted; DBC ProcTypeMask -> 0 and ProcChance 101 (CR4) with remove_spell_proc(-53671)',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Seals, including the Seal power unleashed by your Judgement and Deliverance, by $s1%, and the direct damage of your Judgement and Deliverance by $s3%. Your Judgement and Deliverance increase your melee, ranged and casting speed by $53657s1% for 1 min.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 10, 'SpellVisualID_1': 12015, **_mask(1, m.SEAL_DAMAGE), **_mask(2, m.SEAL_DAMAGE), **_mask(3, m.JUDGEMENT_OWN_HITS)},
 )
 
 
@@ -4684,6 +4702,278 @@ untrain(frost_resistance_aura_19888, trainer_ids=[202])
 untrain(fire_resistance_aura_19891, trainer_ids=[202])
 
 
+divine_intellect_20257 = spell(
+    id=20257,
+    name='Divine Intellect',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_SPELL_CRIT_CHANCE_SCHOOL, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_SPELL_HEALING_OF_STAT_PERCENT, misc_value=3),
+    ],
+    spell_icon_id=44,
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (1,1): eff1 total-stat% -> spell crit (Holy) bp 0; new eff2 healing power from Intellect bp 2',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Holy spells by $s1%, and increases your healing power by $s2% of your Intellect.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+divine_intellect_20258 = spell(
+    id=20258,
+    name='Divine Intellect',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_SPELL_CRIT_CHANCE_SCHOOL, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.MOD_SPELL_HEALING_OF_STAT_PERCENT, misc_value=3),
+    ],
+    spell_icon_id=44,
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (1,1): eff1 total-stat% -> spell crit (Holy) bp 1; new eff2 healing power from Intellect bp 5',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Holy spells by $s1%, and increases your healing power by $s2% of your Intellect.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+divine_intellect_20259 = spell(
+    id=20259,
+    name='Divine Intellect',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_SPELL_CRIT_CHANCE_SCHOOL, misc_value=2),
+        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=AuraType.MOD_SPELL_HEALING_OF_STAT_PERCENT, misc_value=3),
+    ],
+    spell_icon_id=44,
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (1,1): eff1 total-stat% -> spell crit (Holy) bp 2; new eff2 healing power from Intellect bp 8',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Holy spells by $s1%, and increases your healing power by $s2% of your Intellect.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+holy_power_5923 = spell(
+    id=5923,
+    name='Holy Power',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_SPELL_CRIT_CHANCE_SCHOOL, misc_value=2),
+    ],
+    spell_icon_id=1824,
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (5,2): bp 0 -> 1 (+2%)',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Holy spells by $s1%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+)
+
+
+holy_power_5924 = spell(
+    id=5924,
+    name='Holy Power',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.MOD_SPELL_CRIT_CHANCE_SCHOOL, misc_value=2),
+    ],
+    spell_icon_id=1824,
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (5,2): bp 1 -> 3 (+4%)',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Holy spells by $s1%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+)
+
+
+holy_power_5925 = spell(
+    id=5925,
+    name='Holy Power',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.MOD_SPELL_CRIT_CHANCE_SCHOOL, misc_value=2),
+    ],
+    spell_icon_id=1824,
+    notes='pulled from existing data | paladin-rework S2 HOLY 5 (5,2): bp 2 -> 5 (+6%)',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Holy spells by $s1%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+)
+
+
+unyielding_faith_9453 = spell(
+    id=9453,
+    name='Unyielding Faith',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
+        Effect(type=EffectType.APPLY_AURA, base_points=-5001, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COOLDOWN),
+    ],
+    spell_icon_id=1823,
+    notes="pulled from existing data | paladin-rework S2 HOLY 5 (1,2): SpellClassSet 0 -> 10; eff1 crit mask ALL_PALADIN, eff2 Light's Hammer cooldown; rank 3 is 201277 (paladin_holy_ranks.py)",
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the critical strike chance of your spells and abilities by $s1%, and reduces the cooldown of your Light's Hammer by ${$m2/-1000} sec.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'SpellClassSet': 10, **_mask(1, m.ALL_PALADIN), **_mask(2, (0, 0, m.LIGHTS_HAMMER))},
+)
+
+
+unyielding_faith_25836 = spell(
+    id=25836,
+    name='Unyielding Faith',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
+        Effect(type=EffectType.APPLY_AURA, base_points=-10001, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COOLDOWN),
+    ],
+    spell_icon_id=1823,
+    notes="pulled from existing data | paladin-rework S2 HOLY 5 (1,2): SpellClassSet 0 -> 10; eff1 crit mask ALL_PALADIN, eff2 Light's Hammer cooldown; rank 3 is 201277 (paladin_holy_ranks.py)",
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the critical strike chance of your spells and abilities by $s1%, and reduces the cooldown of your Light's Hammer by ${$m2/-1000} sec.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'SpellClassSet': 10, **_mask(1, m.ALL_PALADIN), **_mask(2, (0, 0, m.LIGHTS_HAMMER))},
+)
+
+
+judgements_of_the_pure_53656 = spell(
+    id=53656,
+    name='Judgements of the Pure',
+    school=School.HOLY,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=60000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL, misc_value=5),
+    ],
+    spell_icon_id=3018,
+    notes='pulled from existing data | paladin-rework S2 HOLY 4.1: HASTE_ALL bp 3 (+4%); stale eff1 class mask d0 0x800000 cleared; cast by Paladin::OnJudgementCastHoly',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 12015, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Melee, ranged and casting speed increased by $s1% for $d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Melee, ranged and casting speed increased by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+judgements_of_the_pure_53657 = spell(
+    id=53657,
+    name='Judgements of the Pure',
+    school=School.HOLY,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=60000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL, misc_value=5),
+    ],
+    spell_icon_id=3018,
+    notes='pulled from existing data | paladin-rework S2 HOLY 4.1: HASTE_ALL bp 5 (+6%); stale eff1 class mask d0 0x800000 cleared; cast by Paladin::OnJudgementCastHoly',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'SpellVisualID_1': 12015, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Melee, ranged and casting speed increased by $s1% for $d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Melee, ranged and casting speed increased by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0},
+)
+
+
+infusion_of_light_53672 = spell(
+    id=53672,
+    name='Infusion of Light',
+    school=School.HOLY,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
+        Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CASTING_TIME),
+    ],
+    spell_icon_id=3021,
+    notes='pulled from existing data | paladin-rework S2 HOLY 4.1: eff2 ADD_FLAT CASTING_TIME -0.75/-1.5 s -> ADD_PCT CASTING_TIME -50/-100% (Q5); orphan eff3 BasePoints/DieSides raw keys deleted (empty slot, spec gives eff3 nothing); ProcTypeMask 0x4000 + ProcCharges 1 kept (auto REQ_SPELLMOD row)',
+    raw_overrides={'AttributesEx6': 64, 'CastingTimeIndex': 1, 'ProcTypeMask': 16384, 'ProcChance': 100, 'ProcCharges': 1, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 2147483648, 'EffectSpellClassMaskB_1': 1073741824, 'SpellVisualID_1': 12008, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': "Your next Flash of Light's cast time is reduced by $s2% or your next Holy Light's critical strike chance is increased by $s1%.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Your next Flash of Light's cast time is reduced by $s2% or your next Holy Light's critical strike chance is increased by $s1%.", 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+)
+
+
+infusion_of_light_54149 = spell(
+    id=54149,
+    name='Infusion of Light',
+    school=School.HOLY,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
+        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CASTING_TIME),
+    ],
+    spell_icon_id=3021,
+    notes='pulled from existing data | paladin-rework S2 HOLY 4.1: eff2 ADD_FLAT CASTING_TIME -0.75/-1.5 s -> ADD_PCT CASTING_TIME -50/-100% (Q5); orphan eff3 BasePoints/DieSides raw keys deleted (empty slot, spec gives eff3 nothing); ProcTypeMask 0x4000 + ProcCharges 1 kept (auto REQ_SPELLMOD row)',
+    raw_overrides={'AttributesEx6': 64, 'CastingTimeIndex': 1, 'ProcTypeMask': 16384, 'ProcChance': 100, 'ProcCharges': 1, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 2147483648, 'EffectSpellClassMaskB_1': 1073741824, 'SpellVisualID_1': 12008, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your next Flash of Light's cast time is reduced by $s2% or your next Holy Light's critical strike chance is increased by $s1%.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Your next Flash of Light's cast time is reduced by $s2% or your next Holy Light's critical strike chance is increased by $s1%.", 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+)
+
+
+sacred_cleansing_53659 = spell(
+    id=53659,
+    name='Sacred Cleansing',
+    school=School.HOLY,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=8000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=21, apply_aura=178, misc_value=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=21, apply_aura=178, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=21, apply_aura=178, misc_value=4),
+    ],
+    spell_icon_id=3019,
+    notes='pulled from existing data | paladin-rework S2 HOLY 4.1: duration 10 s -> 8 s (0.2 item 5)',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 2149580800, 'EffectSpellClassMaskA_2': 65536, 'SpellVisualID_1': 12009, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Resistance to Disease, Magic and Poison increased by $s1% for $d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Resistance to Disease, Magic and Poison increased by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 10, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+)
+
+
 # ---------------------------------------------------------------------------
 # TEMPORARY SHIM - delete once paladin_talents.py imports the renamed variables (A3 / WP-A3). The three stock Crusade
 # rank spells became Smite Evil (smite_evil_31866 / 31867 / 31868, RETRIBUTION §2.1) and 19876 lost "Shadow"
@@ -4702,3 +4992,40 @@ def __getattr__(name):
     if name in _LEGACY_NAMES:
         return globals()[_LEGACY_NAMES[name]]
     raise AttributeError(name)
+
+
+# ---------------------------------------------------------------------------
+# paladin-rework S2 HOLY - spell_proc rows (HOLY.md 7), removals, script bindings for the spells declared in this file.
+# Flags: DONE_SPELL_MAGIC_POS 0x4000, TAKEN_DAMAGE 0x100000. Phase 1 CAST, 2 HIT. Chance 0 = the rank's DBC ProcChance.
+# The Holy-new rows (resolver 201206, Merciful Strikes, Zealous Exorcism, Sunlight, ...) live in paladin_holy_spells.py /
+# paladin_holy_ranks.py.
+# ---------------------------------------------------------------------------
+
+# Spiritual Focus capstone (rank 3 only): damage taken, 10 s ICD (starts only on a real proc). TAKEN_DAMAGE is not a spell proc
+# flag, so SpellPhaseMask stays 0 (HOLY 7 lists phase 2; LoadSpellProcs logs "SpellPhaseMask ... won't be used" for it, and S1's
+# Eye for an Eye row -9799 also has none). The "casting Holy Light" gate lives in spell_pal_spiritual_focus_capstone::CheckProc.
+procs_on(spiritual_focus_20207, proc_flags=0x100000, chance=100, cooldown_ms=10000)
+
+# Light's Grace: Holy Light / Flash of Light casts (CAST phase, was HIT on Holy Light only); eff1 is a DUMMY now (trigger_spell 0, X5), chance
+# is the rank's DBC ProcChance (100) - the script picks the buff by rank.
+procs_on(-31833, proc_flags=0x4000, family_name=10, family_mask=(m.HOLY_LIGHT | m.FLASH_OF_LIGHT, 0, 0),
+         spell_phase_mask=m.PROC_SPELL_PHASE_CAST, chance=0)
+
+# Infusion of Light: Flash of Light heals only (the Holy Shock roll moved to the resolver), HIT phase, triggered casts allowed; eff2 is the HoT
+# percent read by the script (DisableEffectsMask 0x2). Was (FoL + Holy Shock, type 3).
+procs_on(-53569, proc_flags=0x4000, family_name=10, family_mask=(m.FLASH_OF_LIGHT, 0, 0), spell_type_mask=2,
+         spell_phase_mask=m.PROC_SPELL_PHASE_HIT, attributes_mask=m.PROC_ATTR_TRIGGERED_CAN_PROC, disable_effects_mask=0x2, chance=0)
+
+# Judgements of the Pure: the stock -53671 row goes (the haste is cast by Paladin::OnJudgementCastHoly once per Judgement / Deliverance cast;
+# the ranks' DBC ProcTypeMask is 0 above so SpellMgr builds no replacement). Ranks 54154 / 54155 are orphaned by the 5 -> 3 rank cut.
+remove_spell_proc(-53671)
+
+unbind_script(-53569, 'spell_pal_infusion_of_light')
+scripted_by(spiritual_focus_20207, 'spell_pal_spiritual_focus_capstone')
+scripted_by(infusion_of_light_53569, 'spell_pal_infusion_of_light_holy')
+scripted_by(infusion_of_light_53576, 'spell_pal_infusion_of_light_holy')
+scripted_by(holy_shock_25912, 'spell_pal_holy_shock_hit')
+scripted_by(holy_shock_25914, 'spell_pal_holy_shock_hit')
+scripted_by(light_s_grace_31833, 'spell_pal_lights_grace_holy')
+scripted_by(light_s_grace_31835, 'spell_pal_lights_grace_holy')
+scripted_by(light_s_grace_31836, 'spell_pal_lights_grace_holy')

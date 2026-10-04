@@ -99,6 +99,9 @@ SEAL_PASSIVE_COMMAND = 0x400  # C - Command passives + Command echo
 BLADE_OF_JUSTICE = 0x800  # Ret, 201400 only (echoes carry P)
 WAKE_OF_ASHES = 0x1000  # Ret, 201413 only (stun 201414 carries none)
 EXECUTION_SENTENCE = 0x2000  # Ret, 201410 / 201411 / 201412
+# LIGHTS_HAMMER is paladin d2 b14 (0x4000). spell_warrior.cpp:1099 reads exactly paladin d2 0x4000 + a MOD_DECREASE_SPEED
+# aura as Avenger's Shield (Heroic Strike bonus damage), so NEVER put it on a spell that carries a snare aura. It sits on
+# 201200 / 201201 / 201202 and the snapshot sources 201281 / 201282 (HOLY.md §2.6).
 LIGHTS_HAMMER = 0x4000  # Holy; never on a spell with MOD_DECREASE_SPEED (spell_warrior.cpp:1099)
 DIVINE_SHIELD = 0x8000  # Divine Shield 642 (added, keeps d0 0x400000)
 DELIVERANCE = 0x10000  # Dv - Deliverance 201061
@@ -133,6 +136,22 @@ RV_PROC = (0x800000, 0x168082, 0x10008)  # U, Exorcism, HoW, CS, DS, HotR, SotR,
 CONVICTION_PROC = (0, 0x28082, 0)  # Exorcism, HoW, CS, DS
 SWIFT_RET_PROC = (0, 0x8000, 0x8)  # CS, J
 VENGEANCE_STRIKES = (0, 0x28000, 0)  # CS, DS
+
+# Holy composites (HOLY.md §2.6). The single-bit Holy keys reuse the stock constants above: HOLY_LIGHT, FLASH_OF_LIGHT,
+# HOLY_SHOCK_HEAL, CRUSADER_STRIKE, EXORCISM, HAMMER_OF_WRATH, HOLY_WRATH, CONSECRATION, CLEANSE_PURIFY, LAY_ON_HANDS,
+# HAND_OF_SACRIFICE, HAND_OF_SALVATION, LIGHTS_HAMMER.
+# FLASH_OF_LIGHT (d0 0x40000000) is a C2 hardcode - stock 19750 only, never on a new spell. Glimmer markers, pulses,
+# Toll Shocks, Merciful heal, splash, cleave, Sunlight hits, buffs and the resolver carry NO bit (FAMILY-BITS H4/H5).
+HOLY_SHOCK_CAST_DMG = 0x200000  # d0, stock 20473 / 25912 (same bit as HOLY_SHOCK; named for the SpellMod rows)
+HOLY_SHOCK_ALL = (0x200000, 0x10000, 0)  # Glimmer r1/r2, resolver row
+HOLY_HEALS = (0xC0000000, 0x10000, 0)  # Sanctified Light crit-heal clause: Holy Light, Flash of Light, Holy Shock heal
+HOLY_HEAL_CASTS_AND_SHOCK = (0xC0200000, 0x10000, 0)  # Sanctified Light crit chance, Dawn before Dusk buff
+HEALING_LIGHT = (0xC0200000, 0x10000, 0x4000)  # stock 20237 eff1 mask + Light's Hammer
+CONCENTRATION_SCOPE = (0x20000, 0, 0x4000000)  # Concentration Aura 19746 (d0 b17) + burst 201164 (d2 b26, load-time)
+HAND_COSTS = (0x2110, 0, 0)  # Hand of Freedom / Sacrifice / Salvation: Blessed Hands cost clause
+JUDGEMENT_OWN_HITS = (0, 0, 0x10008)  # J | Dv: Judgements of the Pure own-hit clause, Enlightened Judgements range
+MERCIFUL_WINDOW = (0, 0x8000, 0x8)  # CS | J (Deliverance excluded)
+ALL_PALADIN = (0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF)  # Unyielding Faith crit: every paladin spell/ability, never autos
 
 # --- spell_proc constants (SpellMgr.h:113-277) ---
 PROC_FLAG_DONE_MELEE_AUTO_ATTACK = 0x4

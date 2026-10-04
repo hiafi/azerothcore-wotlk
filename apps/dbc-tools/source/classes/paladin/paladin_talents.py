@@ -4,9 +4,11 @@ Paladin - talent tabs, talents (granted_by_talent bundles a rank's SkillLineAbil
 Split from a single source/classes/paladin.py via split_class_file.py (.agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md) - see source/classes/README.md for the multi-file layout and lib/dsl/registry.py's load_class_package for how cross-file references (`from .paladin_...` below) resolve.
 """
 
-from lib.dsl.registry import granted_by_talent, tab
-from .paladin_spells import aura_mastery_31821, avenger_s_shield_31935, beacon_of_light_53563, blade_of_justice_201400, blessing_of_sanctuary_20911, divine_favor_20216, divine_illumination_31842, divine_sacrifice_64205, divine_storm_53385, execution_sentence_201410, hammer_of_the_righteous_53595, holy_shield_20925, holy_shock_20473, seal_of_vengeance_31801, wake_of_ashes_201413
-from .paladin_trigger_spells import ardent_defender_31850, ardent_defender_31851, ardent_defender_31852, benediction_20101, benediction_20102, benediction_20103, blade_of_wrath_201457, blade_of_wrath_201458, blade_of_wrath_201459, blessed_hands_53660, blessed_hands_53661, blessed_life_31828, blessed_life_31829, blessed_life_31830, combat_expertise_31858, combat_expertise_31859, combat_expertise_31860, conviction_20117, conviction_20118, conviction_20119, crusade_201463, crusade_201464, crusade_201465, crusaders_aegis_201460, crusaders_aegis_201461, crusaders_aegis_201462, divine_guardian_53527, divine_guardian_53530, divine_might_201443, divine_might_201444, divine_might_201445, divine_purpose_201471, divine_purpose_31871, divine_purpose_31872, enlightened_judgements_53556, enlightened_judgements_53557, eye_for_an_eye_201467, eye_for_an_eye_25988, eye_for_an_eye_9799, fanaticism_31879, fanaticism_31880, fanaticism_31881, guarded_by_the_light_53583, guarded_by_the_light_53585, guardian_s_favor_20174, guardian_s_favor_20175, healing_light_20237, healing_light_20238, healing_light_20239, heart_of_the_crusader_20335, heart_of_the_crusader_20336, heart_of_the_crusader_20337, holy_guidance_31837, holy_guidance_31838, holy_guidance_31839, holy_guidance_31840, holy_guidance_31841, illumination_20210, illumination_20212, illumination_20213, illumination_20214, illumination_20215, improved_blessing_of_might_20042, improved_blessing_of_might_20045, improved_blessing_of_wisdom_20244, improved_blessing_of_wisdom_20245, improved_concentration_aura_20254, improved_concentration_aura_20255, improved_concentration_aura_20256, improved_crusader_strike_201449, improved_crusader_strike_201450, improved_devotion_aura_20138, improved_devotion_aura_20139, improved_devotion_aura_20140, improved_hammer_of_justice_20487, improved_hammer_of_justice_20488, improved_judgements_201468, improved_judgements_25956, improved_judgements_25957, improved_lay_on_hands_20234, improved_lay_on_hands_20235, improved_righteous_fury_20468, improved_righteous_fury_20469, improved_righteous_fury_20470, infusion_of_light_53569, infusion_of_light_53576, judgements_of_the_just_53695, judgements_of_the_just_53696, judgements_of_the_pure_53671, judgements_of_the_pure_53673, judgements_of_the_pure_54151, judgements_of_the_pure_54154, judgements_of_the_pure_54155, judgements_of_the_wise_31876, judgements_of_the_wise_31877, light_s_grace_31833, light_s_grace_31835, light_s_grace_31836, pure_of_heart_31822, pure_of_heart_31823, purify_the_unclean_201451, purify_the_unclean_201452, purify_the_unclean_201453, purifying_power_31825, purifying_power_31826, pursuit_of_justice_26022, pursuit_of_justice_26023, righteous_vengeance_53380, righteous_vengeance_53381, righteous_vengeance_53382, sacred_cleansing_53551, sacred_cleansing_53552, sacred_cleansing_53553, sacred_duty_31848, sacred_duty_31849, sanctified_light_20359, sanctified_light_20360, sanctified_light_20361, sanctified_retribution_201469, sanctified_retribution_201470, sanctified_retribution_31869, sanctified_seals_201454, sanctified_seals_201455, sanctified_seals_201456, sanctified_wrath_53375, sanctified_wrath_53376, sanctity_of_battle_32043, sanctity_of_battle_35396, sanctity_of_battle_35397, seals_of_the_pure_20224, seals_of_the_pure_20225, seals_of_the_pure_20330, seals_of_the_pure_20331, seals_of_the_pure_20332, sheath_of_light_53501, sheath_of_light_53502, sheath_of_light_53503, shield_of_the_templar_53709, shield_of_the_templar_53710, shield_of_the_templar_53711, smite_evil_31866, smite_evil_31867, smite_evil_31868, spiritual_attunement_31785, spiritual_attunement_33776, spiritual_focus_20205, spiritual_focus_20206, spiritual_focus_20207, spiritual_focus_20208, spiritual_focus_20209, stoicism_31844, stoicism_31845, stoicism_53519, strength_of_faith_201446, strength_of_faith_201447, strength_of_faith_201448, swift_retribution_53379, swift_retribution_53484, swift_retribution_53648, the_art_of_war_201472, the_art_of_war_53486, the_art_of_war_53488, touched_by_the_light_53590, touched_by_the_light_53591, touched_by_the_light_53592, two_handed_weapon_specialization_20111, two_handed_weapon_specialization_20112, two_handed_weapon_specialization_20113, vengeance_20049, vengeance_20056, vengeance_20057, vindication_201466, vindication_26016, vindication_9452, zeal_201440, zeal_201441, zeal_201442
+from lib.dsl.registry import granted_by_talent, scripted_by, tab
+from .paladin_spells import avenger_s_shield_31935, beacon_of_light_53563, blade_of_justice_201400, blessing_of_sanctuary_20911, divine_illumination_31842, divine_sacrifice_64205, divine_storm_53385, execution_sentence_201410, hammer_of_the_righteous_53595, holy_shield_20925, holy_shock_20473, seal_of_vengeance_31801, wake_of_ashes_201413
+from .paladin_trigger_spells import ardent_defender_31850, ardent_defender_31851, ardent_defender_31852, benediction_20101, benediction_20102, benediction_20103, blade_of_wrath_201457, blade_of_wrath_201458, blade_of_wrath_201459, blessed_hands_53660, blessed_hands_53661, combat_expertise_31858, combat_expertise_31859, combat_expertise_31860, conviction_20117, conviction_20118, conviction_20119, crusade_201463, crusade_201464, crusade_201465, crusaders_aegis_201460, crusaders_aegis_201461, crusaders_aegis_201462, divine_guardian_53527, divine_guardian_53530, divine_intellect_20257, divine_intellect_20258, divine_intellect_20259, divine_might_201443, divine_might_201444, divine_might_201445, divine_purpose_201471, divine_purpose_31871, divine_purpose_31872, enlightened_judgements_53556, enlightened_judgements_53557, eye_for_an_eye_201467, eye_for_an_eye_25988, eye_for_an_eye_9799, fanaticism_31879, fanaticism_31880, fanaticism_31881, guarded_by_the_light_53583, guarded_by_the_light_53585, guardian_s_favor_20174, guardian_s_favor_20175, healing_light_20237, healing_light_20238, healing_light_20239, heart_of_the_crusader_20335, heart_of_the_crusader_20336, heart_of_the_crusader_20337, holy_guidance_31837, holy_guidance_31838, holy_guidance_31839, holy_power_5923, holy_power_5924, holy_power_5925, illumination_20210, illumination_20212, illumination_20213, improved_blessing_of_might_20042, improved_blessing_of_might_20045, improved_blessing_of_wisdom_20244, improved_blessing_of_wisdom_20245, improved_concentration_aura_20254, improved_concentration_aura_20255, improved_concentration_aura_20256, improved_crusader_strike_201449, improved_crusader_strike_201450, improved_devotion_aura_20138, improved_devotion_aura_20139, improved_devotion_aura_20140, improved_hammer_of_justice_20487, improved_hammer_of_justice_20488, improved_judgements_201468, improved_judgements_25956, improved_judgements_25957, improved_lay_on_hands_20234, improved_lay_on_hands_20235, improved_righteous_fury_20468, improved_righteous_fury_20469, improved_righteous_fury_20470, infusion_of_light_53569, infusion_of_light_53576, judgements_of_the_just_53695, judgements_of_the_just_53696, judgements_of_the_pure_53671, judgements_of_the_pure_53673, judgements_of_the_pure_54151, judgements_of_the_wise_31876, judgements_of_the_wise_31877, light_s_grace_31833, light_s_grace_31835, light_s_grace_31836, pure_of_heart_31822, pure_of_heart_31823, purify_the_unclean_201451, purify_the_unclean_201452, purify_the_unclean_201453, purifying_power_31825, purifying_power_31826, pursuit_of_justice_26022, pursuit_of_justice_26023, righteous_vengeance_53380, righteous_vengeance_53381, righteous_vengeance_53382, sacred_cleansing_53551, sacred_cleansing_53552, sacred_cleansing_53553, sacred_duty_31848, sacred_duty_31849, sanctified_light_20359, sanctified_light_20360, sanctified_light_20361, sanctified_retribution_201469, sanctified_retribution_201470, sanctified_retribution_31869, sanctified_seals_201454, sanctified_seals_201455, sanctified_seals_201456, sanctified_wrath_53375, sanctified_wrath_53376, sanctity_of_battle_32043, sanctity_of_battle_35396, sanctity_of_battle_35397, sheath_of_light_53501, sheath_of_light_53502, sheath_of_light_53503, shield_of_the_templar_53709, shield_of_the_templar_53710, shield_of_the_templar_53711, smite_evil_31866, smite_evil_31867, smite_evil_31868, spiritual_attunement_31785, spiritual_attunement_33776, spiritual_focus_20205, spiritual_focus_20206, spiritual_focus_20207, stoicism_31844, stoicism_31845, stoicism_53519, strength_of_faith_201446, strength_of_faith_201447, strength_of_faith_201448, swift_retribution_53379, swift_retribution_53484, swift_retribution_53648, the_art_of_war_201472, the_art_of_war_53486, the_art_of_war_53488, touched_by_the_light_53590, touched_by_the_light_53591, touched_by_the_light_53592, two_handed_weapon_specialization_20111, two_handed_weapon_specialization_20112, two_handed_weapon_specialization_20113, unyielding_faith_25836, unyielding_faith_9453, vengeance_20049, vengeance_20056, vengeance_20057, vindication_201466, vindication_26016, vindication_9452, zeal_201440, zeal_201441, zeal_201442
+from .paladin_holy_ranks import a_new_dawn_r1_201240, a_new_dawn_r2_201241, a_new_dawn_r3_201242, blessed_crusade_r1_201257, blessed_crusade_r2_201258, blessed_crusade_r3_201259, blessed_hands_talent_r3_201278, dawn_before_dusk_talent_r1_201262, dawn_before_dusk_talent_r2_201263, dawn_before_dusk_talent_r3_201264, enduring_light_r1_201243, enduring_light_r2_201244, enduring_light_r3_201245, glimmer_of_light_talent_r1_201268, glimmer_of_light_talent_r2_201269, glimmer_of_light_talent_r3_201270, illuminated_steel_r1_201246, illuminated_steel_r2_201247, illuminated_steel_r3_201248, light_s_fervor_r1_201260, light_s_fervor_r2_201261, merciful_strikes_talent_r1_201249, merciful_strikes_talent_r2_201250, merciful_strikes_talent_r3_201251, overflowing_light_talent_r1_201274, overflowing_light_talent_r2_201275, overflowing_light_talent_r3_201276, pure_of_heart_talent_r3_201279, radiant_exorcism_talent_r1_201265, radiant_exorcism_talent_r2_201266, radiant_exorcism_talent_r3_201267, shock_and_awe_talent_r1_201271, shock_and_awe_talent_r2_201272, shock_and_awe_talent_r3_201273, sunlight_talent_r1_201254, sunlight_talent_r2_201255, sunlight_talent_r3_201256, unyielding_faith_r3_201277, zealous_exorcism_r1_201252, zealous_exorcism_r2_201253
+from .paladin_holy_spells import divine_toll_201203, light_s_hammer_201200
 
 
 retribution_381_tab = tab(
@@ -24,6 +26,7 @@ holy_382_tab = tab(
     id=382,
     name='Holy',
     class_mask=2,
+    skill_line=594,
     spell_icon_id=70,
     raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': 2047, 'BackgroundFile': 'PaladinHoly'},
 )
@@ -123,124 +126,11 @@ granted_by_talent(
 
 
 granted_by_talent(
-    id=1432,
-    tab=holy_382_tab,
-    tier=0,
-    column=1,
-    ranks=[spiritual_focus_20205, spiritual_focus_20206, spiritual_focus_20207, spiritual_focus_20209, spiritual_focus_20208],
-    player_castable=False,
-)
-
-
-granted_by_talent(
-    id=1433,
-    tab=holy_382_tab,
-    tier=4,
-    column=1,
-    ranks=[divine_favor_20216],
-    player_castable=False,
-    depends_on={'talent_id': 1461, 'rank': 4},
-    flags=1,
-)
-
-
-granted_by_talent(
-    id=1435,
-    tab=holy_382_tab,
-    tier=2,
-    column=0,
-    ranks=[aura_mastery_31821],
-    player_castable=False,
-    flags=1,
-)
-
-
-granted_by_talent(
     id=1442,
     tab=protection_383_tab,
     tier=0,
     column=1,
     ranks=[63646, 63647, 63648, 63649, 63650],
-    player_castable=False,
-)
-
-
-granted_by_talent(
-    id=1443,
-    tab=holy_382_tab,
-    tier=2,
-    column=2,
-    ranks=[improved_lay_on_hands_20234, improved_lay_on_hands_20235],
-    player_castable=False,
-)
-
-
-granted_by_talent(
-    id=1444,
-    tab=holy_382_tab,
-    tier=1,
-    column=0,
-    ranks=[healing_light_20237, healing_light_20238, healing_light_20239],
-    player_castable=False,
-)
-
-
-granted_by_talent(
-    id=1446,
-    tab=holy_382_tab,
-    tier=3,
-    column=2,
-    ranks=[improved_blessing_of_wisdom_20244, improved_blessing_of_wisdom_20245],
-    player_castable=False,
-)
-
-
-granted_by_talent(
-    id=1449,
-    tab=holy_382_tab,
-    tier=1,
-    column=1,
-    ranks=[20257, 20258, 20259, 20260, 20261],
-    player_castable=False,
-)
-
-
-granted_by_talent(
-    id=1450,
-    tab=holy_382_tab,
-    tier=3,
-    column=0,
-    ranks=[improved_concentration_aura_20254, improved_concentration_aura_20255, improved_concentration_aura_20256],
-    player_castable=False,
-)
-
-
-granted_by_talent(
-    id=1461,
-    tab=holy_382_tab,
-    tier=2,
-    column=1,
-    ranks=[illumination_20210, illumination_20212, illumination_20213, illumination_20214, illumination_20215],
-    player_castable=False,
-)
-
-
-granted_by_talent(
-    id=1463,
-    tab=holy_382_tab,
-    tier=0,
-    column=2,
-    ranks=[seals_of_the_pure_20224, seals_of_the_pure_20225, seals_of_the_pure_20330, seals_of_the_pure_20331, seals_of_the_pure_20332],
-    player_castable=False,
-)
-
-
-granted_by_talent(
-    id=1465,
-    tab=holy_382_tab,
-    tier=4,
-    column=2,
-    ranks=[sanctified_light_20359, sanctified_light_20360, sanctified_light_20361],
     player_castable=False,
 )
 
@@ -256,43 +146,11 @@ granted_by_talent(
 
 
 granted_by_talent(
-    id=1502,
-    tab=holy_382_tab,
-    tier=6,
-    column=1,
-    ranks=[holy_shock_20473],
-    player_castable=False,
-    depends_on={'talent_id': 1433, 'rank': 0},
-    flags=1,
-)
-
-
-granted_by_talent(
     id=1521,
     tab=protection_383_tab,
     tier=3,
     column=1,
     ranks=[improved_hammer_of_justice_20487, improved_hammer_of_justice_20488],
-    player_castable=False,
-)
-
-
-granted_by_talent(
-    id=1627,
-    tab=holy_382_tab,
-    tier=5,
-    column=2,
-    ranks=[5923, 5924, 5925, 5926, 25829],
-    player_castable=False,
-)
-
-
-granted_by_talent(
-    id=1628,
-    tab=holy_382_tab,
-    tier=1,
-    column=2,
-    ranks=[9453, 25836],
     player_castable=False,
 )
 
@@ -304,67 +162,6 @@ granted_by_talent(
     column=2,
     ranks=[20096, 20097, 20098, 20099, 20100],
     player_castable=False,
-)
-
-
-granted_by_talent(
-    id=1742,
-    tab=holy_382_tab,
-    tier=4,
-    column=0,
-    ranks=[pure_of_heart_31822, pure_of_heart_31823],
-    player_castable=False,
-)
-
-
-granted_by_talent(
-    id=1743,
-    tab=holy_382_tab,
-    tier=5,
-    column=0,
-    ranks=[purifying_power_31825, purifying_power_31826],
-    player_castable=False,
-)
-
-
-granted_by_talent(
-    id=1744,
-    tab=holy_382_tab,
-    tier=6,
-    column=2,
-    ranks=[blessed_life_31828, blessed_life_31829, blessed_life_31830],
-    player_castable=False,
-)
-
-
-granted_by_talent(
-    id=1745,
-    tab=holy_382_tab,
-    tier=6,
-    column=0,
-    ranks=[light_s_grace_31833, light_s_grace_31835, light_s_grace_31836],
-    player_castable=False,
-)
-
-
-granted_by_talent(
-    id=1746,
-    tab=holy_382_tab,
-    tier=7,
-    column=2,
-    ranks=[holy_guidance_31837, holy_guidance_31838, holy_guidance_31839, holy_guidance_31840, holy_guidance_31841],
-    player_castable=False,
-)
-
-
-granted_by_talent(
-    id=1747,
-    tab=holy_382_tab,
-    tier=8,
-    column=0,
-    ranks=[divine_illumination_31842],
-    player_castable=False,
-    flags=1,
 )
 
 
@@ -431,48 +228,6 @@ granted_by_talent(
 
 
 granted_by_talent(
-    id=2190,
-    tab=holy_382_tab,
-    tier=7,
-    column=0,
-    ranks=[sacred_cleansing_53551, sacred_cleansing_53552, sacred_cleansing_53553],
-    player_castable=False,
-)
-
-
-granted_by_talent(
-    id=2191,
-    tab=holy_382_tab,
-    tier=9,
-    column=2,
-    ranks=[enlightened_judgements_53556, enlightened_judgements_53557],
-    player_castable=False,
-)
-
-
-granted_by_talent(
-    id=2192,
-    tab=holy_382_tab,
-    tier=10,
-    column=1,
-    ranks=[beacon_of_light_53563],
-    player_castable=False,
-    flags=1,
-)
-
-
-granted_by_talent(
-    id=2193,
-    tab=holy_382_tab,
-    tier=9,
-    column=1,
-    ranks=[infusion_of_light_53569, infusion_of_light_53576],
-    player_castable=False,
-    depends_on={'talent_id': 1502, 'rank': 0},
-)
-
-
-granted_by_talent(
     id=2194,
     tab=protection_383_tab,
     tier=8,
@@ -500,26 +255,6 @@ granted_by_talent(
     ranks=[hammer_of_the_righteous_53595],
     player_castable=False,
     flags=1,
-)
-
-
-granted_by_talent(
-    id=2198,
-    tab=holy_382_tab,
-    tier=3,
-    column=3,
-    ranks=[blessed_hands_53660, blessed_hands_53661],
-    player_castable=False,
-)
-
-
-granted_by_talent(
-    id=2199,
-    tab=holy_382_tab,
-    tier=8,
-    column=2,
-    ranks=[judgements_of_the_pure_53671, judgements_of_the_pure_53673, judgements_of_the_pure_54151, judgements_of_the_pure_54154, judgements_of_the_pure_54155],
-    player_castable=False,
 )
 
 
@@ -941,3 +676,439 @@ granted_by_talent(
     skill_line_ability_ids=[30532],
     flags=1,
 )
+
+
+# ---------------------------------------------------------------------------
+# Holy tab 382 - paladin-rework S2 (HOLY §2.2 / §5). 37 talents, 94 points, no prerequisite arrows (B6).
+# Repurposed rows: 1463 Seals of the Pure -> Zealous Exorcism, 1435 Aura Mastery -> Light's Hammer, 1433 Divine Favor -> Divine Toll,
+# 1744 Blessed Life -> Enduring Light. Minted: 60110-60120. Orphaned ranks (20208/09, 20214/15, 20260/61, 5926/25829, 31840/41,
+# 54154/55) are left out of every chain. SkillLineAbility 30510 / 30511 are bundled for Light's Hammer / Divine Toll.
+# ---------------------------------------------------------------------------
+
+
+granted_by_talent(
+    id=60110,
+    tab=holy_382_tab,
+    tier=0,
+    column=0,
+    ranks=[a_new_dawn_r1_201240, a_new_dawn_r2_201241, a_new_dawn_r3_201242],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=1432,
+    tab=holy_382_tab,
+    tier=0,
+    column=1,
+    ranks=[spiritual_focus_20205, spiritual_focus_20206, spiritual_focus_20207],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=1744,
+    tab=holy_382_tab,
+    tier=0,
+    column=2,
+    ranks=[enduring_light_r1_201243, enduring_light_r2_201244, enduring_light_r3_201245],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=60111,
+    tab=holy_382_tab,
+    tier=0,
+    column=3,
+    ranks=[illuminated_steel_r1_201246, illuminated_steel_r2_201247, illuminated_steel_r3_201248],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=1444,
+    tab=holy_382_tab,
+    tier=1,
+    column=0,
+    ranks=[healing_light_20237, healing_light_20238, healing_light_20239],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=1449,
+    tab=holy_382_tab,
+    tier=1,
+    column=1,
+    ranks=[divine_intellect_20257, divine_intellect_20258, divine_intellect_20259],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=1628,
+    tab=holy_382_tab,
+    tier=1,
+    column=2,
+    ranks=[unyielding_faith_9453, unyielding_faith_25836, unyielding_faith_r3_201277],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=60112,
+    tab=holy_382_tab,
+    tier=1,
+    column=3,
+    ranks=[merciful_strikes_talent_r1_201249, merciful_strikes_talent_r2_201250, merciful_strikes_talent_r3_201251],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=1461,
+    tab=holy_382_tab,
+    tier=2,
+    column=0,
+    ranks=[illumination_20210, illumination_20212, illumination_20213],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=1435,
+    tab=holy_382_tab,
+    tier=2,
+    column=1,
+    ranks=[light_s_hammer_201200],
+    player_castable=True,
+    skill_line_ability_ids=[30510],
+    flags=1,
+)
+
+
+
+granted_by_talent(
+    id=1443,
+    tab=holy_382_tab,
+    tier=2,
+    column=2,
+    ranks=[improved_lay_on_hands_20234, improved_lay_on_hands_20235],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=1463,
+    tab=holy_382_tab,
+    tier=2,
+    column=3,
+    ranks=[zealous_exorcism_r1_201252, zealous_exorcism_r2_201253],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=1450,
+    tab=holy_382_tab,
+    tier=3,
+    column=0,
+    ranks=[improved_concentration_aura_20254, improved_concentration_aura_20255, improved_concentration_aura_20256],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=2198,
+    tab=holy_382_tab,
+    tier=3,
+    column=1,
+    ranks=[blessed_hands_53660, blessed_hands_53661, blessed_hands_talent_r3_201278],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=1446,
+    tab=holy_382_tab,
+    tier=3,
+    column=2,
+    ranks=[improved_blessing_of_wisdom_20244, improved_blessing_of_wisdom_20245],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=60113,
+    tab=holy_382_tab,
+    tier=3,
+    column=3,
+    ranks=[sunlight_talent_r1_201254, sunlight_talent_r2_201255, sunlight_talent_r3_201256],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=1742,
+    tab=holy_382_tab,
+    tier=4,
+    column=0,
+    ranks=[pure_of_heart_31822, pure_of_heart_31823, pure_of_heart_talent_r3_201279],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=1502,
+    tab=holy_382_tab,
+    tier=4,
+    column=1,
+    ranks=[holy_shock_20473],
+    player_castable=False,
+    flags=1,
+)
+
+
+
+granted_by_talent(
+    id=1465,
+    tab=holy_382_tab,
+    tier=4,
+    column=2,
+    ranks=[sanctified_light_20359, sanctified_light_20360, sanctified_light_20361],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=60114,
+    tab=holy_382_tab,
+    tier=4,
+    column=3,
+    ranks=[blessed_crusade_r1_201257, blessed_crusade_r2_201258, blessed_crusade_r3_201259],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=60115,
+    tab=holy_382_tab,
+    tier=5,
+    column=1,
+    ranks=[light_s_fervor_r1_201260, light_s_fervor_r2_201261],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=1627,
+    tab=holy_382_tab,
+    tier=5,
+    column=2,
+    ranks=[holy_power_5923, holy_power_5924, holy_power_5925],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=1743,
+    tab=holy_382_tab,
+    tier=5,
+    column=3,
+    ranks=[purifying_power_31825, purifying_power_31826],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=1745,
+    tab=holy_382_tab,
+    tier=6,
+    column=0,
+    ranks=[light_s_grace_31833, light_s_grace_31835, light_s_grace_31836],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=1747,
+    tab=holy_382_tab,
+    tier=6,
+    column=1,
+    ranks=[divine_illumination_31842],
+    player_castable=False,
+    flags=1,
+)
+
+
+
+granted_by_talent(
+    id=60116,
+    tab=holy_382_tab,
+    tier=6,
+    column=2,
+    ranks=[dawn_before_dusk_talent_r1_201262, dawn_before_dusk_talent_r2_201263, dawn_before_dusk_talent_r3_201264],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=60117,
+    tab=holy_382_tab,
+    tier=6,
+    column=3,
+    ranks=[radiant_exorcism_talent_r1_201265, radiant_exorcism_talent_r2_201266, radiant_exorcism_talent_r3_201267],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=2190,
+    tab=holy_382_tab,
+    tier=7,
+    column=0,
+    ranks=[sacred_cleansing_53551, sacred_cleansing_53552, sacred_cleansing_53553],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=60118,
+    tab=holy_382_tab,
+    tier=7,
+    column=1,
+    ranks=[glimmer_of_light_talent_r1_201268, glimmer_of_light_talent_r2_201269, glimmer_of_light_talent_r3_201270],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=1746,
+    tab=holy_382_tab,
+    tier=7,
+    column=2,
+    ranks=[holy_guidance_31837, holy_guidance_31838, holy_guidance_31839],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=60119,
+    tab=holy_382_tab,
+    tier=7,
+    column=3,
+    ranks=[shock_and_awe_talent_r1_201271, shock_and_awe_talent_r2_201272, shock_and_awe_talent_r3_201273],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=60120,
+    tab=holy_382_tab,
+    tier=8,
+    column=0,
+    ranks=[overflowing_light_talent_r1_201274, overflowing_light_talent_r2_201275, overflowing_light_talent_r3_201276],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=2192,
+    tab=holy_382_tab,
+    tier=8,
+    column=1,
+    ranks=[beacon_of_light_53563],
+    player_castable=False,
+    flags=1,
+)
+
+
+
+granted_by_talent(
+    id=2199,
+    tab=holy_382_tab,
+    tier=8,
+    column=3,
+    ranks=[judgements_of_the_pure_53671, judgements_of_the_pure_53673, judgements_of_the_pure_54151],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=2193,
+    tab=holy_382_tab,
+    tier=9,
+    column=1,
+    ranks=[infusion_of_light_53569, infusion_of_light_53576],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=2191,
+    tab=holy_382_tab,
+    tier=9,
+    column=3,
+    ranks=[enlightened_judgements_53556, enlightened_judgements_53557],
+    player_castable=False,
+)
+
+
+
+granted_by_talent(
+    id=1433,
+    tab=holy_382_tab,
+    tier=10,
+    column=1,
+    ranks=[divine_toll_201203],
+    player_castable=True,
+    skill_line_ability_ids=[30511],
+    flags=1,
+)
+
+
+# ---------------------------------------------------------------------------
+# Holy bindings on spells no phase-1 file binds (HOLY §5.1 / §2.7). All additive: stock bindings on these ids stay, and
+# 879 keeps spell_pal_seal_builder (bound in paladin_spells.py).
+# ---------------------------------------------------------------------------
+
+# Blessed Hands capstone (201238): Hand of Protection / Salvation / Freedom / Sacrifice.
+for _hand in (1022, 1038, 1044, 6940):
+    scripted_by(_hand, 'spell_pal_blessed_hands_capstone')
+# Pure of Heart mana + Sacred Cleansing capstone Glimmer: Cleanse / Purify.
+for _cleanse in (4987, 1152):
+    scripted_by(_cleanse, 'spell_pal_cleanse_holy')
+scripted_by(879, 'spell_pal_exorcism_radiant')  # Radiant Exorcism capstone cleave
+scripted_by(25780, 'spell_pal_righteous_fury_shock_and_awe')  # Shock and Awe's threat reduction, beside the stock class

@@ -25,6 +25,7 @@
 #include "SpellAuraDefines.h"
 #include "UnitDefines.h"
 #include <functional>
+#include <initializer_list>
 #include <unordered_map>
 #include <vector>
 
@@ -203,6 +204,59 @@ namespace Paladin
     uint8      GetExecutionSentenceGained(Player const* player);
     // after the burst/splash casts, and in ClearStateRet
     void       EndExecutionSentence(Player* player);
+
+    // ------------------------------------------------------------------
+    // Holy section (HOLY.md §2.8). WP-0 declares; WP-B2 fills the bodies.
+    // ------------------------------------------------------------------
+    enum class ShockType : uint8 { None = 0, Heal, Damage };
+    constexpr uint8 GLIMMER_CAP = 5;                         // per caster, allies + enemies together
+    constexpr float GLIMMER_PULSE_PCT = 15.0f;               // [TUNE] H "Glimmer's 15% pulse"
+    constexpr float DIVINE_TOLL_REPEAT_PCT = 50.0f;          // [TUNE] H "Divine Toll's 50% repeats"
+    constexpr uint8 DIVINE_TOLL_SHOCKS = 10;
+    constexpr uint8 DIVINE_TOLL_MAX_TARGETS = 5;
+    constexpr float DIVINE_TOLL_RANGE = 30.0f;
+
+    void      SetLastShockType(Player* player, ShockType type);
+    ShockType GetLastShockType(Player const* player);
+
+    // Glimmer deque (FEASIBILITY §8; C46 - no native N-per-caster cap).
+    // Apply or refresh; a refresh moves the entry to the back. At GLIMMER_CAP with a new target, the
+    // front (oldest) entry's aura is removed first. Never pulses. No-op unless the caster knows
+    // Glimmer of Light (any rank). The new entry is pushed only after the CastSpell, and only if
+    // target->GetAura(markerId, caster->GetGUID()) exists.
+    void      ApplyGlimmer(Player* caster, Unit* target);
+    void      OnGlimmerRemoved(ObjectGuid casterGuid, ObjectGuid targetGuid, uint32 markerSpellId);
+    uint8     GetGlimmerCount(Player const* caster);
+
+    // Done-side value Holy Shock would deal to `target` as `type` right now (HOLY §2.8), pre-taken.
+    int32     ComputeShockValue(Player* caster, Unit* target, ShockType type, bool crit);
+    // Engine-equivalent crit roll for a script-valued Shock (Divine Toll, H2).
+    bool      RollShockCrit(Player* caster, Unit* target, ShockType type);
+    // 1 + (15 + Mastery%)/100 with Glimmer r3 (201270), else 1. Mastery read live (CORE-AUDIT S8).
+    float     GetGlimmerShockMultiplier(Player const* player);
+
+    // Pulse every owned Glimmer once at pctOfShock% of ComputeShockValue(target's own type, crit); stores
+    // the latest heal and damage pulse value (HOLY §2.8: no combat / CC filter, fixed reference victim).
+    void      PulseGlimmers(Player* caster, bool crit, float pctOfShock);
+    // Enlightened Judgements: pulse every Glimmer at pctOfStored% of the stored value of its type.
+    void      PulseGlimmersFromStored(Player* caster, float pctOfStored);
+
+    // H §5 step 5, run once per Holy Shock (resolver) or once per Divine Toll. Holy Guidance's debuff is
+    // per target, so callers apply it themselves (ApplyHolyGuidance).
+    void      RunShockCastHooks(Player* caster, ShockType type);
+    void      ApplyHolyGuidance(Player* caster, Unit* target, ShockType type);
+    void      AddDawnBeforeDuskStack(Player* caster);        // +1, or remove at 3 (reset)
+
+    // OnJudgementCastHoly / ClearHolyState are declared in Part A above (not redeclared here).
+
+    // Merciful Strikes / Overflowing Light / Divine Toll share this: split `total` evenly over `targets`.
+    void      CastSplitHeal(Player* caster, uint32 healSpellId, std::vector<Unit*> const& targets, int32 total);
+
+    // Illuminated Steel's "fromInt" (HOLY §6.5): GetSpellCritFromIntellect() minus the class base crit
+    // (percent points). Added by B2 so spell_pal_illuminated_steel's DoEffectCalcAmount can call it.
+    float     GetSpellCritFromIntellectOnly(Player* player);
+    void      RefreshIlluminatedSteel(Player* player);       // paladin_hooks.cpp OnPlayerAfterUpdateMaxPower
+    int32     GetRankAmount(Unit const* caster, std::initializer_list<uint32> rankSpellIdsHighFirst, uint8 effIndex);
 }
 
 #endif

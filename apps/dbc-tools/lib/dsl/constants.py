@@ -203,6 +203,8 @@ class AuraType(IntEnum):
     PROC_TRIGGER_SPELL_WITH_VALUE = 231  # druid-rework PLAN §6.4 / BALANCE §3.3 (not 227, that's the PERIODIC variant)
     MOD_HOT_PCT = 259  # druid-rework PLAN §6.4
     ABILITY_IGNORE_AURASTATE = 262  # paladin-rework RETRIBUTION §3 item 2 (verified against SpellAuraDefines.h)
+    MOD_AURA_DURATION_BY_DISPEL_NOT_STACK = 246  # paladin-rework HOLY §5 (Pure of Heart r3: Disease duration on self; verified against SpellAuraDefines.h)
+    MOD_ATTACK_POWER_OF_STAT_PERCENT = 268  # paladin-rework HOLY §4.5 (Shock and Awe buffs: AP from Intellect; verified against SpellAuraDefines.h)
     MOD_HEALING_RECEIVED = 283  # SpellAuraDefines.h: "Possibly only for some spell family class spells"
     ABILITY_PERIODIC_CRIT = 286  # druid-rework PLAN §6.4
     MOD_CRIT_PCT = 290
@@ -210,6 +212,7 @@ class AuraType(IntEnum):
     MOD_MINIMUM_SPEED = 305  # warlock-rework AFFLICTION §3 item 3 - Burning Rush's 100% speed floor (Unit.cpp:11108)
     # Custom aura types this fork added (see each one's comment in SpellAuraDefines.h):
     MOD_LEECH_PCT = 295  # % of damage dealt returned as health - Unit::GetLeechPercentage
+    MOD_CRIT_CHANCE_FOR_CASTER = 308  # paladin-rework HOLY §4.5 (Holy Guidance heal-crit buff; verified against SpellAuraDefines.h) - crit chance vs target, per-caster
     MOD_CUSTOM_STAT_PCT = 306  # flat % to one custom stat; misc_value = 1 << CR_* (see CombatRating below)
 
 
