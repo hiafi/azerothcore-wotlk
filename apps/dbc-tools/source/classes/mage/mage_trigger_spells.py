@@ -24,8 +24,8 @@ frost_talent_tooltip = tooltip_vars(
     1000, "Frost-tree talent multiplier for Frost spell tooltips",
     piercing=talent_mult([11151, 12952, 12953]),
     arctic_all=talent_mult([31674, 31675, 31676], effect=1),
-    arctic_frost=talent_mult([31674, 31675, 31676], effect=2),
-    mult=product("piercing", "arctic_all", "arctic_frost"),
+    arctic_fr=talent_mult([31674, 31675, 31676], effect=2),  # names cap at 12 chars, helper suffix included
+    mult=product("piercing", "arctic_all", "arctic_fr"),
 )
 
 

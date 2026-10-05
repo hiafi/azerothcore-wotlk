@@ -434,7 +434,7 @@ seal_of_wisdom_20166 = spell(
     ],
     spell_icon_id=206,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Melee attacks deal Holy damage and may restore mana.', 'BaseLevel': 10, 'CastingTimeIndex': 1, 'CumulativeAura': 10, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Fills you with divine wisdom for $d.  Each melee hit deals ${5*$<mult_seal>}% weapon damage as Holy damage and has a 20% chance to restore 20% of your base mana.  Crusader Strike and other seal builders add a stack (max 10).  When the seal expires it becomes Primed for 20 sec; Judgement and Deliverance unleash it.  Only one seal can be active at a time.\n\nUnleash: Deals Holy and Arcane damage, increased by 10% per stack, and restores 10% of your maximum mana every sec for 5 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 20, 'RangeIndex': 1, 'SpellClassMask_2': 67108864, 'SpellClassSet': 10, 'SpellDescriptionVariableID': 1102, 'SpellLevel': 10, 'SpellVisualID_1': 7987, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Melee attacks deal Divine damage and may restore mana.', 'BaseLevel': 10, 'CastingTimeIndex': 1, 'CumulativeAura': 10, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Fills you with divine wisdom for $d.  Each melee hit deals ${5*$<mult_seal>}% weapon damage as Divine (Holy and Arcane) damage and has a 20% chance to restore 20% of your base mana.  Crusader Strike and other seal builders add a stack (max 10).  When the seal expires it becomes Primed for 20 sec; Judgement and Deliverance unleash it.  Only one seal can be active at a time.\n\nUnleash: Deals Divine damage, increased by 10% per stack, and restores 10% of your base mana every sec for 5 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 20, 'RangeIndex': 1, 'SpellClassMask_2': 67108864, 'SpellClassSet': 10, 'SpellDescriptionVariableID': 1102, 'SpellLevel': 10, 'SpellVisualID_1': 7987, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -772,7 +772,7 @@ seal_of_vengeance_31801 = spell(
     ],
     spell_icon_id=2292,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Melee attacks deal Holy damage.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'CumulativeAura': 10, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Fills you with holy power for $d.  Each melee hit deals ${10*$<mult_seal>}% weapon damage as Holy damage.  Crusader Strike and other seal builders add a stack (max 10).  When the seal expires it becomes Primed for 20 sec; Judgement and Deliverance unleash it.  Only one seal can be active at a time.\n\nUnleash: Afflicts the target with Twilight damage over 15 sec, increased by 10% per stack, and shields you for 20% of the damage it will deal.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 20, 'RangeIndex': 1, 'SpellClassMask_2': 2048, 'SpellClassSet': 10, 'SpellDescriptionVariableID': 1102, 'SpellLevel': 20, 'SpellVisualID_1': 8062, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Melee attacks deal Twilight damage.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'CumulativeAura': 10, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Fills you with holy power for $d.  Each melee hit deals ${10*$<mult_seal>}% weapon damage as Twilight (Holy and Shadow) damage.  Crusader Strike and other seal builders add a stack (max 10).  When the seal expires it becomes Primed for 20 sec; Judgement and Deliverance unleash it.  Only one seal can be active at a time.\n\nUnleash: Afflicts the target with Twilight damage over 15 sec, increased by 10% per stack, and shields you for 20% of the damage it will deal.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 20, 'RangeIndex': 1, 'SpellClassMask_2': 2048, 'SpellClassSet': 10, 'SpellDescriptionVariableID': 1102, 'SpellLevel': 20, 'SpellVisualID_1': 8062, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1123,7 +1123,7 @@ seal_of_command_20375 = spell(
     ],
     spell_icon_id=561,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Melee attacks deal Holy damage and strike additional targets.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'CumulativeAura': 10, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Fills you with holy command for $d.  Each melee hit deals ${10*$<mult_command>}% weapon damage as Holy damage that also strikes up to 2 more enemies when the attack hits a single target.  Crusader Strike and other seal builders add a stack (max 10).  When the seal expires it becomes Primed for 20 sec; Judgement and Deliverance unleash it.  Only one seal can be active at a time.\n\nUnleash: Deals Holy and Fire damage, increased by 10% per stack, and reduces the damage done by the target by 0.63% per stack for 8 sec. Deliverance also deals the full Judgement damage to the main target and its 2 closest targets.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 20, 'RangeIndex': 1, 'SpellClassMask_1': 33554432, 'SpellClassSet': 10, 'SpellDescriptionVariableID': 1102, 'SpellLevel': 20, 'SpellVisualID_1': 7992, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Melee attacks deal Radiant damage and strike additional targets.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'CumulativeAura': 10, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Fills you with holy command for $d.  Each melee hit deals ${10*$<mult_cmd>}% weapon damage as Radiant (Holy and Fire) damage that also strikes up to 2 more enemies when the attack hits a single target.  Crusader Strike and other seal builders add a stack (max 10).  When the seal expires it becomes Primed for 20 sec; Judgement and Deliverance unleash it.  Only one seal can be active at a time.\n\nUnleash: Deals Radiant damage, increased by 10% per stack, and reduces the damage done by the target by 0.63% per stack for 8 sec. Deliverance also deals the full Judgement damage to the main target and its 2 closest targets.', 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 20, 'RangeIndex': 1, 'SpellClassMask_1': 33554432, 'SpellClassSet': 10, 'SpellDescriptionVariableID': 1102, 'SpellLevel': 20, 'SpellVisualID_1': 7992, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1349,7 +1349,7 @@ seal_of_justice_20164 = spell(
     ],
     spell_icon_id=307,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Melee attacks deal Holy damage and may stun.', 'BaseLevel': 14, 'CastingTimeIndex': 1, 'CumulativeAura': 10, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Fills you with the spirit of justice for $d.  Each melee hit deals ${10*$<mult_seal>}% weapon damage as Holy damage and has a 20% chance to stun a creature for 0.5 sec.  Crusader Strike and other seal builders add a stack (max 10).  When the seal expires it becomes Primed for 20 sec; Judgement and Deliverance unleash it.  Only one seal can be active at a time.\n\nUnleash: Deals Holy and Frost damage, increased by 10% per stack (doubled against controlled targets), and stuns the target for 5 sec (2 sec with Deliverance). Bosses are not stunned.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 20, 'RangeIndex': 1, 'SpellClassMask_1': 134217728, 'SpellClassSet': 10, 'SpellDescriptionVariableID': 1102, 'SpellLevel': 14, 'SpellVisualID_1': 9504, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Melee attacks deal Holy Frost damage and may stun.', 'BaseLevel': 14, 'CastingTimeIndex': 1, 'CumulativeAura': 10, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Fills you with the spirit of justice for $d.  Each melee hit deals ${10*$<mult_seal>}% weapon damage as Holy Frost (Holy and Frost) damage and has a 20% chance to stun a creature for 0.5 sec.  Crusader Strike and other seal builders add a stack (max 10).  When the seal expires it becomes Primed for 20 sec; Judgement and Deliverance unleash it.  Only one seal can be active at a time.\n\nUnleash: Deals Holy Frost damage, increased by 10% per stack (doubled against controlled targets), and stuns the target for 5 sec (2 sec with Deliverance). Bosses are not stunned.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 20, 'RangeIndex': 1, 'SpellClassMask_1': 134217728, 'SpellClassSet': 10, 'SpellDescriptionVariableID': 1102, 'SpellLevel': 14, 'SpellVisualID_1': 9504, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1607,6 +1607,7 @@ execution_sentence_burst_201411 = spell(
     raw_overrides=_raw(
         AttributesEx2=0x4,  # SPELL_ATTR2_IGNORE_LINE_OF_SIGHT: script-cast at a target / dest the paladin may not see
         SpellClassMask_3=m.EXECUTION_SENTENCE,
+        SpellVisualID_1=90045,
         SpellLevel=50,
         SpellDescriptionVariableID=1121,
         Description_Lang_enUS='Deals {pot1*mult} Holy damage.',
@@ -1638,6 +1639,7 @@ execution_sentence_splash_201412 = spell(
         AttributesEx2=0x4,  # SPELL_ATTR2_IGNORE_LINE_OF_SIGHT: script-cast at a target / dest the paladin may not see
         MaxTargets=4,
         SpellClassMask_3=m.EXECUTION_SENTENCE,
+        SpellVisualID_1=90046,
         SpellLevel=50,
         SpellDescriptionVariableID=1121,
         Description_Lang_enUS='Deals {pot1*mult} Holy damage to nearby enemies.',
@@ -1668,14 +1670,14 @@ execution_sentence_201410 = spell(
     ],
     spell_icon_id=90212,
     notes='paladin-rework S1 RETRIBUTION §4.3: DoT 36 / 36 per 1 s tick for 10 s (480 total at T 1 s), 60 s cooldown (>= 30 s: Cooldown Haste applies), magic-dispellable (a dispel fires the burst), ES bit d2 0x2000, learn 50. '
-          'eff2 = aura 271 (damage taken from the caster) 0% until Fanaticism adds to it through SPELLMOD_EFFECT2; it reads SEAL_DAMAGE (U | P) on mask B. Visual = Hammer of Wrath SV 7250 placeholder (VFX follow-up).',
+          'eff2 = aura 271 (damage taken from the caster) 0% until Fanaticism adds to it through SPELLMOD_EFFECT2; it reads SEAL_DAMAGE (U | P) on mask B. Visual 90044 (patch_paladin_vfx_models.py): Ascension\'s falling hammer as a StateKit on the DoT.',
     raw_overrides=_raw(
         castable=True,
         AuraDescription_Lang_Mask=16712190,
         AuraDescription_Lang_enUS='Taking {pot1} Holy damage every $t1 sec.',
         SpellClassMask_3=m.EXECUTION_SENTENCE,
         SpellLevel=50,
-        SpellVisualID_1=7250,
+        SpellVisualID_1=90044,
         SpellDescriptionVariableID=1121,
         Description_Lang_enUS=(
             'A hammer slowly falls upon the target, dealing {pot1.total*dot} Holy damage over $d.  When the hammer expires, is dispelled or the target becomes immune, it strikes the target for '

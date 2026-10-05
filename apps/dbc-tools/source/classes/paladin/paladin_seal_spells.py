@@ -690,11 +690,11 @@ unleashed_wisdom_201104 = spell(
     range_yards=RANGE_SELF, duration_ms=5000,
     effects=[Effect(
         type=EffectType.APPLY_AURA, apply_aura=AuraType.PERIODIC_ENERGIZE, misc_value=0, amplitude=1000, implicit_target_a=1,
-        potency_excluded='percent of maximum mana per tick; base points supplied by the dispatcher',
+        potency_excluded='percent of base mana per tick; base points supplied by the dispatcher',
     )],
     spell_icon_id=_ICON_SOW,
-    notes='paladin-rework SHARED B4.2 (user ruling 2026-10-03): Wisdom unleash mana restore over time, 5 ticks of 1 s. Per-tick amount = CalculatePct(GetMaxPower(POWER_MANA), 10 x (1 + effectPct/100)) passed by the dispatcher; it does NOT scale with seal stacks (only the unleash damage does).',
-    raw_overrides=_utility_raw("Restores 10% of your maximum mana every sec for $d.", "Restoring 10% of maximum mana every sec."),
+    notes='paladin-rework SHARED B4.2 (user ruling 2026-10-03): Wisdom unleash mana restore over time, 5 ticks of 1 s. Per-tick amount = CalculatePct(GetCreateMana(), 10 x (1 + effectPct/100)) passed by the dispatcher; it does NOT scale with seal stacks (only the unleash damage does).',
+    raw_overrides=_utility_raw("Restores 10% of your base mana every sec for $d.", "Restoring 10% of base mana every sec."),
 )
 
 unleashed_justice_aoe_stun_201105 = spell(
@@ -839,13 +839,15 @@ paladin_judgement_tooltip_1100 = tooltip_vars(
     mult_dv=product("mult_j", "pu"),
 )
 
+# Short names (sof = Strength of Faith, sm = Smite Evil, pu = Purify the Unclean): the long forms
+# (`strength_of_faith1`) read 0 in game, so every seal tooltip showed "0% weapon damage".
 paladin_seal_tooltip_1102 = tooltip_vars(
     1102, "Seal tooltips quote the passive's weapon percent (Strength of Faith, Smite Evil; Purify the Unclean on Command only)",
-    strength_of_faith=talent_mult(_STRENGTH_OF_FAITH),
-    smite_evil=talent_mult(_SMITE_EVIL, effect=2),
-    purify_the_unclean=talent_mult(_PURIFY_THE_UNCLEAN),
-    mult_seal=product("strength_of_faith", "smite_evil"),
-    mult_command=product("mult_seal", "purify_the_unclean"),
+    sof=talent_mult(_STRENGTH_OF_FAITH),
+    sm=talent_mult(_SMITE_EVIL, effect=2),
+    pu=talent_mult(_PURIFY_THE_UNCLEAN),
+    mult_seal=product("sof", "sm"),
+    mult_cmd=product("mult_seal", "pu"),
 )
 
 # Short names (ics = Improved Crusader Strike, aw = The Art of War, sob = Sanctity of Battle, sof = Strength of

@@ -1,3 +1,4 @@
+-- DB update 2026_10_05_02 -> 2026_10_05_03
 -- paladin-rework S3 (Protection): talent reset for every paladin (PLAN B5)
 UPDATE `characters` SET `at_login` = `at_login` | 4 WHERE `class` = 2;
 -- orphaned Prot rank spells (Player::_LoadTalents asserts before the reset runs, SYSTEMS 9.2)

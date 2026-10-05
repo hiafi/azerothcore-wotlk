@@ -76,6 +76,10 @@ class RenderErrorsTest(unittest.TestCase):
         self.assertRejects({"Mult": "${1}"}, "must be lowercase")
         self.assertRejects({}, "at least one variable")
         self.assertRejects({"x": "${" + "1*" * 600 + "1}"}, "over the 1024 limit")
+        # 12 chars passes; a talent_mult() helper (`<name>1`) counts toward the cap
+        tooltip.render_entry(1, {"opportunity1": "${1}"})
+        self.assertRejects({"strength_of_faith": "${1}"}, "over the 12 limit")
+        self.assertRejects({"smite_evil_x": tooltip.talent_mult([1, 2])}, "over the 12 limit")
 
     def test_builder_argument_errors(self):
         with self.assertRaises(ValueError):

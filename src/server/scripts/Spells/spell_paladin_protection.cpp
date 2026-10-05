@@ -25,6 +25,9 @@
 
 #include "PaladinMechanics.h"
 #include "Generated/PaladinData.h"
+#include "CellImpl.h"
+#include "GridNotifiers.h"
+#include "GridNotifiersImpl.h"
 #include "HealMechanics.h"
 #include "Player.h"
 #include "PriestMechanics.h"
@@ -54,6 +57,8 @@ namespace
     constexpr uint32  DIVINE_SACRIFICE_THRESHOLD_PCT = 5;      // of max health redirected per Bulwark stack
     constexpr int32   SHIELD_OF_THE_TEMPLAR_REFUND_MS = 1000;
     constexpr uint32  ARDENT_DEFENDER_BELOW_HEALTH_PCT = 35;
+    constexpr float   AVENGERS_SHIELD_RANGE         = 30.0f;   // 31935's range: the extras' start targets
+    constexpr size_t  AVENGING_LIGHT_EXTRA_SHIELDS  = 2;       // on top of the cast's own shield
 
     Player* GetPlayerOrNull(Unit* unit)
     {
@@ -327,8 +332,36 @@ class spell_pal_avengers_shield_prot : public SpellScript
         if (!target || !target->IsAlive())
             return;
 
-        for (uint8 i = 0; i < 2; ++i)
-            player->CastSpell(target, PaladinData::SPELL_AVENGERS_SHIELD_EXTRA, TRIGGERED_FULL_MASK);
+        // Each extra starts on a different enemy so the three chains don't all bounce through the same units:
+        // the enemies nearest the main target first (same pack), the main target again if there aren't enough
+        std::vector<Unit*> starts = SelectExtraStartTargets(player, target);
+        for (size_t i = 0; i < AVENGING_LIGHT_EXTRA_SHIELDS; ++i)
+            player->CastSpell(i < starts.size() ? starts[i] : target, PaladinData::SPELL_AVENGERS_SHIELD_EXTRA,
+                TRIGGERED_FULL_MASK);
+    }
+
+    static std::vector<Unit*> SelectExtraStartTargets(Player* player, Unit* mainTarget)
+    {
+        std::list<Unit*> nearby;
+        Acore::AnyUnfriendlyUnitInObjectRangeCheck check(player, player, AVENGERS_SHIELD_RANGE);
+        Acore::UnitListSearcher<Acore::AnyUnfriendlyUnitInObjectRangeCheck> searcher(player, nearby, check);
+        Cell::VisitObjects(player, searcher, AVENGERS_SHIELD_RANGE);
+
+        std::vector<Unit*> candidates;
+        for (Unit* unit : nearby)
+            if (unit != mainTarget && unit->IsAlive() && player->IsValidAttackTarget(unit)
+                && !unit->HasBreakableByDamageCrowdControlAura() && player->IsWithinLOSInMap(unit))
+                candidates.push_back(unit);
+
+        std::sort(candidates.begin(), candidates.end(), [mainTarget](Unit* a, Unit* b)
+        {
+            return mainTarget->GetExactDistSq(a) < mainTarget->GetExactDistSq(b);
+        });
+
+        if (candidates.size() > AVENGING_LIGHT_EXTRA_SHIELDS)
+            candidates.resize(AVENGING_LIGHT_EXTRA_SHIELDS);
+
+        return candidates;
     }
 
     void Register() override

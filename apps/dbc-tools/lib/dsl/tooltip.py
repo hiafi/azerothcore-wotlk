@@ -22,6 +22,10 @@ from dataclasses import dataclass
 LINE_SEPARATOR = "\r\n"  # stock entries use CRLF (P9.0: LF works too)
 # No known client limit. The longest stock entry is 368 chars; 1024 is room for a few rank chains.
 MAX_ENTRY_LENGTH = 1024
+# Entry 1102 with 17-19 char names (`strength_of_faith1`) made the whole chain read 0 in game, where the
+# same chain under 3-char names works. The exact client cap is unknown; the longest stock name is 12
+# (`opportunity1`), so that is the cap. It counts talent_mult()'s helper suffix.
+MAX_NAME_LENGTH = 12
 
 VAR_REF = re.compile(r"\$<(\w+)>")
 SPELL_CONDITION_REF = re.compile(r"\$\?[sa](\d+)")
@@ -134,7 +138,8 @@ class TooltipVars:
 def render_entry(entry_id: int, variables: dict) -> TooltipVars:
     """Renders `variables` (name -> builder result, or a raw right-hand-side string such as
     `"${$m1*2}"`) into one entry, in declaration order. Raises on a bad name, a duplicate name, a
-    reference to a variable not defined earlier, an `$<id>s<n>` read, or an over-long entry."""
+    reference to a variable not defined earlier, an `$<id>s<n>` read, an over-long name or an over-long
+    entry."""
     if not variables:
         raise ValueError(f"tooltip_vars({entry_id}): declare at least one variable")
     lines: list[tuple[str, str]] = []
@@ -146,6 +151,9 @@ def render_entry(entry_id: int, variables: dict) -> TooltipVars:
 
     defined: set[str] = set()
     for var, rhs in lines:
+        if len(var) > MAX_NAME_LENGTH:
+            raise ValueError(f"tooltip_vars({entry_id}): variable ${var} is {len(var)} chars, over the "
+                             f"{MAX_NAME_LENGTH} limit (a longer name reads 0 in the client) - shorten it")
         if var in defined:
             raise ValueError(f"tooltip_vars({entry_id}): variable ${var} is defined twice "
                              "(a talent_mult() chain also defines <name>1, <name>2, ...)")

@@ -167,8 +167,8 @@ frost_talent_tooltip = tooltip_vars(
     1000, "Frost-tree talent multiplier for Frost spell tooltips",
     piercing=talent_mult([11151, 12952, 12953]),               # +2/4/6% Frost, effect 1
     arctic_all=talent_mult([31674, 31675, 31676], effect=1),   # +1/2/3% all damage
-    arctic_frost=talent_mult([31674, 31675, 31676], effect=2),  # +1/2/3% Frost
-    mult=product("piercing", "arctic_all", "arctic_frost"),
+    arctic_fr=talent_mult([31674, 31675, 31676], effect=2),     # +1/2/3% Frost
+    mult=product("piercing", "arctic_all", "arctic_fr"),
 )
 frostbolt_116 = spell(..., tooltip_vars=frost_talent_tooltip,
                       raw_overrides={..., 'Description_Lang_enUS': '... causing {pot2*mult} Frost damage ...'})
@@ -192,11 +192,14 @@ The live precedent is `mage_trigger_spells.py`; the API is in `apps/dbc-tools/RE
   ranks or values the rework changed. Move the spell to its own entry.
 
 Client rules (P9.0 spike, `docs/potency-system.md`'s "Tooltip" section). Builders and
-`tooltip_vars()` enforce the first two:
+`tooltip_vars()` enforce the first three:
 
 - Inside an entry, read another spell as `$<id>m<n>`. **`$<id>s<n>` stops the variable resolving**:
   it shows as a literal `$<name>`, or as 0 inside math.
 - Variables may only reference variables defined earlier in the entry.
+- **Names are at most 12 chars**, `talent_mult`'s `<name>1`/`<name>2` helpers included. Paladin
+  entry 1102 with `strength_of_faith1`-style names read 0 in game ("0% weapon damage" on every
+  seal). The real cap is unknown; 12 is stock's longest name.
 - A bare `$<var>` in tooltip text displays as a whole number (1.06 shows "1"). Use it inside math.
 - `$<var>` in AuraDescription (buff text) is untested, and no stock spell does it. The pilot kept
   Frostfire Bolt's buff text unmultiplied.

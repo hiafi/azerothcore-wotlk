@@ -76,7 +76,7 @@ namespace
         PAL_BATTLE_SPEED_PPM                    = 15    // 20185 / 20186 stock PPM (B11)
     };
 
-    // 0.63% haste / damage-done per stack (201099 / 201100), 1.25% Holy damage per stack (201103), 10% max mana per
+    // 0.63% haste / damage-done per stack (201099 / 201100), 1.25% Holy damage per stack (201103), 10% base mana per
     // second for 5 s regardless of stacks (201104) - SHARED B4.2
     constexpr float PAL_HASTE_PCT_PER_STACK         = 0.63f;
     constexpr float PAL_LIGHT_DAMAGE_PCT_PER_STACK  = 1.25f;
@@ -760,9 +760,9 @@ class spell_pal_judgement_dispatch : public SpellScript
                     player->CastSpell(target, SPELL_PAL_JUDGEMENT_OF_WISDOM_DEBUFF, TRIGGERED_FULL_MASK);
                 }
 
-                // Mana is a 5 s periodic restore of max mana that does not scale with stacks (only the damage does)
+                // Mana is a 5 s periodic restore of base mana that does not scale with stacks (only the damage does)
                 CastUtility(player, player, PaladinData::SPELL_UNLEASHED_WISDOM,
-                    int32(CalculatePct(player->GetMaxPower(POWER_MANA),
+                    int32(CalculatePct(player->GetCreateMana(),
                         PAL_WISDOM_MANA_PCT_PER_TICK * (1.0f + bonus.effectPct / 100.0f))));
                 break;
             default:
@@ -1166,6 +1166,22 @@ class spell_pal_aura_press : public SpellScript
                 int32 const delta = int32(ends[i] - now) - int32(player->GetSpellCooldownDelay(ids[i]));
                 if (delta > 0)
                     player->ModifySpellCooldown(ids[i], delta);
+            }
+
+            // The restore above and the pressed aura's Cooldown Haste correction (queued earlier, so it runs
+            // first) clear-then-set via SMSG_CLEAR_COOLDOWN, which also drops the client's category-1300
+            // lock on the other buttons. Re-announce every sibling's server-side cooldown so the client's
+            // shared-cooldown sweep matches the server again.
+            PacketCooldowns cooldowns;
+            for (uint32 auraId : ids)
+                if (uint32 const remaining = player->GetSpellCooldownDelay(auraId))
+                    cooldowns[auraId] = remaining;
+
+            if (!cooldowns.empty())
+            {
+                WorldPacket data;
+                player->BuildCooldownPacket(data, SPELL_COOLDOWN_FLAG_NONE, cooldowns);
+                player->SendDirectMessage(&data);
             }
         }, 1ms);
     }

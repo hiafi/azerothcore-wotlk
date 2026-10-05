@@ -166,7 +166,7 @@ guardian_of_ancient_kings_201356 = spell(
         Effect(type=EffectType.TRIGGER_SPELL, trigger_spell=201368, implicit_target_a=1),
     ],
     spell_icon_id=2268,
-    notes="paladin-rework PROTECTION §4.5: talent-taught (60151 (10,0), A3 declares the talent + SLA 30520), learn 60, "
+    notes="paladin-rework PROTECTION §4.5: talent-taught (60151 (10,1), A3 declares the talent + SLA 30520), learn 60, "
           "3 min (Cooldown-Haste eligible, >= 30 s), on the GCD (1500 / category 133, guess like DS / DP), no mana "
           "(guess), self. eff0 -50% damage taken all schools 8 s, eff1 TRIGGER_SPELL -> 201368 (+1 Bulwark / s for "
           "15 s). Does not consume Bulwark. No family bits, no script, no potency.",

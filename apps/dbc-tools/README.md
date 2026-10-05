@@ -466,7 +466,8 @@ frostbolt_116 = spell(
 
 Client rules (P9.0 spike, `docs/potency-system.md`'s "Tooltip" section), enforced at declaration:
 inside an entry, read another spell's value as `$<id>m<n>`, never `$<id>s<n>`, which stops the
-variable resolving; reference only variables defined earlier; names are lowercase. A bare `$<var>`
+variable resolving; reference only variables defined earlier; names are lowercase and at most 12
+chars, `talent_mult()` helpers included (longer names read 0 in game). A bare `$<var>`
 in tooltip text displays as a whole number, so show a multiplier inside math: `${100*$<mult>}`.
 
 `generate.py` also checks every spell (stock entries included): a `$<var>` in Description or

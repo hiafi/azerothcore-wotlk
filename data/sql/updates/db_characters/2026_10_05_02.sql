@@ -1,3 +1,4 @@
+-- DB update 2026_10_05_01 -> 2026_10_05_02
 -- paladin-rework S2 (Holy): talent reset for every paladin (HOLY §12; repeats S1's reset, harmless)
 UPDATE `characters` SET `at_login` = `at_login` | 4 WHERE `class` = 2;
 -- orphaned / cut Holy talent ranks (Player::_LoadTalents asserts before the reset runs, SYSTEMS 9.2)

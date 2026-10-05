@@ -133,6 +133,9 @@ ICON_ID_BLADE_OF_WRATH = 90214  # Blade of Wrath ranks and 201429
 # Paladin rework Protection (paladin-rework.PROTECTION.md §2.4): block 90200-90209, 90201-90209 spare.
 ICON_ID_BULWARK = 90200  # Bulwark buff 201360 / 201361
 
+# Paladin rework Holy: block 90220-90229, 90221-90229 spare.
+ICON_ID_LIGHTS_HAMMER = 90220  # Light's Hammer 201200
+
 ICONS = (
     (ICON_ID_ANGELIC_FEATHER, "Interface/icons/ability_priest_angelicfeather.blp"),
     (ICON_ID_DIVINE_STAR, "Interface/icons/spell_priest_divinestar.blp"),
@@ -167,6 +170,7 @@ ICONS = (
     (ICON_ID_SANCTIFIED_SEALS, "Interface/icons/ability_paladin_empoweredsealsrighteous.blp"),
     (ICON_ID_BLADE_OF_WRATH, "Interface/icons/ability_paladin_bladeofjusticeblue.blp"),
     (ICON_ID_BULWARK, "Interface/icons/inv_ability_lightsmithpaladin_holybulwark.blp"),
+    (ICON_ID_LIGHTS_HAMMER, "Interface/icons/spell_paladin_lightshammer.blp"),
 )
 
 # "Stock path, no blp" entries (warlock-rework DESTRUCTION §2.6/§11 Q19): a SpellIcon.dbc row that

@@ -411,7 +411,7 @@ granted_by_talent(
     id=60151,
     tab=protection_383_tab,
     tier=10,
-    column=0,
+    column=1,
     ranks=[guardian_of_ancient_kings_201356],
     player_castable=True,
     skill_line_ability_ids=[30520],

@@ -210,7 +210,7 @@ light_s_hammer_heal_tick_201201 = spell(
     notes="paladin-rework HOLY §4.3: heal tick, pure carrier (snapshot bp from 201281 passed as SPELLVALUE_BASE_POINT0, "
           "Rain of Fire C5 pattern), TARGET_DEST_DEST + UNIT_DEST_AREA_ALLY radius 10, MaxTargets 5. "
           "IGNORE_CASTER_MODIFIERS (the snapshot already holds the done-mods; taken mods stay live).",
-    raw_overrides=_carrier_raw(level=20, MaxTargets=5, SpellClassMask_3=m.LIGHTS_HAMMER),
+    raw_overrides=_carrier_raw(level=20, MaxTargets=5, SpellClassMask_3=m.LIGHTS_HAMMER, SpellVisualID_1=90043),
 )
 scripted_by(light_s_hammer_heal_tick_201201, 'spell_pal_lights_hammer_tick')
 
@@ -226,7 +226,7 @@ light_s_hammer_damage_tick_201202 = spell(
     spell_icon_id=1664,
     notes="paladin-rework HOLY §4.3: damage tick, pure carrier (snapshot from 201282), TARGET_DEST_DEST + "
           "UNIT_DEST_AREA_ENEMY radius 10, MaxTargets 5. Can crit (DmgClass MAGIC). No script (the OnHit rescale is gone).",
-    raw_overrides=_carrier_raw(level=20, MaxTargets=5, SpellClassMask_3=m.LIGHTS_HAMMER),
+    raw_overrides=_carrier_raw(level=20, MaxTargets=5, SpellClassMask_3=m.LIGHTS_HAMMER, SpellVisualID_1=90042),
 )
 
 light_s_hammer_201200 = spell(
@@ -238,13 +238,13 @@ light_s_hammer_201200 = spell(
                radius_yards=10.0),
         Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=2000, implicit_target_a=1),
     ],
-    spell_icon_id=1664,
+    spell_icon_id=90220,  # build_patch_i.py ICON_ID_LIGHTS_HAMMER
     tooltip_vars=holy_heal_tooltip,
     notes="paladin-rework HOLY §4.3: Rain of Fire C5 shape - eff0 ground reticle + dynobj (no potency), eff1 2 s "
           "PERIODIC_DUMMY (7 ticks, hasted via AttributesEx5 0x2000). Learn 20, 15% mana, 60 s (Cooldown-Haste "
           "eligible), GCD. Bit LH, no MOD_DECREASE_SPEED anywhere. Ground-target flags (AttributesEx 0x88, "
-          "AttributesEx2 0x400000, Targets 64) copied from the reworked Rain of Fire 5740. Visual 7250 (Hammer of "
-          "Wrath missile) + ground 5600 as stock stand-ins (VFX follow-up).",
+          "AttributesEx2 0x400000, Targets 64) copied from the reworked Rain of Fire 5740. Visual 90040 "
+          "(patch_paladin_vfx_models.py): Ascension's grounded hammer + impact.",
     raw_overrides=_raw(
         "Hurls a Light's Hammer to the ground. Every 2 sec for 14 sec it heals up to 5 allies within 10 yards for "
         + pot_text(light_s_hammer_heal_source_201281, var="lh")
@@ -254,7 +254,7 @@ light_s_hammer_201200 = spell(
         level=20, dmg_class=_DMG_MAGIC,
         AttributesEx=136, AttributesEx2=4194304, AttributesEx5=_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC,
         PreventionType=1, StartRecoveryCategory=133, StartRecoveryTime=1500,
-        SpellClassMask_3=m.LIGHTS_HAMMER, SpellVisualID_1=7250, SpellVisualID_2=5600, Targets=64,
+        SpellClassMask_3=m.LIGHTS_HAMMER, SpellVisualID_1=90040, Targets=64,
     ),
 )
 scripted_by(light_s_hammer_201200, 'spell_pal_lights_hammer')
@@ -294,12 +294,12 @@ divine_toll_201203 = spell(
     spell_icon_id=2845,
     notes="paladin-rework HOLY §4.4: talent-taught (1433, A3 declares the talent + SLA 30511), learn 60, 30% mana, 60 s "
           "(Cooldown-Haste eligible), GCD, self-target dummy so it casts with any or no target. No family bits. "
-          "Visual 11947 (Divine Plea) stand-in (VFX follow-up).",
+          "Visual 90041 (patch_paladin_vfx_models.py): Holy Nova cast + Kyrian bell.",
     raw_overrides=_raw(
         "Instantly casts Holy Shock 10 times, divided among up to 5 targets within 30 yards. Each target's first "
         "Holy Shock is at full strength and places Glimmer of Light on it; the others are at 50% strength. Heals "
         "allies if your last Holy Shock healed, otherwise damages enemies in combat with you.",
-        level=60, PreventionType=1, StartRecoveryCategory=133, StartRecoveryTime=1500, SpellVisualID_1=11947,
+        level=60, PreventionType=1, StartRecoveryCategory=133, StartRecoveryTime=1500, SpellVisualID_1=90041,
     ),
 )
 scripted_by(divine_toll_201203, 'spell_pal_divine_toll')

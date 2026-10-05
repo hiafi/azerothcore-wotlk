@@ -1,3 +1,4 @@
+-- DB update 2026_09_29_00 -> 2026_10_05_00
 -- paladin-rework S1: talent reset for every paladin (PLAN B5)
 UPDATE `characters` SET `at_login` = `at_login` | 4 WHERE `class` = 2;
 -- orphaned talent ranks (Player::_LoadTalents asserts before the reset, Player.cpp:15610-15626)
