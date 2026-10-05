@@ -405,6 +405,67 @@ def check_zero_range_unit_target(entries: list[dict]) -> list[str]:
         )
     return warnings
 
+# X1 (paladin-rework SHARED B6 item 7 / CR1): custom helper spells (id >= this) that aim at anything
+# but the caster must carry a real range. Ids below it are stock/pulled rows whose RangeIndex is
+# whatever Blizzard shipped.
+RANGE_LINT_MIN_ID = 200000
+
+# Spell ids exempt from the X1 range lint (reviewed by hand: the spell is only ever applied through a
+# path that never runs Spell::CheckRange, e.g. a hit link on the target itself). Keep a comment per id.
+RANGE_LINT_ALLOW: frozenset[int] = frozenset({
+    200603,  # druid Flourish helper, pre-existing and deployed, not paladin scope
+})
+
+# Targets.h: NONE and UNIT_CASTER - the only implicit targets that are "the caster and nothing else".
+# Everything else counts as non-self, including the area-aura-on-caster shapes (TARGET_UNIT_CASTER_AREA_*,
+# SRC_CASTER, DEST_CASTER, ...): they hit other units, and a helper declared that way is expected to
+# carry the range its siblings do (SHARED CR1 gives the Aura bursts an explicit range).
+_CASTER_ONLY_TARGETS = {0, 1}
+
+
+def check_range_on_nonself_helpers(
+    entries: list[dict], allow: frozenset[int] | set[int] | None = None,
+    skip_ids: set[int] | None = None,
+) -> list[str]:
+    """X1: flags a custom spell (id >= RANGE_LINT_MIN_ID, not in `allow`/`skip_ids`) that builds with
+    RangeIndex 0 - no `range_yards` and no non-zero raw `RangeIndex` - while any effect's implicit
+    target A/B is not caster-only. Same silent failure as check_zero_range_unit_target (Spell::
+    CheckRange fails OUT_OF_RANGE beyond melee, triggered casts included) but broader: it also
+    covers dest and area targets, and is scoped to ids this rework mints so stock rows never nag.
+
+    `skip_ids` lets generate.py drop ids check_zero_range_unit_target already reported, so one
+    spell never prints two near-identical warnings. Give the spell `range_yards=50000.0` ("Anywhere",
+    for a script-cast helper), a real range, `range_yards=RANGE_SELF`, or add it to RANGE_LINT_ALLOW."""
+    allowed = RANGE_LINT_ALLOW if allow is None else allow
+    skipped = skip_ids or set()
+    warnings: list[str] = []
+    for entry in entries:
+        spell_id = entry["id"]
+        if spell_id < RANGE_LINT_MIN_ID or spell_id in allowed or spell_id in skipped:
+            continue
+        if (entry.get("notes") or "").strip() == "pulled from existing data":
+            continue
+        raw_index = (entry.get("raw_overrides") or {}).get("RangeIndex")
+        if entry.get("range_yards") or raw_index:
+            continue
+        hits = sorted({
+            effect[key]
+            for i in (1, 2, 3)
+            if (effect := entry.get(f"effect{i}")) and effect.get("type")
+            for key in ("implicit_target_a", "implicit_target_b")
+            if effect.get(key) not in _CASTER_ONLY_TARGETS and effect.get(key) is not None
+        })
+        if not hits:
+            continue
+        warnings.append(
+            f"spell {spell_id} ({entry.get('name', '?')}): RangeIndex 0 but an effect targets something "
+            f"other than the caster (implicit target {hits}) - Spell::CheckRange fails it OUT_OF_RANGE "
+            f"beyond melee, triggered casts included. Set range_yards (50000.0 = Anywhere for a "
+            f"script-cast helper), range_yards=RANGE_SELF, or add the id to lint.RANGE_LINT_ALLOW."
+        )
+    return warnings
+
+
 # SpellMgr.h/.cpp's SpellMgr::LoadSpellLinked, verified against the real source (review,
 # 2026-09-23 - see lib/dsl/registry.py's comment above _SPELL_LINKED_MAX_SPELLS for the full
 # semantics this mirrors): the map key for a `(spell_trigger, type)` pair is `spell_trigger`

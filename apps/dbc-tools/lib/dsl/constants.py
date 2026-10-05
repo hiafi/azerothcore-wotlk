@@ -145,11 +145,14 @@ class AuraType(IntEnum):
     EFFECT_IMMUNITY = 37  # druid-rework RESTO §0.13 (Tranquil Focus, Nature's Focus capstone)
     MOD_STAT = 29
     MOD_INCREASE_SPEED = 31
+    MOD_INCREASE_MOUNTED_SPEED = 32  # paladin-rework RETRIBUTION §3 item 2 (verified against SpellAuraDefines.h) - Pursuit of Justice
     MOD_DECREASE_SPEED = 33
     MOD_INCREASE_HEALTH = 34  # druid-rework PLAN §6.4
     MOD_SHAPESHIFT = 36  # druid-rework FERAL §0.16 (Bestial Fury is a form)
     PROC_TRIGGER_SPELL = 42
+    PROC_TRIGGER_DAMAGE = 43  # paladin-rework PROTECTION §3 item 5 (verified against SpellAuraDefines.h)
     MOD_DODGE_PERCENT = 49  # druid-rework PLAN §6.4
+    MOD_BLOCK_PERCENT = 51  # paladin-rework PROTECTION §3 item 5 (verified against SpellAuraDefines.h)
     MOD_WEAPON_CRIT_PERCENT = 52  # druid-rework PLAN §6.4
     PERIODIC_LEECH = 53
     TRANSFORM = 56
@@ -180,21 +183,32 @@ class AuraType(IntEnum):
     MOD_MELEE_HASTE = 138  # druid-rework PLAN §6.4
     MOD_SPEED_ALWAYS = 129
     MOD_CRIT_DAMAGE_BONUS = 163
+    MOD_DAMAGE_DONE_VERSUS = 168  # paladin-rework RETRIBUTION §3 item 2 (verified against SpellAuraDefines.h)
+    MOD_SPEED_NOT_STACK = 171  # paladin-rework RETRIBUTION §3 item 2 (verified against SpellAuraDefines.h)
+    MOD_MOUNTED_SPEED_NOT_STACK = 172  # paladin-rework RETRIBUTION §3 item 2 (verified against SpellAuraDefines.h)
+    MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE = 197  # paladin-rework RETRIBUTION §3 item 2 (verified against SpellAuraDefines.h)
     MOD_SPELL_DAMAGE_OF_STAT_PERCENT = 174
     MOD_SPELL_HEALING_OF_STAT_PERCENT = 175
     MOD_BASE_RESISTANCE_PCT = 142  # druid-rework PLAN §6.4 / BALANCE §3.3
     REDUCE_PUSHBACK = 149  # druid-rework PLAN §6.4 / BALANCE §3.3
+    MOD_SHIELD_BLOCKVALUE_PCT = 150  # paladin-rework PROTECTION §3 item 5 (verified against SpellAuraDefines.h)
     MOD_ATTACK_POWER_PCT = 166  # druid-rework PLAN §6.4
     MOD_RATING = 189
+    MOD_RESISTANCE_OF_STAT_PERCENT = 182  # paladin-rework PROTECTION §3 item 5 (verified against SpellAuraDefines.h)
     HASTE_ALL = 193  # SPELL_AURA_MELEE_SLOW in C++ (misnamed) - applies cast+melee+ranged haste in one effect (Bloodlust's own aura, SpellAuraEffects.cpp:4762) - PLAN §1's "generalized spell haste" mechanism
     MOD_DAMAGE_FROM_CASTER = 271  # warlock-rework AFFLICTION §3 item 3 - target-side, per-caster, live per tick (Haunt, Grim Reach debuff, Soulburn: Haunt)
     MOD_RAGE_FROM_DAMAGE_DEALT = 213  # druid-rework PLAN §6.4
     MOD_MANA_REGEN_FROM_STAT = 219  # druid-rework PLAN §6.4 / BALANCE §3.3
     MOD_RATING_FROM_STAT = 220
     PERIODIC_DUMMY = 226
+    MOD_SPELL_DAMAGE_OF_ATTACK_POWER = 237  # paladin-rework RETRIBUTION §3 item 2 (verified against SpellAuraDefines.h)
+    MOD_SPELL_HEALING_OF_ATTACK_POWER = 238  # paladin-rework RETRIBUTION §3 item 2 (verified against SpellAuraDefines.h)
     MOD_AOE_DAMAGE_AVOIDANCE = 229  # druid-rework PLAN §6.4
     PROC_TRIGGER_SPELL_WITH_VALUE = 231  # druid-rework PLAN §6.4 / BALANCE §3.3 (not 227, that's the PERIODIC variant)
     MOD_HOT_PCT = 259  # druid-rework PLAN §6.4
+    ABILITY_IGNORE_AURASTATE = 262  # paladin-rework RETRIBUTION §3 item 2 (verified against SpellAuraDefines.h)
+    MOD_AURA_DURATION_BY_DISPEL_NOT_STACK = 246  # paladin-rework HOLY §5 (Pure of Heart r3: Disease duration on self; verified against SpellAuraDefines.h)
+    MOD_ATTACK_POWER_OF_STAT_PERCENT = 268  # paladin-rework HOLY §4.5 (Shock and Awe buffs: AP from Intellect; verified against SpellAuraDefines.h)
     MOD_HEALING_RECEIVED = 283  # SpellAuraDefines.h: "Possibly only for some spell family class spells"
     ABILITY_PERIODIC_CRIT = 286  # druid-rework PLAN §6.4
     MOD_CRIT_PCT = 290
@@ -202,6 +216,7 @@ class AuraType(IntEnum):
     MOD_MINIMUM_SPEED = 305  # warlock-rework AFFLICTION §3 item 3 - Burning Rush's 100% speed floor (Unit.cpp:11108)
     # Custom aura types this fork added (see each one's comment in SpellAuraDefines.h):
     MOD_LEECH_PCT = 295  # % of damage dealt returned as health - Unit::GetLeechPercentage
+    MOD_CRIT_CHANCE_FOR_CASTER = 308  # paladin-rework HOLY §4.5 (Holy Guidance heal-crit buff; verified against SpellAuraDefines.h) - crit chance vs target, per-caster
     MOD_CUSTOM_STAT_PCT = 306  # flat % to one custom stat; misc_value = 1 << CR_* (see CombatRating below)
 
 

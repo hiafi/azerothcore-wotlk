@@ -85,6 +85,7 @@ enum PaladinSpells
     SPELL_PALADIN_IMPROVED_CONCENTRACTION_AURA   = 63510,
     SPELL_PALADIN_IMPROVED_DEVOTION_AURA         = 63514,
     SPELL_PALADIN_SANCTIFIED_RETRIBUTION_AURA    = 63531,
+    SPELL_PALADIN_SWIFT_RETRIBUTION_AURA         = 201165, // Custom: Swift Retribution's own party aura (was shared with 63531)
     SPELL_PALADIN_AURA_MASTERY_IMMUNE            = 64364,
 
     SPELL_JUDGEMENTS_OF_THE_JUST                 = 68055,
@@ -2161,6 +2162,13 @@ public:
 
     void HandleEffectRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
+        // Custom: Sanctified and Swift Retribution have separate party auras, so there is no shared aura to keep
+        if (_spellId == SPELL_PALADIN_SANCTIFIED_RETRIBUTION_AURA || _spellId == SPELL_PALADIN_SWIFT_RETRIBUTION_AURA)
+        {
+            GetTarget()->RemoveOwnedAura(_spellId, GetCasterGUID());
+            return;
+        }
+
         uint32 spellId = GetSpellInfo()->GetFirstRankSpell()->Id;
 
         if ((spellId == SPELL_PALADIN_SANCTIFIED_RETRIBUTION_R1 && GetTarget()->GetAuraOfRankedSpell(SPELL_PALADIN_SWIFT_RETRIBUTION_R1))
@@ -2366,7 +2374,7 @@ void AddSC_paladin_spell_scripts()
     RegisterSpellScriptWithArgs(spell_pal_improved_aura, "spell_pal_improved_concentraction_aura", SPELL_PALADIN_IMPROVED_CONCENTRACTION_AURA);
     RegisterSpellScriptWithArgs(spell_pal_improved_aura, "spell_pal_improved_devotion_aura", SPELL_PALADIN_IMPROVED_DEVOTION_AURA);
     RegisterSpellScriptWithArgs(spell_pal_improved_aura, "spell_pal_sanctified_retribution", SPELL_PALADIN_SANCTIFIED_RETRIBUTION_AURA);
-    RegisterSpellScriptWithArgs(spell_pal_improved_aura, "spell_pal_swift_retribution", SPELL_PALADIN_SANCTIFIED_RETRIBUTION_AURA);
+    RegisterSpellScriptWithArgs(spell_pal_improved_aura, "spell_pal_swift_retribution", SPELL_PALADIN_SWIFT_RETRIBUTION_AURA);
     RegisterSpellScriptWithArgs(spell_pal_improved_aura_effect, "spell_pal_improved_concentraction_aura_effect", SPELL_PALADIN_CONCENTRACTION_AURA);
     RegisterSpellScriptWithArgs(spell_pal_improved_aura_effect, "spell_pal_improved_devotion_aura_effect", SPELL_PALADIN_DEVOTION_AURA_R1);
     RegisterSpellScript(spell_pal_sanctified_retribution_effect);

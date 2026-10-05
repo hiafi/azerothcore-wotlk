@@ -119,6 +119,8 @@ class Registry:
     linked_spell_removals: list[dict] = field(default_factory=list)
     spell_group_removals: list[dict] = field(default_factory=list)
     trainer_removals: list[dict] = field(default_factory=list)
+    spell_required_removals: list[dict] = field(default_factory=list)
+    spell_rank_removals: list[dict] = field(default_factory=list)
     # Potency system (docs/potency-system.md, PLAN P4): the counterpart to spell_bonus_data above -
     # see unbind_bonus_coefficients() below.
     bonus_removals: list[dict] = field(default_factory=list)
@@ -161,7 +163,7 @@ MERGE_KEYS = (
     "spells", "talents", "tabs", "skill_line_abilities", "trainer_spells",
     "spell_script_names", "spell_bonus_data", "spell_procs",
     "linked_spells", "spell_groups", "spell_group_rules", "custom_attrs", "shapeshift_forms",
-    "script_removals", "linked_spell_removals", "spell_group_removals", "trainer_removals",
+    "script_removals", "linked_spell_removals", "spell_group_removals", "trainer_removals", "spell_required_removals", "spell_rank_removals",
     "bonus_removals", "proc_removals", "spell_categories",
     "creature_templates", "creature_template_models",
     "potency_corrections",
@@ -825,6 +827,35 @@ def untrain(spell: model.Spell | int, trainer_ids: list[int]) -> list[dict]:
     for trainer_id in trainer_ids:
         row = {"id": f"{trainer_id}:{spell_id}", "TrainerId": trainer_id, "SpellId": spell_id}
         _require_active().trainer_removals.append(row)
+        rows.append(row)
+    return rows
+
+
+def unrequire_spell(spell: model.Spell | int, req_spell: int) -> dict:
+    """Declares a removal of one `(spell_id, req_spell)` row from `spell_required` - the "additional
+    spell requirement" `Trainer::GetSpellState` checks (`GetSpellsRequiredForSpellBounds`) *on top of*
+    a `trainer_spell` row's own `ReqAbility`. Needed when the required spell was a rank the single-rank
+    rollout retired (e.g. Greater Blessing of Might required rank-5 Blessing of Might 19838): re-declaring
+    `trained_by()` without `req_ability` does NOT clear it, because it lives in this separate table and the
+    spell stays Unavailable forever. Key-exact DELETE, same mechanics as `untrain()`."""
+    spell_id = _spell_id_of(spell)
+    row = {"spell_id": spell_id, "req_spell": int(req_spell), "_dedup_id": f"{spell_id}:{int(req_spell)}"}
+    _require_active().spell_required_removals.append(row)
+    return row
+
+
+def unrank_spells(*spells: model.Spell | int) -> list[dict]:
+    """Declares a removal of each given spell's `spell_ranks` row - for collapsing a rank chain to a
+    single spell (pass EVERY rank of the chain, rank 1 included, exactly as the single-rank rollout's
+    hand-written migrations did: `GetRank()` defaults to 1 with no chain entry). Key-exact DELETE on
+    `spell_ranks.spell_id` (its primary key), same mechanics as `untrain()`."""
+    if not spells:
+        raise ValueError("unrank_spells(): pass at least one spell")
+    rows = []
+    for spell in spells:
+        row = {"spell_id": _spell_id_of(spell)}
+        row["_dedup_id"] = str(row["spell_id"])
+        _require_active().spell_rank_removals.append(row)
         rows.append(row)
     return rows
 

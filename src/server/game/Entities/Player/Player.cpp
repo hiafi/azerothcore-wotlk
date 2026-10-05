@@ -160,6 +160,12 @@ static constexpr int32 CUSTOM_COOLDOWN_HASTE_MIN_BASE_COOLDOWN_MS = 30 * IN_MILL
 // (warlock-rework Demonology, 20 s base cooldown, DEMONOLOGY.md §7.12).
 static constexpr std::array<uint32, 2> CUSTOM_COOLDOWN_HASTE_ALLOW_LIST = { 200333, 200829 };
 
+// Custom: paladin-rework A7 (PLAN §1A, SHARED B5.12) - never Cooldown Haste eligible, whatever the base
+// cooldown or the allow list says: every player seal (30/60 s base would pass the >= 30 s rule). Talent
+// cooldown mods still apply (they act on rec/catrec before the Cooldown Haste block).
+static constexpr std::array<uint32, 7> CUSTOM_COOLDOWN_HASTE_DENY_LIST =
+    { 20154, 20164, 20165, 20166, 20375, 21084, 31801 };
+
 // we can disable this warning for this since it only
 // causes undefined behavior when passed to the base class constructor
 #ifdef _MSC_VER
@@ -11250,7 +11256,10 @@ void Player::AddSpellAndCategoryCooldowns(SpellInfo const* spellInfo, uint32 ite
         // after the initiating cast, i.e. comfortably after SMSG_SPELL_GO. So instead of calling
         // ModifySpellCooldown() inline below, it's deferred one world tick via m_Events so it
         // always lands after SendSpellGo() has already gone out - see the two call sites below.
-        if (float const cdh = GetCooldownHastePercentage(); cdh > 0.0f)
+        // Custom: paladin-rework A7 - seals are on CUSTOM_COOLDOWN_HASTE_DENY_LIST (SHARED B5.12)
+        if (float const cdh = GetCooldownHastePercentage(); cdh > 0.0f &&
+            std::find(CUSTOM_COOLDOWN_HASTE_DENY_LIST.begin(), CUSTOM_COOLDOWN_HASTE_DENY_LIST.end(), spellInfo->Id) ==
+                CUSTOM_COOLDOWN_HASTE_DENY_LIST.end())
         {
             float const cooldownHasteDivisor = 1.0f + cdh / 100.0f;
             // Custom: druid-rework A3 (PLAN §1A row A3, BALANCE.md §9) - an allow-listed spell is

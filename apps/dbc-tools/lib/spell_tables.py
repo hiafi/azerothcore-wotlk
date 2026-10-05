@@ -632,6 +632,14 @@ REMOVAL_TABLES = (
         "trainer_spells", "a rework retires this trainer grant",
     ),
     RemovalSpec(
+        "spell_required_removals", "spell_required", ("spell_id", "req_spell"),
+        "spell_required", "a rework retires this additional trainer spell requirement",
+    ),
+    RemovalSpec(
+        "spell_rank_removals", "spell_ranks", ("spell_id",),
+        "spell_ranks", "a rework collapses this rank chain to a single spell",
+    ),
+    RemovalSpec(
         "bonus_removals", "spell_bonus_data", ("entry",),
         "spell_bonus_data", "the spell switched to a generated potency coefficient",
     ),

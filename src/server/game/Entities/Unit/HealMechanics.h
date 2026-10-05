@@ -18,7 +18,12 @@
 #ifndef __HEALMECHANICS_H
 #define __HEALMECHANICS_H
 
+#include "Define.h"
+#include <vector>
+
 class SpellInfo;
+class Unit;
+class WorldObject;
 
 /*
  * Class-neutral healing-spell classification helpers. Created by the druid Restoration pass
@@ -44,6 +49,16 @@ namespace Heal
     // `PROC_FLAG_DONE_PERIODIC`, or `damagetype == DOT` in a calculation hook) - this function only
     // classifies the spell definition, not the event that invoked it.
     bool IsDirectNatureHeal(SpellInfo const* spellInfo);
+
+    // Most injured friendly units (lowest health %), party/raid members of `caster` within `range`
+    // of `center`, alive, excluding `exclude`; at most `count`; sorted lowest health % first.
+    // **Includes the caster** (precedent spell_priest_holy.cpp:265-267; solo Divine Toll / Merciful
+    // Strikes / Divine Storm heal rely on it - paladin-rework REVIEW H-m5, 2026-10-03).
+    // Players only (plus the caster itself): pets, guardians and other creatures are never returned
+    // (A4 "members"; the spell_priest_holy.cpp precedent would also pick a member's pet).
+    // Created by the paladin Retribution pass (SHARED.md A4). `out` is cleared first.
+    void SelectMostInjured(Unit* caster, WorldObject const* center, float range, uint8 count,
+                           std::vector<Unit*>& out, Unit const* exclude = nullptr);
 }
 
 #endif

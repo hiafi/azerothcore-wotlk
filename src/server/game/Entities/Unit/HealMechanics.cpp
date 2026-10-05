@@ -16,10 +16,14 @@
  */
 
 #include "HealMechanics.h"
+#include "CellImpl.h"
+#include "GridNotifiersImpl.h"
+#include "Unit.h"
 #include "SharedDefines.h"
 #include "SpellInfo.h"
 #include <algorithm>
 #include <array>
+#include <list>
 
 namespace Heal
 {
@@ -56,5 +60,33 @@ namespace Heal
             return false;
 
         return true;
+    }
+
+    void SelectMostInjured(Unit* caster, WorldObject const* center, float range, uint8 count,
+                           std::vector<Unit*>& out, Unit const* exclude)
+    {
+        out.clear();
+        if (!caster || !center || !count)
+            return;
+
+        std::list<Unit*> nearby;
+        Acore::AnyGroupedUnitInObjectRangeCheck check(center, caster, range, true);
+        Acore::UnitListSearcher<Acore::AnyGroupedUnitInObjectRangeCheck> searcher(caster, nearby, check);
+        Cell::VisitObjects(center, searcher, range);
+
+        // A4 says "party/raid members": players (the caster included), not their pets or guardians. The
+        // grouped-unit check also accepts a group member's pets (IsInRaidWith resolves the owner), which
+        // would let a 20% pet soak the 3 heals of Divine Storm / Seal of Light's echo.
+        for (Unit* unit : nearby)
+            if (unit != exclude && (unit->IsPlayer() || unit == caster))
+                out.push_back(unit);
+
+        std::stable_sort(out.begin(), out.end(), [](Unit const* a, Unit const* b)
+        {
+            return a->GetHealthPct() < b->GetHealthPct();
+        });
+
+        if (out.size() > count)
+            out.resize(count);
     }
 }

@@ -1,0 +1,53 @@
+/*
+ * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/*
+ * Paladin rework - ScriptMgr handlers (paladin-rework.SHARED.md A4 / B6 item 4): logout cleanup
+ * of the per-player seal/Ret/Holy state. Holy adds the Illuminated Steel refresh (S2). Every handler checks
+ * for a paladin first (these run for every class).
+ */
+
+#include "PaladinMechanics.h"
+#include "Player.h"
+#include "ScriptMgr.h"
+
+class PaladinHooksPlayer : public PlayerScript
+{
+public:
+    PaladinHooksPlayer() : PlayerScript("PaladinHooksPlayer",
+        { PLAYERHOOK_ON_LOGOUT, PLAYERHOOK_ON_AFTER_UPDATE_MAX_POWER }) { }
+
+    void OnPlayerLogout(Player* player) override
+    {
+        if (player && player->getClass() == CLASS_PALADIN)
+            Paladin::ClearState(player);
+    }
+
+    // Illuminated Steel (HOLY.md §6.5): fires on every Intellect change (StatSystem.cpp UpdateMaxPower), after
+    // SetStat, so the new Intellect is readable. `value` is left untouched.
+    void OnPlayerAfterUpdateMaxPower(Player* player, Powers& power, float& /*value*/) override
+    {
+        if (player && player->getClass() == CLASS_PALADIN && power == POWER_MANA)
+            Paladin::RefreshIlluminatedSteel(player);
+    }
+};
+
+void AddSC_paladin_hooks()
+{
+    new PaladinHooksPlayer();
+    Paladin::LogRegistrySizes();   // after AddSC_paladin_retribution_spell_scripts() (loader order)
+}
