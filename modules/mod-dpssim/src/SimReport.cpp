@@ -21,6 +21,7 @@
 #include <fstream>
 #include <map>
 #include <sstream>
+#include <utility>
 
 namespace
 {
@@ -29,6 +30,7 @@ namespace
     struct SpellAggregate
     {
         uint32 SpellId = 0;
+        bool IsPet = false;
         uint32 HitCount = 0;
         uint32 CritCount = 0;
         uint64 TotalDamage = 0;
@@ -36,11 +38,14 @@ namespace
 
     std::vector<SpellAggregate> AggregateBySpell(SimDaemon::RunResult const& result)
     {
-        std::map<uint32, SpellAggregate> byId;
+        // Keyed by (spell id, from a pet) so a pet's hits never merge into the bot's row for the same spell
+        std::map<std::pair<uint32, bool>, SpellAggregate> byId;
         for (size_t i = 0; i < result.HitSpellIds.size(); ++i)
         {
-            SpellAggregate& agg = byId[result.HitSpellIds[i]];
+            bool const isPet = i < result.HitIsPet.size() && result.HitIsPet[i];
+            SpellAggregate& agg = byId[{result.HitSpellIds[i], isPet}];
             agg.SpellId = result.HitSpellIds[i];
+            agg.IsPet = isPet;
             ++agg.HitCount;
             agg.TotalDamage += result.HitDamages[i];
             if (i < result.HitCrits.size() && result.HitCrits[i])
@@ -104,7 +109,8 @@ bool SimReport::WriteJson(std::string const& path, SimDaemon::RunConfig const& c
         double const pctOfTotal = result.TotalDamage > 0
             ? 100.0 * double(s.TotalDamage) / double(result.TotalDamage)
             : 0.0;
-        file << "    {\"spellId\": " << s.SpellId << ", \"hitCount\": " << s.HitCount
+        file << "    {\"spellId\": " << s.SpellId << ", \"isPet\": " << (s.IsPet ? "true" : "false")
+             << ", \"hitCount\": " << s.HitCount
              << ", \"critCount\": " << s.CritCount << ", \"totalDamage\": " << s.TotalDamage
              << ", \"pctOfTotal\": " << pctOfTotal << "}" << (i + 1 < spells.size() ? ",\n" : "\n");
     }
@@ -115,8 +121,10 @@ bool SimReport::WriteJson(std::string const& path, SimDaemon::RunConfig const& c
     {
         uint32 const timestamp = i < result.HitTimestamps.size() ? result.HitTimestamps[i] : 0;
         bool const crit = i < result.HitCrits.size() && result.HitCrits[i];
+        bool const isPet = i < result.HitIsPet.size() && result.HitIsPet[i];
         file << "    {\"timestampMs\": " << timestamp << ", \"spellId\": " << result.HitSpellIds[i]
              << ", \"damage\": " << result.HitDamages[i] << ", \"crit\": " << (crit ? "true" : "false")
+             << ", \"isPet\": " << (isPet ? "true" : "false")
              << "}" << (i + 1 < result.HitDamages.size() ? ",\n" : "\n");
     }
     file << "  ],\n";

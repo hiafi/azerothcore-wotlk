@@ -100,6 +100,25 @@ namespace SimProfile
         // case).
         int32 AttackPower = 0;
 
+        // Dummy health drain, off by default (absent = off = today's behaviour: the dummy zeroes all damage, its health
+        // never moves). `DummyHealthDrain = true` makes the dummy take real damage but never drop below 1 health, so it
+        // never dies, and resets it to full health at the start of every iteration - that lets "target below 20%"-style
+        // execute rows fire. `DummyMaxHealth = <n>` sets the dummy's max health, which is what those percentages are
+        // measured against (0 = SimTarget::Config's default, 100,000,000 - far too large for any sim to move the
+        // percentage, so set it to something a fight can actually drain, e.g. a few hundred thousand).
+        bool DummyHealthDrain = false;
+        uint32 DummyMaxHealth = 0;
+
+        // Pre-pull buff phase, in sim ms (default 15000: a 10 s pet summon plus a few GCDs). Before every
+        // iteration, the first included, the bot runs its non-combat engine - restricted to its buff, pet and
+        // non-combat rotation strategies (SimBot::BeginBuffPhase()) - for this long, out of combat, so it presses
+        // its aura, casts its self-buffs and summons its pet as in game, then the pull happens as always. Nothing
+        // cast or applied in the phase is recorded; spell cooldowns it starts carry into the fight; resources are
+        // refilled before the pull.
+        // A cast still going when the phase ends is interrupted, with a warning. 0 disables the phase: the old
+        // behaviour (the bot starts every iteration in combat, unbuffed). A run with no profile uses the default.
+        uint32 PrePullBuffMs = 15000;
+
         // Master switch for modules/mod-dpssim/tools/stat_weights.py, added 2026-09-13: "false"
         // makes that tool refuse to run any batch at all for this profile, regardless of how many
         // TestX flags below are true - a single kill switch for "don't run stat weights against

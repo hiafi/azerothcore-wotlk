@@ -63,7 +63,12 @@
 // fires at. ModifyMeleeDamage fires before armor and the outcome roll, so it can't stand in. Swings are
 // recorded as spell id MELEE_SPELL_ID (0) and count as hits like any spell; special melee attacks
 // (Crusader Strike etc.) are spells and still come through OnSpellDamageTakenFinal, so nothing is
-// counted twice.
+// counted twice. All three hooks also accept hits from the actor's pets, guardians and totems (see
+// AttributeToActor()); those are recorded as separate rows - PET_MELEE_SPELL_ID for white swings, the real spell
+// id otherwise - and flagged in GetHitIsPet().
+//
+// Periodic ticks come through a third hook, OnPeriodicDamageFinal (UNITHOOK_ON_PERIODIC_DAMAGE_FINAL, S0 stage,
+// 2026-10-05): the tick after crit and mitigation, pre-absorb, recorded under the aura's spell id.
 //
 // Filters by GUID rather than storing the actor/target Unit* directly, per this repo's convention
 // of never holding a raw Unit*/Player*/Creature* past the call that produced it.
@@ -101,6 +106,15 @@ public:
     static constexpr uint32 MELEE_SPELL_ID = 0;
     void OnMeleeDamageFinal(Unit* target, Unit* attacker, uint32 damage, bool isCrit) override;
 
+    // Pseudo spell id for a pet/guardian/totem's white swings, distinct from the bot's MELEE_SPELL_ID. Pet rows
+    // are also flagged by GetHitIsPet(), so a pet spell sharing an id with one of the bot's own never merges.
+    static constexpr uint32 PET_MELEE_SPELL_ID = 0xFFFFFFFE;
+
+    // Periodic damage ticks (DoTs), recorded under the aura's spell id - OnPeriodicDamageFinal is a core hook
+    // added 2026-10-05 for the S0 harness stage (see its doc comment in UnitScript.h). Before it, a DoT's damage
+    // never reached the recorder at all, so DoT specs' sim totals silently omitted it.
+    void OnPeriodicDamageFinal(Unit* target, Unit* attacker, uint32 damage, SpellInfo const* spellInfo, bool isCrit) override;
+
     // Aura tracking - added 2026-09-11 to directly observe whether talent-gated procs (Fingers of
     // Frost, Brain Freeze, Arcane Blast stacks, ...) actually fire, rather than inferring it from
     // which spells get cast. Both hooks already exist, unmodified, in core (UnitScript.h) and are
@@ -120,6 +134,12 @@ public:
     // instead of one fresh instance per run like RunPlayerbotOnce() still does. Never call this
     // mid-run - only between one iteration's result collection and the next iteration's first tick.
     void Reset();
+
+    // Records an "applied" event, stamped now, for every non-passive aura already on `unit` (the actor or the
+    // target). Called right after Reset() when auras are already up at the start of the measured run (the
+    // pre-pull buff phase, SimDaemon.cpp), so uptime is measured from the start instead of the aura having no
+    // "applied" event at all.
+    void RecordAurasPresent(Unit* unit);
 
     [[nodiscard]] uint64 GetTotalDamage() const { return _totalDamage; }
     [[nodiscard]] uint32 GetCastCount() const { return _castCount; }
@@ -149,6 +169,9 @@ public:
     // RunPlayerbotIteration() (SimDaemon.cpp) rebases them to the iteration start.
     [[nodiscard]] std::vector<uint32> const& GetHitTimestamps() const { return _hitTimestamps; }
 
+    // Per-hit "came from the bot's pet/guardian/totem rather than the bot itself", parallel to GetHitDamages().
+    [[nodiscard]] std::vector<bool> const& GetHitIsPet() const { return _hitIsPet; }
+
     // One entry per aura gained or lost by the actor or the target while this recorder is alive.
     // `Applied == false` is a removal (SpellId/Positive/StackAmount describe the aura that was
     // removed, not a new one). Not filtered to any particular spell - unlike the rotationSpellId
@@ -169,7 +192,11 @@ public:
     [[nodiscard]] std::vector<AuraEvent> const& GetAuraEvents() const { return _auraEvents; }
 
 private:
-    void RecordHit(uint32 spellId, uint32 damage, bool isCrit);
+    void RecordHit(uint32 spellId, uint32 damage, bool isCrit, bool isPet);
+
+    // True when `attacker` is the actor itself (isPet = false) or something it owns - a pet, guardian, totem or
+    // other summon, found through its owner, charmer or creator GUID (isPet = true).
+    bool AttributeToActor(Unit* attacker, bool& isPet) const;
 
     ObjectGuid _actorGuid;
     ObjectGuid _targetGuid;
@@ -182,6 +209,7 @@ private:
     std::vector<bool> _hitCrits;
     std::vector<uint32> _hitSpellIds;
     std::vector<uint32> _hitTimestamps;
+    std::vector<bool> _hitIsPet;
     std::vector<AuraEvent> _auraEvents;
 };
 

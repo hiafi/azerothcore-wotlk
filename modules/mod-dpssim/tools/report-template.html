@@ -268,7 +268,11 @@ table.uptime td.num { text-align: right; font-family: "IBM Plex Mono", monospace
     7268: "Arcane Missile (tick)", 44401: "Missile Barrage (proc)", 36032: "Arcane Blast (stack)"
   };
   var DB_SPELL_NAMES = __SPELL_NAMES_JSON__;
-  function spellName(id) { return SPELL_NAMES[id] || DB_SPELL_NAMES[id] || ("Spell #" + id); }
+  // isPet (optional): the row is damage from the bot's pet/guardian/totem - suffixed so it reads apart from the bot's own
+  function spellName(id, isPet) {
+    var n = SPELL_NAMES[id] || DB_SPELL_NAMES[id] || ("Spell #" + id);
+    return (isPet && id !== 4294967294) ? n + " (pet)" : n;
+  }
 
   var PALETTE = ["#4fd3ea", "#b98af0", "#ffb454", "#5fd98a", "#ef6a6a", "#7aa2f7"];
   function colorFor(idx) { return PALETTE[idx % PALETTE.length]; }
@@ -394,11 +398,11 @@ table.uptime td.num { text-align: right; font-family: "IBM Plex Mono", monospace
     var segs = spells.map(function (sp, i) {
       var c = colorFor(i);
       var pct = sp.pctOfTotal;
-      return '<div class="seg" style="width:' + pct + '%;background:' + c + '" title="' + spellName(sp.spellId) + ' — ' + fmtNum(pct, 1) + '%">' + (pct > 8 ? fmtNum(pct, 0) + '%' : '') + '</div>';
+      return '<div class="seg" style="width:' + pct + '%;background:' + c + '" title="' + spellName(sp.spellId, sp.isPet) + ' — ' + fmtNum(pct, 1) + '%">' + (pct > 8 ? fmtNum(pct, 0) + '%' : '') + '</div>';
     }).join("");
     var rows = spells.map(function (sp, i) {
       var c = colorFor(i);
-      return '<tr><td><span class="swatch" style="background:' + c + '"></span>' + spellName(sp.spellId) + '</td>' +
+      return '<tr><td><span class="swatch" style="background:' + c + '"></span>' + spellName(sp.spellId, sp.isPet) + '</td>' +
         '<td class="num">' + fmtNum(sp.hitCount) + '</td>' +
         '<td class="num">' + fmtNum(sp.critCount) + '</td>' +
         '<td class="num">' + fmtNum(sp.totalDamage) + '</td>' +
@@ -610,7 +614,7 @@ table.uptime td.num { text-align: right; font-family: "IBM Plex Mono", monospace
     if (!hits.length) { body.innerHTML = '<tr><td colspan="3" class="t" style="padding:20px;text-align:center">No hits &mdash; load a report above.</td></tr>'; return; }
     body.innerHTML = hits.map(function (h) {
       return '<tr><td class="t mono">' + (h.timestampMs / 1000).toFixed(2) + 's</td>' +
-        '<td>' + spellName(h.spellId) + (h.crit ? '<span class="crit-badge">CRIT</span>' : '') + '</td>' +
+        '<td>' + spellName(h.spellId, h.isPet) + (h.crit ? '<span class="crit-badge">CRIT</span>' : '') + '</td>' +
         '<td class="dmg">' + fmtNum(h.damage) + '</td></tr>';
     }).join("");
   }

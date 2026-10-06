@@ -18,9 +18,12 @@
 #include "SimDummyAI.h"
 #include "CreatureScript.h"
 #include "PassiveAI.h"
+#include <algorithm>
 
 namespace
 {
+    bool s_healthDrain = false;
+
     // A sim-exclusive training dummy AI (entry 900004+, data/sql/updates/pending_db_world - see
     // that migration's own doc comment) - identical to the shared npc_training_dummy
     // (src/server/scripts/World/npcs_special.cpp) except it drops that AI's 5-second no-damage
@@ -50,9 +53,27 @@ namespace
 
         void DamageTaken(Unit* /*attacker*/, uint32& damage, DamageEffectType /*damageType*/, SpellSchoolMask /*schoolMask*/) override
         {
+            // Health drain (SimDummyAI::SetHealthDrain): real damage, but never below 1 health
+            if (s_healthDrain)
+            {
+                uint32 const health = me->GetHealth();
+                damage = health > 1 ? std::min(damage, health - 1) : 0;
+                return;
+            }
+
             damage = 0;
         }
     };
+}
+
+void SimDummyAI::SetHealthDrain(bool enabled)
+{
+    s_healthDrain = enabled;
+}
+
+bool SimDummyAI::IsHealthDrainEnabled()
+{
+    return s_healthDrain;
 }
 
 void AddSC_SimDummyAI()

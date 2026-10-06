@@ -22,4 +22,14 @@
 // (dpssim_loader.cpp), same as every other script this module registers.
 void AddSC_SimDummyAI();
 
+namespace SimDummyAI
+{
+    // Off by default: the dummy zeroes all damage it takes, so its health never moves. On: it takes real damage but
+    // never drops below 1 health, so health-threshold effects ("target below 20%") can fire without the dummy
+    // dying. Set from SimTarget::Create() (profile keys DummyHealthDrain / DummyMaxHealth); the sim is
+    // single-threaded (see EventRecorder.h), so a plain flag is enough.
+    void SetHealthDrain(bool enabled);
+    [[nodiscard]] bool IsHealthDrainEnabled();
+}
+
 #endif

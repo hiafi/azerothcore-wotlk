@@ -6423,6 +6423,9 @@ void AuraEffect::HandlePeriodicDamageAurasTick(Unit* target, Unit* caster) const
     uint32 resist = dmgInfo.GetResist();
     damage = dmgInfo.GetDamage();
 
+    // Custom: observational hook for mod-dpssim (see OnPeriodicDamageFinal in UnitScript.h) - pre-absorb tick amount
+    sScriptMgr->OnPeriodicDamageFinal(target, caster, damage + absorb + resist, GetSpellInfo(), crit);
+
     LOG_DEBUG("spells.aura.effect", "PeriodicTick: {} attacked {} for {} dmg inflicted by {} abs is {}",
                     GetCasterGUID().ToString(), target->GetGUID().ToString(), damage, GetId(), absorb);
     Unit::DealDamageMods(target, damage, &absorb);
@@ -6518,6 +6521,9 @@ void AuraEffect::HandlePeriodicHealthLeechAuraTick(Unit* target, Unit* caster) c
     uint32 absorb = dmgInfo.GetAbsorb();
     uint32 resist = dmgInfo.GetResist();
     damage = dmgInfo.GetDamage();
+
+    // Custom: observational hook for mod-dpssim (see OnPeriodicDamageFinal in UnitScript.h) - pre-absorb tick amount
+    sScriptMgr->OnPeriodicDamageFinal(target, caster, damage + absorb + resist, GetSpellInfo(), crit);
 
     // Set trigger flag
     uint32 procAttacker = PROC_FLAG_DONE_PERIODIC;

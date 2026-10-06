@@ -22,20 +22,26 @@
 #include "GameTime.h"
 #include "Log.h"
 #include "Map.h"
+#include "Pet.h"
 #include "Player.h"
 #include "Playerbots.h"
 #include "SimActor.h"
 #include "SimBot.h"
 #include "SimClock.h"
+#include "SimDummyAI.h"
 #include "SimReport.h"
 #include "SimTarget.h"
+#include "Spell.h"
 #include "SpellAuras.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
 #include "StringFormat.h"
+#include "TemporarySummon.h"
 #include "Timer.h"
 #include <algorithm>
 #include <chrono>
+#include <iterator>
+#include <set>
 #include <string>
 #include <thread>
 
@@ -47,9 +53,11 @@ namespace
 
     // Sim time skipped before each playerbot iteration (see RunPlayerbotIteration()): long enough for
     // everything time-based the iteration reset doesn't clear to age out - the GCD, queued action baskets
-    // (5 s), value check intervals, AllowActivity()'s cache, the 5-second mana rule, diminishing returns,
+    // (5 s), value check intervals, the 5-second mana rule, diminishing returns,
     // and UseTrinketAction's own cooldown maps for combat trinkets (5 min or less) - so every iteration,
-    // the first included, starts the same way. A few utility trinkets (20 min to 3 h) are not covered; a
+    // the first included, starts the same way. AllowActivity()'s cache is not left to the gap: the pre-pull buff
+    // phase refills it out of combat, so SimBot::ReestablishCombatState() re-checks it at the pull. A few utility
+    // trinkets (20 min to 3 h) are not covered; a
     // longer gap would cut the uint32 clock's headroom (~5,500 iterations of 180 s at this gap).
     constexpr uint32 ITERATION_GAP_MS = 10 * MINUTE * IN_MILLISECONDS;
 
@@ -113,6 +121,85 @@ namespace
         return result;
     }
 
+    void RefillResources(Player* player, Creature* dummy);
+
+    // Logs the bot's own non-passive auras by spell id, so a reviewer can confirm what is up at the pull (e.g.
+    // Retribution Aura 7294). Only when the set differs from the last one logged, so a long batch logs it once.
+    void LogAurasAtPull(Player* player)
+    {
+        static std::set<uint32> lastLogged;
+        static bool loggedOnce = false;
+
+        std::set<uint32> ids;
+        for (auto const& [spellId, aurApp] : player->GetAppliedAuras())
+        {
+            SpellInfo const* info = aurApp->GetBase()->GetSpellInfo();
+            if (info && !info->IsPassive())
+                ids.insert(spellId);
+        }
+
+        std::string list;
+        for (uint32 id : ids)
+            list += (list.empty() ? "" : ", ") + std::to_string(id);
+        if (loggedOnce && ids == lastLogged)
+            return;
+
+        loggedOnce = true;
+        lastLogged = ids;
+        LOG_INFO("server.dpssim", "mod-dpssim: auras on the bot at the pull: [{}]", list);
+    }
+
+    // Pre-pull buff phase (SimProfile.h's PrePullBuffMs): ticks the bot on its non-combat engine, buff and pet
+    // strategies only (SimBot::BeginBuffPhase()), for `buffMs` of sim time ending at `endMs`, so the measured run
+    // starts exactly where it always did. Unrecorded: the caller rewinds the recorders afterwards. Ends early if
+    // the bot enters combat.
+    void RunBuffPhase(SimDaemon::RunConfig const& config, uint32 buffMs, uint32 endMs, Player* player, Map* map,
+        SimBot& bot, CastRecorder* castRecorder)
+    {
+        if (!bot.BeginBuffPhase())
+            LOG_WARN("server.dpssim", "mod-dpssim: pre-pull buff phase - PlayerbotAI reports the bot inactive out of "
+                "combat (AllowActivity() false), so only relevance >= 100 triggers will run; set "
+                "AiPlayerbot.BotActiveAlone = 100 and AiPlayerbot.botActiveAloneSmartScale = 0 for the sim (run-sim.sh "
+                "does).");
+
+        SimClock buffClock(config.StepMs, endMs - buffMs);
+        while (buffClock.GetElapsedMs() < buffMs)
+        {
+            buffClock.Tick(map);
+            bot.UpdateAI(config.StepMs);
+
+            if (player->IsInCombat())
+            {
+                std::vector<CastRecorder::CastEvent> const& casts = castRecorder->GetCastEvents();
+                Unit* with = player->GetCombatManager().GetAnyTarget();
+                Pet* pet = player->GetPet();
+                LOG_WARN("server.dpssim", "mod-dpssim: pre-pull buff phase ended early at {} ms - the bot entered "
+                    "combat with {} (entry {}), pet in combat: {}; the bot's last cast spell {}.",
+                    buffClock.GetElapsedMs(), with ? with->GetName() : "nothing", with ? with->GetEntry() : 0,
+                    pet && pet->IsInCombat() ? "yes" : "no", casts.empty() ? 0 : casts.back().SpellId);
+                break;
+            }
+
+            if (config.RealTimePaced)
+                std::this_thread::sleep_for(std::chrono::milliseconds(config.StepMs));
+        }
+
+        // A cast still going at the pull (a 10 s pet summon started late) would open the measured fight, landing
+        // after its cost was refilled. Cut it off: the next iteration's phase starts it again with the pet still
+        // missing.
+        for (CurrentSpellTypes type : {CURRENT_GENERIC_SPELL, CURRENT_CHANNELED_SPELL})
+        {
+            if (Spell const* spell = player->GetCurrentSpell(type))
+            {
+                LOG_WARN("server.dpssim", "mod-dpssim: pre-pull buff phase ended with spell {} still being cast - "
+                    "interrupted; raise PrePullBuffMs if this repeats.", spell->m_spellInfo->Id);
+            }
+        }
+        player->InterruptNonMeleeSpells(false);
+
+        bot.EndBuffPhase();
+    }
+
     // The tick loop + result population shared by RunPlayerbotOnce() (one call) and
     // RunPlayerbotBatch() (one call per iteration, same actor/target/bot/recorders reused every
     // time - see that function's own doc comment). Assumes `recorder`/`castRecorder` are already
@@ -121,17 +208,17 @@ namespace
     // thing this function does reset itself is spell cooldowns (see below), since that has to
     // happen on every call, including RunPlayerbotBatch()'s first iteration which ResetForNextIteration()
     // never reaches.
-    void RunPlayerbotIteration(SimDaemon::RunConfig const& config, Player* player, Map* map, SimBot& bot,
-        EventRecorder* recorder, CastRecorder* castRecorder, SimDaemon::RunResult& result)
+    void RunPlayerbotIteration(SimDaemon::RunConfig const& config, Player* player, Creature* dummy, Map* map,
+        SimBot& bot, EventRecorder* recorder, CastRecorder* castRecorder, SimDaemon::RunResult& result)
     {
         // Every iteration starts with nothing on cooldown: pre-loop casts (SimBot::Create()'s spell-teaching
         // casts, gear equip spells) and the previous iteration's cooldowns would otherwise carry over.
         player->RemoveAllSpellCooldown();
 
         // The same for aura-held proc internal cooldowns (Aura::m_procCooldown): ResetForNextIteration()
-        // removes every non-passive aura, but the passive talent/racial auras stay, and their ICDs run on the
-        // real clock (steady_clock), not the sim clock. Script-held ICDs on the real clock (e.g.
-        // spell_mage_biting_cold's _cooldownEnd) are not reachable from here.
+        // removes every non-passive aura, but the passive talent/racial auras stay. Proc ICDs (and the script-held
+        // ones, e.g. spell_mage_biting_cold's _cooldownEnd) now run on the sim clock (Acore::Time::SteadyNow()),
+        // but the clock jumps ITERATION_GAP_MS between iterations anyway - script-held ones age out by that.
         for (auto const& [spellId, aura] : player->GetOwnedAuras())
             aura->ResetProcCooldown();
 
@@ -145,7 +232,29 @@ namespace
         // below. GameTime's cached value can disagree with getMSTime() during setup (DpsSim.cpp clears the
         // override without refreshing GameTime, leaving it at 5000 ms), so "now" is the later of the two.
         uint32 const nowMs = std::max(getMSTime(), uint32(GameTime::GetGameTimeMS().count()));
-        SimClock clock(config.StepMs, nowMs + ITERATION_GAP_MS);
+        uint32 const measuredStartMs = nowMs + ITERATION_GAP_MS;
+
+        // Pre-pull buff phase, at the end of the gap (S0b). After the cooldown reset above on purpose: cooldowns it
+        // starts (an aura press) carry into the fight, as in game. Its recorder output is rewound, its resource
+        // spending refilled, then the pull is exactly what ResetForNextIteration()/Create() already did.
+        // The measured clock still starts at measuredStartMs, so report timestamps begin at 0 and the sim clock
+        // never runs backward (the last buff tick is one step before measuredStartMs).
+        if (config.PrePullBuffMs > 0)
+        {
+            uint32 const buffMs = std::min(config.PrePullBuffMs, ITERATION_GAP_MS);
+            RunBuffPhase(config, buffMs, measuredStartMs, player, map, bot, castRecorder);
+            recorder->Reset();
+            castRecorder->Reset();
+            // Buffs from the phase are up from the first measured ms; without these the uptime table only sees
+            // auras applied during the fight
+            recorder->RecordAurasPresent(player);
+            recorder->RecordAurasPresent(dummy);
+            RefillResources(player, dummy);
+            bot.ReestablishCombatState(dummy);
+        }
+        LogAurasAtPull(player);
+
+        SimClock clock(config.StepMs, measuredStartMs);
         uint32 lastManaSampleMs = 0;
         bool sampledManaOnce = false;
         std::vector<SimDaemon::RunResult::ManaSample> manaSamples;
@@ -173,6 +282,7 @@ namespace
         result.HitCrits = recorder->GetHitCrits();
         result.HitSpellIds = recorder->GetHitSpellIds();
         result.HitTimestamps = recorder->GetHitTimestamps();
+        result.HitIsPet = recorder->GetHitIsPet();
         result.AuraEvents = ToRunResultAuraEvents(recorder->GetAuraEvents());
         result.ManaSamples = std::move(manaSamples);
         result.CastEvents = ToRunResultCastEvents(castRecorder->GetCastEvents());
@@ -193,13 +303,54 @@ namespace
             rebase(e.TimestampMs);
     }
 
+    // Health and every power type back to the class's starting value, for the bot, its pet and (with health drain
+    // on) the dummy. Run by ResetForNextIteration() and again after the pre-pull buff phase, so the buff casts'
+    // mana/rage/energy costs never reach the fight.
+    void RefillResources(Player* player, Creature* dummy)
+    {
+        player->SetFullHealth();
+        player->SetPower(POWER_MANA, player->GetMaxPower(POWER_MANA));
+
+        // The other power types back to the class's starting value: full for energy and focus, empty for rage and
+        // runic power (a class lacking a type has max 0 there, so setting it is a no-op), runes ready, combo
+        // points cleared. Without this a rage/runic-power spec started every iteration after the first with
+        // whatever the last fight left behind.
+        player->SetPower(POWER_ENERGY, player->GetMaxPower(POWER_ENERGY));
+        player->SetPower(POWER_FOCUS, player->GetMaxPower(POWER_FOCUS));
+        player->SetPower(POWER_RAGE, 0);
+        player->SetPower(POWER_RUNIC_POWER, 0);
+        if (player->getClass() == CLASS_DEATH_KNIGHT)
+            for (uint8 rune = 0; rune < MAX_RUNES; ++rune)
+            {
+                player->SetRuneCooldown(rune, 0);
+                player->SetGracePeriod(rune, 0);
+            }
+        player->ClearComboPoints();
+
+        // The bot's pet: health and power full (rage/runic power empty)
+        if (Pet* pet = player->GetPet())
+        {
+            pet->SetFullHealth();
+            for (uint8 power : {POWER_MANA, POWER_FOCUS, POWER_ENERGY})
+                pet->SetPower(Powers(power), pet->GetMaxPower(Powers(power)));
+            pet->SetPower(POWER_RAGE, 0);
+            pet->SetPower(POWER_RUNIC_POWER, 0);
+            pet->ClearComboPoints();
+        }
+
+        // Dummy health drain (SimProfile.h's DummyHealthDrain): the dummy takes real damage now, so it starts every
+        // iteration at full health. Off, the dummy never loses health and there is nothing to reset.
+        if (SimDummyAI::IsHealthDrainEnabled())
+            dummy->SetFullHealth();
+    }
+
     // Between-iteration reset for RunPlayerbotBatch() - see that function's doc comment (SimDaemon.h)
     // for the full reasoning, especially the passive-aura carve-out and SimBot::ReestablishCombatState()'s
     // own doc comment for the real failure this also guards against (a batch's first iteration
-    // landing real hits, then every iteration after it landing zero, forever). Never touches the
-    // target dummy's health (SimTarget's own class comment: its AI zeroes all damage taken, so it
-    // never actually drops - nothing to reset there) or the global cooldown (RunPlayerbotIteration()
-    // starts each iteration ITERATION_GAP_MS later, by which time it has long expired).
+    // landing real hits, then every iteration after it landing zero, forever). The target dummy's health is only
+    // refilled with health drain on (otherwise its AI zeroes all damage taken, so it never drops); the global
+    // cooldown is left alone (RunPlayerbotIteration() starts each iteration ITERATION_GAP_MS later, by which time
+    // it has long expired).
     void ResetForNextIteration(Player* player, Creature* dummy, SimBot& bot, EventRecorder* recorder, CastRecorder* castRecorder)
     {
         // Defensive extra, not the confirmed fix (that's ReestablishCombatState() below - see its
@@ -212,6 +363,20 @@ namespace
         if (!player->IsAlive())
             player->ResurrectPlayer(1.0f);
 
+        // Nothing the last fight left running reaches the next one: a cast in progress, totems, ground effects
+        // (DynamicObjects; a Lightwell is a totem) and temporary guardians (Wild Imps, Treants...). The permanent
+        // pet stays and is reset below.
+        player->InterruptNonMeleeSpells(false);
+        player->UnsummonAllTotems();
+        player->RemoveAllDynObjects();
+        std::vector<TempSummon*> guardians;
+        for (Unit* unit : player->m_Controlled)
+            if (unit && unit->IsGuardian() && !unit->IsPet())
+                guardians.push_back(unit->ToTempSummon());
+        for (TempSummon* guardian : guardians)
+            if (guardian)
+                guardian->UnSummon();
+
         auto removeNonPassive = [](AuraApplication const* aurApp)
         {
             SpellInfo const* info = aurApp->GetBase()->GetSpellInfo();
@@ -222,8 +387,17 @@ namespace
 
         // Not resetting cooldowns here - RunPlayerbotIteration() itself now does that
         // unconditionally at the start of every call, including this one.
-        player->SetFullHealth();
-        player->SetPower(POWER_MANA, player->GetMaxPower(POWER_MANA));
+
+        // The bot's pet (warlock/hunter/DK/mage elemental...): same fresh start as the bot - cooldowns and spell
+        // school lockouts gone, non-passive auras off (health and power are refilled by RefillResources() below).
+        if (Pet* pet = player->GetPet())
+        {
+            pet->m_CreatureSpellCooldowns.clear();
+            std::fill(std::begin(pet->m_ProhibitSchoolTime), std::end(pet->m_ProhibitSchoolTime), 0u);
+            pet->RemoveAppliedAuras(removeNonPassive);
+        }
+
+        RefillResources(player, dummy);
 
         bot.ReestablishCombatState(dummy);
 
@@ -277,6 +451,9 @@ bool SimDaemon::RunOnce(RunConfig const& config, RunResult& result)
     SimTarget::Config targetConfig;
     targetConfig.Level = uint8(config.TargetLevel);
     targetConfig.Armor = config.TargetArmor;
+    targetConfig.HealthDrain = config.DummyHealthDrain;
+    if (config.DummyMaxHealth > 0)
+        targetConfig.MaxHealth = config.DummyMaxHealth;
     if (!target.Create(map, player->GetNearPosition(8.0f, 0.0f), targetConfig))
     {
         LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunOnce() - SimTarget::Create() failed - aborting.");
@@ -326,6 +503,7 @@ bool SimDaemon::RunOnce(RunConfig const& config, RunResult& result)
     result.HitCrits = recorder->GetHitCrits();
     result.HitSpellIds = recorder->GetHitSpellIds();
     result.HitTimestamps = recorder->GetHitTimestamps();
+    result.HitIsPet = recorder->GetHitIsPet();
     result.AuraEvents = ToRunResultAuraEvents(recorder->GetAuraEvents());
     result.ManaSamples = std::move(manaSamples);
     result.CastEvents = ToRunResultCastEvents(castRecorder->GetCastEvents());
@@ -361,6 +539,9 @@ bool SimDaemon::RunPlayerbotOnce(RunConfig const& config, RunResult& result)
     SimTarget::Config targetConfig;
     targetConfig.Level = uint8(config.TargetLevel);
     targetConfig.Armor = config.TargetArmor;
+    targetConfig.HealthDrain = config.DummyHealthDrain;
+    if (config.DummyMaxHealth > 0)
+        targetConfig.MaxHealth = config.DummyMaxHealth;
     if (!target.Create(map, player->GetNearPosition(8.0f, 0.0f), targetConfig))
     {
         LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbotOnce() - SimTarget::Create() failed - aborting.");
@@ -388,7 +569,7 @@ bool SimDaemon::RunPlayerbotOnce(RunConfig const& config, RunResult& result)
         return false;
     }
 
-    RunPlayerbotIteration(config, player, map, bot, recorder, castRecorder, result);
+    RunPlayerbotIteration(config, player, dummy, map, bot, recorder, castRecorder, result);
     return true;
 }
 
@@ -427,6 +608,9 @@ bool SimDaemon::RunPlayerbotBatch(RunConfig const& config, uint32 iterations, st
     SimTarget::Config targetConfig;
     targetConfig.Level = uint8(config.TargetLevel);
     targetConfig.Armor = config.TargetArmor;
+    targetConfig.HealthDrain = config.DummyHealthDrain;
+    if (config.DummyMaxHealth > 0)
+        targetConfig.MaxHealth = config.DummyMaxHealth;
     if (!target.Create(map, player->GetNearPosition(8.0f, 0.0f), targetConfig))
     {
         LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbotBatch() - SimTarget::Create() failed - aborting.");
@@ -451,7 +635,7 @@ bool SimDaemon::RunPlayerbotBatch(RunConfig const& config, uint32 iterations, st
             ResetForNextIteration(player, dummy, bot, recorder, castRecorder);
 
         RunResult result;
-        RunPlayerbotIteration(config, player, map, bot, recorder, castRecorder, result);
+        RunPlayerbotIteration(config, player, dummy, map, bot, recorder, castRecorder, result);
 
         results.push_back(std::move(result));
     }

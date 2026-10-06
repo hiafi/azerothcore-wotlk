@@ -38,13 +38,14 @@ namespace SimReport
     // Schema (top-level object):
     //   "config":  {actorLevel, targetLevel, spellPower, durationMs, randomSeed}
     //   "summary": {elapsedMs, totalDamage, dps, castCount, critCount, critRatePct}
-    //   "spells":  [{spellId, hitCount, critCount, totalDamage, pctOfTotal}, ...] - aggregated from
-    //              HitSpellIds/HitDamages/HitCrits, one entry per distinct spell id, sorted by
-    //              totalDamage descending. hitCount doubles as "cast count" for now - this sim has
-    //              no separate per-spell attempt-vs-landed tracking yet (see RunResult's own
-    //              CastAttempts comment), and no DoT-tick spells yet either (so hit count and tick
-    //              count are the same number for every spell so far).
-    //   "hits":    [{timestampMs, spellId, damage, crit}, ...] in landing order.
+    //   "spells":  [{spellId, isPet, hitCount, critCount, totalDamage, pctOfTotal}, ...] - aggregated from
+    //              HitSpellIds/HitDamages/HitCrits, one entry per distinct (spell id, isPet) pair - isPet marks
+    //              damage dealt by the actor's pet/guardian/totem (S0 stage; periodic ticks are recorded under
+    //              the aura's spell id too) - sorted by
+    //              totalDamage descending. hitCount counts every landed hit: direct hits, DoT ticks
+    //              and pet/guardian hits alike, so for a DoT or a pet spell it is not a cast count
+    //              (per-spell casts are CastRecorder's, see RunResult's own CastAttempts comment).
+    //   "hits":    [{timestampMs, spellId, damage, crit, isPet}, ...] in landing order.
     //   "auraEvents": [{timestampMs, unit ("actor"|"target"), spellId, stackAmount, positive,
     //                  applied}, ...] - see RunResult::AuraEvent's doc comment for field meanings.
     //   "manaSamples": [{timestampMs, manaPct}, ...] - actor's mana, sampled periodically rather

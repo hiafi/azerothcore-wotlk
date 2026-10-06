@@ -120,6 +120,12 @@ namespace SimDaemon
         // values, no flat conf-key equivalent.
         std::map<uint8, float> Stats;
         int32 AttackPower = 0;
+        // Dummy health drain and max health - see SimProfile.h's Profile::DummyHealthDrain/DummyMaxHealth. Copied from
+        // a loaded profile; 0 max health = SimTarget::Config's default.
+        bool DummyHealthDrain = false;
+        uint32 DummyMaxHealth = 0;
+        // Pre-pull buff phase length in sim ms - see SimProfile.h's Profile::PrePullBuffMs. 0 disables the phase.
+        uint32 PrePullBuffMs = 15000;
         // Which spell RunOnce()'s hardcoded RotationTick() teaches and casts - defaults to
         // FROSTBOLT_SPELL_ID (Rank 11, 25304) to keep every existing Phase 1 test's expectations
         // unchanged. Override this (SINGLE_RANK_FROSTBOLT_SPELL_ID above, typically) to test a
@@ -153,6 +159,9 @@ namespace SimDaemon
         // EventRecorder::GetHitTimestamps()'s doc comment. Playerbot runs rebase this and the aura/cast
         // event timestamps to ms since the iteration start (RunPlayerbotIteration() in SimDaemon.cpp).
         std::vector<uint32> HitTimestamps;
+        // Per-hit "dealt by the actor's pet/guardian/totem, not the actor", parallel to HitDamages - see
+        // EventRecorder::GetHitIsPet().
+        std::vector<bool> HitIsPet;
 
         // One entry per aura the actor or target gained/lost during the run - a deliberately
         // separate, decoupled copy of EventRecorder::AuraEvent's fields rather than reusing that
@@ -248,10 +257,10 @@ namespace SimDaemon
     // ms" caches that none of the reset clears. Root-caused 2026-10-05: with the sim clock restarting
     // at 0 each iteration, those caches froze for whole iterations (RetPaladinSim iterations 2-10 each
     // locked onto one seal). Fixed by a sim clock that only moves forward, with an ITERATION_GAP_MS gap
-    // so getMSTime()-based state ages out (RunPlayerbotIteration()). Still open: state timed on the real
-    // clock is not simulated at all - core proc internal cooldowns (steady_clock, Unit.cpp's
-    // AddProcCooldown()/Aura::IsProcOnCooldown(): a 45 s ICD lasts 45 real seconds, far longer in sim
-    // time) and anything timed with time(nullptr) or GameTime::GetGameTime() (e.g. "combat start time").
+    // so getMSTime()-based state ages out (RunPlayerbotIteration()). Core proc internal cooldowns follow the
+    // sim clock too since Stage S0 (Acore::Time::SteadyNow(), Timer.h; Unit.cpp's AddProcCooldown(),
+    // Aura::IsProcOnCooldown()). Still open: anything timed with time(nullptr) or GameTime::GetGameTime()
+    // (e.g. "combat start time") is on the real clock and not simulated at all.
     // If a batch run ever shows a systematic drift from separate-process runs of the same config (the
     // same check that caught the StepMs=100 accuracy issue), look there first.
     //

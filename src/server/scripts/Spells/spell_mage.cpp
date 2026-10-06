@@ -622,7 +622,7 @@ class spell_mage_biting_cold : public AuraScript
     {
         PreventDefaultAction();
 
-        std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+        std::chrono::steady_clock::time_point now = Acore::Time::SteadyNow(); // Custom: sim clock aware (mod-dpssim)
         if (_cooldownEnd > now)
             return;
 

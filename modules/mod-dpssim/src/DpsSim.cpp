@@ -136,6 +136,9 @@ void DpsSimWorldScript::OnDpsSimRun()
                 config.CombatRatings = profile.CombatRatings;
                 config.Stats = profile.Stats;
                 config.AttackPower = profile.AttackPower;
+                config.DummyHealthDrain = profile.DummyHealthDrain;
+                config.DummyMaxHealth = profile.DummyMaxHealth;
+                config.PrePullBuffMs = profile.PrePullBuffMs;
                 LOG_INFO("server.dpssim",
                     "mod-dpssim: loaded DpsSim.Profile '{}' (class {}, {} gear item(s), spellPower {}, attackPower {}, "
                     "{} synthetic rating(s), {} synthetic stat(s)).",

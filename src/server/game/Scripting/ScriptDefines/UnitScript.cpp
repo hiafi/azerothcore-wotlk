@@ -55,6 +55,12 @@ void ScriptMgr::OnMeleeDamageFinal(Unit* target, Unit* attacker, uint32 damage, 
         script->OnMeleeDamageFinal(target, attacker, damage, isCrit));
 }
 
+void ScriptMgr::OnPeriodicDamageFinal(Unit* target, Unit* attacker, uint32 damage, SpellInfo const* spellInfo, bool isCrit)
+{
+    CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_PERIODIC_DAMAGE_FINAL,
+        script->OnPeriodicDamageFinal(target, attacker, damage, spellInfo, isCrit));
+}
+
 void ScriptMgr::ModifyHealReceived(Unit* target, Unit* healer, uint32& heal, SpellInfo const* spellInfo)
 {
     CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_MODIFY_HEAL_RECEIVED, script->ModifyHealReceived(target, healer, heal, spellInfo));
