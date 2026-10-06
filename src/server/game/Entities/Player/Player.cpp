@@ -11317,6 +11317,19 @@ void Player::AddSpellAndCategoryCooldowns(SpellInfo const* spellInfo, uint32 ite
                     continue;
                 }
 
+                // Custom: a category cooldown never shortens a longer cooldown the spell already has from its own
+                // cast or another category. Stock overwrote it: Presence of Mind reset Arcane Power's 2 min
+                // cooldown to 1.5 s, and Arcane Power cut Presence of Mind's to 15 s. A hold this same category set
+                // (a cooldown-on-event spell) is still replaced, so it resolves to the real category cooldown; a
+                // spell with its own running cooldown keeps it through such a hold instead of taking the hold.
+                if (SpellCooldowns::const_iterator const existing = m_spellCooldowns.find(i_scset->second);
+                    existing != m_spellCooldowns.end() && existing->second.category != cat)
+                {
+                    uint32 const remaining = GetSpellCooldownDelay(i_scset->second);
+                    if (remaining && (infinityCooldown || remaining >= uint32(catrecTime)))
+                        continue;
+                }
+
                 _AddSpellCooldown(i_scset->second, cat, itemId, catrecTime, !spellInfo->IsCooldownStartedOnEvent() && catrec && rec && catrec != rec);
 
                 if (spellInfo->HasAttribute(SPELL_ATTR0_CU_FORCE_SEND_CATEGORY_COOLDOWNS))

@@ -1110,6 +1110,7 @@ class spell_pal_aura_press : public SpellScript
     PrepareSpellScript(spell_pal_aura_press);
 
     static constexpr size_t OTHER_AURAS = PALADIN_AURA_BUTTONS.size() - 1;
+    static constexpr int32 AURA_RESTORE_MIN_DELTA_MS = 100;
 
     std::array<uint32, OTHER_AURAS> _otherIds = { };
     std::array<uint32, OTHER_AURAS> _otherEnds = { };
@@ -1130,8 +1131,9 @@ class spell_pal_aura_press : public SpellScript
 
         _active = true;
 
-        // The category-1300 write overwrites each sibling's own 60 s with 15 s (Player.cpp _AddSpellCooldown), so
-        // remember when each one would have ended and restore any longer cooldown after the press (QC7)
+        // Remember when each sibling's own cooldown ends and restore any longer one after the press (QC7). Since the
+        // category fix in Player::AddSpellAndCategoryCooldowns the 15 s category write no longer shortens a longer
+        // own cooldown, so this is only a guard now; the re-announce below is still needed.
         uint32 const now = uint32(GameTime::GetGameTimeMS().count());
         size_t slot = 0;
         for (uint32 auraId : PALADIN_AURA_BUTTONS)
@@ -1164,7 +1166,8 @@ class spell_pal_aura_press : public SpellScript
             for (size_t i = 0; i < ids.size(); ++i)
             {
                 int32 const delta = int32(ends[i] - now) - int32(player->GetSpellCooldownDelay(ids[i]));
-                if (delta > 0)
+                // Below the minimum it is the GameTime/getMSTime skew, not a shortened cooldown
+                if (delta > AURA_RESTORE_MIN_DELTA_MS)
                     player->ModifySpellCooldown(ids[i], delta);
             }
 
