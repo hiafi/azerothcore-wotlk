@@ -145,7 +145,8 @@ public:
     // parallel to GetHitDamages()/GetHitCrits()/GetHitSpellIds() - safe to use directly as a
     // timeline value under the sim clock override (Timer.h), same as every other timestamp this
     // module logs. Added alongside aura tracking for the same reason: M3's timeline report needs
-    // "when", not just "what".
+    // "when", not just "what". These are raw clock values; a playerbot run's clock starts past 0, and
+    // RunPlayerbotIteration() (SimDaemon.cpp) rebases them to the iteration start.
     [[nodiscard]] std::vector<uint32> const& GetHitTimestamps() const { return _hitTimestamps; }
 
     // One entry per aura gained or lost by the actor or the target while this recorder is alive.

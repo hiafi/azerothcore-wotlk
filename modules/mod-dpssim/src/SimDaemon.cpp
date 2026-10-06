@@ -19,6 +19,7 @@
 #include "CastRecorder.h"
 #include "Config.h"
 #include "EventRecorder.h"
+#include "GameTime.h"
 #include "Log.h"
 #include "Map.h"
 #include "Player.h"
@@ -32,6 +33,7 @@
 #include "SpellInfo.h"
 #include "SpellMgr.h"
 #include "StringFormat.h"
+#include "Timer.h"
 #include <algorithm>
 #include <chrono>
 #include <string>
@@ -42,6 +44,14 @@ namespace
     // See SimDaemon.h's RunResult::ManaSamples doc comment for why this is a periodic sample
     // rather than a per-tick or per-event capture.
     constexpr uint32 MANA_SAMPLE_INTERVAL_MS = 500;
+
+    // Sim time skipped before each playerbot iteration (see RunPlayerbotIteration()): long enough for
+    // everything time-based the iteration reset doesn't clear to age out - the GCD, queued action baskets
+    // (5 s), value check intervals, AllowActivity()'s cache, the 5-second mana rule, diminishing returns,
+    // and UseTrinketAction's own cooldown maps for combat trinkets (5 min or less) - so every iteration,
+    // the first included, starts the same way. A few utility trinkets (20 min to 3 h) are not covered; a
+    // longer gap would cut the uint32 clock's headroom (~5,500 iterations of 180 s at this gap).
+    constexpr uint32 ITERATION_GAP_MS = 10 * MINUTE * IN_MILLISECONDS;
 
     // Appends a sample if at least MANA_SAMPLE_INTERVAL_MS has passed since the last one (or this
     // is the very first tick) - called once per sim-loop iteration from both RunOnce() and
@@ -114,15 +124,28 @@ namespace
     void RunPlayerbotIteration(SimDaemon::RunConfig const& config, Player* player, Map* map, SimBot& bot,
         EventRecorder* recorder, CastRecorder* castRecorder, SimDaemon::RunResult& result)
     {
-        // Any pre-loop cast (SimBot::Create()'s spell-teaching casts, gear equip spells) sets a cooldown end-timestamp
-        // in real wall-clock time (getMSTime() before the sim clock override exists yet). The
-        // first clock.Tick() below jumps the override backward to ~0, so that stored end-timestamp
-        // becomes unreachably large and Player::HasSpellCooldown() would read that ability as
-        // permanently on cooldown for the rest of the run. Clearing cooldowns here, right before
-        // the sim clock starts, discards that stale real-time bookkeeping so the run starts clean.
+        // Every iteration starts with nothing on cooldown: pre-loop casts (SimBot::Create()'s spell-teaching
+        // casts, gear equip spells) and the previous iteration's cooldowns would otherwise carry over.
         player->RemoveAllSpellCooldown();
 
-        SimClock clock(config.StepMs);
+        // The same for aura-held proc internal cooldowns (Aura::m_procCooldown): ResetForNextIteration()
+        // removes every non-passive aura, but the passive talent/racial auras stay, and their ICDs run on the
+        // real clock (steady_clock), not the sim clock. Script-held ICDs on the real clock (e.g.
+        // spell_mage_biting_cold's _cooldownEnd) are not reachable from here.
+        for (auto const& [spellId, aura] : player->GetOwnedAuras())
+            aura->ResetProcCooldown();
+
+        // The sim clock must never run backward. Playerbot values and triggers stamp getMSTime(), and
+        // CalculatedValue::Get() compares a time_t "now" against a uint32 lastCheckTime: with a stamp in the
+        // future the difference goes negative and the value is never recalculated. When every iteration
+        // restarted the clock at 0, each interval-cached value froze at its end-of-previous-iteration state
+        // for the whole run (2026-10-05, RetPaladinSim: iterations 2-10 locked onto one seal). So the clock
+        // starts ITERATION_GAP_MS past "now" - the wall clock before the first iteration, the previous
+        // iteration's last tick after that - and the recorded timestamps are rebased to the iteration start
+        // below. GameTime's cached value can disagree with getMSTime() during setup (DpsSim.cpp clears the
+        // override without refreshing GameTime, leaving it at 5000 ms), so "now" is the later of the two.
+        uint32 const nowMs = std::max(getMSTime(), uint32(GameTime::GetGameTimeMS().count()));
+        SimClock clock(config.StepMs, nowMs + ITERATION_GAP_MS);
         uint32 lastManaSampleMs = 0;
         bool sampledManaOnce = false;
         std::vector<SimDaemon::RunResult::ManaSample> manaSamples;
@@ -153,6 +176,21 @@ namespace
         result.AuraEvents = ToRunResultAuraEvents(recorder->GetAuraEvents());
         result.ManaSamples = std::move(manaSamples);
         result.CastEvents = ToRunResultCastEvents(castRecorder->GetCastEvents());
+
+        // Recorders stamp raw getMSTime(); reports count from the iteration start. An event recorded before
+        // the first tick (setup, e.g. SimBot::Create()'s spell-teaching casts and talent passive auras)
+        // clamps to 0.
+        uint32 const startMs = clock.GetStartMs();
+        auto const rebase = [startMs](uint32& timestampMs)
+        {
+            timestampMs = timestampMs >= startMs ? timestampMs - startMs : 0;
+        };
+        for (uint32& timestampMs : result.HitTimestamps)
+            rebase(timestampMs);
+        for (SimDaemon::RunResult::AuraEvent& e : result.AuraEvents)
+            rebase(e.TimestampMs);
+        for (SimDaemon::RunResult::CastEvent& e : result.CastEvents)
+            rebase(e.TimestampMs);
     }
 
     // Between-iteration reset for RunPlayerbotBatch() - see that function's doc comment (SimDaemon.h)
@@ -160,8 +198,8 @@ namespace
     // own doc comment for the real failure this also guards against (a batch's first iteration
     // landing real hits, then every iteration after it landing zero, forever). Never touches the
     // target dummy's health (SimTarget's own class comment: its AI zeroes all damage taken, so it
-    // never actually drops - nothing to reset there) or the global cooldown (max ~1.5s, always long
-    // since expired by the time a 100+ second iteration ends - nothing to reset there either).
+    // never actually drops - nothing to reset there) or the global cooldown (RunPlayerbotIteration()
+    // starts each iteration ITERATION_GAP_MS later, by which time it has long expired).
     void ResetForNextIteration(Player* player, Creature* dummy, SimBot& bot, EventRecorder* recorder, CastRecorder* castRecorder)
     {
         // Defensive extra, not the confirmed fix (that's ReestablishCombatState() below - see its

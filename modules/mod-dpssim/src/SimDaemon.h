@@ -150,7 +150,8 @@ namespace SimDaemon
         std::vector<uint32> HitSpellIds;
 
         // Per-hit sim-clock timestamp, parallel to HitDamages/HitCrits/HitSpellIds - see
-        // EventRecorder::GetHitTimestamps()'s doc comment.
+        // EventRecorder::GetHitTimestamps()'s doc comment. Playerbot runs rebase this and the aura/cast
+        // event timestamps to ms since the iteration start (RunPlayerbotIteration() in SimDaemon.cpp).
         std::vector<uint32> HitTimestamps;
 
         // One entry per aura the actor or target gained/lost during the run - a deliberately
@@ -243,12 +244,16 @@ namespace SimDaemon
     // batch being bad (this failure, when it happened, took out 90%+ of one) still applies to any
     // *new* failure mode, even though this specific one is now fixed.
     //
-    // Separately, still-open caveat regardless of the above: mod-playerbots' own Strategy/Trigger/
-    // Value classes may keep other internal state (e.g. a "don't reconsider this for N seconds"
-    // cache) unrelated to combat entry/auras/cooldowns/resources that wouldn't be cleared by any of
-    // this - if a batch run this way ever shows a systematic drift from separate-process runs of the
-    // same config (the same check that caught the StepMs=100 accuracy issue), this is the first
-    // place to look.
+    // Separately: mod-playerbots' own Strategy/Trigger/Value classes keep "don't reconsider this for N
+    // ms" caches that none of the reset clears. Root-caused 2026-10-05: with the sim clock restarting
+    // at 0 each iteration, those caches froze for whole iterations (RetPaladinSim iterations 2-10 each
+    // locked onto one seal). Fixed by a sim clock that only moves forward, with an ITERATION_GAP_MS gap
+    // so getMSTime()-based state ages out (RunPlayerbotIteration()). Still open: state timed on the real
+    // clock is not simulated at all - core proc internal cooldowns (steady_clock, Unit.cpp's
+    // AddProcCooldown()/Aura::IsProcOnCooldown(): a 45 s ICD lasts 45 real seconds, far longer in sim
+    // time) and anything timed with time(nullptr) or GameTime::GetGameTime() (e.g. "combat start time").
+    // If a batch run ever shows a systematic drift from separate-process runs of the same config (the
+    // same check that caught the StepMs=100 accuracy issue), look there first.
     //
     // `results` is cleared and filled with exactly `iterations` entries in order on success; left
     // however many entries had already been produced before a failure on partial failure (check
