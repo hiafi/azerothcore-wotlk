@@ -2038,6 +2038,15 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
         }
     }
 
+    // Custom: observational hook for mod-dpssim (see OnMeleeDamageFinal in UnitScript.h) - the swing's
+    // mitigated total, with absorb/resist added back so it matches OnSpellDamageTakenFinal's pre-absorb point.
+    uint32 meleeFinalDamage = 0;
+    for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
+        meleeFinalDamage +=
+            damageInfo->damages[i].damage + damageInfo->damages[i].absorb + damageInfo->damages[i].resist;
+    sScriptMgr->OnMeleeDamageFinal(damageInfo->target, damageInfo->attacker, meleeFinalDamage,
+                                   damageInfo->hitOutCome == MELEE_HIT_CRIT);
+
     // set proper HitInfo flags
     if ((tmpHitInfo[0] & HITINFO_FULL_ABSORB) != 0)
     {

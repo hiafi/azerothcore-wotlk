@@ -22,7 +22,7 @@
 
 uint32 SimClock::Tick(Map* map)
 {
-    Acore::Time::SetSimClockOverride(Milliseconds(_elapsedMs));
+    Acore::Time::SetSimClockOverride(Milliseconds(_startMs + _elapsedMs));
     GameTime::UpdateGameTimers();
     map->Update(_stepMs, _stepMs);
     _elapsedMs += _stepMs;

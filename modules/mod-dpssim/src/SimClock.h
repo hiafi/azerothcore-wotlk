@@ -32,9 +32,12 @@ class Map;
 class SimClock
 {
 public:
-    explicit SimClock(uint32 stepMs) : _stepMs(stepMs) { }
+    // `startMs` is the sim-clock value of the first tick. 0 suits RunOnce()'s hardcoded rotation (no
+    // playerbot state); a playerbot run passes a start past "now", so the clock never runs backward (see
+    // RunPlayerbotIteration() in SimDaemon.cpp).
+    explicit SimClock(uint32 stepMs, uint32 startMs = 0) : _stepMs(stepMs), _startMs(startMs) { }
 
-    // Sets the sim-clock override to the current elapsed time (representing "now" at the start of
+    // Sets the sim-clock override to startMs + the current elapsed time (representing "now" at the start of
     // this tick, matching the real server's own GameTime-then-diff convention), refreshes
     // GameTime's cached value from it, ticks `map` by one full fixed step (both Map::Update()
     // diff arguments equal to the step - see the plan doc's SimClock task note for why: passing
@@ -45,9 +48,11 @@ public:
 
     [[nodiscard]] uint32 GetElapsedMs() const { return _elapsedMs; }
     [[nodiscard]] uint32 GetStepMs() const { return _stepMs; }
+    [[nodiscard]] uint32 GetStartMs() const { return _startMs; }
 
 private:
     uint32 _stepMs;
+    uint32 _startMs;
     uint32 _elapsedMs = 0;
 };
 

@@ -29,6 +29,7 @@ enum UnitHook
     UNITHOOK_MODIFY_MELEE_DAMAGE,
     UNITHOOK_MODIFY_SPELL_DAMAGE_TAKEN,
     UNITHOOK_ON_SPELL_DAMAGE_TAKEN_FINAL,
+    UNITHOOK_ON_MELEE_DAMAGE_FINAL,
     UNITHOOK_MODIFY_HEAL_RECEIVED,
     UNITHOOK_ON_BEFORE_ROLL_MELEE_OUTCOME_AGAINST,
     UNITHOOK_ON_AURA_APPLY,
@@ -83,6 +84,12 @@ public:
     // of Unit::DealDamage, so unlike OnDamage it isn't affected by a target's own DamageTaken() AI
     // potentially zeroing `damage` first (see SimTarget's class comment for a concrete example).
     virtual void OnSpellDamageTakenFinal(Unit* /*target*/, Unit* /*attacker*/, int32 /*damage*/, SpellInfo const* /*spellInfo*/, bool /*isCrit*/) { }
+
+    // Custom: the melee (auto-attack) twin of OnSpellDamageTakenFinal - fires from
+    // Unit::CalculateMeleeDamage with a swing's total after armor, the crit/glancing/crushing/block outcome and
+    // resilience, before absorb/resist. Purely observational, for mod-dpssim's EventRecorder: ModifyMeleeDamage
+    // fires before armor and the outcome roll, and OnDamage can't tell a swing from a spell.
+    virtual void OnMeleeDamageFinal(Unit* /*target*/, Unit* /*attacker*/, uint32 /*damage*/, bool /*isCrit*/) { }
 
     // Called when Heal is Recieved
     virtual void ModifyHealReceived(Unit* /*target*/, Unit* /*healer*/, uint32& /*heal*/, SpellInfo const* /*spellInfo*/) { }

@@ -20,22 +20,6 @@
 #include "Player.h"
 #include "PlayerbotFactory.h"
 #include "Playerbots.h"
-#include "SimDaemon.h"
-
-namespace
-{
-    // Bootstraps combat state - see SimBot::Create()'s doc comment for why a manual cast is needed
-    // at all. Which spell this is doesn't matter for that purpose (cast at most once per SimBot,
-    // before the real Engine ever runs, just to get `target->IsInCombat()` true) - but it does
-    // matter for EventRecorder's per-hit output: this lands as hit #0 of every run, and
-    // EventRecorder tracks it like any other hit (see SimDaemon.cpp's rotationSpellId=0 comment).
-    // Using SimDaemon::SINGLE_RANK_FROSTBOLT_SPELL_ID (116) rather than the old, no-longer-taught
-    // FROSTBOLT_SPELL_ID (25304, Rank 11) keeps that first data point on the same scaling as every
-    // other hit the real rotation lands afterward, instead of mixing in a stale-formula outlier
-    // (confirmed live: 25304 hit for ~647 damage at level 80 while every real 116 hit landed at
-    // ~597-599 - not the same formula).
-    constexpr uint32 PULL_SPELL_ID = SimDaemon::SINGLE_RANK_FROSTBOLT_SPELL_ID;
-}
 
 SimBot::~SimBot()
 {
@@ -140,15 +124,24 @@ bool SimBot::Create(Player* bot, Unit* target, std::string const& playerbotTalen
     _ai->GetAiObjectContext()->GetValue<Unit*>("current target")->Set(target);
 
     // Bootstrap combat - see this class's doc comment on Create() for why this is needed rather
-    // than just calling bot->Attack(target, true) and waiting.
-    SpellCastResult result = bot->CastSpell(target, PULL_SPELL_ID, false);
-    if (result != SPELL_CAST_OK)
+    // than just calling bot->Attack(target, true) and waiting. Pure combat-state, the same
+    // CombatManager primitive ReestablishCombatState() uses between iterations (see its comment).
+    // This replaced a hardcoded Frostbolt pull (2026-10-05), which made every class cast Frostbolt as hit #0.
+    bot->SetInCombatWith(target);
+    if (!bot->IsInCombatWith(target))
     {
-        LOG_ERROR("server.dpssim", "mod-dpssim: SimBot::Create() - pull cast failed: SpellCastResult {}.", uint32(result));
+        LOG_ERROR("server.dpssim", "mod-dpssim: SimBot::Create() - SetInCombatWith() did not put the bot in combat.");
         return false;
     }
 
-    // The pull cast alone is not enough: PlayerbotAI::DoNextAction() never switches
+    // The same "check activity" a real bot login does (PlayerbotHolder::OnBotLogin()). PlayerbotAI::
+    // AllowActivity() caches its answer for ~4.5-5 s and the cache starts out false, so without this
+    // the first iteration ran in minimal mode (only relevance >= 100 triggers, then a passiveDelay park),
+    // leaving the bot idle for its first ~5 s (2026-10-05, RetPaladinSim; later iterations, with the cache
+    // already true, opened at ~0.2 s). Called after the combat flag so the answer is "in combat, active".
+    _ai->AllowActivity(ALL_ACTIVITY, true);
+
+    // Entering combat alone is not enough: PlayerbotAI::DoNextAction() never switches
     // currentEngine to BOT_STATE_COMBAT on its own just because bot->IsInCombat() is true - that
     // switch only happens from inside specific actions (AttackAction/PullActions, both call
     // ChangeEngine(BOT_STATE_COMBAT) themselves), which are normally reached via a master's
@@ -199,7 +192,7 @@ void SimBot::ReestablishCombatState(Unit* target)
     // target dummy IS npc_training_dummy::JustEnteredCombat() - refreshing its internal timer to a
     // full fresh 5 seconds as a direct side effect, with no spell cast, GCD, or other AI-visible
     // action involved. This is deliberately NOT the same thing an earlier, reverted attempt tried
-    // (re-casting Create()'s pull spell here to force a similar refresh) - that approach also
+    // (re-casting the Frostbolt pull Create() used to make, to force a similar refresh) - that approach also
     // refreshed the dummy's timer, but injecting an externally-driven CastSpell() into an
     // already-running PlayerbotAI turned the original *rare* failure into a *near-100%-reproducible*
     // one instead, almost certainly by confusing the AI's own action-selection state with a cast it

@@ -101,6 +101,8 @@ def fetch_spell_names(spell_ids: list[int]) -> dict[int, str]:
 # its DB-lookup/placeholder-substitution logic - this is the one place that logic lives.
 def render_report_html(data: dict, label: str) -> str:
     spell_names = fetch_spell_names(collect_spell_ids(data))
+    # Pseudo id 0 is a melee auto-attack swing (EventRecorder::MELEE_SPELL_ID), not a real spell row
+    spell_names.setdefault(0, "Melee")
     html = TEMPLATE_PATH.read_text()
     return (
         html.replace("__PAGE_TITLE__", label)
