@@ -23,7 +23,8 @@
 
 EventRecorder::EventRecorder(ObjectGuid actorGuid, ObjectGuid targetGuid, uint32 rotationSpellId)
     : UnitScript("mod_dpssim_event_recorder", true,
-                 {UNITHOOK_ON_SPELL_DAMAGE_TAKEN_FINAL, UNITHOOK_ON_AURA_APPLY, UNITHOOK_ON_AURA_REMOVE}),
+                 {UNITHOOK_ON_SPELL_DAMAGE_TAKEN_FINAL, UNITHOOK_ON_MELEE_DAMAGE_FINAL, UNITHOOK_ON_AURA_APPLY,
+                  UNITHOOK_ON_AURA_REMOVE}),
       _actorGuid(actorGuid), _targetGuid(targetGuid), _rotationSpellId(rotationSpellId)
 {
 }
@@ -43,9 +44,26 @@ void EventRecorder::OnSpellDamageTakenFinal(Unit* target, Unit* attacker, int32 
     if (!spellInfo || (_rotationSpellId != 0 && spellInfo->Id != _rotationSpellId) || damage <= 0)
         return;
 
+    RecordHit(spellInfo->Id, uint32(damage), isCrit);
+}
+
+void EventRecorder::OnMeleeDamageFinal(Unit* target, Unit* attacker, uint32 damage, bool isCrit)
+{
+    if (!attacker || !target || attacker->GetGUID() != _actorGuid || target->GetGUID() != _targetGuid)
+        return;
+
+    // A single-spell recorder (Phase 1 tests) ignores swings; misses, dodges and parries arrive as 0
+    if (_rotationSpellId != 0 || damage == 0)
+        return;
+
+    RecordHit(MELEE_SPELL_ID, damage, isCrit);
+}
+
+void EventRecorder::RecordHit(uint32 spellId, uint32 damage, bool isCrit)
+{
     _totalDamage += uint64(damage);
-    _hitDamages.push_back(uint32(damage));
-    _hitSpellIds.push_back(spellInfo->Id);
+    _hitDamages.push_back(damage);
+    _hitSpellIds.push_back(spellId);
     _hitTimestamps.push_back(getMSTime());
 
     ++_castCount;

@@ -56,15 +56,17 @@ public:
     // Builds a PlayerbotAI on `bot` - first teaching it every trainer-taught spell appropriate to
     // its class/level via PlayerbotFactory::InitAvailableSpells() (the same, unmodified utility a
     // real random bot uses; needed because FrostMageStrategy's actions reference several spells,
-    // not the one hardcoded id Phase 1's rotation used) - then "pulls" `target` with one
-    // manually-cast spell to bootstrap combat state. That pull is necessary, not just convenient:
+    // not the one hardcoded id Phase 1's rotation used) - then "pulls" `target` by putting both
+    // sides in combat directly (Unit::SetInCombatWith(), no spell cast - the class-agnostic
+    // replacement, 2026-10-05, for a hardcoded Frostbolt pull) to bootstrap combat state. That pull
+    // is necessary, not just convenient:
     // PlayerbotAI::DoNextAction() only switches to the combat engine (and therefore to
     // FrostMageStrategy's triggers) once `bot->IsInCombat()` is true, and a Player's Attack() call
     // alone does not flag combat immediately for a player-controlled unit - real combat entry
     // happens "on contact" (a landed swing or spell hit), and the non-combat engine has no
-    // automatic engage/pull action for an unconfigured mage by default. Once that first hit lands,
-    // control passes entirely to the real Engine from the next UpdateAI() tick onward. Returns
-    // false (logging why) on failure.
+    // automatic engage/pull action for a masterless bot. Once combat is set, control passes
+    // entirely to the real Engine from the next UpdateAI() tick onward. Returns false (logging
+    // why) on failure.
     //
     // `playerbotTalents` is the same positional talent string DpsSim.PlayerbotTalents takes (see
     // its conf doc comment for the format) - passed in explicitly (from RunConfig::

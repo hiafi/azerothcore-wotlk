@@ -47,9 +47,8 @@ namespace SimDaemon
     // The higher-rank rows (7322/10179/10180/10181/FROSTBOLT_SPELL_ID above) still exist in
     // spell_dbc but are no longer taught to real characters, so this - not the constant above - is
     // what both a real player and PlayerbotFactory-driven bot actually cast. Used as
-    // RunConfig::SpellId's real-world override (RunOnce()) and as SimBot's own pull spell
-    // (RunPlayerbotOnce(), via SimBot.cpp) - keeping the bootstrap pull on the same spell as the
-    // rest of the rotation avoids mixing an old-scaling data point into a run's per-hit output.
+    // RunConfig::SpellId's real-world override (RunOnce()). It was also SimBot's pull spell until
+    // 2026-10-05; SimBot now pulls with Unit::SetInCombatWith() and casts nothing.
     constexpr uint32 SINGLE_RANK_FROSTBOLT_SPELL_ID = 116;
 
     // One sim job's parameters. Defaults match the M1 smoke-test job Run() has always used
@@ -100,10 +99,8 @@ namespace SimDaemon
         // it casts one fixed SpellId rather than running a real class Strategy. Comes from
         // DpsSim.Profile when set (see SimProfile.h) - a bare DpsSim.PlayerbotTalents-only setup
         // has no way to say "this is an Arcane build vs. a Frost build" since both are still
-        // CLASS_MAGE either way, but a genuinely different class needs this. Note: SimBot's
-        // pull-spell bootstrap (SimBot.cpp's PULL_SPELL_ID) is currently hardcoded to a mage-only
-        // spell (Frostbolt) regardless of this field, so a non-mage class will fail at the pull
-        // cast until that's revisited - fine for today's mage-only profiles, not yet general.
+        // CLASS_MAGE either way, but a genuinely different class needs this. SimBot's pull is
+        // class-agnostic (Unit::SetInCombatWith(), no spell - see SimBot::Create()).
         uint8 ActorClass = 8 /* CLASS_MAGE */;
         // Positional talent string SimBot::Create() spends on the actor - see
         // DpsSim.PlayerbotTalents' own conf doc comment for the format. Comes from DpsSim.Profile
@@ -128,8 +125,7 @@ namespace SimDaemon
         // unchanged. Override this (SINGLE_RANK_FROSTBOLT_SPELL_ID above, typically) to test a
         // specific spell id directly, bypassing whatever spellbook/rank-availability rules a real
         // character or PlayerbotFactory would apply. Not used by RunPlayerbotOnce() - the real
-        // Engine/Strategy decides its own spells; SimBot's own pull spell is a separate, hardcoded
-        // choice (SimBot.cpp), not this field.
+        // Engine/Strategy decides its own spells, and SimBot's pull casts no spell at all.
         uint32 SpellId = FROSTBOLT_SPELL_ID;
         // Paces the loop to real wall-clock time (sleeps StepMs of real time per tick) instead of
         // running flat-out. Only meant for the accelerated-clock test (SimTests.cpp), which needs
@@ -212,7 +208,7 @@ namespace SimDaemon
     // mod-playerbots Engine/Strategy (via SimBot) each tick instead of the hardcoded Frostbolt-only
     // RotationTick(). Reuses RunConfig/RunResult unchanged - neither struct had anything
     // Frostbolt-specific in it. See SimBot.h for what strategy ends up driving the actor (an
-    // untalented mage defaults to Frost) and why a manual "pull" cast is needed to bootstrap combat.
+    // untalented mage defaults to Frost) and why combat has to be bootstrapped before the Engine acts.
     bool RunPlayerbotOnce(RunConfig const& config, RunResult& result);
 
     // Runs `iterations` independent samples of the same `config` in one process, one actor/target/

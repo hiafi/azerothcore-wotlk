@@ -114,7 +114,7 @@ namespace
     void RunPlayerbotIteration(SimDaemon::RunConfig const& config, Player* player, Map* map, SimBot& bot,
         EventRecorder* recorder, CastRecorder* castRecorder, SimDaemon::RunResult& result)
     {
-        // SimBot::Create()'s pull cast (and any other pre-loop cast) sets a cooldown end-timestamp
+        // Any pre-loop cast (SimBot::Create()'s spell-teaching casts, gear equip spells) sets a cooldown end-timestamp
         // in real wall-clock time (getMSTime() before the sim clock override exists yet). The
         // first clock.Tick() below jumps the override backward to ~0, so that stored end-timestamp
         // becomes unreachably large and Player::HasSpellCooldown() would read that ability as
@@ -341,8 +341,8 @@ bool SimDaemon::RunPlayerbotOnce(RunConfig const& config, RunResult& result)
     // way to see at all.
     CastRecorder* castRecorder = new CastRecorder(player->GetGUID());
 
-    // SimBot::Create() teaches the bot's class spells and "pulls" `dummy` with one manual cast to
-    // bootstrap combat state - see its own doc comment for why that's needed.
+    // SimBot::Create() teaches the bot's class spells and "pulls" `dummy` (puts both in combat, no
+    // spell cast) to bootstrap combat state - see its own doc comment for why that's needed.
     SimBot bot;
     if (!bot.Create(player, dummy, config.PlayerbotTalents))
     {

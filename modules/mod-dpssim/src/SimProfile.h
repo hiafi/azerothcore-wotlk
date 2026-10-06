@@ -42,11 +42,9 @@ namespace SimProfile
     struct Profile
     {
         // A CLASS_* value from SharedDefines.h (e.g. 8 for CLASS_MAGE). Required - Load() fails
-        // if this key is missing. Note: SimBot's pull-spell bootstrap (SimBot.cpp's
-        // PULL_SPELL_ID) is currently hardcoded to a mage-only spell (Frostbolt), so a non-mage
-        // Class here will fail at the pull-cast step until that's revisited - fine for today's
-        // FrostMageSim/ArcaneMageSim (both still CLASS_MAGE, just different talent trees), not
-        // yet for a genuinely different class's profile.
+        // if this key is missing. Any class works: SimBot's pull bootstraps combat with
+        // Unit::SetInCombatWith() rather than a class spell (the old hardcoded Frostbolt pull was
+        // replaced 2026-10-05 for RetPaladinSim).
         uint8 Class = 0;
 
         // Same "<arcane>-<fire>-<frost>"-style positional talent string DpsSim.PlayerbotTalents

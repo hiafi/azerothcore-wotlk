@@ -28,10 +28,11 @@
 // than trust a single aggregate figure blindly (expected casts roughly equal fight duration /
 // cast time, observed crit rate roughly equal the configured crit chance).
 //
-// Hooks a single point in the damage pipeline: OnSpellDamageTakenFinal
+// Hooks two points in the damage pipeline: OnSpellDamageTakenFinal for spells (below) and
+// OnMeleeDamageFinal for auto-attack swings (see further down). OnSpellDamageTakenFinal
 // (UNITHOOK_ON_SPELL_DAMAGE_TAKEN_FINAL, fires from Unit::CalculateSpellDamageTaken once `damage`
 // has its fully mitigated - armor, crit bonus, block/resilience all applied - value). Two
-// properties of that hook make it sufficient on its own, which is why this class doesn't also need
+// properties of that hook make it sufficient for spells, which is why this class doesn't also need
 // OnDamage:
 //   - It fires upstream of Unit::DealDamage, so its `damage` is the real, un-zeroed hit - unlike
 //     OnDamage, which fires *after* a target's own DamageTaken() AI hook has already run and, for
@@ -56,8 +57,13 @@
 // UnitScript.h) specifically to fix this without touching ModifySpellDamageTaken's call site or
 // semantics for its existing consumer.
 //
-// Frostbolt-only for M1 (direct spell hits) - a rotation with melee damage would need
-// ModifyMeleeDamage too, for the same "read before DamageTaken zeroes it" reason.
+// Melee auto-attacks come through a second hook, OnMeleeDamageFinal (UNITHOOK_ON_MELEE_DAMAGE_FINAL, added
+// 2026-10-05 for the Retribution sim - see its doc comment in UnitScript.h): the swing's total after armor,
+// the crit/glancing/crushing/block outcome and resilience, the melee equivalent of the point the spell hook
+// fires at. ModifyMeleeDamage fires before armor and the outcome roll, so it can't stand in. Swings are
+// recorded as spell id MELEE_SPELL_ID (0) and count as hits like any spell; special melee attacks
+// (Crusader Strike etc.) are spells and still come through OnSpellDamageTakenFinal, so nothing is
+// counted twice.
 //
 // Filters by GUID rather than storing the actor/target Unit* directly, per this repo's convention
 // of never holding a raw Unit*/Player*/Creature* past the call that produced it.
@@ -90,6 +96,10 @@ public:
     explicit EventRecorder(ObjectGuid actorGuid, ObjectGuid targetGuid, uint32 rotationSpellId = 0);
 
     void OnSpellDamageTakenFinal(Unit* target, Unit* attacker, int32 damage, SpellInfo const* spellInfo, bool isCrit) override;
+
+    // Pseudo spell id for melee auto-attack swings in the hit log and per-spell aggregate
+    static constexpr uint32 MELEE_SPELL_ID = 0;
+    void OnMeleeDamageFinal(Unit* target, Unit* attacker, uint32 damage, bool isCrit) override;
 
     // Aura tracking - added 2026-09-11 to directly observe whether talent-gated procs (Fingers of
     // Frost, Brain Freeze, Arcane Blast stacks, ...) actually fire, rather than inferring it from
@@ -158,6 +168,8 @@ public:
     [[nodiscard]] std::vector<AuraEvent> const& GetAuraEvents() const { return _auraEvents; }
 
 private:
+    void RecordHit(uint32 spellId, uint32 damage, bool isCrit);
+
     ObjectGuid _actorGuid;
     ObjectGuid _targetGuid;
     uint32 _rotationSpellId;

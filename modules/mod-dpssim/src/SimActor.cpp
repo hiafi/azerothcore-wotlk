@@ -56,11 +56,11 @@ SimActor::~SimActor()
 
 bool SimActor::Create(Config const& config)
 {
-    // accountId 0, no name, no socket, isBot = true: WorldSession's constructor special-cases
-    // exactly this (no LoginDatabase touch, m_Address = "bot") - see the Phase 0 spike write-up
-    // in the plan doc.
+    // accountId 0, no name, no socket: a null socket makes the session headless, which
+    // WorldSession's constructor special-cases (no LoginDatabase touch, m_Address = "headless") -
+    // see the Phase 0 spike write-up in the plan doc.
     _session = new WorldSession(0, "", 0x0, nullptr, SEC_PLAYER, EXPANSION_WRATH_OF_THE_LICH_KING,
-        time_t(0), LOCALE_enUS, 0, false, false, 0, /*isBot=*/true);
+        time_t(0), LOCALE_enUS, 0, false, false, 0);
 
     CharacterCreateInfo createInfo(config.Name, config.Race, config.Class, config.Gender,
         /*skin*/0, /*face*/0, /*hairStyle*/0, /*hairColor*/0, /*facialHair*/0);
@@ -92,12 +92,58 @@ bool SimActor::Create(Config const& config)
     // UpdateAllStats() - see SimProfile.h's Profile::GearItemIds/SpellPower/CombatRatings for why
     // this ordering (gear before synthetic top-ups, so a profile can layer a top-up on top of a
     // real gear baseline rather than one silently overwriting the other's contribution).
+    //
+    // A profile that lists gear replaces the whole starter outfit Player::Create() equipped (a paladin's
+    // starter two-hander 2361 once blocked the profile's axe). Clearing it first lets each profile item take
+    // the first free slot in order - main hand before off-hand, ring 1 before ring 2 - with no starter item
+    // in the way. The starter items are new and not yet in world, so destroying them sends nothing.
+    if (!config.GearItemIds.empty())
+        for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; ++slot)
+            if (_player->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
+                _player->DestroyItem(INVENTORY_SLOT_BAG_0, slot, true);
+
     for (uint32 const itemId : config.GearItemIds)
     {
-        if (!_player->StoreNewItemInBestSlots(itemId, 1))
+        ItemTemplate const* proto = sObjectMgr->GetItemTemplate(itemId);
+        if (!proto)
+        {
+            LOG_ERROR("server.dpssim", "mod-dpssim: SimActor::Create() - gear item {} does not exist.", itemId);
+            continue;
+        }
+
+        // A profile names the gear it wants worn, so grant the item's skill first (2026-10-05, RetPaladinSim):
+        // a fresh paladin has no Two-Handed Axes, and gets Plate only from the level-40 trainer, which runs
+        // later (SimBot::Create()). Weapons go to the level cap, since a lower skill also raises the target's
+        // block/dodge/parry chance; armor proficiencies are fixed-value skills, granted the core's own way.
+        if (uint32 const skill = proto->GetSkill())
+        {
+            if (proto->Class == ITEM_CLASS_WEAPON)
+            {
+                uint16 const maxValue = _player->GetMaxSkillValueForLevel();
+                uint16 const step = _player->GetSkillValue(skill) ? _player->GetSkillStep(skill) : 1;
+                _player->SetSkill(skill, step, maxValue, maxValue);
+            }
+            else if (!_player->HasSkill(skill))
+                _player->LearnDefaultSkill(skill, 0);
+        }
+
+        // Equip explicitly rather than StoreNewItemInBestSlots(): that call drops an unequippable item into
+        // the bags and still returns true, which once left a Ret profile swinging unarmed with no error.
+        // Dual Wield and Titan's Grip are learned later (SimBot::Create()), so a second weapon only fits
+        // here for a class that starts with Dual Wield (rogue, death knight); otherwise it is logged below.
+        uint16 dest = 0;
+        InventoryResult const result = _player->CanEquipNewItem(NULL_SLOT, dest, itemId, false);
+        if (result != EQUIP_ERR_OK)
+        {
             LOG_ERROR("server.dpssim",
-                "mod-dpssim: SimActor::Create() - could not equip item {} (bad item id, or its slot is "
-                "already filled by an earlier item in GearItemIds).", itemId);
+                "mod-dpssim: SimActor::Create() - could not equip item {} (InventoryResult {}; or its slot is "
+                "already filled by an earlier item in GearItemIds).", itemId, uint32(result));
+            continue;
+        }
+
+        _player->EquipNewItem(dest, itemId, true);
+        // Same follow-up StoreNewItemInBestSlots() did: a two-hander displaces an off-hand listed earlier
+        _player->AutoUnequipOffhandIfNeed();
     }
 
     for (auto const& [combatRating, value] : config.CombatRatings)
@@ -154,11 +200,16 @@ bool SimActor::Create(Config const& config)
         return false;
     }
 
+    // The resulting melee attack power and main-hand item, so a profile's AttackPower top-up can be
+    // calibrated against an in-game character sheet. Logged before SimBot::Create() spends talents, so a
+    // talent that raises Strength or attack power isn't in this figure yet.
+    Item const* mainHand = _player->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_MAINHAND);
     LOG_INFO("server.dpssim",
         "mod-dpssim: SimActor created - '{}' (race {}, class {}, level {}), map {}, spellPower {}, attackPower {}, "
-        "{} gear item(s), {} synthetic rating(s), {} synthetic stat(s).",
+        "{} gear item(s), {} synthetic rating(s), {} synthetic stat(s); total melee attack power {}, main hand {}.",
         config.Name, config.Race, config.Class, config.Level, _player->GetMapId(),
         config.SpellPower, config.AttackPower, config.GearItemIds.size(),
-        config.CombatRatings.size(), config.Stats.size());
+        config.CombatRatings.size(), config.Stats.size(),
+        _player->GetTotalAttackPowerValue(BASE_ATTACK), mainHand ? mainHand->GetEntry() : 0);
     return true;
 }

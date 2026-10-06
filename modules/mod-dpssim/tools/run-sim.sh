@@ -171,6 +171,12 @@ docker run --rm --network "$NETWORK" \
     > "$RUN_LOG" 2>&1
 STATUS=$?
 set -e
+# DPSSIM_KEEP_LOG=1 keeps the container's log next to the reports (the scratch dir is deleted on exit) - for
+# debugging a run, e.g. the Engine's opening actions.
+if [[ "${DPSSIM_KEEP_LOG:-0}" == 1 ]]; then
+    cp "$RUN_LOG" "$REPORTS_DIR/${PROFILE_NAME}.${BATCH_TS}.run.log"
+    echo "kept run log: $REPORTS_DIR/${PROFILE_NAME}.${BATCH_TS}.run.log" >&2
+fi
 
 if [[ $STATUS -ne 0 ]]; then
     echo "error: sim run failed - last 40 lines of container output:" >&2
