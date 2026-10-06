@@ -176,6 +176,10 @@ DpsSim.Iterations = 1
 #                      VersatilityRating, CooldownHasteRating, ProcChanceRating - and the named
 #                      core-stat keys - Strength, Agility, Stamina, Intellect, Spirit).
 #
+#                      A profile also sets PrePullBuffMs, the unrecorded out-of-combat buff phase
+#                      before every iteration (SimProfile.h). With no profile it runs at its default
+#                      of 15000 sim ms; there is no DpsSim.* key for it.
+#
 #                      When set, this OWNS DpsSim.PlayerbotTalents below and SimDaemon::RunConfig::
 #                      ActorClass/GearItemIds/SpellPower/CombatRatings/Stats/AttackPower outright -
 #                      all are ignored (gear/stats have no flat conf-key equivalent at all - they

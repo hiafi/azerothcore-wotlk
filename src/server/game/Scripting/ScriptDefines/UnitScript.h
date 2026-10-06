@@ -30,6 +30,7 @@ enum UnitHook
     UNITHOOK_MODIFY_SPELL_DAMAGE_TAKEN,
     UNITHOOK_ON_SPELL_DAMAGE_TAKEN_FINAL,
     UNITHOOK_ON_MELEE_DAMAGE_FINAL,
+    UNITHOOK_ON_PERIODIC_DAMAGE_FINAL,
     UNITHOOK_MODIFY_HEAL_RECEIVED,
     UNITHOOK_ON_BEFORE_ROLL_MELEE_OUTCOME_AGAINST,
     UNITHOOK_ON_AURA_APPLY,
@@ -90,6 +91,13 @@ public:
     // resilience, before absorb/resist. Purely observational, for mod-dpssim's EventRecorder: ModifyMeleeDamage
     // fires before armor and the outcome roll, and OnDamage can't tell a swing from a spell.
     virtual void OnMeleeDamageFinal(Unit* /*target*/, Unit* /*attacker*/, uint32 /*damage*/, bool /*isCrit*/) { }
+
+    // Custom: the periodic (DoT tick) twin of OnSpellDamageTakenFinal - fires from
+    // AuraEffect::HandlePeriodicDamageAurasTick and HandlePeriodicHealthLeechAuraTick with a tick's amount after
+    // crit, armor and resilience, with absorb/resist added back (pre-absorb, like the other two *Final hooks).
+    // Purely observational, for mod-dpssim's EventRecorder: ModifyPeriodicDamageAurasTick fires before crit and
+    // mitigation. `attacker` can be nullptr if the caster despawned while the aura still exists on the target.
+    virtual void OnPeriodicDamageFinal(Unit* /*target*/, Unit* /*attacker*/, uint32 /*damage*/, SpellInfo const* /*spellInfo*/, bool /*isCrit*/) { }
 
     // Called when Heal is Recieved
     virtual void ModifyHealReceived(Unit* /*target*/, Unit* /*healer*/, uint32& /*heal*/, SpellInfo const* /*spellInfo*/) { }

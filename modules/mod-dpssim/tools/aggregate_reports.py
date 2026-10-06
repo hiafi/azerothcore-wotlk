@@ -107,25 +107,27 @@ def aggregate_summary(reports: list[dict], kept_idx: set[int]) -> tuple[dict, di
 # which would overstate a proc-gated spell's typical contribution.
 def aggregate_spells(reports: list[dict], kept_idx: set[int]) -> list[dict]:
     per_report_by_id = []
-    all_ids: set[int] = set()
+    all_ids: set[tuple[int, bool]] = set()
     for i, r in enumerate(reports):
         if i not in kept_idx:
             continue
-        by_id = {s["spellId"]: s for s in r.get("spells", [])}
+        # keyed by (spellId, isPet) so a pet's row never merges into the bot's (isPet is absent in older reports)
+        by_id = {(s["spellId"], s.get("isPet", False)): s for s in r.get("spells", [])}
         per_report_by_id.append(by_id)
         all_ids.update(by_id.keys())
 
     merged = []
-    for spell_id in all_ids:
+    for spell_id, is_pet in all_ids:
         hit_counts, crit_counts, total_damages, pcts = [], [], [], []
         for by_id in per_report_by_id:
-            s = by_id.get(spell_id)
+            s = by_id.get((spell_id, is_pet))
             hit_counts.append(s["hitCount"] if s else 0)
             crit_counts.append(s["critCount"] if s else 0)
             total_damages.append(s["totalDamage"] if s else 0)
             pcts.append(s["pctOfTotal"] if s else 0)
         merged.append({
             "spellId": spell_id,
+            "isPet": is_pet,
             "hitCount": mean(hit_counts),
             "critCount": mean(crit_counts),
             "totalDamage": mean(total_damages),

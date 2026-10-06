@@ -131,11 +131,23 @@ printf '\nDpsSim.Enabled = 1\n' >> "$SCRATCH/etc/worldserver.conf"
 # of the live deployment's own playerbots.conf (confirmed 2026-09-12: the live server currently
 # runs with AiPlayerbot.Enabled = 0, which makes SimBot::Create() fail outright). Only affects
 # this throwaway scratch copy, never the real env/dist/etc/modules/playerbots.conf.
-if grep -q '^AiPlayerbot\.Enabled' "$SCRATCH/etc/modules/playerbots.conf"; then
-    sed -i 's/^AiPlayerbot\.Enabled.*/AiPlayerbot.Enabled = 1/' "$SCRATCH/etc/modules/playerbots.conf"
-else
-    printf '\nAiPlayerbot.Enabled = 1\n' >> "$SCRATCH/etc/modules/playerbots.conf"
-fi
+set_playerbots_key() {
+    local key="$1" value="$2" conf="$SCRATCH/etc/modules/playerbots.conf"
+    if grep -q "^AiPlayerbot\.${key}\b" "$conf"; then
+        sed -i "s/^AiPlayerbot\.${key}\b.*/AiPlayerbot.${key} = ${value}/" "$conf"
+    else
+        printf '\nAiPlayerbot.%s = %s\n' "$key" "$value" >> "$conf"
+    fi
+}
+set_playerbots_key Enabled 1
+
+# The pre-pull buff phase (SimProfile.h's PrePullBuffMs) runs the bot out of combat, alone, on an overworld map,
+# where the live BotActiveAlone (10%) parks it in minimal mode most of the time: only relevance >= 100 triggers,
+# so no aura, self-buff or pet summon. Every bot always active for the sim, regardless of the live settings.
+set_playerbots_key BotActiveAlone 100
+set_playerbots_key botActiveAloneSmartScale 0
+# Defensive pets only: an aggressive pet would pick the dummy during the buff phase and pull the bot into combat.
+set_playerbots_key DefaultPetStance 1
 
 REPORT_CONTAINER_PATH="/azerothcore/env/dist/logs/${PROFILE_NAME}.report.json"
 cat > "$SCRATCH/etc/modules/dpssim.conf" <<EOF

@@ -20,6 +20,7 @@
 #include "Player.h"
 #include "PlayerbotFactory.h"
 #include "Playerbots.h"
+#include <set>
 
 SimBot::~SimBot()
 {
@@ -164,6 +165,89 @@ void SimBot::UpdateAI(uint32 diff)
         _ai->UpdateAI(diff);
 }
 
+namespace
+{
+    // The only non-combat strategies kept during the pre-pull buff phase. The rule: what the masterless bot's
+    // non-combat engine would use to buff itself, and nothing that moves, travels, mounts, loots, quests, grinds,
+    // follows or assists. That is the class's "nc" rotation (the class's own override of "nc", plus the generic
+    // "buff"), and the buff, pet and cure strategies AiFactory::AddDefaultNonCombatStrategies() adds per class:
+    //   Priest    cure, rshadow                       Paladin  bthreat, barmor, bsanc, bmight, bwisdom, bcast,
+    //   Hunter    bdps, pet                                      baoe, cure
+    //   Shaman    cure                                Mage     bdps, bmana, cure
+    //   Warlock   felhunter, felguard, imp, spellstone, firestone, ss self
+    // Everything else the engine carries is dropped for the phase and restored after it: "dps assist", "tank
+    // assist" and "pull" (they attack), "follow", "stay", "mount", "quest", "loot", "gather", "duel", "pvp",
+    // "grind", "rpg"/"new rpg", "travel", "move random" (they wander or fight), "food" (it would sit down to
+    // eat/drink; resources are refilled afterwards anyway), and the chat/packet/emote/ready-check/rebuff-request
+    // strategies, which do nothing for a masterless bot. Names that are not in the engine are simply not found, so
+    // the list can cover every class at once.
+    std::set<std::string> const kBuffPhaseStrategies = {
+        "nc", "buff", "cure", "rshadow", "pet", "bdps", "bmana", "bthreat", "barmor", "bsanc", "bmight", "bwisdom",
+        "bcast", "baoe", "felhunter", "felguard", "imp", "spellstone", "firestone", "ss self",
+    };
+}
+
+bool SimBot::BeginBuffPhase()
+{
+    if (!_ai)
+        return false;
+
+    Player* bot = _ai->GetBot();
+
+    // Out of combat with everything, including the dummy (combat refs are mutual): the non-combat engine only runs
+    // its buff triggers out of combat, and PlayerbotAI::DoNextAction() clears "current target" if it starts the
+    // phase in combat. The pet and guardians stop too: a pet still swinging at the dummy would pull the bot straight
+    // back into combat (Unit::AtTargetAttacked engages the owner). The pull afterwards is ReestablishCombatState().
+    bot->CombatStopWithPets(true);
+    _ai->GetAiObjectContext()->GetValue<Unit*>("current target")->Set(nullptr);
+
+    _removedStrategies.clear();
+    std::string removals;
+    for (std::string const& name : _ai->GetStrategies(BOT_STATE_NON_COMBAT))
+    {
+        if (kBuffPhaseStrategies.count(name))
+            continue;
+
+        _removedStrategies.push_back(name);
+        removals += (removals.empty() ? "-" : ",-") + name;
+    }
+    if (!removals.empty())
+        _ai->ChangeStrategy(removals, BOT_STATE_NON_COMBAT);
+
+    _ai->ChangeEngine(BOT_STATE_NON_COMBAT);
+    // A delay left by the last tick of the previous fight is counted down by UpdateAI() diffs, not the clock, so
+    // the iteration gap never ages it out
+    _ai->SetNextCheckDelay(0);
+
+    if (!_loggedBuffStrategies)
+    {
+        _loggedBuffStrategies = true;
+        std::string kept;
+        for (std::string const& name : _ai->GetStrategies(BOT_STATE_NON_COMBAT))
+            kept += (kept.empty() ? "" : ", ") + name;
+        std::string removed;
+        for (std::string const& name : _removedStrategies)
+            removed += (removed.empty() ? "" : ", ") + name;
+        LOG_INFO("server.dpssim", "mod-dpssim: pre-pull buff phase strategies - kept [{}], removed for the phase [{}].",
+            kept, removed);
+    }
+
+    // Out of combat PlayerbotAI may decide a lone bot is not "active" and run only relevance >= 100 triggers
+    return _ai->AllowActivity(ALL_ACTIVITY, true);
+}
+
+void SimBot::EndBuffPhase()
+{
+    if (!_ai || _removedStrategies.empty())
+        return;
+
+    std::string additions;
+    for (std::string const& name : _removedStrategies)
+        additions += (additions.empty() ? "+" : ",+") + name;
+    _removedStrategies.clear();
+    _ai->ChangeStrategy(additions, BOT_STATE_NON_COMBAT);
+}
+
 void SimBot::ReestablishCombatState(Unit* target)
 {
     if (!_ai || !target)
@@ -206,4 +290,11 @@ void SimBot::ReestablishCombatState(Unit* target)
     // Unit::IsInCombat() was).
     _ai->GetAiObjectContext()->GetValue<Unit*>("current target")->Set(target);
     _ai->ChangeEngine(BOT_STATE_COMBAT);
+
+    // Act from the first tick of the fight. AllowActivity() caches its answer for ~5 s: a "false" taken out of
+    // combat during the pre-pull buff phase would otherwise still stand at the pull, and the minimal-mode tick that
+    // reads it parks the bot for passiveDelay (10 s). Re-checked now, in combat, it is true. The check delay left
+    // by the previous tick is counted down by UpdateAI() diffs, not the clock, so it is cleared too.
+    _ai->AllowActivity(ALL_ACTIVITY, true);
+    _ai->SetNextCheckDelay(0);
 }

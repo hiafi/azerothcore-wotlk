@@ -23,15 +23,32 @@
 
 EventRecorder::EventRecorder(ObjectGuid actorGuid, ObjectGuid targetGuid, uint32 rotationSpellId)
     : UnitScript("mod_dpssim_event_recorder", true,
-                 {UNITHOOK_ON_SPELL_DAMAGE_TAKEN_FINAL, UNITHOOK_ON_MELEE_DAMAGE_FINAL, UNITHOOK_ON_AURA_APPLY,
-                  UNITHOOK_ON_AURA_REMOVE}),
+                 {UNITHOOK_ON_SPELL_DAMAGE_TAKEN_FINAL, UNITHOOK_ON_MELEE_DAMAGE_FINAL, UNITHOOK_ON_PERIODIC_DAMAGE_FINAL,
+                  UNITHOOK_ON_AURA_APPLY, UNITHOOK_ON_AURA_REMOVE}),
       _actorGuid(actorGuid), _targetGuid(targetGuid), _rotationSpellId(rotationSpellId)
 {
 }
 
+bool EventRecorder::AttributeToActor(Unit* attacker, bool& isPet) const
+{
+    isPet = false;
+    if (attacker->GetGUID() == _actorGuid)
+        return true;
+
+    if (attacker->GetOwnerGUID() == _actorGuid || attacker->GetCharmerOrOwnerGUID() == _actorGuid ||
+        attacker->GetCreatorGUID() == _actorGuid)
+    {
+        isPet = true;
+        return true;
+    }
+
+    return false;
+}
+
 void EventRecorder::OnSpellDamageTakenFinal(Unit* target, Unit* attacker, int32 damage, SpellInfo const* spellInfo, bool isCrit)
 {
-    if (!attacker || !target || attacker->GetGUID() != _actorGuid || target->GetGUID() != _targetGuid)
+    bool isPet = false;
+    if (!attacker || !target || target->GetGUID() != _targetGuid || !AttributeToActor(attacker, isPet))
         return;
 
     // Fires from Unit::CalculateSpellDamageTaken, upstream of Unit::DealDamage - `damage` here is
@@ -44,27 +61,42 @@ void EventRecorder::OnSpellDamageTakenFinal(Unit* target, Unit* attacker, int32 
     if (!spellInfo || (_rotationSpellId != 0 && spellInfo->Id != _rotationSpellId) || damage <= 0)
         return;
 
-    RecordHit(spellInfo->Id, uint32(damage), isCrit);
+    RecordHit(spellInfo->Id, uint32(damage), isCrit, isPet);
+}
+
+void EventRecorder::OnPeriodicDamageFinal(Unit* target, Unit* attacker, uint32 damage, SpellInfo const* spellInfo, bool isCrit)
+{
+    bool isPet = false;
+    if (!attacker || !target || target->GetGUID() != _targetGuid || !AttributeToActor(attacker, isPet))
+        return;
+
+    // Same single-spell / any-spell filter as OnSpellDamageTakenFinal
+    if (!spellInfo || (_rotationSpellId != 0 && spellInfo->Id != _rotationSpellId) || damage == 0)
+        return;
+
+    RecordHit(spellInfo->Id, damage, isCrit, isPet);
 }
 
 void EventRecorder::OnMeleeDamageFinal(Unit* target, Unit* attacker, uint32 damage, bool isCrit)
 {
-    if (!attacker || !target || attacker->GetGUID() != _actorGuid || target->GetGUID() != _targetGuid)
+    bool isPet = false;
+    if (!attacker || !target || target->GetGUID() != _targetGuid || !AttributeToActor(attacker, isPet))
         return;
 
     // A single-spell recorder (Phase 1 tests) ignores swings; misses, dodges and parries arrive as 0
     if (_rotationSpellId != 0 || damage == 0)
         return;
 
-    RecordHit(MELEE_SPELL_ID, damage, isCrit);
+    RecordHit(isPet ? PET_MELEE_SPELL_ID : MELEE_SPELL_ID, damage, isCrit, isPet);
 }
 
-void EventRecorder::RecordHit(uint32 spellId, uint32 damage, bool isCrit)
+void EventRecorder::RecordHit(uint32 spellId, uint32 damage, bool isCrit, bool isPet)
 {
     _totalDamage += uint64(damage);
     _hitDamages.push_back(damage);
     _hitSpellIds.push_back(spellId);
     _hitTimestamps.push_back(getMSTime());
+    _hitIsPet.push_back(isPet);
 
     ++_castCount;
     _hitCrits.push_back(isCrit);
@@ -81,6 +113,7 @@ void EventRecorder::Reset()
     _hitCrits.clear();
     _hitSpellIds.clear();
     _hitTimestamps.clear();
+    _hitIsPet.clear();
     _auraEvents.clear();
 }
 
@@ -97,6 +130,28 @@ void EventRecorder::OnAuraApply(Unit* unit, Aura* aura)
     _auraEvents.push_back(AuraEvent{
         getMSTime(), guid, guid == _actorGuid, aura->GetId(), aura->GetStackAmount(),
         spellInfo && spellInfo->IsPositive(), true});
+}
+
+void EventRecorder::RecordAurasPresent(Unit* unit)
+{
+    if (!unit)
+        return;
+
+    ObjectGuid const guid = unit->GetGUID();
+    if (guid != _actorGuid && guid != _targetGuid)
+        return;
+
+    uint32 const now = getMSTime();
+    for (auto const& [spellId, aurApp] : unit->GetAppliedAuras())
+    {
+        Aura const* aura = aurApp->GetBase();
+        SpellInfo const* spellInfo = aura->GetSpellInfo();
+        if (!spellInfo || spellInfo->IsPassive())
+            continue;
+
+        _auraEvents.push_back(AuraEvent{
+            now, guid, guid == _actorGuid, spellId, aura->GetStackAmount(), spellInfo->IsPositive(), true});
+    }
 }
 
 void EventRecorder::OnAuraRemove(Unit* unit, AuraApplication* aurApp, AuraRemoveMode /*mode*/)

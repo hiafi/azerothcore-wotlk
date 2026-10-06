@@ -19,6 +19,7 @@
 #include "Log.h"
 #include "Map.h"
 #include "SharedDefines.h"
+#include "SimDummyAI.h"
 #include "TemporarySummon.h"
 
 SimTarget::~SimTarget()
@@ -68,6 +69,7 @@ bool SimTarget::Create(Map* map, Position const& pos, Config const& config)
     _summon->SetLevel(config.Level);
     _summon->SetMaxHealth(config.MaxHealth);
     _summon->SetFullHealth();
+    SimDummyAI::SetHealthDrain(config.HealthDrain);
     _summon->SetResistance(SPELL_SCHOOL_NORMAL, int32(config.Armor));
 
     LOG_INFO("server.dpssim", "mod-dpssim: SimTarget created - entry {}, level {}, armor {}, maxHealth {}.",

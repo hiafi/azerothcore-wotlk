@@ -112,6 +112,17 @@ namespace Acore::Time
     {
         return SimClockOverrideMs.load(std::memory_order_relaxed) >= 0;
     }
+
+    // Custom: steady_clock::now() on the sim clock when the override is active (the same instant GetTimeMS() reports,
+    // as a time_point), the real steady_clock::now() otherwise. For proc internal cooldowns, which are stored as
+    // steady_clock time_points and would otherwise run on real time in an accelerated sim.
+    inline TimePoint SteadyNow()
+    {
+        if (int64 const simOverride = SimClockOverrideMs.load(std::memory_order_relaxed); simOverride >= 0)
+            return GetApplicationStartTime() + std::chrono::duration_cast<TimePoint::duration>(Milliseconds(simOverride));
+
+        return std::chrono::steady_clock::now();
+    }
 }
 
 inline Milliseconds GetTimeMS()

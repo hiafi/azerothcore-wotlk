@@ -75,10 +75,13 @@ public:
     {
         uint8 Level = 80;
         uint32 Armor = 0;
-        // Health has no gameplay effect on a target dummy's damage output/mitigation - the
-        // training dummy AI (see class comment) zeroes all damage taken regardless, so this is
-        // purely a defensive default in case that AI's behavior ever changes.
+        // With health drain off the dummy AI zeroes all damage taken, so health never moves and this is only a
+        // defensive default. With HealthDrain on it is the pool the fight drains (the profile's DummyMaxHealth;
+        // 0 there keeps this default), which "target below N%" rows read.
         uint32 MaxHealth = 100000000;
+        // Dummy health drain (SimDummyAI::SetHealthDrain) - the dummy takes real damage but never dies. Set by the
+        // profile keys DummyHealthDrain / DummyMaxHealth. Off = the dummy zeroes all damage, as before.
+        bool HealthDrain = false;
     };
 
     // The three training dummy template entries - see the class comment. Only levels 60/70/80 have

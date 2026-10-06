@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <fstream>
 #include <sstream>
+#include <stdexcept>
 
 namespace
 {
@@ -189,6 +190,50 @@ bool SimProfile::Load(std::string const& path, Profile& out)
             {
                 LOG_ERROR("server.dpssim",
                     "mod-dpssim: SimProfile::Load() - '{}' line {}: 'AttackPower' value '{}' is not a number.",
+                    path, lineNo, value);
+                return false;
+            }
+        }
+        else if (key == "DummyHealthDrain")
+        {
+            bool ok = false;
+            bool const flagValue = ParseBool(value, ok);
+            if (!ok)
+            {
+                LOG_ERROR("server.dpssim",
+                    "mod-dpssim: SimProfile::Load() - '{}' line {}: 'DummyHealthDrain' value '{}' is not true/false.",
+                    path, lineNo, value);
+                return false;
+            }
+
+            parsed.DummyHealthDrain = flagValue;
+        }
+        else if (key == "DummyMaxHealth")
+        {
+            try
+            {
+                parsed.DummyMaxHealth = uint32(std::stoul(value));
+            }
+            catch (std::exception const&)
+            {
+                LOG_ERROR("server.dpssim",
+                    "mod-dpssim: SimProfile::Load() - '{}' line {}: 'DummyMaxHealth' value '{}' is not a number.",
+                    path, lineNo, value);
+                return false;
+            }
+        }
+        else if (key == "PrePullBuffMs")
+        {
+            try
+            {
+                if (value.find('-') != std::string::npos)
+                    throw std::invalid_argument("negative");
+                parsed.PrePullBuffMs = uint32(std::stoul(value));
+            }
+            catch (std::exception const&)
+            {
+                LOG_ERROR("server.dpssim",
+                    "mod-dpssim: SimProfile::Load() - '{}' line {}: 'PrePullBuffMs' value '{}' is not a number.",
                     path, lineNo, value);
                 return false;
             }

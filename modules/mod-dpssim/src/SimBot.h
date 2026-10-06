@@ -20,6 +20,7 @@
 
 #include "Define.h"
 #include <string>
+#include <vector>
 
 class Player;
 class PlayerbotAI;
@@ -93,8 +94,22 @@ public:
     // combat between iterations - not anything PlayerbotAI caches on its own side).
     void ReestablishCombatState(Unit* target);
 
+    // Pre-pull buff phase (S0b, 2026-10-05): a real bot presses its aura, self-buffs and summons its pet on its
+    // non-combat engine before a pull, but the sim bot starts every iteration already in combat and never runs
+    // that engine. BeginBuffPhase() ends combat with the dummy, drops the "current target", strips the non-combat
+    // engine down to the buff and pet strategies (see kBuffPhaseStrategies in SimBot.cpp for the rule) and
+    // switches to it; the caller then ticks UpdateAI() for a while. EndBuffPhase() puts the stripped strategies
+    // back. The pull itself is ReestablishCombatState(), exactly as before. Returns false when PlayerbotAI would
+    // park the bot in "minimal" mode out of combat (AllowActivity() false), in which case the phase does nothing.
+    bool BeginBuffPhase();
+    void EndBuffPhase();
+
 private:
     PlayerbotAI* _ai = nullptr;
+
+    // Non-combat strategies BeginBuffPhase() removed, restored by EndBuffPhase()
+    std::vector<std::string> _removedStrategies;
+    bool _loggedBuffStrategies = false;
 };
 
 #endif

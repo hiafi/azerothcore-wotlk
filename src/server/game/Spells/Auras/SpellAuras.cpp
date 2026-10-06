@@ -2118,7 +2118,7 @@ void Aura::AddProcCooldown(SpellProcEntry const* procEntry, TimePoint now)
 
 void Aura::ResetProcCooldown()
 {
-    m_procCooldown = std::chrono::steady_clock::now();
+    m_procCooldown = Acore::Time::SteadyNow(); // Custom: sim clock aware (mod-dpssim)
 }
 
 void Aura::PrepareProcToTrigger(AuraApplication* aurApp, ProcEventInfo& eventInfo, TimePoint now)

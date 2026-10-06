@@ -103,6 +103,8 @@ def render_report_html(data: dict, label: str) -> str:
     spell_names = fetch_spell_names(collect_spell_ids(data))
     # Pseudo id 0 is a melee auto-attack swing (EventRecorder::MELEE_SPELL_ID), not a real spell row
     spell_names.setdefault(0, "Melee")
+    # EventRecorder::PET_MELEE_SPELL_ID: a pet/guardian/totem's white swings
+    spell_names.setdefault(4294967294, "Pet Melee")
     html = TEMPLATE_PATH.read_text()
     return (
         html.replace("__PAGE_TITLE__", label)
