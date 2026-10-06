@@ -149,6 +149,17 @@ set_playerbots_key botActiveAloneSmartScale 0
 # Defensive pets only: an aggressive pet would pick the dummy during the buff phase and pull the bot into combat.
 set_playerbots_key DefaultPetStance 1
 
+# mod-ollama-chat off for the sim: its bot chatter would make paid LLM API calls. (Its tables must still exist in
+# acore_characters: the module loads its personality templates at startup even when disabled, and aborts without
+# them.) Only the scratch copy changes.
+if [[ -f "$SCRATCH/etc/modules/mod_ollama_chat.conf" ]]; then
+    if grep -q '^OllamaChat\.Enable\b' "$SCRATCH/etc/modules/mod_ollama_chat.conf"; then
+        sed -i 's/^OllamaChat\.Enable\b.*/OllamaChat.Enable = 0/' "$SCRATCH/etc/modules/mod_ollama_chat.conf"
+    else
+        printf '\nOllamaChat.Enable = 0\n' >> "$SCRATCH/etc/modules/mod_ollama_chat.conf"
+    fi
+fi
+
 REPORT_CONTAINER_PATH="/azerothcore/env/dist/logs/${PROFILE_NAME}.report.json"
 cat > "$SCRATCH/etc/modules/dpssim.conf" <<EOF
 DpsSim.Enabled = 1
