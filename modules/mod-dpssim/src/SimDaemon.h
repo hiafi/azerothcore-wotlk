@@ -126,6 +126,8 @@ namespace SimDaemon
         uint32 DummyMaxHealth = 0;
         // Pre-pull buff phase length in sim ms - see SimProfile.h's Profile::PrePullBuffMs. 0 disables the phase.
         uint32 PrePullBuffMs = 15000;
+        // Give the actor its premade glyphs - see SimProfile.h's Profile::PlayerbotGlyphs.
+        bool PlayerbotGlyphs = true;
         // Which spell RunOnce()'s hardcoded RotationTick() teaches and casts - defaults to
         // FROSTBOLT_SPELL_ID (Rank 11, 25304) to keep every existing Phase 1 test's expectations
         // unchanged. Override this (SINGLE_RANK_FROSTBOLT_SPELL_ID above, typically) to test a

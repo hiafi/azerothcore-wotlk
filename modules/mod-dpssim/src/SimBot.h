@@ -73,8 +73,9 @@ public:
     // its conf doc comment for the format) - passed in explicitly (from RunConfig::
     // PlayerbotTalents, itself either the flat conf key or a loaded SimProfile's value) rather
     // than read from sConfigMgr directly in here, so this class has no opinion on where the
-    // string came from. Empty = no talents spent.
-    bool Create(Player* bot, Unit* target, std::string const& playerbotTalents);
+    // string came from. Empty = no talents spent. `playerbotGlyphs` applies the class's premade glyphs after the
+    // talents (RunConfig::PlayerbotGlyphs).
+    bool Create(Player* bot, Unit* target, std::string const& playerbotTalents, bool playerbotGlyphs);
 
     // Drives the real Engine/Strategy selector for one tick - call this from the SimClock loop
     // instead of a hardcoded RotationTick(). `diff` is not a wall-clock read: PlayerbotAIBase's

@@ -108,7 +108,8 @@ void DpsSimWorldScript::OnDpsSimRun()
         config.StepMs = sConfigMgr->GetOption<uint32>("DpsSim.StepMs", 10);
 
         // DpsSim.Profile - see SimProfile.h and dpssim.conf.dist's own doc comment. When set, it
-        // owns ActorClass/PlayerbotTalents/GearItemIds/SpellPower/CombatRatings/Stats/AttackPower outright (a bad
+        // owns ActorClass/PlayerbotTalents/PlayerbotGlyphs/GearItemIds/SpellPower/CombatRatings/Stats/AttackPower,
+        // the dummy and pre-pull settings outright (a bad
         // profile aborts the job rather than silently falling back to the flat keys below, so a
         // typo'd profile path never quietly reruns whatever the flat keys happen to say instead).
         // When unset, behavior is unchanged from before profiles existed: DpsSim.PlayerbotTalents
@@ -139,6 +140,7 @@ void DpsSimWorldScript::OnDpsSimRun()
                 config.DummyHealthDrain = profile.DummyHealthDrain;
                 config.DummyMaxHealth = profile.DummyMaxHealth;
                 config.PrePullBuffMs = profile.PrePullBuffMs;
+                config.PlayerbotGlyphs = profile.PlayerbotGlyphs;
                 LOG_INFO("server.dpssim",
                     "mod-dpssim: loaded DpsSim.Profile '{}' (class {}, {} gear item(s), spellPower {}, attackPower {}, "
                     "{} synthetic rating(s), {} synthetic stat(s)).",
