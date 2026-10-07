@@ -2365,8 +2365,8 @@ arcane_overload_200079 = spell(
         Effect(type=EffectType.DUMMY, implicit_target_a=53, implicit_target_b=16, radius_yards=10.0),
     ],
     spell_icon_id=2210,
-    notes='Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 10): shell only - icon/cost/cooldown (SPELL_EFFECT_DUMMY effect1, Phase 3 hook). Variable mana-spend AoE damage, the %-of-max-mana regen tick (same live-read need as Brilliance Aura) and the +10% spell damage buff are all one coherent Phase 3 CastCustomSpell implementation - see deferred list. SpellIconID 145 (Spell_Frost_ManaBurn) - no dedicated Arcane Overload icon exists in the client (Cata-era spell, this fork is WotLK 3.3.5a).',
-    raw_overrides={'BaseLevel': 80, 'SpellLevel': 80, 'CastingTimeIndex': 1, 'DefenseType': 1, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 6, 'SpellClassSet': 3, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Expend up to 30% of your maximum mana to annihilate your enemy target and nearby enemies for damage equal to the mana spent plus a spell power coefficient. Deals reduced damage beyond 5 targets. For 15 sec afterward, restore 3% of your maximum mana every 1 sec and your spell damage is increased by 10%.'},
+    notes='Arcane Mage rework (docs/arcane-mage-rework-design.md, Row 10): shell only - icon/cost/cooldown (SPELL_EFFECT_DUMMY effect1, Phase 3 hook). Variable mana-spend AoE damage, the %-of-max-mana regen tick (same live-read need as Brilliance Aura) and the +10% spell damage buff are all one coherent Phase 3 CastCustomSpell implementation - see deferred list. SpellIconID 145 (Spell_Frost_ManaBurn) - no dedicated Arcane Overload icon exists in the client (Cata-era spell, this fork is WotLK 3.3.5a). SpellClassMask_3 0x2 (dword 3, added 2026-10-06): identity bit so Arcane Flows\' effect1 SPELLMOD_COOLDOWN reaches this cast; shared with the damage sub-spell 200092 (Spell Impact\'s damage scope) and stock Fingers of Frost 44544/74396. Spell Impact\'s SPELLMOD_DAMAGE, the only other dword-3 0x2 consumer, is inert on this DUMMY-only cast.',
+    raw_overrides={'BaseLevel': 80, 'SpellLevel': 80, 'CastingTimeIndex': 1, 'DefenseType': 1, 'EquippedItemClass': -1, 'InterruptFlags': 0, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 6, 'SpellClassSet': 3, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'SpellClassMask_3': 2, 'Description_Lang_enUS': 'Expend up to 30% of your maximum mana to annihilate your enemy target and nearby enemies for damage equal to the mana spent plus a spell power coefficient. Deals reduced damage beyond 5 targets. For 15 sec afterward, restore 3% of your maximum mana every 1 sec and your spell damage is increased by 10%.'},
 )
 
 
@@ -2375,10 +2375,16 @@ arcane_overload_200079 = spell(
 #
 # Custom SpellClassMask_3 (family-flags dword 2) bits, so talents can scope SpellMods and procs to
 # exactly these spells. Stock Mage data uses dword-2 bits 0-4 only; everything from bit 5 up is
-# ours (checked across all of source/classes/mage/ before picking):
+# ours (checked across all of source/classes/mage/ before picking). Exceptions found 2026-10-06
+# against the stock client Spell.dbc: stock Deep Freeze 71757 also carries 0x20, stock Gift of the
+# Naaru 59548 carries 0x80000000. Arcane reuses stock bits: 0x1 Brilliance Aura 200067 (also stock
+# Winter's Chill 12579), 0x2 Arcane Overload 200079/200092 (also stock Fingers of Frost 44544/74396).
 #   0x20  Meteor (200095 cast + 200096 impact/burn)
 #   0x40  Ignite tick (200098) - so a script can tell "Ignite's own payout" apart from a real
 #         player-cast Fire spell by mask instead of by id
+#   0x80  Flashpoint (200111)
+# Restore Mana (200005, the Mana Agate's on-use) takes no custom bit: it carries the stock Mana Gem
+# identity bit instead, SpellClassMask_2 0x100, like the stock Replenish Mana gems.
 # ---------------------------------------------------------------------------------------------
 
 meteor_200095 = spell(

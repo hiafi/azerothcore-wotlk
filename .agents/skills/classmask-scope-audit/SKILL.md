@@ -50,9 +50,11 @@ All four say the same thing. If any local note, CSV comment, or your own prior t
 conversation says something different ("the letter is the dword," "just move the value to match
 the effect's own suffix number") — that source is wrong, not the convention above; this exact
 wrong belief is what caused the Missile Barrage/Arcane Shielding incident this skill exists to
-prevent. When in doubt, write a two-line throwaway Python check against a **known-good, real
-"pulled from existing data" row** (e.g. Summon Water Elemental 31687, or Devastate 20243/Heroic
-Strike whatever's on hand in the class you're auditing) and confirm your read of the convention
+prevent. When in doubt, write a two-line throwaway Python check against a **known-good row read
+from the stock client `Spell.dbc`** (`state.load_stock_rows(dbcfmt.SPELL)`; e.g. Arcane Flows 44378,
+Summon Water Elemental 31687, or Devastate 20243 - whatever's on hand in the class you're auditing;
+a source row's "pulled from existing data" note is no proof it is still stock - Improved Blizzard
+and Arcane Flows carried it after being hand-edited) and confirm your read of the convention
 reproduces that row's known-correct classmask/target-match before trusting any conclusion you're
 about to write down.
 
@@ -65,8 +67,10 @@ every `generate.py` build and is the fastest, most reliable first pass:
 cd apps/dbc-tools && .venv/bin/python3 generate.py 2>&1 | grep WARNING
 ```
 
-This flags any hand-authored row (skips rows marked `"pulled from existing data"` — those are
-verbatim real client bytes, correct by construction) where a `SPELLMOD`-requiring effect
+This flags any emitted row (an effect is exempt only when its aura, misc value and the row's nine
+`EffectSpellClassMask*` values equal the stock client `Spell.dbc` row — verbatim real client bytes,
+correct by construction; a row with no stock counterpart is never exempt, and the old "pulled from
+existing data" note no longer exempts anything) where a `SPELLMOD`-requiring effect
 (`EffectAura` 107/108, `EffectMiscValue` in `lint.py`'s `_SCOPE_REQUIRED_OPS`) has an **all-zero**
 classmask on *its own* effect index while some *other* effect on the same row has a nonzero one —
 the exact "wrote it under the wrong letter" shape (Permafrost, Chilled to the Bone, Empowered

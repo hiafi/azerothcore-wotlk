@@ -19,41 +19,71 @@ from lib.dsl.registry import looks_player_castable
 # all-zero classmask on the effect it lives on is a strong signal of the
 # EffectSpellClassMask{A,B,C}_{1,2,3} letter/number mixup (see
 # docs/dbc-build-pipeline.md "Bug 3"), not a deliberate "applies broadly"
-# design choice the way e.g. SPELLMOD_DAMAGE (0) or SPELLMOD_ALL_EFFECTS (8)
-# can legitimately be.
+# design choice the way e.g. SPELLMOD_DAMAGE (0) can legitimately be.
+# SPELLMOD_ALL_EFFECTS (8) used to be left out on the same "can be broad"
+# reasoning; that is how Magic Absorption's Mana Gem clause shipped as a
+# +45% to every effect of every Mage spell (2026-10-06). 7/8/14/15/19/21/24
+# were added together then: none of them produced a warning on the source
+# of that day once the two real bugs (Magic Absorption, Improved Blizzard)
+# were fixed.
 _SCOPE_REQUIRED_OPS = {
     1,   # SPELLMOD_DURATION
     3,   # SPELLMOD_EFFECT1
     5,   # SPELLMOD_RANGE
     6,   # SPELLMOD_RADIUS
+    7,   # SPELLMOD_CRITICAL_CHANCE
+    8,   # SPELLMOD_ALL_EFFECTS
     10,  # SPELLMOD_CASTING_TIME
     11,  # SPELLMOD_COOLDOWN
     12,  # SPELLMOD_EFFECT2
+    14,  # SPELLMOD_COST
+    15,  # SPELLMOD_CRIT_DAMAGE_BONUS
     17,  # SPELLMOD_JUMP_TARGETS
+    19,  # SPELLMOD_ACTIVATION_TIME
     20,  # SPELLMOD_DAMAGE_MULTIPLIER
+    21,  # SPELLMOD_GLOBAL_COOLDOWN
     22,  # SPELLMOD_DOT
     23,  # SPELLMOD_EFFECT3
+    24,  # SPELLMOD_BONUS_MULTIPLIER
     27,  # SPELLMOD_VALUE_MULTIPLIER
 }
 _SPELLMOD_AURAS = {107, 108}  # SPELL_AURA_ADD_FLAT_MODIFIER, SPELL_AURA_ADD_PCT_MODIFIER
 _LETTERS = ("A", "B", "C")
+_MASK_COLUMNS = tuple(f"EffectSpellClassMask{letter}_{n}" for letter in _LETTERS for n in (1, 2, 3))
 
 
-def check_classmask_scoping(entries: list[dict], rows: list[dict]) -> list[str]:
-    """Flags any hand-authored (non-"pulled from existing data") row where a
-    SpellMod effect that needs a classmask to be meaningfully scoped ends up
-    with an all-zero one for the effect it actually lives on - almost always
-    caused by writing the override under the wrong letter (see
-    apps/dbc-tools/README.md's "Gotcha" callout for the letter/number rule).
-    Untouched pulled data is exempt: those bytes are copied verbatim from the
-    real client DBC, correct by construction regardless of what a human
-    comment on the row claims.
+def _u32(value) -> int:
+    return int(value or 0) & 0xFFFFFFFF
+
+
+def check_classmask_scoping(
+    entries: list[dict], rows: list[dict], stock_rows: dict[int, dict] | None = None,
+) -> list[str]:
+    """Flags any row where a SpellMod effect that needs a classmask to be
+    meaningfully scoped ends up with an all-zero one for the effect it
+    actually lives on - almost always caused by writing the override under
+    the wrong letter (see apps/dbc-tools/README.md's "Gotcha" callout for the
+    letter/number rule).
+
+    Exemption: an effect whose row has a stock client Spell.dbc counterpart
+    (`stock_rows`, i.e. `state.load_stock_rows(dbcfmt.SPELL)`) with the same
+    nine EffectSpellClassMask* values *and* the same EffectAura/EffectMiscValue
+    on that effect - real Blizzard bytes, correct by construction (a few stock
+    SpellMods are deliberately family-wide). A row with no stock counterpart is
+    never exempt. This replaced an exemption keyed on the row's
+    `notes == "pulled from existing data"`, which hid hand edits made to pulled
+    rows without updating the note (Improved Blizzard 11185/12487/12488, Arcane
+    Flows 44378/44379 - 2026-10-06). Requiring the effect's aura/misc to match
+    too keeps a SpellMod effect *added* to a stock row whose masks were left
+    untouched from slipping through.
     """
+    stock_rows = stock_rows or {}
     warnings: list[str] = []
     for entry, row in zip(entries, rows):
-        notes = entry.get("notes") or ""
-        if notes.strip() == "pulled from existing data":
-            continue
+        stock = stock_rows.get(row.get("ID", entry.get("id")))
+        stock_masks_match = stock is not None and all(
+            _u32(row.get(col)) == _u32(stock.get(col)) for col in _MASK_COLUMNS
+        )
         # NOTE (2026-09-09): letter = effect index (A=Effect_1, B=Effect_2, C=Effect_3), number =
         # which of that effect's 3 SpellFamilyFlags dwords - see apps/dbc-tools/README.md's
         # "Gotcha" callout. So `masks[i]` below (i indexed 0/1/2 against _LETTERS "A"/"B"/"C") is
@@ -72,16 +102,21 @@ def check_classmask_scoping(entries: list[dict], rows: list[dict]) -> list[str]:
         for i in range(3):
             aura = row.get(f"EffectAura_{i + 1}", 0)
             misc = row.get(f"EffectMiscValue_{i + 1}", 0)
-            if aura in _SPELLMOD_AURAS and misc in _SCOPE_REQUIRED_OPS and not any(masks[i]):
-                warnings.append(
-                    f"spell {row['ID']} ({entry.get('name', '?')}): effect {i + 1}'s "
-                    f"SpellMod (EffectAura_{i + 1}={aura}, EffectMiscValue_{i + 1}={misc}) has an "
-                    f"all-zero classmask (letter {_LETTERS[i]}: {masks[i]}) even though this row "
-                    f"sets a classmask elsewhere ({masks}) - probably "
-                    f"EffectSpellClassMask{_LETTERS[i]}_* needs the value that's on a different "
-                    f"letter. All-zero here means the engine applies it to every matching spell in "
-                    f"the family, not just the intended one."
-                )
+            if not (aura in _SPELLMOD_AURAS and misc in _SCOPE_REQUIRED_OPS and not any(masks[i])):
+                continue
+            if stock_masks_match and (
+                stock.get(f"EffectAura_{i + 1}", 0) == aura and stock.get(f"EffectMiscValue_{i + 1}", 0) == misc
+            ):
+                continue  # identical to the stock client row - real Blizzard data
+            warnings.append(
+                f"spell {row['ID']} ({entry.get('name', '?')}): effect {i + 1}'s "
+                f"SpellMod (EffectAura_{i + 1}={aura}, EffectMiscValue_{i + 1}={misc}) has an "
+                f"all-zero classmask (letter {_LETTERS[i]}: {masks[i]}) even though this row "
+                f"sets a classmask elsewhere ({masks}) - probably "
+                f"EffectSpellClassMask{_LETTERS[i]}_* needs the value that's on a different "
+                f"letter. All-zero here means the engine applies it to every matching spell in "
+                f"the family, not just the intended one."
+            )
     return warnings
 
 

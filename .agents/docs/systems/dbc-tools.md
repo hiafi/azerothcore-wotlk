@@ -322,6 +322,9 @@ every spell build and prints a `WARNING:` line for any hand-authored row where a
 that needs a classmask ends up with an all-zero one. **Don't ignore that warning** — it means an
 `EffectSpellClassMask*` override is almost certainly on the wrong letter. If you're adding or
 auditing one yourself, double-check the letter/number against `lib/dbcfmt.py`'s comment on the
-`SPELL` table before trusting it. Untouched "pulled from existing data" rows are exempt from both
-the manual check and the lint — those bytes are copied verbatim from the real client DBC, not
-hand-typed, so they're correct regardless of what a human's own comment on the row claims.
+`SPELL` table before trusting it. The lint exempts an effect only when its aura, misc value and the
+row's nine `EffectSpellClassMask*` values equal the stock client `Spell.dbc` row (real Blizzard bytes).
+A "pulled from existing data" note proves nothing: Improved Blizzard and Arcane Flows kept it after
+hand edits, which hid two wildcard SpellMods until 2026-10-06. When you edit a pulled row, replace
+the note with what you changed. The lint only sees rows `generate.py` emits (new or edited), not
+unchanged reference copies.
