@@ -3589,7 +3589,7 @@ hot_streak_44445 = spell(
     ],
     spell_icon_id=2999,
     notes='Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (8,2) rank 1: EFFECT_0 DUMMY is now the Mastery-scaling percentage (33) rather than the proc chance - the proc itself is unconditional (Phase 3 rewrites spell_mage_hot_streak; the trigger list lives in spell_proc -44445, which already excludes Pyroblast). Stock EFFECT_1 dropped.',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Any time you score 2 non-periodic spell criticals in a row using Fireball, Fire Blast, Scorch, Living Bomb, or Frostfire Bolt, your next Pyroblast spell cast within 10 sec will be instant cast. This Pyroblast always critically strikes and deals increased damage equal to 33% of your Mastery.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 8, 'EffectSpellClassMaskC_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Any time you score 2 non-periodic spell criticals in a row using Fireball, Fire Blast, Scorch, or Frostfire Bolt, your next Pyroblast spell cast within 10 sec will be instant cast. This Pyroblast always critically strikes and deals increased damage equal to 33% of your Mastery.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 8, 'EffectSpellClassMaskC_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3609,7 +3609,7 @@ hot_streak_44446 = spell(
     ],
     spell_icon_id=2999,
     notes='Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (8,2) rank 2: EFFECT_0 DUMMY is now the Mastery-scaling percentage (66) rather than the proc chance - the proc itself is unconditional (Phase 3 rewrites spell_mage_hot_streak; the trigger list lives in spell_proc -44445, which already excludes Pyroblast). Stock EFFECT_1 dropped.',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Any time you score 2 non-periodic spell criticals in a row using Fireball, Fire Blast, Scorch, Living Bomb, or Frostfire Bolt, your next Pyroblast spell cast within 10 sec will be instant cast. This Pyroblast always critically strikes and deals increased damage equal to 66% of your Mastery.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 8, 'EffectSpellClassMaskC_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Any time you score 2 non-periodic spell criticals in a row using Fireball, Fire Blast, Scorch, or Frostfire Bolt, your next Pyroblast spell cast within 10 sec will be instant cast. This Pyroblast always critically strikes and deals increased damage equal to 66% of your Mastery.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 8, 'EffectSpellClassMaskC_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3629,7 +3629,7 @@ hot_streak_44448 = spell(
     ],
     spell_icon_id=2999,
     notes='Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 2 (8,2) rank 3: EFFECT_0 DUMMY is now the Mastery-scaling percentage (100) rather than the proc chance - the proc itself is unconditional (Phase 3 rewrites spell_mage_hot_streak; the trigger list lives in spell_proc -44445, which already excludes Pyroblast). Stock EFFECT_1 dropped.',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Any time you score 2 non-periodic spell criticals in a row using Fireball, Fire Blast, Scorch, Living Bomb, or Frostfire Bolt, your next Pyroblast spell cast within 10 sec will be instant cast. This Pyroblast always critically strikes and deals increased damage equal to 100% of your Mastery.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 8, 'EffectSpellClassMaskC_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Any time you score 2 non-periodic spell criticals in a row using Fireball, Fire Blast, Scorch, or Frostfire Bolt, your next Pyroblast spell cast within 10 sec will be instant cast. This Pyroblast always critically strikes and deals increased damage equal to 100% of your Mastery.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 8, 'EffectSpellClassMaskC_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 3, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -5780,6 +5780,28 @@ fanned_flames_ready_200118 = spell(
 )
 
 
+# Stage HU (2026-10-06, .agents/plans/rework-bot-strategies/rework-bot-strategies.STAGE-HU-HANDOFF.md) -
+# Heating Up, Blizzard's Cataclysm buff: the first Hot Streak trigger crit leaves it on the mage, the next
+# trigger crit converts it into Hot Streak 48108 and any trigger non-crit removes it. The aura IS the streak
+# state spell_mage_hot_streak reads (it replaces the old private _critStreak counter), so players and the
+# Fire bot can both see it. A visible, non-passive self buff with a DUMMY aura only: no family flags, so
+# nothing reads it as a spell. Modelled on Hot Streak 48108 (Mage family, Fire, self, 10 sec).
+heating_up_200044 = spell(
+    id=200044,
+    name='Heating Up',
+    school=School.FIRE,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    duration_ms=10000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=2999,
+    notes="Stage HU - visible streak marker for Hot Streak (see the comment above). Icon 2999 is Hot Streak's own. 10 sec matches Blizzard's Heating Up and Hot Streak's window; an unconverted first crit now expires after 10 sec (the old private counter waited forever). No ProcChance/family flags on purpose. `EquippedItemClass: -1` per the 200118 note (a non-passive self-cast spell without it fails SPELL_FAILED_EQUIPPED_ITEM_CLASS). Applied/removed only by spell_mage_hot_streak (and removed when the Hot Streak talent aura is removed). Description lists exactly the spell_proc -44445 triggers (Fireball/Fire Blast/Scorch/Frostfire Bolt); Pyroblast and Living Bomb never feed the streak (Living Bomb's 0x20000 mask bit is only its DoT aura, which deals no damage and ticks as periodic procs the talent's ProcTypeMask 0x10000 excludes; the explosion is 0x10000, not in the filter). Fire school is deliberate: 48108 itself is SchoolMask 1 (physical), but this is a Fire-themed Mage buff.",
+    raw_overrides={'AttributesEx6': 64, 'CastingTimeIndex': 1, 'EquippedItemClass': -1, 'SpellClassSet': 3, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your next critical strike with Fireball, Fire Blast, Scorch or Frostfire Bolt will cause your next Pyroblast to be instant cast.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next critical strike with Fireball, Fire Blast, Scorch or Frostfire Bolt will cause your next Pyroblast to be instant cast.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
 # ---- Phase 3: spell_script_names bindings for the new/modified scripts below ---------------
 scripted_by(flame_throwing_12353, 'spell_mage_flame_throwing_capstone')
 scripted_by(-burnout_44449.id, 'spell_mage_burnout_capstone')
@@ -5797,13 +5819,14 @@ scripted_by(meteor_impact_200096, 'spell_mage_meteor_impact')
 # Fire Mage rework (docs/reworks/fire-mage-rework.md) Phase 3 - Hot Streak's own spell_proc row corrected: stock data's dword-1 mask (0x11000) has the
 # right Frostfire Bolt bit (0x1000) but the wrong second bit (0x10000, not Living Bomb's real
 # 0x20000) - explicitly re-declared here with the exact 5 trigger spells sec 8.2/6 names
-# (Fireball/Fire Blast/Scorch/Living Bomb/Frostfire Bolt), Pyroblast excluded by construction
+# (Fireball/Fire Blast/Scorch/Frostfire Bolt; Living Bomb's 0x20000 bit matches only its DoT aura, which never procs
+# a damaging non-periodic hit), Pyroblast excluded by construction
 # (its own family bit, 0x400000, is in neither mask - see (2,2)'s implementation note).
 # HitMask left at 0 (no crit-only filter here) - spell_mage_hot_streak's own
 # eventInfo.GetHitMask() & PROC_EX_CRITICAL_HIT check is what enforces "2 non-periodic criticals",
 # same as the pre-existing stock row.
 procs_on(-44445, proc_flags=0, school_mask=0, family_name=3,
-         family_mask=(19, 135168, 0),  # dword0: Fireball(1)|Fire Blast(2)|Scorch(16); dword1: Living Bomb(131072)|Frostfire Bolt(4096)
+         family_mask=(19, 135168, 0),  # dword0: Fireball(1)|Fire Blast(2)|Scorch(16); dword1: Living Bomb DoT aura(131072, never procs)|Frostfire Bolt(4096)
          spell_type_mask=1, spell_phase_mask=2, hit_mask=0, chance=0)
 
 

@@ -74,6 +74,7 @@ enum MageSpells
     SPELL_MAGE_T10_2P_BONUS_EFFECT               = 70753,
     SPELL_MAGE_T8_4P_BONUS                       = 64869,
     SPELL_MAGE_HOT_STREAK_PROC                   = 48108,
+    SPELL_MAGE_HEATING_UP                        = 200044,
     SPELL_MAGE_CHILLED_R1                        = 12484,
     SPELL_MAGE_CHILLED_R2                        = 12485,
     SPELL_MAGE_CHILLED_R3                        = 12486,
@@ -3195,42 +3196,53 @@ class spell_mage_hot_streak : public AuraScript
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_MAGE_HOT_STREAK_PROC });
+        return ValidateSpellInfo({ SPELL_MAGE_HOT_STREAK_PROC, SPELL_MAGE_HEATING_UP });
     }
 
     void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
     {
         PreventDefaultAction();
 
-        // Non-crit - reset counter
+        Unit* target = GetTarget();
+
+        // Custom: Stage HU (2026-10-06) - the streak lives in the visible Heating Up aura (Cataclysm style)
+        // instead of a private counter, so players and the Fire bot can see it.
+        // Non-crit - reset the streak
         if (!(eventInfo.GetHitMask() & PROC_EX_CRITICAL_HIT))
         {
-            _critStreak = 0;
+            target->RemoveAurasDueToSpell(SPELL_MAGE_HEATING_UP);
             return;
         }
 
-        // Crit - increment counter
-        ++_critStreak;
+        // First crit - show Heating Up (10 sec, so an unconverted first crit expires)
+        if (!target->HasAura(SPELL_MAGE_HEATING_UP))
+        {
+            target->CastSpell(target, SPELL_MAGE_HEATING_UP, true, nullptr, aurEff);
+            return;
+        }
 
         // Fire Mage rework sec 5 (8,2) Hot Streak - "Any time you score 2 non-periodic spell
         // criticals in a row..." is now unconditional (sec 6, (9,1)/Burnout note aside, this
         // talent's own aurEff->GetAmount() is repurposed as the Mastery-scaling % consumed by
         // Pyroblast - Mage::ApplyDoneDamagePctMods/ApplySpellCritChanceMods - not a proc-chance
         // roll any more).
-        if (_critStreak >= 2)
-        {
-            _critStreak = 0;
-            GetTarget()->CastSpell(GetTarget(), SPELL_MAGE_HOT_STREAK_PROC, true, nullptr, aurEff);
-        }
+        target->RemoveAurasDueToSpell(SPELL_MAGE_HEATING_UP);
+        target->CastSpell(target, SPELL_MAGE_HOT_STREAK_PROC, true, nullptr, aurEff);
+    }
+
+    // Custom: Stage HU - no Heating Up may outlive the talent (unlearn / respec). The talent aura is
+    // permanent, so its removal is never an expiry. A plain removal of a not-present aura is a no-op.
+    void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        GetTarget()->RemoveAurasDueToSpell(SPELL_MAGE_HEATING_UP);
     }
 
     void Register() override
     {
         OnEffectProc += AuraEffectProcFn(spell_mage_hot_streak::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+        AfterEffectRemove += AuraEffectRemoveFn(spell_mage_hot_streak::HandleRemove, EFFECT_0, SPELL_AURA_DUMMY,
+            AURA_EFFECT_HANDLE_REAL);
     }
-
-private:
-    uint8 _critStreak = 0;
 };
 
 // 11366 - Pyroblast
