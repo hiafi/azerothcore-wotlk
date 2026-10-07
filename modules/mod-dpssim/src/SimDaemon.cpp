@@ -563,7 +563,7 @@ bool SimDaemon::RunPlayerbotOnce(RunConfig const& config, RunResult& result)
     // SimBot::Create() teaches the bot's class spells and "pulls" `dummy` (puts both in combat, no
     // spell cast) to bootstrap combat state - see its own doc comment for why that's needed.
     SimBot bot;
-    if (!bot.Create(player, dummy, config.PlayerbotTalents))
+    if (!bot.Create(player, dummy, config.PlayerbotTalents, config.PlayerbotGlyphs))
     {
         LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbotOnce() - SimBot::Create() failed - aborting.");
         return false;
@@ -623,7 +623,7 @@ bool SimDaemon::RunPlayerbotBatch(RunConfig const& config, uint32 iterations, st
     CastRecorder* castRecorder = new CastRecorder(player->GetGUID());
 
     SimBot bot;
-    if (!bot.Create(player, dummy, config.PlayerbotTalents))
+    if (!bot.Create(player, dummy, config.PlayerbotTalents, config.PlayerbotGlyphs))
     {
         LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbotBatch() - SimBot::Create() failed - aborting.");
         return false;

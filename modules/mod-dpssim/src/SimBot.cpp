@@ -27,7 +27,7 @@ SimBot::~SimBot()
     delete _ai;
 }
 
-bool SimBot::Create(Player* bot, Unit* target, std::string const& playerbotTalents)
+bool SimBot::Create(Player* bot, Unit* target, std::string const& playerbotTalents, bool playerbotGlyphs)
 {
     if (!bot || !target)
         return false;
@@ -88,6 +88,17 @@ bool SimBot::Create(Player* bot, Unit* target, std::string const& playerbotTalen
     // bot (InitAvailableSpells() -> InitTalentsTree() -> InitAvailableSpells() again) - some
     // talent-unlocked spells only show up as "available" on this second pass.
     factory.InitAvailableSpells();
+
+    // The premade glyphs a live random bot gets (PlayerbotFactory::InitGlyphs(), after its talents, since the set is
+    // picked by spec tab). Before AddPlayerbotData() below, so the factory has no PlayerbotAI yet and InitGlyphs()
+    // skips its "custom_glyphs" early return, applying the AiPlayerbot.PremadeSpecGlyph set for the bot's level.
+    if (playerbotGlyphs)
+    {
+        factory.InitGlyphs();
+        LOG_INFO("server.dpssim", "mod-dpssim: SimBot::Create() - glyphs (slots 0-5): {} {} {} {} {} {}",
+            bot->GetGlyph(0), bot->GetGlyph(1), bot->GetGlyph(2), bot->GetGlyph(3), bot->GetGlyph(4),
+            bot->GetGlyph(5));
+    }
 
     // Build the PlayerbotAI through PlayerbotsMgr::AddPlayerbotData() - the same entry point a
     // real bot login uses - rather than `new PlayerbotAI(bot)` directly, and keep only a borrowed

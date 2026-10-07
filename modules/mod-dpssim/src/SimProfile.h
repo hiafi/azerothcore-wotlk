@@ -119,6 +119,13 @@ namespace SimProfile
         // behaviour (the bot starts every iteration in combat, unbuffed). A run with no profile uses the default.
         uint32 PrePullBuffMs = 15000;
 
+        // Whether the actor gets its class's premade glyphs, as a live random bot does: PlayerbotFactory::
+        // InitGlyphs() after the talents, picking AiPlayerbot.PremadeSpecGlyph.<class>.<spec tab> by level (true by
+        // default). Glyph effects then show in the sim, e.g. a Frost mage's Glyph of Eternal Water lets the pre-pull
+        // phase summon the permanent Water Elemental. "false" leaves the actor unglyphed (the behaviour before
+        // 2026-10-06). A run with no profile uses the default.
+        bool PlayerbotGlyphs = true;
+
         // Master switch for modules/mod-dpssim/tools/stat_weights.py, added 2026-09-13: "false"
         // makes that tool refuse to run any batch at all for this profile, regardless of how many
         // TestX flags below are true - a single kill switch for "don't run stat weights against

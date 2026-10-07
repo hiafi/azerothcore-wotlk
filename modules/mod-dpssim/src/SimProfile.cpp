@@ -238,6 +238,18 @@ bool SimProfile::Load(std::string const& path, Profile& out)
                 return false;
             }
         }
+        else if (key == "PlayerbotGlyphs")
+        {
+            bool ok = false;
+            parsed.PlayerbotGlyphs = ParseBool(value, ok);
+            if (!ok)
+            {
+                LOG_ERROR("server.dpssim",
+                    "mod-dpssim: SimProfile::Load() - '{}' line {}: 'PlayerbotGlyphs' value '{}' is not true/false.",
+                    path, lineNo, value);
+                return false;
+            }
+        }
         else if (key == "StatWeightsEnabled")
         {
             bool ok = false;

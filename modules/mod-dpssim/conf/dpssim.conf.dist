@@ -178,7 +178,8 @@ DpsSim.Iterations = 1
 #
 #                      A profile also sets PrePullBuffMs, the unrecorded out-of-combat buff phase
 #                      before every iteration (SimProfile.h). With no profile it runs at its default
-#                      of 15000 sim ms; there is no DpsSim.* key for it.
+#                      of 15000 sim ms; there is no DpsSim.* key for it. Likewise PlayerbotGlyphs
+#                      (default true): the actor gets its class's premade glyphs as a live bot does.
 #
 #                      When set, this OWNS DpsSim.PlayerbotTalents below and SimDaemon::RunConfig::
 #                      ActorClass/GearItemIds/SpellPower/CombatRatings/Stats/AttackPower outright -
@@ -232,18 +233,13 @@ DpsSim.Profile =
 #                      wraps mod-playerbots' own, previously-unused TalentSpec::GetTalentLink()).
 #                      Paste that string in here.
 #
-#                      Default value below is this deployment's own
-#                      AiPlayerbot.PremadeSpecLink.8.2.60 ("frost pve" at level 60) copied verbatim -
-#                      confirmed to contain only Frost-tree points (the "--" prefix means 0 in both
-#                      Arcane and Fire) - kept only as a non-empty placeholder so the rotation isn't
-#                      untalented by default. Per the above, this was authored against the stock
-#                      tree and is NOT confirmed correct against this deployment's actual custom
-#                      Frost tree - replace it with a real "talents link" export once you've built
-#                      the intended spec on a live bot.
-#        Default:     --0533030313203100030152231151
+#                      Default value below is the Frost guide build, the same string as
+#                      AiPlayerbot.PremadeSpecLink.8.2.60 and FrostMageSim.conf (Mage bot plan MG8,
+#                      decoded against the live talent_dbc on 2026-10-06: 51 points, legal).
+#        Default:     --3203013301202330310030131231331
 #
 
-DpsSim.PlayerbotTalents = --0533030313203100030152231151
+DpsSim.PlayerbotTalents = --3203013301202330310030131231331
 
 #
 #    DpsSim.ReportPath
