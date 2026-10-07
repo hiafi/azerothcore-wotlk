@@ -1488,6 +1488,11 @@ class spell_pri_shadow_word_death : public SpellScript
 
         int32 damage = _backlashDamage;
 
+        // Custom: 2026-10-06 user ruling, the backlash is cut by 60% (40% of the hit's damage), applied before
+        // Pain and Suffering so that talent still takes its own share of what is left (28% of the hit at 3/3)
+        constexpr int32 SWD_BACKLASH_PCT = 40;
+        ApplyPct(damage, SWD_BACKLASH_PCT);
+
         // Pain and Suffering reduces damage
         if (AuraEffect* aurEff = GetCaster()->GetDummyAuraEffect(SPELLFAMILY_PRIEST, PRIEST_ICON_ID_PAIN_AND_SUFFERING, EFFECT_1))
             AddPct(damage, aurEff->GetAmount());
