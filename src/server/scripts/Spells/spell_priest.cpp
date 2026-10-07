@@ -1469,9 +1469,24 @@ class spell_pri_shadow_word_death : public SpellScript
 {
     PrepareSpellScript(spell_pri_shadow_word_death);
 
+    // Custom: the hit's launch-phase damage (before crit, resist and absorb), recorded in OnHit as the backlash
+    // amount always was. The backlash itself runs in AfterHit, once the hit is known to have left the target alive.
+    int32 _backlashDamage = 0;
+
+    void RecordDamage()
+    {
+        _backlashDamage = GetHitDamage();
+    }
+
     void HandleDamage()
     {
-        int32 damage = GetHitDamage();
+        // Custom: no backlash, and no Deathspeaker backlash roll, when this hit killed the target. The
+        // design doc (sec 4.2) and the bot guide treat backlash and kill as mutually exclusive per cast; the
+        // kill rolls its own tentacle in Priest::OnKill.
+        if (Unit* target = GetHitUnit(); target && !target->IsAlive())
+            return;
+
+        int32 damage = _backlashDamage;
 
         // Pain and Suffering reduces damage
         if (AuraEffect* aurEff = GetCaster()->GetDummyAuraEffect(SPELLFAMILY_PRIEST, PRIEST_ICON_ID_PAIN_AND_SUFFERING, EFFECT_1))
@@ -1481,25 +1496,10 @@ class spell_pri_shadow_word_death : public SpellScript
 
         // Deathspeaker (4,1) backlash clause: "When you take damage from your own Shadow Word:
         // Death, you have a 15/30/45% chance to summon a Tentacle of Madness" (design doc sec 4.2 /
-        // SHADOW.md talent table 4,1). Rolls unconditionally on every cast - the backlash damage
-        // itself is dealt regardless of Pain and Suffering's reduction just above (amount
-        // irrelevant to the roll), and, per investigation below, regardless of whether the cast
-        // was lethal to the enemy target.
-        //
-        // SW:D backlash-vs-kill mutual-exclusivity finding: the design doc's own text ("Backlash
-        // and kill are mutually exclusive per cast by construction ... a kill produces no
-        // backlash") does not hold for this codebase's actual implementation. This `HandleDamage`
-        // is bound to `OnHit` (see Register() below), which fires for every successful hit on the
-        // enemy target - including a killing one - and unconditionally casts the backlash spell on
-        // the caster; nothing here (or anywhere else in this class) checks whether the target
-        // survived. `Priest::OnKill` (PriestMechanics.cpp, called from Unit::Kill) fires
-        // independently whenever this same cast kills the target. So a *lethal* Shadow Word: Death
-        // cast rolls BOTH the backlash chance here AND the kill chance in Priest::OnKill on the
-        // same cast - not mutually exclusive. No extra guard is added to force exclusivity (the
-        // task's instruction was to investigate and handle correctly, not to silently patch stock
-        // SW:D's backlash-on-kill behavior, which is unrelated pre-existing engine behavior outside
-        // this class's owned scope); both rolls remain independent, each still gated by their own
-        // ICD/no-ICD rule, and the max-5-live cap bounds the worst case of a double-summon.
+        // SHADOW.md talent table 4,1). Rolls on every backlash, whatever Pain and Suffering's reduction
+        // just above did to the amount. A lethal cast returned early above, so a cast rolls either this
+        // backlash clause or Priest::OnKill's kill clause, never both (mutually exclusive since 2026-10-06;
+        // before, a lethal cast rolled both and a miss rolled this one on a zero-damage backlash).
         if (Player* caster = GetCaster()->ToPlayer())
         {
             AuraEffect const* deathspeaker = nullptr;
@@ -1518,7 +1518,8 @@ class spell_pri_shadow_word_death : public SpellScript
 
     void Register() override
     {
-        OnHit += SpellHitFn(spell_pri_shadow_word_death::HandleDamage);
+        OnHit += SpellHitFn(spell_pri_shadow_word_death::RecordDamage); // Custom: was HandleDamage
+        AfterHit += SpellHitFn(spell_pri_shadow_word_death::HandleDamage); // Custom: backlash once the kill is known
     }
 };
 
