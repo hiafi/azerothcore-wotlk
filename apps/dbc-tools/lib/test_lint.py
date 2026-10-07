@@ -317,5 +317,70 @@ class CheckCreatureWithoutModelTest(unittest.TestCase):
         self.assertEqual(lint.check_creature_without_model([row], has_model={300170}), [])
 
 
+def _spellmod_row(spell_id: int, effects: list[tuple[int, int]], **masks) -> dict:
+    """A built spell_dbc row: `effects` is (EffectAura, EffectMiscValue) per effect slot, `masks`
+    is EffectSpellClassMask{A,B,C}_{1,2,3} values (letter = effect, number = dword)."""
+    row = {"ID": spell_id}
+    for i, (aura, misc) in enumerate(effects, start=1):
+        row[f"EffectAura_{i}"] = aura
+        row[f"EffectMiscValue_{i}"] = misc
+    for letter in "ABC":
+        for n in (1, 2, 3):
+            row[f"EffectSpellClassMask{letter}_{n}"] = masks.get(f"{letter}_{n}", 0)
+    return row
+
+
+class CheckClassmaskScopingTest(unittest.TestCase):
+    """The two real 2026-10-06 shapes (docs/bugs-and-fixes.md) plus the transposition guard."""
+
+    def _warn(self, row, stock=None, notes="hand-authored"):
+        entry = {"id": row["ID"], "name": "Test", "notes": notes}
+        return lint.check_classmask_scoping([entry], [row], stock)
+
+    # Magic Absorption: effect3 SPELLMOD_ALL_EFFECTS (8) written under letter A (A_3 = 16).
+    def test_op8_mask_on_wrong_letter_warns(self):
+        row = _spellmod_row(200075, [(79, 126), (87, 126), (108, 8)], A_3=16)
+        warnings = self._warn(row)
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("effect 3's", warnings[0])
+
+    def test_op8_mask_on_its_own_letter_is_clean(self):
+        row = _spellmod_row(200075, [(79, 126), (87, 126), (108, 8)], C_2=256)
+        self.assertEqual(self._warn(row), [])
+
+    # Improved Blizzard: effect2 SPELLMOD_COST (14) / effect3 SPELLMOD_ACTIVATION_TIME (19), masks
+    # written as A_2/A_3. The row has a stock counterpart, but its masks differ from stock, and the
+    # old "pulled from existing data" note must no longer exempt it.
+    def test_cost_and_activation_time_on_wrong_letter_warn_despite_pulled_note(self):
+        stock = {12488: _spellmod_row(12488, [(112, 989)], A_1=128)}
+        row = _spellmod_row(12488, [(112, 989), (108, 14), (108, 19)], A_1=128, A_2=0x80080, A_3=0x80080)
+        warnings = self._warn(row, stock, notes="pulled from existing data")
+        self.assertEqual([w.split("'s")[0].split(": ")[1] for w in warnings], ["effect 2", "effect 3"])
+
+    def test_cost_and_activation_time_on_own_letters_are_clean(self):
+        stock = {12488: _spellmod_row(12488, [(112, 989)], A_1=128)}
+        row = _spellmod_row(12488, [(112, 989), (108, 14), (108, 19)], A_1=128, B_1=128, C_1=128)
+        self.assertEqual(self._warn(row, stock), [])
+
+    # Arcane Shielding / Missile Barrage near-miss: effect1's own mask in its 3rd dword (A_3) is
+    # correct. A transposed check (number = effect) would flag this.
+    def test_effect1_mask_in_third_dword_is_clean(self):
+        row = _spellmod_row(11252, [(108, 3)], A_3=8)
+        self.assertEqual(self._warn(row), [])
+
+    def test_stock_identical_effect_is_exempt(self):
+        row = _spellmod_row(21942, [(108, 8), (108, 14)], A_1=4)
+        self.assertEqual(self._warn(row, {21942: dict(row)}), [])
+
+    def test_no_stock_counterpart_is_never_exempt(self):
+        row = _spellmod_row(21942, [(108, 8), (108, 14)], A_1=4)
+        self.assertEqual(len(self._warn(row, {}, notes="pulled from existing data")), 1)
+
+    def test_spellmod_added_to_stock_row_with_unchanged_masks_warns(self):
+        stock = {12488: _spellmod_row(12488, [(112, 989)], A_1=128)}
+        row = _spellmod_row(12488, [(112, 989), (108, 14)], A_1=128)
+        self.assertEqual(len(self._warn(row, stock)), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

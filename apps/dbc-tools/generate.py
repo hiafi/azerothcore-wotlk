@@ -423,7 +423,9 @@ def main() -> int:
     # reconciliation — this is what actually gets emitted to SQL.
     reuse = ReuseContext(existing_secondary, ids_cfg)
     spell_rows = [build.build_spell_row(e, reuse) for e in spell_resolved.entries]
-    for warning in lint.check_classmask_scoping(spell_resolved.entries, spell_rows):
+    # Pure stock client rows: the classmask lint exempts an effect only if it matches stock exactly.
+    stock_spells = state.load_stock_rows(dbcfmt.SPELL)
+    for warning in lint.check_classmask_scoping(spell_resolved.entries, spell_rows, stock_spells):
         print(f"WARNING: {warning}")
     for warning in lint.check_missing_skill_line_ability(
         spell_resolved.entries, skilllineability_resolved.entries, existing_skilllineabilities, ids_cfg,
@@ -478,7 +480,6 @@ def main() -> int:
     # baselines, two purposes" note. Reuses the same `reuse` (idempotent
     # find_or_mint, see reuse.py) so this can't mint a duplicate secondary row
     # for something the SQL-emission pass above already minted one for.
-    stock_spells = state.load_stock_rows(dbcfmt.SPELL)
     stock_talents = state.load_stock_rows(dbcfmt.TALENT)
     stock_talenttabs = state.load_stock_rows(dbcfmt.TALENTTAB)
     stock_skilllineabilities = state.load_stock_rows(dbcfmt.SKILLLINEABILITY)
