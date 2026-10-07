@@ -148,7 +148,12 @@ namespace SimDaemon
     struct RunResult
     {
         bool Success = false;
+        // The configured duration even when the actor died early (see RunPlayerbotIteration()), so DPS = damage /
+        // ElapsedMs always divides by the full fight
         uint32 ElapsedMs = 0;
+        // The actor died mid-iteration, at ActorDiedAtMs sim ms into the fight (meaningless when ActorDied is false)
+        bool ActorDied = false;
+        uint32 ActorDiedAtMs = 0;
         uint32 CastAttempts = 0;
         uint64 TotalDamage = 0;
         uint32 CastCount = 0;

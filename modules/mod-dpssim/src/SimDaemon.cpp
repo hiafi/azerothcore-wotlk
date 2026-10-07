@@ -261,6 +261,24 @@ namespace
         while (clock.GetElapsedMs() < config.DurationMs)
         {
             clock.Tick(map);
+
+            // A dead actor ends the iteration before auto release can run. The sim bot is registered with
+            // PlayerbotsMgr, so PlayerbotsPlayerScript::OnPlayerAfterUpdate also ticks its AI inside
+            // clock.Tick -> Map::Update -> Player::Update. A death from a periodic tick lands inside
+            // Player::Update, before that hook; the first dead tick only switches the bot to the DEAD engine and
+            // auto release (ReleaseSpiritAction -> repop at graveyard -> teleport nobody acknowledges) needs a
+            // second tick, so checking after every Tick stops the iteration in time. Ending here leaves the corpse
+            // in place for ResetForNextIteration() to resurrect, which also has ReestablishCombatState() switch the
+            // bot back to the combat engine.
+            if (!player->IsAlive())
+            {
+                result.ActorDied = true;
+                result.ActorDiedAtMs = clock.GetElapsedMs();
+                LOG_WARN("server.dpssim", "mod-dpssim: the actor DIED {} ms into the iteration - iteration ended, "
+                    "its DPS counts the full {} ms.", result.ActorDiedAtMs, config.DurationMs);
+                break;
+            }
+
             bot.UpdateAI(config.StepMs);
             MaybeSampleMana(player, clock.GetElapsedMs(), lastManaSampleMs, sampledManaOnce, manaSamples);
 
@@ -269,8 +287,17 @@ namespace
                 std::this_thread::sleep_for(std::chrono::milliseconds(config.StepMs));
         }
 
+        // A death in the final step: the loop condition ends the loop before the check above sees it
+        if (!result.ActorDied && !player->IsAlive())
+        {
+            result.ActorDied = true;
+            result.ActorDiedAtMs = config.DurationMs;
+        }
+
         result.Success = true;
-        result.ElapsedMs = clock.GetElapsedMs();
+        // Deliberate: an actor that died is charged the full configured duration, not the time it survived, so
+        // dying costs DPS (a self-killing rotation must read as low DPS, not as a short burst of high DPS)
+        result.ElapsedMs = result.ActorDied ? config.DurationMs : clock.GetElapsedMs();
         // No separate "cast attempts" counter here, unlike RunOnce()'s hardcoded rotation: the real
         // Engine decides what to cast and when internally, with no equivalent hook exposed for
         // "attempted but didn't land" bookkeeping. CastCount (landed hits) is the meaningful number.
@@ -351,17 +378,38 @@ namespace
     // refilled with health drain on (otherwise its AI zeroes all damage taken, so it never drops); the global
     // cooldown is left alone (RunPlayerbotIteration() starts each iteration ITERATION_GAP_MS later, by which time
     // it has long expired).
-    void ResetForNextIteration(Player* player, Creature* dummy, SimBot& bot, EventRecorder* recorder, CastRecorder* castRecorder)
+    void ResetForNextIteration(Player* player, Creature* dummy, SimBot& bot, EventRecorder* recorder, CastRecorder* castRecorder,
+        Position const& startPosition)
     {
-        // Defensive extra, not the confirmed fix (that's ReestablishCombatState() below - see its
-        // own doc comment for the real, confirmed root cause: npc_training_dummy's own no-damage
-        // combat timeout expiring across an iteration boundary, not a death). Kept anyway since
-        // PlayerbotAI::DoNextAction() does have a real "not alive -> clear target, engine to
-        // BOT_STATE_DEAD, nothing ever reverses either" branch - cheap, and a no-op in the
-        // overwhelmingly common case of the actor never actually dying against a target dummy that
-        // never retaliates (SimTarget's own class comment).
+        // The actor can die (a rotation that hurts itself, e.g. Shadow Word: Death backlash).
+        // RunPlayerbotIteration() ends the iteration the moment it does, before the AI's auto release can repop it,
+        // so it is normally still a corpse in place here. The safety net: if a release teleport did start, the sim
+        // bot (in no PlayerbotHolder) would never acknowledge it, IsBeingTeleported() would stay true and
+        // PlayerbotAI::UpdateAI() would return early for the rest of the batch - so acknowledge it and drop the
+        // corpse before resurrecting. RefillResources() below brings health and mana back to full.
+        // A dead player also loses its permanent pet (warlock/hunter...); only the pre-pull buff phase brings it
+        // back, so a pet class that died runs the next iteration petless unless that phase summons it.
+        bool const releaseTeleportStarted = player->IsBeingTeleported();
+        if (releaseTeleportStarted)
+        {
+            LOG_WARN("server.dpssim", "mod-dpssim: the actor was mid-teleport at the iteration reset - the death "
+                "check in RunPlayerbotIteration() failed to stop the auto release in time; acknowledging it.");
+            bot.HandleTeleportAck();
+        }
         if (!player->IsAlive())
+        {
+            // false: no ghost/aura rows - the actor has no characters row (SimActor.cpp, zero SQL)
+            if (player->GetCorpse())
+                player->SpawnCorpseBones(false);
             player->ResurrectPlayer(1.0f);
+        }
+        if (releaseTeleportStarted)
+        {
+            // Back from the graveyard to where the iteration started
+            player->NearTeleportTo(startPosition.GetPositionX(), startPosition.GetPositionY(),
+                startPosition.GetPositionZ(), startPosition.GetOrientation());
+            bot.HandleTeleportAck();
+        }
 
         // Nothing the last fight left running reaches the next one: a cast in progress, totems, ground effects
         // (DynamicObjects; a Lightwell is a totem) and temporary guardians (Wild Imps, Treants...). The permanent
@@ -629,10 +677,12 @@ bool SimDaemon::RunPlayerbotBatch(RunConfig const& config, uint32 iterations, st
         return false;
     }
 
+    Position const startPosition = player->GetPosition();
+
     for (uint32 i = 0; i < iterations; ++i)
     {
         if (i > 0)
-            ResetForNextIteration(player, dummy, bot, recorder, castRecorder);
+            ResetForNextIteration(player, dummy, bot, recorder, castRecorder, startPosition);
 
         RunResult result;
         RunPlayerbotIteration(config, player, dummy, map, bot, recorder, castRecorder, result);
