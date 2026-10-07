@@ -176,6 +176,12 @@ void SimBot::UpdateAI(uint32 diff)
         _ai->UpdateAI(diff);
 }
 
+void SimBot::HandleTeleportAck()
+{
+    if (_ai)
+        _ai->HandleTeleportAck();
+}
+
 namespace
 {
     // The only non-combat strategies kept during the pre-pull buff phase. The rule: what the masterless bot's

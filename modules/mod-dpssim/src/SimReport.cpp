@@ -98,7 +98,14 @@ bool SimReport::WriteJson(std::string const& path, SimDaemon::RunConfig const& c
     file << "    \"dps\": " << dps << ",\n";
     file << "    \"castCount\": " << result.CastCount << ",\n";
     file << "    \"critCount\": " << result.CritCount << ",\n";
-    file << "    \"critRatePct\": " << critRatePct << "\n";
+    file << "    \"critRatePct\": " << critRatePct << ",\n";
+    // null when the actor lived, else the sim ms it died at (elapsedMs is then the full configured duration)
+    file << "    \"actorDiedAtMs\": ";
+    if (result.ActorDied)
+        file << result.ActorDiedAtMs;
+    else
+        file << "null";
+    file << "\n";
     file << "  },\n";
 
     std::vector<SpellAggregate> const spells = AggregateBySpell(result);

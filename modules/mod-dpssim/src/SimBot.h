@@ -85,6 +85,11 @@ public:
     // reading its implementation, not assumed.
     void UpdateAI(uint32 diff);
 
+    // Acknowledges a teleport the sim bot's own death started (the engine's auto release repops it at a graveyard).
+    // Live bots get this from PlayerbotHolder::UpdateSessions, which the sim bot is not in; without it
+    // IsBeingTeleported() stays true and PlayerbotAI::UpdateAI() returns early forever.
+    void HandleTeleportAck();
+
     // Re-establishes combat state between iterations of SimDaemon::RunPlayerbotBatch() - added
     // 2026-09-13 after a real, reproduced failure: a batch's very first iteration would land real
     // hits, then every iteration after it would land zero casts for the rest of the batch, forever.

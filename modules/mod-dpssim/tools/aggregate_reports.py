@@ -55,14 +55,16 @@ def mean(values: list[float]) -> float:
 
 
 # Indices (into `reports`, in their original order) of the runs kept after trimming the top/bottom
-# TRIM_FRACTION by DPS, plus the (lowest, highest) DPS values actually dropped, for transparency.
+# TRIM_FRACTION by DPS (never an iteration where the actor died), plus the (lowest, highest) DPS values actually dropped, for transparency.
 def trim_by_dps(reports: list[dict]) -> tuple[set[int], list[float], list[float]]:
     n = len(reports)
     k = int(n * TRIM_FRACTION)
     order = sorted(range(n), key=lambda i: reports[i]["summary"]["dps"])
-    dropped_low_idx = order[:k]
+    # An iteration where the actor died is never trimmed: a self-killing rotation must stay in the headline mean
+    died = {i for i, r in enumerate(reports) if r["summary"].get("actorDiedAtMs") is not None}
+    dropped_low_idx = [i for i in order[:k] if i not in died]
     dropped_high_idx = order[n - k:] if k > 0 else []
-    kept_idx = set(order[k: n - k]) if k > 0 else set(order)
+    kept_idx = set(range(n)) - set(dropped_low_idx) - set(dropped_high_idx)
     dropped_low = sorted(reports[i]["summary"]["dps"] for i in dropped_low_idx)
     dropped_high = sorted(reports[i]["summary"]["dps"] for i in dropped_high_idx)
     return kept_idx, dropped_low, dropped_high
@@ -148,6 +150,9 @@ def main() -> int:
 
     kept_idx, dropped_low, dropped_high = trim_by_dps(reports)
     summary, raw_mean, per_iteration = aggregate_summary(reports, kept_idx)
+    # Iterations where the actor died (actorDiedAtMs null/absent when it lived). They are never trimmed, so they stay in the
+    # headline means above and a self-killing rotation shows up as low DPS; this only makes the cause visible.
+    death_times = [r["summary"]["actorDiedAtMs"] for r in reports if r["summary"].get("actorDiedAtMs") is not None]
     representative = median_report(reports, kept_idx)
     merged = {
         "config": representative["config"],
@@ -161,6 +166,8 @@ def main() -> int:
         "casts": representative.get("casts", []),
         "aggregate": {
             "iterations": len(reports),
+            "actorDeathCount": len(death_times),
+            "actorDiedAtMs": death_times,
             "sourceReports": [p.name for p in report_paths],
             "representativeDps": representative["summary"]["dps"],
             "trim": {
@@ -180,6 +187,9 @@ def main() -> int:
     out_path.write_text(json.dumps(merged))
     print(f"wrote {out_path} (trimmed mean over {len(kept_idx)}/{len(reports)} iterations, "
           f"dropped {len(dropped_low)} low + {len(dropped_high)} high)")
+    if death_times:
+        print(f"WARNING: the actor DIED in {len(death_times)}/{len(reports)} iterations (at sim ms {death_times}); "
+              f"those iterations are scored on the full duration and are never trimmed from the means.")
     return 0
 
 
