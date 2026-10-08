@@ -245,8 +245,7 @@ public:
 
 namespace
 {
-    // Cat Form white-hit damage multiplier, in percent (user ruling 2026-10-08, DPS balance pass: auto-attacks -50%).
-    constexpr float CAT_FORM_AUTOATTACK_DAMAGE_PCT = 50.0f;
+    constexpr uint32 SPELL_DRUID_CAT_FORM_PASSIVE = 3025;
 
     Player* GetDruidPlayer(Unit* unit)
     {
@@ -342,7 +341,12 @@ public:
 
         if (Player* player = GetDruidPlayer(attacker))
             if (player->GetShapeshiftForm() == FORM_CAT)
-                mult *= CAT_FORM_AUTOATTACK_DAMAGE_PCT / 100.0f;
+            {
+                // Cat Form white-hit damage, in percent: dbc-tools data in Cat Form (Passive) 3025 effect 3
+                // (EFFECT_2) (user ruling 2026-10-08, DPS balance pass). Unchanged if the spell is missing.
+                if (SpellInfo const* catPassive = sSpellMgr->GetSpellInfo(SPELL_DRUID_CAT_FORM_PASSIVE))
+                    mult *= float(catPassive->Effects[EFFECT_2].CalcValue()) / 100.0f;
+            }
 
         if (GetDruidPlayer(target))
             mult *= Druid::GetIronHideDamageTakenMultiplier(target, attacker->GetMeleeDamageSchoolMask());

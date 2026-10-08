@@ -78,7 +78,7 @@ namespace
     constexpr std::array<uint32, 3> RANKS_CATACLYSM = { 17778, 17779, 17780 }; // Destruction (§0.2 item 5)
     constexpr uint32 NPC_DEMON_VOIDWALKER = 1860;
     constexpr uint32 NPC_DEMON_FELGUARD = 17252;
-    constexpr float FELGUARD_AUTOATTACK_DAMAGE_PCT = 90.0f; // user ruling 2026-10-08, DPS balance pass: -10%
+    constexpr uint32 SPELL_WARLOCK_SUMMON_FELGUARD = 30146;
 
     // Summon Infernal's meteor (stock SpellVisual 4859 -> InstantAreaKit 9166 ->
     // spells\infernal_impact_base.m2): its falling bone's translation track reaches the ground at
@@ -1427,7 +1427,10 @@ public:
         if (!owner || !owner->IsPlayer())
             return;
 
-        damage = uint32(float(damage) * FELGUARD_AUTOATTACK_DAMAGE_PCT / 100.0f);
+        // Felguard white-hit damage, in percent: dbc-tools data in Summon Felguard 30146 effect 2 (EFFECT_1)
+        // (user ruling 2026-10-08, DPS balance pass). Unchanged if the spell is missing.
+        if (SpellInfo const* summonInfo = sSpellMgr->GetSpellInfo(SPELL_WARLOCK_SUMMON_FELGUARD))
+            damage = uint32(float(damage) * float(summonInfo->Effects[EFFECT_1].CalcValue()) / 100.0f);
     }
 };
 

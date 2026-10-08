@@ -131,6 +131,31 @@ cat_form_768 = spell(
 )
 
 
+# Cat Form (Passive): stock row brought in only to carry one tuning number. Effect 3 is unused by the
+# engine (Effect_3 stays 0); its BasePoints is read at runtime by DruidFeralUnitHooks::ModifyMeleeDamage
+# (druid_hooks.cpp) as the percentage of normal white-hit damage dealt in Cat Form.
+cat_form_passive_3025 = spell(
+    id=3025,
+    name='Cat Form (Passive)',
+    school=8,
+    attributes=208,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=6, base_points=39, points_per_level=2.0, implicit_target_a=1, apply_aura=99),
+        Effect(type=6, base_points=-30, implicit_target_a=1, apply_aura=10, misc_value=127),
+    ],
+    spell_icon_id=493,
+    notes='DPS balance pass 8 (2026-10-08, user ruling): stock row, only EffectBasePoints_3 changed -1 -> 49 (EffectDieSides_3 stays 1, so CalcValue = 49 + 1 = 50). Effect_3 stays 0 (inert). Slot 3 = percentage of normal white-hit damage in Cat Form; read by DruidFeralUnitHooks::ModifyMeleeDamage via sSpellMgr->GetSpellInfo(3025)->Effects[EFFECT_2].CalcValue().',
+    raw_overrides={'AttributesEx': 1024, 'ShapeshiftMask': 1, 'CastingTimeIndex': 1, 'ProcChance': 101, 'BaseLevel': 20, 'SpellLevel': 20, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectDieSides_3': 1, 'EffectBasePoints_3': 49, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Passive', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712188, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 7, 'SpellClassMask_1': 134217728, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
 faerie_fire_770 = spell(
     id=770,
     name='Faerie Fire',
