@@ -299,7 +299,7 @@ restore_mana_200005 = spell(
     id=200005,
     name='Restore Mana',
     school=School.NORMAL,
-    attributes=402653440,
+    attributes=256,
     cast_time_ms=0,
     cooldown_ms=0,
     category_cooldown_ms=0,
@@ -308,7 +308,7 @@ restore_mana_200005 = spell(
         Effect(type=137, base_points=29, implicit_target_a=1),
     ],
     spell_icon_id=1036,
-    notes='Frost Mage rework (docs/frost-mage-redesign.md sec 2, Conjure Mana Gem): "the new item should restore 30% of maximum mana." SPELL_EFFECT_ENERGIZE_PCT (type 137) is a real, native effect (Spell::EffectEnergizePct, SpellEffects.cpp:1995 - CalculatePct(maxPower, damage)) - no C++ needed, unlike what an earlier pass of the implementation plan assumed. base_points=29 -> 30% (-1 convention, die_sides=1). Wired to item 5514 (Mana Agate)\'s spellid_2 slot in the accompanying pending SQL, replacing the old flat spell 5405; 5405 itself is left untouched since it\'s shared with unrelated items 36799/9397. SpellClassMask_2 0x100 (2026-10-06) is the stock Mana Gem identity bit (Replenish Mana 5405 etc.), so every stock gem modifier reaches the Mana Agate: Magic Absorption effect3 (29441/29444/200075), Glyph of Mana Gem 56367 (+40%) and the Improved Mana Gems set bonuses 37447/61062 (+25% and the Mana Surge spell power proc, spell_proc SpellFamilyMask1 256). Replaces the old custom dword-3 0x10, which stock Permafrost 68391 also carries.',
+    notes='Frost Mage rework (docs/frost-mage-redesign.md sec 2, Conjure Mana Gem): "the new item should restore 30% of maximum mana." SPELL_EFFECT_ENERGIZE_PCT (type 137) is a real, native effect (Spell::EffectEnergizePct, SpellEffects.cpp:1995 - CalculatePct(maxPower, damage)) - no C++ needed, unlike what an earlier pass of the implementation plan assumed. base_points=29 -> 30% (-1 convention, die_sides=1). Wired to item 5514 (Mana Agate)\'s spellid_2 slot in the accompanying pending SQL, replacing the old flat spell 5405; 5405 itself is left untouched since it\'s shared with unrelated items 36799/9397. SpellClassMask_2 0x100 (2026-10-06) is the stock Mana Gem identity bit (Replenish Mana 5405 etc.), so every stock gem modifier reaches the Mana Agate: Magic Absorption effect3 (29441/29444/200075), Glyph of Mana Gem 56367 (+40%) and the Improved Mana Gems set bonuses 37447/61062 (+25% and the Mana Surge spell power proc, spell_proc SpellFamilyMask1 256). Replaces the old custom dword-3 0x10, which stock Permafrost 68391 also carries. Attributes changed 402653440 -> 256 (2026-10-07): the value had been copied from the food spell Refreshment 200006, whose NOT_IN_COMBAT_ONLY_PEACEFUL and ALLOW_WHILE_SITTING bits made the gem unusable in combat.',
     raw_overrides={'SpellClassSet': 3, 'Name_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Restores 30% of maximum mana.', 'EquippedItemClass': -1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellPriority': 50, 'SpellClassMask_2': 256},
 )
 
