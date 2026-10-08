@@ -785,13 +785,13 @@ soul_fire_6353 = spell(
     cooldown_ms=0,
     category_cooldown_ms=0,
     mana_cost=0,
-    mana_cost_pct=9,
+    mana_cost_pct=6,
     range_yards=30.0,
     effects=[
         Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=85.0, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=184,
-    notes="warlock-rework DEMONOLOGY §4.4/§0.1.7: learn level 48 -> 30. Cast time/mana_cost_pct unchanged (3.3.5 values). trained_by replaces the old 48/14000 row below. Potency system P4 (warlock pilot): converted to sp_potency=85.0 (user-reviewed, mismatched row) - replaces the old _scaling.sb_units(1.8, 30, 868, 875) SB-units derivation.",
+    notes="warlock-rework DEMONOLOGY §4.4/§0.1.7: learn level 48 -> 30. Cast time/mana_cost_pct unchanged (3.3.5 values). trained_by replaces the old 48/14000 row below. Potency system P4 (warlock pilot): converted to sp_potency=85.0 (user-reviewed, mismatched row) - replaces the old _scaling.sb_units(1.8, 30, 868, 875) SB-units derivation. mana_cost_pct 9 -> 6 (2026-10-08, DPS balance pass, user ruling: Demonology mana).",
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 30, 'CastingTimeIndex': 171, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Burn the enemy's soul, causing {pot1} Fire damage.", 'EffectBonusMultiplier_1': 1.5426, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ReagentCount_1': 0, 'Reagent_1': 0, 'Speed': 24.0, 'SpellClassMask_2': 128, 'SpellClassSet': 5, 'SpellLevel': 30, 'SpellVisualID_1': 2253, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 scripted_by(soul_fire_6353, 'spell_warl_soul_fire_destruction', 'spell_warl_soul_fire_demonology')
@@ -2339,14 +2339,14 @@ hand_of_guldan_200820 = spell(
     cooldown_ms=12000,
     category_cooldown_ms=0,
     mana_cost=0,
-    mana_cost_pct=10,
+    mana_cost_pct=7,
     range_yards=40.0,
     effects=[
         Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=110.0, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.DUMMY, base_points=2, implicit_target_a=6),
     ],
     spell_icon_id=90160,
-    notes="warlock-rework DEMONOLOGY §4.1: baseline castable, learn 10 (B20). Shadowflame (School.SHADOW|FIRE=36). eff1 DUMMY stored 2 (= 3 Wild Imps, $s2, live=stored+1 via default die_sides=1). NOT_SHAPESHIFTED (Metamorphosis/Dark Apotheosis admit it via their own aura-275 masks). Icon fallback 2340 (mined 90160 not built this pass, optional per §2.5). SpellVisualID_1 90025 = Ascension's falling fel meteor + crater (patch_warlock_vfx_models.py). Potency system P4 (warlock pilot): eff0 converted to sp_potency=110.0 (user-reviewed, mismatched row) - replaces the old _scaling.sb_units(0.65, 10, 313, 316) SB-units derivation.",
+    notes="warlock-rework DEMONOLOGY §4.1: baseline castable, learn 10 (B20). Shadowflame (School.SHADOW|FIRE=36). eff1 DUMMY stored 2 (= 3 Wild Imps, $s2, live=stored+1 via default die_sides=1). NOT_SHAPESHIFTED (Metamorphosis/Dark Apotheosis admit it via their own aura-275 masks). Icon fallback 2340 (mined 90160 not built this pass, optional per §2.5). SpellVisualID_1 90025 = Ascension's falling fel meteor + crater (patch_warlock_vfx_models.py). Potency system P4 (warlock pilot): eff0 converted to sp_potency=110.0 (user-reviewed, mismatched row) - replaces the old _scaling.sb_units(0.65, 10, 313, 316) SB-units derivation. mana_cost_pct 10 -> 7 (2026-10-08, DPS balance pass, user ruling: Demonology mana).",
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Calls down a demonic meteor on the target, dealing {pot1} Shadowflame damage and summoning $s2 Wild Imps. While you are in Metamorphosis, it also deals $200821s1 Shadowflame damage to all other enemies within 8 yards of the target. Wild Imps cast Fel Firebolt at your target and last up to 60 sec.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': m.HAND_OF_GULDAN, 'SpellClassSet': 5, 'SpellVisualID_1': 90025, 'SpellLevel': 10, 'Speed': 0.0, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 trained_by(hand_of_guldan_200820, 214, 10, 600)
