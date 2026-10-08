@@ -1186,7 +1186,7 @@ unbind_script(69366, 'spell_dru_moonkin_form_passive')  # CORE-AUDIT row 10
 
 # (1,0) Moonglow - negative whole-chain row (all 3 ranks share the stock -16845 key)
 procs_on(-16845, proc_flags=0x14000, family_name=7, family_mask=MOONGLOW_SPELLS,
-         spell_phase_mask=PROC_SPELL_PHASE_CAST, chance=5, disable_effects_mask=0x1)
+         spell_phase_mask=PROC_SPELL_PHASE_CAST, chance=15, disable_effects_mask=0x1)
 
 # (2,0) Nature's Grace - negative whole-chain row; chance=0 falls back to each rank's own DBC
 # ProcChance (33/66/100)
