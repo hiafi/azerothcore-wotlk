@@ -1181,9 +1181,15 @@ shadowfiend_34433 = spell(
         Effect(type=EffectType.TRIGGER_SPELL, die_sides=0, implicit_target_a=1, trigger_spell=41967),
     ],
     spell_icon_id=2296,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 268435457, 'AttributesEx2': 524288, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 66, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Creates a shadowy fiend to attack the target.  Caster receives $34650s1% mana when the Shadowfiend attacks. Damage taken by area of effect attacks is reduced. Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 1561, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftMask': 134217728, 'SpellClassMask_1': 1073741824, 'SpellClassMask_2': 256, 'SpellClassSet': 6, 'SpellLevel': 66, 'SpellVisualID_1': 8208, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data. '
+          'BaseLevel/SpellLevel 66->38, trainable at 38 from trainer 208 (DPS balance pass, user ruling 2026-10-08: '
+          'Shadow needs a mana cooldown at 60; 38 was a free even level).',
+    raw_overrides={'AttributesEx': 268435457, 'AttributesEx2': 524288, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 38, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Creates a shadowy fiend to attack the target.  Caster receives $34650s1% mana when the Shadowfiend attacks. Damage taken by area of effect attacks is reduced. Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 1561, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftMask': 134217728, 'SpellClassMask_1': 1073741824, 'SpellClassMask_2': 256, 'SpellClassSet': 6, 'SpellLevel': 38, 'SpellVisualID_1': 8208, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+# Stock trainer 11's level-66 row is left alone (no NPC uses trainer 11). MoneyCost 14000 interpolated
+# between trainer 208's real level-34 (12000c) and level-40 (15000c) rows, which also matches the
+# +1000c per 2 levels slope of its level 40/42/44/46 rows (15000/16000/17000/18000c).
+trained_by(shadowfiend_34433, trainer_id=208, req_level=38, money_cost=14000)
 
 
 prayer_of_shadow_protection_39374 = spell(
