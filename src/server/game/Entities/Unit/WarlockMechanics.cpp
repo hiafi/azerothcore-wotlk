@@ -140,18 +140,9 @@ namespace
     std::unordered_map<ObjectGuid, InstantCastGrant> instantCastGrantByPlayer;
 
     // ------------------------------------------------------------------
-    // Leech-talent exclusivity (SHARED §4). Soul Leech (Destruction, stock ids) and Fel Immolation
-    // (Demonology, minted at these SHARED-pre-assigned ids in S3) aren't Affliction's to declare in
-    // WarlockMechanics.h, but GetActiveLeechTalent must compare every source from this pass on - a
-    // HasTalent() miss on a not-yet-minted id is just `false`, so referencing the literal now is
-    // safe and avoids a second edit to this function in S2/S3.
+    // Leech-talent exclusivity (SHARED §4). Soul Leech and Fel Immolation ids come from
+    // WarlockMechanics.h; Blazing Speed is declared here.
     // ------------------------------------------------------------------
-    constexpr uint32 SPELL_SOUL_LEECH_R1 = 30293;
-    constexpr uint32 SPELL_SOUL_LEECH_R2 = 30295;
-    constexpr uint32 SPELL_SOUL_LEECH_R3 = 30296;
-    constexpr uint32 SPELL_FEL_IMMOLATION_R1 = 200874;
-    constexpr uint32 SPELL_FEL_IMMOLATION_R2 = 200875;
-    constexpr uint32 SPELL_FEL_IMMOLATION_R3 = 200876;
     constexpr uint32 SPELL_BLAZING_SPEED_R1 = 31641;
     constexpr uint32 SPELL_BLAZING_SPEED_R2 = 31642;
     constexpr uint32 SPELL_BLAZING_SPEED_R3 = 200107;
@@ -235,7 +226,7 @@ namespace
 
     // Main-pet creature entries (DEMONOLOGY.md §7.1's "Who gets what" table) - not warlock-specific
     // ids, so not part of the frozen header; duplicated here the same way this file's own
-    // SPELL_SOUL_LEECH_R1/etc. (Destruction section above) duplicate cross-spec/stock ids rather
+    // SPELL_BLAZING_SPEED_R1/etc. (Destruction section above) duplicate cross-spec/stock ids rather
     // than widening WarlockMechanics.h.
     constexpr uint32 NPC_DEMON_IMP = 416;
     constexpr uint32 NPC_DEMON_VOIDWALKER = 1860;
