@@ -584,7 +584,7 @@ devouring_plague_2944 = spell(
     cooldown_ms=0,
     category_cooldown_ms=0,
     mana_cost=0,
-    mana_cost_pct=18,
+    mana_cost_pct=14,
     range_yards=30.0,
     duration_ms=24000,
     effects=[
@@ -593,7 +593,7 @@ devouring_plague_2944 = spell(
     spell_icon_id=3789,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope (anchor rank 19280, rank 6); coefficient/cast_time_ms/mana_cost_pct from max rank (48300, rank 9); MaxLevel set to 80. '
           'docs/reworks/priest-new-spells.md ("Spell Changes"): learn level moved from 20 to 14. '
-          "Potency system P5-Priest: converted to sp_potency=23.7 - a classifier gap (potency_report.py's classify_effect() doesn't recognize PERIODIC_LEECH, so this effect never appeared in the auto-report at all); computed by hand from this fork's own formula (base-implied 23.74, coef-implied 21.58, well under the 10% mismatch threshold so no ambiguity) - matches Shadow Word: Pain's own baseline DoT potency almost exactly, as expected for a plain Shadow DoT. The 15% self-heal (EffectMultipleValue_1) and PERIODIC_LEECH's own stock healing-the-caster mechanic are untouched, same as any other DoT's script multiplier on an already-potency-scaled amount. mana_cost_pct 25 -> 18 (2026-10-08, DPS balance pass, user ruling: Shadow mana).",
+          "Potency system P5-Priest: converted to sp_potency=23.7 - a classifier gap (potency_report.py's classify_effect() doesn't recognize PERIODIC_LEECH, so this effect never appeared in the auto-report at all); computed by hand from this fork's own formula (base-implied 23.74, coef-implied 21.58, well under the 10% mismatch threshold so no ambiguity) - matches Shadow Word: Pain's own baseline DoT potency almost exactly, as expected for a plain Shadow DoT. The 15% self-heal (EffectMultipleValue_1) and PERIODIC_LEECH's own stock healing-the-caster mechanic are untouched, same as any other DoT's script multiplier on an already-potency-scaled amount. mana_cost_pct 25 -> 18 (2026-10-08, DPS balance pass, user ruling: Shadow mana). mana_cost_pct 18 -> 14 (2026-10-08, DPS balance pass, user ruling: Shadow mana).",
     raw_overrides={'AttributesEx2': 524288, 'AttributesEx5': 32, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Causes {pot1} damage every $t1 seconds, healing the caster.', 'BaseLevel': 14, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Afflicts the target with a disease that causes {pot1.total} Shadow damage over $d. 15% of damage caused by the Devouring Plague heals the caster. This spell can only affect one target at a time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMultipleValue_1': 0.15000000596046448, 'EquippedItemClass': -1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftMask': 134217728, 'SpellClassMask_1': 33554432, 'SpellClassMask_2': 4096, 'SpellClassMask_3': 1024, 'SpellClassSet': 6, 'SpellLevel': 14, 'SpellPriority': 50, 'SpellVisualID_1': 346, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 # TrainerId 208 is the live Priest trainer (confirmed via lib/trainer_state.py's
@@ -1423,7 +1423,7 @@ vampiric_touch_34914 = spell(
     cooldown_ms=0,
     category_cooldown_ms=0,
     mana_cost=0,
-    mana_cost_pct=12,
+    mana_cost_pct=9,
     range_yards=30.0,
     duration_ms=15000,
     effects=[
@@ -1433,7 +1433,7 @@ vampiric_touch_34914 = spell(
     ],
     spell_icon_id=2213,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1→level-60 slope (anchor rank 34916, rank 2); coefficient/cast_time_ms/mana_cost_pct from max rank (48160, rank 5); MaxLevel set to 80. '
-          'Potency system P5-Priest: eff1 (periodic) converted to sp_potency=22.4 (user-reviewed, mismatched row); eff0/eff2 (mana-regen proc marker, dispel-punish marker) are flat DUMMY auras, untouched by the spell-wide BaseLevel/MaxLevel potency now manages. mana_cost_pct 16 -> 12 (2026-10-08, DPS balance pass, user ruling: Shadow mana).',
+          'Potency system P5-Priest: eff1 (periodic) converted to sp_potency=22.4 (user-reviewed, mismatched row); eff0/eff2 (mana-regen proc marker, dispel-punish marker) are flat DUMMY auras, untouched by the spell-wide BaseLevel/MaxLevel potency now manages. mana_cost_pct 16 -> 12 (2026-10-08, DPS balance pass, user ruling: Shadow mana). mana_cost_pct 12 -> 9 (2026-10-08, DPS balance pass, user ruling: Shadow mana).',
     raw_overrides={'AttributesEx3': 67108864, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "{pot2} Shadow damage every $t2 seconds. Priest's party or raid members gain 1% of their maximum mana per 5 sec when the priest deals damage from Mind Blast.", 'BaseLevel': 50, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot2.total} Shadow damage over $d to your target and causes up to 10 party or raid members to gain 1% of their maximum mana per 5 sec when you deal damage from Mind Blast. In addition, if the Vampiric Touch is dispelled it will cause $*8;s2 damage to the afflicted target.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 131072, 'SpellClassMask_2': 1024, 'SpellClassMask_3': 1024, 'SpellClassSet': 6, 'SpellLevel': 50, 'SpellVisualID_1': 3582, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
