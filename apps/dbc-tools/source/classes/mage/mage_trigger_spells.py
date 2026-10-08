@@ -41,10 +41,10 @@ arcane_missile_7268 = spell(
     mana_cost_pct=0,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=72.9, potency_kind='direct', implicit_target_a=77),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=94.8, potency_kind='direct', implicit_target_a=77),
     ],
     spell_icon_id=225,
-    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 8); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | Bugfix (playtest report, 2026-09-08): SpellVisualID_1 was left at rank 1\'s own value (268) instead of being carried over from the max rank\'s damage sub-spell (25346, mage.csv/npc.csv - SpellVisualID_1 270) like every other field in this bootstrap was - "arcane missiles has the rank 1 model instead of the max rank model for its missiles". Fixed to 270. Potency system P5 (Mage pass): converted to sp_potency=72.9 (potency-report default, base/coef already agreed).',
+    notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 8); RealPointsPerLevel from rank1→level-60 slope; coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 | Bugfix (playtest report, 2026-09-08): SpellVisualID_1 was left at rank 1\'s own value (268) instead of being carried over from the max rank\'s damage sub-spell (25346, mage.csv/npc.csv - SpellVisualID_1 270) like every other field in this bootstrap was - "arcane missiles has the rank 1 model instead of the max rank model for its missiles". Fixed to 270. Potency system P5 (Mage pass): converted to sp_potency=72.9 (potency-report default, base/coef already agreed). Effect 1 sp_potency 72.9 -> 94.8 (2026-10-08, DPS balance pass, user ruling: Arcane Missiles +30%).',
     raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 8, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Launches Arcane Missiles at the enemy, causing {pot1} Arcane damage every $5143t2 sec for $5143d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 8, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'Speed': 20.0, 'SpellClassMask_1': 2097152, 'SpellClassSet': 3, 'SpellLevel': 8, 'SpellPriority': 50, 'SpellVisualID_1': 270},
 )
 
