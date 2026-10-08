@@ -253,6 +253,9 @@ namespace
             bot.ReestablishCombatState(dummy);
         }
         LogAurasAtPull(player);
+        // The dummy's armor at the pull: a recalculation restoring the template armor would show here.
+        LOG_INFO("server.dpssim", "mod-dpssim: iteration pull - dummy armor {}, maxHealth {}.",
+            dummy->GetArmor(), dummy->GetMaxHealth());
 
         SimClock clock(config.StepMs, measuredStartMs);
         uint32 lastManaSampleMs = 0;

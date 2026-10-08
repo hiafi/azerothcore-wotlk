@@ -139,6 +139,7 @@ void DpsSimWorldScript::OnDpsSimRun()
                 config.AttackPower = profile.AttackPower;
                 config.DummyHealthDrain = profile.DummyHealthDrain;
                 config.DummyMaxHealth = profile.DummyMaxHealth;
+                config.TargetArmor = profile.TargetArmor;
                 config.PrePullBuffMs = profile.PrePullBuffMs;
                 config.PlayerbotGlyphs = profile.PlayerbotGlyphs;
                 LOG_INFO("server.dpssim",

@@ -109,6 +109,11 @@ namespace SimProfile
         bool DummyHealthDrain = false;
         uint32 DummyMaxHealth = 0;
 
+        // The dummy's armor. 0 (absent) = no armor, as before. Copied to SimDaemon::Config::TargetArmor and from there
+        // to SimTarget::Config::Armor. The profiles use 4350, about a level-62 dungeon boss (creature_classlevelstats
+        // level 62 class 1 = 4,344).
+        uint32 TargetArmor = 0;
+
         // Pre-pull buff phase, in sim ms (default 15000: a 10 s pet summon plus a few GCDs). Before every
         // iteration, the first included, the bot runs its non-combat engine - restricted to its buff, pet and
         // non-combat rotation strategies (SimBot::BeginBuffPhase()) - for this long, out of combat, so it presses
