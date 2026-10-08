@@ -245,6 +245,9 @@ public:
 
 namespace
 {
+    // Cat Form white-hit damage multiplier, in percent (user ruling 2026-10-08, DPS balance pass: auto-attacks -50%).
+    constexpr float CAT_FORM_AUTOATTACK_DAMAGE_PCT = 50.0f;
+
     Player* GetDruidPlayer(Unit* unit)
     {
         Player* player = unit ? unit->ToPlayer() : nullptr;
@@ -336,6 +339,10 @@ public:
 
         if (Player* player = GetDruidPlayer(attacker))
             mult *= Druid::GetFeralDamageDoneMultiplier(player, target, nullptr, attacker->GetMeleeDamageSchoolMask());
+
+        if (Player* player = GetDruidPlayer(attacker))
+            if (player->GetShapeshiftForm() == FORM_CAT)
+                mult *= CAT_FORM_AUTOATTACK_DAMAGE_PCT / 100.0f;
 
         if (GetDruidPlayer(target))
             mult *= Druid::GetIronHideDamageTakenMultiplier(target, attacker->GetMeleeDamageSchoolMask());

@@ -78,6 +78,7 @@ namespace
     constexpr std::array<uint32, 3> RANKS_CATACLYSM = { 17778, 17779, 17780 }; // Destruction (§0.2 item 5)
     constexpr uint32 NPC_DEMON_VOIDWALKER = 1860;
     constexpr uint32 NPC_DEMON_FELGUARD = 17252;
+    constexpr float FELGUARD_AUTOATTACK_DAMAGE_PCT = 90.0f; // user ruling 2026-10-08, DPS balance pass: -10%
 
     // Summon Infernal's meteor (stock SpellVisual 4859 -> InstantAreaKit 9166 ->
     // spells\infernal_impact_base.m2): its falling bone's translation track reaches the ground at
@@ -1407,6 +1408,29 @@ public:
     }
 };
 
+// UnitScript: Felguard auto-attacks -10% (user ruling 2026-10-08, DPS balance pass). White hits only; Cleave and
+// Legion Strike are spells and do not pass through UNITHOOK_MODIFY_MELEE_DAMAGE.
+class warlock_felguard_melee_unit_script : public UnitScript
+{
+public:
+    warlock_felguard_melee_unit_script()
+        : UnitScript("warlock_felguard_melee_unit_script", true, { UNITHOOK_MODIFY_MELEE_DAMAGE })
+    {
+    }
+
+    void ModifyMeleeDamage(Unit* /*target*/, Unit* attacker, uint32& damage) override
+    {
+        if (!attacker || !damage || attacker->GetEntry() != NPC_DEMON_FELGUARD)
+            return;
+
+        Unit* owner = attacker->GetOwner();
+        if (!owner || !owner->IsPlayer())
+            return;
+
+        damage = uint32(float(damage) * FELGUARD_AUTOATTACK_DAMAGE_PCT / 100.0f);
+    }
+};
+
 void AddSC_warlock_demonology_spell_scripts()
 {
     // Molten Core: third Soul Fire instant-cast source (SHARED §4 arbiter, priority = registration
@@ -1448,4 +1472,5 @@ void AddSC_warlock_demonology_spell_scripts()
 
     new warlock_demonology_player_script();
     new warlock_demonology_unit_script();
+    new warlock_felguard_melee_unit_script();
 }
