@@ -67,13 +67,28 @@ bool SimTarget::Create(Map* map, Position const& pos, Config const& config)
     _summon->SetReactState(REACT_PASSIVE);
 
     _summon->SetLevel(config.Level);
-    _summon->SetMaxHealth(config.MaxHealth);
+
+    // Armor and max health go through the stat modifiers (and the Update* recalculation), not the raw fields: any later
+    // recalculation (e.g. an armor-reducing aura such as Thrash's, or a level change) rebuilds the field from the
+    // UNIT_MOD_ARMOR / UNIT_MOD_HEALTH modifiers and would otherwise restore the template's values for the rest of the
+    // batch. The pct modifiers are pinned to 1 and the total flat to 0 so the result is exactly the configured value;
+    // auras applied later still scale it as they do for any creature.
+    _summon->SetStatFlatModifier(UNIT_MOD_ARMOR, BASE_VALUE, float(config.Armor));
+    _summon->SetStatPctModifier(UNIT_MOD_ARMOR, BASE_PCT, 1.0f);
+    _summon->SetStatFlatModifier(UNIT_MOD_ARMOR, TOTAL_VALUE, 0.0f);
+    _summon->SetStatPctModifier(UNIT_MOD_ARMOR, TOTAL_PCT, 1.0f);
+    _summon->UpdateArmor();
+
+    _summon->SetStatFlatModifier(UNIT_MOD_HEALTH, BASE_VALUE, float(config.MaxHealth));
+    _summon->SetStatPctModifier(UNIT_MOD_HEALTH, BASE_PCT, 1.0f);
+    _summon->SetStatFlatModifier(UNIT_MOD_HEALTH, TOTAL_VALUE, 0.0f);
+    _summon->SetStatPctModifier(UNIT_MOD_HEALTH, TOTAL_PCT, 1.0f);
+    _summon->UpdateMaxHealth();
     _summon->SetFullHealth();
     SimDummyAI::SetHealthDrain(config.HealthDrain);
-    _summon->SetResistance(SPELL_SCHOOL_NORMAL, int32(config.Armor));
 
-    LOG_INFO("server.dpssim", "mod-dpssim: SimTarget created - entry {}, level {}, armor {}, maxHealth {}.",
-        entry, config.Level, config.Armor, config.MaxHealth);
+    LOG_INFO("server.dpssim", "mod-dpssim: SimTarget created - entry {}, level {}, armor {} (configured {}), maxHealth {}.",
+        entry, config.Level, _summon->GetArmor(), config.Armor, _summon->GetMaxHealth());
     return true;
 }
 

@@ -134,10 +134,11 @@ exorcism_879 = spell(
     mana_cost_pct=8,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=125.0, ap_potency=125.0, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=87.5, ap_potency=87.5, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=292,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=140.0 / ap_potency=140.0 (paladin-potency-proposals.txt total 280.0, user value; was 271.8 from a stale worktree copy, corrected 2026-10-02; split evenly - matches the pre-existing 0.15/0.15 equal SP/AP coefficient split); also fixes PLAN F13 (the single-rank migration had zeroed this spell\'s spell_bonus_data direct_bonus, killing its live SP scaling - this conversion restores it as a side effect, same as docs/potency-system.md\'s "Known live bug" note).',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (paladin pass): converted to sp_potency=140.0 / ap_potency=140.0 (paladin-potency-proposals.txt total 280.0, user value; was 271.8 from a stale worktree copy, corrected 2026-10-02; split evenly - matches the pre-existing 0.15/0.15 equal SP/AP coefficient split); also fixes PLAN F13 (the single-rank migration had zeroed this spell\'s spell_bonus_data direct_bonus, killing its live SP scaling - this conversion restores it as a side effect, same as docs/potency-system.md\'s "Known live bug" note).'
+          ' Effect 1 sp_potency/ap_potency 125.0 -> 87.5 (2026-10-08, DPS balance pass, user ruling: Retribution Exorcism x0.70, round 9).',
     raw_overrides={'AttributesEx': 512, 'AttributesEx6': 33554432, 'AttributesEx7': 32768, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes {pot1*mult_exo} Holy damage to an enemy target.  If the target is Undead or Demon, it will always critically hit.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 2, 'SpellClassSet': 10, 'SpellDescriptionVariableID': 1104, 'SpellLevel': 20, 'SpellVisualID_1': 324, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1210,11 +1211,12 @@ crusader_strike_35395 = spell(
     duration_ms=1,
     effects=[
         Effect(type=121, base_points=-1, implicit_target_a=6),
-        Effect(type=31, weapon_potency=140, implicit_target_a=6),
+        Effect(type=31, weapon_potency=168, implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=6, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2309,
-    notes='pulled from existing data',
+    notes='pulled from existing data'
+          ' Effect 2 weapon_potency 140 -> 168 (2026-10-08, DPS balance pass, user ruling: Retribution x1.20).',
     raw_overrides={'AttributesEx': 268435968, 'AttributesEx6': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An instant strike that causes ${$m2*$<mult_cs>}% weapon damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_2': 32768, 'SpellClassSet': 10, 'SpellDescriptionVariableID': 1103, 'SpellLevel': 1, 'SpellVisualID_1': 8316, 'StanceBarOrder': 4294967295, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1235,10 +1237,11 @@ divine_storm_53385 = spell(
     effects=[
         Effect(type=EffectType.DUMMY, base_points=149, implicit_target_a=1),
         Effect(type=EffectType.DUMMY, base_points=24, implicit_target_a=1),
-        Effect(type=31, weapon_potency=150, implicit_target_a=22, implicit_target_b=15, radius_yards=8.0),
+        Effect(type=31, weapon_potency=180, implicit_target_a=22, implicit_target_b=15, radius_yards=8.0),
     ],
     spell_icon_id=3027,
-    notes='pulled from existing data',
+    notes='pulled from existing data'
+          ' Effect 3 weapon_potency 150 -> 180 (2026-10-08, DPS balance pass, user ruling: Retribution x1.20).',
     raw_overrides={'AttributesEx': 16, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An instant weapon attack that causes $s3% of weapon damage to up to 5 enemies within $a3 yards.  The Divine Storm heals up to 3 injured party or raid members for a total of $s2% of the damage caused.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'MaxTargets': 5, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 131072, 'SpellClassSet': 10, 'SpellLevel': 40, 'SpellVisualID_1': 12006, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -1599,11 +1602,12 @@ execution_sentence_burst_201411 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=180.0, ap_potency=180.0, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=234.0, ap_potency=234.0, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=90212,
     notes='paladin-rework S1 RETRIBUTION §4.3: the hammer\'s main-target strike, 180 / 180, triggered only. Range 50000 (the hammer can expire with the paladin far away). '
-          'spell_pal_execution_sentence_burst applies x(1 + 0.05 * gained) and keeps the main target out of the splash.',
+          'spell_pal_execution_sentence_burst applies x(1 + 0.05 * gained) and keeps the main target out of the splash.'
+          ' Effect 1 sp_potency/ap_potency 180.0 -> 234.0 (2026-10-08, DPS balance pass, user ruling: Retribution x1.30).',
     raw_overrides=_raw(
         AttributesEx2=0x4,  # SPELL_ATTR2_IGNORE_LINE_OF_SIGHT: script-cast at a target / dest the paladin may not see
         SpellClassMask_3=m.EXECUTION_SENTENCE,
@@ -1663,14 +1667,15 @@ execution_sentence_201410 = spell(
     duration_ms=10000,
     effects=[
         Effect(
-            type=EffectType.APPLY_AURA, sp_potency=36.0, ap_potency=36.0, potency_kind='periodic', implicit_target_a=6,
+            type=EffectType.APPLY_AURA, sp_potency=46.8, ap_potency=46.8, potency_kind='periodic', implicit_target_a=6,
             apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000,
         ),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=AuraType.MOD_DAMAGE_FROM_CASTER),
     ],
     spell_icon_id=90212,
     notes='paladin-rework S1 RETRIBUTION §4.3: DoT 36 / 36 per 1 s tick for 10 s (480 total at T 1 s), 60 s cooldown (>= 30 s: Cooldown Haste applies), magic-dispellable (a dispel fires the burst), ES bit d2 0x2000, learn 50. '
-          'eff2 = aura 271 (damage taken from the caster) 0% until Fanaticism adds to it through SPELLMOD_EFFECT2; it reads SEAL_DAMAGE (U | P) on mask B. Visual 90044 (patch_paladin_vfx_models.py): Ascension\'s falling hammer as a StateKit on the DoT.',
+          'eff2 = aura 271 (damage taken from the caster) 0% until Fanaticism adds to it through SPELLMOD_EFFECT2; it reads SEAL_DAMAGE (U | P) on mask B. Visual 90044 (patch_paladin_vfx_models.py): Ascension\'s falling hammer as a StateKit on the DoT.'
+          ' Effect 1 (periodic) sp_potency/ap_potency 36.0 -> 46.8 (2026-10-08, DPS balance pass, user ruling: Retribution x1.30).',
     raw_overrides=_raw(
         castable=True,
         AuraDescription_Lang_Mask=16712190,

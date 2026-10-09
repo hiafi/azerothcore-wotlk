@@ -483,8 +483,15 @@ class spell_warl_conflagrate : public SpellScript
         if (target->HasAura(Warlock::SPELL_CHAOTIC_BURN, caster->GetGUID()))
             mult *= 1.2f;
 
-        _direct = int32(float(total) * mult);
-        _perTick = int32(float(total) * 0.85f * mult / 3.0f);
+        // Conflagrate copies a share of the consumed DoT's full-duration total. The shares come from dbc-tools
+        // (user ruling 2026-10-08): spell 17962 effect 3 (EFFECT_2) = direct share %, effect 2 (EFFECT_1) = follow-up
+        // DoT share % spread over its 3 ticks. A missing SpellInfo leaves them at 100%.
+        SpellInfo const* conflagrateInfo = GetSpellInfo();
+        float const directPct = conflagrateInfo ? float(conflagrateInfo->Effects[EFFECT_2].CalcValue()) : 100.0f;
+        float const dotPct = conflagrateInfo ? float(conflagrateInfo->Effects[EFFECT_1].CalcValue()) : 100.0f;
+
+        _direct = int32(float(total) * directPct / 100.0f * mult);
+        _perTick = int32(float(total) * dotPct / 100.0f * mult / 3.0f);
 
         // The value passed here is what the aura is created with (Spell.cpp:2703 -> :3255);
         // SetSpellValue's own CalcBaseValue already subtracts the 1 die_sides adds back - pass the

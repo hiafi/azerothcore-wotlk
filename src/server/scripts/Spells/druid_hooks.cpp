@@ -245,6 +245,8 @@ public:
 
 namespace
 {
+    constexpr uint32 SPELL_DRUID_CAT_FORM_PASSIVE = 3025;
+
     Player* GetDruidPlayer(Unit* unit)
     {
         Player* player = unit ? unit->ToPlayer() : nullptr;
@@ -336,6 +338,26 @@ public:
 
         if (Player* player = GetDruidPlayer(attacker))
             mult *= Druid::GetFeralDamageDoneMultiplier(player, target, nullptr, attacker->GetMeleeDamageSchoolMask());
+
+        if (Player* player = GetDruidPlayer(attacker))
+            if (player->GetShapeshiftForm() == FORM_CAT)
+            {
+                // Cat Form white-hit damage, in percent: dbc-tools data in Cat Form (Passive) 3025 effect 3
+                // (EFFECT_2) (user ruling 2026-10-08, DPS balance pass). Unchanged if the spell is missing.
+                if (SpellInfo const* catPassive = sSpellMgr->GetSpellInfo(SPELL_DRUID_CAT_FORM_PASSIVE))
+                    mult *= float(catPassive->Effects[EFFECT_2].CalcValue()) / 100.0f;
+            }
+
+        if (Player* player = GetDruidPlayer(attacker))
+            if ((player->GetShapeshiftForm() == FORM_BEAR || player->GetShapeshiftForm() == FORM_DIREBEAR)
+                && player->HasAura(Druid::SPELL_BESTIAL_FURY))
+            {
+                // Bestial Fury bear white-hit damage, in percent: dbc-tools data in the hidden Bestial Fury aura
+                // 200437 effect 3 (EFFECT_2; 200425 has no free slot) (user ruling 2026-10-08, DPS balance pass).
+                // Tank bears (no Bestial Fury) are unaffected. Unchanged if the spell is missing.
+                if (SpellInfo const* bestialFuryAura = sSpellMgr->GetSpellInfo(Druid::SPELL_BESTIAL_FURY_RAGE))
+                    mult *= float(bestialFuryAura->Effects[EFFECT_2].CalcValue()) / 100.0f;
+            }
 
         if (GetDruidPlayer(target))
             mult *= Druid::GetIronHideDamageTakenMultiplier(target, attacker->GetMeleeDamageSchoolMask());

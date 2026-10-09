@@ -65,6 +65,7 @@ namespace SimDaemon
         // SimProfile.h) - there is no flat conf-key equivalent for the RunPlayerbot path, only
         // RunOnce()'s own test-authored values (SimTests.cpp) and profiles set this.
         int32 SpellPower = 0;
+        // The dummy's armor; comes from a loaded profile's TargetArmor key (SimProfile.h), 0 otherwise.
         uint32 TargetArmor = 0;
         // Caster's level - both RunOnce() and RunPlayerbotOnce() honor this. Added to test whether
         // a single-rank spell's damage actually scales with caster level under this deployment's

@@ -222,6 +222,22 @@ bool SimProfile::Load(std::string const& path, Profile& out)
                 return false;
             }
         }
+        else if (key == "TargetArmor")
+        {
+            try
+            {
+                if (value.find('-') != std::string::npos)
+                    throw std::invalid_argument("negative");
+                parsed.TargetArmor = uint32(std::stoul(value));
+            }
+            catch (std::exception const&)
+            {
+                LOG_ERROR("server.dpssim",
+                    "mod-dpssim: SimProfile::Load() - '{}' line {}: 'TargetArmor' value '{}' is not a number.",
+                    path, lineNo, value);
+                return false;
+            }
+        }
         else if (key == "PrePullBuffMs")
         {
             try
