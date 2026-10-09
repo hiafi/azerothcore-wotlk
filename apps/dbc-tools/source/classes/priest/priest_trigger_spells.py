@@ -7645,14 +7645,14 @@ tentacle_mind_flay_200246 = spell(
           'AttributesEx (67125252 - confirmed SPELL_ATTR1_IS_CHANNELED (0x4) already set) so the '
           "tentacle's channel generates no threat, matching the design doc's \"Generates no threat "
           'for the priest.\" spell_pri_tentacle_mind_flay (WP-B, AuraScript) hooks OnEffectPeriodic '
-          'for the 1-Madness-per-tick generation. dot bonus coefficient 0.257 -> 0.2313 (2026-10-08, DPS balance pass, user ruling: Shadow damage).',
+          'for the 1-Madness-per-tick generation. dot bonus coefficient 0.257 -> 0.2313 (2026-10-08, DPS balance pass, user ruling: Shadow damage). dot bonus coefficient 0.2313 -> 0.2429 (2026-10-08, DPS balance pass, user ruling: Tentacle Mind Flay x1.05, round 10).',
     raw_overrides={'AttributesEx': 67126276, 'AttributesEx2': 524288, 'AttributesEx5': 134225920, 'AttributesEx6': 8388608, 'SpellVisualID_1': 12637, 'ChannelInterruptFlags': 31756, 'DefenseType': 1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'CastingTimeIndex': 1, 'SpellClassSet': 6, 'SpellClassMask_3': _masks.MIND_FLAY, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Assaults the target's mind with Shadow energy, causing Shadow damage over 3 sec.", 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
 )
 # SpellVisualID_1 12637 is stock Mind Flay's own channel visual (shared by 15407/17313/17314).
 # Without it the tentacle's channel is invisible - damage ticks and the debuff land, but no beam
 # is drawn (playtest 2026-09-23). A pulled clone doesn't inherit it: 200246 was authored from
 # scratch rather than copied from 15407's row.
-bonus_coefficients(tentacle_mind_flay_200246, dot=0.2313)  # 0.257 -> 0.2313 (2026-10-08, DPS balance pass, user ruling: Shadow damage)
+bonus_coefficients(tentacle_mind_flay_200246, dot=0.2429)  # 0.257 -> 0.2313 (2026-10-08, DPS balance pass, user ruling: Shadow damage); 0.2313 -> 0.2429 (2026-10-08, round 10, x1.05)
 scripted_by(tentacle_mind_flay_200246, 'spell_pri_tentacle_mind_flay')
 
 

@@ -1158,10 +1158,10 @@ incinerate_29722 = spell(
     mana_cost_pct=14,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=63.4, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=57.06, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=90170,
-    notes='warlock-rework DESTRUCTION §4.1 (B3 rebase, learn level 64->24). Icon moved off 2128 to 90170 (B17(b)/C11 - makes the stock "+25% vs Immolate" hardcode inert; Fire and Brimstone (9,1) owns that bonus now via Immolate eff2). Description drops the stock $/4;s1 Immolate clause. Potency system P4 (warlock pilot): converted to sp_potency=97.6 (potency-report default, base/coef already agreed). Effect 1 sp_potency 97.6 -> 63.4 (2026-10-08, DPS balance pass, user ruling: Destruction damage).',
+    notes='warlock-rework DESTRUCTION §4.1 (B3 rebase, learn level 64->24). Icon moved off 2128 to 90170 (B17(b)/C11 - makes the stock "+25% vs Immolate" hardcode inert; Fire and Brimstone (9,1) owns that bonus now via Immolate eff2). Description drops the stock $/4;s1 Immolate clause. Potency system P4 (warlock pilot): converted to sp_potency=97.6 (potency-report default, base/coef already agreed). Effect 1 sp_potency 97.6 -> 63.4 (2026-10-08, DPS balance pass, user ruling: Destruction damage). Effect 1 sp_potency 63.4 -> 57.06 (2026-10-08, DPS balance pass, user ruling: Destruction Incinerate x0.90, round 10).',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 19, 'CumulativeAura': 5, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1} Fire damage to your target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 4, 'EffectSpellClassMaskC_1': 4, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcCharges': 1, 'Speed': 20.0, 'SpellClassMask_2': 64, 'SpellClassSet': 5, 'SpellLevel': 24, 'SpellVisualID_1': 7675, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 trained_by(incinerate_29722, trainer_id=214, req_level=24, money_cost=3000)
@@ -1432,11 +1432,11 @@ shadowfury_30283 = spell(
     range_yards=30.0,
     duration_ms=3000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=217.9, potency_kind='direct', implicit_target_a=16, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=196.11, potency_kind='direct', implicit_target_a=16, radius_yards=8.0),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, mechanic=Mechanic.STUN, implicit_target_a=16, apply_aura=AuraType.MOD_STUN, radius_yards=8.0),
     ],
     spell_icon_id=1988,
-    notes='warlock-rework DESTRUCTION §4.1 (B3 rebase, moved (8,1)->(6,0), learn level 50->40). Fury of the Void (7,0) capstone script bound on this id (WP-B). Potency system P4 (warlock pilot): converted to sp_potency=217.9 (user-reviewed, mismatched row).',
+    notes='warlock-rework DESTRUCTION §4.1 (B3 rebase, moved (8,1)->(6,0), learn level 50->40). Fury of the Void (7,0) capstone script bound on this id (WP-B). Potency system P4 (warlock pilot): converted to sp_potency=217.9 (user-reviewed, mismatched row). Effect 1 sp_potency 217.9 -> 196.11 (2026-10-08, DPS balance pass, user ruling: Destruction Shadowfury x0.90, round 10).',
     raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Stunned.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Shadowfury is unleashed, causing {pot1} Shadow damage and stunning all enemies within $a1 yds for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 4096, 'SpellClassSet': 5, 'SpellLevel': 40, 'SpellPriority': 50, 'SpellVisualID_1': 7732, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 500, 'Targets': 64},
 )
 scripted_by(shadowfury_30283, 'spell_warl_fury_of_the_void')

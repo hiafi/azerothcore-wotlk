@@ -1345,7 +1345,7 @@ mind_flay_15407 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=6, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.APPLY_AURA, base_points=-51, mechanic=Mechanic.SNARE, implicit_target_a=6, apply_aura=AuraType.MOD_DECREASE_SPEED),
-        Effect(type=EffectType.APPLY_AURA, sp_potency=85.4, potency_kind='periodic', implicit_target_a=1, apply_aura=227, amplitude=1000, trigger_spell=58381),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=98.21, potency_kind='periodic', implicit_target_a=1, apply_aura=227, amplitude=1000, trigger_spell=58381),
     ],
     spell_icon_id=548,
     notes='single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope (anchor rank 18807, rank 6); coefficient/cast_time_ms/mana_cost_pct from max rank (48156, rank 9); MaxLevel set to 80. '
@@ -1354,7 +1354,7 @@ mind_flay_15407 = spell(
           "apply_aura=227/PERIODIC_TRIGGER_SPELL_WITH_VALUE, so this effect never appeared in the "
           "auto-report). Two implied potencies disagreed by ~40% (base-implied 67.9 from the live "
           "14+2.65/lvl, SP-coefficient-implied 94.9 at the live 0.271 coefficient); the user chose "
-          "the coefficient-implied value. mana_cost_pct 9 -> 7 (2026-10-08, DPS balance pass, user ruling: Shadow mana). mana_cost_pct 7 -> 5 (2026-10-08, DPS balance pass, user ruling: Shadow mana). Effect 3 sp_potency 94.9 -> 85.4 (2026-10-08, DPS balance pass, user ruling: Shadow damage).",
+          "the coefficient-implied value. mana_cost_pct 9 -> 7 (2026-10-08, DPS balance pass, user ruling: Shadow mana). mana_cost_pct 7 -> 5 (2026-10-08, DPS balance pass, user ruling: Shadow mana). Effect 3 sp_potency 94.9 -> 85.4 (2026-10-08, DPS balance pass, user ruling: Shadow damage). Effect 3 sp_potency 85.4 -> 98.21 (2026-10-08, DPS balance pass, user ruling: Shadow Mind Flay x1.15, round 10).",
     raw_overrides={'AttributesEx': 67125252, 'AttributesEx2': 524288, 'AttributesEx5': 134225920, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement speed slowed.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'ChannelInterruptFlags': 31756, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Assault the target's mind with Shadow energy, causing {pot3.total} Shadow damage over $d and slowing their movement speed by $s2%.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'ShapeshiftMask': 134217728, 'SpellClassMask_3': 1088, 'SpellClassSet': 6, 'SpellLevel': 20, 'SpellVisualID_1': 12637, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 # Priest Shadow rework (SHADOW.md "Scripts on stock spells"): row unchanged - OnEffectPeriodic
