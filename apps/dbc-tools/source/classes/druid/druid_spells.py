@@ -156,6 +156,30 @@ cat_form_passive_3025 = spell(
 )
 
 
+# Druid Pet Scaling 04 (Force of Nature treant, creature 1964): stock row brought in only to carry one tuning
+# number. Effect 2 is unused by the engine (Effect_2 stays 0, so no aura and no immunity side effect from
+# spell_dru_treant_scaling_balance); its BasePoints is read at runtime by
+# spell_druid_balance.cpp's druid_treant_melee_unit_script as the percentage of normal white-hit damage the treant deals.
+druid_pet_scaling_04_35672 = spell(
+    id=35672,
+    name='Druid Pet Scaling 04',
+    school=1,
+    attributes=448,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=6, die_sides=0, implicit_target_a=1, apply_aura=22, misc_value=32),
+    ],
+    spell_icon_id=0,
+    notes='DPS balance pass 11 (2026-10-08, user ruling): stock row, only EffectBasePoints_2 0 -> 179 and EffectDieSides_2 0 -> 1 changed (CalcValue = 179 + 1 = 180). Effect_2 stays 0 (inert). Slot 2 = percentage of normal white-hit damage dealt by the Force of Nature treant (creature 1964, +80%); read by druid_treant_melee_unit_script via sSpellMgr->GetSpellInfo(35672)->Effects[EFFECT_1].CalcValue().',
+    raw_overrides={'AttributesEx3': 268435456, 'AttributesEx4': 34603008, 'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectChainAmplitude_1': 1, 'EffectChainAmplitude_2': 1, 'EffectChainAmplitude_3': 1, 'EffectBasePoints_2': 179, 'EffectDieSides_2': 1},
+)
+
+
 faerie_fire_770 = spell(
     id=770,
     name='Faerie Fire',
@@ -1429,8 +1453,8 @@ lacerate_33745 = spell(
     range_yards=5.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, ap_potency=2.12, potency_kind='periodic', mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=17.22, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.APPLY_AURA, ap_potency=1.91, potency_kind='periodic', mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=3000),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=15.5, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=2246,
     notes=(
@@ -1445,6 +1469,7 @@ lacerate_33745 = spell(
         ' Effect 1 (periodic) ap_potency 8.6 -> 3.44, effect 2 (direct) ap_potency 69.9 -> 27.96 (2026-10-08, DPS balance pass, user ruling: Bear DPS Lacerate x0.40).'
         ' Effect 1 (periodic) ap_potency 3.44 -> 2.75, effect 2 (direct) ap_potency 27.96 -> 22.37 (2026-10-08, DPS balance pass, user ruling: Bear DPS Lacerate x0.80, round 9).'
         ' Effect 1 (periodic) ap_potency 2.75 -> 2.12, effect 2 (direct) ap_potency 22.37 -> 17.22 (2026-10-08, DPS balance pass, user ruling: Bear DPS Lacerate x0.77, round 10).'
+        ' Effect 1 (periodic) ap_potency 2.12 -> 1.91, effect 2 (direct) ap_potency 17.22 -> 15.5 (2026-10-08, DPS balance pass, user ruling: Bear DPS Lacerate x0.90, round 11).'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 128, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '{pot1} damage every $t sec', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'CumulativeAura': 3, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Lacerates the enemy target, dealing {pot2} damage and making them bleed for {pot1.total} damage over $d and causing a high amount of threat.  This effect stacks up to $u times on the same target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 144, 'SpellClassMask_2': 256, 'SpellClassSet': 7, 'SpellLevel': 20, 'SpellVisualID_1': 8146, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
@@ -1615,7 +1640,7 @@ mangle_bear_33878 = spell(
     range_yards=5.0,
     duration_ms=60000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=48.23, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=43.41, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=6, apply_aura=255, misc_value=15),
     ],
     spell_icon_id=2312,
@@ -1628,7 +1653,8 @@ mangle_bear_33878 = spell(
           '(Bear Form has none) - its own SpellFamilyFlags (SpellClassMask_2=64) don\'t match Spell::EffectWeaponDmg\'s "Mangle (Cat): CP" '
           'check (flags[1]&0x400), check, confirmed before concluding no addition was needed here.'
           ' Effect 1 ap_potency 104.4 -> 62.64 (2026-10-08, DPS balance pass, user ruling: Bear DPS Mangle (Bear) x0.60).'
-          ' Effect 1 ap_potency 62.64 -> 48.23 (2026-10-08, DPS balance pass, user ruling: Bear DPS Mangle (Bear) x0.77, round 10).',
+          ' Effect 1 ap_potency 62.64 -> 48.23 (2026-10-08, DPS balance pass, user ruling: Bear DPS Mangle (Bear) x0.77, round 10).'
+          ' Effect 1 ap_potency 48.23 -> 43.41 (2026-10-08, DPS balance pass, user ruling: Bear DPS Mangle (Bear) x0.90, round 11).',
     raw_overrides={'AttributesEx': 134218240, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'All bleed effects cause $s2% additional damage.', 'BaseLevel': 10, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Mangle the target for {pot1} damage and causes the target to take $s2% additional damage from bleed effects for $d.  While Bestial Fury is active, has a 15% chance to grant Tooth and Claw.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': SS_ANY_BEAR, 'SpellClassMask_2': 64, 'SpellClassSet': 7, 'SpellLevel': 10, 'SpellVisualID_1': 6586, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 trained_by(mangle_bear_33878, trainer_id=216, req_level=10, money_cost=600)  # druid-rework FERAL §5: talent -> baseline
@@ -2357,7 +2383,7 @@ pulverize_200421 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=32.76, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=29.48, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.DUMMY, base_points=19, implicit_target_a=6),
     ],
     spell_icon_id=102,
@@ -2373,7 +2399,8 @@ pulverize_200421 = spell(
           "flagged for a follow-up."
           ' Effect 1 ap_potency 93.5 -> 65.45 (2026-10-08, DPS balance pass, user ruling: Bear DPS Pulverize x0.70).'
           ' Effect 1 ap_potency 65.45 -> 42.54 (2026-10-08, DPS balance pass, user ruling: Bear DPS Pulverize x0.65, round 9).'
-          ' Effect 1 ap_potency 42.54 -> 32.76 (2026-10-08, DPS balance pass, user ruling: Bear DPS Pulverize x0.77, round 10).',
+          ' Effect 1 ap_potency 42.54 -> 32.76 (2026-10-08, DPS balance pass, user ruling: Bear DPS Pulverize x0.77, round 10).'
+          ' Effect 1 ap_potency 32.76 -> 29.48 (2026-10-08, DPS balance pass, user ruling: Bear DPS Pulverize x0.90, round 11).',
     raw_overrides=_feral_new_raw(
         "Requires 3 applications of Lacerate on the target.  Deals {pot1} damage, increased by $s2% "
         "for each application of your Lacerate on the target, then consumes Lacerate and reapplies it with 1 "

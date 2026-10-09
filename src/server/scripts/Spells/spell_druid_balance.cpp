@@ -921,6 +921,39 @@ class spell_dru_treant_scaling_balance : public AuraScript
     }
 };
 
+namespace
+{
+    constexpr uint32 NPC_DRUID_FORCE_OF_NATURE_TREANT = 1964;
+    constexpr uint32 SPELL_DRUID_PET_SCALING_04 = 35672;
+}
+
+// UnitScript: Force of Nature treant white hits +80% (user ruling 2026-10-08, DPS balance pass). The treants only
+// melee, so UNITHOOK_MODIFY_MELEE_DAMAGE covers all their damage. The percentage is dbc-tools data in
+// Druid Pet Scaling 04 35672 effect 2 (EFFECT_1, Effect_2 left 0 so the spell_dru_treant_scaling_balance
+// immunities are not affected); a plain aura there would be blocked by those immunities or would block Brambles.
+class druid_treant_melee_unit_script : public UnitScript
+{
+public:
+    druid_treant_melee_unit_script()
+        : UnitScript("druid_treant_melee_unit_script", true, { UNITHOOK_MODIFY_MELEE_DAMAGE })
+    {
+    }
+
+    void ModifyMeleeDamage(Unit* /*target*/, Unit* attacker, uint32& damage) override
+    {
+        if (!attacker || !damage || attacker->GetEntry() != NPC_DRUID_FORCE_OF_NATURE_TREANT)
+            return;
+
+        Unit* owner = attacker->GetOwner();
+        if (!owner || !owner->IsPlayer())
+            return;
+
+        // Unchanged if the spell is missing.
+        if (SpellInfo const* scalingInfo = sSpellMgr->GetSpellInfo(SPELL_DRUID_PET_SCALING_04))
+            damage = uint32(float(damage) * float(scalingInfo->Effects[EFFECT_1].CalcValue()) / 100.0f);
+    }
+};
+
 void AddSC_druid_balance_spell_scripts()
 {
     RegisterSpellScript(spell_dru_starfire_cleave);
@@ -946,4 +979,6 @@ void AddSC_druid_balance_spell_scripts()
     RegisterSpellScript(spell_dru_moonkin_form_proc_balance);
     RegisterSpellScript(spell_dru_brambles_treant_balance);
     RegisterSpellScript(spell_dru_treant_scaling_balance);
+
+    new druid_treant_melee_unit_script();
 }
