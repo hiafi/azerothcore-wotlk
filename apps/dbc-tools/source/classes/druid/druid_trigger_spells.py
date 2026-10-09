@@ -7085,8 +7085,10 @@ bestial_fury_rage_200437 = spell(
     spell_icon_id=2229,
     notes="NEW (druid-rework FERAL §0.16 + WP-BRIEF §4 item 2): hidden aura linked to Bestial Fury 200425 "
           "(linked_spell type 2, druid_talents.py) - +50% rage from damage dealt (Unit::RewardRage) and the Polymorph "
-          "immunity Bear Form 5487's own eff1 gives (Bestial Fury replaces that aura).",
-    raw_overrides=_feral_raw("Rage from damage dealt increased by $s1%.  Immune to Polymorph effects."),
+          "immunity Bear Form 5487's own eff1 gives (Bestial Fury replaces that aura)."
+          ' Effect_3 stays 0 (inert); EffectBasePoints_3 59 + EffectDieSides_3 1 = 60, the percentage of normal white-hit damage for a Bestial Fury bear, read by DruidFeralUnitHooks::ModifyMeleeDamage via Effects[EFFECT_2].CalcValue() when the caster has Bestial Fury 200425 (200425 itself has no free effect slot; 2026-10-08, DPS balance pass, user ruling: Bestial Fury auto-attacks at 60%).',
+    raw_overrides=_feral_raw("Rage from damage dealt increased by $s1%.  Immune to Polymorph effects.",
+                             EffectBasePoints_3=59, EffectDieSides_3=1),
 )
 
 

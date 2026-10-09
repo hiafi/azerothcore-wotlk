@@ -231,9 +231,10 @@ unleash_righteousness_201069 = spell(
     id=201069, name='Judgement of Righteousness', school=_HOLY,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=50000.0,
-    effects=[_unleash_direct(75.0)],
+    effects=[_unleash_direct(97.5)],
     spell_icon_id=_ICON_SOR,
-    notes='paladin-rework SHARED B4.1: Righteousness unleash (single target), 75/75 potency. Speed 0 and instant on purpose: the unleash context needs a synchronous cast - never give this a missile visual.',
+    notes='paladin-rework SHARED B4.1: Righteousness unleash (single target), 75/75 potency. Speed 0 and instant on purpose: the unleash context needs a synchronous cast - never give this a missile visual.'
+          ' Effect 1 potency 75.0 -> 97.5 (2026-10-08, DPS balance pass, user ruling: Retribution x1.30).',
     raw_overrides=_unleash_raw('Deals {pot1} Holy damage.'),
 )
 
@@ -251,9 +252,10 @@ unleash_vengeance_201071 = spell(
     id=201071, name='Judgement of Vengeance', school=_HOLY_SHADOW,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=50000.0, duration_ms=15000,
-    effects=[_unleash_dot(9.0)],
+    effects=[_unleash_dot(10.8)],
     spell_icon_id=_ICON_SOV_DOT_ALIAS,
-    notes='paladin-rework SHARED B4.1: Vengeance unleash DoT, 9/9 per 3 s tick over 15 s (snapshots natively). Icon 90182 (alias of the 2292 texture) and no d1 0x400000, so the JoV +10%/stack hardcode never fires. The script sets canBeRecalculated = false.',
+    notes='paladin-rework SHARED B4.1: Vengeance unleash DoT, 9/9 per 3 s tick over 15 s (snapshots natively). Icon 90182 (alias of the 2292 texture) and no d1 0x400000, so the JoV +10%/stack hardcode never fires. The script sets canBeRecalculated = false.'
+          ' Effect 1 (periodic) potency per tick 9.0 -> 10.8 (2026-10-08, DPS balance pass, user ruling: Retribution x1.20).',
     raw_overrides=_unleash_raw('Afflicts the target with Twilight damage over time.', '{pot1} Twilight damage every $t1 sec.'),
 )
 
@@ -281,9 +283,10 @@ unleash_wisdom_201074 = spell(
     id=201074, name='Judgement of Wisdom', school=_HOLY_ARCANE,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0,
     range_yards=50000.0,
-    effects=[_unleash_direct(45.0)],
+    effects=[_unleash_direct(58.5)],
     spell_icon_id=_ICON_SOW,
-    notes='paladin-rework SHARED B4.1: Wisdom unleash (single target), 45/45 potency.',
+    notes='paladin-rework SHARED B4.1: Wisdom unleash (single target), 45/45 potency.'
+          ' Effect 1 potency 45.0 -> 58.5 (2026-10-08, DPS balance pass, user ruling: Retribution x1.30).',
     raw_overrides=_unleash_raw('Deals {pot1} Holy and Arcane damage.'),
 )
 

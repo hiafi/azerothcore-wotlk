@@ -348,6 +348,17 @@ public:
                     mult *= float(catPassive->Effects[EFFECT_2].CalcValue()) / 100.0f;
             }
 
+        if (Player* player = GetDruidPlayer(attacker))
+            if ((player->GetShapeshiftForm() == FORM_BEAR || player->GetShapeshiftForm() == FORM_DIREBEAR)
+                && player->HasAura(Druid::SPELL_BESTIAL_FURY))
+            {
+                // Bestial Fury bear white-hit damage, in percent: dbc-tools data in the hidden Bestial Fury aura
+                // 200437 effect 3 (EFFECT_2; 200425 has no free slot) (user ruling 2026-10-08, DPS balance pass).
+                // Tank bears (no Bestial Fury) are unaffected. Unchanged if the spell is missing.
+                if (SpellInfo const* bestialFuryAura = sSpellMgr->GetSpellInfo(Druid::SPELL_BESTIAL_FURY_RAGE))
+                    mult *= float(bestialFuryAura->Effects[EFFECT_2].CalcValue()) / 100.0f;
+            }
+
         if (GetDruidPlayer(target))
             mult *= Druid::GetIronHideDamageTakenMultiplier(target, attacker->GetMeleeDamageSchoolMask());
 
