@@ -27,8 +27,14 @@ from pathlib import Path
 
 from .dbcfmt import DbcTable
 
+# `REPLACE INTO` is read exactly like `INSERT INTO`: MySQL deletes any row with the same key and then
+# inserts, so the new row stands alone and columns the statement omits are NOT kept from the old
+# row. Every replay site below stores a parsed row with `rows[key] = row` (a whole-dict
+# assignment, never `.update()`), which is already those semantics; the plain-union readers
+# (`read_table_dump`, `read_table_rows`) have no old row to drop. Needed for the dpssim/training
+# dummies (creature_template 900001-900006, 900012), which were created with `REPLACE INTO`.
 _INSERT_HEAD_RE = re.compile(
-    r"INSERT\s+INTO\s+`(?P<table>\w+)`\s*(?:\((?P<cols>[^)]*)\))?\s*VALUES\s*",
+    r"(?:INSERT|REPLACE)\s+INTO\s+`(?P<table>\w+)`\s*(?:\((?P<cols>[^)]*)\))?\s*VALUES\s*",
     re.IGNORECASE,
 )
 
@@ -242,7 +248,7 @@ def read_table_dump(path: Path, table: DbcTable) -> dict[int, dict]:
             pos = m.end()
             continue
         explicit_cols = (
-            [c.strip(" `") for c in m.group("cols").split(",")] if m.group("cols") else None
+            [c.strip().strip("`") for c in m.group("cols").split(",")] if m.group("cols") else None
         )
         columns = explicit_cols or list(table.columns)
         tuples, pos = _read_tuples(text, m.end())
@@ -391,7 +397,7 @@ def read_table_rows(path: Path, table_name: str, columns: tuple[str, ...]) -> li
             pos = m.end()
             continue
         explicit_cols = (
-            [c.strip(" `") for c in m.group("cols").split(",")] if m.group("cols") else None
+            [c.strip().strip("`") for c in m.group("cols").split(",")] if m.group("cols") else None
         )
         cols = explicit_cols or list(columns)
         tuples, pos = _read_tuples(text, m.end(), variables)
@@ -538,7 +544,7 @@ def read_table_statements(path: Path, table_name: str, columns: tuple[str, ...])
         # Whichever comes first in the file - that is the whole point of this function.
         if dele is None or (ins is not None and ins.start() < dele.start()):
             explicit = (
-                [c.strip(" `") for c in ins.group("cols").split(",")] if ins.group("cols") else None
+                [c.strip().strip("`") for c in ins.group("cols").split(",")] if ins.group("cols") else None
             )
             cols = explicit or list(columns)
             tuples, pos = _read_tuples(text, ins.end(), variables)
@@ -548,7 +554,7 @@ def read_table_statements(path: Path, table_name: str, columns: tuple[str, ...])
         pos = dele.end()
         m = _DELETE_WHERE_TUPLE_IN_RE.match(text, pos)
         if m:
-            key_cols = tuple(c.strip(" `") for c in m.group("cols").split(","))
+            key_cols = tuple(c.strip().strip("`") for c in m.group("cols").split(","))
             tuples, pos = _read_key_tuples(text, m.end(), variables)
             pos = _skip_statement(text, pos)
             yield "delete", (key_cols, [tuple(v) for v in tuples])
@@ -606,7 +612,7 @@ def _next_match(pattern: re.Pattern, text: str, pos: int, table_name: str) -> re
 # these three independent per-iteration scans re-walking past hundreds of other tables' statements
 # in the same large migration file) - see docs/bugs-and-fixes.md's "generate.py looks hung" entry.
 _STATEMENT_HEAD_RE = re.compile(
-    r"INSERT\s+INTO\s+`(?P<ins_table>\w+)`\s*(?:\((?P<cols>[^)]*)\))?\s*VALUES\s*"
+    r"(?:INSERT|REPLACE)\s+INTO\s+`(?P<ins_table>\w+)`\s*(?:\((?P<cols>[^)]*)\))?\s*VALUES\s*"
     r"|DELETE\s+FROM\s+`(?P<del_table>\w+)`\s*"
     r"|UPDATE\s+`(?P<upd_table>\w+)`\s+SET\s+"
     r"|SET\s+(?P<set_name>@\w+)\s*:?=\s*(?P<set_value>-?\d+)\s*;",
@@ -633,7 +639,7 @@ def _apply_insert(
     variables: dict[str, int] | None = None,
 ) -> int:
     explicit_cols = (
-        [c.strip(" `") for c in m.group("cols").split(",")] if m.group("cols") else None
+        [c.strip().strip("`") for c in m.group("cols").split(",")] if m.group("cols") else None
     )
     columns = explicit_cols or list(table.columns)
     tuples, pos = _read_tuples(text, m.end(), variables)
@@ -794,7 +800,7 @@ def _apply_composite_delete(
 ) -> int:
     m = _DELETE_WHERE_TUPLE_IN_RE.match(text, pos)
     if m:
-        delete_cols = tuple(c.strip(" `") for c in m.group("cols").split(","))
+        delete_cols = tuple(c.strip().strip("`") for c in m.group("cols").split(","))
         tuples, end = _read_key_tuples(text, m.end())
         end = _skip_statement(text, end)
         if delete_cols == key_columns:
@@ -886,7 +892,7 @@ def apply_composite_key_statements(
                 pos = m.end()
             elif m.group("ins_table") is not None:
                 explicit = (
-                    [c.strip(" `") for c in m.group("cols").split(",")] if m.group("cols") else None
+                    [c.strip().strip("`") for c in m.group("cols").split(",")] if m.group("cols") else None
                 )
                 cols = explicit or list(columns)
                 tuples, pos = _read_tuples(sql_text, m.end(), variables)

@@ -572,7 +572,7 @@ def render_creature_retirement_report(
         if result.breaker_tripped:
             report.append(
                 f"creature: SKIPPED checking {spec.name} for retired entries - it has rows from "
-                f"previous runs but this run declared none. Check source/classes/* loaded."
+                f"previous runs but this run declared none. Check source/classes/* and source/npcs/* loaded."
             )
             continue
         for key in (*result.keys, *result.base_blocked):

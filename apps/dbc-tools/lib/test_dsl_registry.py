@@ -21,6 +21,8 @@ sys.path.insert(0, str(TOOL_ROOT))
 
 from lib.dsl import model, registry  # noqa: E402
 
+import generate  # noqa: E402
+
 MAGE_FILE = '''
 from lib.dsl.registry import spell, tab, talent
 
@@ -876,6 +878,43 @@ class CreatureModelTest(unittest.TestCase):
         (row,) = reg.creature_template_models
         self.assertEqual((row["Idx"], row["DisplayScale"], row["Probability"]), (1, 0.5, 0.3))
         self.assertEqual(row["id"], "300170:1")
+
+
+class MergeNpcDeclarationsTest(unittest.TestCase):
+    """`generate._merge_npc_declarations`: source/npcs/ folds into the class registry's dict."""
+
+    @staticmethod
+    def _merged(**entries):
+        d = {key: [] for key in registry.MERGE_KEYS}
+        d["spell_var_names"] = {}
+        d["creature_var_names"] = {}
+        for key, rows in entries.items():
+            d[key] = list(rows)
+        return d
+
+    def test_clean_merge_concatenates_and_updates_var_names(self):
+        classes = self._merged(creature_templates=[{"id": 1}])
+        classes["creature_var_names"] = {1: "a"}
+        npcs = self._merged(creature_templates=[{"id": 2}], creature_template_models=[{"id": "2:0"}])
+        npcs["creature_var_names"] = {2: "b"}
+        generate._merge_npc_declarations(classes, npcs)
+        self.assertEqual([r["id"] for r in classes["creature_templates"]], [1, 2])
+        self.assertEqual(classes["creature_template_models"], [{"id": "2:0"}])
+        self.assertEqual(classes["creature_var_names"], {1: "a", 2: "b"})
+
+    def test_duplicate_in_non_template_key_raises(self):
+        classes = self._merged(creature_template_models=[{"id": "900001:0"}])
+        npcs = self._merged(creature_template_models=[{"id": "900001:0"}])
+        with self.assertRaises(registry.DuplicateIdError) as ctx:
+            generate._merge_npc_declarations(classes, npcs)
+        self.assertIn("creature_template_models", str(ctx.exception))
+        self.assertIn("900001:0", str(ctx.exception))
+
+    def test_duplicate_creature_template_raises(self):
+        classes = self._merged(creature_templates=[{"id": 5}])
+        npcs = self._merged(creature_templates=[{"id": 5}])
+        with self.assertRaises(registry.DuplicateIdError):
+            generate._merge_npc_declarations(classes, npcs)
 
 
 if __name__ == "__main__":
