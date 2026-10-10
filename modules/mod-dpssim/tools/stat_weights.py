@@ -23,7 +23,7 @@ SimProfileReport.html (via build_report_html.py), so the weights show up alongsi
 normal breakdown rather than as a separate, disconnected report.
 
 Usage:
-    stat_weights.py <profile> [durationSeconds] [level] [race] [baselineIterations] [statDelta]
+    stat_weights.py <profile> [durationSeconds] [level] [race] [baselineIterations] [statDelta] [targets]
 
 <profile>/[durationSeconds]/[level]/[race] mean exactly what they mean to run-sim.sh (see its own
 doc comment) - this script calls that one for every batch (baseline and each variant), it does not
@@ -32,6 +32,10 @@ baseline batch only (each variant is still exactly half of whatever the baseline
 rounded down, minimum 1) - omit it to use "the iterations from the config" as originally asked for;
 pass a small number (e.g. 2) for a fast smoke test of this whole pipeline without waiting through a
 full-size batch.
+
+[targets] is run-sim.sh's [targets] (number of stacked dummies, default 1); every run in the batch, baseline and
+variants alike, uses the same count. Pass "-" for [baselineIterations] or [statDelta] to keep its default while
+setting [targets].
 
 [statDelta] overrides the level-bracket delta (14/22/46) with an arbitrary flat amount, applied to
 every tested stat identically - added 2026-09-13 for a sign/plausibility sanity check: with the
@@ -163,10 +167,15 @@ def bump_profile(lines: list[str], values: dict[str, str], key: str, delta: int,
 # for why the baseline call is made this way. Lets run-sim.sh's own stderr (progress messages)
 # stream straight through rather than capturing it, so a long stat-weight pass still shows live
 # progress; only stdout (the two final path lines) is captured.
-def run_sim(profile_path: Path, duration: int, level: int, race: int, iterations: int | None) -> tuple[Path, Path, dict]:
+def run_sim(profile_path: Path, duration: int, level: int, race: int, iterations: int | None,
+            targets: int = 1) -> tuple[Path, Path, dict]:
     args = [str(RUN_SIM_SH), str(profile_path), str(duration), str(level), str(race)]
     if iterations is not None:
         args.append(str(iterations))
+    elif targets != 1:
+        args.append("10")  # run-sim.sh's default iteration count; [targets] is positional after [iterations]/[stepMs]
+    if targets != 1:
+        args += ["100", str(targets)]  # stepMs at run-sim.sh's default, then targets
     result = subprocess.run(args, stdout=subprocess.PIPE, text=True, check=True)
     out_lines = [line for line in result.stdout.splitlines() if line.strip()]
     if len(out_lines) < 2:
@@ -189,8 +198,9 @@ def main() -> int:
     duration = int(sys.argv[2]) if len(sys.argv) > 2 else 180
     level = int(sys.argv[3]) if len(sys.argv) > 3 else 60
     race = int(sys.argv[4]) if len(sys.argv) > 4 else 1
-    baseline_iterations_override = int(sys.argv[5]) if len(sys.argv) > 5 else None
-    stat_delta_override = int(sys.argv[6]) if len(sys.argv) > 6 else None
+    baseline_iterations_override = int(sys.argv[5]) if len(sys.argv) > 5 and sys.argv[5] != "-" else None
+    stat_delta_override = int(sys.argv[6]) if len(sys.argv) > 6 and sys.argv[6] != "-" else None
+    targets = int(sys.argv[7]) if len(sys.argv) > 7 else 1
 
     profile_path = resolve_profile_path(profile_arg)
     lines, values = parse_profile(profile_path)
@@ -216,7 +226,7 @@ def main() -> int:
 
     print(f"stat_weights.py: baseline batch ({profile_path.name}, {duration}s, level {level})...", file=sys.stderr)
     baseline_report_path, baseline_html_path, baseline_report = run_sim(
-        profile_path, duration, level, race, baseline_iterations_override)
+        profile_path, duration, level, race, baseline_iterations_override, targets)
     baseline_dps = baseline_report["summary"]["dps"]
     n = iterations_used(baseline_report)
     variant_iterations = max(1, n // 2)
@@ -231,7 +241,8 @@ def main() -> int:
             variant_path = scratch_dir / f"{profile_path.stem}.{key}.conf"
             bump_profile(lines, values, key, delta, variant_path)
             print(f"stat_weights.py: testing {key} (+{delta})...", file=sys.stderr)
-            _report_path, _html_path, variant_report = run_sim(variant_path, duration, level, race, variant_iterations)
+            _report_path, _html_path, variant_report = run_sim(
+                variant_path, duration, level, race, variant_iterations, targets)
             variant_dps = variant_report["summary"]["dps"]
             delta_dps = variant_dps - baseline_dps
             weight = delta_dps / delta

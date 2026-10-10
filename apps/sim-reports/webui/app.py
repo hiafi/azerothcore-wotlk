@@ -52,10 +52,11 @@ build_report_html = _load_build_report_html()
 
 bp = Blueprint("reports", __name__, template_folder="templates", static_folder="static")
 
-# run-sim.sh's reports always end up named "<Profile>.<YYYYMMDD-HHMMSS>.report.json" - see its own
-# FINAL_PATH construction. Sorting on the timestamp group (a plain string) sorts newest-first
+# run-sim.sh's reports end up named "<Profile>.<YYYYMMDD-HHMMSS>.report.json", or
+# "<Profile>.T<N>.<YYYYMMDD-HHMMSS>.report.json" for an N > 1 target run - see its own FINAL_PATH construction.
+# Sorting on the timestamp group (a plain string) sorts newest-first
 # correctly without parsing it into a real datetime, since the format is fixed-width and zero-padded.
-REPORT_FILENAME_RE = re.compile(r"^(?P<profile>.+)\.(?P<timestamp>\d{8}-\d{6})\.report\.json$")
+REPORT_FILENAME_RE = re.compile(r"^(?P<profile>.+?)(?:\.T(?P<targets>\d+))?\.(?P<timestamp>\d{8}-\d{6})\.report\.json$")
 
 
 def _list_reports() -> list[dict]:
@@ -71,7 +72,7 @@ def _list_reports() -> list[dict]:
             data = json.loads(path.read_text())
         except (OSError, json.JSONDecodeError) as exc:
             runs.append({"filename": path.name, "profile": m["profile"], "timestamp": m["timestamp"],
-                         "error": str(exc)})
+                         "targets": int(m["targets"] or 1), "target_rank": "boss", "error": str(exc)})
             continue
         summary = data.get("summary", {})
         config = data.get("config", {})
@@ -80,6 +81,9 @@ def _list_reports() -> list[dict]:
             "error": None, "dps": summary.get("dps"), "total_damage": summary.get("totalDamage"),
             "cast_count": summary.get("castCount"), "crit_rate_pct": summary.get("critRatePct"),
             "duration_ms": config.get("durationMs"),
+            # reports from before multi-target support carry neither field: 1 boss dummy
+            "targets": config.get("targetCount", int(m["targets"] or 1)),
+            "target_rank": config.get("targetRank", "boss"),
         })
     runs.sort(key=lambda r: r["timestamp"], reverse=True)
     return runs
@@ -114,6 +118,9 @@ def view(filename: str):
     data = json.loads(report_path.read_text())
     m = REPORT_FILENAME_RE.match(filename)
     label = f"{m['profile']} ({m['timestamp']})" if m else filename
+    n = data.get("config", {}).get("targetCount") or (m and m["targets"])
+    if m and n and int(n) > 1:
+        label = f"{m['profile']} T{n} ({m['timestamp']})"
     html = build_report_html.render_report_html(data, label)
     return html
 

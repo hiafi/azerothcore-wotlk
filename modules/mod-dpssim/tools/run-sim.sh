@@ -13,7 +13,7 @@
 # original manual version this replaces.
 #
 # Usage:
-#   modules/mod-dpssim/tools/run-sim.sh <profile> [durationSeconds] [level] [race] [iterations] [stepMs]
+#   modules/mod-dpssim/tools/run-sim.sh <profile> [durationSeconds] [level] [race] [iterations] [stepMs] [targets]
 #
 #   <profile>          Either a bare profile name (FrostMageSim, ArcaneMageSim, ...) resolved
 #                       against modules/mod-dpssim/conf/profiles/<name>.conf, or a path to a
@@ -49,6 +49,15 @@
 #                       worsening bias - 1000ms undercounts casts by ~24% and DPS by ~26%. 50ms
 #                       was worse on *both* axes than 100ms - slower and less accurate - so it's
 #                       not a fallback either.
+#   [targets]          Number of stacked target dummies (DpsSim.TargetCount), 1-10. Default: 1. All of them
+#                       sit within DpsSim.TargetSpreadYards (3) of each other, so every target is inside
+#                       every AoE radius - the best case for AoE. For N > 1 the batch files are named
+#                       "<Profile>.T<N>.<ts>..." (iteration reports, aggregated report, kept run log);
+#                       T1 names are unchanged.
+#
+# Environment:
+#   DPSSIM_TARGET_RANK  Dummy rank (DpsSim.TargetRank): boss, elite or auto. Default: auto.
+#   DPSSIM_KEEP_LOG=1   Keep the container's log next to the reports.
 #
 # Examples:
 #   modules/mod-dpssim/tools/run-sim.sh ArcaneMageSim              # 180s @ level 60, avg of 10 @ 100ms (the defaults)
@@ -56,6 +65,7 @@
 #   modules/mod-dpssim/tools/run-sim.sh modules/mod-dpssim/conf/profiles/ArcaneMageSim.conf 60 80
 #   modules/mod-dpssim/tools/run-sim.sh ArcaneMageSim 180 60 1 1   # single run, no averaging
 #   modules/mod-dpssim/tools/run-sim.sh ArcaneMageSim 120 60 1 100 100   # 100 runs at a 100ms step
+#   modules/mod-dpssim/tools/run-sim.sh DestructionWarlockSim 300 60 2 10 100 5   # 5 stacked dummies
 #
 # Requires: the normal Docker stack already up (ac-database healthy, ac-worldserver running -
 # its image, network, volume, and DB credentials are all discovered by inspecting that live
@@ -63,12 +73,23 @@
 
 set -euo pipefail
 
-PROFILE_ARG="${1:?usage: run-sim.sh <profile> [durationSeconds] [level] [race] [iterations] [stepMs]}"
+PROFILE_ARG="${1:?usage: run-sim.sh <profile> [durationSeconds] [level] [race] [iterations] [stepMs] [targets]}"
 DURATION_SECONDS="${2:-180}"
 LEVEL="${3:-60}"
 RACE="${4:-1}"
 ITERATIONS="${5:-10}"
 STEP_MS="${6:-100}"
+TARGETS="${7:-1}"
+TARGET_RANK="${DPSSIM_TARGET_RANK:-auto}"
+
+if ! [[ "$TARGETS" =~ ^([1-9]|10)$ ]]; then
+    echo "error: [targets] must be an integer 1-10, got '$TARGETS'" >&2
+    exit 1
+fi
+if ! [[ "$TARGET_RANK" =~ ^(auto|boss|elite)$ ]]; then
+    echo "error: DPSSIM_TARGET_RANK must be auto, boss or elite, got '$TARGET_RANK'" >&2
+    exit 1
+fi
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 cd "$REPO_ROOT"
@@ -169,6 +190,9 @@ DpsSim.DurationSeconds = ${DURATION_SECONDS}
 DpsSim.PlayerbotLevel = ${LEVEL}
 DpsSim.PlayerbotRace = ${RACE}
 DpsSim.StepMs = ${STEP_MS}
+DpsSim.TargetCount = ${TARGETS}
+DpsSim.TargetRank = ${TARGET_RANK}
+DpsSim.TargetSpreadYards = 3
 DpsSim.Iterations = ${ITERATIONS}
 DpsSim.ReportPath = ${REPORT_CONTAINER_PATH}
 EOF
@@ -176,9 +200,13 @@ EOF
 REPORTS_DIR="$REPO_ROOT/modules/mod-dpssim/reports"
 mkdir -p "$REPORTS_DIR"
 BATCH_TS="$(date +%Y%m%d-%H%M%S)"
+# Multi-target batches carry the count in their file names ("<Profile>.T5.<ts>..."); T1 keeps the old names.
+BATCH_NAME="${PROFILE_NAME}"
+if [[ "$TARGETS" -gt 1 ]]; then BATCH_NAME="${PROFILE_NAME}.T${TARGETS}"; fi
 
 echo "Running '${PROFILE_NAME}' (${ITERATIONS} iteration(s), in one container) for ${DURATION_SECONDS}s" \
-    "(sim time) each at level ${LEVEL}, race ${RACE}, ${STEP_MS}ms step..." >&2
+    "(sim time) each at level ${LEVEL}, race ${RACE}, ${STEP_MS}ms step," \
+    "${TARGETS} target(s), rank ${TARGET_RANK}..." >&2
 
 RUN_LOG="$SCRATCH/run.log"
 set +e
@@ -197,8 +225,8 @@ set -e
 # DPSSIM_KEEP_LOG=1 keeps the container's log next to the reports (the scratch dir is deleted on exit) - for
 # debugging a run, e.g. the Engine's opening actions.
 if [[ "${DPSSIM_KEEP_LOG:-0}" == 1 ]]; then
-    cp "$RUN_LOG" "$REPORTS_DIR/${PROFILE_NAME}.${BATCH_TS}.run.log"
-    echo "kept run log: $REPORTS_DIR/${PROFILE_NAME}.${BATCH_TS}.run.log" >&2
+    cp "$RUN_LOG" "$REPORTS_DIR/${BATCH_NAME}.${BATCH_TS}.run.log"
+    echo "kept run log: $REPORTS_DIR/${BATCH_NAME}.${BATCH_TS}.run.log" >&2
 fi
 
 if [[ $STATUS -ne 0 ]]; then
@@ -224,7 +252,7 @@ if [[ "$ITERATIONS" -gt 1 ]]; then
             tail -40 "$RUN_LOG" >&2
             exit 1
         fi
-        DEST="$REPORTS_DIR/${PROFILE_NAME}.${BATCH_TS}.iter${i}.report.json"
+        DEST="$REPORTS_DIR/${BATCH_NAME}.${BATCH_TS}.iter${i}.report.json"
         cp "$SRC" "$DEST"
         ITERATION_PATHS+=("$DEST")
     done
@@ -235,13 +263,13 @@ else
         tail -40 "$RUN_LOG" >&2
         exit 1
     fi
-    DEST="$REPORTS_DIR/${PROFILE_NAME}.${BATCH_TS}.report.json"
+    DEST="$REPORTS_DIR/${BATCH_NAME}.${BATCH_TS}.report.json"
     cp "$SRC" "$DEST"
     ITERATION_PATHS+=("$DEST")
 fi
 
 if [[ "$ITERATIONS" -gt 1 ]]; then
-    FINAL_PATH="$REPORTS_DIR/${PROFILE_NAME}.${BATCH_TS}.report.json"
+    FINAL_PATH="$REPORTS_DIR/${BATCH_NAME}.${BATCH_TS}.report.json"
     python3 "$REPO_ROOT/modules/mod-dpssim/tools/aggregate_reports.py" "$FINAL_PATH" "${ITERATION_PATHS[@]}" >&2
 else
     FINAL_PATH="${ITERATION_PATHS[0]}"

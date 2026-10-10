@@ -149,6 +149,9 @@ table.uptime td.num { text-align: right; font-family: "IBM Plex Mono", monospace
 .uptime-bar-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; }
 .uptime-bar-fill.buff { background: var(--good); }
 .uptime-bar-fill.debuff { background: var(--bad); }
+.target-note { color: var(--text-dim); font-size: 12.5px; margin-top: 4px; }
+table.spells th.num { text-align: right; }
+table.uptime td.pt { text-align: right; font-family: "IBM Plex Mono", monospace; white-space: nowrap; }
 .type-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; padding: 2px 7px; border-radius: 999px; }
 .type-badge.buff { color: var(--good); background: color-mix(in srgb, var(--good) 18%, transparent); }
 .type-badge.debuff { color: var(--bad); background: color-mix(in srgb, var(--bad) 18%, transparent); }
@@ -181,9 +184,20 @@ table.uptime td.num { text-align: right; font-family: "IBM Plex Mono", monospace
     <footer class="note" id="stat-weights-note"></footer>
   </section>
 
+  <section id="targets-section" hidden>
+    <h2>Damage by target</h2>
+    <div class="spell-block">
+      <table class="spells">
+        <thead><tr><th>Target</th><th class="num">Damage</th><th class="num">Share</th></tr></thead>
+        <tbody id="targets-body"></tbody>
+      </table>
+    </div>
+  </section>
+
   <section>
     <h2>Damage by spell</h2>
     <div id="spell-block"></div>
+    <footer class="note" id="spell-note" hidden>Hits/cast is about N (the target count) only for direct-hit and pulse AoEs. DoTs and persistent areas record every tick, so their hits/cast is ticks &times; targets. Hits/cast shows &ndash; where a row has no casts of its own (pets, proc-only rows).</footer>
   </section>
 
   <section>
@@ -213,6 +227,16 @@ table.uptime td.num { text-align: right; font-family: "IBM Plex Mono", monospace
         <div class="uptime-head">Target</div>
         <table class="uptime"><thead><tr><th>Aura</th><th>Type</th><th>Uptime</th><th>Procs</th></tr></thead><tbody id="uptime-target-body"></tbody></table>
       </div>
+    </div>
+  </section>
+
+  <section id="target-uptime-section" hidden>
+    <h2>Debuff uptime per target</h2>
+    <div class="spell-block">
+      <table class="uptime" id="target-uptime-table">
+        <thead id="target-uptime-head"></thead>
+        <tbody id="target-uptime-body"></tbody>
+      </table>
     </div>
   </section>
 
@@ -298,10 +322,12 @@ table.uptime td.num { text-align: right; font-family: "IBM Plex Mono", monospace
     renderMeta();
     renderSummary();
     renderStatWeights();
+    renderTargets();
     renderSpells();
     renderChart();
     renderManaChart();
     renderUptimeTables();
+    renderTargetUptime();
     renderCastLog();
     renderHitLog();
     renderAuraLog();
@@ -309,7 +335,39 @@ table.uptime td.num { text-align: right; font-family: "IBM Plex Mono", monospace
 
   function renderMeta() {
     var meta = document.getElementById("dur-meta");
-    meta.textContent = report.data ? (fmtSeconds(report.data.summary.elapsedMs) + " sim") : "";
+    var d = report.data;
+    meta.textContent = d ? (fmtSeconds(d.summary.elapsedMs) + " sim") : "";
+    var old = document.getElementById("target-meta");
+    if (old) old.remove();
+    if (!d || !d.config || d.config.targetCount === undefined) return;  // pre multi-target report: nothing to say
+    var n = targetCount(d);
+    var rank = targetRank(d) === "elite" ? (n > 1 ? "elite pack dummies" : "elite pack dummy") : "boss dummy";
+    var el = document.createElement("div");
+    el.id = "target-meta";
+    el.className = "target-note";
+    el.textContent = n > 1 ? n + " targets \u00b7 " + rank : "1 target \u00b7 " + rank;
+    if (n > 1) el.textContent += " \u2014 stacked within " + ((d.config || {}).targetSpreadYards ?? 3) +
+      " yd: every target is inside every AoE radius (best case for AoE)";
+    meta.parentNode.appendChild(el);
+  }
+
+  // Reports from before multi-target support carry none of the fields: one boss dummy.
+  function targetCount(d) { return (d.config && d.config.targetCount) || 1; }
+  function targetRank(d) { return (d.config && d.config.targetRank) || "boss"; }
+
+  // An averaged count is fractional; a single run's is a whole number.
+  function aggSwitchDigits(v) { return Math.round(v) === v ? 0 : 1; }
+
+  function renderTargets() {
+    var section = document.getElementById("targets-section");
+    var d = report.data;
+    if (!d || targetCount(d) < 2 || !d.targets || !d.targets.length) { section.hidden = true; return; }
+    section.hidden = false;
+    document.getElementById("targets-body").innerHTML = d.targets.map(function (t) {
+      return '<tr><td>#' + t.index + (t.index === 0 ? ' <span class="pill">primary</span>' : '') + '</td>' +
+        '<td class="num">' + fmtNum(t.totalDamage) + '</td>' +
+        '<td class="num">' + fmtNum(t.pctOfTotal, 1) + '%</td></tr>';
+    }).join("");
   }
 
   function renderSummary() {
@@ -334,7 +392,7 @@ table.uptime td.num { text-align: right; font-family: "IBM Plex Mono", monospace
           '<div><div class="card-title">' + report.label + '</div><div class="card-sub">Level ' + cfg.actorLevel + ' vs Level ' + cfg.targetLevel + ' target</div></div>' +
           '<span class="badge">' + fmtSeconds(s.elapsedMs) + ' sim' + (agg ? ' &middot; avg of ' + badgeRuns + ' runs' : '') + '</span>' +
         '</div>' +
-        (agg ? '<div class="aggregate-note" style="margin-bottom:16px">DPS, total damage, casts, and crit rate below are averaged over ' +
+        (agg ? '<div class="aggregate-note" style="margin-bottom:16px">DPS, total damage, hits, and crit rate below are averaged over ' +
           (trim ? 'the middle ' + trim.keptCount + ' of ' + agg.iterations + ' back-to-back runs - the ' + trim.droppedLowCount +
             ' lowest (' + trim.droppedLowDps.map(function (v) { return fmtNum(v, 0); }).join(', ') + ' DPS) and ' + trim.droppedHighCount +
             ' highest (' + trim.droppedHighDps.map(function (v) { return fmtNum(v, 0); }).join(', ') + ' DPS) were trimmed as outliers before averaging' +
@@ -345,12 +403,14 @@ table.uptime td.num { text-align: right; font-family: "IBM Plex Mono", monospace
         '<div class="stat-row">' +
           '<div class="stat"><div class="label">DPS</div><div class="value dps">' + fmtNum(s.dps, 1) + '</div>' + dpsSpread + '</div>' +
           '<div class="stat"><div class="label">Total damage</div><div class="value">' + fmtNum(s.totalDamage) + '</div></div>' +
-          '<div class="stat"><div class="label">Casts landed</div><div class="value">' + fmtNum(s.castCount) + '</div></div>' +
+          '<div class="stat"><div class="label">Hits</div><div class="value">' + fmtNum(s.castCount) + '</div></div>' +
           '<div class="stat"><div class="label">Crit rate</div><div class="value">' + fmtNum(s.critRatePct, 1) + '<small>%</small></div><div class="card-sub">' + fmtNum(s.critCount) + ' crits</div></div>' +
         '</div>' +
         '<div class="stat-row" style="margin-top:14px">' +
           '<div class="stat"><div class="label">Spell power</div><div class="value" style="font-size:17px">' + fmtNum(cfg.spellPower) + '</div></div>' +
           '<div class="stat"><div class="label">Attack power</div><div class="value" style="font-size:17px">' + fmtNum(cfg.attackPower || 0) + '</div></div>' +
+          (targetCount(d) > 1 && s.dpsPerTarget !== undefined ? '<div class="stat"><div class="label">DPS per target</div><div class="value" style="font-size:17px">' + fmtNum(s.dpsPerTarget, 1) + '</div></div>' : '') +
+          (s.targetSwitches !== undefined ? '<div class="stat"><div class="label">Target switches</div><div class="value" style="font-size:17px">' + fmtNum(s.targetSwitches, aggSwitchDigits(s.targetSwitches)) + '</div></div>' : '') +
         '</div>' +
       '</div>';
   }
@@ -400,18 +460,26 @@ table.uptime td.num { text-align: right; font-family: "IBM Plex Mono", monospace
       var pct = sp.pctOfTotal;
       return '<div class="seg" style="width:' + pct + '%;background:' + c + '" title="' + spellName(sp.spellId, sp.isPet) + ' — ' + fmtNum(pct, 1) + '%">' + (pct > 8 ? fmtNum(pct, 0) + '%' : '') + '</div>';
     }).join("");
+    var multi = spells.some(function (sp) { return sp.castCount !== undefined; });
+    document.getElementById("spell-note").hidden = !multi;
     var rows = spells.map(function (sp, i) {
       var c = colorFor(i);
+      var extra = '';
+      if (multi) {
+        extra = '<td class="num">' + fmtNum(sp.castCount, Math.round(sp.castCount) === sp.castCount ? 0 : 1) + '</td>' +
+          '<td class="num">' + (sp.castCount > 0 ? fmtNum(sp.hitCount / sp.castCount, 1) : '–') + '</td>' +
+          '<td class="num">' + fmtNum(sp.targetsHit) + '</td>';
+      }
       return '<tr><td><span class="swatch" style="background:' + c + '"></span>' + spellName(sp.spellId, sp.isPet) + '</td>' +
-        '<td class="num">' + fmtNum(sp.hitCount) + '</td>' +
-        '<td class="num">' + fmtNum(sp.critCount) + '</td>' +
+        '<td class="num">' + fmtNum(sp.hitCount, Math.round(sp.hitCount) === sp.hitCount ? 0 : 1) + '</td>' +
+        '<td class="num">' + fmtNum(sp.critCount, Math.round(sp.critCount) === sp.critCount ? 0 : 1) + '</td>' + extra +
         '<td class="num">' + fmtNum(sp.totalDamage) + '</td>' +
         '<td class="num">' + fmtNum(sp.pctOfTotal, 1) + '%</td></tr>';
     }).join("");
     el.innerHTML =
       '<div class="spell-block">' +
         '<div class="stackbar">' + segs + '</div>' +
-        '<table class="spells"><thead><tr><th>Spell</th><th>Hits</th><th>Crits</th><th>Damage</th><th>Share</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+        '<table class="spells"><thead><tr><th>Spell</th><th>Hits</th><th>Crits</th>' + (multi ? '<th class="num">Casts</th><th class="num">Hits/cast</th><th class="num">Targets hit</th>' : '') + '<th>Damage</th><th>Share</th></tr></thead><tbody>' + rows + '</tbody></table>' +
       '</div>';
   }
 
@@ -517,10 +585,14 @@ table.uptime td.num { text-align: right; font-family: "IBM Plex Mono", monospace
   // over the run, rather than just counting events - a stacking aura re-applying mid-window (a
   // fresh "applied" while one is already open) doesn't restart its interval, it just keeps it
   // open, so uptime isn't inflated by proc frequency.
-  function computeUptimes(data, wantActor) {
+  // targetIdx (optional, target unit only): restrict to one dummy's auras. Without it a multi-target report would pair
+  // one dummy's "applied" with another's "lost" under the same spell id.
+  function computeUptimes(data, wantActor, targetIdx) {
     var elapsed = data.summary.elapsedMs;
     var wantUnit = wantActor ? "actor" : "target";
-    var events = (data.auraEvents || []).filter(function (e) { return e.unit === wantUnit; })
+    var events = (data.auraEvents || []).filter(function (e) {
+      return e.unit === wantUnit && (targetIdx === undefined || (e.targetIndex || 0) === targetIdx);
+    })
       .slice().sort(function (a, b) { return a.timestampMs - b.timestampMs; });
     var open = {};
     var totals = {};
@@ -564,7 +636,47 @@ table.uptime td.num { text-align: right; font-family: "IBM Plex Mono", monospace
       return;
     }
     actorBody.innerHTML = uptimeRowsHtml(computeUptimes(d, true));
-    targetBody.innerHTML = uptimeRowsHtml(computeUptimes(d, false));
+    targetBody.innerHTML = uptimeRowsHtml(computeUptimes(d, false, targetCount(d) > 1 ? 0 : undefined));
+    var head = targetBody.closest(".uptime-card").querySelector(".uptime-head");
+    head.textContent = targetCount(d) > 1 ? "Primary target (#0)" : "Target";
+  }
+
+  // Uptime % of each debuff the actor applied, per dummy (multi-target reports only). Same interval pairing as
+  // computeUptimes(), clamped to the fight; an aura still up at the end counts to the end.
+  function renderTargetUptime() {
+    var section = document.getElementById("target-uptime-section");
+    var d = report.data;
+    var n = d ? targetCount(d) : 1;
+    if (!d || n < 2) { section.hidden = true; return; }
+    var perTarget = [];
+    for (var t = 0; t < n; t++) perTarget.push(computeUptimes(d, false, t));
+    var ids = [], seen = {};
+    perTarget.forEach(function (rows) {
+      rows.forEach(function (r) {
+        if (!r.positive && !seen[r.spellId]) { seen[r.spellId] = true; ids.push(r.spellId); }
+      });
+    });
+    if (!ids.length) { section.hidden = true; return; }
+    section.hidden = false;
+    var elapsed = d.summary.elapsedMs;
+    var head = '<tr><th>Debuff</th>';
+    for (var h = 0; h < n; h++) head += '<th class="num">#' + h + (h === 0 ? ' primary' : '') + '</th>';
+    document.getElementById("target-uptime-head").innerHTML = head + '</tr>';
+    var best = {};
+    ids.forEach(function (id) {
+      best[id] = perTarget.map(function (rows) {
+        var r = rows.filter(function (x) { return x.spellId === id; })[0];
+        return r ? Math.min(100, elapsed > 0 ? r.upMs / elapsed * 100 : 0) : 0;
+      });
+    });
+    ids.sort(function (a, b) {
+      return best[b].reduce(function (x, y) { return x + y; }, 0) - best[a].reduce(function (x, y) { return x + y; }, 0);
+    });
+    document.getElementById("target-uptime-body").innerHTML = ids.map(function (id) {
+      return '<tr><td>' + spellName(id) + '</td>' + best[id].map(function (pct) {
+        return '<td class="pt">' + (pct > 0 ? fmtNum(pct, 1) + '%' : '<span style="color:var(--text-faint)">–</span>') + '</td>';
+      }).join("") + '</tr>';
+    }).join("");
   }
 
   // Every cast the actor made, damage or not - see SimReport.h's "casts" schema doc comment for
