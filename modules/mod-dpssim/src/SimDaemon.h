@@ -20,6 +20,7 @@
 
 #include "Define.h"
 #include "ObjectGuid.h"
+#include "SimTarget.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -48,7 +49,7 @@ namespace SimDaemon
     // spell_dbc but are no longer taught to real characters, so this - not the constant above - is
     // what both a real player and PlayerbotFactory-driven bot actually cast. Used as
     // RunConfig::SpellId's real-world override (RunOnce()). It was also SimBot's pull spell until
-    // 2026-10-05; SimBot now pulls with Unit::SetInCombatWith() and casts nothing.
+    // 2026-10-05; SimBot now pulls by engaging each dummy (Unit::EngageWithTarget()) and casts nothing.
     constexpr uint32 SINGLE_RANK_FROSTBOLT_SPELL_ID = 116;
 
     // One sim job's parameters. Defaults match the M1 smoke-test job Run() has always used
@@ -101,7 +102,7 @@ namespace SimDaemon
         // DpsSim.Profile when set (see SimProfile.h) - a bare DpsSim.PlayerbotTalents-only setup
         // has no way to say "this is an Arcane build vs. a Frost build" since both are still
         // CLASS_MAGE either way, but a genuinely different class needs this. SimBot's pull is
-        // class-agnostic (Unit::SetInCombatWith(), no spell - see SimBot::Create()).
+        // class-agnostic (Unit::EngageWithTarget(), no spell - see SimBot::Create()).
         uint8 ActorClass = 8 /* CLASS_MAGE */;
         // Positional talent string SimBot::Create() spends on the actor - see
         // DpsSim.PlayerbotTalents' own conf doc comment for the format. Comes from DpsSim.Profile
@@ -125,6 +126,13 @@ namespace SimDaemon
         // a loaded profile; 0 max health = SimTarget::Config's default.
         bool DummyHealthDrain = false;
         uint32 DummyMaxHealth = 0;
+        // Multi-target runs (DpsSim.TargetCount / TargetSpreadYards / TargetRank): how many dummies spawn (1-10,
+        // the same for every iteration), the ring radius of the extras around the primary (SimTargetGroup) and which
+        // dummy entries they are. Run settings, not profile keys. DpsSim.cpp clamps the first two and resolves
+        // "auto" (boss at 1 target, elite at 2+); RunOnce() always spawns one dummy.
+        uint32 TargetCount = 1;
+        float TargetSpreadYards = 3.0f;
+        SimTarget::Rank TargetRank = SimTarget::Rank::Boss;
         // Pre-pull buff phase length in sim ms - see SimProfile.h's Profile::PrePullBuffMs. 0 disables the phase.
         uint32 PrePullBuffMs = 15000;
         // Give the actor its premade glyphs - see SimProfile.h's Profile::PlayerbotGlyphs.
@@ -170,8 +178,14 @@ namespace SimDaemon
         // Per-hit "dealt by the actor's pet/guardian/totem, not the actor", parallel to HitDamages - see
         // EventRecorder::GetHitIsPet().
         std::vector<bool> HitIsPet;
+        // Per-hit index of the dummy hit (SimTargetGroup order), parallel to HitDamages - see
+        // EventRecorder::GetHitTargetIndex().
+        std::vector<uint8> HitTargetIndex;
+        // Times the bot AI's "current target" changed to a different unit during the iteration, sampled after every
+        // tick; ticks with no current target are ignored. A DoT spread onto another dummy is not a switch.
+        uint32 TargetSwitches = 0;
 
-        // One entry per aura the actor or target gained/lost during the run - a deliberately
+        // One entry per aura the actor or a target gained/lost during the run - a deliberately
         // separate, decoupled copy of EventRecorder::AuraEvent's fields rather than reusing that
         // type directly, so this header doesn't need to pull in EventRecorder.h (and therefore
         // ScriptMgr.h) just to describe a result struct. See EventRecorder::GetAuraEvents()'s doc
@@ -185,6 +199,8 @@ namespace SimDaemon
             uint8 StackAmount = 0;
             bool Positive = false;
             bool Applied = false;
+            // The dummy's index, or -1 when the aura is on the actor
+            int8 TargetIndex = -1;
         };
         std::vector<AuraEvent> AuraEvents;
 
@@ -213,6 +229,8 @@ namespace SimDaemon
             // See CastRecorder::CastEvent::IsTriggered's doc comment - false means a deliberate,
             // non-triggered cast ("requires a button press"), true means a proc/internal cast.
             bool Triggered = false;
+            // See CastRecorder::CastEvent::TargetIndex - the explicit target's dummy index, else -1
+            int8 TargetIndex = -1;
         };
         std::vector<CastEvent> CastEvents;
     };
@@ -236,7 +254,7 @@ namespace SimDaemon
     // boot/teardown, not on the sim itself (confirmed empirically: ~27-34s per sample end to end,
     // most of it fixed overhead, regardless of DpsSim.StepMs). Between iterations, resets the
     // actor's health/mana to full, clears all spell cooldowns, and strips every *non-passive* aura
-    // from both actor and target (SpellInfo::IsPassive() - a talent's permanent self-buff, applied
+    // from the actor and every dummy (SpellInfo::IsPassive() - a talent's permanent self-buff, applied
     // once by SimBot::Create()'s bootstrap, is never reapplied between iterations, so removing it
     // would silently run every iteration after the first without that talent) - see
     // ResetForNextIteration() in SimDaemon.cpp for the exact call sequence.

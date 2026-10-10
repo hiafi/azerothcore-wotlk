@@ -24,6 +24,8 @@
 #include "SimReport.h"
 #include "SimTests.h"
 #include "Timer.h"
+#include "Util.h"
+#include <algorithm>
 
 namespace
 {
@@ -107,6 +109,38 @@ void DpsSimWorldScript::OnDpsSimRun()
         // until checked against a matching 10ms run.
         config.StepMs = sConfigMgr->GetOption<uint32>("DpsSim.StepMs", 10);
 
+        // DpsSim.TargetCount / TargetSpreadYards / TargetRank - multi-target runs, see RunConfig::TargetCount and
+        // dpssim.conf.dist. Run settings like the duration, so the same profile runs at any count.
+        bool ready = true;
+        uint32 const targetCount = sConfigMgr->GetOption<uint32>("DpsSim.TargetCount", 1);
+        config.TargetCount = std::clamp(targetCount, 1u, 10u);
+        if (config.TargetCount != targetCount)
+            LOG_WARN("server.dpssim", "mod-dpssim: DpsSim.TargetCount {} is outside 1-10 - using {}.", targetCount,
+                config.TargetCount);
+
+        // 5 yd is the smallest AoE cluster radius any bot strategy uses (Fire's Flamestrike), so a wider ring would
+        // leave dummies outside it
+        float const spread = sConfigMgr->GetOption<float>("DpsSim.TargetSpreadYards", 3.0f);
+        config.TargetSpreadYards = std::clamp(spread, 0.0f, 5.0f);
+        if (config.TargetSpreadYards != spread)
+            LOG_WARN("server.dpssim", "mod-dpssim: DpsSim.TargetSpreadYards {} is outside 0-5 - using {}.", spread,
+                config.TargetSpreadYards);
+
+        // auto: the boss dummy for one target, so single-target baselines are untouched; elite pack dummies for 2+
+        std::string const rank = sConfigMgr->GetOption<std::string>("DpsSim.TargetRank", "auto");
+        if (StringEqualI(rank, "boss"))
+            config.TargetRank = SimTarget::Rank::Boss;
+        else if (StringEqualI(rank, "elite"))
+            config.TargetRank = SimTarget::Rank::Elite;
+        else if (StringEqualI(rank, "auto"))
+            config.TargetRank = config.TargetCount > 1 ? SimTarget::Rank::Elite : SimTarget::Rank::Boss;
+        else
+        {
+            LOG_ERROR("server.dpssim", "mod-dpssim: DpsSim.TargetRank '{}' is not auto, boss or elite - aborting "
+                "DpsSim.RunPlayerbot job.", rank);
+            ready = false;
+        }
+
         // DpsSim.Profile - see SimProfile.h and dpssim.conf.dist's own doc comment. When set, it
         // owns ActorClass/PlayerbotTalents/PlayerbotGlyphs/GearItemIds/SpellPower/CombatRatings/Stats/AttackPower,
         // the dummy and pre-pull settings outright (a bad
@@ -116,7 +150,6 @@ void DpsSimWorldScript::OnDpsSimRun()
         // directly, ActorClass/GearItemIds/SpellPower/CombatRatings/Stats/AttackPower all at their RunConfig{}
         // defaults (CLASS_MAGE, no gear, no stats - a naked caster) - gear/stats have no flat
         // conf-key equivalent, they only exist via a profile.
-        bool ready = true;
         std::string const profilePath = sConfigMgr->GetOption<std::string>("DpsSim.Profile", "");
         if (!profilePath.empty())
         {
@@ -167,7 +200,9 @@ void DpsSimWorldScript::OnDpsSimRun()
         else if (ready)
         {
             LOG_INFO("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbotBatch() - running {} iterations in-process, "
-                "actor level {} vs. target level {}.", iterations, config.ActorLevel, config.TargetLevel);
+                "actor level {} vs. target level {}, {} target(s) ({}, spread {:.1f} yd).", iterations,
+                config.ActorLevel, config.TargetLevel, config.TargetCount, SimTarget::RankName(config.TargetRank),
+                config.TargetSpreadYards);
 
             std::vector<SimDaemon::RunResult> results;
             if (!SimDaemon::RunPlayerbotBatch(config, iterations, results))
@@ -185,9 +220,11 @@ void DpsSimWorldScript::OnDpsSimRun()
                 double const critRate = result.CastCount > 0
                     ? 100.0 * double(result.CritCount) / double(result.CastCount)
                     : 0.0;
-                LOG_INFO("server.dpssim", "mod-dpssim:   iteration {}/{} - {} landed hits ({} crit, {:.1f}% crit rate), "
-                    "{} total damage, {:.1f} DPS.", i + 1, results.size(), result.CastCount, result.CritCount, critRate,
-                    result.TotalDamage, dps);
+                LOG_INFO("server.dpssim", "mod-dpssim:   iteration {}/{} - {} target(s) ({}, spread {:.1f} yd), {} "
+                    "landed hits ({} crit, {:.1f}% crit rate), {} total damage, {:.1f} DPS, {} target switches.", i + 1,
+                    results.size(), config.TargetCount, SimTarget::RankName(config.TargetRank),
+                    config.TargetSpreadYards, result.CastCount, result.CritCount, critRate, result.TotalDamage, dps,
+                    result.TargetSwitches);
 
                 if (!reportPath.empty())
                     SimReport::WriteJson(IterationReportPath(reportPath, uint32(i + 1)), config, result);

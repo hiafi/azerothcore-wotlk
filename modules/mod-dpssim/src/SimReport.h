@@ -36,21 +36,29 @@ namespace SimReport
     // existing (this does not create directories).
     //
     // Schema (top-level object):
-    //   "config":  {actorLevel, targetLevel, spellPower, durationMs, randomSeed}
-    //   "summary": {elapsedMs, totalDamage, dps, castCount, critCount, critRatePct}
-    //   "spells":  [{spellId, isPet, hitCount, critCount, totalDamage, pctOfTotal}, ...] - aggregated from
+    //   "config":  {actorLevel, targetLevel, spellPower, durationMs, targetCount, targetSpreadYards,
+    //               targetRank ("boss"|"elite")}
+    //   "summary": {elapsedMs, totalDamage, dps, castCount, critCount, critRatePct, actorDiedAtMs, dpsPerTarget,
+    //               targetSwitches} - dps is total damage across every dummy / duration, dpsPerTarget that over
+    //               targetCount; targetSwitches is RunResult::TargetSwitches.
+    //   "spells":  [{spellId, isPet, hitCount, critCount, totalDamage, pctOfTotal, castCount, targetsHit}, ...] -
+    //              castCount is the cast log's count for that spell id (triggered included, 0 for a pet row), so
+    //              hitCount / castCount is hits per cast; targetsHit is the number of distinct dummies hit.
+    //              Aggregated from
     //              HitSpellIds/HitDamages/HitCrits, one entry per distinct (spell id, isPet) pair - isPet marks
     //              damage dealt by the actor's pet/guardian/totem (S0 stage; periodic ticks are recorded under
     //              the aura's spell id too) - sorted by
     //              totalDamage descending. hitCount counts every landed hit: direct hits, DoT ticks
     //              and pet/guardian hits alike, so for a DoT or a pet spell it is not a cast count
-    //              (per-spell casts are CastRecorder's, see RunResult's own CastAttempts comment).
-    //   "hits":    [{timestampMs, spellId, damage, crit, isPet}, ...] in landing order.
+    //              (per-spell casts are castCount above).
+    //   "hits":    [{timestampMs, spellId, damage, crit, isPet, target}, ...] in landing order; target is the dummy
+    //              index.
     //   "auraEvents": [{timestampMs, unit ("actor"|"target"), spellId, stackAmount, positive,
-    //                  applied}, ...] - see RunResult::AuraEvent's doc comment for field meanings.
+    //                  applied, targetIndex}, ...] - see RunResult::AuraEvent's doc comment for field meanings
+    //                  (targetIndex -1 = on the actor).
     //   "manaSamples": [{timestampMs, manaPct}, ...] - actor's mana, sampled periodically rather
     //                  than every tick, see RunResult::ManaSamples's doc comment.
-    //   "casts": [{timestampMs, spellId, triggered}, ...] - every spell the actor cast, in cast
+    //   "casts": [{timestampMs, spellId, triggered, target}, ...] - every spell the actor cast, in cast
     //             order, damage or not (Evocation, self-buffs, ...) - see RunResult::CastEvents's
     //             doc comment. Distinct from "hits" above: a cast here is logged the moment it
     //             fires (Spell::cast() completing), a hit in "hits" is logged when a direct-damage
@@ -59,7 +67,9 @@ namespace SimReport
     //             is Spell::IsTriggered() - false for a deliberate cast ("requires a button press"),
     //             true for a proc/internal trigger (a talent's passive effect being granted, a free
     //             proc-triggered cast, ...) - the report groups on this to separate real ability
-    //             usage from buffs that just showed up on their own.
+    //             usage from buffs that just showed up on their own. `target` is the explicit unit target's
+    //             dummy index, -1 for self, none, ground or a non-dummy.
+    //   "targets": [{index, totalDamage, pctOfTotal}, ...] - damage per dummy, in index order.
     bool WriteJson(std::string const& path, SimDaemon::RunConfig const& config, SimDaemon::RunResult const& result);
 }
 

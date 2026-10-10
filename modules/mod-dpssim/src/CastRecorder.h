@@ -60,7 +60,8 @@
 class CastRecorder : public AllSpellScript
 {
 public:
-    explicit CastRecorder(ObjectGuid actorGuid);
+    // `targetGuids` are the dummies in index order (SimTargetGroup), for CastEvent::TargetIndex
+    CastRecorder(ObjectGuid actorGuid, std::vector<ObjectGuid> targetGuids);
 
     void OnSpellCast(Spell* spell, Unit* caster, SpellInfo const* spellInfo, bool skipCheck) override;
 
@@ -75,6 +76,9 @@ public:
         // that requested this field called "requires a button press". See this class's own doc
         // comment for how the report uses it.
         bool IsTriggered;
+        // The index of the cast's explicit unit target among the dummies, or -1 (self, no unit target, a ground
+        // target or a unit that isn't a dummy). Shows a DoT spread across the pack.
+        int8 TargetIndex;
     };
     [[nodiscard]] std::vector<CastEvent> const& GetCastEvents() const { return _castEvents; }
 
@@ -84,6 +88,7 @@ public:
 
 private:
     ObjectGuid _actorGuid;
+    std::vector<ObjectGuid> _targetGuids;
     std::vector<CastEvent> _castEvents;
 };
 
