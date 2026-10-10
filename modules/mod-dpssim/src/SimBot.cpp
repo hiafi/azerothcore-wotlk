@@ -16,6 +16,7 @@
  */
 
 #include "SimBot.h"
+#include "Creature.h"
 #include "Log.h"
 #include "Player.h"
 #include "PlayerbotFactory.h"
@@ -27,10 +28,13 @@ SimBot::~SimBot()
     delete _ai;
 }
 
-bool SimBot::Create(Player* bot, Unit* target, std::string const& playerbotTalents, bool playerbotGlyphs)
+bool SimBot::Create(Player* bot, std::vector<Creature*> const& targets, std::string const& playerbotTalents,
+    bool playerbotGlyphs)
 {
-    if (!bot || !target)
+    if (!bot || targets.empty() || !targets.front())
         return false;
+
+    Creature* target = targets.front();
 
     // Teaches every trainer-taught spell appropriate to the bot's class/level - the same,
     // unmodified utility a real random bot uses (PlayerbotFactory::InitAvailableSpells(),
@@ -136,13 +140,13 @@ bool SimBot::Create(Player* bot, Unit* target, std::string const& playerbotTalen
     _ai->GetAiObjectContext()->GetValue<Unit*>("current target")->Set(target);
 
     // Bootstrap combat - see this class's doc comment on Create() for why this is needed rather
-    // than just calling bot->Attack(target, true) and waiting. Pure combat-state, the same
-    // CombatManager primitive ReestablishCombatState() uses between iterations (see its comment).
+    // than just calling bot->Attack(target, true) and waiting. Pure combat/threat state, the same
+    // engage ReestablishCombatState() uses between iterations (see EngageTargets()).
     // This replaced a hardcoded Frostbolt pull (2026-10-05), which made every class cast Frostbolt as hit #0.
-    bot->SetInCombatWith(target);
-    if (!bot->IsInCombatWith(target))
+    if (!EngageTargets(targets))
     {
-        LOG_ERROR("server.dpssim", "mod-dpssim: SimBot::Create() - SetInCombatWith() did not put the bot in combat.");
+        LOG_ERROR("server.dpssim", "mod-dpssim: SimBot::Create() - engaging the dummies did not put the bot in "
+            "combat.");
         return false;
     }
 
@@ -174,6 +178,50 @@ void SimBot::UpdateAI(uint32 diff)
 {
     if (_ai)
         _ai->UpdateAI(diff);
+}
+
+bool SimBot::EngageTargets(std::vector<Creature*> const& targets)
+{
+    Player* bot = _ai ? _ai->GetBot() : nullptr;
+    if (!bot)
+        return false;
+
+    bool allEngaged = true;
+    for (size_t i = 0; i < targets.size(); ++i)
+    {
+        Creature* dummy = targets[i];
+        if (!dummy)
+            continue;
+
+        dummy->EngageWithTarget(bot);
+        if (!bot->IsInCombatWith(dummy))
+        {
+            LOG_WARN("server.dpssim", "mod-dpssim: dummy #{} ({}) - EngageWithTarget() did not put the bot in combat "
+                "with it; falling back to SetInCombatWith(), so it may not count as an enemy until it is hit.", i,
+                dummy->GetGUID().ToString());
+            bot->SetInCombatWith(dummy);
+        }
+        allEngaged = allEngaged && bot->IsInCombatWith(dummy);
+    }
+
+    // ThreatManager's AddThreat skips an evading unit, so an evading dummy would not count as an enemy
+    for (size_t i = 0; i < targets.size(); ++i)
+    {
+        if (targets[i] && targets[i]->IsInEvadeMode())
+            LOG_WARN("server.dpssim", "mod-dpssim: dummy #{} ({}) is in evade mode after the engage - the bot is not "
+                "on its threat list, so it is missing from the bot's attackers.", i, targets[i]->GetGUID().ToString());
+    }
+
+    return allEngaged;
+}
+
+ObjectGuid SimBot::GetCurrentTarget() const
+{
+    if (!_ai)
+        return ObjectGuid::Empty;
+
+    Unit* target = _ai->GetAiObjectContext()->GetValue<Unit*>("current target")->Get();
+    return target ? target->GetGUID() : ObjectGuid::Empty;
 }
 
 void SimBot::HandleTeleportAck()
@@ -265,9 +313,9 @@ void SimBot::EndBuffPhase()
     _ai->ChangeStrategy(additions, BOT_STATE_NON_COMBAT);
 }
 
-void SimBot::ReestablishCombatState(Unit* target)
+void SimBot::ReestablishCombatState(std::vector<Creature*> const& targets)
 {
-    if (!_ai || !target)
+    if (!_ai || targets.empty() || !targets.front())
         return;
 
     // **Root cause confirmed 2026-09-13** via temporary diagnostic logging (SimDaemon.cpp's
@@ -299,13 +347,16 @@ void SimBot::ReestablishCombatState(Unit* target)
     // one instead, almost certainly by confusing the AI's own action-selection state with a cast it
     // never decided to make itself. SetInCombatWith() is pure state manipulation, not an action, so
     // it doesn't have that failure mode.
-    if (Player* bot = _ai->GetBot())
-        bot->SetInCombatWith(target);
+    //
+    // The engage is now Unit::EngageWithTarget() from each dummy (EngageTargets()): the same pure state change,
+    // plus the threat-list entry the bot's enemy counts need. It also restores what BeginBuffPhase()'s
+    // CombatStopWithPets(true) dropped, so every iteration starts with every dummy engaged.
+    EngageTargets(targets);
 
     // Same two calls Create() makes once at startup - cheap, harmless no-ops if neither was
     // actually disturbed (which, per the above, the engine state usually wasn't - only
     // Unit::IsInCombat() was).
-    _ai->GetAiObjectContext()->GetValue<Unit*>("current target")->Set(target);
+    _ai->GetAiObjectContext()->GetValue<Unit*>("current target")->Set(targets.front());
     _ai->ChangeEngine(BOT_STATE_COMBAT);
 
     // Act from the first tick of the fight. AllowActivity() caches its answer for ~5 s: a "false" taken out of

@@ -209,6 +209,28 @@ entries already sat in it before this block existed (300001 Frozen Orb, 300002 M
 300100 Divine Star, 300102 Tentacle of Madness), and the warlock-rework plan (§4.5) pre-reserved
 300140-300179 inside it for the Affliction/Demonology/Destruction passes that use this helper next.
 
+### Test and tool NPCs (dpssim MT0)
+
+`source/ids.yaml` has a second creature block, `npc_tools` (900000-900099), accepted by
+`_validate_creature_entry` alongside `creature`. The training dummies (900001-900009) and healing
+dummy (900011/13/14) are declared in `source/npcs/training_dummies.py`; `generate.py` loads
+`source/npcs/` with the same `load_classes_dir` and merges it into the class registry
+(`_merge_npc_declarations`). 900010 and 900012 stay hand-written.
+
+`lib/sql_dump.py` now reads `REPLACE INTO` like `INSERT INTO`. It had to: 900001-900006, 900010
+(`2026_09_01_00.sql`) and 900012 were created with `REPLACE INTO`, so the reader never saw them and a declaration could not
+compare as live. MySQL's semantics (delete the same-key row, then insert; omitted columns are not kept) already
+hold at every replay site because each stores `rows[key] = row`, never `.update()`; the plain-union
+readers have no old row to drop. The same work fixed column lists wrapped over several lines (the
+hand-written REPLACEs do this): the first name on each line kept its newline, so `name`,
+`DamageModifier` and `HealthModifier` read as absent. The same fix also corrects
+`trainer_spell.ReqAbility2` in `2026_09_27_00.sql`; every value of that column is 0, so it can only
+remove false diffs.
+
+Known replay gap: `UPDATE ... WHERE entry IN (...) AND ScriptName = '...'` (the `IN (...)`
+list, which `parse_and_equality_conditions` rejects, `2026_09_29_03.sql`) is not replayed, so
+900001-900003 read as still on `npc_training_dummy` and re-emit one harmless `ScriptName` upsert.
+
 ### Three correctness fixes from code review (2026-09-28)
 
 All three were found by checking T1's first commit against this repo's *actual* migration

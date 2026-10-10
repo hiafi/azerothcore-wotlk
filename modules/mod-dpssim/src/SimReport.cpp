@@ -20,13 +20,14 @@
 #include <algorithm>
 #include <fstream>
 #include <map>
+#include <set>
 #include <sstream>
 #include <utility>
 
 namespace
 {
     // Per-spell aggregate, built from RunResult's parallel HitSpellIds/HitDamages/HitCrits
-    // vectors - see SimReport.h's schema doc comment for why hitCount doubles as cast count today.
+    // vectors (castCount from CastEvents) - see SimReport.h's schema doc comment for hitCount vs. castCount.
     struct SpellAggregate
     {
         uint32 SpellId = 0;
@@ -34,6 +35,10 @@ namespace
         uint32 HitCount = 0;
         uint32 CritCount = 0;
         uint64 TotalDamage = 0;
+        // Casts of this spell id in the cast log, triggered included; 0 for a pet row (pet casts aren't logged)
+        uint32 CastCount = 0;
+        // Distinct dummy indexes this row hit
+        std::set<uint8> TargetsHit;
     };
 
     std::vector<SpellAggregate> AggregateBySpell(SimDaemon::RunResult const& result)
@@ -50,6 +55,18 @@ namespace
             agg.TotalDamage += result.HitDamages[i];
             if (i < result.HitCrits.size() && result.HitCrits[i])
                 ++agg.CritCount;
+            if (i < result.HitTargetIndex.size())
+                agg.TargetsHit.insert(result.HitTargetIndex[i]);
+        }
+
+        for (auto& entry : byId)
+        {
+            SpellAggregate& agg = entry.second;
+            if (agg.IsPet)
+                continue;
+
+            agg.CastCount = uint32(std::count_if(result.CastEvents.begin(), result.CastEvents.end(),
+                [&agg](SimDaemon::RunResult::CastEvent const& c) { return c.SpellId == agg.SpellId; }));
         }
 
         std::vector<SpellAggregate> aggregates;
@@ -74,7 +91,7 @@ bool SimReport::WriteJson(std::string const& path, SimDaemon::RunConfig const& c
 
     // Hand-written, not built with a JSON library - this repo has none vendored (checked before
     // adding one; not worth the dependency for a flat, fully-known schema like this one). Every
-    // string value written below comes from a fixed, controlled set ("actor"/"target" only) - no
+    // string value written below comes from a fixed, controlled set ("actor"/"target", "boss"/"elite") - no
     // escaping logic, because there is nothing here that could ever need escaping. If a future
     // field introduces free-form text (e.g. a spell name, once lookups move server-side), add
     // proper JSON string escaping before writing it, don't assume this stays safe.
@@ -83,13 +100,17 @@ bool SimReport::WriteJson(std::string const& path, SimDaemon::RunConfig const& c
     double const critRatePct = result.CastCount > 0
         ? 100.0 * double(result.CritCount) / double(result.CastCount)
         : 0.0;
+    uint32 const targetCount = std::max(config.TargetCount, 1u);
 
     file << "{\n";
     file << "  \"config\": {\n";
     file << "    \"actorLevel\": " << config.ActorLevel << ",\n";
     file << "    \"targetLevel\": " << config.TargetLevel << ",\n";
     file << "    \"spellPower\": " << config.SpellPower << ",\n";
-    file << "    \"durationMs\": " << config.DurationMs << "\n";
+    file << "    \"durationMs\": " << config.DurationMs << ",\n";
+    file << "    \"targetCount\": " << config.TargetCount << ",\n";
+    file << "    \"targetSpreadYards\": " << config.TargetSpreadYards << ",\n";
+    file << "    \"targetRank\": \"" << SimTarget::RankName(config.TargetRank) << "\"\n";
     file << "  },\n";
 
     file << "  \"summary\": {\n";
@@ -105,7 +126,10 @@ bool SimReport::WriteJson(std::string const& path, SimDaemon::RunConfig const& c
         file << result.ActorDiedAtMs;
     else
         file << "null";
-    file << "\n";
+    file << ",\n";
+    // dps stays total damage across every dummy / duration
+    file << "    \"dpsPerTarget\": " << dps / double(targetCount) << ",\n";
+    file << "    \"targetSwitches\": " << result.TargetSwitches << "\n";
     file << "  },\n";
 
     std::vector<SpellAggregate> const spells = AggregateBySpell(result);
@@ -119,7 +143,8 @@ bool SimReport::WriteJson(std::string const& path, SimDaemon::RunConfig const& c
         file << "    {\"spellId\": " << s.SpellId << ", \"isPet\": " << (s.IsPet ? "true" : "false")
              << ", \"hitCount\": " << s.HitCount
              << ", \"critCount\": " << s.CritCount << ", \"totalDamage\": " << s.TotalDamage
-             << ", \"pctOfTotal\": " << pctOfTotal << "}" << (i + 1 < spells.size() ? ",\n" : "\n");
+             << ", \"pctOfTotal\": " << pctOfTotal << ", \"castCount\": " << s.CastCount
+             << ", \"targetsHit\": " << s.TargetsHit.size() << "}" << (i + 1 < spells.size() ? ",\n" : "\n");
     }
     file << "  ],\n";
 
@@ -129,9 +154,10 @@ bool SimReport::WriteJson(std::string const& path, SimDaemon::RunConfig const& c
         uint32 const timestamp = i < result.HitTimestamps.size() ? result.HitTimestamps[i] : 0;
         bool const crit = i < result.HitCrits.size() && result.HitCrits[i];
         bool const isPet = i < result.HitIsPet.size() && result.HitIsPet[i];
+        uint32 const target = i < result.HitTargetIndex.size() ? result.HitTargetIndex[i] : 0;
         file << "    {\"timestampMs\": " << timestamp << ", \"spellId\": " << result.HitSpellIds[i]
              << ", \"damage\": " << result.HitDamages[i] << ", \"crit\": " << (crit ? "true" : "false")
-             << ", \"isPet\": " << (isPet ? "true" : "false")
+             << ", \"isPet\": " << (isPet ? "true" : "false") << ", \"target\": " << target
              << "}" << (i + 1 < result.HitDamages.size() ? ",\n" : "\n");
     }
     file << "  ],\n";
@@ -143,6 +169,7 @@ bool SimReport::WriteJson(std::string const& path, SimDaemon::RunConfig const& c
         file << "    {\"timestampMs\": " << e.TimestampMs << ", \"unit\": \"" << (e.IsActor ? "actor" : "target")
              << "\", \"spellId\": " << e.SpellId << ", \"stackAmount\": " << uint32(e.StackAmount)
              << ", \"positive\": " << (e.Positive ? "true" : "false") << ", \"applied\": " << (e.Applied ? "true" : "false")
+             << ", \"targetIndex\": " << int32(e.TargetIndex)
              << "}" << (i + 1 < result.AuraEvents.size() ? ",\n" : "\n");
     }
     file << "  ],\n";
@@ -161,8 +188,24 @@ bool SimReport::WriteJson(std::string const& path, SimDaemon::RunConfig const& c
     {
         SimDaemon::RunResult::CastEvent const& c = result.CastEvents[i];
         file << "    {\"timestampMs\": " << c.TimestampMs << ", \"spellId\": " << c.SpellId
-             << ", \"triggered\": " << (c.Triggered ? "true" : "false")
+             << ", \"triggered\": " << (c.Triggered ? "true" : "false") << ", \"target\": " << int32(c.TargetIndex)
              << "}" << (i + 1 < result.CastEvents.size() ? ",\n" : "\n");
+    }
+    file << "  ],\n";
+
+    // Damage per dummy, in index order
+    std::vector<uint64> damageByTarget(targetCount, 0);
+    for (size_t i = 0; i < result.HitDamages.size() && i < result.HitTargetIndex.size(); ++i)
+        if (result.HitTargetIndex[i] < damageByTarget.size())
+            damageByTarget[result.HitTargetIndex[i]] += result.HitDamages[i];
+    file << "  \"targets\": [\n";
+    for (size_t i = 0; i < damageByTarget.size(); ++i)
+    {
+        double const pctOfTotal = result.TotalDamage > 0
+            ? 100.0 * double(damageByTarget[i]) / double(result.TotalDamage)
+            : 0.0;
+        file << "    {\"index\": " << i << ", \"totalDamage\": " << damageByTarget[i] << ", \"pctOfTotal\": "
+             << pctOfTotal << "}" << (i + 1 < damageByTarget.size() ? ",\n" : "\n");
     }
     file << "  ]\n";
     file << "}\n";

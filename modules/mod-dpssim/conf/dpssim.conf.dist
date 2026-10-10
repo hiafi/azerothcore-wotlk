@@ -161,6 +161,49 @@ DpsSim.StepMs = 100
 DpsSim.Iterations = 1
 
 #
+#    DpsSim.TargetCount
+#        Description: Only meaningful alongside DpsSim.RunPlayerbot = 1. How many target dummies the
+#                      run spawns (SimTargetGroup), used for every iteration of the batch, so AoE
+#                      rotations can be measured. Every dummy is engaged at the pull, so each one counts
+#                      as an enemy for the bot strategies' pack/cleave/AoE rows from the first tick.
+#                      Damage on all of them counts: the report's "dps" is the total across every
+#                      dummy, "dpsPerTarget" that divided by this count. A run setting, like
+#                      DpsSim.DurationSeconds, not a profile key - the same profile runs at any count.
+#                      Values outside 1-10 are clamped, with a warning.
+#        Default:     1
+#
+
+DpsSim.TargetCount = 1
+
+#
+#    DpsSim.TargetSpreadYards
+#        Description: Only meaningful alongside DpsSim.TargetCount > 1. The dummies form a stacked
+#                      pack: the first (the primary) stands where the single dummy always does, 8 yards
+#                      in front of the actor, and the others sit evenly spaced on a ring of this radius
+#                      around it, starting directly behind it. That is the best case for AoE: at 5 yards
+#                      or less every dummy is inside the smallest AoE cluster radius any bot strategy
+#                      uses (Flamestrike's 5 yards) and inside a cone from a caster at range. Values
+#                      outside 0-5 are clamped, with a warning.
+#        Default:     3
+#
+
+DpsSim.TargetSpreadYards = 3
+
+#
+#    DpsSim.TargetRank
+#        Description: Only meaningful alongside DpsSim.RunPlayerbot = 1. Which dummy entries spawn,
+#                      case-insensitive. Anything else aborts the job.
+#        Default:     auto  - (boss at 1 target, elite at 2 or more)
+#                     boss  - (900004/900005/900006 for level 60/70/80: rank 3, boss-flagged, the
+#                              single-target default)
+#                     elite - (900007/900008/900009: rank 1, not boss-flagged, so rows gated on
+#                              "not boss" (e.g. Shadow's pack) can open; run one target at this rank to
+#                              compare a pack against a single target like for like)
+#
+
+DpsSim.TargetRank = auto
+
+#
 #    DpsSim.Profile
 #        Description: Only meaningful alongside DpsSim.RunPlayerbot = 1. Full path to a named sim
 #                      profile file (SimProfile.h/.cpp) - e.g.

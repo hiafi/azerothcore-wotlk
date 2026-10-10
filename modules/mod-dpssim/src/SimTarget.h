@@ -19,10 +19,14 @@
 #define MODULE_DPSSIM_SIMTARGET_H
 
 #include "Define.h"
+#include "ObjectGuid.h"
 #include "Position.h"
+#include <memory>
+#include <vector>
 
 class Creature;
 class Map;
+class Player;
 class TempSummon;
 
 // Passive target dummy for the sim to cast at. Built on this fork's own training dummies
@@ -71,9 +75,21 @@ class TempSummon;
 class SimTarget
 {
 public:
+    // Which dummy entries spawn. Boss is the single-target default (rank 3, BOSS_MOB); Elite is the multi-target
+    // pack dummy (rank 1, no BOSS_MOB), so strategy rows gated on `not boss(target)` (e.g. Shadow's pack) can open.
+    enum class Rank : uint8
+    {
+        Boss,
+        Elite
+    };
+
+    // "boss" / "elite", for logs and the report
+    static char const* RankName(Rank rank);
+
     struct Config
     {
         uint8 Level = 80;
+        Rank TargetRank = Rank::Boss;
         uint32 Armor = 0;
         // With health drain off the dummy AI zeroes all damage taken, so health never moves and this is only a
         // defensive default. With HealthDrain on it is the pool the fight drains (the profile's DummyMaxHealth;
@@ -100,17 +116,23 @@ public:
     static constexpr uint32 DUMMY_ENTRY_LEVEL_70 = 900005;
     static constexpr uint32 DUMMY_ENTRY_LEVEL_80 = 900006;
 
-    // Maps a target level to the matching dummy entry above. Exact matches for 60/70/80; anything
+    // Elite pack dummies for multi-target runs: copies of the three above with rank 1 and no BOSS_MOB flag,
+    // declared in apps/dbc-tools next to the boss dummies
+    static constexpr uint32 DUMMY_ENTRY_ELITE_LEVEL_60 = 900007;
+    static constexpr uint32 DUMMY_ENTRY_ELITE_LEVEL_70 = 900008;
+    static constexpr uint32 DUMMY_ENTRY_ELITE_LEVEL_80 = 900009;
+
+    // Maps a target level and rank to the matching dummy entry above. Exact matches for 60/70/80; anything
     // else logs a warning and falls back to the nearest bracket at or below `level` (60 for
     // anything under 60, 70 for 61-69, 80 for 71+) - callers asking for an off-bracket level are
     // almost certainly a mistake, not a deliberate scenario, since this fork only cares about
     // 60/70/80.
-    static uint32 EntryForLevel(uint8 level);
+    static uint32 EntryForLevel(uint8 level, Rank rank);
 
     ~SimTarget();
 
-    // Spawns the dummy entry matching `config.Level` (see EntryForLevel()) on `map` at `pos` and
-    // applies the rest of `config`. Returns false (logging why) on failure - most likely the
+    // Spawns the dummy entry matching `config.Level` and `config.TargetRank` (see EntryForLevel()) on `map` at
+    // `pos` and applies the rest of `config`. Returns false (logging why) on failure - most likely the
     // resolved entry not existing in this deployment's DB (base data, should always be present,
     // but worth checking explicitly rather than dereferencing null).
     bool Create(Map* map, Position const& pos, Config const& config);
@@ -119,6 +141,31 @@ public:
 
 private:
     TempSummon* _summon = nullptr;
+};
+
+// The run's N dummies (1-10), spawned once per process and reused by every iteration, like the single dummy
+// before multi-target runs. Owns each SimTarget through a unique_ptr: ~SimTarget() unsummons, so one must never be
+// copied or moved by a vector reallocation.
+//
+// The layout is a stacked pack, the best case for AoE: index 0 (the primary) stands where the single dummy always
+// stood, 8 yd in front of the actor; indexes 1..N-1 sit on a ring of radius `spreadYards` around the primary at
+// evenly spaced angles, starting directly behind the primary as seen from the actor. At the default 3 yd every
+// dummy is inside the smallest AoE cluster radius any bot strategy uses (5 yd) and inside a cone from a caster at
+// range.
+class SimTargetGroup
+{
+public:
+    // Spawns `count` dummies (clamped to at least 1) around `actor` on its map, each with `config`. Returns false
+    // (logging why) if any spawn fails.
+    bool Create(Player* actor, uint32 count, float spreadYards, SimTarget::Config const& config);
+
+    // In index order; the primary is first
+    [[nodiscard]] std::vector<Creature*> GetCreatures() const;
+    [[nodiscard]] Creature* GetPrimary() const;
+    [[nodiscard]] std::vector<ObjectGuid> GetGuids() const;
+
+private:
+    std::vector<std::unique_ptr<SimTarget>> _targets;
 };
 
 #endif

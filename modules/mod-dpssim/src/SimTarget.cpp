@@ -18,9 +18,13 @@
 #include "SimTarget.h"
 #include "Log.h"
 #include "Map.h"
+#include "Player.h"
 #include "SharedDefines.h"
 #include "SimDummyAI.h"
+#include "StringFormat.h"
 #include "TemporarySummon.h"
+#include <algorithm>
+#include <cmath>
 
 SimTarget::~SimTarget()
 {
@@ -33,16 +37,26 @@ SimTarget::~SimTarget()
         _summon->UnSummon();
 }
 
-uint32 SimTarget::EntryForLevel(uint8 level)
+char const* SimTarget::RankName(Rank rank)
 {
-    if (level == 60)
-        return DUMMY_ENTRY_LEVEL_60;
-    if (level == 70)
-        return DUMMY_ENTRY_LEVEL_70;
-    if (level == 80)
-        return DUMMY_ENTRY_LEVEL_80;
+    return rank == Rank::Elite ? "elite" : "boss";
+}
 
-    uint32 const fallback = level < 60 ? DUMMY_ENTRY_LEVEL_60 : (level < 70 ? DUMMY_ENTRY_LEVEL_70 : DUMMY_ENTRY_LEVEL_80);
+uint32 SimTarget::EntryForLevel(uint8 level, Rank rank)
+{
+    bool const elite = rank == Rank::Elite;
+    uint32 const entry60 = elite ? DUMMY_ENTRY_ELITE_LEVEL_60 : DUMMY_ENTRY_LEVEL_60;
+    uint32 const entry70 = elite ? DUMMY_ENTRY_ELITE_LEVEL_70 : DUMMY_ENTRY_LEVEL_70;
+    uint32 const entry80 = elite ? DUMMY_ENTRY_ELITE_LEVEL_80 : DUMMY_ENTRY_LEVEL_80;
+
+    if (level == 60)
+        return entry60;
+    if (level == 70)
+        return entry70;
+    if (level == 80)
+        return entry80;
+
+    uint32 const fallback = level < 60 ? entry60 : (level < 70 ? entry70 : entry80);
     LOG_WARN("server.dpssim", "mod-dpssim: SimTarget::EntryForLevel() - no dedicated dummy entry for level {} (only 60/70/80 exist) - falling back to entry {}.",
         level, fallback);
     return fallback;
@@ -50,7 +64,7 @@ uint32 SimTarget::EntryForLevel(uint8 level)
 
 bool SimTarget::Create(Map* map, Position const& pos, Config const& config)
 {
-    uint32 const entry = EntryForLevel(config.Level);
+    uint32 const entry = EntryForLevel(config.Level, config.TargetRank);
 
     TempSummon* summon = map->SummonCreature(entry, pos);
     if (!summon)
@@ -95,4 +109,71 @@ bool SimTarget::Create(Map* map, Position const& pos, Config const& config)
 Creature* SimTarget::GetCreature() const
 {
     return _summon;
+}
+
+bool SimTargetGroup::Create(Player* actor, uint32 count, float spreadYards, SimTarget::Config const& config)
+{
+    count = std::max(count, 1u);
+    Map* map = actor->GetMap();
+
+    // The primary, exactly where the single dummy has always gone
+    Position const primaryPos = actor->GetNearPosition(8.0f, 0.0f);
+    // Direction from the actor to the primary: ring slot 0 sits directly behind the primary
+    float const away = actor->GetAbsoluteAngle(primaryPos);
+
+    std::vector<Position> positions = {primaryPos};
+    for (uint32 k = 0; k + 1 < count; ++k)
+    {
+        float const angle = away + float(k) * 2.0f * float(M_PI) / float(count - 1);
+        float const x = primaryPos.GetPositionX() + spreadYards * std::cos(angle);
+        float const y = primaryPos.GetPositionY() + spreadYards * std::sin(angle);
+        float z = primaryPos.GetPositionZ();
+        actor->UpdateGroundPositionZ(x, y, z);
+        positions.emplace_back(x, y, z, primaryPos.GetOrientation());
+    }
+
+    _targets.clear();
+    for (Position const& pos : positions)
+    {
+        auto target = std::make_unique<SimTarget>();
+        if (!target->Create(map, pos, config))
+            return false;
+
+        _targets.push_back(std::move(target));
+    }
+
+    std::string list;
+    for (size_t i = 0; i < _targets.size(); ++i)
+    {
+        Creature const* creature = _targets[i]->GetCreature();
+        list += Acore::StringFormat("{}#{} {} at {:.1f} yd", list.empty() ? "" : ", ", i,
+            creature->GetGUID().ToString(), actor->GetExactDist(creature));
+    }
+    LOG_INFO("server.dpssim", "mod-dpssim: {} target dummies (entry {}, {}, spread {:.1f} yd): {}.", _targets.size(),
+        _targets.front()->GetCreature()->GetEntry(), SimTarget::RankName(config.TargetRank), spreadYards,
+        list);
+    return true;
+}
+
+std::vector<Creature*> SimTargetGroup::GetCreatures() const
+{
+    std::vector<Creature*> creatures;
+    creatures.reserve(_targets.size());
+    for (auto const& target : _targets)
+        creatures.push_back(target->GetCreature());
+    return creatures;
+}
+
+Creature* SimTargetGroup::GetPrimary() const
+{
+    return _targets.empty() ? nullptr : _targets.front()->GetCreature();
+}
+
+std::vector<ObjectGuid> SimTargetGroup::GetGuids() const
+{
+    std::vector<ObjectGuid> guids;
+    guids.reserve(_targets.size());
+    for (auto const& target : _targets)
+        guids.push_back(target->GetCreature()->GetGUID());
+    return guids;
 }

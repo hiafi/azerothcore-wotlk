@@ -32,6 +32,11 @@ docs/.master-todo-list.md's cast-count-swing entry) and not a trimmed-away outli
 this report is already declaring that run non-representative by excluding it from every other
 figure.
 
+Multi-target reports (config.targetCount > 1) are aggregated the same way, plus the per-target breakdown
+(averaged element-wise over the kept runs) and the per-spell castCount (averaged) / targetsHit (max over the kept
+runs). Reports whose targetCount or targetRank differ are refused: averaging a 1-target run with a 5-target run
+would be meaningless. A report from before multi-target support counts as targetCount 1, rank "boss".
+
 Usage:
     aggregate_reports.py <output.json> <report1.json> [<report2.json> ...]
 """
@@ -84,6 +89,17 @@ def median_report(reports: list[dict], kept_idx: set[int]) -> dict:
 
 # Summary fields worth averaging - every field SimReport::WriteJson() puts in "summary" today.
 SUMMARY_KEYS = ["elapsedMs", "totalDamage", "dps", "castCount", "critCount", "critRatePct"]
+# Added with multi-target support; only averaged (and only written) when every report carries them, so an aggregate
+# of older reports stays free of fields that never existed in its inputs.
+MULTI_TARGET_SUMMARY_KEYS = ["dpsPerTarget", "targetSwitches"]
+
+
+def target_count(r: dict) -> int:
+    return r.get("config", {}).get("targetCount", 1)
+
+
+def target_rank(r: dict) -> str:
+    return r.get("config", {}).get("targetRank", "boss")
 
 
 # Returns (trimmedMean, rawMean, perIteration) - perIteration always holds all N raw values
@@ -93,7 +109,8 @@ def aggregate_summary(reports: list[dict], kept_idx: set[int]) -> tuple[dict, di
     trimmed: dict = {}
     raw: dict = {}
     per_iteration: dict = {}
-    for key in SUMMARY_KEYS:
+    keys = SUMMARY_KEYS + [k for k in MULTI_TARGET_SUMMARY_KEYS if all(k in r["summary"] for r in reports)]
+    for key in keys:
         values = [r["summary"][key] for r in reports]
         per_iteration[key] = values
         raw[key] = mean(values)
@@ -118,25 +135,46 @@ def aggregate_spells(reports: list[dict], kept_idx: set[int]) -> list[dict]:
         per_report_by_id.append(by_id)
         all_ids.update(by_id.keys())
 
+    has_multi_target_fields = all(
+        "castCount" in s for i, r in enumerate(reports) if i in kept_idx for s in r.get("spells", []))
     merged = []
     for spell_id, is_pet in all_ids:
-        hit_counts, crit_counts, total_damages, pcts = [], [], [], []
+        hit_counts, crit_counts, total_damages, pcts, cast_counts, targets_hit = [], [], [], [], [], []
         for by_id in per_report_by_id:
             s = by_id.get((spell_id, is_pet))
             hit_counts.append(s["hitCount"] if s else 0)
             crit_counts.append(s["critCount"] if s else 0)
             total_damages.append(s["totalDamage"] if s else 0)
             pcts.append(s["pctOfTotal"] if s else 0)
-        merged.append({
+            cast_counts.append(s.get("castCount", 0) if s else 0)
+            targets_hit.append(s.get("targetsHit", 0) if s else 0)
+        row = {
             "spellId": spell_id,
             "isPet": is_pet,
             "hitCount": mean(hit_counts),
             "critCount": mean(crit_counts),
             "totalDamage": mean(total_damages),
             "pctOfTotal": mean(pcts),
-        })
+        }
+        if has_multi_target_fields:
+            row["castCount"] = mean(cast_counts)
+            # Max, not mean: "how many distinct dummies can this row reach" is a property of the spell, and a
+            # mean of per-run distinct counts would read as a fractional, meaningless number of targets.
+            row["targetsHit"] = max(targets_hit)
+        merged.append(row)
     merged.sort(key=lambda s: s["totalDamage"], reverse=True)
     return merged
+
+
+# Element-wise average of "targets" over the kept runs: totalDamage is averaged, pctOfTotal recomputed from the
+# averaged damage so the column still sums to 100. Empty for reports without a "targets" block.
+def aggregate_targets(reports: list[dict], kept_idx: set[int]) -> list[dict]:
+    kept = [r.get("targets", []) for i, r in enumerate(reports) if i in kept_idx]
+    count = max((len(t) for t in kept), default=0)
+    damages = [mean([t[idx]["totalDamage"] if idx < len(t) else 0 for t in kept]) for idx in range(count)]
+    total = sum(damages)
+    return [{"index": idx, "totalDamage": dmg, "pctOfTotal": dmg / total * 100 if total > 0 else 0.0}
+            for idx, dmg in enumerate(damages)]
 
 
 def main() -> int:
@@ -148,13 +186,23 @@ def main() -> int:
     report_paths = [Path(p) for p in sys.argv[2:]]
     reports = [json.loads(p.read_text()) for p in report_paths]
 
+    for path, r in zip(report_paths, reports):
+        if target_count(r) != target_count(reports[0]) or target_rank(r) != target_rank(reports[0]):
+            print(f"error: refusing to aggregate reports with different target setups: {report_paths[0].name} has "
+                  f"targetCount {target_count(reports[0])} / targetRank {target_rank(reports[0])!r}, {path.name} has "
+                  f"targetCount {target_count(r)} / targetRank {target_rank(r)!r}", file=sys.stderr)
+            return 1
+
     kept_idx, dropped_low, dropped_high = trim_by_dps(reports)
     summary, raw_mean, per_iteration = aggregate_summary(reports, kept_idx)
     # Iterations where the actor died (actorDiedAtMs null/absent when it lived). They are never trimmed, so they stay in the
     # headline means above and a self-killing rotation shows up as low DPS; this only makes the cause visible.
     death_times = [r["summary"]["actorDiedAtMs"] for r in reports if r["summary"].get("actorDiedAtMs") is not None]
     representative = median_report(reports, kept_idx)
+    targets = aggregate_targets(reports, kept_idx)
     merged = {
+        # targetCount / targetSpreadYards / targetRank ride along inside config (identical across all runs,
+        # checked above)
         "config": representative["config"],
         "summary": summary,
         "spells": aggregate_spells(reports, kept_idx),
@@ -182,6 +230,9 @@ def main() -> int:
             "perIteration": per_iteration,
         },
     }
+
+    if targets:
+        merged["targets"] = targets
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(merged))

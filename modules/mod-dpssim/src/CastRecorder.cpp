@@ -20,9 +20,11 @@
 #include "SpellInfo.h"
 #include "Timer.h"
 #include "Unit.h"
+#include <utility>
 
-CastRecorder::CastRecorder(ObjectGuid actorGuid)
-    : AllSpellScript("mod_dpssim_cast_recorder", {ALLSPELLHOOK_ON_CAST}), _actorGuid(actorGuid)
+CastRecorder::CastRecorder(ObjectGuid actorGuid, std::vector<ObjectGuid> targetGuids)
+    : AllSpellScript("mod_dpssim_cast_recorder", {ALLSPELLHOOK_ON_CAST}), _actorGuid(actorGuid),
+      _targetGuids(std::move(targetGuids))
 {
 }
 
@@ -31,5 +33,16 @@ void CastRecorder::OnSpellCast(Spell* spell, Unit* caster, SpellInfo const* spel
     if (!caster || caster->GetGUID() != _actorGuid || !spellInfo || !spell)
         return;
 
-    _castEvents.push_back({getMSTime(), spellInfo->Id, spell->IsTriggered()});
+    ObjectGuid const targetGuid = spell->m_targets.GetUnitTargetGUID();
+    int8 targetIndex = -1;
+    for (size_t i = 0; i < _targetGuids.size() && !targetGuid.IsEmpty(); ++i)
+    {
+        if (_targetGuids[i] == targetGuid)
+        {
+            targetIndex = int8(i);
+            break;
+        }
+    }
+
+    _castEvents.push_back({getMSTime(), spellInfo->Id, spell->IsTriggered(), targetIndex});
 }

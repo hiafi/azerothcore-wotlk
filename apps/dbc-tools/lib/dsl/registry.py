@@ -999,21 +999,22 @@ def _require_creature_rows() -> dict[int, dict]:
 
 
 def _validate_creature_entry(entry: int) -> None:
-    """A `creature_template` entry must be a fresh mint from `source/ids.yaml`'s `creature` block,
-    or an entry that already exists (base dump or migrations) - re-declaring a live custom entry
-    (e.g. 300102, Tentacle of Madness) to override it is legitimate, the same "add a member to an
-    existing group" exception `spell_group()`'s `_validate_group_id` makes."""
+    """A `creature_template` entry must be a fresh mint from `source/ids.yaml`'s `creature` or
+    `npc_tools` block, or an entry that already exists (base dump or migrations) - re-declaring a
+    live custom entry (e.g. 300102, Tentacle of Madness) to override it is legitimate, the same
+    "add a member to an existing group" exception `spell_group()`'s `_validate_group_id` makes."""
     ids_cfg = _active_ids_cfg
     if ids_cfg is not None:
-        r = ids_cfg.get("creature")
-        if r and r["start"] <= entry <= r["end"]:
-            return
+        for block in ("creature", "npc_tools"):
+            r = ids_cfg.get(block)
+            if r and r["start"] <= entry <= r["end"]:
+                return
     if entry in _require_creature_rows():
         return
     raise ValueError(
         f"creature_template({entry}, ...): entry {entry} is neither inside source/ids.yaml's "
-        f"creature reserved block nor an entry that already exists in the base dump/migrations - "
-        f"mint a new one from that block, or double check the id if you meant to override an "
+        f"creature/npc_tools reserved blocks nor an entry that already exists in the base "
+        f"dump/migrations - mint a new one from that block, or double check the id if you meant to override an "
         f"existing creature."
     )
 
@@ -1022,7 +1023,7 @@ def creature_template(entry: int, name: str, **columns) -> dict:
     """Declares one `creature_template` row (`ObjectMgr::LoadCreatureTemplates`) - a rework's own
     NPC, e.g. a talent's summoned add (Tentacle of Madness, `data/sql/updates/db_world/
     2026_09_23_12.sql`, is the row this helper reproduces). `entry` must be a fresh id from
-    `source/ids.yaml`'s `creature` block, or an entry that already exists (see
+    `source/ids.yaml`'s `creature` or `npc_tools` block, or an entry that already exists (see
     `_validate_creature_entry`) - overriding a live custom entry is a legitimate re-declaration.
 
     Builds a **full** row: every column in creature_template's real column list (parsed from its
@@ -1086,6 +1087,7 @@ def creature_template(entry: int, name: str, **columns) -> dict:
 
 def creature_model(
     entry: int, display_id: int, scale: float = 1.0, idx: int = 0, probability: float = 1.0,
+    verified_build: int | None = 0,
 ) -> dict:
     """Declares one `creature_template_model` row (`ObjectMgr::LoadCreatureTemplateModels`) for
     `entry` (an id `creature_template()` declared, or a bare int for an existing creature). Unlike
@@ -1096,7 +1098,9 @@ def creature_model(
     resets *every* model's probability to `1.0` when the models on a creature sum to exactly `0`
     (`totalProbability <= 0.0f` branch, harmless for one model but a real footgun once a second
     model is added later with its own nonzero weight and the first one's `0` no longer reads as
-    "equal chance"). `VerifiedBuild` is always 0, same convention as every other helper here."""
+    "equal chance"). `VerifiedBuild` is 0 by default, same convention as every other helper here;
+    `verified_build=None` reproduces a live row whose column is NULL (the training dummies'
+    hand-written migrations) so a re-declaration compares as unchanged."""
     row = {
         "id": f"{entry}:{idx}",
         "CreatureID": entry,
@@ -1104,7 +1108,7 @@ def creature_model(
         "CreatureDisplayID": display_id,
         "DisplayScale": float(scale),
         "Probability": float(probability),
-        "VerifiedBuild": 0,
+        "VerifiedBuild": verified_build,
     }
     _require_active().creature_template_models.append(row)
     return row

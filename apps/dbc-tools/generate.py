@@ -148,6 +148,26 @@ def _drop_unchanged_blocks(
     return filtered, n_dropped
 
 
+def _merge_npc_declarations(dsl_classes: dict, dsl_npcs: dict) -> None:
+    """Fold `source/npcs/*.py`'s declarations (loaded by the same `load_classes_dir`) into the
+    class registry's merged dict, in place. Lists concatenate; the two var-name dicts update. An
+    entry declared in both places (any merged key) is an error, like a duplicate within one
+    directory."""
+    for key in dsl_registry.MERGE_KEYS:
+        declared = {entry.get("_dedup_id", entry.get("id")) for entry in dsl_classes[key]}
+        for entry in dsl_npcs[key]:
+            dedup_id = entry.get("_dedup_id", entry.get("id"))
+            if dedup_id in declared:
+                raise dsl_registry.DuplicateIdError(
+                    f"{key} entry {dedup_id!r} appears in both source/classes/ and source/npcs/"
+                )
+    for key, value in dsl_npcs.items():
+        if isinstance(value, dict):
+            dsl_classes[key].update(value)
+        else:
+            dsl_classes[key].extend(value)
+
+
 def _merge_dsl_sources(spell_entries: list[dict], talents: dict, dsl_classes: dict) -> None:
     """Append source/classes/*.py's DSL-declared spells/talents/tabs/
     skill_line_abilities into the CSV/YAML-loaded lists, in place — the
@@ -246,8 +266,17 @@ def main() -> int:
         creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
         creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS,
     )
+    # source/npcs/*.py: class-less test/tool NPCs (training dummies) - same loader, merged in.
+    dsl_npcs = dsl_registry.load_classes_dir(
+        SOURCE_DIR / "npcs", ids_cfg=ids_cfg, trainer_index=trainer_index,
+        existing_group_ids=existing_group_ids, shapeshift_index=shapeshift_index,
+        existing_creature_rows=existing_creature_rows,
+        creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
+        creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS,
+    )
+    _merge_npc_declarations(dsl_classes, dsl_npcs)
     n_dsl = sum(len(v) for v in dsl_classes.values())
-    progress(f"loaded source/classes/*.py DSL ({n_dsl} entries)")
+    progress(f"loaded source/classes/*.py + source/npcs/*.py DSL ({n_dsl} entries)")
     _merge_dsl_sources(spell_entries, talents, dsl_classes)
     if n_dsl:
         creature_counts = {
@@ -255,7 +284,7 @@ def main() -> int:
             **spell_tables.count_declared(dsl_classes, tables=spell_tables.CREATURE_TABLES),
         }
         print(
-            f"note: source/classes/*.py (DSL) contributed {len(dsl_classes['spells'])} "
+            f"note: source/classes/*.py + source/npcs/*.py (DSL) contributed {len(dsl_classes['spells'])} "
             f"spell(s), {len(dsl_classes['talents'])} talent(s), {len(dsl_classes['tabs'])} "
             f"talent tab(s), {len(dsl_classes['skill_line_abilities'])} skill line "
             f"abilitie(s), {len(dsl_classes['trainer_spells'])} trainer spell grant(s), "

@@ -250,6 +250,14 @@ class UpsertParsingTest(unittest.TestCase):
             rows = sql_dump.read_table_rows(path, "t", ())
         self.assertEqual(rows, [{"entry": 1, "name": "Foo"}])
 
+    def test_read_table_rows_replace_into(self):
+        sql = "REPLACE INTO `t` (`entry`, `name`) VALUES (1, 'Foo'), (2, 'Bar');\n"
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "x.sql"
+            path.write_text(sql)
+            rows = sql_dump.read_table_rows(path, "t", ())
+        self.assertEqual(rows, [{"entry": 1, "name": "Foo"}, {"entry": 2, "name": "Bar"}])
+
     def test_read_table_rows_multi_row_upsert(self):
         sql = (
             "INSERT INTO `t` (`entry`, `name`) VALUES (1, 'Foo'), (2, 'Bar') "
@@ -465,6 +473,26 @@ class ApplyCompositeKeyStatementsTest(unittest.TestCase):
         rows: dict = {}
         sql_dump.apply_composite_key_statements(rows, MODEL_COLUMNS, MODEL_KEY, "creature_template_model", sql)
         return rows
+
+    def test_multiline_column_list_names_are_clean(self):
+        # The hand-written creature_template REPLACEs wrap their column list over several lines;
+        # a name that starts a line must not keep the newline/indent in front of its backtick.
+        rows = self._replay(
+            "REPLACE INTO `creature_template_model`\n"
+            "    (`CreatureID`, `Idx`,\n     `CreatureDisplayID`) VALUES (900001, 0, 200);\n"
+        )
+        self.assertEqual(rows[(900001, 0)], {"CreatureID": 900001, "Idx": 0, "CreatureDisplayID": 200})
+
+    def test_replace_into_drops_the_old_row_instead_of_merging(self):
+        # MySQL's REPLACE deletes the same-key row first, so a column the second statement omits
+        # must be absent afterwards, not carried over from the first (creature_template 900001-6).
+        rows = self._replay(
+            "INSERT INTO `creature_template_model` (`CreatureID`, `Idx`, `CreatureDisplayID`, "
+            "`DisplayScale`, `Probability`, `VerifiedBuild`) VALUES (900001, 0, 100, 2, 1, 0);\n"
+            "REPLACE INTO `creature_template_model` (`CreatureID`, `Idx`, `CreatureDisplayID`) "
+            "VALUES (900001, 0, 200);\n"
+        )
+        self.assertEqual(rows[(900001, 0)], {"CreatureID": 900001, "Idx": 0, "CreatureDisplayID": 200})
 
     def test_insert_then_and_guarded_update_reflects_the_new_value(self):
         rows = self._replay(

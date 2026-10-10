@@ -19,9 +19,10 @@ live world DB.
 
 ## Routes (mounted at `/reports/` under apps/wow-tools-webui)
 
-- `/` - table of every `<Profile>.<timestamp>.report.json` under
+- `/` - table of every `<Profile>[.T<N>].<timestamp>.report.json` (`T<N>` = N stacked target dummies; none = T1) under
   `modules/mod-dpssim/reports/`, newest first, with each run's DPS/total damage/cast
-  count/crit rate read straight from its `summary` block.
+  count/crit rate read straight from its `summary` block, plus its target count and rank (`T5 elite`; a report without
+  those fields is `T1 boss`).
 - `/view/<filename>` - renders one report through the shared template, on demand (no file
   written to disk - this is a GET, not a rebuild of `SimProfileReport.html`).
 - `/raw/<filename>` - the underlying report JSON, unmodified.

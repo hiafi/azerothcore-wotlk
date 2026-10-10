@@ -23,7 +23,8 @@
 #include <vector>
 
 // Minimal M1 combat-log capture: total damage dealt, cast count, and crit count for one sim
-// actor's hits against one sim target. Full per-spell breakdown is M3 (see the plan doc's Phase 1
+// actor's hits against the sim's target dummies (one, or a multi-target run's pack; each hit records which one).
+// Full per-spell breakdown is M3 (see the plan doc's Phase 1
 // task list) - this is deliberately just enough for a human to spot-check a DPS number rather
 // than trust a single aggregate figure blindly (expected casts roughly equal fight duration /
 // cast time, observed crit rate roughly equal the configured crit chance).
@@ -94,11 +95,12 @@
 class EventRecorder : public UnitScript
 {
 public:
-    // rotationSpellId == 0 (the default) means "track every spell the actor lands on the target",
+    // rotationSpellId == 0 (the default) means "track every spell the actor lands on any dummy",
     // not just one - added for Phase 2 (M2a), where a real mod-playerbots Engine/Strategy casts a
     // whole rotation of different spells rather than Phase 1's single hardcoded Frostbolt. Phase
     // 1's tests still pass a real id and get the original single-spell-filtered behavior.
-    explicit EventRecorder(ObjectGuid actorGuid, ObjectGuid targetGuid, uint32 rotationSpellId = 0);
+    // `targetGuids` are the dummies in index order (SimTargetGroup); a hit on any of them counts.
+    EventRecorder(ObjectGuid actorGuid, std::vector<ObjectGuid> targetGuids, uint32 rotationSpellId = 0);
 
     void OnSpellDamageTakenFinal(Unit* target, Unit* attacker, int32 damage, SpellInfo const* spellInfo, bool isCrit) override;
 
@@ -121,13 +123,13 @@ public:
     // already wired up from Unit.cpp - no core widening needed, unlike ModifySpellDamageTaken back
     // in Phase 1. OnAuraApply only gets a bare Aura* (not a per-target AuraApplication*), so
     // positivity here comes from SpellInfo::IsPositive() (a spell-level classification) rather than
-    // AuraApplication::IsPositive() (a per-application one) - fine for this sim's single-actor,
-    // single-target scope, where the two should never disagree.
+    // AuraApplication::IsPositive() (a per-application one) - fine for this sim's single actor against
+    // hostile dummies only, where the two should never disagree.
     void OnAuraApply(Unit* unit, Aura* aura) override;
     void OnAuraRemove(Unit* unit, AuraApplication* aurApp, AuraRemoveMode mode) override;
 
     // Clears every accumulated counter/vector back to a freshly-constructed instance's state,
-    // without re-registering with ScriptRegistry<UnitScript> or changing actorGuid/targetGuid/
+    // without re-registering with ScriptRegistry<UnitScript> or changing actorGuid/targetGuids/
     // rotationSpellId. Added 2026-09-13 for SimDaemon::RunPlayerbotBatch() - running many
     // iterations in one process reuses the same actor/target Player/Creature (see that function's
     // own doc comment for why), so this recorder has to be explicitly rewound between iterations
@@ -135,7 +137,7 @@ public:
     // mid-run - only between one iteration's result collection and the next iteration's first tick.
     void Reset();
 
-    // Records an "applied" event, stamped now, for every non-passive aura already on `unit` (the actor or the
+    // Records an "applied" event, stamped now, for every non-passive aura already on `unit` (the actor or a
     // target). Called right after Reset() when auras are already up at the start of the measured run (the
     // pre-pull buff phase, SimDaemon.cpp), so uptime is measured from the start instead of the aura having no
     // "applied" event at all.
@@ -172,13 +174,16 @@ public:
     // Per-hit "came from the bot's pet/guardian/totem rather than the bot itself", parallel to GetHitDamages().
     [[nodiscard]] std::vector<bool> const& GetHitIsPet() const { return _hitIsPet; }
 
-    // One entry per aura gained or lost by the actor or the target while this recorder is alive.
+    // Per-hit index of the dummy hit (its position in `targetGuids`), parallel to GetHitDamages().
+    [[nodiscard]] std::vector<uint8> const& GetHitTargetIndex() const { return _hitTargetIndex; }
+
+    // One entry per aura gained or lost by the actor or a target while this recorder is alive.
     // `Applied == false` is a removal (SpellId/Positive/StackAmount describe the aura that was
     // removed, not a new one). Not filtered to any particular spell - unlike the rotationSpellId
     // filter on damage hits, there's no equivalent "aura I care about" concept yet; a human (or the
     // eventual M3 report) filters by SpellId/UnitGuid themselves. `IsActor` is a convenience
-    // (UnitGuid == _actorGuid) computed at capture time, since this recorder already knows both
-    // GUIDs and every caller so far only ever wants "was this on the actor or the target".
+    // (UnitGuid == _actorGuid) computed at capture time, since this recorder already knows every
+    // GUID and every caller so far only ever wants "was this on the actor or a target".
     struct AuraEvent
     {
         uint32 TimestampMs;
@@ -188,18 +193,23 @@ public:
         uint8 StackAmount;
         bool Positive;
         bool Applied;
+        // The dummy's index in `targetGuids`, or -1 when the aura is on the actor
+        int8 TargetIndex;
     };
     [[nodiscard]] std::vector<AuraEvent> const& GetAuraEvents() const { return _auraEvents; }
 
 private:
-    void RecordHit(uint32 spellId, uint32 damage, bool isCrit, bool isPet);
+    void RecordHit(uint32 spellId, uint32 damage, bool isCrit, bool isPet, uint8 targetIndex);
 
     // True when `attacker` is the actor itself (isPet = false) or something it owns - a pet, guardian, totem or
     // other summon, found through its owner, charmer or creator GUID (isPet = true).
     bool AttributeToActor(Unit* attacker, bool& isPet) const;
 
+    // `guid`'s index in _targetGuids, or -1 when it is not one of the dummies
+    int8 TargetIndexOf(ObjectGuid guid) const;
+
     ObjectGuid _actorGuid;
-    ObjectGuid _targetGuid;
+    std::vector<ObjectGuid> _targetGuids;
     uint32 _rotationSpellId;
 
     uint64 _totalDamage = 0;
@@ -210,6 +220,7 @@ private:
     std::vector<uint32> _hitSpellIds;
     std::vector<uint32> _hitTimestamps;
     std::vector<bool> _hitIsPet;
+    std::vector<uint8> _hitTargetIndex;
     std::vector<AuraEvent> _auraEvents;
 };
 

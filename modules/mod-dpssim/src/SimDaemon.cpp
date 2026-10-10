@@ -17,9 +17,12 @@
 
 #include "SimDaemon.h"
 #include "CastRecorder.h"
+#include "CellImpl.h"
 #include "Config.h"
 #include "EventRecorder.h"
 #include "GameTime.h"
+#include "GridNotifiers.h"
+#include "GridNotifiersImpl.h"
 #include "Log.h"
 #include "Map.h"
 #include "Pet.h"
@@ -41,6 +44,7 @@
 #include <algorithm>
 #include <chrono>
 #include <iterator>
+#include <list>
 #include <set>
 #include <string>
 #include <thread>
@@ -107,7 +111,8 @@ namespace
         std::vector<SimDaemon::RunResult::AuraEvent> result;
         result.reserve(events.size());
         for (EventRecorder::AuraEvent const& e : events)
-            result.push_back({e.TimestampMs, e.UnitGuid, e.IsActor, e.SpellId, e.StackAmount, e.Positive, e.Applied});
+            result.push_back({e.TimestampMs, e.UnitGuid, e.IsActor, e.SpellId, e.StackAmount, e.Positive, e.Applied,
+                e.TargetIndex});
         return result;
     }
 
@@ -117,11 +122,59 @@ namespace
         std::vector<SimDaemon::RunResult::CastEvent> result;
         result.reserve(events.size());
         for (CastRecorder::CastEvent const& e : events)
-            result.push_back({e.TimestampMs, e.SpellId, e.IsTriggered});
+            result.push_back({e.TimestampMs, e.SpellId, e.IsTriggered, e.TargetIndex});
         return result;
     }
 
-    void RefillResources(Player* player, Creature* dummy);
+    // Every dummy of a run spawns with the same settings
+    SimTarget::Config MakeTargetConfig(SimDaemon::RunConfig const& config)
+    {
+        SimTarget::Config targetConfig;
+        targetConfig.Level = uint8(config.TargetLevel);
+        targetConfig.TargetRank = config.TargetRank;
+        targetConfig.Armor = config.TargetArmor;
+        targetConfig.HealthDrain = config.DummyHealthDrain;
+        if (config.DummyMaxHealth > 0)
+            targetConfig.MaxHealth = config.DummyMaxHealth;
+        return targetConfig;
+    }
+
+    void RefillResources(Player* player, std::vector<Creature*> const& dummies);
+
+    // Once per process, at the first pull: warns about units near the pack that would close the bots' AoE safety
+    // gate ("unsafe aoe units" counts any attackable unit out of combat), e.g. a Wild Turkey near the race start.
+    // Without this an AoE row that never fires has no visible cause.
+    void WarnStrayUnitsOnce(Player* player, std::vector<Creature*> const& dummies)
+    {
+        static bool warned = false;
+        if (warned || dummies.empty() || !dummies.front())
+            return;
+        warned = true;
+
+        constexpr float STRAY_SEARCH_RANGE = 40.0f;
+        Creature* primary = dummies.front();
+        std::list<Unit*> units;
+        Acore::AnyUnfriendlyNoTotemUnitInObjectRangeCheck check(primary, player, STRAY_SEARCH_RANGE);
+        Acore::UnitListSearcher<Acore::AnyUnfriendlyNoTotemUnitInObjectRangeCheck> searcher(primary, units, check);
+        Cell::VisitObjects(primary, searcher, STRAY_SEARCH_RANGE);
+
+        std::string list;
+        for (Unit* unit : units)
+        {
+            if (std::find(dummies.begin(), dummies.end(), unit) != dummies.end() || !unit->IsAlive() ||
+                !player->IsValidAttackTarget(unit) || unit->GetCreatureType() == CREATURE_TYPE_CRITTER ||
+                unit->IsInCombat())
+                continue;
+
+            list += Acore::StringFormat("{}{} '{}' at {:.1f} yd", list.empty() ? "" : ", ", unit->GetEntry(),
+                unit->GetName(), primary->GetExactDist(unit));
+        }
+
+        if (!list.empty())
+            LOG_WARN("server.dpssim", "mod-dpssim: units within {:.0f} yd of the dummies that are attackable and out "
+                "of combat: {}. AoE safety gates will stay closed; try another race start, e.g. Orc (2).",
+                STRAY_SEARCH_RANGE, list);
+    }
 
     // Logs the bot's own non-passive auras by spell id, so a reviewer can confirm what is up at the pull (e.g.
     // Retribution Aura 7294). Only when the set differs from the last one logged, so a long batch logs it once.
@@ -208,8 +261,9 @@ namespace
     // thing this function does reset itself is spell cooldowns (see below), since that has to
     // happen on every call, including RunPlayerbotBatch()'s first iteration which ResetForNextIteration()
     // never reaches.
-    void RunPlayerbotIteration(SimDaemon::RunConfig const& config, Player* player, Creature* dummy, Map* map,
-        SimBot& bot, EventRecorder* recorder, CastRecorder* castRecorder, SimDaemon::RunResult& result)
+    void RunPlayerbotIteration(SimDaemon::RunConfig const& config, Player* player,
+        std::vector<Creature*> const& dummies, Map* map, SimBot& bot, EventRecorder* recorder,
+        CastRecorder* castRecorder, SimDaemon::RunResult& result)
     {
         // Every iteration starts with nothing on cooldown: pre-loop casts (SimBot::Create()'s spell-teaching
         // casts, gear equip spells) and the previous iteration's cooldowns would otherwise carry over.
@@ -248,19 +302,24 @@ namespace
             // Buffs from the phase are up from the first measured ms; without these the uptime table only sees
             // auras applied during the fight
             recorder->RecordAurasPresent(player);
-            recorder->RecordAurasPresent(dummy);
-            RefillResources(player, dummy);
-            bot.ReestablishCombatState(dummy);
+            for (Creature* dummy : dummies)
+                recorder->RecordAurasPresent(dummy);
+            RefillResources(player, dummies);
+            bot.ReestablishCombatState(dummies);
         }
         LogAurasAtPull(player);
-        // The dummy's armor at the pull: a recalculation restoring the template armor would show here.
+        // The primary dummy's armor at the pull: a recalculation restoring the template armor would show here.
         LOG_INFO("server.dpssim", "mod-dpssim: iteration pull - dummy armor {}, maxHealth {}.",
-            dummy->GetArmor(), dummy->GetMaxHealth());
+            dummies.front()->GetArmor(), dummies.front()->GetMaxHealth());
+        WarnStrayUnitsOnce(player, dummies);
 
         SimClock clock(config.StepMs, measuredStartMs);
         uint32 lastManaSampleMs = 0;
         bool sampledManaOnce = false;
         std::vector<SimDaemon::RunResult::ManaSample> manaSamples;
+        // The bot's own current target, seeded with the primary at the pull (D5: measured, not inferred from casts)
+        ObjectGuid lastTarget = bot.GetCurrentTarget();
+        uint32 targetSwitches = 0;
         while (clock.GetElapsedMs() < config.DurationMs)
         {
             clock.Tick(map);
@@ -284,6 +343,14 @@ namespace
 
             bot.UpdateAI(config.StepMs);
             MaybeSampleMana(player, clock.GetElapsedMs(), lastManaSampleMs, sampledManaOnce, manaSamples);
+
+            ObjectGuid const currentTarget = bot.GetCurrentTarget();
+            if (!currentTarget.IsEmpty())
+            {
+                if (!lastTarget.IsEmpty() && currentTarget != lastTarget)
+                    ++targetSwitches;
+                lastTarget = currentTarget;
+            }
 
             // Only for the accelerated-clock test - see RunConfig::RealTimePaced's doc comment.
             if (config.RealTimePaced)
@@ -313,6 +380,8 @@ namespace
         result.HitSpellIds = recorder->GetHitSpellIds();
         result.HitTimestamps = recorder->GetHitTimestamps();
         result.HitIsPet = recorder->GetHitIsPet();
+        result.HitTargetIndex = recorder->GetHitTargetIndex();
+        result.TargetSwitches = targetSwitches;
         result.AuraEvents = ToRunResultAuraEvents(recorder->GetAuraEvents());
         result.ManaSamples = std::move(manaSamples);
         result.CastEvents = ToRunResultCastEvents(castRecorder->GetCastEvents());
@@ -334,9 +403,9 @@ namespace
     }
 
     // Health and every power type back to the class's starting value, for the bot, its pet and (with health drain
-    // on) the dummy. Run by ResetForNextIteration() and again after the pre-pull buff phase, so the buff casts'
+    // on) every dummy. Run by ResetForNextIteration() and again after the pre-pull buff phase, so the buff casts'
     // mana/rage/energy costs never reach the fight.
-    void RefillResources(Player* player, Creature* dummy)
+    void RefillResources(Player* player, std::vector<Creature*> const& dummies)
     {
         player->SetFullHealth();
         player->SetPower(POWER_MANA, player->GetMaxPower(POWER_MANA));
@@ -371,18 +440,19 @@ namespace
         // Dummy health drain (SimProfile.h's DummyHealthDrain): the dummy takes real damage now, so it starts every
         // iteration at full health. Off, the dummy never loses health and there is nothing to reset.
         if (SimDummyAI::IsHealthDrainEnabled())
-            dummy->SetFullHealth();
+            for (Creature* dummy : dummies)
+                dummy->SetFullHealth();
     }
 
     // Between-iteration reset for RunPlayerbotBatch() - see that function's doc comment (SimDaemon.h)
     // for the full reasoning, especially the passive-aura carve-out and SimBot::ReestablishCombatState()'s
     // own doc comment for the real failure this also guards against (a batch's first iteration
-    // landing real hits, then every iteration after it landing zero, forever). The target dummy's health is only
+    // landing real hits, then every iteration after it landing zero, forever). The target dummies' health is only
     // refilled with health drain on (otherwise its AI zeroes all damage taken, so it never drops); the global
     // cooldown is left alone (RunPlayerbotIteration() starts each iteration ITERATION_GAP_MS later, by which time
     // it has long expired).
-    void ResetForNextIteration(Player* player, Creature* dummy, SimBot& bot, EventRecorder* recorder, CastRecorder* castRecorder,
-        Position const& startPosition)
+    void ResetForNextIteration(Player* player, std::vector<Creature*> const& dummies, SimBot& bot,
+        EventRecorder* recorder, CastRecorder* castRecorder, Position const& startPosition)
     {
         // The actor can die (a rotation that hurts itself, e.g. Shadow Word: Death backlash).
         // RunPlayerbotIteration() ends the iteration the moment it does, before the AI's auto release can repop it,
@@ -434,7 +504,8 @@ namespace
             return !info || !info->IsPassive();
         };
         player->RemoveAppliedAuras(removeNonPassive);
-        dummy->RemoveAppliedAuras(removeNonPassive);
+        for (Creature* dummy : dummies)
+            dummy->RemoveAppliedAuras(removeNonPassive);
 
         // Not resetting cooldowns here - RunPlayerbotIteration() itself now does that
         // unconditionally at the start of every call, including this one.
@@ -448,9 +519,9 @@ namespace
             pet->RemoveAppliedAuras(removeNonPassive);
         }
 
-        RefillResources(player, dummy);
+        RefillResources(player, dummies);
 
-        bot.ReestablishCombatState(dummy);
+        bot.ReestablishCombatState(dummies);
 
         recorder->Reset();
         castRecorder->Reset();
@@ -498,32 +569,27 @@ bool SimDaemon::RunOnce(RunConfig const& config, RunResult& result)
 
     Map* map = player->GetMap();
 
-    SimTarget target;
-    SimTarget::Config targetConfig;
-    targetConfig.Level = uint8(config.TargetLevel);
-    targetConfig.Armor = config.TargetArmor;
-    targetConfig.HealthDrain = config.DummyHealthDrain;
-    if (config.DummyMaxHealth > 0)
-        targetConfig.MaxHealth = config.DummyMaxHealth;
-    if (!target.Create(map, player->GetNearPosition(8.0f, 0.0f), targetConfig))
+    // Always one dummy: the hardcoded rotation casts at a single target
+    SimTargetGroup targets;
+    if (!targets.Create(player, 1, config.TargetSpreadYards, MakeTargetConfig(config)))
     {
         LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunOnce() - SimTarget::Create() failed - aborting.");
         return false;
     }
 
-    Creature* dummy = target.GetCreature();
+    Creature* dummy = targets.GetPrimary();
 
     // Must be heap-allocated, not a local/stack object - see EventRecorder.h's doc comment.
     // Deliberately never deleted (ScriptMgr::Unload() owns it from construction onward); calling
     // RunOnce() several times in one process (as SimTests::RunAll() does) leaks one of these per
     // call for the process's remaining lifetime - documented, known, harmless. See EventRecorder.h.
-    EventRecorder* recorder = new EventRecorder(player->GetGUID(), dummy->GetGUID(), config.SpellId);
+    EventRecorder* recorder = new EventRecorder(player->GetGUID(), targets.GetGuids(), config.SpellId);
 
     // Same heap-allocation/never-deleted rules as `recorder` above - see CastRecorder.h's doc
     // comment. Unfiltered by spell id on purpose (a cast log tracks every ability, not just the
     // rotation's one damage spell) - RunOnce()'s hardcoded RotationTick() only ever casts Frostbolt
     // anyway, so this mostly matters for RunPlayerbotOnce() below, but is added here too for symmetry.
-    CastRecorder* castRecorder = new CastRecorder(player->GetGUID());
+    CastRecorder* castRecorder = new CastRecorder(player->GetGUID(), targets.GetGuids());
 
     SimClock clock(config.StepMs);
     uint32 castAttempts = 0;
@@ -555,6 +621,7 @@ bool SimDaemon::RunOnce(RunConfig const& config, RunResult& result)
     result.HitSpellIds = recorder->GetHitSpellIds();
     result.HitTimestamps = recorder->GetHitTimestamps();
     result.HitIsPet = recorder->GetHitIsPet();
+    result.HitTargetIndex = recorder->GetHitTargetIndex();
     result.AuraEvents = ToRunResultAuraEvents(recorder->GetAuraEvents());
     result.ManaSamples = std::move(manaSamples);
     result.CastEvents = ToRunResultCastEvents(castRecorder->GetCastEvents());
@@ -586,41 +653,35 @@ bool SimDaemon::RunPlayerbotOnce(RunConfig const& config, RunResult& result)
     Player* player = actor.GetPlayer();
     Map* map = player->GetMap();
 
-    SimTarget target;
-    SimTarget::Config targetConfig;
-    targetConfig.Level = uint8(config.TargetLevel);
-    targetConfig.Armor = config.TargetArmor;
-    targetConfig.HealthDrain = config.DummyHealthDrain;
-    if (config.DummyMaxHealth > 0)
-        targetConfig.MaxHealth = config.DummyMaxHealth;
-    if (!target.Create(map, player->GetNearPosition(8.0f, 0.0f), targetConfig))
+    SimTargetGroup targets;
+    if (!targets.Create(player, config.TargetCount, config.TargetSpreadYards, MakeTargetConfig(config)))
     {
         LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbotOnce() - SimTarget::Create() failed - aborting.");
         return false;
     }
 
-    Creature* dummy = target.GetCreature();
+    std::vector<Creature*> const dummies = targets.GetCreatures();
 
     // rotationSpellId defaults to 0 ("track any spell") - see EventRecorder.h's doc comment - since
     // a real Engine/Strategy casts a whole rotation, not Phase 1's one hardcoded Frostbolt.
-    EventRecorder* recorder = new EventRecorder(player->GetGUID(), dummy->GetGUID());
+    EventRecorder* recorder = new EventRecorder(player->GetGUID(), targets.GetGuids());
 
     // Same heap-allocation/never-deleted rules as `recorder` above - see CastRecorder.h's doc
     // comment. This is the recorder that actually matters: a real Engine/Strategy casts a whole
     // rotation, including non-damage abilities (Evocation, self-buffs, ...) EventRecorder has no
     // way to see at all.
-    CastRecorder* castRecorder = new CastRecorder(player->GetGUID());
+    CastRecorder* castRecorder = new CastRecorder(player->GetGUID(), targets.GetGuids());
 
-    // SimBot::Create() teaches the bot's class spells and "pulls" `dummy` (puts both in combat, no
+    // SimBot::Create() teaches the bot's class spells and "pulls" every dummy (each engages the bot, no
     // spell cast) to bootstrap combat state - see its own doc comment for why that's needed.
     SimBot bot;
-    if (!bot.Create(player, dummy, config.PlayerbotTalents, config.PlayerbotGlyphs))
+    if (!bot.Create(player, dummies, config.PlayerbotTalents, config.PlayerbotGlyphs))
     {
         LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbotOnce() - SimBot::Create() failed - aborting.");
         return false;
     }
 
-    RunPlayerbotIteration(config, player, dummy, map, bot, recorder, castRecorder, result);
+    RunPlayerbotIteration(config, player, dummies, map, bot, recorder, castRecorder, result);
     return true;
 }
 
@@ -655,26 +716,20 @@ bool SimDaemon::RunPlayerbotBatch(RunConfig const& config, uint32 iterations, st
     Player* player = actor.GetPlayer();
     Map* map = player->GetMap();
 
-    SimTarget target;
-    SimTarget::Config targetConfig;
-    targetConfig.Level = uint8(config.TargetLevel);
-    targetConfig.Armor = config.TargetArmor;
-    targetConfig.HealthDrain = config.DummyHealthDrain;
-    if (config.DummyMaxHealth > 0)
-        targetConfig.MaxHealth = config.DummyMaxHealth;
-    if (!target.Create(map, player->GetNearPosition(8.0f, 0.0f), targetConfig))
+    SimTargetGroup targets;
+    if (!targets.Create(player, config.TargetCount, config.TargetSpreadYards, MakeTargetConfig(config)))
     {
         LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbotBatch() - SimTarget::Create() failed - aborting.");
         return false;
     }
 
-    Creature* dummy = target.GetCreature();
+    std::vector<Creature*> const dummies = targets.GetCreatures();
 
-    EventRecorder* recorder = new EventRecorder(player->GetGUID(), dummy->GetGUID());
-    CastRecorder* castRecorder = new CastRecorder(player->GetGUID());
+    EventRecorder* recorder = new EventRecorder(player->GetGUID(), targets.GetGuids());
+    CastRecorder* castRecorder = new CastRecorder(player->GetGUID(), targets.GetGuids());
 
     SimBot bot;
-    if (!bot.Create(player, dummy, config.PlayerbotTalents, config.PlayerbotGlyphs))
+    if (!bot.Create(player, dummies, config.PlayerbotTalents, config.PlayerbotGlyphs))
     {
         LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbotBatch() - SimBot::Create() failed - aborting.");
         return false;
@@ -685,10 +740,10 @@ bool SimDaemon::RunPlayerbotBatch(RunConfig const& config, uint32 iterations, st
     for (uint32 i = 0; i < iterations; ++i)
     {
         if (i > 0)
-            ResetForNextIteration(player, dummy, bot, recorder, castRecorder, startPosition);
+            ResetForNextIteration(player, dummies, bot, recorder, castRecorder, startPosition);
 
         RunResult result;
-        RunPlayerbotIteration(config, player, dummy, map, bot, recorder, castRecorder, result);
+        RunPlayerbotIteration(config, player, dummies, map, bot, recorder, castRecorder, result);
 
         results.push_back(std::move(result));
     }
@@ -724,8 +779,10 @@ void SimDaemon::Run()
 
 void SimDaemon::RunPlayerbot(RunConfig const& config)
 {
-    LOG_INFO("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbot() - M2a harness, real mod-playerbots Engine/Strategy selector, actor level {} vs. target level {}.",
-        config.ActorLevel, config.TargetLevel);
+    LOG_INFO("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbot() - M2a harness, real mod-playerbots "
+        "Engine/Strategy selector, actor level {} vs. target level {}, {} target(s) ({}, spread {:.1f} yd).",
+        config.ActorLevel, config.TargetLevel, config.TargetCount, SimTarget::RankName(config.TargetRank),
+        config.TargetSpreadYards);
 
     RunResult result;
     if (!RunPlayerbotOnce(config, result))
@@ -740,8 +797,10 @@ void SimDaemon::RunPlayerbot(RunConfig const& config)
         ? 100.0 * double(result.CritCount) / double(result.CastCount)
         : 0.0;
 
-    LOG_INFO("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbot() complete - {}ms sim time, {} landed hits ({} crit, {:.1f}% crit rate), {} total damage, {:.1f} DPS.",
-        result.ElapsedMs, result.CastCount, result.CritCount, critRate, result.TotalDamage, dps);
+    LOG_INFO("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbot() complete - {} target(s) ({}, spread {:.1f} yd), "
+        "{}ms sim time, {} landed hits ({} crit, {:.1f}% crit rate), {} total damage, {:.1f} DPS, {} target switches.",
+        config.TargetCount, SimTarget::RankName(config.TargetRank), config.TargetSpreadYards, result.ElapsedMs,
+        result.CastCount, result.CritCount, critRate, result.TotalDamage, dps, result.TargetSwitches);
 
     LOG_INFO("server.dpssim", "mod-dpssim:   {} aura events (buffs/debuffs gained or lost by the actor or target).",
         result.AuraEvents.size());

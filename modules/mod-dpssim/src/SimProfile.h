@@ -42,9 +42,9 @@ namespace SimProfile
     struct Profile
     {
         // A CLASS_* value from SharedDefines.h (e.g. 8 for CLASS_MAGE). Required - Load() fails
-        // if this key is missing. Any class works: SimBot's pull bootstraps combat with
-        // Unit::SetInCombatWith() rather than a class spell (the old hardcoded Frostbolt pull was
-        // replaced 2026-10-05 for RetPaladinSim).
+        // if this key is missing. Any class works: SimBot's pull bootstraps combat by having each
+        // dummy engage the bot (Unit::EngageWithTarget(), see SimBot::Create()) rather than a class
+        // spell (the old hardcoded Frostbolt pull was replaced 2026-10-05 for RetPaladinSim).
         uint8 Class = 0;
 
         // Same "<arcane>-<fire>-<frost>"-style positional talent string DpsSim.PlayerbotTalents

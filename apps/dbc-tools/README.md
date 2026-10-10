@@ -429,6 +429,14 @@ declared `creature_template_model` whose `CreatureDisplayID` has no `creature_mo
 anywhere; and a declared `creature_template` with no `creature_template_model` row anywhere
 (declared or live).
 
+**Class-less NPCs: `source/npcs/`.** `source/classes/` only holds class folders. Test and tool NPCs
+that belong to no class (the training dummies, `source/npcs/training_dummies.py`) live in
+`source/npcs/*.py` instead: same DSL, same loader (`generate.py` calls `load_classes_dir` on it a
+second time and merges the result), ids from `source/ids.yaml`'s `npc_tools` block (900000-900099)
+or the `creature` block. A creature entry declared in both directories is an error. Pass every
+column that differs from the schema default explicitly, so the file documents the NPC and rebuilds
+the row on a fresh DB; `creature_model(..., verified_build=None)` reproduces a NULL `VerifiedBuild`.
+
 ### Declaring tooltip variables (P9)
 
 SpellMods never show up in a tooltip, so stock shows a talent's percent bonus through a

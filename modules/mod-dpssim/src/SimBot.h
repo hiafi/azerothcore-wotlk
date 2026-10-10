@@ -19,12 +19,13 @@
 #define MODULE_DPSSIM_SIMBOT_H
 
 #include "Define.h"
+#include "ObjectGuid.h"
 #include <string>
 #include <vector>
 
+class Creature;
 class Player;
 class PlayerbotAI;
-class Unit;
 
 // Wraps a real mod-playerbots PlayerbotAI on top of an existing SimActor's Player, so the sim's
 // hardcoded Phase 1 rotation (SimDaemon.cpp's RotationTick()) can be replaced with
@@ -57,9 +58,10 @@ public:
     // Builds a PlayerbotAI on `bot` - first teaching it every trainer-taught spell appropriate to
     // its class/level via PlayerbotFactory::InitAvailableSpells() (the same, unmodified utility a
     // real random bot uses; needed because FrostMageStrategy's actions reference several spells,
-    // not the one hardcoded id Phase 1's rotation used) - then "pulls" `target` by putting both
-    // sides in combat directly (Unit::SetInCombatWith(), no spell cast - the class-agnostic
-    // replacement, 2026-10-05, for a hardcoded Frostbolt pull) to bootstrap combat state. That pull
+    // not the one hardcoded id Phase 1's rotation used) - then "pulls" every dummy in `targets` (index 0, the
+    // primary, becomes the "current target") with no spell cast: each dummy engages the bot
+    // (Unit::EngageWithTarget(), a zero-threat entry on the bot's threat list plus combat; see EngageTargets())
+    // to bootstrap combat state. That pull
     // is necessary, not just convenient:
     // PlayerbotAI::DoNextAction() only switches to the combat engine (and therefore to
     // FrostMageStrategy's triggers) once `bot->IsInCombat()` is true, and a Player's Attack() call
@@ -75,7 +77,8 @@ public:
     // than read from sConfigMgr directly in here, so this class has no opinion on where the
     // string came from. Empty = no talents spent. `playerbotGlyphs` applies the class's premade glyphs after the
     // talents (RunConfig::PlayerbotGlyphs).
-    bool Create(Player* bot, Unit* target, std::string const& playerbotTalents, bool playerbotGlyphs);
+    bool Create(Player* bot, std::vector<Creature*> const& targets, std::string const& playerbotTalents,
+        bool playerbotGlyphs);
 
     // Drives the real Engine/Strategy selector for one tick - call this from the SimClock loop
     // instead of a hardcoded RotationTick(). `diff` is not a wall-clock read: PlayerbotAIBase's
@@ -98,11 +101,15 @@ public:
     // measurably worse and was reverted) and the confirmed mechanism (Unit::IsInCombat() itself
     // going false for real - most likely npc_training_dummy's own no-damage combat timeout ending
     // combat between iterations - not anything PlayerbotAI caches on its own side).
-    void ReestablishCombatState(Unit* target);
+    void ReestablishCombatState(std::vector<Creature*> const& targets);
+
+    // The GUID of the AI's "current target" value (empty when it has none), sampled every tick to count target
+    // switches (SimDaemon::RunResult::TargetSwitches)
+    [[nodiscard]] ObjectGuid GetCurrentTarget() const;
 
     // Pre-pull buff phase (S0b, 2026-10-05): a real bot presses its aura, self-buffs and summons its pet on its
     // non-combat engine before a pull, but the sim bot starts every iteration already in combat and never runs
-    // that engine. BeginBuffPhase() ends combat with the dummy, drops the "current target", strips the non-combat
+    // that engine. BeginBuffPhase() ends combat with the dummies, drops the "current target", strips the non-combat
     // engine down to the buff and pet strategies (see kBuffPhaseStrategies in SimBot.cpp for the rule) and
     // switches to it; the caller then ticks UpdateAI() for a while. EndBuffPhase() puts the stripped strategies
     // back. The pull itself is ReestablishCombatState(), exactly as before. Returns false when PlayerbotAI would
@@ -111,6 +118,13 @@ public:
     void EndBuffPhase();
 
 private:
+    // Every enemy count the bot strategies use is built from the bot's threat list ("attackers" walks
+    // ThreatManager::GetThreatenedByMeList()), and Unit::SetInCombatWith() only makes a combat reference: a dummy
+    // engaged that way counts as an enemy only once it is hit, and an extra dummy never hit would never open an AoE
+    // row. So each dummy engages the bot. Returns false if a dummy is still not in combat with the bot after the
+    // SetInCombatWith() fallback.
+    bool EngageTargets(std::vector<Creature*> const& targets);
+
     PlayerbotAI* _ai = nullptr;
 
     // Non-combat strategies BeginBuffPhase() removed, restored by EndBuffPhase()

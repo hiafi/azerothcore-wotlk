@@ -20,13 +20,22 @@
 #include "SpellInfo.h"
 #include "Timer.h"
 #include "Unit.h"
+#include <utility>
 
-EventRecorder::EventRecorder(ObjectGuid actorGuid, ObjectGuid targetGuid, uint32 rotationSpellId)
+EventRecorder::EventRecorder(ObjectGuid actorGuid, std::vector<ObjectGuid> targetGuids, uint32 rotationSpellId)
     : UnitScript("mod_dpssim_event_recorder", true,
                  {UNITHOOK_ON_SPELL_DAMAGE_TAKEN_FINAL, UNITHOOK_ON_MELEE_DAMAGE_FINAL, UNITHOOK_ON_PERIODIC_DAMAGE_FINAL,
                   UNITHOOK_ON_AURA_APPLY, UNITHOOK_ON_AURA_REMOVE}),
-      _actorGuid(actorGuid), _targetGuid(targetGuid), _rotationSpellId(rotationSpellId)
+      _actorGuid(actorGuid), _targetGuids(std::move(targetGuids)), _rotationSpellId(rotationSpellId)
 {
+}
+
+int8 EventRecorder::TargetIndexOf(ObjectGuid guid) const
+{
+    for (size_t i = 0; i < _targetGuids.size(); ++i)
+        if (_targetGuids[i] == guid)
+            return int8(i);
+    return -1;
 }
 
 bool EventRecorder::AttributeToActor(Unit* attacker, bool& isPet) const
@@ -48,7 +57,8 @@ bool EventRecorder::AttributeToActor(Unit* attacker, bool& isPet) const
 void EventRecorder::OnSpellDamageTakenFinal(Unit* target, Unit* attacker, int32 damage, SpellInfo const* spellInfo, bool isCrit)
 {
     bool isPet = false;
-    if (!attacker || !target || target->GetGUID() != _targetGuid || !AttributeToActor(attacker, isPet))
+    int8 const targetIndex = target ? TargetIndexOf(target->GetGUID()) : -1;
+    if (!attacker || targetIndex < 0 || !AttributeToActor(attacker, isPet))
         return;
 
     // Fires from Unit::CalculateSpellDamageTaken, upstream of Unit::DealDamage - `damage` here is
@@ -61,42 +71,45 @@ void EventRecorder::OnSpellDamageTakenFinal(Unit* target, Unit* attacker, int32 
     if (!spellInfo || (_rotationSpellId != 0 && spellInfo->Id != _rotationSpellId) || damage <= 0)
         return;
 
-    RecordHit(spellInfo->Id, uint32(damage), isCrit, isPet);
+    RecordHit(spellInfo->Id, uint32(damage), isCrit, isPet, uint8(targetIndex));
 }
 
 void EventRecorder::OnPeriodicDamageFinal(Unit* target, Unit* attacker, uint32 damage, SpellInfo const* spellInfo, bool isCrit)
 {
     bool isPet = false;
-    if (!attacker || !target || target->GetGUID() != _targetGuid || !AttributeToActor(attacker, isPet))
+    int8 const targetIndex = target ? TargetIndexOf(target->GetGUID()) : -1;
+    if (!attacker || targetIndex < 0 || !AttributeToActor(attacker, isPet))
         return;
 
     // Same single-spell / any-spell filter as OnSpellDamageTakenFinal
     if (!spellInfo || (_rotationSpellId != 0 && spellInfo->Id != _rotationSpellId) || damage == 0)
         return;
 
-    RecordHit(spellInfo->Id, damage, isCrit, isPet);
+    RecordHit(spellInfo->Id, damage, isCrit, isPet, uint8(targetIndex));
 }
 
 void EventRecorder::OnMeleeDamageFinal(Unit* target, Unit* attacker, uint32 damage, bool isCrit)
 {
     bool isPet = false;
-    if (!attacker || !target || target->GetGUID() != _targetGuid || !AttributeToActor(attacker, isPet))
+    int8 const targetIndex = target ? TargetIndexOf(target->GetGUID()) : -1;
+    if (!attacker || targetIndex < 0 || !AttributeToActor(attacker, isPet))
         return;
 
     // A single-spell recorder (Phase 1 tests) ignores swings; misses, dodges and parries arrive as 0
     if (_rotationSpellId != 0 || damage == 0)
         return;
 
-    RecordHit(isPet ? PET_MELEE_SPELL_ID : MELEE_SPELL_ID, damage, isCrit, isPet);
+    RecordHit(isPet ? PET_MELEE_SPELL_ID : MELEE_SPELL_ID, damage, isCrit, isPet, uint8(targetIndex));
 }
 
-void EventRecorder::RecordHit(uint32 spellId, uint32 damage, bool isCrit, bool isPet)
+void EventRecorder::RecordHit(uint32 spellId, uint32 damage, bool isCrit, bool isPet, uint8 targetIndex)
 {
     _totalDamage += uint64(damage);
     _hitDamages.push_back(damage);
     _hitSpellIds.push_back(spellId);
     _hitTimestamps.push_back(getMSTime());
     _hitIsPet.push_back(isPet);
+    _hitTargetIndex.push_back(targetIndex);
 
     ++_castCount;
     _hitCrits.push_back(isCrit);
@@ -114,6 +127,7 @@ void EventRecorder::Reset()
     _hitSpellIds.clear();
     _hitTimestamps.clear();
     _hitIsPet.clear();
+    _hitTargetIndex.clear();
     _auraEvents.clear();
 }
 
@@ -123,13 +137,14 @@ void EventRecorder::OnAuraApply(Unit* unit, Aura* aura)
         return;
 
     ObjectGuid const guid = unit->GetGUID();
-    if (guid != _actorGuid && guid != _targetGuid)
+    int8 const targetIndex = TargetIndexOf(guid);
+    if (guid != _actorGuid && targetIndex < 0)
         return;
 
     SpellInfo const* spellInfo = aura->GetSpellInfo();
     _auraEvents.push_back(AuraEvent{
         getMSTime(), guid, guid == _actorGuid, aura->GetId(), aura->GetStackAmount(),
-        spellInfo && spellInfo->IsPositive(), true});
+        spellInfo && spellInfo->IsPositive(), true, targetIndex});
 }
 
 void EventRecorder::RecordAurasPresent(Unit* unit)
@@ -138,7 +153,8 @@ void EventRecorder::RecordAurasPresent(Unit* unit)
         return;
 
     ObjectGuid const guid = unit->GetGUID();
-    if (guid != _actorGuid && guid != _targetGuid)
+    int8 const targetIndex = TargetIndexOf(guid);
+    if (guid != _actorGuid && targetIndex < 0)
         return;
 
     uint32 const now = getMSTime();
@@ -150,7 +166,8 @@ void EventRecorder::RecordAurasPresent(Unit* unit)
             continue;
 
         _auraEvents.push_back(AuraEvent{
-            now, guid, guid == _actorGuid, spellId, aura->GetStackAmount(), spellInfo->IsPositive(), true});
+            now, guid, guid == _actorGuid, spellId, aura->GetStackAmount(), spellInfo->IsPositive(), true,
+            targetIndex});
     }
 }
 
@@ -160,12 +177,13 @@ void EventRecorder::OnAuraRemove(Unit* unit, AuraApplication* aurApp, AuraRemove
         return;
 
     ObjectGuid const guid = unit->GetGUID();
-    if (guid != _actorGuid && guid != _targetGuid)
+    int8 const targetIndex = TargetIndexOf(guid);
+    if (guid != _actorGuid && targetIndex < 0)
         return;
 
     Aura const* aura = aurApp->GetBase();
     SpellInfo const* spellInfo = aura->GetSpellInfo();
     _auraEvents.push_back(AuraEvent{
         getMSTime(), guid, guid == _actorGuid, aura->GetId(), aura->GetStackAmount(),
-        spellInfo && spellInfo->IsPositive(), false});
+        spellInfo && spellInfo->IsPositive(), false, targetIndex});
 }

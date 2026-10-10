@@ -39,7 +39,7 @@
     <table>
       <thead>
         <tr>
-          <th>Profile</th><th>Run at</th>
+          <th>Profile</th><th>Targets</th><th>Run at</th>
           <th class="num">DPS</th><th class="num">Total dmg</th><th class="num">Casts</th><th class="num">Crit %</th><th class="num">Duration</th>
           <th></th>
         </tr>
@@ -48,6 +48,7 @@
         {% for r in runs %}
         <tr>
           <td>{{ r.profile }}</td>
+          <td>T{{ r.targets }} {{ r.target_rank }}</td>
           <td>{{ r.timestamp[:4] }}-{{ r.timestamp[4:6] }}-{{ r.timestamp[6:8] }} {{ r.timestamp[9:11] }}:{{ r.timestamp[11:13] }}:{{ r.timestamp[13:15] }}</td>
           {% if r.error %}
           <td colspan="4" class="err">failed to read: {{ r.error }}</td>
