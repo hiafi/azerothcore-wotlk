@@ -508,6 +508,22 @@ LFGDUNGEONS = DbcTable(
     signed=frozenset({"Faction"}),
 )
 
+# CreatureSpellData.dbc - a tamed/summoned pet's default spells, looked up by
+# creature_template.PetSpellDataId (SpellMgr::LoadPetDefaultSpells). lib/superseded_ranks.py rewrites
+# the records that name a superseded rank of a collapsed chain (pet-stale-ranks). Server-only: the
+# rows go out as a creaturespelldata_dbc block, never into the client patch (the server alone decides
+# a pet's spells and sends them in SMSG_PET_SPELLS). fmt from DBCfmt.h's CreatureSpellDatafmt, columns
+# from data/sql/base/db_world/creaturespelldata_dbc.sql; Availability_* is 'x' (the AC struct never
+# reads it) but is a real column. Stock file: patch-enUS.MPQ (no later patch-enUS-N.MPQ carries it,
+# byte-identical to the server's extracted copy), flattened into var/extractors/dbc/. Not in ALL_TABLES.
+CREATURESPELLDATA = DbcTable(
+    name="CreatureSpellData",
+    dbc_filename="CreatureSpellData.dbc",
+    sql_table="creaturespelldata_dbc",
+    fmt="niiiixxxx",
+    columns=_cols("ID", ("Spells", 4), ("Availability", 4)),
+)
+
 ALL_TABLES = (
     SPELL, TALENT, TALENTTAB, SPELLCASTTIMES, SPELLDURATION, SPELLRANGE,
     SPELLRADIUS, SKILLLINEABILITY, ITEM,

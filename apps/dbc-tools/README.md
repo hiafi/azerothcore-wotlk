@@ -46,6 +46,11 @@ SQL (the server doesn't need them), it just skips producing a client patch
 for whichever files aren't there, and `reuse.py` mints fresh IDs from the
 reserved blocks instead of reusing matching stock rows.
 
+One exception feeds the SQL, not the patch: `CreatureSpellData.dbc`, which only `patch-enUS.MPQ`
+carries (no later patch has it). Extract it, flattened, into the same directory. The superseded-rank
+rule (`lib/superseded_ranks.py`) reads it; without it `generate.py` prints a `WARNING` and emits no
+`creaturespelldata_dbc` rows.
+
 ## Generating
 
 ```

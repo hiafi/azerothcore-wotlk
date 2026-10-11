@@ -349,6 +349,50 @@ not obvious:
   entries have MapID 0), and DisableMgr rejects a continent map with flags anyway. With the file missing
   it errors only when something is declared.
 
+## Superseded ranks: generated `SkillLineAbility` and `CreatureSpellData` overrides
+
+Pets learn from `SkillLineAbility`, not trainers: `SpellMgr::LoadPetLevelupSpellMap` takes every row on a
+creature family's skill lines with `AcquireMethod` 2 (`SKILL_LINE_ABILITY_LEARNED_ON_SKILL_LEARN`; 1 is
+`..._ON_SKILL_VALUE`). The single-rank conversion removed the chains from `spell_ranks`, so a pet learned
+every superseded rank as its own spell (an Imp with Firebolt 3110 and 7799..47964). `generate.py` now
+overrides each stock row whose `Spell` is a superseded rank (a base `spell_ranks` chain member other
+than the DSL spell tagged "single-rank bootstrap") and whose `AcquireMethod` is 2: the stock row with
+`AcquireMethod` 0 (`lib/superseded_ranks.py`). A declared `skill_line_ability` with the same ID wins and
+prints a `WARNING`. When added (2026-10-11) the rule covered 553 rows, all on pet-family skill lines
+(warlock demons and hunter pets).
+
+That alone is not enough, because pets have a second source: **default spells**. `LoadPetDefaultSpells`
+reads the `CreatureSpellData` record named by `creature_template.PetSpellDataId` (a tamed beast keeps
+the wild beast's entry), and `LoadPetDefaultSpells_helper` drops only the spells in the family's level-up
+set. Stock records name ranked family spells (Ghost Saber: Claw 16829), so once the overrides above
+removed those ranks from the level-up set they came back as defaults. The boot log showed it as
+`Loaded Addition Spells For 803 Pet Spell Data Entries` (112 in stock). So the same rule also writes
+`creaturespelldata_dbc`: each stock record that names a superseded rank, with that `Spells_N` replaced
+by the survivor (`Availability_N` stays stock). The survivor is in the level-up set, so the helper drops
+it again and the default lists are exactly stock's. That covers 714 of 802 records and 42 ranks. Things
+that are not obvious:
+
+- **Server-only.** The rows never go into patch-Z. The server never sends `PetSpellDataId` to the client,
+  and it alone sends a pet's spells (`Player::PetSpellInitialize`).
+- **The stock file is `var/extractors/dbc/CreatureSpellData.dbc`.** Only `patch-enUS.MPQ` carries it. If
+  it is missing, the run prints a `WARNING` and emits nothing for the table.
+- **The block is a delta.** Only records that `state.load_existing_rows` (stock plus promoted `db_world/`)
+  doesn't already hold are emitted, through `render_generic_table_block`. The `SkillLineAbility` rows
+  still go through resolve, because the client patch needs them.
+- **Before promotion:** every run lists the 553 IDs in its "editing N existing ... skill line
+  abilitie(s)" line and re-emits both blocks. That is expected; strip them if an earlier pending file
+  already carries them byte-identically.
+- **After promotion:** a run is silent. The overrides read back as live, `generate.py` counts them in a
+  separate `note: superseded ranks: N SkillLineAbility override(s) already live` line (not as "unchanged
+  copies"), and the `creaturespelldata_dbc` block is empty.
+- **When a WARNING appears.** It appears only if a promoted migration left an overridden row as neither
+  stock nor the override. Read it; the override is built from stock and replaces that change.
+
+Existing pets keep whatever they already learned, so a rank-chain collapse also needs a characters-DB
+cleanup. For this one, that is `pending_db_characters/rev_1791713091186211987.sql`. See
+`docs/bugs-and-fixes.md` ("Pets learn every superseded rank..."). Plan:
+`.agents/plans/pet-stale-ranks/pet-stale-ranks.PLAN.md`.
+
 ## Watch out: one client DBC, one patch archive
 
 Five scripts each own a patch letter: `generate.py` → `patch-Z.mpq` (Spell/Talent/Item/…),
