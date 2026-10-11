@@ -43,6 +43,7 @@ content itself.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Callable
 
 import re
 
@@ -184,17 +185,36 @@ def load_table_rows(table_name: str) -> list[dict]:
     return rows
 
 
-def _migration_files_mentioning(table_name: str) -> list[Path]:
+def _INVISIBLE_RE_FOR(table_name: str) -> re.Pattern:
+    """Statements on `table_name` the head scanner (`sql_dump._STATEMENT_HEAD_RE`) cannot match: an
+    unquoted table name, `INSERT IGNORE`, or `UPDATE t AS alias`. Never matches the recognised forms."""
+    t = re.escape(table_name)
+    return re.compile(
+        rf"(?:\bINSERT\s+IGNORE\s+INTO\s+`?{t}`?\b"
+        rf"|\b(?:INSERT|REPLACE)\s+INTO\s+{t}\b"
+        rf"|\bDELETE\s+FROM\s+{t}\b"
+        rf"|\bUPDATE\s+{t}\b"
+        rf"|\bUPDATE\s+`{t}`\s+(?:AS\s+)?(?!SET\b)\w+)",
+        re.IGNORECASE,
+    )
+
+
+def _migration_files_mentioning(table_name: str, loose: bool = False) -> list[Path]:
     """Every non-base SQL file that mentions `table_name`, in apply order:
     promoted core updates, pending core updates, then module SQL (a cheap
     substring check before bothering to parse each file)."""
     needle = f"`{table_name}`"
+    unquoted = re.compile(rf"\b{re.escape(table_name)}\b", re.IGNORECASE)
     candidates = [
         *(sorted(PROMOTED_SQL_DIR.glob("*.sql")) if PROMOTED_SQL_DIR.is_dir() else []),
         *(sorted(PENDING_SQL_DIR.glob("*.sql")) if PENDING_SQL_DIR.is_dir() else []),
         *module_sql_files(),
     ]
-    return [p for p in candidates if needle in p.read_text(encoding="utf-8")]
+    # `loose` also opens a file that only names the table unquoted, so its statements can be warned about.
+    return [
+        p for p in candidates
+        if needle in (text := p.read_text(encoding="utf-8")) or (loose and unquoted.search(text))
+    ]
 
 
 def load_keyed_table_rows(table_name: str, columns: tuple[str, ...]) -> dict[int, dict]:
@@ -227,6 +247,7 @@ def load_keyed_table_rows(table_name: str, columns: tuple[str, ...]) -> dict[int
 
 def load_replayed_table_rows(
     table_name: str, columns: tuple[str, ...], key_columns: tuple[str, ...],
+    warn_skipped: bool = False, fill_missing: bool = False,
 ) -> list[dict]:
     """True live state for `table_name`, replaying INSERT/UPDATE/DELETE in apply order across the
     base dump and every migration/module file that mentions it - unlike `load_table_rows`'s plain
@@ -252,17 +273,52 @@ def load_replayed_table_rows(
     partial column list, so this isn't a hypothetical (found via code review, 2026-09-28).
     `apply_composite_key_statements`'s own INSERT handling never calls `_fill_defaults` - a column
     a statement didn't mention simply isn't in the row dict, exactly what `TableSpec.defaults`
-    needs to see."""
+    needs to see.
+
+    `warn_skipped` prints a WARNING (file name plus the start of the statement) for every statement
+    on `table_name` the replay could not apply, instead of skipping it silently. Opt-in because most
+    callers' tables tolerate an imperfect replay; `lib/trainer_pricing.py` writes rows derived from
+    this one, so an unapplied DELETE there could resurrect a row. With it on, a file is also scanned
+    for statements the replay's scanner cannot even see (unquoted table name, `INSERT IGNORE`,
+    `UPDATE ... AS alias`), and `TRUNCATE` is reported; each prints the same WARNING.
+
+    `fill_missing` gives columns an INSERT omitted the value 0 at INSERT time (see
+    `sql_dump.apply_composite_key_statements`); only for tables whose columns all default to 0.
+
+    The WHERE of a DELETE/UPDATE may use OR / AND / `=` / `IN (...)` / `BETWEEN`, and `SET col = col | n`
+    style expressions are evaluated (`sql_dump.parse_where_predicate`); this applies to every caller."""
     rows: dict[tuple, dict] = {}
     base_path = BASE_SQL_DIR / f"{table_name}.sql"
+
+    def reporter(path: Path) -> Callable[[str], None] | None:
+        if not warn_skipped:
+            return None
+        return lambda snippet: print(
+            f"WARNING: trainer_state.py: {path.name}: cannot replay this {table_name} statement, "
+            f"live state may be wrong: {' '.join(snippet.split())[:100]}"
+        )
+
+    def warn_invisible(path: Path, text: str | None = None) -> None:
+        """Statements on the table that `_STATEMENT_HEAD_RE` cannot see at all."""
+        if not warn_skipped:
+            return
+        text = path.read_text(encoding="utf-8") if text is None else text
+        for m in _INVISIBLE_RE_FOR(table_name).finditer(text):
+            if not sql_dump._in_line_comment(text, m.start()):
+                reporter(path)(m.group(0))
+
     if base_path.is_file():
         sql_dump.apply_composite_key_statements(
-            rows, columns, key_columns, table_name, base_path.read_text(encoding="utf-8")
+            rows, columns, key_columns, table_name, base_path.read_text(encoding="utf-8"),
+            reporter(base_path), fill_missing,
         )
-    for path in _migration_files_mentioning(table_name):
+        warn_invisible(base_path)
+    for path in _migration_files_mentioning(table_name, loose=warn_skipped):
+        text = path.read_text(encoding="utf-8")
         sql_dump.apply_composite_key_statements(
-            rows, columns, key_columns, table_name, path.read_text(encoding="utf-8")
+            rows, columns, key_columns, table_name, text, reporter(path), fill_missing,
         )
+        warn_invisible(path, text)
     return list(rows.values())
 
 

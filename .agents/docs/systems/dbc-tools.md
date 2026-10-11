@@ -65,6 +65,43 @@ both the new files and the older literal-multi-line ones. Rule for any new emitt
 line break inside a quoted SQL literal. Already-committed `rev_*.sql` files keep the old form and
 still fail the linter (never delete them, see above); only a file generated after this change is clean.
 
+## Trainer pricing
+
+A trainer spell's price is a function of its learn level (`ReqLevel`) alone. `source/trainer_pricing.py`
+holds three things and `lib/trainer_pricing.py` applies them on every `generate.py` run:
+
+- **`PRICE_CURVE`**: `(ReqLevel, copper)` anchors (10c at levels 1-3, 20c at 4, 1s at 10, 12s at 25,
+  60s at 40, 2g 20s at 60, 14g 40s at 80). Between anchors the price is interpolated linearly in
+  integer math and rounded half up to 1c below 100c, 10c up to 9999c, and 1s from 1g. Outside the
+  anchors it is clamped (below level 1 is 10c, above 80 is the last anchor). The curve is validated on
+  load: levels strictly increasing, prices non-decreasing, > 0 and on their own rounding step (a multiple of
+  10 from 100c, of 100 from 10000c), else `PricingPolicyError`.
+- **`PRICED_TRAINER_IDS`**: an explicit allow-list (13 Death Knight, 18-30 mage portals, 200-217 class
+  trainers). A stock trainer that later gets an NPC wired to it is *not* repriced silently. A listed
+  trainer with no live spawned NPC (`TrainerIndex.trainer_problems()`) gets a `WARNING` and is skipped.
+- **`PRICE_OVERRIDES`**: `{SpellId: copper}`, a fixed price on every priced trainer that beats the curve.
+  Empty.
+
+**Rows in scope** are the true live `trainer_spell` rows of the priced trainers (a replay over every
+file, generated ones included) plus `trained_by()` declarations. A declaration supplies every column
+except `MoneyCost`: **`money_cost` is ignored on a listed and live trainer** (it is still honoured on a trainer
+outside the allow-list, and on a listed one with no live NPC, which is skipped with a WARNING). Keys retired by `untrain()` are excluded. Only rows that differ from live are
+emitted, so a rerun emits no `trainer_spell` rows. Nothing is read from the old price, so nothing can
+compound; retune by editing the curve and regenerating.
+
+**The replay must be faithful**, because its output drives writes. `sql_dump.apply_composite_key_statements`
+applies `(TrainerId, SpellId) IN (...)`, single-column `=`/`IN`, AND-ed point, `BETWEEN` and OR-of-AND
+DELETEs and UPDATEs (`parse_where_predicate`), honours every UPDATE condition (key or not), evaluates
+`SET col = col | n` style expressions, and for `trainer_spell` fills omitted INSERT columns with 0 at INSERT
+time. A statement it cannot apply prints `WARNING: trainer_state.py: <file>: cannot replay ...`, including
+`TRUNCATE`, `INSERT IGNORE`, `UPDATE ... AS alias` and an unquoted table name (the statement scanner
+cannot see those, so a separate scan reports them). Treat any such WARNING as a bug in the replay or the
+SQL: the pass may re-insert a row that SQL removed. Not detected: a statement that merely mentions the
+table inside a larger construct (a subquery, `INSERT ... SELECT`).
+
+The same replay serves `creature_template`/`creature_template_model` (`lib/spell_tables.py`), where the
+widened WHERE/expression support corrects stock values to live; those callers do not warn.
+
 ## The prune pass: removing a `scripted_by()` / `procs_on()` from source
 
 Deleting a declaration from `source/classes/*` does **not**, on its own, delete the row. The delta
