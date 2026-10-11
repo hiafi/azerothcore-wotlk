@@ -40,7 +40,7 @@ TOOL_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOL_ROOT))
 
 from lib import build, dbcfile, dbcfmt, lint, mpq_writer, patch_out, resolve, source, sql_out, state  # noqa: E402
-from lib import header_gen, potency_sheet, spell_tables, trainer_state  # noqa: E402
+from lib import header_gen, potency_sheet, spell_tables, trainer_pricing, trainer_state  # noqa: E402
 from lib.dsl import registry as dsl_registry  # noqa: E402
 
 KNOWN_FLAGS = {"--no-prune", "--check"}
@@ -100,20 +100,41 @@ def _spell_category_base_error(rows: dict[int, dict], base_dir: Path) -> str | N
     return None
 
 
-def _trainer_spells_to_emit(dsl_rows: list[dict], trainer_index: trainer_state.TrainerIndex) -> list[dict]:
-    """Drops any declared trainer_spell row that's already live with
+def _trainer_spells_to_emit(rows: list[dict], live: dict[tuple[int, int], dict]) -> list[dict]:
+    """Drops any priced trainer_spell row that's already live with
     identical values — same "no-op rerun stays a no-op" property the DBC
     tables get from lib/resolve.py's new/edited/unchanged split, just
     reimplemented here since trainer_spell has no reserved-ID-range concept
-    for resolve.resolve_rows to key off."""
+    for resolve.resolve_rows to key off.
+
+    `live` must be a *replay* (trainer_pricing.replay_trainer_spells), not
+    TrainerIndex.existing_trainer_spells's INSERT union: the union ignores
+    UPDATE and DELETE, so a row a later file updated or removed still reads
+    as its last INSERT."""
     to_emit = []
-    for row in dsl_rows:
-        key = (row["TrainerId"], row["SpellId"])
-        existing = trainer_index.existing_trainer_spells.get(key)
+    for row in rows:
+        existing = live.get((row["TrainerId"], row["SpellId"]))
         if existing and all(existing.get(c) == row.get(c) for c in TRAINER_SPELL_COLUMNS):
             continue
         to_emit.append(row)
     return to_emit
+
+
+def _priced_trainer_spells(dsl_classes: dict, trainer_index: trainer_state.TrainerIndex) -> list[dict]:
+    """The trainer_spell rows to emit after applying source/trainer_pricing.py: the live rows of every
+    priced trainer plus every trained_by() declaration, priced from the learn-level curve, minus what
+    is already live (a replay over all files). Warns about a listed trainer with no live NPC."""
+    policy = trainer_pricing.load_policy()
+    live = trainer_pricing.replay_trainer_spells()
+    removed = {(int(r["TrainerId"]), int(r["SpellId"])) for r in dsl_classes["trainer_removals"]}
+    priced_ids, skipped = trainer_pricing.live_priced_trainer_ids(policy, trainer_index)
+    for trainer_id, problems in skipped:
+        print(f"WARNING: trainer pricing: TrainerId {trainer_id} is in PRICED_TRAINER_IDS but has no live NPC, "
+              f"skipped ({'; '.join(problems)})")
+    priced = trainer_pricing.priced_trainer_spells(
+        dsl_classes["trainer_spells"], live, priced_ids, removed, policy,
+    )
+    return _trainer_spells_to_emit(priced, live)
 
 
 def _drop_unchanged_blocks(
@@ -352,7 +373,7 @@ def main() -> int:
         print(f"WARNING: {warning}")
     for warning in lint.check_creature_without_model(dsl_classes["creature_templates"], has_model):
         print(f"WARNING: {warning}")
-    trainer_spell_rows = _trainer_spells_to_emit(dsl_classes["trainer_spells"], trainer_index)
+    trainer_spell_rows = _priced_trainer_spells(dsl_classes, trainer_index)
     spell_table_blocks = spell_tables.render_blocks(spell_table_index, dsl_classes)
     # Prune: rows an *earlier* run of this script emitted that source/classes/*
     # no longer declares (a removed scripted_by()/procs_on()/bonus_coefficients()).

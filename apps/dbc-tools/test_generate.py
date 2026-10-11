@@ -131,11 +131,6 @@ class DropUnchangedBlocksTest(unittest.TestCase):
         self.assertEqual(n_dropped, 1)
 
 
-class _FakeTrainerIndex:
-    def __init__(self, existing: dict):
-        self.existing_trainer_spells = existing
-
-
 TRAINER_SPELL_ROW = {
     "id": "13:200005", "TrainerId": 13, "SpellId": 200005, "MoneyCost": 500,
     "ReqSkillLine": 0, "ReqSkillRank": 0, "ReqAbility1": 0, "ReqAbility2": 0,
@@ -145,18 +140,18 @@ TRAINER_SPELL_ROW = {
 
 class TrainerSpellsToEmitTest(unittest.TestCase):
     def test_new_grant_is_emitted(self):
-        idx = _FakeTrainerIndex(existing={})
-        self.assertEqual(generate._trainer_spells_to_emit([TRAINER_SPELL_ROW], idx), [TRAINER_SPELL_ROW])
+        live = {}
+        self.assertEqual(generate._trainer_spells_to_emit([TRAINER_SPELL_ROW], live), [TRAINER_SPELL_ROW])
 
     def test_identical_existing_grant_is_not_re_emitted(self):
-        idx = _FakeTrainerIndex(existing={(13, 200005): dict(TRAINER_SPELL_ROW)})
-        self.assertEqual(generate._trainer_spells_to_emit([TRAINER_SPELL_ROW], idx), [])
+        live = {(13, 200005): dict(TRAINER_SPELL_ROW)}
+        self.assertEqual(generate._trainer_spells_to_emit([TRAINER_SPELL_ROW], live), [])
 
     def test_changed_existing_grant_is_re_emitted(self):
         existing = dict(TRAINER_SPELL_ROW)
         existing["ReqLevel"] = 55  # source now wants a different level
-        idx = _FakeTrainerIndex(existing={(13, 200005): existing})
-        self.assertEqual(generate._trainer_spells_to_emit([TRAINER_SPELL_ROW], idx), [TRAINER_SPELL_ROW])
+        live = {(13, 200005): existing}
+        self.assertEqual(generate._trainer_spells_to_emit([TRAINER_SPELL_ROW], live), [TRAINER_SPELL_ROW])
 
 
 if __name__ == "__main__":

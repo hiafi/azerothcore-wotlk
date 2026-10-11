@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import Callable
 
 from .dbcfmt import DbcTable
 
@@ -182,8 +183,36 @@ def _read_tuples(
 _COL_EQ_RE = re.compile(r"`(?P<col>\w+)`\s*=\s*")
 
 
+_SELF_EXPR_RE = re.compile(r"`(?P<src>\w+)`\s*(?P<op>[|&+-])\s*(?P<neg>~?)\s*(?P<num>\d+)")
+
+
+def _self_expression(col: str, m: re.Match):
+    """`col = col | 64` style assignment as a function of the old value, or None if `m` is not a
+    self-referencing integer expression (`|`, `&`, `&~`, `+`, `-`)."""
+    if m.group("src") != col:
+        return None
+    n, op = int(m.group("num")), m.group("op")
+    if m.group("neg"):
+        if op != "&":
+            return None
+        return lambda old: old & ~n
+    return {"|": lambda old: old | n, "&": lambda old: old & n,
+            "+": lambda old: old + n, "-": lambda old: old - n}[op]
+
+
+def _assign(row: dict, assignments: dict) -> None:
+    """Applies `_read_set_assignments(..., allow_expr=True)` output to `row`; an expression on a
+    column the row does not hold (an INSERT omitted it) cannot be evaluated and is left out."""
+    for col, value in assignments.items():
+        if callable(value):
+            if isinstance(row.get(col), int):
+                row[col] = value(row[col])
+        else:
+            row[col] = value
+
+
 def _read_set_assignments(
-    text: str, start: int, variables: dict[str, int] | None = None
+    text: str, start: int, variables: dict[str, int] | None = None, allow_expr: bool = False,
 ) -> tuple[dict, int]:
     """Parse a `` `col` = value (, `col` = value)* `` list starting at
     `start` (right after `UPDATE ... SET `), stopping as soon as the next
@@ -198,7 +227,12 @@ def _read_set_assignments(
         m = _COL_EQ_RE.match(text, i)
         if not m:
             break
-        value, i = _read_value(text, m.end(), terminators=" \t\r\n,);", variables=variables)
+        expr = _SELF_EXPR_RE.match(text, m.end()) if allow_expr else None
+        func = _self_expression(m.group("col"), expr) if expr else None
+        if func is not None:
+            value, i = func, expr.end()
+        else:
+            value, i = _read_value(text, m.end(), terminators=" \t\r\n,);", variables=variables)
         assignments[m.group("col")] = value
         while i < n and text[i] in " \t\r\n":
             i += 1
@@ -795,9 +829,105 @@ def apply_statements(rows: dict[int, dict], table: DbcTable, sql_text: str) -> N
 # ---------------------------------------------------------------------------
 
 
+_COND_RE = re.compile(
+    r"^`(?P<col>\w+)`\s*(?:"
+    r"=\s*(?P<eq>-?\d+)"
+    r"|IN\s*\((?P<in>[^)]*)\)"
+    r"|BETWEEN\s+(?P<lo>-?\d+)\s*\|\s*(?P<hi>-?\d+)"
+    r")$",
+    re.IGNORECASE,
+)
+_BETWEEN_RE = re.compile(r"BETWEEN\s+(-?\d+)\s+AND\s+(-?\d+)", re.IGNORECASE)
+
+
+def _split_top_level(text: str, word: str) -> list[str]:
+    """Splits `text` on the keyword `word` (AND/OR) outside parentheses; a parenthesised IN list
+    never contains one, but an OR-of-ANDs does."""
+    parts, depth, start = [], 0, 0
+    pattern = re.compile(rf"\s+{word}\s+", re.IGNORECASE)
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+        elif depth == 0:
+            m = pattern.match(text, i)
+            if m:
+                parts.append(text[start:i])
+                start = i = m.end()
+                continue
+        i += 1
+    parts.append(text[start:])
+    return [p.strip() for p in parts]
+
+
+def _strip_outer_parens(text: str) -> str:
+    text = text.strip()
+    while text.startswith("(") and text.endswith(")"):
+        depth = 0
+        for i, ch in enumerate(text):
+            depth += ch == "("
+            depth -= ch == ")"
+            if depth == 0 and i < len(text) - 1:
+                return text  # the first '(' closes before the end: not one wrapping pair
+        text = text[1:-1].strip()
+    return text
+
+
+def parse_where_predicate(where_text: str, lenient: bool = False):
+    """A WHERE clause as a `row -> bool` callable, or None when any part is outside the supported
+    grammar: OR of (parenthesised) AND chains of `` `col` = n``, `` `col` IN (n, ...)`` and
+    `` `col` BETWEEN a AND b``. `lenient` makes a condition on a column the row does not hold count
+    as satisfied (an UPDATE's guard, where "unknown" must not block the fix); the default treats it
+    as not matching (a DELETE must not remove what it cannot judge). Built so a composite-key replay
+    can apply the hand-written
+    DELETE/UPDATE shapes this repo actually contains (`TrainerId = 1 AND SpellId = 71` point
+    deletes, `BETWEEN` ranges, the OR-of-AND form) instead of silently ignoring them."""
+    text = _BETWEEN_RE.sub(lambda m: f"BETWEEN {m.group(1)}|{m.group(2)}", where_text.strip())
+    disjuncts = []
+    for or_part in _split_top_level(_strip_outer_parens(text), "OR"):
+        conds = []
+        for and_part in _split_top_level(_strip_outer_parens(or_part), "AND"):
+            m = _COND_RE.match(_strip_outer_parens(and_part))
+            if not m:
+                return None
+            col = m.group("col")
+            if m.group("eq") is not None:
+                value = int(m.group("eq"))
+                conds.append((col, lambda v, value=value: v == value))
+            elif m.group("in") is not None:
+                try:
+                    values = {int(x) for x in m.group("in").split(",") if x.strip()}
+                except ValueError:
+                    return None
+                conds.append((col, lambda v, values=values: v in values))
+            else:
+                lo, hi = int(m.group("lo")), int(m.group("hi"))
+                conds.append((col, lambda v, lo=lo, hi=hi: v is not None and lo <= v <= hi))
+        disjuncts.append(conds)
+
+    def predicate(row: dict) -> bool:
+        return any(
+            all(lenient if col not in row else test(row[col]) for col, test in conds)
+            for conds in disjuncts
+        )
+
+    return predicate
+
+
+def _names_key_column(where_text: str, key_columns: tuple[str, ...]) -> bool:
+    """Whether a WHERE clause filters on at least one key column. The general predicate is only
+    trusted then; a filter purely on other columns stays "skipped, never guessed at"."""
+    return any(f"`{c}`" in where_text for c in key_columns)
+
+
 def _apply_composite_delete(
     rows: dict[tuple, dict], key_columns: tuple[str, ...], text: str, pos: int,
+    report: Callable[[str], None] | None = None,
 ) -> int:
+    start = pos
     m = _DELETE_WHERE_TUPLE_IN_RE.match(text, pos)
     if m:
         delete_cols = tuple(c.strip().strip("`") for c in m.group("cols").split(","))
@@ -810,60 +940,89 @@ def _apply_composite_delete(
         try:
             idx = [key_columns.index(c) for c in delete_cols]
         except ValueError:
+            if report:
+                report(text[start:start + 120])
             return end  # a column we don't key on - can't tell what it removes
         for values in tuples:
             wanted = tuple(values)
             for key in [k for k in rows if tuple(k[i] for i in idx) == wanted]:
                 rows.pop(key, None)
         return end
-    m = _WHERE_IN_RE.match(text, pos)
-    if m:
-        col = re.search(r"`(\w+)`", m.group(0)).group(1)
-        if col in key_columns:
-            idx = key_columns.index(col)
-            wanted = set(_parse_id_list(m.group("ids")))
-            for key in [k for k in rows if k[idx] in wanted]:
-                rows.pop(key, None)
+    for pattern in (_WHERE_IN_RE, _WHERE_EQ_RE):
+        m = pattern.match(text, pos)
+        if m:
+            col = re.search(r"`(\w+)`", m.group(0)).group(1)
+            if col in key_columns:
+                idx = key_columns.index(col)
+                if pattern is _WHERE_IN_RE:
+                    wanted = set(_parse_id_list(m.group("ids")))
+                else:
+                    wanted = {int(m.group("id"))}
+                for key in [k for k in rows if k[idx] in wanted]:
+                    rows.pop(key, None)
+                return m.end()
+            break  # a non-key column: the general predicate below can still apply it
+    m = _WHERE_ANY_RE.match(text, pos)
+    predicate = (
+        parse_where_predicate(m.group("conds")) if m and _names_key_column(m.group("conds"), key_columns) else None
+    )
+    if predicate is not None:
+        for key in [k for k, row in rows.items() if predicate(row)]:
+            rows.pop(key, None)
         return m.end()
-    m = _WHERE_EQ_RE.match(text, pos)
-    if m:
-        col = re.search(r"`(\w+)`", m.group(0)).group(1)
-        if col in key_columns:
-            idx = key_columns.index(col)
-            value = int(m.group("id"))
-            for key in [k for k in rows if k[idx] == value]:
-                rows.pop(key, None)
-        return m.end()
+    if report:
+        report(text[start:start + 120])
     return _skip_statement(text, pos)
 
 
 def _apply_composite_update(
     rows: dict[tuple, dict], key_columns: tuple[str, ...], text: str, pos: int,
-    variables: dict[str, int] | None = None,
+    variables: dict[str, int] | None = None, report: Callable[[str], None] | None = None,
 ) -> int:
-    assignments, pos = _read_set_assignments(text, pos, variables)
-    if not assignments:
-        return _skip_statement(text, pos)
-    m = _WHERE_ANY_RE.match(text, pos)
-    if not m:
+    """One composite-key UPDATE. Every condition is honoured, key or not, the way MySQL would: a
+    row is touched only if all of them hold. A condition on a column the stored row does not hold
+    (an INSERT omitted it) cannot be judged and counts as satisfied. A WHERE that names no key
+    column, or is outside the supported grammar, is reported and skipped."""
+    start = pos
+    assignments, pos = _read_set_assignments(text, pos, variables, allow_expr=True)
+    m = _WHERE_ANY_RE.match(text, pos) if assignments else None
+    if m is None:
+        if report:
+            report("UPDATE ... SET " + text[start:start + 100])
         return _skip_statement(text, pos)
     end = m.end()
     conditions = parse_and_equality_conditions(m.group("conds"))
-    if conditions is None:
+    if conditions is not None and any(c in key_columns for c, _ in conditions):
+        for row in rows.values():
+            if all(c not in row or row[c] == v for c, v in conditions):
+                _assign(row, assignments)
         return end
-    by_col = dict(conditions)
-    key_filter = {c: by_col[c] for c in key_columns if c in by_col}
-    if not key_filter:
-        return end  # nothing here narrows to a specific key - can't tell which row(s) this affects
+    # Not an AND of equalities naming a key column: IN / BETWEEN / OR, or a filter on non-key columns.
+    predicate = (
+        parse_where_predicate(m.group("conds"), lenient=True)
+        if _names_key_column(m.group("conds"), key_columns) else None
+    )
+    if predicate is None:
+        if report:
+            report("UPDATE ... SET " + text[start:start + 100])
+        return end
     for row in rows.values():
-        if all(row.get(c) == v for c, v in key_filter.items()):
-            row.update(assignments)
+        if predicate(row):
+            _assign(row, assignments)
     return end
+
+
+def _in_line_comment(text: str, pos: int) -> bool:
+    """Whether `pos` sits after a `--` or `#` on its own line."""
+    line_start = text.rfind("\n", 0, pos) + 1
+    prefix = text[line_start:pos]
+    return "--" in prefix or "#" in prefix
 
 
 def apply_composite_key_statements(
     rows: dict[tuple, dict], columns: tuple[str, ...], key_columns: tuple[str, ...],
-    table_name: str, sql_text: str,
+    table_name: str, sql_text: str, on_skip: Callable[[str], None] | None = None,
+    fill_missing: bool = False,
 ) -> None:
     """`apply_statements`'s composite-key cousin - see this section's module-level comment for why
     it exists. Handles exactly the statement shapes this repo's real migrations and `sql_out.py`'s
@@ -875,13 +1034,25 @@ def apply_composite_key_statements(
         column naming one member of `key_columns` (e.g. "delete every model of this creature",
         every `Idx`) - the prefix case, same idea as `spell_tables._matching_keys`.
       - `UPDATE \\`table\\` SET ... WHERE <AND-ed \\`col\\` = value conditions>;` - a point fix.
-        A condition naming a `key_columns` member narrows which stored row(s) it applies to; a
-        condition on any other column is a defensive "only if it still has this value" guard and
-        isn't re-checked, same reasoning as `_apply_update`'s own AND-guard fallback.
+        Every condition is honoured, key or not, the way MySQL would (see
+        `_apply_composite_update`); `SET col = col | n` style self-expressions are evaluated.
+      - any other DELETE/UPDATE WHERE made of OR / AND / `=` / `IN (...)` / `BETWEEN`
+        (`parse_where_predicate`), e.g. `TrainerId = 212 AND SpellId = 1`.
     An unrecognized shape is skipped, never guessed at - same "degrade safely" contract as
-    `apply_statements`."""
+    `apply_statements` - but not silently when `on_skip` is given: it is called with the start of
+    each statement the replay could not apply, so a caller whose output depends on the replay
+    (the trainer pricing pass) can warn.
+
+    `fill_missing` gives an INSERT's omitted columns the value 0 at INSERT time, so a later WHERE on
+    them matches (right only for a table whose omitted columns all default to 0, e.g.
+    `trainer_spell`); the default leaves them out, which `TableSpec.defaults` relies on.
+    `TRUNCATE` of the table is reported (it empties the table; the replay does not model it)."""
     pos = 0
     variables: dict[str, int] = {}
+    if on_skip:
+        for t in re.finditer(rf"\bTRUNCATE\s+(?:TABLE\s+)?`?{re.escape(table_name)}`?\b", sql_text, re.IGNORECASE):
+            if not _in_line_comment(sql_text, t.start()):
+                on_skip(sql_text[t.start():t.start() + 60])
     while True:
         m = _next_statement(sql_text, pos, table_name)
         if m is None:
@@ -897,17 +1068,24 @@ def apply_composite_key_statements(
                 cols = explicit or list(columns)
                 tuples, pos = _read_tuples(sql_text, m.end(), variables)
                 for values in tuples:
-                    if len(values) != len(cols):
-                        continue
-                    row = dict(zip(cols, values))
                     try:
+                        if len(values) != len(cols):
+                            raise ValueError("column count mismatch")
+                        row = dict(zip(cols, values))
+                        if fill_missing:
+                            for c in columns:
+                                row.setdefault(c, 0)
                         key = tuple(row[c] for c in key_columns)
-                    except KeyError:
+                    except (KeyError, ValueError):
+                        if on_skip:
+                            on_skip("INSERT row " + repr(values)[:100])
                         continue
                     rows[key] = row
             elif m.group("del_table") is not None:
-                pos = _apply_composite_delete(rows, key_columns, sql_text, m.end())
+                pos = _apply_composite_delete(rows, key_columns, sql_text, m.end(), on_skip)
             else:
-                pos = _apply_composite_update(rows, key_columns, sql_text, m.end(), variables)
+                pos = _apply_composite_update(rows, key_columns, sql_text, m.end(), variables, on_skip)
         except Exception:
+            if on_skip:
+                on_skip(sql_text[m.start():m.start() + 120])
             pos = _skip_statement(sql_text, m.end())

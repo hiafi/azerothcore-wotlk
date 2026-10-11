@@ -113,6 +113,10 @@ fireball = spell(id=200002, name="Fireball", school=School.FIRE, cast_time_ms=25
 trained_by(fireball, trainer_id=212, req_level=20, money_cost=500)
 ```
 
+On a trainer listed in `PRICED_TRAINER_IDS` (`source/trainer_pricing.py`) that is also live, `money_cost` is **ignored**: the
+price comes from the learn-level curve (or a `PRICE_OVERRIDES` entry), see `.agents/docs/systems/dbc-tools.md`'s
+"Trainer pricing". It is only honoured on a trainer outside that allow-list.
+
 Three more plain world-DB tables can be declared right next to the spell
 they belong to, instead of in a hand-written migration that has to be kept
 in sync with the C++ separately (`lib/spell_tables.py`; same "skip what's
