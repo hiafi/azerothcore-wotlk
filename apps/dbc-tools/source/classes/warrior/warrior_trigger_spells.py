@@ -5,7 +5,7 @@ Split from a single source/classes/warrior.py via split_class_file.py (.agents/p
 """
 
 from lib.dsl import AuraType, Effect, EffectType, PowerType, School
-from lib.dsl.registry import spell
+from lib.dsl.registry import procs_on, spell
 
 
 defiance_12303 = spell(
@@ -844,6 +844,10 @@ improved_revenge_12797 = spell(
     notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Improved Revenge rank 1 - now unconditional (was chance-based) Fixed 2026-09-04: capstone tooltip text now shown on every rank (gray/|cFF9D9D9D on non-final ranks',
     raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases damage of your Revenge ability by 15%. After using Revenge your next Devastate within 8 sec will strike an additional target.\n\n|cFF9D9D9DCapstone Bonus: Your Revenge strikes 2 additional targets.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1024, 'EffectSpellClassMaskB_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 25, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
+procs_on(
+    improved_revenge_12797, proc_flags=0x10, family_name=4, family_mask=(0x400, 0, 0), spell_type_mask=1,
+    spell_phase_mask=2, hit_mask=0, attributes_mask=0, disable_effects_mask=0b101, chance=100.0, cooldown_ms=0,
+)
 
 
 improved_revenge_12799 = spell(
@@ -860,11 +864,15 @@ improved_revenge_12799 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.DUMMY, trigger_spell=200045),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=17),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=107, misc_value=17),
     ],
     spell_icon_id=562,
     notes="Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Improved Revenge rank 2 + capstone (unconditional +2 Revenge targets) - PLAYTEST, novel combo of proven primitives Fixed 2026-09-04: capstone tooltip text now shown on every rank (gray/|cFF9D9D9D on non-final ranks, normal color on the final rank), separated from the base text by two newlines, matching the pattern already used by the Frost Mage rework's pulled-from-Blizzard capstone talents (e.g. Frostbite).",
     raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases damage of your Revenge ability by 30%. After using Revenge your next Devastate within 8 sec will strike an additional target.\n\nCapstone Bonus: Your Revenge strikes 2 additional targets.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1024, 'EffectSpellClassMaskB_1': 1024, 'EffectSpellClassMaskC_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 50, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+)
+procs_on(
+    improved_revenge_12799, proc_flags=0x10, family_name=4, family_mask=(0x400, 0, 0), spell_type_mask=1,
+    spell_phase_mask=2, hit_mask=0, attributes_mask=0, disable_effects_mask=0b101, chance=100.0, cooldown_ms=0,
 )
 
 
@@ -3036,10 +3044,10 @@ devastate_extra_target_200045 = spell(
     range_yards=0.0,
     duration_ms=8000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=107, misc_value=17),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=17),
     ],
     spell_icon_id=1508,
-    notes="Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Improved Revenge's charge-buff - no script needed, see Player::ApplySpellMod",
+    notes="Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Improved Revenge's charge-buff - no script needed, see Player::ApplySpellMod. Fixed 2026-10-10: jump-target amount bp 1 (total +2, since Devastate's ChainTarget is 0 and the chain code needs >1) and the talent ranks got a spell_proc row",
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Your next Devastate will strike an additional target.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your next Devastate will strike an additional target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Devastate: Extra Target', 'ProcChance': 101, 'ProcCharges': 1, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
