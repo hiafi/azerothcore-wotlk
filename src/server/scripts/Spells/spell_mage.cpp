@@ -3907,7 +3907,8 @@ class spell_mage_arcane_shielding_proc : public AuraScript
 
     void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
     {
-        if (AuraEffect* talentAurEff = GetTarget()->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_MAGE, MAGE_ICON_ARCANE_SHIELDING, EFFECT_0))
+        // GetTarget() is null in DoEffectCalcAmount (not an apply-state hook); the owner is the target.
+        if (AuraEffect* talentAurEff = GetUnitOwner()->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_MAGE, MAGE_ICON_ARCANE_SHIELDING, EFFECT_0))
             AddPct(amount, talentAurEff->GetAmount());
     }
 
