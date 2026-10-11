@@ -151,6 +151,10 @@ class Registry:
     # filled by the tooltip_vars() helper (P9.2). Client-only (no SQL), so generate.py only merges
     # them into the client patch; the DuplicateIdError merge check below stops two files minting one id.
     tooltip_vars: list[dict] = field(default_factory=list)
+    # `disables` rows of sourceType 8 (DISABLE_TYPE_LFG_MAP), from lfg_exclude() - a world-DB
+    # table outside the spell system, declared from source/world/ (a SPELL_TABLES entry, so diff/prune
+    # like custom_attr).
+    lfg_disables: list[dict] = field(default_factory=list)
     # P2b: {id: python_variable_name}, found by introspecting each loaded module's own namespace
     # after it finishes executing - see _collect_var_names(). Not in MERGE_KEYS: these are dicts,
     # not lists, and merged by lib.header_gen's caller with a plain dict.update() (ids are already
@@ -169,6 +173,7 @@ MERGE_KEYS = (
     "potency_corrections",
     "consts",
     "tooltip_vars",
+    "lfg_disables",
 )
 
 # The registry a class file's spell()/talent()/tab()/skill_line_ability()
@@ -802,6 +807,37 @@ def spell_category(category_id: int, flags: int = 0, comment: str = "") -> dict:
         raise ValueError(f"spell_category({category_id}, ...): flags must be a uint32, got {flags!r}")
     row = {"id": category_id, "ID": category_id, "Flags": flags, "comment": comment}
     _require_active().spell_categories.append(row)
+    return row
+
+
+DISABLE_TYPE_LFG_MAP = 8  # DisableMgr.h
+DUNGEON_STATUSFLAG_NORMAL = 0x01  # SharedDefines.h
+
+
+def lfg_exclude(map_id: int, comment: str) -> dict:
+    """Removes every dungeon finder entry on `map_id` from the finder: a `disables` row of
+    sourceType 8 (`DISABLE_TYPE_LFG_MAP`). `LFGMgr::InitializeLockedDungeons` then locks each
+    `LFGDungeons.dbc` entry whose `MapID` matches, for every player, and `GetCompatibleDungeons`
+    drops locked entries from the random pool. The dungeon is gone from "Specific Dungeons" too;
+    the instance itself stays enterable on foot.
+
+    It is per map, not per finder entry: every wing (Dire Maul East/West/North are all map 429),
+    both difficulties and any seasonal boss entry on that map (Coren Direbrew, map 230) go together.
+    `generate.py` prints the entries each exclusion covers and stops on a map that has none.
+
+    `flags` is always `DUNGEON_STATUSFLAG_NORMAL`: `LFGMgr::IsDungeonDisabled` asks DisableMgr with no
+    unit and flags 0, which resolves to normal difficulty, so a row without that bit never matches.
+
+    `comment` (the dungeon's name) is stored in the row's `comment` column."""
+    if isinstance(map_id, bool) or not isinstance(map_id, int) or map_id < 0:
+        raise ValueError(f"lfg_exclude({map_id!r}, ...): map_id must be a Map.dbc id (non-negative int)")
+    if not comment:
+        raise ValueError(f"lfg_exclude({map_id}, ...): comment (the dungeon's name) is required")
+    row = {
+        "id": map_id, "sourceType": DISABLE_TYPE_LFG_MAP, "entry": map_id,
+        "flags": DUNGEON_STATUSFLAG_NORMAL, "params_0": "", "params_1": "", "comment": comment,
+    }
+    _require_active().lfg_disables.append(row)
     return row
 
 

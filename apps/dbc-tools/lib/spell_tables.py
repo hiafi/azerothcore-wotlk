@@ -60,6 +60,9 @@ SPELLCATEGORY_COLUMNS = ("ID", "Flags")
 # spellshapeshiftform_dbc is DBC-backed (unlike the other four, plain world-DB tables) - reuse
 # lib.dbcfmt's own column list rather than re-transcribing it a second time.
 SPELLSHAPESHIFTFORM_COLUMNS = dbcfmt.SPELLSHAPESHIFTFORM.columns
+# lfg_exclude() (source/world/): sourceType 8 rows only. The base dump and mod-progression's phase
+# SQL (which owns sourceType 1-5/9/10) have no sourceType 8 rows, so nothing else writes these keys.
+DISABLES_COLUMNS = ("sourceType", "entry", "flags", "params_0", "params_1", "comment")
 
 # T1 (.agents/plans/warlock-rework/warlock-rework.T1-HANDOFF.md): creature_template/
 # creature_template_model - a rework's own NPCs, previously always a hand-written migration (e.g.
@@ -211,6 +214,9 @@ class TableSpec:
     # omitted one of these columns silently mis-detects "unchanged". Empty for every table where
     # 0/NULL is already correct (unaffected - see _same_row's fallback).
     defaults: dict = field(default_factory=dict)
+    # Skip the prune circuit breaker (see rows_to_prune): zero declarations is a normal state for
+    # this table, so retiring the last declaration must still DELETE it.
+    prune_when_empty: bool = False
 
 
 SPELL_TABLES = (
@@ -231,6 +237,12 @@ SPELL_TABLES = (
     TableSpec(
         "spell_potency_correction", SPELL_POTENCY_CORRECTION_COLUMNS,
         ("spell_id", "effect_index"), "potency_corrections",
+    ),
+    # Every declaration lives in one small file (source/world/lfg.py), and "no dungeon excluded"
+    # is a legitimate end state, so the breaker would only ever block a real retirement.
+    TableSpec(
+        "disables", DISABLES_COLUMNS, ("sourceType", "entry"), "lfg_disables",
+        defaults={"flags": 0, "params_0": "", "params_1": "", "comment": ""}, prune_when_empty=True,
     ),
 )
 
@@ -358,7 +370,7 @@ class SpellTableIndex:
         if not emitted:
             return PruneResult(spec, [], [], False)
         declared_keys = self._key_set(spec, declared)
-        if not declared_keys:
+        if not declared_keys and not spec.prune_when_empty:
             return PruneResult(spec, [], [], True)
         orphans = emitted - declared_keys
         base = self._base.get(spec.name, set())
@@ -384,6 +396,7 @@ _PRUNE_WHY = {
                   "-- alive that no declared script handles.",
     "spell_bonus_data": "Left in place, a stale row keeps overriding the\n"
                         "-- engine's own spell coefficient.",
+    "disables": "Left in place, the dungeon stays out of the dungeon finder.",
 }
 _PRUNE_WHY_DEFAULT = "Left in place it keeps applying."
 

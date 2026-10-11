@@ -489,6 +489,25 @@ SOUNDENTRIES = DbcTable(
     read_as_string=frozenset({"Name", *(f"File_{i}" for i in range(1, 11)), "DirectoryBase"}),
 )
 
+# LFGDungeons.dbc - read-only reference for lfg_exclude() (lib/dsl/registry.py): lint checks each
+# declared map id against the MapID column so a typo (or a raid/zone id that never appears in the
+# dungeon finder) stops the run. Nothing here is ever written; the server loads the stock file
+# (DBCStores.cpp: LOAD_DBC(sLFGDungeonStore, "LFGDungeons.dbc", "lfgdungeons_dbc"), empty overlay).
+# fmt from DBCfmt.h's LFGDungeonEntryfmt, columns from data/sql/base/db_world/lfgdungeons_dbc.sql.
+# Stock file: patch-enUS-3.MPQ, flattened into var/extractors/dbc/ like Item.dbc. Not in ALL_TABLES.
+LFGDUNGEONS = DbcTable(
+    name="LFGDungeons",
+    dbc_filename="LFGDungeons.dbc",
+    sql_table="lfgdungeons_dbc",
+    fmt="nssssssssssssssssxiiiiiiiiixxixixxxxxxxxxxxxxxxxx",
+    columns=_cols(
+        "ID", _locale_cols("Name"), "MinLevel", "MaxLevel", "Target_Level", "Target_Level_Min",
+        "Target_Level_Max", "MapID", "Difficulty", "Flags", "TypeID", "Faction", "TextureFilename",
+        "ExpansionLevel", "Order_Index", "Group_Id", _locale_cols("Description"),
+    ),
+    signed=frozenset({"Faction"}),
+)
+
 ALL_TABLES = (
     SPELL, TALENT, TALENTTAB, SPELLCASTTIMES, SPELLDURATION, SPELLRANGE,
     SPELLRADIUS, SKILLLINEABILITY, ITEM,

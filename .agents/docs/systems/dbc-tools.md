@@ -331,6 +331,24 @@ only, not `--check`.
 `lint.check_removed_proc_flags` warns while `abs(id)`'s `ProcTypeMask` is non-zero (other ranks of a
 negative id are not checked).
 
+## Dungeon finder exclusions: `lfg_exclude()`
+
+`lfg_exclude(map_id, name)` (`source/world/lfg.py`; usage in `apps/dbc-tools/README.md`) declares a
+`disables` row of sourceType 8, a `SPELL_TABLES` entry keyed on `(sourceType, entry)`. Things that are
+not obvious:
+
+- **`flags` must be 1.** `LFGMgr::IsDungeonDisabled` calls `DisableMgr::IsDisabledFor(DISABLE_TYPE_LFG_MAP,
+  map, nullptr)`: no unit and flags 0, so the difficulty checked is always normal and a row without
+  `DUNGEON_STATUSFLAG_NORMAL` never matches. The same call means heroic cannot be excluded separately.
+- **No collision with mod-progression.** Its phase SQL owns `disables` sourceTypes 1-5, 9 and 10 (maps
+  are sourceType 2, which closes the instance itself), and the base dump has no sourceType 8 rows.
+- **The prune circuit breaker is off for this table** (`TableSpec.prune_when_empty`): an empty
+  `lfg.py` is a normal state, and with the breaker on, removing the last exclusion would never DELETE it.
+- **`lint.check_lfg_exclusions` reads stock `LFGDungeons.dbc`** (`dbcfmt.LFGDUNGEONS`, read-only, not in
+  `ALL_TABLES`). It errors on a map without a TypeID 1/2/5 entry, which includes continent maps (random
+  entries have MapID 0), and DisableMgr rejects a continent map with flags anyway. With the file missing
+  it errors only when something is declared.
+
 ## Watch out: one client DBC, one patch archive
 
 Five scripts each own a patch letter: `generate.py` → `patch-Z.mpq` (Spell/Talent/Item/…),
