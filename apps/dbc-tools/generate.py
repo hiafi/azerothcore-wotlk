@@ -40,7 +40,8 @@ TOOL_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOL_ROOT))
 
 from lib import build, dbcfile, dbcfmt, lint, mpq_writer, patch_out, resolve, source, sql_out, state  # noqa: E402
-from lib import header_gen, potency_sheet, spell_tables, trainer_pricing, trainer_state  # noqa: E402
+from lib import header_gen, potency_sheet, spell_tables, superseded_ranks, trainer_pricing, trainer_state  # noqa: E402
+from bootstrap import load_spell_ranks_chains  # noqa: E402
 from lib.dsl import registry as dsl_registry  # noqa: E402
 
 KNOWN_FLAGS = {"--no-prune", "--check"}
@@ -416,6 +417,41 @@ def main() -> int:
     existing_secondary = {name: list(rows.values()) for name, rows in existing_secondary_by_id.items()}
     progress("loaded existing (db_world-promoted-aware) DBC state")
 
+    # pet-stale-ranks: stock SkillLineAbility rows still teach pets every superseded rank of a
+    # collapsed chain (SpellMgr::LoadPetLevelupSpellMap). Override each with AcquireMethod 0 - see
+    # lib/superseded_ranks.py. Appended before both resolve passes, so the rows reach the SQL and
+    # the client patch like declared ones; a declared row with the same ID wins.
+    stock_skilllineabilities = state.load_stock_rows(dbcfmt.SKILLLINEABILITY)
+    rank_overrides = superseded_ranks.skilllineability_overrides(
+        load_spell_ranks_chains(), dsl_classes["spells"], stock_skilllineabilities,
+        talents["skill_line_abilities"], existing_skilllineabilities,
+    )
+    talents["skill_line_abilities"].extend(rank_overrides.entries)
+    rank_override_ids = {e["id"] for e in rank_overrides.entries}
+    # Default pet spells (CreatureSpellData via creature_template.PetSpellDataId) name the same ranks,
+    # and SpellMgr's LoadPetDefaultSpells_helper only drops those in the family's level-up set, which
+    # the overrides above just shrank. Server-only rows, emitted as their own block below.
+    spell_data_overrides = superseded_ranks.creaturespelldata_overrides(
+        rank_overrides.superseded, state.load_stock_rows(dbcfmt.CREATURESPELLDATA),
+        state.load_existing_rows(dbcfmt.CREATURESPELLDATA),
+    )
+    for warning in rank_overrides.collisions + rank_overrides.warnings + spell_data_overrides.warnings:
+        print(f"WARNING: superseded ranks: {warning}")
+    print(
+        f"note: superseded ranks: {len(rank_overrides.superseded)} superseded rank(s) of collapsed chains, "
+        f"{len(rank_overrides.entries)} SkillLineAbility row(s) overridden to AcquireMethod 0 on skill "
+        f"line(s) {sorted({e['skill_line'] for e in rank_overrides.entries})}; "
+        f"{len(spell_data_overrides.rows)} CreatureSpellData record(s) with the survivor in place of a "
+        f"superseded rank, {len(spell_data_overrides.to_emit)} not yet live"
+    )
+    if not (BASE_DBC_DIR / dbcfmt.CREATURESPELLDATA.dbc_filename).is_file():
+        print(
+            f"WARNING: superseded ranks: no stock {dbcfmt.CREATURESPELLDATA.dbc_filename} in "
+            f"{BASE_DBC_DIR.relative_to(REPO_ROOT)}, so pets' default spells keep their superseded ranks - "
+            f"extract DBFilesClient/{dbcfmt.CREATURESPELLDATA.dbc_filename} from the client's patch-enUS.MPQ "
+            f"into that directory (see .agents/docs/systems/dbc-tools.md)"
+        )
+
     # Reconcile source/ against what's actually live: an entry is either new
     # (id inside the reserved block), a deliberate edit to something that
     # already exists (id outside the block, but changed), or an untouched
@@ -442,9 +478,13 @@ def main() -> int:
     item_resolved = resolve.resolve_rows(
         item_entries, ids_cfg["item"], existing_items, build.build_item_row,
     )
+    # Superseded-rank overrides are generated, not pulled-in copies: once promoted they resolve as
+    # unchanged, so count them apart. They sit outside the reserved block, so each is edited or unchanged.
+    n_live_rank_overrides = len(rank_override_ids - set(skilllineability_resolved.edited_ids))
+    n_unchanged_sla = skilllineability_resolved.unchanged - n_live_rank_overrides
     n_unchanged = (
         spell_resolved.unchanged + talent_resolved.unchanged + talenttab_resolved.unchanged
-        + skilllineability_resolved.unchanged + item_resolved.unchanged
+        + n_unchanged_sla + item_resolved.unchanged
     )
     if n_unchanged:
         print(
@@ -452,9 +492,11 @@ def main() -> int:
             f"(pulled in for reference — see apps/dbc-tools/README.md) and were not "
             f"generated: {spell_resolved.unchanged} spell(s), {talent_resolved.unchanged} "
             f"talent(s), {talenttab_resolved.unchanged} talent tab(s), "
-            f"{skilllineability_resolved.unchanged} skill line abilitie(s), "
+            f"{n_unchanged_sla} skill line abilitie(s), "
             f"{item_resolved.unchanged} item(s)"
         )
+    if n_live_rank_overrides:
+        print(f"note: superseded ranks: {n_live_rank_overrides} SkillLineAbility override(s) already live")
     n_edited = (
         len(spell_resolved.edited_ids) + len(talent_resolved.edited_ids)
         + len(talenttab_resolved.edited_ids) + len(skilllineability_resolved.edited_ids)
@@ -535,7 +577,6 @@ def main() -> int:
     # for something the SQL-emission pass above already minted one for.
     stock_talents = state.load_stock_rows(dbcfmt.TALENT)
     stock_talenttabs = state.load_stock_rows(dbcfmt.TALENTTAB)
-    stock_skilllineabilities = state.load_stock_rows(dbcfmt.SKILLLINEABILITY)
     stock_items = state.load_stock_rows(dbcfmt.ITEM)
     # P9 (potency-system.PLAN.md, D12): SpellDescriptionVariables references - a tooltip variable
     # the spell's entry doesn't define renders as a literal `$<var>` in the client. Errors stop the
@@ -655,6 +696,10 @@ def main() -> int:
     trainer_spell_block = sql_out.render_generic_table_block(
         "trainer_spell", TRAINER_SPELL_COLUMNS, ("TrainerId", "SpellId"), trainer_spell_rows,
     )
+    spell_data_block = sql_out.render_generic_table_block(
+        dbcfmt.CREATURESPELLDATA.sql_table, dbcfmt.CREATURESPELLDATA.columns, ("ID",),
+        spell_data_overrides.to_emit,
+    )
 
     rev = int(time.time() * 1_000_000_000)
     out_path = PENDING_SQL_DIR / f"rev_{rev}.sql"
@@ -662,7 +707,7 @@ def main() -> int:
         out_path, blocks, header,
         extra_blocks=[
             *prune_blocks, *removal_blocks, trainer_spell_block, *spell_table_blocks,
-            *creature_blocks,
+            *creature_blocks, spell_data_block,
         ],
     )
     print(f"SQL: wrote {out_path.relative_to(REPO_ROOT)}" if wrote_sql else "SQL: nothing to emit")
