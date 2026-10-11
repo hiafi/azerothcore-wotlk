@@ -763,6 +763,53 @@ def check_potency_bonus_overrides(
     return errors
 
 
+# LFGDungeons.dbc TypeIDs LFGMgr::LoadLFGDungeons keeps that sit on an instance map (LFGMgr.h:
+# LFG_TYPE_DUNGEON/RAID/HEROIC). LFG_TYPE_RANDOM is also kept but its MapID is 0, a continent.
+_LFG_INSTANCE_TYPES = {1: "dungeon", 2: "raid", 5: "heroic"}
+_LFGDUNGEONS_FILE = "LFGDungeons.dbc"
+
+
+def check_lfg_exclusions(
+    rows: list[dict], lfg_dungeons: dict[int, dict] | None,
+) -> tuple[list[str], list[str]]:
+    """`(errors, notes)` for lfg_exclude() declarations, checked against stock LFGDungeons.dbc.
+
+    Error: a map with no dungeon/raid/heroic finder entry - a typo, or a continent map, which
+    DisableMgr rejects at load anyway ("Disable flags for map ... are invalid" for flags on a common
+    map). Note: one line per exclusion naming every finder entry it covers, since a map exclusion
+    takes all wings and seasonal entries on that map with it. `lfg_dungeons` None (stock file not
+    extracted) is reported as an error when anything is declared: an unchecked map id is exactly
+    the silent no-op this check exists to catch."""
+    if not rows:
+        return [], []
+    if lfg_dungeons is None:
+        return [
+            f"lfg_exclude() declared but no stock {_LFGDUNGEONS_FILE} to check map ids against - extract "
+            f"DBFilesClient/{_LFGDUNGEONS_FILE} from the client's patch-enUS-3.MPQ into var/extractors/dbc/ "
+            f"(see .agents/docs/systems/dbc-tools.md)"
+        ], []
+    by_map: dict[int, list[dict]] = {}
+    for entry in lfg_dungeons.values():
+        if entry["TypeID"] in _LFG_INSTANCE_TYPES:
+            by_map.setdefault(entry["MapID"], []).append(entry)
+    errors, notes = [], []
+    for row in sorted(rows, key=lambda r: r["entry"]):
+        map_id = row["entry"]
+        entries = sorted(by_map.get(map_id, []), key=lambda e: e["ID"])
+        if not entries:
+            errors.append(
+                f"lfg_exclude({map_id}, {row['comment']!r}): no dungeon finder entry uses map {map_id} "
+                f"(LFGDungeons.dbc MapID) - wrong id? lfg_exclude() takes a Map.dbc id, not an LFGDungeons id"
+            )
+            continue
+        covered = ", ".join(
+            f"{e['ID']} {e['Name_Lang_enUS']} ({_LFG_INSTANCE_TYPES[e['TypeID']]}, {e['MinLevel']}-{e['MaxLevel']})"
+            for e in entries
+        )
+        notes.append(f"lfg_exclude({map_id}, {row['comment']!r}) removes from the finder: {covered}")
+    return errors, notes
+
+
 def check_undeclared_spell_categories(
     entries: list[dict], declared_ids: set[int], block: dict | None,
 ) -> list[str]:

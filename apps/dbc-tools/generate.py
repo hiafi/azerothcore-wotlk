@@ -169,18 +169,18 @@ def _drop_unchanged_blocks(
     return filtered, n_dropped
 
 
-def _merge_npc_declarations(dsl_classes: dict, dsl_npcs: dict) -> None:
-    """Fold `source/npcs/*.py`'s declarations (loaded by the same `load_classes_dir`) into the
-    class registry's merged dict, in place. Lists concatenate; the two var-name dicts update. An
-    entry declared in both places (any merged key) is an error, like a duplicate within one
-    directory."""
+def _merge_npc_declarations(dsl_classes: dict, dsl_npcs: dict, source_dir: str = "source/npcs/") -> None:
+    """Fold a non-class source directory's declarations (`source/npcs/*.py`, `source/world/*.py` -
+    loaded by the same `load_classes_dir`) into the class registry's merged dict, in place. Lists
+    concatenate; the two var-name dicts update. An entry declared in both places (any merged key) is
+    an error, like a duplicate within one directory."""
     for key in dsl_registry.MERGE_KEYS:
         declared = {entry.get("_dedup_id", entry.get("id")) for entry in dsl_classes[key]}
         for entry in dsl_npcs[key]:
             dedup_id = entry.get("_dedup_id", entry.get("id"))
             if dedup_id in declared:
                 raise dsl_registry.DuplicateIdError(
-                    f"{key} entry {dedup_id!r} appears in both source/classes/ and source/npcs/"
+                    f"{key} entry {dedup_id!r} appears in both {source_dir} and an earlier source directory"
                 )
     for key, value in dsl_npcs.items():
         if isinstance(value, dict):
@@ -296,8 +296,11 @@ def main() -> int:
         creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS,
     )
     _merge_npc_declarations(dsl_classes, dsl_npcs)
+    # source/world/*.py: world content tied to no class or NPC (lfg_exclude()) - same loader, merged in.
+    dsl_world = dsl_registry.load_classes_dir(SOURCE_DIR / "world", ids_cfg=ids_cfg)
+    _merge_npc_declarations(dsl_classes, dsl_world, "source/world/")
     n_dsl = sum(len(v) for v in dsl_classes.values())
-    progress(f"loaded source/classes/*.py + source/npcs/*.py DSL ({n_dsl} entries)")
+    progress(f"loaded source/classes/*.py + source/npcs/*.py + source/world/*.py DSL ({n_dsl} entries)")
     _merge_dsl_sources(spell_entries, talents, dsl_classes)
     if n_dsl:
         creature_counts = {
@@ -577,8 +580,15 @@ def main() -> int:
     )
     if category_base_error:
         category_errors.append(category_base_error)
-    if tooltip_errors or bonus_errors or category_errors:
-        for error in tooltip_errors + bonus_errors + category_errors:
+    lfg_dungeons = (
+        state.load_stock_rows(dbcfmt.LFGDUNGEONS)
+        if (BASE_DBC_DIR / dbcfmt.LFGDUNGEONS.dbc_filename).is_file() else None
+    )
+    lfg_errors, lfg_notes = lint.check_lfg_exclusions(dsl_classes["lfg_disables"], lfg_dungeons)
+    for note in lfg_notes:
+        print(f"note: {note}")
+    if tooltip_errors or bonus_errors or category_errors or lfg_errors:
+        for error in tooltip_errors + bonus_errors + category_errors + lfg_errors:
             print(f"ERROR: {error}")
         return 1
     client_spell_resolved = resolve.resolve_rows(

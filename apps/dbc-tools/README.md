@@ -380,6 +380,26 @@ the client only for spells with `custom_attr` 0x10000000 (FORCE_SEND_CATEGORY_CO
 client's sweep relies on `Spell.dbc` `Category`/`CategoryRecoveryTime` plus this row. Still check a
 sibling's sweep in-game, not only `.cooldown` (which reads server state).
 
+### Keeping a dungeon out of the dungeon finder
+
+`source/world/lfg.py` declares world content that belongs to no class (`source/world/` is loaded
+like `source/npcs/`):
+
+```python
+from lib.dsl.registry import lfg_exclude
+
+lfg_exclude(230, "Blackrock Depths")  # Map.dbc id, dungeon name
+```
+
+Each becomes a `disables` row `(8, <map>, 1, '', '', <name>)` (`DISABLE_TYPE_LFG_MAP`). The dungeon is then
+locked for everyone: it drops out of the random pool and the "Specific Dungeons" list, and stays
+enterable on foot. It applies per map, so every finder entry on that map goes with it: all wings,
+normal and heroic, and seasonal bosses (BRD takes Coren Direbrew). `generate.py` prints a `note:` per
+exclusion listing exactly what it covers, and stops with an error for a map no dungeon/raid/heroic
+finder entry uses. Deleting a line re-enables the dungeon (the prune pass DELETEs the row, the last one
+included). Live on worldserver start or `.reload disables`. Needs the stock
+`var/extractors/dbc/LFGDungeons.dbc` (`DBFilesClient/LFGDungeons.dbc` from `patch-enUS-3.MPQ`, flattened).
+
 ### Declaring a creature (T1)
 
 A `source/classes/*.py` file can also declare a rework's own NPC - `creature_template` +
