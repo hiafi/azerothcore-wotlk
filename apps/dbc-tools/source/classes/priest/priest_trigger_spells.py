@@ -5,7 +5,7 @@ Split from a single source/classes/priest.py via split_class_file.py (.agents/pl
 """
 
 from lib.dsl import RANGE_SELF, ApplyAura, AuraType, DispelType, Effect, EffectType, Mechanic, School, SpellModOp
-from lib.dsl.registry import bonus_coefficients, linked_spell, procs_on, scripted_by, spell, unbind_bonus_coefficients
+from lib.dsl.registry import bonus_coefficients, linked_spell, procs_on, scripted_by, spell, unbind_bonus_coefficients, unbind_script
 from . import _masks
 
 # Proc flags/phases used by the procs_on() calls below - src/server/game/Spells/SpellMgr.h's
@@ -2897,6 +2897,9 @@ misery_33193 = spell(
 )
 # misery_33196/33197/33198 (the old PROC_TRIGGER_SPELL targets) are now orphaned. Left declared,
 # unreferenced, per repo convention (don't delete pulled data).
+# Stock spell_gen_proc_on_victim (-33191) cast eff1's PROC_TRIGGER_SPELL trigger on the victim. With
+# eff1 removed its handler has no effect to bind to and only logged a boot warning per rank.
+unbind_script(-misery_33191.id, 'spell_gen_proc_on_victim')
 
 
 # Priest Discipline rework (docs/reworks/priest-disc-rework.md (4,0)): reflected fraction retuned
@@ -5291,6 +5294,10 @@ renewed_hope_63944 = spell(
     ),
     raw_overrides={'AttributesEx2': 4, 'AttributesEx6': 67108864, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 6144, 'EffectSpellClassMaskA_2': 65536, 'EffectSpellClassMaskB_1': 1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172, 'Description_Lang_enUS': 'Increases the critical effect chance of your Flash Heal, Greater Heal and Penance (Heal) spells on targets afflicted by the Weakened Soul effect, and you have a chance to reduce damage taken by your Power Word: Shield target.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Reduces damage taken by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 6, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
+# Stock spell_gen_damage_reduction_aura cast 68066 (a flat -3%, shared with Blessing of Sanctuary/
+# Vigilance) from 63944's stock DUMMY eff1. The reduction is now 63944's own MOD_DAMAGE_PERCENT_TAKEN
+# (1%, 200168 2%), so that handler is retired; 20911/25899 keep their stock binding.
+unbind_script(renewed_hope_63944, 'spell_gen_damage_reduction_aura')
 
 
 renewed_hope_target_debuff_200168 = spell(

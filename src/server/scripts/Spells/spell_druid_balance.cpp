@@ -668,8 +668,11 @@ class spell_dru_astral_surge_sp : public AuraScript
     {
         DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_dru_astral_surge_sp::CalculateDamageAmount, EFFECT_0,
                                                       SPELL_AURA_MOD_DAMAGE_DONE);
-        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_dru_astral_surge_sp::CalculateHealingAmount, EFFECT_1,
-                                                      SPELL_AURA_MOD_HEALING_DONE);
+        // Only Balance of Power has a healing effect. Astral Surge is Arcane/Nature damage only
+        // (druid-balance.md "Astral Surge": "Nature heals are excluded").
+        if (m_scriptSpellId == Druid::SPELL_BALANCE_OF_POWER_BUFF)
+            DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_dru_astral_surge_sp::CalculateHealingAmount, EFFECT_1,
+                                                          SPELL_AURA_MOD_HEALING_DONE);
     }
 };
 

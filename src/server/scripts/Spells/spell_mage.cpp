@@ -1629,19 +1629,15 @@ public:
 };
 
 // -11113 - Blast Wave
+// Custom: Fire Mage rework sec 3.2 removed Blast Wave's knockback (stock EFFECT_2), so the stock
+// Glyph of Blast Wave handler that cancelled it had nothing to bind to and was dropped.
 class spell_mage_blast_wave : public SpellScript
 {
     PrepareSpellScript(spell_mage_blast_wave);
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_MAGE_GLYPH_OF_BLAST_WAVE, SPELL_MAGE_KINDLING });
-    }
-
-    void HandleKnockBack(SpellEffIndex effIndex)
-    {
-        if (GetCaster()->HasAura(SPELL_MAGE_GLYPH_OF_BLAST_WAVE))
-            PreventHitDefaultEffect(effIndex);
+        return ValidateSpellInfo({ SPELL_MAGE_KINDLING });
     }
 
     // Fire Mage rework sec 4.2: "Blast Wave consumes all stacks on cast regardless of how many
@@ -1654,7 +1650,6 @@ class spell_mage_blast_wave : public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_mage_blast_wave::HandleKnockBack, EFFECT_2, SPELL_EFFECT_KNOCK_BACK);
         AfterCast += SpellCastFn(spell_mage_blast_wave::ConsumeKindling);
     }
 };
@@ -2371,7 +2366,9 @@ class spell_mage_burnout_capstone : public AuraScript
     void Register() override
     {
         DoCheckProc += AuraCheckProcFn(spell_mage_burnout_capstone::CheckProc);
-        OnEffectProc += AuraEffectProcFn(spell_mage_burnout_capstone::HandleProc, EFFECT_0, SPELL_AURA_ADD_PCT_MODIFIER);
+        // EFFECT_0 is a DUMMY since warlock-rework A1/A2 moved the crit-damage SpellMod onto the
+        // hidden passives 200686-200688.
+        OnEffectProc += AuraEffectProcFn(spell_mage_burnout_capstone::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
     }
 };
 
@@ -4274,9 +4271,9 @@ class spell_mage_arcane_overload : public SpellScript
             caster->ModifyPower(POWER_MANA, -_manaSpent);
     }
 
-    // "...and nearby enemies" - a simplification from "around the target" to "around the caster"
-    // (apps/dbc-tools' 200079 effect2, TARGET_UNIT_SRC_AREA_ENEMY/10yd - flagged for Phase 4
-    // playtest). The primary target is excluded here so it isn't hit twice.
+    // "...and nearby enemies" - 10 yd around the target (apps/dbc-tools' 200079 effect2,
+    // TARGET_DEST_TARGET_ANY + TARGET_UNIT_DEST_AREA_ENEMY). The primary target is excluded here
+    // so EFFECT_0 and EFFECT_1 don't both hit it.
     void RemovePrimaryTarget(std::list<WorldObject*>& targets)
     {
         if (Unit* primary = GetExplTargetUnit())
@@ -4321,7 +4318,7 @@ class spell_mage_arcane_overload : public SpellScript
     void Register() override
     {
         BeforeCast += SpellCastFn(spell_mage_arcane_overload::HandleCast);
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_mage_arcane_overload::RemovePrimaryTarget, EFFECT_1, TARGET_UNIT_SRC_AREA_ENEMY);
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_mage_arcane_overload::RemovePrimaryTarget, EFFECT_1, TARGET_UNIT_DEST_AREA_ENEMY);
         OnEffectHitTarget += SpellEffectFn(spell_mage_arcane_overload::HandleHit, EFFECT_0, SPELL_EFFECT_DUMMY);
         OnEffectHitTarget += SpellEffectFn(spell_mage_arcane_overload::HandleHit, EFFECT_1, SPELL_EFFECT_DUMMY);
         AfterCast += SpellCastFn(spell_mage_arcane_overload::HandleAfterCast);
