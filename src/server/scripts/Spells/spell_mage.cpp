@@ -1629,19 +1629,15 @@ public:
 };
 
 // -11113 - Blast Wave
+// Custom: Fire Mage rework sec 3.2 removed Blast Wave's knockback (stock EFFECT_2), so the stock
+// Glyph of Blast Wave handler that cancelled it had nothing to bind to and was dropped.
 class spell_mage_blast_wave : public SpellScript
 {
     PrepareSpellScript(spell_mage_blast_wave);
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_MAGE_GLYPH_OF_BLAST_WAVE, SPELL_MAGE_KINDLING });
-    }
-
-    void HandleKnockBack(SpellEffIndex effIndex)
-    {
-        if (GetCaster()->HasAura(SPELL_MAGE_GLYPH_OF_BLAST_WAVE))
-            PreventHitDefaultEffect(effIndex);
+        return ValidateSpellInfo({ SPELL_MAGE_KINDLING });
     }
 
     // Fire Mage rework sec 4.2: "Blast Wave consumes all stacks on cast regardless of how many
@@ -1654,7 +1650,6 @@ class spell_mage_blast_wave : public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_mage_blast_wave::HandleKnockBack, EFFECT_2, SPELL_EFFECT_KNOCK_BACK);
         AfterCast += SpellCastFn(spell_mage_blast_wave::ConsumeKindling);
     }
 };
