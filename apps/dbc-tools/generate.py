@@ -40,7 +40,8 @@ TOOL_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOL_ROOT))
 
 from lib import build, dbcfile, dbcfmt, lint, mpq_writer, patch_out, resolve, source, sql_out, state  # noqa: E402
-from lib import header_gen, potency_sheet, spell_tables, superseded_ranks, trainer_pricing, trainer_state  # noqa: E402
+from lib import gcd_haste, header_gen, potency_sheet, spell_tables, superseded_ranks  # noqa: E402
+from lib import trainer_pricing, trainer_state  # noqa: E402
 from bootstrap import load_spell_ranks_chains  # noqa: E402
 from lib.dsl import registry as dsl_registry  # noqa: E402
 
@@ -168,6 +169,36 @@ def _drop_unchanged_blocks(
         else:
             n_dropped += 1
     return filtered, n_dropped
+
+
+def _gcd_haste_entries(
+    spell_entries: list[dict], talents: dict, dsl_spells: list[dict], superseded: dict[int, int],
+    trainer_taught: set[int], existing_spells: dict[int, dict], existing_talents: dict[int, dict],
+    existing_talenttabs: dict[int, dict], existing_skilllineabilities: dict[int, dict],
+    existing_secondary: dict[str, list[dict]], ids_cfg: dict,
+) -> tuple[list[dict], gcd_haste.Result]:
+    """melee-haste-gcd T1: the per-class GCD-haste aura entries, computed from the merged spell data (base
+    DBC + promoted migrations, with this run's source rows laid over them). See lib/gcd_haste.py. Built with
+    a throwaway ReuseContext so no secondary-table row is minted for the comparison alone."""
+    policy = gcd_haste.load_policy()
+    scratch = ReuseContext(existing_secondary, ids_cfg)
+    spells = gcd_haste.merged_spell_rows(
+        existing_spells, (build.build_spell_row(e, scratch) for e in spell_entries),
+    )
+    abilities = {**existing_skilllineabilities}
+    abilities.update({int(r["ID"]): r for r in map(build.build_skilllineability_row, talents["skill_line_abilities"])})
+    talent_rows = {**existing_talents}
+    talent_rows.update({int(r["ID"]): r for r in map(build.build_talent_row, talents["talents"])})
+    tab_rows = {**existing_talenttabs}
+    tab_rows.update({int(r["ID"]): r for r in map(build.build_talenttab_row, talents["tabs"])})
+    learnable = gcd_haste.learnable_spell_ids(
+        abilities.values(), talent_rows.values(), gcd_haste.dsl_player_castable_ids(dsl_spells), policy,
+        gcd_haste.pet_talent_tab_ids(tab_rows.values()), set(superseded) - trainer_taught,
+    )
+    result = gcd_haste.compute(spells, learnable, policy, set(superseded) - trainer_taught)
+    if result.errors:
+        return [], result
+    return gcd_haste.aura_entries(result, policy), result
 
 
 def _merge_npc_declarations(dsl_classes: dict, dsl_npcs: dict, source_dir: str = "source/npcs/") -> None:
@@ -451,6 +482,47 @@ def main() -> int:
             f"extract DBFilesClient/{dbcfmt.CREATURESPELLDATA.dbc_filename} from the client's patch-enUS.MPQ "
             f"into that directory (see .agents/docs/systems/dbc-tools.md)"
         )
+
+    # melee-haste-gcd T1: one hidden GCD-haste aura per class family, its classmasks computed from the merged
+    # spell data (lib/gcd_haste.py, policy in source/gcd_haste.py). Appended before both resolve passes, so
+    # the rows reach the SQL and the client patch like declared ones. A bit shared with a spell the core
+    # already hastes stops the run.
+    # What a player can still be taught: replayed trainer_spell rows of a reachable trainer (minus untrain()
+    # removals) plus trained_by() declarations. A superseded rank in here is still learnable, so it is not
+    # left out of the masks.
+    removed_grants = {(int(r["TrainerId"]), int(r["SpellId"])) for r in dsl_classes["trainer_removals"]}
+    live_grants = [key for key in trainer_pricing.replay_trainer_spells() if key not in removed_grants]
+    declared_grants = {int(r["SpellId"]) for r in dsl_classes["trainer_spells"]}
+    trainer_reachable = lambda trainer_id: not trainer_index.trainer_problems(trainer_id)  # noqa: E731
+    trainer_taught = declared_grants | {spell for trainer, spell in live_grants if trainer_reachable(trainer)}
+    try:
+        gcd_entries, gcd_result = _gcd_haste_entries(
+            spell_entries, talents, dsl_classes["spells"], rank_overrides.superseded, trainer_taught, existing_spells,
+            existing_talents, existing_talenttabs, existing_skilllineabilities, existing_secondary, ids_cfg,
+        )
+    except gcd_haste.GcdHasteError as error:
+        print(f"ERROR: gcd haste: {error}")
+        return 1
+    for line in gcd_haste.report_lines(gcd_result):
+        print(line)
+    for warning in gcd_result.warnings:
+        print(f"WARNING: gcd haste: {warning}")
+    # The masks leave out NOT_CASTABLE spells (and superseded ranks nobody teaches) on the premise that no
+    # player can learn them: check that against the replayed trainer_spell rows and trained_by() declarations.
+    gcd_result.errors.extend(gcd_haste.untrainable_errors(
+        gcd_result.assumed_untrainable, live_grants, trainer_reachable, declared_grants,
+    ))
+    if gcd_result.errors:
+        for error in gcd_result.errors:
+            print(f"ERROR: gcd haste: {error}")
+        return 1
+    taken = {e["id"] for e in spell_entries}
+    for entry in gcd_entries:
+        if entry["id"] in taken:
+            print(f"ERROR: gcd haste: aura spell ID {entry['id']} is already declared in source/")
+            return 1
+    spell_entries.extend(gcd_entries)
+    progress("computed GCD-haste auras")
 
     # Reconcile source/ against what's actually live: an entry is either new
     # (id inside the reserved block), a deliberate edit to something that
