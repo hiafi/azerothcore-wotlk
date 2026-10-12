@@ -2366,7 +2366,9 @@ class spell_mage_burnout_capstone : public AuraScript
     void Register() override
     {
         DoCheckProc += AuraCheckProcFn(spell_mage_burnout_capstone::CheckProc);
-        OnEffectProc += AuraEffectProcFn(spell_mage_burnout_capstone::HandleProc, EFFECT_0, SPELL_AURA_ADD_PCT_MODIFIER);
+        // EFFECT_0 is a DUMMY since warlock-rework A1/A2 moved the crit-damage SpellMod onto the
+        // hidden passives 200686-200688.
+        OnEffectProc += AuraEffectProcFn(spell_mage_burnout_capstone::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
     }
 };
 
