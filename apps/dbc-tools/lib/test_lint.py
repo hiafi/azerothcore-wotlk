@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import sys
 import unittest
+from unittest import mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -380,6 +381,36 @@ class CheckClassmaskScopingTest(unittest.TestCase):
         stock = {12488: _spellmod_row(12488, [(112, 989)], A_1=128)}
         row = _spellmod_row(12488, [(112, 989), (108, 14)], A_1=128)
         self.assertEqual(len(self._warn(row, stock)), 1)
+
+    # melee-haste-gcd T4-FIX: Predatory Strikes' marker was ADD_FLAT_MODIFIER DAMAGE (op 0) with no
+    # classmask anywhere on the row, leaking +375 flat damage onto every druid hit.
+    def test_all_zero_flat_damage_mod_on_custom_row_warns(self):
+        row = _spellmod_row(16975, [(107, 14), (107, 0)], A_1=1)
+        warnings = self._warn(row)
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("effect 2's SpellMod", warnings[0])
+        self.assertIn("EVERY spell of the family", warnings[0])
+
+    def test_all_zero_pct_mod_on_row_with_no_masks_at_all_warns(self):
+        row = _spellmod_row(200999, [(108, 0)])
+        self.assertEqual(len(self._warn(row)), 1)
+
+    def test_marker_bit_damage_mod_is_clean(self):
+        row = _spellmod_row(16975, [(107, 14), (107, 0)], A_1=1, B_3=0x4000)
+        self.assertEqual(self._warn(row), [])
+
+    def test_stock_identical_all_zero_damage_mod_is_exempt(self):
+        row = _spellmod_row(1234, [(107, 0)])
+        self.assertEqual(self._warn(row, {1234: dict(row)}), [])
+
+    def test_allow_listed_family_wide_mod_is_clean(self):
+        row = _spellmod_row(424242, [(107, 0)])
+        with mock.patch.object(lint, "_FAMILY_WIDE_ALLOWED", {(424242, 1)}):
+            self.assertEqual(self._warn(row), [])
+
+    def test_scope_required_op_is_not_double_reported(self):
+        row = _spellmod_row(200075, [(108, 14)], A_1=0)
+        self.assertEqual(len(self._warn(row)), 1)
 
 
 if __name__ == "__main__":

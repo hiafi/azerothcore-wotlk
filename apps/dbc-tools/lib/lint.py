@@ -47,6 +47,15 @@ _SCOPE_REQUIRED_OPS = {
     24,  # SPELLMOD_BONUS_MULTIPLIER
     27,  # SPELLMOD_VALUE_MULTIPLIER
 }
+# (spell id, 1-based effect) pairs of custom/hand-edited SpellMods that are *deliberately* family-wide
+# (all-zero classmask = every spell of the SpellFamilyName). Add an entry, with the reason, only after
+# confirming the leak is the intent. See melee-haste-gcd T4-FIX (Predatory Strikes).
+_FAMILY_WIDE_ALLOWED: set[tuple[int, int]] = {
+    # Empowering Frostbolt 200023/200024 effect 1: the crit damage bonus of ALL your spells is meant to be
+    # increased (docs/reworks/frost-mage-rework.md:199, "the critical strike damage bonus of your spells").
+    (200023, 1),
+    (200024, 1),
+}
 _SPELLMOD_AURAS = {107, 108}  # SPELL_AURA_ADD_FLAT_MODIFIER, SPELL_AURA_ADD_PCT_MODIFIER
 _LETTERS = ("A", "B", "C")
 _MASK_COLUMNS = tuple(f"EffectSpellClassMask{letter}_{n}" for letter in _LETTERS for n in (1, 2, 3))
@@ -97,27 +106,51 @@ def check_classmask_scoping(
             tuple(row.get(f"EffectSpellClassMask{letter}_{n}", 0) or 0 for n in (1, 2, 3))
             for letter in _LETTERS
         ]
-        if not any(any(word) for word in masks):
-            continue  # nothing on this row is scoped at all - not this bug
+        warned_effects: set[int] = set()
+        if any(any(word) for word in masks):
+            _check_scope_required(entry, row, masks, stock, stock_masks_match, warnings, warned_effects)
         for i in range(3):
             aura = row.get(f"EffectAura_{i + 1}", 0)
             misc = row.get(f"EffectMiscValue_{i + 1}", 0)
-            if not (aura in _SPELLMOD_AURAS and misc in _SCOPE_REQUIRED_OPS and not any(masks[i])):
+            if aura not in _SPELLMOD_AURAS or any(masks[i]) or i in warned_effects:
+                continue
+            if (row["ID"], i + 1) in _FAMILY_WIDE_ALLOWED:
                 continue
             if stock_masks_match and (
                 stock.get(f"EffectAura_{i + 1}", 0) == aura and stock.get(f"EffectMiscValue_{i + 1}", 0) == misc
             ):
                 continue  # identical to the stock client row - real Blizzard data
             warnings.append(
-                f"spell {row['ID']} ({entry.get('name', '?')}): effect {i + 1}'s "
-                f"SpellMod (EffectAura_{i + 1}={aura}, EffectMiscValue_{i + 1}={misc}) has an "
-                f"all-zero classmask (letter {_LETTERS[i]}: {masks[i]}) even though this row "
-                f"sets a classmask elsewhere ({masks}) - probably "
-                f"EffectSpellClassMask{_LETTERS[i]}_* needs the value that's on a different "
-                f"letter. All-zero here means the engine applies it to every matching spell in "
-                f"the family, not just the intended one."
+                f"spell {row['ID']} ({entry.get('name', '?')}): effect {i + 1}'s SpellMod "
+                f"(EffectAura_{i + 1}={aura}, EffectMiscValue_{i + 1}={misc}) has an all-zero classmask "
+                f"on a custom/hand-edited row, so it applies to EVERY spell of the family "
+                f"(SpellInfo::IsAffected). Scope it, use a marker bit nothing matches "
+                f"(druid _masks.MARKER_NOTHING) if it is only a data marker, or add it to "
+                f"lint._FAMILY_WIDE_ALLOWED if family-wide is intended."
             )
     return warnings
+
+
+def _check_scope_required(entry, row, masks, stock, stock_masks_match, warnings, warned_effects) -> None:
+    for i in range(3):
+        aura = row.get(f"EffectAura_{i + 1}", 0)
+        misc = row.get(f"EffectMiscValue_{i + 1}", 0)
+        if not (aura in _SPELLMOD_AURAS and misc in _SCOPE_REQUIRED_OPS and not any(masks[i])):
+            continue
+        if stock_masks_match and (
+            stock.get(f"EffectAura_{i + 1}", 0) == aura and stock.get(f"EffectMiscValue_{i + 1}", 0) == misc
+        ):
+            continue  # identical to the stock client row - real Blizzard data
+        warned_effects.add(i)
+        warnings.append(
+            f"spell {row['ID']} ({entry.get('name', '?')}): effect {i + 1}'s "
+            f"SpellMod (EffectAura_{i + 1}={aura}, EffectMiscValue_{i + 1}={misc}) has an "
+            f"all-zero classmask (letter {_LETTERS[i]}: {masks[i]}) even though this row "
+            f"sets a classmask elsewhere ({masks}) - probably "
+            f"EffectSpellClassMask{_LETTERS[i]}_* needs the value that's on a different "
+            f"letter. All-zero here means the engine applies it to every matching spell in "
+            f"the family, not just the intended one."
+        )
 
 
 def check_missing_skill_line_ability(

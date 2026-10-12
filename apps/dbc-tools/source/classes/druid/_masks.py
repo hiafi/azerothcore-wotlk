@@ -76,6 +76,12 @@ YSERAS_GIFT = 0x80000000  # bit 31 - Ysera's Gift heal 200569
 # by mask (RESTO §0.1/§2.4).
 # Flourish (200564) gets NO bit at all - no SpellMod ever needs to scope to it (RESTO §0.1).
 
+# MARKER_NOTHING: dword-3 bit 14, the one family-7 bit no spell carries (released when the Eclipse buffs'
+# masks were cleared; ECLIPSE_BUFF above is now unused). Put it in the classmask of an ADD_FLAT/PCT_MODIFIER
+# that is only a data marker read in C++ (Predatory Strikes eff1) so SpellInfo::IsAffected matches nothing
+# (an all-zero mask means every spell of the family). It must NEVER go on a real spell or a real SpellMod.
+MARKER_NOTHING = 0x4000
+
 # Every free druid dword-3 bit is now allocated (PLAN §4.4). Dword 1 bit 26 (0x4000000, NPC-only
 # 9033) is the only remaining reserve, a last resort.
 
