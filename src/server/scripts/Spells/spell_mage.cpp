@@ -4270,9 +4270,9 @@ class spell_mage_arcane_overload : public SpellScript
             caster->ModifyPower(POWER_MANA, -_manaSpent);
     }
 
-    // "...and nearby enemies" - a simplification from "around the target" to "around the caster"
-    // (apps/dbc-tools' 200079 effect2, TARGET_UNIT_SRC_AREA_ENEMY/10yd - flagged for Phase 4
-    // playtest). The primary target is excluded here so it isn't hit twice.
+    // "...and nearby enemies" - 10 yd around the target (apps/dbc-tools' 200079 effect2,
+    // TARGET_DEST_TARGET_ANY + TARGET_UNIT_DEST_AREA_ENEMY). The primary target is excluded here
+    // so EFFECT_0 and EFFECT_1 don't both hit it.
     void RemovePrimaryTarget(std::list<WorldObject*>& targets)
     {
         if (Unit* primary = GetExplTargetUnit())
@@ -4317,7 +4317,7 @@ class spell_mage_arcane_overload : public SpellScript
     void Register() override
     {
         BeforeCast += SpellCastFn(spell_mage_arcane_overload::HandleCast);
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_mage_arcane_overload::RemovePrimaryTarget, EFFECT_1, TARGET_UNIT_SRC_AREA_ENEMY);
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_mage_arcane_overload::RemovePrimaryTarget, EFFECT_1, TARGET_UNIT_DEST_AREA_ENEMY);
         OnEffectHitTarget += SpellEffectFn(spell_mage_arcane_overload::HandleHit, EFFECT_0, SPELL_EFFECT_DUMMY);
         OnEffectHitTarget += SpellEffectFn(spell_mage_arcane_overload::HandleHit, EFFECT_1, SPELL_EFFECT_DUMMY);
         AfterCast += SpellCastFn(spell_mage_arcane_overload::HandleAfterCast);
