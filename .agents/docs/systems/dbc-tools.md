@@ -453,8 +453,8 @@ unchanged reference copies.
 ## GCD-haste auras (melee-haste-gcd T1)
 
 `source/gcd_haste.py` (policy) + `lib/gcd_haste.py` (applied on every `generate.py` run, call site next to the
-superseded-ranks pass) emit one hidden passive per class family, `Haste: Global Cooldown`, whose PCT
-`SPELLMOD_GLOBAL_COOLDOWN` classmasks cover the 1.5s GCD spells the core's haste branch skips (DmgClass
+superseded-ranks pass) emit one hidden passive per class family, `Haste: Global Cooldown`, whose FLAT
+`SPELLMOD_GLOBAL_COOLDOWN` (aura 107, ms; the server ignores pct GCD mods) classmasks cover the 1.5s GCD spells the core's haste branch skips (DmgClass
 MELEE/RANGED, `USES_RANGED_SLOT`, `IS_ABILITY`). Plan: `.agents/plans/melee-haste-gcd/`.
 
 - Masks are computed from the merged spell data, never typed. Effect 0 = melee-haste mask (`EffectSpellClassMaskA_n`),

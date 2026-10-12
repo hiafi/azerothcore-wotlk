@@ -55,10 +55,10 @@ NOT_CASTABLE: dict[int, str] = {
 # Periodic-dummy amplitude (ms) of effect 2, the tick T2's AuraScript recomputes the haste amount on.
 TICK_MS = 500
 
-# Amount (percent) of the mod effects. This is a T1 TEST VALUE, so the Warrior aura can be `.learn`ed to
-# check that the client honours a pct GCD mod on a melee ability. T2's CalcAmount hook overrides it at
-# runtime, and T2 will set it back to 0.
-PLACEHOLDER_PCT = -33
+# Amount (ms, flat) of the mod effects in the DBC. The runtime AuraScript (`spell_custom_haste_gcd`,
+# src/server/scripts/Custom/custom_haste_gcd.cpp) owns the amount; 0 only matters before its first
+# calculation.
+PLACEHOLDER_MS = 0
 
 # Pet skill lines (CreatureFamily.dbc skillLine[0]/[1], all 40 families). A SkillLineAbility row on one is a
 # pet ability: the pet casts it, and the player's spell mods never apply, so it is not a candidate.

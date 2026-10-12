@@ -409,19 +409,6 @@ def main() -> int:
     for warning in lint.check_creature_without_model(dsl_classes["creature_templates"], has_model):
         print(f"WARNING: {warning}")
     trainer_spell_rows = _priced_trainer_spells(dsl_classes, trainer_index)
-    spell_table_blocks = spell_tables.render_blocks(spell_table_index, dsl_classes)
-    # Prune: rows an *earlier* run of this script emitted that source/classes/*
-    # no longer declares (a removed scripted_by()/procs_on()/bonus_coefficients()).
-    # render_blocks above only ever speaks about rows still declared, so without
-    # this an orphan stays live in the world DB forever - see
-    # .agents/plans/dbc-tools-prune-pass/dbc-tools-prune-pass.PLAN.md for why
-    # provenance is "did a generated file emit it", not "is it one of our spell ids".
-    if "--no-prune" in sys.argv:
-        prune_blocks, prune_report = [], ["prune: skipped (--no-prune)"]
-    else:
-        prune_blocks, prune_report = spell_tables.render_prune_blocks(spell_table_index, dsl_classes)
-    for line in prune_report:
-        print(line)
     # Declared removals (unbind_script/unlink_spell/leave_spell_group/untrain/remove_spell_proc/
     # unbind_bonus_coefficients) - a row this tool
     # never emitted itself (stock data, or an older hand-written migration), so the prune pass
@@ -522,6 +509,22 @@ def main() -> int:
             print(f"ERROR: gcd haste: aura spell ID {entry['id']} is already declared in source/")
             return 1
     spell_entries.extend(gcd_entries)
+    # Bind the runtime AuraScript to every generated aura like any scripted_by() binding, then render the
+    # spell-table blocks once, so the new rows are diffed and pruned with the rest.
+    dsl_classes["spell_script_names"].extend(gcd_haste.script_rows(gcd_entries))
+    spell_table_blocks = spell_tables.render_blocks(spell_table_index, dsl_classes)
+    # Prune: rows an *earlier* run of this script emitted that source/classes/*
+    # no longer declares (a removed scripted_by()/procs_on()/bonus_coefficients()).
+    # render_blocks above only ever speaks about rows still declared, so without
+    # this an orphan stays live in the world DB forever - see
+    # .agents/plans/dbc-tools-prune-pass/dbc-tools-prune-pass.PLAN.md for why
+    # provenance is "did a generated file emit it", not "is it one of our spell ids".
+    if "--no-prune" in sys.argv:
+        prune_blocks, prune_report = [], ["prune: skipped (--no-prune)"]
+    else:
+        prune_blocks, prune_report = spell_tables.render_prune_blocks(spell_table_index, dsl_classes)
+    for line in prune_report:
+        print(line)
     progress("computed GCD-haste auras")
 
     # Reconcile source/ against what's actually live: an entry is either new

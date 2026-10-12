@@ -29,7 +29,7 @@ MELEE_CLASS, RANGED_CLASS, MAGIC_CLASS = 2, 3, 1
 def make_policy(**overrides) -> gcd_haste.Policy:
     args = dict(
         aura_ids={WARRIOR: 900000, PALADIN: 900001, HUNTER: 900002},
-        exclude={}, tick_ms=500, placeholder_pct=-33, pet_skill_lines=(),
+        exclude={}, tick_ms=500, placeholder_ms=-495, pet_skill_lines=(),
     )
     args.update(overrides)
     return gcd_haste.Policy(**args)
@@ -294,7 +294,7 @@ class AuraEntryTests(unittest.TestCase):
         self.assertEqual([row[f"EffectSpellClassMaskB_{n}"] for n in (1, 2, 3)], [0x10, 0x20, 0x40])
         self.assertEqual([row[f"EffectSpellClassMaskC_{n}"] for n in (1, 2, 3)], [0, 0, 0])
         self.assertEqual([row[f"Effect_{n}"] for n in (1, 2, 3)], [6, 6, 6])
-        self.assertEqual([row[f"EffectAura_{n}"] for n in (1, 2, 3)], [108, 108, 226])
+        self.assertEqual([row[f"EffectAura_{n}"] for n in (1, 2, 3)], [107, 107, 226])
         self.assertEqual([row[f"EffectMiscValue_{n}"] for n in (1, 2)], [21, 21])
         self.assertEqual(row["EffectAuraPeriod_3"], 500)
         self.assertEqual(row["SpellClassSet"], HUNTER)
@@ -304,19 +304,19 @@ class AuraEntryTests(unittest.TestCase):
         row = self.build_row(entry)
         self.assertEqual((row["Effect_2"], row["EffectAura_2"], row["EffectMiscValue_2"]), (0, 0, 0))
         self.assertEqual([row[f"EffectSpellClassMaskB_{n}"] for n in (1, 2, 3)], [0, 0, 0])
-        self.assertEqual(row["EffectAura_1"], 108)
+        self.assertEqual(row["EffectAura_1"], 107)
         self.assertEqual(row["EffectAura_3"], 226)
 
     def test_empty_melee_mask_leaves_effect_0_out_entirely(self):
         entry = self.entry_for([spell(1, HUNTER, (0x1, 0, 0), dmg_class=RANGED_CLASS)], HUNTER)
         row = self.build_row(entry)
         self.assertEqual((row["Effect_1"], row["EffectAura_1"]), (0, 0))
-        self.assertEqual(row["EffectAura_2"], 108)
+        self.assertEqual(row["EffectAura_2"], 107)
         self.assertEqual(row["EffectSpellClassMaskB_1"], 0x1)
 
     def test_placeholder_amount_is_stored_as_basepoints_minus_one(self):
         entry = self.entry_for([spell(1, WARRIOR, (0x1, 0, 0), dmg_class=MELEE_CLASS, attributes=ABILITY)], WARRIOR)
-        self.assertEqual(self.build_row(entry)["EffectBasePoints_1"], -34)
+        self.assertEqual(self.build_row(entry)["EffectBasePoints_1"], -496)  # test policy uses -495
 
     def test_row_is_a_hidden_passive_with_no_cost_cast_time_cooldown_or_gcd(self):
         entry = self.entry_for([spell(1, WARRIOR, (0x1, 0, 0), dmg_class=MELEE_CLASS, attributes=ABILITY)], WARRIOR)
@@ -357,11 +357,23 @@ class AuraEntryTests(unittest.TestCase):
         )
         self.assertEqual([e["id"] for e in gcd_haste.aura_entries(result, policy)], [900000])
 
+    def test_every_generated_aura_is_bound_to_the_runtime_script(self):
+        policy = make_policy()
+        result = run(
+            [spell(1, WARRIOR, (0x1, 0, 0), attributes=ABILITY), spell(2, PALADIN, (0x1, 0, 0), attributes=ABILITY)],
+            policy=policy,
+        )
+        rows = gcd_haste.script_rows(gcd_haste.aura_entries(result, policy))
+        self.assertEqual(
+            [(r["spell_id"], r["ScriptName"]) for r in rows],
+            [(900000, "spell_custom_haste_gcd"), (900001, "spell_custom_haste_gcd")],
+        )
+
 
 class PolicyTests(unittest.TestCase):
     def test_the_real_policy_file_loads(self):
         policy = gcd_haste.load_policy()
-        self.assertEqual(policy.placeholder_pct, -33)
+        self.assertEqual(policy.placeholder_ms, 0)
         self.assertEqual(policy.tick_ms, 500)
         self.assertEqual(len(set(policy.aura_ids.values())), len(policy.aura_ids))
 
