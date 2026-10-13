@@ -449,3 +449,31 @@ A "pulled from existing data" note proves nothing: Improved Blizzard and Arcane 
 hand edits, which hid two wildcard SpellMods until 2026-10-06. When you edit a pulled row, replace
 the note with what you changed. The lint only sees rows `generate.py` emits (new or edited), not
 unchanged reference copies.
+
+## GCD-haste auras (melee-haste-gcd T1)
+
+`source/gcd_haste.py` (policy) + `lib/gcd_haste.py` (applied on every `generate.py` run, call site next to the
+superseded-ranks pass) emit one hidden passive per class family, `Haste: Global Cooldown`, whose FLAT
+`SPELLMOD_GLOBAL_COOLDOWN` (aura 107, ms; the server ignores pct GCD mods) classmasks cover the 1.5s GCD spells the core's haste branch skips (DmgClass
+MELEE/RANGED, `USES_RANGED_SLOT`, `IS_ABILITY`). Plan: `.agents/plans/melee-haste-gcd/`.
+
+- Masks are computed from the merged spell data, never typed. Effect 0 = melee-haste mask (`EffectSpellClassMaskA_n`),
+  effect 1 = ranged-haste mask (`..B_n`), effect 2 = PERIODIC_DUMMY. An empty mask is left as *no effect*: an
+  all-zero classmask matches every spell in the family.
+- A bit shared with a spell the core already hastes stops the run (`ERROR: gcd haste: ...`). Resolve it in
+  `source/gcd_haste.py` with a reason: `EXCLUDE` (leave a live ability unhasted) or `NOT_CASTABLE` (a retired
+  spell the data still lists as learnable; dropped from both sides).
+- "Learnable" = SkillLineAbility row off the pet skill lines, rank of a non-pet-tab talent, or a DSL spell that
+  `looks_player_castable` accepts *and* is not a pet spell; minus superseded ranks. The DSL carries stock pet
+  spells as reference copies, so the heuristic alone would pull Hunter pet abilities in.
+- The server rewrites some `SpellFamilyFlags` at load (`SpellInfoCorrections.cpp`); `SERVER_FLAG_FIXES`/
+  `SERVER_FLAG_RULES` mirror them by hand and the check runs under both views. Re-check when that file changes.
+  Only flag rewrites are mirrored: other corrections were checked and do not change candidacy (e.g. Shattering
+  Throw 64382 loses `IS_ABILITY` at load but stays a candidate, its DmgClass being MELEE).
+- `NOT_CASTABLE` ids are left out of the check on the premise that no player can learn them. `generate.py`
+  enforces it: a live `trainer_spell` row of a reachable trainer, or a `trained_by()` declaration, stops the run
+  (`ERROR: gcd haste: ...`). A superseded rank that a reachable trainer still teaches (Swift Flight Form 40120)
+  stays learnable, so it is covered like any other candidate. A stale `EXCLUDE` id prints a
+  `WARNING: gcd haste: ...`.
+- A new family aura ID comes from `FAMILY_AURA_IDS` (201560-201566 in use); a family with bits and no ID errors.
+- A new aura is a *new* spell in the reserved block, so it does not appear in the "editing N existing spell(s)" line.
