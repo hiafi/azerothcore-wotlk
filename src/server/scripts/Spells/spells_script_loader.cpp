@@ -43,6 +43,12 @@ void AddSC_paladin_retribution_spell_scripts(); // Custom: paladin-rework (Retri
 void AddSC_paladin_holy_spell_scripts(); // Custom: paladin-rework (Holy)
 void AddSC_paladin_protection_spell_scripts(); // Custom: paladin-rework (Protection)
 void AddSC_paladin_hooks(); // Custom: paladin-rework (Retribution)
+void AddSC_hunter_shared_spell_scripts(); // Custom: hunter-rework
+void AddSC_hunter_pet_spell_scripts(); // Custom: hunter-rework
+void AddSC_hunter_beast_mastery_spell_scripts(); // Custom: hunter-rework
+void AddSC_hunter_marksmanship_spell_scripts(); // Custom: hunter-rework
+void AddSC_hunter_survival_spell_scripts(); // Custom: hunter-rework
+void AddSC_hunter_hooks(); // Custom: hunter-rework
 void AddSC_warrior_spell_scripts();
 void AddSC_quest_spell_scripts();
 void AddSC_item_spell_scripts();
@@ -78,6 +84,12 @@ void AddSpellsScripts()
     AddSC_paladin_holy_spell_scripts(); // Custom: paladin-rework (Holy)
     AddSC_paladin_protection_spell_scripts(); // Custom: paladin-rework (Protection)
     AddSC_paladin_hooks(); // Custom: paladin-rework (Retribution)
+    AddSC_hunter_shared_spell_scripts(); // Custom: hunter-rework
+    AddSC_hunter_pet_spell_scripts(); // Custom: hunter-rework
+    AddSC_hunter_beast_mastery_spell_scripts(); // Custom: hunter-rework
+    AddSC_hunter_marksmanship_spell_scripts(); // Custom: hunter-rework
+    AddSC_hunter_survival_spell_scripts(); // Custom: hunter-rework
+    AddSC_hunter_hooks(); // Custom: hunter-rework
     AddSC_warrior_spell_scripts();
     AddSC_quest_spell_scripts();
     AddSC_item_spell_scripts();
