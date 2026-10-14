@@ -76,6 +76,33 @@ class ClientPatchLintTest(unittest.TestCase):
         self.assertIn("talent frame", warnings[0])
         self.assertIn("398 (RaceMask: -260097 -> 4294707199)", warnings[0])
 
+    def test_an_inert_new_tab_is_a_note_once_the_last_build_carried_talenttab(self):
+        retired = {"TalentTab": {60800: {"ID": 60800, "ClassMask": 0, "PetTalentMask": 0, "OrderIndex": 3}}}
+        notes: list[str] = []
+        self.assertEqual(lint.check_client_patch(retired, self.STOCK, {"TalentTab.dbc"}, notes), [])
+        self.assertEqual(len(notes), 1)
+        self.assertIn("60800", notes[0])
+
+    def test_the_first_build_that_ships_an_inert_tab_still_warns_twice(self):
+        retired = {"TalentTab": {60800: {"ID": 60800, "ClassMask": 0, "PetTalentMask": 0, "OrderIndex": 3}}}
+        notes: list[str] = []
+        warnings = lint.check_client_patch(retired, self.STOCK, set(), notes)
+        self.assertEqual(notes, [])
+        self.assertEqual(len(warnings), 2)
+        self.assertIn("talent frame", warnings[0])
+        self.assertIn("TalentTab.dbc is new in the client patch", warnings[1])
+
+    def test_an_inert_tab_beside_an_edited_stock_row_still_warns(self):
+        shipping = {"TalentTab": {60800: {"ID": 60800, "ClassMask": 0, "PetTalentMask": 0},
+                                  398: {"ID": 398, "RaceMask": 1, "OrderIndex": 0}}}
+        notes: list[str] = []
+        self.assertEqual(len(lint.check_client_patch(shipping, self.STOCK, {"TalentTab.dbc"}, notes)), 1)
+        self.assertEqual(notes, [])
+
+    def test_a_new_tab_with_a_class_mask_is_not_inert(self):
+        shipping = {"TalentTab": {60801: {"ID": 60801, "ClassMask": 4, "PetTalentMask": 0}}}
+        self.assertEqual(len(lint.check_client_patch(shipping, self.STOCK, {"TalentTab.dbc"}, [])), 1)
+
     def test_new_and_dropped_tables_vs_last_build(self):
         shipping = {"Spell": {1: {}}, "SpellRange": {30200: {}}}
         warnings = lint.check_client_patch(shipping, {}, {"Spell.dbc", "Item.dbc"})

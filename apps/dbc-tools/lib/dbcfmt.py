@@ -524,6 +524,26 @@ CREATURESPELLDATA = DbcTable(
     columns=_cols("ID", ("Spells", 4), ("Availability", 4)),
 )
 
+# CreatureFamily.dbc - read-only reference for lib/superseded_ranks.py's retire_pet_spell(): a family's
+# two pet skill lines (SkillLine_1 its own, SkillLine_2 usually the shared 270 "Pet - Hunter") say which
+# SkillLineAbility rows teach its pets, and creature_template.family keys into ID. fmt from DBCfmt.h's
+# CreatureFamilyfmt ("nfifiiiiixssssssssssssssssxx"); there is no creaturefamily SQL overlay to write
+# (the base creaturefamily_dbc table is empty), so this table is never emitted. Stock file: the server's
+# DBC dir (it is not in the client patch MPQs this tool extracts from), flattened into var/extractors/dbc/.
+# Not in ALL_TABLES.
+CREATUREFAMILY = DbcTable(
+    name="CreatureFamily",
+    dbc_filename="CreatureFamily.dbc",
+    sql_table="creaturefamily_dbc",
+    fmt="nfifiiiiix" + "s" * 16 + "xx",
+    columns=_cols(
+        "ID", "MinScale", "MinScaleLevel", "MaxScale", "MaxScaleLevel", ("SkillLine", 2), "PetFoodMask",
+        "PetTalentType", "CategoryEnumID", _locale_cols("Name"), "IconFile",
+    ),
+    signed=frozenset({"PetTalentType"}),
+    read_as_string=frozenset({"IconFile"}),
+)
+
 ALL_TABLES = (
     SPELL, TALENT, TALENTTAB, SPELLCASTTIMES, SPELLDURATION, SPELLRANGE,
     SPELLRADIUS, SKILLLINEABILITY, ITEM,

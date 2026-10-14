@@ -51,6 +51,11 @@ carries (no later patch has it). Extract it, flattened, into the same directory.
 rule (`lib/superseded_ranks.py`) reads it; without it `generate.py` prints a `WARNING` and emits no
 `creaturespelldata_dbc` rows.
 
+`CreatureFamily.dbc` is the same kind of exception (in no client MPQ; copy it from the worldserver's DBC
+directory, `ac-worldserver:/azerothcore/env/dist/data/dbc/`, into `var/extractors/dbc/`). `retire_pet_spell()`
+reads it to know which skill lines a family uses: with a retirement declared and the file missing the run stops
+with an `ERROR`, and the hunter family lint (rule d) prints a `WARNING` that it only knows skill line 270.
+
 ## Generating
 
 ```
@@ -461,6 +466,106 @@ second time and merges the result), ids from `source/ids.yaml`'s `npc_tools` blo
 or the `creature` block. A creature entry declared in both directories is an error. Pass every
 column that differs from the schema default explicitly, so the file documents the NPC and rebuilds
 the row on a fresh DB; `creature_model(..., verified_build=None)` reproduces a NULL `VerifiedBuild`.
+
+### Editing stock talents, pet spells and items (hunter-rework T1)
+
+Helpers for changing data that already exists (stock rows), so no later stage hand-writes world SQL. All of them
+register from a `source/classes/*.py` (or, for items, `source/world/*.py`) file like `spell()` does.
+
+```python
+from lib.dsl import AcquireMethod
+from lib.dsl.registry import (
+    item_template, live_item_templates, retire_pet_spell, retire_talent, skill_line_ability, tab, talent,
+)
+
+# retire_talent(talent_id) - moves a stock talent out of its tree without deleting the row: the live row
+# re-emitted on TabID 60800 (the "Retired" holding tab, declared once in source/classes/hunter/
+# hunter_retired_tab.py - do not declare another), TierID/ColumnIndex 0, every SpellRank_n 0, PrereqTalent_n/
+# PrereqRank_n 0, CategoryMask_n 0, Flags 0. Errors if talent_id is not a live row; generate.py stops
+# (MissingRetiredTabError) if nothing declares tab 60800. Never TabID 0: mod-playerbots dereferences the tab of
+# every Talent.dbc row. A talent that source/classes/hunter/hunter_pet_talents.py carries as a reference copy
+# must be deleted from that file first (one declaration per id).
+retire_talent(2110)
+
+# retire_pet_spell(spell, families=None) - takes a stock pet ability away from pets. `spell` is an id or a
+# declared Spell; `families` are CreatureFamily ids (creature_template.family: 3 Spider, 2 Cat, ...). It
+#   1. sets AcquireMethod 0 on every stock SkillLineAbility row teaching the spell on a pet skill line - the
+#      shared 270 and every CreatureFamily.dbc line - or, with `families`, only on the lines those families
+#      use alone (the shared 270 cannot be retired for one family: that row is reported and left, unless
+#      shared_lines=True opts in - see Cower below);
+#   2. strips the spell from the CreatureSpellData record of every creature of those families
+#      (creature_template.family -> PetSpellDataId), so it does not come back as a default spell;
+#   3. rides the pet-stale-ranks override path (one row per record: superseded rank -> survivor first, then the
+#      strip). A skill_line_ability() declared with the same id wins, with the existing WARNING.
+# A talent whose rank spell is retired here also needs retire_talent(): this never touches Talent.dbc.
+retire_pet_spell(61684)                    # Dash, for every family
+retire_pet_spell(24604, families=[1])      # Furious Howl: the Wolf's rows only (stock row 13031 is on its own line 208)
+# Cower (1742) is taught only by SLA 13012 on the shared line 270. shared_lines=True retires that row for every
+# family and keeps the CreatureSpellData strip to `families` (PET 4.6: non-Ferocity families only):
+retire_pet_spell(1742, families=[...non-Ferocity family ids...], shared_lines=True)
+# A retirement that matches no SkillLineAbility row in scope and no record prints
+# "WARNING: retire_pet_spell: retire_pet_spell(N) matches nothing" (wrong spell id or family).
+
+# skill_line_ability(..., acquire_method=, superseded_by=) - the typed AcquireMethod / SupercededBySpell
+# columns (None = unset, the row is built exactly as before; raw_overrides still wins). AcquireMethod is a
+# lib.dsl IntEnum: NONE 0, LEARNED_ON_SKILL_VALUE 1, LEARNED_ON_SKILL_LEARN 2 (a pet learns it with its
+# level - SpellMgr::LoadPetLevelupSpellMap reads exactly this).
+skill_line_ability(id=30990, skill_line=270, spell_id=201710, acquire_method=AcquireMethod.LEARNED_ON_SKILL_LEARN)
+
+# item_template(entry, **columns) - edits columns of an EXISTING item_template row (unknown entry raises;
+# `class` is a Python keyword, hence the dict). Unmentioned columns keep their live value, an unknown column
+# raises KeyError. Emitted as a column-limited
+# `UPDATE item_template SET <passed columns> WHERE entry IN (...)` (item_template is on the SQL linter's
+# do-not-delete list; rows with the same assignments share one statement), so nothing you left alone is
+# rewritten from the replayed row, and apps/item-tools' overlay reads it back. Never pruned: a dropped declaration prints "item: ... no longer declared - left in place".
+item_template(2101, **{"class": 1, "subclass": 0, "BagFamily": 0})
+# live_item_templates() is the read-only live row dict, for selecting by column instead of listing entries.
+# Illustrative selector only (the real ranged-weapon one is source/world/ranged_weapons.py; Thrown is out of scope):
+for entry, row in live_item_templates().items():
+    if row["class"] == 2 and row["subclass"] == 18:
+        item_template(entry, ammo_type=0)
+```
+
+Live state for `item_template()` comes from apps/item-tools' overlay (`item_lib.overlay`: base dump plus every
+merged and pending migration, recursing into `itemization_templates_v2/`), not from `trainer_state`'s replay,
+which only sees top-level `*.sql`.
+
+**`item_template` class/subclass must agree with `Item.dbc`.** The server resets them from the DBC at boot
+(`DBC.EnforceItemAttributes`, default 1) and the client reads them from its own `Item.dbc`, so an edit that
+changes `class`/`subclass` also needs the matching `source/items.csv` row (a stock id is an *edit*: an `item_dbc`
+delta plus the row replaced inside patch-Z). `WARNING: item N ... differs from its Item.dbc row` when they
+disagree. Stock content using this: `source/world/quivers.py` (33 quivers and ammo pouches become plain bags,
+class 1/subclass 0/`BagFamily` 0) and `source/world/ranged_weapons.py` (every live bow, gun and crossbow gets
+`ammo_type` 0, selected by `class` 2 and `subclass` 2/3/18, never by `ammo_type`). `ammo_type` is not in
+`Item.dbc`, so there is no client patch for it; the client caches item queries, so **delete the client's `Cache`
+folder once at rollout**. `WARNING: item N ... the client still demands ammo` (`lint.check_ranged_ammo_type`) fires on a
+declared ranged weapon, or a custom `items.csv` bow/gun/crossbow (id >= 56806), whose `ammo_type` is not 0.
+
+The item lints, the hunter family-bit lint and `check_talent_tab_refs` run on a **full** `generate.py` run only:
+`--check` returns before them, so a session limited to `--check` gets no feedback from them.
+
+**Talent rows are ordered by their final tab.** Talent.dbc's physical order is load-bearing (see
+`dbcfile.order_talent_rows`): a row goes into the block of the `TabID` it is built with, so a talent moved from
+one tab to another leaves the old block and sorts by tier/column in the new one; tabs keep the stock file's
+order, and a tab missing from the stock file (60800) is a block after all of them. `ERROR: talent row(s) ...
+name TabID N, which is not in the built TalentTab.dbc` (`lint.check_talent_tab_refs`) stops the run when a
+talent names a tab nobody declared.
+
+**Family-bit lint.** `WARNING: spell N ...: hunter family-bit rule (a|b|c|d)` (`lint.check_hunter_family_rules`,
+custom ids >= 200000 with `SpellClassSet` 9): (a) a non-aspect (its name does not start with "Aspect of")
+carrying an aspect bit; (b) any carrier of d1 b0; (c) any reader mask (an effect's `EffectSpellClassMask`, or a
+`spell_proc` family mask) containing the pet bit d1 b28 - read a pet group through its d2 bit alone; (d) a
+pet-cast spell (carries d2 b22/b23/b24, or is taught on skill line 270 or a CreatureFamily.dbc line) that
+lacks d1 b28. A spell with d1 b28 and DmgClass RANGED never warns. The literals live in
+`lint.HUNTER_FAMILY_RULES`; another class joins by adding a `FamilyBitRules` row to `FAMILY_BIT_RULES`.
+
+**Pet reference data.** `source/classes/hunter/hunter_pet_talents.py` holds the three stock pet talent tabs
+(409 Tenacity, 410 Ferocity, 411 Cunning) and their 63 talents as untouched copies (66 rows, no SQL, no patch
+delta); the hunter pet pass owns every edit. `pull_talents.py --tab 409,410,411 --dsl` prints DSL `tab(...)` /
+`talent(...)` declarations to stdout (the DSL counterpart of `pull_dsl.py`; it never writes a file and skips ids
+already declared under `source/classes/`). `retire_pet_spell()` needs the stock
+`var/extractors/dbc/CreatureFamily.dbc` (from the worldserver's `env/dist/data/dbc/`; generate.py stops with the
+path if a retirement is declared without it).
 
 ### Declaring tooltip variables (P9)
 

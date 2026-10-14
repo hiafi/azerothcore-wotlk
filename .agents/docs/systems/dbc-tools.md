@@ -393,6 +393,70 @@ cleanup. For this one, that is `pending_db_characters/rev_1791713091186211987.sq
 `docs/bugs-and-fixes.md` ("Pets learn every superseded rank..."). Plan:
 `.agents/plans/pet-stale-ranks/pet-stale-ranks.PLAN.md`.
 
+## Hunter T1: editing stock talents, pet spells and items
+
+Added for the hunter rework (`.agents/plans/hunter-rework/`, SHARED Part C7). The README's "Editing stock
+talents, pet spells and items" section has the call syntax; this is what to know when something misbehaves.
+
+- **`acquire_method` / `superseded_by` on `skill_line_ability()`.** Typed, emitted only when not `None`, so a
+  row without them is built byte-for-byte as before. `raw_overrides` is applied last and still wins.
+  `lib.dsl.AcquireMethod` is the enum.
+- **`retire_talent(id)`** appends a talent entry on holding tab **60800** (`RETIRED_TAB_ID`) and a
+  `retired_talents` bookkeeping row (so retiring twice is a `DuplicateIdError`). It needs the live Talent rows,
+  which `generate.py` passes to every `load_classes_dir` call as `live_data` (`spell_tables.dsl_live_data`). The
+  tool scripts that load `source/classes/` themselves (`pull_dsl.py`, `potency_report.py`, `pull_talents.py
+  --dsl`) pass `spell_tables.load_dsl_live_data()`; a new one has to as well, or a class file calling
+  `retire_talent()`/`item_template()` raises `RuntimeError`. The holding tab is checked after all sources merge
+  (`check_retired_talent_tab`), because a call cannot see a sibling file's `tab()` at import time.
+- **Talent.dbc order.** `order_talent_rows` keys each row on its *final* TabID now. A moved or retired row leaves
+  its stock block (which stays where it was) and joins the new one; a tab absent from the stock file gets a block
+  after every stock block. Rows the stock file had keep their stock relative order inside a block, then new
+  rows in the order given. `lib/test_client_dbc_roundtrip.py` still proves an untouched stock file repacks
+  byte-identically.
+- **`check_talent_tab_refs`** is an ERROR (the run stops before anything is written) on both populations: the
+  server's live-plus-built rows and the client's stock-plus-built rows.
+- **`retire_pet_spell`** is resolved in `lib/superseded_ranks.py` (`retired_skilllineability_overrides`,
+  `spell_data_strips`, and the `strips=` argument of `creaturespelldata_overrides`) and wired in `generate.py`
+  next to the superseded-rank pass, whose rows it shares (`rank_override_ids`). The `CreatureSpellData` strip
+  zeroes the slot and its `Availability_N`; a record some other family's creature also names is left alone and
+  reported, since a record cannot be split. Needs `var/extractors/dbc/CreatureFamily.dbc` (not in any client
+  MPQ - the server's DBC dir has it, like `CreatureSpellData.dbc` above; `dbcfmt.CREATUREFAMILY` reads it,
+  byte-identical round trip): a declared retirement without it is an ERROR, the family lint's rule (d) a WARNING.
+  A superseded rank counts as the spell for the strip (a record naming only Bite rank 4 is stripped when the
+  survivor is retired). `shared_lines=True` retires a shared-line (270) row for every family while the strip
+  stays scoped to `families`; a retirement that matches nothing is a WARNING.
+- **`item_template()`** uses `spell_tables.ITEM_TABLES` (a sibling of `CREATURE_TABLES`): upsert only, never
+  pruned (`render_item_retirement_report` lists a dropped declaration), unchanged rows emit nothing. Two
+  differences from `creature_template`: the live rows come from `apps/item-tools`' overlay (it recurses into
+  `itemization_templates_v2/`; `trainer_state` does not), and the statement is a column-limited
+  `UPDATE ... SET <declared columns> WHERE entry IN (...)` (`sql_out.render_update_block` reads each row's
+  `_update_columns`; rows with the same assignments share one statement). Reason: mod-progression and other
+  runtime SQL rewrite price and level columns of these same rows, and a full-row update from a replayed copy
+  would revert them. An UPDATE, not a multi-row `INSERT ... ON DUPLICATE KEY UPDATE`, because the overlay
+  reads only the first tuple of an INSERT (T-FIX T1-1). A rerun after the migration applied emits nothing
+  (`test_item_template.RoundTripTest`).
+- **Item lints.** `check_item_dbc_consistency` (WARNING) and `check_ranged_ammo_type` (WARNING) run in the full
+  run, not under `--check`. The 33 quiver `items.csv` rows are stock-id edits: they appear in the "editing N
+  existing ... item(s)" line, in an `item_dbc` `DELETE ... WHERE ID IN (...)` plus INSERT, and in patch-Z's
+  `Item.dbc`. The ranged-weapon edit has no DBC half: `AmmoType` lives only in `item_template`, the client reads
+  it from the item query, so the client's `Cache` folder must be wiped once after rollout.
+- **Family-bit lint** (`check_hunter_family_rules`) takes the built custom spell rows, the declared `spell_proc`
+  rows, the SkillLineAbility rows (stock plus built) and the pet skill lines (270 plus `CreatureFamily.dbc`'s).
+  Rule (c) inspects every effect mask whatever its aura (an effect mask only exists to be read), which is
+  broader than the SpellMod-only scoping lint, and every declared `spell_proc` row whatever its spell id
+  (SpellFamilyName 9 or 0; 0 matches any family). Rule (a) exempts an "Aspect of ..." name only for a spell
+  with a SkillLineAbility row, so a same-named triggered aura still warns; the rule set's `exempt_ids` is the
+  explicit escape hatch. Full run only, like the item lints and `check_talent_tab_refs`; `--check` returns
+  before them. Without `CreatureFamily.dbc` the run prints a WARNING when custom class-set-9 spells exist.
+- **TalentTab.dbc in patch-Z.** The retired tab 60800 (`order_index` 3, ClassMask 0, PetTalentMask 0) makes
+  `TalentTab.dbc` ship for the first time. The first full run prints two WARNINGs (`TalentTab.dbc ships in the
+  client patch ...  60800 (new)` and `TalentTab.dbc is new in the client patch ...`): accept them once and check
+  every class's talent frame and the three pet tabs in game. Later runs, once the previous build already carried
+  the file, print a `note:` instead when the only TalentTab rows are new inert ones (`lint.check_client_patch`'s
+  `notes`); any edited stock row or a tab with a class or pet mask still warns. `CharacterDatabaseCleaner` keeps
+  `character_talent` rows on a valid tab, so the characters SQL that retires a talent deletes them itself.
+- **Cost.** Loading the item overlay and the Talent rows adds about 30 s to `generate.py` and to `--check`.
+
 ## Watch out: one client DBC, one patch archive
 
 Five scripts each own a patch letter: `generate.py` → `patch-Z.mpq` (Spell/Talent/Item/…),

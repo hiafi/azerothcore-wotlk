@@ -34,6 +34,7 @@ def _int(value) -> int | None:
 SPELLFAMILY_HUNTER = 9
 SPELL_DAMAGE_CLASS_MELEE = 2
 SPELL_ATTR0_USES_RANGED_SLOT = 0x2
+PET_FAMILY_BIT = 0x10000000  # SpellClassMask_2 (d1) b28: every pet-cast hunter-family spell carries it
 ITEM_SUBCLASS_MASK_WEAPON_RANGED = (1 << 2) | (1 << 3) | (1 << 18) | (1 << 16)  # bow, gun, crossbow, thrown
 
 
@@ -236,6 +237,13 @@ class Spell:
     notes: str | None = None
     # P9: a `tooltip_vars(...)` result (lib/dsl/tooltip.py's TooltipVars); sets SpellDescriptionVariableID.
     tooltip_vars: object | None = None
+    # (rap_pct, sp_pct) - pet ability tooltips (hunter-rework SHARED C7.11, PET.md 4.3a): the spell is cast
+    # by a hunter pet whose attack power is `rap_pct`% of the owner's ranged attack power plus `sp_pct`% of
+    # the owner's spell power, so each effect's tooltip stat term becomes `c*rap_pct/100*$RAP+c*sp_pct/100*$SP`
+    # (`c` = that effect's ap_coefficient) instead of `c*$AP`, which the client fills from the hunter's
+    # *melee* attack power. Only for a pet-bit spell (SpellClassMask_2 d1 b28) with no sp_potency; None keeps
+    # today's output byte for byte.
+    pet_owner_scaling: tuple[float, float] | None = None
 
     def __post_init__(self) -> None:
         # Populated by _resolve_potency() during to_entry() - lib.dsl.registry.spell() reads
@@ -259,6 +267,8 @@ class Spell:
                     f"SpellDescriptionVariableID, not both"
                 )
             raw_overrides["SpellDescriptionVariableID"] = self.tooltip_vars.id
+        if self.pet_owner_scaling is not None:
+            self._check_pet_owner_scaling(raw_overrides)
         effect_dicts = [(e.to_dict() if e is not None else None) for e in self.effects]
         effect_dicts += [None, None, None]
         if any(e is not None and e.has_potency for e in self.effects):
@@ -289,6 +299,28 @@ class Spell:
             "raw_overrides": raw_overrides or None,
             "notes": self.notes,
         }
+
+    def _check_pet_owner_scaling(self, raw_overrides: dict) -> None:
+        """`pet_owner_scaling` is only meaningful on a pet-bit spell and only without a spell-power half:
+        pet spell power is 0 after the hunter rework (Q8), so an `sp_potency` has no server meaning."""
+        shares = self.pet_owner_scaling
+        if len(shares) != 2 or any(not isinstance(v, (int, float)) or v < 0 for v in shares):
+            raise ValueError(
+                f"spell {self.id} ({self.name}): pet_owner_scaling must be (rap_pct, sp_pct), two non-negative "
+                f"numbers, got {shares!r}"
+            )
+        if not (raw_overrides.get("SpellClassMask_2", 0) or 0) & PET_FAMILY_BIT:
+            raise ValueError(
+                f"spell {self.id} ({self.name}): pet_owner_scaling needs the pet bit (SpellClassMask_2 d1 b28, "
+                f"0x{PET_FAMILY_BIT:X}) in raw_overrides - without it this is not a pet-cast spell and its "
+                f"tooltip's $AP is right as it is"
+            )
+        if any(e is not None and e.sp_potency for e in self.effects):
+            raise ValueError(
+                f"spell {self.id} ({self.name}): pet_owner_scaling can't combine with sp_potency - pet spell "
+                f"power is 0, so a spell-power half has no server meaning; the spell-power share of the "
+                f"owner is already the second number of pet_owner_scaling"
+            )
 
     def _resolve_potency(self, effect_dicts: list[dict | None], raw_overrides: dict) -> None:
         """Potency system (docs/potency-system.md, PLAN P2 step 2). Runs once per `to_entry()`
@@ -360,6 +392,10 @@ class Spell:
             resolved = _potency.resolve(pe, spell_level=int(spell_level))
             if resolved.ap_coefficient and uses_ranged_attack_power(int(self.attributes or 0), raw_overrides):
                 resolved = dataclasses.replace(resolved, ap_token=_potency.RANGED_AP_TOKEN)
+            if self.pet_owner_scaling is not None:
+                resolved = dataclasses.replace(
+                    resolved, owner_scaling=(float(self.pet_owner_scaling[0]), float(self.pet_owner_scaling[1])),
+                )
             resolved_by_index[index] = resolved
 
             cp_resolved = None
@@ -390,6 +426,8 @@ class Spell:
             # object this was resolved from.
             d["_potency"] = dataclasses.asdict(resolved)
             d["_potency"]["spell_level"] = int(spell_level)
+            if resolved.owner_scaling is None:
+                del d["_potency"]["owner_scaling"]  # keep an unset spell's stash exactly what it was
 
             if effect.weapon_potency is not None and not effect.sp_potency:
                 continue  # pure weapon percent: "no correction row", no DBC/spell_bonus_data
@@ -544,10 +582,12 @@ class SkillLineAbility:
     class_mask: int = 0
     race_mask: int = 0
     min_skill_line_rank: int = 1
+    acquire_method: int | None = None
+    superseded_by: int | None = None
     raw_overrides: dict | None = None
 
     def to_entry(self) -> dict:
-        return {
+        entry = {
             "id": self.id,
             "skill_line": self.skill_line,
             "spell_id": self.spell_id,
@@ -556,3 +596,10 @@ class SkillLineAbility:
             "min_skill_line_rank": _int(self.min_skill_line_rank),
             "raw_overrides": dict(self.raw_overrides) if self.raw_overrides else None,
         }
+        # Typed columns, present only when declared: None keeps the built row exactly as it was before
+        # these fields existed (build_skilllineability_row leaves the column at its empty-row 0).
+        if self.acquire_method is not None:
+            entry["acquire_method"] = _int(self.acquire_method)
+        if self.superseded_by is not None:
+            entry["superseded_by"] = _int(self.superseded_by)
+        return entry

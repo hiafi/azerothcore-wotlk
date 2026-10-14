@@ -115,6 +115,32 @@ def render_upsert_block(
     return f"INSERT INTO `{table_name}` ({cols_sql}) VALUES\n{tuples} ON DUPLICATE KEY UPDATE {update_cols};"
 
 
+def render_update_block(
+    table_name: str, columns: tuple[str, ...], key_column: str, rows: list[dict]
+) -> str:
+    """Column-limited `UPDATE ... SET ... WHERE key IN (...)` for rows that only edit columns of an
+    existing entry - `item_template` (lib.dsl.registry.item_template()), a do-not-delete table whose
+    migrations apps/item-tools' overlay replays. Each row carries `_update_columns`, the columns its
+    declaration named (absent: every non-key column). Rows with identical assignments share one
+    statement, so ~540 bows are one short `WHERE entry IN (...)` list; a column nobody declared is never
+    written. The overlay reads exactly this shape (`_UPDATE_RE` + `_ENTRY_IN_RE`) - the multi-row
+    `INSERT ... ON DUPLICATE KEY UPDATE` it replaced only had its first tuple read back, so a rerun
+    re-emitted every row (T-FIX T1-1). Idempotent, and an entry that does not exist is a no-op.
+    Returns `""` for an empty `rows`."""
+    groups: dict[tuple, list[int]] = {}
+    for row in sorted(rows, key=lambda r: r[key_column]):
+        only = row.get("_update_columns")
+        wanted = [c for c in columns if c != key_column and (only is None or c in only)]
+        assignment = tuple((c, _sql_literal(row.get(c))) for c in wanted)
+        groups.setdefault(assignment, []).append(row[key_column])
+    statements = []
+    for assignment, keys in sorted(groups.items(), key=lambda kv: kv[1][0]):
+        sets = ", ".join(f"`{c}` = {v}" for c, v in assignment)
+        keys_sql = ", ".join(str(k) for k in keys)
+        statements.append(f"UPDATE `{table_name}` SET {sets} WHERE `{key_column}` IN ({keys_sql});")
+    return "\n".join(statements)
+
+
 def stable_key_sort(keys):
     """Deterministic ordering for key tuples that may mix numbers, strings and
     `None` within a column (a migration that omitted a column normalises to

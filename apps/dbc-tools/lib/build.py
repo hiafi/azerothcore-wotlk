@@ -147,5 +147,11 @@ def build_skilllineability_row(entry: dict) -> dict:
     row["ClassMask"] = entry.get("class_mask", 0) or 0
     row["RaceMask"] = entry.get("race_mask", 0) or 0
     row["MinSkillLineRank"] = entry.get("min_skill_line_rank", 1) or 0
+    # Typed, opt-in columns (SkillLineAbility.acquire_method / superseded_by): absent or None leaves the
+    # empty-row 0, byte-identical to a row built before they existed. raw_overrides still wins below.
+    if entry.get("acquire_method") is not None:
+        row["AcquireMethod"] = entry["acquire_method"]
+    if entry.get("superseded_by") is not None:
+        row["SupercededBySpell"] = entry["superseded_by"]
     _apply_raw_overrides(row, entry, dbcfmt.SKILLLINEABILITY)
     return row

@@ -24,6 +24,7 @@ wrong one.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from pathlib import Path
@@ -80,6 +81,11 @@ CREATURE_TEMPLATE_DEFAULTS = sql_dump.parse_create_table_defaults(CREATURE_TEMPL
 CREATURE_TEMPLATE_MODEL_COLUMNS = (
     "CreatureID", "Idx", "CreatureDisplayID", "DisplayScale", "Probability", "VerifiedBuild",
 )
+# Hunter T1 (.agents/plans/hunter-rework/hunter-rework.T1-HANDOFF.md): item_template, for lib.dsl.registry.
+# item_template() - same parse-the-CREATE-TABLE treatment as creature_template above.
+ITEM_TEMPLATE_PATH = trainer_state.BASE_SQL_DIR / "item_template.sql"
+ITEM_TEMPLATE_COLUMNS = sql_dump.parse_create_table_columns(ITEM_TEMPLATE_PATH, "item_template")
+ITEM_TEMPLATE_DEFAULTS = sql_dump.parse_create_table_defaults(ITEM_TEMPLATE_PATH, "item_template")
 
 
 # First line of every file `generate.py` writes (its `header`). This is the
@@ -592,6 +598,123 @@ def render_creature_retirement_report(
             report.append(
                 f"creature: {spec.name} {_key_text(spec.key_columns, key)} is no longer declared - "
                 f"left in place; {spec.name} is never auto-deleted, remove by hand if wanted."
+            )
+    return report
+
+
+# ---------------------------------------------------------------------------
+# Hunter T1: item_template - lib.dsl.registry.item_template() edits columns of an *existing* stock
+# item (the stock quivers become bags; every bow/gun/crossbow loses its ammo type). Same shape as
+# CREATURE_TABLES above (upsert only, never pruned, retired declarations reported) with two
+# differences:
+#   - live state comes from apps/item-tools' overlay (`item_lib.overlay.get_rows`), not
+#     trainer_state's replay. The item system keeps its migrations in `itemization_templates_v2/`
+#     subdirectories, which `trainer_state._migration_files_mentioning` (top-level *.sql only) never
+#     sees; the overlay walks them recursively in bare-filename order, as the real DBUpdater does.
+#   - the emitted statement is a column-limited `UPDATE ... SET <declared columns> WHERE entry IN (...)`
+#     (sql_out.render_update_block reads each row's `_update_columns`), so a column nobody declared is
+#     never rewritten from the replayed row - another migration or a module's runtime SQL
+#     (mod-progression rewrites price and level columns) can have changed it since - and the overlay
+#     reads it back (a multi-row INSERT it only read the first tuple of; T-FIX T1-1).
+# ---------------------------------------------------------------------------
+
+ITEM_TABLES = (
+    TableSpec(
+        "item_template", ITEM_TEMPLATE_COLUMNS, ("entry",), "item_templates", defaults=ITEM_TEMPLATE_DEFAULTS,
+    ),
+)
+
+
+def load_live_item_template_rows() -> dict[int, dict]:
+    """Every live `item_template` row by entry: base dump plus every merged and pending migration,
+    via apps/item-tools' `item_lib.overlay.get_rows()` (imported lazily - it lives outside this tool)."""
+    import sys
+
+    item_tools = str(trainer_state.REPO_ROOT / "apps" / "item-tools")
+    if item_tools not in sys.path:
+        sys.path.append(item_tools)
+    from item_lib import overlay  # noqa: PLC0415
+
+    return overlay.get_rows()
+
+
+_GENERATED_ITEM_UPDATE_RE = re.compile(
+    r"UPDATE\s+`item_template`\s+SET\s+.+?\s+WHERE\s+`entry`\s+IN\s*\(([^)]+)\)\s*;", re.IGNORECASE | re.DOTALL
+)
+
+
+def load_generated_item_entries() -> list[dict]:
+    """`{"entry": n}` for every item a generated migration still on disk edits - the item counterpart of
+    `load_generated_table_rows` (that one replays INSERT/DELETE; `item_template` is emitted as an UPDATE,
+    which `sql_dump` does not parse). Feeds `render_item_retirement_report` only."""
+    entries: dict[int, dict] = {}
+    for path in trainer_state._migration_files_mentioning("item_template"):
+        if not _is_generated(path):
+            continue
+        for match in _GENERATED_ITEM_UPDATE_RE.finditer(path.read_text(encoding="utf-8")):
+            for token in match.group(1).split(","):
+                entries[int(token)] = {"entry": int(token)}
+    return list(entries.values())
+
+
+def dsl_live_data(talent_rows: dict[int, dict], item_rows: dict[int, dict]) -> dict:
+    """The `live_data` bundle `lib.dsl.registry.load_classes_dir` hands `retire_talent()` and
+    `item_template()` (see `registry._active_live_data`)."""
+    return {
+        "talent_rows": talent_rows,
+        "item_template_rows": item_rows,
+        "item_template_columns": ITEM_TEMPLATE_COLUMNS,
+        "item_template_defaults": ITEM_TEMPLATE_DEFAULTS,
+    }
+
+
+def load_dsl_live_data() -> dict:
+    """`dsl_live_data` loaded from disk, for the tools besides generate.py that load source/classes/
+    (pull_dsl.py, potency_report.py, pull_talents.py --dsl): without it any class file that calls
+    `retire_talent()` fails to load for them, as it would for generate.py with the argument omitted."""
+    from . import dbcfmt, state  # noqa: PLC0415
+
+    return dsl_live_data(state.load_existing_rows(dbcfmt.TALENT), load_live_item_template_rows())
+
+
+def load_item_table_index(live_rows: dict[int, dict] | None = None) -> SpellTableIndex:
+    live_rows = load_live_item_template_rows() if live_rows is None else live_rows
+    return SpellTableIndex(
+        {"item_template": list(live_rows.values())},
+        emitted={spec.name: load_generated_item_entries() for spec in ITEM_TABLES},
+        base={spec.name: load_base_table_rows(spec.name) for spec in ITEM_TABLES},
+        tables=ITEM_TABLES,
+    )
+
+
+def render_item_blocks(index: SpellTableIndex, dsl_classes: dict[str, list[dict]]) -> list[str]:
+    """The `item_template` column-limited UPDATE for every declared row that differs from the live row.
+    Empty when nothing differs, so a rerun after the migration applied emits nothing."""
+    blocks = []
+    for spec in ITEM_TABLES:
+        rows = index.rows_to_emit(spec, dsl_classes.get(spec.registry_key, []))
+        block = sql_out.render_update_block(spec.name, spec.columns, spec.key_columns[0], rows)
+        if block:
+            blocks.append(block)
+    return blocks
+
+
+def render_item_retirement_report(index: SpellTableIndex, dsl_classes: dict[str, list[dict]]) -> list[str]:
+    """Report-only, like `render_creature_retirement_report`: an item row a past run emitted whose
+    declaration is gone is left as it is - a column cannot be un-edited by omission."""
+    report: list[str] = []
+    for spec in ITEM_TABLES:
+        result = index.rows_to_prune(spec, dsl_classes.get(spec.registry_key, []))
+        if result.breaker_tripped:
+            report.append(
+                f"item: SKIPPED checking {spec.name} for retired entries - it has rows from previous runs "
+                f"but this run declared none. Check source/world/*.py loaded."
+            )
+            continue
+        for key in (*result.keys, *result.base_blocked):
+            report.append(
+                f"item: {spec.name} {_key_text(spec.key_columns, key)} is no longer declared - left in place; "
+                f"{spec.name} is never auto-reverted, undo the column edit by hand if wanted."
             )
     return report
 

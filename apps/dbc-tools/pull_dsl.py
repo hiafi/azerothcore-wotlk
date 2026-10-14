@@ -59,6 +59,7 @@ def main(argv: list[str]) -> int:
         existing_creature_rows={int(r["entry"]): r for r in creature_table_index.live_rows("creature_template")},
         creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
         creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS,
+        live_data=spell_tables.load_dsl_live_data(),
     )
     declared = {e["id"] for e in dsl["spells"]}
     # The legacy CSVs (source/spells/npc.csv, generic.csv) still count - generate.py refuses an

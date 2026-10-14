@@ -273,6 +273,18 @@ class CombatRating(IntEnum):
     COOLDOWN_HASTE = 22  # Custom: was CR_WEAPON_SKILL_RANGED
 
 
+class AcquireMethod(IntEnum):
+    """`SkillLineAbility.dbc`'s `AcquireMethod` column - transcribed from `SkillLineAbilityAcquireMethod`
+    in src/server/shared/DataStores/DBCEnums.h. `LEARNED_ON_SKILL_LEARN` is what
+    `SpellMgr::LoadPetLevelupSpellMap` reads to build a creature family's level-up spell list, so a pet
+    ability row needs it; `NONE` takes the spell out of that list (what the superseded-rank and
+    `retire_pet_spell()` overrides emit)."""
+
+    NONE = 0
+    LEARNED_ON_SKILL_VALUE = 1
+    LEARNED_ON_SKILL_LEARN = 2
+
+
 class ShapeshiftForm(IntEnum):
     """`ShapeshiftMask`/`ShapeshiftExclude` bit source and `spellshapeshiftform_dbc`'s
     `form_id` - transcribed from `ShapeShiftForm` in

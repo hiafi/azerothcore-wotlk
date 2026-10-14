@@ -108,36 +108,46 @@ def order_talent_rows(rows: list[dict], base_rows: list[dict]) -> list[dict]:
          match the logical grid. Verified live: a block left in its *old* physical sub-order
          after a tier/column redesign rendered nothing for that tab, even though every
          individual row's own data (TierID/ColumnIndex included) was already correct.
-      3. A brand-new talent ID (not in the base file at all) gets inserted into its own TabID's
-         block via rule 2 — never appended past the file's old contiguous tab boundaries.
+      3. A row goes into the block of its **final** (built) TabID, not the tab it has in the base file,
+         so a stock talent moved to another tab (Sniper Training 2143, SV 362 -> MM 363) leaves its old
+         block and sorts inside the new one; the old block keeps its place, just without the row. A
+         brand-new talent ID is placed the same way - never appended past the file's old contiguous
+         tab boundaries. Blocks follow the base file's tab order; a tab absent from the base file
+         (the 60800 holding tab of `retire_talent`) gets its own block after every base block.
 
-    `base_rows`: the base/extracted client DBC's rows, in original file order — the source of
-    tab-block boundaries and their relative order in the file.
+    Within a block, rows the base file already had come first (in base order), then the rest in the
+    order given - the sort below is stable, so equal (TierID, ColumnIndex) pairs keep that order.
+
+    `base_rows`: the base/extracted client DBC's rows, in original file order - the source of
+    tab-block order.
     """
     by_id = {r["ID"]: r for r in rows}
 
     tab_order: list[int] = []
     tab_ids: dict[int, list[int]] = {}
-    for r in base_rows:
-        tab = r["TabID"]
-        if tab not in tab_ids:
-            tab_order.append(tab)
-            tab_ids[tab] = []
-        tab_ids[tab].append(r["ID"])
 
-    base_id_set = {r["ID"] for r in base_rows}
-    for new_id, row in by_id.items():
-        if new_id in base_id_set:
-            continue
-        tab = row["TabID"]
+    def place(tab: int, row_id: int) -> None:
         if tab not in tab_ids:
             tab_order.append(tab)
             tab_ids[tab] = []
-        tab_ids[tab].append(new_id)
+        tab_ids[tab].append(row_id)
+
+    # Base tabs first, in file order, even when every row of one has moved away.
+    for r in base_rows:
+        tab_ids.setdefault(r["TabID"], [])
+        if r["TabID"] not in tab_order:
+            tab_order.append(r["TabID"])
+    base_id_set = {r["ID"] for r in base_rows}
+    for r in base_rows:
+        if r["ID"] in by_id:
+            place(by_id[r["ID"]]["TabID"], r["ID"])
+    for new_id, row in by_id.items():
+        if new_id not in base_id_set:
+            place(row["TabID"], new_id)
 
     ordered: list[dict] = []
     for tab in tab_order:
-        block = [by_id[i] for i in tab_ids[tab] if i in by_id]
+        block = [by_id[i] for i in tab_ids[tab]]
         block.sort(key=lambda r: (r["TierID"], r["ColumnIndex"]))
         ordered.extend(block)
 

@@ -8,6 +8,7 @@ of building a row or deciding whether to emit it.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from types import SimpleNamespace
 
 from lib.dsl.constants import RANGE_SELF, RANGE_SELF_INDEX
@@ -729,8 +730,15 @@ _REVIEW_WHEN_SHIPPED = {
 }
 
 
+def _is_inert_talent_tab(row_id: int, row: dict, base: dict[int, dict]) -> bool:
+    """A TalentTab row that is new and matches no class and no pet type (`retire_talent()`'s holding tab,
+    60800): the client never shows it, so shipping it cannot change any existing talent frame."""
+    return row_id not in base and not int(row.get("ClassMask") or 0) and not int(row.get("PetTalentMask") or 0)
+
+
 def check_client_patch(
     shipping: dict[str, dict[int, dict]], stock: dict[str, dict[int, dict]], previous_files: set[str] | None,
+    notes: list[str] | None = None,
 ) -> list[str]:
     """Warnings about what the client patch is about to carry (docs/bugs-and-fixes.md, 2026-10-02:
     one run shipped a TalentTab.dbc nobody meant to change, and it broke every talent frame).
@@ -741,12 +749,24 @@ def check_client_patch(
 
     - a table in _REVIEW_WHEN_SHIPPED is shipping: list each row and the columns it changes, so a
       spurious diff (a signedness or string-offset artifact) is obvious
-    - a table is new to the patch, or has dropped out of it, compared with the last build"""
+    - a table is new to the patch, or has dropped out of it, compared with the last build
+
+    Known inert case (T-FIX T1-3): once the last build already carried TalentTab.dbc (so it was reviewed in
+    game), a run whose only TalentTab rows are new ones with ClassMask 0 and PetTalentMask 0 - the retired
+    holding tab - is appended to `notes` instead of `warnings`. The first build that ships the file still
+    warns, so the in-game look happens once."""
     warnings = []
     for name, rows in sorted(shipping.items()):
         if name not in _REVIEW_WHEN_SHIPPED:
             continue
         base = stock.get(name, {})
+        if (
+            notes is not None and name == "TalentTab" and previous_files is not None and "TalentTab.dbc" in previous_files
+            and all(_is_inert_talent_tab(row_id, row, base) for row_id, row in rows.items())
+        ):
+            notes.append(f"TalentTab.dbc ships {len(rows)} inert new tab(s) {sorted(rows)} (ClassMask 0, "
+                         f"PetTalentMask 0) and no other change - no talent frame is affected")
+            continue
         changes = []
         for row_id, row in sorted(rows.items()):
             if row_id not in base:
@@ -926,5 +946,244 @@ def check_removed_proc_flags(
                     f"(if the spell has a trigger aura), so the proc is NOT disabled. Zero "
                     f"ProcTypeMask (raw_overrides={{'ProcTypeMask': 0}}) on this spell "
                     f"(and every rank) if the intent is no proc."
+                )
+    return warnings
+
+def check_talent_tab_refs(talent_rows, talenttab_rows) -> list[str]:
+    """ERRORs for every built Talent.dbc row whose `TabID` is not a row of the built TalentTab.dbc
+    (hunter-rework SHARED §C7.10, review P2). Both arguments are the *whole* table as it will exist
+    (stock plus this run's rows), not just this run's rows. A talent on a missing tab is not dropped
+    quietly: mod-playerbots' `InitPetTalents` dereferences the tab of every Talent.dbc row without a null
+    check and crashes, and the core's talent lookups read `sTalentTabStore.LookupEntry(...)` unguarded in
+    places. `retire_talent()` moves a row to the declared holding tab 60800, never to TabID 0; a retired row
+    whose tab was never declared lands here."""
+    tab_ids = {int(row["ID"]) for row in talenttab_rows}
+    missing: dict[int, list[int]] = {}
+    for row in talent_rows:
+        tab = int(row["TabID"])
+        if tab not in tab_ids:
+            missing.setdefault(tab, []).append(int(row["ID"]))
+    errors = []
+    for tab, ids in sorted(missing.items()):
+        shown = ", ".join(str(i) for i in sorted(ids)[:10]) + (f", ... ({len(ids)} in all)" if len(ids) > 10 else "")
+        errors.append(
+            f"talent row(s) {shown} name TabID {tab}, which is not in the built TalentTab.dbc - declare the "
+            f"tab() (a retired talent's holding tab is 60800, source/classes/hunter/hunter_retired_tab.py)"
+        )
+    return errors
+
+
+# Ranged weapon ItemSubClass ids (ItemSubclassWeapon): Bow, Gun, Crossbow. Thrown (16) and Wand (19) are out.
+_AMMO_WEAPON_SUBCLASSES = (2, 3, 18)
+_ITEM_CLASS_WEAPON = 2
+# source/items.csv rows from this id up are custom; below it they are stock Item.dbc rows being edited.
+_FIRST_CUSTOM_ITEM_ID = 56806
+
+
+def check_item_dbc_consistency(item_templates: list[dict], item_dbc_rows: dict[int, dict]) -> list[str]:
+    """Warnings for a declared `item_template()` row whose `class`/`subclass` differs from the item's
+    Item.dbc row. `item_dbc_rows` is the Item.dbc the server will have (stock plus `item_dbc` overlay plus
+    this run's rows). `DBC.EnforceItemAttributes` defaults to 1 (WorldConfig.cpp) and resets the item_template
+    class/subclass from Item.dbc at boot (ObjectMgr.cpp), so a mismatch means the edit is undone at the next
+    start - and the client reads class/subclass from its own Item.dbc. An item with no Item.dbc row is not
+    judged here (nothing to compare against)."""
+    warnings = []
+    for row in item_templates:
+        dbc = item_dbc_rows.get(int(row["entry"]))
+        if dbc is None:
+            continue
+        declared = (int(row["class"]), int(row["subclass"]))
+        actual = (int(dbc["ClassID"]), int(dbc["SubclassID"]))
+        if declared != actual:
+            warnings.append(
+                f"item {row['entry']} ({row.get('name', '?')}): item_template class/subclass {declared[0]}/{declared[1]} "
+                f"differs from its Item.dbc row {actual[0]}/{actual[1]} - DBC.EnforceItemAttributes resets "
+                f"item_template to the Item.dbc values at boot, so this edit would be undone. Add or edit the "
+                f"source/items.csv row for {row['entry']} so both agree."
+            )
+    return warnings
+
+
+def check_ranged_ammo_type(
+    item_templates: list[dict], item_entries: list[dict], live_rows: dict[int, dict],
+) -> list[str]:
+    """Warnings for a bow, gun or crossbow that would still need ammo. With the no-ammo rework every ranged
+    weapon must have `ammo_type` 0, or the client's paper-doll check refuses to let it fire. Two shapes:
+    (a) a declared `item_template()` row of class 2, subclass 2/3/18 with `ammo_type` != 0;
+    (b) a custom `source/items.csv` row (id >= 56806) of class 2, subclass 2/3/18 whose item_template row -
+    its declaration if there is one, else the live overlay row - has `ammo_type` != 0.
+    A custom weapon with no item_template row anywhere is not judged here."""
+    warnings = []
+    warned: set[int] = set()
+    declared = {int(row["entry"]): row for row in item_templates}
+    for entry, row in sorted(declared.items()):
+        if (
+            int(row["class"]) == _ITEM_CLASS_WEAPON and int(row["subclass"]) in _AMMO_WEAPON_SUBCLASSES
+            and int(row["ammo_type"] or 0) != 0
+        ):
+            warnings.append(
+                f"item {entry} ({row.get('name', '?')}): declared ranged weapon (subclass {row['subclass']}) has "
+                f"ammo_type {row['ammo_type']}, so the client still demands ammo; declare ammo_type=0 "
+                f"(source/world/ranged_weapons.py does this for every live bow, gun and crossbow)"
+            )
+            warned.add(entry)
+    for entry in item_entries:
+        entry_id = int(entry["id"])
+        if (
+            entry_id < _FIRST_CUSTOM_ITEM_ID or entry.get("class_id") != _ITEM_CLASS_WEAPON
+            or entry.get("subclass_id") not in _AMMO_WEAPON_SUBCLASSES or entry_id in warned
+        ):
+            continue
+        template = declared.get(entry_id, live_rows.get(entry_id))
+        if template is not None and int(template.get("ammo_type") or 0) != 0:
+            warnings.append(
+                f"item {entry_id} ({template.get('name', '?')}): custom ranged weapon (items.csv subclass "
+                f"{entry['subclass_id']}) has item_template ammo_type {template['ammo_type']}, so the client "
+                f"still demands ammo; set ammo_type 0 in its item_template row or declare it with "
+                f"item_template({entry_id}, ammo_type=0)"
+            )
+    return warnings
+
+
+# --- Per-family bit rules (hunter-rework SHARED C7.6, PLAN section 2; T1 step 8) -----------------------
+
+
+@dataclass(frozen=True)
+class FamilyBitRules:
+    """The family-bit rules of one SpellClassSet, as data so another class can join with its own row of
+    `FAMILY_BIT_RULES`. A mask is `(d0, d1, d2)` = `SpellClassMask_1/_2/_3` = `EffectSpellClassMaskX_1/_2/_3`.
+    The hunter literals below are PLAN section 2 / SHARED A3 (`_masks.py` does not exist until H0, and a lint
+    must not import the thing it checks)."""
+
+    name: str
+    spell_class_set: int
+    # (a) a spell that is not one of these must not carry any of these bits (SpellInfo::GetSpellSpecific
+    # makes any carrier SPELL_SPECIFIC_ASPECT, which knocks the active aspect off). `exempt_name_prefix` is
+    # the name prefix that marks the spell as the real thing - but only for a spell that is also learned by a
+    # player (it has a SkillLineAbility row), because a helper or triggered aura can be named "Aspect of ..."
+    # too and still knocks the real aspect off (T-FIX T1-6); `exempt_ids` is the explicit escape hatch.
+    protected_bits: tuple[int, int, int] = (0, 0, 0)
+    exempt_name_prefix: str = ""
+    exempt_ids: frozenset = frozenset()
+    # (b) nobody may carry these bits (a poisoned bit a core hardcode still keys on).
+    forbidden_carrier_bits: tuple[int, int, int] = (0, 0, 0)
+    # (c) no reader mask (an effect mask or a spell_proc family mask) may share a bit with these
+    # (`SpellInfo::IsAffected` matches on ANY shared bit, so a reader containing the pet bit reaches every pet
+    # ability).
+    forbidden_reader_bits: tuple[int, int, int] = (0, 0, 0)
+    # (d) a pet-cast spell (carries one of `pet_group_bits`, or is taught on a pet skill line) must carry all
+    # of `pet_required_bits`: without the pet bit SpellInfo::IsRangedWeaponSpell is true for any hunter-family
+    # spell and the pet's cast would need a ranged weapon.
+    pet_group_bits: tuple[int, int, int] = (0, 0, 0)
+    pet_required_bits: tuple[int, int, int] = (0, 0, 0)
+
+
+HUNTER_FAMILY_RULES = FamilyBitRules(
+    name="hunter",
+    spell_class_set=9,
+    protected_bits=(0x380000, 0x440000, 0x1010),                    # ASPECT_SPECIFIC
+    exempt_name_prefix="Aspect of",
+    forbidden_carrier_bits=(0, 0x1, 0),                              # d1 b0: the old Steady Shot bit
+    forbidden_reader_bits=(0, 0x10000000, 0),                        # d1 b28: the pet bit
+    pet_group_bits=(0, 0, 0x400000 | 0x800000 | 0x1000000),          # d2 b22 / b23 / b24
+    pet_required_bits=(0, 0x10000000, 0),                            # d1 b28
+)
+FAMILY_BIT_RULES = (HUNTER_FAMILY_RULES,)
+_CUSTOM_SPELL_ID_START = 200000
+PET_SHARED_SKILL_LINE = 270  # "Pet - Hunter": the skill line every hunter pet family shares
+
+
+def _spell_class_mask(row: dict) -> tuple[int, int, int]:
+    return tuple(_u32(row.get(f"SpellClassMask_{n}")) for n in (1, 2, 3))
+
+
+def _shares_bit(mask: tuple[int, int, int], bits: tuple[int, int, int]) -> bool:
+    return any(m & b for m, b in zip(mask, bits))
+
+
+def _hex_mask(mask: tuple[int, int, int]) -> str:
+    return "(" + ", ".join(f"0x{word:X}" for word in mask) + ")"
+
+
+def check_hunter_family_rules(
+    entries: list[dict], rows: list[dict], spell_procs: list[dict] | None = None,
+    skill_line_abilities: list[dict] | None = None, pet_skill_lines: set[int] | frozenset[int] = frozenset(),
+    rules: tuple[FamilyBitRules, ...] = FAMILY_BIT_RULES,
+) -> list[str]:
+    """WARNINGs for the PLAN section 2 family-bit rules, on custom spell ids (>= 200000) of each rule set's
+    SpellClassSet. `entries`/`rows` are aligned like `check_classmask_scoping`'s (source entry, built row).
+    Rules, per `FamilyBitRules`:
+      (a) a non-aspect carrying an aspect bit (an "Aspect of ..." name only counts when the spell has a
+          SkillLineAbility row; otherwise list its id in `exempt_ids`);
+      (b) any carrier of a forbidden carrier bit (d1 b0);
+      (c) a reader mask containing the pet bit d1 b28 - on any effect's `EffectSpellClassMask`, or in a
+          declared `spell_proc` family mask (`spell_procs`: the registry's rows, whatever their spell id, with
+          SpellFamilyName of the rule's class set or 0 - 0 matches any family);
+      (d) inverted: a pet-cast spell that lacks the pet bit. Pet-cast = carries a pet group bit, or is taught
+          by a SkillLineAbility row (`skill_line_abilities`: dicts with Spell/SkillLine) on a pet skill line
+          (`pet_skill_lines`, plus 270). The pet bit with DmgClass RANGED (the pets' ranged spits, the 30 yd
+          commands) is intended and never warns - nothing here looks at DmgClass.
+    Rule (c) looks at every effect's mask whatever its aura: an effect mask only exists to be read."""
+    spell_procs = spell_procs or []
+    pet_lines = set(pet_skill_lines) | {PET_SHARED_SKILL_LINE}
+    taught_on_pet_line = {
+        int(r["Spell"]) for r in (skill_line_abilities or []) if int(r["SkillLine"]) in pet_lines
+    }
+    learned = {int(r["Spell"]) for r in (skill_line_abilities or [])}
+    warnings: list[str] = []
+    for rule in rules:
+        for entry, row in zip(entries, rows):
+            spell_id = int(row["ID"])
+            if spell_id < _CUSTOM_SPELL_ID_START or int(row.get("SpellClassSet") or 0) != rule.spell_class_set:
+                continue
+            label = f"spell {spell_id} ({entry.get('name', '?')})"
+            mask = _spell_class_mask(row)
+            name = str(entry.get("name") or "")
+            if (
+                _shares_bit(mask, rule.protected_bits) and spell_id not in rule.exempt_ids
+                and not (
+                    rule.exempt_name_prefix and name.lower().startswith(rule.exempt_name_prefix.lower())
+                    and spell_id in learned
+                )
+            ):
+                warnings.append(
+                    f"{label}: {rule.name} family-bit rule (a): carries an aspect bit {_hex_mask(mask)} "
+                    f"(aspect bits {_hex_mask(rule.protected_bits)}) but is not an aspect - the core makes it "
+                    f"SPELL_SPECIFIC_ASPECT and it knocks the active aspect off. Use another bit (a real aspect needs a "
+                    f"SkillLineAbility row, or its id in the rule's exempt_ids)."
+                )
+            if _shares_bit(mask, rule.forbidden_carrier_bits):
+                warnings.append(
+                    f"{label}: {rule.name} family-bit rule (b): carries a poisoned bit {_hex_mask(mask)} "
+                    f"(d1 b0, {_hex_mask(rule.forbidden_carrier_bits)}) that old Steady Shot readers and core "
+                    f"hardcodes still key on. Use another bit."
+                )
+            for letter in _LETTERS:
+                reader = tuple(_u32(row.get(f"EffectSpellClassMask{letter}_{n}")) for n in (1, 2, 3))
+                if _shares_bit(reader, rule.forbidden_reader_bits):
+                    warnings.append(
+                        f"{label}: {rule.name} family-bit rule (c): effect {_LETTERS.index(letter) + 1}'s reader "
+                        f"mask {_hex_mask(reader)} contains the pet bit (d1 b28) - SpellInfo::IsAffected matches "
+                        f"on any shared bit, so it reaches every pet ability. Read a pet group through its d2 "
+                        f"bit alone."
+                    )
+            pet_cast = _shares_bit(mask, rule.pet_group_bits) or spell_id in taught_on_pet_line
+            if pet_cast and not all(m & b == b for m, b in zip(mask, rule.pet_required_bits)):
+                warnings.append(
+                    f"{label}: {rule.name} family-bit rule (d): a pet-cast spell without the pet bit "
+                    f"{_hex_mask(rule.pet_required_bits)} (mask {_hex_mask(mask)}) - without it the core treats "
+                    f"it as a ranged weapon spell and the pet's cast needs a ranged weapon."
+                )
+        for proc in spell_procs:
+            # Every declared row, whatever its id (declared rows are ours; hunter procs sit on stock ids too).
+            # SpellFamilyName 0 matches the family mask against ANY family, so it is judged like the class set.
+            if int(proc.get("SpellFamilyName") or 0) not in (rule.spell_class_set, 0):
+                continue
+            reader = tuple(_u32(proc.get(f"SpellFamilyMask{n}")) for n in (0, 1, 2))
+            if _shares_bit(reader, rule.forbidden_reader_bits):
+                warnings.append(
+                    f"spell_proc {proc['SpellId']}: {rule.name} family-bit rule (c): family mask "
+                    f"{_hex_mask(reader)} contains the pet bit (d1 b28), so the proc reaches every pet "
+                    f"ability. Use the pet group's d2 bit alone."
                 )
     return warnings

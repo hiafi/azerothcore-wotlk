@@ -50,7 +50,7 @@ KNOWN_FLAGS = {"--no-prune", "--check"}
 # PLAN P2b step 4: adopted class by class, inside each class's own pass - not a side effect of
 # every generate.py run. Extend this tuple when a pass is ready to start generating/relying on its
 # own Generated/<Class>Data.h (warlock first, in P4).
-CLASSES_WITH_GENERATED_HEADERS = ("warlock", "paladin")
+CLASSES_WITH_GENERATED_HEADERS = ("warlock", "paladin", "hunter")
 GENERATED_HEADER_DIR = REPO_ROOT / "src" / "server" / "game" / "Entities" / "Unit" / "Generated"
 from lib.reuse import ReuseContext  # noqa: E402
 
@@ -311,13 +311,22 @@ def main() -> int:
     # missing via code review, 2026-09-28 - a bare id set can't tell "override" from "wipe").
     existing_creature_rows = {int(r["entry"]): r for r in creature_table_index.live_rows("creature_template")}
     progress("loaded creature table index (creature_template/creature_template_model)")
+    # Hunter T1: the live data retire_talent() (Talent.dbc rows, base client file + promoted migrations)
+    # and item_template() (item_template rows, base dump + every migration incl. itemization_templates_v2/)
+    # edit an existing row against - see lib/spell_tables.py's ITEM_TABLES for why items use the item-tools
+    # overlay. Like creature_template, item_template is never pruned (upsert-only).
+    existing_talents = state.load_existing_rows(dbcfmt.TALENT)
+    item_live_rows = spell_tables.load_live_item_template_rows()
+    item_table_index = spell_tables.load_item_table_index(item_live_rows)
+    live_data = spell_tables.dsl_live_data(existing_talents, item_live_rows)
+    progress("loaded live Talent.dbc rows and item_template rows")
 
     dsl_classes = dsl_registry.load_classes_dir(
         SOURCE_DIR / "classes", ids_cfg=ids_cfg, trainer_index=trainer_index,
         existing_group_ids=existing_group_ids, shapeshift_index=shapeshift_index,
         existing_creature_rows=existing_creature_rows,
         creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
-        creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS,
+        creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS, live_data=live_data,
     )
     # source/npcs/*.py: class-less test/tool NPCs (training dummies) - same loader, merged in.
     dsl_npcs = dsl_registry.load_classes_dir(
@@ -325,12 +334,18 @@ def main() -> int:
         existing_group_ids=existing_group_ids, shapeshift_index=shapeshift_index,
         existing_creature_rows=existing_creature_rows,
         creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
-        creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS,
+        creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS, live_data=live_data,
     )
     _merge_npc_declarations(dsl_classes, dsl_npcs)
-    # source/world/*.py: world content tied to no class or NPC (lfg_exclude()) - same loader, merged in.
-    dsl_world = dsl_registry.load_classes_dir(SOURCE_DIR / "world", ids_cfg=ids_cfg)
+    # source/world/*.py: world content tied to no class or NPC (lfg_exclude(), item_template() edits of
+    # stock items) - same loader, merged in.
+    dsl_world = dsl_registry.load_classes_dir(SOURCE_DIR / "world", ids_cfg=ids_cfg, live_data=live_data)
     _merge_npc_declarations(dsl_classes, dsl_world, "source/world/")
+    try:
+        dsl_registry.check_retired_talent_tab(dsl_classes)
+    except dsl_registry.MissingRetiredTabError as error:
+        print(f"ERROR: {error}")
+        return 1
     n_dsl = sum(len(v) for v in dsl_classes.values())
     progress(f"loaded source/classes/*.py + source/npcs/*.py + source/world/*.py DSL ({n_dsl} entries)")
     _merge_dsl_sources(spell_entries, talents, dsl_classes)
@@ -338,6 +353,7 @@ def main() -> int:
         creature_counts = {
             **spell_tables.count_declared(dsl_classes),
             **spell_tables.count_declared(dsl_classes, tables=spell_tables.CREATURE_TABLES),
+            **spell_tables.count_declared(dsl_classes, tables=spell_tables.ITEM_TABLES),
         }
         print(
             f"note: source/classes/*.py + source/npcs/*.py (DSL) contributed {len(dsl_classes['spells'])} "
@@ -393,6 +409,9 @@ def main() -> int:
     creature_blocks = spell_tables.render_creature_blocks(creature_table_index, dsl_classes)
     for line in spell_tables.render_creature_retirement_report(creature_table_index, dsl_classes):
         print(line)
+    item_blocks = spell_tables.render_item_blocks(item_table_index, dsl_classes)
+    for line in spell_tables.render_item_retirement_report(item_table_index, dsl_classes):
+        print(line)
     known_model_display_ids = {
         int(r["DisplayID"]) for r in trainer_state.load_table_rows("creature_model_info")
     }
@@ -425,7 +444,6 @@ def main() -> int:
     progress("rendered spell-table blocks (prune + removal passes done)")
 
     existing_spells = state.load_existing_rows(dbcfmt.SPELL)
-    existing_talents = state.load_existing_rows(dbcfmt.TALENT)
     existing_talenttabs = state.load_existing_rows(dbcfmt.TALENTTAB)
     existing_skilllineabilities = state.load_existing_rows(dbcfmt.SKILLLINEABILITY)
     existing_items = state.load_existing_rows(dbcfmt.ITEM)
@@ -444,17 +462,62 @@ def main() -> int:
         load_spell_ranks_chains(), dsl_classes["spells"], stock_skilllineabilities,
         talents["skill_line_abilities"], existing_skilllineabilities,
     )
+    declared_sla_entries = list(talents["skill_line_abilities"])  # before any generated override joins the list
     talents["skill_line_abilities"].extend(rank_overrides.entries)
     rank_override_ids = {e["id"] for e in rank_overrides.entries}
+    # Hunter T1: retire_pet_spell() declarations ride the same two paths - AcquireMethod 0 on the stock
+    # SkillLineAbility rows that teach the spell to pets, and a strip from the CreatureSpellData records
+    # applied below with the superseded-rank mapping (one row per record).
+    pet_retirements = dsl_classes["pet_spell_retirements"]
+    retire_overrides = superseded_ranks.Overrides()
+    spell_data_strips: dict[int, frozenset[int]] = {}
+    retire_warnings: list[str] = []
+    if pet_retirements:
+        if not (BASE_DBC_DIR / dbcfmt.CREATUREFAMILY.dbc_filename).is_file():
+            print(
+                f"ERROR: retire_pet_spell() was declared but there is no stock {dbcfmt.CREATUREFAMILY.dbc_filename} "
+                f"in {BASE_DBC_DIR.relative_to(REPO_ROOT)} - copy it from the worldserver's DBC directory "
+                f"(ac-worldserver:/azerothcore/env/dist/data/dbc/) into that directory"
+            )
+            return 1
+        retire_overrides = superseded_ranks.retired_skilllineability_overrides(
+            pet_retirements, stock_skilllineabilities,
+            superseded_ranks.family_skill_lines(state.load_stock_rows(dbcfmt.CREATUREFAMILY)),
+            declared_sla_entries, rank_override_ids, existing_skilllineabilities,
+        )
+        spell_data_strips, retire_warnings = superseded_ranks.spell_data_strips(
+            pet_retirements, existing_creature_rows, state.load_stock_rows(dbcfmt.CREATURESPELLDATA),
+            rank_overrides.superseded,
+        )
+        for retirement in pet_retirements:
+            if retirement["spell_id"] not in retire_overrides.matched and not any(
+                retirement["spell_id"] in spells for spells in spell_data_strips.values()
+            ):
+                scope = "every family" if retirement["families"] is None else f"families {list(retirement['families'])}"
+                retire_warnings.append(
+                    f"retire_pet_spell({retirement['spell_id']}) matches nothing for {scope}: no stock pet "
+                    f"SkillLineAbility row on their skill lines and no CreatureSpellData record to strip - "
+                    f"wrong spell id or family?"
+                )
+        talents["skill_line_abilities"].extend(retire_overrides.entries)
+        rank_override_ids |= {e["id"] for e in retire_overrides.entries}
     # Default pet spells (CreatureSpellData via creature_template.PetSpellDataId) name the same ranks,
     # and SpellMgr's LoadPetDefaultSpells_helper only drops those in the family's level-up set, which
     # the overrides above just shrank. Server-only rows, emitted as their own block below.
     spell_data_overrides = superseded_ranks.creaturespelldata_overrides(
         rank_overrides.superseded, state.load_stock_rows(dbcfmt.CREATURESPELLDATA),
-        state.load_existing_rows(dbcfmt.CREATURESPELLDATA),
+        state.load_existing_rows(dbcfmt.CREATURESPELLDATA), spell_data_strips,
     )
     for warning in rank_overrides.collisions + rank_overrides.warnings + spell_data_overrides.warnings:
         print(f"WARNING: superseded ranks: {warning}")
+    for warning in retire_overrides.collisions + retire_overrides.warnings + retire_warnings:
+        print(f"WARNING: retire_pet_spell: {warning}")
+    if pet_retirements:
+        print(
+            f"note: retire_pet_spell: {len(pet_retirements)} retirement(s), {len(retire_overrides.entries)} "
+            f"SkillLineAbility row(s) overridden to AcquireMethod 0, {len(spell_data_strips)} CreatureSpellData "
+            f"record(s) stripped"
+        )
     print(
         f"note: superseded ranks: {len(rank_overrides.superseded)} superseded rank(s) of collapsed chains, "
         f"{len(rank_overrides.entries)} SkillLineAbility row(s) overridden to AcquireMethod 0 on skill "
@@ -642,6 +705,36 @@ def main() -> int:
         build.build_skilllineability_row(e) for e in skilllineability_resolved.entries
     ]
     item_rows = [build.build_item_row(e) for e in item_resolved.entries]
+    # Hunter T1 (SHARED C7.6): the PLAN section 2 family-bit rules. Pet skill lines = the shared 270 plus
+    # every CreatureFamily.dbc line (the lint adds 270 itself); without the stock file only 270 is known.
+    pet_skill_lines: set[int] = set()
+    if (BASE_DBC_DIR / dbcfmt.CREATUREFAMILY.dbc_filename).is_file():
+        for lines in superseded_ranks.family_skill_lines(state.load_stock_rows(dbcfmt.CREATUREFAMILY)).values():
+            pet_skill_lines.update(lines)
+    elif any(
+        int(row["ID"]) >= lint._CUSTOM_SPELL_ID_START and int(row.get("SpellClassSet") or 0) == 9
+        for row in spell_rows
+    ):
+        print(
+            f"WARNING: hunter family lint: no stock {dbcfmt.CREATUREFAMILY.dbc_filename} in "
+            f"{BASE_DBC_DIR.relative_to(REPO_ROOT)}, so rule (d) only knows skill line 270 and misses a spell "
+            f"taught on a family's own line - copy it from the worldserver's DBC directory "
+            f"(ac-worldserver:/azerothcore/env/dist/data/dbc/)"
+        )
+    for warning in lint.check_hunter_family_rules(
+        spell_resolved.entries, spell_rows, dsl_classes["spell_procs"],
+        list({**existing_skilllineabilities, **{int(r["ID"]): r for r in skilllineability_rows}}.values()),
+        pet_skill_lines,
+    ):
+        print(f"WARNING: {warning}")
+    # Hunter T1: a declared item_template() class/subclass must match the Item.dbc the server will have
+    # (stock plus item_dbc overlay plus this run's rows), and no bow/gun/crossbow may still need ammo.
+    for warning in lint.check_item_dbc_consistency(
+        dsl_classes["item_templates"], {**existing_items, **{int(r["ID"]): r for r in item_rows}},
+    ):
+        print(f"WARNING: {warning}")
+    for warning in lint.check_ranged_ammo_type(dsl_classes["item_templates"], item_entries, item_live_rows):
+        print(f"WARNING: {warning}")
     progress("built rows for SQL emission and ran lint checks")
 
     # Second reconciliation pass, against pure-vanilla state instead of
@@ -735,6 +828,21 @@ def main() -> int:
     client_item_rows = [build.build_item_row(e) for e in client_item_resolved.entries]
     progress("built client-patch rows (resolved against pure-vanilla stock baseline)")
 
+    # Hunter T1 (SHARED §C7.10): a Talent row on a TalentTab nobody declared crashes mod-playerbots and
+    # reads a null tab in the core. Checked on both populations - the server's live-plus-built rows (what
+    # the SQL overlay leaves in the DB) and the client's stock-plus-built rows (what patch-Z ships).
+    tab_ref_errors = lint.check_talent_tab_refs(
+        [*{**existing_talents, **{int(r["ID"]): r for r in talent_rows}}.values()],
+        [*{**existing_talenttabs, **{int(r["ID"]): r for r in talenttab_rows}}.values()],
+    ) + lint.check_talent_tab_refs(
+        [*{**stock_talents, **{int(r["ID"]): r for r in client_talent_rows}}.values()],
+        [*{**stock_talenttabs, **{int(r["ID"]): r for r in client_talenttab_rows}}.values()],
+    )
+    if tab_ref_errors:
+        for error in dict.fromkeys(tab_ref_errors):
+            print(f"ERROR: {error}")
+        return 1
+
     # -- pending SQL: reserved range + explicit edited IDs, per table --
     blocks = [
         (dbcfmt.SPELL, ids_cfg["spell"], spell_rows, spell_resolved.edited_ids, existing_spells),
@@ -782,7 +890,7 @@ def main() -> int:
         out_path, blocks, header,
         extra_blocks=[
             *prune_blocks, *removal_blocks, trainer_spell_block, *spell_table_blocks,
-            *creature_blocks, spell_data_block,
+            *creature_blocks, *item_blocks, spell_data_block,
         ],
     )
     print(f"SQL: wrote {out_path.relative_to(REPO_ROOT)}" if wrote_sql else "SQL: nothing to emit")
@@ -836,8 +944,11 @@ def main() -> int:
     shipping = {
         table.name: rows for table, rows in new_rows_by_table.items() if table.dbc_filename in dbc_files
     }
-    for warning in lint.check_client_patch(shipping, {"TalentTab": stock_talenttabs}, previous_patch):
+    patch_notes: list[str] = []
+    for warning in lint.check_client_patch(shipping, {"TalentTab": stock_talenttabs}, previous_patch, patch_notes):
         print(f"WARNING: patch: {warning}")
+    for note in patch_notes:
+        print(f"note: patch: {note}")
     if dbc_files:
         report = patch_out.write_patch(dbc_files)
         print(f"patch: loose files -> {patch_out.LOOSE_DIR}")
