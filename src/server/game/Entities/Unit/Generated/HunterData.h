@@ -8,6 +8,7 @@
 namespace HunterData
 {
     // Spell ids
+    constexpr uint32 SPELL_AUTO_SHOT = 75; // auto_shot_75
     constexpr uint32 SPELL_MEND_PET = 136; // mend_pet_136
     constexpr uint32 SPELL_DISENGAGE = 781; // disengage_781
     constexpr uint32 SPELL_EYES_OF_THE_BEAST = 1002; // eyes_of_the_beast_1002
@@ -30,6 +31,7 @@ namespace HunterData
     constexpr uint32 SPELL_FREEZING_TRAP_EFFECT = 3355; // freezing_trap_effect_3355
     constexpr uint32 SPELL_BLACK_ARROW = 3674; // black_arrow_3674
     constexpr uint32 SPELL_ASPECT_OF_THE_CHEETAH = 5118; // aspect_of_the_cheetah_5118
+    constexpr uint32 SPELL_QUICK_SHOTS = 6150; // quick_shots_6150
     constexpr uint32 SPELL_ASPECT_OF_THE_PACK = 13159; // aspect_of_the_pack_13159
     constexpr uint32 SPELL_ASPECT_OF_THE_BEAST = 13161; // aspect_of_the_beast_13161
     constexpr uint32 SPELL_ASPECT_OF_THE_MONKEY = 13163; // aspect_of_the_monkey_13163
@@ -145,6 +147,7 @@ namespace HunterData
     constexpr uint32 SPELL_READINESS = 23989; // readiness_23989
     constexpr uint32 SPELL_WYVERN_STING_24131 = 24131; // wyvern_sting_24131
     constexpr uint32 SPELL_SUREFOOTED_24283 = 24283; // surefooted_24283
+    constexpr uint32 SPELL_INTIMIDATION_24394 = 24394; // intimidation_24394
     constexpr uint32 SPELL_DEMORALIZING_SCREECH = 24423; // demoralizing_screech_24423
     constexpr uint32 SPELL_IMPROVED_REVIVE_PET_24443 = 24443; // improved_revive_pet_24443
     constexpr uint32 SPELL_PROWL = 24450; // prowl_24450
@@ -201,6 +204,10 @@ namespace HunterData
     constexpr uint32 SPELL_SNAKE_TRAP = 34600; // snake_trap_34600
     constexpr uint32 SPELL_THE_BEAST_WITHIN = 34692; // the_beast_within_34692
     constexpr uint32 SPELL_MASTER_TACTICIAN_34833 = 34833; // master_tactician_34833
+    constexpr uint32 SPELL_MASTER_TACTICIAN_34834 = 34834; // master_tactician_34834
+    constexpr uint32 SPELL_MASTER_TACTICIAN_34835 = 34835; // master_tactician_34835
+    constexpr uint32 SPELL_MASTER_TACTICIAN_34836 = 34836; // master_tactician_34836
+    constexpr uint32 SPELL_MASTER_TACTICIAN_34837 = 34837; // master_tactician_34837
     constexpr uint32 SPELL_MASTER_TACTICIAN_34838 = 34838; // master_tactician_34838
     constexpr uint32 SPELL_MASTER_TACTICIAN_34839 = 34839; // master_tactician_34839
     constexpr uint32 SPELL_FIRE_BREATH = 34889; // fire_breath_34889
@@ -321,19 +328,31 @@ namespace HunterData
     constexpr uint32 SPELL_LOCK_AND_LOAD_56344 = 56344; // lock_and_load_56344
     constexpr uint32 SPELL_STING = 56626; // sting_56626
     constexpr uint32 SPELL_STEADY_SHOT = 56641; // steady_shot_56641
+    constexpr uint32 SPELL_GLYPH_OF_THE_HAWK = 56856; // glyph_of_the_hawk_56856
     constexpr uint32 SPELL_STAMPEDE = 57386; // stampede_57386
     constexpr uint32 SPELL_LAVA_BREATH = 58604; // lava_breath_58604
     constexpr uint32 SPELL_RAKE = 59881; // rake_59881
     constexpr uint32 SPELL_FEEDING_FRENZY_60096 = 60096; // feeding_frenzy_60096
     constexpr uint32 SPELL_FREEZING_ARROW = 60192; // freezing_arrow_60192
+    constexpr uint32 SPELL_FREEZING_ARROW_60202 = 60202; // freezing_arrow_60202
+    constexpr uint32 SPELL_FREEZING_ARROW_EFFECT = 60210; // freezing_arrow_effect_60210
     constexpr uint32 SPELL_SPIRIT_STRIKE = 61193; // spirit_strike_61193
     constexpr uint32 SPELL_DASH = 61684; // dash_61684
     constexpr uint32 SPELL_CHARGE = 61685; // charge_61685
     constexpr uint32 SPELL_ASPECT_OF_THE_DRAGONHAWK = 61846; // aspect_of_the_dragonhawk_61846
     constexpr uint32 SPELL_CALL_STABLED_PET = 62757; // call_stabled_pet_62757
+    constexpr uint32 SPELL_GLYPH_OF_EXPLOSIVE_SHOT = 63066; // glyph_of_explosive_shot_63066
     constexpr uint32 SPELL_TRAP_MASTERY_63457 = 63457; // trap_mastery_63457
     constexpr uint32 SPELL_TRAP_MASTERY_63458 = 63458; // trap_mastery_63458
     constexpr uint32 SPELL_THUNDERSTOMP = 63900; // thunderstomp_63900
     constexpr uint32 SPELL_SNIPER_TRAINING_64418 = 64418; // sniper_training_64418
+    constexpr uint32 SPELL_SNIPER_TRAINING_64419 = 64419; // sniper_training_64419
+    constexpr uint32 SPELL_SNIPER_TRAINING_64420 = 64420; // sniper_training_64420
     constexpr uint32 SPELL_FEROCIOUS_INSPIRATION_75593 = 75593; // ferocious_inspiration_75593
+    constexpr uint32 SPELL_GLAIVE_TOSS = 201600; // glaive_toss_201600
+    constexpr uint32 SPELL_ASPECT_OF_THE_DRAGONHAWK_EXPLOSION = 201601; // aspect_of_the_dragonhawk_explosion_201601
+    constexpr uint32 SPELL_ASPECT_OF_THE_VIPER_POISON = 201602; // aspect_of_the_viper_poison_201602
+    constexpr uint32 SPELL_ASPECT_OF_THE_BEAST_PET_BUFF = 201603; // aspect_of_the_beast_pet_buff_201603
+    constexpr uint32 SPELL_ASPECT_OF_THE_MONKEY_VERSATILITY = 201604; // aspect_of_the_monkey_versatility_201604
+    constexpr uint32 SPELL_ASPECT_OF_THE_MONKEY_PET = 201605; // aspect_of_the_monkey_pet_201605
 }

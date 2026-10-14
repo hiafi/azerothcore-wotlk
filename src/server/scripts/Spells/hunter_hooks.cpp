@@ -51,11 +51,30 @@ public:
         if (!pet || pet->getPetType() != HUNTER_PET)
             return;
 
-        Player* owner = Hunter::GetOwningPlayer(pet);
+        // Pet::GetOwner reads the stored owner: the charmer/owner GUID is empty until SetMinion, which runs after
+        // AddToMap on the taming paths.
+        Player* owner = pet->GetOwner();
         if (!owner || owner->getClass() != CLASS_HUNTER)
             return;
 
         // Filled in order: H0-P (passthrough, kit, pin) -> H0 (Monkey re-apply) -> S2 (Lone Survivor).
+
+        // ---- H0-P slot: passthrough, kit swap, pin (PET first). ----
+
+        // ---- H0: Aspect of the Monkey re-apply (SHARED §B6.6), the pet was summoned after the aspect. ----
+        if (owner->HasAura(Hunter::SPELL_ASPECT_OF_THE_MONKEY) && !pet->HasAura(Hunter::SPELL_ASPECT_OF_THE_MONKEY_PET))
+        {
+            // 201605's implicit target 5 resolves through the owner's guardian-pet slot, which Pet::LoadFromDB and
+            // Player::SummonPet fill (SetMinion) before AddToMap. The taming paths (Spell::EffectTameCreature,
+            // EffectCreateTamedPet, Player::CreatePet) call AddToMap before SetMinion, so there the slot
+            // is still empty and the aura goes on the pet directly.
+            if (owner->GetGuardianPet() == pet)
+                owner->CastSpell(pet, Hunter::SPELL_ASPECT_OF_THE_MONKEY_PET, true);
+            else
+                pet->AddAura(Hunter::SPELL_ASPECT_OF_THE_MONKEY_PET, pet);
+        }
+
+        // ---- S2 slot: Lone Survivor refresh (after H0). ----
     }
 
     void OnInitStatsForLevel(Guardian* guardian, uint8 /*petlevel*/) override
@@ -64,7 +83,10 @@ public:
             return;
 
         // A hunter pet or any hunter-owned guardian (Stampede beasts must reach this hook); H0-P narrows it.
-        Player* owner = Hunter::GetOwningPlayer(guardian);
+        // Minion::GetOwner uses the owner GUID stored at construction: the charmer/owner GUID is empty before
+        // SetMinion, and this hook runs before it (Pet::LoadPetFromDB, InitTamedPet).
+        Unit* ownerUnit = guardian->GetOwner();
+        Player* owner = ownerUnit ? ownerUnit->ToPlayer() : nullptr;
         if (!owner || owner->getClass() != CLASS_HUNTER)
             return;
     }
