@@ -37,7 +37,7 @@ Import rule: this file imports no sibling spell module; stock rows are named by 
 """
 
 from lib.dsl import AuraType, Effect, EffectType, PowerType, School
-from lib.dsl.registry import const, retire_pet_spell, scripted_by, skill_line_ability, spell, spell_group, unbind_script
+from lib.dsl.registry import const, custom_attr, retire_pet_spell, scripted_by, skill_line_ability, spell, spell_group, unbind_script
 from . import _masks as m
 
 
@@ -551,3 +551,235 @@ scripted_by(53186, 'spell_hun_pet_bloodthirsty')
 scripted_by(53187, 'spell_hun_pet_bloodthirsty')
 unbind_script(-24604, 'spell_hun_target_self_and_pet')   # X2: Furious Howl's raid retarget; 53434 stays bound, inert
 scripted_by(web_pull_201718, 'spell_hun_pet_web_pull')
+
+
+# =====================================================================================================
+# H0-P2 (PET.md 2.1, 4.5, 5.2, 6.2, 8.2): mirror auras, Kill Command helpers, per-type kit auras, bindings
+# =====================================================================================================
+
+hunter_pet_versatility_201700 = spell(
+    id=201700,
+    name='Hunter Pet Versatility',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_HEALING_DONE_PERCENT),
+    ],
+    spell_icon_id=0,
+    notes="H0-P2 PET 5.2: hidden mirror aura on the hunter pet / beast. Amounts stored 0, set by spell_hun_pet_passthrough (eff0 +V done, eff1 -V/2 taken, eff2 +V healing done). Family 0. custom_attr POSITIVE (eff1 negative would classify it negative, warlock 200854 precedent).",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+custom_attr(hunter_pet_versatility_201700, attributes=0x0E000000)
+
+
+hunter_pet_crit_haste_201701 = spell(
+    id=201701,
+    name='Hunter Pet Crit and Haste',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_CRIT_PCT),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.HASTE_ALL),
+    ],
+    spell_icon_id=0,
+    notes="H0-P2 PET 5.2: hidden mirror aura. eff0 MOD_CRIT_PCT (290), eff1 MELEE_SLOW (193, haste). Amounts stored 0, set by spell_hun_pet_passthrough. Family 0.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+hunter_pet_damage_hook_201702 = spell(
+    id=201702,
+    name='Hunter Pet Damage Hook',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_ATTACK_POWER),
+    ],
+    spell_icon_id=0,
+    notes="H0-P2 PET 5.2: hidden mirror aura. eff0 MOD_DAMAGE_PERCENT_DONE 127 (S1 term on the pet, pet-multiplier copy on beasts), eff1 MOD_ATTACK_POWER (beasts only, 0 on the pet). Amounts stored 0, set by spell_hun_pet_passthrough. Family 0.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+hunter_pet_autocast_marker_201703 = spell(
+    id=201703,
+    name='Hunter Pet Autocast Marker',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=0,
+    notes="H0-P2 review W1: hidden no-op passive learned once by a hunter pet (Hunter::SeatDefaultPetBar) right after it turns autocast on for the basic and the utility. Pet spells are saved UNCHANGED before the first tick (tame paths save at once), so the PETSPELL_NEW state can't mark 'autocast not yet applied'; a learned spell persists in pet_spell. Family 0, no effect.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+
+hunter_pet_utility_marker_201752 = spell(
+    id=201752,
+    name='Hunter Pet Utility Autocast Marker',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+    ],
+    spell_icon_id=0,
+    notes="H0-P2 review C2-1: second hidden no-op passive, learned once by a hunter pet right after Hunter::SeatDefaultPetBar turns autocast on for its buff/debuff utility. Separate from 201703 (the basic's marker) because Roar of Courage (pet level 10) and Menacing Roar (14) are learned later than the basic. Family 0, no effect.",
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+kill_command_teleport_201704 = spell(
+    id=201704,
+    name='Kill Command (Teleport)',
+    school=School.NORMAL,
+    attributes=16,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    effects=[
+        Effect(type=5, base_points=0, die_sides=0, implicit_target_a=1, implicit_target_b=65, radius_yards=2.0),
+    ],
+    spell_icon_id=0,
+    notes='H0-P2 PET 2.1/6.2: pet-cast helper, family 0 (no SpellClassSet). eff0 TELEPORT_UNITS (5) A=1 caster, B=65 TARGET_DEST_TARGET_BACK, radius 2 yd, RangeIndex 13 - 36563 (Shadowstep) shape. Instant, no cost, no GCD, not passive. AttributesEx2 0x4 IGNORE_LINE_OF_SIGHT (as on 36563; triggered casts still run the LoS checks, review RD-1) and AttributesEx3 0x10000 SUPPRESS_CASTER_PROCS. Cast by spell_hun_kill_command_rework.',
+    raw_overrides={'RangeIndex': 13, 'AttributesEx2': 0x4, 'AttributesEx3': 0x10000, 'CastingTimeIndex': 1, 'ProcChance': 101, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+kill_command_strike_201705 = spell(
+    id=201705,
+    name='Kill Command (Strike)',
+    school=School.NORMAL,
+    attributes=16,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    effects=[
+        Effect(type=EffectType.DUMMY, die_sides=0, implicit_target_a=6),
+    ],
+    spell_icon_id=0,
+    notes='H0-P2 PET 2.1/6.2: pet-cast cosmetic strike, family 0, eff0 DUMMY on the target, no damage. AttributesEx3 0x10000 SUPPRESS_CASTER_PROCS. SpellVisualID_1 6762 (Claw 16827). range_yards 50000.0: triggered casts are range-checked strictly (Spell.cpp:6247-6251, :7336).',
+    raw_overrides={'AttributesEx3': 0x10000, 'SpellVisualID_1': 6762, 'CastingTimeIndex': 1, 'ProcChance': 101, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0},
+)
+
+
+ferocity_kit_201706 = spell(
+    id=201706,
+    name='Ferocity Kit',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=0),
+    ],
+    spell_icon_id=0,
+    notes="H0-P2 PET 4.5: hidden hunter aura, live +0 ms cooldown / +0% damage (the basics' DBC values are Ferocity's). eff0 SPELLMOD_COOLDOWN, eff1 SPELLMOD_DAMAGE, both masked to PET_BASIC_READER (0,0,0x800000): EffectSpellClassMaskA_3 (effect 1, dword 3) and EffectSpellClassMaskB_3 (effect 2, dword 3); nothing on d1 (a d1 b28 bit would reach every pet ability). Stored = live - 1.",
+    raw_overrides={'SpellClassSet': 9, 'EffectSpellClassMaskA_3': m.PET_BASIC_READER[2], 'EffectSpellClassMaskB_3': m.PET_BASIC_READER[2], 'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+
+
+tenacity_kit_201707 = spell(
+    id=201707,
+    name='Tenacity Kit',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5999, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=193, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=0),
+    ],
+    spell_icon_id=0,
+    notes="H0-P2 PET 4.5: hidden hunter aura, live +6000 ms cooldown (stored 5999) / +194% damage (stored 193): Bite 4 s -> 10 s, 25.5 -> 75 potency. eff0 SPELLMOD_COOLDOWN, eff1 SPELLMOD_DAMAGE, both masked to PET_BASIC_READER (0,0,0x800000): EffectSpellClassMaskA_3 (effect 1, dword 3) and EffectSpellClassMaskB_3 (effect 2, dword 3); nothing on d1 (a d1 b28 bit would reach every pet ability). Stored = live - 1.",
+    raw_overrides={'SpellClassSet': 9, 'EffectSpellClassMaskA_3': m.PET_BASIC_READER[2], 'EffectSpellClassMaskB_3': m.PET_BASIC_READER[2], 'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+
+
+cunning_kit_201708 = spell(
+    id=201708,
+    name='Cunning Kit',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=0),
+    ],
+    spell_icon_id=0,
+    notes="H0-P2 PET 4.5: hidden hunter aura, live 0 / 0 (reserved for Cunning families that keep a melee basic). eff0 SPELLMOD_COOLDOWN, eff1 SPELLMOD_DAMAGE, both masked to PET_BASIC_READER (0,0,0x800000): EffectSpellClassMaskA_3 (effect 1, dword 3) and EffectSpellClassMaskB_3 (effect 2, dword 3); nothing on d1 (a d1 b28 bit would reach every pet ability). Stored = live - 1.",
+    raw_overrides={'SpellClassSet': 9, 'EffectSpellClassMaskA_3': m.PET_BASIC_READER[2], 'EffectSpellClassMaskB_3': m.PET_BASIC_READER[2], 'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+)
+
+
+# ---- H0-P2 script bindings (PET.md 8.2) ----
+unbind_script(34902, 'spell_hun_generic_scaling')    # 34903/34904 keep the stock class
+scripted_by(34902, 'spell_hun_pet_scaling_rework')
+scripted_by(hunter_pet_versatility_201700, 'spell_hun_pet_passthrough')
+scripted_by(hunter_pet_crit_haste_201701, 'spell_hun_pet_passthrough')
+scripted_by(hunter_pet_damage_hook_201702, 'spell_hun_pet_passthrough')
+unbind_script(34026, 'spell_hun_kill_command')
+scripted_by(34026, 'spell_hun_kill_command_rework')

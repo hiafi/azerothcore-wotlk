@@ -273,6 +273,174 @@ def check_sla_rows(sla_rows: list[dict], spell_rows_by_id: dict[int, dict], tabl
     return bad
 
 
+ALSO_NAMED = "is also named by creatures of families"
+EXPECTED_SHARED_RECORD_WARNINGS: list[str] = []   # A3-gen: 5953 and 9071 now strip; nothing is left alone
+
+NO_ITEM_CLASS_P2 = (201700, 201703, 201752, 201701, 201702, 201704, 201705, 201706, 201707, 201708, 34026)
+MIRRORS = (201700, 201701, 201702)
+KITS = (201706, 201707, 201708)
+MARKERS = (201703, 201752)
+MARKER = 201703    # Hunter Pet Autocast Marker: hidden passive DUMMY, family 0, no script
+PASSIVE = 0x40
+PET_BASIC_READER = (0, 0, PET_BASIC_D2)
+
+
+def check_shared_record_warnings(strip_warnings: list[str], expected: list[str]) -> list[str]:
+    got = [w for w in strip_warnings if ALSO_NAMED in w]
+    if got == expected:
+        return []
+    return [f"'record also named by another family' warnings differ: unexpected {[w for w in got if w not in expected]}, "
+            f"missing {[w for w in expected if w not in got]}"]
+
+
+def check_passive_permanent(rows_by_id: dict[int, dict], permanent_index: int, ids=MIRRORS + MARKERS + KITS) -> list[str]:
+    """Mirrors and kits, on the BUILT row: passive (Attributes & 0x40) and the permanent SpellDuration index
+    (`reuse.duration_index(None)`), so a stray raw DurationIndex fails."""
+    bad = []
+    for spell_id in ids:
+        row = rows_by_id.get(spell_id)
+        if row is None:
+            bad.append(f"{spell_id}: not declared")
+            continue
+        if not int(row.get("Attributes") or 0) & PASSIVE:
+            bad.append(f"{spell_id}: Attributes {row.get('Attributes')} lacks passive 0x40")
+        if int(row.get("DurationIndex") or 0) != permanent_index:
+            bad.append(f"{spell_id}: built DurationIndex {row.get('DurationIndex')}, expected the permanent "
+                       f"index {permanent_index}")
+    return bad
+
+
+def check_helpers(rows_by_id: dict[int, dict], strike_range_index: int) -> list[str]:
+    """Kill Command helpers, on the BUILT rows: family 0; 201704 RangeIndex 13 with AttributesEx2 IGNORE_LINE_OF_SIGHT
+    (0x4) and AttributesEx3 SUPPRESS_CASTER_PROCS (0x10000); 201705 RangeIndex == the index for 50000 yd."""
+    bad = []
+    for spell_id in (201704, 201705):
+        row = rows_by_id.get(spell_id)
+        if row is None:
+            bad.append(f"{spell_id}: not declared")
+        elif int(row.get("SpellClassSet") or 0) != 0:
+            bad.append(f"{spell_id}: SpellClassSet {row.get('SpellClassSet')}, expected 0 (family 0)")
+    tele, strike = rows_by_id.get(201704), rows_by_id.get(201705)
+    if tele is not None:
+        if int(tele.get("RangeIndex") or 0) != 13:
+            bad.append(f"201704: RangeIndex {tele.get('RangeIndex')}, expected 13")
+        if not int(tele.get("AttributesEx2") or 0) & 0x4:
+            bad.append(f"201704: AttributesEx2 {tele.get('AttributesEx2')} lacks IGNORE_LINE_OF_SIGHT 0x4")
+        if not int(tele.get("AttributesEx3") or 0) & 0x10000:
+            bad.append(f"201704: AttributesEx3 {tele.get('AttributesEx3')} lacks SUPPRESS_CASTER_PROCS 0x10000")
+    if strike is not None and int(strike.get("RangeIndex") or 0) != strike_range_index:
+        bad.append(f"201705: built RangeIndex {strike.get('RangeIndex')}, expected {strike_range_index} (50000 yd)")
+    return bad
+
+
+def check_autocast_marker(rows_by_id: dict[int, dict], bound: list[dict], marker: int = MARKER) -> list[str]:
+    """201703 / 201752 (`marker`): declared, family 0 with no SpellClassSet and no mask at spell or effect level,
+    and no script binding."""
+    row = rows_by_id.get(marker)
+    if row is None:
+        return [f"{marker}: not declared"]
+    bad = []
+    if int(row.get("SpellClassSet") or 0) != 0:
+        bad.append(f"{marker}: SpellClassSet {row.get('SpellClassSet')}, expected 0")
+    for n in (1, 2, 3):
+        if _u32(row.get(f"SpellClassMask_{n}")):
+            bad.append(f"{marker}: SpellClassMask_{n} is not empty")
+        for effect in (1, 2, 3):
+            if _effect_mask(row, effect)[n - 1]:
+                bad.append(f"{marker}: effect {effect} mask dword {n} is not empty")
+    if int(row.get("Effect_1") or 0) != 6 or int(row.get("EffectAura_1") or 0) != 4:
+        bad.append(f"{marker}: eff0 is not APPLY_AURA DUMMY (Effect_1 {row.get('Effect_1')}, "
+                   f"EffectAura_1 {row.get('EffectAura_1')})")
+    if int(row.get("EffectBasePoints_1") or 0) != 0:
+        bad.append(f"{marker}: eff0 amount {row.get('EffectBasePoints_1')}, expected 0")
+    names = sorted(r["ScriptName"] for r in bound if int(r["spell_id"]) == marker)
+    if names:
+        bad.append(f"{marker}: bound to script(s) {names}, expected none")
+    return bad
+
+
+def check_kit_masks(rows_by_id: dict[int, dict], ids=KITS) -> list[str]:
+    """SpellClassSet 9, eff1 and eff2 masks exactly (0, 0, 0x800000), and no SpellClassMask dword 0/1 (spell-level)."""
+    bad = []
+    for spell_id in ids:
+        row = rows_by_id.get(spell_id)
+        if row is None:
+            bad.append(f"{spell_id}: not declared")
+            continue
+        if int(row.get("SpellClassSet") or 0) != 9:
+            bad.append(f"{spell_id}: SpellClassSet {row.get('SpellClassSet')}, expected 9")
+        for effect in (1, 2):
+            if _effect_mask(row, effect) != PET_BASIC_READER:
+                bad.append(f"{spell_id}: effect {effect} mask {_effect_mask(row, effect)}, expected {PET_BASIC_READER}")
+        for dword in (1, 2):
+            if _u32(row.get(f"SpellClassMask_{dword}")):
+                bad.append(f"{spell_id}: spell-level SpellClassMask_{dword} is not empty")
+    return bad
+
+
+def check_kit_values(rows_by_id: dict[int, dict]) -> list[str]:
+    want = {201706: (-1, -1), 201707: (5999, 193), 201708: (-1, -1)}
+    bad = []
+    for spell_id, (cooldown, damage) in want.items():
+        row = rows_by_id.get(spell_id)
+        if row is None:
+            bad.append(f"{spell_id}: not declared")
+            continue
+        got = (int(row.get("EffectBasePoints_1") or 0), int(row.get("EffectBasePoints_2") or 0))
+        if got != (cooldown, damage):
+            bad.append(f"{spell_id}: stored base points {got}, expected {(cooldown, damage)}")
+    return bad
+
+
+def check_kill_command_row(row: dict | None) -> list[str]:
+    """PET 6.2's built 34026 row."""
+    if row is None:
+        return ["34026: not declared"]
+    want = {"Category": 0, "RecoveryTime": 6000, "StartRecoveryTime": 1500, "StartRecoveryCategory": 133,
+            "DefenseType": 3, "AttributesEx": 0, "AttributesEx2": 0, "SpellLevel": 10, "Effect_1": 2, "Effect_2": 3}
+    bad = [f"34026: {k} {row.get(k)}, expected {v}" for k, v in want.items() if int(row.get(k) or 0) != v]
+    mask = tuple(_u32(row.get(f"SpellClassMask_{n}")) for n in (1, 2, 3))
+    if mask != (0, 0x800, 0):
+        bad.append(f"34026: SpellClassMask {mask}, expected (0, 0x800, 0)")
+    return bad
+
+
+def check_trainer_rows(trainer_spells: list[dict], spell_id=34026, trainers=(204, 205), req_level=10) -> list[str]:
+    got = {int(t["TrainerId"]): int(t["ReqLevel"]) for t in trainer_spells if int(t["SpellId"]) == spell_id}
+    want = {t: req_level for t in trainers}
+    return [] if got == want else [f"trainer_spell rows for {spell_id}: {got}, expected {want}"]
+
+
+def check_bindings(bound: list[dict], unbound: list[dict], expected_bound: dict[int, set[str]],
+                   expected_unbound: dict[int, set[str]]) -> list[str]:
+    """`bound`: spell_script_names rows, `unbound`: script_removals rows. Each expected pair must be present, and
+    nothing else is declared for the spells the expectation names (34903/34904 stay untouched)."""
+    def group(rows):
+        out: dict[int, set[str]] = {}
+        for r in rows:
+            out.setdefault(int(r["spell_id"]), set()).add(r["ScriptName"])
+        return out
+
+    got_bound, got_unbound = group(bound), group(unbound)
+    bad = []
+    for spell_id, names in expected_bound.items():
+        if got_bound.get(spell_id, set()) != names:
+            bad.append(f"{spell_id}: bound scripts {sorted(got_bound.get(spell_id, ()))}, expected {sorted(names)}")
+    for spell_id, names in expected_unbound.items():
+        if got_unbound.get(spell_id, set()) != names:
+            bad.append(f"{spell_id}: unbound scripts {sorted(got_unbound.get(spell_id, ()))}, expected {sorted(names)}")
+    for spell_id in (34903, 34904):
+        if spell_id in got_bound or spell_id in got_unbound:
+            bad.append(f"{spell_id}: must stay untouched, but the package binds/unbinds it")
+    return bad
+
+
+EXPECTED_BOUND = {34902: {"spell_hun_pet_scaling_rework"}, 201700: {"spell_hun_pet_passthrough"},
+                  201701: {"spell_hun_pet_passthrough"}, 201702: {"spell_hun_pet_passthrough"},
+                  34026: {"spell_hun_kill_command_rework"}}
+EXPECTED_UNBOUND = {34902: {"spell_hun_generic_scaling"}, 34026: {"spell_hun_kill_command"}}
+
+
 # ---- real data ------------------------------------------------------------------------------------------------
 
 _CACHE: dict = {}
@@ -297,7 +465,7 @@ def package_data() -> dict:
         reuse = ReuseContext({}, ids_cfg)
         rows = [build.build_spell_row(e, reuse) for e in package.spells]
         _CACHE.update(
-            package=package, ids_cfg=ids_cfg, creature_rows=creature_rows, rows=rows,
+            reuse=reuse, package=package, ids_cfg=ids_cfg, creature_rows=creature_rows, rows=rows,
             rows_by_id={int(r["ID"]): r for r in rows},
             sla_rows=[build.build_skilllineability_row(e) for e in package.skill_line_abilities],
             stock_spells=state.load_stock_rows(dbcfmt.SPELL),
@@ -306,19 +474,34 @@ def package_data() -> dict:
 
 
 def retirement_resolution() -> dict:
-    """Runs the two helpers exactly as generate.py (lines ~473-500) does, on the hunter package's retirements."""
+    """Runs the retirement helpers exactly as generate.py (lines ~460-503) does, on the hunter package's retirements:
+    the real superseded-rank map, the declared + rank-override + retire-override SkillLineAbility overlay, and the
+    family skill lines (P1-4: a `{}` superseded map hid the Bite records 5953 and 9071)."""
     if "resolution" not in _CACHE:
+        from bootstrap import load_spell_ranks_chains  # noqa: PLC0415
+
         data = package_data()
         package = data["package"]
         stock_sla = state.load_stock_rows(dbcfmt.SKILLLINEABILITY)
+        existing_sla = state.load_existing_rows(dbcfmt.SKILLLINEABILITY)
+        lines_by_family = superseded_ranks.family_skill_lines(state.load_stock_rows(dbcfmt.CREATUREFAMILY))
+        declared = list(package.skill_line_abilities)
+        rank_overrides = superseded_ranks.skilllineability_overrides(
+            load_spell_ranks_chains(), package.spells, stock_sla, declared, existing_sla,
+        )
         retirements = package.pet_spell_retirements
         overrides = superseded_ranks.retired_skilllineability_overrides(
-            retirements, stock_sla,
-            superseded_ranks.family_skill_lines(state.load_stock_rows(dbcfmt.CREATUREFAMILY)),
-            list(package.skill_line_abilities), set(), {},
+            retirements, stock_sla, lines_by_family, declared, {e["id"] for e in rank_overrides.entries}, existing_sla,
         )
+        built_declared = [*declared, *rank_overrides.entries]
         strips, strip_warnings = superseded_ranks.spell_data_strips(
-            retirements, data["creature_rows"], state.load_stock_rows(dbcfmt.CREATURESPELLDATA), {},
+            retirements, data["creature_rows"], state.load_stock_rows(dbcfmt.CREATURESPELLDATA),
+            rank_overrides.superseded, lines_by_family,
+            {
+                **stock_sla,
+                **{e["id"]: build.build_skilllineability_row(e) for e in built_declared},
+                **{e["id"]: build.build_skilllineability_row(e) for e in overrides.entries},
+            },
         )
         _CACHE["resolution"] = (retirements, overrides, strips, strip_warnings)
     return _CACHE["resolution"]
@@ -359,6 +542,45 @@ class HunterPetDataTest(unittest.TestCase):
     # (d)
     def test_furious_howl_shape(self):
         self.assertClean(check_furious_howl(package_data()["rows_by_id"].get(FURIOUS_HOWL)))
+
+    # H0-P2 built-row guards
+    def test_h0_p2_rows_have_equipped_item_class_minus_one(self):
+        self.assertClean(check_equipped_item_class(package_data()["rows_by_id"], NO_ITEM_CLASS_P2))
+
+    def test_mirrors_and_kits_are_passive_and_permanent(self):
+        data = package_data()
+        self.assertClean(check_passive_permanent(data["rows_by_id"], data["reuse"].duration_index(None)))
+
+    def test_kill_command_helpers(self):
+        data = package_data()
+        self.assertClean(check_helpers(data["rows_by_id"], data["reuse"].range_index(50000.0)))
+
+    def test_kit_masks_and_values(self):
+        rows = package_data()["rows_by_id"]
+        self.assertClean(check_kit_masks(rows))
+        self.assertClean(check_kit_values(rows))
+
+    def test_autocast_marker(self):
+        package = package_data()["package"]
+        for marker in MARKERS:
+            self.assertClean(check_autocast_marker(package_data()["rows_by_id"], package.spell_script_names, marker))
+
+    def test_versatility_mirror_custom_attr(self):
+        attrs = {int(c["spell_id"]): int(c["attributes"]) for c in package_data()["package"].custom_attrs}
+        self.assertEqual(attrs.get(201700), 0x0E000000)
+
+    def test_kill_command_row_trainers_and_bindings(self):
+        data = package_data()
+        package = data["package"]
+        self.assertClean(check_kill_command_row(data["rows_by_id"].get(34026)))
+        self.assertClean(check_trainer_rows(package.trainer_spells))
+        self.assertClean(check_bindings(package.spell_script_names, package.script_removals,
+                                        EXPECTED_BOUND, EXPECTED_UNBOUND))
+
+    # P1-4: the real superseded map and family data, so the Bite records strip and nothing is left alone
+    def test_no_record_is_left_alone_because_another_family_names_it(self):
+        _, _, _, strip_warnings = retirement_resolution()
+        self.assertClean(check_shared_record_warnings(strip_warnings, EXPECTED_SHARED_RECORD_WARNINGS))
 
     # (e)
     def test_d2_b23_carriers(self):
@@ -535,6 +757,102 @@ class HunterPetDataNegativeTest(unittest.TestCase):
         with_class = [dict(r) for r in rows]
         with_class[5]["ClassMask"] = 4
         self.assertTrue(any("ClassMask" in p for p in check_sla_rows(with_class, spells)))
+
+    def test_shared_record_warning_list_is_exact(self):
+        warning = "retire_pet_spell(17253, families=[1]): CreatureSpellData 5953 holds it and " \
+                  "is also named by creatures of families [2], so it is left alone"
+        self.assertEqual(len(check_shared_record_warnings([warning, "unrelated"], [])), 1)
+        self.assertEqual(len(check_shared_record_warnings([warning], [])), 1)
+        self.assertEqual(len(check_shared_record_warnings([], [warning])), 1)
+        self.assertEqual(check_shared_record_warnings([warning, "other"], [warning]), [])
+
+    def test_passive_and_duration_are_caught(self):
+        rows = {1: _row(1, Attributes=464, DurationIndex=7), 2: _row(2, Attributes=16, DurationIndex=7),
+                3: _row(3, Attributes=464, DurationIndex=9)}
+        bad = check_passive_permanent(rows, 7, ids=(1, 2, 3, 4))
+        self.assertEqual(len(bad), 3)    # 2 not passive, 3 wrong built duration index, 4 missing
+        self.assertEqual(check_passive_permanent(rows, 7, ids=(1,)), [])
+
+    def test_helper_defects_are_caught(self):
+        good = {201704: _row(201704, SpellClassSet=0, RangeIndex=13, AttributesEx2=0x4, AttributesEx3=0x10000),
+                201705: _row(201705, SpellClassSet=0, RangeIndex=30202)}
+        self.assertEqual(check_helpers(good, 30202), [])
+        self.assertEqual(len(check_helpers({**good, 201704: {**good[201704], "SpellClassSet": 9}}, 30202)), 1)
+        self.assertEqual(len(check_helpers({**good, 201704: {**good[201704], "RangeIndex": 2}}, 30202)), 1)
+        self.assertEqual(len(check_helpers({**good, 201704: {**good[201704], "AttributesEx2": 0}}, 30202)), 1)
+        self.assertEqual(len(check_helpers({**good, 201704: {**good[201704], "AttributesEx3": 0}}, 30202)), 1)
+        self.assertEqual(len(check_helpers({**good, 201705: {**good[201705], "RangeIndex": 36}}, 30202)), 1)
+        self.assertEqual(len(check_helpers({}, 30202)), 2)
+
+    def test_autocast_marker_defects_are_caught(self):
+        good = _row(MARKER, SpellClassSet=0, Effect_1=6, EffectAura_1=4, EffectBasePoints_1=0)
+        self.assertEqual(check_autocast_marker({MARKER: good}, []), [])
+        self.assertEqual(len(check_autocast_marker({}, [])), 1)
+        self.assertEqual(len(check_autocast_marker({MARKER: {**good, "SpellClassSet": 9}}, [])), 1)
+        self.assertEqual(len(check_autocast_marker({MARKER: {**good, "SpellClassMask_3": PET_BASIC_D2}}, [])), 1)
+        self.assertEqual(len(check_autocast_marker({MARKER: {**good, "EffectSpellClassMaskA_3": PET_BASIC_D2}}, [])), 1)
+        self.assertEqual(len(check_autocast_marker({MARKER: {**good, "EffectAura_1": 79}}, [])), 1)
+        self.assertEqual(len(check_autocast_marker({MARKER: {**good, "EffectBasePoints_1": 5}}, [])), 1)
+        self.assertEqual(len(check_autocast_marker({MARKER: good}, [{"spell_id": MARKER, "ScriptName": "x"}])), 1)
+        self.assertEqual(check_autocast_marker({MARKER: good}, [{"spell_id": 34902, "ScriptName": "x"}]), [])
+        utility = {**good, "ID": 201752}
+        self.assertEqual(check_autocast_marker({201752: utility}, [], 201752), [])
+        self.assertEqual(len(check_autocast_marker({201752: {**utility, "SpellClassSet": 9}}, [], 201752)), 1)
+        self.assertEqual(len(check_autocast_marker({}, [], 201752)), 1)
+        self.assertEqual(len(check_autocast_marker({201752: utility}, [{"spell_id": 201752, "ScriptName": "x"}], 201752)), 1)
+
+    def _good_kit(self, spell_id=201707):
+        return _row(spell_id, SpellClassSet=9, EffectSpellClassMaskA_3=PET_BASIC_D2, EffectSpellClassMaskB_3=PET_BASIC_D2)
+
+    def test_kit_mask_defects_are_caught(self):
+        good = {i: self._good_kit(i) for i in KITS}
+        self.assertEqual(check_kit_masks(good), [])
+        self.assertEqual(len(check_kit_masks({**good, 201706: {**good[201706], "SpellClassSet": 0}})), 1)
+        self.assertEqual(len(check_kit_masks({**good, 201706: {**good[201706], "EffectSpellClassMaskB_2": PET_BIT_D1}})), 1)
+        self.assertEqual(len(check_kit_masks({**good, 201706: {**good[201706], "EffectSpellClassMaskA_3": 0}})), 1)
+        self.assertEqual(len(check_kit_masks({**good, 201706: {**good[201706], "SpellClassMask_2": PET_BIT_D1}})), 1)
+        self.assertEqual(len(check_kit_masks({k: v for k, v in good.items() if k != 201708})), 1)
+
+    def test_kit_value_defects_are_caught(self):
+        good = {201706: _row(201706, EffectBasePoints_1=-1, EffectBasePoints_2=-1),
+                201707: _row(201707, EffectBasePoints_1=5999, EffectBasePoints_2=193),
+                201708: _row(201708, EffectBasePoints_1=-1, EffectBasePoints_2=-1)}
+        self.assertEqual(check_kit_values(good), [])
+        self.assertEqual(len(check_kit_values({**good, 201707: _row(201707, EffectBasePoints_1=6000,
+                                                                    EffectBasePoints_2=193)})), 1)
+        self.assertEqual(len(check_kit_values({**good, 201706: _row(201706, EffectBasePoints_1=0,
+                                                                    EffectBasePoints_2=-1)})), 1)
+
+    def test_kill_command_row_defects_are_caught(self):
+        good = _row(34026, Category=0, RecoveryTime=6000, StartRecoveryTime=1500, StartRecoveryCategory=133,
+                    DefenseType=3, AttributesEx=0, AttributesEx2=0, SpellLevel=10, Effect_1=2, Effect_2=3,
+                    SpellClassMask_2=0x800)
+        self.assertEqual(check_kill_command_row(good), [])
+        for key, value in (("Category", 1171), ("RecoveryTime", 60000), ("AttributesEx", 0x10000400),
+                           ("AttributesEx2", 4), ("SpellLevel", 66), ("Effect_1", 6), ("Effect_2", 0),
+                           ("DefenseType", 0), ("StartRecoveryCategory", 0), ("SpellClassMask_1", 1),
+                           ("SpellClassMask_3", 1), ("SpellClassMask_2", 0x801)):
+            self.assertEqual(len(check_kill_command_row({**good, key: value})), 1, key)
+        self.assertEqual(len(check_kill_command_row(None)), 1)
+
+    def test_trainer_row_defects_are_caught(self):
+        good = [{"TrainerId": 204, "SpellId": 34026, "ReqLevel": 10}, {"TrainerId": 205, "SpellId": 34026, "ReqLevel": 10}]
+        self.assertEqual(check_trainer_rows(good), [])
+        self.assertEqual(len(check_trainer_rows(good[:1])), 1)
+        self.assertEqual(len(check_trainer_rows([{**good[0], "ReqLevel": 66}, good[1]])), 1)
+        self.assertEqual(len(check_trainer_rows([*good, {"TrainerId": 7, "SpellId": 34026, "ReqLevel": 66}])), 1)
+
+    def test_binding_defects_are_caught(self):
+        def rows(pairs):
+            return [{"spell_id": i, "ScriptName": n} for i, n in pairs]
+        bound = rows([(34902, "spell_hun_pet_scaling_rework")])
+        unbound = rows([(34902, "spell_hun_generic_scaling")])
+        eb, eu = {34902: {"spell_hun_pet_scaling_rework"}}, {34902: {"spell_hun_generic_scaling"}}
+        self.assertEqual(check_bindings(bound, unbound, eb, eu), [])
+        self.assertEqual(len(check_bindings([], unbound, eb, eu)), 1)                    # not rebound
+        self.assertEqual(len(check_bindings(bound, [], eb, eu)), 1)                      # stock class still bound
+        self.assertEqual(len(check_bindings(bound + rows([(34903, "x")]), unbound, eb, eu)), 1)    # 34903 touched
+        self.assertEqual(len(check_bindings(bound, unbound + rows([(34904, "y")]), eb, eu)), 1)
 
     def test_family_rules_lint_fires_on_a_pet_group_carrier_without_the_pet_bit(self):
         row = {"ID": 200100, "SpellClassSet": 9, "SpellClassMask_1": 0, "SpellClassMask_2": 0,

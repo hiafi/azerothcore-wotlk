@@ -268,13 +268,19 @@ def retired_skilllineability_overrides(
 def spell_data_strips(
     retirements: list[dict], creature_rows: dict[int, dict], spell_data_rows: dict[int, dict],
     superseded: dict[int, int] | None = None,
+    lines_by_family: dict[int, tuple[int, ...]] | None = None,
+    effective_sla: dict[int, dict] | None = None,
 ) -> tuple[dict[int, frozenset[int]], list[str]]:
     """Which spells each CreatureSpellData record must lose: `(record id -> spells, warnings)`.
 
     A retirement for every family strips the spell from every record some creature names in
     `PetSpellDataId`. One scoped to families strips it from the records their creatures
     (`creature_template.family`) name - unless a creature of another family names the same record and the
-    record holds the spell, in which case the record is left alone and reported (a record cannot be split).
+    record holds the spell, in which case the record is left alone and reported (a record cannot be split) -
+    except when `lines_by_family` and `effective_sla` are given and every such other family still teaches the
+    spell through its own level-up set (`effective_sla`: SkillLineAbility id -> row after every override; a row
+    on one of the family's skill lines with AcquireMethod 2 and Spell == the retired spell). Its default copy
+    is then redundant (SpellMgr::LoadPetDefaultSpells_helper drops it), so the strip is lossless and silent.
     `creature_rows` are the live `creature_template` rows, `spell_data_rows` the stock records.
 
     A record "holds" the spell when a slot is the spell itself **or a superseded rank that
@@ -289,6 +295,14 @@ def spell_data_strips(
         if record:
             named_by.setdefault(record, set()).add(int(row.get("family") or 0))
     superseded = superseded or {}
+    taught: dict[int, set[int]] = {}  # family -> spells in its post-retirement level-up set
+    for row in (effective_sla or {}).values():
+        if int(row["AcquireMethod"]) != SKILL_LINE_ABILITY_LEARNED_ON_SKILL_LEARN:
+            continue
+        for family, lines in (lines_by_family or {}).items():
+            if int(row["SkillLine"]) in lines:
+                taught.setdefault(family, set()).add(int(row["Spell"]))
+    can_check = lines_by_family is not None and effective_sla is not None
     strips: dict[int, set[int]] = {}
     warnings: list[str] = []
     for retirement in retirements:
@@ -302,7 +316,10 @@ def spell_data_strips(
             if families is None:
                 strips.setdefault(record, set()).add(spell_id)
             elif named_by[record] & set(families):
-                if named_by[record] - set(families):
+                others = named_by[record] - set(families)
+                if others and can_check and all(spell_id in taught.get(f, ()) for f in others):
+                    strips.setdefault(record, set()).add(spell_id)
+                elif others:
                     warnings.append(
                         f"retire_pet_spell({spell_id}, families={list(families)}): CreatureSpellData {record} holds "
                         f"it and is also named by creatures of families {sorted(named_by[record] - set(families))}, "

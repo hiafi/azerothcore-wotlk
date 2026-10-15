@@ -16,13 +16,24 @@
  */
 
 #include "HunterMechanics.h"
+#include "CharmInfo.h"
 #include "Config.h"
+#include "Creature.h"
+#include "DBCStores.h"
+#include "Pet.h"
 #include "Player.h"
 #include "Random.h"
 #include "Spell.h"
+#include "SpellAuraEffects.h"
+#include "SpellAuras.h"
 #include "SpellInfo.h"
+#include "SpellMgr.h"
+#include "TemporarySummon.h"
 #include "Unit.h"
 #include <algorithm>
+#include <cmath>
+#include <unordered_map>
+#include <vector>
 
 /*
  * Hunter rework - shared mechanics (hunter-rework.SHARED.md §A5, §C4). Stage T2 holds the T2 block only.
@@ -88,8 +99,6 @@ namespace Hunter
 
     bool IsAspectRollSource(SpellInfo const* spellInfo)
     {
-        // Hand literal until H0-P declares it: PET's strike (declared by H0-P).
-        constexpr uint32 SPELL_PET_STRIKE = 201705;
         // d1 b28: every pet-cast family-9 spell carries it (SHARED §A3).
         constexpr uint32 FAMILY_FLAG1_PET_ABILITY = 0x10000000;
 
@@ -105,7 +114,8 @@ namespace Hunter
         if (spellInfo->IsPassive() || (spellInfo->SpellFamilyFlags[1] & FAMILY_FLAG1_PET_ABILITY))
             return false;
 
-        if (spellInfo->Id == SPELL_KILL_COMMAND || spellInfo->Id == SPELL_PET_STRIKE)
+        // Kill Command and its cosmetic pet strike (201705, PET 6.3) never roll aspect procs.
+        if (spellInfo->Id == SPELL_KILL_COMMAND || spellInfo->Id == SPELL_KILL_COMMAND_STRIKE)
             return false;
 
         for (SpellEffectInfo const& effect : spellInfo->Effects)
@@ -169,5 +179,699 @@ namespace Hunter
             return;
 
         player->EnergizeBySpell(player, shot->Id, amount, POWER_MANA);
+    }
+
+    // ---- H0-P: pet section (PET.md 4.2, 4.5, 4.7, 5, 6; HunterMechanics.h has the contract) ----
+    namespace
+    {
+        // Stock Leggings of Beast Mastery (spell_hunter.cpp:71): +70 pet attack power, mirrored by the beast copy.
+        constexpr uint32 SPELL_PET_LEGGINGS_OF_BEAST_MASTERY = 38297;
+        constexpr int32 LEGGINGS_PET_AP_BONUS = 70;
+
+        // CreatureFamily.dbc petTalentType values.
+        constexpr int32 PET_TALENT_TYPE_FEROCITY = 0;
+        constexpr int32 PET_TALENT_TYPE_TENACITY = 1;
+        constexpr int32 PET_TALENT_TYPE_CUNNING = 2;
+
+        // Commanded spells (PET 4.9). S1 builds them; until then these are the reserved ids as hand literals. S1
+        // replaces each with the HunterData::SPELL_<STEM> alias when it declares the spell.
+        constexpr uint32 SPELL_LUNGE_COMMAND = 201720;           // lunge_command_201720
+        constexpr uint32 SPELL_RIP_THROAT_COMMAND = 201721;      // rip_throat_command_201721
+        constexpr uint32 SPELL_RAKE_COMMAND = 201722;            // rake_command_201722
+        constexpr uint32 SPELL_POUNCE_COMMAND = 201723;          // pounce_command_201723
+        constexpr uint32 SPELL_SAVAGE_REND_COMMAND = 201724;     // savage_rend_command_201724
+        constexpr uint32 SPELL_LEAPING_TEAR_COMMAND = 201725;    // leaping_tear_command_201725
+        constexpr uint32 SPELL_SWIPE_COMMAND = 201726;           // swipe_command_201726
+        constexpr uint32 SPELL_MAUL_COMMAND = 201727;            // maul_command_201727
+        constexpr uint32 SPELL_VENOM_BITE_COMMAND = 201728;      // venom_bite_command_201728
+        constexpr uint32 SPELL_VENOMOUS_CLOUD_COMMAND = 201729;  // venomous_cloud_command_201729
+        constexpr uint32 SPELL_SAVAGE_STRIKES_COMMAND = 201730;  // savage_strikes_command_201730
+        constexpr uint32 SPELL_SAVAGE_POUNCE_COMMAND = 201731;   // savage_pounce_command_201731
+        constexpr uint32 SPELL_THRASH_COMMAND = 201732;          // thrash_command_201732
+        constexpr uint32 SPELL_CRUSHING_BLOW_COMMAND = 201733;   // crushing_blow_command_201733
+        constexpr uint32 SPELL_FEINT_STRIKE_COMMAND = 201734;    // feint_strike_command_201734
+        constexpr uint32 SPELL_AMBUSH_COMMAND = 201735;          // ambush_command_201735
+
+        // PET 4.2: the type defaults, then one row per family (32 hunter families).
+        constexpr PetKit KIT_FEROCITY_DEFAULT =
+            { SPELL_BITE, SPELL_DASH, SPELL_SAVAGE_STRIKES_COMMAND, SPELL_SAVAGE_POUNCE_COMMAND };
+        constexpr PetKit KIT_TENACITY_DEFAULT =
+            { SPELL_BITE, SPELL_LAST_STAND, SPELL_THRASH_COMMAND, SPELL_CRUSHING_BLOW_COMMAND };
+        constexpr PetKit KIT_CUNNING_DEFAULT =
+            { SPELL_CUNNING_SPIT, SPELL_BULLHEADED, SPELL_FEINT_STRIKE_COMMAND, SPELL_AMBUSH_COMMAND };
+        constexpr PetKit KIT_NONE = { 0, 0, 0, 0 };
+
+        PetKit const& GetTypeDefaultKit(PetType type)
+        {
+            switch (type)
+            {
+                case PetType::Ferocity:
+                    return KIT_FEROCITY_DEFAULT;
+                case PetType::Tenacity:
+                    return KIT_TENACITY_DEFAULT;
+                case PetType::Cunning:
+                    return KIT_CUNNING_DEFAULT;
+                default:
+                    return KIT_NONE;
+            }
+        }
+
+        PetType GetFamilyPetType(uint32 creatureFamily)
+        {
+            CreatureFamilyEntry const* family = sCreatureFamilyStore.LookupEntry(creatureFamily);
+            if (!family)
+                return PetType::None;
+
+            switch (family->petTalentType)
+            {
+                case PET_TALENT_TYPE_FEROCITY:
+                    return PetType::Ferocity;
+                case PET_TALENT_TYPE_TENACITY:
+                    return PetType::Tenacity;
+                case PET_TALENT_TYPE_CUNNING:
+                    return PetType::Cunning;
+                default:
+                    return PetType::None;
+            }
+        }
+
+        // Families that differ from their type's default (PET 4.2; family id in the comment).
+        std::unordered_map<uint32, PetKit> const& GetFamilyKits()
+        {
+            static std::unordered_map<uint32, PetKit> const kits =
+            {
+                // Ferocity
+                // Wolf
+                { 1, { SPELL_BITE, SPELL_FURIOUS_HOWL, SPELL_LUNGE_COMMAND, SPELL_RIP_THROAT_COMMAND } },
+                // Cat
+                { 2, { SPELL_CLAW, SPELL_ROAR_OF_COURAGE, SPELL_RAKE_COMMAND, SPELL_POUNCE_COMMAND } },
+                // Raptor
+                { 11, { SPELL_CLAW, SPELL_TEAR_ARMOR, SPELL_SAVAGE_REND_COMMAND, SPELL_LEAPING_TEAR_COMMAND } },
+                // Carrion Bird
+                { 7, KIT_FEROCITY_DEFAULT },
+                // Hyena
+                { 25, KIT_FEROCITY_DEFAULT },
+                // Devilsaur
+                { 39, KIT_FEROCITY_DEFAULT },
+                // Core Hound
+                { 45, KIT_FEROCITY_DEFAULT },
+                // Tallstrider
+                { 12, { SPELL_CLAW, SPELL_DASH, SPELL_SAVAGE_STRIKES_COMMAND, SPELL_SAVAGE_POUNCE_COMMAND } },
+                // Spirit Beast
+                { 46, { SPELL_CLAW, SPELL_DASH, SPELL_SAVAGE_STRIKES_COMMAND, SPELL_SAVAGE_POUNCE_COMMAND } },
+                // Moth
+                { 37, { SPELL_SMACK, SPELL_DASH, SPELL_SAVAGE_STRIKES_COMMAND, SPELL_SAVAGE_POUNCE_COMMAND } },
+                // Wasp
+                { 44, { SPELL_SMACK, SPELL_DASH, SPELL_SAVAGE_STRIKES_COMMAND, SPELL_SAVAGE_POUNCE_COMMAND } },
+                // Tenacity
+                // Bear
+                { 4, { SPELL_CLAW, SPELL_MENACING_ROAR, SPELL_SWIPE_COMMAND, SPELL_MAUL_COMMAND } },
+                // Boar
+                { 5, KIT_TENACITY_DEFAULT },
+                // Crocolisk
+                { 6, KIT_TENACITY_DEFAULT },
+                // Turtle
+                { 21, KIT_TENACITY_DEFAULT },
+                // Warp Stalker
+                { 32, KIT_TENACITY_DEFAULT },
+                // Worm
+                { 42, KIT_TENACITY_DEFAULT },
+                // Crab
+                { 8, { SPELL_CLAW, SPELL_LAST_STAND, SPELL_THRASH_COMMAND, SPELL_CRUSHING_BLOW_COMMAND } },
+                // Scorpid
+                { 20, { SPELL_CLAW, SPELL_LAST_STAND, SPELL_THRASH_COMMAND, SPELL_CRUSHING_BLOW_COMMAND } },
+                // Gorilla
+                { 9, { SPELL_SMACK, SPELL_LAST_STAND, SPELL_THRASH_COMMAND, SPELL_CRUSHING_BLOW_COMMAND } },
+                // Rhino
+                { 43, { SPELL_SMACK, SPELL_LAST_STAND, SPELL_THRASH_COMMAND, SPELL_CRUSHING_BLOW_COMMAND } },
+                // Cunning
+                // Spider
+                { 3, { SPELL_VENOM_SPIT, SPELL_WEB_PULL, SPELL_VENOM_BITE_COMMAND, SPELL_VENOMOUS_CLOUD_COMMAND } },
+                // Bat
+                { 24, KIT_CUNNING_DEFAULT },
+                // Bird of Prey
+                { 26, KIT_CUNNING_DEFAULT },
+                // Wind Serpent
+                { 27, KIT_CUNNING_DEFAULT },
+                // Dragonhawk
+                { 30, KIT_CUNNING_DEFAULT },
+                // Ravager
+                { 31, KIT_CUNNING_DEFAULT },
+                // Sporebat
+                { 33, KIT_CUNNING_DEFAULT },
+                // Nether Ray
+                { 34, KIT_CUNNING_DEFAULT },
+                // Serpent
+                { 35, KIT_CUNNING_DEFAULT },
+                // Chimaera
+                { 38, KIT_CUNNING_DEFAULT },
+                // Silithid
+                { 41, KIT_CUNNING_DEFAULT },
+            };
+            return kits;
+        }
+
+        // S1: The Beast Within 3/3 Mastery (live GetMasteryPercentage()), PET 9.1
+        float S1Term(Player* /*owner*/, Unit* /*unit*/)
+        {
+            return 0.0f;
+        }
+
+        // Recalculates every effect of an already-applied aura (RecalculateAmount() routes back through
+        // ComputePetPassthroughAmount). Add-if-missing alone goes stale (warlock fix of 2026-09-28,
+        // WarlockMechanics.cpp RecalculateAllEffects).
+        void RecalculateAllEffects(Aura* aura)
+        {
+            if (!aura)
+                return;
+
+            for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+                if (AuraEffect* effect = aura->GetEffect(i))
+                    effect->RecalculateAmount();
+        }
+
+        // The pet's own spell for a wanted id: the id itself, else the rank of the same chain it learned.
+        uint32 FindKnownPetSpell(Pet const* pet, uint32 spellId)
+        {
+            if (pet->HasSpell(spellId))
+                return spellId;
+
+            uint32 const first = sSpellMgr->GetFirstSpellInChain(spellId);
+            uint32 best = 0;
+            uint8 bestRank = 0;
+            for (auto const& [knownId, petSpell] : pet->m_spells)
+            {
+                if (petSpell.state == PETSPELL_REMOVED || sSpellMgr->GetFirstSpellInChain(knownId) != first)
+                    continue;
+
+                uint8 const rank = sSpellMgr->GetSpellRank(knownId);
+                if (!best || rank > bestRank)
+                {
+                    best = knownId;
+                    bestRank = rank;
+                }
+            }
+
+            return best;
+        }
+
+        // Crit effects (aura 52 / 290) of `unit` whose spell the owner carries as well: raid buffs such as Furious
+        // Howl, Leader of the Pack or Rampage land on both, and the owner's ranged crit already contains them.
+        float GetSharedCritBonus(Player const* owner, Unit const* unit)
+        {
+            int32 shared = 0;
+            for (AuraType const auraType : { SPELL_AURA_MOD_WEAPON_CRIT_PERCENT, SPELL_AURA_MOD_CRIT_PCT })
+                for (AuraEffect const* auraEffect : unit->GetAuraEffectsByType(auraType))
+                    if (auraEffect->GetId() != SPELL_HUNTER_PET_CRIT_HASTE && owner->HasAura(auraEffect->GetId()))
+                        shared += auraEffect->GetAmount();
+
+            return float(shared);
+        }
+
+        bool IsAutocastUtility(uint32 spellId)
+        {
+            return spellId == SPELL_FURIOUS_HOWL || spellId == SPELL_ROAR_OF_COURAGE || spellId == SPELL_TEAR_ARMOR ||
+                spellId == SPELL_MENACING_ROAR;
+        }
+
+        // Owner attack power the pet inherits: 100% RAP + 100% SP (PET 5.3, same formula as the 34902 eff1 rebind).
+        int32 ComputeOwnerAttackPowerShare(Player* owner)
+        {
+            float const rangedAp = std::max(0.0f, owner->GetTotalAttackPowerValue(RANGED_ATTACK));
+            float const spellPower = std::max(0, owner->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_MAGIC));
+            int32 amount = int32(rangedAp * HunterData::PET_AP_FROM_RAP_PCT / 100.0f +
+                spellPower * HunterData::PET_AP_FROM_SP_PCT / 100.0f);
+            if (owner->HasAura(SPELL_PET_LEGGINGS_OF_BEAST_MASTERY))
+                amount += LEGGINGS_PET_AP_BONUS;
+
+            return amount;
+        }
+    }
+
+    PetType GetPetType(Unit const* petOrGuardian)
+    {
+        Creature const* creature = petOrGuardian ? petOrGuardian->ToCreature() : nullptr;
+        CreatureTemplate const* creatureTemplate = creature ? creature->GetCreatureTemplate() : nullptr;
+        return creatureTemplate ? GetFamilyPetType(creatureTemplate->family) : PetType::None;
+    }
+
+    PetKit const& GetPetKit(uint32 creatureFamily)
+    {
+        auto const& kits = GetFamilyKits();
+        auto const itr = kits.find(creatureFamily);
+        if (itr != kits.end())
+            return itr->second;
+
+        // Unknown family: its type's default (None gives an all-zero kit).
+        return GetTypeDefaultKit(GetFamilyPetType(creatureFamily));
+    }
+
+    uint32 GetCommandSpell(Unit const* pet, uint8 slot)
+    {
+        Creature const* creature = pet ? pet->ToCreature() : nullptr;
+        CreatureTemplate const* creatureTemplate = creature ? creature->GetCreatureTemplate() : nullptr;
+        if (!creatureTemplate)
+            return 0;
+
+        PetKit const& kit = GetPetKit(creatureTemplate->family);
+        return slot == 0 ? kit.commandI : slot == 1 ? kit.commandII : 0;
+    }
+
+    bool HasActivePet(Player const* owner)
+    {
+        Pet const* pet = owner ? owner->GetPet() : nullptr;
+        return pet && pet->IsAlive() && pet->IsInWorld();
+    }
+
+    SpellCastResult CheckPetCanAct(Player* owner, Unit* target, SpellInfo const* petSpell)
+    {
+        Pet* pet = owner ? owner->GetPet() : nullptr;
+        // Only a real hunter pet obeys (a warlock demon or a charmed beast does not).
+        if (!pet || !pet->IsAlive() || pet->getPetType() != HUNTER_PET)
+            return SPELL_FAILED_NO_PET;
+
+        // Mini Spell::CheckCasterAuras on the pet, as spell_hun_masters_call does (spell_hunter.cpp:625-637). Roots do
+        // not block: Kill Command and the commands teleport or cast from where the pet stands.
+        uint32 const unitFlags = pet->GetUnitFlags();
+        if (pet->GetCharmerGUID())
+            return SPELL_FAILED_CHARMED;
+        if (unitFlags & UNIT_FLAG_STUNNED)
+            return SPELL_FAILED_STUNNED;
+        if (unitFlags & UNIT_FLAG_FLEEING)
+            return SPELL_FAILED_FLEEING;
+        if (unitFlags & UNIT_FLAG_CONFUSED)
+            return SPELL_FAILED_CONFUSED;
+
+        // Kill Command: no pet reach (the pet teleports to the target).
+        if (!petSpell)
+            return SPELL_CAST_OK;
+
+        if (!target)
+            return SPELL_FAILED_BAD_TARGETS;
+
+        float const range = petSpell->GetMaxRange(false, pet);
+        if (range > 0.0f && !pet->IsWithinDist(target, range))
+            return SPELL_FAILED_OUT_OF_RANGE;
+
+        if (!pet->IsWithinLOSInMap(target))
+            return SPELL_FAILED_LINE_OF_SIGHT;
+
+        return SPELL_CAST_OK;
+    }
+
+    void ApplyPetKit(Player* owner, Pet* pet)
+    {
+        if (!owner || !pet)
+            return;
+
+        uint32 wanted = 0;
+        switch (GetPetType(pet))
+        {
+            case PetType::Ferocity:
+                wanted = SPELL_FEROCITY_KIT;
+                break;
+            case PetType::Tenacity:
+                wanted = SPELL_TENACITY_KIT;
+                break;
+            case PetType::Cunning:
+                wanted = SPELL_CUNNING_KIT;
+                break;
+            default:
+                break;
+        }
+
+        // Idempotent: the kits are passive owner auras, so a kit already on the owner is left alone.
+        for (uint32 kit : { SPELL_FEROCITY_KIT, SPELL_TENACITY_KIT, SPELL_CUNNING_KIT })
+            if (kit != wanted && owner->HasAura(kit))
+                owner->RemoveAurasDueToSpell(kit);
+
+        if (wanted && !owner->HasAura(wanted))
+            owner->AddAura(wanted, owner);
+    }
+
+    void ApplyPetTypeStats(Guardian* guardian)
+    {
+        if (!guardian)
+            return;
+
+        uint32 swing = 0;
+        switch (GetPetType(guardian))
+        {
+            case PetType::Ferocity:
+                swing = HunterData::PET_SWING_MS_FEROCITY;
+                break;
+            case PetType::Tenacity:
+                swing = HunterData::PET_SWING_MS_TENACITY;
+                break;
+            case PetType::Cunning:
+                swing = HunterData::PET_SWING_MS_CUNNING;
+                break;
+            default:
+                return;
+        }
+
+        // Stock forces a 2 s swing and level -/+ level/4 at that speed (Pet.cpp:1103, :1178); keep the DPS the same
+        // for every type by scaling the base damage with the swing. UpdateAllStats() runs right after this hook
+        // (Pet.cpp:1434-1436), so no stat update here.
+        uint8 const level = guardian->GetLevel();
+        guardian->SetAttackTime(BASE_ATTACK, swing);
+        guardian->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, float(level - level / 4) * swing / 2000.0f);
+        guardian->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, float(level + level / 4) * swing / 2000.0f);
+        guardian->SetStatPctModifier(UNIT_MOD_DAMAGE_MAINHAND, BASE_PCT, HunterData::PET_WHITE_SCALE_PCT / 100.0f);
+
+        // A pet level-up: the pet is already in the world and the mirrors carry the old amounts. The load and summon
+        // paths are covered by OnPetAddToWorld, Stampede beasts by S1's summon script.
+        if (guardian->IsInWorld())
+        {
+            Unit* ownerUnit = guardian->GetOwner();
+            if (Player* owner = ownerUnit ? ownerUnit->ToPlayer() : nullptr)
+                RefreshPetPassthrough(owner, guardian);
+        }
+    }
+
+    PassthroughKind GetPassthroughKind(Player const* owner, Unit const* unit)
+    {
+        if (!owner || !unit || !unit->HasUnitTypeMask(UNIT_MASK_MINION))
+            return PassthroughKind::None;
+
+        // Minion::GetOwner reads the GUID stored at construction. GetOwnerGUID is set only in SetMinion, which runs
+        // after InitStatsForLevel and, on the taming paths, after AddToMap.
+        Unit const* minionOwner = static_cast<Minion const*>(unit)->GetOwner();
+        if (minionOwner != owner)
+            return PassthroughKind::None;
+
+        if (unit->IsPet())
+        {
+            bool const hunterPet = static_cast<Pet const*>(unit)->getPetType() == HUNTER_PET;
+            return hunterPet ? PassthroughKind::Pet : PassthroughKind::None;
+        }
+
+        uint32 const entry = unit->GetEntry();
+        if (entry >= uint32(HunterData::STAMPEDE_ENTRY_MIN) && entry <= uint32(HunterData::STAMPEDE_ENTRY_MAX))
+            return PassthroughKind::StampedeBeast;
+
+        return PassthroughKind::None;
+    }
+
+    void RefreshPetPassthrough(Player* owner, Unit* unit)
+    {
+        if (!owner || !unit || GetPassthroughKind(owner, unit) == PassthroughKind::None)
+            return;
+
+        for (uint32 spellId :
+            { SPELL_HUNTER_PET_VERSATILITY, SPELL_HUNTER_PET_CRIT_HASTE, SPELL_HUNTER_PET_DAMAGE_HOOK })
+        {
+            // The owner applies the aura (never the pet: a pet-cast copy would be saved to pet_aura), and every
+            // effect is recalculated: an aura that is already present keeps whatever amount it had.
+            Aura* aura = unit->GetAura(spellId, owner->GetGUID());
+            if (!aura)
+                aura = owner->AddAura(spellId, unit);
+
+            RecalculateAllEffects(aura);
+        }
+    }
+
+    void RefreshAllPassthrough(Player* owner)
+    {
+        if (!owner)
+            return;
+
+        // Copy first: the refresh applies auras, which can run stat updates that touch the control set.
+        std::vector<Unit*> const controlled(owner->m_Controlled.begin(), owner->m_Controlled.end());
+        for (Unit* unit : controlled)
+            if (unit)
+                RefreshPetPassthrough(owner, unit);
+    }
+
+    int32 ComputePetPassthroughAmount(Player* owner, Unit* target, uint32 spellId, uint8 effIndex)
+    {
+        if (!owner || !target)
+            return 0;
+
+        PassthroughKind const kind = GetPassthroughKind(owner, target);
+        if (kind == PassthroughKind::None)
+            return 0;
+
+        switch (spellId)
+        {
+            case SPELL_HUNTER_PET_VERSATILITY:
+            {
+                float const versatility =
+                    owner->GetVersatilityPercentage() * HunterData::PET_VERSATILITY_SHARE_PCT / 100.0f;
+                switch (effIndex)
+                {
+                    case EFFECT_0:
+                        return int32(std::lround(versatility));
+                    case EFFECT_1:
+                        return -int32(std::lround(versatility / 2.0f));
+                    case EFFECT_2:
+                        return int32(std::lround(versatility));
+                    default:
+                        return 0;
+                }
+            }
+            case SPELL_HUNTER_PET_CRIT_HASTE:
+            {
+                if (effIndex == EFFECT_0)
+                {
+                    // A creature's crit is 5 + aura 52 + aura 290 (Unit.cpp:3743): the pet's total equals the owner's.
+                    float const ownerCrit = owner->GetFloatValue(PLAYER_RANGED_CRIT_PERCENTAGE);
+                    // Minus the crit auras both carry (raid buffs): the target has them itself.
+                    float const shared =
+                        (ownerCrit - 5.0f - GetSharedCritBonus(owner, target)) *
+                        HunterData::PET_CRIT_SHARE_PCT / 100.0f;
+                    int32 crit = std::max<int32>(0, int32(std::lround(shared)));
+                    if (kind == PassthroughKind::StampedeBeast)
+                        crit += int32(std::lround(GetPetCritBonusPct(owner->GetPet())));
+                    return crit;
+                }
+
+                if (effIndex == EFFECT_1)
+                {
+                    float haste = 1.0f + owner->GetRatingBonusValue(CR_HASTE_RANGED) / 100.0f;
+                    // Skip the auras the target carries itself (Bloodlust, Heroism): they already speed it up once.
+                    for (AuraType const auraType : { SPELL_AURA_MOD_MELEE_RANGED_HASTE, SPELL_AURA_MELEE_SLOW })
+                        for (AuraEffect const* auraEffect : owner->GetAuraEffectsByType(auraType))
+                            if (!target->HasAura(auraEffect->GetId()))
+                                haste *= 1.0f + auraEffect->GetAmount() / 100.0f;
+
+                    return int32(std::lround((haste - 1.0f) * 100.0f * HunterData::PET_HASTE_SHARE_PCT / 100.0f));
+                }
+
+                return 0;
+            }
+            case SPELL_HUNTER_PET_DAMAGE_HOOK:
+            {
+                if (effIndex == EFFECT_0)
+                {
+                    float const s1Term = S1Term(owner, target);
+                    if (kind == PassthroughKind::Pet)
+                        return int32(std::lround(s1Term));
+
+                    float const petPct = GetPetDamageDonePct(owner->GetPet());
+                    return int32(std::lround(((1.0f + petPct / 100.0f) * (1.0f + s1Term / 100.0f) - 1.0f) * 100.0f));
+                }
+
+                if (effIndex == EFFECT_1 && kind == PassthroughKind::StampedeBeast)
+                {
+                    // Animal Handler and the other pet attack power percents ([R2-11 RESOLVED]); 1 without a pet.
+                    Pet const* pet = owner->GetPet();
+                    float const multiplier = pet ? pet->GetTotalAuraMultiplier(SPELL_AURA_MOD_ATTACK_POWER_PCT) : 1.0f;
+                    return int32(std::lround(ComputeOwnerAttackPowerShare(owner) * multiplier));
+                }
+
+                return 0;
+            }
+            default:
+                return 0;
+        }
+    }
+
+    float GetPetDamageDonePct(Pet const* pet)
+    {
+        if (!pet)
+            return 0.0f;
+
+        float const multiplier = pet->GetTotalAuraMultiplier(SPELL_AURA_MOD_DAMAGE_PERCENT_DONE,
+            [](AuraEffect const* auraEffect)
+            {
+                uint32 const spellId = auraEffect->GetId();
+                return (auraEffect->GetMiscValue() & SPELL_SCHOOL_MASK_NORMAL) != 0 &&
+                    spellId != SPELL_BESTIAL_WRATH && spellId != SPELL_HUNTER_PET_VERSATILITY &&
+                    spellId != SPELL_HUNTER_PET_DAMAGE_HOOK;
+            });
+        return (multiplier - 1.0f) * 100.0f;
+    }
+
+    float GetPetCritBonusPct(Pet const* pet)
+    {
+        if (!pet)
+            return 0.0f;
+
+        // Leaves out 201701 itself and every crit aura the owner carries too (raid buffs): the owner's crit, which a
+        // beast copies, already contains those.
+        Player const* owner = pet->GetOwner();
+        auto const own = [owner](AuraEffect const* auraEffect)
+        {
+            uint32 const spellId = auraEffect->GetId();
+            return spellId != SPELL_HUNTER_PET_CRIT_HASTE && !(owner && owner->HasAura(spellId));
+        };
+
+        int32 const bonus = pet->GetTotalAuraModifier(SPELL_AURA_MOD_WEAPON_CRIT_PERCENT, own) +
+            pet->GetTotalAuraModifier(SPELL_AURA_MOD_CRIT_PCT, own);
+        return float(bonus);
+    }
+
+    void PinPetPowers(Pet* pet)
+    {
+        if (!pet || pet->getPetType() != HUNTER_PET)
+            return;
+
+        // Happy pets deal x1.25 white damage (StatSystem.cpp:1379), folded into PET_WHITE_SCALE_PCT; drain and the
+        // death penalty are undone here (PET 4.7).
+        HappinessState const before = pet->GetHappinessState();
+        pet->SetPower(POWER_HAPPINESS, pet->GetMaxPower(POWER_HAPPINESS));
+        pet->SetPower(POWER_FOCUS, pet->GetMaxPower(POWER_FOCUS));
+        if (pet->GetHappinessState() != before)
+            pet->UpdateDamagePhysical(BASE_ATTACK);
+    }
+
+    void SeatDefaultPetBar(Pet* pet)
+    {
+        // The load path adds the pet to the world before its spells load (Pet.cpp:410 vs the async callback), so the
+        // 34902 tick does the real work there; this returns at once while the pet has no spells. learnSpell/addSpell
+        // must never run on a pet that is still loading.
+        if (!pet || pet->getPetType() != HUNTER_PET || !pet->IsInWorld() || !pet->IsAlive() ||
+            pet->isBeingLoaded())
+            return;
+
+        Player* owner = pet->GetOwner();
+        CharmInfo* charmInfo = pet->GetCharmInfo();
+        CreatureTemplate const* creatureTemplate = pet->GetCreatureTemplate();
+        if (!owner || owner->getClass() != CLASS_HUNTER || !charmInfo || !creatureTemplate)
+            return;
+
+        PetKit const& kit = GetPetKit(creatureTemplate->family);
+        uint32 const basic = kit.basic ? FindKnownPetSpell(pet, kit.basic) : 0;
+        if (!basic)
+            return;
+
+        bool changed = false;
+
+        // Stranded rule, the only re-seat trigger: the basic is on no spell slot of the bar (the engine learns the
+        // lines in reverse order, so with five active spells for four slots the basic is the one left out). A basic
+        // that is on the bar, in any of the 10 slots, means the player's own arrangement stands. A player who removes
+        // the basic on purpose gets it back.
+        uint32 const firstBasic = sSpellMgr->GetFirstSpellInChain(basic);
+        bool basicOnBar = false;
+        for (uint8 slot = ACTION_BAR_INDEX_START; slot < ACTION_BAR_INDEX_END; ++slot)
+        {
+            UnitActionBarEntry const* entry = charmInfo->GetActionBarEntry(slot);
+            if (entry && entry->IsActionBarForSpell() && entry->GetAction() &&
+                sSpellMgr->GetFirstSpellInChain(entry->GetAction()) == firstBasic)
+            {
+                basicOnBar = true;
+                break;
+            }
+        }
+
+        if (!basicOnBar)
+        {
+            // Wanted bar (PET 4.2): basic, utility, Growl, then Cower for Ferocity or Dash for the others. A spell
+            // the pet does not know is skipped and the gap closed.
+            uint32 const slotFour = GetPetType(pet) == PetType::Ferocity ? SPELL_COWER : SPELL_DASH;
+            std::vector<uint32> wanted = { basic };
+            for (uint32 spellId : { kit.utility, uint32(SPELL_GROWL), slotFour })
+            {
+                uint32 const known = spellId ? FindKnownPetSpell(pet, spellId) : 0;
+                if (known && std::find(wanted.begin(), wanted.end(), known) == wanted.end())
+                    wanted.push_back(known);
+            }
+
+            // Only slots that already hold a spell (or nothing) are written; command and reaction slots are never
+            // touched. The spell slots 3-6 come first, then any other spell-type slot, so the basic is always seated
+            // first and as many as fit are seated.
+            std::vector<uint8> slots;
+            for (uint8 slot = ACTION_BAR_INDEX_PET_SPELL_START; slot < ACTION_BAR_INDEX_PET_SPELL_END; ++slot)
+                slots.push_back(slot);
+            for (uint8 slot = ACTION_BAR_INDEX_START; slot < ACTION_BAR_INDEX_END; ++slot)
+                if (slot < ACTION_BAR_INDEX_PET_SPELL_START || slot >= ACTION_BAR_INDEX_PET_SPELL_END)
+                    slots.push_back(slot);
+
+            size_t seated = 0;
+            for (uint8 slot : slots)
+            {
+                UnitActionBarEntry const* entry = charmInfo->GetActionBarEntry(slot);
+                bool const inSpellRange =
+                    slot >= ACTION_BAR_INDEX_PET_SPELL_START && slot < ACTION_BAR_INDEX_PET_SPELL_END;
+                if (!entry || !entry->IsActionBarForSpell())
+                    continue;
+
+                if (seated >= wanted.size())
+                {
+                    // Spell slots 3-6 beyond the wanted bar are emptied. A spell parked elsewhere is left alone unless
+                    // it is one of the wanted spells (it would otherwise show twice).
+                    bool const duplicate = entry->GetAction() &&
+                        std::find(wanted.begin(), wanted.end(), entry->GetAction()) != wanted.end();
+                    if (inSpellRange || duplicate)
+                        charmInfo->SetActionBar(slot, 0, ACT_PASSIVE);
+                    continue;
+                }
+
+                uint32 const spellId = wanted[seated++];
+                SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
+                auto const petSpell = pet->m_spells.find(spellId);
+                ActiveStates type = ACT_PASSIVE;
+                if (spellInfo && spellInfo->IsAutocastable())
+                {
+                    bool const autocast = petSpell != pet->m_spells.end() && petSpell->second.active == ACT_ENABLED;
+                    type = autocast ? ACT_ENABLED : ACT_DISABLED;
+                }
+
+                charmInfo->SetActionBar(slot, spellId, type);
+            }
+
+            // A spell displaced from the bar keeps its autocast state on purpose: an autocast spell that is no longer
+            // on the bar keeps casting until the player turns it off from the spellbook.
+            changed = true;
+        }
+
+        // Autocast once per spell group, tracked by two persistent hidden passives (pet_spell), so tames, existing pets
+        // and rank-ups are all covered and a player who later turns autocast off is respected:
+        //  - 201703 marks the basic. A pet that lacks it and knows the basic gets autocast on the basic, then the
+        //    marker.
+        //  - 201752 marks the buff or debuff utility (Furious Howl, Roar of Courage, Tear Armor, Menacing Roar). The
+        //    utilities are learned later than the basic (pet level 10 and 14), so they have their own marker, added
+        //    only in the pass that handled the utility. Placeholder utilities and Web Pull never get it.
+        // Web Pull, Dash, Last Stand, Bullheaded, Growl and Cower stay manual.
+        // addSpell, not learnSpell: a marker is hidden, so no "learned" packet and no extra PetSpellInitialize (the
+        // single resend below covers it). Passive, so addSpell casts it on the pet; type NORMAL, so _SaveSpells writes
+        // it.
+        auto const enableAutocastOnce = [&](uint32 spellId, uint32 marker)
+        {
+            if (!spellId || pet->HasSpell(marker) || !sSpellMgr->GetSpellInfo(marker))
+                return;
+
+            auto const petSpell = pet->m_spells.find(spellId);
+            SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
+            if (petSpell == pet->m_spells.end() || !spellInfo || !spellInfo->IsAutocastable())
+                return;
+
+            if (petSpell->second.active != ACT_ENABLED)
+            {
+                pet->ToggleAutocast(spellInfo, true);
+                charmInfo->SetSpellAutocast(spellInfo, true);
+            }
+
+            if (pet->addSpell(marker, ACT_PASSIVE))
+                changed = true;
+        };
+
+        enableAutocastOnce(basic, SPELL_HUNTER_PET_AUTOCAST_MARKER);
+        if (IsAutocastUtility(kit.utility))
+            enableAutocastOnce(FindKnownPetSpell(pet, kit.utility), SPELL_HUNTER_PET_UTILITY_MARKER);
+
+        if (changed && owner->GetPet() == pet)
+            owner->PetSpellInitialize();
     }
 }

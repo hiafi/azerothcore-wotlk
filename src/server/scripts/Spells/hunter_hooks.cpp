@@ -59,7 +59,15 @@ public:
 
         // Filled in order: H0-P (passthrough, kit, pin) -> H0 (Monkey re-apply) -> S2 (Lone Survivor).
 
-        // ---- H0-P slot: passthrough, kit swap, pin (PET first). ----
+        // ---- H0-P: kit swap, passthrough, pin, default bar (PET first). ----
+        // The passthrough is refreshed on the pet directly: owner->m_Controlled holds it only after SetMinion, which
+        // may not have run yet. On the load path the pet's spells are not loaded yet (the 34902 tick seats the bar),
+        // and the taming paths do not reach this hook at all (the owner GUID is empty until SetMinion): the tick covers
+        // both within 2 s.
+        Hunter::ApplyPetKit(owner, pet);
+        Hunter::RefreshPetPassthrough(owner, pet);
+        Hunter::PinPetPowers(pet);
+        Hunter::SeatDefaultPetBar(pet);
 
         // ---- H0: Aspect of the Monkey re-apply (SHARED §B6.6), the pet was summoned after the aspect. ----
         if (owner->HasAura(Hunter::SPELL_ASPECT_OF_THE_MONKEY) && !pet->HasAura(Hunter::SPELL_ASPECT_OF_THE_MONKEY_PET))
@@ -91,6 +99,13 @@ public:
         Player* owner = ownerUnit ? ownerUnit->ToPlayer() : nullptr;
         if (!owner || owner->getClass() != CLASS_HUNTER)
             return;
+
+        // H0-P: the hunter pet and Stampede beasts only (snakes, charmed beasts and other pets stay out). The hook
+        // runs before UpdateAllStats() (Pet.cpp:1434-1436), so the type stats need no update call.
+        if (Hunter::GetPassthroughKind(owner, guardian) == Hunter::PassthroughKind::None)
+            return;
+
+        Hunter::ApplyPetTypeStats(guardian);
     }
 };
 

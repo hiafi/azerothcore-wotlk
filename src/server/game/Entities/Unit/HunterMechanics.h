@@ -23,6 +23,7 @@
 #include "SharedDefines.h"
 #include <cstdint>
 
+class Guardian;
 class Pet;
 class Player;
 class ProcEventInfo;
@@ -121,6 +122,67 @@ namespace Hunter
     // ---- H0-P (PET.md §8.4 defines the bodies and the rest of the pet section) ----
     constexpr uint32 SPELL_BLOODTHIRSTY_54131 = HunterData::SPELL_BLOODTHIRSTY_54131;
     constexpr uint32 SPELL_WEB_PULL = HunterData::SPELL_WEB_PULL; // appears once web_pull_201718 is generated
+
+    // H0-P2: DSL-declared ids (hunter_pet.py, hunter_spells.py)
+    constexpr uint32 SPELL_HUNTER_PET_VERSATILITY = HunterData::SPELL_HUNTER_PET_VERSATILITY;    // 201700
+    constexpr uint32 SPELL_HUNTER_PET_CRIT_HASTE = HunterData::SPELL_HUNTER_PET_CRIT_HASTE;      // 201701
+    constexpr uint32 SPELL_HUNTER_PET_DAMAGE_HOOK = HunterData::SPELL_HUNTER_PET_DAMAGE_HOOK;    // 201702
+    constexpr uint32 SPELL_KILL_COMMAND_TELEPORT = HunterData::SPELL_KILL_COMMAND_TELEPORT;      // 201704
+    constexpr uint32 SPELL_KILL_COMMAND_STRIKE = HunterData::SPELL_KILL_COMMAND_STRIKE;          // 201705
+    constexpr uint32 SPELL_FEROCITY_KIT = HunterData::SPELL_FEROCITY_KIT;                        // 201706
+    constexpr uint32 SPELL_TENACITY_KIT = HunterData::SPELL_TENACITY_KIT;                        // 201707
+    constexpr uint32 SPELL_HUNTER_PET_AUTOCAST_MARKER = HunterData::SPELL_HUNTER_PET_AUTOCAST_MARKER; // 201703
+    constexpr uint32 SPELL_HUNTER_PET_UTILITY_MARKER = HunterData::SPELL_HUNTER_PET_UTILITY_MARKER; // 201752
+    constexpr uint32 SPELL_CUNNING_KIT = HunterData::SPELL_CUNNING_KIT;                          // 201708
+    constexpr uint32 SPELL_BITE = HunterData::SPELL_BITE;
+    constexpr uint32 SPELL_CLAW = HunterData::SPELL_CLAW;
+    constexpr uint32 SPELL_SMACK = HunterData::SPELL_SMACK;
+    constexpr uint32 SPELL_VENOM_SPIT = HunterData::SPELL_VENOM_SPIT;
+    constexpr uint32 SPELL_CUNNING_SPIT = HunterData::SPELL_CUNNING_SPIT;
+    constexpr uint32 SPELL_FURIOUS_HOWL = HunterData::SPELL_FURIOUS_HOWL;
+    constexpr uint32 SPELL_ROAR_OF_COURAGE = HunterData::SPELL_ROAR_OF_COURAGE;
+    constexpr uint32 SPELL_TEAR_ARMOR = HunterData::SPELL_TEAR_ARMOR;
+    constexpr uint32 SPELL_MENACING_ROAR = HunterData::SPELL_MENACING_ROAR;
+    constexpr uint32 SPELL_GROWL = HunterData::SPELL_GROWL;
+    constexpr uint32 SPELL_DASH = HunterData::SPELL_DASH;
+    constexpr uint32 SPELL_LAST_STAND = HunterData::SPELL_LAST_STAND;
+    constexpr uint32 SPELL_BULLHEADED = HunterData::SPELL_BULLHEADED;
+    constexpr uint32 SPELL_BESTIAL_WRATH = HunterData::SPELL_BESTIAL_WRATH;
+    // Stock ids the DSL never declares (no HunterData:: name): hand literals.
+    constexpr uint32 SPELL_COWER = 1742;                   // stock Cower, pulled onto the Ferocity lines (PET 4.4)
+    constexpr uint32 SPELL_HUNTER_PET_SCALING_01 = 34902;  // stock Hunter Pet Scaling 01, rebound by H0-P2 (PET 5.3)
+    constexpr uint32 SPELL_KILL_COMMAND_PET = 58914;       // stock Kill Command pet aura, left inert (PET 6.1)
+
+    // PET.md 8.4. The ids alias HunterData:: from the generated header; GetPassthroughKind reads
+    // HunterData::STAMPEDE_ENTRY_MIN/MAX.
+    enum class PetType : uint8 { Ferocity = 0, Tenacity = 1, Cunning = 2, None = 0xFF };
+    enum class PassthroughKind : uint8 { None, Pet, StampedeBeast };
+
+    struct PetKit { uint32 basic; uint32 utility; uint32 commandI; uint32 commandII; };
+
+    PetType GetPetType(Unit const* petOrGuardian);            // CreatureFamilyEntry::petTalentType
+    PetKit const& GetPetKit(uint32 creatureFamily);           // PET 4.2 + 4.9; unknown family -> its type's default
+    uint32 GetCommandSpell(Unit const* pet, uint8 slot);      // slot 0 = Command I, 1 = Command II (BM S1)
+    bool HasActivePet(Player const* owner);                   // pet exists, alive, in world (MM Lone Survivor)
+    SpellCastResult CheckPetCanAct(Player* owner, Unit* target, SpellInfo const* petSpell);
+        // null petSpell = Kill Command (no pet reach); else the commanded spell's range + pet LoS
+    void ApplyPetKit(Player* owner, Pet* pet);                // 201706-201708 swap
+    void ApplyPetTypeStats(Guardian* guardian);               // swing, base, white scale (PET 5.6)
+    PassthroughKind GetPassthroughKind(Player const* owner, Unit const* unit);
+    void RefreshPetPassthrough(Player* owner, Unit* unit);    // add-if-missing + recalc of every effect, 201700-201702
+    void RefreshAllPassthrough(Player* owner);                // m_Controlled walk
+    int32 ComputePetPassthroughAmount(Player* owner, Unit* target, uint32 spellId, uint8 effIndex);
+    float GetPetDamageDonePct(Pet const* pet);                // excl. 19574, 201700, 201702 (Stampede copy)
+    float GetPetCritBonusPct(Pet const* pet);                 // pet aura 52 + 290, excl. 201701
+
+    // Harness-approved additions (H0-P2 D6, D12). Both are idempotent and cheap; the 34902 tick (EFFECT_0 only) and
+    // OnPetAddToWorld call them.
+    // Pins POWER_HAPPINESS and POWER_FOCUS at max (PET 4.7); refreshes white damage if the happiness state changed.
+    void PinPetPowers(Pet* pet);
+    // Seats the default pet bar (basic, utility, Growl, Cower/Dash) when the basic is on no bar slot, and turns
+    // autocast on once for the basic and once for the buff/debuff utility, each tracked by its own hidden marker
+    // spell (201703, 201752) in pet_spell. Needs a live, loaded pet.
+    void SeatDefaultPetBar(Pet* pet);
     // ---- S1 / S2 / S3 append their own sections (transform re-cast, mark state, Burning Tar bank) ----
 }
 

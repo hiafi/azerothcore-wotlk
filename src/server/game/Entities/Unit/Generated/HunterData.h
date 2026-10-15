@@ -368,6 +368,15 @@ namespace HunterData
     constexpr uint32 SPELL_ASPECT_OF_THE_BEAST_PET_BUFF = 201603; // aspect_of_the_beast_pet_buff_201603
     constexpr uint32 SPELL_ASPECT_OF_THE_MONKEY_VERSATILITY = 201604; // aspect_of_the_monkey_versatility_201604
     constexpr uint32 SPELL_ASPECT_OF_THE_MONKEY_PET = 201605; // aspect_of_the_monkey_pet_201605
+    constexpr uint32 SPELL_HUNTER_PET_VERSATILITY = 201700; // hunter_pet_versatility_201700
+    constexpr uint32 SPELL_HUNTER_PET_CRIT_HASTE = 201701; // hunter_pet_crit_haste_201701
+    constexpr uint32 SPELL_HUNTER_PET_DAMAGE_HOOK = 201702; // hunter_pet_damage_hook_201702
+    constexpr uint32 SPELL_HUNTER_PET_AUTOCAST_MARKER = 201703; // hunter_pet_autocast_marker_201703
+    constexpr uint32 SPELL_KILL_COMMAND_TELEPORT = 201704; // kill_command_teleport_201704
+    constexpr uint32 SPELL_KILL_COMMAND_STRIKE = 201705; // kill_command_strike_201705
+    constexpr uint32 SPELL_FEROCITY_KIT = 201706; // ferocity_kit_201706
+    constexpr uint32 SPELL_TENACITY_KIT = 201707; // tenacity_kit_201707
+    constexpr uint32 SPELL_CUNNING_KIT = 201708; // cunning_kit_201708
     constexpr uint32 SPELL_VENOM_SPIT = 201710; // venom_spit_201710
     constexpr uint32 SPELL_CUNNING_SPIT = 201711; // cunning_spit_201711
     constexpr uint32 SPELL_ROAR_OF_COURAGE = 201715; // roar_of_courage_201715
@@ -376,6 +385,7 @@ namespace HunterData
     constexpr uint32 SPELL_WEB_PULL = 201718; // web_pull_201718
     constexpr uint32 SPELL_BOAR_S_SPEED_201750 = 201750; // boar_s_speed_201750
     constexpr uint32 SPELL_BOAR_S_SPEED_201751 = 201751; // boar_s_speed_201751
+    constexpr uint32 SPELL_HUNTER_PET_UTILITY_MARKER = 201752; // hunter_pet_utility_marker_201752
 
     // const() - hidden script numbers (tier 3)
     constexpr int32 PET_AP_FROM_RAP_PCT = 100; // Pet attack power per owner ranged attack power, percent (PET 5.3).

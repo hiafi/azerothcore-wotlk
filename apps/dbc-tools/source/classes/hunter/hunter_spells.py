@@ -1102,21 +1102,52 @@ kill_command_34026 = spell(
     name='Kill Command',
     school=School.NORMAL,
     attributes=327680,
-    category=1171,
     cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=60000,
+    cooldown_ms=6000,
+    category_cooldown_ms=0,
     mana_cost=0,
     mana_cost_pct=3,
-    range_yards=45.0,
-    duration_ms=30000,
+    range_yards=40.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=75.0, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.DUMMY, implicit_target_a=6),
     ],
     spell_icon_id=2226,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 268436480, 'AttributesEx2': 4, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 66, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Give the command to kill, increasing your pet's damage done from special attacks by ${$34027M1*3}% for $34027d.  Each special attack done by the pet reduces the damage bonus by $34027s1%.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 2048, 'SpellClassSet': 9, 'SpellLevel': 66},
+    notes=(
+        'H0-P2 (PET.md 6.2): rewritten in place as a hunter-damage pet command. eff0 SCHOOL_DAMAGE ap_potency 75, '
+        'eff1 DUMMY (script hook, spell_hun_kill_command_rework), no aura and no duration (inert by data, 6.1), '
+        'Category 0, RecoveryTime 6000, GCD 1500/133, 40 yd, AttributesEx/Ex2 0, SpellLevel 10, d1 b11 unchanged.'
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'BaseLevel': 10,
+        'CastingTimeIndex': 1,
+        'DefenseType': 3,
+        # Index 0 = no duration: a falsy duration_ms mints the permanent (-1) row, and 34026 must never be an aura (PET 6.1).
+        'DurationIndex': 0,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': (
+            'Command your pet to teleport behind the target and strike it, dealing {pot1} Physical damage. '
+            'Your pet must be alive and free to act; its distance from the target does not matter.'
+        ),
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'Name_Lang_Mask': 16712190,
+        'PreventionType': 1,
+        'ProcChance': 101,
+        'SpellClassMask_2': 2048,
+        'SpellClassSet': 9,
+        'SpellLevel': 10,
+        'StartRecoveryCategory': 133,
+        'StartRecoveryTime': 1500,
+    },
 )
+# Learned at 10 from the Hunter trainers 204 and 205 (PET.md 6.2); stock trainer 7 has no users.
+trained_by(kill_command_34026, trainer_id=204, req_level=10)
+trained_by(kill_command_34026, trainer_id=205, req_level=10)
 
 
 aspect_of_the_viper_34074 = spell(

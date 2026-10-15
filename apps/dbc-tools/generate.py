@@ -490,6 +490,12 @@ def main() -> int:
         spell_data_strips, retire_warnings = superseded_ranks.spell_data_strips(
             pet_retirements, existing_creature_rows, state.load_stock_rows(dbcfmt.CREATURESPELLDATA),
             rank_overrides.superseded,
+            superseded_ranks.family_skill_lines(state.load_stock_rows(dbcfmt.CREATUREFAMILY)),
+            {
+                **stock_skilllineabilities,
+                **{e["id"]: build.build_skilllineability_row(e) for e in talents["skill_line_abilities"]},
+                **{e["id"]: build.build_skilllineability_row(e) for e in retire_overrides.entries},
+            },
         )
         for retirement in pet_retirements:
             if retirement["spell_id"] not in retire_overrides.matched and not any(

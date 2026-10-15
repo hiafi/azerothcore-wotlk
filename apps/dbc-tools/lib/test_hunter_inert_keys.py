@@ -12,8 +12,6 @@ guard is on the code and the reserved stems, not on the header:
   (b) every declared spell in 201720-201749 has a `_command_` stem, or is `venomous_cloud_splash_201736`, and its
       header name has no `_<id>` suffix (vacuous until S1 declares them; S1 re-runs it).
 
-# ---- SLOT (H0-P2): the 34026 guard goes below, in `Hunter34026GuardSlotTest` ----
-
 Run directly:
 
     apps/dbc-tools/.venv/bin/python3 -m pytest apps/dbc-tools/lib/test_hunter_inert_keys.py -q
@@ -69,6 +67,18 @@ def regenerated_header_names(package) -> dict[str, int]:
     return parse_header_names("\n".join(lines))
 
 
+# Bite 17253, Claw 16827 and Smack 49966 are retired only from the Cunning lines (family-scoped retire_pet_spell) and stay
+# the real per-type basics. The exemption is derived from the data: a spell is exempt only when EVERY retirement of it
+# names families, so turning one into a global retirement makes the guard fire on the kit table again (RD-3).
+EXPECTED_SCOPED_BASICS = frozenset({17253, 16827, 49966})
+
+
+def scoped_only_retirements(retirements: list[dict]) -> set[int]:
+    """Spell ids whose every `retire_pet_spell` entry is family-scoped (`families` is not None)."""
+    ids = {int(r["spell_id"]) for r in retirements}
+    return {i for i in ids if all(r["families"] is not None for r in retirements if int(r["spell_id"]) == i)}
+
+
 # ---- checks (pure) ---------------------------------------------------------------------------------------------
 
 def check_no_retired_spell_in_code(sources: dict[str, str], names: dict[str, int], retired: set[int]) -> list[str]:
@@ -115,6 +125,12 @@ class HunterInertKeyTest(unittest.TestCase):
         package = package_data()["package"]
         retired = {int(r["spell_id"]) for r in package.pet_spell_retirements}
         self.assertTrue(retired, "no retire_pet_spell declared yet (hunter_pet.py WP-A1 item 5)")
+        # Bite, Claw and Smack are retired only from the Cunning lines (scoped retire_pet_spell); they remain the
+        # real per-type basics, so the pet kit table may name them.
+        scoped = scoped_only_retirements(package.pet_spell_retirements)
+        self.assertLessEqual(EXPECTED_SCOPED_BASICS, scoped,
+                             "Bite/Claw/Smack must stay family-scoped retirements (a global one strands the kit basics)")
+        retired -= scoped
         names = {**parse_header_names(HEADER_PATH.read_text()), **regenerated_header_names(package)}
         sources = {str(f.relative_to(REPO_ROOT)): f.read_text() for f in hunter_cpp_files()}
         self.assertClean(check_no_retired_spell_in_code(sources, names, retired))
@@ -125,14 +141,64 @@ class HunterInertKeyTest(unittest.TestCase):
         self.assertClean(check_command_stems(package.spell_var_names, header_by_id))
 
 
-# ---- SLOT (H0-P2): the 34026 guard (PET.md 6.1; `test_paladin_ret_inert_keys.py` shape) ------------------------
-# H0-P2 A2 fills this class: the built 34026 row has no effect of type 6, 27, 35, 65, 119, 128, 129, 143 or 174 and
-# DurationIndex 0, with a negative fixture for an APPLY_AURA effect and one for a duration. S1 extends it.
+# ---- the 34026 guard (PET.md 6.1; `test_paladin_ret_inert_keys.py` shape) ------------------------------------------
+# Two stock core lines key on an Aura whose id is 34026 (SpellAuraEffects.cpp:5204 HandleAuraDummy, SpellAuras.cpp:1863
+# HandleAuraSpecificMods). The rewritten Kill Command is a plain instant cast, so no Aura object with that id can ever
+# exist; the guard fails if the built row gains an aura-creating effect or a duration. S1 extends it.
 
-@unittest.skip("SLOT: filled by H0-P2 (34026 guard)")
+KILL_COMMAND = 34026
+AURA_CREATING_EFFECTS = (6, 27, 35, 65, 119, 128, 129, 143, 174)
+
+
+def check_34026_inert(row: dict | None, entry: dict | None = None) -> list[str]:
+    """No effect of an aura-creating type on any of the three effects, and no duration.
+
+    Asserted on the BUILT row: DurationIndex must be 0 (the raw `'DurationIndex': 0` key builds 0; without it
+    `reuse.duration_index(falsy)` mints the permanent -1 row, reuse.py:127-145, so deleting the "redundant" key
+    must fail here). With the declaration `entry`, a truthy `duration_ms` is flagged too."""
+    if row is None:
+        return [f"{KILL_COMMAND}: not declared in the hunter package"]
+    bad = []
+    for index in (1, 2, 3):
+        effect = int(row.get(f"Effect_{index}") or 0)
+        if effect in AURA_CREATING_EFFECTS:
+            bad.append(f"{KILL_COMMAND}: effect {index} has aura-creating type {effect}; an Aura with id {KILL_COMMAND} "
+                       f"would reach the stock 34026 core cases (PET 6.1)")
+    if int(row.get("DurationIndex") or 0) != 0:
+        bad.append(f"{KILL_COMMAND}: built DurationIndex {row.get('DurationIndex')}, expected 0")
+    if entry is not None and entry.get("duration_ms"):
+        bad.append(f"{KILL_COMMAND}: duration_ms {entry['duration_ms']}, expected none")
+    return bad
+
+
 class Hunter34026GuardSlotTest(unittest.TestCase):
-    def test_placeholder(self):
-        pass
+    def test_built_kill_command_row_is_inert(self):
+        data = package_data()
+        entry = next((e for e in data["package"].spells if e["id"] == KILL_COMMAND), None)
+        self.assertIsNotNone(entry, "34026 is not declared")
+        problems = check_34026_inert(data["rows_by_id"].get(KILL_COMMAND), entry)
+        self.assertEqual(problems, [], "\n" + "\n".join(problems))
+
+    def test_guard_fires_on_an_apply_aura_effect(self):
+        for effect_type in AURA_CREATING_EFFECTS:
+            row = {"ID": KILL_COMMAND, "Effect_1": 2, "Effect_2": effect_type, "DurationIndex": 0}
+            self.assertEqual(len(check_34026_inert(row)), 1, effect_type)
+        # the stock row shape: eff0 APPLY_AURA DUMMY, 30 s
+        stock = {"ID": KILL_COMMAND, "Effect_1": 6, "EffectAura_1": 4, "DurationIndex": 9}
+        self.assertEqual(len(check_34026_inert(stock)), 2)
+
+    def test_guard_fires_on_a_duration(self):
+        row = {"ID": KILL_COMMAND, "Effect_1": 2, "Effect_2": 3, "DurationIndex": 1}
+        self.assertEqual(len(check_34026_inert(row)), 1)
+        self.assertEqual(len(check_34026_inert(row, {"duration_ms": 0})), 1)         # built index 1, clean entry: fails
+        # the permanent (-1) row a deleted raw key would mint is also a non-zero built index
+        self.assertEqual(len(check_34026_inert({**row, "DurationIndex": 30100}, {"duration_ms": None})), 1)
+        self.assertEqual(len(check_34026_inert({**row, "DurationIndex": 0}, {"duration_ms": 30000})), 1)
+        self.assertEqual(check_34026_inert({**row, "DurationIndex": 0}, {"duration_ms": 0}), [])
+
+    def test_guard_passes_the_rewritten_shape_and_fires_on_a_missing_row(self):
+        self.assertEqual(check_34026_inert({"ID": KILL_COMMAND, "Effect_1": 2, "Effect_2": 3, "DurationIndex": 0}), [])
+        self.assertEqual(len(check_34026_inert(None)), 1)
 
 
 # ---- negative fixtures: every check must fire on a minimal bad input -------------------------------------------
@@ -147,6 +213,12 @@ class HunterInertKeyNegativeTest(unittest.TestCase):
         self.assertEqual(len(bad), 1)
         self.assertIn("a.cpp:1", bad[0])
         self.assertIn("SPELL_RAKE", bad[0])
+
+    def test_scoped_only_retirements_derivation(self):
+        scoped = [{"spell_id": 1, "families": (1,)}, {"spell_id": 2, "families": None},
+                  {"spell_id": 3, "families": (1,)}, {"spell_id": 3, "families": None}]
+        self.assertEqual(scoped_only_retirements(scoped), {1})     # a global entry for 3 un-exempts it
+        self.assertEqual(scoped_only_retirements([]), set())
 
     def test_command_name_comments_and_unknown_tokens_pass(self):
         src = {"a.cpp": "// SPELL_RAKE used to be here\n/* SPELL_RAKE */ cast(SPELL_RAKE_COMMAND); cast(SPELL_UNKNOWN);\n"}
