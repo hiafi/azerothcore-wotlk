@@ -70,19 +70,7 @@ public:
         Hunter::SeatDefaultPetBar(pet);
 
         // ---- H0: Aspect of the Monkey re-apply (SHARED §B6.6), the pet was summoned after the aspect. ----
-        if (owner->HasAura(Hunter::SPELL_ASPECT_OF_THE_MONKEY) && !pet->HasAura(Hunter::SPELL_ASPECT_OF_THE_MONKEY_PET))
-        {
-            // 201605's implicit target 5 resolves through the owner's guardian-pet slot, which Pet::LoadFromDB and
-            // Player::SummonPet fill (SetMinion) before AddToMap. The taming paths (Spell::EffectTameCreature,
-            // EffectCreateTamedPet, Player::CreatePet) call AddToMap before SetMinion, so there the slot
-            // is still empty and the aura goes on the pet directly. The owner is the caster either way: a
-            // pet-cast copy would be saved to pet_aura and Pet::_LoadAuras (async, after AddToMap) would add a
-            // second aura next to the owner-cast one on the next summon.
-            if (owner->GetGuardianPet() == pet)
-                owner->CastSpell(pet, Hunter::SPELL_ASPECT_OF_THE_MONKEY_PET, true);
-            else
-                owner->AddAura(Hunter::SPELL_ASPECT_OF_THE_MONKEY_PET, pet);
-        }
+        Hunter::ReapplyPetMonkeyAura(owner, pet);
 
         // ---- S2 slot: Lone Survivor refresh (after H0). ----
     }

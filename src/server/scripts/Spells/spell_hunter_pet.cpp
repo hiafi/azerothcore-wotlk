@@ -260,6 +260,7 @@ class spell_hun_pet_scaling_rework : public AuraScript
         Hunter::PinPetPowers(pet);
         Hunter::SeatDefaultPetBar(pet);
         Hunter::RefreshAllPassthrough(owner);
+        Hunter::ReapplyPetMonkeyAura(owner, pet);
     }
 
     void Register() override
@@ -353,7 +354,7 @@ class spell_hun_kill_command_rework : public SpellScript
         // CastSpell returns the SpellCastResult; on a failed cast, jump behind the target by hand
         if (pet->CastSpell(target, Hunter::SPELL_KILL_COMMAND_TELEPORT, TRIGGERED_FULL_MASK) != SPELL_CAST_OK)
         {
-            LOG_WARN("scripts.hunter", "Kill Command: teleport spell {} failed for pet {}, using NearTeleportTo",
+            LOG_ERROR("scripts.hunter", "Kill Command: teleport spell {} failed for pet {}, using NearTeleportTo",
                 Hunter::SPELL_KILL_COMMAND_TELEPORT, pet->GetEntry());
             Position pos = target->GetNearPosition(pet->GetCombatReach() + target->GetCombatReach(), M_PI);
             pet->NearTeleportTo(pos);

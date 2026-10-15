@@ -179,10 +179,15 @@ namespace Hunter
     // OnPetAddToWorld call them.
     // Pins POWER_HAPPINESS and POWER_FOCUS at max (PET 4.7); refreshes white damage if the happiness state changed.
     void PinPetPowers(Pet* pet);
-    // Seats the default pet bar (basic, utility, Growl, Cower/Dash) when the basic is on no bar slot, and turns
+    // Seats the default pet bar (basic, utility, Growl, Cower/Dash) once per pet (while it lacks marker 201703) when
+    // the basic is on no bar slot, and turns
     // autocast on once for the basic and once for the buff/debuff utility, each tracked by its own hidden marker
     // spell (201703, 201752) in pet_spell. Needs a live, loaded pet.
     void SeatDefaultPetBar(Pet* pet);
+
+    // Aspect of the Monkey (SHARED B6.6): puts 201605 on a pet that lacks it while its owner carries the aspect.
+    // Idempotent; called from the pet-added hook and from the 34902 tick (a fresh tame never reaches the hook).
+    void ReapplyPetMonkeyAura(Player* owner, Pet* pet);
     // ---- S1 / S2 / S3 append their own sections (transform re-cast, mark state, Burning Tar bank) ----
 }
 

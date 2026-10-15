@@ -379,13 +379,15 @@ namespace Hunter
         // Howl, Leader of the Pack or Rampage land on both, and the owner's ranged crit already contains them.
         float GetSharedCritBonus(Player const* owner, Unit const* unit)
         {
-            int32 shared = 0;
-            for (AuraType const auraType : { SPELL_AURA_MOD_WEAPON_CRIT_PERCENT, SPELL_AURA_MOD_CRIT_PCT })
-                for (AuraEffect const* auraEffect : unit->GetAuraEffectsByType(auraType))
-                    if (auraEffect->GetId() != SPELL_HUNTER_PET_CRIT_HASTE && owner->HasAura(auraEffect->GetId()))
-                        shared += auraEffect->GetAmount();
+            // Group-aware like the engine's own crit total (Unit::GetTotalAuraModifier): Furious Howl and Leader of the
+            // Pack share an exclusive same-effect group, so both on one unit count once, not twice.
+            auto const shared = [owner](AuraEffect const* auraEffect)
+            {
+                return auraEffect->GetId() != SPELL_HUNTER_PET_CRIT_HASTE && owner->HasAura(auraEffect->GetId());
+            };
 
-            return float(shared);
+            return float(unit->GetTotalAuraModifier(SPELL_AURA_MOD_WEAPON_CRIT_PERCENT, shared) +
+                unit->GetTotalAuraModifier(SPELL_AURA_MOD_CRIT_PCT, shared));
         }
 
         bool IsAutocastUtility(uint32 spellId)
@@ -650,10 +652,18 @@ namespace Hunter
                 {
                     float haste = 1.0f + owner->GetRatingBonusValue(CR_HASTE_RANGED) / 100.0f;
                     // Skip the auras the target carries itself (Bloodlust, Heroism): they already speed it up once.
-                    for (AuraType const auraType : { SPELL_AURA_MOD_MELEE_RANGED_HASTE, SPELL_AURA_MELEE_SLOW })
-                        for (AuraEffect const* auraEffect : owner->GetAuraEffectsByType(auraType))
-                            if (!target->HasAura(auraEffect->GetId()))
-                                haste *= 1.0f + auraEffect->GetAmount() / 100.0f;
+                    auto const notOnTarget = [target](AuraEffect const* auraEffect)
+                    {
+                        return !target->HasAura(auraEffect->GetId());
+                    };
+
+                    // 192 has no stack-group check in its handler, so a plain product is right. 193 honours
+                    // same-effect groups (HandleModCombatSpeedPct), and so does the group-aware multiplier.
+                    for (AuraEffect const* auraEffect : owner->GetAuraEffectsByType(SPELL_AURA_MOD_MELEE_RANGED_HASTE))
+                        if (notOnTarget(auraEffect))
+                            haste *= 1.0f + auraEffect->GetAmount() / 100.0f;
+
+                    haste *= owner->GetTotalAuraMultiplier(SPELL_AURA_MELEE_SLOW, notOnTarget);
 
                     return int32(std::lround((haste - 1.0f) * 100.0f * HunterData::PET_HASTE_SHARE_PCT / 100.0f));
                 }
@@ -775,7 +785,8 @@ namespace Hunter
             }
         }
 
-        if (!basicOnBar)
+        // Once per pet: the marker is learned in the pass that seats the bar, so a later removal is the player's choice.
+        if (!basicOnBar && !pet->HasSpell(SPELL_HUNTER_PET_AUTOCAST_MARKER))
         {
             // Wanted bar (PET 4.2): basic, utility, Growl, then Cower for Ferocity or Dash for the others. A spell
             // the pet does not know is skipped and the gap closed.
@@ -873,5 +884,23 @@ namespace Hunter
 
         if (changed && owner->GetPet() == pet)
             owner->PetSpellInitialize();
+    }
+
+    void ReapplyPetMonkeyAura(Player* owner, Pet* pet)
+    {
+        if (!owner || !pet || !owner->HasAura(SPELL_ASPECT_OF_THE_MONKEY) ||
+            pet->HasAura(SPELL_ASPECT_OF_THE_MONKEY_PET))
+            return;
+
+        // 201605's implicit target 5 resolves through the owner's guardian-pet slot, which Pet::LoadFromDB and
+        // Player::SummonPet fill (SetMinion) before AddToMap. The taming paths (Spell::EffectTameCreature,
+        // EffectCreateTamedPet, Player::CreatePet) call AddToMap before SetMinion, so there the slot
+        // is still empty and the aura goes on the pet directly. The owner is the caster either way: a
+        // pet-cast copy would be saved to pet_aura and Pet::_LoadAuras (async, after AddToMap) would add a
+        // second aura next to the owner-cast one on the next summon.
+        if (owner->GetGuardianPet() == pet)
+            owner->CastSpell(pet, SPELL_ASPECT_OF_THE_MONKEY_PET, true);
+        else
+            owner->AddAura(SPELL_ASPECT_OF_THE_MONKEY_PET, pet);
     }
 }
