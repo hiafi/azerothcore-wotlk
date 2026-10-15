@@ -320,7 +320,6 @@ raptor_strike_2973 = spell(
     range_yards=5.0,
     effects=[
         Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=100.0, potency_kind='direct', implicit_target_a=6),
-        Effect(type=EffectType.DUMMY, base_points=9),
     ],
     spell_icon_id=26,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 11 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
@@ -405,7 +404,7 @@ arcane_shot_3044 = spell(
     range_yards=35.0,
     effects=[
         Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=130.0, potency_kind='direct', implicit_target_a=6),
-        Effect(type=EffectType.DUMMY, base_points=4),
+        Effect(type=EffectType.DUMMY, base_points=49),   # 5.0% max mana per cast (user ruling 2026-10-14)
     ],
     spell_icon_id=218,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 6); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 11 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (hunter pass): converted to ap_potency=135.7 (potency-report default, base/coef already agreed).',
@@ -1719,11 +1718,10 @@ steady_shot_56641 = spell(
     range_yards=35.0,
     effects=[
         Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=100.0, potency_kind='direct', implicit_target_a=6),
-        Effect(type=EffectType.DUMMY, base_points=9),
     ],
     spell_icon_id=2228,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (hunter pass): converted effect 1 (the flat + AP-scaling term) to ap_potency=42.6 (potency-report default, base/coef already agreed); the raw weapon+ammo damage added in SpellEffects.cpp\'s SPELLFAMILY_HUNTER case is real weapon itemization, not hard-coded AP math (no RAP term there), so it is untouched.',
-    raw_overrides={'AttributesEx2': 131072, 'AttributesEx4': 134217728, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 16, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A steady shot that causes {pot1} Physical damage and restores ${$m2/10}.1% of your maximum mana.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 40.0, 'SpellClassMask_3': m.STEADY_SHOT, 'SpellClassSet': 9, 'SpellLevel': 8, 'SpellVisualID_1': 8155, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx2': 131072, 'AttributesEx4': 134217728, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 16, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A steady shot that causes {pot1} Physical damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 40.0, 'SpellClassMask_3': m.STEADY_SHOT, 'SpellClassSet': 9, 'SpellLevel': 8, 'SpellVisualID_1': 8155, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 # 204 is the live Hunter trainer; Steady Shot is a baseline at 8 (hunter-rework SHARED B1).
 trained_by(steady_shot_56641, trainer_id=204, req_level=8)

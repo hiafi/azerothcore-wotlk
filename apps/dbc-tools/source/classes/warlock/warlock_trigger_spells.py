@@ -6768,7 +6768,7 @@ dark_apotheosis_passive_200836 = spell(
     ],
     spell_icon_id=0,
     notes="warlock-rework DEMONOLOGY §5.2: hidden, linked from 200835 (type 2). SpellClassSet 5 (required - a family-0 aura 275 would admit every spell, not just warlock ones, SpellInfo.cpp:1352-1353). eff0 -20% damage done. eff1 MOD_IGNORE_SHAPESHIFT(275) mask letter B (=eff1, dbc-tools A/B/C=eff0/1/2 gotcha) = DA_ALLOWED (every warlock bit except Metamorphosis 47241's d3 0x2000 and DEMONIC_LEAP - a truly full mask would let those two skip CheckShapeshift and swap form mid-DA / work outside Metamorphosis, §5.2). custom_attr SPELL_ATTR0_CU_POSITIVE (the -20% would otherwise classify it negative, druid Bestial Fury precedent). attributes 464 -> 400 (drop PASSIVE 0x40, = stock Metamorphosis passive 54879): a passive aura is never sent to the client (Aura::CanBeSentToClient), so the client never saw this aura 275, treated form 23 as a plain shapeshift and auto-cancelled Dark Apotheosis before casting any NOT_SHAPESHIFTED spell.",
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'EffectSpellClassMaskB_1': m.DA_ALLOWED[0], 'EffectSpellClassMaskB_2': m.DA_ALLOWED[1], 'EffectSpellClassMaskB_3': m.DA_ALLOWED[2], 'Name_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+    raw_overrides={'EquippedItemClass': -1, 'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'EffectSpellClassMaskB_1': m.DA_ALLOWED[0], 'EffectSpellClassMaskB_2': m.DA_ALLOWED[1], 'EffectSpellClassMaskB_3': m.DA_ALLOWED[2], 'Name_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'SpellClassSet': 5, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
 )
 custom_attr(dark_apotheosis_passive_200836, attributes=0x0E000000)
 
@@ -7002,7 +7002,7 @@ demonic_bulwark_debuff_200847 = spell(
     ],
     spell_icon_id=2365,
     notes='warlock-rework DEMONOLOGY §5.3/§7.13: enemy debuff, 3 s (refreshed by each Immolation Aura pulse), granted by spell_warl_immolation_aura_tick if the caster has Demonic Bulwark talent. eff0/eff1 live -2/4/6% damage done, -7/14/20% attack speed (CastCustomSpell BP0=-eff1.GetAmount(), BP1=-eff2.GetAmount() of the talent rank - custom-BP rule).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Damage done and attack speed reduced.', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces damage done and attack speed.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+    raw_overrides={'EquippedItemClass': -1, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Damage done and attack speed reduced.', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces damage done and attack speed.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
 )
 
 
@@ -7027,7 +7027,7 @@ fel_immolation_heal_200848 = spell(
     ],
     spell_icon_id=2355,
     notes='warlock-rework DEMONOLOGY §5.3/§7.13: self heal, cast by spell_warl_fel_immolation_leech when Fel Immolation is the active leech talent (SHARED §4). AttributesEx3 |= SUPPRESS_CASTER_PROCS - the heal itself must not re-trigger anything. Potency system P4 (warlock pilot): NOT converted, see eff0.',
-    raw_overrides={'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals $s1 damage.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'RangeIndex': 1, 'EffectChainAmplitude_1': 1.0},
+    raw_overrides={'EquippedItemClass': -1, 'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals $s1 damage.', 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'RangeIndex': 1, 'EffectChainAmplitude_1': 1.0},
 )
 
 

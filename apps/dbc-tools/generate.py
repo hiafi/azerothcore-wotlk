@@ -380,6 +380,8 @@ def main() -> int:
             print(f"WARNING: {warning}")
         for warning in lint.check_range_on_nonself_helpers(dsl_classes["spells"]):
             print(f"WARNING: {warning}")
+        for warning in lint.check_custom_equipped_item_class(dsl_classes["spells"]):
+            print(f"WARNING: {warning}")
         header_problems = header_gen.check_headers(
             dsl_classes, GENERATED_HEADER_DIR, CLASSES_WITH_GENERATED_HEADERS
         )
@@ -698,6 +700,9 @@ def main() -> int:
         int(w.split()[1]) for w in zero_range_warnings
     }
     for warning in lint.check_range_on_nonself_helpers(spell_entries, skip_ids=already_reported):
+        print(f"WARNING: {warning}")
+    # Custom spells default to EquippedItemClass 0, which fails every cast (silently when triggered).
+    for warning in lint.check_custom_equipped_item_class(spell_entries):
         print(f"WARNING: {warning}")
     talent_rows = [build.build_talent_row(e) for e in talent_resolved.entries]
     talenttab_rows = [build.build_talenttab_row(e) for e in talenttab_resolved.entries]

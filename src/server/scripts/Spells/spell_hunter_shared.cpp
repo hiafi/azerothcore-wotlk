@@ -42,7 +42,7 @@ namespace
     constexpr uint32 SPELL_MONKEY = Hunter::SPELL_ASPECT_OF_THE_MONKEY;
 }
 
-// 56641 Steady Shot, 3044 Arcane Shot, 2973 Raptor Strike - shot mana (SHARED §B2): once per cast, hit or miss
+// 3044 Arcane Shot, 2973 Raptor Strike - shot mana (SHARED §B2): once per cast, hit or miss (Steady Shot returns none)
 class spell_hun_shot_mana : public SpellScript
 {
     PrepareSpellScript(spell_hun_shot_mana);

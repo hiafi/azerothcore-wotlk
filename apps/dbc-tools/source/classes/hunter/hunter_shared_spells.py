@@ -26,7 +26,7 @@ glaive_toss_201600 = spell(
     raw_overrides={'SpellLevel': 12, 'DefenseType': 3, 'SpellClassSet': 9, 'SpellClassMask_3': 0x40,
                    'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'FacingCasterFlags': 1,
                    'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1,
-                   'SpellVisualID_1': 9044,   # stock 39635 "Throw Glaive" (the glaives of Azzinoth); Speed left 0, V1
+                   'SpellVisualID_1': 9044, 'Speed': 40.0,   # stock 39635 "Throw Glaive" (glaives of Azzinoth), same Speed 40: the missile flies
                    'Description_Lang_enUS': 'Throw a glaive at the target, dealing {pot1} Physical damage to it and to up to ${$x1-1} other nearby enemies in combat with you.'},
 )
 
@@ -56,21 +56,21 @@ aspect_of_the_beast_pet_buff_201603 = spell(
     id=201603, name='Aspect of the Beast', duration_ms=10000, range_yards=50000.0,
     effects=[Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=127,
                     base_points=14, implicit_target_a=5)],   # live +15%
-    spell_icon_id=1510, raw_overrides={'SpellLevel': 20, 'AuraDescription_Lang_enUS': 'Damage increased by $s1%.'},
+    spell_icon_id=1510, raw_overrides={'SpellLevel': 20, 'EquippedItemClass': -1, 'AuraDescription_Lang_enUS': 'Damage increased by $s1%.'},
 )
 
 aspect_of_the_monkey_versatility_201604 = spell(
     id=201604, name='Aspect of the Monkey', duration_ms=10000,
     effects=[Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.MOD_CUSTOM_STAT_PCT,
                     misc_value=1 << CombatRating.VERSATILITY, base_points=2, implicit_target_a=1)],  # live 3%, §0.4
-    spell_icon_id=1549, raw_overrides={'SpellLevel': 4, 'AuraDescription_Lang_enUS': 'Versatility increased by $s1%.'},
+    spell_icon_id=1549, raw_overrides={'SpellLevel': 4, 'EquippedItemClass': -1, 'AuraDescription_Lang_enUS': 'Versatility increased by $s1%.'},
 )
 
 aspect_of_the_monkey_pet_201605 = spell(
     id=201605, name='Aspect of the Monkey', duration_ms=-1, range_yards=50000.0,
     effects=[Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.DUMMY, base_points=-1, implicit_target_a=5)],
     spell_icon_id=1549,
-    raw_overrides={'SpellLevel': 4, 'Attributes': 0x80,   # DO_NOT_DISPLAY: hidden on the pet frame
+    raw_overrides={'SpellLevel': 4, 'EquippedItemClass': -1, 'Attributes': 0x80,   # DO_NOT_DISPLAY: hidden on the pet frame
                    'AttributesEx3': 0x100000,   # ALLOW_AURA_WHILE_DEAD: persists through pet death
                    'AttributesEx2': 0x1,        # ALLOW_DEAD_TARGET: lands on a dead pet
                    'ProcTypeMask': 0x100000, 'ProcChance': 100},
@@ -134,7 +134,6 @@ scripted_by(aspect_of_the_monkey_pet_201605, "spell_hun_aspect_of_the_monkey_pet
 scripted_by(aspect_of_the_dragonhawk_explosion_201601, "spell_hun_aspect_of_the_dragonhawk_explosion")
 scripted_by(aspect_of_the_viper_poison_201602, "spell_hun_aspect_of_the_viper_poison")
 scripted_by(glaive_toss_201600, "spell_hun_glaive_toss")
-scripted_by(56641, "spell_hun_shot_mana")
 scripted_by(3044, "spell_hun_shot_mana")
 scripted_by(2973, "spell_hun_shot_mana")
 unbind_script(13161, "spell_hun_aspect_of_the_beast")

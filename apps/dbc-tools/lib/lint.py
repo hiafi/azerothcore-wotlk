@@ -535,6 +535,46 @@ def check_range_on_nonself_helpers(
     return warnings
 
 
+# Spell ids exempt from the EquippedItemClass lint (reviewed by hand: the spell really requires an
+# equipped item of class 0, Consumable). Keep a comment per id; expected to stay empty.
+EQUIPPED_ITEM_CLASS_ALLOW: frozenset[int] = frozenset()
+
+_SPELL_ATTR0_PASSIVE = 0x40
+
+
+def check_custom_equipped_item_class(
+    entries: list[dict], allow: frozenset[int] | set[int] | None = None,
+) -> list[str]:
+    """A custom spell (id >= RANGE_LINT_MIN_ID, not in `allow`) whose `EquippedItemClass` is unset or 0.
+    The column defaults to 0 = ITEM_CLASS_CONSUMABLE, which the engine reads as "needs an equipped item of
+    class 0": `Spell::CheckItems` -> `Player::HasItemFitToSpellRequirements` logs "Not handled spell
+    requirement for item class 0" and fails the cast with SPELL_FAILED_EQUIPPED_ITEM_CLASS, silently for a
+    triggered one (Aspect of the Beast/Monkey procs, Fanned Flames - docs/bugs-and-fixes.md). Passive
+    spells (SPELL_ATTR0_PASSIVE) are exempt: CheckCast skips CheckItems for them. Set
+    `'EquippedItemClass': -1` in `raw_overrides`, or add the id to EQUIPPED_ITEM_CLASS_ALLOW.
+
+    Pass the *full* declared population, like check_zero_range_unit_target."""
+    allowed = EQUIPPED_ITEM_CLASS_ALLOW if allow is None else allow
+    warnings: list[str] = []
+    for entry in entries:
+        spell_id = entry["id"]
+        if spell_id < RANGE_LINT_MIN_ID or spell_id in allowed:
+            continue
+        raw = entry.get("raw_overrides") or {}
+        if raw.get("EquippedItemClass", 0) != 0:
+            continue
+        # A passive spell is applied through learn/aura-restore, never a cast that runs CheckItems.
+        if int(raw.get("Attributes", entry.get("attributes")) or 0) & _SPELL_ATTR0_PASSIVE:
+            continue
+        warnings.append(
+            f"spell {spell_id} ({entry.get('name', '?')}): EquippedItemClass is 0 (the default), which means "
+            f"\"needs an equipped item of class 0\" and fails every cast with "
+            f"SPELL_FAILED_EQUIPPED_ITEM_CLASS. Set raw_overrides 'EquippedItemClass': -1, or add the id to "
+            f"lint.EQUIPPED_ITEM_CLASS_ALLOW."
+        )
+    return warnings
+
+
 # SpellMgr.h/.cpp's SpellMgr::LoadSpellLinked, verified against the real source (review,
 # 2026-09-23 - see lib/dsl/registry.py's comment above _SPELL_LINKED_MAX_SPELLS for the full
 # semantics this mirrors): the map key for a `(spell_trigger, type)` pair is `spell_trigger`

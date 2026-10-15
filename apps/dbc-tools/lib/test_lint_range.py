@@ -84,5 +84,36 @@ class CheckRangeOnNonSelfHelpersTest(unittest.TestCase):
         self.assertEqual(lint.check_range_on_nonself_helpers([entry], skip_ids={201100}), [])
 
 
+class CheckCustomEquippedItemClassTest(unittest.TestCase):
+    def test_unset_warns(self):
+        warnings = lint.check_custom_equipped_item_class([_spell(201603)])
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("201603", warnings[0])
+
+    def test_explicit_zero_warns(self):
+        entry = _spell(201603, raw_overrides={"EquippedItemClass": 0})
+        self.assertEqual(len(lint.check_custom_equipped_item_class([entry])), 1)
+
+    def test_minus_one_does_not_warn(self):
+        entry = _spell(201603, raw_overrides={"EquippedItemClass": -1})
+        self.assertEqual(lint.check_custom_equipped_item_class([entry]), [])
+
+    def test_real_item_class_does_not_warn(self):
+        entry = _spell(201603, raw_overrides={"EquippedItemClass": 2})
+        self.assertEqual(lint.check_custom_equipped_item_class([entry]), [])
+
+    def test_passive_exempt(self):
+        self.assertEqual(lint.check_custom_equipped_item_class([_spell(201603, raw_overrides={"Attributes": 0x40})]), [])
+        self.assertEqual(lint.check_custom_equipped_item_class([_spell(201603, attributes=0x40)]), [])
+
+    def test_stock_id_ignored(self):
+        self.assertEqual(lint.check_custom_equipped_item_class([_spell(116)]), [])
+
+    def test_allow_list_exempts(self):
+        entry = _spell(201603)
+        self.assertEqual(lint.check_custom_equipped_item_class([entry], allow={201603}), [])
+        self.assertEqual(len(lint.check_custom_equipped_item_class([entry], allow=set())), 1)
+
+
 if __name__ == "__main__":
     unittest.main()
