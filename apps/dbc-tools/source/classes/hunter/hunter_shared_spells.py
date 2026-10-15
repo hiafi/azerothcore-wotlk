@@ -26,7 +26,7 @@ glaive_toss_201600 = spell(
     raw_overrides={'SpellLevel': 12, 'DefenseType': 3, 'SpellClassSet': 9, 'SpellClassMask_3': 0x40,
                    'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'FacingCasterFlags': 1,
                    'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1,
-                   'SpellVisualID_1': 9044, 'Speed': 40.0,   # stock 39635 "Throw Glaive" (glaives of Azzinoth), same Speed 40: the missile flies
+                   'SpellVisualID_1': 90090, 'Speed': 40.0,   # patch_hunter_vfx_models.py: stock SV 9044 (39635 "Throw Glaive") with the twilight-glaive missile model; Speed 40 so it flies
                    'Description_Lang_enUS': 'Throw a glaive at the target, dealing {pot1} Physical damage to it and to up to ${$x1-1} other nearby enemies in combat with you.'},
 )
 
