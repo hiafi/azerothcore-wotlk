@@ -13,8 +13,8 @@ skill_line_ability / creature_template bindings follow the spell rows below.
 """
 
 from lib.dsl import AuraType, CombatRating, Effect, EffectType, School
-from lib.dsl.registry import (creature_template, leave_spell_group, procs_on, scripted_by, skill_line_ability, spell,
-                              trained_by, unbind_script, unlink_spell)
+from lib.dsl.registry import (creature_template, custom_attr, leave_spell_group, procs_on, scripted_by,
+                              skill_line_ability, spell, trained_by, unbind_script, unlink_spell)
 
 
 glaive_toss_201600 = spell(
@@ -26,6 +26,7 @@ glaive_toss_201600 = spell(
     raw_overrides={'SpellLevel': 12, 'DefenseType': 3, 'SpellClassSet': 9, 'SpellClassMask_3': 0x40,
                    'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'FacingCasterFlags': 1,
                    'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1,
+                   'SpellVisualID_1': 9044,   # stock 39635 "Throw Glaive" (the glaives of Azzinoth); Speed left 0, V1
                    'Description_Lang_enUS': 'Throw a glaive at the target, dealing {pot1} Physical damage to it and to up to ${$x1-1} other nearby enemies in combat with you.'},
 )
 
@@ -86,8 +87,8 @@ trained_by(61846, 204, req_level=16)
 trained_by(13161, 204, req_level=20)   # replaces the live @30 row (same key)
 trained_by(53271, 204, req_level=56)
 trained_by(62757, 204, req_level=10)
-trained_by(34490, 204, req_level=14)
-trained_by(19577, 204, req_level=30)
+# Silencing Shot 34490 / Intimidation 19577 are still talent spells (LoadTrainers drops them): the baseline grant moves to
+# S1 (Intimidation) / S2 (Silencing Shot), user 2026-10-14.
 trained_by(glaive_toss_201600, 204, req_level=12)
 
 # --- Glaive Toss spellbook entry (B9.3) ---
@@ -112,6 +113,9 @@ procs_on(-53221, proc_flags=0, family_name=9, family_mask=(0, 0, 0x20000000),
          spell_phase_mask=2)                                                               # Improved Steady Shot
 procs_on(-34497, proc_flags=0, family_name=9, family_mask=(0x60800, 0x800000, 0x20000201),
          spell_type_mask=1, spell_phase_mask=2, hit_mask=2)                                # Thrill of the Hunt
+
+# --- Viper loses effect 1 (B6): the stock row 34074 = 0x0E000000 (POSITIVE_EFF0|1|2) would log "no EFFECT_1/2" at boot ---
+custom_attr(34074, attributes=0x02000000)   # SPELL_ATTR0_CU_POSITIVE_EFF0
 
 # --- Dragonhawk's dodge rider is retired (B6.1) ---
 unlink_spell(61846, 61848, type=2)

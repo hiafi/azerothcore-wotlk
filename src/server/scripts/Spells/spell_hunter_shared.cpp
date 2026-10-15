@@ -71,6 +71,28 @@ class spell_hun_aspect_proc : public AuraScript
             Hunter::SPELL_ASPECT_OF_THE_VIPER_POISON, Hunter::SPELL_ASPECT_OF_THE_BEAST_PET_BUFF });
     }
 
+    // The engine starts the internal cooldown right after CheckProc passes, so an event with nothing to act on (no
+    // live pet for Beast, no living enemy for Dragonhawk and Viper) is rejected here instead of in HandleProc
+    bool HasProcAction(Player* player, ProcEventInfo& eventInfo) const
+    {
+        switch (GetId())
+        {
+            case Hunter::SPELL_ASPECT_OF_THE_BEAST:
+            {
+                Pet* pet = player->GetPet();
+                return pet && pet->IsAlive();
+            }
+            case Hunter::SPELL_ASPECT_OF_THE_DRAGONHAWK:
+            case Hunter::SPELL_ASPECT_OF_THE_VIPER:
+            {
+                Unit* target = Hunter::GetProcTarget(eventInfo);
+                return target && target->IsAlive() && !player->IsFriendlyTo(target);
+            }
+            default:
+                return true;
+        }
+    }
+
     bool CheckProc(ProcEventInfo& eventInfo)
     {
         Unit* owner = GetUnitOwner();
@@ -83,11 +105,11 @@ class spell_hun_aspect_proc : public AuraScript
             // Auto Shot is triggered, so it has no CAST phase; every other HIT event (one per Multi-Shot target) is
             // rejected, which keeps the roll to once per cast
             return (eventInfo.GetTypeMask() & PROC_FLAG_DONE_RANGED_AUTO_ATTACK) && spellInfo &&
-                spellInfo->Id == Hunter::SPELL_AUTO_SHOT;
+                spellInfo->Id == Hunter::SPELL_AUTO_SHOT && HasProcAction(owner->ToPlayer(), eventInfo);
         }
 
         if (eventInfo.GetSpellPhaseMask() & PROC_SPELL_PHASE_CAST)
-            return spellInfo && Hunter::IsAspectRollSource(spellInfo);
+            return spellInfo && Hunter::IsAspectRollSource(spellInfo) && HasProcAction(owner->ToPlayer(), eventInfo);
 
         return false;
     }
@@ -107,16 +129,15 @@ class spell_hun_aspect_proc : public AuraScript
                 player->CastSpell(player, Hunter::SPELL_QUICK_SHOTS, true);
                 break;
             case Hunter::SPELL_ASPECT_OF_THE_DRAGONHAWK:
-                if (target && target->IsAlive() && !player->IsFriendlyTo(target))
+                if (target)
                     player->CastSpell(target, Hunter::SPELL_ASPECT_OF_THE_DRAGONHAWK_EXPLOSION, true);
                 break;
             case Hunter::SPELL_ASPECT_OF_THE_BEAST:
                 if (Pet* pet = player->GetPet())
-                    if (pet->IsAlive())
-                        player->CastSpell(pet, Hunter::SPELL_ASPECT_OF_THE_BEAST_PET_BUFF, true);
+                    player->CastSpell(pet, Hunter::SPELL_ASPECT_OF_THE_BEAST_PET_BUFF, true);
                 break;
             case Hunter::SPELL_ASPECT_OF_THE_VIPER:
-                if (target && target->IsAlive() && !player->IsFriendlyTo(target))
+                if (target)
                     player->CastSpell(target, Hunter::SPELL_ASPECT_OF_THE_VIPER_POISON, true);
                 break;
             default:

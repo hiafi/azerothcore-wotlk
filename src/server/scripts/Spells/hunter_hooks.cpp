@@ -67,11 +67,13 @@ public:
             // 201605's implicit target 5 resolves through the owner's guardian-pet slot, which Pet::LoadFromDB and
             // Player::SummonPet fill (SetMinion) before AddToMap. The taming paths (Spell::EffectTameCreature,
             // EffectCreateTamedPet, Player::CreatePet) call AddToMap before SetMinion, so there the slot
-            // is still empty and the aura goes on the pet directly.
+            // is still empty and the aura goes on the pet directly. The owner is the caster either way: a
+            // pet-cast copy would be saved to pet_aura and Pet::_LoadAuras (async, after AddToMap) would add a
+            // second aura next to the owner-cast one on the next summon.
             if (owner->GetGuardianPet() == pet)
                 owner->CastSpell(pet, Hunter::SPELL_ASPECT_OF_THE_MONKEY_PET, true);
             else
-                pet->AddAura(Hunter::SPELL_ASPECT_OF_THE_MONKEY_PET, pet);
+                owner->AddAura(Hunter::SPELL_ASPECT_OF_THE_MONKEY_PET, pet);
         }
 
         // ---- S2 slot: Lone Survivor refresh (after H0). ----

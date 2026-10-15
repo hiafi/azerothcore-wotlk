@@ -178,7 +178,7 @@ HAVE_REAL_DATA = (state.BASE_DBC_DIR / dbcfmt.ITEM.dbc_filename).is_file()
 class _RealItemData(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.rows = spell_tables.load_live_item_template_rows()
+        cls.rows = cls._rows_without_generated_migrations()
         cls.live_data = spell_tables.dsl_live_data({}, cls.rows)
         cls.ids_cfg = source.load_ids(TOOL_ROOT / "source" / "ids.yaml")
         cls.quivers = registry.load_class_file(TOOL_ROOT / "source" / "world" / "quivers.py", live_data=cls.live_data)
@@ -189,6 +189,20 @@ class _RealItemData(unittest.TestCase):
         cls.spec = spec
         cls.index = spell_tables.SpellTableIndex({"item_template": list(cls.rows.values())}, tables=spell_tables.ITEM_TABLES)
         cls.items_csv = source.load_items_csv(TOOL_ROOT / "source" / "items.csv")
+
+    @staticmethod
+    def _rows_without_generated_migrations() -> dict[int, dict]:
+        """The base dump plus every hand-written migration, with generate.py's own output left out: those tests
+        start from the pre-generate state, whichever generated files happen to be merged or pending on disk.
+        Uses the uncached resolve so the overlay's shared cache never holds the filtered rows."""
+        from unittest import mock
+
+        spell_tables.load_live_item_template_rows()  # puts apps/item-tools on sys.path
+        from item_lib import overlay  # noqa: PLC0415
+
+        hand_written = [p for p in overlay._contributing_files() if not spell_tables._is_generated(p)]
+        with mock.patch.object(overlay, "_contributing_files", return_value=hand_written):
+            return overlay.resolve_current_rows()
 
 
 @unittest.skipUnless(HAVE_REAL_DATA, "needs the extracted base Item.dbc (var/extractors/dbc)")
