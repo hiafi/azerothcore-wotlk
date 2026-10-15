@@ -229,12 +229,18 @@ def check_b13_spell_procs(procs: list[dict]) -> list[str]:
     return bad
 
 
+# Deliberate SpellClassSet changes on pulled stock rows. Bloodthirsty 53186/53187 go from family 17 to 0 on purpose
+# (hunter-rework PET.md 7.1: the old family filter is dropped and spell_hun_pet_bloodthirsty does the gating); they
+# are proc-trigger auras, not SpellMods, so family 0 does not leak a modifier.
+INTENTIONAL_CLASS_SET_CHANGES = frozenset({53186, 53187})
+
+
 def check_class_set_matches_stock(rows_by_id: dict[int, dict], stock: dict[int, dict]) -> list[str]:
     """A pulled stock row may not diverge from the stock client's SpellClassSet (a repeated or stale
     raw_overrides value would silently win)."""
     bad = []
     for spell_id, row in rows_by_id.items():
-        if spell_id >= CUSTOM_ID_START or spell_id not in stock:
+        if spell_id >= CUSTOM_ID_START or spell_id not in stock or spell_id in INTENTIONAL_CLASS_SET_CHANGES:
             continue
         built, base = int(row.get("SpellClassSet") or 0), int(stock[spell_id].get("SpellClassSet") or 0)
         if built != base:

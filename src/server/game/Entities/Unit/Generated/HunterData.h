@@ -245,6 +245,13 @@ namespace HunterData
     constexpr uint32 SPELL_IMPROVED_TRACKING_52787 = 52787; // improved_tracking_52787
     constexpr uint32 SPELL_IMPROVED_TRACKING_52788 = 52788; // improved_tracking_52788
     constexpr uint32 SPELL_SWOOP = 52825; // swoop_52825
+    constexpr uint32 SPELL_PET_BARDING = 53175; // pet_barding_53175
+    constexpr uint32 SPELL_PET_BARDING_53176 = 53176; // pet_barding_53176
+    constexpr uint32 SPELL_BLOODTHIRSTY = 53186; // bloodthirsty_53186
+    constexpr uint32 SPELL_BLOODTHIRSTY_53187 = 53187; // bloodthirsty_53187
+    constexpr uint32 SPELL_SPIDER_S_BITE = 53203; // spider_s_bite_53203
+    constexpr uint32 SPELL_SPIDER_S_BITE_53204 = 53204; // spider_s_bite_53204
+    constexpr uint32 SPELL_SPIDER_S_BITE_53205 = 53205; // spider_s_bite_53205
     constexpr uint32 SPELL_CHIMERA_SHOT = 53209; // chimera_shot_53209
     constexpr uint32 SPELL_WILD_QUIVER = 53215; // wild_quiver_53215
     constexpr uint32 SPELL_WILD_QUIVER_53216 = 53216; // wild_quiver_53216
@@ -265,6 +272,7 @@ namespace HunterData
     constexpr uint32 SPELL_INVIGORATION = 53252; // invigoration_53252
     constexpr uint32 SPELL_INVIGORATION_53253 = 53253; // invigoration_53253
     constexpr uint32 SPELL_COBRA_STRIKES = 53256; // cobra_strikes_53256
+    constexpr uint32 SPELL_COBRA_STRIKES_53257 = 53257; // cobra_strikes_53257
     constexpr uint32 SPELL_COBRA_STRIKES_53259 = 53259; // cobra_strikes_53259
     constexpr uint32 SPELL_COBRA_STRIKES_53260 = 53260; // cobra_strikes_53260
     constexpr uint32 SPELL_LONGEVITY = 53262; // longevity_53262
@@ -289,6 +297,8 @@ namespace HunterData
     constexpr uint32 SPELL_RABID = 53401; // rabid_53401
     constexpr uint32 SPELL_LICK_YOUR_WOUNDS = 53426; // lick_your_wounds_53426
     constexpr uint32 SPELL_CALL_OF_THE_WILD = 53434; // call_of_the_wild_53434
+    constexpr uint32 SPELL_GRACE_OF_THE_MANTIS = 53450; // grace_of_the_mantis_53450
+    constexpr uint32 SPELL_GRACE_OF_THE_MANTIS_53451 = 53451; // grace_of_the_mantis_53451
     constexpr uint32 SPELL_INTERVENE = 53476; // intervene_53476
     constexpr uint32 SPELL_TAUNT = 53477; // taunt_53477
     constexpr uint32 SPELL_LAST_STAND = 53478; // last_stand_53478
@@ -307,6 +317,7 @@ namespace HunterData
     constexpr uint32 SPELL_FOCUSED_AIM_53621 = 53621; // focused_aim_53621
     constexpr uint32 SPELL_FOCUSED_AIM_53622 = 53622; // focused_aim_53622
     constexpr uint32 SPELL_CARRION_FEEDER = 54044; // carrion_feeder_54044
+    constexpr uint32 SPELL_BLOODTHIRSTY_54131 = 54131; // bloodthirsty_54131
     constexpr uint32 SPELL_FROSTSTORM_BREATH = 54644; // froststorm_breath_54644
     constexpr uint32 SPELL_MONSTROUS_BITE = 54680; // monstrous_bite_54680
     constexpr uint32 SPELL_VENOM_WEB_SPRAY = 54706; // venom_web_spray_54706
@@ -339,6 +350,8 @@ namespace HunterData
     constexpr uint32 SPELL_SPIRIT_STRIKE = 61193; // spirit_strike_61193
     constexpr uint32 SPELL_DASH = 61684; // dash_61684
     constexpr uint32 SPELL_CHARGE = 61685; // charge_61685
+    constexpr uint32 SPELL_NATURAL_ARMOR = 61689; // natural_armor_61689
+    constexpr uint32 SPELL_NATURAL_ARMOR_61690 = 61690; // natural_armor_61690
     constexpr uint32 SPELL_ASPECT_OF_THE_DRAGONHAWK = 61846; // aspect_of_the_dragonhawk_61846
     constexpr uint32 SPELL_CALL_STABLED_PET = 62757; // call_stabled_pet_62757
     constexpr uint32 SPELL_GLYPH_OF_EXPLOSIVE_SHOT = 63066; // glyph_of_explosive_shot_63066
@@ -355,4 +368,27 @@ namespace HunterData
     constexpr uint32 SPELL_ASPECT_OF_THE_BEAST_PET_BUFF = 201603; // aspect_of_the_beast_pet_buff_201603
     constexpr uint32 SPELL_ASPECT_OF_THE_MONKEY_VERSATILITY = 201604; // aspect_of_the_monkey_versatility_201604
     constexpr uint32 SPELL_ASPECT_OF_THE_MONKEY_PET = 201605; // aspect_of_the_monkey_pet_201605
+    constexpr uint32 SPELL_VENOM_SPIT = 201710; // venom_spit_201710
+    constexpr uint32 SPELL_CUNNING_SPIT = 201711; // cunning_spit_201711
+    constexpr uint32 SPELL_ROAR_OF_COURAGE = 201715; // roar_of_courage_201715
+    constexpr uint32 SPELL_TEAR_ARMOR = 201716; // tear_armor_201716
+    constexpr uint32 SPELL_MENACING_ROAR = 201717; // menacing_roar_201717
+    constexpr uint32 SPELL_WEB_PULL = 201718; // web_pull_201718
+    constexpr uint32 SPELL_BOAR_S_SPEED_201750 = 201750; // boar_s_speed_201750
+    constexpr uint32 SPELL_BOAR_S_SPEED_201751 = 201751; // boar_s_speed_201751
+
+    // const() - hidden script numbers (tier 3)
+    constexpr int32 PET_AP_FROM_RAP_PCT = 100; // Pet attack power per owner ranged attack power, percent (PET 5.3).
+    constexpr int32 PET_AP_FROM_SP_PCT = 100; // Pet attack power per owner spell power, percent (PET 5.3).
+    constexpr int32 PET_CRIT_SHARE_PCT = 100; // Share of owner crit the pet inherits, percent (PET 5.3).
+    constexpr int32 PET_HASTE_SHARE_PCT = 100; // Share of owner haste the pet inherits, percent (PET 5.3).
+    constexpr int32 PET_STAMINA_PCT = 45; // Pet stamina inherited from owner stamina, percent (PET 5.3).
+    constexpr int32 PET_SWING_MS_CUNNING = 2000; // Cunning pet swing timer, ms (PET 5.3).
+    constexpr int32 PET_SWING_MS_FEROCITY = 1500; // Ferocity pet swing timer, ms (PET 5.3).
+    constexpr int32 PET_SWING_MS_TENACITY = 2500; // Tenacity pet swing timer, ms (PET 5.3).
+    constexpr int32 PET_TENACITY_STAMINA_BONUS_PCT = 20; // Extra stamina percent for Tenacity pets (PET 5.3).
+    constexpr int32 PET_VERSATILITY_SHARE_PCT = 100; // Share of owner versatility the pet inherits, percent (PET 5.3).
+    constexpr int32 PET_WHITE_SCALE_PCT = 25; // Pet white-damage scale, percent (PET 5.3).
+    constexpr int32 STAMPEDE_ENTRY_MAX = 300219; // Last creature_template entry of the Stampede pet block (PET X6).
+    constexpr int32 STAMPEDE_ENTRY_MIN = 300200; // First creature_template entry of the Stampede pet block (PET X6).
 }

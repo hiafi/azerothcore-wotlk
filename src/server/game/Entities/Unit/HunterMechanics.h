@@ -119,6 +119,8 @@ namespace Hunter
     void  RestoreShotMana(Player* player, SpellInfo const* shot, float multiplier = 1.0f);
 
     // ---- H0-P (PET.md §8.4 defines the bodies and the rest of the pet section) ----
+    constexpr uint32 SPELL_BLOODTHIRSTY_54131 = HunterData::SPELL_BLOODTHIRSTY_54131;
+    constexpr uint32 SPELL_WEB_PULL = HunterData::SPELL_WEB_PULL; // appears once web_pull_201718 is generated
     // ---- S1 / S2 / S3 append their own sections (transform re-cast, mark state, Burning Tar bank) ----
 }
 
