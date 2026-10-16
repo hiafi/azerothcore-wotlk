@@ -17,12 +17,17 @@
 
 /*
  * Hunter rework - Beast Mastery spell scripts (hunter-rework.SHARED.md §A4 / §C4, BEAST-MASTERY.md §4, S1a-HANDOFF
- * A1, A3-A7). Ids come from HunterData:: (long names where a short stem lost, L11) and the Hunter:: aliases in
- * HunterMechanics.h; stock ids the hunter DSL never declares stay hand literals.
+ * A1, A3-A7, S1b-HANDOFF B1-B4, B6). Ids come from HunterData:: (long names where a short stem lost, L11) and the
+ * Hunter:: aliases in HunterMechanics.h; stock ids the hunter DSL never declares stay named constants below.
  */
 
+#include "CreatureAI.h"
+#include "DBCStores.h"
+#include "GridDefines.h"
 #include "HunterMechanics.h"
 #include "Log.h"
+#include "Map.h"
+#include "ObjectMgr.h"
 #include "Pet.h"
 #include "Player.h"
 #include "ScriptMgr.h"
@@ -32,13 +37,53 @@
 #include "SpellMgr.h"
 #include "SpellScript.h"
 #include "SpellScriptLoader.h"
+#include "TemporarySummon.h"
 #include "Unit.h"
+#include "WorldPacket.h"
+#include <array>
 #include <cmath>
+#include <initializer_list>
 #include <list>
 #include <vector>
 
 namespace
 {
+    // Stock ids the hunter DSL never declares (no HunterData:: name)
+    constexpr uint32 SPELL_REPLENISHMENT = 57669;              // stock Replenishment (spell_gen_replenishment)
+
+    // _masks.py PET_BASIC_ATTACK: d2 b23, every pet basic attack (Culling the Herd reads it)
+    constexpr uint32 FAMILY_FLAG2_PET_BASIC_ATTACK = 0x800000;
+
+    // Stampede guardians (BEAST-MASTERY §4.6), the generated creature_template names (review m6)
+    constexpr std::array<uint32, 8> STAMPEDE_BEAST_ENTRIES = { HunterData::NPC_STAMPEDING_WOLF,
+        HunterData::NPC_STAMPEDING_CAT, HunterData::NPC_STAMPEDING_RAPTOR, HunterData::NPC_STAMPEDING_BEAR,
+        HunterData::NPC_STAMPEDING_SPIDER, HunterData::NPC_STAMPEDING_BEAST_FEROCITY,
+        HunterData::NPC_STAMPEDING_BEAST_TENACITY, HunterData::NPC_STAMPEDING_BEAST_CUNNING };
+
+    // The rank of `ranks` (listed highest first) that `player` knows, else 0. Every BM rank is a passive with aura
+    // effects, so ownership is HasAura (L10).
+    uint32 GetKnownRank(Player const* player, std::initializer_list<uint32> ranks)
+    {
+        for (uint32 rank : ranks)
+            if (player->HasAura(rank))
+                return rank;
+
+        return 0;
+    }
+
+    // EFFECT_0 of the known rank of `ranks`, read from its SpellInfo (L10); 0 when no rank is known
+    int32 GetKnownRankValue(Player const* player, std::initializer_list<uint32> ranks)
+    {
+        uint32 const rank = GetKnownRank(player, ranks);
+        return rank ? sSpellMgr->AssertSpellInfo(rank)->Effects[EFFECT_0].CalcValue(player) : 0;
+    }
+
+    uint32 GetSerpentsSwiftnessRank(Player const* player)
+    {
+        return GetKnownRank(player, { HunterData::SPELL_SERPENT_S_SWIFTNESS_34468,
+            HunterData::SPELL_SERPENT_S_SWIFTNESS_34467, HunterData::SPELL_SERPENT_S_SWIFTNESS });
+    }
+
     // The hunter Player behind `unit` (the unit itself, or the owner of its pet/guardian), nullptr otherwise.
     Player* GetOwningHunter(Unit* unit)
     {
@@ -46,13 +91,15 @@ namespace
         return player && player->getClass() == CLASS_HUNTER ? player : nullptr;
     }
 
-    // Gives every live Stampede beast the owner controls `spellId` with the given remaining duration. S1b summons
-    // the beasts; until then GetPassthroughKind never returns StampedeBeast and this is a no-op.
+    // Gives every live Stampede beast the owner controls `spellId` with the given remaining duration. Walks a copy
+    // of m_Controlled, because AddAura runs aura hooks that may touch the owner's controlled set (S1b decision 8).
     void ApplyToStampedeBeasts(Player* owner, uint32 spellId, int32 duration)
     {
-        for (Unit* unit : owner->m_Controlled)
+        std::vector<Unit*> const controlled(owner->m_Controlled.begin(), owner->m_Controlled.end());
+        for (Unit* unit : controlled)
         {
-            if (!unit || !unit->IsAlive() ||
+            // an unsummoned beast stays a valid pointer until its deferred delete, so check it is still in world
+            if (!unit || !unit->IsInWorld() || !unit->IsAlive() ||
                 Hunter::GetPassthroughKind(owner, unit) != Hunter::PassthroughKind::StampedeBeast)
                 continue;
 
@@ -126,7 +173,13 @@ class spell_hun_command : public SpellScript
         if (!pet->IsValidAttackTarget(target))
             return;
 
-        pet->CastSpell(target, cmd, TRIGGERED_FULL_MASK);
+        // S1a-5: the press passed CheckPetCanAct, but the triggered pet cast re-checks range strictly (melee reach),
+        // so it can still fail at the edge of melee range; log it where the playtest can see it (L17)
+        SpellCastResult const result = pet->CastSpell(target, cmd, TRIGGERED_FULL_MASK);
+        if (result != SPELL_CAST_OK)
+            LOG_ERROR("scripts.hunter", "Command {}: pet {} failed to cast commanded spell {} on {} (result {})",
+                GetSpellInfo()->Id, pet->GetEntry(), cmd, target->GetGUID().ToString(), uint32(result));
+
         Hunter::CommandPetAttack(pet, target);
     }
 
@@ -362,20 +415,29 @@ class spell_hun_bestial_wrath_bm : public AuraScript
         if (!owner)
             return;
 
-        // The Beast Within: the highest known rank (5/10/15), read from the rank spell (L10)
+        // The Beast Within: the highest known rank (5/10/15), read from the rank spell (L10). S1a-4: it lasts as long
+        // as Bestial Wrath has left, so a pet_aura reload on resummon doesn't restart it at full duration.
+        // An AuraDuration of 0 means "the DBC duration" (Spell.cpp), so a spent Bestial Wrath casts nothing.
+        int32 const duration = GetAura()->GetDuration();
         for (uint32 rank : { HunterData::SPELL_THE_BEAST_WITHIN_201857, HunterData::SPELL_THE_BEAST_WITHIN_201856,
                  HunterData::SPELL_THE_BEAST_WITHIN_201855 })
         {
+            if (duration == 0)
+                break;
+
             if (!owner->HasAura(rank))
                 continue;
 
             int32 const amount = sSpellMgr->AssertSpellInfo(rank)->Effects[EFFECT_0].CalcValue(owner);
-            owner->CastCustomSpell(HunterData::SPELL_THE_BEAST_WITHIN, SPELLVALUE_BASE_POINT1, amount, owner,
-                TRIGGERED_FULL_MASK);
+            CustomSpellValues values;
+            values.AddSpellMod(SPELLVALUE_BASE_POINT1, amount);
+            values.AddSpellMod(SPELLVALUE_AURA_DURATION, duration);
+            owner->CastCustomSpell(HunterData::SPELL_THE_BEAST_WITHIN, values, owner, TRIGGERED_FULL_MASK);
             break;
         }
 
-        ApplyToStampedeBeasts(owner, Hunter::SPELL_BESTIAL_WRATH, GetAura()->GetDuration());
+        if (duration != 0)
+            ApplyToStampedeBeasts(owner, Hunter::SPELL_BESTIAL_WRATH, duration);
     }
 
     void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
@@ -445,6 +507,451 @@ class spell_hun_tbw_mastery : public AuraScript
     }
 };
 
+// 34466/34467/34468 Serpent's Swiftness, 201849/201850/201851 Cobra Shot - Steady Shot's Nature hit, and at
+// Serpent's Swiftness 3/3 a Kill Command cut per Steady Shot cast (S1b B1, BEAST-MASTERY §4.2, §7.1). Every bound
+// rank has eff0 aura DUMMY. 34468's spell_proc row has phase 0x3 (CAST + HIT), the others 0x2 (HIT), so the two
+// branches are told apart by the event's phase in both hooks (L9).
+class spell_hun_steady_shot_nature : public AuraScript
+{
+    PrepareAuraScript(spell_hun_steady_shot_nature);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ HunterData::SPELL_STEADY_SHOT, HunterData::SPELL_KILL_COMMAND,
+            HunterData::SPELL_STEADY_SHOT_NATURE, HunterData::SPELL_SERPENT_S_SWIFTNESS,
+            HunterData::SPELL_SERPENT_S_SWIFTNESS_34467, HunterData::SPELL_SERPENT_S_SWIFTNESS_34468,
+            HunterData::SPELL_COBRA_SHOT, HunterData::SPELL_COBRA_SHOT_201850, HunterData::SPELL_COBRA_SHOT_201851 });
+    }
+
+    bool IsCobraShotRank() const
+    {
+        uint32 const id = GetId();
+        return id == HunterData::SPELL_COBRA_SHOT || id == HunterData::SPELL_COBRA_SHOT_201850 ||
+            id == HunterData::SPELL_COBRA_SHOT_201851;
+    }
+
+    Player* GetHunter() const
+    {
+        Unit* owner = GetUnitOwner();
+        Player* player = owner ? owner->ToPlayer() : nullptr;
+        return player && player->getClass() == CLASS_HUNTER ? player : nullptr;
+    }
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        SpellInfo const* spellInfo = eventInfo.GetSpellInfo();
+        if (!spellInfo || spellInfo->Id != HunterData::SPELL_STEADY_SHOT)
+            return false;
+
+        Player* player = GetHunter();
+        if (!player)
+            return false;
+
+        uint32 const phase = eventInfo.GetSpellPhaseMask();
+
+        // CAST (34468's row only): the Kill Command cut, once per Steady Shot cast; there is no DamageInfo here
+        if (phase & PROC_SPELL_PHASE_CAST)
+            return GetId() == HunterData::SPELL_SERPENT_S_SWIFTNESS_34468;
+
+        if (phase & PROC_SPELL_PHASE_HIT)
+        {
+            DamageInfo* damageInfo = eventInfo.GetDamageInfo();
+            if (!damageInfo || damageInfo->GetDamage() == 0)
+                return false;
+
+            // L6: the "does this proc act" gate lives here, not in the handler (review m4)
+            Unit* victim = damageInfo->GetVictim();
+            if (!victim || !victim->IsAlive() || !player->IsValidAttackTarget(victim))
+                return false;
+
+            // One Nature hit per Steady Shot hit (BM WP4): with a Serpent's Swiftness rank known, that aura casts it
+            // for both talents and the Cobra Shot aura stands down
+            return !IsCobraShotRank() || !GetSerpentsSwiftnessRank(player);
+        }
+
+        return false;
+    }
+
+    void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
+    {
+        PreventDefaultAction();
+
+        Player* player = GetHunter();
+        if (!player)
+            return;
+
+        uint32 const phase = eventInfo.GetSpellPhaseMask();
+        if (phase & PROC_SPELL_PHASE_CAST)
+        {
+            // 1000 ms, real seconds (34468 eff2, L10)
+            int32 const cut = sSpellMgr->AssertSpellInfo(HunterData::SPELL_SERPENT_S_SWIFTNESS_34468)
+                ->Effects[EFFECT_2].CalcValue(player);
+            if (cut > 0)
+                Hunter::ReduceSpellCooldown(player, HunterData::SPELL_KILL_COMMAND, uint32(cut));
+            return;
+        }
+
+        if (!(phase & PROC_SPELL_PHASE_HIT))
+            return;
+
+        DamageInfo* damageInfo = eventInfo.GetDamageInfo();
+        Unit* victim = damageInfo ? damageInfo->GetVictim() : nullptr;
+        if (!victim || !victim->IsAlive())
+            return;
+
+        int32 const pct = GetKnownRankValue(player, { HunterData::SPELL_SERPENT_S_SWIFTNESS_34468,
+                HunterData::SPELL_SERPENT_S_SWIFTNESS_34467, HunterData::SPELL_SERPENT_S_SWIFTNESS }) +
+            GetKnownRankValue(player, { HunterData::SPELL_COBRA_SHOT_201851, HunterData::SPELL_COBRA_SHOT_201850,
+                HunterData::SPELL_COBRA_SHOT });
+        if (pct <= 0)
+            return;
+
+        // The pre-armor figure: damage + cleanDamage (armor loss, block, resilience) + absorb + resist. On a crit the
+        // armor came off before the crit doubling (Unit.cpp CalculateSpellDamageTaken), so the armor loss is added
+        // once more (B10; exact for a x2 crit, 0-verify 4.3). The block is taken out of that second term, so a
+        // blocked crit doesn't count its block twice (review m3); resilience (PvP only) still does.
+        uint32 pre = damageInfo->GetUnmitigatedDamage();
+        if (eventInfo.GetHitMask() & PROC_HIT_CRITICAL)
+        {
+            uint32 const notArmor = damageInfo->GetDamage() + damageInfo->GetAbsorb() + damageInfo->GetResist() +
+                damageInfo->GetBlock();
+            if (pre > notArmor)
+                pre += pre - notArmor;
+        }
+
+        int32 const damage = CalculatePct(int32(pre), pct);
+        if (damage <= 0)
+            return;
+
+        player->CastCustomSpell(HunterData::SPELL_STEADY_SHOT_NATURE, SPELLVALUE_BASE_POINT0, damage, victim,
+            TRIGGERED_FULL_MASK);
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_hun_steady_shot_nature::CheckProc);
+        OnEffectProc += AuraEffectProcFn(spell_hun_steady_shot_nature::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+    }
+};
+
+// 53256/53259/53260 Cobra Strikes - a Steady Shot cast (CAST row, 5/10/15% x Proc Chance) resets Arcane Shot only;
+// Explosive Shot keeps its shared category entry (S1b B2, BEAST-MASTERY §0.11, §7.1)
+class spell_hun_cobra_strikes_bm : public AuraScript
+{
+    PrepareAuraScript(spell_hun_cobra_strikes_bm);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ HunterData::SPELL_ARCANE_SHOT });
+    }
+
+    void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& /*eventInfo*/)
+    {
+        PreventDefaultAction();
+
+        Unit* owner = GetUnitOwner();
+        Player* player = owner ? owner->ToPlayer() : nullptr;
+        if (!player || player->getClass() != CLASS_HUNTER)
+            return;
+
+        player->RemoveSpellCooldown(HunterData::SPELL_ARCANE_SHOT, true);
+    }
+
+    void Register() override
+    {
+        OnEffectProc += AuraEffectProcFn(spell_hun_cobra_strikes_bm::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+    }
+};
+
+// 3044 Arcane Shot (second class; SHARED's spell_hun_shot_mana stays) - Stomp: the pet stomps at the target once per
+// Arcane Shot cast, Cobra Strikes resets included, from any pet distance (S1b B3, BEAST-MASTERY §4.7)
+class spell_hun_arcane_shot_bm : public SpellScript
+{
+    PrepareSpellScript(spell_hun_arcane_shot_bm);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ HunterData::SPELL_STOMP_PET, HunterData::SPELL_STOMP_TALENT });
+    }
+
+    void HandleAfterCast()
+    {
+        Player* player = GetCaster() ? GetCaster()->ToPlayer() : nullptr;
+        if (!player || player->getClass() != CLASS_HUNTER || !player->HasAura(HunterData::SPELL_STOMP_TALENT))
+            return;
+
+        Pet* pet = player->GetPet();
+        Unit* target = GetExplTargetUnit();
+        if (!pet || !target || !target->IsAlive())
+            return;
+
+        // Kill Command's rule: no pet range, the stomp lands at the target. CheckPetCanAct ignores the target when
+        // petSpell is null, so the hostility check is our own (L6)
+        if (Hunter::CheckPetCanAct(player, target, nullptr) != SPELL_CAST_OK || !pet->IsValidAttackTarget(target))
+            return;
+
+        pet->CastSpell(target, HunterData::SPELL_STOMP_PET, TRIGGERED_FULL_MASK);
+    }
+
+    void Register() override
+    {
+        AfterCast += SpellCastFn(spell_hun_arcane_shot_bm::HandleAfterCast);
+    }
+};
+
+// 201809 Hunter Pet Talent Procs, on the real pet (owner-added, ApplyBmPetAuras) - Culling the Herd on a basic
+// attack crit, the Improved Aspect of the Viper capstone on a basic or command crit (S1b B4, BEAST-MASTERY §4.9).
+// The spell_proc row already limits it to crits of d2 b22 | b23 spells; neither effect rolls (deterministic).
+class spell_hun_bm_pet_procs : public AuraScript
+{
+    PrepareAuraScript(spell_hun_bm_pet_procs);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ HunterData::SPELL_CULLING_THE_HERD_BUFF, SPELL_REPLENISHMENT,
+            HunterData::SPELL_IMPROVED_ASPECT_OF_THE_VIPER_201831, HunterData::SPELL_CULLING_THE_HERD,
+            HunterData::SPELL_CULLING_THE_HERD_201842, HunterData::SPELL_CULLING_THE_HERD_201843 });
+    }
+
+    static bool IsBasicAttack(SpellInfo const* spellInfo)
+    {
+        return spellInfo->SpellFamilyName == SPELLFAMILY_HUNTER &&
+            (spellInfo->SpellFamilyFlags[2] & FAMILY_FLAG2_PET_BASIC_ATTACK);
+    }
+
+    static uint32 GetCullingTheHerdRank(Player const* owner)
+    {
+        return GetKnownRank(owner, { HunterData::SPELL_CULLING_THE_HERD_201843,
+            HunterData::SPELL_CULLING_THE_HERD_201842, HunterData::SPELL_CULLING_THE_HERD });
+    }
+
+    // The hunter who added 201809 (the aura's caster, L5), while the aura's pet is still his and nobody else charms it
+    // (review m2: a mind-controlled pet must not feed its charmer, nor its owner). The owner's own possession (Eyes
+    // of the Beast) still counts.
+    Player* GetRealOwner() const
+    {
+        Unit* caster = GetCaster();
+        Player* owner = caster ? caster->ToPlayer() : nullptr;
+        if (!owner || owner->getClass() != CLASS_HUNTER)
+            return nullptr;
+
+        Unit* unit = GetUnitOwner();
+        Pet* pet = unit ? unit->ToPet() : nullptr;
+        if (!pet || pet->GetOwner() != owner)
+            return nullptr;
+
+        ObjectGuid const charmer = pet->GetCharmerGUID();
+        return charmer.IsEmpty() || charmer == owner->GetGUID() ? owner : nullptr;
+    }
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        SpellInfo const* spellInfo = eventInfo.GetSpellInfo();
+        if (!spellInfo)
+            return false;
+
+        Player* owner = GetRealOwner();
+        if (!owner)
+            return false;
+
+        return (IsBasicAttack(spellInfo) && GetCullingTheHerdRank(owner)) ||
+            owner->HasAura(HunterData::SPELL_IMPROVED_ASPECT_OF_THE_VIPER_201831);
+    }
+
+    void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
+    {
+        PreventDefaultAction();
+
+        Unit* pet = GetUnitOwner();
+        Player* owner = GetRealOwner();
+        SpellInfo const* spellInfo = eventInfo.GetSpellInfo();
+        if (!pet || !owner || !spellInfo)
+            return;
+
+        // Culling the Herd (basic attacks only): 201808 is target 1, so it always lands on its caster; the hunter
+        // and the pet each cast their own copy (B4)
+        if (IsBasicAttack(spellInfo))
+        {
+            if (uint32 const rank = GetCullingTheHerdRank(owner))
+            {
+                int32 const amount = sSpellMgr->AssertSpellInfo(rank)->Effects[EFFECT_0].CalcValue(owner);
+                if (amount > 0)
+                {
+                    owner->CastCustomSpell(HunterData::SPELL_CULLING_THE_HERD_BUFF, SPELLVALUE_BASE_POINT0, amount,
+                        owner, TRIGGERED_FULL_MASK);
+                    pet->CastCustomSpell(HunterData::SPELL_CULLING_THE_HERD_BUFF, SPELLVALUE_BASE_POINT0, amount, pet,
+                        TRIGGERED_FULL_MASK);
+                }
+            }
+        }
+
+        // Improved Aspect of the Viper 2/2 capstone (basic or command crit, per target on area commands, F23)
+        if (owner->HasAura(HunterData::SPELL_IMPROVED_ASPECT_OF_THE_VIPER_201831))
+        {
+            owner->EnergizeBySpell(owner, HunterData::SPELL_IMPROVED_ASPECT_OF_THE_VIPER_201831,
+                CalculatePct(owner->GetMaxPower(POWER_MANA), HunterData::IAOTV_CAPSTONE_MANA_PCT), POWER_MANA);
+            owner->CastSpell(owner, SPELL_REPLENISHMENT, true);
+        }
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_hun_bm_pet_procs::CheckProc);
+        OnEffectProc += AuraEffectProcFn(spell_hun_bm_pet_procs::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+    }
+};
+
+// 201802 Stampede - three guardians of the pet's family attack the target for 15 s (S1b B6, BEAST-MASTERY §4.4,
+// PET §9.1). The warlock spell_warl_summon_infernal shape, summoned inline (no meteor delay). No follow motion and
+// no AttackStart here: npc_hun_stampede_beast starts its own chase from the GUID it is given (S1b decision 7).
+class spell_hun_stampede : public SpellScript
+{
+    PrepareSpellScript(spell_hun_stampede);
+
+    bool Validate(SpellInfo const* spellInfo) override
+    {
+        if (!ValidateSpellInfo({ HunterData::SPELL_BESTIAL_WRATH, HunterData::SPELL_BEAST_CLEAVE_BUFF }))
+            return false;
+
+        if (!sSummonPropertiesStore.LookupEntry(spellInfo->Effects[EFFECT_0].MiscValueB))
+        {
+            LOG_ERROR("scripts.hunter", "spell_hun_stampede: spell {} has no SummonProperties {}", spellInfo->Id,
+                spellInfo->Effects[EFFECT_0].MiscValueB);
+            return false;
+        }
+
+        for (uint32 entry : STAMPEDE_BEAST_ENTRIES)
+        {
+            if (!sObjectMgr->GetCreatureTemplate(entry))
+            {
+                LOG_ERROR("scripts.hunter", "spell_hun_stampede: creature_template {} does not exist", entry);
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    SpellCastResult CheckCast()
+    {
+        // CR3: only a hunter Player acts
+        Player* player = GetCaster()->ToPlayer();
+        if (!player || player->getClass() != CLASS_HUNTER)
+            return SPELL_CAST_OK;
+
+        Pet* pet = player->GetPet();
+        if (!pet || !pet->IsAlive())
+            return SPELL_FAILED_NO_PET;
+
+        Unit* target = GetExplTargetUnit();
+        if (!target || !target->IsAlive() || !player->IsValidAttackTarget(target))
+            return SPELL_FAILED_BAD_TARGETS;
+
+        return SPELL_CAST_OK;
+    }
+
+    // Copies the player's `spellId` aura on the pet to `beast` with the pet's remaining duration. S1a's recursion
+    // guards make this safe: Bestial Wrath's apply hook skips a non-pet, Beast Cleave's returns on a non-Player.
+    static void CopyPetAura(Player* player, Pet* pet, Unit* beast, uint32 spellId)
+    {
+        // a spent aura (0 ms left) is not copied: the copy would expire on the next update (review m5)
+        Aura const* petAura = pet->GetAura(spellId, player->GetGUID());
+        if (!petAura || petAura->GetDuration() == 0)
+            return;
+
+        if (Aura* copy = player->AddAura(spellId, beast))
+            copy->SetDuration(petAura->GetDuration());
+    }
+
+    void HandleSummon(SpellEffIndex effIndex)
+    {
+        PreventHitDefaultEffect(effIndex);
+
+        Player* player = GetCaster() ? GetCaster()->ToPlayer() : nullptr;
+        if (!player || player->getClass() != CLASS_HUNTER)
+            return;
+
+        Pet* pet = player->GetPet();
+        WorldLocation const* dest = GetHitDest();
+        if (!pet || !dest || !pet->GetCreatureTemplate())
+            return;
+
+        SpellInfo const* spellInfo = GetSpellInfo();
+        uint32 const spellId = spellInfo->Id;
+        uint32 const entry = Hunter::GetStampedeEntry(pet->GetCreatureTemplate()->family);
+        SummonPropertiesEntry const* properties =
+            sSummonPropertiesStore.LookupEntry(spellInfo->Effects[effIndex].MiscValueB);
+        if (!properties)
+            return;
+
+        int32 duration = spellInfo->GetDuration();
+        player->ApplySpellMod(spellId, SPELLMOD_DURATION, duration);
+
+        // The spell's dest only carries coordinates (its map id stays invalid, bugs log "Summon Infernal summons
+        // nothing"), so the map is the player's
+        Map* map = player->GetMap();
+        Position const center = *dest;
+        Unit* target = GetExplTargetUnit();
+
+        std::vector<TempSummon*> beasts;
+        for (int32 i = 0; i < HunterData::STAMPEDE_BEAST_COUNT; ++i)
+        {
+            // evenly on a STAMPEDE_SPREAD_YD ring around the dest, ground height from the player's map
+            float const angle = player->GetOrientation() + 2.0f * float(M_PI) * float(i) /
+                float(HunterData::STAMPEDE_BEAST_COUNT);
+            float x = center.GetPositionX() + HunterData::STAMPEDE_SPREAD_YD * std::cos(angle);
+            float y = center.GetPositionY() + HunterData::STAMPEDE_SPREAD_YD * std::sin(angle);
+            float z = center.GetPositionZ();
+            Acore::NormalizeMapCoord(x);
+            Acore::NormalizeMapCoord(y);
+            player->UpdateGroundPositionZ(x, y, z);
+
+            // each beast faces the target (else the ring's center), not outward along its ring angle (review MN-4)
+            Position spot(x, y, z);
+            spot.SetOrientation(target ? spot.GetAbsoluteAngle(target) : spot.GetAbsoluteAngle(center));
+
+            TempSummon* beast = map->SummonCreature(entry, spot, properties, duration, player, spellId);
+            if (!beast)
+                continue;
+
+            if (properties->Category == SUMMON_CATEGORY_ALLY)
+                beast->SetFaction(player->GetFaction());
+
+            // The beast is in m_Controlled once SummonCreature has returned (L4)
+            Hunter::RefreshPetPassthrough(player, beast);
+            CopyPetAura(player, pet, beast, HunterData::SPELL_BESTIAL_WRATH);
+            CopyPetAura(player, pet, beast, HunterData::SPELL_BEAST_CLEAVE_BUFF);
+
+            if (target && target->IsAlive() && beast->AI())
+                beast->AI()->SetGUID(target->GetGUID());
+
+            beasts.push_back(beast);
+        }
+
+        if (beasts.empty())
+            return;
+
+        // The spell's own SPELL_SUMMON combat-log line (Spell::ExecuteLogEffectSummonObject) was skipped along with
+        // the default effect; damage meters need it to credit the beasts' damage to the hunter. Same layout as
+        // Spell::SendLogExecute.
+        WorldPacket data(SMSG_SPELLLOGEXECUTE, 8 + 4 + 4 + 4 + 4 + 8 * beasts.size());
+        data << player->GetPackGUID();
+        data << uint32(spellId);
+        data << uint32(1);                              // effect count
+        data << uint32(SPELL_EFFECT_SUMMON);
+        data << uint32(beasts.size());                  // target count
+        for (TempSummon* beast : beasts)
+            data << beast->GetPackGUID();
+        player->SendMessageToSet(&data, true);
+    }
+
+    void Register() override
+    {
+        OnCheckCast += SpellCheckCastFn(spell_hun_stampede::CheckCast);
+        OnEffectHit += SpellEffectFn(spell_hun_stampede::HandleSummon, EFFECT_0, SPELL_EFFECT_SUMMON);
+    }
+};
+
 void AddSC_hunter_beast_mastery_spell_scripts()
 {
     RegisterSpellScript(spell_hun_command);
@@ -454,4 +961,10 @@ void AddSC_hunter_beast_mastery_spell_scripts()
     RegisterSpellScript(spell_hun_beast_cleave);
     RegisterSpellScript(spell_hun_bestial_wrath_bm);
     RegisterSpellScript(spell_hun_tbw_mastery);
+    // S1b
+    RegisterSpellScript(spell_hun_steady_shot_nature);
+    RegisterSpellScript(spell_hun_cobra_strikes_bm);
+    RegisterSpellScript(spell_hun_arcane_shot_bm);
+    RegisterSpellScript(spell_hun_bm_pet_procs);
+    RegisterSpellScript(spell_hun_stampede);
 }

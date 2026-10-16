@@ -375,6 +375,8 @@ namespace HunterData
     constexpr uint32 SPELL_SNIPER_TRAINING_64418 = 64418; // sniper_training_64418
     constexpr uint32 SPELL_SNIPER_TRAINING_64419 = 64419; // sniper_training_64419
     constexpr uint32 SPELL_SNIPER_TRAINING_64420 = 64420; // sniper_training_64420
+    constexpr uint32 SPELL_FEROCIOUS_INSPIRATION_75446 = 75446; // ferocious_inspiration_75446
+    constexpr uint32 SPELL_FEROCIOUS_INSPIRATION_75447 = 75447; // ferocious_inspiration_75447
     constexpr uint32 SPELL_FEROCIOUS_INSPIRATION_75593 = 75593; // ferocious_inspiration_75593
     constexpr uint32 SPELL_GLAIVE_TOSS = 201600; // glaive_toss_201600
     constexpr uint32 SPELL_ASPECT_OF_THE_DRAGONHAWK_EXPLOSION = 201601; // aspect_of_the_dragonhawk_explosion_201601
@@ -419,11 +421,14 @@ namespace HunterData
     constexpr uint32 SPELL_HUNTER_PET_UTILITY_MARKER = 201752; // hunter_pet_utility_marker_201752
     constexpr uint32 SPELL_COMMAND_I = 201800; // command_i_201800
     constexpr uint32 SPELL_COMMAND_II = 201801; // command_ii_201801
+    constexpr uint32 SPELL_STAMPEDE_SUMMON = 201802; // stampede_summon_201802
+    constexpr uint32 SPELL_STEADY_SHOT_NATURE = 201803; // steady_shot_nature_201803
     constexpr uint32 SPELL_STOMP_PET = 201804; // stomp_pet_201804
     constexpr uint32 SPELL_SPIKED_COLLAR_STRIKE = 201805; // spiked_collar_strike_201805
     constexpr uint32 SPELL_BEAST_CLEAVE_BUFF = 201806; // beast_cleave_buff_201806
     constexpr uint32 SPELL_BEAST_CLEAVE_STRIKE = 201807; // beast_cleave_strike_201807
     constexpr uint32 SPELL_CULLING_THE_HERD_BUFF = 201808; // culling_the_herd_buff_201808
+    constexpr uint32 SPELL_BM_PET_PROCS = 201809; // bm_pet_procs_201809
     constexpr uint32 SPELL_PHOENIX_S_PLUME_LOCKOUT = 201810; // phoenix_s_plume_lockout_201810
     constexpr uint32 SPELL_COBRA_SHOT_TRANSFORM = 201811; // cobra_shot_transform_201811
     constexpr uint32 SPELL_BEAST_WITHIN_MASTERY = 201812; // beast_within_mastery_201812
@@ -466,9 +471,36 @@ namespace HunterData
     constexpr uint32 SPELL_THE_BEAST_WITHIN_201855 = 201855; // the_beast_within_201855
     constexpr uint32 SPELL_THE_BEAST_WITHIN_201856 = 201856; // the_beast_within_201856
     constexpr uint32 SPELL_THE_BEAST_WITHIN_201857 = 201857; // the_beast_within_201857
+    constexpr uint32 SPELL_LUNGE_DISPLAY = 201858; // lunge_display_201858
+    constexpr uint32 SPELL_RIP_THROAT_DISPLAY = 201859; // rip_throat_display_201859
+    constexpr uint32 SPELL_RAKE_DISPLAY = 201860; // rake_display_201860
+    constexpr uint32 SPELL_POUNCE_DISPLAY = 201861; // pounce_display_201861
+    constexpr uint32 SPELL_SAVAGE_REND_DISPLAY = 201862; // savage_rend_display_201862
+    constexpr uint32 SPELL_LEAPING_TEAR_DISPLAY = 201863; // leaping_tear_display_201863
+    constexpr uint32 SPELL_SWIPE_DISPLAY = 201864; // swipe_display_201864
+    constexpr uint32 SPELL_MAUL_DISPLAY = 201865; // maul_display_201865
+    constexpr uint32 SPELL_VENOM_BITE_DISPLAY = 201866; // venom_bite_display_201866
+    constexpr uint32 SPELL_VENOMOUS_CLOUD_DISPLAY = 201867; // venomous_cloud_display_201867
+    constexpr uint32 SPELL_SAVAGE_STRIKES_DISPLAY = 201868; // savage_strikes_display_201868
+    constexpr uint32 SPELL_SAVAGE_POUNCE_DISPLAY = 201869; // savage_pounce_display_201869
+    constexpr uint32 SPELL_THRASH_DISPLAY = 201870; // thrash_display_201870
+    constexpr uint32 SPELL_CRUSHING_BLOW_DISPLAY = 201871; // crushing_blow_display_201871
+    constexpr uint32 SPELL_FEINT_STRIKE_DISPLAY = 201872; // feint_strike_display_201872
+    constexpr uint32 SPELL_AMBUSH_DISPLAY = 201873; // ambush_display_201873
+
+    // Creature (NPC) ids
+    constexpr uint32 NPC_STAMPEDING_WOLF = 300200; // stampeding_wolf_300200
+    constexpr uint32 NPC_STAMPEDING_CAT = 300201; // stampeding_cat_300201
+    constexpr uint32 NPC_STAMPEDING_RAPTOR = 300202; // stampeding_raptor_300202
+    constexpr uint32 NPC_STAMPEDING_BEAR = 300203; // stampeding_bear_300203
+    constexpr uint32 NPC_STAMPEDING_SPIDER = 300204; // stampeding_spider_300204
+    constexpr uint32 NPC_STAMPEDING_BEAST_FEROCITY = 300205; // stampeding_beast_ferocity_300205
+    constexpr uint32 NPC_STAMPEDING_BEAST_TENACITY = 300206; // stampeding_beast_tenacity_300206
+    constexpr uint32 NPC_STAMPEDING_BEAST_CUNNING = 300207; // stampeding_beast_cunning_300207
 
     // const() - hidden script numbers (tier 3)
     constexpr float BEAST_CLEAVE_RADIUS_YD = 8.0f; // Beast Cleave splash radius around the victim, yards (BM 13).
+    constexpr int32 COMMAND_DISPLAY_OFFSET = 138; // PT-5: the pet-spellbook display passive of commanded spell N is N + this (201720..201735 -> 201858..201873).
     constexpr int32 IAOTV_CAPSTONE_MANA_PCT = 1; // Improved Aspect of the Viper capstone mana, percent of max mana (BM 13).
     constexpr int32 KILL_COMMAND_BW_REDUCTION_MS = 5000; // Kill Command cut to the Bestial Wrath cooldown, ms (BM 13).
     constexpr int32 PET_AP_FROM_RAP_PCT = 100; // Pet attack power per owner ranged attack power, percent (PET 5.3).

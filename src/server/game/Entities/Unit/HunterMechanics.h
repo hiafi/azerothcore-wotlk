@@ -113,11 +113,12 @@ namespace Hunter
     //    AfterHit (it has the attribute), never both. WP-B keeps the list in a comment next to the body.
     void  OnDirectFireHit(Unit* attacker, Unit* target, SpellInfo const* spellInfo);
 
-    // Shot mana (§B2): the percent of maximum mana stored in the shot's EFFECT_1 DUMMY (tenths of a percent),
-    // read with CalcValue(caster) so SPELLMOD_EFFECT2 / ALL_EFFECTS talents apply.
+    // Shot mana (§B2, S1b PT-6): the percent of BASE mana stored in the shot's EFFECT_1 DUMMY (tenths of a percent),
+    // read with CalcValue(caster) so SPELLMOD_EFFECT2 / ALL_EFFECTS talents apply. A shot without an EFFECT_1 reads 0.
     float GetShotManaPct(Unit const* caster, SpellInfo const* shot);
-    // EnergizeBySpell(player, shot->Id, max mana * pct * multiplier, POWER_MANA). MM's free Arcane Shot and
-    // Lethal Shots capstone call it too.
+    // EnergizeBySpell(player, shot->Id, base mana (GetCreateMana, the class/level base) * pct * multiplier,
+    // POWER_MANA). Every caller shares that base: Arcane Shot, Raptor Strike, and later MM's free Arcane Shot and
+    // Lethal Shots capstone.
     void  RestoreShotMana(Player* player, SpellInfo const* shot, float multiplier = 1.0f);
 
     // ---- H0-P (PET.md §8.4 defines the bodies and the rest of the pet section) ----
@@ -166,7 +167,8 @@ namespace Hunter
     uint32 GetCommandSpell(Unit const* pet, uint8 slot);      // slot 0 = Command I, 1 = Command II (BM S1)
     bool HasActivePet(Player const* owner);                   // pet exists, alive, in world (MM Lone Survivor)
     SpellCastResult CheckPetCanAct(Player* owner, Unit* target, SpellInfo const* petSpell);
-        // null petSpell = Kill Command (no pet reach); else the commanded spell's range + pet LoS
+        // null petSpell = Kill Command (no pet reach); else the commanded spell's range + pet LoS (a melee-range
+        // spell is measured as the pet's own triggered cast measures it, Spell::CheckRange, S1a-5)
     void ApplyPetKit(Player* owner, Pet* pet);                // 201706-201708 swap
     void ApplyPetTypeStats(Guardian* guardian);               // swing, base, white scale (PET 5.6)
     PassthroughKind GetPassthroughKind(Player const* owner, Unit const* unit);
@@ -182,7 +184,9 @@ namespace Hunter
     void PinPetPowers(Pet* pet);
     // Seats the default pet bar (basic, utility, Growl, Cower/Dash) once per pet (while it lacks marker 201703) when
     // the basic is on no bar slot, and turns autocast on once for the basic and once for the buff/debuff utility,
-    // each tracked by its own hidden marker spell (201703, 201752) in pet_spell. Needs a live, loaded pet.
+    // each tracked by its own hidden marker spell (201703, 201752) in pet_spell. S1b PT-5: also keeps the two
+    // passive "Command I/II: <ability>" display spells of the pet's kit in its spellbook (commanded id +
+    // HunterData::COMMAND_DISPLAY_OFFSET) and removes the other 14. Needs a live, loaded pet.
     void SeatDefaultPetBar(Pet* pet);
 
     // Aspect of the Monkey (SHARED B6.6): puts 201605 on a pet that lacks it while its owner carries the aspect.
@@ -207,7 +211,11 @@ namespace Hunter
     void  CommandPetAttack(Pet* pet, Unit* target);              // A13
     void  CollectBmSplashTargets(Player* hunter, Unit* source, Unit* center, float radius, uint32 maxTargets,
                                  std::vector<Unit*>& out);       // A13, §0.4 filter
-    // ---- S1b / S2 / S3 append their own sections (mark state, Burning Tar bank) ----
+    // ---- S1b ----
+    uint32 GetStampedeEntry(uint32 creatureFamily);      // 1/2/11/4/3 -> 300200..300204, else by type 300205..300207
+    void   ApplyBmPetAuras(Player* owner, Pet* pet);     // 201809 add-if-missing (owner as caster); kind Pet only
+    void   OnPhoenixPlumePetDeath(Unit* unit);           // HunterUnitScript::OnUnitDeath body (§4.10)
+    // ---- S2 / S3 append their own sections (mark state, Burning Tar bank) ----
 }
 
 #endif

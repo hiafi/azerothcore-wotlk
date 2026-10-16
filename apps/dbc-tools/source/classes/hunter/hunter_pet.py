@@ -176,7 +176,7 @@ pet_barding_53175 = spell(
     ],
     spell_icon_id=2927,
     notes='pulled from existing data. H0-P1 (PET.md 7.1): dodge bp 0 -> 1 (2%)',
-    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases your pet's armor by $s1% and chance to Dodge by $s2%.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases your pet's armor by $s1% and its chance to dodge by $s2%.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
 
@@ -197,7 +197,7 @@ pet_barding_53176 = spell(
     ],
     spell_icon_id=2927,
     notes='pulled from existing data. H0-P1 (PET.md 7.1): dodge bp 1 -> 3 (4%)',
-    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases your pet's armor by $s1% and chance to Dodge by $s2%.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases your pet's armor by $s1% and its chance to dodge by $s2%.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
 
@@ -258,7 +258,7 @@ bloodthirsty_53186 = spell(
     ],
     spell_icon_id=2253,
     notes='pulled from existing data. H0-P1 (PET.md 7.1): ProcChance 100 (spell_hun_pet_bloodthirsty rolls the real chance from EFFECT_1 = DUMMY bp 9, shown 10%); eff0 mask and SpellClassSet 17 cleared',
-    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 69972, 'ProcChance': 100, 'DurationIndex': 0, 'RangeIndex': 2, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your pet's attacks have a $s2% chance to heal it for 5% of its total health over 5 sec.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 69972, 'ProcChance': 100, 'DurationIndex': 0, 'RangeIndex': 2, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your pet's attacks have a $s2% chance to heal it for 5% of its total health.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
 
@@ -279,7 +279,7 @@ bloodthirsty_53187 = spell(
     ],
     spell_icon_id=2253,
     notes='pulled from existing data. H0-P1 (PET.md 7.1): ProcChance 100 (spell_hun_pet_bloodthirsty rolls the real chance from EFFECT_1 = DUMMY bp 19, shown 20%); eff0 mask and SpellClassSet 17 cleared',
-    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 69972, 'ProcChance': 100, 'DurationIndex': 0, 'RangeIndex': 2, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your pet's attacks have a $s2% chance to heal it for 5% of its total health over 5 sec.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 69972, 'ProcChance': 100, 'DurationIndex': 0, 'RangeIndex': 2, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your pet's attacks have a $s2% chance to heal it for 5% of its total health.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
 
@@ -332,7 +332,7 @@ venom_spit_201710 = spell(
     spell_icon_id=68,
     notes='H0-P1 (PET.md 4.3): Spider basic. Visual 7910 / Speed 40 and icon 68 from Poison Spit 35387, field shape from Acid Spit 55749 (direct hit). Ranged DmgClass 3 so it crits via GetUnitCriticalChance; d1 b28 + d2 b23 carrier; 0 Focus, 6 s cooldown, GCD 1500/133.',
     raw_overrides={**_SPIT_RAW, 'SpellVisualID_1': 7910, 'Speed': 40.0,
-                   'Description_Lang_enUS': 'Spit venom at an enemy, causing {pot1} Nature damage.'},
+                   'Description_Lang_enUS': 'Spit venom at the enemy, causing {pot1} Nature damage.'},
 )
 
 
@@ -382,7 +382,7 @@ roar_of_courage_201715 = spell(
                    'SpellClassSet': 9, 'SpellClassMask_2': m.PET_ABILITY, 'EquippedItemClass': -1,
                    'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0,
                    'AuraDescription_Lang_enUS': 'Increases Strength and Agility by $s1.',
-                   'Description_Lang_enUS': 'Your pet roars, increasing the Strength and Agility of party and raid members within 100 yards by $s1 for $d. Does not stack with Strength of Earth Totem or Horn of Winter.'},
+                   'Description_Lang_enUS': 'Your pet roars, increasing the Strength and Agility of all party and raid members by $s1. Does not stack with Strength of Earth Totem or Horn of Winter.'},
 )
 
 
@@ -433,7 +433,7 @@ menacing_roar_201717 = spell(
                    'AttributesEx6': 8388608, 'SpellClassSet': 9, 'SpellClassMask_2': m.PET_ABILITY, 'EquippedItemClass': -1,
                    'EffectChainAmplitude_1': 1.0,
                    'AuraDescription_Lang_enUS': 'Reduces melee attack power by $s1.',
-                   'Description_Lang_enUS': 'Your pet roars, reducing the melee attack power of enemies within 10 yards by $s1 for $d. Does not stack with Demoralizing Shout, Demoralizing Roar, Vindication or Curse of Weakness.'},
+                   'Description_Lang_enUS': 'Your pet roars, reducing the attack power of all enemies within $a1 yards by $s1 for $d. Does not stack with Demoralizing Shout, Demoralizing Roar, Vindication or Curse of Weakness.'},
 )
 
 
@@ -499,7 +499,7 @@ web_pull_201718 = spell(
     raw_overrides={'AttributesEx': 512, 'SpellLevel': 1, 'BaseLevel': 1, 'DefenseType': 1, 'PreventionType': 1, 'FacingCasterFlags': 1,
                    'SpellVisualID_1': 684, 'SpellClassSet': 9, 'SpellClassMask_2': m.PET_ABILITY, 'EquippedItemClass': -1,
                    'EffectChainAmplitude_1': 1.0,
-                   'Description_Lang_enUS': 'Shoots a web at an enemy up to 30 yards away and pulls it to your pet. Does not work on bosses.'},
+                   'Description_Lang_enUS': 'Spin a web at the target, pulling it to your pet. Does not work on bosses. 30 sec cooldown.'},
 )
 
 

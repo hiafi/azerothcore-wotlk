@@ -47,7 +47,7 @@ aspect_of_the_viper_poison_201602 = spell(
     id=201602, name='Aspect of the Viper', school=School.NATURE, dispel=0,   # Dispel 0: never a "sting" (§2)
     duration_ms=6000, range_yards=50000.0,
     effects=[Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=1000,
-                    base_points=4, implicit_target_a=6)],   # live 5 = 0.5% max mana per tick, placeholder M (§0.3)
+                    base_points=49, implicit_target_a=6)],   # live 50 = 0.50% max mana per tick, in hundredths of a percent (the C++ divides by 100)
     spell_icon_id=2227,
     raw_overrides={'SpellLevel': 20, 'DefenseType': 0, 'SpellClassSet': 9, 'SpellClassMask_3': 0x4000000,
                    'AttributesEx3': 0x10000, 'EquippedItemClass': -1,
@@ -106,8 +106,8 @@ procs_on(aspect_of_the_monkey_pet_201605, proc_flags=0x100000, chance=100.0)   #
 # --- B13 interim re-keys: d1 b0 -> d2 b29 (every other column copied from the live row) ---
 procs_on(-53290, proc_flags=0, family_name=9, family_mask=(0x800, 0, 0x20000200),
          spell_type_mask=1, spell_phase_mask=2, hit_mask=2, attributes_mask=2)             # Hunting Party
-procs_on(-53256, proc_flags=0, family_name=9, family_mask=(0x800, 0x800000, 0x20000000),
-         spell_phase_mask=2, hit_mask=2)                                                   # Cobra Strikes
+procs_on(-53256, proc_flags=0x100, family_name=9, family_mask=(0, 0, 0x20000000),
+         spell_phase_mask=0x1, hit_mask=0, chance=0)   # Cobra Strikes: S1b resets Arcane Shot on a CAST-phase Steady Shot
 procs_on(-53234, proc_flags=0, family_name=9, family_mask=(0x20000, 0, 0x20000001),
          spell_phase_mask=2, hit_mask=2)                                                   # Piercing Shots
 procs_on(-53221, proc_flags=0, family_name=9, family_mask=(0, 0, 0x20000000),

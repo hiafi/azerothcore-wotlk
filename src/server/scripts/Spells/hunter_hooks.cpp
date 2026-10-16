@@ -17,7 +17,7 @@
 
 /*
  * Hunter rework - ScriptMgr handlers (hunter-rework.SHARED.md §A4 / §A5 / §C2 / §C4). One class per hook kind:
- * every hunter stage extends HunterPlayerScript and HunterPetScript, and S1 adds HunterUnitScript. Every hook
+ * every hunter stage extends HunterPlayerScript and HunterPetScript, and S1b adds HunterUnitScript. Every hook
  * returns early on the cheapest check (class, pet type); HunterNoAmmoGrant is the only all-class hook.
  */
 
@@ -28,6 +28,7 @@
 #include "Player.h"
 #include "ScriptMgr.h"
 #include "Spell.h"
+#include "UnitScript.h"
 
 class HunterPlayerScript : public PlayerScript
 {
@@ -131,6 +132,23 @@ public:
     }
 };
 
+// S1b (SHARED §A5): the one hunter UnitScript. OnUnitDeath runs for every death in the world, so each branch starts
+// with its cheapest guard (unit->IsPet() first, inside Hunter::OnPhoenixPlumePetDeath). S2 adds
+// UNITHOOK_MODIFY_SPELL_DAMAGE_TAKEN and a second, independent death branch (Lone Survivor) to this class.
+class HunterUnitScript : public UnitScript
+{
+public:
+    HunterUnitScript() : UnitScript("HunterUnitScript", true, { UNITHOOK_ON_UNIT_DEATH }) { }
+
+    void OnUnitDeath(Unit* unit, Unit* /*killer*/) override
+    {
+        // ---- S1b: Phoenix's Plume revive (BEAST-MASTERY §4.10). ----
+        Hunter::OnPhoenixPlumePetDeath(unit);
+
+        // ---- S2 slot: Lone Survivor refresh on pet death. ----
+    }
+};
+
 // Every class and every player, bots included (Q3): 46699 skips SPELL_FAILED_NO_AMMO server-side. The ammo_type 0
 // rows on bows, guns and crossbows are the client half (SHARED §C2).
 class HunterNoAmmoGrant : public PlayerScript
@@ -163,5 +181,6 @@ void AddSC_hunter_hooks()
 {
     new HunterPlayerScript();
     new HunterPetScript();
+    new HunterUnitScript();
     new HunterNoAmmoGrant();
 }

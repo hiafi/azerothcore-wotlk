@@ -69,7 +69,9 @@ B13_GLAIVE_STRIPS = (((56333, 56336, 56337), 2), ((3674,), 2), ((63066,), 1))
 # Re-keyed spell_proc rows: key -> (family, (m0, m1, m2)) after B13.
 B13_SPELL_PROCS = {
     -53290: (0x800, 0, 0x20000200),
-    -53256: (0x800, 0x800000, 0x20000000),
+    # Cobra Strikes: H0's (0x800, 0x800000, 0x20000000) row, edited in place by S1b B2 to Steady Shot d2 b29 only (CAST
+    # phase, spell_hun_cobra_strikes_bm resets Arcane Shot); test_hunter_bm_data.py checks its other columns.
+    -53256: (0, 0, 0x20000000),
     -53234: (0x20000, 0, 0x20000001),
     -53221: (0, 0, 0x20000000),
     -34497: (0x60800, 0x800000, 0x20000201),

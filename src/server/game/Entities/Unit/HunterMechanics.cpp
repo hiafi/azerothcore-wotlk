@@ -23,6 +23,7 @@
 #include "DBCStores.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
+#include "Log.h"
 #include "Pet.h"
 #include "Player.h"
 #include "Random.h"
@@ -170,6 +171,8 @@ namespace Hunter
         if (!shot)
             return 0.0f;
 
+        // Tenths of a percent of base mana (Arcane Shot 3044: bp 199 -> 20.0%). Raptor Strike 2973 has no EFFECT_1,
+        // so it reads 0 and restores nothing (S1b PT-6 leaves it so).
         return shot->Effects[EFFECT_1].CalcValue(caster) / 10.0f;
     }
 
@@ -178,8 +181,10 @@ namespace Hunter
         if (!player || !shot)
             return;
 
+        // S1b PT-6 (user ruling 2026-10-15): the percent is of BASE mana (UNIT_FIELD_BASE_MANA, the class/level base),
+        // not of maximum mana, for every caller.
         float const pct = GetShotManaPct(player, shot);
-        uint32 const amount = uint32(std::max(0.0f, player->GetMaxPower(POWER_MANA) * pct / 100.0f * multiplier));
+        uint32 const amount = uint32(std::max(0.0f, player->GetCreateMana() * pct / 100.0f * multiplier));
         if (!amount)
             return;
 
@@ -413,6 +418,63 @@ namespace Hunter
 
             return amount;
         }
+
+        // S1b PT-5: every commanded spell (one kit slot each, 201720-201735) has one passive display spell at
+        // id + COMMAND_DISPLAY_OFFSET (201858-201873). 201736 (Venomous Cloud's splash) is in no slot and has none.
+        constexpr uint32 COMMANDED_SPELLS[] =
+        {
+            SPELL_LUNGE_COMMAND, SPELL_RIP_THROAT_COMMAND, SPELL_RAKE_COMMAND, SPELL_POUNCE_COMMAND,
+            SPELL_SAVAGE_REND_COMMAND, SPELL_LEAPING_TEAR_COMMAND, SPELL_SWIPE_COMMAND, SPELL_MAUL_COMMAND,
+            SPELL_VENOM_BITE_COMMAND, SPELL_VENOMOUS_CLOUD_COMMAND, SPELL_SAVAGE_STRIKES_COMMAND,
+            SPELL_SAVAGE_POUNCE_COMMAND, SPELL_THRASH_COMMAND, SPELL_CRUSHING_BLOW_COMMAND, SPELL_FEINT_STRIKE_COMMAND,
+            SPELL_AMBUSH_COMMAND,
+        };
+
+        // Learns the kit's two display spells and removes the other 14; true when the spellbook changed. Idempotent.
+        // addSpell, not learnSpell: the caller sends the single PetSpellInitialize. The display spells are passive
+        // (attributes 0x150), so addSpell casts their DUMMY self-aura and never puts them on the bar
+        // (Pet.cpp addSpell), and they can't be cast; nothing here ever casts the real commanded spell.
+        bool SyncCommandDisplaySpells(Pet* pet, PetKit const& kit)
+        {
+            bool changed = false;
+            for (uint32 command : COMMANDED_SPELLS)
+            {
+                uint32 const display = command + uint32(HunterData::COMMAND_DISPLAY_OFFSET);
+                bool const wanted = command == kit.commandI || command == kit.commandII;
+                if (wanted)
+                {
+                    // The SpellInfo check keeps addSpell's "Non-existed in SpellStore" error off the 2 s tick when the
+                    // data is not deployed.
+                    if (!pet->HasSpell(display) && sSpellMgr->GetSpellInfo(display) &&
+                        pet->addSpell(display, ACT_PASSIVE))
+                        changed = true;
+                }
+                else if (pet->HasSpell(display) && pet->removeSpell(display, false))
+                    changed = true;
+            }
+
+            return changed;
+        }
+
+        // S1b B6: the Stampede guardians (creature_template, hunter_bm_spells.py) must sit inside PET's
+        // STAMPEDE_ENTRY_MIN/MAX, which GetPassthroughKind reads.
+        constexpr bool IsStampedeEntry(uint32 entry)
+        {
+            return entry >= uint32(HunterData::STAMPEDE_ENTRY_MIN) && entry <= uint32(HunterData::STAMPEDE_ENTRY_MAX);
+        }
+        static_assert(IsStampedeEntry(HunterData::NPC_STAMPEDING_WOLF) &&
+            IsStampedeEntry(HunterData::NPC_STAMPEDING_CAT) && IsStampedeEntry(HunterData::NPC_STAMPEDING_RAPTOR) &&
+            IsStampedeEntry(HunterData::NPC_STAMPEDING_BEAR) &&
+            IsStampedeEntry(HunterData::NPC_STAMPEDING_SPIDER) &&
+            IsStampedeEntry(HunterData::NPC_STAMPEDING_BEAST_FEROCITY) &&
+            IsStampedeEntry(HunterData::NPC_STAMPEDING_BEAST_TENACITY) &&
+            IsStampedeEntry(HunterData::NPC_STAMPEDING_BEAST_CUNNING),
+            "Stampede guardians must sit inside STAMPEDE_ENTRY_MIN/MAX (GetPassthroughKind)");
+
+        // S1b B5: Phoenix's Plume. 54114 is the stock Heart of the Phoenix revive (no HunterData:: name).
+        constexpr uint32 SPELL_HEART_OF_THE_PHOENIX_REVIVE = 54114;
+        constexpr uint32 SPELL_PHOENIX_S_PLUME_RANK3 = HunterData::SPELL_PHOENIX_S_PLUME;           // 201826
+        constexpr uint32 SPELL_PHOENIX_S_PLUME_LOCKOUT = HunterData::SPELL_PHOENIX_S_PLUME_LOCKOUT; // 201810
     }
 
     PetType GetPetType(Unit const* petOrGuardian)
@@ -477,7 +539,17 @@ namespace Hunter
             return SPELL_FAILED_BAD_TARGETS;
 
         float const range = petSpell->GetMaxRange(false, pet);
-        if (range > 0.0f && !pet->IsWithinDist(target, range))
+        if (petSpell->RangeEntry && (petSpell->RangeEntry->Flags & SPELL_RANGE_MELEE))
+        {
+            // S1a-5: the pet casts the command triggered, and Spell::CheckRange (strict) measures a melee-range spell
+            // centre to centre with IsWithinMeleeRange, less 2 x MIN_MELEE_REACH (one with leeway). The plain
+            // IsWithinDist below adds both object sizes, so it let through presses the pet's cast then refused, and
+            // the Command's cooldown was spent on nothing. Same arithmetic here.
+            float const margin = pet->GetLeewayBonusRange(target) > 0.0f ? MIN_MELEE_REACH : 2 * MIN_MELEE_REACH;
+            if (!pet->IsWithinMeleeRange(target, std::max(range - margin, 0.0f)))
+                return SPELL_FAILED_OUT_OF_RANGE;
+        }
+        else if (range > 0.0f && !pet->IsWithinDist(target, range))
             return SPELL_FAILED_OUT_OF_RANGE;
 
         if (!pet->IsWithinLOSInMap(target))
@@ -582,7 +654,11 @@ namespace Hunter
 
     void RefreshPetPassthrough(Player* owner, Unit* unit)
     {
-        if (!owner || !unit || GetPassthroughKind(owner, unit) == PassthroughKind::None)
+        if (!owner || !unit)
+            return;
+
+        PassthroughKind const kind = GetPassthroughKind(owner, unit);
+        if (kind == PassthroughKind::None)
             return;
 
         for (uint32 spellId :
@@ -596,6 +672,10 @@ namespace Hunter
 
             RecalculateAllEffects(aura);
         }
+
+        // S1b B4: the BM pet proc carrier, on the hunter pet only (Stampede beasts get none, BEAST-MASTERY §8.3).
+        if (kind == PassthroughKind::Pet)
+            ApplyBmPetAuras(owner, unit->ToPet());
     }
 
     void RefreshAllPassthrough(Player* owner)
@@ -776,11 +856,18 @@ namespace Hunter
             return;
 
         PetKit const& kit = GetPetKit(creatureTemplate->family);
+
+        // S1b PT-5: the kit's Command I/II display spells, before the basic check (they don't depend on it). This is
+        // the 34902 tick's path, so a tame or a family change is picked up within 2 s.
+        bool changed = SyncCommandDisplaySpells(pet, kit);
+
         uint32 const basic = kit.basic ? FindKnownPetSpell(pet, kit.basic) : 0;
         if (!basic)
+        {
+            if (changed && owner->GetPet() == pet)
+                owner->PetSpellInitialize();
             return;
-
-        bool changed = false;
+        }
 
         // Stranded rule, the only re-seat trigger: the basic is on no spell slot of the bar (the engine learns the
         // lines in reverse order, so with five active spells for four slots the basic is the one left out). A basic
@@ -1036,5 +1123,114 @@ namespace Hunter
             candidates.resize(maxTargets);
 
         out.insert(out.end(), candidates.begin(), candidates.end());
+    }
+
+    // ---- S1b: Beast Mastery (S1b-HANDOFF B4-B7) ----
+    uint32 GetStampedeEntry(uint32 creatureFamily)
+    {
+        switch (creatureFamily)
+        {
+            case CREATURE_FAMILY_WOLF:
+                return HunterData::NPC_STAMPEDING_WOLF;
+            case CREATURE_FAMILY_CAT:
+                return HunterData::NPC_STAMPEDING_CAT;
+            case CREATURE_FAMILY_RAPTOR:
+                return HunterData::NPC_STAMPEDING_RAPTOR;
+            case CREATURE_FAMILY_BEAR:
+                return HunterData::NPC_STAMPEDING_BEAR;
+            case CREATURE_FAMILY_SPIDER:
+                return HunterData::NPC_STAMPEDING_SPIDER;
+            default:
+                break;
+        }
+
+        // Any other family: its type's beast (CreatureFamilyEntry::petTalentType 0 / 1 / 2); unknown -> Ferocity's.
+        switch (GetFamilyPetType(creatureFamily))
+        {
+            case PetType::Tenacity:
+                return HunterData::NPC_STAMPEDING_BEAST_TENACITY;
+            case PetType::Cunning:
+                return HunterData::NPC_STAMPEDING_BEAST_CUNNING;
+            default:
+                return HunterData::NPC_STAMPEDING_BEAST_FEROCITY;
+        }
+    }
+
+    void ApplyBmPetAuras(Player* owner, Pet* pet)
+    {
+        // 201809 carries Culling the Herd and the Improved Aspect of the Viper capstone; its script checks the talents
+        // at proc time, so every hunter pet carries it. The owner is the caster (L5): a pet-cast copy would be saved
+        // to pet_aura and doubled on reload. Passive, so it is never saved and the 34902 tick re-adds it.
+        if (!owner || !pet || pet->HasAura(HunterData::SPELL_BM_PET_PROCS))
+            return;
+
+        owner->AddAura(HunterData::SPELL_BM_PET_PROCS, pet);
+    }
+
+    void OnPhoenixPlumePetDeath(Unit* unit)
+    {
+        // Runs for every death in the world (HunterUnitScript): cheapest guard first, nothing allocated before the
+        // owner qualifies.
+        if (!unit || !unit->IsPet())
+            return;
+
+        Pet* pet = unit->ToPet();
+        if (pet->getPetType() != HUNTER_PET)
+            return;
+
+        // Pet::GetOwner reads the stored Player*.
+        Player* owner = pet->GetOwner();
+        if (!owner || owner->getClass() != CLASS_HUNTER)
+            return;
+
+        // A UnitScript has no Validate(): the three spells are checked once, on the first hunter-pet death, before
+        // the aura checks (a missing 201826 would otherwise just never match). LOG_ERROR so it reaches the log (L17).
+        static bool const spellsValid = []()
+        {
+            bool valid = true;
+            for (uint32 spellId :
+                { SPELL_HEART_OF_THE_PHOENIX_REVIVE, SPELL_PHOENIX_S_PLUME_LOCKOUT, SPELL_PHOENIX_S_PLUME_RANK3 })
+            {
+                if (!sSpellMgr->GetSpellInfo(spellId))
+                {
+                    LOG_ERROR("scripts.hunter",
+                        "Hunter::OnPhoenixPlumePetDeath: spell {} does not exist, Phoenix's Plume revive disabled.",
+                        spellId);
+                    valid = false;
+                }
+            }
+
+            return valid;
+        }();
+        if (!spellsValid)
+            return;
+
+        // Rank 3 (the capstone), in combat, and the 10-minute lockout aura is not up. The lockout is an aura, not a
+        // cooldown: no Cooldown Haste, and Readiness can't reset it.
+        if (!owner->HasAura(SPELL_PHOENIX_S_PLUME_RANK3) || !owner->IsInCombat() ||
+            owner->HasAura(SPELL_PHOENIX_S_PLUME_LOCKOUT))
+            return;
+
+        // The event lives on the owner's own event list, so capturing the owner is safe (the list dies with it); the
+        // pet is re-resolved by GUID inside, so a pet dismissed, stabled or replaced in that second is skipped.
+        ObjectGuid const petGuid = pet->GetGUID();
+        owner->m_Events.AddEventAtOffset([owner, petGuid]()
+        {
+            // A hunter who died or left the world in that second gets no revive (R-cpp m1).
+            if (!owner->IsAlive() || !owner->IsInWorld())
+                return;
+
+            Pet* deadPet = owner->GetPet();
+            if (!deadPet || deadPet->GetGUID() != petGuid || deadPet->IsAlive() ||
+                owner->HasAura(SPELL_PHOENIX_S_PLUME_LOCKOUT))
+                return;
+
+            // The owner casts the stock revive on the dead pet, as spell_hun_pet_heart_of_the_phoenix does
+            // (spell_hunter.cpp); EffectResurrectPet brings it back at the owner's side. The lockout starts only when
+            // the revive cast went through, so a failed cast leaves the next death free to try again.
+            if (owner->CastCustomSpell(SPELL_HEART_OF_THE_PHOENIX_REVIVE, SPELLVALUE_BASE_POINT0,
+                HunterData::PHOENIX_PLUME_REVIVE_PCT, deadPet, TRIGGERED_FULL_MASK) == SPELL_CAST_OK)
+                owner->CastSpell(owner, SPELL_PHOENIX_S_PLUME_LOCKOUT, true);
+        }, Milliseconds(HunterData::PHOENIX_PLUME_REVIVE_DELAY_MS));
     }
 }

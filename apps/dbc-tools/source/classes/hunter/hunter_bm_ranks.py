@@ -91,11 +91,12 @@ def _rank(spell_id, name, rank, effects, icon, description, masks=None, raw=None
 
 # ---- (0,0) Pathfinding 1384: r3 clones 19560 (r1/r2 are in hunter_trigger_spells.py). Capstone via linked_spell 201813 (A1).
 _PATHFINDING = (
-    "Increases the chance for your Aspect of the Monkey to trigger by $s1% and your Versatility by $s2%."
+    "Increases the chance for your Aspect of the Monkey to grant Versatility by $s1%, and increases your "
+    "Versatility by $s2%."
 )
 _PATHFINDING_CAP = (
-    "Increases the speed bonus of your Aspect of the Cheetah and Aspect of the Pack by $201813s1%, and your mounted "
-    "speed by $201813s2%. The mounted speed increase does not stack with other effects."
+    "Increases the speed bonus of your Aspect of the Cheetah, Aspect of the Pack and mounts by $201813s1%. Does not "
+    "stack with other effects that increase mounted speed."
 )
 pathfinding_201820 = _rank(
     201820, 'Pathfinding', 3,
@@ -121,7 +122,7 @@ def _dragonhawk(spell_id, rank, chance, damage, haste):
         spell_id, 'Improved Aspect of the Dragonhawk', rank,
         [_flat(SpellModOp.CHANCE_OF_SUCCESS, chance), _pct(SpellModOp.DAMAGE, damage),
          _aura(AuraType.HASTE_ALL, haste)], 2328,
-        "Increases the chance for your Aspect of the Dragonhawk to explode by $s1% and its explosion damage by $s2%, "
+        "Increases the chance for your Aspect of the Dragonhawk to explode by $s1% and the explosion's damage by $s2%, "
         "and increases your haste by $s3%.",
         masks={1: (0, 0, m.ASPECT_OF_THE_DRAGONHAWK), 2: (0, 0, m.DRAGONHAWK_EXPLOSION)},
     )
@@ -131,21 +132,21 @@ improved_aspect_of_the_dragonhawk_201824 = _dragonhawk(201824, 1, 4, 9, 0)
 improved_aspect_of_the_dragonhawk_201825 = _dragonhawk(201825, 2, 9, 19, 1)
 
 # ---- (1,1) Phoenix's Plume 1625: r3 clones 19575 (capstone revive is S1b / 201810).
-_PLUME = "Increases the damage of your pet's commands by $s1%."
+_PLUME = "Increases the damage of your Command I and Command II by $s1%."
 _PLUME_CAP = (
-    f"If your pet dies while you are in combat, it returns to life with {_c(PHOENIX_PLUME_REVIVE_PCT)}% health. "
+    f"If your pet dies in combat, it returns to life with {_c(PHOENIX_PLUME_REVIVE_PCT)}% of its health. "
     "This effect cannot occur more than once every $201810d."
 )
 phoenix_s_plume_201826 = _rank(
-    201826, "Phoenix's Plume", 3, [_pct(SpellModOp.DAMAGE, 29)], 2787,
-    _desc(_PLUME, _PLUME_CAP, last=True), masks={1: m.COMMANDED_READER},
+    201826, "Phoenix's Plume", 3, [_pct(SpellModOp.DAMAGE, 29), _pct(SpellModOp.DOT, 29)], 2787,
+    _desc(_PLUME, _PLUME_CAP, last=True), masks={1: m.COMMANDED_READER, 2: m.COMMANDED_READER},
 )
 
 # ---- (1,2) Spiked Collar 1395: pet damage; r3 eff1 DUMMY bp 49 = the 50% share read by S1b.
-_COLLAR = "Increases your pet's damage by $s1%."
+_COLLAR = "Increases the damage done by your pet by $s1%."
 _COLLAR_CAP = (
-    f"Your Kill Command also strikes up to {_c(SPIKED_COLLAR_MAX_TARGETS)} other enemies within "
-    f"{_c(SPIKED_COLLAR_RADIUS_YD)} yards of the target for $201829s2% of its damage."
+    f"Your Kill Command also strikes up to {_c(SPIKED_COLLAR_MAX_TARGETS)} additional enemies within "
+    f"{_c(SPIKED_COLLAR_RADIUS_YD)} yards of its target for $201829s2% of its damage."
 )
 spiked_collar_201827 = _rank(
     201827, 'Spiked Collar', 1, [_flat(SpellModOp.ALL_EFFECTS, 2)], 2934, _desc(_COLLAR, _COLLAR_CAP),
@@ -162,8 +163,8 @@ spiked_collar_201829 = _rank(
 
 # ---- (2,3) Improved Aspect of the Viper 2138: trigger chance, mana restored (201602 eff1), Proc Chance rating.
 _VIPER = (
-    "Increases the chance for your Aspect of the Viper to trigger by $s1% and the mana it restores by $s2%, and "
-    "increases your Proc Chance by $s3%."
+    "Increases the chance for your Aspect of the Viper to poison its target by $s1% and the mana its poison "
+    "restores by $s2%, and increases your Proc Chance by $s3%."
 )
 _VIPER_CAP = (
     f"When your pet critically hits with its basic attack or a command, you regenerate "
@@ -188,7 +189,7 @@ improved_aspect_of_the_viper_201831 = _viper(201831, 2, 9, 49, 1, True)
 def _attunement(spell_id, rank, bp):
     return _rank(
         spell_id, 'Arcane Attunement', rank, [_pct(SpellModOp.DAMAGE, bp), _pct(SpellModOp.EFFECT2, bp)], 3487,
-        "Increases the damage of your Arcane Shot and the mana it restores by $s1%.",
+        "Increases the damage of your Arcane Shot by $s1%, and your Arcane Shot restores $s2% more mana.",
         masks={1: (m.ARCANE_SHOT, 0, 0), 2: (m.ARCANE_SHOT, 0, 0)},
     )
 
@@ -202,7 +203,8 @@ def _aotb(spell_id, rank, chance, damage):
     return _rank(
         spell_id, 'Improved Aspect of the Beast', rank,
         [_flat(SpellModOp.CHANCE_OF_SUCCESS, chance), _flat(SpellModOp.ALL_EFFECTS, damage)], 1562,
-        "Increases the chance for your Aspect of the Beast to trigger by $s1%, and your pet's damage by $s2%.",
+        "Increases the chance for your Aspect of the Beast to send your pet into a rage by $s1%, and increases the "
+        "damage done by your pet by $s2%.",
         masks={1: (0, 0, m.ASPECT_OF_THE_BEAST), 2: (m.TAMED_PET_PASSIVE_01, 0, 0)},
     )
 
@@ -214,18 +216,20 @@ improved_aspect_of_the_beast_201837 = _aotb(201837, 3, 5, 8)
 # ---- (4,0) Stomp 1390: one-rank DUMMY marker; the text shows 201804's potency value times Earthshaker (tooltip var 1161).
 stomp_talent_201838 = _rank(
     201838, 'Stomp', None, [_dummy()], 129,
-    "Your Arcane Shot makes your pet Stomp, dealing " + pot_text(stomp_pet_201804, var='es')
-    + " Physical damage to every enemy within $201804a1 yards of the target.",
+    "Your Arcane Shot commands your pet to Stomp, dealing " + pot_text(stomp_pet_201804, var='es')
+    + " Physical damage to all enemies within $201804a1 yards of its target.",
     tooltip_vars=bm_stomp_1161,
 )
 
 # ---- (4,2) Shark Attack 1388: pet damage +5/10%.
 shark_attack_201839 = _rank(
-    201839, 'Shark Attack', 1, [_flat(SpellModOp.ALL_EFFECTS, 4)], 2918, "Increases your pet's damage by $s1%.",
+    201839, 'Shark Attack', 1, [_flat(SpellModOp.ALL_EFFECTS, 4)], 2918,
+    "Increases the damage done by your pet by $s1%.",
     masks={1: (m.TAMED_PET_PASSIVE_01, 0, 0)},
 )
 shark_attack_201840 = _rank(
-    201840, 'Shark Attack', 2, [_flat(SpellModOp.ALL_EFFECTS, 9)], 2918, "Increases your pet's damage by $s1%.",
+    201840, 'Shark Attack', 2, [_flat(SpellModOp.ALL_EFFECTS, 9)], 2918,
+    "Increases the damage done by your pet by $s1%.",
     masks={1: (m.TAMED_PET_PASSIVE_01, 0, 0)},
 )
 
@@ -233,7 +237,7 @@ shark_attack_201840 = _rank(
 def _culling(spell_id, rank, bp):
     return _rank(
         spell_id, 'Culling the Herd', rank, [_dummy(bp)], 4115,
-        "When your pet's basic attack deals a critical strike, you and your pet deal $s1% more damage for $201808d.",
+        "When your pet's basic attack critically strikes, you and your pet deal $s1% increased damage for $201808d.",
     )
 
 
@@ -257,7 +261,8 @@ earthshaker_201845 = _earthshaker(201845, 2, 29, 3)
 def _pack_hunter(spell_id, rank, damage, targets):
     return _rank(
         spell_id, 'Pack Hunter', rank, [_pct(SpellModOp.DAMAGE, damage), _flat(SpellModOp.JUMP_TARGETS, targets)], 1697,
-        "Increases the damage of your Multi-Shot by $s1% and lets it hit $s2 additional $ltarget:targets;.",
+        "Increases the damage of your Multi-Shot by $s1%, and your Multi-Shot strikes $s2 additional "
+        "$ltarget:targets;.",
         masks={1: (m.MULTI_SHOT, 0, 0), 2: (m.MULTI_SHOT, 0, 0)},
     )
 
@@ -268,9 +273,8 @@ pack_hunter_201847 = _pack_hunter(201847, 2, 19, 1)
 # ---- (6,2) Beast Cleave 60205: eff0 PROC_TRIGGER_SPELL -> 201806, once per Multi-Shot cast (CAST phase).
 beast_cleave_talent_201848 = _rank(
     201848, 'Beast Cleave', None, [_aura(AuraType.PROC_TRIGGER_SPELL, 0, 0, 201806)], 277,
-    "After you cast Multi-Shot, your pet's attacks and your Kill Command also hit every other enemy within "
-    f"{_c(BEAST_CLEAVE_RADIUS_YD)} yards of their target for $201806s2% of the damage dealt, for $201806d. Area "
-    "commands, Stomp and periodic damage are not copied.",
+    "After you Multi-Shot, your pet's single-target attacks and your Kill Command also strike all enemies within "
+    f"{_c(BEAST_CLEAVE_RADIUS_YD)} yards of the target for $201806s2% of the damage dealt. Lasts $201806d.",
     raw={'ProcTypeMask': 0x100, 'ProcChance': 100},
 )
 procs_on(
@@ -280,10 +284,9 @@ procs_on(
 
 # ---- (7,1) Cobra Shot 60206: DUMMY Nature share 5/10/15%; r3 capstone links 201811 (A1). Read by S1b scripts.
 _COBRA = (
-    "Your Steady Shot deals an additional $s1% of its damage as Nature damage. This adds to Serpent's Swiftness in "
-    "the same hit."
+    "Your Steady Shot deals an additional $s1% of its damage as Nature damage."
 )
-_COBRA_CAP = "Your Steady Shot becomes instant. Only one Steady Shot transformation can be active."
+_COBRA_CAP = "Your Steady Shot becomes instant. Cannot be combined with other talents that transform Steady Shot."
 
 
 def _cobra(spell_id, rank, bp, last):
@@ -300,8 +303,9 @@ cobra_shot_201851 = _cobra(201851, 3, 14, True)
 # ---- (7,2) Master's Command 2136: commanded-spell damage.
 def _masters_command(spell_id, rank, bp):
     return _rank(
-        spell_id, "Master's Command", rank, [_pct(SpellModOp.DAMAGE, bp)], 3486,
-        "Increases the damage of your pet's commands by $s1%.", masks={1: m.COMMANDED_READER},
+        spell_id, "Master's Command", rank, [_pct(SpellModOp.DAMAGE, bp), _pct(SpellModOp.DOT, bp)], 3486,
+        "Increases the damage of your Command I and Command II by $s1%.",
+        masks={1: m.COMMANDED_READER, 2: m.COMMANDED_READER},
     )
 
 
@@ -311,9 +315,10 @@ master_s_command_201854 = _masters_command(201854, 3, 29)
 
 # ---- (8,1) The Beast Within 1803: DUMMY 5/10/15% passed to 34471 by the script; r3 capstone links 201812 (A1).
 _TBW = (
-    "While your pet is under Bestial Wrath, you deal $s1% more damage and your spells cost ${$34471m1*-1}% less mana."
+    "While your pet is under the effects of Bestial Wrath, you also go into a rage, dealing $s1% additional damage "
+    "and paying ${$34471m1*-1}% less mana for $34471d."
 )
-_TBW_CAP = "Your pet, your Stampede beasts and your Kill Command deal additional damage equal to your Mastery."
+_TBW_CAP = "Your pets and your Kill Command deal additional damage equal to your Mastery."
 
 
 def _tbw(spell_id, rank, bp, last):

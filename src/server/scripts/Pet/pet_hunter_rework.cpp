@@ -21,7 +21,10 @@
 
 #include "CombatManager.h"
 #include "Containers.h"
+#include "CreatureAI.h"
 #include "CreatureScript.h"
+#include "MotionMaster.h"
+#include "ObjectAccessor.h"
 #include "PetDefines.h"
 #include "ScriptedCreature.h"
 #include "ScriptMgr.h"
@@ -145,7 +148,91 @@ private:
     uint32 _spellTimer;
 };
 
+enum HunterStampedeBeastData
+{
+    DATA_STAMPEDE_TARGET = 0 // SetGUID id: the Stampede cast's target (spell_hun_stampede)
+};
+
+// 300200-300207 - Stampede beasts (BEAST-MASTERY.md §4.6, PET.md §9.1). SummonProperties 1021 guardians summoned by
+// spell_hun_stampede through Map::SummonCreature. Melee only, explicit targeting, deaf to pet commands and
+// Kill Command. The three guardian traps (docs/bugs-and-fixes.md):
+// - "Infernal walks back to the warlock...": "when replacing a moving generator with MoveChase, stop the old spline,
+//   or a chase that starts in range will ride it off." -> StopMoving() before every MoveChase, and no follow motion
+//   is ever issued (no MoveFollow anywhere, not even without a target).
+// - "A guardian given MoveChase never leaves its owner...": "any scripted MoveChase needs GetVictim() to equal the
+//   chase target." -> Attack(target, true) before MoveChase, and again whenever the victim was cleared.
+// - "A plain summoned Creature can't attack faction-neutral targets...": "Explicitly
+//   me->SetUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED) on the summon (e.g. in its IsSummonedBy override)." A 1021 Guardian
+//   already gets it from SetMinion; setting it again is harmless.
+struct npc_hun_stampede_beast : public CreatureAI
+{
+    explicit npc_hun_stampede_beast(Creature* creature) : CreatureAI(creature) { }
+
+    void IsSummonedBy(WorldObject* /*summoner*/) override
+    {
+        // Guardian::InitStats ends with SetReactState(REACT_AGGRESSIVE); InitSummon (this hook) runs after it.
+        me->SetReactState(REACT_PASSIVE);
+        me->SetUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED);
+        // No MoveFollow/MoveChase here: UpdateAI picks the target and starts the chase.
+    }
+
+    void SetGUID(ObjectGuid const& guid, int32 id) override
+    {
+        if (id == DATA_STAMPEDE_TARGET)
+            _targetGUID = guid;
+    }
+
+    void UpdateAI(uint32 /*diff*/) override
+    {
+        if (Unit* target = ResolveTarget())
+        {
+            if (me->GetVictim() != target && me->Attack(target, true))
+            {
+                me->StopMoving();
+                me->GetMotionMaster()->MoveChase(target);
+            }
+        }
+        else if (me->GetVictim())
+            me->AttackStop();
+
+        DoMeleeAttackIfReady();
+    }
+
+private:
+    bool IsUsableTarget(Unit* unit) const
+    {
+        return unit && unit->IsAlive() && me->IsInMap(unit) && me->IsValidAttackTarget(unit);
+    }
+
+    // The stored Stampede target, else the owner's victim, else the owner's pet's victim. Re-resolved every tick.
+    Unit* ResolveTarget() const
+    {
+        if (!_targetGUID.IsEmpty())
+            if (Unit* stored = ObjectAccessor::GetUnit(*me, _targetGUID))
+                if (IsUsableTarget(stored))
+                    return stored;
+
+        Unit* owner = me->GetOwner();
+        if (!owner)
+            return nullptr;
+
+        if (Unit* ownerVictim = owner->GetVictim())
+            if (IsUsableTarget(ownerVictim))
+                return ownerVictim;
+
+        if (Unit* pet = ObjectAccessor::GetUnit(*owner, owner->GetPetGUID()))
+            if (Unit* petVictim = pet->GetVictim())
+                if (IsUsableTarget(petVictim))
+                    return petVictim;
+
+        return nullptr;
+    }
+
+    ObjectGuid _targetGUID;
+};
+
 void AddSC_hunter_rework_pet_scripts()
 {
     RegisterCreatureAI(npc_pet_hunter_snake_trap_rework);
+    RegisterCreatureAI(npc_hun_stampede_beast);
 }

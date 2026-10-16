@@ -262,7 +262,8 @@ class spell_hun_aspect_of_the_monkey_pet : public AuraScript
     }
 };
 
-// 201602 Aspect of the Viper - poison: each tick restores a tenth-percent of max mana (SHARED §B6.5)
+// 201602 Aspect of the Viper - poison: each tick restores eff0 hundredths of a percent of max mana (SHARED §B6.5;
+// S1a-1: stored x10, live 50 = 0.50%, so Improved Aspect of the Viper and Glyph 56851 percent mods don't truncate)
 class spell_hun_aspect_of_the_viper_poison : public AuraScript
 {
     PrepareAuraScript(spell_hun_aspect_of_the_viper_poison);
@@ -274,7 +275,7 @@ class spell_hun_aspect_of_the_viper_poison : public AuraScript
             return;
 
         caster->EnergizeBySpell(caster, GetId(),
-            CalculatePct(caster->GetMaxPower(POWER_MANA), aurEff->GetAmount() / 10.0f), POWER_MANA);
+            CalculatePct(caster->GetMaxPower(POWER_MANA), aurEff->GetAmount() / 100.0f), POWER_MANA);
     }
 
     void Register() override
