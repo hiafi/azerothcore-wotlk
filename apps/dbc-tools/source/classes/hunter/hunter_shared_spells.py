@@ -61,6 +61,18 @@ aspect_of_the_beast_pet_buff_201603 = spell(
     spell_icon_id=1510, raw_overrides={'SpellLevel': 20, 'EquippedItemClass': -1, 'AuraDescription_Lang_enUS': 'Damage increased by $s1%.'},
 )
 
+# S1b-FIX F-2: the hunter-side marker of a Beast proc (visible, no effect). Applied and removed with 201603 by
+# spell_hun_aspect_beast_pet_buff; the tooltip reads 201603's own value. ID from the BM block (PLAN 4.1), after the PT-5 display passives (201858-201874: 201874 is the reserved splash display).
+aspect_of_the_beast_marker_201875 = spell(
+    id=201875, name='Aspect of the Beast', duration_ms=10000,
+    effects=[Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.DUMMY, base_points=0, implicit_target_a=1)],
+    spell_icon_id=1510,
+    raw_overrides={'SpellLevel': 20, 'EquippedItemClass': -1,
+                   'AuraDescription_Lang_enUS': 'Your pet deals $201603s1% more damage.',
+                   'Description_Lang_enUS': 'Your pet deals $201603s1% more damage.'},
+    notes='S1b-FIX F-2: visible hunter marker of the Beast proc. DUMMY, not passive, no consolidate flag, 10 s as 201603.',
+)
+
 aspect_of_the_monkey_versatility_201604 = spell(
     id=201604, name='Aspect of the Monkey', duration_ms=10000,
     effects=[Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.MOD_CUSTOM_STAT_PCT,
@@ -132,6 +144,7 @@ scripted_by(13161, "spell_hun_aspect_proc")
 scripted_by(34074, "spell_hun_aspect_proc")
 scripted_by(13163, "spell_hun_aspect_of_the_monkey")
 scripted_by(aspect_of_the_monkey_pet_201605, "spell_hun_aspect_of_the_monkey_pet")
+scripted_by(aspect_of_the_beast_pet_buff_201603, "spell_hun_aspect_beast_pet_buff")
 scripted_by(aspect_of_the_dragonhawk_explosion_201601, "spell_hun_aspect_of_the_dragonhawk_explosion")
 scripted_by(aspect_of_the_viper_poison_201602, "spell_hun_aspect_of_the_viper_poison")
 scripted_by(glaive_toss_201600, "spell_hun_glaive_toss")

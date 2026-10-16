@@ -98,6 +98,11 @@ HELPER_COPY_CUSTOM_ATTR = CU_IGNORE_ARMOR | CU_NO_POSITIVE_TAKEN_BONUS     # 0x2
 COMMANDED = tuple(range(201720, 201737))                                  # 17 spells, 201736 is the splash
 RANGED_COMMANDED = frozenset({201729, 201734, 201735, 201736})
 COMMANDS = (201800, 201801)
+BEAST_PET_BUFF = 201603
+BEAST_MARKER = 201875
+ATTR_PASSIVE = 0x40
+ATTR_EX7_CONSOLIDATE = 0x10000000
+AURA_DUMMY = 4
 HELPER_COPIES = (201805, 201807)
 HELPER_CARRIERS = tuple(range(201805, 201814))                            # 201805-201813: no family bits (BM 2.4)
 NEW_S1A_IDS = (
@@ -330,6 +335,42 @@ def check_command_press(spell_id: int, row: dict | None) -> list[str]:
     if _i(row, "AttributesEx") != 0:
         bad.append(f"AttributesEx 0x{_i(row, 'AttributesEx'):X}, expected 0")
     return [f"{spell_id}: {b}" for b in bad]
+
+
+def check_command_gcd(spell_id: int, row: dict | None) -> list[str]:
+    """(d2) a Command press starts the shared hunter GCD (S1b-FIX F-1): category 133, 1500 ms, and a cooldown of its own."""
+    if row is None:
+        return [f"{spell_id}: not declared"]
+    bad = []
+    if _i(row, "StartRecoveryCategory") != 133 or _i(row, "StartRecoveryTime") != 1500:
+        bad.append(f"GCD {_i(row, 'StartRecoveryCategory')}/{_i(row, 'StartRecoveryTime')}, expected 133/1500")
+    if _i(row, "RecoveryTime") not in (30000, 60000):
+        bad.append(f"RecoveryTime {_i(row, 'RecoveryTime')}, expected 30000 / 60000")
+    return [f"{spell_id}: {b}" for b in bad]
+
+
+def check_beast_marker(marker: dict | None, buff: dict | None) -> list[str]:
+    """The hunter-side Aspect of the Beast marker (S1b-FIX F-2): visible dummy, not passive, no consolidate flag, the
+    pet buff's duration, no family bits, tooltip read from 201603."""
+    if marker is None or buff is None:
+        return [f"{BEAST_MARKER}/{BEAST_PET_BUFF}: not declared"]
+    bad = []
+    if _i(marker, "Attributes") & ATTR_PASSIVE:
+        bad.append("passive (0x40): hidden from the buff bar")
+    if _i(marker, "AttributesEx7") & ATTR_EX7_CONSOLIDATE:
+        bad.append("AttributesEx7 consolidate flag (0x10000000) set")
+    if _i(marker, "EquippedItemClass") != -1:
+        bad.append(f"EquippedItemClass {marker.get('EquippedItemClass')}, expected -1")
+    if any(spell_mask(marker)) or any(effect_mask(marker, e) != (0, 0, 0) for e in range(3)):
+        bad.append("family bits set")
+    if (_i(marker, "Effect_1"), _i(marker, "EffectAura_1")) != (6, AURA_DUMMY) or _i(marker, "Effect_2") or _i(marker, "Effect_3"):
+        bad.append("must be exactly one APPLY_AURA / SPELL_AURA_DUMMY effect")
+    # both rows are built from duration_ms through the same SpellDuration lookup, so equal ms means an equal index
+    if not _i(marker, "DurationIndex") or _i(marker, "DurationIndex") != _i(buff, "DurationIndex"):
+        bad.append("duration differs from 201603")
+    if "$201603s1" not in str(marker.get("AuraDescription_Lang_enUS", "")):
+        bad.append("AuraDescription must read $201603s1, not a hard-coded percent")
+    return [f"{BEAST_MARKER}: {b}" for b in bad]
 
 
 def check_helper_copy(spell_id: int, row: dict | None, custom_attrs: list[dict]) -> list[str]:
@@ -1054,6 +1095,17 @@ class HunterBmDataTest(unittest.TestCase):
         rows = package_data()["rows_by_id"]
         self.assertClean([b for i in COMMANDS for b in check_command_press(i, rows.get(i))])
 
+    def test_command_presses_start_the_gcd(self):
+        rows = package_data()["rows_by_id"]
+        self.assertClean([b for i in COMMANDS for b in check_command_gcd(i, rows.get(i))])
+
+    def test_aspect_of_the_beast_marker(self):
+        data = package_data()
+        rows = data["rows_by_id"]
+        self.assertClean(check_beast_marker(rows.get(BEAST_MARKER), rows.get(BEAST_PET_BUFF)))
+        names = {r["ScriptName"] for r in data["package"].spell_script_names if int(r["spell_id"]) == BEAST_PET_BUFF}
+        self.assertEqual(names, {"spell_hun_aspect_beast_pet_buff"})
+
     def test_beast_cleave_and_spiked_collar_copies(self):
         data = package_data()
         self.assertClean([b for i in HELPER_COPIES
@@ -1273,6 +1325,19 @@ class HunterBmDataNegativeTest(unittest.TestCase):
         proc = {"SpellId": 201809, "SpellFamilyMask1": 0x10000000}
         self.assertEqual(len(check_no_pet_bit_readers({}, (201809,), [proc])), 1)
         self.assertEqual(check_no_pet_bit_readers({}, (201809,), [{"SpellId": 5, "SpellFamilyMask1": 0x10000000}]), [])
+
+    def test_command_gcd_and_beast_marker_guards(self):
+        press = {**good_press(), "StartRecoveryCategory": 133, "StartRecoveryTime": 1500, "RecoveryTime": 30000}
+        self.assertEqual(check_command_gcd(201800, press), [])
+        self.assertEqual(len(check_command_gcd(201800, {**press, "StartRecoveryTime": 0})), 1)
+        self.assertEqual(len(check_command_gcd(201800, {**press, "RecoveryTime": 0})), 1)
+        buff = {"DurationIndex": 9}
+        marker = {"Attributes": 0, "AttributesEx7": 0, "EquippedItemClass": -1, "Effect_1": 6, "EffectAura_1": 4,
+                  "Effect_2": 0, "Effect_3": 0, "DurationIndex": 9, "AuraDescription_Lang_enUS": "x $201603s1% y"}
+        self.assertEqual(check_beast_marker(marker, buff), [])
+        for bad in ({"Attributes": 0x40}, {"AttributesEx7": 0x10000000}, {"EquippedItemClass": 0}, {"DurationIndex": 8},
+                    {"EffectAura_1": 79}, {"SpellClassMask_1": 1}, {"AuraDescription_Lang_enUS": "15% more"}):
+            self.assertEqual(len(check_beast_marker({**marker, **bad}, buff)), 1, bad)
 
     def test_command_press_guard(self):
         self.assertEqual(check_command_press(201800, good_press()), [])

@@ -487,6 +487,7 @@ namespace HunterData
     constexpr uint32 SPELL_CRUSHING_BLOW_DISPLAY = 201871; // crushing_blow_display_201871
     constexpr uint32 SPELL_FEINT_STRIKE_DISPLAY = 201872; // feint_strike_display_201872
     constexpr uint32 SPELL_AMBUSH_DISPLAY = 201873; // ambush_display_201873
+    constexpr uint32 SPELL_ASPECT_OF_THE_BEAST_MARKER = 201875; // aspect_of_the_beast_marker_201875
 
     // Creature (NPC) ids
     constexpr uint32 NPC_STAMPEDING_WOLF = 300200; // stampeding_wolf_300200

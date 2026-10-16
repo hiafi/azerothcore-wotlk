@@ -68,7 +68,8 @@ class spell_hun_aspect_proc : public AuraScript
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ Hunter::SPELL_QUICK_SHOTS, Hunter::SPELL_ASPECT_OF_THE_DRAGONHAWK_EXPLOSION,
-            Hunter::SPELL_ASPECT_OF_THE_VIPER_POISON, Hunter::SPELL_ASPECT_OF_THE_BEAST_PET_BUFF });
+            Hunter::SPELL_ASPECT_OF_THE_VIPER_POISON, Hunter::SPELL_ASPECT_OF_THE_BEAST_PET_BUFF,
+            Hunter::SPELL_ASPECT_OF_THE_BEAST_MARKER });
     }
 
     // The engine starts the internal cooldown right after CheckProc passes, so an event with nothing to act on (no
@@ -134,7 +135,11 @@ class spell_hun_aspect_proc : public AuraScript
                 break;
             case Hunter::SPELL_ASPECT_OF_THE_BEAST:
                 if (Pet* pet = player->GetPet())
+                {
                     player->CastSpell(pet, Hunter::SPELL_ASPECT_OF_THE_BEAST_PET_BUFF, true);
+                    // S1b-FIX F-2: the visible hunter-side marker, refreshed with the pet buff
+                    player->CastSpell(player, Hunter::SPELL_ASPECT_OF_THE_BEAST_MARKER, true);
+                }
                 break;
             case Hunter::SPELL_ASPECT_OF_THE_VIPER:
                 if (target)
@@ -262,6 +267,25 @@ class spell_hun_aspect_of_the_monkey_pet : public AuraScript
     }
 };
 
+// 201603 Aspect of the Beast - pet buff: its hunter-side marker (201875) leaves with it (S1b-FIX F-2), so a dead,
+// dismissed or replaced pet never leaves a stale "your pet deals more damage" buff on the hunter
+class spell_hun_aspect_beast_pet_buff : public AuraScript
+{
+    PrepareAuraScript(spell_hun_aspect_beast_pet_buff);
+
+    void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        if (Player* player = Hunter::GetOwningPlayer(GetTarget()))
+            player->RemoveAurasDueToSpell(Hunter::SPELL_ASPECT_OF_THE_BEAST_MARKER);
+    }
+
+    void Register() override
+    {
+        AfterEffectRemove += AuraEffectRemoveFn(spell_hun_aspect_beast_pet_buff::HandleRemove, EFFECT_0,
+            SPELL_AURA_MOD_DAMAGE_PERCENT_DONE, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
 // 201602 Aspect of the Viper - poison: each tick restores eff0 hundredths of a percent of max mana (SHARED §B6.5;
 // S1a-1: stored x10, live 50 = 0.50%, so Improved Aspect of the Viper and Glyph 56851 percent mods don't truncate)
 class spell_hun_aspect_of_the_viper_poison : public AuraScript
@@ -338,6 +362,7 @@ void AddSC_hunter_shared_spell_scripts()
     RegisterSpellScript(spell_hun_aspect_proc);
     RegisterSpellScript(spell_hun_aspect_of_the_monkey);
     RegisterSpellScript(spell_hun_aspect_of_the_monkey_pet);
+    RegisterSpellScript(spell_hun_aspect_beast_pet_buff);
     RegisterSpellScript(spell_hun_aspect_of_the_viper_poison);
     RegisterSpellScript(spell_hun_aspect_of_the_dragonhawk_explosion);
     RegisterSpellScript(spell_hun_glaive_toss);
