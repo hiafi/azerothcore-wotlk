@@ -154,6 +154,19 @@ static uint32 copseReclaimDelay[MAX_DEATH_COUNT] = { 30, 60, 120 };
 // Custom: Cooldown Haste stat only affects abilities whose baseline cooldown is longer than this.
 static constexpr int32 CUSTOM_COOLDOWN_HASTE_MIN_BASE_COOLDOWN_MS = 30 * IN_MILLISECONDS;
 
+// Custom: CDH-GCD-FIX - delay of the deferred Cooldown Haste correction. ResendSpellCooldown's
+// SMSG_CLEAR_COOLDOWN drops the client's whole record for the spell, including the GCD the cast just
+// started, so a spell on the GCD waits until that GCD is over. Read StartRecoveryTime, not
+// GlobalCooldownMgr: for an instant, the GCD is not set yet when the cooldown is stored. A hasted GCD
+// is never longer than the base one, so firing after the base GCD is always after the client's own.
+static Milliseconds GetCooldownHasteCorrectionDelay(SpellInfo const* spellInfo)
+{
+    if (spellInfo->StartRecoveryCategory && spellInfo->StartRecoveryTime)
+        return Milliseconds(spellInfo->StartRecoveryTime + 100);
+
+    return 1ms;
+}
+
 // Custom: druid-rework A3 (PLAN §1A, BALANCE.md §9) - spells on this list are always Cooldown
 // Haste eligible regardless of their base cooldown (Starsurge 200333, whose 10 s base cooldown
 // would otherwise fail CUSTOM_COOLDOWN_HASTE_MIN_BASE_COOLDOWN_MS), + Call Dreadstalkers 200829
@@ -11289,7 +11302,7 @@ void Player::AddSpellAndCategoryCooldowns(SpellInfo const* spellInfo, uint32 ite
             m_Events.AddEventAtOffset([this, deferredSpellId, deferredDeltaMs]()
             {
                 ModifySpellCooldown(deferredSpellId, deferredDeltaMs); // Custom: druid-rework A8
-            }, 1ms);
+            }, GetCooldownHasteCorrectionDelay(spellInfo)); // Custom: CDH-GCD-FIX
         }
 
         PacketCooldowns forcedCategoryCooldowns;
@@ -11369,7 +11382,7 @@ void Player::AddSpellAndCategoryCooldowns(SpellInfo const* spellInfo, uint32 ite
                 m_Events.AddEventAtOffset([this, deferredSpellId, deferredDeltaMs]()
                 {
                     ModifySpellCooldown(deferredSpellId, deferredDeltaMs); // Custom: druid-rework A8
-                }, 1ms);
+                }, GetCooldownHasteCorrectionDelay(spellInfo)); // Custom: CDH-GCD-FIX
             }
         }
     }
