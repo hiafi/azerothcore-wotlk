@@ -77,6 +77,8 @@ command_i_201800 = spell(
     raw_overrides={
         'EquippedItemClass': -1, 'SpellLevel': 20, 'BaseLevel': 20, 'DefenseType': 0, 'SpellClassSet': 9,
         'SpellClassMask_3': m.COMMAND_PRESS, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500,
+        # Stock instants use SpellCastTimes row 1; the DSL's default 0 has no row in the client's SpellCastTimes.dbc.
+        'CastingTimeIndex': 1,
         'Description_Lang_enUS': 'Commands your pet to use its first command on your target. Requires a pet.',
     },
 )
@@ -100,6 +102,8 @@ command_ii_201801 = spell(
     raw_overrides={
         'EquippedItemClass': -1, 'SpellLevel': 30, 'BaseLevel': 30, 'DefenseType': 0, 'SpellClassSet': 9,
         'SpellClassMask_3': m.COMMAND_PRESS, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500,
+        # Stock instants use SpellCastTimes row 1; the DSL's default 0 has no row in the client's SpellCastTimes.dbc.
+        'CastingTimeIndex': 1,
         'Description_Lang_enUS': 'Commands your pet to use its second command on your target. Requires a pet.',
     },
 )
