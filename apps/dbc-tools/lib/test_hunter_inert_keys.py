@@ -201,6 +201,42 @@ class Hunter34026GuardSlotTest(unittest.TestCase):
         self.assertEqual(len(check_34026_inert(None)), 1)
 
 
+# ---- the 34692 guard (BM 5; SHARED D3) -----------------------------------------------------------------------------
+# SpellAuras.cpp:1846 hardcodes aura id 34692 (The Beast Within) -> 34471. S1a ends the stock rank in 34692 by giving the
+# talent new ranks 201855-201857, so the hardcode is inert only while NO Talent.dbc row (stock or declared) names 34692.
+
+ORPHANED_BEAST_WITHIN = 34692
+
+
+def check_spell_in_no_talent_row(talent_rows: list[dict], spell_id: int = ORPHANED_BEAST_WITHIN) -> list[str]:
+    """No Talent.dbc row names `spell_id` in any of its nine SpellRank columns."""
+    bad = []
+    for row in talent_rows:
+        for n in range(1, 10):
+            if int(row.get(f"SpellRank_{n}") or 0) == spell_id:
+                bad.append(f"talent {row['ID']}: SpellRank_{n} is {spell_id}; the stock hardcode keyed on it stays live "
+                           f"(SHARED D3)")
+    return bad
+
+
+class HunterOrphanedRankTest(unittest.TestCase):
+    def test_34692_is_in_no_talent_row(self):
+        from lib import build, dbcfmt, state  # noqa: PLC0415
+
+        package = package_data()["package"]
+        merged = {**state.load_stock_rows(dbcfmt.TALENT),
+                  **{int(r["ID"]): r for r in map(build.build_talent_row, package.talents)}}
+        problems = check_spell_in_no_talent_row(list(merged.values()))
+        self.assertEqual(problems, [], "\n" + "\n".join(problems))
+
+    def test_guard_fires_on_any_rank_column(self):
+        self.assertEqual(check_spell_in_no_talent_row([{"ID": 1803, "SpellRank_1": 201855}]), [])
+        self.assertEqual(len(check_spell_in_no_talent_row([{"ID": 1803, "SpellRank_1": 34692}])), 1)
+        self.assertEqual(len(check_spell_in_no_talent_row([{"ID": 1803, "SpellRank_3": 34692}])), 1)
+        self.assertEqual(len(check_spell_in_no_talent_row([{"ID": 1803, "SpellRank_9": 34692}])), 1)
+        self.assertEqual(len(check_spell_in_no_talent_row([{"ID": 1, "SpellRank_1": 7}], spell_id=7)), 1)
+
+
 # ---- negative fixtures: every check must fire on a minimal bad input -------------------------------------------
 
 class HunterInertKeyNegativeTest(unittest.TestCase):

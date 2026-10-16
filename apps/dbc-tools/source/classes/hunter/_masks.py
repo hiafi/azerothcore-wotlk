@@ -131,6 +131,9 @@ STOMP_CARRIER = (0, PET_ABILITY, STOMP)
 PET_BASIC_READER = (0, 0, PET_BASIC_ATTACK)          # PET kit auras 201706-201708, BM Culling the Herd / Improved Viper
 COMMANDED_READER = (0, 0, COMMANDED_PET_SPELL)       # BM Phoenix's Plume, Master's Command
 STOMP_READER = (0, 0, STOMP)                         # BM Earthshaker
+COMMAND_PRESS_READER = (0, 0, COMMAND_PRESS)          # BM Longevity (Command I / II cooldown)
+BM_PET_PROC_MASK = (0, 0, COMMANDED_PET_SPELL | PET_BASIC_ATTACK)  # spell_proc family mask, no d1 b28 (BM 2.4)
+KC_READER = (0, KILL_COMMAND, 0)                     # BM Focused Fire, Catlike Reflexes, 201812
 
 # --- spell_proc constants (SpellMgr.h) ---
 PROC_FLAG_DONE_RANGED_AUTO_ATTACK = 0x40

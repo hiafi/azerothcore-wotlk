@@ -16,10 +16,13 @@
  */
 
 #include "HunterMechanics.h"
+#include "CellImpl.h"
 #include "CharmInfo.h"
 #include "Config.h"
 #include "Creature.h"
 #include "DBCStores.h"
+#include "GridNotifiers.h"
+#include "GridNotifiersImpl.h"
 #include "Pet.h"
 #include "Player.h"
 #include "Random.h"
@@ -30,8 +33,10 @@
 #include "SpellMgr.h"
 #include "TemporarySummon.h"
 #include "Unit.h"
+#include "UnitAI.h"
 #include <algorithm>
 #include <cmath>
+#include <list>
 #include <unordered_map>
 #include <vector>
 
@@ -193,24 +198,23 @@ namespace Hunter
         constexpr int32 PET_TALENT_TYPE_TENACITY = 1;
         constexpr int32 PET_TALENT_TYPE_CUNNING = 2;
 
-        // Commanded spells (PET 4.9). S1 builds them; until then these are the reserved ids as hand literals. S1
-        // replaces each with the HunterData::SPELL_<STEM> alias when it declares the spell.
-        constexpr uint32 SPELL_LUNGE_COMMAND = 201720;           // lunge_command_201720
-        constexpr uint32 SPELL_RIP_THROAT_COMMAND = 201721;      // rip_throat_command_201721
-        constexpr uint32 SPELL_RAKE_COMMAND = 201722;            // rake_command_201722
-        constexpr uint32 SPELL_POUNCE_COMMAND = 201723;          // pounce_command_201723
-        constexpr uint32 SPELL_SAVAGE_REND_COMMAND = 201724;     // savage_rend_command_201724
-        constexpr uint32 SPELL_LEAPING_TEAR_COMMAND = 201725;    // leaping_tear_command_201725
-        constexpr uint32 SPELL_SWIPE_COMMAND = 201726;           // swipe_command_201726
-        constexpr uint32 SPELL_MAUL_COMMAND = 201727;            // maul_command_201727
-        constexpr uint32 SPELL_VENOM_BITE_COMMAND = 201728;      // venom_bite_command_201728
-        constexpr uint32 SPELL_VENOMOUS_CLOUD_COMMAND = 201729;  // venomous_cloud_command_201729
-        constexpr uint32 SPELL_SAVAGE_STRIKES_COMMAND = 201730;  // savage_strikes_command_201730
-        constexpr uint32 SPELL_SAVAGE_POUNCE_COMMAND = 201731;   // savage_pounce_command_201731
-        constexpr uint32 SPELL_THRASH_COMMAND = 201732;          // thrash_command_201732
-        constexpr uint32 SPELL_CRUSHING_BLOW_COMMAND = 201733;   // crushing_blow_command_201733
-        constexpr uint32 SPELL_FEINT_STRIKE_COMMAND = 201734;    // feint_strike_command_201734
-        constexpr uint32 SPELL_AMBUSH_COMMAND = 201735;          // ambush_command_201735
+        // Commanded spells (PET 4.9), declared by the BM DSL rows.
+        constexpr uint32 SPELL_LUNGE_COMMAND = HunterData::SPELL_LUNGE_COMMAND;
+        constexpr uint32 SPELL_RIP_THROAT_COMMAND = HunterData::SPELL_RIP_THROAT_COMMAND;
+        constexpr uint32 SPELL_RAKE_COMMAND = HunterData::SPELL_RAKE_COMMAND;
+        constexpr uint32 SPELL_POUNCE_COMMAND = HunterData::SPELL_POUNCE_COMMAND;
+        constexpr uint32 SPELL_SAVAGE_REND_COMMAND = HunterData::SPELL_SAVAGE_REND_COMMAND;
+        constexpr uint32 SPELL_LEAPING_TEAR_COMMAND = HunterData::SPELL_LEAPING_TEAR_COMMAND;
+        constexpr uint32 SPELL_SWIPE_COMMAND = HunterData::SPELL_SWIPE_COMMAND;
+        constexpr uint32 SPELL_MAUL_COMMAND = HunterData::SPELL_MAUL_COMMAND;
+        constexpr uint32 SPELL_VENOM_BITE_COMMAND = HunterData::SPELL_VENOM_BITE_COMMAND;
+        constexpr uint32 SPELL_VENOMOUS_CLOUD_COMMAND = HunterData::SPELL_VENOMOUS_CLOUD_COMMAND;
+        constexpr uint32 SPELL_SAVAGE_STRIKES_COMMAND = HunterData::SPELL_SAVAGE_STRIKES_COMMAND;
+        constexpr uint32 SPELL_SAVAGE_POUNCE_COMMAND = HunterData::SPELL_SAVAGE_POUNCE_COMMAND;
+        constexpr uint32 SPELL_THRASH_COMMAND = HunterData::SPELL_THRASH_COMMAND;
+        constexpr uint32 SPELL_CRUSHING_BLOW_COMMAND = HunterData::SPELL_CRUSHING_BLOW_COMMAND;
+        constexpr uint32 SPELL_FEINT_STRIKE_COMMAND = HunterData::SPELL_FEINT_STRIKE_COMMAND;
+        constexpr uint32 SPELL_AMBUSH_COMMAND = HunterData::SPELL_AMBUSH_COMMAND;
 
         // PET 4.2: the type defaults, then one row per family (32 hunter families).
         constexpr PetKit KIT_FEROCITY_DEFAULT =
@@ -331,10 +335,11 @@ namespace Hunter
             return kits;
         }
 
-        // S1: The Beast Within 3/3 Mastery (live GetMasteryPercentage()), PET 9.1
-        float S1Term(Player* /*owner*/, Unit* /*unit*/)
+        // S1: The Beast Within 3/3 Mastery (live GetMasteryPercentage()), PET 9.1, BM A7. Kinds Pet and
+        // StampedeBeast both get it; the caller has already resolved the kind.
+        float S1Term(Player* owner, Unit* /*unit*/)
         {
-            return 0.0f;
+            return GetBeastMasteryPetMasteryPct(owner);
         }
 
         // Recalculates every effect of an already-applied aura (RecalculateAmount() routes back through
@@ -658,12 +663,21 @@ namespace Hunter
                     };
 
                     // 192 has no stack-group check in its handler, so a plain product is right. 193 honours
-                    // same-effect groups (HandleModCombatSpeedPct), and so does the group-aware multiplier.
+                    // same-effect groups (HandleModCombatSpeedPct), and so does the group-aware multiplier: the
+                    // owner's group-aware total over the pet's shared group-aware total (the crit mirror's shape),
+                    // so a shared member never drops out before its group's maximum is taken.
                     for (AuraEffect const* auraEffect : owner->GetAuraEffectsByType(SPELL_AURA_MOD_MELEE_RANGED_HASTE))
                         if (notOnTarget(auraEffect))
                             haste *= 1.0f + auraEffect->GetAmount() / 100.0f;
 
-                    haste *= owner->GetTotalAuraMultiplier(SPELL_AURA_MELEE_SLOW, notOnTarget);
+                    float const petShared = target->GetTotalAuraMultiplier(SPELL_AURA_MELEE_SLOW,
+                        [owner](AuraEffect const* auraEffect)
+                        {
+                            uint32 const spellId = auraEffect->GetId();
+                            return spellId != SPELL_HUNTER_PET_CRIT_HASTE && owner->HasAura(spellId);
+                        });
+                    if (petShared > 0.0f)
+                        haste *= owner->GetTotalAuraMultiplier(SPELL_AURA_MELEE_SLOW) / petShared;
 
                     return int32(std::lround((haste - 1.0f) * 100.0f * HunterData::PET_HASTE_SHARE_PCT / 100.0f));
                 }
@@ -770,8 +784,8 @@ namespace Hunter
 
         // Stranded rule, the only re-seat trigger: the basic is on no spell slot of the bar (the engine learns the
         // lines in reverse order, so with five active spells for four slots the basic is the one left out). A basic
-        // that is on the bar, in any of the 10 slots, means the player's own arrangement stands. A player who removes
-        // the basic on purpose gets it back.
+        // that is on the bar, in any of the 10 slots, means the player's own arrangement stands. Only while the pet
+        // lacks 201703: once the bar has been seated (same pass), a basic the player removes stays removed.
         uint32 const firstBasic = sSpellMgr->GetFirstSpellInChain(basic);
         bool basicOnBar = false;
         for (uint8 slot = ACTION_BAR_INDEX_START; slot < ACTION_BAR_INDEX_END; ++slot)
@@ -902,5 +916,125 @@ namespace Hunter
             owner->CastSpell(pet, SPELL_ASPECT_OF_THE_MONKEY_PET, true);
         else
             owner->AddAura(SPELL_ASPECT_OF_THE_MONKEY_PET, pet);
+    }
+
+    // ---- S1a: Beast Mastery (BEAST-MASTERY.md §8.4; S1a-HANDOFF A7, A8, A13) ----
+    float GetBeastMasteryPetMasteryPct(Player const* owner)
+    {
+        if (!owner || !owner->HasAura(HunterData::SPELL_THE_BEAST_WITHIN_201857))
+            return 0.0f;
+
+        return owner->GetMasteryPercentage();
+    }
+
+    bool IsBeastCleaveExcluded(SpellInfo const* spellInfo)
+    {
+        if (!spellInfo)
+            return false;
+
+        // The AoE commands and their splash, Stomp, Spiked Collar and Beast Cleave's own strike never feed it.
+        switch (spellInfo->Id)
+        {
+            case HunterData::SPELL_LEAPING_TEAR_COMMAND:
+            case HunterData::SPELL_SWIPE_COMMAND:
+            case HunterData::SPELL_VENOMOUS_CLOUD_COMMAND:
+            case HunterData::SPELL_VENOMOUS_CLOUD_SPLASH:
+            case HunterData::SPELL_STOMP_PET:
+            case HunterData::SPELL_SPIKED_COLLAR_STRIKE:
+            case HunterData::SPELL_BEAST_CLEAVE_STRIKE:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    void RefreshSteadyShotTransforms(Player* player)
+    {
+        // An evicted transform aura never comes back by itself (C6); removal is automatic through the type-2 link.
+        if (!player || !player->HasAura(SPELL_COBRA_SHOT_RANK3) || player->HasAura(SPELL_COBRA_SHOT_TRANSFORM))
+            return;
+
+        player->AddAura(SPELL_COBRA_SHOT_TRANSFORM, player);
+    }
+
+    void RecalculatePetTalentChannels(Player* player)
+    {
+        // The pet may not exist (hooks fire for every hunter, summon and load paths): nothing to do then.
+        Pet* pet = player ? player->GetPet() : nullptr;
+        if (!pet)
+            return;
+
+        for (uint32 spellId : { SPELL_TAMED_PET_PASSIVE_8875, SPELL_TAMED_PET_PASSIVE_19581,
+            SPELL_TAMED_PET_PASSIVE_19591, SPELL_TAMED_PET_PASSIVE_34667 })
+            if (Aura* aura = pet->GetAura(spellId))
+                aura->RecalculateAmountOfEffects();
+    }
+
+    void OnBeastMasteryTalentsChanged(Player* player)
+    {
+        if (!player)
+            return;
+
+        // Channels before the passthrough: the beasts' copy reads the pet's damage auras.
+        RefreshSteadyShotTransforms(player);
+        RecalculatePetTalentChannels(player);
+        RefreshAllPassthrough(player);
+    }
+
+    void CommandPetAttack(Pet* pet, Unit* target)
+    {
+        if (!pet || !target || pet->GetVictim() == target)
+            return;
+
+        // as the pet-action "attack" handler (PetHandler.cpp COMMAND_ATTACK); same sequence as
+        // spell_hun_kill_command_rework
+        CharmInfo* charmInfo = pet->GetCharmInfo();
+        if (!charmInfo || !pet->IsAIEnabled || !pet->AI())
+            return;
+
+        pet->ClearUnitState(UNIT_STATE_FOLLOW);
+        pet->AttackStop();
+        charmInfo->SetIsCommandAttack(true);
+        charmInfo->SetIsAtStay(false);
+        charmInfo->SetIsFollowing(false);
+        charmInfo->SetIsCommandFollow(false);
+        charmInfo->SetIsReturning(false);
+        pet->AI()->AttackStart(target);
+    }
+
+    void CollectBmSplashTargets(Player* hunter, Unit* source, Unit* center, float radius, uint32 maxTargets,
+        std::vector<Unit*>& out)
+    {
+        if (!hunter || !source || !center)
+            return;
+
+        std::list<Unit*> nearby;
+        Acore::AnyUnfriendlyUnitInObjectRangeCheck check(center, source, radius);
+        Acore::UnitListSearcher<Acore::AnyUnfriendlyUnitInObjectRangeCheck> searcher(center, nearby, check);
+        Cell::VisitObjects(center, searcher, radius);
+
+        Pet* pet = hunter->GetPet();
+        std::vector<Unit*> candidates;
+        for (Unit* unit : nearby)
+        {
+            if (unit == center || !unit->IsAlive() || !source->IsValidAttackTarget(unit))
+                continue;
+
+            // BM §0.4: only enemies the hunter or its pet are fighting.
+            if (!unit->IsInCombatWith(hunter) && !(pet && unit->IsInCombatWith(pet)))
+                continue;
+
+            candidates.push_back(unit);
+        }
+
+        std::sort(candidates.begin(), candidates.end(), [center](Unit const* a, Unit const* b)
+        {
+            return center->GetExactDistSq(a) < center->GetExactDistSq(b);
+        });
+
+        if (maxTargets && candidates.size() > maxTargets)
+            candidates.resize(maxTargets);
+
+        out.insert(out.end(), candidates.begin(), candidates.end());
     }
 }

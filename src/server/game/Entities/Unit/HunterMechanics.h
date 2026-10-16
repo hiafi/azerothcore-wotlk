@@ -22,6 +22,7 @@
 #include "Generated/HunterData.h"
 #include "SharedDefines.h"
 #include <cstdint>
+#include <vector>
 
 class Guardian;
 class Pet;
@@ -180,15 +181,33 @@ namespace Hunter
     // Pins POWER_HAPPINESS and POWER_FOCUS at max (PET 4.7); refreshes white damage if the happiness state changed.
     void PinPetPowers(Pet* pet);
     // Seats the default pet bar (basic, utility, Growl, Cower/Dash) once per pet (while it lacks marker 201703) when
-    // the basic is on no bar slot, and turns
-    // autocast on once for the basic and once for the buff/debuff utility, each tracked by its own hidden marker
-    // spell (201703, 201752) in pet_spell. Needs a live, loaded pet.
+    // the basic is on no bar slot, and turns autocast on once for the basic and once for the buff/debuff utility,
+    // each tracked by its own hidden marker spell (201703, 201752) in pet_spell. Needs a live, loaded pet.
     void SeatDefaultPetBar(Pet* pet);
 
     // Aspect of the Monkey (SHARED B6.6): puts 201605 on a pet that lacks it while its owner carries the aspect.
     // Idempotent; called from the pet-added hook and from the 34902 tick (a fresh tame never reaches the hook).
     void ReapplyPetMonkeyAura(Player* owner, Pet* pet);
-    // ---- S1 / S2 / S3 append their own sections (transform re-cast, mark state, Burning Tar bank) ----
+
+    // ---- S1a (Beast Mastery, BEAST-MASTERY.md §8.4; S1b appends GetStampedeEntry, ApplyBmPetAuras,
+    //      OnPhoenixPlumePetDeath) ----
+    // Stock ids the BM code uses (no HunterData:: name for the Tamed Pet Passive channels): hand literals.
+    constexpr uint32 SPELL_TAMED_PET_PASSIVE_8875 = 8875;     // stock Tamed Pet Passive (pet talent channel)
+    constexpr uint32 SPELL_TAMED_PET_PASSIVE_19581 = 19581;   // stock Tamed Pet Passive (pet talent channel)
+    constexpr uint32 SPELL_TAMED_PET_PASSIVE_19591 = 19591;   // stock Tamed Pet Passive (pet talent channel)
+    constexpr uint32 SPELL_TAMED_PET_PASSIVE_34667 = 34667;   // stock Tamed Pet Passive (pet talent channel)
+    constexpr uint32 SPELL_COBRA_SHOT_TRANSFORM = HunterData::SPELL_COBRA_SHOT_TRANSFORM;  // 201811
+    constexpr uint32 SPELL_COBRA_SHOT_RANK3 = HunterData::SPELL_COBRA_SHOT_201851;         // 201851
+
+    float GetBeastMasteryPetMasteryPct(Player const* owner);     // Mastery % with The Beast Within 3/3 (201857), else 0
+    bool  IsBeastCleaveExcluded(SpellInfo const* spellInfo);     // 201725/6/9, 201736, 201804/5/7
+    void  RefreshSteadyShotTransforms(Player* player);           // 201811 re-add when 201851 is known (C6)
+    void  RecalculatePetTalentChannels(Player* player);          // pet auras 8875, 19581, 19591, 34667 (§0.14)
+    void  OnBeastMasteryTalentsChanged(Player* player);          // the two above, then RefreshAllPassthrough once
+    void  CommandPetAttack(Pet* pet, Unit* target);              // A13
+    void  CollectBmSplashTargets(Player* hunter, Unit* source, Unit* center, float radius, uint32 maxTargets,
+                                 std::vector<Unit*>& out);       // A13, §0.4 filter
+    // ---- S1b / S2 / S3 append their own sections (mark state, Burning Tar bank) ----
 }
 
 #endif

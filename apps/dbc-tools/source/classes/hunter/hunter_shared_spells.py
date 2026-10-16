@@ -15,6 +15,7 @@ skill_line_ability / creature_template bindings follow the spell rows below.
 from lib.dsl import AuraType, CombatRating, Effect, EffectType, School
 from lib.dsl.registry import (creature_template, custom_attr, leave_spell_group, procs_on, scripted_by,
                               skill_line_ability, spell, trained_by, unbind_script, unlink_spell)
+from .hunter_bm_spells import bm_dragonhawk_1155
 
 
 glaive_toss_201600 = spell(
@@ -36,9 +37,10 @@ aspect_of_the_dragonhawk_explosion_201601 = spell(
     effects=[Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=60.0, potency_kind='direct', time_basis_ms=1500,
                     implicit_target_a=53, implicit_target_b=16, radius_yards=5.0)],   # placeholder, M (§0.5)
     spell_icon_id=2328,
+    tooltip_vars=bm_dragonhawk_1155,
     raw_overrides={'SpellLevel': 16, 'DefenseType': 3, 'SpellClassSet': 9, 'SpellClassMask_3': 0x2000000,
                    'AttributesEx3': 0x10000, 'EquippedItemClass': -1,
-                   'Description_Lang_enUS': 'Explodes for {pot1} Fire damage to the target and all enemies within $a1 yards.'},
+                   'Description_Lang_enUS': 'Explodes for {pot1*idh} Fire damage to the target and all enemies within $a1 yards.'},
 )
 
 aspect_of_the_viper_poison_201602 = spell(
@@ -87,8 +89,7 @@ trained_by(61846, 204, req_level=16)
 trained_by(13161, 204, req_level=20)   # replaces the live @30 row (same key)
 trained_by(53271, 204, req_level=56)
 trained_by(62757, 204, req_level=10)
-# Silencing Shot 34490 / Intimidation 19577 are still talent spells (LoadTrainers drops them): the baseline grant moves to
-# S1 (Intimidation) / S2 (Silencing Shot), user 2026-10-14.
+trained_by(19577, trainer_id=204, req_level=30)   # Intimidation: baseline since row 1387 became Command II (S1a A12); SpellLevel 30 unchanged
 trained_by(glaive_toss_201600, 204, req_level=12)
 
 # --- Glaive Toss spellbook entry (B9.3) ---

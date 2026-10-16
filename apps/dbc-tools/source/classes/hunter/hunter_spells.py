@@ -7,6 +7,7 @@ Split from a single source/classes/hunter.py via split_class_file.py (.agents/pl
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, School
 from lib.dsl.registry import knows, pot_text, spell, tooltip_vars, trained_by, unbind_bonus_coefficients
 from . import _masks as m
+from .hunter_bm_spells import bm_dragonhawk_1155, bm_kill_command_1160, bm_steady_shot_1150
 from .hunter_pet import PET_AP_FROM_RAP_PCT, PET_AP_FROM_SP_PCT
 from .hunter_shared_spells import aspect_of_the_dragonhawk_explosion_201601
 from .hunter_trigger_spells import explosive_trap_effect_13812, immolation_trap_13797, volley_42243
@@ -1113,6 +1114,7 @@ kill_command_34026 = spell(
         Effect(type=EffectType.DUMMY, implicit_target_a=6),
     ],
     spell_icon_id=2226,
+    tooltip_vars=bm_kill_command_1160,
     notes=(
         'H0-P2 (PET.md 6.2): rewritten in place as a hunter-damage pet command. eff0 SCHOOL_DAMAGE ap_potency 75, '
         'eff1 DUMMY (script hook, spell_hun_kill_command_rework), no aura and no duration (inert by data, 6.1), '
@@ -1127,7 +1129,7 @@ kill_command_34026 = spell(
         'DurationIndex': 0,
         'Description_Lang_Mask': 16712190,
         'Description_Lang_enUS': (
-            'Command your pet to teleport behind the target and strike it, dealing {pot1} Physical damage. '
+            'Command your pet to teleport behind the target and strike it, dealing {pot1*kc} Physical damage. '
             'Your pet must be alive and free to act; its distance from the target does not matter.'
         ),
         'EffectChainAmplitude_1': 1.0,
@@ -1746,8 +1748,9 @@ steady_shot_56641 = spell(
         Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=100.0, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=2228,
+    tooltip_vars=bm_steady_shot_1150,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (hunter pass): converted effect 1 (the flat + AP-scaling term) to ap_potency=42.6 (potency-report default, base/coef already agreed); the raw weapon+ammo damage added in SpellEffects.cpp\'s SPELLFAMILY_HUNTER case is real weapon itemization, not hard-coded AP math (no RAP term there), so it is untouched.',
-    raw_overrides={'AttributesEx2': 131072, 'AttributesEx4': 134217728, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 16, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A steady shot that causes {pot1} Physical damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 40.0, 'SpellClassMask_3': m.STEADY_SHOT, 'SpellClassSet': 9, 'SpellLevel': 8, 'SpellVisualID_1': 8155, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx2': 131072, 'AttributesEx4': 134217728, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 16, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A steady shot that causes {pot1*fi} Physical damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 40.0, 'SpellClassMask_3': m.STEADY_SHOT, 'SpellClassSet': 9, 'SpellLevel': 8, 'SpellVisualID_1': 8155, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 # 204 is the live Hunter trainer; Steady Shot is a baseline at 8 (hunter-rework SHARED B1).
 trained_by(steady_shot_56641, trainer_id=204, req_level=8)
@@ -1884,8 +1887,9 @@ aspect_of_the_dragonhawk_61846 = spell(
         Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.DUMMY, base_points=-1, implicit_target_a=1, trigger_spell=0),
     ],
     spell_icon_id=2328,
+    tooltip_vars=bm_dragonhawk_1155,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 74); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 2 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'ActiveIconID': 122, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Ranged attacks may explode for Fire damage.', 'BaseLevel': 16, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The hunter takes on the aspects of a dragonhawk. Your ranged attacks have a $h% chance to explode, dealing ' + pot_text(aspect_of_the_dragonhawk_explosion_201601) + ' Fire damage to the target and all enemies within $201601a1 yards. Cannot occur more than once every 3 sec. Only one Aspect can be active at a time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 10, 'ProcTypeMask': 0x140, 'RangeIndex': 1, 'SpellClassMask_3': 4096, 'SpellClassSet': 9, 'SpellLevel': 16, 'SpellVisualID_1': 3161},
+    raw_overrides={'ActiveIconID': 122, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Ranged attacks may explode for Fire damage.', 'BaseLevel': 16, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The hunter takes on the aspects of a dragonhawk. Your ranged attacks have a $h% chance to explode, dealing ' + pot_text(aspect_of_the_dragonhawk_explosion_201601, var='idh') + ' Fire damage to the target and all enemies within $201601a1 yards. Cannot occur more than once every 3 sec. Only one Aspect can be active at a time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 10, 'ProcTypeMask': 0x140, 'RangeIndex': 1, 'SpellClassMask_3': 4096, 'SpellClassSet': 9, 'SpellLevel': 16, 'SpellVisualID_1': 3161},
 )
 
 
@@ -2055,14 +2059,14 @@ bestial_wrath_19574 = spell(
     mana_cost=0,
     mana_cost_pct=10,
     range_yards=100.0,
-    duration_ms=10000,
+    duration_ms=15000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=5, apply_aura=61),
-        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=5, apply_aura=79, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=5, apply_aura=79, misc_value=127),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=5, apply_aura=AuraType.MECHANIC_IMMUNITY, misc_value=12),
     ],
     spell_icon_id=1680,
-    notes='pulled from existing data',
+    notes='pulled from existing data; S1a A6 (BEAST-MASTERY 4.12): duration 10 s -> 15 s, eff1 (aura 79) bp 49 -> 39 (+40%).',
     raw_overrides={'AttributesEx': 33792, 'AttributesEx5': 393224, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Enraged.', 'BaseLevel': 40, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Send your pet into a rage causing $s2% additional damage for $d.  While enraged, the beast does not feel pity or remorse or fear and it cannot be stopped unless killed.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_2': 33554432, 'SpellClassSet': 9, 'SpellLevel': 40, 'SpellVisualID_1': 7278, 'TargetCreatureType': 1},
 )
 

@@ -22,6 +22,7 @@
  */
 
 #include "HunterMechanics.h"
+#include "ObjectAccessor.h"
 #include "Pet.h"
 #include "PetScript.h"
 #include "Player.h"
@@ -31,12 +32,45 @@
 class HunterPlayerScript : public PlayerScript
 {
 public:
-    HunterPlayerScript() : PlayerScript("HunterPlayerScript", { PLAYERHOOK_ON_LOGOUT }) { }
+    HunterPlayerScript() : PlayerScript("HunterPlayerScript",
+        { PLAYERHOOK_ON_LOGOUT, PLAYERHOOK_ON_PLAYER_LEARN_TALENTS, PLAYERHOOK_ON_TALENTS_RESET,
+          PLAYERHOOK_ON_AFTER_SPEC_SLOT_CHANGED }) { }
 
     void OnPlayerLogout(Player* player) override
     {
         if (player && player->getClass() == CLASS_HUNTER)
             Hunter::ClearState(player);
+    }
+
+    // S1a (BM A8): the one hunter talent-change path. The rank's passive is applied before this hook
+    // (Player::LearnTalent adds the talent first); the pet may not exist, every step null-checks it.
+    void OnPlayerLearnTalents(Player* player, uint32 /*talentId*/, uint32 /*talentRank*/, uint32 /*spellid*/) override
+    {
+        if (player && player->getClass() == CLASS_HUNTER)
+            Hunter::OnBeastMasteryTalentsChanged(player);
+    }
+
+    // Fires BEFORE the talents are removed (Player.cpp:3902), so the refresh is deferred to the next update; only
+    // the GUID is captured and the player is re-resolved (it may have logged out).
+    void OnPlayerTalentsReset(Player* player, bool /*noCost*/) override
+    {
+        if (!player || player->getClass() != CLASS_HUNTER)
+            return;
+
+        ObjectGuid const guid = player->GetGUID();
+        player->m_Events.AddEventAtOffset([guid]()
+        {
+            Player* hunter = ObjectAccessor::FindPlayer(guid);
+            if (hunter && hunter->getClass() == CLASS_HUNTER)
+                Hunter::OnBeastMasteryTalentsChanged(hunter);
+        }, Milliseconds(0));
+    }
+
+    // Fires after the spec's auras were swapped.
+    void OnPlayerAfterSpecSlotChanged(Player* player, uint8 /*newSlot*/) override
+    {
+        if (player && player->getClass() == CLASS_HUNTER)
+            Hunter::OnBeastMasteryTalentsChanged(player);
     }
 };
 

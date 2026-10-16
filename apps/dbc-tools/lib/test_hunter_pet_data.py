@@ -437,7 +437,7 @@ def check_bindings(bound: list[dict], unbound: list[dict], expected_bound: dict[
 
 EXPECTED_BOUND = {34902: {"spell_hun_pet_scaling_rework"}, 201700: {"spell_hun_pet_passthrough"},
                   201701: {"spell_hun_pet_passthrough"}, 201702: {"spell_hun_pet_passthrough"},
-                  34026: {"spell_hun_kill_command_rework"}}
+                  34026: {"spell_hun_kill_command_rework", "spell_hun_kill_command_bm"}}
 EXPECTED_UNBOUND = {34902: {"spell_hun_generic_scaling"}, 34026: {"spell_hun_kill_command"}}
 
 
@@ -593,7 +593,8 @@ class HunterPetDataTest(unittest.TestCase):
     def test_longevity_and_cobra_strikes_are_re_masked(self):
         rows = package_data()["rows_by_id"]
         for spell_id in (53262, 53263, 53264):
-            self.assertEqual(_effect_mask(rows[spell_id], 1), (0, 0x02000000, 0x8), spell_id)
+            # S1a (BM 5): Bestial Wrath + the Command presses (d2 b21), no longer every pet ability
+            self.assertEqual(_effect_mask(rows[spell_id], 1), (0, 0x02000000, 0x200000), spell_id)
         self.assertEqual(_effect_mask(rows[53257], 1), (0, 0, 0x400000))
 
     # (f)
