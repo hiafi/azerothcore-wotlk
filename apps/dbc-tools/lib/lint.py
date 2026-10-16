@@ -56,6 +56,11 @@ _FAMILY_WIDE_ALLOWED: set[tuple[int, int]] = {
     # increased (docs/reworks/frost-mage-rework.md:199, "the critical strike damage bonus of your spells").
     (200023, 1),
     (200024, 1),
+    # Chilled to the Bone 44566-44568 effect 1: "all damage you deal" is meant to reach every mage spell
+    # (user ruling 2026-10-16, S1c).
+    (44566, 1),
+    (44567, 1),
+    (44568, 1),
 }
 _SPELLMOD_AURAS = {107, 108}  # SPELL_AURA_ADD_FLAT_MODIFIER, SPELL_AURA_ADD_PCT_MODIFIER
 _LETTERS = ("A", "B", "C")
@@ -152,6 +157,58 @@ def _check_scope_required(entry, row, masks, stock, stock_masks_match, warnings,
             f"letter. All-zero here means the engine applies it to every matching spell in "
             f"the family, not just the intended one."
         )
+
+
+# Spell ids whose family-0 SpellMod (aura 107 / 108 on a SpellClassSet 0 row) is a *deliberate* effect on every
+# spell of every class. Add an entry only with a one-line reason, after confirming the leak is the intent.
+FAMILY_ZERO_SPELLMOD_ALLOW: dict[int, str] = {}
+
+
+def check_family_zero_spellmods(
+    entries: list[dict], rows: list[dict], stock_rows: dict[int, dict] | None = None,
+    allow: dict[int, str] | None = None,
+) -> list[str]:
+    """A declared row with an aura 107 / 108 effect whose built `SpellClassSet` is 0. `SpellInfo::IsAffected`
+    returns true for family 0 and ignores the mask, so the modifier reaches EVERY spell of every class (and
+    the pets' spells through `Unit::GetSpellModOwner`) whatever its EffectSpellClassMask* says - Improved
+    Prayer of Mending's -4 s cooldown / +20% on a Freepick hunter's Bite, Claw and Smack. Set the row's
+    SpellClassSet to the owning class's family (and scope the mask), or add the id to
+    FAMILY_ZERO_SPELLMOD_ALLOW with the reason.
+
+    Exemptions: a row in `allow`; an effect whose aura, misc value and nine EffectSpellClassMask* values equal
+    its stock client Spell.dbc row on that effect (real Blizzard data, e.g. the stock family-wide Hunter Giant
+    Stalker) - the check_classmask_scoping pattern. Pass the *full* declared population."""
+    stock_rows = stock_rows or {}
+    allowed = FAMILY_ZERO_SPELLMOD_ALLOW if allow is None else allow
+    warnings: list[str] = []
+    for entry, row in zip(entries, rows):
+        spell_id = row.get("ID", entry.get("id"))
+        if spell_id in allowed or _u32(row.get("SpellClassSet")) != 0:
+            continue
+        stock = stock_rows.get(spell_id)
+        # The stock row must itself be family 0: a rebuild of a stock family-N row that lost its
+        # SpellClassSet keeps every mask byte and is exactly the leak this lint exists for.
+        masks_match = (
+            stock is not None and _u32(stock.get("SpellClassSet")) == 0
+            and all(_u32(row.get(col)) == _u32(stock.get(col)) for col in _MASK_COLUMNS)
+        )
+        for i in range(3):
+            aura = row.get(f"EffectAura_{i + 1}", 0)
+            misc = row.get(f"EffectMiscValue_{i + 1}", 0)
+            if aura not in _SPELLMOD_AURAS:
+                continue
+            if masks_match and (
+                stock.get(f"EffectAura_{i + 1}", 0) == aura and stock.get(f"EffectMiscValue_{i + 1}", 0) == misc
+            ):
+                continue  # identical to the stock client row - real Blizzard data
+            warnings.append(
+                f"spell {spell_id} ({entry.get('name', '?')}): effect {i + 1}'s SpellMod "
+                f"(EffectAura_{i + 1}={aura}, EffectMiscValue_{i + 1}={misc}) is on a SpellClassSet 0 row, "
+                f"so SpellInfo::IsAffected applies it to EVERY spell of every class and to pet spells "
+                f"whatever its classmask says. Set the row's SpellClassSet to the owning class's family, "
+                f"or add the id to lint.FAMILY_ZERO_SPELLMOD_ALLOW with the reason."
+            )
+    return warnings
 
 
 def check_missing_skill_line_ability(

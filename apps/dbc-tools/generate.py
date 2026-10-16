@@ -382,6 +382,16 @@ def main() -> int:
             print(f"WARNING: {warning}")
         for warning in lint.check_custom_equipped_item_class(dsl_classes["spells"]):
             print(f"WARNING: {warning}")
+        # Family-0 SpellMods need the built SpellClassSet. --check skips the live secondary tables; seeding the
+        # stock lookup rows keeps the throwaway context from minting (and exhausting) reserved index blocks.
+        check_reuse = ReuseContext(
+            {name: list(state.load_stock_rows(table).values()) for name, table in SECONDARY_TABLES.items()}, ids_cfg,
+        )
+        for warning in lint.check_family_zero_spellmods(
+            spell_entries, [build.build_spell_row(e, check_reuse) for e in spell_entries],
+            state.load_stock_rows(dbcfmt.SPELL),
+        ):
+            print(f"WARNING: {warning}")
         header_problems = header_gen.check_headers(
             dsl_classes, GENERATED_HEADER_DIR, CLASSES_WITH_GENERATED_HEADERS
         )
@@ -709,6 +719,12 @@ def main() -> int:
         print(f"WARNING: {warning}")
     # Custom spells default to EquippedItemClass 0, which fails every cast (silently when triggered).
     for warning in lint.check_custom_equipped_item_class(spell_entries):
+        print(f"WARNING: {warning}")
+    # Full declared population (like the scans above): a family-0 SpellMod already live is not "edited",
+    # so a resolved-only scan would hide it.
+    for warning in lint.check_family_zero_spellmods(
+        spell_entries, [build.build_spell_row(e, scratch_reuse) for e in spell_entries], stock_spells,
+    ):
         print(f"WARNING: {warning}")
     talent_rows = [build.build_talent_row(e) for e in talent_resolved.entries]
     talenttab_rows = [build.build_talenttab_row(e) for e in talenttab_resolved.entries]
