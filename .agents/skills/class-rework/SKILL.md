@@ -53,6 +53,9 @@ specs plus pets) took far longer than earlier classes; these rules come from wha
   rows, tests, tooltips, playtest guides) and Opus for C++ mechanisms and reviews. Run one in-stage
   review, not three, plus the harness's independent Opus review of the diff; the independent review
   found the misses that mattered. Don't spawn a verification agent for something a grep answers.
+- **Size each piece of work.** Small fixes (a few values, one file) the harness does directly; medium,
+  single-implementer stages the harness launches itself as a background subagent from the handoff file
+  (Sonnet by default); only big, orchestrated stages go to a separate user-run session.
 - **Bundle playtest fixes.** Collect a playtest's findings into one fix handoff and one deploy rather
   than a build per finding.
 - **Every handoff** names its preconditions (HEAD, clean tree, boot baseline), the absolute report
