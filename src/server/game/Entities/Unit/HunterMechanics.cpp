@@ -21,9 +21,11 @@
 #include "Config.h"
 #include "Creature.h"
 #include "DBCStores.h"
+#include "GameTime.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
 #include "Log.h"
+#include "ObjectAccessor.h"
 #include "Pet.h"
 #include "Player.h"
 #include "Random.h"
@@ -36,8 +38,10 @@
 #include "Unit.h"
 #include "UnitAI.h"
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <list>
+#include <mutex>
 #include <unordered_map>
 #include <vector>
 
@@ -98,9 +102,10 @@ namespace Hunter
             player->CastSpell(player, SPELL_REQUIRES_NO_AMMO, true);
     }
 
-    void ClearState(Player* /*player*/)
+    void ClearState(Player* player)
     {
         // Later sections add their Clear*State calls here; removal paths use find-only map access.
+        ClearMarksmanshipState(player);
     }
 
     bool IsAspectRollSource(SpellInfo const* spellInfo)
@@ -1232,5 +1237,503 @@ namespace Hunter
                 HunterData::PHOENIX_PLUME_REVIVE_PCT, deadPet, TRIGGERED_FULL_MASK) == SPELL_CAST_OK)
                 owner->CastSpell(owner, SPELL_PHOENIX_S_PLUME_LOCKOUT, true);
         }, Milliseconds(HunterData::PHOENIX_PLUME_REVIVE_DELAY_MS));
+    }
+
+    // ---- S2: Marksmanship (MARKSMANSHIP.md §4.2-§4.8, §5.10, §7; S2a-HANDOFF A2-A5, A11, A16, A20) ----
+    /*
+     * Mark state is per player, keyed by the player GUID (S2a A2). Map structure changes (find / emplace / erase) of
+     * the outer map go through `markStateLock` because maps update on several threads (PaladinMechanics.cpp
+     * precedent); a player's entry, and its per-target map, is only touched from that player's own map update, and
+     * unordered_map entries keep their address across other keys' insertions. Removal paths (OnMarkRemoved,
+     * RefreshFalconHaste, every read) are find-only (R5). The counter is the authority; the visible aura stack is
+     * max(1, n) and is never read back (SetStackAmount returns early without a client update when the aura's
+     * caster is null, SpellAuras.cpp:1033). Reads return 0 once the aura (by caster GUID) is gone, even if an entry
+     * lingers (an aura removed while its caster was off the map never reaches OnMarkRemoved).
+     */
+    namespace
+    {
+        constexpr uint32 SPELL_SNIPERS_MARK = HunterData::SPELL_SNIPERS_MARK;           // 201920
+        constexpr uint32 SPELL_VIPERS_MARK = HunterData::SPELL_VIPERS_MARK;             // 201921
+        constexpr uint32 SPELL_FALCONS_MARK = HunterData::SPELL_FALCONS_MARK;           // 201922
+        constexpr uint32 SPELL_FALCONS_HASTE = HunterData::SPELL_FALCONS_HASTE;         // 201942
+
+        // Talent chains the mechanics read, highest rank first (each rank is a passive aura on the hunter).
+        constexpr std::array<uint32, 3> KEEN_EYE_RANKS =
+            { HunterData::SPELL_KEEN_EYE_201974, HunterData::SPELL_KEEN_EYE_201973, HunterData::SPELL_KEEN_EYE };
+        constexpr std::array<uint32, 3> TRIANGULATION_RANKS = { HunterData::SPELL_TRIANGULATION_201978,
+            HunterData::SPELL_TRIANGULATION_201977, HunterData::SPELL_TRIANGULATION };
+        constexpr std::array<uint32, 3> MARKED_FOR_DEATH_RANKS = { HunterData::SPELL_MARKED_FOR_DEATH_53244,
+            HunterData::SPELL_MARKED_FOR_DEATH_53243, HunterData::SPELL_MARKED_FOR_DEATH };
+        constexpr std::array<uint32, 3> RAPID_KILLING_RANKS = { HunterData::SPELL_RAPID_KILLING_201981,
+            HunterData::SPELL_RAPID_KILLING_34949, HunterData::SPELL_RAPID_KILLING };
+
+        constexpr std::array<Mark, 3> ALL_MARKS = { Mark::Sniper, Mark::Viper, Mark::Falcon };
+
+        struct MarkState
+        {
+            std::unordered_map<ObjectGuid, std::array<uint8, 3>> stacks;   // target GUID -> counter per Mark
+            uint32 lastTripleConsumeMs = 0;                                 // GameTime ms of the last triple consume
+            ObjectGuid convergenceCentre;                                   // S2b: Convergence's centre, per cast
+            bool inStackWrite = false;                                      // M13 re-entrancy guard
+        };
+
+        std::mutex markStateLock;
+        std::unordered_map<ObjectGuid, MarkState> markStates;
+
+        MarkState* FindMarkState(ObjectGuid const& playerGuid)
+        {
+            std::lock_guard<std::mutex> lock(markStateLock);
+            auto const itr = markStates.find(playerGuid);
+            return itr != markStates.end() ? &itr->second : nullptr;
+        }
+
+        MarkState& GetOrCreateMarkState(ObjectGuid const& playerGuid)
+        {
+            std::lock_guard<std::mutex> lock(markStateLock);
+            return markStates[playerGuid];
+        }
+
+        bool IsValidMark(Mark mark)
+        {
+            return mark < Mark::Max;
+        }
+
+        uint8 MarkIndex(Mark mark)
+        {
+            return static_cast<uint8>(mark);
+        }
+
+        // The player's own mark aura on the target (one per caster), nullptr when absent.
+        Aura* GetMarkAura(Player const* player, Unit const* target, Mark mark)
+        {
+            uint32 const spellId = GetMarkSpellId(mark);
+            return spellId ? target->GetAura(spellId, player->GetGUID()) : nullptr;
+        }
+
+        // The highest rank of a talent chain the player carries, nullptr without one.
+        SpellInfo const* GetKnownRank(Player const* player, std::array<uint32, 3> const& ranksHighestFirst)
+        {
+            for (uint32 spellId : ranksHighestFirst)
+                if (player->HasAura(spellId))
+                    return sSpellMgr->GetSpellInfo(spellId);
+
+            return nullptr;
+        }
+
+        // §4.1 favored actions (MARK_FAVORED_GAIN in total): Sniper's - Arcane Shot, Chimera Shot, Kill Shot;
+        // Viper's - Serpent Sting; Falcon's - none. Keyed by the chain's first rank.
+        bool IsFavoredAction(uint32 firstRankId, Mark mark)
+        {
+            switch (mark)
+            {
+                case Mark::Sniper:
+                    return firstRankId == HunterData::SPELL_ARCANE_SHOT ||
+                        firstRankId == HunterData::SPELL_CHIMERA_SHOT || firstRankId == HunterData::SPELL_KILL_SHOT;
+                case Mark::Viper:
+                    return firstRankId == HunterData::SPELL_SERPENT_STING;
+                default:
+                    return false;
+            }
+        }
+
+        // The one stack writer (S2a A2, M13): counter first, then the visible stack inside the guard. The mark hooks
+        // are AURA_EFFECT_HANDLE_REAL only, so SetStackAmount (REAPPLY | CHANGE_AMOUNT) never re-enters them; the
+        // ASSERT turns a hook re-registered with REAPPLY into a crash on the first mark instead of a recursion.
+        void WriteMarkStacks(Player* player, Unit* target, Mark mark, uint32 wanted)
+        {
+            if (!player || !target || !IsValidMark(mark))
+                return;
+
+            // No stacks without the aura (R5): a writer never creates state for a mark that is not up.
+            Aura* aura = GetMarkAura(player, target, mark);
+            if (!aura)
+                return;
+
+            uint8 const stacks = uint8(std::min<uint32>(wanted, MARK_MAX_STACKS));
+            MarkState& state = GetOrCreateMarkState(player->GetGUID());
+            ASSERT(!state.inStackWrite, "Hunter::WriteMarkStacks re-entered (mark hook registered with REAPPLY?)");
+            state.stacks[target->GetGUID()][MarkIndex(mark)] = stacks;
+
+            // The 3.3.5 client draws no number at 1, so 0 and 1 look the same (accepted, §9). Never ModStackAmount:
+            // it refreshes the duration.
+            uint8 const display = std::max<uint8>(1, stacks);
+            if (aura->GetStackAmount() != display)
+            {
+                state.inStackWrite = true;
+                aura->SetStackAmount(display);
+                state.inStackWrite = false;
+            }
+
+            RefreshFalconHaste(player);
+        }
+
+        // Effect amount write that re-registers the spell mod only when the value moved (ChangeAmount marks the
+        // amount as set by script, so a later recalculation does not reset it to the DBC 0).
+        void SetEffectAmount(Aura* aura, uint8 effIndex, int32 amount)
+        {
+            if (AuraEffect* effect = aura->GetEffect(effIndex))
+                if (effect->GetAmount() != amount)
+                    effect->ChangeAmount(amount);
+        }
+    }
+
+    uint32 GetMarkSpellId(Mark mark)
+    {
+        switch (mark)
+        {
+            case Mark::Sniper:
+                return SPELL_SNIPERS_MARK;
+            case Mark::Viper:
+                return SPELL_VIPERS_MARK;
+            case Mark::Falcon:
+                return SPELL_FALCONS_MARK;
+            default:
+                return 0;
+        }
+    }
+
+    bool GetMarkForSpell(uint32 spellId, Mark& out)
+    {
+        switch (spellId)
+        {
+            case SPELL_SNIPERS_MARK:
+                out = Mark::Sniper;
+                return true;
+            case SPELL_VIPERS_MARK:
+                out = Mark::Viper;
+                return true;
+            case SPELL_FALCONS_MARK:
+                out = Mark::Falcon;
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    bool HasMark(Player const* player, Unit const* target, Mark mark)
+    {
+        return player && target && IsValidMark(mark) && GetMarkAura(player, target, mark);
+    }
+
+    uint8 GetMarkStacks(Player const* player, Unit const* target, Mark mark)
+    {
+        if (!HasMark(player, target, mark))
+            return 0;
+
+        MarkState const* state = FindMarkState(player->GetGUID());
+        if (!state)
+            return 0;
+
+        auto const itr = state->stacks.find(target->GetGUID());
+        return itr != state->stacks.end() ? itr->second[MarkIndex(mark)] : 0;
+    }
+
+    void AddMarkStacks(Player* player, Unit* target, Mark mark, uint8 amount)
+    {
+        if (!amount)
+            return;
+
+        WriteMarkStacks(player, target, mark, uint32(GetMarkStacks(player, target, mark)) + amount);
+    }
+
+    void SetMarkStacks(Player* player, Unit* target, Mark mark, uint8 stacks)
+    {
+        WriteMarkStacks(player, target, mark, stacks);
+    }
+
+    void OnMarkApplied(Player* player, Unit* target, Mark mark)
+    {
+        if (!player || !target || !IsValidMark(mark))
+            return;
+
+        // A fresh aura (a press, a Trick Shots copy) starts at counter 0; its visible stack is already 1, so the
+        // stack is not written here (§4.2).
+        MarkState& state = GetOrCreateMarkState(player->GetGUID());
+        ASSERT(!state.inStackWrite, "Hunter::OnMarkApplied ran inside a stack write (hook registered with REAPPLY?)");
+        state.stacks[target->GetGUID()][MarkIndex(mark)] = 0;
+
+        RefreshFalconHaste(player);
+    }
+
+    void OnMarkRemoved(Player* player, Unit* target, Mark mark)
+    {
+        if (!player || !target || !IsValidMark(mark))
+            return;
+
+        // Find-only (paladin CR5): logout erased the state before the auras go.
+        if (MarkState* state = FindMarkState(player->GetGUID()))
+        {
+            ASSERT(!state->inStackWrite, "Hunter::OnMarkRemoved ran inside a stack write (REAPPLY hook?)");
+
+            auto const itr = state->stacks.find(target->GetGUID());
+            if (itr != state->stacks.end())
+            {
+                itr->second[MarkIndex(mark)] = 0;
+
+                // The removed aura has already left the target's applied list (Unit::_UnapplyAura erases it before
+                // the effect handlers run), so this sees only the player's other marks.
+                bool otherMarkUp = false;
+                for (Mark other : ALL_MARKS)
+                    if (other != mark && GetMarkAura(player, target, other))
+                        otherMarkUp = true;
+
+                if (!otherMarkUp)
+                    state->stacks.erase(itr);
+            }
+        }
+
+        RefreshFalconHaste(player);
+    }
+
+    void SetConvergenceCentre(Player* player, ObjectGuid centre)
+    {
+        if (!player)
+            return;
+
+        if (centre)
+            GetOrCreateMarkState(player->GetGUID()).convergenceCentre = centre;
+        else if (MarkState* state = FindMarkState(player->GetGUID()))
+            state->convergenceCentre.Clear();
+    }
+
+    ObjectGuid GetConvergenceCentre(Player const* player)
+    {
+        MarkState const* state = player ? FindMarkState(player->GetGUID()) : nullptr;
+        return state ? state->convergenceCentre : ObjectGuid::Empty;
+    }
+
+    uint8 MarkSnapshot::Count() const
+    {
+        return uint8(std::count(present.begin(), present.end(), true));
+    }
+
+    bool MarkSnapshot::Has(Mark mark) const
+    {
+        return IsValidMark(mark) && present[MarkIndex(mark)];
+    }
+
+    uint8 MarkSnapshot::Stacks(Mark mark) const
+    {
+        return Has(mark) ? stacks[MarkIndex(mark)] : 0;
+    }
+
+    MarkSnapshot ReadMarks(Player const* player, Unit const* target)
+    {
+        MarkSnapshot snapshot;
+        if (!player || !target)
+            return snapshot;
+
+        for (Mark mark : ALL_MARKS)
+        {
+            uint8 const index = MarkIndex(mark);
+            snapshot.present[index] = HasMark(player, target, mark);
+            snapshot.stacks[index] = snapshot.present[index] ? GetMarkStacks(player, target, mark) : 0;
+        }
+
+        return snapshot;
+    }
+
+    void ConsumeMarks(Player* player, Unit* target, MarkSnapshot const& snapshot)
+    {
+        if (!player || !target)
+            return;
+
+        // AURA_REMOVE_BY_DEFAULT; each removal reaches OnMarkRemoved through spell_hun_mark's REAL remove hook.
+        for (Mark mark : ALL_MARKS)
+            if (snapshot.Has(mark))
+                target->RemoveAurasDueToSpell(GetMarkSpellId(mark), player->GetGUID());
+    }
+
+    void OnHunterSpellCast(Player* player, Spell* spell)
+    {
+        // §4.3 / S2a A3, in this order: class, not triggered, not auto-repeat, hunter family, not a mark press (C9),
+        // not Aimed Shot (Q18), then the primary unit target only.
+        if (!player || !spell || player->getClass() != CLASS_HUNTER)
+            return;
+
+        if (spell->IsTriggered())
+            return;
+
+        if (spell->IsAutoRepeat())
+            return;
+
+        SpellInfo const* spellInfo = spell->GetSpellInfo();
+        if (!spellInfo || spellInfo->SpellFamilyName != SPELLFAMILY_HUNTER)
+            return;
+
+        Mark pressed = Mark::Max;
+        if (GetMarkForSpell(spellInfo->Id, pressed))
+            return;
+
+        if (spellInfo->Id == HunterData::SPELL_AIMED_SHOT)
+            return;
+
+        // Fires at Spell.cpp:3956, before the completion CheckCast (R7, accepted). Ground-targeted casts have none.
+        Unit* target = spell->m_targets.GetUnitTarget();
+        if (!target || target == player || !player->IsValidAttackTarget(target))
+            return;
+
+        uint32 const firstRankId = spellInfo->GetFirstRankSpell()->Id;
+        for (Mark mark : ALL_MARKS)
+            if (HasMark(player, target, mark))
+                AddMarkStacks(player, target, mark, IsFavoredAction(firstRankId, mark) ? MARK_FAVORED_GAIN : MARK_GAIN);
+    }
+
+    void RollKeenEye(Player* player, Unit* target)
+    {
+        if (!player || !target)
+            return;
+
+        // §5.10: the known rank's eff0 (10/20/30) is the chance; once per cast, no ICD.
+        SpellInfo const* rank = GetKnownRank(player, KEEN_EYE_RANKS);
+        if (!rank)
+            return;
+
+        MarkSnapshot const marks = ReadMarks(player, target);
+        if (!marks.Count())
+            return;
+
+        if (!RollProcChance(player, float(rank->Effects[EFFECT_0].CalcValue(player))))
+            return;
+
+        for (Mark mark : ALL_MARKS)
+            if (marks.Has(mark))
+                AddMarkStacks(player, target, mark, KEEN_EYE_GAIN);
+    }
+
+    void RefreshFalconHaste(Player* player)
+    {
+        if (!player)
+            return;
+
+        // §4.5: the highest Falcon's stack among the player's live Falcon's Marks. Find-only.
+        bool falconMarkUp = false;
+        uint8 highest = 0;
+        if (MarkState const* state = FindMarkState(player->GetGUID()))
+        {
+            for (auto const& [targetGuid, counters] : state->stacks)
+            {
+                Unit* target = ObjectAccessor::GetUnit(*player, targetGuid);
+                if (!target || !GetMarkAura(player, target, Mark::Falcon))
+                    continue;
+
+                falconMarkUp = true;
+                highest = std::max(highest, counters[MarkIndex(Mark::Falcon)]);
+            }
+        }
+
+        if (!falconMarkUp)
+        {
+            player->RemoveAurasDueToSpell(SPELL_FALCONS_HASTE);
+            return;
+        }
+
+        Aura* haste = player->GetAura(SPELL_FALCONS_HASTE, player->GetGUID());
+        if (!haste)
+        {
+            // A player leaving the world gets no new aura.
+            if (!player->IsInWorld())
+                return;
+
+            haste = player->AddAura(SPELL_FALCONS_HASTE, player);
+            if (!haste)
+                return;
+        }
+
+        // A 0-stack mark gives 0% (the buff stays up while a Falcon's Mark is).
+        SetEffectAmount(haste, EFFECT_0, MARK_FALCON_HASTE_PER_STACK * highest);
+    }
+
+    void SetSniperCritHelper(Player* player, uint32 helperId, int32 critChance, int32 critDamagePct)
+    {
+        if (!player || !helperId)
+            return;
+
+        // §4.6 / S2a A5: hidden helper on the hunter (201948 Aimed Shot, 201949 Chimera Shot). A missing helper
+        // already means 0 / 0, so a reset never adds it.
+        Aura* helper = player->GetAura(helperId, player->GetGUID());
+        if (!helper)
+        {
+            if (!critChance && !critDamagePct)
+                return;
+
+            helper = player->AddAura(helperId, player);
+            if (!helper)
+                return;
+        }
+
+        // eff0 ADD_FLAT_MODIFIER SPELLMOD_CRITICAL_CHANCE, eff1 ADD_PCT_MODIFIER SPELLMOD_CRIT_DAMAGE_BONUS.
+        SetEffectAmount(helper, EFFECT_0, critChance);
+        SetEffectAmount(helper, EFFECT_1, critDamagePct);
+    }
+
+    float GetSniperPayoffMultiplier(Player const* player)
+    {
+        if (!player)
+            return 1.0f;
+
+        // §4.7 / S2a A16: (1 + MfD eff0 / 100) x (1 + Mastery / 100, rank 3 only), two separate factors (L10: the
+        // percent comes from the rank's SpellInfo).
+        SpellInfo const* rank = GetKnownRank(player, MARKED_FOR_DEATH_RANKS);
+        if (!rank)
+            return 1.0f;
+
+        float multiplier = 1.0f + rank->Effects[EFFECT_0].CalcValue(player) / 100.0f;
+        if (rank->Id == HunterData::SPELL_MARKED_FOR_DEATH_53244)
+            multiplier *= 1.0f + player->GetMasteryPercentage() / 100.0f;
+
+        return multiplier;
+    }
+
+    float GetTriangulationMultiplier(Player const* player, uint8 marksConsumed)
+    {
+        if (!player || !marksConsumed)
+            return 1.0f;
+
+        // +3/6/9% (the rank's eff0) per mark consumed, a separate multiplier (§4.7).
+        SpellInfo const* rank = GetKnownRank(player, TRIANGULATION_RANKS);
+        if (!rank)
+            return 1.0f;
+
+        return 1.0f + rank->Effects[EFFECT_0].CalcValue(player) * marksConsumed / 100.0f;
+    }
+
+    float GetRapidKillingExecutePct(Player const* player)
+    {
+        // §6 row (2,3): the known rank's eff0 DUMMY (4/8/12). S2b's UnitScript is the only reader.
+        SpellInfo const* rank = player ? GetKnownRank(player, RAPID_KILLING_RANKS) : nullptr;
+        return rank ? float(rank->Effects[EFFECT_0].CalcValue(player)) : 0.0f;
+    }
+
+    void ApplyMarksmanshipTakenMods(Unit* /*target*/, Unit* /*attacker*/, int32& /*damage*/,
+        SpellInfo const* /*spellInfo*/)
+    {
+        // Empty in S2a: S2b fills it (Rapid Killing's execute clause, MARKSMANSHIP §10.4) and adds its caller.
+    }
+
+    void RefreshLoneSurvivor(Player* /*player*/)
+    {
+        // Empty in S2a: S2b fills it (MARKSMANSHIP §10.3 / §10.4) and adds its callers.
+    }
+
+    void NoteTripleConsume(Player* player)
+    {
+        if (player)
+            GetOrCreateMarkState(player->GetGUID()).lastTripleConsumeMs = uint32(GameTime::GetGameTimeMS().count());
+    }
+
+    uint32 GetLastTripleConsumeMs(Player const* player)
+    {
+        MarkState const* state = player ? FindMarkState(player->GetGUID()) : nullptr;
+        return state ? state->lastTripleConsumeMs : 0;
+    }
+
+    void ClearMarksmanshipState(Player* player)
+    {
+        if (!player)
+            return;
+
+        std::lock_guard<std::mutex> lock(markStateLock);
+        markStates.erase(player->GetGUID());
     }
 }

@@ -35,7 +35,7 @@ class HunterPlayerScript : public PlayerScript
 public:
     HunterPlayerScript() : PlayerScript("HunterPlayerScript",
         { PLAYERHOOK_ON_LOGOUT, PLAYERHOOK_ON_PLAYER_LEARN_TALENTS, PLAYERHOOK_ON_TALENTS_RESET,
-          PLAYERHOOK_ON_AFTER_SPEC_SLOT_CHANGED }) { }
+          PLAYERHOOK_ON_AFTER_SPEC_SLOT_CHANGED, PLAYERHOOK_ON_SPELL_CAST }) { }
 
     void OnPlayerLogout(Player* player) override
     {
@@ -72,6 +72,13 @@ public:
     {
         if (player && player->getClass() == CLASS_HUNTER)
             Hunter::OnBeastMasteryTalentsChanged(player);
+    }
+
+    // S2a (MARKSMANSHIP §4.3, A3): mark stack gain, once per non-triggered cast (Spell.cpp, before the completion
+    // CheckCast). Independent of HunterNoAmmoGrant's own cast hook; OnHunterSpellCast does the class check first.
+    void OnPlayerSpellCast(Player* player, Spell* spell, bool /*skipCheck*/) override
+    {
+        Hunter::OnHunterSpellCast(player, spell);
     }
 };
 

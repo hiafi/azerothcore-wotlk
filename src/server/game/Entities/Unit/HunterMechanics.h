@@ -21,10 +21,12 @@
 #include "Define.h"
 #include "Generated/HunterData.h"
 #include "SharedDefines.h"
+#include <array>
 #include <cstdint>
 #include <vector>
 
 class Guardian;
+class ObjectGuid;
 class Pet;
 class Player;
 class ProcEventInfo;
@@ -216,6 +218,69 @@ namespace Hunter
     uint32 GetStampedeEntry(uint32 creatureFamily);      // 1/2/11/4/3 -> 300200..300204, else by type 300205..300207
     void   ApplyBmPetAuras(Player* owner, Pet* pet);     // 201809 add-if-missing (owner as caster); kind Pet only
     void   OnPhoenixPlumePetDeath(Unit* unit);           // HunterUnitScript::OnUnitDeath body (§4.10)
+
+    // ---- S2 (Marksmanship, MARKSMANSHIP.md §4.8 as amended by S2a-HANDOFF A20) ----
+    enum class Mark : uint8 { Sniper = 0, Viper = 1, Falcon = 2, Max = 3 };
+
+    // Tunables (one place each: the const() rows of hunter_mm_spells.py, X10). Spell values live in the DBC; these
+    // are the script-only numbers.
+    constexpr uint8  MARK_MAX_STACKS = HunterData::MARK_MAX_STACKS;
+    constexpr uint8  MARK_GAIN = HunterData::MARK_GAIN;
+    constexpr uint8  MARK_FAVORED_GAIN = HunterData::MARK_FAVORED_GAIN;   // total (cast 1 + favored 2), §0.4 R2-13
+    constexpr uint8  KEEN_EYE_GAIN = HunterData::KEEN_EYE_GAIN;
+    constexpr int32  SNIPER_CRIT_CHANCE = HunterData::SNIPER_CRIT_CHANCE;   // flat points
+    constexpr int32  SNIPER_CRIT_DAMAGE_PER_STACK = HunterData::SNIPER_CRIT_DAMAGE_PER_STACK;   // pct of the crit bonus
+    constexpr int32  CHIMERA_SNIPER_CRIT_CHANCE = HunterData::CHIMERA_SNIPER_CRIT_CHANCE;
+    constexpr int32  CHIMERA_SNIPER_CRIT_DAMAGE = HunterData::CHIMERA_SNIPER_CRIT_DAMAGE;
+    constexpr int32  MARK_FALCON_HASTE_PER_STACK = HunterData::MARK_FALCON_HASTE_PER_STACK;
+    constexpr uint32 QUICKENING_MS_PER_STACK = HunterData::QUICKENING_MS_PER_STACK;
+    constexpr float  PACK_RADIUS = HunterData::PACK_RADIUS_YD;            // ricochet, bounce
+    constexpr uint8  PACK_MAX_TARGETS = HunterData::PACK_MAX_TARGETS;
+    constexpr uint8  MULTI_SHOT_TARGET_CAP = HunterData::MULTI_SHOT_TARGET_CAP;   // primary + 4 chain targets
+    constexpr uint32 DEADEYE_CDR_MS = HunterData::DEADEYE_CDR_MS;
+    constexpr uint32 FOCUSED_AIM_CDR_MS = HunterData::FOCUSED_AIM_CDR_MS;
+    constexpr float  RAPID_KILLING_HEALTH_PCT = HunterData::RAPID_KILLING_HEALTH_PCT;
+    constexpr int32  RAIN_OF_ARROWS_FIRE_PCT = HunterData::RAIN_OF_ARROWS_FIRE_PCT;   // S2b (Volley tick Fire! roll)
+
+    uint32 GetMarkSpellId(Mark mark);                                          // 0 for Mark::Max
+    bool   GetMarkForSpell(uint32 spellId, Mark& out);                         // false unless 201920-201922
+    bool   HasMark(Player const* player, Unit const* target, Mark mark);       // the player's mark aura is on target
+    uint8  GetMarkStacks(Player const* player, Unit const* target, Mark mark); // 0 when absent
+    void   AddMarkStacks(Player* player, Unit* target, Mark mark, uint8 amount);  // cap, show max(1,n), Falcon; guarded
+    void   SetMarkStacks(Player* player, Unit* target, Mark mark, uint8 stacks);  // copies, re-press reset; guarded
+    void   OnMarkApplied(Player* player, Unit* target, Mark mark);   // REAL apply only -> counter 0; no stack write
+    void   OnMarkRemoved(Player* player, Unit* target, Mark mark);   // REAL remove only; find-only
+    // Convergence centre (§5.2 step 9, S2b): set just before the synchronous CastSpell of 201932, cleared right after.
+    void   SetConvergenceCentre(Player* player, ObjectGuid centre);
+    ObjectGuid GetConvergenceCentre(Player const* player);
+
+    // Per-cast snapshot (M14): lives in the SpellScript instance, never in HunterMechanics state.
+    struct MarkSnapshot
+    {
+        std::array<bool, 3>  present{};
+        std::array<uint8, 3> stacks{};
+        uint8 Count() const;           // marks present
+        bool  Has(Mark mark) const;
+        uint8 Stacks(Mark mark) const; // 0 when absent
+    };
+    MarkSnapshot ReadMarks(Player const* player, Unit const* target);
+    void   ConsumeMarks(Player* player, Unit* target, MarkSnapshot const& snapshot);   // removes the snapshot's auras
+
+    void   OnHunterSpellCast(Player* player, Spell* spell);   // §4.3, called from HunterPlayerScript
+    // §5.10, Arcane/Multi-Shot OnCast. The caller skips triggered casts (the signature carries no Spell).
+    void   RollKeenEye(Player* player, Unit* target);
+    void   RefreshFalconHaste(Player* player);                // §4.5
+    void   SetSniperCritHelper(Player* player, uint32 helperId, int32 critChance, int32 critDamagePct);
+    float  GetSniperPayoffMultiplier(Player const* player);   // §4.7
+    float  GetTriangulationMultiplier(Player const* player, uint8 marksConsumed);   // 1.0 without a rank
+    float  GetRapidKillingExecutePct(Player const* player);   // §6 row (2,3): known rank's eff0, 0 without a rank
+    // UnitScript (S2b); empty body in S2a.
+    void   ApplyMarksmanshipTakenMods(Unit* target, Unit* attacker, int32& damage, SpellInfo const* spellInfo);
+    void   RefreshLoneSurvivor(Player* player);              // §10.3/§10.4 (S2b); empty body in S2a
+    void   NoteTripleConsume(Player* player);
+    uint32 GetLastTripleConsumeMs(Player const* player);      // GameTime ms, 0 = never; B0b reads it (Readiness rule)
+    void   ClearMarksmanshipState(Player* player);            // called from Hunter::ClearState
+
     // ---- S2 / S3 append their own sections (mark state, Burning Tar bank) ----
 }
 
