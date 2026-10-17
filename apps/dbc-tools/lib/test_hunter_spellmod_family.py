@@ -51,16 +51,17 @@ ASPECT_SPECIFIC = (0x380000, 0x440000, 0x1010)  # mirrors _masks.ASPECT_SPECIFIC
 # SHARED B13: (ids, 1-based effect index). The effect's typed/raw mask must have d1 0x1 clear, d2 b29 set.
 B13_REPOINTS = (
     ((1978,), 2), ((3674,), 2),
-    ((19416, 19417, 19418, 19419, 19420), 1),               # Efficiency
+    ((19419, 19420), 1),                                    # Efficiency (orphans; S2a makes r1-r3 eff0 a DUMMY)
     ((19485, 19487, 19488, 19489, 19490), 1),               # Mortal Shots
     ((19498, 19499, 19500), 1),                             # Hawk Eye
     ((34455, 34459, 34460), 3),                             # Ferocious Inspiration
-    ((34485, 34486, 34487, 34488, 34489), 2),               # Master Marksman
+    ((34488, 34489), 2),                                    # Master Marksman (orphans; S2a drops r1-r3 eff1)
     ((34494, 34496), 2),                                    # Survival Instincts
     ((34506, 34507, 34508, 34838, 34839), 1),               # Master Tactician trigger
     ((34833, 34834, 34835, 34836, 34837), 1),               # Master Tactician buff
     ((53234, 53237, 53238), 1),                             # Piercing Shots
-    ((53241, 53243, 53244, 53245, 53246), 2),               # Marked for Death
+    ((53245, 53246), 2),                                    # Marked for Death (orphans; S2a: r1-r3 eff1 = DOT
+                                                            # on d2 b28, test_hunter_mm_data.py checks it)
     ((53620, 53621, 53622), 1),                             # Focused Aim
     ((64418, 64419, 64420), 1),                             # Sniper Training
 )
@@ -72,7 +73,7 @@ B13_SPELL_PROCS = {
     # Cobra Strikes: H0's (0x800, 0x800000, 0x20000000) row, edited in place by S1b B2 to Steady Shot d2 b29 only (CAST
     # phase, spell_hun_cobra_strikes_bm resets Arcane Shot); test_hunter_bm_data.py checks its other columns.
     -53256: (0, 0, 0x20000000),
-    -53234: (0x20000, 0, 0x20000001),
+    -53234: (0x20000, 0, 0x20000000),        # S2a (MM 8): narrowed to Steady + Aimed, Chimera's d2 b0 dropped
     -53221: (0, 0, 0x20000000),
     -34497: (0x60800, 0x800000, 0x20000201),
 }
@@ -234,7 +235,10 @@ def check_b13_spell_procs(procs: list[dict]) -> list[str]:
 # Deliberate SpellClassSet changes on pulled stock rows. Bloodthirsty 53186/53187 go from family 17 to 0 on purpose
 # (hunter-rework PET.md 7.1: the old family filter is dropped and spell_hun_pet_bloodthirsty does the gating); they
 # are proc-trigger auras, not SpellMods, so family 0 does not leak a modifier.
-INTENTIONAL_CLASS_SET_CHANGES = frozenset({53186, 53187})
+# S2a (MARKSMANSHIP 6, S2-HANDOFF stale line 11): Lethal Shots 19426/19427/19429 and Ranged Weapon Specialization
+# 19507-19509 go from stock family 0 to 9 on purpose: they become scoped SpellMods (a family-0 SpellMod matches every
+# spell, and check_family_zero_spellmods warns on one).
+INTENTIONAL_CLASS_SET_CHANGES = frozenset({53186, 53187, 19426, 19427, 19429, 19507, 19508, 19509})
 
 
 def check_class_set_matches_stock(rows_by_id: dict[int, dict], stock: dict[int, dict]) -> list[str]:
@@ -357,16 +361,17 @@ class HunterGateNegativeTest(unittest.TestCase):
         self.assertEqual(len(check_b13_repoints(rows)), 1)  # B has no d2 bit
 
     def test_stale_raw_twin_on_built_row_is_caught(self):
-        # Real build_spell_row: the raw_overrides twin is applied last and wins, so a stale one fails.
+        # Real build_spell_row: the raw_overrides twin is applied last and wins, so a stale one fails. (19419, an
+        # orphaned Efficiency rank: S2a turns 19419-19418 eff0 into a DUMMY, so they left B13_REPOINTS.)
         ids_cfg = source.load_ids(TOOL_ROOT / "source" / "ids.yaml")
-        entry = {"id": 19416, "name": "x", "effect1": {"type": 6, "apply_aura": 107},
+        entry = {"id": 19419, "name": "x", "effect1": {"type": 6, "apply_aura": 107},
                  "raw_overrides": {"SpellClassSet": 9, "EffectSpellClassMaskA_2": 0x88801081,
                                    "EffectSpellClassMaskA_3": 0x20000001}}
         row = build.build_spell_row(entry, ReuseContext({}, ids_cfg))
-        self.assertEqual(len(check_b13_repoints({19416: row})), 1)
+        self.assertEqual(len(check_b13_repoints({19419: row})), 1)
         entry["raw_overrides"]["EffectSpellClassMaskA_2"] = 0x88801080
         row = build.build_spell_row(entry, ReuseContext({}, ids_cfg))
-        self.assertEqual(check_b13_repoints({19416: row}), [])
+        self.assertEqual(check_b13_repoints({19419: row}), [])
         self.assertEqual(check_spellmod_scoping([row]), [])
 
     def test_glaive_bit_left_on_strip_row_is_caught(self):

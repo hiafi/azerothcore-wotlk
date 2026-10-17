@@ -148,3 +148,26 @@ PROC_SPELL_PHASE_FINISH = 0x4
 PROC_HIT_NORMAL = 0x1
 PROC_HIT_CRITICAL = 0x2
 PROC_ATTR_TRIGGERED_CAN_PROC = 0x2
+
+# --- S2 Marksmanship composites (MARKSMANSHIP.md 2.4; appended by S2a WP-0, values in the trailing comments) ---
+AIMED_SHOT_MASK = (AIMED_SHOT, 0, 0)                                          # (0x20000, 0, 0)
+CHIMERA_SHOT_MASK = (0, 0, CHIMERA_SHOT)                                      # (0, 0, 0x1)
+STEADY_AIMED = (AIMED_SHOT, 0, STEADY_SHOT)                                   # (0x20000, 0, 0x20000000)
+# Arcane, Multi, Aimed (+ricochet/bounce), Silencing/Scatter, Kill Shot, Chimera, marks, Steady
+HUNTER_SHOTS = (
+    ARCANE_SHOT | MULTI_SHOT | AIMED_SHOT | SCATTER_SILENCING,
+    KILL_SHOT,
+    CHIMERA_SHOT | MARK_PRESS | STEADY_SHOT,
+)                                                                             # (0x61800, 0x800000, 0x28000001)
+RWS_SHOTS = (HUNTER_SHOTS[0] | AUTO_SHOT, HUNTER_SHOTS[1], HUNTER_SHOTS[2])  # (0x61801, 0x800000, 0x28000001)
+# HUNTER_SHOTS + Volley tick, Explosive Shot + tick, Glaive Toss, Chimera - Serpent, half Volley, mark DoTs
+MORTAL_SHOTS_MASK = (
+    HUNTER_SHOTS[0] | VOLLEY,
+    HUNTER_SHOTS[1] | EXPLOSIVE_SHOT,
+    HUNTER_SHOTS[2] | EXPLOSIVE_SHOT_TICK | GLAIVE_TOSS | CHIMERA_SERPENT | HALF_VOLLEY | MARK_DOT,
+)                                                                             # (0x63800, 0x80800000, 0x78000A41)
+RAPID_KILLING_BUFF = (AIMED_SHOT | ARCANE_SHOT, KILL_SHOT, CHIMERA_SHOT)      # (0x20800, 0x800000, 0x1)
+IMPROVED_STINGS_MASK = (SERPENT_STING, 0, MARK_DOT)                           # (0x4000, 0, 0x10000000)
+VOLLEY_DAMAGE = (VOLLEY, 0, HALF_VOLLEY)                                      # (0x2000, 0, 0x40000000)
+BARRAGE_DAMAGE = (VOLLEY | MULTI_SHOT, 0, HALF_VOLLEY)                        # (0x3000, 0, 0x40000000)
+WILD_QUIVER_PROC = (AUTO_SHOT, 0, STEADY_SHOT)                                # (0x1, 0, 0x20000000)

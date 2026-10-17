@@ -102,6 +102,7 @@ trained_by(13161, 204, req_level=20)   # replaces the live @30 row (same key)
 trained_by(53271, 204, req_level=56)
 trained_by(62757, 204, req_level=10)
 trained_by(19577, trainer_id=204, req_level=30)   # Intimidation: baseline since row 1387 became Command II (S1a A12); SpellLevel 30 unchanged
+trained_by(34490, trainer_id=204, req_level=14)   # Silencing Shot: baseline since row 1808 became Falcon's Mark (S2a A21); SpellLevel 14
 trained_by(glaive_toss_201600, 204, req_level=12)
 
 # --- Glaive Toss spellbook entry (B9.3) ---
@@ -120,8 +121,11 @@ procs_on(-53290, proc_flags=0, family_name=9, family_mask=(0x800, 0, 0x20000200)
          spell_type_mask=1, spell_phase_mask=2, hit_mask=2, attributes_mask=2)             # Hunting Party
 procs_on(-53256, proc_flags=0x100, family_name=9, family_mask=(0, 0, 0x20000000),
          spell_phase_mask=0x1, hit_mask=0, chance=0)   # Cobra Strikes: S1b resets Arcane Shot on a CAST-phase Steady Shot
-procs_on(-53234, proc_flags=0, family_name=9, family_mask=(0x20000, 0, 0x20000001),
-         spell_phase_mask=2, hit_mask=2)                                                   # Piercing Shots
+# S2a (MARKSMANSHIP 8, WP brief resolution 2): -53234 narrowed in place to Steady + Aimed crits (Chimera's d2 b0
+# dropped), ProcFlags 0x100 (= the ranks' DBC ProcTypeMask) and SpellTypeMask DAMAGE written out; the other columns
+# keep the live row's 0. This is the only -53234 row (hunter_mm_spells.py must not declare one).
+procs_on(-53234, proc_flags=0x100, family_name=9, family_mask=(0x20000, 0, 0x20000000),
+         spell_type_mask=1, spell_phase_mask=0x2, hit_mask=0x2)                            # Piercing Shots
 procs_on(-53221, proc_flags=0, family_name=9, family_mask=(0, 0, 0x20000000),
          spell_phase_mask=2)                                                               # Improved Steady Shot
 procs_on(-34497, proc_flags=0, family_name=9, family_mask=(0x60800, 0x800000, 0x20000201),

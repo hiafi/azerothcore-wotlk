@@ -121,8 +121,10 @@ REQUIRED_STOCK_RANKS = (
 )
 # Orchestrator ruling (S1a): Steady Shot keeps its stock EquippedItemClass 2 (ranged weapon). It is cast directly by the
 # player and never triggered, so the requirement is wanted. S1b (A6, PT-6) edits Arcane Shot 3044, which keeps its 2 for
-# the same reason (a ranged-weapon shot the player casts). These two are the ONLY exemptions from the -1 guard.
-EQUIPPED_ITEM_CLASS_EXEMPT = frozenset({56641, 3044})
+# the same reason (a ranged-weapon shot the player casts). S2a (S2-HANDOFF M4 / stale line 6) adds the other player-cast
+# ranged shots: Aimed Shot 19434, Chimera Shot 53209, Multi-Shot 2643 and the three marks 201920-201922. These are the
+# ONLY exemptions from the -1 guard (test_hunter_mm_data.PLAYER_CAST_SHOTS mirrors this set).
+EQUIPPED_ITEM_CLASS_EXEMPT = frozenset({56641, 3044, 19434, 53209, 2643, 201920, 201921, 201922})
 TAB = 361
 TAB_RANK_CAP = 200000
 
@@ -1280,12 +1282,13 @@ class HunterBmDataNegativeTest(unittest.TestCase):
         self.assertEqual(len(check_equipped_item_class(rows, (201721,))), 1)            # undeclared
         self.assertEqual(len(check_required_rows_declared(rows, (201720, 201721))), 1)
 
-    def test_only_steady_shot_and_arcane_shot_are_exempt_from_the_equipped_item_class_guard(self):
-        self.assertEqual(EQUIPPED_ITEM_CLASS_EXEMPT, {56641, 3044})
-        rows = {56641: {"ID": 56641, "EquippedItemClass": 2}, 34026: {"ID": 34026, "EquippedItemClass": 2},
-                3044: {"ID": 3044, "EquippedItemClass": 2}}
-        ids = {56641, 34026, 3044} - EQUIPPED_ITEM_CLASS_EXEMPT
-        self.assertEqual(len(check_equipped_item_class(rows, sorted(ids))), 1)      # 34026 is not exempt
+    def test_only_the_player_cast_ranged_shots_are_exempt_from_the_equipped_item_class_guard(self):
+        self.assertEqual(EQUIPPED_ITEM_CLASS_EXEMPT, {56641, 3044, 19434, 53209, 2643, 201920, 201921, 201922})
+        rows = {i: {"ID": i, "EquippedItemClass": 2} for i in (56641, 34026, 3044, 19434, 201920, 201930, 201933)}
+        ids = set(rows) - EQUIPPED_ITEM_CLASS_EXEMPT
+        # 34026 (Kill Command), 201930 (Viper's Bite, a triggered DoT) and 201933 (the free, triggered Arcane Shot) are
+        # not exempt: class 2 on them fails
+        self.assertEqual(len(check_equipped_item_class(rows, sorted(ids))), 3)
         # an S1b display spell left at the stock-style 0 fails
         self.assertEqual(len(check_equipped_item_class({201858: {"ID": 201858, "EquippedItemClass": 0}}, (201858,))), 1)
         self.assertFalse(set(NEW_S1B_IDS) & EQUIPPED_ITEM_CLASS_EXEMPT)

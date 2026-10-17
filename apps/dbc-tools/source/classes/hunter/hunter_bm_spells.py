@@ -36,6 +36,10 @@ COMMAND_DISPLAY_OFFSET = const(
 bm_steady_shot_1150 = tooltip_vars(
     1150, "Talents on Steady Shot",
     fi=talent_mult([34455, 34459, 34460], effect=3),
+    # S2a (MARKSMANSHIP 5.12, R2-6): MM's Precise Shots and Ranged Weapon Specialization, appended in place.
+    ps=talent_mult([19454, 19455, 19456], effect=1),
+    rws=talent_mult([19507, 19508, 19509], effect=1),
+    steady=product('fi', 'ps', 'rws'),
 )
 bm_dragonhawk_1155 = tooltip_vars(
     1155, "Improved Dragonhawk on the explosion",

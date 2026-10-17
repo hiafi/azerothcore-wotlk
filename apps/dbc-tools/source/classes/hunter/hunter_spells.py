@@ -13,9 +13,19 @@ from .hunter_bm_spells import (
     bm_kill_command_1160,
     bm_steady_shot_1150,
 )
+from .hunter_mm_spells import (
+    CHIMERA_SERPENT_BURST_PCT, CHIMERA_SNIPER_CRIT_DAMAGE, mm_arcane_shot_1151, mm_serpent_sting_1152, mm_volley_1172,
+)
 from .hunter_pet import PET_AP_FROM_RAP_PCT, PET_AP_FROM_SP_PCT
 from .hunter_shared_spells import aspect_of_the_dragonhawk_explosion_201601
 from .hunter_trigger_spells import explosive_trap_effect_13812, immolation_trap_13797, volley_42243
+
+
+def _c(row):
+    """A const() row's value as tooltip text (100 -> '100'), BM's interpolation (TOOLTIP-RECONCILE X10)."""
+    value = row['value']
+    return str(int(value)) if float(value).is_integer() else str(value)
+
 
 # Immolation Trap's tick count times Glyph of Immolation Trap (56846: -6 sec, so 3 ticks, and
 # +$56846m2% DoT damage), replacing stock entry 121, which priced the glyph against the old
@@ -197,8 +207,9 @@ volley_1510 = spell(
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PERIODIC_TRIGGER_SPELL, amplitude=1000, trigger_spell=volley_42243.id),
     ],
     spell_icon_id=126,
+    tooltip_vars=mm_volley_1172,   # S2a (MM 5.12): Barrage x Rain of Arrows
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80 2026-10-03: the damage number now comes from pot_text(volley_42243), the trigger spell\'s own potency text, replacing a stock $RAP*<old coefficient>+$<id>m1 cross-reference that showed the converted BasePoints.',
-    raw_overrides={'AttributesEx': 268435612, 'AttributesEx2': 4325376, 'AttributesEx3': 32, 'AttributesEx4': 134217728, 'AttributesEx5': 8192, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 18, 'ChannelInterruptFlags': 31756, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Continuously fires a volley of ammo at the target area, causing ' + pot_text(volley_42243) + ' Arcane damage to enemy targets within $a1 yards every ${$1510d/6}.2 $Lsecond:seconds; for $1510d.', 'EffectBonusMultiplier_1': 0.14300000667572021, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'ImplicitTargetA_3': 1, 'InterruptFlags': 9, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'Speed': 30.0, 'SpellClassMask_1': 8192, 'SpellClassSet': 9, 'SpellLevel': 40, 'SpellVisualID_1': 10384, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Targets': 64},
+    raw_overrides={'AttributesEx': 268435612, 'AttributesEx2': 4325376, 'AttributesEx3': 32, 'AttributesEx4': 134217728, 'AttributesEx5': 8192, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 18, 'ChannelInterruptFlags': 31756, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Continuously fires a volley of ammo at the target area, causing ' + pot_text(volley_42243, var='mult') + ' Arcane damage to enemy targets within $a1 yards every ${$1510d/6}.2 $Lsecond:seconds; for $1510d.', 'EffectBonusMultiplier_1': 0.14300000667572021, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'ImplicitTargetA_3': 1, 'InterruptFlags': 9, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'Speed': 30.0, 'SpellClassMask_1': 8192, 'SpellClassSet': 9, 'SpellLevel': 40, 'SpellVisualID_1': 10384, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Targets': 64},
 )
 
 
@@ -266,8 +277,9 @@ serpent_sting_1978 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=271, misc_value=127),
     ],
     spell_icon_id=536,
+    tooltip_vars=mm_serpent_sting_1152,   # S2a (MM 5.12): Improved Stings x Serpent's Swiftness
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 12 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (hunter pass): converted to ap_potency=33.5 (potency-report default, base/coef already agreed).',
-    raw_overrides={'AttributesEx2': 131072, 'AttributesEx4': 0x4000, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Causes {pot1} Nature damage every $t1 seconds.', 'BaseLevel': 4, 'CastingTimeIndex': 18, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Stings the target, causing {pot1.total} Nature damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 162311, 'EffectSpellClassMaskB_2': 0x88820100, 'EffectSpellClassMaskB_3': 0x2003c201, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 40.0, 'SpellClassMask_1': 16384, 'SpellClassSet': 9, 'SpellLevel': 4, 'SpellVisualID_1': 3179, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx2': 131072, 'AttributesEx4': 0x4000, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Causes {pot1} Nature damage every $t1 seconds.', 'BaseLevel': 4, 'CastingTimeIndex': 18, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Stings the target, causing {pot1.total*sting} Nature damage over $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 162311, 'EffectSpellClassMaskB_2': 0x88820100, 'EffectSpellClassMaskB_3': 0x2003c201, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 40.0, 'SpellClassMask_1': 16384, 'SpellClassSet': 9, 'SpellLevel': 4, 'SpellVisualID_1': 3179, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -414,8 +426,9 @@ arcane_shot_3044 = spell(
         Effect(type=EffectType.DUMMY, base_points=199),   # 20.0% of BASE mana (GetCreateMana) per cast, in tenths of a percent (PT-6, user ruling 2026-10-15)
     ],
     spell_icon_id=218,
+    tooltip_vars=mm_arcane_shot_1151,   # S2a (MM 5.12): RWS x Arcane Attunement x Ferocious Inspiration
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 6); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 11 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (hunter pass): converted to ap_potency=135.7 (potency-report default, base/coef already agreed).',
-    raw_overrides={'AttributesEx2': 131072, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 18, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An instant shot that causes {pot1} Arcane damage and restores ${$m2/10}.1% of your base mana.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 40.0, 'SpellClassMask_1': 2048, 'SpellClassSet': 9, 'SpellLevel': 6, 'SpellVisualID_1': 3299, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx2': 131072, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 18, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An instant shot that causes {pot1*mult} Arcane damage and restores ${$m2/10}.1% of your base mana.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 40.0, 'SpellClassMask_1': 2048, 'SpellClassSet': 9, 'SpellLevel': 6, 'SpellVisualID_1': 3299, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1762,7 +1775,7 @@ steady_shot_56641 = spell(
     spell_icon_id=2228,
     tooltip_vars=bm_steady_shot_1150,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P7 (hunter pass): converted effect 1 (the flat + AP-scaling term) to ap_potency=42.6 (potency-report default, base/coef already agreed); the raw weapon+ammo damage added in SpellEffects.cpp\'s SPELLFAMILY_HUNTER case is real weapon itemization, not hard-coded AP math (no RAP term there), so it is untouched.',
-    raw_overrides={'AttributesEx2': 131072, 'AttributesEx4': 134217728, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 4, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A steady shot that causes {pot1*fi} Physical damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 40.0, 'SpellClassMask_3': m.STEADY_SHOT, 'SpellClassSet': 9, 'SpellLevel': 8, 'SpellVisualID_1': 8155, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx2': 131072, 'AttributesEx4': 134217728, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 4, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A steady shot that causes {pot1*steady} Physical damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 40.0, 'SpellClassMask_3': m.STEADY_SHOT, 'SpellClassSet': 9, 'SpellLevel': 8, 'SpellVisualID_1': 8155, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 # 204 is the live Hunter trainer; Steady Shot is a baseline at 8 (hunter-rework SHARED B1).
 trained_by(steady_shot_56641, trainer_id=204, req_level=8)
@@ -2000,20 +2013,23 @@ aimed_shot_19434 = spell(
     name='Aimed Shot',
     school=School.NORMAL,
     attributes=65554,
-    category=85,
+    category=1301,   # S2a (MM 5.1, Q17): split from Multi-Shot's 85; spell_category(1301) is in hunter_mm_spells.py
+    # Stale line 1 / M2: SpellInfo::CalcCastTime adds 500 ms to every ranged-slot shot, so 1500 ms (CastingTimeIndex 16)
+    # is a 2.0 s live cast. The typed value and the raw twin move together. The tooltip shows "1.5 sec cast".
+    cast_time_ms=1500,
     cooldown_ms=0,
-    category_cooldown_ms=10000,
+    category_cooldown_ms=10000,   # the only cooldown (SHARED B14)
     mana_cost=0,
-    mana_cost_pct=8,
+    mana_cost_pct=8,   # placeholder, M
     range_yards=35.0,
-    duration_ms=10000,
     effects=[
-        Effect(type=121, base_points=4, points_per_level=6.716666666666667, implicit_target_a=6),
-        Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=6, apply_aura=AuraType.MOD_HEALING_PCT, misc_value=127),
+        # Q11: no flat part. The damage is pure weapon_potency, which takes no time basis (M3).
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=220, implicit_target_a=6),   # placeholder, M
     ],
     spell_icon_id=1629,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx2': 131072, 'AttributesEx4': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Healing effects reduced by $s2%.', 'BaseLevel': 20, 'CastingTimeIndex': 18, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An aimed shot that increases ranged damage by $s1 and reduces healing done to that target by $s2%.  Lasts $d.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'MaxLevel': 80, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 40.0, 'SpellClassMask_1': 131072, 'SpellClassSet': 9, 'SpellLevel': 20, 'SpellVisualID_1': 7955, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data. S2a (MARKSMANSHIP 5.1): 2.0 s live cast, category 1301 / 10 s, 220 weapon potency; the stock flat bp 4 + 6.72/level and the -50% healing debuff are dropped (Q11, MM 0.5).',
+    raw_overrides={'AttributesEx2': 131072, 'AttributesEx4': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 16, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "An aimed shot that deals $s2% weapon damage and consumes your marks on the target, triggering each mark's effect.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 40.0, 'SpellClassMask_1': 131072, 'SpellClassSet': 9, 'SpellLevel': 20, 'SpellVisualID_1': 7955, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -2165,7 +2181,7 @@ silencing_shot_34490 = spell(
     ],
     spell_icon_id=127,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx2': 131072, 'AttributesEx3': 0x10000, 'AttributesEx7': 2048, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Silenced.', 'CastingTimeIndex': 18, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A shot that deals $s1% weapon damage and silences the target for $d. Non-player victims are also interrupted for $32747d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMechanic_3': 26, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 60.0, 'SpellClassMask_1': 262144, 'SpellClassSet': 9, 'SpellLevel': 14, 'SpellVisualID_1': 8344},
+    raw_overrides={'AttributesEx2': 131072, 'AttributesEx3': 0x10000, 'AttributesEx7': 2048, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Silenced.', 'CastingTimeIndex': 18, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A shot that deals $s1% weapon damage and silences the target for $d. Non-player victim spellcasting is also interrupted for $32747d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMechanic_3': 26, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 60.0, 'SpellClassMask_1': 262144, 'SpellClassSet': 9, 'SpellLevel': 14, 'SpellVisualID_1': 8344},
 )
 
 
@@ -2199,18 +2215,18 @@ chimera_shot_53209 = spell(
     school=School.NATURE,
     attributes=65538,
     cooldown_ms=10000,
-    category_cooldown_ms=6000,
+    category_cooldown_ms=0,   # S2a (MM 5.6): the stock 6000 was inert (no category)
     mana_cost=0,
-    mana_cost_pct=12,
+    mana_cost_pct=12,   # placeholder, M
     range_yards=35.0,
     effects=[
         Effect(type=77, die_sides=0, implicit_target_a=6),
         Effect(type=121, base_points=-1, implicit_target_a=6),
-        Effect(type=31, base_points=124, implicit_target_a=6),
+        Effect(type=31, weapon_potency=150, implicit_target_a=6),   # R2-15 (user 2026-10-13); placeholder, M
     ],
     spell_icon_id=3412,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx2': 131072, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 18, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You deal $s3% weapon damage, refreshing the current Sting on your target and triggering an effect:\r\n\r\nSerpent Sting - Instantly deals 40% of the damage done by your Serpent Sting.\r\n\r\nViper Sting - Instantly restores mana to you equal to 60% of the total amount drained by your Viper Sting.\r\n\r\nScorpid Sting - Attempts to Disarm the target for 10 sec. This effect cannot occur more than once per 1 minute.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 40.0, 'SpellClassMask_3': 1, 'SpellClassSet': 9, 'SpellLevel': 60, 'SpellVisualID_1': 11725, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx2': 131072, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 18, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "You deal $s3% weapon damage, refreshing your Serpent Sting on the target and instantly dealing " + _c(CHIMERA_SERPENT_BURST_PCT) + "% of its total damage. Each of your marks on the target also triggers, without being consumed: Sniper's Mark makes this a critical strike with " + _c(CHIMERA_SNIPER_CRIT_DAMAGE) + "% more critical strike damage; Viper's Mark adds a stack and applies Viper's Venom; Falcon's Mark increases your attack power by $201947s1% for $201947d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 40.0, 'SpellClassMask_3': 1, 'SpellClassSet': 9, 'SpellLevel': 60, 'SpellVisualID_1': 11725, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
