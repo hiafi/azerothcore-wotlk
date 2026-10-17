@@ -167,6 +167,7 @@ namespace HunterData
     constexpr uint32 SPELL_KILL_COMMAND = 34026; // kill_command_34026
     constexpr uint32 SPELL_KILL_COMMAND_34027 = 34027; // kill_command_34027
     constexpr uint32 SPELL_ASPECT_OF_THE_VIPER = 34074; // aspect_of_the_viper_34074
+    constexpr uint32 SPELL_ADVANTAGED_STATE_DND = 34082; // advantaged_state_dnd_34082
     constexpr uint32 SPELL_ANIMAL_HANDLER = 34453; // animal_handler_34453
     constexpr uint32 SPELL_ANIMAL_HANDLER_34454 = 34454; // animal_handler_34454
     constexpr uint32 SPELL_FEROCIOUS_INSPIRATION = 34455; // ferocious_inspiration_34455
@@ -503,6 +504,10 @@ namespace HunterData
     constexpr uint32 SPELL_VIPERS_VENOM = 201931; // vipers_venom_201931
     constexpr uint32 SPELL_CONVERGENCE = 201932; // convergence_201932
     constexpr uint32 SPELL_ARCANE_SHOT_FREE = 201933; // arcane_shot_free_201933
+    constexpr uint32 SPELL_AIMED_SHOT_RICOCHET = 201934; // aimed_shot_ricochet_201934
+    constexpr uint32 SPELL_AIMED_SHOT_BOUNCE = 201935; // aimed_shot_bounce_201935
+    constexpr uint32 SPELL_HALF_VOLLEY = 201936; // half_volley_201936
+    constexpr uint32 SPELL_HALF_VOLLEY_TICK = 201937; // half_volley_tick_201937
     constexpr uint32 SPELL_FIRE_MM_BUFF = 201940; // fire_mm_buff_201940
     constexpr uint32 SPELL_QUICKENING = 201941; // quickening_201941
     constexpr uint32 SPELL_FALCONS_HASTE = 201942; // falcons_haste_201942
@@ -513,7 +518,9 @@ namespace HunterData
     constexpr uint32 SPELL_CHIMERA_SHOT_FALCON = 201947; // chimera_shot_falcon_201947
     constexpr uint32 SPELL_SNIPERS_MARK_AIMED_CRIT = 201948; // snipers_mark_aimed_crit_201948
     constexpr uint32 SPELL_SNIPERS_MARK_CHIMERA_CRIT = 201949; // snipers_mark_chimera_crit_201949
+    constexpr uint32 SPELL_LONE_SURVIVOR_BUFF = 201950; // lone_survivor_buff_201950
     constexpr uint32 SPELL_MARKSMANSHIP_MASTERY = 201951; // marksmanship_mastery_201951
+    constexpr uint32 SPELL_COMBAT_EXPERIENCE_CAPSTONE = 201952; // combat_experience_capstone_201952
     constexpr uint32 SPELL_QUICK_DRAW = 201960; // quick_draw_201960
     constexpr uint32 SPELL_QUICK_DRAW_201961 = 201961; // quick_draw_201961
     constexpr uint32 SPELL_QUICK_DRAW_201962 = 201962; // quick_draw_201962
@@ -549,15 +556,20 @@ namespace HunterData
     constexpr uint32 NPC_STAMPEDING_BEAST_CUNNING = 300207; // stampeding_beast_cunning_300207
 
     // const() - hidden script numbers (tier 3)
+    constexpr uint32 BARRAGE_ICD_MS = 10000; // Barrage capstone: half Volley internal cooldown, ms (MM 5.5).
     constexpr float BEAST_CLEAVE_RADIUS_YD = 8.0f; // Beast Cleave splash radius around the victim, yards (BM 13).
     constexpr int32 CHIMERA_SERPENT_BURST_PCT = 40; // Chimera Shot: Serpent Sting burst, percent of the sting's total damage (MM 5.6).
     constexpr int32 CHIMERA_SNIPER_CRIT_CHANCE = 100; // Sniper's Mark: Chimera Shot crit chance, flat points (MM 5.6).
     constexpr int32 CHIMERA_SNIPER_CRIT_DAMAGE = 100; // Sniper's Mark: Chimera Shot crit damage bonus, percent (MM 5.6).
+    constexpr int32 COMBAT_EXPERIENCE_CAPSTONE_PCT = 30; // Combat Experience capstone: Intellect, percent of Agility (MM 5.10).
     constexpr int32 COMMAND_DISPLAY_OFFSET = 138; // PT-5: the pet-spellbook display passive of commanded spell N is N + this (201720..201735 -> 201858..201873).
     constexpr uint8 CONVERGENCE_MAX_TARGETS = 5; // Convergence splash target cap, the centre excluded (MM 5.10).
     constexpr int32 CONVERGENCE_SPLASH_PCT = 50; // Convergence splash share of the centre hit, percent (MM 5.10).
     constexpr uint32 DEADEYE_CDR_MS = 2000; // Deadeye capstone: mark cooldown cut per Aimed Shot crit, ms (MM 5.2).
     constexpr uint32 FOCUSED_AIM_CDR_MS = 1000; // Focused Aim capstone: Aimed Shot cooldown cut per Steady Shot crit, ms (MM 5.11).
+    constexpr uint32 HUNTER_SHOTS_MASK_0 = 399360; // _masks.HUNTER_SHOTS, SpellFamilyFlags[0] (MM 2.4).
+    constexpr uint32 HUNTER_SHOTS_MASK_1 = 8388608; // _masks.HUNTER_SHOTS, SpellFamilyFlags[1] (MM 2.4).
+    constexpr uint32 HUNTER_SHOTS_MASK_2 = 671088641; // _masks.HUNTER_SHOTS, SpellFamilyFlags[2] (MM 2.4).
     constexpr int32 IAOTV_CAPSTONE_MANA_PCT = 1; // Improved Aspect of the Viper capstone mana, percent of max mana (BM 13).
     constexpr uint8 KEEN_EYE_GAIN = 2; // Keen Eye extra stacks on each mark on the target (MM 5.10).
     constexpr int32 KILL_COMMAND_BW_REDUCTION_MS = 5000; // Kill Command cut to the Bestial Wrath cooldown, ms (BM 13).
@@ -568,6 +580,7 @@ namespace HunterData
     constexpr uint8 MULTI_SHOT_TARGET_CAP = 5; // Multi-Shot target cap, primary included (MM 5.3).
     constexpr uint8 PACK_MAX_TARGETS = 4; // Trick Shots ricochet / Rain of Arrows bounce target cap (MM 5.2).
     constexpr float PACK_RADIUS_YD = 8.0f; // Trick Shots ricochet / Rain of Arrows bounce radius, yards (MM 5.2).
+    constexpr int32 PACK_SHOT_DAMAGE_PCT = 50; // Ricochet / bounce damage, percent of Aimed Shot's (MM 5.3, 5.4).
     constexpr int32 PET_AP_FROM_RAP_PCT = 100; // Pet attack power per owner ranged attack power, percent (PET 5.3).
     constexpr int32 PET_AP_FROM_SP_PCT = 100; // Pet attack power per owner spell power, percent (PET 5.3).
     constexpr int32 PET_CRIT_SHARE_PCT = 100; // Share of owner crit the pet inherits, percent (PET 5.3).

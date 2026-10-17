@@ -4,9 +4,9 @@ DoTs, Convergence, the free Arcane Shot, the charged and payoff buffs, the Snipe
 plus the MM const() block (TOOLTIP-RECONCILE X10, MARKSMANSHIP 4.8), the MM tooltip_vars entries (5.12), the S2a
 spell_proc rows (8), the S2a script bindings / unbinds (10.2 as amended by S2a-HANDOFF A1-A21) and spellcategory 1301.
 
-Skeleton written by S2a WP-0 0-dsl (variable stems and Names frozen for HunterData.h), completed by S2a WP-A1. Not in
-S2a: 201934-201937, 201950, 201952 (S2b declares them). EquippedItemClass -1 on every row except the three player-cast
-marks (2, M4).
+Skeleton written by S2a WP-0 0-dsl (variable stems and Names frozen for HunterData.h), completed by S2a WP-A1. S2b
+WP-A1 adds 201934-201937, 201950, 201952, the 24691 spell_proc row, the S2b bindings and linked_spell(201982, 201952).
+EquippedItemClass -1 on every row except the three player-cast marks (2, M4).
 
 Imports: this file imports only `_masks` (orchestrator ruling, S2a): hunter_spells.py / hunter_trigger_spells.py /
 hunter_mm_ranks.py import the consts and tooltip_vars below, so every stock or rank spell is named here by bare id.
@@ -86,6 +86,33 @@ CONVERGENCE_SPLASH_PCT = const(
 CONVERGENCE_MAX_TARGETS = const(
     'CONVERGENCE_MAX_TARGETS', 5, 'Convergence splash target cap, the centre excluded (MM 5.10).', cpp_type='uint8',
 )
+# S2b A1 (S2a deviation 8, TOOLTIP-RECONCILE X10): the tooltip numbers S2a left as literals, plus the shot mask the
+# Rapid Killing execute clause reads in C++ (B8; _masks.py has no C++ home, so one uint32 per SpellFamilyFlags dword).
+PACK_SHOT_DAMAGE_PCT = const(
+    'PACK_SHOT_DAMAGE_PCT', 50,
+    "Ricochet / bounce damage, percent of Aimed Shot's (MM 5.3, 5.4).",
+    cpp_type='int32',
+)
+BARRAGE_ICD_MS = const(
+    'BARRAGE_ICD_MS', 10000, "Barrage capstone: half Volley internal cooldown, ms (MM 5.5).",
+    cpp_type='uint32',
+)
+COMBAT_EXPERIENCE_CAPSTONE_PCT = const(
+    'COMBAT_EXPERIENCE_CAPSTONE_PCT', 30, 'Combat Experience capstone: Intellect, percent of Agility (MM 5.10).',
+    cpp_type='int32',
+)
+HUNTER_SHOTS_MASK_0 = const(
+    'HUNTER_SHOTS_MASK_0', m.HUNTER_SHOTS[0], '_masks.HUNTER_SHOTS, SpellFamilyFlags[0] (MM 2.4).',
+    cpp_type='uint32',
+)
+HUNTER_SHOTS_MASK_1 = const(
+    'HUNTER_SHOTS_MASK_1', m.HUNTER_SHOTS[1], '_masks.HUNTER_SHOTS, SpellFamilyFlags[1] (MM 2.4).',
+    cpp_type='uint32',
+)
+HUNTER_SHOTS_MASK_2 = const(
+    'HUNTER_SHOTS_MASK_2', m.HUNTER_SHOTS[2], '_masks.HUNTER_SHOTS, SpellFamilyFlags[2] (MM 2.4).',
+    cpp_type='uint32',
+)
 
 
 def _n(c):
@@ -144,8 +171,13 @@ spell_category(1301, comment="Aimed Shot (split from 85)")
 _MASK_KEYS = {1: 'A', 2: 'B', 3: 'C'}
 _FAMILY = {'SpellClassSet': 9}
 _HIDDEN = 464                       # 0x1D0: passive, DO_NOT_DISPLAY (0x80), the rank-passive set
+_DO_NOT_DISPLAY = 0x80              # Attributes: hidden aura, not passive (SharedDefines.h; client only)
 _SUPPRESS_CASTER_PROCS = 0x10000    # AttributesEx3: proc-free payloads (MM 5 common rules)
 _DO_NOT_RESET_COMBAT_TIMERS = 0x20000   # AttributesEx2: stock shot flag (Arcane / Aimed / Chimera Shot)
+# AttributesEx2 SPELL_ATTR2_IGNORE_LINE_OF_SIGHT (SharedDefines.h): S2b R-cpp m-1. The pack shots and Convergence are
+# defined around the primary target, so CheckCast's hunter-to-target / hunter-to-dest LoS is the wrong test (a marked
+# mob behind a pillar would fail its ricochet with SPELL_FAILED_LINE_OF_SIGHT and log an error).
+_IGNORE_LINE_OF_SIGHT = 0x4
 # SpellCastTimes row 18 (-1000000 ms): the +500 ranged-slot add still clamps to 0 (M2).
 _USES_RANGED_SLOT_INSTANT = 18
 
@@ -314,10 +346,12 @@ convergence_201932 = spell(
           'MM 5.10 gives eff1 150; the DSL allows one direct AP coefficient per spell (D6), so eff1 carries 300 '
           'too and '
           'spell_hun_convergence (S2b) scales EFFECT_1 by CONVERGENCE_SPLASH_PCT (Swipe 201726 precedent). Physical, '
-          'RANGED, Speed 0, Targets 0x40 (dest), SUPPRESS_CASTER_PROCS, no family bit. tooltip_vars 1171.',
+          'RANGED, Speed 0, Targets 0x40 (dest), SUPPRESS_CASTER_PROCS, IGNORE_LINE_OF_SIGHT (S2b R-cpp m-1: no '
+          'hunter-to-centre LoS fail; the splash also skips the centre-to-target LoS), no family bit. '
+          'tooltip_vars 1171.',
     raw_overrides={
         'EquippedItemClass': -1, 'SpellLevel': 40, 'DefenseType': 3, 'SpellClassSet': 9, 'Targets': 0x40,
-        'AttributesEx3': _SUPPRESS_CASTER_PROCS,
+        'AttributesEx2': _IGNORE_LINE_OF_SIGHT, 'AttributesEx3': _SUPPRESS_CASTER_PROCS,
         'Description_Lang_enUS': 'Deals {pot1*mfd} Physical damage to the target and ' + _n(CONVERGENCE_SPLASH_PCT)
                                  + '% as much to up to ' + _n(CONVERGENCE_MAX_TARGETS) + ' other enemies within $a2 '
                                  'yards that are in combat with you.',
@@ -364,7 +398,8 @@ arcane_shot_free_201933 = spell(
 
 
 # ---- buffs and helpers (MARKSMANSHIP 4.5, 4.6, 5.3, 5.4, 5.6-5.10). Visible buffs (M1): no 0x40, no 0x80, no
-# AttributesEx7 0x10000000. Hidden: 201948, 201949, 201951. Every SpellMod row: SpellClassSet 9 + a _masks.py mask. ----
+# AttributesEx7 0x10000000. Hidden on purpose: 201948, 201949, 201951, S2b's 201952 (passives) and S2b's half Volley
+# carrier 201936 (0x80 only, not passive). Every SpellMod row: SpellClassSet 9 + a _masks.py mask. ----
 def _buff(spell_id, name, effects, icon, duration_ms, notes, masks=None, raw=None, attributes=0):
     overrides = {'EquippedItemClass': -1}
     overrides.update(_mask_overrides(masks))
@@ -497,6 +532,158 @@ marksmanship_mastery_201951 = _buff(
 )
 
 
+# ---- S2b: the ricochet and bounce, Barrage's half Volley, Lone Survivor's buff, Combat Experience's capstone
+# (MARKSMANSHIP 5.3, 5.4, 5.5, 5.10; S2b-HANDOFF B2, B6, B7, B9). EquippedItemClass -1 on all six (stale line 6, M4).
+
+# Ricochet 201934 / bounce 201935 (B2): Aimed Shot copies on d0 b17 (R2-12: Aimed Shot's talents and the Sniper crit
+# helper reach them), Speed 0 (launch and hit inside the handler's CastSpell), always cast with TRIGGERED_FULL_MASK (R3:
+# only TRIGGERED_IGNORE_SPELL_AND_CATEGORY_CD keeps the d0 b17 load fix's 10 s RecoveryTime from starting).
+# Must equal aimed_shot_19434's eff1 weapon_potency (hunter_spells.py imports this file, so no import back).
+_AIMED_SHOT_WEAPON_POTENCY = 220
+_PACK_SHOT_WEAPON_POTENCY = _AIMED_SHOT_WEAPON_POTENCY * int(PACK_SHOT_DAMAGE_PCT['value']) // 100   # 110
+
+
+def _pack_shot(spell_id, kind, notes):
+    return spell(
+        id=spell_id,
+        name='Aimed Shot',
+        school=School.NORMAL,
+        cast_time_ms=0,
+        cooldown_ms=0,
+        category_cooldown_ms=0,
+        mana_cost=0,
+        mana_cost_pct=0,
+        range_yards=50000.0,
+        effects=[
+            Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
+            Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=_PACK_SHOT_WEAPON_POTENCY,
+                   implicit_target_a=6),
+        ],
+        spell_icon_id=253,
+        notes=notes,
+        raw_overrides={
+            'EquippedItemClass': -1, 'SpellLevel': 20, 'DefenseType': 3,
+            'SpellClassSet': 9, 'SpellClassMask_1': m.AIMED_SHOT,
+            'CastingTimeIndex': _USES_RANGED_SLOT_INSTANT, 'Speed': 0.0, 'AttributesEx2': _IGNORE_LINE_OF_SIGHT,
+            'AttributesEx3': _SUPPRESS_CASTER_PROCS, 'SpellVisualID_1': 7955,   # Aimed Shot's visual
+            'Description_Lang_enUS': f'A {kind} of your Aimed Shot that deals $s2% weapon damage.',
+        },
+    )
+
+
+aimed_shot_ricochet_201934 = _pack_shot(
+    201934, 'ricochet',
+    'S2b A1 / MM 5.3 (B2): Trick Shots ricochet. Physical, RANGED, d0 b17, Speed 0, CastingTimeIndex 18, no cost or '
+    'cooldown, 50000 yd, SUPPRESS_CASTER_PROCS, IGNORE_LINE_OF_SIGHT (S2b R-cpp m-1), SpellLevel 20, icon 253; eff0 '
+    'NORMALIZED_WEAPON_DMG bp -1, eff1 '
+    'weapon_potency 110 (PACK_SHOT_DAMAGE_PCT of Aimed Shot\'s 220). spell_hun_aimed_shot_ricochet scales OnHit by '
+    'Triangulation x the Sniper payoff; the handler consumes the target\'s marks afterwards. Visual 7955 (Aimed Shot).',
+)
+aimed_shot_bounce_201935 = _pack_shot(
+    201935, 'bounce',
+    'S2b A1 / MM 5.4 (B2): Rain of Arrows bounce, identical to the ricochet 201934 and unscripted (reads and consumes '
+    'no marks). Visual 7955 (Aimed Shot).',
+)
+
+# Half Volley 201936 / tick 201937 (B6, Q30, the warlock Rain of Fire C5 shape): 201936 eff0 is the dynobj and the
+# snapshot source (SpellDamageBonusDone at AfterEffectApply; Barrage / Rain of Arrows reach it through d2 b30), eff1 3
+# unhasted 1 s ticks (no AttributesEx5 0x2000); spell_hun_half_volley_aura casts 201937 with BP0 = the snapshot.
+# Hidden on purpose (M1): Attributes 0x80 only, so neither the hunter's 3 s eff1 aura nor the eff0 DUMMY on enemies
+# shows an icon. Not passive (0x40) and no Stances, so no server path reads the bit: the dynobj, the periodic and the
+# aura script run as before.
+half_volley_201936 = spell(
+    id=201936,
+    name='Volley',
+    school=School.ARCANE,
+    attributes=_DO_NOT_DISPLAY,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    duration_ms=3000,
+    effects=[
+        # Placeholder, M: one Volley tick (42243's 75.5 direct, T 1.5).
+        Effect(type=EffectType.PERSISTENT_AREA_AURA, apply_aura=AuraType.DUMMY, implicit_target_a=28, radius_yards=8.0,
+               ap_potency=75.5, potency_kind='direct', time_basis_ms=1500),
+        Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=1000, implicit_target_a=1),
+    ],
+    spell_icon_id=126,
+    tooltip_vars=mm_volley_1172,
+    notes='S2b A1 / MM 5.5 (B6): Barrage\'s half Volley. Arcane, RANGED, 3 s, Targets 0x40 (dest), 50000 yd, d2 b30 '
+          '(HALF_VOLLEY), SUPPRESS_CASTER_PROCS, visual 10384 (Volley\'s), SpellLevel 40 (= 42243\'s, S2b R-data M-1: '
+          'the potency BaseLevel; 60 gave every hunter below 60 the level-60 base), icon 126, hidden (Attributes '
+          '0x80, A3), CANNOT_BE_SAVED (custom_attr). eff0 PERSISTENT_AREA_AURA DUMMY target 28 radius 8, '
+          'ap_potency 75.5 direct T 1.5 (the snapshot source, = one 42243 tick, placeholder M); eff1 PERIODIC_DUMMY 1000 ms on self, unhasted (3 ticks). '
+          'tooltip_vars 1172.',
+    raw_overrides={
+        # SpellLevel = the Volley tick 42243's: potency derives BaseLevel from it and CalcValue lifts any lower caster
+        # level to BaseLevel, so this keeps the snapshot equal to one 42243 tick at every level (pytest-guarded).
+        'EquippedItemClass': -1, 'SpellLevel': 40, 'DefenseType': 3, 'Targets': 0x40,
+        'SpellClassSet': 9, 'SpellClassMask_3': m.HALF_VOLLEY, 'AttributesEx3': _SUPPRESS_CASTER_PROCS,
+        'SpellVisualID_1': 10384,
+        'Description_Lang_enUS': 'Calls down a volley of arrows at the target location, dealing {pot1*mult} Arcane '
+                                 'damage to enemies within $a1 yards that are in combat with you every $t2 sec for $d.',
+        'AuraDescription_Lang_enUS': 'Raining arrows on the target area.',
+    },
+)
+half_volley_tick_201937 = spell(
+    id=201937,
+    name='Volley',
+    school=School.ARCANE,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=87, implicit_target_b=16, radius_yards=8.0,
+               potency_excluded='snapshot from 201936 eff0 passed as BP0 each tick (C5)'),
+    ],
+    spell_icon_id=126,
+    notes='S2b A1 / MM 5.5 (B6): half Volley tick. Arcane SCHOOL_DAMAGE, TARGET_DEST_DEST (87) + '
+          'TARGET_UNIT_DEST_AREA_ENEMY (16) radius 8, amount = BP0 from spell_hun_half_volley_aura (potency_excluded), '
+          'IGNORE_CASTER_MODIFIERS | SUPPRESS_CASTER_PROCS (no second done pass, no procs), RANGED, 100 yd (RangeIndex '
+          '135), visual 9493 (42243\'s), family 9 with no bit (FAMILY-BITS 0.6). spell_hun_half_volley_tick keeps '
+          'in-combat units only.',
+    raw_overrides={
+        'EquippedItemClass': -1, 'SpellLevel': 60, 'DefenseType': 3, 'SpellClassSet': 9, 'RangeIndex': 135,
+        'AttributesEx3': 0x20000000 | _SUPPRESS_CASTER_PROCS, 'SpellVisualID_1': 9493,
+    },
+)
+
+# Lone Survivor 201950 (B7, M1 visible): the DBC 5% is a default; spell_hun_lone_survivor / RefreshLoneSurvivor set the
+# rank's eff0 (Classic) or eff1 (Classless, M12) through BP0. No number in the aura text (X7 spike still pending).
+lone_survivor_buff_201950 = _buff(
+    201950, 'Lone Survivor',
+    [_self_aura(AuraType.MOD_DAMAGE_PERCENT_DONE, 4, misc_value=127)],
+    535, -1,
+    'S2b A1 / MM 5.10 (B7): Lone Survivor buff, VISIBLE (M1: not passive, no 0x80, AttributesEx7 0). '
+    'MOD_DAMAGE_PERCENT_DONE all schools (misc 127) bp 4 (DBC default 5%; the script passes the rank / Classless '
+    'value), until removed (the rank\'s 500 ms tick, pet summon, pet death). Icon 535 (X21).',
+    raw={'AttributesEx7': 0,
+         'Description_Lang_enUS': 'Increases the damage you deal while you have no pet.',
+         'AuraDescription_Lang_enUS': 'Damage dealt increased.'},
+)
+
+# Combat Experience capstone 201952 (B9, M1 hidden): linked to Combat Experience r3 201982 (type 2, below);
+# spell_hun_combat_experience_capstone sets eff0 to COMBAT_EXPERIENCE_CAPSTONE_PCT of Agility on each eff1 tick.
+combat_experience_capstone_201952 = _buff(
+    201952, 'Combat Experience',
+    [_self_aura(AuraType.MOD_STAT, -1, misc_value=3),     # misc 3 = STAT_INTELLECT
+     _self_aura(AuraType.PERIODIC_DUMMY, 0, amplitude=1000)],
+    2223, -1,
+    'S2b A1 / MM 5.10 (B9): hidden Combat Experience capstone passive (attributes 464). eff0 MOD_STAT Intellect bp -1 '
+    '(0), set by spell_hun_combat_experience_capstone from eff1 PERIODIC_DUMMY (1 s) to COMBAT_EXPERIENCE_CAPSTONE_PCT '
+    'x Agility, only on change. Int never feeds Agility (no loop).',
+    raw={'Description_Lang_enUS': 'Increases your Intellect by ' + _n(COMBAT_EXPERIENCE_CAPSTONE_PCT)
+                                  + '% of your Agility.'},
+    attributes=_HIDDEN,
+)
+
+
 # ---- spell_proc rows (MARKSMANSHIP 8). Every key is declared only here (−53234 is A4's, in hunter_shared_spells.py).
 # chance 0 = the DBC ProcChance; 100 on the deterministic carriers. ----
 # Master Marksman: Steady Shot CAST -> Fire! (new row; ranks 34485-34487 carry ProcChance 4/8/12, A3).
@@ -517,6 +704,10 @@ procs_on(efficiency_buff_201945, proc_flags=0x100, family_name=9, family_mask=m.
 procs_on(precise_shots_buff_201946, proc_flags=0x100, family_name=9, family_mask=m.STEADY_SHOT_MASK,
          spell_phase_mask=0x1, chance=100.0)
 procs_on(35098, proc_flags=0x100, family_name=9, family_mask=m.RAPID_KILLING_BUFF, spell_phase_mask=0x1, chance=100.0)
+# S2b B6: Barrage r3's half Volley. Multi-Shot CAST (non-triggered: no attributes_mask 0x2), chance 0 = the DBC 25%,
+# BARRAGE_ICD_MS internal cooldown; eff0 (the SpellMod) never procs. spell_hun_barrage_capstone's OnEffectProc on eff1.
+procs_on(24691, proc_flags=0x100, family_name=9, family_mask=(m.MULTI_SHOT, 0, 0), spell_phase_mask=0x1,
+         cooldown_ms=int(BARRAGE_ICD_MS['value']), disable_effects_mask=0x1)
 
 
 # ---- script bindings and unbinds (MARKSMANSHIP 10.2 as amended by S2a A1-A21; positive keys only, L7). Stock
@@ -538,11 +729,29 @@ unbind_script(-53234, 'spell_hun_piercing_shots')                          # exa
 for _rank in (53234, 53237, 53238):                                        # Piercing Shots r1-r3
     scripted_by(_rank, 'spell_hun_piercing_shots_mm')
 
+# S2b (S2b-HANDOFF brief; positive keys only, L7; 2643 / 1510 / 24691 / 19407 / 19412 have no live binding, and stock
+# spell_hun_volley_trigger stays on -42243).
+scripted_by(2643, 'spell_hun_multi_shot_mm')                               # Multi-Shot (its first binding)
+scripted_by(aimed_shot_ricochet_201934, 'spell_hun_aimed_shot_ricochet')
+scripted_by(convergence_201932, 'spell_hun_convergence')
+scripted_by(1510, 'spell_hun_volley_mm')                                   # Volley (additive to -42243's trigger)
+scripted_by(24691, 'spell_hun_barrage_capstone')                           # Barrage r3
+scripted_by(half_volley_201936, 'spell_hun_half_volley_aura')
+scripted_by(half_volley_tick_201937, 'spell_hun_half_volley_tick')
+for _rank in (19407, 19412):                                               # Lone Survivor r1-r2
+    scripted_by(_rank, 'spell_hun_lone_survivor')
+scripted_by(combat_experience_capstone_201952, 'spell_hun_combat_experience_capstone')
+
 linked_spell(53244, marksmanship_mastery_201951.id, 2)                     # Marked for Death r3 -> Mastery passive
+linked_spell(201982, combat_experience_capstone_201952.id, 2)              # Combat Experience r3 -> capstone passive
 
 # SPELL_ATTR0_CU_AURA_CANNOT_BE_SAVED (0x01000000, SpellInfo.h; Aura::CanBeSaved): the script-set amounts would come
-# back stale from character_aura at login. Falcon's Haste is non-passive (saved otherwise); the crit helpers are
-# passive (never saved anyway), set explicitly so a later attribute change can't start saving them.
+# back stale from character_aura at login. Falcon's Haste and S2b's Lone Survivor buff are non-passive (saved
+# otherwise); the crit helpers are passive (never saved anyway), set explicitly so a later attribute change can't start
+# saving them. S2b's half Volley caster aura 201936 is non-passive too (R-cpp m-4): a logout in its 3 s window would
+# reload it without its dynobj.
 custom_attr(falcons_haste_201942, attributes=0x01000000)
+custom_attr(lone_survivor_buff_201950, attributes=0x01000000)
+custom_attr(half_volley_201936, attributes=0x01000000)
 custom_attr(snipers_mark_aimed_crit_201948, attributes=0x01000000)
 custom_attr(snipers_mark_chimera_crit_201949, attributes=0x01000000)

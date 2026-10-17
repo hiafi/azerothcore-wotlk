@@ -9,7 +9,9 @@ Versatility buff, 201605 Aspect of the Monkey pet proc aura.
 
 Stock rows are named by bare id in the binding calls below; this file never imports from
 hunter_spells.py / hunter_trigger_spells.py. The scripted_by / procs_on / trained_by /
-skill_line_ability / creature_template bindings follow the spell rows below.
+skill_line_ability / creature_template bindings follow the spell rows below. One stock row is
+declared here in full: the every-hunter passive 34082 (S2b, user ruling 2026-10-16), a SHARED
+class-wide edit that belongs to no spec file; it needs no import.
 """
 
 from lib.dsl import AuraType, CombatRating, Effect, EffectType, School
@@ -88,6 +90,36 @@ aspect_of_the_monkey_pet_201605 = spell(
                    'AttributesEx3': 0x100000,   # ALLOW_AURA_WHILE_DEAD: persists through pet death
                    'AttributesEx2': 0x1,        # ALLOW_DEAD_TARGET: lands on a dead pet
                    'ProcTypeMask': 0x100000, 'ProcChance': 100},
+)
+
+# User ruling 2026-10-16 (S2b-HANDOFF "drop the hunter's hidden 15% ranged haste", S2b-0VERIFY finding 1): stock
+# passive 34082 (every hunter: SkillLine 183, ClassMask 4, AcquireMethod 2), pulled with pull_dsl.py. Its 0-based eff1
+# MOD_RANGED_HASTE (140) bp 14 (live 15%) is removed; eff0 PROC_TRIGGER_SPELL -> 34084 (a server-only inert DUMMY,
+# no script) is kept as stock, the minimal edit. Knock-on: base hunter GCD back to 1.5 s, Steady Shot 1.5 s and Aimed
+# Shot 2.0 s live casts at zero gear haste, Auto Shot 15% slower (the balance stage rebalances).
+advantaged_state_dnd_34082 = spell(
+    id=34082,
+    name='Advantaged State (DND)',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL,
+               trigger_spell=34084),
+        None,   # was APPLY_AURA MOD_RANGED_HASTE (140) bp 14: removed (user ruling 2026-10-16)
+    ],
+    spell_icon_id=28,
+    notes='pulled from existing data (pull_dsl.py 34082). hunter-rework S2b A1 (user ruling 2026-10-16): eff1 '
+          'MOD_RANGED_HASTE 15% removed; eff0 PROC_TRIGGER_SPELL -> 34084 and every other column kept as stock.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 65876, 'ProcChance': 100, 'DurationIndex': 0, 'RangeIndex': 1,
+                   'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712172,
+                   'Description_Lang_Mask': 16712188, 'AuraDescription_Lang_Mask': 16712188,
+                   'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
 

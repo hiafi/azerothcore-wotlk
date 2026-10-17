@@ -21,9 +21,9 @@ from lib.dsl.registry import pot_text, spell
 
 from . import _masks as m
 from .hunter_mm_spells import (
-    CONVERGENCE_MAX_TARGETS, CONVERGENCE_SPLASH_PCT, DEADEYE_CDR_MS, KEEN_EYE_GAIN, MULTI_SHOT_TARGET_CAP,
-    PACK_MAX_TARGETS, PACK_RADIUS_YD, RAIN_OF_ARROWS_FIRE_PCT, RAPID_KILLING_HEALTH_PCT, convergence_201932,
-    mm_convergence_1171,
+    COMBAT_EXPERIENCE_CAPSTONE_PCT, CONVERGENCE_MAX_TARGETS, CONVERGENCE_SPLASH_PCT, DEADEYE_CDR_MS, KEEN_EYE_GAIN,
+    MULTI_SHOT_TARGET_CAP, PACK_MAX_TARGETS, PACK_RADIUS_YD, PACK_SHOT_DAMAGE_PCT, RAIN_OF_ARROWS_FIRE_PCT,
+    RAPID_KILLING_HEALTH_PCT, convergence_201932, mm_convergence_1171,
 )
 from .hunter_trigger_spells import rapid_killing_35098
 
@@ -191,13 +191,13 @@ keen_eye_201974 = _keen_eye(201974, 3, 29)
 
 # ---- (5,3) Trick Shots 2131 (one rank): Multi-Shot +2 chain targets (3 + 2 = 5, works natively); eff1 DUMMY marker
 # for S2b's spell_hun_multi_shot_mm and the handler's ricochet (step 7). Inert until S2b except the +2 targets.
-# "50%" = the ricochet's 110 weapon potency of Aimed Shot's 220 (201934 is declared in S2b, no single DBC home).
+# The ricochet's percent is PACK_SHOT_DAMAGE_PCT, the source of 201934's weapon potency (110 of Aimed Shot's 220).
 trick_shots_201975 = _rank(
     201975, 'Trick Shots', None, [_flat(SpellModOp.JUMP_TARGETS, 1), _dummy()], 2541,
     f"Your Multi-Shot hits up to {_c(MULTI_SHOT_TARGET_CAP)} targets and copies your marks on its target, with their "
     f"stacks, to each enemy it hits. Your next Aimed Shot within $201943d ricochets to up to {_c(PACK_MAX_TARGETS)} "
-    f"other enemies with your marks within {_c(PACK_RADIUS_YD)} yards, dealing 50% of its damage to each and "
-    "consuming their marks.",
+    f"other enemies with your marks within {_c(PACK_RADIUS_YD)} yards, dealing {_c(PACK_SHOT_DAMAGE_PCT)}% of its "
+    "damage to each and consuming their marks.",
     masks={1: (m.MULTI_SHOT, 0, 0)},
 )
 
@@ -227,12 +227,13 @@ triangulation_201977 = _triangulation(201977, 2, 5, False)
 triangulation_201978 = _triangulation(201978, 3, 8, True)
 
 # ---- (6,3) Rain of Arrows 60229: Volley damage +10/20% (Volley tick 42243 + the S2b half Volley); capstone = r2
-# known (S2b's spell_hun_volley_mm). "completes" = AURA_REMOVE_BY_EXPIRE (MM-C1). "50%" as Trick Shots (201935, S2b).
+# known (S2b's spell_hun_volley_mm). "completes" = AURA_REMOVE_BY_EXPIRE (MM-C1). The bounce 201935's percent is
+# PACK_SHOT_DAMAGE_PCT, as Trick Shots.
 _RAIN_OF_ARROWS = "Increases the damage of your Volley by $s1%."
 _RAIN_OF_ARROWS_CAP = (
     f"Each tick of your Volley has a {_c(RAIN_OF_ARROWS_FIRE_PCT)}% chance to grant Fire!. When your Volley completes, "
     f"your next Aimed Shot within $201944d bounces to up to {_c(PACK_MAX_TARGETS)} enemies within "
-    f"{_c(PACK_RADIUS_YD)} yards, dealing 50% of its damage to each."
+    f"{_c(PACK_RADIUS_YD)} yards, dealing {_c(PACK_SHOT_DAMAGE_PCT)}% of its damage to each."
 )
 
 
@@ -268,14 +269,14 @@ rapid_killing_201981 = _rank(
 
 # ---- (5,0) Combat Experience 1804 r3 (r1 34475 / r2 34476 in hunter_trigger_spells.py), a clone of 34476 with the
 # normalized effect order: eff0 aura 137 Agility (misc 1) +3% [2], eff1 MOD_CRIT_PCT +3% [2]. The capstone passive
-# 201952 and linked_spell(201982, 201952, 2) are S2b's ("30%" is S2b's script value; no const home in S2a).
+# 201952 and linked_spell(201982, 201952, 2) are S2b's; the percent is COMBAT_EXPERIENCE_CAPSTONE_PCT (the script's).
 combat_experience_201982 = _rank(
     201982, 'Combat Experience', 3,
     [_aura(AuraType.MOD_TOTAL_STAT_PERCENTAGE, 2, 1), _aura(AuraType.MOD_CRIT_PCT, 2)],
     2223,
     _desc(
         "Increases your total Agility by $s1% and your critical strike chance by $s2%.",
-        "Increases your Intellect by 30% of your Agility.",
+        f"Increases your Intellect by {_c(COMBAT_EXPERIENCE_CAPSTONE_PCT)}% of your Agility.",
         last=True,
     ),
 )

@@ -9,7 +9,10 @@ from lib.dsl.registry import spell
 
 from . import _masks as m
 from .hunter_bm_spells import PHOENIX_PLUME_REVIVE_PCT
-from .hunter_mm_spells import FOCUSED_AIM_CDR_MS, RAPID_KILLING_HEALTH_PCT, fire_mm_buff_201940, mm_volley_1172
+from .hunter_mm_spells import (
+    BARRAGE_ICD_MS, COMBAT_EXPERIENCE_CAPSTONE_PCT, FOCUSED_AIM_CDR_MS, RAPID_KILLING_HEALTH_PCT, fire_mm_buff_201940,
+    mm_volley_1172,
+)
 
 _PLUME_REVIVE = str(int(PHOENIX_PLUME_REVIVE_PCT['value']))
 
@@ -1248,7 +1251,7 @@ barrage_19461 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': _mm_desc('Increases the damage of your Multi-Shot and Volley by $s1%.', "Your Multi-Shot has a $24691h% chance to call down a Volley at the target's location that lasts half as long and deals half the damage. This effect cannot occur more than once every 10 sec.", last=False),
+        'Description_Lang_enUS': _mm_desc('Increases the damage of your Multi-Shot and Volley by $s1%.', f"Your Multi-Shot has a $24691h% chance to call down a Volley at the target's location that lasts half as long and deals half the damage. This effect cannot occur more than once every {int(BARRAGE_ICD_MS['value']) // 1000} sec.", last=False),
         'EffectBonusMultiplier_1': 1.0,
         'EffectBonusMultiplier_2': 1.0,
         'EffectBonusMultiplier_3': 1.0,
@@ -1287,7 +1290,7 @@ barrage_19462 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': _mm_desc('Increases the damage of your Multi-Shot and Volley by $s1%.', "Your Multi-Shot has a $24691h% chance to call down a Volley at the target's location that lasts half as long and deals half the damage. This effect cannot occur more than once every 10 sec.", last=False),
+        'Description_Lang_enUS': _mm_desc('Increases the damage of your Multi-Shot and Volley by $s1%.', f"Your Multi-Shot has a $24691h% chance to call down a Volley at the target's location that lasts half as long and deals half the damage. This effect cannot occur more than once every {int(BARRAGE_ICD_MS['value']) // 1000} sec.", last=False),
         'EffectBonusMultiplier_1': 1.0,
         'EffectBonusMultiplier_2': 1.0,
         'EffectBonusMultiplier_3': 1.0,
@@ -2539,7 +2542,7 @@ barrage_24691 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': _mm_desc('Increases the damage of your Multi-Shot and Volley by $s1%.', "Your Multi-Shot has a $24691h% chance to call down a Volley at the target's location that lasts half as long and deals half the damage. This effect cannot occur more than once every 10 sec.", last=True),
+        'Description_Lang_enUS': _mm_desc('Increases the damage of your Multi-Shot and Volley by $s1%.', f"Your Multi-Shot has a $24691h% chance to call down a Volley at the target's location that lasts half as long and deals half the damage. This effect cannot occur more than once every {int(BARRAGE_ICD_MS['value']) // 1000} sec.", last=True),
         'EffectBonusMultiplier_1': 1.0,
         'EffectBonusMultiplier_2': 1.0,
         'EffectBonusMultiplier_3': 1.0,
@@ -2857,7 +2860,7 @@ combat_experience_34475 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': _mm_desc('Increases your total Agility by $s1% and your critical strike chance by $s2%.', 'Increases your Intellect by 30% of your Agility.', last=False),
+        'Description_Lang_enUS': _mm_desc('Increases your total Agility by $s1% and your critical strike chance by $s2%.', f'Increases your Intellect by {_mm_c(COMBAT_EXPERIENCE_CAPSTONE_PCT)}% of your Agility.', last=False),
         'EffectBonusMultiplier_1': 1.0,
         'EffectChainAmplitude_1': 1.0,
         'EffectChainAmplitude_2': 1.0,
@@ -2894,7 +2897,7 @@ combat_experience_34476 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': _mm_desc('Increases your total Agility by $s1% and your critical strike chance by $s2%.', 'Increases your Intellect by 30% of your Agility.', last=False),
+        'Description_Lang_enUS': _mm_desc('Increases your total Agility by $s1% and your critical strike chance by $s2%.', f'Increases your Intellect by {_mm_c(COMBAT_EXPERIENCE_CAPSTONE_PCT)}% of your Agility.', last=False),
         'EffectBonusMultiplier_1': 1.0,
         'EffectChainAmplitude_1': 1.0,
         'EffectChainAmplitude_2': 1.0,

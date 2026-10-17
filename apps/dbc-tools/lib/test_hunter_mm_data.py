@@ -32,6 +32,29 @@ raw_overrides via `build.build_spell_row`), so a stale raw twin that wins fails 
   (m) bindings: the brief's script classes on positive keys, the two exact stock unbinds and
       linked_spell(53244, 201951, 2).
 
+S2b (S2b-HANDOFF WP-A row A2, B2 / B6 / B7 / B9, the S2a review's m-1 and the 34082 ruling) adds:
+
+  (n) the ricochet 201934 / bounce 201935 (B2): d0 b17 only, Speed 0, CastingTimeIndex 18, EquippedItemClass -1,
+      SUPPRESS_CASTER_PROCS, eff0 NORMALIZED_WEAPON_DMG bp -1, eff1 live weapon potency = PACK_SHOT_DAMAGE_PCT of
+      Aimed Shot 19434's (A1 derives it from a private literal 220: the built equality is the guard), 110 today;
+  (o) the half Volley 201936 / tick 201937 (B6): 201936 d2 b30 only, hidden (0x80), 3 s / 1 s = 3 unhasted ticks
+      (no AttributesEx5 0x2000), eff0 the dynobj with ap potency 75.5 direct time_basis 1500 (spell_bonus_data equal
+      to the Volley tick 42243's); 201937 potency_excluded (no bonus row), no family bit, AttributesEx3 0x20010000;
+      VOLLEY_DAMAGE / BARRAGE_DAMAGE hold d2 b30 and the Barrage / Rain of Arrows ranks carry them;
+  (p) Barrage r3's spell_proc row 24691 (CAST, 10 s cooldown, Multi-Shot mask, disable_effects_mask 0x1, flags
+      0x100), no chain-key twin;
+  (q) Lone Survivor 201950 visible (M1, AttributesEx7 0), Combat Experience 201952 hidden + linked_spell(201982,
+      201952, 2); the S2b bindings (201935 unscripted, -42243 kept);
+  (r) a source guard: every CastSpell / CastCustomSpell of 201934 / 201935 in the hunter C++ passes
+      TRIGGERED_FULL_MASK and no other TRIGGERED_* flag (R3: the d0 b17 load fix's 10 s RecoveryTime);
+  (s) 34082 (user ruling 2026-10-16): no aura 140 effect left, eff0 PROC_TRIGGER_SPELL -> 34084 kept; no
+      hunter-learnable passive (SLA auto-learn, talent rank, trainer row, linked type 2) carries aura 140 with a
+      non-zero amount (the orphans 34469 / 34470 are not learnable: 0-verify finding 4);
+  (t) Multi-Shot 2643 left as it is (B1 "data unchanged"; the hidden 0.5 s cast is the user's open question);
+  (u) the S2b review fixes: 201936 SpellLevel = the Volley tick 42243's (R-data M-1: the potency BaseLevel),
+      AttributesEx2 IGNORE_LINE_OF_SIGHT (0x4) on 201934 / 201935 / 201932 (R-cpp m-1), and exactly one
+      CANNOT_BE_SAVED (0x01000000) spell_custom_attr row on 201950 and 201936 (R-cpp m-4).
+
 Every check is a pure function; the negative-fixture class feeds each one a good input (must pass) and a crafted bad
 copy (must fail), so a check that silently passes everything is caught.
 
@@ -44,6 +67,7 @@ from __future__ import annotations
 
 import copy
 import importlib.util
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -55,6 +79,13 @@ from lib.test_hunter_pet_data import package_data  # noqa: E402
 
 TOOL_ROOT = Path(__file__).resolve().parents[1]
 MASKS_PY = TOOL_ROOT / "source" / "classes" / "hunter" / "_masks.py"
+REPO_ROOT = TOOL_ROOT.parents[1]
+# (r) the C++ that may cast the ricochet / bounce (B1 writes the casts into the first one)
+PACK_SHOT_CASTER_SOURCES = (
+    REPO_ROOT / "src" / "server" / "scripts" / "Spells" / "spell_hunter_marksmanship.cpp",
+    REPO_ROOT / "src" / "server" / "scripts" / "Spells" / "hunter_hooks.cpp",
+    REPO_ROOT / "src" / "server" / "game" / "Entities" / "Unit" / "HunterMechanics.cpp",
+)
 
 LETTERS = ("A", "B", "C")
 SPELLFAMILY_HUNTER = 9
@@ -64,10 +95,14 @@ EFFECT_SCHOOL_DAMAGE = 2
 EFFECT_DUMMY = 3
 EFFECT_APPLY_AURA = 6
 EFFECT_WEAPON_PERCENT_DAMAGE = 31
+EFFECT_PERSISTENT_AREA_AURA = 27
 EFFECT_SCRIPT_EFFECT = 77
 EFFECT_NORMALIZED_WEAPON_DMG = 121
 AURA_PERIODIC_DAMAGE = 3
 AURA_DUMMY = 4
+AURA_MOD_STAT = 29
+AURA_MOD_DAMAGE_PERCENT_DONE = 79
+AURA_MOD_RANGED_HASTE = 140
 AURA_PERIODIC_TRIGGER_SPELL = 23
 AURA_PROC_TRIGGER_SPELL = 42
 AURA_ADD_FLAT_MODIFIER = 107
@@ -87,7 +122,11 @@ ATTR_USES_RANGED_SLOT = 0x2
 ATTR_PASSIVE = 0x40
 ATTR_DO_NOT_DISPLAY = 0x80
 ATTR_EX_NO_AURA_ICON = 0x10000000          # SPELL_ATTR1_DONT_DISPLAY_IN_AURA_BAR
+ATTR_EX2_IGNORE_LINE_OF_SIGHT = 0x4        # SPELL_ATTR2_IGNORE_LINE_OF_SIGHT (SharedDefines.h)
 ATTR_EX3_SUPPRESS_CASTER_PROCS = 0x10000
+CUSTOM_ATTR_CANNOT_BE_SAVED = 0x01000000    # SPELL_ATTR0_CU_AURA_CANNOT_BE_SAVED (SpellInfo.h)
+ATTR_EX3_IGNORE_CASTER_MODIFIERS = 0x20000000
+ATTR_EX5_HASTE_AFFECT_DURATION = 0x2000     # SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC (hasted ticks)
 ATTR_EX7_CONSOLIDATE = 0x10000000
 RANGED_SLOT_ADD_MS = 500                    # SpellInfo::CalcCastTime, SpellInfo.cpp:2815-2816
 DEFENSE_RANGED = 3
@@ -99,6 +138,8 @@ D0_AIMED_SHOT = 0x20000                     # d0 b17
 D2_MARK_PRESS = 0x8000000                   # d2 b27
 D2_MARK_DOT = 0x10000000                    # d2 b28
 D2_STEADY_SHOT = 0x20000000                 # d2 b29
+D2_HALF_VOLLEY = 0x40000000                 # d2 b30
+D0_MULTI_SHOT = 0x1000                      # d0 b12
 
 PROC_FLAG_KILL = 0x2
 PROC_FLAG_DONE_SPELL_RANGED = 0x100
@@ -126,9 +167,20 @@ STAMPEDE = 201802
 PRECISION_R3, RAPID_KILLING_R3, MFD_R3 = 201965, 201981, 53244
 NEW_S2A_IDS = (*MARKS, VIPERS_BITE, VIPERS_VENOM, CONVERGENCE, ARCANE_SHOT_FREE, *range(201940, 201950), MASTERY,
                *range(201960, 201983))
-S2B_IDS = (201934, 201935, 201936, 201937, 201950, 201952)        # declared by S2b, never by S2a
+RICOCHET, BOUNCE, HALF_VOLLEY, HALF_VOLLEY_TICK = 201934, 201935, 201936, 201937
+LONE_SURVIVOR_BUFF, COMBAT_EXPERIENCE_CAPSTONE = 201950, 201952
+PACK_SHOTS = (RICOCHET, BOUNCE)
+NEW_S2B_IDS = (RICOCHET, BOUNCE, HALF_VOLLEY, HALF_VOLLEY_TICK, LONE_SURVIVOR_BUFF, COMBAT_EXPERIENCE_CAPSTONE)
+VOLLEY, VOLLEY_TICK, BARRAGE_R3, COMBAT_EXPERIENCE_R3 = 1510, 42243, 24691, 201982
+LONE_SURVIVOR_RANKS = (19407, 19412)
+BARRAGE_RANKS = (19461, 19462, BARRAGE_R3)
+RAIN_OF_ARROWS_RANKS = (201979, 201980)
+ADVANTAGED_STATE, ADVANTAGED_STATE_PROC = 34082, 34084
+SERPENTS_SWIFTNESS_ORPHANS = (34469, 34470)       # aura 140 kept, taught by nothing (0-verify finding 4)
 # stock non-rank rows S2a edits whose built row must be -1 (helpers / buffs / triggered; M4)
 EDITED_STOCK_HELPERS = (CHIMERA_SERPENT, WILD_QUIVER_SHOT, RAPID_KILLING_BUFF_ID, *SNIPER_TRAINING_BUFFS, 42243)
+# S2b: ids it declares or binds whose built row must be -1 (Volley 1510 is a player-cast channel: class 2, untouched)
+S2B_MINUS_ONE_IDS = (*NEW_S2B_IDS, BARRAGE_R3, *LONE_SURVIVOR_RANKS, CONVERGENCE, ADVANTAGED_STATE)
 # M4 exemption: the player-cast ranged shots (S2-HANDOFF M4 / stale line 6). Mirrors test_hunter_bm_data's set.
 PLAYER_CAST_SHOTS = frozenset({STEADY_SHOT, ARCANE_SHOT, AIMED_SHOT, CHIMERA_SHOT, MULTI_SHOT, *MARKS})
 
@@ -196,8 +248,10 @@ MARK_DURATION_MS = 15000
 
 # M1: visible (non-passive, displayed, not consolidated) and hidden-on-purpose S2a rows
 VISIBLE = (*MARKS, VIPERS_BITE, VIPERS_VENOM, FIRE, QUICKENING, FALCONS_HASTE, TRICK_SHOTS_BUFF, ROA_BUFF,
-           EFFICIENCY_BUFF, PRECISE_SHOTS_BUFF, FALCONS_EDGE, RAPID_KILLING_BUFF_ID, *SNIPER_TRAINING_BUFFS)
-HIDDEN = (AIMED_CRIT_HELPER, CHIMERA_CRIT_HELPER, MASTERY)
+           EFFICIENCY_BUFF, PRECISE_SHOTS_BUFF, FALCONS_EDGE, RAPID_KILLING_BUFF_ID, *SNIPER_TRAINING_BUFFS,
+           LONE_SURVIVOR_BUFF)
+# 201936: the half Volley's caster aura is hidden (S2b A1 question 2, A3 sets Attributes 0x80)
+HIDDEN = (AIMED_CRIT_HELPER, CHIMERA_CRIT_HELPER, MASTERY, COMBAT_EXPERIENCE_CAPSTONE, HALF_VOLLEY)
 HIDDEN_NO_AURA_ICON = (AIMED_CRIT_HELPER, CHIMERA_CRIT_HELPER)     # A5: Attributes 0x80 + AttributesEx 0x10000000
 
 # MM 2.4, literal (tuples are (d0, d1, d2)); `_masks.py` must hold exactly these
@@ -224,7 +278,8 @@ SPELLMOD_SPECS = (
     ((19507, 19508, 19509), 1, AURA_ADD_PCT_MODIFIER, OP_DAMAGE, "RWS_SHOTS"),                       # RWS
     (SNIPER_TRAINING_BUFFS, 1, AURA_ADD_PCT_MODIFIER, OP_DAMAGE, "HUNTER_SHOTS"),                    # Sniper Training
     (SNIPER_TRAINING_BUFFS, 2, AURA_ADD_PCT_MODIFIER, OP_DOT, (0, 0, D2_MARK_DOT)),
-    ((53241, 53243, MFD_R3), 3, AURA_ADD_PCT_MODIFIER, OP_DAMAGE, (0, 0, D2_MARK_PRESS)),            # Marked for Death (eff2: SpellInfoCorrections.cpp:409 rewrites eff0 mask at load)
+    # Marked for Death (eff2: SpellInfoCorrections.cpp:409 rewrites eff0 mask at load)
+    ((53241, 53243, MFD_R3), 3, AURA_ADD_PCT_MODIFIER, OP_DAMAGE, (0, 0, D2_MARK_PRESS)),
     ((53241, 53243, MFD_R3), 2, AURA_ADD_PCT_MODIFIER, OP_DOT, (0, 0, D2_MARK_DOT)),
     ((MASTERY,), 1, AURA_ADD_PCT_MODIFIER, OP_DAMAGE, (0, 0, D2_MARK_PRESS)),                       # 201951
     ((MASTERY,), 2, AURA_ADD_PCT_MODIFIER, OP_DOT, (0, 0, D2_MARK_DOT)),
@@ -267,9 +322,14 @@ PROC_ROWS = {
                    "HitMask": PROC_HIT_CRITICAL, "Chance": 100.0, "DisableEffectsMask": 0x1},
     RAPID_KILLING_R3: {"ProcFlags": PROC_FLAG_KILL, "AttributesMask": PROC_ATTR_REQ_EXP_OR_HONOR, "Chance": 100.0,
                        "DisableEffectsMask": 0x3},
+    # S2b B6: Barrage r3, non-triggered Multi-Shot CAST (no 0x2), the DBC 25% (chance 0), 10 s ICD, eff0 never procs
+    BARRAGE_R3: {"ProcFlags": PROC_FLAG_DONE_SPELL_RANGED, "SpellFamilyName": 9, "mask": (D0_MULTI_SHOT, 0, 0),
+                 "SpellPhaseMask": PROC_PHASE_CAST, "Cooldown": 10000, "DisableEffectsMask": 0x1,
+                 "AttributesMask": 0, "Chance": 0.0},
 }
-# M15: ranks whose non-zero DBC ProcTypeMask has no spell_proc row on purpose (A18: Barrage's interim default entry)
-M15_ACCEPTED = frozenset({24691})
+# M15: ranks whose non-zero DBC ProcTypeMask has no spell_proc row on purpose. Empty since S2b gave Barrage r3 its row
+# (A18's interim default entry is gone).
+M15_ACCEPTED = frozenset()
 
 # (m) the brief's bindings (positive keys) and exact stock unbinds
 S2A_SCRIPT_BINDINGS = {
@@ -283,9 +343,56 @@ S2A_SCRIPT_BINDINGS = {
     "spell_hun_mm_mastery": frozenset({MASTERY}),
     "spell_hun_piercing_shots_mm": frozenset({53234, 53237, 53238}),
 }
+S2B_SCRIPT_BINDINGS = {
+    "spell_hun_multi_shot_mm": frozenset({MULTI_SHOT}),
+    "spell_hun_aimed_shot_ricochet": frozenset({RICOCHET}),
+    "spell_hun_convergence": frozenset({CONVERGENCE}),
+    "spell_hun_volley_mm": frozenset({VOLLEY}),
+    "spell_hun_barrage_capstone": frozenset({BARRAGE_R3}),
+    "spell_hun_half_volley_aura": frozenset({HALF_VOLLEY}),
+    "spell_hun_half_volley_tick": frozenset({HALF_VOLLEY_TICK}),
+    "spell_hun_lone_survivor": frozenset(LONE_SURVIVOR_RANKS),
+    "spell_hun_combat_experience_capstone": frozenset({COMBAT_EXPERIENCE_CAPSTONE}),
+}
+SCRIPT_BINDINGS = {**S2A_SCRIPT_BINDINGS, **S2B_SCRIPT_BINDINGS}
 S2A_UNBINDS = {(CHIMERA_SHOT, "spell_hun_chimera_shot"), (-53234, "spell_hun_piercing_shots")}
+UNSCRIPTED_S2B_IDS = frozenset({BOUNCE, LONE_SURVIVOR_BUFF})        # B2: the bounce has no script; 201950 is set by B7
+KEPT_STOCK_BINDING = (-VOLLEY_TICK, "spell_hun_volley_trigger")     # stays bound (no unbind, B5)
 FREE_ARCANE_SHOT_SCRIPTS = frozenset({"spell_hun_shot_mana", "spell_hun_arcane_shot_mm"})
 MASTERY_LINK = (MFD_R3, MASTERY, 2)
+COMBAT_EXPERIENCE_LINK = (COMBAT_EXPERIENCE_R3, COMBAT_EXPERIENCE_CAPSTONE, 2)
+LINKS = (MASTERY_LINK, COMBAT_EXPERIENCE_LINK)
+
+# (n) the pack shots: built fields fixed by B2
+PACK_SHOT_FIELDS = {
+    "SpellClassSet": SPELLFAMILY_HUNTER, "SpellClassMask_1": D0_AIMED_SHOT, "SpellClassMask_2": 0,
+    "SpellClassMask_3": 0, "CastingTimeIndex": 18, "EquippedItemClass": -1, "DefenseType": DEFENSE_RANGED,
+    "SchoolMask": SCHOOL_PHYSICAL, "SpellLevel": 20, "SpellIconID": 253, "Category": 0, "RecoveryTime": 0,
+    "CategoryRecoveryTime": 0, "ManaCost": 0, "ManaCostPct": 0,
+    "Effect_1": EFFECT_NORMALIZED_WEAPON_DMG, "EffectBasePoints_1": -1, "ImplicitTargetA_1": 6,
+    "Effect_2": EFFECT_WEAPON_PERCENT_DAMAGE, "ImplicitTargetA_2": 6, "Effect_3": 0,
+}
+PACK_SHOT_WEAPON_POTENCY = 110           # B2 literal: half of Aimed Shot's 220 today
+# (o) the half Volley
+HALF_VOLLEY_DURATION_MS, HALF_VOLLEY_AMPLITUDE_MS, HALF_VOLLEY_TICKS = 3000, 1000, 3
+HALF_VOLLEY_AP_POTENCY, HALF_VOLLEY_TIME_BASIS_S = 75.5, 1.5
+HALF_VOLLEY_TICK_EX3 = ATTR_EX3_IGNORE_CASTER_MODIFIERS | ATTR_EX3_SUPPRESS_CASTER_PROCS     # 0x20010000
+# (s) learnable-spell sources: hunter talent tabs (BM 361, SV 362, MM 363), the hunter class skill lines whose
+# class-mask-0 rows still belong to the hunter, the SLA auto-learn methods (1 on skill value, 2 on skill learn)
+HUNTER_TALENT_TABS = frozenset({361, 362, 363})
+HUNTER_SKILL_LINES = frozenset({50, 51, 163})
+SLA_AUTO_LEARN = frozenset({1, 2})
+# (t) Multi-Shot 2643 as it stands (B1 "data unchanged"; index 1 = the stock hidden 0.5 s ranged-slot cast, an open
+# question for the user, 0-verify 4a: change this pin only together with that ruling)
+MULTI_SHOT_FIELDS = {
+    "SpellClassSet": SPELLFAMILY_HUNTER, "SpellClassMask_1": D0_MULTI_SHOT, "SpellClassMask_2": 0,
+    "SpellClassMask_3": 0, "CastingTimeIndex": 1, "EquippedItemClass": 2, "Category": 85,
+    "CategoryRecoveryTime": 10000, "Effect_1": EFFECT_NORMALIZED_WEAPON_DMG, "ImplicitTargetA_1": 6,
+    "EffectChainTargets_1": 3, "Effect_2": 0, "Effect_3": 0, "DefenseType": DEFENSE_RANGED,
+}
+# (u) the S2b review fixes
+IGNORE_LOS_IDS = (RICOCHET, BOUNCE, CONVERGENCE)                  # R-cpp m-1: the pack is defined around the primary
+CANNOT_BE_SAVED_S2B_IDS = (LONE_SURVIVOR_BUFF, HALF_VOLLEY)       # non-passive script-driven auras (B7, R-cpp m-4)
 
 
 # ---- helpers ---------------------------------------------------------------------------------------------------------
@@ -503,16 +610,35 @@ EFFECT_COLUMNS = ("Effect", "EffectAura", "EffectBasePoints", "EffectDieSides", 
                   "EffectRealPointsPerLevel")
 
 
-def check_free_arcane_shot(row: dict | None, arcane: dict | None, bound: list[dict]) -> list[str]:
+BONUS_COLUMNS = ("direct_bonus", "dot_bonus", "ap_bonus", "ap_dot_bonus")
+
+
+def check_free_arcane_shot(row: dict | None, arcane: dict | None, bound: list[dict],
+                           bonus_rows: list[dict]) -> list[str]:
     """(e) A9 + stale line 3: 201933's eff1 equals 3044's built eff1 column by column (the mana restore of
     spell_hun_shot_mana reads it: a literal that drifts from 3044 is a finding), index 18, class -1, d0 b11 only,
-    no cost / category / cooldown, SUPPRESS_CASTER_PROCS, the two scripts and not BM's Stomp class."""
+    no cost / category / cooldown, SUPPRESS_CASTER_PROCS, the two scripts and not BM's Stomp class.
+    S2a review m-1: the damage is a copy too (`ap_potency=130.0` literal), so eff0 and the spell_bonus_data row must
+    equal 3044's as well."""
     if row is None or arcane is None:
         return [f"{ARCANE_SHOT_FREE}/{ARCANE_SHOT}: not declared"]
     bad = []
     for col in EFFECT_COLUMNS:
         if float(row.get(f"{col}_2") or 0) != float(arcane.get(f"{col}_2") or 0):
             bad.append(f"eff1 {col} {row.get(f'{col}_2')} differs from Arcane Shot's {arcane.get(f'{col}_2')}")
+        if float(row.get(f"{col}_1") or 0) != float(arcane.get(f"{col}_1") or 0):
+            bad.append(f"eff0 {col} {row.get(f'{col}_1')} differs from Arcane Shot's {arcane.get(f'{col}_1')} "
+                       f"(m-1: the damage is copied as a literal)")
+    bonus = {int(b["entry"]): b for b in bonus_rows}
+    mine, theirs = bonus.get(ARCANE_SHOT_FREE), bonus.get(ARCANE_SHOT)
+    if mine is None or theirs is None:
+        bad.append(f"spell_bonus_data: free {'present' if mine else 'missing'}, Arcane Shot "
+                   f"{'present' if theirs else 'missing'} (m-1: both carry the ap potency)")
+    else:
+        for col in BONUS_COLUMNS:
+            if float(mine.get(col) or 0) != float(theirs.get(col) or 0):
+                bad.append(f"spell_bonus_data {col} {mine.get(col)} differs from Arcane Shot's {theirs.get(col)} "
+                           f"(m-1)")
     if _i(row, "Effect_2") != EFFECT_DUMMY:
         bad.append(f"eff1 type {row.get('Effect_2')}, expected DUMMY (the mana percent)")
     for key, want in (("CastingTimeIndex", 18), ("EquippedItemClass", -1), ("SpellClassSet", SPELLFAMILY_HUNTER),
@@ -602,18 +728,29 @@ def check_equipped_item_class(rows_by_id: dict[int, dict], minus_one_ids, class_
 # ---- (h) family-bit carriers -----------------------------------------------------------------------------------------
 
 def check_family_bit_carriers(rows: list[dict]) -> list[str]:
+    """FAMILY-BITS 0.6 + the S2b classmask audit: d0 b17 only on 19434 / 201934 / 201935 and d2 b30 only on 201936
+    (any custom id, or a family-9 stock row of the package), no bit on the helpers, buffs, ranks and 201937 / 201950 /
+    201952."""
     bad = []
-    no_bit = {*range(201940, 201950), MASTERY, CONVERGENCE, *range(201960, 201983)}
+    no_bit = {*range(201940, 201950), MASTERY, CONVERGENCE, *range(201960, 201983), HALF_VOLLEY_TICK,
+              LONE_SURVIVOR_BUFF, COMBAT_EXPERIENCE_CAPSTONE}
     for row in rows:
         sid, mask = int(row["ID"]), spell_mask(row)
+        ours = sid >= 200000 or _i(row, "SpellClassSet") == SPELLFAMILY_HUNTER
         if mask[2] & D2_MARK_PRESS and sid not in MARKS:
             bad.append(f"{sid}: carries d2 b27 (mark press) but is no mark")
         if mask[2] & D2_MARK_DOT and sid not in (VIPERS_BITE, VIPERS_VENOM):
             bad.append(f"{sid}: carries d2 b28 (mark DoT) but is not 201930 / 201931")
         if sid >= 200000 and mask[0] & D0_ARCANE_SHOT and sid != ARCANE_SHOT_FREE:
             bad.append(f"{sid}: custom id on d0 b11 (only 201933 reuses Arcane Shot's bit)")
-        if sid >= 200000 and mask[0] & D0_AIMED_SHOT and sid not in (201934, 201935):
-            bad.append(f"{sid}: custom id on d0 b17 (only S2b's ricochet / bounce reuse Aimed Shot's bit)")
+        if ours and mask[0] & D0_AIMED_SHOT and sid not in (AIMED_SHOT, *PACK_SHOTS):
+            bad.append(f"{sid}: carries d0 b17 (only Aimed Shot 19434 and S2b's ricochet / bounce)")
+        if ours and mask[2] & D2_HALF_VOLLEY and sid != HALF_VOLLEY:
+            bad.append(f"{sid}: carries d2 b30 (only the half Volley 201936)")
+        if sid in PACK_SHOTS and mask != (D0_AIMED_SHOT, 0, 0):
+            bad.append(f"{sid}: SpellClassMask {_hex(mask)}, expected (0x20000, 0x0, 0x0)")
+        if sid == HALF_VOLLEY and mask != (0, 0, D2_HALF_VOLLEY):
+            bad.append(f"{sid}: SpellClassMask {_hex(mask)}, expected (0x0, 0x0, 0x40000000)")
         if sid in no_bit and any(mask):
             bad.append(f"{sid}: SpellClassMask {_hex(mask)}, expected no family bit (FAMILY-BITS 0.6)")
         if sid in MARKS and mask != (0, 0, D2_MARK_PRESS):
@@ -834,7 +971,10 @@ def check_stampede_family(row: dict | None) -> list[str]:
 
 
 def check_bindings(bound: list[dict], removals: list[dict], linked: list[dict],
-                   expected=S2A_SCRIPT_BINDINGS, unbinds=S2A_UNBINDS) -> list[str]:
+                   expected=SCRIPT_BINDINGS, unbinds=S2A_UNBINDS, links=LINKS) -> list[str]:
+    """(m) + (q): every brief class on exactly its positive keys, the exact stock unbinds, Readiness untouched, the
+    bounce and the Lone Survivor buff unscripted, stock -42243 spell_hun_volley_trigger not unbound, the two type-2
+    links."""
     bad = []
     for name, ids in expected.items():
         have = {int(r["spell_id"]) for r in bound if r["ScriptName"] == name}
@@ -847,11 +987,330 @@ def check_bindings(bound: list[dict], removals: list[dict], linked: list[dict],
     for spell_id, name in got_unbinds:
         if name in ("spell_hun_readiness", "spell_hun_readiness_rework"):
             bad.append(f"unbind_script({spell_id}, {name}): Readiness keeps the stock binding (stale line 4)")
+    if KEPT_STOCK_BINDING in got_unbinds:
+        bad.append(f"unbind_script{KEPT_STOCK_BINDING}: the stock Volley trigger stays bound (B5)")
     if any(r["ScriptName"] == "spell_hun_readiness_rework" for r in bound):
         bad.append("spell_hun_readiness_rework bound (dropped by stale line 4)")
+    for r in bound:
+        if abs(int(r["spell_id"])) in UNSCRIPTED_S2B_IDS:
+            bad.append(f"{r['spell_id']} bound to {r['ScriptName']} (B2 / B7: no script on 201935 / 201950)")
     have = {(int(r["spell_trigger"]), int(r["spell_effect"]), int(r["type"])) for r in linked}
-    if MASTERY_LINK not in have:
-        bad.append(f"linked_spell{MASTERY_LINK} not declared")
+    for link in links:
+        if link not in have:
+            bad.append(f"linked_spell{link} not declared")
+    return bad
+
+
+# ---- (n) the ricochet / bounce ---------------------------------------------------------------------------------------
+
+def live_weapon_potency(row: dict, effect: int) -> int:
+    """A WEAPON_PERCENT_DAMAGE effect's live percent: stored base points + 1 (die sides 1), stored = live - 1."""
+    return _i(row, f"EffectBasePoints_{effect}") + (1 if _i(row, f"EffectDieSides_{effect}") >= 1 else 0)
+
+
+def check_pack_shots(rows_by_id: dict[int, dict], pack_pct) -> list[str]:
+    """(n) B2 on both built rows: the PACK_SHOT_FIELDS, Speed 0, SUPPRESS_CASTER_PROCS, and eff1's live weapon potency
+    = pack_pct % of Aimed Shot 19434's built eff1 (A1 computes it from a private copy of 220: a retune of Aimed Shot
+    that leaves the copy behind fails here) and = 110 today (B2)."""
+    aimed = rows_by_id.get(AIMED_SHOT)
+    if aimed is None:
+        return [f"{AIMED_SHOT}: not declared"]
+    if pack_pct is None:
+        return ["const PACK_SHOT_DAMAGE_PCT not declared"]
+    aimed_potency = live_weapon_potency(aimed, 2)
+    want_potency = aimed_potency * int(pack_pct) // 100
+    bad = []
+    if want_potency != PACK_SHOT_WEAPON_POTENCY:
+        bad.append(f"{pack_pct}% of Aimed Shot's {aimed_potency} is {want_potency}, B2 says "
+                   f"{PACK_SHOT_WEAPON_POTENCY} (update the B2 literal with the ruling)")
+    for spell_id in PACK_SHOTS:
+        row = rows_by_id.get(spell_id)
+        if row is None:
+            bad.append(f"{spell_id}: not declared")
+            continue
+        for key, want in PACK_SHOT_FIELDS.items():
+            if _i(row, key) != want:
+                bad.append(f"{spell_id}: {key} {row.get(key)}, expected {want}")
+        if float(row.get("Speed") or 0) != 0.0:
+            bad.append(f"{spell_id}: Speed {row.get('Speed')}, expected 0 (launch and hit inside the CastSpell)")
+        if not _i(row, "AttributesEx3") & ATTR_EX3_SUPPRESS_CASTER_PROCS:
+            bad.append(f"{spell_id}: AttributesEx3 0x{_i(row, 'AttributesEx3'):X} lacks SUPPRESS_CASTER_PROCS "
+                       f"(0x10000)")
+        if live_weapon_potency(row, 2) != want_potency:
+            bad.append(f"{spell_id}: eff1 weapon potency {live_weapon_potency(row, 2)}, expected {want_potency} "
+                       f"(= {pack_pct}% of Aimed Shot 19434's {aimed_potency})")
+    return bad
+
+
+# ---- (o) the half Volley ---------------------------------------------------------------------------------------------
+
+def check_half_volley(volley: dict | None, volley_entry: dict | None, tick: dict | None, tick_entry: dict | None,
+                      bonus_rows: list[dict], duration_index_3s: int) -> list[str]:
+    """(o) B6: 201936 the dynobj + snapshot source (3 unhasted 1 s ticks, ap potency 75.5 direct T 1.5, bonus row =
+    the Volley tick 42243's), hidden; 201937 the potency-excluded tick (no bonus row, no bit, Ex3 0x20010000)."""
+    if volley is None or tick is None or volley_entry is None or tick_entry is None:
+        return [f"{HALF_VOLLEY}/{HALF_VOLLEY_TICK}: not declared"]
+    bad = []
+    for key, want in (("SpellClassSet", SPELLFAMILY_HUNTER), ("SchoolMask", SCHOOL_ARCANE),
+                      ("DefenseType", DEFENSE_RANGED), ("EquippedItemClass", -1), ("Targets", 0x40),
+                      ("DurationIndex", duration_index_3s),
+                      ("Effect_1", EFFECT_PERSISTENT_AREA_AURA), ("EffectAura_1", AURA_DUMMY),
+                      ("ImplicitTargetA_1", 28), ("Effect_2", EFFECT_APPLY_AURA),
+                      ("EffectAura_2", AURA_PERIODIC_DUMMY), ("EffectAuraPeriod_2", HALF_VOLLEY_AMPLITUDE_MS),
+                      ("ImplicitTargetA_2", 1), ("Effect_3", 0)):
+        if _i(volley, key) != want:
+            bad.append(f"{HALF_VOLLEY}: {key} {volley.get(key)}, expected {want}")
+    if spell_mask(volley) != (0, 0, D2_HALF_VOLLEY):
+        bad.append(f"{HALF_VOLLEY}: SpellClassMask {_hex(spell_mask(volley))}, expected (0x0, 0x0, 0x40000000) "
+                   f"(d2 b30: Barrage / Rain of Arrows reach the snapshot)")
+    if _i(volley, "AttributesEx5") & ATTR_EX5_HASTE_AFFECT_DURATION:
+        bad.append(f"{HALF_VOLLEY}: AttributesEx5 0x{_i(volley, 'AttributesEx5'):X} holds 0x2000 (hasted ticks; B6 "
+                   f"wants {HALF_VOLLEY_TICKS} unhasted)")
+    if not _i(volley, "Attributes") & ATTR_DO_NOT_DISPLAY:
+        bad.append(f"{HALF_VOLLEY}: Attributes 0x{_i(volley, 'Attributes'):X} lacks DO_NOT_DISPLAY (0x80)")
+    if not _i(volley, "AttributesEx3") & ATTR_EX3_SUPPRESS_CASTER_PROCS:
+        bad.append(f"{HALF_VOLLEY}: AttributesEx3 lacks SUPPRESS_CASTER_PROCS (0x10000)")
+    if HALF_VOLLEY_DURATION_MS // max(_i(volley, "EffectAuraPeriod_2"), 1) != HALF_VOLLEY_TICKS:
+        bad.append(f"{HALF_VOLLEY}: {HALF_VOLLEY_DURATION_MS} ms / {volley.get('EffectAuraPeriod_2')} ms is not "
+                   f"{HALF_VOLLEY_TICKS} ticks")
+    potency = (volley_entry.get("effect1") or {}).get("_potency") or {}
+    got = (potency.get("kind"), potency.get("total_potency"), potency.get("t_seconds"))
+    if got != ("direct", HALF_VOLLEY_AP_POTENCY, HALF_VOLLEY_TIME_BASIS_S) or not potency.get("ap_coefficient"):
+        bad.append(f"{HALF_VOLLEY}: eff0 potency (kind, total, T s) {got} ap {potency.get('ap_coefficient')}, "
+                   f"expected ('direct', {HALF_VOLLEY_AP_POTENCY}, {HALF_VOLLEY_TIME_BASIS_S}) with an ap part "
+                   f"(time_basis_ms 1500)")
+    bonus = {int(b["entry"]): b for b in bonus_rows}
+    mine, tick_row = bonus.get(HALF_VOLLEY), bonus.get(VOLLEY_TICK)
+    if mine is None or tick_row is None or float(mine.get("ap_bonus") or 0) != float(tick_row.get("ap_bonus") or 0):
+        bad.append(f"{HALF_VOLLEY}: spell_bonus_data ap {None if mine is None else mine.get('ap_bonus')}, expected "
+                   f"the Volley tick {VOLLEY_TICK}'s {None if tick_row is None else tick_row.get('ap_bonus')}")
+    for key, want in (("SpellClassSet", SPELLFAMILY_HUNTER), ("SchoolMask", SCHOOL_ARCANE),
+                      ("DefenseType", DEFENSE_RANGED), ("EquippedItemClass", -1),
+                      ("AttributesEx3", HALF_VOLLEY_TICK_EX3), ("Effect_1", EFFECT_SCHOOL_DAMAGE),
+                      ("ImplicitTargetA_1", 87), ("ImplicitTargetB_1", 16), ("Effect_2", 0), ("Effect_3", 0)):
+        if _i(tick, key) != want:
+            bad.append(f"{HALF_VOLLEY_TICK}: {key} {tick.get(key)}, expected {want}")
+    if any(spell_mask(tick)):
+        bad.append(f"{HALF_VOLLEY_TICK}: SpellClassMask {_hex(spell_mask(tick))}, expected none (no SpellMod may "
+                   f"touch the tick a second time)")
+    if not (tick_entry.get("effect1") or {}).get("_potency_excluded"):
+        bad.append(f"{HALF_VOLLEY_TICK}: eff0 not potency_excluded (the amount is the BP0 snapshot)")
+    if HALF_VOLLEY_TICK in bonus:
+        bad.append(f"{HALF_VOLLEY_TICK}: has a spell_bonus_data row (a second AP pass on the snapshot)")
+    return bad
+
+
+def check_half_volley_reach(masks, rows_by_id: dict[int, dict]) -> list[str]:
+    """(o) VOLLEY_DAMAGE / BARRAGE_DAMAGE hold d2 b30 and the Barrage / Rain of Arrows ranks' eff0 carry them."""
+    bad = []
+    for name, ranks in (("VOLLEY_DAMAGE", RAIN_OF_ARROWS_RANKS), ("BARRAGE_DAMAGE", BARRAGE_RANKS)):
+        composite = tuple(getattr(masks, name, (0, 0, 0)))
+        if not composite[2] & D2_HALF_VOLLEY:
+            bad.append(f"_masks.{name} {_hex(composite)} lacks d2 b30 (the half Volley)")
+        for spell_id in ranks:
+            row = rows_by_id.get(spell_id)
+            if row is None:
+                bad.append(f"{spell_id}: not declared")
+            elif effect_mask(row, 1) != composite:
+                bad.append(f"{spell_id}: eff0 mask {_hex(effect_mask(row, 1))}, expected {name} {_hex(composite)}")
+    return bad
+
+
+# ---- (p) Barrage r3's row --------------------------------------------------------------------------------------------
+
+def check_barrage_chain_proc(procs: list[dict]) -> list[str]:
+    """(p) the 24691 row is positive-keyed on r3 alone: no -19461 chain key (it would give r1 / r2 the capstone) and no
+    row on r1 / r2 (their ProcTypeMask is 0)."""
+    keys = {int(p["SpellId"]) for p in procs}
+    return [f"spell_proc {k}: only {BARRAGE_R3} carries the half Volley row" for k in sorted(keys)
+            if abs(k) in BARRAGE_RANKS and k != BARRAGE_R3]
+
+
+# ---- (q) Lone Survivor / Combat Experience ---------------------------------------------------------------------------
+
+def check_lone_survivor_and_capstone(rows_by_id: dict[int, dict], permanent_index: int) -> list[str]:
+    bad = []
+    row = rows_by_id.get(LONE_SURVIVOR_BUFF)
+    if row is None:
+        bad.append(f"{LONE_SURVIVOR_BUFF}: not declared")
+    else:
+        for key, want in (("Effect_1", EFFECT_APPLY_AURA), ("EffectAura_1", AURA_MOD_DAMAGE_PERCENT_DONE),
+                          ("EffectMiscValue_1", 127), ("DurationIndex", permanent_index), ("AttributesEx7", 0),
+                          ("EquippedItemClass", -1), ("SpellIconID", 535)):
+            if _i(row, key) != want:
+                bad.append(f"{LONE_SURVIVOR_BUFF}: {key} {row.get(key)}, expected {want}")
+    row = rows_by_id.get(COMBAT_EXPERIENCE_CAPSTONE)
+    if row is None:
+        bad.append(f"{COMBAT_EXPERIENCE_CAPSTONE}: not declared")
+    else:
+        for key, want in (("Effect_1", EFFECT_APPLY_AURA), ("EffectAura_1", AURA_MOD_STAT), ("EffectMiscValue_1", 3),
+                          ("EffectBasePoints_1", -1), ("Effect_2", EFFECT_APPLY_AURA),
+                          ("EffectAura_2", AURA_PERIODIC_DUMMY), ("EffectAuraPeriod_2", 1000),
+                          ("EquippedItemClass", -1)):
+            if _i(row, key) != want:
+                bad.append(f"{COMBAT_EXPERIENCE_CAPSTONE}: {key} {row.get(key)}, expected {want}")
+        if _i(row, "Attributes") & (ATTR_PASSIVE | ATTR_DO_NOT_DISPLAY) != ATTR_PASSIVE | ATTR_DO_NOT_DISPLAY:
+            bad.append(f"{COMBAT_EXPERIENCE_CAPSTONE}: Attributes 0x{_i(row, 'Attributes'):X}, expected a hidden "
+                       f"passive (0x40 | 0x80)")
+    return bad
+
+
+# ---- (u) the S2b review fixes ----------------------------------------------------------------------------------------
+
+def check_half_volley_level(rows_by_id: dict[int, dict]) -> list[str]:
+    """(u) R-data M-1: potency derives BaseLevel from SpellLevel and SpellEffectInfo::CalcValue lifts a lower caster
+    level to BaseLevel, so 201936 must share the Volley tick 42243's SpellLevel to be one tick at every level."""
+    volley, tick = rows_by_id.get(HALF_VOLLEY), rows_by_id.get(VOLLEY_TICK)
+    if volley is None or tick is None:
+        return [f"{HALF_VOLLEY}/{VOLLEY_TICK}: not declared"]
+    if not _i(tick, "SpellLevel") or _i(volley, "SpellLevel") != _i(tick, "SpellLevel"):
+        return [f"{HALF_VOLLEY}: SpellLevel {volley.get('SpellLevel')}, expected the Volley tick {VOLLEY_TICK}'s "
+                f"{tick.get('SpellLevel')} (the potency BaseLevel; a higher one gives low-level hunters its base)"]
+    return []
+
+
+def check_ignore_line_of_sight(rows_by_id: dict[int, dict], ids=IGNORE_LOS_IDS) -> list[str]:
+    """(u) R-cpp m-1: the ricochet, the bounce and Convergence carry AttributesEx2 IGNORE_LINE_OF_SIGHT (0x4)."""
+    bad = []
+    for spell_id in ids:
+        row = rows_by_id.get(spell_id)
+        if row is None:
+            bad.append(f"{spell_id}: not declared")
+        elif not _i(row, "AttributesEx2") & ATTR_EX2_IGNORE_LINE_OF_SIGHT:
+            bad.append(f"{spell_id}: AttributesEx2 0x{_i(row, 'AttributesEx2'):X} lacks IGNORE_LINE_OF_SIGHT (0x4)")
+    return bad
+
+
+def check_cannot_be_saved(custom_attrs: list[dict], ids=CANNOT_BE_SAVED_S2B_IDS) -> list[str]:
+    """(u) R-cpp m-4: exactly one spell_custom_attr row per id (the table is keyed on the spell id), holding
+    CANNOT_BE_SAVED (0x01000000)."""
+    bad = []
+    for spell_id in ids:
+        attrs = [int(c["attributes"]) for c in custom_attrs if int(c["spell_id"]) == spell_id]
+        if len(attrs) != 1 or not attrs[0] & CUSTOM_ATTR_CANNOT_BE_SAVED:
+            bad.append(f"{spell_id}: spell_custom_attr {[hex(a) for a in attrs]}, expected one row with "
+                       f"CANNOT_BE_SAVED (0x01000000)")
+    return bad
+
+
+# ---- (r) the TRIGGERED_FULL_MASK source guard ------------------------------------------------------------------------
+
+PACK_SHOT_TOKENS = ("SPELL_AIMED_SHOT_RICOCHET", "SPELL_AIMED_SHOT_BOUNCE", str(RICOCHET), str(BOUNCE))
+_CAST_CALL_RE = re.compile(r"\b(CastSpell|CastCustomSpell)\s*\(")
+_COMMENT_RE = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)
+_TRIGGERED_FLAG_RE = re.compile(r"\bTRIGGERED_[A-Z_]+\b")
+
+
+def _call_args(text: str, open_paren: int) -> str:
+    depth = 0
+    for i in range(open_paren, len(text)):
+        if text[i] == "(":
+            depth += 1
+        elif text[i] == ")":
+            depth -= 1
+            if depth == 0:
+                return text[open_paren + 1:i]
+    return text[open_paren + 1:]
+
+
+def check_pack_shot_casts(text: str) -> tuple[list[str], int]:
+    """(r) every CastSpell / CastCustomSpell whose arguments name 201934 / 201935 (the header name, the literal, or a
+    local alias assigned from either, e.g. `uint32 const shot = ... SPELL_AIMED_SHOT_BOUNCE`) passes TRIGGERED_FULL_MASK
+    and no other TRIGGERED_* flag (R3). Returns (problems, casts seen): zero casts is fine (B1 may not have written
+    them yet)."""
+    code = _COMMENT_RE.sub("", text)
+    tokens = set(PACK_SHOT_TOKENS)
+    pattern = "|".join(re.escape(t) for t in PACK_SHOT_TOKENS)
+    for m in re.finditer(r"\b(\w+)\s*(?<![=!<>+\-*/])=(?!=)[^;{}]*?\b(?:" + pattern + r")\b", code):
+        if not _CAST_CALL_RE.search(m.group(0)):      # `result = CastSpell(... RICOCHET ...)` is a cast, not an alias
+            tokens.add(m.group(1))
+    token_re = re.compile(r"\b(?:" + "|".join(re.escape(t) for t in sorted(tokens)) + r")\b")
+    bad, seen = [], 0
+    for m in _CAST_CALL_RE.finditer(code):
+        args = _call_args(code, m.end() - 1)
+        if not token_re.search(args):
+            continue
+        seen += 1
+        line = code.count("\n", 0, m.start()) + 1
+        flags = set(_TRIGGERED_FLAG_RE.findall(args))
+        if flags != {"TRIGGERED_FULL_MASK"}:
+            bad.append(f"line ~{line}: {m.group(1)}({' '.join(args.split())}) passes {sorted(flags) or 'no flag'}, "
+                       f"expected TRIGGERED_FULL_MASK only (R3: the d0 b17 10 s RecoveryTime)")
+    return bad, seen
+
+
+# ---- (s) 34082 and aura 140 ------------------------------------------------------------------------------------------
+
+def check_advantaged_state(row: dict | None) -> list[str]:
+    """(s) the user's ruling: no MOD_RANGED_HASTE effect left on 34082; eff0 PROC_TRIGGER_SPELL -> 34084 and the proc
+    fields stay stock; still a hidden passive with EquippedItemClass -1."""
+    if row is None:
+        return [f"{ADVANTAGED_STATE}: not declared (the stock edit is missing: the 15% ranged haste is back)"]
+    bad = []
+    for n in (1, 2, 3):
+        if _i(row, f"EffectAura_{n}") == AURA_MOD_RANGED_HASTE:
+            bad.append(f"eff{n - 1} still MOD_RANGED_HASTE (140) bp {row.get(f'EffectBasePoints_{n}')}")
+    for key, want in (("Effect_1", EFFECT_APPLY_AURA), ("EffectAura_1", AURA_PROC_TRIGGER_SPELL),
+                      ("EffectTriggerSpell_1", ADVANTAGED_STATE_PROC), ("Effect_2", 0), ("Effect_3", 0),
+                      ("ProcTypeMask", 65876), ("ProcChance", 100), ("Attributes", 464), ("EquippedItemClass", -1)):
+        if _i(row, key) != want:
+            bad.append(f"{key} {row.get(key)}, expected {want}")
+    return [f"{ADVANTAGED_STATE}: {b}" for b in bad]
+
+
+def hunter_learnable_ids(sla_rows, talent_rows, trainer_spells, linked) -> set[int]:
+    """(s) spells a hunter actually learns: SLA auto-learn rows (AcquireMethod 1/2) for the hunter class mask (or class
+    mask 0 on a hunter skill line), hunter talent tab ranks, trainer rows, then linked type-2 passives of those."""
+    ids: set[int] = set()
+    for r in sla_rows:
+        if _i(r, "AcquireMethod") not in SLA_AUTO_LEARN:
+            continue
+        mask = _i(r, "ClassMask")
+        if mask & CLASSMASK_HUNTER or (not mask and _i(r, "SkillLine") in HUNTER_SKILL_LINES):
+            ids.add(_i(r, "Spell"))
+    for row in talent_rows:
+        if _i(row, "TabID") in HUNTER_TALENT_TABS:
+            ids.update(_i(row, f"SpellRank_{n}") for n in range(1, 10))
+    ids.update(int(t.get("SpellId") or t.get("spell_id") or 0) for t in trainer_spells)
+    links = [(int(r["spell_trigger"]), int(r["spell_effect"]), int(r["type"])) for r in linked]
+    grown = True
+    while grown:
+        new = {effect for trigger, effect, kind in links if kind == 2 and trigger in ids and effect > 0} - ids
+        ids |= new
+        grown = bool(new)
+    ids.discard(0)
+    return ids
+
+
+def _amount_nonzero(row: dict, n: int) -> bool:
+    die = _i(row, f"EffectDieSides_{n}")
+    return die > 1 or _i(row, f"EffectBasePoints_{n}") + (1 if die == 1 else 0) != 0
+
+
+def check_no_learnable_ranged_haste(spell_rows: dict[int, dict], learnable: set[int]) -> list[str]:
+    """(s) no learnable passive (built row, else stock) carries aura 140 with a non-zero amount."""
+    bad = []
+    for spell_id in sorted(learnable):
+        row = spell_rows.get(spell_id)
+        if row is None or not _i(row, "Attributes") & ATTR_PASSIVE:
+            continue
+        for n in (1, 2, 3):
+            if _i(row, f"Effect_{n}") and _i(row, f"EffectAura_{n}") == AURA_MOD_RANGED_HASTE \
+                    and _amount_nonzero(row, n):
+                bad.append(f"{spell_id}: learnable passive with MOD_RANGED_HASTE (140) on eff{n - 1}, bp "
+                           f"{row.get(f'EffectBasePoints_{n}')} (user ruling 2026-10-16: no hidden ranged haste)")
+    return bad
+
+
+# ---- (t) Multi-Shot --------------------------------------------------------------------------------------------------
+
+def check_multi_shot(row: dict | None) -> list[str]:
+    if row is None:
+        return [f"{MULTI_SHOT}: not declared"]
+    bad = [f"{MULTI_SHOT}: {key} {row.get(key)}, expected {want} (B1: data unchanged)"
+           for key, want in MULTI_SHOT_FIELDS.items() if _i(row, key) != want]
+    if float(row.get("Speed") or 0) != 30.0:
+        bad.append(f"{MULTI_SHOT}: Speed {row.get('Speed')}, expected 30 (B1: data unchanged)")
     return bad
 
 
@@ -864,7 +1323,11 @@ def _cast_times(reuse) -> dict[int, int]:
 
 
 def _touched_ids() -> set[int]:
-    return {*NEW_S2A_IDS, *TAB_RANKS, *EDITED_STOCK_HELPERS}
+    return {*NEW_S2A_IDS, *TAB_RANKS, *EDITED_STOCK_HELPERS, *S2B_MINUS_ONE_IDS}
+
+
+def _const(package, name: str):
+    return next((c["value"] for c in package.consts if c["name"] == name), None)
 
 
 class HunterMmDataTest(unittest.TestCase):
@@ -884,9 +1347,60 @@ class HunterMmDataTest(unittest.TestCase):
         sv = [r for r in talents.values() if _i(r, "TabID") == SV_TAB and _i(r, "ID") == SNIPER_TRAINING_ROW]
         self.assertEqual(sv, [], "Sniper Training 2143 still on tab 362 in the overlay")
 
-    def test_s2b_ids_not_declared_in_s2a(self):
+    def test_s2b_ids_declared(self):
         rows = package_data()["rows_by_id"]
-        self.assertEqual(sorted(i for i in S2B_IDS if i in rows), [])
+        self.assertEqual(sorted(i for i in NEW_S2B_IDS if i not in rows), [])
+
+    def test_pack_shots(self):
+        data = package_data()
+        self.assertClean(check_pack_shots(data["rows_by_id"], _const(data["package"], "PACK_SHOT_DAMAGE_PCT")))
+
+    def test_half_volley(self):
+        data = package_data()
+        rows, package = data["rows_by_id"], data["package"]
+        entries = {int(e["id"]): e for e in package.spells}
+        self.assertClean(check_half_volley(rows.get(HALF_VOLLEY), entries.get(HALF_VOLLEY), rows.get(HALF_VOLLEY_TICK),
+                                           entries.get(HALF_VOLLEY_TICK), package.spell_bonus_data,
+                                           data["reuse"].duration_index(HALF_VOLLEY_DURATION_MS)))
+        self.assertClean(check_half_volley_reach(load_masks_module(), rows))
+
+    def test_barrage_proc_chain(self):
+        self.assertClean(check_barrage_chain_proc(package_data()["package"].spell_procs))
+
+    def test_lone_survivor_and_combat_experience(self):
+        data = package_data()
+        self.assertClean(check_lone_survivor_and_capstone(data["rows_by_id"], data["reuse"].duration_index(-1)))
+
+    def test_s2b_review_fixes(self):
+        data = package_data()
+        rows = data["rows_by_id"]
+        self.assertClean(check_half_volley_level(rows))
+        self.assertClean(check_ignore_line_of_sight(rows))
+        self.assertClean(check_cannot_be_saved(data["package"].custom_attrs))
+
+    def test_pack_shot_casts_pass_full_mask(self):
+        problems = []
+        for path in PACK_SHOT_CASTER_SOURCES:
+            if path.is_file():
+                bad, _seen = check_pack_shot_casts(path.read_text(encoding="utf-8"))
+                problems += [f"{path.name}: {b}" for b in bad]
+        self.assertClean(problems)
+
+    def test_advantaged_state_and_no_learnable_ranged_haste(self):
+        data = package_data()
+        package, rows = data["package"], data["rows_by_id"]
+        self.assertClean(check_advantaged_state(rows.get(ADVANTAGED_STATE)))
+        sla = {**state.load_stock_rows(dbcfmt.SKILLLINEABILITY), **{int(r["ID"]): r for r in data["sla_rows"]}}
+        talents = {**state.load_stock_rows(dbcfmt.TALENT),
+                   **{int(r["ID"]): r for r in map(build.build_talent_row, package.talents)}}
+        learnable = hunter_learnable_ids(sla.values(), talents.values(), package.trainer_spells,
+                                         package.linked_spells)
+        self.assertIn(ADVANTAGED_STATE, learnable)              # the guard sees 34082 (SLA 15148, AcquireMethod 2)
+        self.assertFalse(learnable & set(SERPENTS_SWIFTNESS_ORPHANS), "an aura-140 orphan became learnable")
+        self.assertClean(check_no_learnable_ranged_haste({**data["stock_spells"], **rows}, learnable))
+
+    def test_multi_shot_unchanged(self):
+        self.assertClean(check_multi_shot(package_data()["rows_by_id"].get(MULTI_SHOT)))
 
     def test_marks(self):
         data = package_data()
@@ -909,7 +1423,7 @@ class HunterMmDataTest(unittest.TestCase):
         data = package_data()
         rows = data["rows_by_id"]
         self.assertClean(check_free_arcane_shot(rows.get(ARCANE_SHOT_FREE), rows.get(ARCANE_SHOT),
-                                                data["package"].spell_script_names))
+                                                data["package"].spell_script_names, data["package"].spell_bonus_data))
 
     def test_visibility_lists(self):
         self.assertClean(check_visibility(package_data()["rows_by_id"]))
@@ -1003,8 +1517,10 @@ def good_aimed() -> tuple[dict, dict]:
 
 
 def good_arcane_pair() -> tuple[dict, dict]:
-    arcane = {"ID": ARCANE_SHOT, "Effect_2": EFFECT_DUMMY, "EffectBasePoints_2": 199, "EffectDieSides_2": 1}
-    free = {"ID": ARCANE_SHOT_FREE, "Effect_1": EFFECT_SCHOOL_DAMAGE, "Effect_2": EFFECT_DUMMY,
+    damage = {"Effect_1": EFFECT_SCHOOL_DAMAGE, "EffectBasePoints_1": -71, "EffectDieSides_1": 1,
+              "EffectRealPointsPerLevel_1": 7.428571428571428}
+    arcane = {"ID": ARCANE_SHOT, **damage, "Effect_2": EFFECT_DUMMY, "EffectBasePoints_2": 199, "EffectDieSides_2": 1}
+    free = {"ID": ARCANE_SHOT_FREE, **damage, "Effect_2": EFFECT_DUMMY,
             "EffectBasePoints_2": 199, "EffectDieSides_2": 1, "CastingTimeIndex": 18, "EquippedItemClass": -1,
             "SpellClassSet": 9, "SpellClassMask_1": D0_ARCANE_SHOT, "SchoolMask": SCHOOL_ARCANE,
             "DefenseType": DEFENSE_RANGED, "AttributesEx3": ATTR_EX3_SUPPRESS_CASTER_PROCS}
@@ -1012,6 +1528,8 @@ def good_arcane_pair() -> tuple[dict, dict]:
 
 
 GOOD_FREE_BOUND = [{"spell_id": ARCANE_SHOT_FREE, "ScriptName": n} for n in sorted(FREE_ARCANE_SHOT_SCRIPTS)]
+GOOD_ARCANE_BONUS = [{"entry": i, "direct_bonus": 0.0, "dot_bonus": 0.0, "ap_bonus": 0.5571428571428572,
+                      "ap_dot_bonus": 0.0} for i in (ARCANE_SHOT, ARCANE_SHOT_FREE)]
 
 
 def good_spellmod_rows(masks) -> dict[int, dict]:
@@ -1054,10 +1572,86 @@ def good_rapid_killing() -> dict[int, dict]:
 
 
 def good_bindings() -> tuple[list[dict], list[dict], list[dict]]:
-    bound = [{"spell_id": i, "ScriptName": n} for n, ids in S2A_SCRIPT_BINDINGS.items() for i in ids]
+    bound = [{"spell_id": i, "ScriptName": n} for n, ids in SCRIPT_BINDINGS.items() for i in ids]
     removals = [{"spell_id": k, "ScriptName": n} for k, n in S2A_UNBINDS]
-    linked = [{"spell_trigger": MFD_R3, "spell_effect": MASTERY, "type": 2}]
+    linked = [{"spell_trigger": a, "spell_effect": b, "type": t} for a, b, t in LINKS]
     return bound, removals, linked
+
+
+def good_pack_rows() -> dict[int, dict]:
+    aimed = {"ID": AIMED_SHOT, "Effect_2": EFFECT_WEAPON_PERCENT_DAMAGE, "EffectBasePoints_2": 219,
+             "EffectDieSides_2": 1}
+    rows = {AIMED_SHOT: aimed}
+    for i in PACK_SHOTS:
+        rows[i] = {"ID": i, **PACK_SHOT_FIELDS, "Speed": 0.0, "AttributesEx3": ATTR_EX3_SUPPRESS_CASTER_PROCS,
+                   "EffectBasePoints_2": 109, "EffectDieSides_2": 1, "EffectDieSides_1": 1}
+    return rows
+
+
+def good_half_volley() -> tuple[dict, dict, dict, dict, list[dict]]:
+    volley = {"ID": HALF_VOLLEY, "SpellClassSet": 9, "SchoolMask": SCHOOL_ARCANE, "DefenseType": DEFENSE_RANGED,
+              "EquippedItemClass": -1, "Targets": 0x40, "DurationIndex": 30112, "Attributes": ATTR_DO_NOT_DISPLAY,
+              "AttributesEx3": ATTR_EX3_SUPPRESS_CASTER_PROCS, "SpellClassMask_3": D2_HALF_VOLLEY,
+              "Effect_1": EFFECT_PERSISTENT_AREA_AURA, "EffectAura_1": AURA_DUMMY, "ImplicitTargetA_1": 28,
+              "Effect_2": EFFECT_APPLY_AURA, "EffectAura_2": AURA_PERIODIC_DUMMY, "EffectAuraPeriod_2": 1000,
+              "ImplicitTargetA_2": 1}
+    volley_entry = {"id": HALF_VOLLEY, "effect1": {"_potency": {"kind": "direct", "total_potency": 75.5,
+                                                                "t_seconds": 1.5, "ap_coefficient": 0.3236}}}
+    tick = {"ID": HALF_VOLLEY_TICK, "SpellClassSet": 9, "SchoolMask": SCHOOL_ARCANE, "DefenseType": DEFENSE_RANGED,
+            "EquippedItemClass": -1, "AttributesEx3": 0x20010000, "Effect_1": EFFECT_SCHOOL_DAMAGE,
+            "ImplicitTargetA_1": 87, "ImplicitTargetB_1": 16}
+    tick_entry = {"id": HALF_VOLLEY_TICK, "effect1": {"_potency_excluded": "snapshot"}}
+    bonus = [{"entry": HALF_VOLLEY, "ap_bonus": 0.3236}, {"entry": VOLLEY_TICK, "ap_bonus": 0.3236}]
+    return volley, volley_entry, tick, tick_entry, bonus
+
+
+def good_lone_and_capstone() -> dict[int, dict]:
+    return {
+        LONE_SURVIVOR_BUFF: {"ID": LONE_SURVIVOR_BUFF, "Effect_1": EFFECT_APPLY_AURA,
+                             "EffectAura_1": AURA_MOD_DAMAGE_PERCENT_DONE, "EffectMiscValue_1": 127,
+                             "DurationIndex": DUR_PERM, "AttributesEx7": 0, "EquippedItemClass": -1,
+                             "SpellIconID": 535},
+        COMBAT_EXPERIENCE_CAPSTONE: {"ID": COMBAT_EXPERIENCE_CAPSTONE, "Attributes": 464, "Effect_1": EFFECT_APPLY_AURA,
+                                     "EffectAura_1": AURA_MOD_STAT, "EffectMiscValue_1": 3, "EffectBasePoints_1": -1,
+                                     "Effect_2": EFFECT_APPLY_AURA, "EffectAura_2": AURA_PERIODIC_DUMMY,
+                                     "EffectAuraPeriod_2": 1000, "EquippedItemClass": -1},
+    }
+
+
+# (r) fixtures in the shape B1 is expected to write (S2b B3 steps 7 / 8)
+GOOD_CASTS_CPP = """
+    // a comment naming CastSpell(unit, HunterData::SPELL_AIMED_SHOT_RICOCHET, TRIGGERED_NONE) is ignored
+    player->CastSpell(unit, HunterData::SPELL_AIMED_SHOT_RICOCHET, TRIGGERED_FULL_MASK);
+    player->CastSpell(bounceTarget, HunterData::SPELL_AIMED_SHOT_BOUNCE,
+                      TRIGGERED_FULL_MASK);
+    uint32 const shotId = ricochet ? HunterData::SPELL_AIMED_SHOT_RICOCHET : HunterData::SPELL_AIMED_SHOT_BOUNCE;
+    player->CastSpell(unit, shotId, TRIGGERED_FULL_MASK);
+    player->CastSpell(player, HunterData::SPELL_RAIN_OF_ARROWS_BOUNCE, TRIGGERED_IGNORE_GCD);
+    if (x == y) player->CastSpell(player, HunterData::SPELL_TRICK_SHOTS_BUFF, true);
+"""
+
+
+def good_learnable_sources() -> tuple[list[dict], list[dict], list[dict], list[dict]]:
+    sla = [{"ID": 15148, "SkillLine": 183, "Spell": ADVANTAGED_STATE, "ClassMask": 4, "AcquireMethod": 2},
+           {"ID": 15219, "SkillLine": 50, "Spell": 34469, "ClassMask": 4, "AcquireMethod": 0},
+           {"ID": 1, "SkillLine": 6, "Spell": 116, "ClassMask": 128, "AcquireMethod": 2}]     # a mage spell
+    talents = [{"ID": 1803, "TabID": 361, "SpellRank_1": 34466, "SpellRank_2": 34467, "SpellRank_3": 34468},
+               {"ID": 1, "TabID": 41, "SpellRank_1": 44972}]                                  # another class's tab
+    trainer = [{"SpellId": 3045}]
+    linked = [{"spell_trigger": COMBAT_EXPERIENCE_R3, "spell_effect": COMBAT_EXPERIENCE_CAPSTONE, "type": 2},
+              {"spell_trigger": 34466, "spell_effect": 201999, "type": 2}]
+    return sla, talents, trainer, linked
+
+
+def haste_passive(spell_id: int, bp: int = 14, die: int = 1, effect: int = 2, attributes: int = 464) -> dict:
+    return {"ID": spell_id, "Attributes": attributes, f"Effect_{effect}": EFFECT_APPLY_AURA,
+            f"EffectAura_{effect}": AURA_MOD_RANGED_HASTE, f"EffectBasePoints_{effect}": bp,
+            f"EffectDieSides_{effect}": die}
+
+
+GOOD_ADVANTAGED = {"ID": ADVANTAGED_STATE, "Attributes": 464, "ProcTypeMask": 65876, "ProcChance": 100,
+                   "EquippedItemClass": -1, "Effect_1": EFFECT_APPLY_AURA, "EffectAura_1": AURA_PROC_TRIGGER_SPELL,
+                   "EffectTriggerSpell_1": ADVANTAGED_STATE_PROC}
 
 
 class HunterMmDataNegativeTest(unittest.TestCase):
@@ -1141,20 +1735,31 @@ class HunterMmDataNegativeTest(unittest.TestCase):
 
     def test_free_arcane_shot_guard(self):
         free, arcane = good_arcane_pair()
-        self.assertEqual(check_free_arcane_shot(free, arcane, GOOD_FREE_BOUND), [])
+        bonus = GOOD_ARCANE_BONUS
+
+        def check(f=free, a=arcane, bound=GOOD_FREE_BOUND, b=bonus):
+            return check_free_arcane_shot(f, a, bound, b)
+
+        self.assertEqual(check(), [])
         # the stale MM 5.10 literal (bp 4 = 0.5%) diverges from 3044's 199
-        self.assertEqual(len(check_free_arcane_shot(changed(free, EffectBasePoints_2=4), arcane, GOOD_FREE_BOUND)), 1)
+        self.assertEqual(len(check(f=changed(free, EffectBasePoints_2=4))), 1)
         # 3044 retuned while 201933 keeps a literal 199: must fail too
-        self.assertEqual(len(check_free_arcane_shot(free, changed(arcane, EffectBasePoints_2=149), GOOD_FREE_BOUND)), 1)
-        self.assertEqual(len(check_free_arcane_shot(changed(free, EffectDieSides_2=0), arcane, GOOD_FREE_BOUND)), 1)
+        self.assertEqual(len(check(a=changed(arcane, EffectBasePoints_2=149))), 1)
+        self.assertEqual(len(check(f=changed(free, EffectDieSides_2=0))), 1)
         for key, value in (("CastingTimeIndex", 1), ("EquippedItemClass", 2), ("Category", 1173), ("ManaCostPct", 3),
                            ("RecoveryTime", 6000), ("SpellClassMask_1", D0_ARCANE_SHOT | D0_AIMED_SHOT),
                            ("AttributesEx3", 0)):
-            self.assertEqual(len(check_free_arcane_shot(changed(free, **{key: value}), arcane, GOOD_FREE_BOUND)), 1,
-                             key)
+            self.assertEqual(len(check(f=changed(free, **{key: value}))), 1, key)
         bm = GOOD_FREE_BOUND + [{"spell_id": ARCANE_SHOT_FREE, "ScriptName": "spell_hun_arcane_shot_bm"}]
-        self.assertEqual(len(check_free_arcane_shot(free, arcane, bm)), 1)
-        self.assertEqual(len(check_free_arcane_shot(free, arcane, GOOD_FREE_BOUND[:1])), 1)
+        self.assertEqual(len(check(bound=bm)), 1)
+        self.assertEqual(len(check(bound=GOOD_FREE_BOUND[:1])), 1)
+        # m-1: 3044's damage retuned (flat part and per-level slope) while 201933 keeps the old literal
+        self.assertEqual(len(check(a=changed(arcane, EffectBasePoints_1=-60, EffectRealPointsPerLevel_1=8.0))), 2)
+        self.assertEqual(len(check(f=changed(free, Effect_1=EFFECT_DUMMY))), 2)      # type differs + not SCHOOL_DAMAGE
+        # m-1: 3044's ap coefficient retuned (ap_potency 130 -> 150) while 201933's stays
+        retuned = [changed(b, ap_bonus=0.64) if b["entry"] == ARCANE_SHOT else b for b in bonus]
+        self.assertEqual(len(check(b=retuned)), 1)
+        self.assertEqual(len(check(b=[b for b in bonus if b["entry"] != ARCANE_SHOT_FREE])), 1)  # free row lost
 
     def test_visibility_guard(self):
         rows = {i: {"ID": i, "Attributes": 0, "AttributesEx": 0, "AttributesEx7": 0} for i in VISIBLE}
@@ -1291,9 +1896,10 @@ class HunterMmDataNegativeTest(unittest.TestCase):
                 19461: {"ID": 19461, "Effect_1": 6}, 24691: {"ID": 24691, "Effect_1": 6, "ProcTypeMask": 0x100},
                 53215: {"ID": 53215, "Effect_1": 6, "ProcTypeMask": 0x140},
                 53217: {"ID": 53217, "Effect_1": 6, "ProcTypeMask": 0x140}}
-        procs = [{"SpellId": -53215}]
+        procs = [{"SpellId": -53215}, {"SpellId": BARRAGE_R3}]
         self.assertEqual(check_m15(rows, talents, procs), [])
-        self.assertEqual(len(check_m15(rows, talents, [])), 2)                                  # Wild Quiver unrowed
+        self.assertEqual(len(check_m15(rows, talents, [])), 3)                     # Wild Quiver + Barrage r3 unrowed
+        self.assertEqual(len(check_m15(rows, talents, procs[:1])), 1)             # S2b: 24691 is no longer accepted
         stale = {**rows, 34482: changed(rows[34482], EffectSpellClassMaskB_1=0x73A01)}        # mask on absent eff1
         self.assertEqual(len(check_m15(stale, talents, procs)), 1)
         proc = {**rows, 34483: changed(rows[34483], ProcTypeMask=0x100)}
@@ -1312,11 +1918,225 @@ class HunterMmDataNegativeTest(unittest.TestCase):
         self.assertEqual(len(check_bindings(bound + [{"spell_id": -53234, "ScriptName": "spell_hun_piercing_shots_mm"}],
                                             removals, linked)), 1)
         self.assertEqual(len(check_bindings(bound, removals[:1], linked)), 1)
-        self.assertEqual(len(check_bindings(bound, removals, [])), 1)
+        self.assertEqual(len(check_bindings(bound, removals, [])), 2)                           # both links
         rebind = removals + [{"spell_id": 23989, "ScriptName": "spell_hun_readiness"}]
         self.assertEqual(len(check_bindings(bound, rebind, linked)), 1)
         self.assertEqual(len(check_bindings([b for b in bound if b["spell_id"] != ARCANE_SHOT_FREE], removals,
                                             linked)), 1)
+        # S2b (q)
+        self.assertEqual(len(check_bindings(bound, removals, linked[:1])), 1)                   # 201982 link lost
+        self.assertEqual(len(check_bindings(bound, removals, [{**linked[1], "type": 0}, linked[0]])), 1)
+        neg = [changed(b, spell_id=-19407) if b["spell_id"] == 19407 else b for b in bound]
+        self.assertEqual(len(check_bindings(neg, removals, linked)), 1)                         # chain key
+        bounce = bound + [{"spell_id": BOUNCE, "ScriptName": "spell_hun_aimed_shot_ricochet"}]
+        self.assertEqual(len(check_bindings(bounce, removals, linked)), 2)                      # wrong set + no script
+        self.assertEqual(len(check_bindings(bound + [{"spell_id": LONE_SURVIVOR_BUFF, "ScriptName": "x"}], removals,
+                                            linked)), 1)
+        unbound = removals + [{"spell_id": -VOLLEY_TICK, "ScriptName": "spell_hun_volley_trigger"}]
+        self.assertEqual(len(check_bindings(bound, unbound, linked)), 1)
+        self.assertEqual(len(check_bindings([b for b in bound if b["spell_id"] != HALF_VOLLEY_TICK], removals,
+                                            linked)), 1)
+
+    def test_pack_shot_guard(self):
+        rows = good_pack_rows()
+        self.assertEqual(check_pack_shots(rows, 50), [])
+        self.assertEqual(len(check_pack_shots(rows, None)), 1)
+        for key, value in (("SpellClassMask_1", 0), ("SpellClassMask_3", D2_HALF_VOLLEY), ("CastingTimeIndex", 1),
+                           ("EquippedItemClass", 2), ("DefenseType", 1), ("RecoveryTime", 10000),
+                           ("Speed", 40.0), ("AttributesEx3", 0), ("EffectBasePoints_1", 0),
+                           ("EffectBasePoints_2", 219)):
+            bad = {**rows, RICOCHET: changed(rows[RICOCHET], **{key: value})}
+            self.assertEqual(len(check_pack_shots(bad, 50)), 1, key)
+        # Aimed Shot retuned to 250 while A1's private 220 stays: the copies keep 110, expected 125 (+ the B2 literal)
+        aimed = {**rows, AIMED_SHOT: changed(rows[AIMED_SHOT], EffectBasePoints_2=249)}
+        self.assertEqual(len(check_pack_shots(aimed, 50)), 3)
+        self.assertEqual(len(check_pack_shots({k: v for k, v in rows.items() if k != BOUNCE}, 50)), 1)
+        self.assertEqual(live_weapon_potency({"EffectBasePoints_2": 109, "EffectDieSides_2": 1}, 2), 110)
+
+    def test_half_volley_guard(self):
+        volley, v_entry, tick, t_entry, bonus = good_half_volley()
+
+        def check(v=volley, ve=v_entry, t=tick, te=t_entry, b=bonus):
+            return check_half_volley(v, ve, t, te, b, 30112)
+
+        self.assertEqual(check(), [])
+        for key, value in (("SpellClassMask_3", 0), ("AttributesEx5", ATTR_EX5_HASTE_AFFECT_DURATION),
+                           ("Attributes", 0), ("DurationIndex", 30100), ("EquippedItemClass", 2),
+                           ("AttributesEx3", 0), ("Targets", 0)):
+            self.assertEqual(len(check(v=changed(volley, **{key: value}))), 1, key)
+        self.assertEqual(len(check(v=changed(volley, EffectAuraPeriod_2=500))), 2)        # period + 6 ticks
+        no_basis = changed(v_entry, effect1={"_potency": {**v_entry["effect1"]["_potency"], "t_seconds": 3.0}})
+        self.assertEqual(len(check(ve=no_basis)), 1)                                        # time_basis_ms dropped
+        self.assertEqual(len(check(b=[bonus[0], {"entry": VOLLEY_TICK, "ap_bonus": 0.4}])), 1)
+        for key, value in (("SpellClassMask_3", D2_HALF_VOLLEY), ("AttributesEx3", ATTR_EX3_SUPPRESS_CASTER_PROCS),
+                           ("EquippedItemClass", 2), ("ImplicitTargetB_1", 15)):
+            self.assertEqual(len(check(t=changed(tick, **{key: value}))), 1, key)
+        self.assertEqual(len(check(te={"id": HALF_VOLLEY_TICK, "effect1": {}})), 1)         # potency not excluded
+        self.assertEqual(len(check(b=bonus + [{"entry": HALF_VOLLEY_TICK, "ap_bonus": 0.3}])), 1)
+        self.assertEqual(len(check(t=None)), 1)
+
+    def test_half_volley_reach_guard(self):
+        fake = type("M", (), dict(SPEC_MASKS))
+
+        def eff0(spell_id, name):
+            return {"ID": spell_id, **{f"EffectSpellClassMaskA_{n}": w for n, w in enumerate(SPEC_MASKS[name], 1)}}
+
+        rows = {i: eff0(i, "BARRAGE_DAMAGE") for i in BARRAGE_RANKS}
+        rows.update({i: eff0(i, "VOLLEY_DAMAGE") for i in RAIN_OF_ARROWS_RANKS})
+        self.assertEqual(check_half_volley_reach(fake, rows), [])
+        lost = type("M", (), {**SPEC_MASKS, "VOLLEY_DAMAGE": (0x2000, 0, 0)})
+        self.assertEqual(len(check_half_volley_reach(lost, rows)), 3)                       # mask + both RoA ranks
+        stale = {**rows, BARRAGE_R3: changed(rows[BARRAGE_R3], EffectSpellClassMaskA_3=0)}
+        self.assertEqual(len(check_half_volley_reach(fake, stale)), 1)
+
+    def test_family_bit_s2b_guard(self):
+        good = [{"ID": AIMED_SHOT, "SpellClassSet": 9, "SpellClassMask_1": D0_AIMED_SHOT},
+                {"ID": RICOCHET, "SpellClassSet": 9, "SpellClassMask_1": D0_AIMED_SHOT},
+                {"ID": BOUNCE, "SpellClassSet": 9, "SpellClassMask_1": D0_AIMED_SHOT},
+                {"ID": HALF_VOLLEY, "SpellClassSet": 9, "SpellClassMask_3": D2_HALF_VOLLEY},
+                {"ID": HALF_VOLLEY_TICK, "SpellClassSet": 9}, {"ID": 20900, "SpellClassSet": 4,
+                                                               "SpellClassMask_1": D0_AIMED_SHOT}]   # other family
+        self.assertEqual(check_family_bit_carriers(good), [])
+        self.assertEqual(len(check_family_bit_carriers(good + [{"ID": 20901, "SpellClassSet": 9,
+                                                                "SpellClassMask_1": D0_AIMED_SHOT}])), 1)
+        self.assertEqual(len(check_family_bit_carriers(good + [{"ID": 42243, "SpellClassSet": 9,
+                                                                "SpellClassMask_3": D2_HALF_VOLLEY}])), 1)
+        tick = [changed(r, SpellClassMask_3=D2_HALF_VOLLEY) if r["ID"] == HALF_VOLLEY_TICK else r for r in good]
+        self.assertEqual(len(check_family_bit_carriers(tick)), 2)                           # d2 b30 + no-bit id
+        for sid in (LONE_SURVIVOR_BUFF, COMBAT_EXPERIENCE_CAPSTONE):
+            self.assertEqual(len(check_family_bit_carriers(good + [{"ID": sid, "SpellClassMask_2": 0x1}])), 1, sid)
+        extra = [changed(r, SpellClassMask_2=0x1) if r["ID"] == BOUNCE else r for r in good]
+        self.assertEqual(len(check_family_bit_carriers(extra)), 1)                          # bounce mask not exact
+        wide = [changed(r, SpellClassMask_1=D0_MULTI_SHOT) if r["ID"] == HALF_VOLLEY else r for r in good]
+        self.assertEqual(len(check_family_bit_carriers(wide)), 1)
+
+    def test_barrage_proc_guard(self):
+        procs = good_procs()
+        self.assertEqual(check_proc_rows(procs), [])
+        self.assertEqual(check_barrage_chain_proc(procs), [])
+
+        def edited(**cols):
+            return [changed(p, **cols) if p["SpellId"] == BARRAGE_R3 else p for p in procs]
+
+        for key, value in (("SpellPhaseMask", PROC_PHASE_HIT), ("Cooldown", 0), ("DisableEffectsMask", 0),
+                           ("ProcFlags", 0x110), ("SpellFamilyMask0", 0x3000), ("AttributesMask", 0x2),
+                           ("SpellFamilyName", 0), ("Chance", 100.0)):
+            self.assertEqual(len(check_proc_rows(edited(**{key: value}))), 1, key)
+        self.assertEqual(len(check_proc_rows([p for p in procs if p["SpellId"] != BARRAGE_R3])), 1)
+        chain = [changed(p, SpellId=-19461) if p["SpellId"] == BARRAGE_R3 else p for p in procs]
+        self.assertEqual(len(check_barrage_chain_proc(chain)), 1)
+        self.assertEqual(len(check_barrage_chain_proc(procs + [{"SpellId": 19462}])), 1)
+
+    def test_lone_survivor_and_capstone_guard(self):
+        rows = good_lone_and_capstone()
+        self.assertEqual(check_lone_survivor_and_capstone(rows, DUR_PERM), [])
+        for key, value in (("AttributesEx7", ATTR_EX7_CONSOLIDATE), ("DurationIndex", DUR15),
+                           ("EffectMiscValue_1", 1), ("EquippedItemClass", 2)):
+            bad = {**rows, LONE_SURVIVOR_BUFF: changed(rows[LONE_SURVIVOR_BUFF], **{key: value})}
+            self.assertEqual(len(check_lone_survivor_and_capstone(bad, DUR_PERM)), 1, key)
+        for key, value in (("Attributes", 0x40), ("EffectMiscValue_1", 1), ("EffectAuraPeriod_2", 500)):
+            bad = {**rows, COMBAT_EXPERIENCE_CAPSTONE: changed(rows[COMBAT_EXPERIENCE_CAPSTONE], **{key: value})}
+            self.assertEqual(len(check_lone_survivor_and_capstone(bad, DUR_PERM)), 1, key)
+        self.assertEqual(len(check_lone_survivor_and_capstone({}, DUR_PERM)), 2)
+        # M1 lists: 201950 visible, 201952 / 201936 hidden
+        vis = {i: {"ID": i} for i in VISIBLE}
+        vis.update({i: {"ID": i, "Attributes": 0x80 | 0x40, "AttributesEx": ATTR_EX_NO_AURA_ICON} for i in HIDDEN})
+        self.assertEqual(check_visibility(vis), [])
+        self.assertEqual(len(check_visibility({**vis, LONE_SURVIVOR_BUFF: {"ID": LONE_SURVIVOR_BUFF,
+                                                                           "Attributes": 0x40}})), 1)
+        self.assertEqual(len(check_visibility({**vis, COMBAT_EXPERIENCE_CAPSTONE: {"ID": COMBAT_EXPERIENCE_CAPSTONE,
+                                                                                   "Attributes": 0x40}})), 1)
+        self.assertEqual(len(check_visibility({**vis, HALF_VOLLEY: {"ID": HALF_VOLLEY, "Attributes": 0}})), 1)
+
+    def test_half_volley_level_guard(self):
+        rows = {HALF_VOLLEY: {"ID": HALF_VOLLEY, "SpellLevel": 40}, VOLLEY_TICK: {"ID": VOLLEY_TICK, "SpellLevel": 40}}
+        self.assertEqual(check_half_volley_level(rows), [])
+        self.assertEqual(len(check_half_volley_level({**rows, HALF_VOLLEY: changed(rows[HALF_VOLLEY],
+                                                                                   SpellLevel=60)})), 1)
+        both_zero = {i: changed(r, SpellLevel=0) for i, r in rows.items()}
+        self.assertEqual(len(check_half_volley_level(both_zero)), 1)
+        self.assertEqual(len(check_half_volley_level({HALF_VOLLEY: rows[HALF_VOLLEY]})), 1)
+
+    def test_ignore_line_of_sight_guard(self):
+        rows = {i: {"ID": i, "AttributesEx2": ATTR_EX2_IGNORE_LINE_OF_SIGHT} for i in IGNORE_LOS_IDS}
+        self.assertEqual(check_ignore_line_of_sight(rows), [])
+        for spell_id in IGNORE_LOS_IDS:
+            bad = {**rows, spell_id: changed(rows[spell_id], AttributesEx2=0x20000)}    # another Ex2 bit only
+            self.assertEqual(len(check_ignore_line_of_sight(bad)), 1, spell_id)
+        self.assertEqual(len(check_ignore_line_of_sight({k: v for k, v in rows.items() if k != CONVERGENCE})), 1)
+
+    def test_cannot_be_saved_guard(self):
+        attrs = [{"spell_id": i, "attributes": CUSTOM_ATTR_CANNOT_BE_SAVED} for i in CANNOT_BE_SAVED_S2B_IDS]
+        self.assertEqual(check_cannot_be_saved(attrs), [])
+        self.assertEqual(len(check_cannot_be_saved([a for a in attrs if a["spell_id"] != HALF_VOLLEY])), 1)
+        wrong = [changed(a, attributes=0x200000) if a["spell_id"] == HALF_VOLLEY else a for a in attrs]
+        self.assertEqual(len(check_cannot_be_saved(wrong)), 1)
+        self.assertEqual(len(check_cannot_be_saved(attrs + [{"spell_id": HALF_VOLLEY, "attributes": 0x1}])), 1)
+
+    def test_pack_shot_cast_guard(self):
+        self.assertEqual(check_pack_shot_casts(""), ([], 0))                                  # no casts yet
+        self.assertEqual(check_pack_shot_casts(GOOD_CASTS_CPP), ([], 3))
+        for bad_line in ("player->CastSpell(unit, HunterData::SPELL_AIMED_SHOT_RICOCHET, TRIGGERED_NONE);",
+                         "player->CastSpell(unit, HunterData::SPELL_AIMED_SHOT_BOUNCE, true);",
+                         "player->CastSpell(unit, 201934, TRIGGERED_IGNORE_GCD);",
+                         "player->CastSpell(unit, HunterData::SPELL_AIMED_SHOT_RICOCHET,\n"
+                         "    TriggerCastFlags(TRIGGERED_FULL_MASK & ~TRIGGERED_IGNORE_SPELL_AND_CATEGORY_CD));",
+                         "player->CastSpell(unit, shotId, TRIGGERED_IGNORE_POWER_AND_REAGENT_COST);",
+                         "player->CastCustomSpell(HunterData::SPELL_AIMED_SHOT_BOUNCE, SPELLVALUE_BASE_POINT0, bp, "
+                         "unit, TRIGGERED_NONE);"):
+            problems, seen = check_pack_shot_casts(GOOD_CASTS_CPP + bad_line)
+            self.assertEqual((len(problems), seen), (1, 4), bad_line)
+        info = ("SpellInfo const* info = sSpellMgr->GetSpellInfo(HunterData::SPELL_AIMED_SHOT_RICOCHET);\n"
+                "player->CastSpell(targets, info, nullptr, TRIGGERED_IGNORE_GCD);")
+        self.assertEqual(len(check_pack_shot_casts(info)[0]), 1)                               # alias through a lookup
+
+    def test_advantaged_state_guard(self):
+        self.assertEqual(check_advantaged_state(GOOD_ADVANTAGED), [])
+        self.assertEqual(len(check_advantaged_state(None)), 1)
+        stock = changed(GOOD_ADVANTAGED, Effect_2=EFFECT_APPLY_AURA, EffectAura_2=AURA_MOD_RANGED_HASTE,
+                        EffectBasePoints_2=14, EffectDieSides_2=1)
+        self.assertEqual(len(check_advantaged_state(stock)), 2)                            # haste back + eff1 present
+        zeroed = changed(GOOD_ADVANTAGED, Effect_2=EFFECT_APPLY_AURA, EffectAura_2=AURA_MOD_RANGED_HASTE,
+                         EffectBasePoints_2=-1, EffectDieSides_2=1)
+        self.assertEqual(len(check_advantaged_state(zeroed)), 2)                           # an aura 140 effect is left
+        self.assertEqual(len(check_advantaged_state(changed(GOOD_ADVANTAGED, Effect_1=0, EffectAura_1=0,
+                                                            EffectTriggerSpell_1=0))), 3)   # eff0 dropped too
+        self.assertEqual(len(check_advantaged_state(changed(GOOD_ADVANTAGED, EquippedItemClass=2))), 1)
+
+    def test_learnable_ranged_haste_guard(self):
+        sla, talents, trainer, linked = good_learnable_sources()
+        learnable = hunter_learnable_ids(sla, talents, trainer, linked)
+        self.assertEqual(learnable, {ADVANTAGED_STATE, 34466, 34467, 34468, 3045, 201999})
+        clean = {ADVANTAGED_STATE: GOOD_ADVANTAGED, 34469: haste_passive(34469, bp=15, effect=1),
+                 34470: haste_passive(34470, bp=19, effect=1), 44972: haste_passive(44972),
+                 3045: haste_passive(3045, bp=39, effect=1, attributes=0x40010)}       # castable: not passive
+        self.assertEqual(check_no_learnable_ranged_haste(clean, learnable), [])
+        # the stock 34082 back: fails
+        self.assertEqual(len(check_no_learnable_ranged_haste({**clean, ADVANTAGED_STATE: haste_passive(
+            ADVANTAGED_STATE)}, learnable)), 1)
+        # an orphan wired back into a talent: fails
+        wired = talents + [{"ID": 1803, "TabID": 361, "SpellRank_1": 34469}]
+        self.assertEqual(len(check_no_learnable_ranged_haste(clean, hunter_learnable_ids(sla, wired, trainer,
+                                                                                          linked))), 1)
+        # an auto-learned orphan (AcquireMethod 0 -> 2): fails
+        auto = [changed(r, AcquireMethod=2) if r["Spell"] == 34469 else r for r in sla]
+        self.assertEqual(len(check_no_learnable_ranged_haste(clean, hunter_learnable_ids(auto, talents, trainer,
+                                                                                         linked))), 1)
+        # a linked type-2 passive of a talent rank: fails
+        self.assertEqual(len(check_no_learnable_ranged_haste({**clean, 201999: haste_passive(201999)}, learnable)), 1)
+        # aura 140 with amount 0 (bp -1 die 1) is not haste; die sides > 1 is
+        self.assertEqual(check_no_learnable_ranged_haste({**clean, 34466: haste_passive(34466, bp=-1)}, learnable),
+                         [])
+        self.assertEqual(len(check_no_learnable_ranged_haste({**clean, 34466: haste_passive(34466, bp=-1, die=3)},
+                                                             learnable)), 1)
+
+    def test_multi_shot_guard(self):
+        good = {"ID": MULTI_SHOT, **MULTI_SHOT_FIELDS, "Speed": 30.0}
+        self.assertEqual(check_multi_shot(good), [])
+        for key, value in (("CastingTimeIndex", 18), ("EffectChainTargets_1", 5), ("SpellClassMask_1", 0x3000),
+                           ("EquippedItemClass", -1), ("Speed", 0.0)):
+            self.assertEqual(len(check_multi_shot(changed(good, **{key: value}))), 1, key)
+        self.assertEqual(len(check_multi_shot(None)), 1)
 
 
 if __name__ == "__main__":
