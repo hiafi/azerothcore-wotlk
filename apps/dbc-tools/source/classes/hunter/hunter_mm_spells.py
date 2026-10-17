@@ -258,7 +258,7 @@ vipers_venom_201931 = _mark_dot(
 
 
 snipers_mark_201920 = _mark(
-    201920, "Sniper's Mark", School.NORMAL, 3524, 30, 20000, 7955,
+    201920, "Sniper's Mark", School.NORMAL, 3524, 30, 30000, 7955,
     'A precise shot that deals $s2% weapon damage and places Sniper\'s Mark on the target for $d. Each of your '
     'abilities against the target adds a stack, up to $u; Arcane Shot, Chimera Shot and Kill Shot add '
     + _favored_extra() + ' more. Your Aimed Shot consumes the mark, gaining ' + _n(SNIPER_CRIT_CHANCE)
@@ -268,7 +268,7 @@ snipers_mark_201920 = _mark(
     'Marked. Aimed Shot consumes this mark for extra critical strike chance and critical strike damage.',
 )
 vipers_mark_201921 = _mark(
-    201921, "Viper's Mark", School.NATURE, 1630, 40, 30000, 3179,
+    201921, "Viper's Mark", School.NATURE, 1630, 40, 45000, 3179,
     'A venomous shot that deals $s2% weapon damage as Nature damage and places Viper\'s Mark on the target for $d. '
     'Each of your abilities against the target adds a stack, up to $u; Serpent Sting adds ' + _favored_extra()
     + ' more. Your Aimed Shot consumes the mark and applies Viper\'s Bite, dealing '
@@ -279,7 +279,7 @@ vipers_mark_201921 = _mark(
     tooltip=mm_mark_dots_1170,
 )
 falcons_mark_201922 = _mark(
-    201922, "Falcon's Mark", School.NORMAL, 1530, 50, 45000, 8155,
+    201922, "Falcon's Mark", School.NORMAL, 1530, 50, 60000, 8155,
     'A swift shot that deals $s2% weapon damage and places Falcon\'s Mark on the target for $d. Each of your '
     'abilities against the target adds a stack, up to $u, and each stack increases your haste by '
     + _n(MARK_FALCON_HASTE_PER_STACK) + '%. Your Aimed Shot consumes the mark and grants Quickening, increasing your '

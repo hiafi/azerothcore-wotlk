@@ -181,9 +181,9 @@ ORPHANS = (19419, 19420, 19430, 19431, 19489, 19490, 34488, 34489, 34490, 34950,
 
 # MM 4.1 per mark: school mask, RecoveryTime, SpellLevel, icon
 MARK_DATA = {
-    SNIPERS_MARK: (SCHOOL_PHYSICAL, 20000, 30, 3524),
-    VIPERS_MARK: (SCHOOL_NATURE, 30000, 40, 1630),
-    FALCONS_MARK: (SCHOOL_PHYSICAL, 45000, 50, 1530),
+    SNIPERS_MARK: (SCHOOL_PHYSICAL, 30000, 30, 3524),
+    VIPERS_MARK: (SCHOOL_NATURE, 45000, 40, 1630),
+    FALCONS_MARK: (SCHOOL_PHYSICAL, 60000, 50, 1530),
 }
 MARK_FIELDS = {          # common built fields (MM 4.1 + A1)
     "SpellClassSet": SPELLFAMILY_HUNTER, "SpellClassMask_1": 0, "SpellClassMask_2": 0,
@@ -1119,7 +1119,7 @@ class HunterMmDataNegativeTest(unittest.TestCase):
             self.assertEqual(len(check_mark(SNIPERS_MARK, changed(good, **{key: value}), CAST_TIMES, DUR15)), 1, key)
         self.assertEqual(len(check_mark(SNIPERS_MARK, changed(good, EffectAura_3=3), CAST_TIMES, DUR15)), 1)
         self.assertEqual(len(check_mark(SNIPERS_MARK, changed(good, EffectBasePoints_3=0), CAST_TIMES, DUR15)), 1)
-        self.assertEqual(len(check_mark(SNIPERS_MARK, changed(good, RecoveryTime=30000), CAST_TIMES, DUR15)), 1)
+        self.assertEqual(len(check_mark(SNIPERS_MARK, changed(good, RecoveryTime=20000), CAST_TIMES, DUR15)), 1)
         self.assertEqual(len(check_mark(SNIPERS_MARK, good, CAST_TIMES, DUR_PERM)), 1)              # duration
 
     def test_aimed_shot_guard(self):
