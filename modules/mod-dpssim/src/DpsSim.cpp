@@ -19,6 +19,8 @@
 #include "DpsSim.h"
 #include "GameTime.h"
 #include "Log.h"
+#include "Player.h"
+#include "SimActor.h"
 #include "SimDaemon.h"
 #include "SimProfile.h"
 #include "SimReport.h"
@@ -42,12 +44,33 @@ namespace
             return basePath.substr(0, basePath.size() - suffix.size()) + iterTag + suffix;
         return basePath + iterTag;
     }
+
+    // CharacterDatabaseInfo is "host;port;user;password;database"; AC_CHARACTER_DATABASE_INFO overrides it. Returns
+    // the database name, or an empty string if the value is malformed.
+    std::string CharactersDatabaseName()
+    {
+        std::string const info = sConfigMgr->GetOption<std::string>("CharacterDatabaseInfo", "");
+        size_t const lastSep = info.rfind(';');
+        return lastSep == std::string::npos ? std::string() : info.substr(lastSep + 1);
+    }
 }
 
 DpsSimWorldScript::DpsSimWorldScript() : WorldScript(MODULE_STRING, {WORLDHOOK_ON_DPS_SIM_RUN}) { }
 
 void DpsSimWorldScript::OnDpsSimRun()
 {
+    // Fail closed: the sim creates level-up mail, pets and items that draw ids from sequences shared with the live
+    // server, so it may only ever run on a disposable characters schema (run-sim.sh creates acore_characters_sim_*).
+    // A sim pointed at the live DB, or at a conf with no readable name, refuses to start.
+    std::string const charactersDb = CharactersDatabaseName();
+    if (charactersDb.empty() || charactersDb == "acore_characters" ||
+        charactersDb.rfind("acore_characters_sim", 0) != 0)
+    {
+        LOG_FATAL("server.dpssim", "mod-dpssim: refusing to run: the characters database is '{}', not a throwaway "
+            "'acore_characters_sim*' schema. Use modules/mod-dpssim/tools/run-sim.sh.", charactersDb);
+        return;
+    }
+
     // M1 skeleton: this is not the sim daemon yet (SimDaemon/SimActor/SimTarget/SimClock land in
     // follow-up work on this same module, once this foundation is confirmed to boot, build, and
     // link correctly). What this smoke-tests, end to end, in one run:
@@ -239,7 +262,16 @@ void DpsSimWorldScript::OnDpsSimRun()
     LOG_INFO("server.dpssim", "mod-dpssim: OnDpsSimRun() complete, exiting.");
 }
 
+DpsSimPlayerScript::DpsSimPlayerScript() : PlayerScript(MODULE_STRING, {PLAYERHOOK_ON_SAVE}) { }
+
+void DpsSimPlayerScript::OnPlayerSave(Player* player)
+{
+    if (SimActor::IsSimGuid(player->GetGUID()))
+        SimActor::NoteSaveAttempt(player->GetGUID());
+}
+
 void AddSC_DpsSim()
 {
     new DpsSimWorldScript();
+    new DpsSimPlayerScript();
 }
