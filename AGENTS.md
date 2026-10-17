@@ -23,6 +23,8 @@ Read the matching doc(s) BEFORE starting the task:
 - Reviewing a changeset or PR → `.agents/docs/code-review.md`
 - Self-reviewing, or opening or updating a PR → also `.agents/docs/self-review-rules.md`
 - Touching a subsystem that has a doc in `.agents/docs/systems/` → read that doc too
+- Authoring or editing a custom spell, talent or proc (dbc-tools DSL or SpellScript) →
+  `.agents/docs/systems/custom-spells.md`
 - Changing existing live-stack e2e (`e2e/`), and only when the user asked or an existing test broke → `e2e/README.md` and `.agents/docs/e2e-policy.md`
 - Capturing a lesson or adding/updating agent docs → `.agents/docs/README.md`
 - Merging upstream, or editing any file that also exists upstream (core C++ especially) →

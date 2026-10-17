@@ -2,7 +2,7 @@
 name: class-rework
 description: Run this repo's phased process for reworking a class's abilities/talent tree — design doc, dbc-tools data, C++ hooks, build/deploy, playtest guide. Use when the user asks to rework, retune, or overhaul a class's talents/abilities.
 metadata:
-  version: "1.1"
+  version: "1.2"
 ---
 
 # Class rework
@@ -21,12 +21,43 @@ they were flagged explicitly in the plan doc rather than assumed.
 
 ## Phase 0 — Design doc
 
-Write `docs/<class>_rework.md`: every new spell/aura in prose (what it does, numbers, duration,
-stacking rules), then the talent tree row by row (name, ranks, effect per rank, capstone bonus if
-the last rank unlocks bonus behavior). This is the spec everything else derives from — pull actual
+The design doc follows `docs/reworks/TEMPLATE.md`: one shared doc per class plus one doc per spec,
+and for every spell and talent a block with slot and stock replacement, the exact tooltip, values
+tagged `[fixed]`/`[tune]`, rules (what it triggers from, stacking, pets), what it isn't affected by,
+and open questions. If the user's doc isn't in that shape, list the missing pieces (tooltips apart
+from values, no "Replaces", unanswered edge cases) and get them before planning; converting a loose
+doc later cost the hunter rework a reconcile pass and two question rounds. This is the spec
+everything else derives from — pull actual
 current values from the live DBC/DB via `apps/dbc-tools`, don't reconstruct from memory of stock
 WotLK talents; several "this needs C++" calls only became clear by checking what data the pipeline
 can already express (see `apps/dbc-tools/README.md`'s `SPELL_AURA_*`/`raw_overrides` coverage).
+
+## Large reworks: staging, specs and agents
+
+For a whole class (several specs, a pet system, shared baseline changes), the work runs as stages:
+a harness session plans, reviews, builds, deploys and commits, and each stage is implemented by a
+separate session from a handoff file in `.agents/plans/<class>-rework/`. The hunter rework (three
+specs plus pets) took far longer than earlier classes; these rules come from what cost the most.
+
+- **Write each spec's work package just in time.** Up front, plan only what every stage shares:
+  the class-wide changes, ID blocks, family-bit map, rulings and stage order. Write a spec's detailed
+  package right before its stage, from the design doc and the code as it is then. Hunter's three
+  packages, written before any code landed, had 23 and 29 stale lines by the time MM and SV ran,
+  and each needed a large verification pass first.
+- **Prototype the client-visible mechanics first.** Before writing packages, deploy one throwaway
+  spell per mechanic type the class uses (a cast-time spell, an instant, a proc buff the player
+  must see, a pet ability, a "next cast is instant" proc) and check it in-game. Every item in
+  `.agents/docs/systems/custom-spells.md` was a playtest surprise that cost a fix stage and a
+  rebuild.
+- **Spend Opus where it pays.** In a stage session, use Sonnet for mechanical work packages (data
+  rows, tests, tooltips, playtest guides) and Opus for C++ mechanisms and reviews. Run one in-stage
+  review, not three, plus the harness's independent Opus review of the diff; the independent review
+  found the misses that mattered. Don't spawn a verification agent for something a grep answers.
+- **Bundle playtest fixes.** Collect a playtest's findings into one fix handoff and one deploy rather
+  than a build per finding.
+- **Every handoff** names its preconditions (HEAD, clean tree, boot baseline), the absolute report
+  path, and a predicted boot `Loaded`/`Validated`/"is not assigned" delta; the harness appends each
+  deploy to the plan's deploy log so the next stage's preconditions can be checked.
 
 ## Phase 1 — New abilities/auras
 
@@ -152,8 +183,10 @@ membership).
 - `docker compose stop ac-worldserver` before rebuilding — faster than rebuilding a running
   container.
 - `docker-compose.override.yml` bind-mounts `./data:/azerothcore/data:ro` into `ac-db-import`, so a
-  new/changed pending SQL migration takes effect on `docker compose up -d` — **no image rebuild
-  needed** for SQL-only changes, only for C++ changes to the worldserver binary.
+  new/changed pending SQL migration takes effect on `docker compose up --no-deps ac-db-import` — **never
+  rebuild the `ac-db-import` image** for SQL (it recompiles the whole tree, about 30 minutes); rebuild
+  only `ac-worldserver`, and only for C++ changes. Keep the server up during the compile and stop it just
+  before the import (characters SQL needs it stopped).
 - After a rebuild+deploy, **grep the worldserver boot log for `did not pass Validate()` /
   `Validated N scripts`** — this is the cheapest way to catch a silently-dropped script (see
   Phase 3's talent-id/spell-id pitfall) before it wastes a playtest session.
@@ -168,6 +201,9 @@ membership).
 
 ## Related docs
 
+- `.agents/docs/systems/custom-spells.md` — engine and client gotchas for custom spells (cast bars,
+  ranged-slot cast times, visible auras, triggered casts, Cooldown Haste); read before Phase 1.
+- `docs/reworks/TEMPLATE.md` — the design doc format Phase 0 expects.
 - `.agents/docs/systems/potency.md` — how a damage/heal/absorb effect's numbers should be authored
   (Phase 1), from the Warlock pilot (P4) onward.
 - `docs/dbc-build-pipeline.md` — why DBCs are generated artifacts, not hand-edited.
