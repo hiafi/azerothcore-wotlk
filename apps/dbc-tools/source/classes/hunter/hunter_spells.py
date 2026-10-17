@@ -299,8 +299,8 @@ multi_shot_2643 = spell(
         Effect(type=121, points_per_level=6.564516129032258, die_sides=0, implicit_target_a=6, chain_targets=3),
     ],
     spell_icon_id=85,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 18); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 8 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx2': 131072, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 18, 'CastingTimeIndex': 1, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Fires several missiles, hitting $x1 targets.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'InterruptFlags': 9, 'MaxLevel': 80, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 30.0, 'SpellClassMask_1': 4096, 'SpellClassSet': 9, 'SpellLevel': 18, 'SpellPriority': 50, 'SpellVisualID_1': 567, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 18); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 8 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. S2-FIX F-2 (user ruling): CastingTimeIndex 18 (was 1): index 1 plus the engine\'s +500 ms ranged-slot add was a hidden 0.5 s cast',
+    raw_overrides={'AttributesEx2': 131072, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 18, 'CastingTimeIndex': 18, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Fires several missiles, hitting $x1 targets.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'InterruptFlags': 9, 'MaxLevel': 80, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 30.0, 'SpellClassMask_1': 4096, 'SpellClassSet': 9, 'SpellLevel': 18, 'SpellPriority': 50, 'SpellVisualID_1': 567, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1066,8 +1066,8 @@ multi_shot_25294 = spell(
         Effect(type=121, base_points=149, implicit_target_a=6, chain_targets=3),
     ],
     spell_icon_id=85,
-    notes='pulled from existing data; step-7: superseded rank, kept (referenced by item_template spellid)',
-    raw_overrides={'AttributesEx2': 131072, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Fires several missiles, hitting $x1 targets for an additional $s1 damage.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'InterruptFlags': 9, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 5', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 30.0, 'SpellClassMask_1': 4096, 'SpellClassSet': 9, 'SpellLevel': 60, 'SpellPriority': 50, 'SpellVisualID_1': 567, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data; step-7: superseded rank, kept (referenced by item_template spellid). S2-FIX F-2: CastingTimeIndex 18, like 2643 (no hidden 0.5 s cast)',
+    raw_overrides={'AttributesEx2': 131072, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 18, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Fires several missiles, hitting $x1 targets for an additional $s1 damage.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'InterruptFlags': 9, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 5', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 30.0, 'SpellClassMask_1': 4096, 'SpellClassSet': 9, 'SpellLevel': 60, 'SpellPriority': 50, 'SpellVisualID_1': 567, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -2012,7 +2012,7 @@ aimed_shot_19434 = spell(
     id=19434,
     name='Aimed Shot',
     school=School.NORMAL,
-    attributes=65554,
+    attributes=0x410012,   # S2-FIX F-1: + TRACK_TARGET_IN_CAST_PLAYER_ONLY (0x400000), like Steady Shot 56641
     category=1301,   # S2a (MM 5.1, Q17): split from Multi-Shot's 85; spell_category(1301) is in hunter_mm_spells.py
     # Stale line 1 / M2: SpellInfo::CalcCastTime adds 500 ms to every ranged-slot shot, so 1500 ms (CastingTimeIndex 16)
     # is a 2.0 s live cast. The typed value and the raw twin move together. The tooltip shows "1.5 sec cast".
@@ -2028,8 +2028,8 @@ aimed_shot_19434 = spell(
         Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=220, implicit_target_a=6),   # placeholder, M
     ],
     spell_icon_id=1629,
-    notes='pulled from existing data. S2a (MARKSMANSHIP 5.1): 2.0 s live cast, category 1301 / 10 s, 220 weapon potency; the stock flat bp 4 + 6.72/level and the -50% healing debuff are dropped (Q11, MM 0.5).',
-    raw_overrides={'AttributesEx2': 131072, 'AttributesEx4': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 16, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "An aimed shot that deals $s2% weapon damage and consumes your marks on the target, triggering each mark's effect.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 40.0, 'SpellClassMask_1': 131072, 'SpellClassSet': 9, 'SpellLevel': 20, 'SpellVisualID_1': 7955, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data. S2a (MARKSMANSHIP 5.1): 2.0 s live cast, category 1301 / 10 s, 220 weapon potency; the stock flat bp 4 + 6.72/level and the -50% healing debuff are dropped (Q11, MM 0.5). S2-FIX F-1: Attributes 0x410012 (+TRACK_TARGET_IN_CAST_PLAYER_ONLY) and AttributesEx4 0x18000000 (+FORCE_DISPLAY_CASTBAR 0x08000000: the client hides a ranged-slot shot\'s cast bar without it), like Steady Shot 56641.',
+    raw_overrides={'AttributesEx2': 131072, 'AttributesEx4': 0x18000000, 'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 16, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "An aimed shot that deals $s2% weapon damage and consumes your marks on the target, triggering each mark's effect.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'ModalNextSpell': 75, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 114, 'Speed': 40.0, 'SpellClassMask_1': 131072, 'SpellClassSet': 9, 'SpellLevel': 20, 'SpellVisualID_1': 7955, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 

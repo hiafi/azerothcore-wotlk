@@ -119,6 +119,9 @@ OP_GLOBAL_COOLDOWN = 21
 OP_DOT = 22
 
 ATTR_USES_RANGED_SLOT = 0x2
+ATTR_TRACK_TARGET_IN_CAST = 0x400000       # SPELL_ATTR0_TRACK_TARGET_IN_CAST_PLAYER_ONLY (auto-face during the cast)
+ATTR_EX4_FORCE_DISPLAY_CASTBAR = 0x08000000   # SPELL_ATTR4_FORCE_DISPLAY_CASTBAR (the client hides a ranged shot's bar)
+ATTR_EX4_STOCK_AIMED = 0x10000000          # Aimed Shot's stock AttributesEx4 bit, kept
 ATTR_PASSIVE = 0x40
 ATTR_DO_NOT_DISPLAY = 0x80
 ATTR_EX_NO_AURA_ICON = 0x10000000          # SPELL_ATTR1_DONT_DISPLAY_IN_AURA_BAR
@@ -287,7 +290,7 @@ SPELLMOD_SPECS = (
     ((AIMED_CRIT_HELPER,), 2, AURA_ADD_PCT_MODIFIER, OP_CRIT_DAMAGE_BONUS, "AIMED_SHOT_MASK"),
     ((CHIMERA_CRIT_HELPER,), 1, AURA_ADD_FLAT_MODIFIER, OP_CRITICAL_CHANCE, "CHIMERA_SHOT_MASK"),    # 201949
     ((CHIMERA_CRIT_HELPER,), 2, AURA_ADD_PCT_MODIFIER, OP_CRIT_DAMAGE_BONUS, "CHIMERA_SHOT_MASK"),
-    ((FIRE,), 1, AURA_ADD_PCT_MODIFIER, OP_CASTING_TIME, "AIMED_SHOT_MASK"),                         # Fire!
+    ((FIRE,), 1, AURA_ADD_FLAT_MODIFIER, OP_CASTING_TIME, "AIMED_SHOT_MASK"),                        # Fire! (F-3: flat)
     ((FIRE,), 2, AURA_ADD_PCT_MODIFIER, OP_COST, "AIMED_SHOT_MASK"),
     ((EFFICIENCY_BUFF,), 1, AURA_ADD_PCT_MODIFIER, OP_CASTING_TIME, "STEADY_AIMED"),                 # 201945
     ((EFFICIENCY_BUFF,), 2, AURA_ADD_PCT_MODIFIER, OP_GLOBAL_COOLDOWN, "STEADY_AIMED"),
@@ -382,11 +385,11 @@ HALF_VOLLEY_TICK_EX3 = ATTR_EX3_IGNORE_CASTER_MODIFIERS | ATTR_EX3_SUPPRESS_CAST
 HUNTER_TALENT_TABS = frozenset({361, 362, 363})
 HUNTER_SKILL_LINES = frozenset({50, 51, 163})
 SLA_AUTO_LEARN = frozenset({1, 2})
-# (t) Multi-Shot 2643 as it stands (B1 "data unchanged"; index 1 = the stock hidden 0.5 s ranged-slot cast, an open
-# question for the user, 0-verify 4a: change this pin only together with that ruling)
+# (t) Multi-Shot 2643 (B1 "data unchanged" except S2-FIX F-2, the user's ruling: truly instant, index 18 = -1,000,000 ms;
+# index 1 plus the engine's +500 ms ranged-slot add was a hidden 0.5 s cast)
 MULTI_SHOT_FIELDS = {
     "SpellClassSet": SPELLFAMILY_HUNTER, "SpellClassMask_1": D0_MULTI_SHOT, "SpellClassMask_2": 0,
-    "SpellClassMask_3": 0, "CastingTimeIndex": 1, "EquippedItemClass": 2, "Category": 85,
+    "SpellClassMask_3": 0, "CastingTimeIndex": 18, "EquippedItemClass": 2, "Category": 85,
     "CategoryRecoveryTime": 10000, "Effect_1": EFFECT_NORMALIZED_WEAPON_DMG, "ImplicitTargetA_1": 6,
     "EffectChainTargets_1": 3, "Effect_2": 0, "Effect_3": 0, "DefenseType": DEFENSE_RANGED,
 }
@@ -571,6 +574,13 @@ def check_aimed_shot(row: dict | None, entry: dict | None, cast_times: dict[int,
         bad.append(f"CastingTimeIndex {row.get('CastingTimeIndex')}, expected 16")
     if entry.get("cast_time_ms") != 1500:
         bad.append(f"cast_time_ms {entry.get('cast_time_ms')}, expected 1500")
+    if not _i(row, "Attributes") & ATTR_TRACK_TARGET_IN_CAST:
+        bad.append(f"Attributes {hex(_i(row, 'Attributes'))} lacks TRACK_TARGET_IN_CAST_PLAYER_ONLY 0x400000 "
+                   f"(S2-FIX F-1: auto-face the target during the cast, like Steady Shot)")
+    ex4 = _i(row, "AttributesEx4")
+    if not ex4 & ATTR_EX4_FORCE_DISPLAY_CASTBAR or not ex4 & ATTR_EX4_STOCK_AIMED:
+        bad.append(f"AttributesEx4 {hex(ex4)} must hold FORCE_DISPLAY_CASTBAR 0x8000000 (S2-FIX F-1: no cast bar "
+                   f"without it) and the stock 0x10000000")
     if _i(row, "Category") != 1301:
         bad.append(f"Category {row.get('Category')}, expected 1301")
     if not any(int(c["id"]) == 1301 for c in categories):
@@ -602,6 +612,69 @@ def check_aimed_shot(row: dict | None, entry: dict | None, cast_times: dict[int,
         bad.append(f"InterruptFlags {row.get('InterruptFlags')} SpellLevel {row.get('SpellLevel')} MaxLevel "
                    f"{row.get('MaxLevel')}, expected 15 / 20 / 0")
     return [f"{AIMED_SHOT}: {b}" for b in bad]
+
+
+# ---- S2-FIX F-1 / F-2 / F-3: ranged-slot cast bars, instant shots, instant-cast SpellMods -------------------------------
+
+SHOT_ATTRS = 0x10002                      # USES_RANGED_SLOT | 0x10000: the player-cast shots (not the Volley tick 42243)
+EFFECT_INDEXES = (1, 2, 3)
+
+
+def _is_hunter_shot(row: dict) -> bool:
+    return (_i(row, "Attributes") & SHOT_ATTRS) == SHOT_ATTRS and _i(row, "SpellClassSet") == SPELLFAMILY_HUNTER
+
+
+def check_ranged_shot_cast_bars(rows_by_id: dict[int, dict], cast_times: dict[int, int]) -> tuple[list[str], int]:
+    """F-1: every hunter ranged-slot shot with a live cast time > 0 carries FORCE_DISPLAY_CASTBAR (else the client
+    shows no cast bar). F-2: every other one (live cast 0) is the truly instant row, CastingTimeIndex 18: index 1 plus
+    the engine's +500 ms ranged-slot add is a hidden 0.5 s cast. Returns (problems, shots seen)."""
+    bad, seen = [], 0
+    for spell_id, row in sorted(rows_by_id.items()):
+        if not _is_hunter_shot(row):
+            continue
+        seen += 1
+        if live_cast_ms(row, cast_times) > 0:
+            if not _i(row, "AttributesEx4") & ATTR_EX4_FORCE_DISPLAY_CASTBAR:
+                bad.append(f"{spell_id}: live cast {live_cast_ms(row, cast_times)} ms without FORCE_DISPLAY_CASTBAR "
+                           f"(AttributesEx4 {hex(_i(row, 'AttributesEx4'))}): no cast bar")
+        elif _i(row, "CastingTimeIndex") != 18:
+            bad.append(f"{spell_id}: instant shot with CastingTimeIndex {row.get('CastingTimeIndex')}, expected 18 "
+                       f"(the +500 ms ranged-slot add makes index 0/1 a hidden 0.5 s cast)")
+    return bad, seen
+
+
+def check_instant_cast_mods(rows_by_id: dict[int, dict], cast_times: dict[int, int]) -> tuple[list[str], int]:
+    """F-3: a CASTING_TIME SpellMod (aura 107 / 108, op 10) that reaches a hunter ranged-slot shot with a cast time
+    and is meant to make it instant (percentage <= -100, or any flat cut) must be FLAT and cut at least the live
+    cast (DBC base + 500 ms). The server adds the 500 ms before the mods, the client after them, so a -100% leaves
+    a 0.5 s cast on the client while a flat cut larger than the base zeroes both sides (Cobra Shot 201811). Stored
+    base points are live - 1 (die sides 0). Returns (problems, instant mods seen)."""
+    targets = {i: r for i, r in rows_by_id.items() if _is_hunter_shot(r) and live_cast_ms(r, cast_times) > 0}
+    bad, seen = [], 0
+    for spell_id, row in sorted(rows_by_id.items()):
+        for n in EFFECT_INDEXES:
+            aura = _i(row, f"EffectAura_{n}")
+            if _i(row, f"Effect_{n}") != EFFECT_APPLY_AURA or aura not in SPELLMOD_AURAS \
+                    or _i(row, f"EffectMiscValue_{n}") != OP_CASTING_TIME:
+                continue
+            mask = effect_mask(row, n)
+            reached = [t for t, tr in targets.items() if any(a & b for a, b in zip(mask, spell_mask(tr)))]
+            if not reached:
+                continue
+            live = _i(row, f"EffectBasePoints_{n}") + 1
+            if aura == AURA_ADD_PCT_MODIFIER:
+                if live <= -100:
+                    seen += 1
+                    bad.append(f"{spell_id}: eff{n - 1} is a {live}% cast time cut on {reached}: make it a flat "
+                               f"cut (the client adds the +500 ms after the mods)")
+                continue
+            seen += 1
+            for t in reached:
+                need = live_cast_ms(targets[t], cast_times)
+                if live > -need:
+                    bad.append(f"{spell_id}: eff{n - 1} flat {live} ms on {t} (live cast {need} ms): cut it by at "
+                               f"least {need} ms (stored <= {-need - 1})")
+    return bad, seen
 
 
 # ---- (e) the free Arcane Shot ----------------------------------------------------------------------------------------
@@ -1379,12 +1452,14 @@ class HunterMmDataTest(unittest.TestCase):
         self.assertClean(check_cannot_be_saved(data["package"].custom_attrs))
 
     def test_pack_shot_casts_pass_full_mask(self):
-        problems = []
+        problems, casts = [], 0
         for path in PACK_SHOT_CASTER_SOURCES:
             if path.is_file():
-                bad, _seen = check_pack_shot_casts(path.read_text(encoding="utf-8"))
+                bad, seen = check_pack_shot_casts(path.read_text(encoding="utf-8"))
                 problems += [f"{path.name}: {b}" for b in bad]
+                casts += seen
         self.assertClean(problems)
+        self.assertGreater(casts, 0, "no 201934 / 201935 cast found in the caster sources: the guard saw nothing")
 
     def test_advantaged_state_and_no_learnable_ranged_haste(self):
         data = package_data()
@@ -1401,6 +1476,20 @@ class HunterMmDataTest(unittest.TestCase):
 
     def test_multi_shot_unchanged(self):
         self.assertClean(check_multi_shot(package_data()["rows_by_id"].get(MULTI_SHOT)))
+
+    def test_ranged_shot_cast_bars_and_instant_rows(self):
+        data = package_data()
+        problems, seen = check_ranged_shot_cast_bars(data["rows_by_id"], _cast_times(data["reuse"]))
+        self.assertClean(problems)
+        self.assertGreater(seen, 10)   # the guard sees the shots (a wrong filter would pass vacuously)
+        # the superseded Multi-Shot rank kept for an item spell is the same instant shot
+        self.assertEqual(_i(data["rows_by_id"][25294], "CastingTimeIndex"), 18)
+
+    def test_instant_cast_mods_are_flat(self):
+        data = package_data()
+        problems, seen = check_instant_cast_mods(data["rows_by_id"], _cast_times(data["reuse"]))
+        self.assertClean(problems)
+        self.assertGreaterEqual(seen, 2)   # Fire! (201940) and Cobra Shot's transform (201811)
 
     def test_marks(self):
         data = package_data()
@@ -1507,7 +1596,7 @@ GOOD_ST_BUILT = {"ID": SNIPER_TRAINING_ROW, "TabID": TAB, "TierID": 7, "ColumnIn
 
 
 def good_aimed() -> tuple[dict, dict]:
-    row = {"ID": AIMED_SHOT, "CastingTimeIndex": 16, "Attributes": 0x10012, "Category": 1301,
+    row = {"ID": AIMED_SHOT, "CastingTimeIndex": 16, "Attributes": 0x410012, "AttributesEx4": 0x18000000, "Category": 1301,
            "CategoryRecoveryTime": 10000, "RecoveryTime": 0, "SpellClassMask_1": D0_AIMED_SHOT, "EquippedItemClass": 2,
            "Effect_1": EFFECT_NORMALIZED_WEAPON_DMG, "EffectBasePoints_1": -1, "Effect_2": EFFECT_WEAPON_PERCENT_DAMAGE,
            "InterruptFlags": 15, "SpellLevel": 20, "MaxLevel": 0}
@@ -1725,6 +1814,12 @@ class HunterMmDataNegativeTest(unittest.TestCase):
         self.assertEqual(len(check_aimed_shot(changed(row, CastingTimeIndex=5), entry, CAST_TIMES, cats, [], [])), 2)
         self.assertEqual(len(check_aimed_shot(changed(row, CastingTimeIndex=18), entry, CAST_TIMES, cats, [], [])), 2)
         self.assertEqual(len(check_aimed_shot(changed(row, Category=85), entry, CAST_TIMES, cats, [], [])), 1)
+        # S2-FIX F-1: the cast bar flag, the stock Ex4 bit and the auto-face attribute
+        self.assertEqual(len(check_aimed_shot(changed(row, AttributesEx4=ATTR_EX4_STOCK_AIMED), entry, CAST_TIMES, cats,
+                                              [], [])), 1)
+        self.assertEqual(len(check_aimed_shot(changed(row, AttributesEx4=ATTR_EX4_FORCE_DISPLAY_CASTBAR), entry,
+                                              CAST_TIMES, cats, [], [])), 1)
+        self.assertEqual(len(check_aimed_shot(changed(row, Attributes=0x10012), entry, CAST_TIMES, cats, [], [])), 1)
         self.assertEqual(len(check_aimed_shot(changed(row, RecoveryTime=10000), entry, CAST_TIMES, cats, [], [])), 1)
         self.assertEqual(len(check_aimed_shot(changed(row, SpellClassMask_1=0), entry, CAST_TIMES, cats, [], [])), 1)
         self.assertEqual(len(check_aimed_shot(changed(row, MaxLevel=80), entry, CAST_TIMES, cats, [], [])), 1)
@@ -2130,10 +2225,37 @@ class HunterMmDataNegativeTest(unittest.TestCase):
         self.assertEqual(len(check_no_learnable_ranged_haste({**clean, 34466: haste_passive(34466, bp=-1, die=3)},
                                                              learnable)), 1)
 
+    def test_ranged_shot_cast_bar_guard(self):
+        aimed = {"ID": 1, "Attributes": 0x410012, "AttributesEx4": 0x18000000, "SpellClassSet": 9,
+                 "CastingTimeIndex": 16}
+        instant = {"ID": 2, "Attributes": 0x10002, "SpellClassSet": 9, "CastingTimeIndex": 18}
+        volley_tick = {"ID": 3, "Attributes": 0x2, "SpellClassSet": 9, "CastingTimeIndex": 1}   # not a shot: skipped
+        rows = {r["ID"]: r for r in (aimed, instant, volley_tick)}
+        self.assertEqual(check_ranged_shot_cast_bars(rows, CAST_TIMES), ([], 2))
+        no_bar = {**rows, 1: changed(aimed, AttributesEx4=0x10000000)}
+        self.assertEqual(len(check_ranged_shot_cast_bars(no_bar, CAST_TIMES)[0]), 1)
+        hidden_cast = {**rows, 2: changed(instant, CastingTimeIndex=1)}          # index 1 + 500 = a hidden 0.5 s cast
+        self.assertEqual(len(check_ranged_shot_cast_bars(hidden_cast, CAST_TIMES)[0]), 1)
+
+    def test_instant_cast_mod_guard(self):
+        aimed = {"ID": 1, "Attributes": 0x410012, "AttributesEx4": 0x18000000, "SpellClassSet": 9,
+                 "CastingTimeIndex": 16, "SpellClassMask_1": D0_AIMED_SHOT}
+        def mod(aura, bp, mask=D0_AIMED_SHOT, misc=OP_CASTING_TIME):
+            return {"ID": 9, "Effect_1": EFFECT_APPLY_AURA, "EffectAura_1": aura, "EffectBasePoints_1": bp,
+                    "EffectMiscValue_1": misc, "EffectSpellClassMaskA_1": mask}
+        def run(row):
+            return check_instant_cast_mods({1: aimed, 9: row}, CAST_TIMES)
+        self.assertEqual(run(mod(AURA_ADD_FLAT_MODIFIER, -2001)), ([], 1))                 # Fire!: flat, 2000 live
+        self.assertEqual(len(run(mod(AURA_ADD_FLAT_MODIFIER, -1501))[0]), 1)             # flat but short of 2000
+        self.assertEqual(len(run(mod(AURA_ADD_PCT_MODIFIER, -101))[0]), 1)               # -100%: the 0.5 s residue
+        self.assertEqual(run(mod(AURA_ADD_PCT_MODIFIER, -11)), ([], 0))                  # Efficiency's -10%: fine
+        self.assertEqual(run(mod(AURA_ADD_PCT_MODIFIER, -101, mask=0x1)), ([], 0))       # not Aimed Shot's bit
+        self.assertEqual(run(mod(AURA_ADD_PCT_MODIFIER, -101, misc=0)), ([], 0))         # another op
+
     def test_multi_shot_guard(self):
         good = {"ID": MULTI_SHOT, **MULTI_SHOT_FIELDS, "Speed": 30.0}
         self.assertEqual(check_multi_shot(good), [])
-        for key, value in (("CastingTimeIndex", 18), ("EffectChainTargets_1", 5), ("SpellClassMask_1", 0x3000),
+        for key, value in (("CastingTimeIndex", 1), ("EffectChainTargets_1", 5), ("SpellClassMask_1", 0x3000),
                            ("EquippedItemClass", -1), ("Speed", 0.0)):
             self.assertEqual(len(check_multi_shot(changed(good, **{key: value}))), 1, key)
         self.assertEqual(len(check_multi_shot(None)), 1)

@@ -411,13 +411,21 @@ def _buff(spell_id, name, effects, icon, duration_ms, notes, masks=None, raw=Non
     )
 
 
+# Fire!'s flat cast time cut (S2-FIX F-3): must exceed Aimed Shot's live base, 1500 ms DBC + 500 ms ranged-slot add.
+FIRE_CAST_TIME_FLAT = -2001
+
+
 fire_mm_buff_201940 = _buff(
     201940, 'Fire!',
-    [_self_aura(AuraType.ADD_PCT_MODIFIER, -101, SpellModOp.CASTING_TIME),
+    [_self_aura(AuraType.ADD_FLAT_MODIFIER, FIRE_CAST_TIME_FLAT, SpellModOp.CASTING_TIME),
      _self_aura(AuraType.ADD_PCT_MODIFIER, -101, SpellModOp.COST)],
     2230, 20000,
-    'S2a A14 / MM 5.8: Fire! (Master Marksman, Rain of Arrows). Aimed Shot cast time and cost -100% (stored -101), '
-    'AIMED_SHOT_MASK on both, 1 charge spent by its CAST-phase spell_proc row (non-triggered casts only, MM 0.6).',
+    'S2a A14 / MM 5.8: Fire! (Master Marksman, Rain of Arrows). Aimed Shot cost -100% (stored -101) and, S2-FIX F-3, '
+    'a FLAT cast time cut of -2001 ms (was -100%, stored -101): the client adds the ranged-slot +500 ms after the cast '
+    'time mods, so a percentage left a 0.5 s cast; a flat cut larger than the 1500 + 500 base zeroes it on both sides '
+    '(Cobra Shot 201811 precedent). Flat first, then percentages and haste, so Efficiency (-10%) and haste only scale '
+    'a value that is already <= 0. AIMED_SHOT_MASK on both, 1 charge spent by its CAST-phase spell_proc row '
+    '(non-triggered casts only, MM 0.6).',
     masks={1: m.AIMED_SHOT_MASK, 2: m.AIMED_SHOT_MASK},
     raw={**_FAMILY, 'ProcCharges': 1,
          'Description_Lang_enUS': 'Your next Aimed Shot within $d is instant and costs no mana.',
@@ -615,7 +623,8 @@ half_volley_201936 = spell(
           '(HALF_VOLLEY), SUPPRESS_CASTER_PROCS, visual 10384 (Volley\'s), SpellLevel 40 (= 42243\'s, S2b R-data M-1: '
           'the potency BaseLevel; 60 gave every hunter below 60 the level-60 base), icon 126, hidden (Attributes '
           '0x80, A3), CANNOT_BE_SAVED (custom_attr). eff0 PERSISTENT_AREA_AURA DUMMY target 28 radius 8, '
-          'ap_potency 75.5 direct T 1.5 (the snapshot source, = one 42243 tick, placeholder M); eff1 PERIODIC_DUMMY 1000 ms on self, unhasted (3 ticks). '
+          'ap_potency 75.5 direct T 1.5 (the snapshot source, = one 42243 tick, placeholder M); '
+          'eff1 PERIODIC_DUMMY 1000 ms on self, unhasted (3 ticks). '
           'tooltip_vars 1172.',
     raw_overrides={
         # SpellLevel = the Volley tick 42243's: potency derives BaseLevel from it and CalcValue lifts any lower caster

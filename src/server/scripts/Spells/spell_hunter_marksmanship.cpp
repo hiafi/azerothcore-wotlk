@@ -127,8 +127,9 @@ namespace
     // The Aimed Shot pack search (§5.2 steps 7-8, S2b B3): alive, attackable enemies within `radius` of `origin`
     // (the primary; its corpse on a killing blow, the same tick), in combat with the hunter himself (not "or pet":
     // the BM §0.4 filter of Hunter::CollectBmSplashTargets doesn't apply), never `origin`, never in `exclude`,
-    // holding at least one of the hunter's marks when `requireMark`; nearest to `origin` first, at most `maxTargets`.
-    // Local on purpose (no new Hunter:: signature).
+    // holding at least one of the hunter's marks when `requireMark`, in line of sight of `origin` (the ricochet and
+    // bounce spells ignore LoS themselves, AttributesEx2 0x4, so a marked add behind a wall is never picked);
+    // nearest to `origin` first, at most `maxTargets`. Local on purpose (no new Hunter:: signature).
     void CollectPackTargets(Player* player, Unit* origin, float radius, uint32 maxTargets, bool requireMark,
         GuidSet const& exclude, std::vector<Unit*>& out)
     {
@@ -150,6 +151,9 @@ namespace
                 continue;
 
             if (requireMark && !HasAnyMark(player, unit))
+                continue;
+
+            if (!origin->IsWithinLOSInMap(unit))
                 continue;
 
             candidates.push_back(unit);
@@ -1299,22 +1303,27 @@ class spell_hun_convergence : public SpellScript
         });
     }
 
-    // eff1: never the centre, in combat with the hunter only, the nearest CONVERGENCE_MAX_TARGETS to the dest
+    // eff1: never the centre, in combat with the hunter only, in line of sight of the dest (the centre's position,
+    // like the pack shots: the spell ignores LoS itself, AttributesEx2 0x4), the nearest CONVERGENCE_MAX_TARGETS
     void FilterSplash(std::list<WorldObject*>& targets)
     {
         Player* player = GetHunterPlayer(GetCaster());
         ObjectGuid const centre = GetCentre();
-        targets.remove_if([player, centre](WorldObject const* object)
+        WorldLocation const* dest = GetExplTargetDest();
+        targets.remove_if([player, centre, dest](WorldObject const* object)
         {
             Unit const* unit = object ? object->ToUnit() : nullptr;
-            return !player || !unit || unit->GetGUID() == centre || !unit->IsInCombatWith(player);
+            if (!player || !unit || unit->GetGUID() == centre || !unit->IsInCombatWith(player))
+                return true;
+
+            return dest && !unit->IsWithinLOS(dest->GetPositionX(), dest->GetPositionY(), dest->GetPositionZ());
         });
 
         std::size_t const maxTargets = CONVERGENCE_MAX_TARGETS;
         if (targets.size() <= maxTargets)
             return;
 
-        if (WorldLocation const* dest = GetExplTargetDest())
+        if (dest)
         {
             targets.sort([dest](WorldObject const* a, WorldObject const* b)
             {
