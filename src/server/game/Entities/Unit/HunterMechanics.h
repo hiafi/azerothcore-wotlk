@@ -241,6 +241,10 @@ namespace Hunter
     constexpr uint32 FOCUSED_AIM_CDR_MS = HunterData::FOCUSED_AIM_CDR_MS;
     constexpr float  RAPID_KILLING_HEALTH_PCT = HunterData::RAPID_KILLING_HEALTH_PCT;
     constexpr int32  RAIN_OF_ARROWS_FIRE_PCT = HunterData::RAIN_OF_ARROWS_FIRE_PCT;   // S2b (Volley tick Fire! roll)
+    constexpr int32  PACK_SHOT_DAMAGE_PCT = HunterData::PACK_SHOT_DAMAGE_PCT;   // S2b ricochet / bounce, % of Aimed
+    constexpr uint32 BARRAGE_ICD_MS = HunterData::BARRAGE_ICD_MS;               // S2b half Volley ICD (spell_proc)
+    // S2b Combat Experience capstone: Intellect = this percent of Agility.
+    constexpr int32  COMBAT_EXPERIENCE_CAPSTONE_PCT = HunterData::COMBAT_EXPERIENCE_CAPSTONE_PCT;
 
     uint32 GetMarkSpellId(Mark mark);                                          // 0 for Mark::Max
     bool   GetMarkForSpell(uint32 spellId, Mark& out);                         // false unless 201920-201922
@@ -274,9 +278,10 @@ namespace Hunter
     float  GetSniperPayoffMultiplier(Player const* player);   // §4.7
     float  GetTriangulationMultiplier(Player const* player, uint8 marksConsumed);   // 1.0 without a rank
     float  GetRapidKillingExecutePct(Player const* player);   // §6 row (2,3): known rank's eff0, 0 without a rank
-    // UnitScript (S2b); empty body in S2a.
+    // §10.4 / S2b B8: Rapid Killing's execute clause, from HunterUnitScript::ModifySpellDamageTaken (every spell hit).
     void   ApplyMarksmanshipTakenMods(Unit* target, Unit* attacker, int32& damage, SpellInfo const* spellInfo);
-    void   RefreshLoneSurvivor(Player* player);              // §10.3/§10.4 (S2b); empty body in S2a
+    // §10.3 / §10.4 / S2b B7: 201950 up without a live hunter pet, at the rank's Classic or Classless value.
+    void   RefreshLoneSurvivor(Player* player);
     void   NoteTripleConsume(Player* player);
     uint32 GetLastTripleConsumeMs(Player const* player);      // GameTime ms, 0 = never; B0b reads it (Readiness rule)
     void   ClearMarksmanshipState(Player* player);            // called from Hunter::ClearState

@@ -1266,6 +1266,9 @@ namespace Hunter
             HunterData::SPELL_MARKED_FOR_DEATH_53243, HunterData::SPELL_MARKED_FOR_DEATH };
         constexpr std::array<uint32, 3> RAPID_KILLING_RANKS = { HunterData::SPELL_RAPID_KILLING_201981,
             HunterData::SPELL_RAPID_KILLING_34949, HunterData::SPELL_RAPID_KILLING };
+        constexpr std::array<uint32, 2> LONE_SURVIVOR_RANKS =
+            { HunterData::SPELL_LONE_SURVIVOR_19412, HunterData::SPELL_LONE_SURVIVOR };
+        constexpr uint32 SPELL_LONE_SURVIVOR_BUFF = HunterData::SPELL_LONE_SURVIVOR_BUFF;   // 201950
 
         constexpr std::array<Mark, 3> ALL_MARKS = { Mark::Sniper, Mark::Viper, Mark::Falcon };
 
@@ -1311,7 +1314,8 @@ namespace Hunter
         }
 
         // The highest rank of a talent chain the player carries, nullptr without one.
-        SpellInfo const* GetKnownRank(Player const* player, std::array<uint32, 3> const& ranksHighestFirst)
+        template <std::size_t N>
+        SpellInfo const* GetKnownRank(Player const* player, std::array<uint32, N> const& ranksHighestFirst)
         {
             for (uint32 spellId : ranksHighestFirst)
                 if (player->HasAura(spellId))
@@ -1374,6 +1378,15 @@ namespace Hunter
             if (AuraEffect* effect = aura->GetEffect(effIndex))
                 if (effect->GetAmount() != amount)
                     effect->ChangeAmount(amount);
+        }
+
+        // §2.4 HUNTER_SHOTS (_masks.py, one HunterData const per dword): the hunter's shots, pet abilities excluded.
+        // A stack-built flag96 and three ANDs: no allocation (B8 runs for every direct spell hit).
+        bool IsHunterShot(SpellInfo const* spellInfo)
+        {
+            flag96 const shots(HunterData::HUNTER_SHOTS_MASK_0, HunterData::HUNTER_SHOTS_MASK_1,
+                HunterData::HUNTER_SHOTS_MASK_2);
+            return spellInfo->SpellFamilyName == SPELLFAMILY_HUNTER && (spellInfo->SpellFamilyFlags & shots);
         }
     }
 
@@ -1705,15 +1718,71 @@ namespace Hunter
         return rank ? float(rank->Effects[EFFECT_0].CalcValue(player)) : 0.0f;
     }
 
-    void ApplyMarksmanshipTakenMods(Unit* /*target*/, Unit* /*attacker*/, int32& /*damage*/,
-        SpellInfo const* /*spellInfo*/)
+    void ApplyMarksmanshipTakenMods(Unit* target, Unit* attacker, int32& damage, SpellInfo const* spellInfo)
     {
-        // Empty in S2a: S2b fills it (Rapid Killing's execute clause, MARKSMANSHIP §10.4) and adds its caller.
+        // §10.4 / S2b B8, Rapid Killing's execute clause. Unit::CalculateSpellDamageTaken calls this for every direct
+        // spell hit in the world, before armor and crit, so the cheapest checks come first and nothing allocates.
+        // Shots only: a pet's hit has the pet as attacker (not a Player) and periodic ticks never reach the hook.
+        if (damage <= 0 || !target || !attacker || !attacker->IsPlayer() || attacker->getClass() != CLASS_HUNTER)
+            return;
+
+        if (!spellInfo || !IsHunterShot(spellInfo))
+            return;
+
+        // The hook honours IGNORE_CASTER_MODIFIERS itself (druid_hooks.cpp precedent).
+        if (spellInfo->HasAttribute(SPELL_ATTR3_IGNORE_CASTER_MODIFIERS))
+            return;
+
+        // RAPID_KILLING_HEALTH_PCT is a float: GetHealthPct, not HealthBelowPct(int32) (S2b 0-verify finding 7).
+        if (target->GetHealthPct() >= RAPID_KILLING_HEALTH_PCT)
+            return;
+
+        // The known rank's eff0 (4/8/12), live through its SpellInfo; 0 without a rank.
+        float const pct = GetRapidKillingExecutePct(attacker->ToPlayer());
+        if (pct > 0.0f)
+            AddPct(damage, pct);
     }
 
-    void RefreshLoneSurvivor(Player* /*player*/)
+    void RefreshLoneSurvivor(Player* player)
     {
-        // Empty in S2a: S2b fills it (MARKSMANSHIP §10.3 / §10.4) and adds its callers.
+        // §10.3 / §10.4 / S2b B7. Callers: spell_hun_lone_survivor's 500 ms tick (19407 / 19412 eff2),
+        // HunterPetScript::OnPetAddToWorld and HunterUnitScript::OnUnitDeath (hunter pet death).
+        if (!player)
+            return;
+
+        SpellInfo const* rank = GetKnownRank(player, LONE_SURVIVOR_RANKS);
+        if (!rank)
+        {
+            player->RemoveAurasDueToSpell(SPELL_LONE_SURVIVOR_BUFF);
+            return;
+        }
+
+        // Only a live hunter pet counts (user ruling 3): HasActivePet checks alive and in world but not the type, so
+        // a Classless player's warlock demon or a charmed pet leaves the buff up.
+        Pet const* pet = player->GetPet();
+        if (HasActivePet(player) && pet && pet->getPetType() == HUNTER_PET)
+        {
+            player->RemoveAurasDueToSpell(SPELL_LONE_SURVIVOR_BUFF);
+            return;
+        }
+
+        // M12: the Classless value (eff1, 1/2%) on a Classless realm, else the Classic value (eff0, 5/10%).
+        int32 const amount = rank->Effects[IsClasslessRealm() ? EFFECT_1 : EFFECT_0].CalcValue(player);
+
+        Aura* buff = player->GetAura(SPELL_LONE_SURVIVOR_BUFF, player->GetGUID());
+        if (!buff)
+        {
+            // A player leaving the world gets no new aura; AddAura refuses a dead player (non-passive buff).
+            if (!player->IsInWorld())
+                return;
+
+            buff = player->AddAura(SPELL_LONE_SURVIVOR_BUFF, player);
+            if (!buff)
+                return;
+        }
+
+        // eff0 MOD_DAMAGE_PERCENT_DONE; rewritten only when the value moved (rank or realm change, a loaded aura).
+        SetEffectAmount(buff, EFFECT_0, amount);
     }
 
     void NoteTripleConsume(Player* player)

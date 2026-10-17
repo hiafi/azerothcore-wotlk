@@ -23,6 +23,11 @@
  */
 
 #include "HunterMechanics.h"
+#include "CellImpl.h"
+#include "DynamicObject.h"
+#include "GameTime.h"
+#include "GridNotifiers.h"
+#include "GridNotifiersImpl.h"
 #include "Log.h"
 #include "ObjectGuid.h"
 #include "Player.h"
@@ -37,9 +42,11 @@
 #include "SpellScriptLoader.h"
 #include "Unit.h"
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <initializer_list>
 #include <list>
+#include <vector>
 
 namespace
 {
@@ -97,6 +104,66 @@ namespace
 
         TargetInfo const* info = FindTargetInfo(spell, target->GetGUID());
         return info && info->missCondition == SPELL_MISS_NONE && info->crit;
+    }
+
+    // ---- S2b ----
+    constexpr std::array<Hunter::Mark, 3> MM_MARKS =
+        { Hunter::Mark::Sniper, Hunter::Mark::Viper, Hunter::Mark::Falcon };
+
+    // Convergence (MARKSMANSHIP §5.10, S2a deviation 2): 201932's eff1 carries the centre's full potency (the DSL
+    // allows one direct AP potency per spell), so the splash hits are scaled here; the DSL consts are the one home.
+    constexpr int32 CONVERGENCE_SPLASH_PCT = HunterData::CONVERGENCE_SPLASH_PCT;
+    constexpr uint8 CONVERGENCE_MAX_TARGETS = HunterData::CONVERGENCE_MAX_TARGETS;
+
+    bool HasAnyMark(Player const* player, Unit const* target)
+    {
+        for (Hunter::Mark mark : MM_MARKS)
+            if (Hunter::HasMark(player, target, mark))
+                return true;
+
+        return false;
+    }
+
+    // The Aimed Shot pack search (§5.2 steps 7-8, S2b B3): alive, attackable enemies within `radius` of `origin`
+    // (the primary; its corpse on a killing blow, the same tick), in combat with the hunter himself (not "or pet":
+    // the BM §0.4 filter of Hunter::CollectBmSplashTargets doesn't apply), never `origin`, never in `exclude`,
+    // holding at least one of the hunter's marks when `requireMark`; nearest to `origin` first, at most `maxTargets`.
+    // Local on purpose (no new Hunter:: signature).
+    void CollectPackTargets(Player* player, Unit* origin, float radius, uint32 maxTargets, bool requireMark,
+        GuidSet const& exclude, std::vector<Unit*>& out)
+    {
+        if (!player || !origin || !maxTargets)
+            return;
+
+        std::list<Unit*> nearby;
+        Acore::AnyUnfriendlyUnitInObjectRangeCheck check(origin, player, radius);
+        Acore::UnitListSearcher<Acore::AnyUnfriendlyUnitInObjectRangeCheck> searcher(origin, nearby, check);
+        Cell::VisitObjects(origin, searcher, radius);
+
+        std::vector<Unit*> candidates;
+        for (Unit* unit : nearby)
+        {
+            if (unit == origin || !unit->IsAlive() || exclude.count(unit->GetGUID()))
+                continue;
+
+            if (!player->IsValidAttackTarget(unit) || !unit->IsInCombatWith(player))
+                continue;
+
+            if (requireMark && !HasAnyMark(player, unit))
+                continue;
+
+            candidates.push_back(unit);
+        }
+
+        std::sort(candidates.begin(), candidates.end(), [origin](Unit const* a, Unit const* b)
+        {
+            return origin->GetExactDistSq(a) < origin->GetExactDistSq(b);
+        });
+
+        if (candidates.size() > maxTargets)
+            candidates.resize(maxTargets);
+
+        out.insert(out.end(), candidates.begin(), candidates.end());
     }
 }
 
@@ -243,7 +310,9 @@ class spell_hun_aimed_shot_mm : public SpellScript
             HunterData::SPELL_EFFICIENCY_19418, HunterData::SPELL_PRECISE_SHOTS_19456,
             HunterData::SPELL_MARKED_FOR_DEATH, HunterData::SPELL_MARKED_FOR_DEATH_53243,
             HunterData::SPELL_MARKED_FOR_DEATH_53244, HunterData::SPELL_SNIPERS_MARK, HunterData::SPELL_VIPERS_MARK,
-            HunterData::SPELL_FALCONS_MARK });
+            HunterData::SPELL_FALCONS_MARK, HunterData::SPELL_CONVERGENCE, HunterData::SPELL_AIMED_SHOT_RICOCHET,
+            HunterData::SPELL_AIMED_SHOT_BOUNCE, HunterData::SPELL_TRICK_SHOTS_BUFF,
+            HunterData::SPELL_RAIN_OF_ARROWS_BOUNCE });
     }
 
     bool Load() override
@@ -256,6 +325,22 @@ class spell_hun_aimed_shot_mm : public SpellScript
     static void SetHelper(Player* player, int32 critChance, int32 critDamagePct)
     {
         Hunter::SetSniperCritHelper(player, HunterData::SPELL_SNIPERS_MARK_AIMED_CRIT, critChance, critDamagePct);
+    }
+
+    // Viper's Mark -> Viper's Bite with the consumed stacks, alive only (L6); 0 stacks -> nothing.
+    // SPELLVALUE_AURA_STACK on a refreshed aura ADDS stacks (Spell.cpp:3262-3271), so the caster's old Bite goes
+    // first. Used by the primary (step 6) and by each ricochet target (step 7).
+    static void CastVipersBite(Player* player, Unit* target, uint8 stacks)
+    {
+        if (!stacks || !target->IsAlive() || !player->IsValidAttackTarget(target))
+            return;
+
+        target->RemoveAurasDueToSpell(HunterData::SPELL_VIPERS_BITE, player->GetGUID());
+        SpellCastResult const result = player->CastCustomSpell(HunterData::SPELL_VIPERS_BITE, SPELLVALUE_AURA_STACK,
+            int32(stacks), target, TRIGGERED_FULL_MASK);
+        if (result != SPELL_CAST_OK)
+            LOG_ERROR("scripts.hunter", "Aimed Shot: Viper's Bite {} ({} stacks) on {} failed (result {})",
+                HunterData::SPELL_VIPERS_BITE, uint32(stacks), target->GetGUID().ToString(), uint32(result));
     }
 
     int32 GetSnapshotCritDamage() const
@@ -276,6 +361,16 @@ class spell_hun_aimed_shot_mm : public SpellScript
 
         SetHelper(player, _primary.Has(Hunter::Mark::Sniper) ? Hunter::SNIPER_CRIT_CHANCE : 0,
             GetSnapshotCritDamage());
+
+        // Step 3 (S2b B3): the pack markers belong to this cast; removed now, so a second Aimed Shot in flight
+        // can't reuse them
+        _trickShots = player->HasAura(HunterData::SPELL_TRICK_SHOTS_BUFF);
+        _rainOfArrows = player->HasAura(HunterData::SPELL_RAIN_OF_ARROWS_BOUNCE);
+        if (_trickShots)
+            player->RemoveAurasDueToSpell(HunterData::SPELL_TRICK_SHOTS_BUFF);
+
+        if (_rainOfArrows)
+            player->RemoveAurasDueToSpell(HunterData::SPELL_RAIN_OF_ARROWS_BOUNCE);
     }
 
     // The crit roll is done; eff1 stays armed for this missile's hit
@@ -319,12 +414,96 @@ class spell_hun_aimed_shot_mm : public SpellScript
         SetHitDamage(int32(float(damage) * triangulation * sniper));
     }
 
-    // S2b hook point (§5.2 steps 7-8, S2-HANDOFF seam 3): the Trick Shots ricochets and Rain of Arrows bounces around
-    // `centre` go here; they add their consumed Falcon's stacks to `maxFalcon`, record a first triple-mark target in
-    // `convergence` when none is set yet, and set `tripleConsumed`. Empty in S2a.
-    void HandlePacks(Player* /*player*/, Unit* /*primary*/, Position const& /*centre*/, uint8& /*maxFalcon*/,
-        ConvergenceCentre& /*convergence*/, bool& /*tripleConsumed*/)
+    // Steps 7-8 (S2b B3, S2-HANDOFF seam 3): the Trick Shots ricochets and Rain of Arrows bounces around the primary
+    // (`centre` is its position, the corpse's on a killing blow; the search measures from the unit itself, same
+    // point). Ricochets add their consumed Falcon's stacks to `maxFalcon`, record a first triple-mark target in
+    // `convergence` when none is set yet (Triangulation 3/3, as the primary), and set `tripleConsumed`.
+    void HandlePacks(Player* player, Unit* primary, Position const& /*centre*/, uint8& maxFalcon,
+        ConvergenceCentre& convergence, bool& tripleConsumed)
     {
+        GuidSet exclude;   // every ricochet target; the bounce skips them
+
+        // Step 7: per target, read its marks -> its own helper values -> the ricochet (Speed 0 + TRIGGERED_FULL_MASK:
+        // launch, crit roll and hit all run inside CastSpell) -> consume exactly as step 6
+        if (_trickShots)
+        {
+            bool const triangulation3 = player->HasAura(HunterData::SPELL_TRIANGULATION_201978);
+
+            std::vector<Unit*> ricochets;
+            CollectPackTargets(player, primary, Hunter::PACK_RADIUS, Hunter::PACK_MAX_TARGETS, true, exclude,
+                ricochets);
+            for (Unit* unit : ricochets)
+            {
+                Hunter::MarkSnapshot const marks = Hunter::ReadMarks(player, unit);
+                SetHelper(player, marks.Has(Hunter::Mark::Sniper) ? Hunter::SNIPER_CRIT_CHANCE : 0,
+                    Hunter::SNIPER_CRIT_DAMAGE_PER_STACK * int32(marks.Stacks(Hunter::Mark::Sniper)));
+
+                exclude.insert(unit->GetGUID());
+                SpellCastResult const result =
+                    player->CastSpell(unit, HunterData::SPELL_AIMED_SHOT_RICOCHET, TRIGGERED_FULL_MASK);
+                if (result != SPELL_CAST_OK)
+                {
+                    LOG_ERROR("scripts.hunter", "Aimed Shot: ricochet {} on {} failed (result {})",
+                        HunterData::SPELL_AIMED_SHOT_RICOCHET, unit->GetGUID().ToString(), uint32(result));
+                    continue;
+                }
+
+                // A ricochet that killed its target took the marks with the death: the snapshot pays (as step 6)
+                Hunter::ConsumeMarks(player, unit, marks);
+                CastVipersBite(player, unit, marks.Stacks(Hunter::Mark::Viper));
+                maxFalcon = std::max(maxFalcon, marks.Stacks(Hunter::Mark::Falcon));
+
+                if (marks.Count() == uint8(Hunter::Mark::Max))
+                {
+                    tripleConsumed = true;
+                    if (!convergence.set && triangulation3)
+                    {
+                        convergence.set = true;
+                        convergence.guid = unit->GetGUID();
+                        convergence.position = unit->GetPosition();
+                    }
+                }
+            }
+        }
+
+        // Step 8: helper 0/0, no marks read or consumed; never a ricochet target
+        if (_rainOfArrows)
+        {
+            SetHelper(player, 0, 0);
+
+            std::vector<Unit*> bounces;
+            CollectPackTargets(player, primary, Hunter::PACK_RADIUS, Hunter::PACK_MAX_TARGETS, false, exclude,
+                bounces);
+            for (Unit* unit : bounces)
+            {
+                SpellCastResult const result =
+                    player->CastSpell(unit, HunterData::SPELL_AIMED_SHOT_BOUNCE, TRIGGERED_FULL_MASK);
+                if (result != SPELL_CAST_OK)
+                    LOG_ERROR("scripts.hunter", "Aimed Shot: bounce {} on {} failed (result {})",
+                        HunterData::SPELL_AIMED_SHOT_BOUNCE, unit->GetGUID().ToString(), uint32(result));
+            }
+        }
+    }
+
+    // Step 9's Convergence branch (S2b B3): once per cast, at the recorded centre's position (alive or a corpse: a
+    // dead unit target would fail the cast). 201932 is Speed 0 and triggered, so it resolves inside CastSpell and
+    // spell_hun_convergence reads the centre GUID before it is cleared.
+    static void CastConvergence(Player* player, ConvergenceCentre const& convergence)
+    {
+        if (!convergence.set || !player->HasAura(HunterData::SPELL_TRIANGULATION_201978))
+            return;
+
+        SpellCastTargets targets;
+        targets.SetDst(convergence.position);
+
+        Hunter::SetConvergenceCentre(player, convergence.guid);
+        SpellCastResult const result = player->CastSpell(targets,
+            sSpellMgr->AssertSpellInfo(HunterData::SPELL_CONVERGENCE), nullptr, TRIGGERED_FULL_MASK);
+        Hunter::SetConvergenceCentre(player, ObjectGuid::Empty);
+
+        if (result != SPELL_CAST_OK)
+            LOG_ERROR("scripts.hunter", "Aimed Shot: Convergence {} at centre {} failed (result {})",
+                HunterData::SPELL_CONVERGENCE, convergence.guid.ToString(), uint32(result));
     }
 
     // Step 6 riders on the primary
@@ -392,19 +571,8 @@ class spell_hun_aimed_shot_mm : public SpellScript
         // Consume (§4.4): on a dead target the auras went with the death, so this is a no-op and the snapshot pays
         Hunter::ConsumeMarks(player, target, _primary);
 
-        // Viper's Mark -> Viper's Bite with the consumed stacks. SPELLVALUE_AURA_STACK on a refreshed aura ADDS stacks
-        // (Spell.cpp:3262-3271), so the caster's old Bite goes first
-        uint8 const viperStacks = _primary.Stacks(Hunter::Mark::Viper);
-        if (_primary.Has(Hunter::Mark::Viper) && viperStacks > 0 && alive && player->IsValidAttackTarget(target))
-        {
-            target->RemoveAurasDueToSpell(HunterData::SPELL_VIPERS_BITE, player->GetGUID());
-            SpellCastResult const result = player->CastCustomSpell(HunterData::SPELL_VIPERS_BITE,
-                SPELLVALUE_AURA_STACK, int32(viperStacks), target, TRIGGERED_FULL_MASK);
-            if (result != SPELL_CAST_OK)
-                LOG_ERROR("scripts.hunter", "Aimed Shot: Viper's Bite {} ({} stacks) on {} failed (result {})",
-                    HunterData::SPELL_VIPERS_BITE, uint32(viperStacks), target->GetGUID().ToString(),
-                    uint32(result));
-        }
+        // Viper's Mark -> Viper's Bite with the consumed stacks (alive only)
+        CastVipersBite(player, target, _primary.Stacks(Hunter::Mark::Viper));
 
         // Falcon's Mark -> the highest consumed Falcon's stack (primary here; S2b's ricochets add theirs)
         uint8 maxFalcon = _primary.Stacks(Hunter::Mark::Falcon);
@@ -423,8 +591,8 @@ class spell_hun_aimed_shot_mm : public SpellScript
 
         HandlePacks(player, target, centre, maxFalcon, convergence, tripleConsumed);
 
-        // Step 9 (once per cast). S2b: the Convergence branch (SetConvergenceCentre, the 201932 cast at
-        // convergence.position, clear) goes here, before Quickening.
+        // Step 9 (once per cast): Convergence first (S2b), then Quickening
+        CastConvergence(player, convergence);
 
         // Quickening: 1 s per stack of the highest Falcon's consumed, never shortening a running one (M-m3: a
         // SPELLVALUE_AURA_DURATION overwrites the remaining time, Spell.cpp:3309-3317)
@@ -457,6 +625,8 @@ class spell_hun_aimed_shot_mm : public SpellScript
 private:
     Hunter::MarkSnapshot _primary;
     ObjectGuid _primaryGuid;
+    bool _trickShots = false;     // 201943 was up at cast completion (step 3)
+    bool _rainOfArrows = false;   // 201944 was up at cast completion (step 3)
 };
 
 // 53209 Chimera Shot (stock spell_hun_chimera_shot unbound) - the Serpent burst and refresh, and each mark triggers
@@ -908,6 +1078,591 @@ class spell_hun_piercing_shots_mm : public AuraScript
     }
 };
 
+// ===========================================================================================
+// S2b - packs, area effects and the passives (S2b-HANDOFF B1-B9)
+// ===========================================================================================
+
+// 2643 Multi-Shot - the 5-target cap, Keen Eye's Multi-Shot half and the Trick Shots copies and marker (MARKSMANSHIP
+// §5.3, S2b B1). Built eff0: NORMALIZED_WEAPON_DMG, TargetA 6 (TARGET_UNIT_TARGET_ENEMY), chain 3.
+class spell_hun_multi_shot_mm : public SpellScript
+{
+    PrepareSpellScript(spell_hun_multi_shot_mm);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ HunterData::SPELL_TRICK_SHOTS_BUFF, HunterData::SPELL_TRICK_SHOTS,
+            HunterData::SPELL_KEEN_EYE, HunterData::SPELL_KEEN_EYE_201973, HunterData::SPELL_KEEN_EYE_201974,
+            HunterData::SPELL_SNIPERS_MARK, HunterData::SPELL_VIPERS_MARK, HunterData::SPELL_FALCONS_MARK });
+    }
+
+    bool Load() override
+    {
+        Unit* caster = GetCaster();
+        return caster && caster->IsPlayer();
+    }
+
+    // The chain list excludes the primary (Spell.cpp ~1946) and is in jump order (each candidate closest to the
+    // previous jump, Spell.cpp:2276-2298); re-sort it by distance to the primary and keep the nearest
+    // MULTI_SHOT_TARGET_CAP - 1, so Trick Shots +2 and BM's Pack Hunter +1/+2 never reach more than 5 (M-m2)
+    void TrimChainTargets(std::list<WorldObject*>& targets)
+    {
+        std::size_t const maxChainTargets = std::size_t(Hunter::MULTI_SHOT_TARGET_CAP) - 1;
+        if (targets.size() <= maxChainTargets)
+            return;
+
+        WorldObject const* origin = GetExplTargetUnit();
+        if (!origin)
+            origin = GetCaster();
+
+        if (!origin)
+            return;
+
+        targets.sort([origin](WorldObject const* a, WorldObject const* b)
+        {
+            return origin->GetExactDistSq(a) < origin->GetExactDistSq(b);
+        });
+        targets.resize(maxChainTargets);
+    }
+
+    // Targets are already selected (Spell.cpp:4021 before :4040) and the OnPlayerSpellCast gains have landed
+    // (:3956): Keen Eye first (the player's own presses only), then the copy snapshot, so its stacks are copied
+    void HandleOnCast()
+    {
+        Player* player = GetHunterPlayer(GetCaster());
+        Unit* primary = GetExplTargetUnit();
+        if (!player || !primary)
+            return;
+
+        if (!GetSpell()->IsTriggered())
+            Hunter::RollKeenEye(player, primary);
+
+        _primaryGuid = primary->GetGUID();
+        _marks = Hunter::ReadMarks(player, primary);
+        _snapshotMs = uint32(GameTime::GetGameTimeMS().count());
+        for (Hunter::Mark mark : MM_MARKS)
+        {
+            Aura const* source = _marks.Has(mark) ?
+                primary->GetAura(Hunter::GetMarkSpellId(mark), player->GetGUID()) : nullptr;
+            _durations[uint8(mark)] = source ? source->GetDuration() : 0;
+        }
+    }
+
+    // Per secondary unit hit (missile arrival): copy each snapshot mark the unit lacks from this hunter. AddAura makes
+    // a new aura (spell_hun_mark_aura's REAL apply sets the counter to 0), then the snapshot stacks, then the source's
+    // remaining time on both max duration and duration so the client timer is right (M-m5). Never overwrites an
+    // existing mark, never spreads a copy further (only the primary's snapshot is copied).
+    void HandleCopyMarks(SpellEffIndex /*effIndex*/)
+    {
+        Player* player = GetHunterPlayer(GetCaster());
+        Unit* unit = GetHitUnit();
+        if (!player || !unit || unit->GetGUID() == _primaryGuid || !_marks.Count())
+            return;
+
+        if (!player->HasAura(HunterData::SPELL_TRICK_SHOTS) || !unit->IsAlive() || !unit->IsInCombatWith(player))
+            return;
+
+        int32 const elapsed = int32(uint32(GameTime::GetGameTimeMS().count()) - _snapshotMs);
+        for (Hunter::Mark mark : MM_MARKS)
+        {
+            if (!_marks.Has(mark) || Hunter::HasMark(player, unit, mark))
+                continue;
+
+            // A permanent source (duration -1) keeps the copy's own duration; an expired one copies nothing
+            int32 const sourceDuration = _durations[uint8(mark)];
+            int32 const remaining = sourceDuration > 0 ? sourceDuration - elapsed : sourceDuration;
+            if (sourceDuration > 0 && remaining <= 0)
+                continue;
+
+            Aura* copy = player->AddAura(Hunter::GetMarkSpellId(mark), unit);
+            if (!copy)
+                continue;
+
+            Hunter::SetMarkStacks(player, unit, mark, _marks.Stacks(mark));
+            if (remaining > 0)
+            {
+                copy->SetMaxDuration(remaining);
+                copy->SetDuration(remaining);
+            }
+        }
+    }
+
+    // The Trick Shots marker for the next Aimed Shot
+    void HandleAfterCast()
+    {
+        Player* player = GetHunterPlayer(GetCaster());
+        if (player && player->HasAura(HunterData::SPELL_TRICK_SHOTS))
+            player->CastSpell(player, HunterData::SPELL_TRICK_SHOTS_BUFF, TRIGGERED_FULL_MASK);
+    }
+
+    void Register() override
+    {
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_hun_multi_shot_mm::TrimChainTargets, EFFECT_0,
+            TARGET_UNIT_TARGET_ENEMY);
+        OnCast += SpellCastFn(spell_hun_multi_shot_mm::HandleOnCast);
+        OnEffectHitTarget += SpellEffectFn(spell_hun_multi_shot_mm::HandleCopyMarks, EFFECT_0,
+            SPELL_EFFECT_NORMALIZED_WEAPON_DMG);
+        AfterCast += SpellCastFn(spell_hun_multi_shot_mm::HandleAfterCast);
+    }
+
+private:
+    Hunter::MarkSnapshot _marks;
+    std::array<int32, 3> _durations{};   // each snapshot mark's remaining ms at OnCast, per Hunter::Mark
+    uint32 _snapshotMs = 0;              // GameTime ms of the snapshot
+    ObjectGuid _primaryGuid;
+};
+
+// 201934 Aimed Shot (ricochet) - Triangulation and the Sniper payoff on its own target, read live (the handler
+// consumes that target's marks only after this synchronous cast returns), as separate multipliers before armor and
+// crit (MARKSMANSHIP §5.3, S2b B2). Its crit chance / crit damage come from helper 201948, set by the handler.
+class spell_hun_aimed_shot_ricochet : public SpellScript
+{
+    PrepareSpellScript(spell_hun_aimed_shot_ricochet);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ HunterData::SPELL_TRIANGULATION, HunterData::SPELL_TRIANGULATION_201977,
+            HunterData::SPELL_TRIANGULATION_201978, HunterData::SPELL_MARKED_FOR_DEATH,
+            HunterData::SPELL_MARKED_FOR_DEATH_53243, HunterData::SPELL_MARKED_FOR_DEATH_53244,
+            HunterData::SPELL_SNIPERS_MARK, HunterData::SPELL_VIPERS_MARK, HunterData::SPELL_FALCONS_MARK });
+    }
+
+    bool Load() override
+    {
+        Unit* caster = GetCaster();
+        return caster && caster->IsPlayer();
+    }
+
+    void HandleOnHit()
+    {
+        Player* player = GetHunterPlayer(GetCaster());
+        Unit* target = GetHitUnit();
+        if (!player || !target)
+            return;
+
+        int32 const damage = GetHitDamage();
+        if (damage <= 0)
+            return;
+
+        Hunter::MarkSnapshot const marks = Hunter::ReadMarks(player, target);
+        float const triangulation = Hunter::GetTriangulationMultiplier(player, marks.Count());
+        float const sniper = marks.Has(Hunter::Mark::Sniper) ? Hunter::GetSniperPayoffMultiplier(player) : 1.0f;
+        SetHitDamage(int32(float(damage) * triangulation * sniper));
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_hun_aimed_shot_ricochet::HandleOnHit);
+    }
+};
+
+// 201932 Convergence - the centre hit and the splash (MARKSMANSHIP §5.10, S2b B4). Built: eff0 and eff1 both
+// SCHOOL_DAMAGE, TargetA 87 (TARGET_DEST_DEST) / TargetB 16 (TARGET_UNIT_DEST_AREA_ENEMY), radius 8. A hook bound to
+// one effect each keeps the two target lists apart (Spell.cpp:1001-1013, :9083-9104), so a unit is either the centre
+// (eff0) or a splash target (eff1), never both. The centre GUID comes from Hunter::GetConvergenceCentre, set by the
+// Aimed Shot handler around this synchronous cast.
+class spell_hun_convergence : public SpellScript
+{
+    PrepareSpellScript(spell_hun_convergence);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ HunterData::SPELL_MARKED_FOR_DEATH, HunterData::SPELL_MARKED_FOR_DEATH_53243,
+            HunterData::SPELL_MARKED_FOR_DEATH_53244 });
+    }
+
+    bool Load() override
+    {
+        Unit* caster = GetCaster();
+        return caster && caster->IsPlayer();
+    }
+
+    // Read once per cast and kept in the instance (M14); empty without a hunter caster or a recorded centre
+    ObjectGuid GetCentre()
+    {
+        if (!_centreRead)
+        {
+            _centreRead = true;
+            Player* player = GetHunterPlayer(GetCaster());
+            _centre = player ? Hunter::GetConvergenceCentre(player) : ObjectGuid::Empty;
+        }
+
+        return _centre;
+    }
+
+    // eff0: only the centre (none when it died: a corpse is not an area target)
+    void FilterCentre(std::list<WorldObject*>& targets)
+    {
+        ObjectGuid const centre = GetCentre();
+        targets.remove_if([centre](WorldObject const* object)
+        {
+            return !object || centre.IsEmpty() || object->GetGUID() != centre;
+        });
+    }
+
+    // eff1: never the centre, in combat with the hunter only, the nearest CONVERGENCE_MAX_TARGETS to the dest
+    void FilterSplash(std::list<WorldObject*>& targets)
+    {
+        Player* player = GetHunterPlayer(GetCaster());
+        ObjectGuid const centre = GetCentre();
+        targets.remove_if([player, centre](WorldObject const* object)
+        {
+            Unit const* unit = object ? object->ToUnit() : nullptr;
+            return !player || !unit || unit->GetGUID() == centre || !unit->IsInCombatWith(player);
+        });
+
+        std::size_t const maxTargets = CONVERGENCE_MAX_TARGETS;
+        if (targets.size() <= maxTargets)
+            return;
+
+        if (WorldLocation const* dest = GetExplTargetDest())
+        {
+            targets.sort([dest](WorldObject const* a, WorldObject const* b)
+            {
+                return a->GetExactDistSq(*dest) < b->GetExactDistSq(*dest);
+            });
+        }
+
+        targets.resize(maxTargets);
+    }
+
+    // The Sniper payoff always (§4.7); splash hits at CONVERGENCE_SPLASH_PCT (S2a deviation 2: eff1 carries eff0's
+    // potency). Before armor and crit.
+    void HandleOnHit()
+    {
+        Player* player = GetHunterPlayer(GetCaster());
+        Unit* target = GetHitUnit();
+        if (!player || !target)
+            return;
+
+        int32 const damage = GetHitDamage();
+        if (damage <= 0)
+            return;
+
+        float multiplier = Hunter::GetSniperPayoffMultiplier(player);
+        if (target->GetGUID() != GetCentre())
+            multiplier *= float(CONVERGENCE_SPLASH_PCT) / 100.0f;
+
+        SetHitDamage(int32(float(damage) * multiplier));
+    }
+
+    void Register() override
+    {
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_hun_convergence::FilterCentre, EFFECT_0,
+            TARGET_UNIT_DEST_AREA_ENEMY);
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_hun_convergence::FilterSplash, EFFECT_1,
+            TARGET_UNIT_DEST_AREA_ENEMY);
+        OnHit += SpellHitFn(spell_hun_convergence::HandleOnHit);
+    }
+
+private:
+    bool _centreRead = false;
+    ObjectGuid _centre;
+};
+
+// 1510 Volley - Rain of Arrows 2/2: a Fire! roll per tick and the bounce marker on a completed channel (MARKSMANSHIP
+// §5.4, S2b B5). Additive: stock spell_hun_volley_trigger stays on -42243. Built: eff0 PERSISTENT_AREA_AURA (the
+// dynobj aura, owned by the DynamicObject: Load drops it), eff1 APPLY_AURA PERIODIC_TRIGGER_SPELL on the caster ->
+// 42243 every 1 s.
+class spell_hun_volley_mm : public AuraScript
+{
+    PrepareAuraScript(spell_hun_volley_mm);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ HunterData::SPELL_FIRE_MM_BUFF, HunterData::SPELL_RAIN_OF_ARROWS_BOUNCE,
+            HunterData::SPELL_RAIN_OF_ARROWS_201980 });
+    }
+
+    bool Load() override
+    {
+        return GetOwner() && GetOwner()->IsPlayer();
+    }
+
+    // Once per tick, not per target; no PreventDefaultAction (the tick must still fire)
+    void HandlePeriodic(AuraEffect const* /*aurEff*/)
+    {
+        Player* player = GetHunterPlayer(GetUnitOwner());
+        if (!player || !player->HasAura(HunterData::SPELL_RAIN_OF_ARROWS_201980))
+            return;
+
+        if (Hunter::RollProcChance(player, float(Hunter::RAIN_OF_ARROWS_FIRE_PCT)))
+            player->CastSpell(player, HunterData::SPELL_FIRE_MM_BUFF, TRIGGERED_FULL_MASK);
+    }
+
+    // A channel that runs to its end loses its caster aura by expiry (AURA_REMOVE_BY_EXPIRE, Unit.cpp:3847-3850); a
+    // cancel or an interrupt is AURA_REMOVE_BY_CANCEL (Spell.cpp:3846-3852), a death BY_DEATH (MM-C1: completed only)
+    void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        if (GetTargetApplication()->GetRemoveMode() != AURA_REMOVE_BY_EXPIRE)
+            return;
+
+        Player* player = GetHunterPlayer(GetUnitOwner());
+        if (player && player->HasAura(HunterData::SPELL_RAIN_OF_ARROWS_201980))
+            player->CastSpell(player, HunterData::SPELL_RAIN_OF_ARROWS_BOUNCE, TRIGGERED_FULL_MASK);
+    }
+
+    void Register() override
+    {
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_hun_volley_mm::HandlePeriodic, EFFECT_1,
+            SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+        AfterEffectRemove += AuraEffectRemoveFn(spell_hun_volley_mm::HandleRemove, EFFECT_1,
+            SPELL_AURA_PERIODIC_TRIGGER_SPELL, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+// 24691 Barrage rank 3 - the half Volley at the Multi-Shot's target (MARKSMANSHIP §5.5, S2b B6). The spell_proc row
+// is Multi-Shot CAST phase, 25% (DBC), 10 s cooldown, eff0 disabled; eff1 is the DUMMY carrier (trigger_spell 0).
+// The CAST phase has no action target (Spell.cpp:4134-4135), so the target is Hunter::GetProcTarget (M-m1).
+class spell_hun_barrage_capstone : public AuraScript
+{
+    PrepareAuraScript(spell_hun_barrage_capstone);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ HunterData::SPELL_HALF_VOLLEY });
+    }
+
+    bool Load() override
+    {
+        return GetOwner() && GetOwner()->IsPlayer();
+    }
+
+    void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
+    {
+        PreventDefaultAction();
+
+        // Never while one is active (the proc is lost); no target -> lost
+        Player* player = GetHunterPlayer(GetUnitOwner());
+        if (!player || player->GetDynObject(HunterData::SPELL_HALF_VOLLEY))
+            return;
+
+        Unit* target = Hunter::GetProcTarget(eventInfo);
+        if (!target)
+            return;
+
+        SpellCastTargets targets;
+        targets.SetDst(*target);
+
+        SpellCastResult const result = player->CastSpell(targets,
+            sSpellMgr->AssertSpellInfo(HunterData::SPELL_HALF_VOLLEY), nullptr, TRIGGERED_FULL_MASK);
+        if (result != SPELL_CAST_OK)
+            LOG_ERROR("scripts.hunter", "Barrage: half Volley {} at {} failed (result {})",
+                HunterData::SPELL_HALF_VOLLEY, target->GetGUID().ToString(), uint32(result));
+    }
+
+    void Register() override
+    {
+        OnEffectProc += AuraEffectProcFn(spell_hun_barrage_capstone::HandleProc, EFFECT_1, SPELL_AURA_DUMMY);
+    }
+};
+
+// 201936 Volley (half) - the C5 snapshot (MARKSMANSHIP §5.5, Q30, S2b B6; spell_warl_rain_of_fire_aura shape). Built:
+// eff0 PERSISTENT_AREA_AURA (the dynobj and the snapshot source; its aura is owned by the DynamicObject, Load drops
+// it), eff1 APPLY_AURA PERIODIC_DUMMY 1000 ms on the caster, unhasted (no SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC,
+// no periodic damage aura: SpellAuraEffects.cpp:670-674), so 3 ticks.
+class spell_hun_half_volley_aura : public AuraScript
+{
+    PrepareAuraScript(spell_hun_half_volley_aura);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ HunterData::SPELL_HALF_VOLLEY_TICK });
+    }
+
+    bool Load() override
+    {
+        return GetOwner() && GetOwner()->IsPlayer();
+    }
+
+    // The snapshot: eff0 through the caster's done bonuses (Barrage and Rain of Arrows reach it by d2 b30). The
+    // victim must be non-null (Unit.cpp:8547, the AP path dereferences it, M-m4): the caster stands in, so the
+    // victim-side done terms (Hunter's Mark's RAP attacker bonus, MOD_DAMAGE_DONE_VERSUS by creature type) are
+    // judged against the hunter (accepted, SV ground-fire precedent). The dynobj exists already (dest effects run
+    // first, Spell.cpp:4269); its position is kept as a fallback for a last tick racing its expiry.
+    void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+
+        SpellInfo const* info = GetSpellInfo();
+        int32 const base = info->Effects[EFFECT_0].CalcValue(caster);
+        _snapshot = int32(caster->SpellDamageBonusDone(caster, info, uint32(std::max(0, base)), SPELL_DIRECT_DAMAGE,
+            EFFECT_0));
+
+        if (DynamicObject* dyn = caster->GetDynObject(GetId()))
+        {
+            _centre = dyn->GetPosition();
+            _hasCentre = true;
+        }
+    }
+
+    // Each tick casts the tick at the dynobj with BP0 = the snapshot (IGNORE_CASTER_MODIFIERS: no second done pass)
+    void HandlePeriodic(AuraEffect const* aurEff)
+    {
+        Unit* caster = GetCaster();
+        if (!caster || _snapshot <= 0)
+            return;
+
+        SpellCastTargets targets;
+        if (DynamicObject* dyn = caster->GetDynObject(GetId()))
+            targets.SetDst(*dyn);
+        else if (_hasCentre)
+            targets.SetDst(_centre);
+        else
+            return;
+
+        CustomSpellValues values;
+        values.AddSpellMod(SPELLVALUE_BASE_POINT0, int32(float(_snapshot) * aurEff->GetFinalTickBonusMultiplier()));
+
+        caster->CastSpell(targets, sSpellMgr->AssertSpellInfo(HunterData::SPELL_HALF_VOLLEY_TICK), &values,
+            TRIGGERED_FULL_MASK, nullptr, aurEff);
+    }
+
+    void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        if (Unit* caster = GetCaster())
+            caster->RemoveDynObject(GetId());
+    }
+
+    void Register() override
+    {
+        AfterEffectApply += AuraEffectApplyFn(spell_hun_half_volley_aura::HandleApply, EFFECT_1,
+            SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_hun_half_volley_aura::HandlePeriodic, EFFECT_1,
+            SPELL_AURA_PERIODIC_DUMMY);
+        AfterEffectRemove += AuraEffectRemoveFn(spell_hun_half_volley_aura::HandleRemove, EFFECT_1,
+            SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
+    }
+
+private:
+    int32 _snapshot = 0;
+    Position _centre;
+    bool _hasCentre = false;
+};
+
+// 201937 Volley (half, tick) - in-combat enemies only (MARKSMANSHIP §5.5, S2b B6). Built eff0: SCHOOL_DAMAGE,
+// TargetA 87 / TargetB 16 (TARGET_UNIT_DEST_AREA_ENEMY), radius 8.
+class spell_hun_half_volley_tick : public SpellScript
+{
+    PrepareSpellScript(spell_hun_half_volley_tick);
+
+    bool Load() override
+    {
+        Unit* caster = GetCaster();
+        return caster && caster->IsPlayer();
+    }
+
+    void FilterTargets(std::list<WorldObject*>& targets)
+    {
+        Unit* caster = GetCaster();
+        targets.remove_if([caster](WorldObject const* object)
+        {
+            Unit const* unit = object ? object->ToUnit() : nullptr;
+            return !caster || !unit || !unit->IsInCombatWith(caster);
+        });
+    }
+
+    void Register() override
+    {
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_hun_half_volley_tick::FilterTargets, EFFECT_0,
+            TARGET_UNIT_DEST_AREA_ENEMY);
+    }
+};
+
+// 19407, 19412 Lone Survivor - the 500 ms refresh of buff 201950 (MARKSMANSHIP §10.3, S2b B7). Built eff2: APPLY_AURA
+// PERIODIC_DUMMY, amplitude 500. Hunter::RefreshLoneSurvivor owns the rule (no live hunter pet -> 201950 at the
+// Classic or Classless value; pet -> removed); HunterPetScript / HunterUnitScript call it on summon and pet death.
+class spell_hun_lone_survivor : public AuraScript
+{
+    PrepareAuraScript(spell_hun_lone_survivor);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ HunterData::SPELL_LONE_SURVIVOR_BUFF });
+    }
+
+    bool Load() override
+    {
+        return GetOwner() && GetOwner()->IsPlayer();
+    }
+
+    void HandlePeriodic(AuraEffect const* /*aurEff*/)
+    {
+        if (Player* player = GetHunterPlayer(GetUnitOwner()))
+            Hunter::RefreshLoneSurvivor(player);
+    }
+
+    // The rank's own aura went (unlearn, respec, rank change): the buff goes with it; a remaining rank's next tick
+    // brings it back
+    void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        if (Unit* owner = GetUnitOwner())
+            owner->RemoveAurasDueToSpell(HunterData::SPELL_LONE_SURVIVOR_BUFF);
+    }
+
+    void Register() override
+    {
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_hun_lone_survivor::HandlePeriodic, EFFECT_2,
+            SPELL_AURA_PERIODIC_DUMMY);
+        AfterEffectRemove += AuraEffectRemoveFn(spell_hun_lone_survivor::HandleRemove, EFFECT_2,
+            SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+// 201952 Combat Experience (capstone, linked from 201982) - Intellect = COMBAT_EXPERIENCE_CAPSTONE_PCT% of Agility
+// (MARKSMANSHIP §5.10, S2b B9). Built: eff0 APPLY_AURA MOD_STAT misc 3 (Intellect) bp -1, eff1 APPLY_AURA
+// PERIODIC_DUMMY 1000 ms. Intellect never feeds Agility, so no loop.
+class spell_hun_combat_experience_capstone : public AuraScript
+{
+    PrepareAuraScript(spell_hun_combat_experience_capstone);
+
+    bool Load() override
+    {
+        return GetOwner() && GetOwner()->IsPlayer();
+    }
+
+    static int32 GetIntellectAmount(Unit const* owner)
+    {
+        return int32(CalculatePct(owner->GetStat(STAT_AGILITY), HunterData::COMBAT_EXPERIENCE_CAPSTONE_PCT));
+    }
+
+    // eff0 starts at the live value on apply (no 1 s zero window, spell_hun_mm_mastery precedent)
+    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    {
+        Unit* owner = GetUnitOwner();
+        if (!owner || !owner->IsPlayer())
+            return;
+
+        amount = GetIntellectAmount(owner);
+        canBeRecalculated = true;
+    }
+
+    // Changing the amount re-applies the stat, so only when it moved (gear, buffs)
+    void HandlePeriodic(AuraEffect const* /*aurEff*/)
+    {
+        Unit* owner = GetUnitOwner();
+        if (!owner || !owner->IsPlayer())
+            return;
+
+        AuraEffect* stat = GetEffect(EFFECT_0);
+        if (!stat || stat->GetAuraType() != SPELL_AURA_MOD_STAT)
+            return;
+
+        int32 const amount = GetIntellectAmount(owner);
+        if (stat->GetAmount() != amount)
+            stat->ChangeAmount(amount);
+    }
+
+    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_hun_combat_experience_capstone::CalculateAmount, EFFECT_0,
+            SPELL_AURA_MOD_STAT);
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_hun_combat_experience_capstone::HandlePeriodic, EFFECT_1,
+            SPELL_AURA_PERIODIC_DUMMY);
+    }
+};
+
 void AddSC_hunter_marksmanship_spell_scripts()
 {
     // S2a
@@ -920,4 +1675,15 @@ void AddSC_hunter_marksmanship_spell_scripts()
     RegisterSpellScript(spell_hun_rapid_killing_capstone);
     RegisterSpellScript(spell_hun_mm_mastery);
     RegisterSpellScript(spell_hun_piercing_shots_mm);
+
+    // S2b
+    RegisterSpellScript(spell_hun_multi_shot_mm);
+    RegisterSpellScript(spell_hun_aimed_shot_ricochet);
+    RegisterSpellScript(spell_hun_convergence);
+    RegisterSpellScript(spell_hun_volley_mm);
+    RegisterSpellScript(spell_hun_barrage_capstone);
+    RegisterSpellScript(spell_hun_half_volley_aura);
+    RegisterSpellScript(spell_hun_half_volley_tick);
+    RegisterSpellScript(spell_hun_lone_survivor);
+    RegisterSpellScript(spell_hun_combat_experience_capstone);
 }

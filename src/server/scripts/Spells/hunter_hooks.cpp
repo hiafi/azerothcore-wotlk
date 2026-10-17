@@ -35,7 +35,7 @@ class HunterPlayerScript : public PlayerScript
 public:
     HunterPlayerScript() : PlayerScript("HunterPlayerScript",
         { PLAYERHOOK_ON_LOGOUT, PLAYERHOOK_ON_PLAYER_LEARN_TALENTS, PLAYERHOOK_ON_TALENTS_RESET,
-          PLAYERHOOK_ON_AFTER_SPEC_SLOT_CHANGED, PLAYERHOOK_ON_SPELL_CAST }) { }
+          PLAYERHOOK_ON_AFTER_SPEC_SLOT_CHANGED, PLAYERHOOK_ON_SPELL_CAST, PLAYERHOOK_ON_PLAYER_RESURRECT }) { }
 
     void OnPlayerLogout(Player* player) override
     {
@@ -80,6 +80,15 @@ public:
     {
         Hunter::OnHunterSpellCast(player, spell);
     }
+
+    // S2b (S2a review n-1): Falcon's Haste 201942 is a non-passive buff, so death removes it while a Falcon's Mark may
+    // still be up; re-add it at once instead of at the next mark stack change. Player::ResurrectPlayer calls this
+    // after setDeathState(Alive), so AddAura accepts the player.
+    void OnPlayerResurrect(Player* player, float /*restore_percent*/, bool& /*applySickness*/) override
+    {
+        if (player && player->getClass() == CLASS_HUNTER)
+            Hunter::RefreshFalconHaste(player);
+    }
 };
 
 class HunterPetScript : public PetScript
@@ -114,7 +123,10 @@ public:
         // ---- H0: Aspect of the Monkey re-apply (SHARED §B6.6), the pet was summoned after the aspect. ----
         Hunter::ReapplyPetMonkeyAura(owner, pet);
 
-        // ---- S2 slot: Lone Survivor refresh (after H0). ----
+        // ---- S2: Lone Survivor refresh (after H0; MARKSMANSHIP §10.4). ----
+        // The hunter pet is back: drop 201950 at once. SetMinion runs before AddToMap on the call/load and summon
+        // paths, so owner->GetPet() already returns this pet.
+        Hunter::RefreshLoneSurvivor(owner);
     }
 
     void OnInitStatsForLevel(Guardian* guardian, uint8 /*petlevel*/) override
@@ -145,14 +157,34 @@ public:
 class HunterUnitScript : public UnitScript
 {
 public:
-    HunterUnitScript() : UnitScript("HunterUnitScript", true, { UNITHOOK_ON_UNIT_DEATH }) { }
+    HunterUnitScript() : UnitScript("HunterUnitScript", true,
+        { UNITHOOK_ON_UNIT_DEATH, UNITHOOK_MODIFY_SPELL_DAMAGE_TAKEN }) { }
 
     void OnUnitDeath(Unit* unit, Unit* /*killer*/) override
     {
         // ---- S1b: Phoenix's Plume revive (BEAST-MASTERY §4.10). ----
         Hunter::OnPhoenixPlumePetDeath(unit);
 
-        // ---- S2 slot: Lone Survivor refresh on pet death. ----
+        // ---- S2: Lone Survivor refresh on hunter pet death (MARKSMANSHIP §10.4, M-m8). ----
+        // Independent of the Phoenix's Plume branch (no order between them). Type checks first: every death in the
+        // world reaches this. setDeathState(JustDied) already ran, so the dead pet no longer counts as active. A
+        // Phoenix's Plume revive (54114) does not re-add the pet to the world: the 500 ms tick drops 201950 again.
+        // Pet::GetOwner reads the stored Player*.
+        if (unit && unit->IsPet())
+        {
+            Pet* pet = unit->ToPet();
+            Player* owner = pet->getPetType() == HUNTER_PET ? pet->GetOwner() : nullptr;
+            if (owner && owner->getClass() == CLASS_HUNTER)
+                Hunter::RefreshLoneSurvivor(owner);
+        }
+    }
+
+    // ---- S2b: Rapid Killing's execute clause (MARKSMANSHIP §10.4, B8). ----
+    // Unit::CalculateSpellDamageTaken, before armor and crit, for every direct spell hit in the world; the body's
+    // checks run cheapest first.
+    void ModifySpellDamageTaken(Unit* target, Unit* attacker, int32& damage, SpellInfo const* spellInfo) override
+    {
+        Hunter::ApplyMarksmanshipTakenMods(target, attacker, damage, spellInfo);
     }
 };
 
