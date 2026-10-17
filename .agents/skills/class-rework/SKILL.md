@@ -49,8 +49,9 @@ specs plus pets) took far longer than earlier classes; these rules come from wha
   must see, a pet ability, a "next cast is instant" proc) and check it in-game. Every item in
   `.agents/docs/systems/custom-spells.md` was a playtest surprise that cost a fix stage and a
   rebuild.
-- **Spend Opus where it pays.** In a stage session, use Sonnet for mechanical work packages (data
-  rows, tests, tooltips, playtest guides) and Opus for C++ mechanisms and reviews. Run one in-stage
+- **Spend Opus where it pays.** In a stage session: Sonnet at medium effort for mechanical work
+  packages (data rows, tests, tooltips, playtest guides, small fixes); Sonnet high or Opus medium for
+  C++ mechanisms; Opus high for reviews, diagnosis and spec or handoff drafting. Run one in-stage
   review, not three, plus the harness's independent Opus review of the diff; the independent review
   found the misses that mattered. Don't spawn a verification agent for something a grep answers.
 - **Size each piece of work.** Small fixes (a few values, one file) the harness does directly; medium,
