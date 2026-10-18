@@ -363,10 +363,10 @@ lunge_command_201720 = spell(
     range_yards=25.0,
     effects=[
         Effect(type=41, implicit_target_a=6),    # SPELL_EFFECT_JUMP to the target
-        _direct(400.0),
+        _direct(360.0),
     ],
     pet_owner_scaling=_PET_SCALING,
-    notes='S1a A2 / BM 4.5: Wolf I. eff0 JUMP (41) to the target, eff1 400 Physical. 25 yd (the jump reach) but DmgClass MELEE (B16). Visual 519 from pet Charge 61685. If the one-spell Lunge fails the playtest, split 201737 (not built).',
+    notes='S1a A2 / BM 4.5: Wolf I. eff0 JUMP (41) to the target, eff1 360 Physical (TUNE1: was 400). 25 yd (the jump reach) but DmgClass MELEE (B16). Visual 519 from pet Charge 61685. If the one-spell Lunge fails the playtest, split 201737 (not built).',
     raw_overrides={**_cmd_raw(519),
                    'Description_Lang_enUS': 'Leap to the target and strike it for {pot2} Physical damage.'},
 )
@@ -382,9 +382,9 @@ rip_throat_command_201721 = spell(
     mana_cost=0,
     mana_cost_pct=0,
     range_yards=5.0,
-    effects=[_direct(1000.0)],
+    effects=[_direct(850.0)],
     pet_owner_scaling=_PET_SCALING,
-    notes='S1a A2 / BM 4.5: Wolf II, 1000 Physical, melee. Visual 2275 from Ravage 6785.',
+    notes='S1a A2 / BM 4.5: Wolf II, 850 Physical (TUNE1: was 1000), melee. Visual 2275 from Ravage 6785.',
     raw_overrides={**_cmd_raw(2275), 'RangeIndex': 2,
                    'Description_Lang_enUS': "Tear at the target's throat, causing {pot1} Physical damage."},
 )

@@ -232,7 +232,7 @@ namespace Hunter
             return 0.0f;
 
         // User ruling 6 (S3a brief resolution 5): Raptor Strike 2973 has no EFFECT_1 and is never read there. It
-        // restores the percent of base mana in Deadly Focus rank 2's marker (202081 eff2 DUMMY, live 15, already a
+        // restores the percent of base mana in Deadly Focus rank 2's marker (202081 eff2 DUMMY, live 25, already a
         // whole percent) while the hunter knows that rank, and nothing otherwise.
         if (shot->GetFirstRankSpell()->Id == SPELL_RAPTOR_STRIKE)
         {

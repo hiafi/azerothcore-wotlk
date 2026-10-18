@@ -375,7 +375,7 @@ arcane_shot_free_201933 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=130.0, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=65.0, potency_kind='direct', implicit_target_a=6),
         # Orchestrator ruling: no import of hunter_spells.py here, so the value is a literal that must equal
         # arcane_shot_3044's eff1 (20.0% of base mana in tenths of a percent, PT-6); A5's pytest asserts the equality.
         Effect(type=EffectType.DUMMY, base_points=ARCANE_SHOT_MANA_TENTHS),
@@ -547,7 +547,7 @@ marksmanship_mastery_201951 = _buff(
 # helper reach them), Speed 0 (launch and hit inside the handler's CastSpell), always cast with TRIGGERED_FULL_MASK (R3:
 # only TRIGGERED_IGNORE_SPELL_AND_CATEGORY_CD keeps the d0 b17 load fix's 10 s RecoveryTime from starting).
 # Must equal aimed_shot_19434's eff1 weapon_potency (hunter_spells.py imports this file, so no import back).
-_AIMED_SHOT_WEAPON_POTENCY = 220
+_AIMED_SHOT_WEAPON_POTENCY = 440
 _PACK_SHOT_WEAPON_POTENCY = _AIMED_SHOT_WEAPON_POTENCY * int(PACK_SHOT_DAMAGE_PCT['value']) // 100   # 110
 
 

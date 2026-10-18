@@ -185,7 +185,7 @@ def _helper(spell_id, name, school, icon, level, effects, notes, duration_ms=Non
 # ---- 5.1 Mantis Strike 202040 + its enable 202041 (talent (4,0), learn 30; replaces Counterattack 19306) ----
 mantis_strike_202040 = _castable(
     202040, 'Mantis Strike', School.NORMAL, 278, 30,
-    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=160.0, potency_kind='direct', implicit_target_a=6),
+    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=128.0, potency_kind='direct', implicit_target_a=6),
      _aura(AuraType.MOD_ROOT, 0, 0, target=6, mechanic=Mechanic.ROOT)],
     'S3a A1 / SV 5.1 + A4: Mantis Strike. Physical RANGED instant AP strike (no weapon, N5): eff0 SCHOOL_DAMAGE 160 AP '
     'potency (T 1.5), eff1 MOD_ROOT with mechanic ROOT on the effect, 2 s root, 3% base mana (placeholder, M), no '
@@ -245,9 +245,9 @@ scavenger_energize_202044 = _helper(
 # ---- 5.3 Wildfire Bomb 202045 (talent (2,1), learn 20; impact + burn in one spell, d1 b6) ----
 wildfire_bomb_202045 = _castable(
     202045, 'Wildfire Bomb', School.FIRE, 2505, 20,
-    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=120.0, potency_kind='direct', implicit_target_a=53,
+    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=84.0, potency_kind='direct', implicit_target_a=53,
             implicit_target_b=16, radius_yards=8.0),
-     Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000, ap_potency=23.0,
+     Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=1000, ap_potency=16.0,
             potency_kind='periodic', implicit_target_a=53, implicit_target_b=16, radius_yards=8.0)],
     'S3a A1 / SV 5.3 + A4: Wildfire Bomb. Fire instant, unit-targeted, 15 yd, 18 s cooldown (< 30 s: no Cooldown '
     'Haste), category 0, 6% base mana (placeholder, M), eff0 impact 120 AP potency (T 1.5), eff1 burn 23 AP potency '
@@ -286,7 +286,7 @@ tar_slow_202049 = _helper(
 )
 burning_tar_202050 = _helper(
     202050, 'Burning Tar', School.FIRE, 1939, 50,
-    [_aura(AuraType.PERIODIC_DAMAGE, 0, 0, target=6, amplitude=1000, ap_potency=24.0, potency_kind='periodic',
+    [_aura(AuraType.PERIODIC_DAMAGE, 0, 0, target=6, amplitude=1000, ap_potency=16.8, potency_kind='periodic',
            time_basis_ms=1500)],
     'S3a A1 / SV 5.10 + A3: Burning Tar, the bank DoT. Fire PERIODIC_DAMAGE 1 s ticks (hasted), 6 s, eff0 24 AP '
     'potency as the chunk SOURCE (time basis 1500: a payout priced as an instant; the S3b script reads CalcValue), '
@@ -322,7 +322,7 @@ tar_bomb_202047 = _castable(
 # ---- 5.8 Cluster Bombs 202051 / 202052 (talent (10,1), learn 60; d2 b5 on both) ----
 cluster_bombs_blast_202052 = _helper(
     202052, 'Cluster Bombs', School.FIRE, 2499, 60,
-    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=90.0, potency_kind='direct', implicit_target_a=87,
+    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=76.5, potency_kind='direct', implicit_target_a=87,
             implicit_target_b=16, radius_yards=5.0)],
     'S3a A1 / SV 5.8: a Cluster Bombs follow-up blast, Fire 90 AP potency (T 1.5) at TARGET_DEST_DEST (87) + '
     'TARGET_UNIT_DEST_AREA_ENEMY (16) 5 yd, cast at a scripted position by spell_hun_cluster_bombs (SpellCastTargets '
@@ -333,7 +333,7 @@ cluster_bombs_blast_202052 = _helper(
 )
 cluster_bombs_202051 = _castable(
     202051, 'Cluster Bombs', School.FIRE, 2499, 60,
-    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=90.0, potency_kind='direct', implicit_target_a=87,
+    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=72.0, potency_kind='direct', implicit_target_a=87,
             implicit_target_b=16, radius_yards=5.0),
      Effect(type=EffectType.DUMMY, implicit_target_a=87)],
     'S3a A1 / SV 5.8 + A4: Cluster Bombs. The cast is the first blast (eff0 Fire 90 AP potency, T 1.5, A 87 / B 16 5 '
@@ -353,7 +353,7 @@ cluster_bombs_202051 = _castable(
 # ---- 5.7 / 5.6 Shrapnel 202053 and the two Explosive Shot splashes (no bits, proc-free) ----
 shrapnel_hit_202053 = _helper(
     202053, 'Shrapnel', School.FIRE, 2147, 35,
-    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=40.0, potency_kind='direct', implicit_target_a=6)],
+    [Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=34.0, potency_kind='direct', implicit_target_a=6)],
     'S3a A1 / SV 5.7: Shrapnel. Fire 40 AP potency (T 1.5) at one enemy picked by Hunter::TryShrapnel, RANGED, '
     'AttributesEx3 SUPPRESS_CASTER_PROCS, IGNORE_LINE_OF_SIGHT (stale line 12: the shrapnel flies from the primary; '
     'TryShrapnel filters candidates by the primary\'s LoS, N3), no bit (Mastery and Point of No Escape by '

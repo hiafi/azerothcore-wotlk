@@ -296,9 +296,9 @@ def _cobra(spell_id, rank, bp, last):
     )
 
 
-cobra_shot_201849 = _cobra(201849, 1, 4, False)
-cobra_shot_201850 = _cobra(201850, 2, 9, False)
-cobra_shot_201851 = _cobra(201851, 3, 14, True)
+cobra_shot_201849 = _cobra(201849, 1, 7, False)
+cobra_shot_201850 = _cobra(201850, 2, 15, False)
+cobra_shot_201851 = _cobra(201851, 3, 24, True)
 
 # ---- (7,2) Master's Command 2136: commanded-spell damage.
 def _masters_command(spell_id, rank, bp):

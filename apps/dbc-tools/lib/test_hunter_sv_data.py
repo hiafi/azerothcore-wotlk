@@ -16,10 +16,10 @@ raw_overrides via `build.build_spell_row`), so a stale raw twin that wins fails 
   (c) the four castables (A4, stale line 14): Attributes 0x50000 (no USES_RANGED_SLOT), CastingTimeIndex 1, live cast
       0, EquippedItemClass -1, GCD 1500 / 133, their one family bit, not an `_is_hunter_shot` row, SpellLevel = learn
       level (N2), plus the per-spell shape of 5.1 / 5.3 / 5.4 / 5.8;
-  (d) Explosive Shot 53301 (A5, stale line 1, brief 7): index 18 / live cast 0 / class 2, eff0 SCHOOL_DAMAGE 150 AP
+  (d) Explosive Shot 53301 (A5, stale line 1, brief 7): index 18 / live cast 0 / class 2, eff0 SCHOOL_DAMAGE 90 AP
       direct, eff1 bare PERIODIC_DUMMY 1000 ms (no potency, no potency_excluded), Ex5 0x200 cleared, SpellLevel 30 and
       no raw BaseLevel / MaxLevel key in its spell() call; `check_ranged_shot_cast_bars` sees it; the blast 53352
-      carries the only blast potency (50 AP, generated spell_bonus_data replaces 0.16), Ex2 0x4, class -1, no stale
+      carries the only blast potency (32.5 AP, generated spell_bonus_data replaces 0.16), Ex2 0x4, class -1, no stale
       A_1 mask; the splashes 202054 / 202055 are A 87 / B 16 + Targets 0x40 (brief 2), SUPPRESS + IGNORE_CASTER_MODS;
   (e) LoS / procs (stale line 12, N3): AttributesEx2 0x4 on exactly {202048, 202049, 202050, 202053, 202056, 202057,
       202059} among 202040-202159 (and stock 53352); AttributesEx3 0x10000 on the no-proc helpers only;
@@ -261,7 +261,7 @@ EXPLOSIVE_SHOT_FIELDS = {
     "EffectAura_2": AURA_PERIODIC_DUMMY, "ImplicitTargetA_2": 6, "EffectAuraPeriod_2": 1000,
     "EffectBasePoints_2": -1, "Effect_3": 0, "SpellDescriptionVariableID": 1180,
 }
-EXPLOSIVE_SHOT_AP, BLAST_AP, BLAST_STALE_AP_BONUS = 150.0, 50.0, 0.16
+EXPLOSIVE_SHOT_AP, BLAST_AP, BLAST_STALE_AP_BONUS = 90.0, 32.5, 0.16
 EXPLOSIVE_SHOT_DURATION_MS = 2000
 SPLASH_PCT = 40
 
@@ -476,8 +476,8 @@ LINKS = ((19255, SURVIVALIST_DETERRENCE, 2), (19256, SURVIVALIST_DETERRENCE, 2),
 FAVORED_PREY_GROUP, GROUP_RULE_EXCLUSIVE = 1242, 1
 
 # (o) user ruling 6
-RAPTOR_MANA_PCT = 15  # user 2026-10-17: 5 -> 15% base mana
-DEADLY_FOCUS_MANA_TEXT = re.compile(r"Raptor Strike restores (15|\$202081s3|\$s3)% of your base mana")
+RAPTOR_MANA_PCT = 25  # user 2026-10-18: 5 -> 15 -> 25% base mana
+DEADLY_FOCUS_MANA_TEXT = re.compile(r"Raptor Strike restores (25|\$202081s3|\$s3)% of your base mana")
 
 # (l) stale line 19 / brief 13: stale raw readers S3a deletes: (id, 1-based effect) whose mask must be zero
 STALE_READERS = (
@@ -748,7 +748,7 @@ def check_explosive_shot(row: dict | None, entry: dict | None, source: str | Non
 
 
 def check_explosive_blast(row: dict | None, entry: dict | None, bonus_rows: list[dict]) -> list[str]:
-    """(d) 53352: the only blast potency (50 AP direct), SpellLevel 30, the generated bonus row (not 0.16), d2 b9,
+    """(d) 53352: the only blast potency (32.5 AP direct), SpellLevel 30, the generated bonus row (not 0.16), d2 b9,
     Ex2 0x4 (stock), class -1, no stale A_1."""
     if row is None or entry is None:
         return [f"{EXPLOSIVE_BLAST}: not declared"]
@@ -1234,7 +1234,7 @@ def check_lock_and_load(rows_by_id: dict[int, dict], marker_duration_index: int)
 
 # ---- (q) Explosive Trap pair, Wyvern Sting, S3b helpers --------------------------------------------------------------
 
-TRAP_EFFECT_STOCK_BP, TRAP_EFFECT_STOCK_AMPLITUDE = 14, 2000      # stock 13812 eff1 (aura 3 -> 226 keeps both)
+TRAP_EFFECT_STOCK_BP, TRAP_EFFECT_STOCK_AMPLITUDE = 11, 2000      # 13812 eff1 (aura 3 -> 226 keeps the amplitude); bp stock 14 x0.8 (TUNE1)
 EFFECT_PERSISTENT_AREA_AURA = 27
 WYVERN_DURATION_MS = 2000
 WYVERN_FIELDS = {"Effect_1": EFFECT_APPLY_AURA, "EffectAura_1": 79, "EffectMiscValue_1": 127, "EffectBasePoints_1": -31,
@@ -1523,7 +1523,7 @@ def good_explosive() -> tuple[dict, dict, str]:
     row = {"ID": EXPLOSIVE_SHOT, **EXPLOSIVE_SHOT_FIELDS, "Speed": 40.0, "SpellClassSet": 9,
            "SpellClassMask_2": D1_EXPLOSIVE_SHOT, "DurationIndex": DUR2000, "AttributesEx5": 0,
            "AttributesEx2": 0x20000}
-    entry = {"id": EXPLOSIVE_SHOT, "effect1": {"_potency": {"kind": "direct", "total_potency": 150.0,
+    entry = {"id": EXPLOSIVE_SHOT, "effect1": {"_potency": {"kind": "direct", "total_potency": 90.0,
                                                             "ap_coefficient": 0.43}},
              "effect2": {}}
     source = ("explosive_shot_53301 = spell(\n    id=53301,\n    raw_overrides={'SpellLevel': 30, "
@@ -1534,7 +1534,7 @@ def good_explosive() -> tuple[dict, dict, str]:
 def good_blast() -> tuple[dict, dict, list[dict]]:
     row = {"ID": EXPLOSIVE_BLAST, "Effect_1": EFFECT_SCHOOL_DAMAGE, "SpellLevel": 30, "BaseLevel": 30, "MaxLevel": 0,
            "EquippedItemClass": -1, "SpellClassMask_3": D2_EXPLOSIVE_SHOT_TICK, "AttributesEx2": 0x4}
-    entry = {"id": EXPLOSIVE_BLAST, "effect1": {"_potency": {"kind": "direct", "total_potency": 50.0,
+    entry = {"id": EXPLOSIVE_BLAST, "effect1": {"_potency": {"kind": "direct", "total_potency": 32.5,
                                                              "ap_coefficient": 0.1429}}}
     return row, entry, [{"entry": EXPLOSIVE_BLAST, "ap_bonus": 0.1429}]
 
@@ -1619,7 +1619,7 @@ def good_ruling_rows() -> dict[int, dict]:
         202080: {"ID": 202080, **pct, "Description_Lang_enUS": "Increases ... by $s1%.\n\n|cFF9D9D9DCapstone Bonus: "
                                                                "Raptor Strike restores 5% of your base mana.|r"},
         202081: {"ID": 202081, **pct, "Effect_2": EFFECT_APPLY_AURA, "EffectAura_2": FLAT,
-                 "Effect_3": EFFECT_APPLY_AURA, "EffectAura_3": AURA_DUMMY, "EffectBasePoints_3": 14,
+                 "Effect_3": EFFECT_APPLY_AURA, "EffectAura_3": AURA_DUMMY, "EffectBasePoints_3": 24,
                  "EffectDieSides_3": 1,
                  "Description_Lang_enUS": "Increases ... by $s1%.\n\nCapstone Bonus: ... more range. Raptor Strike "
                                           "restores $s3% of your base mana."},
