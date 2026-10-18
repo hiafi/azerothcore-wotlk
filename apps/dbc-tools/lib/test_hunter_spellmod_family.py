@@ -49,16 +49,18 @@ GLAIVE_TOSS_BIT = 0x40               # d2 b6
 ASPECT_SPECIFIC = (0x380000, 0x440000, 0x1010)  # mirrors _masks.ASPECT_SPECIFIC
 
 # SHARED B13: (ids, 1-based effect index). The effect's typed/raw mask must have d1 0x1 clear, d2 b29 set.
+# S3a (SURVIVAL 5.12 / 6 (7,3), WP brief 13) clears Black Arrow 3674's eff1 reader, the Master Tactician trigger masks
+# (34506-34508) and the 34837 buff's masks outright (no reader left to re-point); test_hunter_sv_data.py checks them.
 B13_REPOINTS = (
-    ((1978,), 2), ((3674,), 2),
+    ((1978,), 2),
     ((19419, 19420), 1),                                    # Efficiency (orphans; S2a makes r1-r3 eff0 a DUMMY)
     ((19485, 19487, 19488, 19489, 19490), 1),               # Mortal Shots
     ((19498, 19499, 19500), 1),                             # Hawk Eye
     ((34455, 34459, 34460), 3),                             # Ferocious Inspiration
     ((34488, 34489), 2),                                    # Master Marksman (orphans; S2a drops r1-r3 eff1)
     ((34494, 34496), 2),                                    # Survival Instincts
-    ((34506, 34507, 34508, 34838, 34839), 1),               # Master Tactician trigger
-    ((34833, 34834, 34835, 34836, 34837), 1),               # Master Tactician buff
+    ((34838, 34839), 1),                                    # Master Tactician trigger (orphans; S3a clears r1-r3)
+    ((34833, 34834, 34835, 34836), 1),                      # Master Tactician buff (S3a clears 34837)
     ((53234, 53237, 53238), 1),                             # Piercing Shots
     ((53245, 53246), 2),                                    # Marked for Death (orphans; S2a: r1-r3 eff1 = DOT
                                                             # on d2 b28, test_hunter_mm_data.py checks it)
@@ -69,13 +71,15 @@ B13_REPOINTS = (
 B13_GLAIVE_STRIPS = (((56333, 56336, 56337), 2), ((3674,), 2), ((63066,), 1))
 # Re-keyed spell_proc rows: key -> (family, (m0, m1, m2)) after B13.
 B13_SPELL_PROCS = {
-    -53290: (0x800, 0, 0x20000200),
+    # S3a (SURVIVAL 8.1, A11 / A12) edits the two H0 interim rows in place: Hunting Party -> HUNTING_PARTY_PROC, Thrill
+    # of the Hunt -> THRILL_PROC (no d2 b9); both keep d1 0x1 clear and d2 b29 set.
+    -53290: (0x802, 0x80080000, 0x20010040),
     # Cobra Strikes: H0's (0x800, 0x800000, 0x20000000) row, edited in place by S1b B2 to Steady Shot d2 b29 only (CAST
     # phase, spell_hun_cobra_strikes_bm resets Arcane Shot); test_hunter_bm_data.py checks its other columns.
     -53256: (0, 0, 0x20000000),
     -53234: (0x20000, 0, 0x20000000),        # S2a (MM 8): narrowed to Steady + Aimed, Chimera's d2 b0 dropped
     -53221: (0, 0, 0x20000000),
-    -34497: (0x60800, 0x800000, 0x20000201),
+    -34497: (0x61800, 0x80800000, 0x28000001),
 }
 H0_NEW_SPELLS = range(201600, 201606)
 STEADY_SHOT_ID = 56641
@@ -382,7 +386,8 @@ class HunterGateNegativeTest(unittest.TestCase):
     def test_wrong_rekeyed_spell_proc_is_caught(self):
         stale = {"SpellId": -53290, "SpellFamilyMask0": 0x800, "SpellFamilyMask1": 1, "SpellFamilyMask2": 0x200}
         self.assertEqual(len(check_b13_spell_procs([stale])), 1)
-        good = {"SpellId": -53290, "SpellFamilyMask0": 0x800, "SpellFamilyMask1": 0, "SpellFamilyMask2": 0x20000200}
+        good = {"SpellId": -53290, "SpellFamilyMask0": 0x802, "SpellFamilyMask1": 0x80080000,
+                "SpellFamilyMask2": 0x20010040}
         self.assertEqual(check_b13_spell_procs([good]), [])
 
     def test_class_set_repeated_differently_from_stock_is_caught(self):

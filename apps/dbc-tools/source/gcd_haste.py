@@ -29,8 +29,6 @@ EXCLUDE: dict[int, str] = {
            "the player Pummel is a different spell. All-zero SpellClassMask, so no mod could target it anyway",
     59671: "Challenging Howl (Demonology skill line): all-zero SpellClassMask, so no spell mod can target it; "
            "stays on the full 1.5s",
-    3674: "Black Arrow: shares Hunter bit 7 with the traps (Freezing/Immolation/Frost/Explosive/Snake Trap, "
-          "Freezing Arrow), which the core already hastes; stays unhasted rather than double-dipping the traps",
     47585: "Dispersion: its only bit (Priest bit 74) is shared with ~20 spells the core already hastes "
            "(Power Word: Shield, Renew, Mind Flay, ...); stays on the full 1.5s",
 }
@@ -50,6 +48,12 @@ NOT_CASTABLE: dict[int, str] = {
     53736: "Seal of Corruption: retired by the Paladin rework (B1.3, script unbound, spell row untouched)",
     19888: "Frost Resistance Aura: retired by the Prot rework (untrained, deleted from character_spell)",
     19891: "Fire Resistance Aura: retired by the Prot rework (untrained, deleted from character_spell)",
+    3674: "Black Arrow: retired by the Hunter rework S3a (talent 1322 became Tar Bomb; no trainer row) and its "
+          "SpellClassMask zeroed (SURVIVAL 0.17), so as a candidate its all-zero mask would be an error; its stock "
+          "SkillLineAbility row still lists it as learnable",
+    19306: "Counterattack: retired by the Hunter rework S3a (talent 1312 became Mantis Strike; no trainer row) and its "
+           "SpellClassMask zeroed (SURVIVAL 0.17, d1 b19 is Mantis Strike's); its stock SkillLineAbility row still "
+           "lists it as learnable",
 }
 
 # Periodic-dummy amplitude (ms) of effect 2, the tick T2's AuraScript recomputes the haste amount on.

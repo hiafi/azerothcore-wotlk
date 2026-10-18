@@ -17,7 +17,9 @@ class-wide edit that belongs to no spec file; it needs no import.
 from lib.dsl import AuraType, CombatRating, Effect, EffectType, School
 from lib.dsl.registry import (creature_template, custom_attr, leave_spell_group, procs_on, scripted_by,
                               skill_line_ability, spell, trained_by, unbind_script, unlink_spell)
+from . import _masks as m
 from .hunter_bm_spells import bm_dragonhawk_1155
+from .hunter_sv_spells import sv_glaive_1154
 
 
 glaive_toss_201600 = spell(
@@ -26,11 +28,14 @@ glaive_toss_201600 = spell(
     effects=[Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=60.0, potency_kind='direct',
                     implicit_target_a=6, chain_targets=3)],
     spell_icon_id=85,   # stock Ability_UpgradeMoonGlaive
+    # hunter-rework S3a A15 (X18): Improved Glaive Toss's % through tooltip_vars 1154 (`igt`); `${$x1-1}` stays, the
+    # capstone's JUMP_TARGETS mod changes the bounce count. TOOLTIP-RECONCILE (a) wording.
+    tooltip_vars=sv_glaive_1154,
     raw_overrides={'SpellLevel': 12, 'DefenseType': 3, 'SpellClassSet': 9, 'SpellClassMask_3': 0x40,
                    'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'FacingCasterFlags': 1,
                    'EffectChainAmplitude_1': 1.0, 'EquippedItemClass': -1,
                    'SpellVisualID_1': 90090, 'Speed': 40.0,   # patch_hunter_vfx_models.py: stock SV 9044 (39635 "Throw Glaive") with the twilight-glaive missile model; Speed 40 so it flies
-                   'Description_Lang_enUS': 'Throw a glaive at the target, dealing {pot1} Physical damage to it and to up to ${$x1-1} other nearby enemies in combat with you.'},
+                   'Description_Lang_enUS': 'Throw a glaive that strikes the target and bounces to ${$x1-1} nearby enemies in combat with you, dealing {pot1*igt} Physical damage to each.'},
 )
 
 aspect_of_the_dragonhawk_explosion_201601 = spell(
@@ -149,8 +154,11 @@ procs_on(13163, proc_flags=0x100000, cooldown_ms=20000)   # Monkey (was HitMask 
 procs_on(aspect_of_the_monkey_pet_201605, proc_flags=0x100000, chance=100.0)   # the real roll is scripted
 
 # --- B13 interim re-keys: d1 b0 -> d2 b29 (every other column copied from the live row) ---
-procs_on(-53290, proc_flags=0, family_name=9, family_mask=(0x800, 0, 0x20000200),
-         spell_type_mask=1, spell_phase_mask=2, hit_mask=2, attributes_mask=2)             # Hunting Party
+# hunter-rework S3a A11 (SURVIVAL 8.1): the B13 interim row, edited in place (the only -53290 row): HUNTING_PARTY_PROC,
+# HIT, crit, no TRIGGERED_CAN_PROC, the eff1 Agility / eff2 RAP auras disabled; chance 0 = DBC ProcChance 100.
+procs_on(-53290, proc_flags=0x100, family_name=9, family_mask=m.HUNTING_PARTY_PROC,
+         spell_type_mask=1, spell_phase_mask=0x2, hit_mask=0x2, attributes_mask=0, disable_effects_mask=0x6,
+         chance=0)                                                                         # Hunting Party
 procs_on(-53256, proc_flags=0x100, family_name=9, family_mask=(0, 0, 0x20000000),
          spell_phase_mask=0x1, hit_mask=0, chance=0)   # Cobra Strikes: S1b resets Arcane Shot on a CAST-phase Steady Shot
 # S2a (MARKSMANSHIP 8, WP brief resolution 2): -53234 narrowed in place to Steady + Aimed crits (Chimera's d2 b0
@@ -160,8 +168,11 @@ procs_on(-53234, proc_flags=0x100, family_name=9, family_mask=(0x20000, 0, 0x200
          spell_type_mask=1, spell_phase_mask=0x2, hit_mask=0x2)                            # Piercing Shots
 procs_on(-53221, proc_flags=0, family_name=9, family_mask=(0, 0, 0x20000000),
          spell_phase_mask=2)                                                               # Improved Steady Shot
-procs_on(-34497, proc_flags=0, family_name=9, family_mask=(0x60800, 0x800000, 0x20000201),
-         spell_type_mask=1, spell_phase_mask=2, hit_mask=2)                                # Thrill of the Hunt
+# hunter-rework S3a A12 (SURVIVAL 8.1, SV-B1): the H0 row, edited in place (the only -34497 row): THRILL_PROC (no d2 b9,
+# the blasts), CAST phase, crit, the eff1 cut DUMMY disabled; chance 0 = DBC ProcChance 50 / 100, Proc Chance applies.
+procs_on(-34497, proc_flags=0x100, family_name=9, family_mask=m.THRILL_PROC,
+         spell_type_mask=1, spell_phase_mask=0x1, hit_mask=0x2, attributes_mask=0, disable_effects_mask=0x2,
+         chance=0)                                                                         # Thrill of the Hunt
 
 # --- Viper loses effect 1 (B6): the stock row 34074 = 0x0E000000 (POSITIVE_EFF0|1|2) would log "no EFFECT_1/2" at boot ---
 custom_attr(34074, attributes=0x02000000)   # SPELL_ATTR0_CU_POSITIVE_EFF0

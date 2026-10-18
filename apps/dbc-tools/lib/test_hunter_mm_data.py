@@ -184,8 +184,11 @@ SERPENTS_SWIFTNESS_ORPHANS = (34469, 34470)       # aura 140 kept, taught by not
 EDITED_STOCK_HELPERS = (CHIMERA_SERPENT, WILD_QUIVER_SHOT, RAPID_KILLING_BUFF_ID, *SNIPER_TRAINING_BUFFS, 42243)
 # S2b: ids it declares or binds whose built row must be -1 (Volley 1510 is a player-cast channel: class 2, untouched)
 S2B_MINUS_ONE_IDS = (*NEW_S2B_IDS, BARRAGE_R3, *LONE_SURVIVOR_RANKS, CONVERGENCE, ADVANTAGED_STATE)
-# M4 exemption: the player-cast ranged shots (S2-HANDOFF M4 / stale line 6). Mirrors test_hunter_bm_data's set.
-PLAYER_CAST_SHOTS = frozenset({STEADY_SHOT, ARCANE_SHOT, AIMED_SHOT, CHIMERA_SHOT, MULTI_SHOT, *MARKS})
+# M4 exemption: the player-cast ranged shots (S2-HANDOFF M4 / stale line 6). Mirrors test_hunter_bm_data's set. S3a
+# (S3-HANDOFF N5): + the Survival shots Explosive Shot 53301, Wyvern Sting 19386, Scatter Shot 19503, Black Arrow 3674.
+SV_PLAYER_CAST_SHOTS = (53301, 19386, 19503, 3674)
+PLAYER_CAST_SHOTS = frozenset({STEADY_SHOT, ARCANE_SHOT, AIMED_SHOT, CHIMERA_SHOT, MULTI_SHOT, *MARKS,
+                               *SV_PLAYER_CAST_SHOTS})
 
 # MM 2.2 / 6: talent id -> ((tier, column), rank spell ids)
 TAB_LAYOUT = {

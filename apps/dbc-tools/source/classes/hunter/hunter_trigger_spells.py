@@ -13,6 +13,10 @@ from .hunter_mm_spells import (
     BARRAGE_ICD_MS, COMBAT_EXPERIENCE_CAPSTONE_PCT, FOCUSED_AIM_CDR_MS, RAPID_KILLING_HEALTH_PCT, fire_mm_buff_201940,
     mm_volley_1172,
 )
+# hunter_sv_spells.py imports only lib.dsl and _masks (its docstring forbids importing this file), so no cycle.
+from .hunter_sv_spells import (
+    THRILL_MANA_REFUND_PCT, THRILL_MM_CUT_FACTOR, mantis_strike_enable_202041, scavenger_energize_202044,
+)
 
 _PLUME_REVIVE = str(int(PHOENIX_PLUME_REVIVE_PCT['value']))
 
@@ -47,6 +51,105 @@ def _mm_c(row):
 def _mm_sec(row):
     """A millisecond const() row's value as whole-second tooltip text (1000 -> '1')."""
     return _mm_c({'value': row['value'] / 1000})
+
+
+# ---- hunter-rework S3a A3 (SURVIVAL 5.5 / 5.12 / 6 / 6.1): the stock SV ranks and helpers edited in place below.
+# Masks come from _masks.py through _sv_masks (letter = effect, digit = dword); rank tooltips use the G / P capstone
+# convention (grey suffix below the last rank, plain on the last). Stored base_points are live - 1. ----
+_sv_masks = _mm_masks
+_sv_desc = _mm_desc
+
+
+def _sv_aura(aura, base_points=0, misc_value=0, trigger_spell=0):
+    """One self-targeted APPLY_AURA effect (target 1)."""
+    return Effect(
+        type=EffectType.APPLY_AURA, base_points=base_points, implicit_target_a=1, apply_aura=aura,
+        misc_value=int(misc_value), trigger_spell=trigger_spell,
+    )
+
+
+_SV_SUREFOOTED = "Reduces the duration of movement impairing effects on you by $s1% and increases your haste by $s3%."
+_SV_TRAP_MASTERY = (
+    "Increases the duration of your Frost Trap by $s1%, the periodic damage of your Immolation Trap and Explosive Trap "
+    "by $s2%, and the number of snakes your Snake Trap summons by ${$m3*2}. Your Snake Trap's snakes apply your "
+    "Serpent Sting to the enemies they bite."
+)
+_SV_TRAP_MASTERY_CAP = "Your Freezing Trap lasts twice as long on targets affected by your Scatter Shot."
+_SV_SURVIVAL_INSTINCTS = (
+    "Reduces all damage taken by $s1% and increases the critical strike chance of your Arcane Shot, Steady Shot, "
+    "Explosive Shot, Wildfire Bomb and Glaive Toss by $s2%."
+)
+_SV_SURVIVALIST = (
+    "Increases your Agility and Stamina by $s1%, reduces the cooldown of your Deterrence by ${$m3/-1000} sec and "
+    "increases its duration by ${$202061m1/1000} sec."
+)
+_SV_SURVIVALIST_CAP = (
+    "Your movement speed is increased by $202060s1% while Deterrence is active and for $202060d after you use "
+    "Disengage or Feign Death."
+)
+_SV_SURVIVAL_TACTICS = (
+    "Reduces the cooldown of your Disengage by ${$m2/-1000} sec and increases your Versatility by $s1%."
+)
+_SV_SURVIVAL_TACTICS_CAP = "Using Disengage removes all movement slowing effects from you."
+_SV_ENTRAPMENT = "Increases the slowing effect of your Frost Trap by $s1%."
+_SV_ENTRAPMENT_CAP = "When your Frost Trap or Snake Trap is triggered, all afflicted enemies are rooted for $64804d."
+_SV_HUNTER_VS_WILD = (
+    "Increases your attack power and ranged attack power by an amount equal to $s1% of your total Stamina, and "
+    "increases the damage of your pet by $s3%."
+)
+_SV_KILLER_INSTINCT = "Increases your critical strike chance with all spells and abilities by $s1%."
+_SV_KILLER_INSTINCT_CAP = (
+    "Your Mongoose Bite, Explosive Shot and Glaive Toss have a $19373h% chance to allow the use of Mantis Strike for "
+    "$202041d."
+)
+_SV_RESOURCEFULNESS = (
+    "Reduces the mana cost of your traps, Raptor Strike, Mongoose Bite and Mantis Strike by $s1% and the cooldown of "
+    "your traps by ${$m2/-1000} sec."
+)
+_SV_RESOURCEFULNESS_CAP = (
+    "Your Mongoose Bite and Mantis Strike hits have a $34493h% chance to restore $202044s1% of your maximum mana."
+)
+_SV_LIGHTNING_REFLEXES = "Increases your Agility by $s1%."
+# SV-B1 (user ruling 1): the 40% refund is the stock script's literal and the x2 factor the C++ tunable, both quoted
+# from their hunter_sv_spells.py const() (X10); eff1 ($m2) holds the 1 s cut.
+_SV_THRILL_OF_THE_HUNT = (
+    f"Your shots have a $h% chance, when they critically strike, to refund {_mm_c(THRILL_MANA_REFUND_PCT)}% of their "
+    f"mana cost and reduce their remaining cooldown by ${{$m2/1000}} sec, or by "
+    f"${{$m2*{_mm_c(THRILL_MM_CUT_FACTOR)}/1000}} sec for Chimera Shot, Multi-Shot and Aimed Shot."
+)
+_SV_EXPOSE_WEAKNESS = (
+    "Your ranged critical strikes, including Raptor Strike, Mongoose Bite and Mantis Strike, increase your attack "
+    "power by $s1% of your Agility for $34501d."
+)
+# User ruling 5 (X7): aura texts whose amount comes from the trigger stay number-free.
+_SV_EXPOSE_WEAKNESS_BUFF = (
+    "Your ranged critical strikes grant Expose Weakness, increasing your ranged attack power by a percentage of your "
+    "Agility for $d."
+)
+_SV_EXPOSE_WEAKNESS_AURA = "Ranged attack power increased by a percentage of your Agility."
+_SV_MASTER_TACTICIAN = (
+    "Your ranged attacks, including Raptor Strike, Mongoose Bite and Mantis Strike, have a $h% chance to increase "
+    "your critical strike chance with all spells and attacks by $34837s1% for $34837d."
+)
+_SV_MASTER_TACTICIAN_BUFF = (
+    "Your ranged attacks have a chance to increase your critical strike chance with all spells and attacks by $s1% "
+    "for $d."
+)
+_SV_MASTER_TACTICIAN_AURA = "Critical strike chance increased by $s1%."
+_SV_HUNTING_PARTY = (
+    "Increases your Agility by $s2% and your ranged attack power by $s3%. Critical strikes from your Arcane Shot, "
+    "Explosive Shot, Glaive Toss, Steady Shot, Raptor Strike, Mongoose Bite and Mantis Strike grant Replenishment: up "
+    "to 10 party or raid members regain 1% of their maximum mana every 5 sec for $57669d."
+)
+_SV_POINT_OF_NO_ESCAPE = "Increases your damage against targets affected by your Tar Bomb or Frost Trap by $s1%."
+_SV_TNT = (
+    "Increases the damage of your Explosive Shot, Explosive Trap, Wildfire Bomb, Tar Bomb, Cluster Bombs, Immolation "
+    "Trap and Burning Tar by $s1%."
+)
+_SV_TNT_CAP = (
+    "Your explosives deal additional damage equal to your Mastery. Explosives are Explosive Shot, Shrapnel, Explosive "
+    "Trap, Wildfire Bomb, Tar Bomb, Burning Tar and Cluster Bombs."
+)
 
 
 freezing_trap_effect_3355 = spell(
@@ -508,11 +611,35 @@ entrapment_19184 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=19185),
+        _sv_aura(AuraType.ADD_FLAT_MODIFIER, -6, SpellModOp.EFFECT1),
     ],
     spell_icon_id=20,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your Frost Trap or Snake Trap are triggered you entrap all afflicted targets, preventing them from moving for $19185d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 2097152, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (4,2)): stock row edited in place, stored = live - 1; eff0 '
+        'PROC_TRIGGER_SPELL -> flat SPELLMOD_EFFECT1 -5/10/15 on FROST_TRAP_AURA (13810 eff0, the slow); '
+        'ProcTypeMask 0x200000 -> 0 (only r3 roots).'
+    ),
+    raw_overrides={
+        'AttributesEx3': 67108864,
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _sv_desc(_SV_ENTRAPMENT, _SV_ENTRAPMENT_CAP, last=False),
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_2': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 1',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 100,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+        **_sv_masks({1: (m.FROST_TRAP_AURA, 0, 0)}),
+    },
 )
 
 
@@ -528,11 +655,36 @@ survivalist_19255 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=137, misc_value=2),
+        _sv_aura(AuraType.MOD_TOTAL_STAT_PERCENTAGE, 0, 1),
+        _sv_aura(AuraType.MOD_TOTAL_STAT_PERCENTAGE, 0, 2),
+        _sv_aura(AuraType.ADD_FLAT_MODIFIER, -3001, SpellModOp.COOLDOWN),
     ],
     spell_icon_id=164,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Stamina by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (2,3)): stock row edited in place, stored = live - 1; eff0 Agility '
+        '/ eff1 Stamina +1/2/3% (aura 137 misc 1 / 2); eff2 Deterrence cooldown -3/6/10 s (C mask '
+        "DETERRENCE). The +1 s helper 202061 is A1's linked_spell; the speed capstone is S3b."
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _sv_desc(_SV_SURVIVALIST, _SV_SURVIVALIST_CAP, last=False),
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_2': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 1',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+        **_sv_masks({3: (0, m.DETERRENCE, 0)}),
+    },
 )
 
 
@@ -548,11 +700,36 @@ survivalist_19256 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=137, misc_value=2),
+        _sv_aura(AuraType.MOD_TOTAL_STAT_PERCENTAGE, 1, 1),
+        _sv_aura(AuraType.MOD_TOTAL_STAT_PERCENTAGE, 1, 2),
+        _sv_aura(AuraType.ADD_FLAT_MODIFIER, -6001, SpellModOp.COOLDOWN),
     ],
     spell_icon_id=164,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Stamina by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (2,3)): stock row edited in place, stored = live - 1; eff0 Agility '
+        '/ eff1 Stamina +1/2/3% (aura 137 misc 1 / 2); eff2 Deterrence cooldown -3/6/10 s (C mask '
+        "DETERRENCE). The +1 s helper 202061 is A1's linked_spell; the speed capstone is S3b."
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _sv_desc(_SV_SURVIVALIST, _SV_SURVIVALIST_CAP, last=False),
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_2': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 2',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+        **_sv_masks({3: (0, m.DETERRENCE, 0)}),
+    },
 )
 
 
@@ -568,11 +745,36 @@ survivalist_19257 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=137, misc_value=2),
+        _sv_aura(AuraType.MOD_TOTAL_STAT_PERCENTAGE, 2, 1),
+        _sv_aura(AuraType.MOD_TOTAL_STAT_PERCENTAGE, 2, 2),
+        _sv_aura(AuraType.ADD_FLAT_MODIFIER, -10001, SpellModOp.COOLDOWN),
     ],
     spell_icon_id=164,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Stamina by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (2,3)): stock row edited in place, stored = live - 1; eff0 Agility '
+        '/ eff1 Stamina +1/2/3% (aura 137 misc 1 / 2); eff2 Deterrence cooldown -3/6/10 s (C mask '
+        "DETERRENCE). The +1 s helper 202061 is A1's linked_spell; the speed capstone is S3b."
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _sv_desc(_SV_SURVIVALIST, _SV_SURVIVALIST_CAP, last=True),
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_2': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 3',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+        **_sv_masks({3: (0, m.DETERRENCE, 0)}),
+    },
 )
 
 
@@ -628,12 +830,34 @@ survival_tactics_19286 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=16),
-        Effect(type=EffectType.APPLY_AURA, base_points=-2001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        _sv_aura(AuraType.MOD_CUSTOM_STAT_PCT, 0, 1 << CombatRating.VERSATILITY),
+        _sv_aura(AuraType.ADD_FLAT_MODIFIER, -3001, SpellModOp.COOLDOWN),
     ],
     spell_icon_id=857,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the chance your Feign Death ability and all trap spells will be resisted by $s1%, and reduces the cooldown of your Disengage ability by $/1000;S2 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 284, 'EffectSpellClassMaskA_2': 8192, 'EffectSpellClassMaskB_2': 16384, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (3,3)): stock row edited in place, stored = live - 1; eff0 resist '
+        'SpellMod -> Versatility +1/2% (aura 306), stale A_1 / A_2 deleted; eff1 Disengage cooldown -3/6 s (B '
+        'mask DISENGAGE). De-snare capstone is S3b.'
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _sv_desc(_SV_SURVIVAL_TACTICS, _SV_SURVIVAL_TACTICS_CAP, last=False),
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 1',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+        **_sv_masks({2: (0, m.DISENGAGE, 0)}),
+    },
 )
 
 
@@ -649,12 +873,34 @@ survival_tactics_19287 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=107, misc_value=16),
-        Effect(type=EffectType.APPLY_AURA, base_points=-4001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        _sv_aura(AuraType.MOD_CUSTOM_STAT_PCT, 1, 1 << CombatRating.VERSATILITY),
+        _sv_aura(AuraType.ADD_FLAT_MODIFIER, -6001, SpellModOp.COOLDOWN),
     ],
     spell_icon_id=857,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the chance your Feign Death ability and all trap spells will be resisted by $s1%, and reduces the cooldown of your Disengage ability by $/1000;S2 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 284, 'EffectSpellClassMaskA_2': 8192, 'EffectSpellClassMaskB_2': 16384, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 17408, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (3,3)): stock row edited in place, stored = live - 1; eff0 resist '
+        'SpellMod -> Versatility +1/2% (aura 306), stale A_1 / A_2 deleted; eff1 Disengage cooldown -3/6 s (B '
+        'mask DISENGAGE); ProcTypeMask 0x4400 -> 0 (N8). De-snare capstone is S3b.'
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _sv_desc(_SV_SURVIVAL_TACTICS, _SV_SURVIVAL_TACTICS_CAP, last=True),
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 2',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 100,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+        **_sv_masks({2: (0, m.DISENGAGE, 0)}),
+    },
 )
 
 
@@ -672,10 +918,32 @@ surefooted_19290 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=232, misc_value=11),
         Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=232, misc_value=7),
+        _sv_aura(AuraType.HASTE_ALL, 0),
     ],
     spell_icon_id=246,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the duration of movement impairing effects by $s1%.', 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (0,1)): stock row edited in place, stored = live - 1; eff2 '
+        'HASTE_ALL (193) +1/2/3%; the phantom eff3 EffectBasePoints_3 / EffectDieSides_3 raw keys deleted '
+        '(they would override the new eff2).'
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _SV_SUREFOOTED,
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_2': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 1',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+    },
 )
 
 
@@ -693,10 +961,32 @@ surefooted_19294 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=232, misc_value=11),
         Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=232, misc_value=7),
+        _sv_aura(AuraType.HASTE_ALL, 1),
     ],
     spell_icon_id=246,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the duration of movement impairing effects by $s1%.', 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (0,1)): stock row edited in place, stored = live - 1; eff2 '
+        'HASTE_ALL (193) +1/2/3%; the phantom eff3 EffectBasePoints_3 / EffectDieSides_3 raw keys deleted '
+        '(they would override the new eff2).'
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _SV_SUREFOOTED,
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_2': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 2',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+    },
 )
 
 
@@ -717,8 +1007,30 @@ trap_mastery_19376 = spell(
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=107, misc_value=8),
     ],
     spell_icon_id=69,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Frost Trap and Freezing Trap - Increases the duration by $s1%.\r\n\r\nImmolation Trap, Explosive Trap and Black Arrow - Increases the periodic damage done by $s2%.\r\n\r\nSnake Trap - Increases the number of snakes summoned by $*2;s3.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 24, 'EffectSpellClassMaskB_1': 4, 'EffectSpellClassMaskB_2': 134217728, 'EffectSpellClassMaskB_3': 131072, 'EffectSpellClassMaskC_2': 8192, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (1,2)): stock row edited in place, stored = live - 1; eff0 DURATION '
+        'A mask 0x18 -> FROST_TRAP_AURA (Frost Trap only); eff1 DOT B mask -> TRAP_MASTERY_DOT (stale B_2 '
+        '0x8000000 Black Arrow deleted); eff2 snake count on SNAKE_TRAP_EFFECT unchanged. Snake sting and the '
+        'Freezing Trap capstone are S3b.'
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _sv_desc(_SV_TRAP_MASTERY, _SV_TRAP_MASTERY_CAP, last=False),
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 1',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+        **_sv_masks({1: (m.FROST_TRAP_AURA, 0, 0), 2: m.TRAP_MASTERY_DOT, 3: (0, m.SNAKE_TRAP_EFFECT, 0)}),
+    },
 )
 
 
@@ -734,11 +1046,35 @@ entrapment_19387 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=64803),
+        _sv_aura(AuraType.ADD_FLAT_MODIFIER, -11, SpellModOp.EFFECT1),
     ],
     spell_icon_id=20,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your Frost Trap or Snake Trap are triggered you entrap all afflicted targets, preventing them from moving for $64803d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 2097152, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (4,2)): stock row edited in place, stored = live - 1; eff0 '
+        'PROC_TRIGGER_SPELL -> flat SPELLMOD_EFFECT1 -5/10/15 on FROST_TRAP_AURA (13810 eff0, the slow); '
+        'ProcTypeMask 0x200000 -> 0 (only r3 roots).'
+    ),
+    raw_overrides={
+        'AttributesEx3': 67108864,
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _sv_desc(_SV_ENTRAPMENT, _SV_ENTRAPMENT_CAP, last=False),
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_2': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 2',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 100,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+        **_sv_masks({1: (m.FROST_TRAP_AURA, 0, 0)}),
+    },
 )
 
 
@@ -754,11 +1090,37 @@ entrapment_19388 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=64804),
+        _sv_aura(AuraType.ADD_FLAT_MODIFIER, -16, SpellModOp.EFFECT1),
+        _sv_aura(AuraType.PROC_TRIGGER_SPELL, trigger_spell=64804),
     ],
     spell_icon_id=20,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your Frost Trap or Snake Trap are triggered you entrap all afflicted targets, preventing them from moving for $64804d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 2097152, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (4,2)): stock row edited in place, stored = live - 1; eff0 '
+        'PROC_TRIGGER_SPELL -> flat SPELLMOD_EFFECT1 -5/10/15 on FROST_TRAP_AURA (13810 eff0, the slow); eff1 '
+        'PROC_TRIGGER_SPELL -> 64804 (3 s root), ProcTypeMask 0x200000 kept for the row -19184 (A1).'
+    ),
+    raw_overrides={
+        'AttributesEx3': 67108864,
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _sv_desc(_SV_ENTRAPMENT, _SV_ENTRAPMENT_CAP, last=True),
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_2': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 3',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 100,
+        'ProcTypeMask': 2097152,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+        **_sv_masks({1: (m.FROST_TRAP_AURA, 0, 0)}),
+    },
 )
 
 
@@ -2492,10 +2854,32 @@ surefooted_24283 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=232, misc_value=11),
         Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=232, misc_value=7),
+        _sv_aura(AuraType.HASTE_ALL, 2),
     ],
     spell_icon_id=246,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the duration of movement impairing effects by $s1%.', 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (0,1)): stock row edited in place, stored = live - 1; eff2 '
+        'HASTE_ALL (193) +1/2/3%; the phantom eff3 EffectBasePoints_3 / EffectDieSides_3 raw keys deleted '
+        '(they would override the new eff2).'
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _SV_SUREFOOTED,
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_2': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 3',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+    },
 )
 
 
@@ -2621,8 +3005,32 @@ ferocious_inspiration_34455 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=108),
     ],
     spell_icon_id=2232,
-    notes='pulled from existing data; hunter-rework S1a A3: text only',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by all party and raid members by $75593s1%, and increases the damage of your Arcane Shot and Steady Shot by $s3%. Does not stack with other effects that increase party damage by a percentage.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_2': 32, 'EffectSpellClassMaskB_2': 64, 'EffectSpellClassMaskC_1': 2048, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9, 'EffectSpellClassMaskC_3': 536870912},
+    notes=(
+        'pulled from existing data; hunter-rework S1a A3: text only; hunter-rework S3a A3 (S3-HANDOFF stale '
+        'line 19): deleted EffectSpellClassMaskB_2 (an inert reader on a missing effect of a bit S3 makes '
+        'live).'
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': 'Increases the damage done by all party and raid members by $75593s1%, and increases the damage of your Arcane Shot and Steady Shot by $s3%. Does not stack with other effects that increase party damage by a percentage.',
+        'EffectBasePoints_2': -1,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EffectDieSides_2': 1,
+        'EffectSpellClassMaskA_2': 32,
+        'EffectSpellClassMaskC_1': 2048,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 1',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+        'EffectSpellClassMaskC_3': 536870912,
+    },
 )
 
 
@@ -2643,8 +3051,32 @@ ferocious_inspiration_34459 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108),
     ],
     spell_icon_id=2232,
-    notes='pulled from existing data; hunter-rework S1a A3: text only',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by all party and raid members by $75446s1%, and increases the damage of your Arcane Shot and Steady Shot by $s3%. Does not stack with other effects that increase party damage by a percentage.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_2': 32, 'EffectSpellClassMaskB_2': 64, 'EffectSpellClassMaskC_1': 2048, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9, 'EffectSpellClassMaskC_3': 536870912},
+    notes=(
+        'pulled from existing data; hunter-rework S1a A3: text only; hunter-rework S3a A3 (S3-HANDOFF stale '
+        'line 19): deleted EffectSpellClassMaskB_2 (an inert reader on a missing effect of a bit S3 makes '
+        'live).'
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': 'Increases the damage done by all party and raid members by $75446s1%, and increases the damage of your Arcane Shot and Steady Shot by $s3%. Does not stack with other effects that increase party damage by a percentage.',
+        'EffectBasePoints_2': -1,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EffectDieSides_2': 1,
+        'EffectSpellClassMaskA_2': 32,
+        'EffectSpellClassMaskC_1': 2048,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 2',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+        'EffectSpellClassMaskC_3': 536870912,
+    },
 )
 
 
@@ -2665,8 +3097,32 @@ ferocious_inspiration_34460 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=108),
     ],
     spell_icon_id=2232,
-    notes='pulled from existing data; hunter-rework S1a A3: text only',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by all party and raid members by $75447s1%, and increases the damage of your Arcane Shot and Steady Shot by $s3%. Does not stack with other effects that increase party damage by a percentage.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_2': 32, 'EffectSpellClassMaskB_2': 64, 'EffectSpellClassMaskC_1': 2048, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9, 'EffectSpellClassMaskC_3': 536870912},
+    notes=(
+        'pulled from existing data; hunter-rework S1a A3: text only; hunter-rework S3a A3 (S3-HANDOFF stale '
+        'line 19): deleted EffectSpellClassMaskB_2 (an inert reader on a missing effect of a bit S3 makes '
+        'live).'
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': 'Increases the damage done by all party and raid members by $75447s1%, and increases the damage of your Arcane Shot and Steady Shot by $s3%. Does not stack with other effects that increase party damage by a percentage.',
+        'EffectBasePoints_2': -1,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EffectDieSides_2': 1,
+        'EffectSpellClassMaskA_2': 32,
+        'EffectSpellClassMaskC_1': 2048,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 3',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+        'EffectSpellClassMaskC_3': 536870912,
+    },
 )
 
 
@@ -3187,11 +3643,33 @@ resourcefulness_34491 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=108, misc_value=14),
-        Effect(type=EffectType.APPLY_AURA, base_points=-2001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        _sv_aura(AuraType.ADD_FLAT_MODIFIER, -3001, SpellModOp.COOLDOWN),
     ],
     spell_icon_id=2240,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of all traps, melee abilities and Black Arrow by $s1% and reduces the cooldown of all traps and Black Arrow by $/1000;s2 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 222, 'EffectSpellClassMaskA_2': 540672, 'EffectSpellClassMaskB_1': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (5,2)): stock row edited in place, stored = live - 1; eff0 cost '
+        '-22/42/62% A mask -> RESOURCEFULNESS_COST (stale A_1 222 / A_2 0x84000 replaced); eff1 trap cooldown '
+        '-3/6/10 s on TRAP.'
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _sv_desc(_SV_RESOURCEFULNESS, _SV_RESOURCEFULNESS_CAP, last=False),
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 1',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+        **_sv_masks({1: m.RESOURCEFULNESS_COST, 2: (m.TRAP, 0, 0)}),
+    },
 )
 
 
@@ -3208,11 +3686,33 @@ resourcefulness_34492 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-41, implicit_target_a=1, apply_aura=108, misc_value=14),
-        Effect(type=EffectType.APPLY_AURA, base_points=-4001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        _sv_aura(AuraType.ADD_FLAT_MODIFIER, -6001, SpellModOp.COOLDOWN),
     ],
     spell_icon_id=2240,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of all traps, melee abilities and Black Arrow by $s1% and reduces the cooldown of all traps and Black Arrow by $/1000;s2 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 222, 'EffectSpellClassMaskA_2': 540672, 'EffectSpellClassMaskB_1': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (5,2)): stock row edited in place, stored = live - 1; eff0 cost '
+        '-22/42/62% A mask -> RESOURCEFULNESS_COST (stale A_1 222 / A_2 0x84000 replaced); eff1 trap cooldown '
+        '-3/6/10 s on TRAP.'
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _sv_desc(_SV_RESOURCEFULNESS, _SV_RESOURCEFULNESS_CAP, last=False),
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 2',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+        **_sv_masks({1: m.RESOURCEFULNESS_COST, 2: (m.TRAP, 0, 0)}),
+    },
 )
 
 
@@ -3229,11 +3729,36 @@ resourcefulness_34493 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-61, implicit_target_a=1, apply_aura=108, misc_value=14),
-        Effect(type=EffectType.APPLY_AURA, base_points=-6001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        _sv_aura(AuraType.ADD_FLAT_MODIFIER, -10001, SpellModOp.COOLDOWN),
+        _sv_aura(AuraType.PROC_TRIGGER_SPELL, trigger_spell=scavenger_energize_202044.id),
     ],
     spell_icon_id=2240,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of all traps, melee abilities and Black Arrow by $s1% and reduces the cooldown of all traps and Black Arrow by $/1000;s2 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 222, 'EffectSpellClassMaskA_2': 540672, 'EffectSpellClassMaskB_1': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (5,2)): stock row edited in place, stored = live - 1; eff0 cost '
+        '-22/42/62% A mask -> RESOURCEFULNESS_COST (stale A_1 222 / A_2 0x84000 replaced); eff1 trap cooldown '
+        '-3/6/10 s on TRAP; eff2 PROC_TRIGGER_SPELL -> Scavenger 202044, ProcChance 30, ProcTypeMask 0x100 '
+        '(HIT row 34493, A1).'
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _sv_desc(_SV_RESOURCEFULNESS, _SV_RESOURCEFULNESS_CAP, last=True),
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 3',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 30,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+        'ProcTypeMask': 256,
+        **_sv_masks({1: m.RESOURCEFULNESS_COST, 2: (m.TRAP, 0, 0)}),
+    },
 )
 
 
@@ -3249,12 +3774,34 @@ survival_instincts_34494 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
+        _sv_aura(AuraType.MOD_DAMAGE_PERCENT_TAKEN, -2, 127),
         Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=7),
     ],
     spell_icon_id=2239,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces all damage taken by $s1% and increases the critical strike chance of your Arcane Shot, Steady Shot, and Explosive Shot by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 222, 'EffectSpellClassMaskB_1': 2048, 'EffectSpellClassMaskB_2': 2147483648, 'EffectSpellClassMaskB_3': 536871488, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (1,3)): stock row edited in place, stored = live - 1; eff0 damage '
+        'taken -1/2%; eff1 crit B mask -> SURVIVAL_INSTINCTS_CRIT (+Wildfire Bomb, Glaive Toss); stale A_1 '
+        '222 on the aura-87 eff0 deleted.'
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _SV_SURVIVAL_INSTINCTS,
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'ImplicitTargetA_3': 1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 1',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+        **_sv_masks({2: m.SURVIVAL_INSTINCTS_CRIT}),
+    },
 )
 
 
@@ -3270,12 +3817,34 @@ survival_instincts_34496 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-5, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
+        _sv_aura(AuraType.MOD_DAMAGE_PERCENT_TAKEN, -3, 127),
         Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=107, misc_value=7),
     ],
     spell_icon_id=2239,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces all damage taken by $s1% and increases the critical strike chance of your Arcane Shot, Steady Shot, and Explosive Shot by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 222, 'EffectSpellClassMaskB_1': 2048, 'EffectSpellClassMaskB_2': 2147483648, 'EffectSpellClassMaskB_3': 536871488, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (1,3)): stock row edited in place, stored = live - 1; eff0 damage '
+        'taken -1/2%; eff1 crit B mask -> SURVIVAL_INSTINCTS_CRIT (+Wildfire Bomb, Glaive Toss); stale A_1 '
+        '222 on the aura-87 eff0 deleted.'
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _SV_SURVIVAL_INSTINCTS,
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'ImplicitTargetA_3': 1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 2',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+        **_sv_masks({2: m.SURVIVAL_INSTINCTS_CRIT}),
+    },
 )
 
 
@@ -3292,10 +3861,36 @@ thrill_of_the_hunt_34497 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        _sv_aura(AuraType.DUMMY, 999),
     ],
     spell_icon_id=2236,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives you a $s1% chance to regain 40% of the mana cost of any shot when it critically hits.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 222, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 33, 'ProcTypeMask': 256, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (6,2), SV-B1): stock row edited in place, stored = live - 1; eff0 '
+        'DUMMY kept (stock carrier, stock spell_hun_thrill_of_the_hunt); new eff1 DUMMY 1000 ms cut (read by '
+        'spell_hun_thrill_of_the_hunt_sv); ProcChance 50/100, ProcTypeMask 0x100 (row -34497, A4); stale A_1 '
+        '222 deleted.'
+    ),
+    raw_overrides={
+        'AttributesEx3': 67108864,
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _SV_THRILL_OF_THE_HUNT,
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_2': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 1',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 50,
+        'ProcTypeMask': 256,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+    },
 )
 
 
@@ -3312,10 +3907,36 @@ thrill_of_the_hunt_34498 = spell(
     range_yards=0.0,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=65, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        _sv_aura(AuraType.DUMMY, 999),
     ],
     spell_icon_id=2236,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives you a $s1% chance to regain 40% of the mana cost of any shot when it critically hits.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 222, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 66, 'ProcTypeMask': 256, 'RangeIndex': 1, 'SpellClassMask_2': 2155872256, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (6,2), SV-B1): stock row edited in place, stored = live - 1; eff0 '
+        'DUMMY kept (stock carrier, stock spell_hun_thrill_of_the_hunt); new eff1 DUMMY 1000 ms cut (read by '
+        'spell_hun_thrill_of_the_hunt_sv); ProcChance 50/100, ProcTypeMask 0x100 (row -34497, A4); stale A_1 '
+        '222 deleted; stray SpellClassMask_2 0x80800000 stripped (0.17).'
+    ),
+    raw_overrides={
+        'AttributesEx3': 67108864,
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _SV_THRILL_OF_THE_HUNT,
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_2': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 2',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 100,
+        'ProcTypeMask': 256,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+    },
 )
 
 
@@ -3351,11 +3972,37 @@ expose_weakness_34500 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=34501),
+        _sv_aura(AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, 9, trigger_spell=34501),
     ],
     spell_icon_id=2112,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your ranged criticals have a $h% chance to grant you Expose Weakness. Expose Weakness increases your attack power by $34501s1% of your Agility for $34501d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 33, 'ProcTypeMask': 262464, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (6,3), 0.7): stock row edited in place, stored = live - 1; eff0 '
+        'PROC_TRIGGER_SPELL -> PROC_TRIGGER_SPELL_WITH_VALUE (231) 10/20/30% of Agility as BP0 into 34501; '
+        'ProcChance 100; ProcTypeMask 0x40140 -> 0x140 (row -34500, A1; spell_hun_sv_ranged_cast_proc).'
+    ),
+    raw_overrides={
+        'AttributesEx2': 4,
+        'AttributesEx3': 67108864,
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _SV_EXPOSE_WEAKNESS,
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_2': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 1',
+        'Name_Lang_Mask': 16712190,
+        'PreventionType': 2,
+        'ProcChance': 100,
+        'ProcTypeMask': 320,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+    },
 )
 
 
@@ -3371,11 +4018,37 @@ expose_weakness_34502 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=34501),
+        _sv_aura(AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, 19, trigger_spell=34501),
     ],
     spell_icon_id=2112,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your ranged criticals have a $h% chance to grant you Expose Weakness. Expose Weakness increases your attack power by $34501s1% of your Agility for $34501d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 66, 'ProcTypeMask': 262464, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (6,3), 0.7): stock row edited in place, stored = live - 1; eff0 '
+        'PROC_TRIGGER_SPELL -> PROC_TRIGGER_SPELL_WITH_VALUE (231) 10/20/30% of Agility as BP0 into 34501; '
+        'ProcChance 100; ProcTypeMask 0x40140 -> 0x140 (row -34500, A1; spell_hun_sv_ranged_cast_proc).'
+    ),
+    raw_overrides={
+        'AttributesEx2': 4,
+        'AttributesEx3': 67108864,
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _SV_EXPOSE_WEAKNESS,
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_2': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 2',
+        'Name_Lang_Mask': 16712190,
+        'PreventionType': 2,
+        'ProcChance': 100,
+        'ProcTypeMask': 320,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+    },
 )
 
 
@@ -3391,11 +4064,37 @@ expose_weakness_34503 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=34501),
+        _sv_aura(AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, 29, trigger_spell=34501),
     ],
     spell_icon_id=2112,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your ranged criticals have a $h% chance to grant you Expose Weakness. Expose Weakness increases your attack power by $34501s1% of your Agility for $34501d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 100, 'ProcTypeMask': 262464, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (6,3), 0.7): stock row edited in place, stored = live - 1; eff0 '
+        'PROC_TRIGGER_SPELL -> PROC_TRIGGER_SPELL_WITH_VALUE (231) 10/20/30% of Agility as BP0 into 34501; '
+        'ProcChance 100; ProcTypeMask 0x40140 -> 0x140 (row -34500, A1; spell_hun_sv_ranged_cast_proc).'
+    ),
+    raw_overrides={
+        'AttributesEx2': 4,
+        'AttributesEx3': 67108864,
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _SV_EXPOSE_WEAKNESS,
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_2': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 3',
+        'Name_Lang_Mask': 16712190,
+        'PreventionType': 2,
+        'ProcChance': 100,
+        'ProcTypeMask': 320,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+    },
 )
 
 
@@ -3411,11 +4110,35 @@ master_tactician_34506 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=master_tactician_34833.id),
+        _sv_aura(AuraType.PROC_TRIGGER_SPELL, -1, trigger_spell=34837),
     ],
     spell_icon_id=2233,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx2': 4, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your successful ranged attacks have a $h% chance to increase your critical strike chance with all attacks by $34833s1% for $34833d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 522819, 'EffectSpellClassMaskA_2': 128, 'EffectSpellClassMaskB_1': 522819, 'EffectSpellClassMaskB_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 10, 'ProcTypeMask': 320, 'RangeIndex': 1, 'SpellClassSet': 9, 'EffectSpellClassMaskA_3': 536870912},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (7,3), stale line 22): stock row edited in place, stored = live - '
+        '1; every rank triggers 34837 (was 34833/34834/34835); ProcChance 5/10/15; ProcTypeMask 0x140 kept '
+        '(row 3450x, A1; spell_hun_sv_ranged_cast_proc); the five stale trigger masks deleted.'
+    ),
+    raw_overrides={
+        'AttributesEx2': 4,
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _SV_MASTER_TACTICIAN,
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 1',
+        'Name_Lang_Mask': 16712190,
+        'PreventionType': 2,
+        'ProcChance': 5,
+        'ProcTypeMask': 320,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+    },
 )
 
 
@@ -3431,11 +4154,35 @@ master_tactician_34507 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=34834),
+        _sv_aura(AuraType.PROC_TRIGGER_SPELL, -1, trigger_spell=34837),
     ],
     spell_icon_id=2233,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx2': 4, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your successful ranged attacks have a $h% chance to increase your critical strike chance with all attacks by $34834s1% for $34834d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 522819, 'EffectSpellClassMaskA_2': 128, 'EffectSpellClassMaskB_1': 522819, 'EffectSpellClassMaskB_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 10, 'ProcTypeMask': 320, 'RangeIndex': 1, 'SpellClassSet': 9, 'EffectSpellClassMaskA_3': 536870912},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (7,3), stale line 22): stock row edited in place, stored = live - '
+        '1; every rank triggers 34837 (was 34833/34834/34835); ProcChance 5/10/15; ProcTypeMask 0x140 kept '
+        '(row 3450x, A1; spell_hun_sv_ranged_cast_proc); the five stale trigger masks deleted.'
+    ),
+    raw_overrides={
+        'AttributesEx2': 4,
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _SV_MASTER_TACTICIAN,
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 2',
+        'Name_Lang_Mask': 16712190,
+        'PreventionType': 2,
+        'ProcChance': 10,
+        'ProcTypeMask': 320,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+    },
 )
 
 
@@ -3451,11 +4198,35 @@ master_tactician_34508 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=34835),
+        _sv_aura(AuraType.PROC_TRIGGER_SPELL, -1, trigger_spell=34837),
     ],
     spell_icon_id=2233,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx2': 4, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your successful ranged attacks have a $h% chance to increase your critical strike chance with all attacks by $34835s1% for $34835d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 522819, 'EffectSpellClassMaskA_2': 128, 'EffectSpellClassMaskB_1': 522819, 'EffectSpellClassMaskB_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 10, 'ProcTypeMask': 320, 'RangeIndex': 1, 'SpellClassSet': 9, 'EffectSpellClassMaskA_3': 536870912},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (7,3), stale line 22): stock row edited in place, stored = live - '
+        '1; every rank triggers 34837 (was 34833/34834/34835); ProcChance 5/10/15; ProcTypeMask 0x140 kept '
+        '(row 3450x, A1; spell_hun_sv_ranged_cast_proc); the five stale trigger masks deleted.'
+    ),
+    raw_overrides={
+        'AttributesEx2': 4,
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _SV_MASTER_TACTICIAN,
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 3',
+        'Name_Lang_Mask': 16712190,
+        'PreventionType': 2,
+        'ProcChance': 15,
+        'ProcTypeMask': 320,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+    },
 )
 
 
@@ -4417,8 +5188,28 @@ invigoration_53252 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=8),
     ],
     spell_icon_id=3487,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your pet scores a critical hit with a special ability, you have a $s1% chance to instantly regenerate $53398s1% mana.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 134217728, 'EffectSpellClassMaskB_2': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'pulled from existing data; hunter-rework S3a A3 (S3-HANDOFF stale line 19): deleted '
+        'EffectSpellClassMaskB_2, EffectSpellClassMaskA_2 (an inert reader on a missing effect of a bit S3 '
+        'makes live).'
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': 'When your pet scores a critical hit with a special ability, you have a $s1% chance to instantly regenerate $53398s1% mana.',
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 1',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+    },
 )
 
 
@@ -4437,8 +5228,27 @@ invigoration_53253 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=8),
     ],
     spell_icon_id=3487,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your pet scores a critical hit with a special ability, you have a $s1% chance to instantly regenerate $53398s1% mana.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'pulled from existing data; hunter-rework S3a A3 (S3-HANDOFF stale line 19): deleted '
+        'EffectSpellClassMaskB_2 (an inert reader on a missing effect of a bit S3 makes live).'
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': 'When your pet scores a critical hit with a special ability, you have a $s1% chance to instantly regenerate $53398s1% mana.',
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 2',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+    },
 )
 
 
@@ -4619,10 +5429,36 @@ hunting_party_53290 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=1, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=137, misc_value=1),
+        _sv_aura(167, 1),
     ],
     spell_icon_id=3406,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Agility by an additional $s2%, and your Arcane Shot, Explosive Shot and Steady Shot critical strikes have a $h% chance to grant up to 10 party or raid members mana regeneration equal to 1% of the maximum mana per 5 sec. Lasts for $57669d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 33, 'ProcTypeMask': 332096, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (9,3)): stock row edited in place, stored = live - 1; eff0 DUMMY '
+        'proc carrier and eff1 Agility kept; new eff2 aura 167 (MOD_RANGED_ATTACK_POWER_PCT) +2/4/6%; '
+        'ProcChance 100; ProcTypeMask -> 0x100 (row -53290, A4; spell_hun_hunting_party_rework).'
+    ),
+    raw_overrides={
+        'AttributesEx2': 4,
+        'AttributesEx3': 67108864,
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _SV_HUNTING_PARTY,
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 1',
+        'Name_Lang_Mask': 16712190,
+        'PreventionType': 2,
+        'ProcChance': 100,
+        'ProcTypeMask': 256,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+    },
 )
 
 
@@ -4640,10 +5476,36 @@ hunting_party_53291 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=137, misc_value=1),
+        _sv_aura(167, 3),
     ],
     spell_icon_id=3406,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Agility by an additional $s2%, and your Arcane Shot, Explosive Shot and Steady Shot critical strikes have a $h% chance to grant up to 10 party or raid members mana regeneration equal to 1% of the maximum mana per 5 sec. Lasts for $57669d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 66, 'ProcTypeMask': 332096, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (9,3)): stock row edited in place, stored = live - 1; eff0 DUMMY '
+        'proc carrier and eff1 Agility kept; new eff2 aura 167 (MOD_RANGED_ATTACK_POWER_PCT) +2/4/6%; '
+        'ProcChance 100; ProcTypeMask -> 0x100 (row -53290, A4; spell_hun_hunting_party_rework).'
+    ),
+    raw_overrides={
+        'AttributesEx2': 4,
+        'AttributesEx3': 67108864,
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _SV_HUNTING_PARTY,
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 2',
+        'Name_Lang_Mask': 16712190,
+        'PreventionType': 2,
+        'ProcChance': 100,
+        'ProcTypeMask': 256,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+    },
 )
 
 
@@ -4661,10 +5523,36 @@ hunting_party_53292 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=137, misc_value=1),
+        _sv_aura(167, 5),
     ],
     spell_icon_id=3406,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Agility by an additional $s2%, and your Arcane Shot, Explosive Shot and Steady Shot critical strikes have a $h% chance to grant up to 10 party or raid members mana regeneration equal to 1% of the maximum mana per 5 sec. Lasts for $57669d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 100, 'ProcTypeMask': 279872, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (9,3)): stock row edited in place, stored = live - 1; eff0 DUMMY '
+        'proc carrier and eff1 Agility kept; new eff2 aura 167 (MOD_RANGED_ATTACK_POWER_PCT) +2/4/6%; '
+        'ProcChance 100; ProcTypeMask -> 0x100 (row -53290, A4; spell_hun_hunting_party_rework).'
+    ),
+    raw_overrides={
+        'AttributesEx2': 4,
+        'AttributesEx3': 67108864,
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _SV_HUNTING_PARTY,
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 3',
+        'Name_Lang_Mask': 16712190,
+        'PreventionType': 2,
+        'ProcChance': 100,
+        'ProcTypeMask': 256,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+    },
 )
 
 
@@ -4743,12 +5631,31 @@ point_of_no_escape_53298 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=107, misc_value=12),
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=107, misc_value=23),
+        _sv_aura(AuraType.DUMMY, 1),
     ],
     spell_icon_id=3520,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of all of your attacks on targets affected by your Frost Trap, Freezing Trap and Freezing Arrow by $s1%.', 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 8, 'EffectSpellClassMaskB_1': 16, 'EffectSpellClassMaskC_2': 67108864, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (7,2)): stock row edited in place, stored = live - 1; eff0 crit '
+        'SpellMod -> DUMMY 2/4% (read by Hunter::GetPointOfNoEscapePct); eff1 dropped; every stale mask incl. '
+        "C_2 0x4000000 and the phantom eff3 keys deleted; ProcTypeMask 0. Inert until S3b's marker."
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _SV_POINT_OF_NO_ESCAPE,
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 1',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+    },
 )
 
 
@@ -4764,12 +5671,31 @@ point_of_no_escape_53299 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=107, misc_value=12),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=107, misc_value=23),
+        _sv_aura(AuraType.DUMMY, 3),
     ],
     spell_icon_id=3520,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of all of your attacks on targets affected by your Frost Trap, Freezing Trap and Freezing Arrow by $s1%.', 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 8, 'EffectSpellClassMaskB_1': 16, 'EffectSpellClassMaskC_2': 67108864, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (7,2)): stock row edited in place, stored = live - 1; eff0 crit '
+        'SpellMod -> DUMMY 2/4% (read by Hunter::GetPointOfNoEscapePct); eff1 dropped; every stale mask incl. '
+        "C_2 0x4000000 and the phantom eff3 keys deleted; ProcTypeMask 0. Inert until S3b's marker."
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _SV_POINT_OF_NO_ESCAPE,
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 2',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+    },
 )
 
 
@@ -5259,13 +6185,33 @@ t_n_t_56333 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108, misc_value=22),
+        _sv_aura(AuraType.ADD_PCT_MODIFIER, 3, SpellModOp.DAMAGE),
+        _sv_aura(AuraType.ADD_PCT_MODIFIER, 3, SpellModOp.DOT),
     ],
     spell_icon_id=355,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Explosive Shot,  Explosive Trap, Black Arrow and Immolation Trap by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 4, 'EffectSpellClassMaskB_2': 2147483648, 'EffectSpellClassMaskB_3': 512, 'EffectSpellClassMaskC_1': 4, 'EffectSpellClassMaskC_2': 134217728, 'EffectSpellClassMaskC_3': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (8,2), 7.1): stock row edited in place, stored = live - 1; eff0 '
+        'DUMMY -> pct DAMAGE +4/8/12% on SV_TNT_DAMAGE; eff1 -> pct DOT on SV_TNT_DOT; eff2 dropped; stale B '
+        '/ C masks replaced or deleted; ProcTypeMask 0.'
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _sv_desc(_SV_TNT, _SV_TNT_CAP, last=False),
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 1',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+        **_sv_masks({1: m.SV_TNT_DAMAGE, 2: m.SV_TNT_DOT}),
+    },
 )
 
 
@@ -5281,13 +6227,33 @@ t_n_t_56336 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=65, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=108, misc_value=22),
+        _sv_aura(AuraType.ADD_PCT_MODIFIER, 7, SpellModOp.DAMAGE),
+        _sv_aura(AuraType.ADD_PCT_MODIFIER, 7, SpellModOp.DOT),
     ],
     spell_icon_id=355,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Explosive Shot,  Explosive Trap, Black Arrow and Immolation Trap by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 4, 'EffectSpellClassMaskB_2': 2147483648, 'EffectSpellClassMaskB_3': 512, 'EffectSpellClassMaskC_1': 4, 'EffectSpellClassMaskC_2': 134217728, 'EffectSpellClassMaskC_3': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (8,2), 7.1): stock row edited in place, stored = live - 1; eff0 '
+        'DUMMY -> pct DAMAGE +4/8/12% on SV_TNT_DAMAGE; eff1 -> pct DOT on SV_TNT_DOT; eff2 dropped; stale B '
+        '/ C masks replaced or deleted; ProcTypeMask 0.'
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _sv_desc(_SV_TNT, _SV_TNT_CAP, last=False),
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 2',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+        **_sv_masks({1: m.SV_TNT_DAMAGE, 2: m.SV_TNT_DOT}),
+    },
 )
 
 
@@ -5303,13 +6269,32 @@ t_n_t_56337 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108, misc_value=22),
+        _sv_aura(AuraType.ADD_PCT_MODIFIER, 11, SpellModOp.DAMAGE),
+        _sv_aura(AuraType.ADD_PCT_MODIFIER, 11, SpellModOp.DOT),
     ],
     spell_icon_id=355,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Explosive Shot,  Explosive Trap, Black Arrow and Immolation Trap by $s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 4, 'EffectSpellClassMaskB_2': 2281701376, 'EffectSpellClassMaskB_3': 512, 'EffectSpellClassMaskC_1': 4, 'EffectSpellClassMaskC_2': 134217728, 'EffectSpellClassMaskC_3': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (8,2), 7.1): stock row edited in place, stored = live - 1; eff0 '
+        'DUMMY -> pct DAMAGE +4/8/12% on SV_TNT_DAMAGE; eff1 -> pct DOT on SV_TNT_DOT; eff2 dropped; stale B '
+        '/ C masks replaced or deleted; ProcTypeMask 0.'
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _sv_desc(_SV_TNT, _SV_TNT_CAP, last=True),
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 3',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+        **_sv_masks({1: m.SV_TNT_DAMAGE, 2: m.SV_TNT_DOT}),
+    },
 )
 
 
@@ -5325,12 +6310,35 @@ hunter_vs_wild_56339 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=268, misc_value=2),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=212, misc_value=2),
+        _sv_aura(AuraType.MOD_ATTACK_POWER_OF_STAT_PERCENT, 5, 2),
+        _sv_aura(212, 5, 2),
+        _sv_aura(AuraType.ADD_FLAT_MODIFIER, 1, SpellModOp.ALL_EFFECTS),
     ],
     spell_icon_id=3647,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx2': 4, 'AttributesEx3': 268435456, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases you and your pet's attack power and ranged attack power equal to $s1% of your total Stamina.", 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (4,3)): stock row edited in place, stored = live - 1; AP / RAP of '
+        'Stamina 6/13/20%; new eff2 flat ALL_EFFECTS +2/4/6 on Tamed Pet Passive 01 (pet damage, the Spiked '
+        'Collar channel, stale line 20).'
+    ),
+    raw_overrides={
+        'AttributesEx2': 4,
+        'AttributesEx3': 268435456,
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _SV_HUNTER_VS_WILD,
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 1',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'SpellClassSet': 9,
+        **_sv_masks({3: m.TAMED_PET_PASSIVE_01_MASK}),
+    },
 )
 
 
@@ -5346,12 +6354,34 @@ hunter_vs_wild_56340 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=268, misc_value=2),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=212, misc_value=2),
+        _sv_aura(AuraType.MOD_ATTACK_POWER_OF_STAT_PERCENT, 12, 2),
+        _sv_aura(212, 12, 2),
+        _sv_aura(AuraType.ADD_FLAT_MODIFIER, 3, SpellModOp.ALL_EFFECTS),
     ],
     spell_icon_id=3647,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx2': 4, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases you and your pet's attack power and ranged attack power equal to $s1% of your total Stamina.", 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (4,3)): stock row edited in place, stored = live - 1; AP / RAP of '
+        'Stamina 6/13/20%; new eff2 flat ALL_EFFECTS +2/4/6 on Tamed Pet Passive 01 (pet damage, the Spiked '
+        'Collar channel, stale line 20).'
+    ),
+    raw_overrides={
+        'AttributesEx2': 4,
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _SV_HUNTER_VS_WILD,
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 2',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'SpellClassSet': 9,
+        **_sv_masks({3: m.TAMED_PET_PASSIVE_01_MASK}),
+    },
 )
 
 
@@ -5367,12 +6397,34 @@ hunter_vs_wild_56341 = spell(
     mana_cost_pct=0,
     range_yards=50000.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=268, misc_value=2),
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=212, misc_value=2),
+        _sv_aura(AuraType.MOD_ATTACK_POWER_OF_STAT_PERCENT, 19, 2),
+        _sv_aura(212, 19, 2),
+        _sv_aura(AuraType.ADD_FLAT_MODIFIER, 5, SpellModOp.ALL_EFFECTS),
     ],
     spell_icon_id=3647,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx2': 4, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases you and your pet's attack power and ranged attack power equal to $s1% of your total Stamina.", 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (4,3)): stock row edited in place, stored = live - 1; AP / RAP of '
+        'Stamina 6/13/20%; new eff2 flat ALL_EFFECTS +2/4/6 on Tamed Pet Passive 01 (pet damage, the Spiked '
+        'Collar channel, stale line 20).'
+    ),
+    raw_overrides={
+        'AttributesEx2': 4,
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _SV_HUNTER_VS_WILD,
+        'EffectBonusMultiplier_3': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 3',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'SpellClassSet': 9,
+        **_sv_masks({3: m.TAMED_PET_PASSIVE_01_MASK}),
+    },
 )
 
 
@@ -5457,8 +6509,30 @@ trap_mastery_63457 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=8),
     ],
     spell_icon_id=69,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Frost Trap and Freezing Trap - Increases the duration by $s1%.\r\n\r\nImmolation Trap, Explosive Trap and Black Arrow - Increases the periodic damage done by $s2%.\r\n\r\nSnake Trap - Increases the number of snakes summoned by $*2;s3.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 24, 'EffectSpellClassMaskB_1': 4, 'EffectSpellClassMaskB_2': 134217728, 'EffectSpellClassMaskB_3': 131072, 'EffectSpellClassMaskC_2': 8192, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (1,2)): stock row edited in place, stored = live - 1; eff0 DURATION '
+        'A mask 0x18 -> FROST_TRAP_AURA (Frost Trap only); eff1 DOT B mask -> TRAP_MASTERY_DOT (stale B_2 '
+        '0x8000000 Black Arrow deleted); eff2 snake count on SNAKE_TRAP_EFFECT unchanged. Snake sting and the '
+        'Freezing Trap capstone are S3b.'
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _sv_desc(_SV_TRAP_MASTERY, _SV_TRAP_MASTERY_CAP, last=False),
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 2',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+        **_sv_masks({1: (m.FROST_TRAP_AURA, 0, 0), 2: m.TRAP_MASTERY_DOT, 3: (0, m.SNAKE_TRAP_EFFECT, 0)}),
+    },
 )
 
 
@@ -5479,8 +6553,30 @@ trap_mastery_63458 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=107, misc_value=8),
     ],
     spell_icon_id=69,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Frost Trap and Freezing Trap - Increases the duration by $s1%.\r\n\r\nImmolation Trap, Explosive Trap and Black Arrow - Increases the periodic damage done by $s2%.\r\n\r\nSnake Trap - Increases the number of snakes summoned by $*2;s3.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 24, 'EffectSpellClassMaskB_1': 4, 'EffectSpellClassMaskB_2': 134217728, 'EffectSpellClassMaskB_3': 131072, 'EffectSpellClassMaskC_2': 8192, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 9},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (1,2)): stock row edited in place, stored = live - 1; eff0 DURATION '
+        'A mask 0x18 -> FROST_TRAP_AURA (Frost Trap only); eff1 DOT B mask -> TRAP_MASTERY_DOT (stale B_2 '
+        '0x8000000 Black Arrow deleted); eff2 snake count on SNAKE_TRAP_EFFECT unchanged. Snake sting and the '
+        'Freezing Trap capstone are S3b.'
+    ),
+    raw_overrides={
+        'AuraDescription_Lang_Mask': 16712188,
+        'CastingTimeIndex': 1,
+        'Description_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _sv_desc(_SV_TRAP_MASTERY, _SV_TRAP_MASTERY_CAP, last=True),
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EquippedItemClass': -1,
+        'NameSubtext_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 3',
+        'Name_Lang_Mask': 16712190,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'SpellClassSet': 9,
+        **_sv_masks({1: (m.FROST_TRAP_AURA, 0, 0), 2: m.TRAP_MASTERY_DOT, 3: (0, m.SNAKE_TRAP_EFFECT, 0)}),
+    },
 )
 
 
@@ -5589,8 +6685,27 @@ glyph_of_explosive_shot_63066 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=7),
     ],
     spell_icon_id=1,
-    notes='pulled for H0 (hunter rework WP-0)',
-    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_3': 512, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Increases the critical strike chance of Explosive Shot by $63066s1%.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 9, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_2': 1.0},
+    notes=(
+        'pulled for H0 (hunter rework WP-0); hunter-rework S3a A3 (SURVIVAL 0.18): eff0 (A) mask d2 b9 -> '
+        'GLYPH_EXPLOSIVE_SHOT (the 53301 hit d1 b31 and the 53352 blasts d2 b9; never Glaive Toss).'
+    ),
+    raw_overrides={
+        'CastingTimeIndex': 1,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'EquippedItemClass': -1,
+        'Name_Lang_Mask': 16712190,
+        'NameSubtext_Lang_Mask': 16712188,
+        'Description_Lang_enUS': 'Increases the critical strike chance of Explosive Shot by $63066s1%.',
+        'Description_Lang_Mask': 16712190,
+        'AuraDescription_Lang_Mask': 16712188,
+        'SpellClassSet': 9,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EffectBonusMultiplier_2': 1.0,
+        **_sv_masks({1: m.GLYPH_EXPLOSIVE_SHOT}),
+    },
 )
 
 
@@ -5777,11 +6892,34 @@ master_tactician_34837 = spell(
     range_yards=0.0,
     duration_ms=8000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.MOD_WEAPON_CRIT_PERCENT),
+        _sv_aura(AuraType.MOD_CRIT_PCT, 9),
     ],
     spell_icon_id=2233,
-    notes='pulled for H0 (hunter rework WP-0)',
-    raw_overrides={'AttributesEx2': 4, 'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 522819, 'EffectSpellClassMaskA_2': 128, 'EffectSpellClassMaskB_1': 522819, 'EffectSpellClassMaskB_2': 1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 5', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your successful ranged attacks have a chance to increase your critical strike chance with all attacks by $34837s1% for $34837d.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Critical strike chance with all attacks increased by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 9, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectSpellClassMaskA_3': 536870912},
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 5.12): stock row edited in place, stored = live - 1; aura 52 -> 290 '
+        '(MOD_CRIT_PCT) +10%, the five stale masks deleted, 8 s kept.'
+    ),
+    raw_overrides={
+        'AttributesEx2': 4,
+        'CastingTimeIndex': 1,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'EquippedItemClass': -1,
+        'Name_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 5',
+        'NameSubtext_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _SV_MASTER_TACTICIAN_BUFF,
+        'Description_Lang_Mask': 16712190,
+        'AuraDescription_Lang_enUS': _SV_MASTER_TACTICIAN_AURA,
+        'AuraDescription_Lang_Mask': 16712190,
+        'SpellClassSet': 9,
+        'PreventionType': 2,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+    },
 )
 
 
@@ -6396,4 +7534,383 @@ chimera_shot_serpent_53353 = spell(
     spell_icon_id=3412,
     notes='pulled S2a; hunter-rework S2a A3 (MARKSMANSHIP 5.6): SpellClassMask_3 0xC00 -> 0x800 (d2 b10 stripped, CHIMERA_SERPENT kept).',
     raw_overrides={'AttributesEx2': 4, 'AttributesEx6': 33, 'CastingTimeIndex': 18, 'ProcChance': 101, 'BaseLevel': 60, 'SpellLevel': 60, 'Speed': 40.0, 'EquippedItemClass': -1, 'SpellVisualID_1': 11725, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'You deal $53209s3% weapon damage, refreshing the current Sting on your target and triggering an effect:\r\n\r\nSerpent Sting - Instantly deals 40% of the damage done by your Serpent Sting.\r\n\r\nViper Sting - Instantly restores mana to you equal to 60% of the total amount drained by your Viper Sting.\r\n\r\nScorpid Sting - Attempts to Disarm the target for 10 sec. This effect cannot occur more than once per 1 minute.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'StartRecoveryCategory': 133, 'SpellClassSet': 9, 'SpellClassMask_3': 2048, 'DefenseType': 3, 'PreventionType': 2, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+# ---- hunter-rework S3a pulls (WP-0 0-dsl, SURVIVAL 4): stock rows pulled by 0-dsl and edited in place by A3.
+# 53352 left npc.csv in the same change. 34501 / 64804 / the Lightning Reflexes and Killer Instinct ranks were
+# undeclared.
+
+explosive_shot_53352 = spell(
+    id=53352,
+    name='Explosive Shot',
+    school=School.FIRE,
+    attributes=8716288,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=6, ap_potency=50, potency_kind='direct'),
+    ],
+    spell_icon_id=3407,
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 5.5, A5): stock row edited in place, stored = live - 1; the blast: '
+        'SCHOOL_DAMAGE ap_potency=50 direct, cast by spell_hun_explosive_shot_rework with no bp (one potency '
+        "application); SpellLevel 30 (the talent row's learn level); stale EffectSpellClassMaskA_1 0xC00017 "
+        'deleted; d2 b9 (EXPLOSIVE_SHOT_TICK), AttributesEx2 0x4 and EquippedItemClass -1 kept.'
+    ),
+    raw_overrides={
+        'AttributesEx2': 4,
+        'AttributesEx4': 128,
+        'AttributesEx6': 32,
+        'CastingTimeIndex': 1,
+        'ProcChance': 101,
+        'EquippedItemClass': -1,
+        'SpellVisualID_1': 12284,
+        'SpellPriority': 50,
+        'Name_Lang_Mask': 16712190,
+        'NameSubtext_Lang_Mask': 16712188,
+        'Description_Lang_enUS': 'You fire an explosive charge into the enemy target, dealing Fire damage. The charge will blast the target every second for an additional $53301d.',
+        'Description_Lang_Mask': 16712190,
+        'AuraDescription_Lang_Mask': 16712188,
+        'SpellClassSet': 9,
+        'SpellClassMask_3': 512,
+        'DefenseType': 3,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'SpellLevel': 30,
+    },
+)
+
+
+expose_weakness_34501 = spell(
+    id=34501,
+    name='Expose Weakness',
+    school=School.ARCANE,
+    dispel=DispelType.MAGIC,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=7000,
+    effects=[
+        _sv_aura(212, 9, 1),
+    ],
+    spell_icon_id=2112,
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 5.12, 0.7): stock row edited in place, stored = live - 1; eff0 aura '
+        "268 -> 212 (RAP of Agility) misc 1, amount = the rank's BP0 (aura 231; bp 9 = rank 1 for a bare "
+        'cast); eff1 (aura 212) dropped; 7 s kept; number-free aura text (user ruling 5). Family 0 kept (no '
+        'SpellMod; a family-9 buff would see wildcard hunter SpellMods).'
+    ),
+    raw_overrides={
+        'AttributesEx2': 4,
+        'AttributesEx3': 65536,
+        'CastingTimeIndex': 1,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'EquippedItemClass': -1,
+        'SpellVisualID_1': 6959,
+        'Name_Lang_Mask': 16712190,
+        'NameSubtext_Lang_Mask': 16712172,
+        'Description_Lang_enUS': _SV_EXPOSE_WEAKNESS_BUFF,
+        'Description_Lang_Mask': 16712190,
+        'AuraDescription_Lang_enUS': _SV_EXPOSE_WEAKNESS_AURA,
+        'AuraDescription_Lang_Mask': 16712190,
+        'DefenseType': 3,
+        'PreventionType': 2,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+    },
+)
+
+
+entrapment_64804 = spell(
+    id=64804,
+    name='Entrapment',
+    school=School.NORMAL,
+    dispel=DispelType.MAGIC,
+    mechanic=Mechanic.ROOT,
+    attributes=134217728,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    duration_ms=3000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=22, implicit_target_b=15, apply_aura=AuraType.MOD_ROOT, radius_yards=10.0),
+    ],
+    spell_icon_id=20,
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 5.12): stock row edited in place, stored = live - 1; duration 4000 -> '
+        '3000 ms; targets and the SpellInfoCorrections.cpp:697-702 load fix untouched; family 0 kept (the '
+        'hunter Entrapment DR key needs family 9 and stays off, as stock).'
+    ),
+    raw_overrides={
+        'AttributesEx': 136,
+        'AttributesEx2': 268435456,
+        'CastingTimeIndex': 1,
+        'ProcChance': 101,
+        'EquippedItemClass': -1,
+        'SpellVisualID_1': 7484,
+        'Name_Lang_Mask': 16712190,
+        'NameSubtext_Lang_Mask': 16712188,
+        'Description_Lang_enUS': 'When your Frost Trap or Snake Trap are triggered you entrap all afflicted targets, preventing them from moving for $d.',
+        'Description_Lang_Mask': 16712190,
+        'AuraDescription_Lang_enUS': 'Immobile.',
+        'AuraDescription_Lang_Mask': 16712190,
+        'DefenseType': 1,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectChainAmplitude_3': 1.0,
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_2': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+    },
+)
+
+
+lightning_reflexes_19168 = spell(
+    id=19168,
+    name='Lightning Reflexes',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        _sv_aura(AuraType.MOD_TOTAL_STAT_PERCENTAGE, 1, 1),
+    ],
+    spell_icon_id=30,
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (5,3)): stock row edited in place, stored = live - 1; Agility '
+        '3/6/9% -> 2/4/6%; stock family 0 kept (no SpellMod, N7).'
+    ),
+    raw_overrides={
+        'CastingTimeIndex': 1,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'EquippedItemClass': -1,
+        'Name_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 1',
+        'NameSubtext_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _SV_LIGHTNING_REFLEXES,
+        'Description_Lang_Mask': 16712190,
+        'AuraDescription_Lang_Mask': 16712188,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectBonusMultiplier_1': 1.0,
+    },
+)
+
+
+lightning_reflexes_19180 = spell(
+    id=19180,
+    name='Lightning Reflexes',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        _sv_aura(AuraType.MOD_TOTAL_STAT_PERCENTAGE, 3, 1),
+    ],
+    spell_icon_id=30,
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (5,3)): stock row edited in place, stored = live - 1; Agility '
+        '3/6/9% -> 2/4/6%; stock family 0 kept (no SpellMod, N7).'
+    ),
+    raw_overrides={
+        'CastingTimeIndex': 1,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'EquippedItemClass': -1,
+        'Name_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 2',
+        'NameSubtext_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _SV_LIGHTNING_REFLEXES,
+        'Description_Lang_Mask': 16712190,
+        'AuraDescription_Lang_Mask': 16712188,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectBonusMultiplier_1': 1.0,
+    },
+)
+
+
+lightning_reflexes_19181 = spell(
+    id=19181,
+    name='Lightning Reflexes',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        _sv_aura(AuraType.MOD_TOTAL_STAT_PERCENTAGE, 5, 1),
+    ],
+    spell_icon_id=30,
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (5,3)): stock row edited in place, stored = live - 1; Agility '
+        '3/6/9% -> 2/4/6%; stock family 0 kept (no SpellMod, N7).'
+    ),
+    raw_overrides={
+        'CastingTimeIndex': 1,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'EquippedItemClass': -1,
+        'Name_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 3',
+        'NameSubtext_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _SV_LIGHTNING_REFLEXES,
+        'Description_Lang_Mask': 16712190,
+        'AuraDescription_Lang_Mask': 16712188,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectChainAmplitude_2': 1.0,
+        'EffectBonusMultiplier_1': 1.0,
+    },
+)
+
+
+killer_instinct_19370 = spell(
+    id=19370,
+    name='Killer Instinct',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        _sv_aura(AuraType.MOD_CRIT_PCT, 0),
+    ],
+    spell_icon_id=238,
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (5,0)): stock row edited in place, stored = live - 1; eff0 aura 52 '
+        '-> 290 (MOD_CRIT_PCT) +1/2/3%; stock family 0 kept (no SpellMod, N7).'
+    ),
+    raw_overrides={
+        'CastingTimeIndex': 1,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'EquippedItemClass': -1,
+        'Name_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 1',
+        'NameSubtext_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _sv_desc(_SV_KILLER_INSTINCT, _SV_KILLER_INSTINCT_CAP, last=False),
+        'Description_Lang_Mask': 16712190,
+        'AuraDescription_Lang_Mask': 16712188,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_2': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+    },
+)
+
+
+killer_instinct_19371 = spell(
+    id=19371,
+    name='Killer Instinct',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        _sv_aura(AuraType.MOD_CRIT_PCT, 1),
+    ],
+    spell_icon_id=238,
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (5,0)): stock row edited in place, stored = live - 1; eff0 aura 52 '
+        '-> 290 (MOD_CRIT_PCT) +1/2/3%; stock family 0 kept (no SpellMod, N7).'
+    ),
+    raw_overrides={
+        'CastingTimeIndex': 1,
+        'ProcChance': 101,
+        'RangeIndex': 1,
+        'EquippedItemClass': -1,
+        'Name_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 2',
+        'NameSubtext_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _sv_desc(_SV_KILLER_INSTINCT, _SV_KILLER_INSTINCT_CAP, last=False),
+        'Description_Lang_Mask': 16712190,
+        'AuraDescription_Lang_Mask': 16712188,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_2': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+    },
+)
+
+
+killer_instinct_19373 = spell(
+    id=19373,
+    name='Killer Instinct',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        _sv_aura(AuraType.MOD_CRIT_PCT, 2),
+        _sv_aura(AuraType.PROC_TRIGGER_SPELL, trigger_spell=mantis_strike_enable_202041.id),
+    ],
+    spell_icon_id=238,
+    notes=(
+        'hunter-rework S3a A3 (SURVIVAL 6 (5,0)): stock row edited in place, stored = live - 1; eff0 aura 52 '
+        '-> 290 (MOD_CRIT_PCT) +1/2/3%; stock family 0 kept (no SpellMod, N7); eff1 PROC_TRIGGER_SPELL -> '
+        'Mantis Strike enable 202041, ProcChance 20, ProcTypeMask 0x100 (CAST row 19373, A1).'
+    ),
+    raw_overrides={
+        'CastingTimeIndex': 1,
+        'ProcChance': 20,
+        'RangeIndex': 1,
+        'EquippedItemClass': -1,
+        'Name_Lang_Mask': 16712190,
+        'NameSubtext_Lang_enUS': 'Rank 3',
+        'NameSubtext_Lang_Mask': 16712190,
+        'Description_Lang_enUS': _sv_desc(_SV_KILLER_INSTINCT, _SV_KILLER_INSTINCT_CAP, last=True),
+        'Description_Lang_Mask': 16712190,
+        'AuraDescription_Lang_Mask': 16712188,
+        'EffectChainAmplitude_1': 1.0,
+        'EffectBonusMultiplier_1': 1.0,
+        'EffectBonusMultiplier_2': 1.0,
+        'EffectBonusMultiplier_3': 1.0,
+        'ProcTypeMask': 256,
+    },
 )

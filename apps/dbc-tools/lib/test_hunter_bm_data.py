@@ -123,8 +123,11 @@ REQUIRED_STOCK_RANKS = (
 # player and never triggered, so the requirement is wanted. S1b (A6, PT-6) edits Arcane Shot 3044, which keeps its 2 for
 # the same reason (a ranged-weapon shot the player casts). S2a (S2-HANDOFF M4 / stale line 6) adds the other player-cast
 # ranged shots: Aimed Shot 19434, Chimera Shot 53209, Multi-Shot 2643 and the three marks 201920-201922. These are the
-# ONLY exemptions from the -1 guard (test_hunter_mm_data.PLAYER_CAST_SHOTS mirrors this set).
-EQUIPPED_ITEM_CLASS_EXEMPT = frozenset({56641, 3044, 19434, 53209, 2643, 201920, 201921, 201922})
+# ONLY exemptions from the -1 guard (test_hunter_mm_data.PLAYER_CAST_SHOTS mirrors this set). S3a (S3-HANDOFF N5) adds
+# the Survival ranged shots it touches, stock class 2 kept: Explosive Shot 53301, Wyvern Sting 19386, Scatter Shot 19503
+# and the retired Black Arrow 3674 (masks only).
+EQUIPPED_ITEM_CLASS_EXEMPT = frozenset({56641, 3044, 19434, 53209, 2643, 201920, 201921, 201922,
+                                        53301, 19386, 19503, 3674})
 TAB = 361
 TAB_RANK_CAP = 200000
 
@@ -1283,7 +1286,8 @@ class HunterBmDataNegativeTest(unittest.TestCase):
         self.assertEqual(len(check_required_rows_declared(rows, (201720, 201721))), 1)
 
     def test_only_the_player_cast_ranged_shots_are_exempt_from_the_equipped_item_class_guard(self):
-        self.assertEqual(EQUIPPED_ITEM_CLASS_EXEMPT, {56641, 3044, 19434, 53209, 2643, 201920, 201921, 201922})
+        self.assertEqual(EQUIPPED_ITEM_CLASS_EXEMPT, {56641, 3044, 19434, 53209, 2643, 201920, 201921, 201922,
+                                                      53301, 19386, 19503, 3674})
         rows = {i: {"ID": i, "EquippedItemClass": 2} for i in (56641, 34026, 3044, 19434, 201920, 201930, 201933)}
         ids = set(rows) - EQUIPPED_ITEM_CLASS_EXEMPT
         # 34026 (Kill Command), 201930 (Viper's Bite, a triggered DoT) and 201933 (the free, triggered Arcane Shot) are
