@@ -473,13 +473,13 @@ efficiency_buff_201945 = _buff(
     133, 15000,
     'S2a A14 / MM 5.10: Efficiency buff. Cast time and GCD of Steady / Aimed Shot -10% (stored -11 = rank 1; the '
     'handler passes -10/-20/-30 as BP0/BP1 from the rank), STEADY_AIMED on both, 2 charges spent by its CAST row. '
-    'X7 spike: the aura text carries $s1 (does it show the server-set rank value?).',
+    'X7 ruled 2026-10-17: the aura text is number-free (the spike failed).',
     masks={1: m.STEADY_AIMED, 2: m.STEADY_AIMED},
     raw={**_FAMILY, 'ProcCharges': 2,
          'Description_Lang_enUS': 'Reduces the cast time and global cooldown of your next $n Steady Shots or Aimed '
                                   'Shots by $s1%.',
          'AuraDescription_Lang_enUS': 'The cast time and global cooldown of your next $n Steady Shots or Aimed Shots '
-                                      'are reduced by $s1%.'},
+                                      'are reduced.'},
 )
 precise_shots_buff_201946 = _buff(
     201946, 'Precise Shots', [_self_aura(AuraType.ADD_PCT_MODIFIER, 49, SpellModOp.DAMAGE)],
