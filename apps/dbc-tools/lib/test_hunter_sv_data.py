@@ -251,10 +251,11 @@ CASTABLE_EXTRA = {   # SURVIVAL 5.1 / 5.3 / 5.4 / 5.8, A4
 POTENCY_LEVELS = {MANTIS_STRIKE: 30, WILDFIRE_BOMB: 20, TAR_BOMB: 50, BURNING_TAR: 50, CLUSTER_BOMBS: 60,
                   CLUSTER_BOMBS_BLAST: 60, SHRAPNEL_HIT: 35, EXPLOSIVE_SHOT: 30, EXPLOSIVE_BLAST: 30}
 
-# (d) Explosive Shot 53301 (A5, stale line 1): fixed built fields
+# (d) Explosive Shot 53301 (A5, stale line 1): fixed built fields. RangeIndex 35 (0-35 yd, no ranged flag): no
+# minimum range (user 2026-10-17; was 114 Hunter Range)
 EXPLOSIVE_SHOT_FIELDS = {
     "Attributes": ATTR_EXPLOSIVE_SHOT, "CastingTimeIndex": 18, "EquippedItemClass": 2, "EquippedItemSubclass": 262156,
-    "DefenseType": DEFENSE_RANGED, "RangeIndex": 114, "Category": 1173, "CategoryRecoveryTime": 6000,
+    "DefenseType": DEFENSE_RANGED, "RangeIndex": 35, "Category": 1173, "CategoryRecoveryTime": 6000,
     "ManaCostPct": 7, "SpellLevel": 30, "BaseLevel": 30, "MaxLevel": 0, "SchoolMask": SCHOOL_FIRE,
     "Effect_1": EFFECT_SCHOOL_DAMAGE, "ImplicitTargetA_1": 6, "Effect_2": EFFECT_APPLY_AURA,
     "EffectAura_2": AURA_PERIODIC_DUMMY, "ImplicitTargetA_2": 6, "EffectAuraPeriod_2": 1000,
@@ -475,8 +476,8 @@ LINKS = ((19255, SURVIVALIST_DETERRENCE, 2), (19256, SURVIVALIST_DETERRENCE, 2),
 FAVORED_PREY_GROUP, GROUP_RULE_EXCLUSIVE = 1242, 1
 
 # (o) user ruling 6
-RAPTOR_MANA_PCT = 5
-DEADLY_FOCUS_MANA_TEXT = re.compile(r"Raptor Strike restores (5|\$202081s3|\$s3)% of your base mana")
+RAPTOR_MANA_PCT = 15  # user 2026-10-17: 5 -> 15% base mana
+DEADLY_FOCUS_MANA_TEXT = re.compile(r"Raptor Strike restores (15|\$202081s3|\$s3)% of your base mana")
 
 # (l) stale line 19 / brief 13: stale raw readers S3a deletes: (id, 1-based effect) whose mask must be zero
 STALE_READERS = (
@@ -1618,7 +1619,7 @@ def good_ruling_rows() -> dict[int, dict]:
         202080: {"ID": 202080, **pct, "Description_Lang_enUS": "Increases ... by $s1%.\n\n|cFF9D9D9DCapstone Bonus: "
                                                                "Raptor Strike restores 5% of your base mana.|r"},
         202081: {"ID": 202081, **pct, "Effect_2": EFFECT_APPLY_AURA, "EffectAura_2": FLAT,
-                 "Effect_3": EFFECT_APPLY_AURA, "EffectAura_3": AURA_DUMMY, "EffectBasePoints_3": 4,
+                 "Effect_3": EFFECT_APPLY_AURA, "EffectAura_3": AURA_DUMMY, "EffectBasePoints_3": 14,
                  "EffectDieSides_3": 1,
                  "Description_Lang_enUS": "Increases ... by $s1%.\n\nCapstone Bonus: ... more range. Raptor Strike "
                                           "restores $s3% of your base mana."},
@@ -2089,7 +2090,7 @@ class HunterSvDataNegativeTest(unittest.TestCase):
     def test_ruling_6_and_lock_and_load_guard(self):
         rows = good_ruling_rows()
         self.assertEqual(check_ruling_6(rows), [])
-        for sid, cols in ((202081, {"EffectBasePoints_3": 5}), (202081, {"Effect_3": 0}),
+        for sid, cols in ((202081, {"EffectBasePoints_3": 4}), (202081, {"Effect_3": 0}),
                           (202081, {"EffectSpellClassMaskC_3": 0x10000}), (202080, {"Effect_3": 3}),
                           (202081, {"Description_Lang_enUS": "Increases ... by $s1%."}),
                           (RAPTOR_STRIKE, {"Description_Lang_enUS": "A quick strike that deals {pot1} Physical "

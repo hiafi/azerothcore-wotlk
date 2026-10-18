@@ -105,9 +105,9 @@ def _rank(spell_id, name, rank, level, effects, icon, description, masks=None, p
 
 
 # ---- (0,0) Deadly Focus 1820 (repurposed Hawk Eye), learn 10: Mongoose Bite / Mantis Strike damage +10/20%
-# (STRIKE_HITS). r2 eff1 flat RANGE +10 yd on THREE_STRIKES; eff2 DUMMY bp 4 (live 5) = user ruling 6's marker, the
-# percent of base mana Raptor Strike 2973 restores (B2's Hunter::GetShotManaPct reads 202081 EFFECT_2 through SpellInfo
-# when the player knows 202081). No mask on eff2: not a SpellMod, no family-0 leak.
+# (STRIKE_HITS). r2 eff1 flat RANGE +10 yd on THREE_STRIKES; eff2 DUMMY bp 14 (live 15; user 2026-10-17, was 5) =
+# user ruling 6's marker, the percent of base mana Raptor Strike 2973 restores (B2's Hunter::GetShotManaPct reads
+# 202081 EFFECT_2 through SpellInfo when the player knows 202081). No mask on eff2: not a SpellMod, no family-0 leak.
 _DF = "Increases the damage of your Mongoose Bite and Mantis Strike by $s1%."
 _DF_CAP = ("Your Raptor Strike, Mongoose Bite and Mantis Strike have $202081s2 yd more range. Raptor Strike restores "
            "$202081s3% of your base mana.")
@@ -117,7 +117,7 @@ def _deadly_focus(spell_id, rank, bp, last):
     effects = [_pct(SpellModOp.DAMAGE, bp)]
     masks = {1: m.STRIKE_HITS}
     if last:
-        effects += [_flat(SpellModOp.RANGE, 9), _dummy(4)]
+        effects += [_flat(SpellModOp.RANGE, 9), _dummy(14)]
         masks[2] = m.THREE_STRIKES
     return _rank(
         spell_id, 'Deadly Focus', rank, _level(0), effects, 161, _desc(_DF, _DF_CAP, last=last), masks=masks,
