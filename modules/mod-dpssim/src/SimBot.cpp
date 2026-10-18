@@ -18,10 +18,75 @@
 #include "SimBot.h"
 #include "Creature.h"
 #include "Log.h"
+#include "ObjectMgr.h"
+#include "Pet.h"
 #include "Player.h"
 #include "PlayerbotFactory.h"
 #include "Playerbots.h"
+#include "SpellInfo.h"
+#include "SpellMgr.h"
 #include <set>
+
+namespace
+{
+    // Tames `entry` for `bot` and spends the pet's talent points, the way a live bot gets its pet: the body of
+    // PlayerbotFactory::InitPet() (Player::CreatePet(), then the pet re-levelled to the owner, happiness and health
+    // full, autocast on for every active pet spell) followed by PlayerbotFactory::InitPetTalents() (the
+    // AiPlayerbot.PremadeHunterPetLink.<type>.<points> lines). InitPet() itself picks a random tameable creature of
+    // the preferred families, which a sim cannot have, so the creature is the profile's fixed one. Core code saves
+    // the new pet (Player::CreatePet(): SavePetToDB(PET_SAVE_AS_CURRENT)) - to the sim's throwaway characters
+    // schema only; this function adds no save of its own.
+    Pet* TameSimPet(Player* bot, uint32 entry)
+    {
+        CreatureTemplate const* tmpl = sObjectMgr->GetCreatureTemplate(entry);
+        if (!tmpl || !tmpl->family)
+        {
+            LOG_ERROR("server.dpssim", "mod-dpssim: pet creature {} does not exist or has no creature family.", entry);
+            return nullptr;
+        }
+
+        // A leftover stable record (the pet of an earlier death, removed from the world) makes CreatePet() refuse
+        if (PetStable* stable = bot->GetPetStable())
+        {
+            stable->CurrentPet.reset();
+            stable->UnslottedPets.clear();
+        }
+
+        Pet* pet = bot->CreatePet(entry);
+        if (!pet)
+        {
+            LOG_ERROR("server.dpssim", "mod-dpssim: Player::CreatePet({}) failed for the sim actor.", entry);
+            return nullptr;
+        }
+
+        pet->InitStatsForLevel(bot->GetLevel());
+        pet->SetLevel(bot->GetLevel());
+        pet->SetPower(POWER_HAPPINESS, pet->GetMaxPower(Powers(POWER_HAPPINESS)));
+        pet->SetHealth(pet->GetMaxHealth());
+
+        for (auto const& [spellId, petSpell] : pet->m_spells)
+        {
+            if (petSpell.state == PETSPELL_REMOVED)
+                continue;
+
+            SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
+            if (!spellInfo || spellInfo->IsPassive())
+                continue;
+
+            pet->ToggleAutocast(spellInfo, true);
+        }
+
+        PlayerbotFactory factory(bot, bot->GetLevel());
+        factory.InitPetTalents();
+
+        uint32 const maxPoints = pet->GetMaxTalentPointsForLevel(pet->GetLevel());
+        uint32 const freePoints = pet->GetFreeTalentPoints();
+        LOG_INFO("server.dpssim", "mod-dpssim: tamed pet '{}' (creature {}, family {}), level {}, {} of {} talent "
+            "point(s) spent, {} spell(s).", pet->GetName(), entry, uint32(tmpl->family), pet->GetLevel(),
+            maxPoints > freePoints ? maxPoints - freePoints : 0, maxPoints, pet->m_spells.size());
+        return pet;
+    }
+}
 
 SimBot::~SimBot()
 {
@@ -29,10 +94,12 @@ SimBot::~SimBot()
 }
 
 bool SimBot::Create(Player* bot, std::vector<Creature*> const& targets, std::string const& playerbotTalents,
-    bool playerbotGlyphs)
+    bool playerbotGlyphs, uint32 petCreatureEntry)
 {
     if (!bot || targets.empty() || !targets.front())
         return false;
+
+    _petCreatureEntry = petCreatureEntry;
 
     Creature* target = targets.front();
 
@@ -104,6 +171,31 @@ bool SimBot::Create(Player* bot, std::vector<Creature*> const& targets, std::str
             bot->GetGlyph(5));
     }
 
+    // A hunter's ranged weapon needs no arrows: the "Requires No Ammo" aura (46699). The core grants it at login, on a
+    // level change and after a real cast, none of which has necessarily happened for this actor yet (GiveLevel() ran
+    // before the actor was in the world), so ask the factory, as it does for a live bot. The spells and talents above
+    // come first, as for a live bot.
+    if (bot->getClass() == CLASS_HUNTER)
+        factory.InitAmmo();
+
+    // The hunter pet, after the talents (some raise the pet's stats or its talent points) and before the AI exists,
+    // as in PlayerbotFactory::Randomize() (InitPet() then InitPetTalents() with no PlayerbotAI yet)
+    if (_petCreatureEntry != 0)
+    {
+        if (bot->getClass() != CLASS_HUNTER)
+        {
+            LOG_ERROR("server.dpssim", "mod-dpssim: SimBot::Create() - a pet creature ({}) was given to a class that "
+                "has no hunter pet.", _petCreatureEntry);
+            return false;
+        }
+
+        if (!TameSimPet(bot, _petCreatureEntry))
+        {
+            LOG_ERROR("server.dpssim", "mod-dpssim: SimBot::Create() - the hunter pet could not be created.");
+            return false;
+        }
+    }
+
     // Build the PlayerbotAI through PlayerbotsMgr::AddPlayerbotData() - the same entry point a
     // real bot login uses - rather than `new PlayerbotAI(bot)` directly, and keep only a borrowed
     // pointer to it (~SimBot() still owns cleanup via delete, same as before; see its comment).
@@ -139,6 +231,20 @@ bool SimBot::Create(Player* bot, std::vector<Creature*> const& targets, std::str
     // a live diagnostic: bot->IsInCombat() read true for 5 real seconds with zero action taken).
     _ai->GetAiObjectContext()->GetValue<Unit*>("current target")->Set(target);
 
+    // What the strategy factories resolved for this actor's class and spec tab (AiFactory::AddDefault*Strategies()),
+    // so a run log shows which rotation was actually driving it (e.g. a hunter: bm / mm / surv, plus bdps and aoe)
+    {
+        auto const join = [](std::vector<std::string> const& names)
+        {
+            std::string joined;
+            for (std::string const& name : names)
+                joined += (joined.empty() ? "" : ", ") + name;
+            return joined;
+        };
+        LOG_INFO("server.dpssim", "mod-dpssim: SimBot::Create() - strategies resolved: combat [{}], non-combat [{}].",
+            join(_ai->GetStrategies(BOT_STATE_COMBAT)), join(_ai->GetStrategies(BOT_STATE_NON_COMBAT)));
+    }
+
     // Bootstrap combat - see this class's doc comment on Create() for why this is needed rather
     // than just calling bot->Attack(target, true) and waiting. Pure combat/threat state, the same
     // engage ReestablishCombatState() uses between iterations (see EngageTargets()).
@@ -172,6 +278,33 @@ bool SimBot::Create(Player* bot, std::vector<Creature*> const& targets, std::str
     _ai->ChangeEngine(BOT_STATE_COMBAT);
 
     return true;
+}
+
+bool SimBot::EnsurePet()
+{
+    if (_petCreatureEntry == 0 || !_ai)
+        return true;
+
+    Player* bot = _ai->GetBot();
+    Pet* pet = bot->GetPet();
+    if (pet && pet->IsAlive())
+        return true;
+
+    if (pet)
+    {
+        // Revive Pet's own steps (Spell::EffectResurrectPet), without its position change and database save
+        LOG_WARN("server.dpssim", "mod-dpssim: the hunter pet is dead at the start of the iteration - reviving it.");
+        pet->ReplaceAllDynamicFlags(UNIT_DYNFLAG_NONE);
+        pet->RemoveUnitFlag(UNIT_FLAG_SKINNABLE);
+        pet->setDeathState(DeathState::Alive);
+        pet->ClearUnitState(uint32(UNIT_STATE_ALL_STATE & ~(UNIT_STATE_POSSESSED)));
+        pet->SetFullHealth();
+        pet->SetDisplayId(pet->GetNativeDisplayId());
+        return true;
+    }
+
+    LOG_WARN("server.dpssim", "mod-dpssim: the hunter pet is gone at the start of the iteration - taming it again.");
+    return TameSimPet(bot, _petCreatureEntry) != nullptr;
 }
 
 void SimBot::UpdateAI(uint32 diff)

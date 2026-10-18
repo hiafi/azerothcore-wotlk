@@ -76,9 +76,20 @@ public:
     // PlayerbotTalents, itself either the flat conf key or a loaded SimProfile's value) rather
     // than read from sConfigMgr directly in here, so this class has no opinion on where the
     // string came from. Empty = no talents spent. `playerbotGlyphs` applies the class's premade glyphs after the
-    // talents (RunConfig::PlayerbotGlyphs).
+    // talents (RunConfig::PlayerbotGlyphs). `petCreatureEntry` is a hunter profile's PetCreatureEntry
+    // (SimProfile.h): non-zero tames that beast for the actor after the talents and glyphs, the way
+    // PlayerbotFactory::InitPet() would (and spends its talent points like InitPetTalents()), and makes
+    // EnsurePet() keep it alive and present for the rest of the run. 0 = no pet. A hunter also gets the
+    // "Requires No Ammo" aura here (PlayerbotFactory::InitAmmo()), so a ranged weapon needs no arrows.
     bool Create(Player* bot, std::vector<Creature*> const& targets, std::string const& playerbotTalents,
-        bool playerbotGlyphs);
+        bool playerbotGlyphs, uint32 petCreatureEntry = 0);
+
+    // Called at the start of every iteration of a run with a pet: returns true if the actor has a living pet.
+    // A dead pet is revived in place (Revive Pet's own steps), a missing one (removed after a death, or the
+    // actor's own death) is tamed again from the profile's PetCreatureEntry. Does nothing, returning true, for
+    // a run with no pet. Neither path adds a database save of its own (the core and the factory save a new
+    // pet, to the throwaway sim characters schema only - see README.md).
+    bool EnsurePet();
 
     // Drives the real Engine/Strategy selector for one tick - call this from the SimClock loop
     // instead of a hardcoded RotationTick(). `diff` is not a wall-clock read: PlayerbotAIBase's
@@ -126,6 +137,9 @@ private:
     bool EngageTargets(std::vector<Creature*> const& targets);
 
     PlayerbotAI* _ai = nullptr;
+
+    // The hunter pet the profile asked for (SimProfile.h's PetCreatureEntry), 0 = none
+    uint32 _petCreatureEntry = 0;
 
     // Non-combat strategies BeginBuffPhase() removed, restored by EndBuffPhase()
     std::vector<std::string> _removedStrategies;

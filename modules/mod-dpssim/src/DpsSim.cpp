@@ -166,7 +166,7 @@ void DpsSimWorldScript::OnDpsSimRun()
 
         // DpsSim.Profile - see SimProfile.h and dpssim.conf.dist's own doc comment. When set, it
         // owns ActorClass/PlayerbotTalents/PlayerbotGlyphs/GearItemIds/SpellPower/CombatRatings/Stats/AttackPower,
-        // the dummy and pre-pull settings outright (a bad
+        // the hunter pet, the dummy and pre-pull settings outright (a bad
         // profile aborts the job rather than silently falling back to the flat keys below, so a
         // typo'd profile path never quietly reruns whatever the flat keys happen to say instead).
         // When unset, behavior is unchanged from before profiles existed: DpsSim.PlayerbotTalents
@@ -198,6 +198,7 @@ void DpsSimWorldScript::OnDpsSimRun()
                 config.TargetArmor = profile.TargetArmor;
                 config.PrePullBuffMs = profile.PrePullBuffMs;
                 config.PlayerbotGlyphs = profile.PlayerbotGlyphs;
+                config.PetCreatureEntry = profile.PetCreatureEntry;
                 LOG_INFO("server.dpssim",
                     "mod-dpssim: loaded DpsSim.Profile '{}' (class {}, {} gear item(s), spellPower {}, attackPower {}, "
                     "{} synthetic rating(s), {} synthetic stat(s)).",

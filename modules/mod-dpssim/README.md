@@ -22,6 +22,17 @@ Set `DpsSim.Enabled = 1` in this process's `worldserver.conf` (see `conf/dpssim.
 **Never enable this on a config also meant to serve real players** — sim mode skips the auth/
 world socket listeners entirely and is never a connectable realm.
 
+## Hunters and their pet
+
+A hunter profile (`conf/profiles/BmHunterSim.conf`, `MmHunterSim.conf`, `SvHunterSim.conf`) sets `PetCreatureEntry`, the
+creature_template entry of a beast the actor tames before the first iteration (`SimBot::Create()`, then
+`SimBot::EnsurePet()` at the start of every iteration). The pet is made the way a live bot's pet is
+(`Player::CreatePet()`, the actor's level, autocast on, then `PlayerbotFactory::InitPetTalents()` for the pet-tree
+points), but from a fixed entry instead of `InitPet()`'s random pick, so every iteration and every run has the same pet.
+A dead pet is revived and a missing one tamed again. The pet's swings and spells are recorded under the owner (rows
+read "(pet)" in the report). A hunter actor also gets the "Requires No Ammo" aura, so its ranged weapon needs no
+arrows. The run log shows what ran: "tamed pet ...", and "strategies resolved: combat [...], non-combat [...]".
+
 ## The sim never touches the live characters DB
 
 The sim actor is a real `Player` with no `characters` row, and it creates pets, level-up mail and items whose ids come

@@ -131,6 +131,20 @@ namespace SimProfile
         // 2026-10-06). A run with no profile uses the default.
         bool PlayerbotGlyphs = true;
 
+        // Hunter pet: the creature_template entry of a beast the actor tames before the first iteration (0 = no pet,
+        // the behaviour of every class that has no permanent pet). A fixed entry, not a family, on purpose: the
+        // factory's PlayerbotFactory::InitPet() picks a random tameable creature of the preferred families
+        // (AiPlayerbot.PreferredHunterPetFamilies), and a sim needs the same pet in every iteration and every run.
+        // The pet is made the way InitPet() makes it - Player::CreatePet(entry), the actor's level, autocast on for
+        // every active pet spell - and then PlayerbotFactory::InitPetTalents() spends the pet's talent points from the
+        // AiPlayerbot.PremadeHunterPetLink.<type>.<points> lines, exactly as for a live bot. If it is dead or gone at
+        // the start of an iteration SimBot::EnsurePet() revives or re-creates it. Hunter profiles only (a profile with
+        // a PetCreatureEntry and another Class fails to load). The entry must be a beast with a creature family; the
+        // profiles use the stock "Tamable <family>" test entries, which exist in every database (level 1 in the
+        // template, the pet takes the actor's level): Wolf 26016, Cat 26021, Raptor 26029, Bear 34025, Boar 26020,
+        // Spider 26033.
+        uint32 PetCreatureEntry = 0;
+
         // Master switch for modules/mod-dpssim/tools/stat_weights.py, added 2026-09-13: "false"
         // makes that tool refuse to run any batch at all for this profile, regardless of how many
         // TestX flags below are true - a single kill switch for "don't run stat weights against

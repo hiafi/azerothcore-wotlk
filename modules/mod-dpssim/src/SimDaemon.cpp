@@ -269,6 +269,13 @@ namespace
         // casts, gear equip spells) and the previous iteration's cooldowns would otherwise carry over.
         player->RemoveAllSpellCooldown();
 
+        // A hunter run keeps its pet for every iteration: revived if it died, tamed again if it is gone (the
+        // iteration reset resurrects a dead actor, which drops its permanent pet). Before the pre-pull buff phase,
+        // which then treats it like any other pet of the actor.
+        if (!bot.EnsurePet())
+            LOG_ERROR("server.dpssim", "mod-dpssim: the hunter pet could not be restored for this iteration - it runs "
+                "without one.");
+
         // The same for aura-held proc internal cooldowns (Aura::m_procCooldown): ResetForNextIteration()
         // removes every non-passive aura, but the passive talent/racial auras stay. Proc ICDs (and the script-held
         // ones, e.g. spell_mage_biting_cold's _cooldownEnd) now run on the sim clock (Acore::Time::SteadyNow()),
@@ -675,7 +682,7 @@ bool SimDaemon::RunPlayerbotOnce(RunConfig const& config, RunResult& result)
     // SimBot::Create() teaches the bot's class spells and "pulls" every dummy (each engages the bot, no
     // spell cast) to bootstrap combat state - see its own doc comment for why that's needed.
     SimBot bot;
-    if (!bot.Create(player, dummies, config.PlayerbotTalents, config.PlayerbotGlyphs))
+    if (!bot.Create(player, dummies, config.PlayerbotTalents, config.PlayerbotGlyphs, config.PetCreatureEntry))
     {
         LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbotOnce() - SimBot::Create() failed - aborting.");
         return false;
@@ -729,7 +736,7 @@ bool SimDaemon::RunPlayerbotBatch(RunConfig const& config, uint32 iterations, st
     CastRecorder* castRecorder = new CastRecorder(player->GetGUID(), targets.GetGuids());
 
     SimBot bot;
-    if (!bot.Create(player, dummies, config.PlayerbotTalents, config.PlayerbotGlyphs))
+    if (!bot.Create(player, dummies, config.PlayerbotTalents, config.PlayerbotGlyphs, config.PetCreatureEntry))
     {
         LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbotBatch() - SimBot::Create() failed - aborting.");
         return false;

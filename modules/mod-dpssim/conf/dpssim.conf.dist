@@ -223,6 +223,8 @@ DpsSim.TargetRank = auto
 #                      before every iteration (SimProfile.h). With no profile it runs at its default
 #                      of 15000 sim ms; there is no DpsSim.* key for it. Likewise PlayerbotGlyphs
 #                      (default true): the actor gets its class's premade glyphs as a live bot does.
+#                      A hunter profile also sets PetCreatureEntry (SimProfile.h): the tameable
+#                      beast the actor tames and keeps for the whole run; 0 or absent = no pet.
 #
 #                      When set, this OWNS DpsSim.PlayerbotTalents below and SimDaemon::RunConfig::
 #                      ActorClass/GearItemIds/SpellPower/CombatRatings/Stats/AttackPower outright -
