@@ -41,6 +41,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <limits>
 #include <list>
 #include <mutex>
 #include <unordered_map>
@@ -171,17 +172,58 @@ namespace Hunter
         return nullptr;
     }
 
-    void OnDirectFireHit(Unit* /*attacker*/, Unit* /*target*/, SpellInfo const* /*spellInfo*/)
+    void OnDirectFireHit(Unit* attacker, Unit* target, SpellInfo const* spellInfo)
     {
-        // Empty in H0 and S3a; S3b writes the body (contract in HunterMechanics.h, SURVIVAL §0.23).
+        // S3b body (contract in HunterMechanics.h, SURVIVAL §0.23, S3b-HANDOFF B1).
         // Never twice for one hit: a source either raises Tarred's proc itself (no SUPPRESS_CASTER_PROCS) or calls
-        // this from its AfterHit (it carries the attribute), never both.
+        // this from its AfterHit (it carries the attribute), never both (S3b 0-verify 4a checked every source).
         //  - Raise Tarred 202048's proc themselves (its OnEffectProc calls this): the 53301 hit, the 202045 impact,
         //    the 202051 first blast, the 13812 blast.
         //  - Call this from their AfterHit (suppressed, GetHitDamage() > 0 only): 201601 (H0's Dragonhawk
         //    explosion), 202052 (Cluster Bombs follow-up), 202053 (Shrapnel), 202054 (Explosive Shot hit splash).
         //  - Exclusion list (the body returns for them): 53352 (Explosive Shot blasts), 202055 (blast splash),
         //    202057 (Explosive Trap ground fire), 202050 (Burning Tar itself).
+        // No class check (contract verbatim): the bank is erased by 202050's own AfterEffectRemove for any caster.
+        Player* hunter = GetOwningPlayer(attacker);
+        if (!hunter || !target || !spellInfo || !target->IsAlive())
+            return;
+
+        switch (spellInfo->Id)
+        {
+            case SPELL_EXPLOSIVE_SHOT_BLAST:
+            case SPELL_EXPLOSIVE_SHOT_BLAST_SPLASH:
+            case SPELL_EXPLOSIVE_TRAP_FIRE:
+            case SPELL_BURNING_TAR:
+                return;
+            default:
+                break;
+        }
+
+        if (!(spellInfo->GetSchoolMask() & SPELL_SCHOOL_MASK_FIRE))
+            return;
+
+        // At least one non-periodic damage effect (a periodic-only spell never counts).
+        bool directDamage = false;
+        for (SpellEffectInfo const& effect : spellInfo->Effects)
+        {
+            switch (effect.Effect)
+            {
+                case SPELL_EFFECT_SCHOOL_DAMAGE:
+                case SPELL_EFFECT_WEAPON_DAMAGE:
+                case SPELL_EFFECT_WEAPON_DAMAGE_NOSCHOOL:
+                case SPELL_EFFECT_NORMALIZED_WEAPON_DMG:
+                case SPELL_EFFECT_WEAPON_PERCENT_DAMAGE:
+                    directDamage = true;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        if (!directDamage || !target->GetAura(SPELL_TARRED, hunter->GetGUID()))
+            return;
+
+        AddBurningTar(hunter, target);
     }
 
     float GetShotManaPct(Unit const* caster, SpellInfo const* shot)
@@ -1859,50 +1901,266 @@ namespace Hunter
             if (itr->second.empty())
                 explosiveCarries.erase(itr);
         }
+
+        // Stock Frost Trap Aura (the dynobj aura, eff0 MOD_DECREASE_SPEED): no HunterData:: name (S3b brief 10).
+        constexpr uint32 SPELL_FROST_TRAP_AURA = 13810;
+
+        /*
+         * Burning Tar bank (C18, S3b B2; the Mage::AddIgniteDamage shape with a lock, stale line 10, N15): caster
+         * GUID -> target GUID -> { damage still to pay, stacks shown }. Same rules as the carry above: every access
+         * holds `burningTarLock` for its whole duration, no pointer into the map leaves the lock, removal is
+         * find-only, no Unit* is stored. 202050's AfterEffectRemove and ClearState (logout) remove the entries.
+         */
+        struct BurningTarBank
+        {
+            uint32 remaining = 0;
+            uint32 stacks = 0;
+        };
+
+        std::mutex burningTarLock;
+        std::unordered_map<ObjectGuid, std::unordered_map<ObjectGuid, BurningTarBank>> burningTarBanks;
+
+        // Find-only erase of one (caster, target) bank; drops the caster's map once empty. Caller holds the lock.
+        void EraseBurningTarLocked(ObjectGuid const& casterGuid, ObjectGuid const& targetGuid)
+        {
+            auto const itr = burningTarBanks.find(casterGuid);
+            if (itr == burningTarBanks.end())
+                return;
+
+            itr->second.erase(targetGuid);
+            if (itr->second.empty())
+                burningTarBanks.erase(itr);
+        }
+
+        // Find-only lookup; nullptr when there is no bank. Caller holds the lock and drops the pointer with it.
+        BurningTarBank* FindBurningTarLocked(ObjectGuid const& casterGuid, ObjectGuid const& targetGuid)
+        {
+            auto const casterItr = burningTarBanks.find(casterGuid);
+            if (casterItr == burningTarBanks.end())
+                return nullptr;
+
+            auto const targetItr = casterItr->second.find(targetGuid);
+            return targetItr != casterItr->second.end() ? &targetItr->second : nullptr;
+        }
     }
 
-    // S3b fills this (Burning Tar bank, SURVIVAL §5.10); no S3a caller.
-    void AddBurningTar(Player* /*hunter*/, Unit* /*target*/)
+    void AddBurningTar(Player* hunter, Unit* target)
     {
+        // §5.10 / S3b B2. Caller: OnDirectFireHit (target alive, Tarred by this hunter, a counted direct Fire hit).
+        if (!hunter || !target || !hunter->IsInWorld() || !target->IsInWorld() || !target->IsAlive())
+            return;
+
+        SpellInfo const* burningTar = sSpellMgr->GetSpellInfo(SPELL_BURNING_TAR);
+        if (!burningTar)
+            return;
+
+        // (1) The chunk: 202050's own eff0 (potency) through the done path as a DOT (RAP coefficient, Dark Hunting,
+        // T.N.T., Mastery's SPELLMOD_DOT on d1 b27, Fire %, Versatility, Favored Prey), then Point of No Escape by
+        // hand while this hunter's marker is up (§0.3: 202058's aura 271 mask skips d1 b27).
+        int32 const base = burningTar->Effects[EFFECT_0].CalcValue(hunter);
+        uint32 chunk = hunter->SpellDamageBonusDone(target, burningTar, uint32(std::max(base, 0)), DOT, EFFECT_0);
+        if (target->GetAura(SPELL_POINT_OF_NO_ESCAPE_MARKER, hunter->GetGUID()))
+            chunk = uint32(float(chunk) * (1.0f + GetPointOfNoEscapePct(hunter) / 100.0f));
+
+        ObjectGuid const hunterGuid = hunter->GetGUID();
+        ObjectGuid const targetGuid = target->GetGUID();
+
+        // (2) Apply or refresh. The lock is never held across CastSpell / RefreshTimers / SetStackAmount (they can
+        // run aura hooks, and 202050's remove hook takes the lock).
+        Aura* aura = target->GetAura(SPELL_BURNING_TAR, hunterGuid);
+        if (!aura)
+        {
+            // A new Burning Tar starts from an empty bank (a stale entry would otherwise be paid out again).
+            {
+                std::lock_guard<std::mutex> lock(burningTarLock);
+                EraseBurningTarLocked(hunterGuid, targetGuid);
+            }
+
+            // 202050 has AttributesEx2 0x4 (stale line 12): the counted hit may come from a trap or splash the
+            // hunter can't see.
+            hunter->CastSpell(target, SPELL_BURNING_TAR, TRIGGERED_FULL_MASK);
+            aura = target->GetAura(SPELL_BURNING_TAR, hunterGuid);
+            if (!aura)
+            {
+                // Immune (or the target died in the cast): nothing banks.
+                std::lock_guard<std::mutex> lock(burningTarLock);
+                EraseBurningTarLocked(hunterGuid, targetGuid);
+                return;
+            }
+        }
+        else
+        {
+            // S3b 0-verify 4c: max duration (with mods) and duration back to 6 s, amplitude from current haste, tick
+            // number 0, periodic timer kept (PERIODIC_DAMAGE), crit chance re-snapshotted; amount and stacks untouched.
+            aura->RefreshTimers(false);
+        }
+
+        // (3) Bank the chunk. No damage cap; the sum saturates at uint32 max instead of wrapping.
+        uint32 stacks = 0;
+        uint32 remaining = 0;
+        {
+            std::lock_guard<std::mutex> lock(burningTarLock);
+            BurningTarBank& bank = burningTarBanks[hunterGuid][targetGuid];
+            bank.remaining = uint32(std::min<uint64>(uint64(bank.remaining) + chunk,
+                uint64(std::numeric_limits<uint32>::max())));
+            ++bank.stacks;
+            stacks = bank.stacks;
+            remaining = bank.remaining;
+        }
+
+        // Display only (0-verify 4e): SetStackAmount recalculates the amount (CalcValue x done x stacks), and the
+        // next tick's SetAmount overwrites it with the bank's payout, so the stack never feeds the damage dealt.
+        // Stale line 21: the engine's taken path still multiplies FLAT damage-taken auras by stack² (accepted).
+        uint8 const display = uint8(std::min<uint32>(stacks, 255));
+        if (aura->GetStackAmount() != display)
+            aura->SetStackAmount(display);
+
+        LOG_DEBUG("scripts.hunter", "Burning Tar: {} -> {} banked {} (stack {}), bank now {}",
+            hunterGuid.ToString(), targetGuid.ToString(), chunk, stacks, remaining);
     }
 
-    // S3b fills this; no S3a caller (Burning Tar 202050 has no script in S3a).
-    uint32 TakeBurningTarTick(Unit* /*caster*/, Unit* /*target*/, AuraEffect const* /*eff*/)
+    uint32 TakeBurningTarTick(Unit* caster, Unit* target, AuraEffect const* eff)
     {
-        return 0;
+        // §5.10 / S3b B2: called from 202050's OnEffectPeriodic, before the default tick reads GetAmount()
+        // (SpellAuraEffects.cpp PeriodicTick runs the scripts first). The return becomes the tick's amount; the
+        // engine then applies GetFinalTickBonusMultiplier() (1 + f on tick N, 1 otherwise) and the taken path.
+        if (!caster || !target || !eff || !eff->GetBase())
+            return 0;
+
+        int32 const amplitude = eff->GetAmplitude();
+        int32 const totalTicks = eff->GetTotalTicks();
+        int32 const tickNumber = int32(eff->GetTickNumber());   // already incremented (0-verify 4d): 1..N
+
+        // f exactly as GetFinalTickBonusMultiplier (SpellAuraEffects.cpp:7136-7144): the same integer
+        // GetMaxDuration() - N * amplitude and the same float division. It is copied, not called, because the
+        // function returns 1.0 on every tick but the last and the non-final payouts need f too.
+        float f = 0.0f;
+        if (totalTicks > 0 && amplitude > 0)
+        {
+            int32 const leftover = eff->GetBase()->GetMaxDuration() - totalTicks * amplitude;
+            f = leftover > 0 ? float(leftover) / float(amplitude) : 0.0f;
+        }
+
+        ObjectGuid const casterGuid = caster->GetGUID();
+        ObjectGuid const targetGuid = target->GetGUID();
+
+        uint32 payout = 0;
+        uint32 left = 0;
+        bool finalTick = false;
+        {
+            std::lock_guard<std::mutex> lock(burningTarLock);
+            BurningTarBank* bank = FindBurningTarLocked(casterGuid, targetGuid);
+            if (!bank || !bank->remaining)
+                return 0;
+
+            // Tick N (or a tick past a shrunk N, or broken periodic data): the engine multiplies this by 1 + f, so
+            // pay remaining / (1 + f) and empty the bank.
+            finalTick = totalTicks <= 0 || amplitude <= 0 || tickNumber >= totalTicks;
+
+            // Stranding guard (Gate+ race "haste change between refreshes"): RefreshTimers keeps the periodic timer
+            // while it shortens the amplitude, so after a refresh with more haste the timer can exceed the new
+            // amplitude and tick N can fall after expiry. When the next tick is not due before the aura runs out,
+            // this tick (n < N, engine multiplier 1.0) pays the whole bank.
+            bool const lastToFire = !finalTick && eff->GetPeriodicTimer() > eff->GetBase()->GetDuration();
+
+            if (finalTick)
+                payout = uint32(double(bank->remaining) / (1.0 + double(f)));
+            else if (lastToFire)
+                payout = bank->remaining;
+            else
+                payout = uint32(double(bank->remaining) / (double(totalTicks - tickNumber + 1) + double(f)));
+
+            // SetAmount takes an int32.
+            payout = std::min<uint32>(payout, uint32(std::numeric_limits<int32>::max()));
+
+            if (finalTick || lastToFire)
+                bank->remaining = 0;
+            else
+                bank->remaining -= std::min(payout, bank->remaining);
+
+            left = bank->remaining;
+        }
+
+        // Bank side of the playtest's bank-vs-dealt check: `paid` is the amount before the engine's final-tick
+        // multiplier, the taken path, crit and absorb (the combat log shows what was dealt).
+        LOG_DEBUG("scripts.hunter", "Burning Tar: {} -> {} tick {}/{} (amp {}, f {:.3f}) paid {}{}, bank left {}",
+            casterGuid.ToString(), targetGuid.ToString(), tickNumber, totalTicks, amplitude, f, payout,
+            finalTick ? " (final, x(1+f) by the engine)" : "", left);
+
+        return payout;
     }
 
-    // S3b fills this; no S3a caller.
-    uint32 GetBurningTarRemaining(Unit const* /*caster*/, Unit const* /*target*/)
+    uint32 GetBurningTarRemaining(Unit const* caster, Unit const* target)
     {
-        return 0;
+        if (!caster || !target)
+            return 0;
+
+        std::lock_guard<std::mutex> lock(burningTarLock);
+        BurningTarBank const* bank = FindBurningTarLocked(caster->GetGUID(), target->GetGUID());
+        return bank ? bank->remaining : 0;
     }
 
-    // S3b fills this; no S3a caller.
-    uint32 GetBurningTarStacks(Unit const* /*caster*/, Unit const* /*target*/)
+    uint32 GetBurningTarStacks(Unit const* caster, Unit const* target)
     {
-        return 0;
+        if (!caster || !target)
+            return 0;
+
+        std::lock_guard<std::mutex> lock(burningTarLock);
+        BurningTarBank const* bank = FindBurningTarLocked(caster->GetGUID(), target->GetGUID());
+        return bank ? bank->stacks : 0;
     }
 
-    // S3b fills this; no S3a caller.
-    void ClearBurningTar(ObjectGuid /*casterGuid*/, ObjectGuid /*targetGuid*/)
+    void ClearBurningTar(ObjectGuid casterGuid, ObjectGuid targetGuid)
     {
+        // 202050's AfterEffectRemove (REAL: expiry, death, dispel, despawn). Whatever is left is dropped.
+        std::lock_guard<std::mutex> lock(burningTarLock);
+        if (BurningTarBank const* bank = FindBurningTarLocked(casterGuid, targetGuid))
+            if (bank->remaining)
+                LOG_DEBUG("scripts.hunter", "Burning Tar: {} -> {} removed with {} unpaid",
+                    casterGuid.ToString(), targetGuid.ToString(), bank->remaining);
+
+        EraseBurningTarLocked(casterGuid, targetGuid);
     }
 
-    // S3b fills this; called from ClearState (A18), a no-op until the bank exists.
-    void ClearBurningTarForCaster(ObjectGuid /*casterGuid*/)
+    void ClearBurningTarForCaster(ObjectGuid casterGuid)
     {
+        // ClearState (logout). The caster's auras left behind tick for 0 and their remove hook finds nothing.
+        std::lock_guard<std::mutex> lock(burningTarLock);
+        auto const itr = burningTarBanks.find(casterGuid);
+        if (itr != burningTarBanks.end())
+            burningTarBanks.erase(itr);
     }
 
-    // S3b fills this (Lock and Load rework, C49); Lock and Load stays stock through S3a (user ruling 7).
-    bool TryLockAndLoad(Player* /*hunter*/, float /*baseChancePct*/)
+    bool TryLockAndLoad(Player* hunter, float baseChancePct)
     {
-        return false;
+        // C49 / S3b B4: the periodic path's one roll (the ground-fire tick; the talent script rolls its own row).
+        // 67544 is the shared 5 s ICD.
+        if (!hunter || hunter->HasAura(SPELL_LOCK_AND_LOAD_MARKER))
+            return false;
+
+        if (!RollProcChance(hunter, baseChancePct))
+            return false;
+
+        TriggerLockAndLoad(hunter);
+        return true;
     }
 
-    // S3b fills this; no S3a caller.
-    void TriggerLockAndLoad(Player* /*hunter*/)
+    void TriggerLockAndLoad(Player* hunter)
     {
+        // C49 / S3b B4: one charge (56453, consumed by its own CAST row), the ICD marker, and Arcane Shot +
+        // Explosive Shot (category 1173) off cooldown; Chain Reaction (rank 3) cuts Cluster Bombs by its eff2.
+        if (!hunter || !hunter->IsInWorld())
+            return;
+
+        hunter->CastSpell(hunter, SPELL_LOCK_AND_LOAD_BUFF, TRIGGERED_FULL_MASK);
+        hunter->CastSpell(hunter, SPELL_LOCK_AND_LOAD_MARKER, TRIGGERED_FULL_MASK);
+        hunter->RemoveCategoryCooldown(CATEGORY_ARCANE_EXPLOSIVE);
+
+        // "Known" = the rank's passive aura (GetKnownRank's rule). eff2 DUMMY bp 1999, live 2000 ms (V-m15).
+        if (hunter->HasAura(SPELL_LOCK_AND_LOAD_R3))
+            if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(SPELL_LOCK_AND_LOAD_R3))
+                ReduceSpellCooldown(hunter, SPELL_CLUSTER_BOMBS,
+                    uint32(std::max(rank->Effects[EFFECT_2].CalcValue(hunter), 0)));
     }
 
     void TryShrapnel(Player* hunter, Unit* primary)
@@ -1996,10 +2254,26 @@ namespace Hunter
             explosiveCarries.erase(itr);
     }
 
-    // S3b fills this (Explosive Trap ground-fire snapshot, §5.9); 1.0 is "no aura 168 term" for any S3a reader.
-    float GetCreatureTypeDoneFactor(Unit const* /*caster*/, Unit const* /*target*/, SpellInfo const* /*spellInfo*/)
+    float GetCreatureTypeDoneFactor(Unit const* caster, Unit const* target, SpellInfo const* spellInfo)
     {
-        return 1.0f;
+        // §5.9 / S3b B5 (V-m4): the SPELL_AURA_MOD_DAMAGE_DONE_VERSUS term of Unit::SpellPctDamageModsDone
+        // (Unit.cpp ~8313-8317), read the same way: the product of (100 + amount) / 100 over the caster's aura-168
+        // effects whose misc mask has the target's creature-type bit, filtered by the spell's Attributes6 rule. The
+        // signature carries no damage type, so the rule is evaluated as non-DOT; it only matters for a spell with
+        // SPELL_ATTR6_IGNORE_CASTER_DAMAGE_MODIFIERS, which neither 13812 nor 202057 has.
+        if (!caster || !target)
+            return 1.0f;
+
+        uint32 const creatureTypeMask = target->GetCreatureTypeMask();
+        if (!creatureTypeMask)
+            return 1.0f;
+
+        return caster->GetTotalAuraMultiplier(SPELL_AURA_MOD_DAMAGE_DONE_VERSUS,
+            [creatureTypeMask, spellInfo, caster](AuraEffect const* aurEff)
+            {
+                return (creatureTypeMask & aurEff->GetMiscValue()) &&
+                    (!spellInfo || spellInfo->ValidateAttribute6SpellDamageMods(caster, aurEff, false));
+            });
     }
 
     float GetPointOfNoEscapePct(Player const* hunter)
@@ -2010,9 +2284,53 @@ namespace Hunter
         return rank ? float(rank->Effects[EFFECT_0].CalcValue(hunter)) : 0.0f;
     }
 
-    // S3b fills this (the 202058 marker, §9.2 #18); no S3a caller.
-    void UpdatePointOfNoEscape(Unit* /*caster*/, Unit* /*target*/)
+    void UpdatePointOfNoEscape(Unit* caster, Unit* target)
     {
+        // §0.3 / §9.2 #18 / S3b B3. Callers: Tarred 202048's apply (REAL | REAPPLY: a Tar Bomb refresh is REAPPLY,
+        // brief 4) and remove hooks, Frost Trap Aura 13810's apply and remove hooks. A removal hook runs after the
+        // aura left the target's applied list (Unit.cpp _UnapplyAura), so the other source is read correctly.
+        Player* hunter = GetOwningPlayer(caster);
+        if (!hunter || !target)
+            return;
+
+        ObjectGuid const hunterGuid = hunter->GetGUID();
+
+        if (!GetKnownRank(hunter, POINT_OF_NO_ESCAPE_RANKS))
+        {
+            target->RemoveAurasDueToSpell(SPELL_POINT_OF_NO_ESCAPE_MARKER, hunterGuid);
+            return;
+        }
+
+        // The longer remaining time of this hunter's Tarred and Frost Trap Aura on the target (a permanent -1 never
+        // occurs for either and counts as 0).
+        int32 longest = 0;
+        if (Aura const* tarred = target->GetAura(SPELL_TARRED, hunterGuid))
+            longest = std::max(longest, tarred->GetDuration());
+
+        if (Aura const* frostTrap = target->GetAura(SPELL_FROST_TRAP_AURA, hunterGuid))
+            longest = std::max(longest, frostTrap->GetDuration());
+
+        Aura* marker = target->GetAura(SPELL_POINT_OF_NO_ESCAPE_MARKER, hunterGuid);
+        if (longest <= 0)
+        {
+            if (marker)
+                target->RemoveAurasDueToSpell(SPELL_POINT_OF_NO_ESCAPE_MARKER, hunterGuid);
+            return;
+        }
+
+        if (!marker)
+        {
+            // AddAura: no CheckCast, no LoS, no DR (stale line 12); it refuses a dead or immune target itself.
+            if (!hunter->IsInWorld() || !target->IsInWorld() || !target->IsAlive())
+                return;
+
+            marker = hunter->AddAura(SPELL_POINT_OF_NO_ESCAPE_MARKER, target);
+            if (!marker)
+                return;
+        }
+
+        marker->SetMaxDuration(longest);
+        marker->SetDuration(longest);
     }
 
     bool IsOncePerRangedCast(ProcEventInfo& eventInfo)

@@ -23,11 +23,14 @@
 #include "Containers.h"
 #include "CreatureAI.h"
 #include "CreatureScript.h"
+#include "HunterMechanics.h"
 #include "MotionMaster.h"
 #include "ObjectAccessor.h"
 #include "PetDefines.h"
+#include "Player.h"
 #include "ScriptedCreature.h"
 #include "ScriptMgr.h"
+#include "SpellAuras.h"
 #include "TemporarySummon.h"
 #include <algorithm>
 
@@ -76,9 +79,40 @@ struct npc_pet_hunter_snake_trap_rework : public ScriptedAI
     // Redefined for random target selection:
     void MoveInLineOfSight(Unit* /*who*/) override { }
 
-    // Hook for S3 (Q15): the hunter's Serpent Sting with the hunter as original caster, inside Trap Mastery's Snake
-    // Trap clause, Survival only. Empty in H0; S3 fills it and decides where the snake's attack calls it.
-    void ApplyOwnerSting(Unit* /*victim*/) { }
+    // Trap Mastery's Snake Trap clause (B6, §0.13): the snakes apply the hunter's own Serpent Sting. A melee snake
+    // cannot cast it (SPELL_FAILED_TOO_CLOSE), so the aura is added directly with the hunter as caster. Refreshed
+    // only when missing or at SNAKE_STING_REFRESH_MS left, so the snakes never reset the hunter's own sting.
+    void ApplyOwnerSting(Unit* victim)
+    {
+        if (!victim || !victim->IsAlive() || !me->IsSummon())
+            return;
+
+        Unit* summoner = me->ToTempSummon()->GetSummonerUnit();
+        Player* owner = summoner ? summoner->ToPlayer() : nullptr;
+        if (!owner)
+            return;
+
+        if (!owner->HasSpell(HunterData::SPELL_TRAP_MASTERY) &&
+            !owner->HasSpell(HunterData::SPELL_TRAP_MASTERY_63457) &&
+            !owner->HasSpell(HunterData::SPELL_TRAP_MASTERY_63458))
+            return;
+
+        if (!me->IsValidAttackTarget(victim))
+            return;
+
+        if (Aura const* sting = victim->GetAura(HunterData::SPELL_SERPENT_STING, owner->GetGUID()))
+            if (sting->GetDuration() < 0 || sting->GetDuration() > int32(Hunter::SNAKE_STING_REFRESH_MS))
+                return;
+
+        owner->AddAura(HunterData::SPELL_SERPENT_STING, victim);
+    }
+
+    void DamageDealt(Unit* victim, uint32& damage, DamageEffectType damageType,
+        SpellSchoolMask /*damageSchoolMask*/) override
+    {
+        if (damageType == DIRECT_DAMAGE && damage > 0)
+            ApplyOwnerSting(victim);
+    }
 
     void UpdateAI(uint32 diff) override
     {

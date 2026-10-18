@@ -46,11 +46,34 @@
 
 namespace
 {
+    // Stock Frost Trap slow (aura 33, mechanic 11): Lock and Load's trap clause skips a target immune to it (bosses);
+    // the DSL has no name for it
+    constexpr uint32 SPELL_FROST_TRAP_SLOW = 67035;
+
     // The hunter Player behind a spell's caster or an aura's owner (CR3), nullptr otherwise
     Player* GetHunterPlayer(Unit* unit)
     {
         Player* player = unit ? unit->ToPlayer() : nullptr;
         return player && player->getClass() == CLASS_HUNTER ? player : nullptr;
+    }
+
+    // The Player behind a caster, hunter or not (R-cpp C-1): for paths that keep no per-hunter state, so a Classless /
+    // Freepick Player holding the Survival talents gets the same behaviour as a hunter
+    Player* AsPlayer(Unit* unit)
+    {
+        return unit ? unit->ToPlayer() : nullptr;
+    }
+
+    // The known Lock and Load rank (highest first), nullptr without the talent. Rank ownership is the passive aura
+    // (L10); the SpellInfo is returned so a caller reads the live eff1 chance through CalcValue.
+    SpellInfo const* GetLockAndLoadRank(Player const* player)
+    {
+        for (uint32 const rankId : { Hunter::SPELL_LOCK_AND_LOAD_R3, Hunter::SPELL_LOCK_AND_LOAD_R2,
+            Hunter::SPELL_LOCK_AND_LOAD_R1 })
+            if (player->HasAura(rankId))
+                return sSpellMgr->GetSpellInfo(rankId);
+
+        return nullptr;
     }
 
     // The spell's per-target record for `guid` (missCondition and crit, set at launch), nullptr when there is none.
@@ -103,7 +126,7 @@ namespace
         SpellCastResult const result = player->CastSpell(targets, sSpellMgr->AssertSpellInfo(splashId), &values,
             TRIGGERED_FULL_MASK);
         if (result != SPELL_CAST_OK)
-            LOG_ERROR("scripts.hunter", "Explosive Shot: splash {} at {} failed (result {})", splashId,
+            LOG_DEBUG("scripts.hunter", "Explosive Shot: splash {} at {} failed (result {})", splashId,
                 primary->GetGUID().ToString(), uint32(result));
     }
 
@@ -242,16 +265,20 @@ class spell_hun_explosive_shot_rework : public SpellScript
     // dealt damage (Spell.cpp m_damage = damageInfo.damage: after crit, armor, taken mods and absorb, V5).
     void HandleAfterHit()
     {
-        Player* player = GetHunterPlayer(GetCaster());
+        Player* player = AsPlayer(GetCaster());
         Unit* target = GetHitUnit();
         uint32 const carry = _carry;
         _carry = 0;
         if (!player || !target || !HasLanded(GetSpell(), target))
             return;
 
-        // (1) the hit splash, (2) Shrapnel (order kept from §5.6; neither reads the other)
+        // (1) the hit splash, (2) Shrapnel (order kept from §5.6; neither reads the other). Both keep no per-hunter
+        // state, so they run for any Player (C-1); the carry below is hunter-only.
         CastExplosiveSplash(player, target, Hunter::SPELL_EXPLOSIVE_SHOT_SPLASH, GetHitDamage());
         Hunter::TryShrapnel(player, target);
+
+        if (!GetHunterPlayer(player))
+            return;
 
         // (3) the carry per fresh blast, replacing any older value; an immune target holds no aura, so nothing is
         // stored (the old charge's remove hook already cleared it). Only on a charge this hit just applied or
@@ -284,7 +311,7 @@ private:
 // (HandlePeriodicDummyAuraTick: CastCustomSpell(53352, BP0 = m_amount)) and 53352 is cast with NO bp: its own
 // CalcValue and potency run exactly once. aurEff is the triggering aura, as in the hardcode (a failed blast ends the
 // charge: stock, accepted, brief resolution 8). The blast is cast for ANY Player caster (a non-hunter on the
-// Classless / Freepick realm holds 53301 too, R-cpp M-1); only the carry, splash and Shrapnel are hunter-only, because
+// Classless / Freepick realm holds 53301 too, R-cpp M-1); only the carry is hunter-only, because
 // Hunter::ClearState runs for hunters only.
 class spell_hun_explosive_shot_rework_aura : public AuraScript
 {
@@ -377,7 +404,7 @@ class spell_hun_explosive_shot_blast : public SpellScript
     // list: no Burning Tar call here (SURVIVAL §0.23).
     void HandleAfterHit()
     {
-        Player* player = GetHunterPlayer(GetCaster());
+        Player* player = AsPlayer(GetCaster());
         Unit* target = GetHitUnit();
         if (!player || !target || !HasLanded(GetSpell(), target))
             return;
@@ -409,7 +436,7 @@ class spell_hun_explosive_shot_splash : public SpellScript
 
     void FilterTargets(std::list<WorldObject*>& targets)
     {
-        if (!GetHunterPlayer(GetCaster()))
+        if (!AsPlayer(GetCaster()))
             return;
 
         Unit* primary = GetSpell()->GetOriginalTarget();
@@ -427,7 +454,7 @@ class spell_hun_explosive_shot_splash : public SpellScript
     // splash 202055 never counts (SURVIVAL §0.23 exclusion list)
     void HandleAfterHit()
     {
-        if (!GetHunterPlayer(GetCaster()) || GetSpellInfo()->Id != Hunter::SPELL_EXPLOSIVE_SHOT_SPLASH)
+        if (!AsPlayer(GetCaster()) || GetSpellInfo()->Id != Hunter::SPELL_EXPLOSIVE_SHOT_SPLASH)
             return;
 
         if (GetHitDamage() > 0)
@@ -462,7 +489,7 @@ class spell_hun_shrapnel : public SpellScript
 
     void HandleOnHit()
     {
-        Player* player = GetHunterPlayer(GetCaster());
+        Player* player = AsPlayer(GetCaster());
         Unit* target = GetHitUnit();
         if (!player || !target)
             return;
@@ -485,7 +512,7 @@ class spell_hun_shrapnel : public SpellScript
     // SUPPRESS_CASTER_PROCS hides it from Tarred's row (SURVIVAL §0.23)
     void HandleAfterHit()
     {
-        if (GetHunterPlayer(GetCaster()) && GetHitDamage() > 0)
+        if (AsPlayer(GetCaster()) && GetHitDamage() > 0)
             Hunter::OnDirectFireHit(GetCaster(), GetHitUnit(), GetSpellInfo());
     }
 
@@ -517,7 +544,7 @@ class spell_hun_cluster_bombs : public SpellScript
 
     void HandleScheduler(SpellEffIndex /*effIndex*/)
     {
-        Player* player = GetHunterPlayer(GetCaster());
+        Player* player = AsPlayer(GetCaster());
         WorldLocation const* dest = GetExplTargetDest();
         if (!player || !dest)
             return;
@@ -566,7 +593,7 @@ class spell_hun_cluster_bombs_blast : public SpellScript
 
     void HandleAfterHit()
     {
-        if (GetHunterPlayer(GetCaster()) && GetHitDamage() > 0)
+        if (AsPlayer(GetCaster()) && GetHitDamage() > 0)
             Hunter::OnDirectFireHit(GetCaster(), GetHitUnit(), GetSpellInfo());
     }
 
@@ -919,6 +946,527 @@ class spell_hun_glaive_toss_sv : public SpellScript
     }
 };
 
+// ===========================================================================================================
+// S3b (hunter-rework.S3b-HANDOFF.md B1-B8, S3b-WP-BRIEF.md "Binding decisions after 0-verify"). Every hook below
+// matches the BUILT row's effect index and aura type (L3). Scripts hold hook-owned state on the instance only; the
+// shared state (the Burning Tar bank) lives in HunterMechanics. No raw pointer outlives a call.
+// ===========================================================================================================
+
+// 202048 Tarred (SURVIVAL §0.23, §5.4, S3b B1). Built: eff0 APPLY_AURA DUMMY. The spell_proc row is TAKEN flags
+// 0x20200 (ranged / magic damage class taken), Fire, spell type DAMAGE, phase 0, attributes 0x2 (a trap blast is a
+// triggered cast). The actor is the aura's caster (a trap blast's actor is the hunter, §0.20). Direct Fire hits that
+// raise this proc through the row: the 53301 hit, the 202045 impact, the 202051 first blast, the 13812 blast.
+// Sources hidden from the row by SUPPRESS_CASTER_PROCS call Hunter::OnDirectFireHit from their own AfterHit instead
+// (201601, 202052, 202053, 202054); a spell is in exactly one of the two lists. The apply hook also runs on a refresh
+// (REAPPLY: a second Tar Bomb refreshes Tarred without a REAL apply), so the Point of No Escape marker follows it.
+class spell_hun_tarred : public AuraScript
+{
+    PrepareAuraScript(spell_hun_tarred);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ Hunter::SPELL_BURNING_TAR, Hunter::SPELL_POINT_OF_NO_ESCAPE_MARKER });
+    }
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        Unit* caster = GetCaster();
+        if (!caster || eventInfo.GetActor() != caster)
+            return false;
+
+        DamageInfo* damageInfo = eventInfo.GetDamageInfo();
+        if (!damageInfo || damageInfo->GetDamage() == 0 || damageInfo->GetDamageType() == DOT)
+            return false;
+
+        return eventInfo.GetSpellInfo() != nullptr;
+    }
+
+    void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
+    {
+        PreventDefaultAction();
+
+        Hunter::OnDirectFireHit(eventInfo.GetActor(), GetTarget(), eventInfo.GetSpellInfo());
+    }
+
+    // The marker's duration follows the longest of Tarred / Frost Trap; a gone caster leaves it to run out
+    void HandleUpdate(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        if (Unit* caster = GetCaster())
+            Hunter::UpdatePointOfNoEscape(caster, GetTarget());
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_hun_tarred::CheckProc);
+        OnEffectProc += AuraEffectProcFn(spell_hun_tarred::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+        AfterEffectApply += AuraEffectApplyFn(spell_hun_tarred::HandleUpdate, EFFECT_0, SPELL_AURA_DUMMY,
+            AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK);
+        AfterEffectRemove += AuraEffectRemoveFn(spell_hun_tarred::HandleUpdate, EFFECT_0, SPELL_AURA_DUMMY,
+            AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+// 202050 Burning Tar (SURVIVAL §3 #5, §5.10, S3b B2). Built: eff0 PERIODIC_DAMAGE, 1000 ms, 6 s. The tick amount is
+// the bank's share for this tick (Hunter::TakeBurningTarTick); the default tick then deals it, crits, and raises
+// DONE_PERIODIC for Lock and Load, so there is NO PreventDefaultAction. The script runs before the engine's
+// immune / dead checks (SpellAuraEffects.cpp PeriodicTick), so an immune tick still drains its share (accepted).
+// A REAPPLY (a refresh or the display stack change) never reaches the REAL remove hook, so only the aura's end
+// clears the bank.
+class spell_hun_burning_tar : public AuraScript
+{
+    PrepareAuraScript(spell_hun_burning_tar);
+
+    void HandlePeriodic(AuraEffect const* aurEff)
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetTarget();
+        AuraEffect* effect = GetEffect(EFFECT_0);
+        if (!effect)
+            return;
+
+        // No caster means no bank: never let the display-stack amount tick (R-cpp M-1).
+        if (!caster || !target)
+        {
+            effect->SetAmount(0);
+            return;
+        }
+
+        effect->SetAmount(int32(Hunter::TakeBurningTarTick(caster, target, aurEff)));
+    }
+
+    void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        Unit* target = GetTarget();
+        if (target)
+            Hunter::ClearBurningTar(GetCasterGUID(), target->GetGUID());
+    }
+
+    void Register() override
+    {
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_hun_burning_tar::HandlePeriodic, EFFECT_0,
+            SPELL_AURA_PERIODIC_DAMAGE);
+        AfterEffectRemove += AuraEffectRemoveFn(spell_hun_burning_tar::HandleRemove, EFFECT_0,
+            SPELL_AURA_PERIODIC_DAMAGE, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+// 202058 Point of No Escape marker (SURVIVAL §0.3, S3b B3). Built: eff0 MOD_DAMAGE_FROM_CASTER (271); its class mask
+// is PONE_ALL_EXCEPT_BURNING_TAR. The amount is the hunter's known rank (2 / 4 / 6 percent), read when the marker is
+// first added (UpdatePointOfNoEscape only adjusts the durations of an existing marker).
+class spell_hun_point_of_no_escape : public AuraScript
+{
+    PrepareAuraScript(spell_hun_point_of_no_escape);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ Hunter::SPELL_POINT_OF_NO_ESCAPE_R1, Hunter::SPELL_POINT_OF_NO_ESCAPE_R2,
+            Hunter::SPELL_POINT_OF_NO_ESCAPE_R3 });
+    }
+
+    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
+    {
+        Player const* hunter = Hunter::GetOwningPlayer(GetCaster());
+        amount = hunter ? int32(Hunter::GetPointOfNoEscapePct(hunter)) : 0;
+    }
+
+    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_hun_point_of_no_escape::CalculateAmount, EFFECT_0,
+            SPELL_AURA_MOD_DAMAGE_FROM_CASTER);
+    }
+};
+
+// 13810 Frost Trap aura (S3b B3, bare-id binding). Built: eff0 PERSISTENT_AREA_AURA with aura 33
+// (MOD_DECREASE_SPEED), the slow; eff1 aura 23, eff2 aura 308. The dynobj aura's caster is the hunter (the trap GO
+// casts through a world trigger with the owner as original caster). Each trap is a new aura, so REAL covers it.
+class spell_hun_frost_trap_aura_sv : public AuraScript
+{
+    PrepareAuraScript(spell_hun_frost_trap_aura_sv);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ Hunter::SPELL_POINT_OF_NO_ESCAPE_MARKER });
+    }
+
+    void HandleUpdate(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        if (Unit* caster = GetCaster())
+            Hunter::UpdatePointOfNoEscape(caster, GetTarget());
+    }
+
+    void Register() override
+    {
+        AfterEffectApply += AuraEffectApplyFn(spell_hun_frost_trap_aura_sv::HandleUpdate, EFFECT_0,
+            SPELL_AURA_MOD_DECREASE_SPEED, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectRemove += AuraEffectRemoveFn(spell_hun_frost_trap_aura_sv::HandleUpdate, EFFECT_0,
+            SPELL_AURA_MOD_DECREASE_SPEED, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+// 56342 / 56343 / 56344 Lock and Load (SURVIVAL §5.12, §6 (3,2), §8.1, S3b B4; replaces stock
+// spell_hun_lock_and_load, unbound from -56342). Built on every rank: eff0 PROC_TRIGGER_SPELL (56453; the trap chance
+// 33 / 66 / 100), eff1 DUMMY (the periodic chance 3 / 6 / 10); eff2 is an inert DUMMY (56344's carries Chain Reaction)
+// that the -56342 row's disable_effects_mask 0x4 keeps out of every proc. The row's chance is 0, so the DBC
+// ProcChance 100 (x Proc Chance) is a sure pass and the script's one RollProcChance per effect is the only roll. The
+// trap clause skips a target immune to the stock Frost Trap slow (bosses, WotLK 3.2); the periodic clause takes
+// Immolation Trap's DoT and Burning Tar (the Explosive Trap ground fire calls TryLockAndLoad from its own tick).
+// OnProc replaces the default 56453 cast.
+class spell_hun_lock_and_load_rework : public AuraScript
+{
+    PrepareAuraScript(spell_hun_lock_and_load_rework);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ Hunter::SPELL_LOCK_AND_LOAD_BUFF, Hunter::SPELL_LOCK_AND_LOAD_MARKER,
+            HunterData::SPELL_IMMOLATION_TRAP_13797, Hunter::SPELL_BURNING_TAR, Hunter::SPELL_CLUSTER_BOMBS,
+            Hunter::SPELL_LOCK_AND_LOAD_R3 });
+    }
+
+    // The 5 s marker is the shared ICD: no roll while it is up
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        Player* player = AsPlayer(GetUnitOwner());
+        return player && eventInfo.GetActor() == player && !player->HasAura(Hunter::SPELL_LOCK_AND_LOAD_MARKER);
+    }
+
+    bool CheckTrapProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
+    {
+        if (!(eventInfo.GetTypeMask() & PROC_FLAG_DONE_TRAP_ACTIVATION))
+            return false;
+
+        // A unit-target trap raises the activation in both HIT and FINISH; roll once per cast, on FINISH
+        if (!(eventInfo.GetSpellPhaseMask() & PROC_SPELL_PHASE_FINISH))
+            return false;
+
+        // Patch 3.3.3: only Frost Trap activations proc here; the fire traps proc through the periodic clause
+        SpellInfo const* procSpell = eventInfo.GetSpellInfo();
+        if (!procSpell || !(procSpell->GetSchoolMask() & SPELL_SCHOOL_MASK_FROST))
+            return false;
+
+        // Immune to the Frost Trap slow (bosses): WotLK 3.2.0
+        if (Spell const* spell = eventInfo.GetProcSpell())
+            if (Unit* target = spell->GetOriginalTarget())
+                if (SpellInfo const* slowInfo = sSpellMgr->GetSpellInfo(SPELL_FROST_TRAP_SLOW))
+                    if (target->IsImmunedToSpell(slowInfo))
+                        return false;
+
+        return Hunter::RollProcChance(GetUnitOwner(), float(aurEff->GetAmount()));
+    }
+
+    bool CheckPeriodicProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
+    {
+        if (!(eventInfo.GetTypeMask() & PROC_FLAG_DONE_PERIODIC))
+            return false;
+
+        SpellInfo const* procSpell = eventInfo.GetSpellInfo();
+        if (!procSpell || (procSpell->Id != HunterData::SPELL_IMMOLATION_TRAP_13797 &&
+            procSpell->Id != Hunter::SPELL_BURNING_TAR))
+            return false;
+
+        return Hunter::RollProcChance(GetUnitOwner(), float(aurEff->GetAmount()));
+    }
+
+    void HandleProc(ProcEventInfo& /*eventInfo*/)
+    {
+        PreventDefaultAction();
+
+        if (Player* player = AsPlayer(GetUnitOwner()))
+            Hunter::TriggerLockAndLoad(player);
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_hun_lock_and_load_rework::CheckProc);
+        DoCheckEffectProc += AuraCheckEffectProcFn(spell_hun_lock_and_load_rework::CheckTrapProc, EFFECT_0,
+            SPELL_AURA_PROC_TRIGGER_SPELL);
+        DoCheckEffectProc += AuraCheckEffectProcFn(spell_hun_lock_and_load_rework::CheckPeriodicProc, EFFECT_1,
+            SPELL_AURA_DUMMY);
+        OnProc += AuraProcFn(spell_hun_lock_and_load_rework::HandleProc);
+    }
+};
+
+// 13812 Explosive Trap - the ground fire (SURVIVAL §5.9, Q30 C5, S3b B5; the S2b half-Volley shape). Built after
+// S3b: eff0 SCHOOL_DAMAGE (the blast, untouched), eff1 PERSISTENT_AREA_AURA + PERIODIC_DUMMY (226, 2000 ms, unhasted).
+// DoEffectCalcAmount runs once, when the area aura is created; the same AuraScript instance then gets every
+// application's tick (0-verify (4g)). The snapshot is the hunter's done bonus on the base amount (Trap Mastery,
+// T.N.T., Mastery, Fire %), with the creature-type term (Favored Prey) divided out: spell_hun_explosive_trap_fire_tick
+// applies it per target. Victim-side terms are not in it (taken mods apply to 202057's own hit). Each application's
+// tick casts 202057 with the exact amount, the final tick weighted by GetFinalTickBonusMultiplier (a 20 s / 2 s trap
+// has no leftover, so 1.0). The cast passes aurEff: a dead hunter's ground fire stops (CheckCast: triggered-by-aura).
+class spell_hun_explosive_trap_fire : public AuraScript
+{
+    PrepareAuraScript(spell_hun_explosive_trap_fire);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ Hunter::SPELL_EXPLOSIVE_TRAP_FIRE });
+    }
+
+    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    {
+        canBeRecalculated = false;
+        _snapshot = 0.0f;
+
+        Player* hunter = Hunter::GetOwningPlayer(GetCaster());
+        if (!hunter || amount <= 0)
+            return;
+
+        SpellInfo const* trapInfo = GetSpellInfo();
+        float const factor = Hunter::GetCreatureTypeDoneFactor(hunter, hunter, trapInfo);
+        float const done = float(hunter->SpellDamageBonusDone(hunter, trapInfo, uint32(amount), DOT, EFFECT_1));
+        _snapshot = factor > 0.0f ? done / factor : done;
+    }
+
+    void HandlePeriodic(AuraEffect const* aurEff)
+    {
+        PreventDefaultAction();
+
+        Player* hunter = Hunter::GetOwningPlayer(GetCaster());
+        Unit* target = GetTarget();
+        if (!hunter || !target || !target->IsAlive())
+            return;
+
+        // Area-spell visibility rule: stealthed enemies the hunter can't see still burn
+        if (!hunter->IsValidAttackTarget(target, GetSpellInfo()))
+            return;
+
+        int32 const damage = int32(_snapshot * aurEff->GetFinalTickBonusMultiplier());
+        if (damage <= 0)
+            return;
+
+        // No triggering aura: CheckCast would refuse a dead caster, and the fire keeps burning after the hunter dies
+        hunter->CastCustomSpell(Hunter::SPELL_EXPLOSIVE_TRAP_FIRE, SPELLVALUE_BASE_POINT0, damage, target,
+            TRIGGERED_FULL_MASK);
+    }
+
+    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_hun_explosive_trap_fire::CalculateAmount, EFFECT_1,
+            SPELL_AURA_PERIODIC_DUMMY);
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_hun_explosive_trap_fire::HandlePeriodic, EFFECT_1,
+            SPELL_AURA_PERIODIC_DUMMY);
+    }
+
+private:
+    float _snapshot = 0.0f;
+};
+
+// 202057 Explosive Trap fire tick (S3b B5). Built: eff0 SCHOOL_DAMAGE, DieSides 1 (BP0 is exact),
+// IGNORE_CASTER_MODIFIERS (the snapshot already holds the caster side), SUPPRESS_CASTER_PROCS and on OnDirectFireHit's
+// exclusion list (no Burning Tar stack). OnHit runs after the victim's taken mods and before crit / armor / absorb.
+// The two terms the snapshot left out are applied here per target: the creature-type factor and Point of No Escape
+// (the ground fire carries no bit for the marker's mask, V-m7). Then Lock and Load rolls its periodic chance once per
+// tick per target (the 5 s marker throttles it).
+class spell_hun_explosive_trap_fire_tick : public SpellScript
+{
+    PrepareSpellScript(spell_hun_explosive_trap_fire_tick);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ Hunter::SPELL_LOCK_AND_LOAD_R1, Hunter::SPELL_LOCK_AND_LOAD_R2,
+            Hunter::SPELL_LOCK_AND_LOAD_R3, Hunter::SPELL_POINT_OF_NO_ESCAPE_MARKER });
+    }
+
+    bool Load() override
+    {
+        Unit* caster = GetCaster();
+        return caster && caster->IsPlayer();
+    }
+
+    void HandleOnHit()
+    {
+        Player* hunter = AsPlayer(GetCaster());
+        Unit* target = GetHitUnit();
+        if (!hunter || !target)
+            return;
+
+        float multiplier = Hunter::GetCreatureTypeDoneFactor(hunter, target, GetSpellInfo());
+        if (target->HasAura(Hunter::SPELL_POINT_OF_NO_ESCAPE_MARKER, hunter->GetGUID()))
+            multiplier *= 1.0f + Hunter::GetPointOfNoEscapePct(hunter) / 100.0f;
+
+        int32 const damage = GetHitDamage();
+        if (damage > 0 && multiplier != 1.0f)
+            SetHitDamage(int32(float(damage) * multiplier));
+
+        if (SpellInfo const* rank = GetLockAndLoadRank(hunter))
+            Hunter::TryLockAndLoad(hunter, float(rank->Effects[EFFECT_1].CalcValue(hunter)));
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_hun_explosive_trap_fire_tick::HandleOnHit);
+    }
+};
+
+// 3355 Freezing Trap (SURVIVAL §0.13, S3b B6, bare-id binding). Built: eff0 MOD_STUN, eff1 aura 308. Trap Mastery's
+// capstone (63458) doubles the stun on a target that carries the hunter's own Scatter Shot. The apply hook runs
+// after the diminishing-returns step has set the duration, so the doubling is on the DR'd value (accepted).
+class spell_hun_freezing_trap_sv : public AuraScript
+{
+    PrepareAuraScript(spell_hun_freezing_trap_sv);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ HunterData::SPELL_TRAP_MASTERY_63458, HunterData::SPELL_SCATTER_SHOT });
+    }
+
+    void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetTarget();
+        Aura* aura = GetAura();
+        if (!caster || !target || !aura || !caster->HasAura(HunterData::SPELL_TRAP_MASTERY_63458) ||
+            !target->HasAura(HunterData::SPELL_SCATTER_SHOT, caster->GetGUID()))
+            return;
+
+        int32 const duration = aura->GetDuration();
+        int32 const maxDuration = aura->GetMaxDuration();
+        if (duration <= 0 || maxDuration <= 0)
+            return;
+
+        aura->SetMaxDuration(maxDuration * 2);
+        aura->SetDuration(duration * 2);
+    }
+
+    void Register() override
+    {
+        AfterEffectApply += AuraEffectApplyFn(spell_hun_freezing_trap_sv::HandleApply, EFFECT_0, SPELL_AURA_MOD_STUN,
+            AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+// 19386 Wyvern Sting (SURVIVAL §0.12, §5.12, S3b B7; replaces stock spell_hun_wyvern_sting, unbound from -19386).
+// Built: eff0 MOD_DAMAGE_PERCENT_DONE (79), 2 s. Only a natural expiry starts the 30 s sleep (202059): a dispel, a
+// death or an early removal does not. The sleep goes through the normal cast path, so diminishing returns and
+// immunity still apply. Serpent Sting never wakes it (Q23).
+class spell_hun_wyvern_sting_rework : public AuraScript
+{
+    PrepareAuraScript(spell_hun_wyvern_sting_rework);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ HunterData::SPELL_WYVERN_STING_SLEEP });
+    }
+
+    void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        AuraApplication const* application = GetTargetApplication();
+        if (!application || application->GetRemoveMode() != AURA_REMOVE_BY_EXPIRE)
+            return;
+
+        Unit* caster = GetCaster();
+        Unit* target = GetTarget();
+        if (!caster || !target || !target->IsAlive())
+            return;
+
+        caster->CastSpell(target, HunterData::SPELL_WYVERN_STING_SLEEP, TRIGGERED_FULL_MASK);
+    }
+
+    void Register() override
+    {
+        AfterEffectRemove += AuraEffectRemoveFn(spell_hun_wyvern_sting_rework::HandleRemove, EFFECT_0,
+            SPELL_AURA_MOD_DAMAGE_PERCENT_DONE, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+// 19263 Deterrence (SURVIVAL §6 (2,3), §9.2 #22, S3b B8). Built: eff0 MOD_DODGE_PERCENT (49), eff1 aura 287, eff2
+// MOD_PACIFY. Survivalist rank 3 (19257) grants the speed for as long as the Deterrence that was just applied has left.
+// A cancelled Deterrence leaves the speed to run out (accepted).
+class spell_hun_deterrence_sv : public AuraScript
+{
+    PrepareAuraScript(spell_hun_deterrence_sv);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ HunterData::SPELL_SURVIVALIST_SPEED, HunterData::SPELL_SURVIVALIST_19257 });
+    }
+
+    void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        Player* player = AsPlayer(GetTarget());
+        Aura* aura = GetAura();
+        if (!player || !aura || !player->HasAura(HunterData::SPELL_SURVIVALIST_19257))
+            return;
+
+        player->CastCustomSpell(HunterData::SPELL_SURVIVALIST_SPEED, SPELLVALUE_AURA_DURATION, aura->GetDuration(),
+            player, TRIGGERED_FULL_MASK);
+    }
+
+    void Register() override
+    {
+        AfterEffectApply += AuraEffectApplyFn(spell_hun_deterrence_sv::HandleApply, EFFECT_0,
+            SPELL_AURA_MOD_DODGE_PERCENT, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+// 781 Disengage (SURVIVAL §6 (2,3), (3,3), §9.2 #23-#24, S3b B8). Additive to stock spell_hun_disengage (the combat
+// CheckCast). Survivalist rank 3 (19257) grants 202060 (its own 3 s); Survival Tactics rank 2 (19287) clears every slow
+// (RemoveAurasWithMechanic matches effect-level mechanics too, 0-verify (4m)).
+class spell_hun_disengage_sv : public SpellScript
+{
+    PrepareSpellScript(spell_hun_disengage_sv);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ HunterData::SPELL_SURVIVALIST_SPEED, HunterData::SPELL_SURVIVALIST_19257,
+            HunterData::SPELL_SURVIVAL_TACTICS_19287 });
+    }
+
+    bool Load() override
+    {
+        Unit* caster = GetCaster();
+        return caster && caster->IsPlayer();
+    }
+
+    void HandleAfterCast()
+    {
+        Player* player = AsPlayer(GetCaster());
+        if (!player)
+            return;
+
+        if (player->HasAura(HunterData::SPELL_SURVIVALIST_19257))
+            player->CastSpell(player, HunterData::SPELL_SURVIVALIST_SPEED, TRIGGERED_FULL_MASK);
+
+        if (player->HasAura(HunterData::SPELL_SURVIVAL_TACTICS_19287))
+            player->RemoveAurasWithMechanic(1 << MECHANIC_SNARE);
+    }
+
+    void Register() override
+    {
+        AfterCast += SpellCastFn(spell_hun_disengage_sv::HandleAfterCast);
+    }
+};
+
+// 5384 Feign Death (SURVIVAL §6 (2,3), §9.2 #22, S3b B8, bare-id binding): Survivalist rank 3 grants 202060. The
+// triggered cast does not break Feign Death (the CAST interrupt is skipped for triggered spells).
+class spell_hun_feign_death_sv : public SpellScript
+{
+    PrepareSpellScript(spell_hun_feign_death_sv);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ HunterData::SPELL_SURVIVALIST_SPEED, HunterData::SPELL_SURVIVALIST_19257 });
+    }
+
+    bool Load() override
+    {
+        Unit* caster = GetCaster();
+        return caster && caster->IsPlayer();
+    }
+
+    void HandleAfterCast()
+    {
+        Player* player = AsPlayer(GetCaster());
+        if (player && player->HasAura(HunterData::SPELL_SURVIVALIST_19257))
+            player->CastSpell(player, HunterData::SPELL_SURVIVALIST_SPEED, TRIGGERED_FULL_MASK);
+    }
+
+    void Register() override
+    {
+        AfterCast += SpellCastFn(spell_hun_feign_death_sv::HandleAfterCast);
+    }
+};
+
 void AddSC_hunter_survival_spell_scripts()
 {
     RegisterSpellScript(spell_hun_mantis_strike);
@@ -936,4 +1484,16 @@ void AddSC_hunter_survival_spell_scripts()
     RegisterSpellScript(spell_hun_thrill_of_the_hunt_sv);
     RegisterSpellScript(spell_hun_tnt_mastery);
     RegisterSpellScript(spell_hun_glaive_toss_sv);
+    RegisterSpellScript(spell_hun_tarred);
+    RegisterSpellScript(spell_hun_burning_tar);
+    RegisterSpellScript(spell_hun_point_of_no_escape);
+    RegisterSpellScript(spell_hun_frost_trap_aura_sv);
+    RegisterSpellScript(spell_hun_lock_and_load_rework);
+    RegisterSpellScript(spell_hun_explosive_trap_fire);
+    RegisterSpellScript(spell_hun_explosive_trap_fire_tick);
+    RegisterSpellScript(spell_hun_freezing_trap_sv);
+    RegisterSpellScript(spell_hun_wyvern_sting_rework);
+    RegisterSpellScript(spell_hun_deterrence_sv);
+    RegisterSpellScript(spell_hun_disengage_sv);
+    RegisterSpellScript(spell_hun_feign_death_sv);
 }
