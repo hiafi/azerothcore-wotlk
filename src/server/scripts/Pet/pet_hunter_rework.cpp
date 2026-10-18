@@ -92,9 +92,10 @@ struct npc_pet_hunter_snake_trap_rework : public ScriptedAI
         if (!owner)
             return;
 
-        if (!owner->HasSpell(HunterData::SPELL_TRAP_MASTERY) &&
-            !owner->HasSpell(HunterData::SPELL_TRAP_MASTERY_63457) &&
-            !owner->HasSpell(HunterData::SPELL_TRAP_MASTERY_63458))
+        // Passive talent ranks are never in the spell map (Player::_addTalentAurasAndSpells), so check their auras
+        if (!owner->HasAura(HunterData::SPELL_TRAP_MASTERY) &&
+            !owner->HasAura(HunterData::SPELL_TRAP_MASTERY_63457) &&
+            !owner->HasAura(HunterData::SPELL_TRAP_MASTERY_63458))
             return;
 
         if (!me->IsValidAttackTarget(victim))

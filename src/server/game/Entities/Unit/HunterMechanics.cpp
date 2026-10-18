@@ -237,7 +237,8 @@ namespace Hunter
         if (shot->GetFirstRankSpell()->Id == SPELL_RAPTOR_STRIKE)
         {
             Player const* player = caster ? caster->ToPlayer() : nullptr;
-            if (!player || !player->HasSpell(SPELL_DEADLY_FOCUS_R2))
+            // A passive talent rank is never in the spell map (Player::_addTalentAurasAndSpells), so check its aura
+            if (!player || !player->HasAura(SPELL_DEADLY_FOCUS_R2))
                 return 0.0f;
 
             SpellInfo const* deadlyFocus = sSpellMgr->GetSpellInfo(SPELL_DEADLY_FOCUS_R2);
