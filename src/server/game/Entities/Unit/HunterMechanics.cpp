@@ -19,6 +19,7 @@
 #include "CellImpl.h"
 #include "CharmInfo.h"
 #include "Config.h"
+#include "Containers.h"
 #include "Creature.h"
 #include "DBCStores.h"
 #include "GameTime.h"
@@ -106,6 +107,13 @@ namespace Hunter
     {
         // Later sections add their Clear*State calls here; removal paths use find-only map access.
         ClearMarksmanshipState(player);
+
+        if (!player)
+            return;
+
+        // S3 (A18): the Explosive Shot carry and the Burning Tar bank this hunter owns as caster.
+        ClearExplosiveShotCarryForCaster(player->GetGUID());
+        ClearBurningTarForCaster(player->GetGUID());
     }
 
     bool IsAspectRollSource(SpellInfo const* spellInfo)
@@ -165,10 +173,15 @@ namespace Hunter
 
     void OnDirectFireHit(Unit* /*attacker*/, Unit* /*target*/, SpellInfo const* /*spellInfo*/)
     {
-        // Empty in H0; S3 fills the body (contract in HunterMechanics.h, SURVIVAL §0.23).
-        // Callers S3 keeps in a list here: Tarred 202048's OnEffectProc (53301 hit, 202045 impact, 202051 first
-        // blast, 13812 blast) and the AfterHit of every suppressed Fire source (201601 from H0; 202052, 202053,
-        // 202054 from S3).
+        // Empty in H0 and S3a; S3b writes the body (contract in HunterMechanics.h, SURVIVAL §0.23).
+        // Never twice for one hit: a source either raises Tarred's proc itself (no SUPPRESS_CASTER_PROCS) or calls
+        // this from its AfterHit (it carries the attribute), never both.
+        //  - Raise Tarred 202048's proc themselves (its OnEffectProc calls this): the 53301 hit, the 202045 impact,
+        //    the 202051 first blast, the 13812 blast.
+        //  - Call this from their AfterHit (suppressed, GetHitDamage() > 0 only): 201601 (H0's Dragonhawk
+        //    explosion), 202052 (Cluster Bombs follow-up), 202053 (Shrapnel), 202054 (Explosive Shot hit splash).
+        //  - Exclusion list (the body returns for them): 53352 (Explosive Shot blasts), 202055 (blast splash),
+        //    202057 (Explosive Trap ground fire), 202050 (Burning Tar itself).
     }
 
     float GetShotManaPct(Unit const* caster, SpellInfo const* shot)
@@ -176,8 +189,20 @@ namespace Hunter
         if (!shot)
             return 0.0f;
 
-        // Tenths of a percent of base mana (Arcane Shot 3044: bp 199 -> 20.0%). Raptor Strike 2973 has no EFFECT_1,
-        // so it reads 0 and restores nothing (S1b PT-6 leaves it so).
+        // User ruling 6 (S3a brief resolution 5): Raptor Strike 2973 has no EFFECT_1 and is never read there. It
+        // restores the percent of base mana in Deadly Focus rank 2's marker (202081 eff2 DUMMY, live 5, already a
+        // whole percent) while the hunter knows that rank, and nothing otherwise.
+        if (shot->GetFirstRankSpell()->Id == SPELL_RAPTOR_STRIKE)
+        {
+            Player const* player = caster ? caster->ToPlayer() : nullptr;
+            if (!player || !player->HasSpell(SPELL_DEADLY_FOCUS_R2))
+                return 0.0f;
+
+            SpellInfo const* deadlyFocus = sSpellMgr->GetSpellInfo(SPELL_DEADLY_FOCUS_R2);
+            return deadlyFocus ? float(deadlyFocus->Effects[EFFECT_2].CalcValue(player)) : 0.0f;
+        }
+
+        // Tenths of a percent of base mana (Arcane Shot 3044: bp 199 -> 20.0%).
         return shot->Effects[EFFECT_1].CalcValue(caster) / 10.0f;
     }
 
@@ -1804,5 +1829,261 @@ namespace Hunter
 
         std::lock_guard<std::mutex> lock(markStateLock);
         markStates.erase(player->GetGUID());
+    }
+
+    // ---- S3: Survival (SURVIVAL.md §0.19, §5.6, §5.7, §7.2, §10; S3a-HANDOFF A6, A7, A11, A12, A17, A18) ----
+    /*
+     * Explosive Shot recast carry (V3, N15): caster GUID -> target GUID -> the done-final amount each remaining blast
+     * adds. Every access holds `explosiveCarryLock` for its whole duration (maps update on several threads, the
+     * markStates precedent), no pointer into the map leaves the lock, and removal paths are find-only. No Unit* is
+     * stored; the owning aura's AfterEffectRemove and ClearState (logout) remove the entries.
+     */
+    namespace
+    {
+        // Talent chains the S3 mechanics read, highest rank first (each rank is a passive aura on the hunter).
+        constexpr std::array<uint32, 2> SHRAPNEL_RANKS = { SPELL_SHRAPNEL_R2, SPELL_SHRAPNEL_R1 };
+        constexpr std::array<uint32, 3> POINT_OF_NO_ESCAPE_RANKS =
+            { SPELL_POINT_OF_NO_ESCAPE_R3, SPELL_POINT_OF_NO_ESCAPE_R2, SPELL_POINT_OF_NO_ESCAPE_R1 };
+
+        std::mutex explosiveCarryLock;
+        std::unordered_map<ObjectGuid, std::unordered_map<ObjectGuid, uint32>> explosiveCarries;
+
+        // Find-only erase of one (caster, target) entry; drops the caster's map once empty. Caller holds the lock.
+        void EraseExplosiveShotCarryLocked(ObjectGuid const& casterGuid, ObjectGuid const& targetGuid)
+        {
+            auto const itr = explosiveCarries.find(casterGuid);
+            if (itr == explosiveCarries.end())
+                return;
+
+            itr->second.erase(targetGuid);
+            if (itr->second.empty())
+                explosiveCarries.erase(itr);
+        }
+    }
+
+    // S3b fills this (Burning Tar bank, SURVIVAL §5.10); no S3a caller.
+    void AddBurningTar(Player* /*hunter*/, Unit* /*target*/)
+    {
+    }
+
+    // S3b fills this; no S3a caller (Burning Tar 202050 has no script in S3a).
+    uint32 TakeBurningTarTick(Unit* /*caster*/, Unit* /*target*/, AuraEffect const* /*eff*/)
+    {
+        return 0;
+    }
+
+    // S3b fills this; no S3a caller.
+    uint32 GetBurningTarRemaining(Unit const* /*caster*/, Unit const* /*target*/)
+    {
+        return 0;
+    }
+
+    // S3b fills this; no S3a caller.
+    uint32 GetBurningTarStacks(Unit const* /*caster*/, Unit const* /*target*/)
+    {
+        return 0;
+    }
+
+    // S3b fills this; no S3a caller.
+    void ClearBurningTar(ObjectGuid /*casterGuid*/, ObjectGuid /*targetGuid*/)
+    {
+    }
+
+    // S3b fills this; called from ClearState (A18), a no-op until the bank exists.
+    void ClearBurningTarForCaster(ObjectGuid /*casterGuid*/)
+    {
+    }
+
+    // S3b fills this (Lock and Load rework, C49); Lock and Load stays stock through S3a (user ruling 7).
+    bool TryLockAndLoad(Player* /*hunter*/, float /*baseChancePct*/)
+    {
+        return false;
+    }
+
+    // S3b fills this; no S3a caller.
+    void TriggerLockAndLoad(Player* /*hunter*/)
+    {
+    }
+
+    void TryShrapnel(Player* hunter, Unit* primary)
+    {
+        // §5.7 / A7. Called from the AfterHit of the 53301 hit and of each 53352 blast, after the splash.
+        if (!hunter || !primary || !hunter->IsInWorld() || !primary->IsInWorld())
+            return;
+
+        // The known rank's eff0 (10 / 20%), live through its SpellInfo, scaled by Proc Chance.
+        SpellInfo const* rank = GetKnownRank(hunter, SHRAPNEL_RANKS);
+        if (!rank || !RollProcChance(hunter, float(rank->Effects[EFFECT_0].CalcValue(hunter))))
+            return;
+
+        // Candidates: alive enemies within SHRAPNEL_RADIUS_YD of the primary (its corpse on a killing blow, the same
+        // tick) that are in combat with the hunter and in the primary's line of sight (202053 ignores LoS itself,
+        // AttributesEx2 0x4, so the filter is from the primary, stale line 12), plus the primary while it lives
+        // (brief resolution 2). Uniform pick; no candidate, no shrapnel.
+        std::list<Unit*> nearby;
+        Acore::AnyUnfriendlyUnitInObjectRangeCheck check(primary, hunter, SHRAPNEL_RADIUS_YD);
+        Acore::UnitListSearcher<Acore::AnyUnfriendlyUnitInObjectRangeCheck> searcher(primary, nearby, check);
+        Cell::VisitObjects(primary, searcher, SHRAPNEL_RADIUS_YD);
+
+        std::vector<Unit*> candidates;
+        if (primary->IsAlive() && hunter->IsValidAttackTarget(primary))
+            candidates.push_back(primary);
+
+        for (Unit* unit : nearby)
+        {
+            if (unit == primary || !unit->IsAlive() || !hunter->IsValidAttackTarget(unit))
+                continue;
+
+            if (!unit->IsInCombatWith(hunter) || !primary->IsWithinLOSInMap(unit))
+                continue;
+
+            candidates.push_back(unit);
+        }
+
+        if (candidates.empty())
+            return;
+
+        Unit* victim = Acore::Containers::SelectRandomContainerElement(candidates);
+        hunter->CastSpell(victim, SPELL_SHRAPNEL_HIT, TRIGGERED_FULL_MASK);
+    }
+
+    void SetExplosiveShotCarry(Unit* caster, Unit* target, uint32 perBlast)
+    {
+        // A6: the 53301 AfterHit stores the per-blast carry of a recast (replaces any previous value); 0 stores
+        // nothing and drops a stale entry.
+        if (!caster || !target)
+            return;
+
+        std::lock_guard<std::mutex> lock(explosiveCarryLock);
+        if (!perBlast)
+        {
+            EraseExplosiveShotCarryLocked(caster->GetGUID(), target->GetGUID());
+            return;
+        }
+
+        explosiveCarries[caster->GetGUID()][target->GetGUID()] = perBlast;
+    }
+
+    uint32 GetExplosiveShotCarry(Unit const* caster, Unit const* target)
+    {
+        if (!caster || !target)
+            return 0;
+
+        std::lock_guard<std::mutex> lock(explosiveCarryLock);
+        auto const casterItr = explosiveCarries.find(caster->GetGUID());
+        if (casterItr == explosiveCarries.end())
+            return 0;
+
+        auto const targetItr = casterItr->second.find(target->GetGUID());
+        return targetItr != casterItr->second.end() ? targetItr->second : 0;
+    }
+
+    void ClearExplosiveShotCarry(Unit const* caster, Unit const* target)
+    {
+        // The 53301 aura's AfterEffectRemove (REAL). A caster already gone was cleared by ClearState.
+        if (!caster || !target)
+            return;
+
+        std::lock_guard<std::mutex> lock(explosiveCarryLock);
+        EraseExplosiveShotCarryLocked(caster->GetGUID(), target->GetGUID());
+    }
+
+    void ClearExplosiveShotCarryForCaster(ObjectGuid casterGuid)
+    {
+        std::lock_guard<std::mutex> lock(explosiveCarryLock);
+        auto const itr = explosiveCarries.find(casterGuid);
+        if (itr != explosiveCarries.end())
+            explosiveCarries.erase(itr);
+    }
+
+    // S3b fills this (Explosive Trap ground-fire snapshot, §5.9); 1.0 is "no aura 168 term" for any S3a reader.
+    float GetCreatureTypeDoneFactor(Unit const* /*caster*/, Unit const* /*target*/, SpellInfo const* /*spellInfo*/)
+    {
+        return 1.0f;
+    }
+
+    float GetPointOfNoEscapePct(Player const* hunter)
+    {
+        // The known rank's eff0 DUMMY (53298 / 53299 / 202106: 2 / 4 / 6), live through its SpellInfo; 0 without the
+        // talent. S3a's only reader is Shrapnel's OnHit, behind the 202058 marker, which never exists before S3b.
+        SpellInfo const* rank = hunter ? GetKnownRank(hunter, POINT_OF_NO_ESCAPE_RANKS) : nullptr;
+        return rank ? float(rank->Effects[EFFECT_0].CalcValue(hunter)) : 0.0f;
+    }
+
+    // S3b fills this (the 202058 marker, §9.2 #18); no S3a caller.
+    void UpdatePointOfNoEscape(Unit* /*caster*/, Unit* /*target*/)
+    {
+    }
+
+    bool IsOncePerRangedCast(ProcEventInfo& eventInfo)
+    {
+        // §7.2 / A11, the aspect rule of SHARED §B6.2: Auto Shot is triggered, so it has no CAST phase and counts at
+        // HIT; every other HIT event (one per Multi-Shot target) is rejected. The CAST phase never runs for a
+        // triggered cast, so IsAspectRollSource decides there.
+        SpellInfo const* spellInfo = eventInfo.GetSpellInfo();
+        if (!spellInfo)
+            return false;
+
+        if (eventInfo.GetSpellPhaseMask() & PROC_SPELL_PHASE_HIT)
+            return (eventInfo.GetTypeMask() & PROC_FLAG_DONE_RANGED_AUTO_ATTACK) && spellInfo->Id == SPELL_AUTO_SHOT;
+
+        if (eventInfo.GetSpellPhaseMask() & PROC_SPELL_PHASE_CAST)
+            return IsAspectRollSource(spellInfo);
+
+        return false;
+    }
+
+    uint32 GetFavoredPreyBuff(uint32 creatureType)
+    {
+        // A11: CREATURE_TYPE 1-10 -> 202063-202072 (one spell_group 1242, exclusive); totem, non-combat pet and gas
+        // cloud get none.
+        switch (creatureType)
+        {
+            case CREATURE_TYPE_BEAST:
+                return SPELL_FAVORED_PREY_BEAST;
+            case CREATURE_TYPE_DRAGONKIN:
+                return SPELL_FAVORED_PREY_DRAGONKIN;
+            case CREATURE_TYPE_DEMON:
+                return SPELL_FAVORED_PREY_DEMON;
+            case CREATURE_TYPE_ELEMENTAL:
+                return SPELL_FAVORED_PREY_ELEMENTAL;
+            case CREATURE_TYPE_GIANT:
+                return SPELL_FAVORED_PREY_GIANT;
+            case CREATURE_TYPE_UNDEAD:
+                return SPELL_FAVORED_PREY_UNDEAD;
+            case CREATURE_TYPE_HUMANOID:
+                return SPELL_FAVORED_PREY_HUMANOID;
+            case CREATURE_TYPE_CRITTER:
+                return SPELL_FAVORED_PREY_CRITTER;
+            case CREATURE_TYPE_MECHANICAL:
+                return SPELL_FAVORED_PREY_MECHANICAL;
+            case CREATURE_TYPE_NOT_SPECIFIED:
+                return SPELL_FAVORED_PREY_NOT_SPECIFIED;
+            default:
+                return 0;
+        }
+    }
+
+    void ReduceCategoryCooldown(Player* player, uint32 category, uint32 ms)
+    {
+        // §0.19 / A12. Only spells the player knows (brief resolution 6: item and other stray entries share the map)
+        // whose category matches. ReduceSpellCooldown re-sends the entry (Player::ResendSpellCooldown erases and
+        // re-inserts it), so the ids are collected first and the map is never changed while it is iterated.
+        if (!player || !category || !ms)
+            return;
+
+        std::vector<uint32> spellIds;
+        for (auto const& entry : player->GetSpellCooldownMap())
+        {
+            if (!player->HasSpell(entry.first))
+                continue;
+
+            SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(entry.first);
+            if (spellInfo && spellInfo->GetCategory() == category)
+                spellIds.push_back(entry.first);
+        }
+
+        for (uint32 spellId : spellIds)
+            ReduceSpellCooldown(player, spellId, ms);
     }
 }

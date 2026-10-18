@@ -25,6 +25,7 @@
 #include <cstdint>
 #include <vector>
 
+class AuraEffect;
 class Guardian;
 class ObjectGuid;
 class Pet;
@@ -118,6 +119,7 @@ namespace Hunter
 
     // Shot mana (§B2, S1b PT-6): the percent of BASE mana stored in the shot's EFFECT_1 DUMMY (tenths of a percent),
     // read with CalcValue(caster) so SPELLMOD_EFFECT2 / ALL_EFFECTS talents apply. A shot without an EFFECT_1 reads 0.
+    // S3 (user ruling 6): Raptor Strike reads Deadly Focus rank 2's eff2 marker (a whole percent), 0 without it.
     float GetShotManaPct(Unit const* caster, SpellInfo const* shot);
     // EnergizeBySpell(player, shot->Id, base mana (GetCreateMana, the class/level base) * pct * multiplier,
     // POWER_MANA). Every caller shares that base: Arcane Shot, Raptor Strike, and later MM's free Arcane Shot and
@@ -287,6 +289,89 @@ namespace Hunter
     void   ClearMarksmanshipState(Player* player);            // called from Hunter::ClearState
 
     // ---- S2 / S3 append their own sections (mark state, Burning Tar bank) ----
+
+    // ---- S3 (Survival, SURVIVAL.md §10 as frozen by S3a-HANDOFF A17; S3b adds no signature) ----
+    // Hand literals for stock ids the DSL may name differently; the rest alias HunterData::.
+    constexpr uint32 SPELL_LOCK_AND_LOAD_BUFF   = 56453;
+    constexpr uint32 SPELL_LOCK_AND_LOAD_MARKER = 67544;
+    constexpr uint32 CATEGORY_ARCANE_EXPLOSIVE  = 1173;
+    constexpr uint32 CATEGORY_FIRE_TRAPS        = 1250;
+    constexpr uint32 SPELL_REPLENISHMENT        = 57669;   // stock, undeclared (Hunting Party's buff, 0-verify §7)
+
+    // DSL-declared ids (hunter_sv_spells.py, hunter_sv_ranks.py, hunter_trigger_spells.py, hunter_spells.py).
+    constexpr uint32 SPELL_RAPTOR_STRIKE = HunterData::SPELL_RAPTOR_STRIKE;                          // 2973
+    constexpr uint32 SPELL_EXPLOSIVE_SHOT = HunterData::SPELL_EXPLOSIVE_SHOT;                        // 53301
+    constexpr uint32 SPELL_EXPLOSIVE_SHOT_BLAST = HunterData::SPELL_EXPLOSIVE_SHOT_53352;            // 53352
+    constexpr uint32 SPELL_TARRED = HunterData::SPELL_TARRED;                                        // 202048
+    constexpr uint32 SPELL_BURNING_TAR = HunterData::SPELL_BURNING_TAR;                              // 202050
+    constexpr uint32 SPELL_CLUSTER_BOMBS = HunterData::SPELL_CLUSTER_BOMBS;                          // 202051
+    constexpr uint32 SPELL_CLUSTER_BOMBS_BLAST = HunterData::SPELL_CLUSTER_BOMBS_BLAST;              // 202052
+    constexpr uint32 SPELL_SHRAPNEL_HIT = HunterData::SPELL_SHRAPNEL_HIT;                            // 202053
+    constexpr uint32 SPELL_EXPLOSIVE_SHOT_SPLASH = HunterData::SPELL_EXPLOSIVE_SHOT_SPLASH;          // 202054
+    constexpr uint32 SPELL_EXPLOSIVE_SHOT_BLAST_SPLASH = HunterData::SPELL_EXPLOSIVE_SHOT_BLAST_SPLASH; // 202055
+    constexpr uint32 SPELL_EXPLOSIVE_TRAP_FIRE = HunterData::SPELL_EXPLOSIVE_TRAP_FIRE;              // 202057
+    constexpr uint32 SPELL_POINT_OF_NO_ESCAPE_MARKER = HunterData::SPELL_POINT_OF_NO_ESCAPE_MARKER;  // 202058
+    constexpr uint32 SPELL_TNT_MASTERY = HunterData::SPELL_TNT_MASTERY;                              // 202062
+    constexpr uint32 SPELL_FAVORED_PREY_BEAST = HunterData::SPELL_FAVORED_PREY_BEAST;                // 202063
+    constexpr uint32 SPELL_FAVORED_PREY_DRAGONKIN = HunterData::SPELL_FAVORED_PREY_DRAGONKIN;        // 202064
+    constexpr uint32 SPELL_FAVORED_PREY_DEMON = HunterData::SPELL_FAVORED_PREY_DEMON;                // 202065
+    constexpr uint32 SPELL_FAVORED_PREY_ELEMENTAL = HunterData::SPELL_FAVORED_PREY_ELEMENTAL;        // 202066
+    constexpr uint32 SPELL_FAVORED_PREY_GIANT = HunterData::SPELL_FAVORED_PREY_GIANT;                // 202067
+    constexpr uint32 SPELL_FAVORED_PREY_UNDEAD = HunterData::SPELL_FAVORED_PREY_UNDEAD;              // 202068
+    constexpr uint32 SPELL_FAVORED_PREY_HUMANOID = HunterData::SPELL_FAVORED_PREY_HUMANOID;          // 202069
+    constexpr uint32 SPELL_FAVORED_PREY_CRITTER = HunterData::SPELL_FAVORED_PREY_CRITTER;            // 202070
+    constexpr uint32 SPELL_FAVORED_PREY_MECHANICAL = HunterData::SPELL_FAVORED_PREY_MECHANICAL;      // 202071
+    constexpr uint32 SPELL_FAVORED_PREY_NOT_SPECIFIED = HunterData::SPELL_FAVORED_PREY_NOT_SPECIFIED; // 202072
+    // Talent rank spells the mechanics read (each a passive aura on the hunter).
+    constexpr uint32 SPELL_DEADLY_FOCUS_R2 = HunterData::SPELL_DEADLY_FOCUS_202081;                  // 202081
+    constexpr uint32 SPELL_SHRAPNEL_R1 = HunterData::SPELL_SHRAPNEL;                                 // 202098
+    constexpr uint32 SPELL_SHRAPNEL_R2 = HunterData::SPELL_SHRAPNEL_202099;                          // 202099
+    constexpr uint32 SPELL_POINT_OF_NO_ESCAPE_R1 = HunterData::SPELL_POINT_OF_NO_ESCAPE;             // 53298
+    constexpr uint32 SPELL_POINT_OF_NO_ESCAPE_R2 = HunterData::SPELL_POINT_OF_NO_ESCAPE_53299;       // 53299
+    constexpr uint32 SPELL_POINT_OF_NO_ESCAPE_R3 = HunterData::SPELL_POINT_OF_NO_ESCAPE_202106;      // 202106
+    constexpr uint32 SPELL_LOCK_AND_LOAD_R1 = HunterData::SPELL_LOCK_AND_LOAD;                       // 56342
+    constexpr uint32 SPELL_LOCK_AND_LOAD_R2 = HunterData::SPELL_LOCK_AND_LOAD_56343;                 // 56343
+    constexpr uint32 SPELL_LOCK_AND_LOAD_R3 = HunterData::SPELL_LOCK_AND_LOAD_56344;                 // 56344
+
+    // Tunables (one place each: the const() rows of hunter_sv_spells.py, X10).
+    constexpr float  SHRAPNEL_RADIUS_YD = HunterData::SHRAPNEL_RADIUS_YD;
+    constexpr uint8  CLUSTER_BOMBS_FOLLOWUP_COUNT = HunterData::CLUSTER_BOMBS_FOLLOWUP_COUNT;
+    constexpr uint32 CLUSTER_BOMBS_FOLLOWUP_MS = HunterData::CLUSTER_BOMBS_FOLLOWUP_MS;           // first offset
+    constexpr uint32 CLUSTER_BOMBS_FOLLOWUP_LAST_MS = HunterData::CLUSTER_BOMBS_FOLLOWUP_LAST_MS; // last offset
+    constexpr float  CLUSTER_BOMBS_SCATTER_YD = HunterData::CLUSTER_BOMBS_SCATTER_YD;
+    constexpr float  IGT_SLOW_MIN_DISTANCE_YD = HunterData::IGT_SLOW_MIN_DISTANCE_YD;
+    constexpr uint32 SNAKE_STING_REFRESH_MS = HunterData::SNAKE_STING_REFRESH_MS;
+    constexpr uint32 THRILL_MM_CUT_FACTOR = HunterData::THRILL_MM_CUT_FACTOR;
+    constexpr int32  THRILL_MANA_REFUND_PCT = HunterData::THRILL_MANA_REFUND_PCT;                 // text only
+
+    // Burning Tar bank (C18; Mage::AddIgniteDamage shape). Key = (caster GUID, target GUID); find-only on removal.
+    void   AddBurningTar(Player* hunter, Unit* target);                         // chunk, cast/refresh, stack display
+    // §5.10 weights; empties the bank on the last tick.
+    uint32 TakeBurningTarTick(Unit* caster, Unit* target, AuraEffect const* eff);
+    uint32 GetBurningTarRemaining(Unit const* caster, Unit const* target);      // bots / sims / logging
+    uint32 GetBurningTarStacks(Unit const* caster, Unit const* target);
+    void   ClearBurningTar(ObjectGuid casterGuid, ObjectGuid targetGuid);
+    void   ClearBurningTarForCaster(ObjectGuid casterGuid);                     // called from ClearState (logout)
+
+    // Lock and Load (C49): one trigger path for the row, the tick script and Chain Reaction.
+    bool   TryLockAndLoad(Player* hunter, float baseChancePct);  // false while 67544 is up, else RollProcChance
+    void   TriggerLockAndLoad(Player* hunter);                   // 56453, 67544, reset category 1173; r3: CB -2 s
+
+    void   TryShrapnel(Player* hunter, Unit* primary);           // §5.7
+    // Explosive Shot recast carry (V3): a done-final amount per remaining blast, keyed (caster GUID, target GUID).
+    void   SetExplosiveShotCarry(Unit* caster, Unit* target, uint32 perBlast);
+    uint32 GetExplosiveShotCarry(Unit const* caster, Unit const* target);   // 0 when none
+    void   ClearExplosiveShotCarry(Unit const* caster, Unit const* target);
+    void   ClearExplosiveShotCarryForCaster(ObjectGuid casterGuid);         // called from ClearState (logout)
+    // Aura 168 product; the only signature (V-m4).
+    float  GetCreatureTypeDoneFactor(Unit const* caster, Unit const* target, SpellInfo const* spellInfo);
+    float  GetPointOfNoEscapePct(Player const* hunter);          // rank 53298/53299/202106 eff0, 0 without the talent
+    void   UpdatePointOfNoEscape(Unit* caster, Unit* target);    // add/extend/remove 202058 (duration = longest source)
+    bool   IsOncePerRangedCast(ProcEventInfo& eventInfo);        // §7.2
+    uint32 GetFavoredPreyBuff(uint32 creatureType);              // 0 for totem / non-combat pet / gas cloud
+    void   ReduceCategoryCooldown(Player* player, uint32 category, uint32 ms); // §0.19
+    // S3 supplies the body of the H0 section's OnDirectFireHit (contract there and in SURVIVAL §0.23); it calls
+    // AddBurningTar.
 }
 
 #endif
