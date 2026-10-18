@@ -358,6 +358,7 @@ namespace HunterData
     constexpr uint32 SPELL_LOCK_AND_LOAD = 56342; // lock_and_load_56342
     constexpr uint32 SPELL_LOCK_AND_LOAD_56343 = 56343; // lock_and_load_56343
     constexpr uint32 SPELL_LOCK_AND_LOAD_56344 = 56344; // lock_and_load_56344
+    constexpr uint32 SPELL_LOCK_AND_LOAD_56453 = 56453; // lock_and_load_56453
     constexpr uint32 SPELL_STING = 56626; // sting_56626
     constexpr uint32 SPELL_STEADY_SHOT = 56641; // steady_shot_56641
     constexpr uint32 SPELL_GLYPH_OF_ASPECT_OF_THE_VIPER = 56851; // glyph_of_aspect_of_the_viper_56851
@@ -393,6 +394,7 @@ namespace HunterData
     constexpr uint32 SPELL_SNIPER_TRAINING_64419 = 64419; // sniper_training_64419
     constexpr uint32 SPELL_SNIPER_TRAINING_64420 = 64420; // sniper_training_64420
     constexpr uint32 SPELL_ENTRAPMENT_64804 = 64804; // entrapment_64804
+    constexpr uint32 SPELL_LOCK_AND_LOAD_MARKER = 67544; // lock_and_load_marker_67544
     constexpr uint32 SPELL_FEROCIOUS_INSPIRATION_75446 = 75446; // ferocious_inspiration_75446
     constexpr uint32 SPELL_FEROCIOUS_INSPIRATION_75447 = 75447; // ferocious_inspiration_75447
     constexpr uint32 SPELL_FEROCIOUS_INSPIRATION_75593 = 75593; // ferocious_inspiration_75593

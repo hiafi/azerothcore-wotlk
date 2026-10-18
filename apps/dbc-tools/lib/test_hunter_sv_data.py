@@ -28,9 +28,10 @@ raw_overrides via `build.build_spell_row`), so a stale raw twin that wins fails 
       those four in both exemption sets (test_hunter_bm_data / test_hunter_mm_data);
   (h) SpellMods (N7): every aura 107/108 effect of an S3a id is SpellClassSet 9 with a non-zero mask; the SURVIVAL 6
       ops and masks; `_masks.py` holds the SURVIVAL 2.5 composites;
-  (i) spell_proc rows (SURVIVAL 8.1, stale line 8, A11 / A12): the 14 S3a rows exactly once, their columns, no
-      negative / positive twin, no S3b row (202048, -56342, 56453); the proc carriers' DBC ProcTypeMask / ProcChance /
-      trigger; N8: every tab-362 rank with ProcTypeMask != 0 has a row or is listed inert, no mask on an absent effect;
+  (i) spell_proc rows (SURVIVAL 8.1, stale line 8, A11 / A12; S3b A4): the 14 S3a rows and the 3 S3b rows (202048,
+      -56342, 56453) exactly once, their columns, no negative / positive twin; the proc carriers' DBC ProcTypeMask /
+      ProcChance / trigger (Lock and Load included); N8: every tab-362 rank with ProcTypeMask != 0 has a row (nothing is
+      listed inert any more), no mask on an absent effect;
   (j) Thrill of the Hunt (SV-B1, stale line 9): ProcChance 50 / 100, ProcTypeMask 0x100, eff1 DUMMY 1000 ms live on
       both, no A_1 mask, 34498's family bits stripped;
   (k) family bits (SURVIVAL 2.4, 0.17): d1 b19 / b6 / b26 / b27 and d2 b5 on exactly their carriers, 3674 / 19306 /
@@ -38,11 +39,16 @@ raw_overrides via `build.build_spell_row`), so a stale raw twin that wins fails 
   (l) stale line 19: Serpent Sting 1978 eff1 amount 0 and no taught hunter SPELLMOD_EFFECT2 reader on d0 0x4000; the
       stale raw readers S3a deletes (Ferocious Inspiration, Invigoration, Point of No Escape, Black Arrow eff1);
   (m) Favored Prey spell_group 1242 = 202063-202072, rule 1 (exclusive); the four linked_spell type-2 rows;
-  (n) bindings (brief script table): every S3a class on exactly its positive keys, the two exact unbinds (-53301,
-      -53290), no S3b class, unbind or row; stock spell_hun_thrill_of_the_hunt / spell_hun_glaive_toss / shot mana kept;
+  (n) bindings (brief script table): every S3a and S3b class on exactly its positive keys, the exact unbinds (-53301,
+      -53290; S3b: -56342, -19386); stock spell_hun_thrill_of_the_hunt / spell_hun_glaive_toss / shot mana /
+      spell_hun_disengage kept;
   (o) user ruling 6: 202081's eff2 marker (live 5, no mask), Raptor Strike 2973's text has no mana clause, Deadly
-      Focus r2's capstone names Raptor Strike's 5% base mana; Lock and Load 56342-56344 stay stock (seam rule 3);
-  (p) the S2-FIX guards (N1) still pass on the whole package with the SV rows in it.
+      Focus r2's capstone names Raptor Strike's 5% base mana;
+  (p) the S2-FIX guards (N1) still pass on the whole package with the SV rows in it;
+  (q) S3b data (S3b-HANDOFF A4 row, 0-verify binding decisions): Lock and Load 56342-56344 / 56453 / 67544 values, the
+      Explosive Trap pair 13812 eff1 (aura 226, stock bp / amplitude) and 202057 (ppl 0, potency_excluded, Ex3), Wyvern
+      Sting 19386 (aura 79 / misc 127 / bp -31, 2000 ms, no interrupt / proc mask / mechanic, class 2), the S3b helpers'
+      CastingTimeIndex 1 (C-3) and the 0x4 list.
 
 Every check is a pure function; the negative-fixture class feeds each one a good input (must pass) and crafted bad
 copies (must fail), so a check that silently passes everything is caught.
@@ -156,6 +162,9 @@ SCATTER_SHOT, WYVERN_STING = 19503, 19386
 DEADLY_FOCUS = (202080, 202081)
 THRILL = (34497, 34498)
 LOCK_AND_LOAD = (56342, 56343, 56344)
+LOCK_AND_LOAD_BUFF, LOCK_AND_LOAD_MARKER = 56453, 67544
+LOCK_AND_LOAD_PROC_TYPE = 0x240000                  # DBC ProcTypeMask of 56342-56344 (stock, kept)
+EXPLOSIVE_TRAP_EFFECT, FROST_TRAP_AURA, FREEZING_TRAP_EFFECT = 13812, 13810, 3355
 CASTABLES = (MANTIS_STRIKE, WILDFIRE_BOMB, TAR_BOMB, CLUSTER_BOMBS)
 SPLASHES = (SPLASH, BLAST_SPLASH)
 NEW_HELPER_IDS = (*range(202040, 202046), *range(202047, 202073))      # 202046 stays reserved (SURVIVAL 2.1)
@@ -365,7 +374,21 @@ PROC_ROWS = {
              "SpellTypeMask": 0, "SpellPhaseMask": PROC_PHASE_FINISH, "HitMask": 0,
              "AttributesMask": PROC_ATTR_TRIGGERED_CAN_PROC, "DisableEffectsMask": 0x1},
 }
-S3B_PROC_KEYS = frozenset({TARRED, -TARRED, -56342, 56342, 56453, -56453})    # S3b ships these with their scripts
+# S3b rows (S3b-HANDOFF B1 / B4, 0-verify V-m1 / V-m17): Tarred's TAKEN-flag row (phase 0, Fire, trigger-capable), the
+# exact live key -56342 re-declared (HIT | FINISH, no cooldown, chance 0 kept), 56453's CAST row (no
+# TRIGGERED_CAN_PROC).
+PROC_PHASE_HIT_FINISH = PROC_PHASE_HIT | PROC_PHASE_FINISH
+S3B_PROC_ROWS = {
+    TARRED: {"SpellFamilyName": 0, "Chance": 100.0, "Cooldown": 0, "ProcFlags": 0x20200, "SchoolMask": SCHOOL_FIRE,
+             "mask": (0, 0, 0), "SpellTypeMask": 1, "SpellPhaseMask": 0, "HitMask": 0,
+             "AttributesMask": PROC_ATTR_TRIGGERED_CAN_PROC, "DisableEffectsMask": 0},
+    -56342: {**_ROW, "ProcFlags": 0, "mask": "LOCK_AND_LOAD_PROC", "SpellTypeMask": 0,
+             "SpellPhaseMask": PROC_PHASE_HIT_FINISH, "HitMask": 0, "AttributesMask": PROC_ATTR_TRIGGERED_CAN_PROC,
+             "DisableEffectsMask": 0x4},
+    56453: {**_ROW, "Chance": 100.0, "ProcFlags": 0x100, "mask": (0x800, D1_EXPLOSIVE_SHOT, 0), "SpellTypeMask": 0,
+            "SpellPhaseMask": PROC_PHASE_CAST, "HitMask": 0, "AttributesMask": 0, "DisableEffectsMask": 0},
+}
+ALL_PROC_ROWS = {**PROC_ROWS, **S3B_PROC_ROWS}
 # Proc carriers (SURVIVAL 6 + stale lines 9 / 22, A11): id -> (ProcTypeMask, ProcChance, 1-based carrier effect,
 # aura of that effect, trigger spell). Every DUMMY carrier has trigger 0 (PLAN 2 DUMMY-carrier rule).
 PROC_CARRIERS = {
@@ -381,6 +404,7 @@ PROC_CARRIERS = {
     34507: (0x140, 10, 1, AURA_PROC_TRIGGER_SPELL, MASTER_TACTICIAN_BUFF),
     34508: (0x140, 15, 1, AURA_PROC_TRIGGER_SPELL, MASTER_TACTICIAN_BUFF),
     **{i: (0x100, 100, 1, AURA_DUMMY, 0) for i in (53290, 53291, 53292)},
+    **{i: (LOCK_AND_LOAD_PROC_TYPE, 100, 1, AURA_PROC_TRIGGER_SPELL, LOCK_AND_LOAD_BUFF) for i in LOCK_AND_LOAD},
     34497: (0x100, 50, 1, AURA_DUMMY, 0),
     34498: (0x100, 100, 1, AURA_DUMMY, 0),
     19388: (PROC_FLAG_TRAP_ACTIVATION, None, 2, AURA_PROC_TRIGGER_SPELL, ENTRAPMENT_ROOT),
@@ -388,12 +412,9 @@ PROC_CARRIERS = {
 # Ranks / helpers that must carry ProcTypeMask 0 (no row, no default entry; SURVIVAL 8.1 "No-row DUMMY carriers")
 ZERO_PROC_TYPE = (*(i for i in NEW_RANK_IDS if i not in PROC_CARRIERS), 53298, 53299, 19287, 19184, 19387, 19370,
                   19371, MONGOOSE_FURY, 56333, 56336, 56337)
-# N8: tab-362 ranks with a non-zero ProcTypeMask and no row in the package on purpose. Lock and Load keeps the stock
-# talent, the live -56342 row and its stock script through S3a (seam rule 3); Wyvern Sting 19386's stock 0x100000 is
-# S3b's (its rework zeroes it). Both are inert-by-design for S3a, not unreviewed defaults.
-M15_ACCEPTED = frozenset({*LOCK_AND_LOAD, WYVERN_STING})
-# (o) stays stock through S3a: Lock and Load's stock ProcTypeMask and effect count
-LOCK_AND_LOAD_PROC_TYPE = 0x240000
+# N8: tab-362 ranks with a non-zero ProcTypeMask and no row in the package on purpose. None since S3b: -56342 is
+# declared (B4) and Wyvern Sting 19386's stock 0x100000 is zeroed (B7).
+M15_ACCEPTED: frozenset[int] = frozenset()
 
 # (k) SURVIVAL 2.4: (dword index 0-2, bit) -> the exact carriers (family-9 rows of the package)
 BIT_CARRIERS = {
@@ -430,14 +451,21 @@ SCRIPT_BINDINGS = {
     "spell_hun_thrill_of_the_hunt_sv": frozenset(THRILL),
     "spell_hun_tnt_mastery": frozenset({TNT_MASTERY}),
     "spell_hun_glaive_toss_sv": frozenset({GLAIVE_TOSS}),
+    # S3b (brief script table; every key positive, the two unbinds below are the only negative ones)
+    "spell_hun_tarred": frozenset({TARRED}),
+    "spell_hun_burning_tar": frozenset({BURNING_TAR}),
+    "spell_hun_point_of_no_escape": frozenset({PONE_MARKER}),
+    "spell_hun_frost_trap_aura_sv": frozenset({FROST_TRAP_AURA}),
+    "spell_hun_lock_and_load_rework": frozenset(LOCK_AND_LOAD),
+    "spell_hun_explosive_trap_fire": frozenset({EXPLOSIVE_TRAP_EFFECT}),
+    "spell_hun_explosive_trap_fire_tick": frozenset({TRAP_FIRE}),
+    "spell_hun_freezing_trap_sv": frozenset({FREEZING_TRAP_EFFECT}),
+    "spell_hun_wyvern_sting_rework": frozenset({WYVERN_STING}),
+    "spell_hun_deterrence_sv": frozenset({19263}),
+    "spell_hun_disengage_sv": frozenset({781}),
+    "spell_hun_feign_death_sv": frozenset({5384}),
 }
 S3A_UNBINDS = frozenset({(-EXPLOSIVE_SHOT, "spell_hun_explosive_shot"), (-53290, "spell_hun_hunting_party")})
-S3B_CLASSES = frozenset({
-    "spell_hun_tarred", "spell_hun_burning_tar", "spell_hun_lock_and_load_rework", "spell_hun_explosive_trap_fire",
-    "spell_hun_explosive_trap_fire_tick", "spell_hun_point_of_no_escape", "spell_hun_frost_trap_aura_sv",
-    "spell_hun_freezing_trap_sv", "spell_hun_wyvern_sting_rework", "spell_hun_deterrence_sv",
-    "spell_hun_disengage_sv", "spell_hun_feign_death_sv",
-})
 S3B_UNBINDS = frozenset({(-56342, "spell_hun_lock_and_load"), (-WYVERN_STING, "spell_hun_wyvern_sting")})
 KEPT_STOCK_CLASSES = frozenset({"spell_hun_thrill_of_the_hunt", "spell_hun_glaive_toss", "spell_hun_shot_mana",
                                 "spell_hun_disengage", "spell_hun_lock_and_load", "spell_hun_wyvern_sting"})
@@ -895,7 +923,7 @@ def check_removed_effects(rows_by_id: dict[int, dict], removed=REMOVED_EFFECTS) 
 
 # ---- (i) spell_proc rows, carriers, N8 -------------------------------------------------------------------------------
 
-def check_proc_rows(procs: list[dict], masks, expected=PROC_ROWS, forbidden=S3B_PROC_KEYS) -> list[str]:
+def check_proc_rows(procs: list[dict], masks, expected=ALL_PROC_ROWS) -> list[str]:
     bad = []
     by_key: dict[int, list[dict]] = {}
     for p in procs:
@@ -921,8 +949,6 @@ def check_proc_rows(procs: list[dict], masks, expected=PROC_ROWS, forbidden=S3B_
             if got != want:
                 bad.append(f"spell_proc {key}: {col} {got if col == 'Chance' else hex(got)}, expected "
                            f"{want if col == 'Chance' else hex(want)} (SURVIVAL 8.1)")
-    for key in sorted(forbidden & set(by_key)):
-        bad.append(f"spell_proc {key}: S3b's row declared in S3a (seam rule 4)")
     return bad
 
 
@@ -1101,17 +1127,15 @@ def check_bindings(bound: list[dict], removals: list[dict], expected=SCRIPT_BIND
         have = {int(r["spell_id"]) for r in bound if r["ScriptName"] == name}
         if have != set(ids):
             bad.append(f"{name}: bound to {sorted(have)}, expected {sorted(ids)} (positive keys, L7)")
-    for r in bound:
-        if r["ScriptName"] in S3B_CLASSES:
-            bad.append(f"{r['ScriptName']} bound to {r['spell_id']}: an S3b class (seam rule 4)")
     got = {(int(r["spell_id"]), r["ScriptName"]) for r in removals}
-    for key in sorted(S3A_UNBINDS - got):
+    for key in sorted((S3A_UNBINDS | S3B_UNBINDS) - got):
         bad.append(f"unbind_script{key} not declared")
-    for key in sorted(S3B_UNBINDS & got):
-        bad.append(f"unbind_script{key}: S3b's unbind declared in S3a")
     for spell_id, name in sorted(got):
         if name in KEPT_STOCK_CLASSES and (spell_id, name) not in S3B_UNBINDS:
             bad.append(f"unbind_script({spell_id}, {name}): that stock class stays bound")
+    for r in bound:
+        if int(r["spell_id"]) < 0:
+            bad.append(f"{r['ScriptName']} bound to the negative key {r['spell_id']} (positive keys, L7)")
     if SHOT_MANA_BINDING not in {(int(r["spell_id"]), r["ScriptName"]) for r in bound}:
         bad.append(f"scripted_by{SHOT_MANA_BINDING} missing (ruling 6 restores through the existing shot-mana path)")
     return bad
@@ -1140,21 +1164,144 @@ def check_ruling_6(rows_by_id: dict[int, dict]) -> list[str]:
     return bad
 
 
-def check_lock_and_load_stock(rows_by_id: dict[int, dict]) -> list[str]:
-    """Seam rule 3: 56342-56344 stay stock in S3a (no Chain Reaction eff2 on 56344, 56342's stock eff2 kept, the stock
-    ProcTypeMask)."""
+# 56342-56344 (SURVIVAL 6.1, B4): eff0 trigger bp, eff1 DUMMY bp (live 3 / 6 / 10 %), eff2 DUMMY bp
+LOCK_AND_LOAD_VALUES = {
+    56342: (32, 2, 0), 56343: (65, 5, 0), 56344: (99, 9, 1999),     # 56344 eff2 = Chain Reaction 2000 ms (0-verify 4l)
+}
+LOCK_AND_LOAD_MARKER_MS = 5000
+ATTR_EX3_SUPPRESS_AND_IGNORE = ATTR_EX3_IGNORE_CASTER_MODIFIERS | ATTR_EX3_SUPPRESS_CASTER_PROCS
+
+
+def check_lock_and_load(rows_by_id: dict[int, dict], marker_duration_index: int) -> list[str]:
+    """(q) B4 + 0-verify binding decision 1: the three ranks keep the stock DBC ProcTypeMask 0x240000 / chance 100, the
+    trigger eff0 (-> 56453) with bp 32 / 65 / 99, the DUMMY eff1 bp 2 / 5 / 9, and an aura eff2 on EVERY rank (inert
+    DUMMY bp 0 on 56342 / 56343, Chain Reaction bp 1999 on 56344) so -56342's disable_effects_mask 0x4 is valid; no
+    SpellMod mask on any of them. 56453 is the one-charge, free-shot buff with the new text; 67544 lasts 5000 ms and has
+    no stale reader masks."""
     bad = []
-    rows = [rows_by_id.get(i) for i in LOCK_AND_LOAD]
-    if any(r is None for r in rows):
-        return [f"{LOCK_AND_LOAD}: not declared"]
-    for spell_id, row in zip(LOCK_AND_LOAD, rows):
+    for spell_id, (trigger_bp, dummy_bp, eff2_bp) in LOCK_AND_LOAD_VALUES.items():
+        row = rows_by_id.get(spell_id)
+        if row is None:
+            bad.append(f"{spell_id}: not declared")
+            continue
         if _i(row, "ProcTypeMask") != LOCK_AND_LOAD_PROC_TYPE:
-            bad.append(f"{spell_id}: ProcTypeMask 0x{_i(row, 'ProcTypeMask'):X}, expected the stock 0x240000")
-    if not _i(rows[0], "Effect_3"):
-        bad.append(f"{LOCK_AND_LOAD[0]}: lost its stock eff2 (S3b's edit)")
-    if _i(rows[2], "Effect_3"):
-        bad.append(f"{LOCK_AND_LOAD[2]}: has an eff2 (Chain Reaction is S3b's)")
+            bad.append(f"{spell_id}: ProcTypeMask 0x{_i(row, 'ProcTypeMask'):X}, expected "
+                       f"0x{LOCK_AND_LOAD_PROC_TYPE:X}")
+        if _i(row, "ProcChance") != 100:
+            bad.append(f"{spell_id}: ProcChance {row.get('ProcChance')}, expected 100")
+        if (_i(row, "Effect_1"), _i(row, "EffectAura_1"), _i(row, "EffectTriggerSpell_1")) != \
+                (EFFECT_APPLY_AURA, AURA_PROC_TRIGGER_SPELL, LOCK_AND_LOAD_BUFF):
+            bad.append(f"{spell_id}: eff0 is not PROC_TRIGGER_SPELL -> {LOCK_AND_LOAD_BUFF}")
+        if _i(row, "EffectBasePoints_1") != trigger_bp:
+            bad.append(f"{spell_id}: eff0 bp {row.get('EffectBasePoints_1')}, expected {trigger_bp}")
+        if not is_dummy(row, 2) or _i(row, "EffectBasePoints_2") != dummy_bp:
+            bad.append(f"{spell_id}: eff1 is not a DUMMY of bp {dummy_bp} (live {dummy_bp + 1} %): "
+                       f"{row.get('Effect_2')}/{row.get('EffectAura_2')} bp {row.get('EffectBasePoints_2')}")
+        if _i(row, "Effect_3") != EFFECT_APPLY_AURA or _i(row, "EffectAura_3") != AURA_DUMMY:
+            bad.append(f"{spell_id}: eff2 {row.get('Effect_3')}/{row.get('EffectAura_3')}, expected an aura DUMMY on "
+                       f"every rank (-56342 disable_effects_mask 0x4 needs an aura effect, SpellMgr.cpp:2125)")
+        elif _i(row, "EffectBasePoints_3") != eff2_bp:
+            bad.append(f"{spell_id}: eff2 bp {row.get('EffectBasePoints_3')}, expected {eff2_bp}"
+                       + (" (Chain Reaction 2000 ms)" if eff2_bp else " (inert marker)"))
+        if _i(row, "CastingTimeIndex") != 1 or _i(row, "EquippedItemClass") != -1:
+            bad.append(f"{spell_id}: CastingTimeIndex / EquippedItemClass {row.get('CastingTimeIndex')} / "
+                       f"{row.get('EquippedItemClass')}, expected 1 / -1")
+        for n in (1, 2, 3):
+            if any(effect_mask(row, n)):
+                bad.append(f"{spell_id}: eff{n - 1} carries the SpellMod mask {_hex(effect_mask(row, n))}")
+    buff = rows_by_id.get(LOCK_AND_LOAD_BUFF)
+    if buff is None:
+        bad.append(f"{LOCK_AND_LOAD_BUFF}: not declared")
+    else:
+        if _i(buff, "ProcCharges") != 1:
+            bad.append(f"{LOCK_AND_LOAD_BUFF}: ProcCharges {buff.get('ProcCharges')}, expected 1 (one free shot)")
+        text = str(buff.get("Description_Lang_enUS") or "") + str(buff.get("AuraDescription_Lang_enUS") or "")
+        if "$56342s3" in text or "cooldown" not in text.lower():
+            bad.append(f"{LOCK_AND_LOAD_BUFF}: text {text!r} keeps the stale '$56342s3 sec cooldown' wording")
+    marker = rows_by_id.get(LOCK_AND_LOAD_MARKER)
+    if marker is None:
+        bad.append(f"{LOCK_AND_LOAD_MARKER}: not declared")
+    else:
+        if _i(marker, "DurationIndex") != marker_duration_index:
+            bad.append(f"{LOCK_AND_LOAD_MARKER}: DurationIndex {marker.get('DurationIndex')}, expected "
+                       f"{marker_duration_index} ({LOCK_AND_LOAD_MARKER_MS} ms)")
+        for n in (1, 2, 3):
+            if any(effect_mask(marker, n)):
+                bad.append(f"{LOCK_AND_LOAD_MARKER}: eff{n - 1} keeps the stale mask {_hex(effect_mask(marker, n))}")
     return bad
+
+
+# ---- (q) Explosive Trap pair, Wyvern Sting, S3b helpers --------------------------------------------------------------
+
+TRAP_EFFECT_STOCK_BP, TRAP_EFFECT_STOCK_AMPLITUDE = 14, 2000      # stock 13812 eff1 (aura 3 -> 226 keeps both)
+EFFECT_PERSISTENT_AREA_AURA = 27
+WYVERN_DURATION_MS = 2000
+WYVERN_FIELDS = {"Effect_1": EFFECT_APPLY_AURA, "EffectAura_1": 79, "EffectMiscValue_1": 127, "EffectBasePoints_1": -31,
+                 "AuraInterruptFlags": 0, "ProcTypeMask": 0, "Mechanic": 0, "EffectMechanic_1": 0,
+                 "EquippedItemClass": 2}      # aura 79 = MOD_DAMAGE_PERCENT_DONE, misc 127 = all schools, live -30 %
+
+
+def check_explosive_trap_effect(row: dict | None) -> list[str]:
+    """(q) B5: 13812 eff1 becomes the PERIODIC_DUMMY (aura 226) persistent area aura with the stock bp / amplitude (the
+    script pays the tick; a stock aura 3 would double-damage); eff0 stays the SCHOOL_DAMAGE blast."""
+    if row is None:
+        return [f"{EXPLOSIVE_TRAP_EFFECT}: not declared"]
+    bad = []
+    if (_i(row, "Effect_2"), _i(row, "EffectAura_2")) != (EFFECT_PERSISTENT_AREA_AURA, AURA_PERIODIC_DUMMY):
+        bad.append(f"{EXPLOSIVE_TRAP_EFFECT}: eff1 {row.get('Effect_2')}/{row.get('EffectAura_2')}, expected "
+                   f"PERSISTENT_AREA_AURA / PERIODIC_DUMMY ({EFFECT_PERSISTENT_AREA_AURA}/{AURA_PERIODIC_DUMMY})")
+    if _i(row, "EffectBasePoints_2") != TRAP_EFFECT_STOCK_BP:
+        bad.append(f"{EXPLOSIVE_TRAP_EFFECT}: eff1 bp {row.get('EffectBasePoints_2')}, expected the stock "
+                   f"{TRAP_EFFECT_STOCK_BP}")
+    if _i(row, "EffectAuraPeriod_2") != TRAP_EFFECT_STOCK_AMPLITUDE:
+        bad.append(f"{EXPLOSIVE_TRAP_EFFECT}: eff1 amplitude {row.get('EffectAuraPeriod_2')}, expected the stock "
+                   f"{TRAP_EFFECT_STOCK_AMPLITUDE}")
+    if (_i(row, "Effect_1"), _i(row, "EffectAura_1")) != (EFFECT_SCHOOL_DAMAGE, 0):
+        bad.append(f"{EXPLOSIVE_TRAP_EFFECT}: eff0 {row.get('Effect_1')}/{row.get('EffectAura_1')}, expected the "
+                   f"unchanged SCHOOL_DAMAGE blast")
+    return bad
+
+
+def check_trap_fire_tick(row: dict | None, entry: dict | None) -> list[str]:
+    """(q) B5: 202057's BP0 is the script's snapshot, exact because ppl 0 and die sides <= 1 (CalcBaseValue -1 /
+    CalcValue +1; die sides 1 is the DSL convention, 0-verify decision 5 - not 0), potency_excluded, no potency,
+    IGNORE_CASTER_MODIFIERS | SUPPRESS_CASTER_PROCS."""
+    if row is None or entry is None:
+        return [f"{TRAP_FIRE}: not declared"]
+    bad = []
+    if _i(row, "Effect_1") != EFFECT_SCHOOL_DAMAGE:
+        bad.append(f"{TRAP_FIRE}: eff0 {row.get('Effect_1')}, expected SCHOOL_DAMAGE")
+    if float(row.get("EffectRealPointsPerLevel_1") or 0) != 0.0:
+        bad.append(f"{TRAP_FIRE}: ppl {row.get('EffectRealPointsPerLevel_1')}, expected 0 (BP0 must not level-scale)")
+    if _i(row, "EffectDieSides_1") > 1:
+        bad.append(f"{TRAP_FIRE}: die sides {row.get('EffectDieSides_1')}, expected <= 1 (no random spread)")
+    if not _potency_excluded(entry, 1) or _potency(entry, 1):
+        bad.append(f"{TRAP_FIRE}: eff0 must be potency_excluded (script BP0) with no potency")
+    if _i(row, "AttributesEx3") & ATTR_EX3_SUPPRESS_AND_IGNORE != ATTR_EX3_SUPPRESS_AND_IGNORE:
+        bad.append(f"{TRAP_FIRE}: AttributesEx3 0x{_i(row, 'AttributesEx3'):X} lacks IGNORE_CASTER_MODIFIERS | "
+                   f"SUPPRESS_CASTER_PROCS")
+    return bad
+
+
+def check_wyvern_sting(row: dict | None, duration_index: int) -> list[str]:
+    """(q) B7 / SURVIVAL 5.12: 19386 is MOD_DAMAGE_PERCENT_DONE (aura 79, misc 127) bp -31 (live -30 %) for 2000 ms; the
+    stock sleep interrupt flags, proc mask and mechanics are zeroed (the 202059 sleep is the only sleep); the
+    player-cast shot keeps EquippedItemClass 2 (N5)."""
+    if row is None:
+        return [f"{WYVERN_STING}: not declared"]
+    bad = [f"{WYVERN_STING}: {key} {row.get(key)}, expected {want}" for key, want in WYVERN_FIELDS.items()
+           if _i(row, key) != want]
+    if _i(row, "DurationIndex") != duration_index:
+        bad.append(f"{WYVERN_STING}: DurationIndex {row.get('DurationIndex')}, expected {duration_index} "
+                   f"({WYVERN_DURATION_MS} ms)")
+    return bad
+
+
+def check_s3b_helper_cast_time(rows_by_id: dict[int, dict], ids=NEW_HELPER_IDS) -> list[str]:
+    """(q) C-3: every S3a / S3b helper is an instant cast through CastingTimeIndex 1 (the DSL's 0 is no cast time)."""
+    return [f"{i}: CastingTimeIndex {rows_by_id[i].get('CastingTimeIndex')}, expected 1 (C-3)"
+            for i in ids if i in rows_by_id and _i(rows_by_id[i], "CastingTimeIndex") != 1] + \
+           [f"{i}: not declared" for i in ids if i not in rows_by_id]
 
 
 # ---- (p) S2-FIX ------------------------------------------------------------------------------------------------------
@@ -1297,10 +1444,31 @@ class HunterSvDataTest(unittest.TestCase):
         package = package_data()["package"]
         self.assertClean(check_bindings(package.spell_script_names, package.script_removals))
 
-    def test_ruling_6_and_lock_and_load_stock(self):
+    def test_ruling_6(self):
+        self.assertClean(check_ruling_6(package_data()["rows_by_id"]))
+
+    def test_lock_and_load_s3b(self):
+        data = package_data()
+        self.assertClean(check_lock_and_load(data["rows_by_id"],
+                                             data["reuse"].duration_index(LOCK_AND_LOAD_MARKER_MS)))
+
+    def test_explosive_trap_pair_s3b(self):
+        data = package_data()
+        rows = data["rows_by_id"]
+        entries = {int(e["id"]): e for e in data["package"].spells}
+        self.assertClean(check_explosive_trap_effect(rows.get(EXPLOSIVE_TRAP_EFFECT)))
+        self.assertClean(check_trap_fire_tick(rows.get(TRAP_FIRE), entries.get(TRAP_FIRE)))
+
+    def test_wyvern_sting_s3b(self):
+        data = package_data()
+        self.assertClean(check_wyvern_sting(data["rows_by_id"].get(WYVERN_STING),
+                                            data["reuse"].duration_index(WYVERN_DURATION_MS)))
+
+    def test_s3b_helper_cast_time_and_los_list(self):
         rows = package_data()["rows_by_id"]
-        self.assertClean(check_ruling_6(rows))
-        self.assertClean(check_lock_and_load_stock(rows))
+        self.assertClean(check_s3b_helper_cast_time(rows))
+        self.assertEqual(IGNORE_LOS_IDS, frozenset({202048, 202049, 202050, 202053, 202056, 202057, 202059}))
+        self.assertClean(check_ignore_los(rows))
 
     def test_s2fix_guards_still_pass(self):
         data = package_data()
@@ -1317,6 +1485,7 @@ def changed(row: dict, **cols) -> dict:
 
 CAST_TIMES = {0: 0, 1: 0, 4: 1000, 5: 2000, 16: 1500, 18: -1000000}
 DUR2000 = 32
+DUR5000 = 33
 MASKS = load_masks_module()
 
 
@@ -1396,7 +1565,7 @@ def good_spellmod_rows() -> dict[int, dict]:
 
 def good_procs() -> list[dict]:
     procs = []
-    for key, cols in PROC_ROWS.items():
+    for key, cols in ALL_PROC_ROWS.items():
         p = {"SpellId": key}
         for col, want in cols.items():
             if col == "mask":
@@ -1439,7 +1608,7 @@ def good_bit_rows() -> list[dict]:
 def good_bindings() -> tuple[list[dict], list[dict]]:
     bound = [{"spell_id": i, "ScriptName": n} for n, ids in SCRIPT_BINDINGS.items() for i in ids]
     bound.append({"spell_id": SHOT_MANA_BINDING[0], "ScriptName": SHOT_MANA_BINDING[1]})
-    removals = [{"spell_id": k, "ScriptName": n} for k, n in S3A_UNBINDS]
+    removals = [{"spell_id": k, "ScriptName": n} for k, n in sorted(S3A_UNBINDS | S3B_UNBINDS)]
     return bound, removals
 
 
@@ -1459,9 +1628,36 @@ def good_ruling_rows() -> dict[int, dict]:
 
 
 def good_lnl_rows() -> dict[int, dict]:
-    rows = {i: {"ID": i, "ProcTypeMask": LOCK_AND_LOAD_PROC_TYPE, "Effect_1": 6, "Effect_2": 6} for i in LOCK_AND_LOAD}
-    rows[LOCK_AND_LOAD[0]]["Effect_3"] = 6
+    rows = {}
+    for spell_id, (trigger_bp, dummy_bp, eff2_bp) in LOCK_AND_LOAD_VALUES.items():
+        rows[spell_id] = {"ID": spell_id, "ProcTypeMask": LOCK_AND_LOAD_PROC_TYPE, "ProcChance": 100,
+                          "CastingTimeIndex": 1, "EquippedItemClass": -1,
+                          "Effect_1": EFFECT_APPLY_AURA, "EffectAura_1": AURA_PROC_TRIGGER_SPELL,
+                          "EffectTriggerSpell_1": LOCK_AND_LOAD_BUFF, "EffectBasePoints_1": trigger_bp,
+                          "Effect_2": EFFECT_APPLY_AURA, "EffectAura_2": AURA_DUMMY, "EffectBasePoints_2": dummy_bp,
+                          "Effect_3": EFFECT_APPLY_AURA, "EffectAura_3": AURA_DUMMY, "EffectBasePoints_3": eff2_bp}
+    rows[LOCK_AND_LOAD_BUFF] = {"ID": LOCK_AND_LOAD_BUFF, "ProcCharges": 1,
+                                "Description_Lang_enUS": "Your next Arcane Shot or Explosive Shot triggers no "
+                                                         "cooldown and costs no mana."}
+    rows[LOCK_AND_LOAD_MARKER] = {"ID": LOCK_AND_LOAD_MARKER, "DurationIndex": DUR5000}
     return rows
+
+
+def good_trap_effect_row() -> dict:
+    return {"ID": EXPLOSIVE_TRAP_EFFECT, "Effect_1": EFFECT_SCHOOL_DAMAGE, "EffectAura_1": 0,
+            "Effect_2": EFFECT_PERSISTENT_AREA_AURA, "EffectAura_2": AURA_PERIODIC_DUMMY,
+            "EffectBasePoints_2": TRAP_EFFECT_STOCK_BP, "EffectAuraPeriod_2": TRAP_EFFECT_STOCK_AMPLITUDE}
+
+
+def good_trap_fire_tick() -> tuple[dict, dict]:
+    row = {"ID": TRAP_FIRE, "Effect_1": EFFECT_SCHOOL_DAMAGE, "EffectRealPointsPerLevel_1": 0.0,
+           "EffectDieSides_1": 1, "AttributesEx3": ATTR_EX3_SUPPRESS_AND_IGNORE}
+    entry = {"id": TRAP_FIRE, "effect1": {"_potency_excluded": "snapshot BP from spell_hun_explosive_trap_fire"}}
+    return row, entry
+
+
+def good_wyvern_row() -> dict:
+    return {"ID": WYVERN_STING, **WYVERN_FIELDS, "DurationIndex": DUR2000}
 
 
 class HunterSvDataNegativeTest(unittest.TestCase):
@@ -1712,20 +1908,46 @@ class HunterSvDataNegativeTest(unittest.TestCase):
 
     def test_proc_row_guard(self):
         procs = good_procs()
-        self.assertEqual(len(procs), 14)
+        self.assertEqual(len(procs), 17)                                                          # 14 S3a + 3 S3b
         self.assertEqual(check_proc_rows(procs, MASKS), [])
         self.assertTrue(check_proc_rows(procs[1:], MASKS))                                       # a row missing
         self.assertTrue(check_proc_rows(procs + [procs[0]], MASKS))                               # declared twice
         self.assertTrue(check_proc_rows(procs + [{"SpellId": -34506}], MASKS))                    # negative twin
         self.assertTrue(check_proc_rows(procs + [{"SpellId": 34500}], MASKS))                     # positive twin
-        self.assertTrue(check_proc_rows(procs + [{"SpellId": TARRED}], MASKS))                    # S3b row
+        self.assertTrue(check_proc_rows(procs + [{"SpellId": TARRED}], MASKS))                    # declared twice
         self.assertTrue(check_proc_rows(procs + [{"SpellId": -56342}], MASKS))
+        self.assertTrue(check_proc_rows(procs + [{"SpellId": 56342}], MASKS))                     # positive twin
+        self.assertTrue(check_proc_rows(procs + [{"SpellId": -TARRED}], MASKS))
+        self.assertTrue(check_proc_rows(procs + [{"SpellId": -56453}], MASKS))
+        for key in (TARRED, -56342, 56453):                                                       # an S3b row missing
+            self.assertTrue(check_proc_rows([p for p in procs if p["SpellId"] != key], MASKS), key)
         for key, col, value in ((-34497, "SpellPhaseMask", PROC_PHASE_HIT), (-34497, "SpellFamilyMask2", 0x20000201),
                                 (-53290, "AttributesMask", 0x2), (-53290, "DisableEffectsMask", 0),
                                 (-53290, "ProcFlags", 0), (202084, "SpellPhaseMask", PROC_PHASE_CAST),
                                 (19373, "SpellPhaseMask", PROC_PHASE_HIT), (202097, "HitMask", 0x3),
                                 (-19184, "AttributesMask", 0), (34507, "HitMask", 0x2), (202105, "Chance", 30.0),
-                                (34493, "DisableEffectsMask", 0x1), (-34500, "SpellFamilyName", 0)):
+                                (34493, "DisableEffectsMask", 0x1), (-34500, "SpellFamilyName", 0),
+                                # S3b: 202048 flags 0x20200, phase 0, Fire, attr 0x2
+                                (TARRED, "ProcFlags", 0x200), (TARRED, "ProcFlags", 0x20000),
+                                (TARRED, "SpellPhaseMask", PROC_PHASE_HIT), (TARRED, "SchoolMask", 0x20),
+                                (TARRED, "SchoolMask", 0), (TARRED, "AttributesMask", 0),
+                                (TARRED, "SpellFamilyName", SPELLFAMILY_HUNTER), (TARRED, "Chance", 0.0),
+                                (TARRED, "SpellFamilyMask1", D1_TAR_BOMB),
+                                # S3b: -56342 HIT | FINISH, attr 0x2, disable 0x4, cooldown 0, LOCK_AND_LOAD_PROC
+                                (-56342, "SpellPhaseMask", PROC_PHASE_HIT),
+                                (-56342, "SpellPhaseMask", PROC_PHASE_FINISH),
+                                (-56342, "SpellPhaseMask", PROC_PHASE_CAST | PROC_PHASE_HIT_FINISH),
+                                (-56342, "AttributesMask", 0), (-56342, "DisableEffectsMask", 0),
+                                (-56342, "DisableEffectsMask", 0x6), (-56342, "Cooldown", 22000),
+                                (-56342, "SpellFamilyMask0", 0), (-56342, "SpellFamilyMask2", 0),
+                                (-56342, "SpellFamilyName", 0), (-56342, "Chance", 100.0),
+                                (-56342, "ProcFlags", 0x240000),
+                                # S3b: 56453 CAST row without the triggered-can-proc attribute
+                                (56453, "AttributesMask", PROC_ATTR_TRIGGERED_CAN_PROC),
+                                (56453, "SpellPhaseMask", PROC_PHASE_HIT), (56453, "SpellPhaseMask", 0),
+                                (56453, "ProcFlags", 0x11100), (56453, "SpellFamilyMask0", 0),
+                                (56453, "SpellFamilyMask1", 0), (56453, "Chance", 0.0),
+                                (56453, "DisableEffectsMask", 0x4)):
             bad = [changed(p, **{col: value}) if p["SpellId"] == key else p for p in procs]
             self.assertTrue(check_proc_rows(bad, MASKS), (key, col, value))
 
@@ -1738,7 +1960,9 @@ class HunterSvDataNegativeTest(unittest.TestCase):
                                (202084, {"EffectTriggerSpell_2": 202063}), (202097, {"EffectMiscValue_3": 1}),
                                (34500, {"EffectAura_1": AURA_PROC_TRIGGER_SPELL}),
                                (202098, {"ProcTypeMask": 0x100}), (19287, {"ProcTypeMask": 0x4400}),
-                               (19387, {"ProcTypeMask": 0x200000})):
+                               (19387, {"ProcTypeMask": 0x200000}),
+                               (56342, {"ProcTypeMask": 0}), (56343, {"ProcChance": 50}),
+                               (56344, {"EffectTriggerSpell_1": 0}), (56344, {"EffectAura_1": AURA_DUMMY})):
             bad = copy.deepcopy(rows)
             bad[spell_id].update(cols)
             self.assertTrue(check_proc_carriers(bad), (spell_id, cols))
@@ -1748,12 +1972,15 @@ class HunterSvDataNegativeTest(unittest.TestCase):
         m15_rows = {i: {"ID": i, "ProcTypeMask": 0x140, "Effect_1": 6} for i in (34500, 34502, 34503)}
         m15_rows.update({i: {"ID": i, "ProcTypeMask": LOCK_AND_LOAD_PROC_TYPE, "Effect_1": 6} for i in LOCK_AND_LOAD})
         m15_rows[19559] = {"ID": 19559, "ProcTypeMask": 0x100}
-        self.assertEqual(check_m15(m15_rows, talents, [{"SpellId": -34500}]), [])
+        both = [{"SpellId": -34500}, {"SpellId": -56342}]
+        self.assertEqual(check_m15(m15_rows, talents, both), [])
         self.assertTrue(check_m15(m15_rows, talents, []))                                         # no row
-        self.assertTrue(check_m15(m15_rows, talents, [{"SpellId": -34500}], accepted=frozenset()))   # not inert
+        self.assertTrue(check_m15(m15_rows, talents, [{"SpellId": -34500}]))                      # no -56342 row (B4)
+        self.assertEqual(check_m15(m15_rows, talents, [{"SpellId": -34500}], accepted=frozenset(LOCK_AND_LOAD)), [])
+        self.assertEqual(M15_ACCEPTED, frozenset())                                               # nothing inert in S3b
         stale = copy.deepcopy(m15_rows)
         stale[34502]["EffectSpellClassMaskB_2"] = 1                                               # absent eff1
-        self.assertTrue(check_m15(stale, talents, [{"SpellId": -34500}]))
+        self.assertTrue(check_m15(stale, talents, both))
 
     def test_thrill_guard(self):
         rows = good_thrill_rows()
@@ -1830,13 +2057,30 @@ class HunterSvDataNegativeTest(unittest.TestCase):
     def test_binding_guard(self):
         bound, removals = good_bindings()
         self.assertEqual(check_bindings(bound, removals), [])
+        self.assertEqual(len(S3B_UNBINDS), 2)
+        for name in ("spell_hun_tarred", "spell_hun_burning_tar", "spell_hun_point_of_no_escape",
+                     "spell_hun_frost_trap_aura_sv", "spell_hun_lock_and_load_rework", "spell_hun_explosive_trap_fire",
+                     "spell_hun_explosive_trap_fire_tick", "spell_hun_freezing_trap_sv",
+                     "spell_hun_wyvern_sting_rework", "spell_hun_deterrence_sv", "spell_hun_disengage_sv",
+                     "spell_hun_feign_death_sv"):                                           # every S3b class positive
+            self.assertIn(name, SCRIPT_BINDINGS)
+            self.assertTrue(check_bindings([r for r in bound if r["ScriptName"] != name], removals), name)
+            self.assertTrue(check_bindings(bound + [{"spell_id": 1, "ScriptName": name}], removals), name)
+            self.assertTrue(check_bindings([changed(r, spell_id=-r["spell_id"]) if r["ScriptName"] == name else r
+                                            for r in bound], removals), name)                   # negative key
+        for key in S3B_UNBINDS:                                                                   # each S3b unbind
+            self.assertTrue(check_bindings(bound, [r for r in removals
+                                                   if (r["spell_id"], r["ScriptName"]) != key]), key)
+        self.assertTrue(check_bindings(bound, [r for r in removals if r["spell_id"] != -56342]))
+        self.assertTrue(check_bindings(bound, [r for r in removals if r["spell_id"] != -WYVERN_STING]))
+        self.assertTrue(check_bindings(bound, removals + [{"spell_id": 781, "ScriptName": "spell_hun_disengage"}]))
+        self.assertTrue(check_bindings(bound, removals + [{"spell_id": -56343,
+                                                           "ScriptName": "spell_hun_lock_and_load"}]))
         neg = [changed(r, spell_id=-34500) if r["spell_id"] == 34500 else r for r in bound]
         self.assertTrue(check_bindings(neg, removals))                                           # negative key
         self.assertTrue(check_bindings([r for r in bound if r["spell_id"] != 34508], removals))
-        self.assertTrue(check_bindings(bound + [{"spell_id": TARRED, "ScriptName": "spell_hun_tarred"}], removals))
+        self.assertTrue(check_bindings(bound + [{"spell_id": SPLASH, "ScriptName": "spell_hun_tarred"}], removals))
         self.assertTrue(check_bindings(bound, removals[:1]))                                      # an unbind missing
-        self.assertTrue(check_bindings(bound, removals + [{"spell_id": -56342,
-                                                           "ScriptName": "spell_hun_lock_and_load"}]))
         self.assertTrue(check_bindings(bound, removals + [{"spell_id": -34497,
                                                            "ScriptName": "spell_hun_thrill_of_the_hunt"}]))
         self.assertTrue(check_bindings([r for r in bound if r["spell_id"] != RAPTOR_STRIKE], removals))
@@ -1857,17 +2101,88 @@ class HunterSvDataNegativeTest(unittest.TestCase):
         effect_dummy = copy.deepcopy(rows)                                                        # SPELL_EFFECT_DUMMY
         effect_dummy[202081].update(Effect_3=EFFECT_DUMMY, EffectAura_3=0)
         self.assertEqual(check_ruling_6(effect_dummy), [])
-        lnl = good_lnl_rows()
-        self.assertEqual(check_lock_and_load_stock(lnl), [])
-        bad = copy.deepcopy(lnl)
-        bad[56344]["Effect_3"] = 6                                                                # Chain Reaction early
-        self.assertTrue(check_lock_and_load_stock(bad))
-        bad = copy.deepcopy(lnl)
-        bad[56342]["Effect_3"] = 0
-        self.assertTrue(check_lock_and_load_stock(bad))
-        bad = copy.deepcopy(lnl)
-        bad[56343]["ProcTypeMask"] = 0
-        self.assertTrue(check_lock_and_load_stock(bad))
+
+    def test_lock_and_load_guard(self):
+        rows = good_lnl_rows()
+        self.assertEqual(check_lock_and_load(rows, DUR5000), [])
+        self.assertTrue(check_lock_and_load(rows, DUR2000))                                       # 67544 not 5000 ms
+        self.assertTrue(check_lock_and_load({k: v for k, v in rows.items() if k != 67544}, DUR5000))
+        for spell_id, cols in (
+                (56342, {"ProcTypeMask": 0}), (56343, {"ProcTypeMask": 0x11100}), (56344, {"ProcChance": 0}),
+                (56342, {"EffectTriggerSpell_1": 0}), (56343, {"EffectAura_1": AURA_DUMMY}),
+                (56342, {"EffectBasePoints_1": 33}), (56343, {"EffectBasePoints_1": 64}),
+                (56344, {"EffectBasePoints_1": 98}),
+                (56342, {"EffectBasePoints_2": 1}), (56343, {"EffectBasePoints_2": 3}),     # the old 1 / 3 / 5
+                (56344, {"EffectBasePoints_2": 5}), (56344, {"EffectAura_2": 0}),
+                (56342, {"Effect_3": 0}), (56343, {"Effect_3": 0}),                    # eff2 gone: 0x4 would be invalid
+                (56344, {"Effect_3": 0}), (56344, {"EffectAura_3": 0}), (56342, {"EffectAura_3": 0}),
+                (56344, {"EffectBasePoints_3": 0}), (56344, {"EffectBasePoints_3": 2000}),
+                (56342, {"EffectBasePoints_3": 21}), (56343, {"EffectBasePoints_3": 1999}),
+                (56342, {"CastingTimeIndex": 0}), (56344, {"EquippedItemClass": 2}),
+                (56343, {"EffectSpellClassMaskA_1": 0x800}), (56344, {"EffectSpellClassMaskB_3": 1}),
+                (56453, {"ProcCharges": 2}), (56453, {"ProcCharges": 0}),
+                (56453, {"Description_Lang_enUS": "Your next Arcane Shot or Explosive Shot triggers a $56342s3 sec "
+                                                  "cooldown and costs no mana."}),
+                (67544, {"DurationIndex": DUR2000}), (67544, {"EffectSpellClassMaskA_1": 64}),
+                (67544, {"EffectSpellClassMaskB_2": 16777216})):
+            bad = copy.deepcopy(rows)
+            bad[spell_id].update(cols)
+            self.assertTrue(check_lock_and_load(bad, DUR5000), (spell_id, cols))
+        for spell_id in (*LOCK_AND_LOAD, LOCK_AND_LOAD_BUFF, LOCK_AND_LOAD_MARKER):
+            self.assertTrue(check_lock_and_load({k: v for k, v in rows.items() if k != spell_id}, DUR5000), spell_id)
+
+    def test_explosive_trap_effect_guard(self):
+        row = good_trap_effect_row()
+        self.assertEqual(check_explosive_trap_effect(row), [])
+        self.assertTrue(check_explosive_trap_effect(None))
+        for cols in ({"EffectAura_2": 3}, {"EffectAura_2": 0}, {"Effect_2": 6}, {"EffectBasePoints_2": 15},
+                     {"EffectBasePoints_2": 0}, {"EffectAuraPeriod_2": 1000}, {"EffectAuraPeriod_2": 0},
+                     {"Effect_1": 6}, {"EffectAura_1": 3}, {"Effect_1": 0}):
+            self.assertTrue(check_explosive_trap_effect(changed(row, **cols)), cols)
+
+    def test_trap_fire_tick_guard(self):
+        row, entry = good_trap_fire_tick()
+        self.assertEqual(check_trap_fire_tick(row, entry), [])
+        self.assertTrue(check_trap_fire_tick(None, entry))
+        self.assertTrue(check_trap_fire_tick(row, None))
+        self.assertEqual(check_trap_fire_tick(changed(row, EffectDieSides_1=0), entry), [])        # 0 is also exact
+        for cols in ({"EffectRealPointsPerLevel_1": 1.44}, {"EffectDieSides_1": 5}, {"Effect_1": 6},
+                     {"AttributesEx3": ATTR_EX3_SUPPRESS_CASTER_PROCS},
+                     {"AttributesEx3": ATTR_EX3_IGNORE_CASTER_MODIFIERS}, {"AttributesEx3": 0}):
+            self.assertTrue(check_trap_fire_tick(changed(row, **cols), entry), cols)
+        self.assertTrue(check_trap_fire_tick(row, {**entry, "effect1": {}}))                      # not excluded
+        potent = {**entry, "effect1": {**entry["effect1"], "_potency": {"kind": "direct", "total_potency": 10.0}}}
+        self.assertTrue(check_trap_fire_tick(row, potent))                                        # carries a potency
+
+    def test_wyvern_sting_guard(self):
+        row = good_wyvern_row()
+        self.assertEqual(check_wyvern_sting(row, DUR2000), [])
+        self.assertTrue(check_wyvern_sting(None, DUR2000))
+        self.assertTrue(check_wyvern_sting(row, DUR5000))
+        for cols in ({"EffectAura_1": 3}, {"EffectAura_1": 0}, {"Effect_1": 3}, {"EffectMiscValue_1": 1},
+                     {"EffectMiscValue_1": 0}, {"EffectBasePoints_1": -11}, {"EffectBasePoints_1": -1},
+                     {"DurationIndex": DUR5000}, {"AuraInterruptFlags": 4718594}, {"ProcTypeMask": 1048576},
+                     {"Mechanic": 10}, {"EffectMechanic_1": 10}, {"EquippedItemClass": -1}, {"EquippedItemClass": 0}):
+            self.assertTrue(check_wyvern_sting(changed(row, **cols), DUR2000), cols)
+
+    def test_s3b_helper_cast_time_guard(self):
+        rows = {i: {"ID": i, "CastingTimeIndex": 1} for i in NEW_HELPER_IDS}
+        self.assertEqual(check_s3b_helper_cast_time(rows), [])
+        for i in (TARRED, BURNING_TAR, TRAP_FIRE, WYVERN_SLEEP, SURVIVALIST_SPEED, PONE_MARKER):
+            self.assertTrue(check_s3b_helper_cast_time({**rows, i: {"ID": i, "CastingTimeIndex": 0}}), i)
+            self.assertTrue(check_s3b_helper_cast_time({**rows, i: {"ID": i, "CastingTimeIndex": 18}}), i)
+            self.assertTrue(check_s3b_helper_cast_time({k: v for k, v in rows.items() if k != i}), i)
+
+    def test_los_list_guard(self):
+        rows = {i: {"ID": i, "AttributesEx2": 0} for i in SV_BLOCK}
+        for i in IGNORE_LOS_IDS:
+            rows[i]["AttributesEx2"] = ATTR_EX2_IGNORE_LINE_OF_SIGHT
+        rows[EXPLOSIVE_BLAST] = {"ID": EXPLOSIVE_BLAST, "AttributesEx2": ATTR_EX2_IGNORE_LINE_OF_SIGHT}
+        self.assertEqual(check_ignore_los(rows), [])
+        for i in sorted(IGNORE_LOS_IDS):                                                          # one of the 7 missing
+            self.assertTrue(check_ignore_los({**rows, i: {"ID": i, "AttributesEx2": 0}}), i)
+        for i in (202058, 202060, 202054, 202055, 202052, 202051, 202045):                         # an 8th carrier
+            self.assertTrue(check_ignore_los({**rows, i: {"ID": i, "AttributesEx2": ATTR_EX2_IGNORE_LINE_OF_SIGHT}}), i)
 
     def test_s2fix_guard(self):
         row, _entry, _source = good_explosive()

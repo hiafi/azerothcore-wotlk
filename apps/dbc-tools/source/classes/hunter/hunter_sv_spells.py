@@ -11,7 +11,8 @@ Skeleton written by S3a WP-0 0-dsl (variable stems and Names frozen for HunterDa
 row: EquippedItemClass -1 (none is a player-cast ranged shot that needs a weapon: Mantis Strike is an AP instant like
 Raptor Strike, N5), SpellClassSet 9, the family bit only where SURVIVAL 2.4 gives one, SpellLevel = the talent row's
 learn level (10 + 5N) or SURVIVAL 5's value. CastingTimeIndex 1 on the four castables (stale line 14, the Commands'
-precedent), 0 on the triggered helpers (the MM helper precedent), 1 on the two hidden passives (the rank-passive
+precedent), 0 on the triggered helpers (the MM helper precedent; S3b C-3 moved them to 1 as well, custom-spells.md), 1
+on the two hidden passives (the rank-passive
 precedent). AttributesEx2 IGNORE_LINE_OF_SIGHT (0x4) exactly on 202048, 202049, 202050, 202053, 202056, 202057, 202059
 (stale line 12). Aura texts as SURVIVAL 5 writes them; user ruling 5 (X7) keeps only Burning Tar 202050 number-free
 here (orchestrator ruling, S3a).
@@ -170,7 +171,9 @@ def _castable(spell_id, name, school, icon, level, effects, notes, bit=None, coo
 def _helper(spell_id, name, school, icon, level, effects, notes, duration_ms=None, range_yards=_RANGE_UNLIMITED,
             attributes=0, raw=None, **kwargs):
     """A triggered helper or buff: no cast time, no cost, family 9 with no bit unless `raw` adds one."""
-    overrides = {'EquippedItemClass': -1, 'SpellLevel': level, **_FAMILY}
+    # CastingTimeIndex 1 (S3b C-3): the DSL's 0 has no SpellCastTimes row; no helper uses the ranged slot (0 / 18 are
+    # for USES_RANGED_SLOT instants, custom-spells.md), so 1 is the right instant everywhere here.
+    overrides = {'EquippedItemClass': -1, 'SpellLevel': level, 'CastingTimeIndex': _CAST_INSTANT, **_FAMILY}
     overrides.update(raw or {})
     return spell(
         id=spell_id, name=name, school=school, attributes=attributes, cast_time_ms=0, cooldown_ms=0,
@@ -525,7 +528,8 @@ linked_spell(56337, tnt_mastery_202062.id, 2)                               # T.
 # keys -34500 / -19184 re-declared with their exact key). chance 0 = the rank's DBC ProcChance (A2 / A3 set it, Proc
 # Chance applies on top). Phase CAST 0x1 / HIT 0x2 / FINISH 0x4; hit NORMAL 0x1 / CRIT 0x2; type DAMAGE 1.
 # DONE_RANGED_AUTO 0x40, DONE_SPELL_RANGED 0x100, TRAP_ACTIVATION 0x200000. Not here: -53290 / -34497 (A4 edits them in
-# place in hunter_shared_spells.py), Tarred 202048 and every Lock and Load key (S3b). ----
+# place in hunter_shared_spells.py). The S3b rows (Tarred 202048, Lock and Load -56342 / 56453) are at the end of this
+# block. ----
 # Killer Instinct r3: Mongoose Bite / Explosive Shot / Glaive Toss cast -> eff1 202041 (eff0 crit aura never procs).
 procs_on(19373, proc_flags=0x100, family_name=9, family_mask=m.KILLER_INSTINCT_PROC, spell_phase_mask=0x1,
          disable_effects_mask=0x1)
@@ -557,13 +561,32 @@ for _rank in (34506, 34507, 34508):
 # eff0 (the SpellMod) never procs, so only 19388's eff1 (-> 64804) fires.
 procs_on(-19184, proc_flags=0x200000, family_name=9, family_mask=(m.FROST_TRAP_AURA, m.SNAKE_TRAP_EFFECT, 0),
          spell_phase_mask=0x4, attributes_mask=0x2, disable_effects_mask=0x1)
+# ---- S3b rows (SURVIVAL 8.1; S3b-HANDOFF B1 / B4) ----
+# Tarred (B1): TAKEN_SPELL_MAGIC_NEG | TAKEN_SPELL_RANGED (0x20200), Fire, damage type, phase 0 (a phase on TAKEN-only
+# flags would log "SpellPhaseMask value defined, but it won't be used", V-m1), TRIGGERED_CAN_PROC (trap blasts and
+# triggered Fire hits count). spell_hun_tarred does the actor / damage / DOT checks; chance 100.
+procs_on(202048, proc_flags=0x20200, family_name=0, school_mask=4, spell_type_mask=1, spell_phase_mask=0, hit_mask=0,
+         attributes_mask=0x2, chance=100.0)
+# Lock and Load (B4), trap / periodic trigger (live key -56342, re-declared exact: was ICD 22000 and no HIT | FINISH
+# phase set). proc_flags 0 = the DBC ProcTypeMask 0x240000; LOCK_AND_LOAD_PROC is the live row's mask (Freezing / Frost
+# Trap, Burning Tar, Explosive / Immolation Trap effects). chance 0 -> the DBC ProcChance 100, which Proc Chance lifts
+# to
+# >= 100: the row cannot fail, spell_hun_lock_and_load_rework rolls RollProcChance(eff) itself (V-m17: do not "fix").
+# Cooldown 0: the 5 s marker 67544 is the ICD. disable_effects_mask 0x4 (eff2 never procs: Chain Reaction's DUMMY on
+# r3).
+procs_on(-56342, proc_flags=0, family_name=9, family_mask=m.LOCK_AND_LOAD_PROC, spell_phase_mask=0x2 | 0x4,
+         attributes_mask=0x2, disable_effects_mask=0x4, chance=0.0, cooldown_ms=0)
+# Lock and Load buff 56453 (B4, X22): the charge is spent by the next NON-triggered Arcane Shot / Explosive Shot cast
+# (CAST phase, no TRIGGERED_CAN_PROC, so MM's free triggered Arcane Shot 201933 never eats it).
+procs_on(56453, proc_flags=0x100, family_name=9, family_mask=(m.ARCANE_SHOT, m.EXPLOSIVE_SHOT, 0), spell_phase_mask=0x1,
+         chance=100.0)
 
 
 # ---- script bindings and unbinds (SURVIVAL 9.3 as amended by the S3a WP brief's script table; positive keys only,
 # stale line 8; unbinds use the exact live keys, 0-verify 2a: -53301 and -53290 each hold one live row). Stock and rank
 # spells by bare id (no import of hunter_spells / hunter_trigger_spells / hunter_sv_ranks; the MM precedent). S3b's
 # classes (tarred, burning_tar, lock_and_load_rework, explosive_trap_fire*, point_of_no_escape, frost_trap_aura_sv,
-# freezing_trap_sv, wyvern rework, deterrence / disengage / feign death sv) bind in S3b. ----
+# freezing_trap_sv, wyvern rework, deterrence / disengage / feign death sv) bind in the S3b block at the end. ----
 scripted_by(mantis_strike_202040, 'spell_hun_mantis_strike')
 unbind_script(-53301, 'spell_hun_explosive_shot')                           # exact live key (stock TakeAmmo, moot)
 scripted_by(53301, 'spell_hun_explosive_shot_rework')                       # Explosive Shot (Spell + Aura pair)
@@ -585,3 +608,22 @@ for _rank in (34497, 34498):                                # Thrill of the Hunt
     scripted_by(_rank, 'spell_hun_thrill_of_the_hunt_sv')
 scripted_by(tnt_mastery_202062, 'spell_hun_tnt_mastery')
 scripted_by(201600, 'spell_hun_glaive_toss_sv')                             # Glaive Toss (additive to SHARED's)
+
+# ---- S3b bindings (S3b WP brief class table; positive keys, bare ids for stock / trigger-file spells). The exact
+# unbind
+# keys -56342 and -19386 each hold one live row (S3b-HANDOFF B4 / B7). Hook indices follow the BUILT rows (L3). ----
+scripted_by(tarred_202048, 'spell_hun_tarred')                              # DUMMY eff0: proc + PoNE apply / remove
+scripted_by(burning_tar_202050, 'spell_hun_burning_tar')                    # PERIODIC_DAMAGE eff0: bank tick
+scripted_by(point_of_no_escape_marker_202058, 'spell_hun_point_of_no_escape')   # aura 271 eff0
+scripted_by(13810, 'spell_hun_frost_trap_aura_sv')                          # Frost Trap aura, eff0 aura 33 (bare id)
+unbind_script(-56342, 'spell_hun_lock_and_load')                            # exact live key (stock script)
+for _rank in (56342, 56343, 56344):                                         # Lock and Load r1-r3
+    scripted_by(_rank, 'spell_hun_lock_and_load_rework')
+scripted_by(13812, 'spell_hun_explosive_trap_fire')                         # Explosive Trap effect, eff1 PERIODIC_DUMMY
+scripted_by(explosive_trap_fire_202057, 'spell_hun_explosive_trap_fire_tick')
+scripted_by(3355, 'spell_hun_freezing_trap_sv')                             # Freezing Trap Effect, eff0 MOD_STUN
+unbind_script(-19386, 'spell_hun_wyvern_sting')                             # exact live key (stock script)
+scripted_by(19386, 'spell_hun_wyvern_sting_rework')                         # Wyvern Sting, eff0 MOD_DAMAGE_PERCENT_DONE
+scripted_by(19263, 'spell_hun_deterrence_sv')                               # Deterrence, eff0 MOD_DODGE_PERCENT
+scripted_by(781, 'spell_hun_disengage_sv')                                  # Disengage (additive to stock's)
+scripted_by(5384, 'spell_hun_feign_death_sv')                               # Feign Death

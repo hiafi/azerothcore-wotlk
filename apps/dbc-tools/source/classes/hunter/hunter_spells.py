@@ -2001,7 +2001,6 @@ wyvern_sting_19386 = spell(
     name='Wyvern Sting',
     school=School.NATURE,
     dispel=DispelType.POISON,
-    mechanic=Mechanic.SLEEP,
     attributes=1114114,
     category=1111,
     cooldown_ms=0,
@@ -2009,13 +2008,13 @@ wyvern_sting_19386 = spell(
     mana_cost=0,
     mana_cost_pct=8,
     range_yards=35.0,
-    duration_ms=30000,
+    duration_ms=2000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, mechanic=Mechanic.SLEEP, implicit_target_a=6, apply_aura=AuraType.MOD_STUN),
+        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=6, apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=127),
     ],
     spell_icon_id=1721,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx2': 131072, 'AttributesEx4': 8388608, 'AttributesEx5': 32, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Asleep.', 'AuraInterruptFlags': 4718594, 'BaseLevel': 40, 'CastingTimeIndex': 18, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A stinging shot that puts the target to sleep for $d.  Any damage will cancel the effect.  When the target wakes up, the Sting causes $24131o1 Nature damage over $24131d.  Only one Sting per Hunter can be active on the target at a time.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 100, 'ProcTypeMask': 1048576, 'RangeIndex': 114, 'Speed': 40.0, 'SpellClassMask_2': 4096, 'SpellClassSet': 9, 'SpellLevel': 40, 'SpellVisualID_1': 7205, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. hunter-rework S3b A3 (B7, SURVIVAL 5.12): eff0 MOD_STUN/SLEEP -> MOD_DAMAGE_PERCENT_DONE misc 127 bp -31 (live -30%, static live-1), mechanic 0, 2 s, AuraInterruptFlags 0 and ProcTypeMask 0 (the stock 0x100000 and the damage-break are gone); spell_hun_wyvern_sting_rework casts the 30 s sleep 202059 on expiry. Kept: category 60 s, 8% mana, 35 yd, Poison, SpellClassMask_2 0x1000 (d1 b12 Wyvern DR key), CastingTimeIndex 18, EquippedItemClass 2 (player-cast ranged shot, N5).',
+    raw_overrides={'AttributesEx2': 131072, 'AttributesEx4': 8388608, 'AttributesEx5': 32, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Damage dealt reduced.', 'BaseLevel': 40, 'CastingTimeIndex': 18, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "A stinging shot that reduces the target's damage done by $s1% for $d, then puts it to sleep for $202059d. Any damage other than Serpent Sting wakes the target.", 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 262156, 'FacingCasterFlags': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 100, 'RangeIndex': 114, 'Speed': 40.0, 'SpellClassMask_2': 4096, 'SpellClassSet': 9, 'SpellLevel': 40, 'SpellVisualID_1': 7205, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
