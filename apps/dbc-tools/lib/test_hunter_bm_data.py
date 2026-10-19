@@ -1076,8 +1076,8 @@ class HunterBmDataTest(unittest.TestCase):
         package = package_data()["package"]
         bonus = [r for r in package.spell_bonus_data if int(r["entry"]) == 56641]
         self.assertEqual(len(bonus), 1)
-        # TUNE1: ap_potency 70 (was 100), so the coefficient is 0.70 * (1.5 / 3.5); a 1.0 s basis would give 0.2
-        self.assertAlmostEqual(bonus[0]["ap_bonus"], 0.70 * 1.5 / 3.5, places=4)
+        # TUNE3: ap_potency 49 (TUNE1 70, was 100), so the coefficient is 0.49 * (1.5 / 3.5)
+        self.assertAlmostEqual(bonus[0]["ap_bonus"], 0.49 * 1.5 / 3.5, places=4)
 
     def test_s1b_ids_have_equipped_item_class_minus_one(self):
         rows = package_data()["rows_by_id"]

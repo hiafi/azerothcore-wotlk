@@ -1780,7 +1780,7 @@ steady_shot_56641 = spell(
     range_yards=35.0,
     effects=[
         # The potency time basis stays at the live 1.5 s cast (DBC 1000 ms + the engine's 500 ms), not cast_time_ms.
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=70.0, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=49.0, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     spell_icon_id=2228,
@@ -2035,7 +2035,7 @@ aimed_shot_19434 = spell(
     effects=[
         # Q11: no flat part. The damage is pure weapon_potency, which takes no time basis (M3).
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=440, implicit_target_a=6),   # placeholder, M
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=594, implicit_target_a=6),   # placeholder, M
     ],
     spell_icon_id=1629,
     notes='pulled from existing data. S2a (MARKSMANSHIP 5.1): 2.0 s live cast, category 1301 / 10 s, 220 weapon potency; the stock flat bp 4 + 6.72/level and the -50% healing debuff are dropped (Q11, MM 0.5). S2-FIX F-1: Attributes 0x410012 (+TRACK_TARGET_IN_CAST_PLAYER_ONLY) and AttributesEx4 0x18000000 (+FORCE_DISPLAY_CASTBAR 0x08000000: the client hides a ranged-slot shot\'s cast bar without it), like Steady Shot 56641.',

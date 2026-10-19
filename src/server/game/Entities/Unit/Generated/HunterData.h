@@ -630,7 +630,7 @@ namespace HunterData
     // const() - hidden script numbers (tier 3)
     constexpr uint32 BARRAGE_ICD_MS = 10000; // Barrage capstone: half Volley internal cooldown, ms (MM 5.5).
     constexpr float BEAST_CLEAVE_RADIUS_YD = 8.0f; // Beast Cleave splash radius around the victim, yards (BM 13).
-    constexpr int32 CHIMERA_SERPENT_BURST_PCT = 40; // Chimera Shot: Serpent Sting burst, percent of the sting's total damage (MM 5.6).
+    constexpr int32 CHIMERA_SERPENT_BURST_PCT = 60; // Chimera Shot: Serpent Sting burst, percent of the sting's total damage (MM 5.6).
     constexpr int32 CHIMERA_SNIPER_CRIT_CHANCE = 100; // Sniper's Mark: Chimera Shot crit chance, flat points (MM 5.6).
     constexpr int32 CHIMERA_SNIPER_CRIT_DAMAGE = 100; // Sniper's Mark: Chimera Shot crit damage bonus, percent (MM 5.6).
     constexpr uint8 CLUSTER_BOMBS_FOLLOWUP_COUNT = 4; // Cluster Bombs: follow-up blasts after the cast (SV 5.8).

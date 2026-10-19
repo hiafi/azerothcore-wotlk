@@ -74,7 +74,7 @@ RAIN_OF_ARROWS_FIRE_PCT = const(
     cpp_type='int32',
 )
 CHIMERA_SERPENT_BURST_PCT = const(
-    'CHIMERA_SERPENT_BURST_PCT', 40, "Chimera Shot: Serpent Sting burst, percent of the sting's total damage (MM 5.6).",
+    'CHIMERA_SERPENT_BURST_PCT', 60, "Chimera Shot: Serpent Sting burst, percent of the sting's total damage (MM 5.6).",
     cpp_type='int32',
 )
 # S2a A1: Convergence's two script numbers (MM 5.10). The DSL allows one direct AP coefficient per spell (D6), so
@@ -206,7 +206,8 @@ def _self_aura(aura, base_points=0, misc_value=0, **kwargs):
 _MARK_TAIL = ' Reapplying the mark resets its stacks.'
 
 
-def _mark(spell_id, name, school, icon, level, cooldown_ms, visual, description, aura_text, tooltip=None):
+def _mark(spell_id, name, school, icon, level, cooldown_ms, visual, description, aura_text, tooltip=None,
+          weapon_potency=220):
     return spell(
         id=spell_id,
         name=name,
@@ -221,12 +222,13 @@ def _mark(spell_id, name, school, icon, level, cooldown_ms, visual, description,
         duration_ms=15000,
         effects=[
             Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
-            Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=110, implicit_target_a=6),
+            Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=weapon_potency, implicit_target_a=6),
             Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=AuraType.DUMMY),
         ],
         spell_icon_id=icon,
         tooltip_vars=tooltip,
-        notes=f'S2a A1 / MM 4.1: {name}. Instant shot (CastingTimeIndex 18), 110 weapon potency, eff2 DUMMY = the mark '
+        notes=f'S2a A1 / MM 4.1: {name}. Instant shot (CastingTimeIndex 18), {weapon_potency} weapon potency '
+              f'(TUNE3: was 110), eff2 DUMMY = the mark '
               f'(0-10 stacks, spell_hun_mark), 15 s, {cooldown_ms // 1000} s, 4% base mana, 35 yd, Speed 40, d2 b27, '
               f'GCD 1500/133, EquippedItemClass 2 (player-cast shot, M4). Visual {visual} reused from a stock shot.',
         raw_overrides={
@@ -278,7 +280,7 @@ def _mark_dot(spell_id, name, duration_ms, icon, level, potency, description, ra
 
 
 vipers_bite_201930 = _mark_dot(
-    201930, "Viper's Bite", 12000, 1630, 40, 4.0,
+    201930, "Viper's Bite", 12000, 1630, 40, 4.6,
     'Deals {pot1*mult} Nature damage every $t1 sec for $d per stack.',
     # stack = Viper's stacks consumed (SPELLVALUE_AURA_STACK; old Bite removed first)
     raw={'CumulativeAura': int(MARK_MAX_STACKS['value'])},
@@ -318,6 +320,7 @@ falcons_mark_201922 = _mark(
     'haste by $201941s1% for ' + _sec(QUICKENING_MS_PER_STACK) + ' sec per stack. Your Chimera Shot against the '
     'target increases your attack power by $201947s1% for $201947d.',
     'Marked. Aimed Shot consumes this mark to grant its caster Quickening.',
+    weapon_potency=215,
 )
 
 
@@ -547,8 +550,8 @@ marksmanship_mastery_201951 = _buff(
 # helper reach them), Speed 0 (launch and hit inside the handler's CastSpell), always cast with TRIGGERED_FULL_MASK (R3:
 # only TRIGGERED_IGNORE_SPELL_AND_CATEGORY_CD keeps the d0 b17 load fix's 10 s RecoveryTime from starting).
 # Must equal aimed_shot_19434's eff1 weapon_potency (hunter_spells.py imports this file, so no import back).
-_AIMED_SHOT_WEAPON_POTENCY = 440
-_PACK_SHOT_WEAPON_POTENCY = _AIMED_SHOT_WEAPON_POTENCY * int(PACK_SHOT_DAMAGE_PCT['value']) // 100   # 110
+_AIMED_SHOT_WEAPON_POTENCY = 594
+_PACK_SHOT_WEAPON_POTENCY = _AIMED_SHOT_WEAPON_POTENCY * int(PACK_SHOT_DAMAGE_PCT['value']) // 100   # 297
 
 
 def _pack_shot(spell_id, kind, notes):
