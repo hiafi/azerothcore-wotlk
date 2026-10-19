@@ -150,7 +150,7 @@ TAB_CELLS = {
     1801: (6, 0), 1386: (6, 1), 60205: (6, 2), 1800: (6, 3),
     1802: (7, 0), 60206: (7, 1), 2136: (7, 2),
     2137: (8, 0), 1803: (8, 1), 2140: (8, 2),
-    2227: (9, 2),
+    2227: (9, 1),
     2139: (10, 1),
 }
 TAB_TALENT_COUNT = 33
@@ -193,7 +193,7 @@ EDITED_S1B_IDS = (
     19598, 19599, 19600, 34455, 34459, 34460, 56314, 56315, 56316, 75593,                        # hunter_trigger_spells
 )
 # B1: Steady Shot's Nature hit rows, one per rank, positive keys. Serpent's Swiftness r3 alone also sees CAST (KC cut).
-STEADY_SHOT_NATURE_PROCS = {34466: 0x2, 34467: 0x2, 34468: 0x3, 201849: 0x2, 201850: 0x2, 201851: 0x2}
+STEADY_SHOT_NATURE_PROCS = {34466: 0x2, 34467: 0x2, 34468: 0x3}
 STEADY_SHOT_FAMILY_MASK = (0, 0, 0x20000000)            # d2 b29
 COBRA_STRIKES_PROC_KEY = -53256
 BM_PET_PROC_FAMILY_MASK = (0, 0, 0x00C00000)            # d2 b22 (commanded) | b23 (basic), no d1 b28
@@ -1644,10 +1644,10 @@ class HunterBmS1bNegativeTest(unittest.TestCase):
 
         self.assertEqual(len(check_steady_shot_nature_procs(with_change(34468, SpellPhaseMask=0x2))), 1)  # loses CAST
         self.assertEqual(len(check_steady_shot_nature_procs(with_change(34466, SpellPhaseMask=0x3))), 1)  # gains CAST
-        self.assertEqual(len(check_steady_shot_nature_procs(with_change(201850, SpellFamilyMask1=0x1))), 1)
-        self.assertEqual(len(check_steady_shot_nature_procs(with_change(201849, HitMask=0x2))), 1)
+        self.assertEqual(len(check_steady_shot_nature_procs(with_change(34467, SpellFamilyMask1=0x1))), 1)
+        self.assertEqual(len(check_steady_shot_nature_procs(with_change(34466, HitMask=0x2))), 1)
         self.assertEqual(len(check_steady_shot_nature_procs(with_change(34467, ProcFlags=0))), 1)
-        self.assertEqual(len(check_steady_shot_nature_procs(with_change(201850, SpellId=-201850))), 2)
+        self.assertEqual(len(check_steady_shot_nature_procs(with_change(34467, SpellId=-34467))), 2)
         self.assertEqual(len(check_steady_shot_nature_procs(good_b1_procs()[:-1])), 1)
         chain = good_b1_procs() + [{**good_b1_procs()[0], "SpellId": -34466}]
         self.assertEqual(len(check_steady_shot_nature_procs(chain)), 2)     # the chain row + rank 1's negative twin
@@ -1700,7 +1700,7 @@ class HunterBmS1bNegativeTest(unittest.TestCase):
         self.assertEqual(check_script_bindings(good_bindings()), [])
         negative = [{**b, "spell_id": -53256} if b["spell_id"] == 53256 else b for b in good_bindings()]
         self.assertEqual(len(check_script_bindings(negative)), 2)           # negative key + the set differs
-        self.assertEqual(len(check_script_bindings([b for b in good_bindings() if b["spell_id"] != 201851])), 1)
+        self.assertEqual(len(check_script_bindings([b for b in good_bindings() if b["spell_id"] != 34468])), 1)
         extra = good_bindings() + [{"spell_id": 56641, "ScriptName": "spell_hun_steady_shot_nature"}]
         self.assertEqual(len(check_script_bindings(extra)), 1)
         self.assertEqual(check_script_bindings(good_bindings() + [{"spell_id": -1, "ScriptName": "other"}]), [])

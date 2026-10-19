@@ -272,7 +272,7 @@ pack_hunter_201847 = _pack_hunter(201847, 2, 19, 1)
 
 # ---- (6,2) Beast Cleave 60205: eff0 PROC_TRIGGER_SPELL -> 201806, once per Multi-Shot cast (CAST phase).
 beast_cleave_talent_201848 = _rank(
-    201848, 'Beast Cleave', None, [_aura(AuraType.PROC_TRIGGER_SPELL, 0, 0, 201806)], 277,
+    201848, 'Beast Cleave', None, [_aura(AuraType.PROC_TRIGGER_SPELL, 0, 0, 201806)], 90235,
     "After you Multi-Shot, your pet's single-target attacks and your Kill Command also strike all enemies within "
     f"{_c(BEAST_CLEAVE_RADIUS_YD)} yards of the target for $201806s2% of the damage dealt. Lasts $201806d.",
     raw={'ProcTypeMask': 0x100, 'ProcChance': 100},
@@ -282,17 +282,18 @@ procs_on(
     family_mask=(m.MULTI_SHOT, 0, 0), spell_phase_mask=m.PROC_SPELL_PHASE_CAST, chance=100.0,
 )
 
-# ---- (7,1) Cobra Shot 60206: DUMMY Nature share 5/10/15%; r3 capstone links 201811 (A1). Read by S1b scripts.
+# ---- (7,1) Cobra Shot 60206: Steady Shot damage +16/32/51%; r3 capstone links 201811 (A1). The Nature share moved to
+# Serpent's Swiftness, so these ranks carry no script and no spell_proc row.
 _COBRA = (
-    "Your Steady Shot deals an additional $s1% of its damage as Nature damage."
+    "Increases the damage of your Steady Shot by $s1%."
 )
 _COBRA_CAP = "Your Steady Shot becomes instant. Cannot be combined with other talents that transform Steady Shot."
 
 
 def _cobra(spell_id, rank, bp, last):
     return _rank(
-        spell_id, 'Cobra Shot', rank, [_dummy(bp)], 3409, _desc(_COBRA, _COBRA_CAP, last=last),
-        raw={'ProcTypeMask': 0x100, 'ProcChance': 100},
+        spell_id, 'Cobra Shot', rank, [_pct(SpellModOp.DAMAGE, bp)], 2236, _desc(_COBRA, _COBRA_CAP, last=last),
+        masks={1: m.STEADY_SHOT_MASK},
     )
 
 
