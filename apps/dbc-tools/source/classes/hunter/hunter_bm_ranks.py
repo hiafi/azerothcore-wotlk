@@ -188,7 +188,7 @@ improved_aspect_of_the_viper_201831 = _viper(201831, 2, 9, 49, 1, True)
 # ---- (3,0) Arcane Attunement 1385: Arcane Shot damage and mana (EFFECT2 = the mana DUMMY).
 def _attunement(spell_id, rank, bp):
     return _rank(
-        spell_id, 'Arcane Attunement', rank, [_pct(SpellModOp.DAMAGE, bp), _pct(SpellModOp.EFFECT2, bp)], 3487,
+        spell_id, 'Arcane Attunement', rank, [_pct(SpellModOp.DAMAGE, bp), _pct(SpellModOp.EFFECT2, bp)], 2942,
         "Increases the damage of your Arcane Shot by $s1%, and your Arcane Shot restores $s2% more mana.",
         masks={1: (m.ARCANE_SHOT, 0, 0), 2: (m.ARCANE_SHOT, 0, 0)},
     )

@@ -136,7 +136,7 @@ ICON_ID_BULWARK = 90200  # Bulwark buff 201360 / 201361
 # Paladin rework Holy: block 90220-90229, 90221-90229 spare.
 ICON_ID_LIGHTS_HAMMER = 90220  # Light's Hammer 201200
 
-# Hunter icon pass (2026-10-19): block 90230-90238, Ascension icons for talents whose stock art didn't fit.
+# Hunter icon pass (2026-10-19): block 90230-90239, Ascension icons for talents whose stock art didn't fit.
 ICON_ID_HUNTER_TRAP_MASTERY = 90230
 ICON_ID_HUNTER_IMPROVED_GLAIVE_TOSS = 90231
 ICON_ID_HUNTER_ENTRAPMENT = 90232
@@ -146,6 +146,7 @@ ICON_ID_HUNTER_BEAST_CLEAVE = 90235  # talent 201848 + buff 201806 / strike 2018
 ICON_ID_HUNTER_LONE_SURVIVOR = 90236
 ICON_ID_HUNTER_MASTER_MARKSMAN = 90237
 ICON_ID_HUNTER_TRIANGULATION = 90238
+ICON_ID_HUNTER_PRECISION = 90239
 
 ICONS = (
     (ICON_ID_ANGELIC_FEATHER, "Interface/icons/ability_priest_angelicfeather.blp"),
@@ -191,6 +192,7 @@ ICONS = (
     (ICON_ID_HUNTER_LONE_SURVIVOR, "Interface/icons/ability_hunter_camouflage.blp"),
     (ICON_ID_HUNTER_MASTER_MARKSMAN, "Interface/icons/ability_rogue_combatexpertise.blp"),
     (ICON_ID_HUNTER_TRIANGULATION, "Interface/icons/Essence_of_Convergence.blp"),
+    (ICON_ID_HUNTER_PRECISION, "Interface/icons/sha_ability_rogue_bloodyeye_nightborne.blp"),
 )
 
 # "Stock path, no blp" entries (warlock-rework DESTRUCTION §2.6/§11 Q19): a SpellIcon.dbc row that
