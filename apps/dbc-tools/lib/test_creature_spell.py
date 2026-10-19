@@ -236,7 +236,9 @@ class ConvergenceTest(unittest.TestCase):
 
     def test_a_removal_converges_through_load_removed_keys(self):
         dsl = _load()
-        blocks, report = spell_tables.render_removal_blocks(dsl, {TABLE: {(300298.0, 0.0)}})
+        # hermetic: ignore the working tree's pending migrations (a real generated rev may already hold this DELETE)
+        with mock.patch.object(trainer_state, "_migration_files_mentioning", return_value=[]):
+            blocks, report = spell_tables.render_removal_blocks(dsl, {TABLE: {(300298.0, 0.0)}})
         creature_blocks = [b for b in blocks if "creature_template_spell" in b]
         self.assertEqual(len(creature_blocks), 1)
         self.assertIn("removal: creature_template_spell (CreatureID=300298, Index=0)", "\n".join(report))
@@ -249,6 +251,12 @@ class ConvergenceTest(unittest.TestCase):
 
 
 class RemovalTest(unittest.TestCase):
+    def setUp(self):
+        # hermetic: ignore the working tree's pending migrations (a real generated rev may already hold these DELETEs)
+        patcher = mock.patch.object(trainer_state, "_migration_files_mentioning", return_value=[])
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_a_removal_emits_one_key_exact_delete(self):
         dsl = _load('from lib.dsl.registry import remove_creature_spell\nremove_creature_spell(300298, 0)\n')
         blocks, report = spell_tables.render_removal_blocks(dsl, {TABLE: {(300298.0, 0.0)}})

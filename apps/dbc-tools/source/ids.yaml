@@ -200,16 +200,17 @@ summonproperties:
 reservations:
   shaman:
     # Spell: shared 202200-202359, Enh 202360-202519, Ele 202520-202639, Resto 202640-202759, spare 202760-202799
-    # (the P0 spike sits in 202760-202779).
+    # (202760-202779 held the removed P0 spike: don't reuse, players' clients may have cached them).
     spell: {start: 202200, end: 202799}
     # Talent: Ele 60280-60294, Enh 60295-60309, Resto 60310-60324, spare 60325-60329.
     talent: {start: 60280, end: 60329}
     # SkillLineAbility: shared 30640-30679, Enh 30680-30689, Ele 30690-30699, Resto 30700-30709.
     skilllineability: {start: 30640, end: 30719}
-    # spell_group: 1251 imbues, 1252 attunements, 1253-1256 per attunement, 1257 Healing Rain (the P0 spike uses 1270).
+    # spell_group: 1251 imbues, 1252 attunements, 1253-1256 per attunement, 1257 Healing Rain.
     spell_group: {start: 1251, end: 1270}
     spelldescriptionvariables: {start: 1190, end: 1229}  # by tens
-    # creature: Water 300260, Storm 300261, Spirits 300262-300265, new totems 300270-300279 (P0 spike: 300298/300299).
+    # creature: Water 300260, Storm 300261, Spirits 300262-300265, new totems 300270-300279
+    # (300298/300299 held the removed P0 spike: don't reuse).
     creature: {start: 300260, end: 300299}
     spellicon: {start: 90270, end: 90309}  # by tens
     soundentries: {start: 90081, end: 90100}

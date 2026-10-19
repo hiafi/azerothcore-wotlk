@@ -1,15 +1,8 @@
 """
-Shaman - trainer rows, untrains and creature-spell clean-up for the shared rework (SH0a).
-
-The first block removes the P0 spike's hand-written `creature_template_spell` rows (the spike files are gone;
-creatures 300298 / 300299 stay inert). Later blocks (A5) add the trainer 210 rows and untrains.
+Shaman - trainer rows and untrains for the shared rework (SH0a, A5).
 """
 
-from lib.dsl.registry import remove_creature_spell, trained_by, untrain
-
-
-remove_creature_spell(300298, 0)
-remove_creature_spell(300299, 0)
+from lib.dsl.registry import trained_by, untrain
 
 
 # SH0a (A5): trainer 210 rows. Bare ids; race masks stay on the SkillLineAbility rows.
