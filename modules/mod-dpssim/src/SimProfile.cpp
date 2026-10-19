@@ -254,6 +254,22 @@ bool SimProfile::Load(std::string const& path, Profile& out)
                 return false;
             }
         }
+        else if (key == "PetCreatureEntry")
+        {
+            try
+            {
+                if (value.find('-') != std::string::npos)
+                    throw std::invalid_argument("negative");
+                parsed.PetCreatureEntry = uint32(std::stoul(value));
+            }
+            catch (std::exception const&)
+            {
+                LOG_ERROR("server.dpssim",
+                    "mod-dpssim: SimProfile::Load() - '{}' line {}: 'PetCreatureEntry' value '{}' is not a number.",
+                    path, lineNo, value);
+                return false;
+            }
+        }
         else if (key == "PlayerbotGlyphs")
         {
             bool ok = false;
@@ -337,6 +353,13 @@ bool SimProfile::Load(std::string const& path, Profile& out)
     if (!haveClass)
     {
         LOG_ERROR("server.dpssim", "mod-dpssim: SimProfile::Load() - '{}': missing required 'Class' key.", path);
+        return false;
+    }
+
+    if (parsed.PetCreatureEntry != 0 && parsed.Class != CLASS_HUNTER)
+    {
+        LOG_ERROR("server.dpssim", "mod-dpssim: SimProfile::Load() - '{}': 'PetCreatureEntry' is for hunter profiles "
+            "(Class {}), this one is class {}.", path, uint32(CLASS_HUNTER), parsed.Class);
         return false;
     }
 

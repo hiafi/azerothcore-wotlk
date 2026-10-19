@@ -179,6 +179,26 @@ def _talent_call_lines(
     return lines
 
 
+def _plain_talent_call_lines(entry: dict, var: str, tab_var: str) -> list[str]:
+    """`<var> = talent(...)` for a talent whose rank ids stay bare ints: no `granted_by_talent`, so no
+    SkillLineAbility row is derived (pull_talents.py --dsl: untouched reference copies, hunter-rework T1)."""
+    lines = [f"{var} = talent("]
+    lines.append(f"    id={entry['id']!r},")
+    lines.append(f"    tab_id={tab_var}.id,")
+    lines.append(f"    tier={entry['tier']!r},")
+    lines.append(f"    column={entry['column']!r},")
+    lines.append(f"    rank_spell_ids={list(entry.get('rank_spell_ids') or [])!r},")
+    depends_on = entry.get("depends_on")
+    if depends_on and (depends_on.get("talent_id") or depends_on.get("rank")):
+        lines.append(f"    depends_on={dict(depends_on)!r},")
+    if entry.get("flags"):
+        lines.append(f"    flags={entry['flags']!r},")
+    if entry.get("raw_overrides"):
+        lines.append(f"    raw_overrides={entry['raw_overrides']!r},")
+    lines.append(")")
+    return lines
+
+
 def convert(class_name: str) -> str:
     spells_csv = source.load_one_spell_file(SOURCE_DIR / "spells" / f"{class_name}.csv")
     spells_talents_csv_path = SOURCE_DIR / "spells" / f"{class_name}_talents.csv"

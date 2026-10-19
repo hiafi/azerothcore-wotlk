@@ -30,6 +30,7 @@ wiring into `generate.py` are Phase 1, not yet done.
 from __future__ import annotations
 
 from .constants import (
+    AcquireMethod,
     AuraType,
     CombatRating,
     DispelType,
@@ -53,6 +54,7 @@ from .registry import (
 )
 
 __all__ = [
+    "AcquireMethod",
     "RANGE_SELF",
     "School",
     "PowerType",

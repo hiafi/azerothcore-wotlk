@@ -138,6 +138,18 @@ at an *unconverted* effect is fine as-is.
 ranged attack power (`model.uses_ranged_attack_power`: Hunter family, a ranged-weapon
 requirement or SPELL_ATTR0_USES_RANGED_SLOT, and not a melee damage class). Nothing to set by hand.
 
+**Pet spells must not use `$AP`: `pet_owner_scaling=`.** The client fills `$AP` in a pet ability's tooltip from
+the *hunter's melee* attack power, but the server scales the pet's damage by the pet's own attack power (after the
+hunter rework: 100% of the owner's ranged attack power plus 100% of the owner's spell power, `PET.md` 4.3a), so an
+`$AP` term quotes the wrong stat. A pet-bit spell (`SpellClassMask_2` d1 b28) therefore passes
+`spell(..., pet_owner_scaling=(rap_pct, sp_pct))`; each effect's stat term `c*$AP` then becomes
+`c*rap_pct/100*$RAP+c*sp_pct/100*$SP` in every `$max()` branch (`c` is that effect's `ap_coefficient`, so a Bite at
+`ap_potency 25.5`, cast 0, shows `0.1093*$RAP+0.1093*$SP`). A zero share drops its term and `(0, 0)` leaves the
+base line only. `pot_text()` of such a spell carries the same terms, so a hunter tooltip quoting a pet spell shows
+the same number. Errors: the option without the pet bit, or on a spell with any nonzero `sp_potency` (pet spell
+power is 0). Leaving it `None` changes nothing. The values come from `hunter_pet.py`'s
+`PET_AP_FROM_RAP_PCT` / `PET_AP_FROM_SP_PCT` `const()`s once the hunter pet pass writes them.
+
 **`$SP`/`$AP` are real, confirmed-live tokens** for "caster's current effective spell power/attack
 power," usable inside a raw `${...}` math expression — this is what `{potN}`'s generated formula
 uses internally (`lib/potency.py`'s `tooltip_expression()`/`_stat_bonus_term()`); you shouldn't need

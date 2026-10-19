@@ -33,4 +33,15 @@ public:
     void OnDpsSimRun() override;
 };
 
+// Tripwire for the "a sim actor never persists" guarantee (SimActor::Create()): OnPlayerSave fires at the top of
+// Player::SaveToDB(), before any row is written, so it can count but not veto. Always registered; costs one guid
+// compare per save of a real player.
+class DpsSimPlayerScript : public PlayerScript
+{
+public:
+    DpsSimPlayerScript();
+
+    void OnPlayerSave(Player* player) override;
+};
+
 #endif

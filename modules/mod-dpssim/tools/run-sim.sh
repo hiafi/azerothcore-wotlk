@@ -67,6 +67,13 @@
 #   modules/mod-dpssim/tools/run-sim.sh ArcaneMageSim 120 60 1 100 100   # 100 runs at a 100ms step
 #   modules/mod-dpssim/tools/run-sim.sh DestructionWarlockSim 300 60 2 10 100 5   # 5 stacked dummies
 #
+# Database isolation: the sim never connects to the live acore_characters. Before booting, this script clones the
+# live characters schema (structure plus the small static/bookkeeping tables the worldserver reads at startup, see
+# CHARS_COPY_DATA_TABLES) into a throwaway schema "acore_characters_sim_<pid>", points the sim container's
+# AC_CHARACTER_DATABASE_INFO at it, and drops it on exit (also after a failed or interrupted run). mod-dpssim itself
+# refuses to run on any characters DB not named acore_characters_sim*. The login, world and playerbots databases
+# are shared as before (the sim only reads the first two; it doesn't write the playerbots one).
+#
 # Requires: the normal Docker stack already up (ac-database healthy, ac-worldserver running -
 # its image, network, volume, and DB credentials are all discovered by inspecting that live
 # container, not hardcoded here, so this stays correct if any of those ever change).
@@ -135,12 +142,57 @@ if [[ "${#DB_ENV[@]}" -lt 4 ]]; then
         "DB env discovery may need updating." >&2
     exit 1
 fi
+
+# The characters DB is the one connection that is NOT passed through: the sim gets a throwaway clone (below).
+SIM_CHARS_DB="acore_characters_sim_$$"
 DB_ENV_ARGS=()
-for kv in "${DB_ENV[@]}"; do DB_ENV_ARGS+=(-e "$kv"); done
+LIVE_CHARS_INFO=""
+for kv in "${DB_ENV[@]}"; do
+    if [[ "$kv" == AC_CHARACTER_DATABASE_INFO=* ]]; then
+        LIVE_CHARS_INFO="${kv#AC_CHARACTER_DATABASE_INFO=}"
+    else
+        DB_ENV_ARGS+=(-e "$kv")
+    fi
+done
+# "host;port;user;password;database"
+IFS=';' read -r DB_HOST DB_PORT DB_USER DB_PASS LIVE_CHARS_DB <<< "$LIVE_CHARS_INFO"
+if [[ -z "$DB_HOST" || -z "$DB_USER" || -z "$LIVE_CHARS_DB" ]]; then
+    echo "error: couldn't parse AC_CHARACTER_DATABASE_INFO from ac-worldserver." >&2
+    exit 1
+fi
+if [[ "$SIM_CHARS_DB" == "$LIVE_CHARS_DB" || "$SIM_CHARS_DB" != acore_characters_sim_* ]]; then
+    echo "error: refusing to run: scratch characters DB '$SIM_CHARS_DB' must not be the live one." >&2
+    exit 1
+fi
+DB_ENV_ARGS+=(-e "AC_CHARACTER_DATABASE_INFO=${DB_HOST};${DB_PORT};${DB_USER};${DB_PASS};${SIM_CHARS_DB}")
+
+# The mysql client lives in the database container: find the one on the stack's network that answers to $DB_HOST.
+DB_CONTAINER=""
+for c in $(docker network inspect "$NETWORK" --format '{{range .Containers}}{{.Name}} {{end}}'); do
+    if docker inspect "$c" --format "{{range \$k, \$v := .NetworkSettings.Networks}}{{range \$v.Aliases}}{{println .}}{{end}}{{end}}" \
+            | grep -qx "$DB_HOST"; then
+        DB_CONTAINER="$c"
+        break
+    fi
+done
+if [[ -z "$DB_CONTAINER" ]]; then
+    echo "error: no container on network '$NETWORK' with the alias '$DB_HOST' - can't create the scratch DB." >&2
+    exit 1
+fi
+# MYSQL_PWD keeps the password out of the process list; mysql on stdin so the multi-statement scripts need no quoting.
+db_sql() { docker exec -i -e MYSQL_PWD="$DB_PASS" "$DB_CONTAINER" mysql -u"$DB_USER" -N -B "$@"; }
 
 # --- build a scratch etc/ + logs/ dir for this one run ------------------------------------
 SCRATCH="$(mktemp -d -t dpssim-run.XXXXXX)"
-trap 'rm -rf "$SCRATCH"' EXIT
+cleanup() {
+    rm -rf "$SCRATCH"
+    # Always drop the throwaway characters schema, whether the run succeeded, failed or was interrupted.
+    if [[ "$SIM_CHARS_DB" == acore_characters_sim_* ]]; then
+        db_sql -e "DROP DATABASE IF EXISTS \`${SIM_CHARS_DB}\`" || echo "warning: couldn't drop '$SIM_CHARS_DB'" >&2
+    fi
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
 mkdir -p "$SCRATCH/logs"
 cp -r env/dist/etc/. "$SCRATCH/etc/"
 
@@ -207,6 +259,39 @@ if [[ "$TARGETS" -gt 1 ]]; then BATCH_NAME="${PROFILE_NAME}.T${TARGETS}"; fi
 echo "Running '${PROFILE_NAME}' (${ITERATIONS} iteration(s), in one container) for ${DURATION_SECONDS}s" \
     "(sim time) each at level ${LEVEL}, race ${RACE}, ${STEP_MS}ms step," \
     "${TARGETS} target(s), rank ${TARGET_RANK}..." >&2
+
+# --- throwaway characters DB ----------------------------------------------------------------------------------------
+# Structure of every live base table (CREATE TABLE ... LIKE keeps columns, keys and defaults), then the rows of only
+# the static / bookkeeping tables the worldserver and its modules read at startup:
+#   updates, updates_include   the DB updater's applied-migration records (an empty `updates` would make the sim try
+#                              to re-apply every characters migration)
+#   worldstates, active_arena_season, mail_server_template*   core startup loads
+#   mod_ollama_chat_personality_templates   mod-ollama-chat aborts at startup without them, even when disabled
+#   playerbots_*_names         name pools playerbots loads at startup
+# Everything player-owned (characters, items, pets, mail, ...) stays empty. If a new module's startup load of
+# another table aborts a sim boot, add that table here.
+CHARS_COPY_DATA_TABLES=(updates updates_include worldstates active_arena_season mail_server_template
+    mail_server_template_conditions mail_server_template_items mod_ollama_chat_personality_templates
+    playerbots_names playerbots_guild_names playerbots_arena_team_names)
+
+echo "Creating throwaway characters DB ${SIM_CHARS_DB}..." >&2
+LIVE_TABLES="$(db_sql -e "SELECT table_name FROM information_schema.tables WHERE table_schema = '${LIVE_CHARS_DB}'
+    AND table_type = 'BASE TABLE' ORDER BY table_name")"
+SIM_DB_SCRIPT="$SCRATCH/create-sim-db.sql"
+{
+    echo "DROP DATABASE IF EXISTS \`${SIM_CHARS_DB}\`;"
+    echo "CREATE DATABASE \`${SIM_CHARS_DB}\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+    while read -r t; do
+        echo "CREATE TABLE \`${SIM_CHARS_DB}\`.\`${t}\` LIKE \`${LIVE_CHARS_DB}\`.\`${t}\`;"
+    done <<< "$LIVE_TABLES"
+    for t in "${CHARS_COPY_DATA_TABLES[@]}"; do
+        # A module that isn't installed has no table to copy; skip it rather than fail the run.
+        if grep -qx "$t" <<< "$LIVE_TABLES"; then
+            echo "INSERT INTO \`${SIM_CHARS_DB}\`.\`${t}\` SELECT * FROM \`${LIVE_CHARS_DB}\`.\`${t}\`;"
+        fi
+    done
+} > "$SIM_DB_SCRIPT"
+db_sql < "$SIM_DB_SCRIPT"
 
 RUN_LOG="$SCRATCH/run.log"
 set +e

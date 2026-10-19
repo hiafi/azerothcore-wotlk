@@ -30,6 +30,7 @@
 #include "SpellMgr.h"
 #include "SpellPotency.h" // Custom: potency-system
 #include "WarlockMechanics.h" // Custom: warlock-rework B14 bane slot
+#include "HunterMechanics.h" // Custom: hunter-rework Q5 stings stack
 
 uint32 GetTargetFlagMask(SpellTargetObjectTypes objType)
 {
@@ -1471,6 +1472,10 @@ bool SpellInfo::IsAuraExclusiveBySpecificPerCasterWith(SpellInfo const* spellInf
 {
     // Custom: warlock-rework B14 - a bane and a curse from the same warlock coexist on one target
     if (Warlock::IsBane(this) != Warlock::IsBane(spellInfo))
+        return false;
+
+    // Custom: hunter-rework Q5 - a hunter's stings coexist on one target
+    if (Hunter::StingsStack(this, spellInfo))
         return false;
 
     SpellSpecificType spellSpec = GetSpellSpecific();

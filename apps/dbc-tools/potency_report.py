@@ -340,6 +340,7 @@ def main() -> int:
         existing_creature_rows=existing_creature_rows,
         creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
         creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS,
+        live_data=spell_tables.load_dsl_live_data(),
     )
 
     existing_spells = state.load_existing_rows(dbcfmt.SPELL)

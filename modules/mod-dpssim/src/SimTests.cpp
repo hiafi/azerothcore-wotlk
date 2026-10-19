@@ -16,7 +16,10 @@
  */
 
 #include "SimTests.h"
+#include "DatabaseEnv.h"
 #include "Log.h"
+#include "QueryResult.h"
+#include "SimActor.h"
 #include "SimDaemon.h"
 #include "StringFormat.h"
 #include <algorithm>
@@ -237,16 +240,59 @@ namespace
             accelerated.CastCount, accelerated.TotalDamage, config.DurationMs, realTime.CastCount, realTime.TotalDamage));
         return passed;
     }
+
+    // Test 4/4: a sim actor never persists. 20 simulated minutes is past the stock 15-minute PlayerSaveInterval, the
+    // threshold that made the old actor autosave orphan rows into the live characters DB. Safe even if the fix
+    // regresses: the sim only runs against a throwaway characters schema (OnDpsSimRun refuses the live one).
+    bool RunNoPersistTest()
+    {
+        SimDaemon::RunConfig config;
+        config.StepMs = 1000;
+        config.DurationMs = 20 * 60 * 1000;
+        config.SpellPower = 0;
+        config.TargetArmor = 0;
+
+        uint32 const savesBefore = SimActor::GetSaveAttempts();
+        SimDaemon::RunResult result;
+        if (!SimDaemon::RunOnce(config, result))
+        {
+            LogVerdict("no-persist test", false, "RunOnce() failed - see preceding LOG_ERROR output.");
+            return false;
+        }
+        uint32 const saves = SimActor::GetSaveAttempts() - savesBefore;
+
+        // Everything under the reserved block once the actor is gone: must be zero (nothing may have saved it).
+        uint64 leftovers = 0;
+        for (char const* table : {"characters", "character_talent", "character_spell", "character_action",
+                "character_skills", "character_aura", "character_inventory", "character_stats"})
+        {
+            if (QueryResult rows = CharacterDatabase.Query("SELECT COUNT(*) FROM `{}` WHERE `guid` >= {}",
+                    table, SimActor::SIM_GUID_BASE))
+                leftovers += rows->Fetch()[0].Get<uint64>();
+        }
+        if (QueryResult rows = CharacterDatabase.Query("SELECT COUNT(*) FROM `item_instance` WHERE `owner_guid` >= {}",
+                SimActor::SIM_GUID_BASE))
+            leftovers += rows->Fetch()[0].Get<uint64>();
+
+        bool const passed = saves == 0 && leftovers == 0;
+        LogVerdict("no-persist test", passed, Acore::StringFormat(
+            "{}s simulated, {} SaveToDB() call(s) on the sim actor (expected 0), "
+            "{} row(s) in the reserved guid block (expected 0).",
+            config.DurationMs / 1000, saves, leftovers));
+        return passed;
+    }
 }
 
 void SimTests::RunAll()
 {
-    LOG_INFO("server.dpssim", "mod-dpssim: SimTests::RunAll() - running Phase 1's three required tests.");
+    LOG_INFO("server.dpssim", "mod-dpssim: SimTests::RunAll() - running Phase 1's three required tests plus the "
+        "no-persist guard.");
 
     uint32 passed = 0;
     passed += RunKnownValueTest() ? 1 : 0;
     passed += RunTimestepTest() ? 1 : 0;
     passed += RunAcceleratedClockTest() ? 1 : 0;
+    passed += RunNoPersistTest() ? 1 : 0;
 
-    LOG_INFO("server.dpssim", "mod-dpssim: SimTests::RunAll() complete - {}/3 tests passed.", passed);
+    LOG_INFO("server.dpssim", "mod-dpssim: SimTests::RunAll() complete - {}/4 tests passed.", passed);
 }

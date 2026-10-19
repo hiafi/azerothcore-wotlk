@@ -16,13 +16,35 @@
  */
 
 #include "SimActor.h"
+#include "DatabaseEnv.h"
 #include "Log.h"
 #include "Map.h"
 #include "MotionMaster.h"
 #include "ObjectAccessor.h"
 #include "ObjectMgr.h"
 #include "Player.h"
+#include "World.h"
 #include "WorldSession.h"
+#include <atomic>
+
+namespace
+{
+    std::atomic<uint32> s_nextSimGuidOffset{0};
+    std::atomic<uint32> s_saveAttempts{0};
+}
+
+uint32 SimActor::GetSaveAttempts()
+{
+    return s_saveAttempts.load();
+}
+
+void SimActor::NoteSaveAttempt(ObjectGuid guid)
+{
+    ++s_saveAttempts;
+    LOG_ERROR("server.dpssim", "mod-dpssim: Player::SaveToDB() entered for sim actor {} - a save path the sim "
+        "was meant to rule out is live (rows land in the throwaway sim characters DB); find the caller.",
+        guid.ToString());
+}
 
 SimActor::~SimActor()
 {
@@ -56,6 +78,16 @@ SimActor::~SimActor()
 
 bool SimActor::Create(Config const& config)
 {
+    // Nothing may persist this actor. Player::Update() autosaves every PlayerSaveInterval ms of Update time (the
+    // sim feeds it sim time, so a 10-iteration batch crosses the default 15 minutes) and the actor has no
+    // `characters` row, so the save wrote its child tables (talents, spells, actions, ...) as orphans under a guid
+    // the live server later handed to a real character. Player's constructor snapshots both values, so set them
+    // before `new Player`. 0 disables the autosave timer (`if (m_nextSave)`) and the additional-save timer.
+    sWorld->setIntConfig(CONFIG_INTERVAL_SAVE, 0);
+    sWorld->setIntConfig(CONFIG_ADDITIONAL_SAVES, 0);
+
+    _guidLow = SIM_GUID_BASE + s_nextSimGuidOffset++;
+
     // accountId 0, no name, no socket: a null socket makes the session headless, which
     // WorldSession's constructor special-cases (no LoginDatabase touch, m_Address = "headless") -
     // see the Phase 0 spike write-up in the plan doc.
@@ -67,7 +99,7 @@ bool SimActor::Create(Config const& config)
 
     _player = new Player(_session);
     _player->GetMotionMaster()->Initialize();
-    if (!_player->Create(sObjectMgr->GetGenerator<HighGuid::Player>().Generate(), &createInfo))
+    if (!_player->Create(_guidLow, &createInfo))
     {
         LOG_ERROR("server.dpssim", "mod-dpssim: SimActor::Create() - Player::Create() failed (race {}, class {}) - check the race/class combo is valid.",
             config.Race, config.Class);

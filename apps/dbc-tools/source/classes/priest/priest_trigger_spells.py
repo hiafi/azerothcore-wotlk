@@ -6433,7 +6433,7 @@ divine_touch_buff_200176 = spell(
     spell_icon_id=237,
     notes='HOLY.md 1,0: the Divine Touch buff - next Greater Heal instant (-100% cast time) and free '
           '(-100% cost), scoped to Greater Heal only (both effects), 1 charge, 15 s, no stack.',
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your next Greater Heal is instant and free.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Greater Heal is instant and free.', 'EquippedItemClass': -1, 'ProcChance': 101, 'ProcCharges': 1, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.GREATER_HEAL, 'EffectSpellClassMaskB_1': _masks.GREATER_HEAL, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your next Greater Heal is instant and free.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Greater Heal is instant and free.', 'EquippedItemClass': -1, 'ProcChance': 101, 'ProcCharges': 1, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.GREATER_HEAL, 'EffectSpellClassMaskB_1': _masks.GREATER_HEAL, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
 )
 
 
@@ -6554,7 +6554,7 @@ improved_holy_nova_200183 = spell(
     notes='HOLY.md 2,2: rank 1, +10% (base_points=9), scoped to BOTH Holy Nova bits - damage '
           '(15237) and heal (23455) - EffectSpellClassMaskA_1 below, since HOLY.md flags they use '
           'different family bits and both need covering on this one effect slot.',
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage and healing of your Holy Nova spell by $s1%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.HOLY_NOVA_DMG | _masks.HOLY_NOVA_HEAL, 'EffectChainAmplitude_1': 1.0},
+    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage and healing of your Holy Nova spell by $s1%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.HOLY_NOVA_DMG | _masks.HOLY_NOVA_HEAL, 'EffectChainAmplitude_1': 1.0},
 )
 
 
@@ -6569,7 +6569,7 @@ improved_holy_nova_200184 = spell(
     ],
     spell_icon_id=1874,
     notes='HOLY.md 2,2: rank 2, +20% (base_points=19).',
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage and healing of your Holy Nova spell by $s1%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.HOLY_NOVA_DMG | _masks.HOLY_NOVA_HEAL, 'EffectChainAmplitude_1': 1.0},
+    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage and healing of your Holy Nova spell by $s1%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.HOLY_NOVA_DMG | _masks.HOLY_NOVA_HEAL, 'EffectChainAmplitude_1': 1.0},
 )
 
 
@@ -6608,7 +6608,7 @@ searing_light_200186 = spell(
           'portion) read the misc=22 variant - same masks as 14909/15017 (Smite|HF|Holy Nova dmg|'
           'Penance dmg bolt on eff1, Holy Fire only on eff2). New eff3 SPELLMOD_COST -25% '
           '(base_points=-26) scoped Holy Nova damage only.',
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Smite, Holy Fire, Holy Nova and Penance spells by $s1%, and reduces the mana cost of your Holy Nova by $s2%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': 5243008, 'EffectSpellClassMaskA_2': 32768, 'EffectSpellClassMaskA_3': _masks.PENANCE_BOLT, 'EffectSpellClassMaskB_1': 1048576, 'EffectSpellClassMaskC_1': _masks.HOLY_NOVA_DMG, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Smite, Holy Fire, Holy Nova and Penance spells by $s1%, and reduces the mana cost of your Holy Nova by $s2%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': 5243008, 'EffectSpellClassMaskA_2': 32768, 'EffectSpellClassMaskA_3': _masks.PENANCE_BOLT, 'EffectSpellClassMaskB_1': 1048576, 'EffectSpellClassMaskC_1': _masks.HOLY_NOVA_DMG, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 
 
@@ -6683,7 +6683,7 @@ kindled_faith_buff_200190 = spell(
     notes='HOLY.md 3,3: the Kindled Faith buff - next Holy Fire instant (-100% cast time), scoped to '
           "Holy Fire only, 1 charge, 10 s, no stack. Icon reuses Holy Fire's own (156, "
           'talent-tooltip-audit fix, WP-C).',
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your next Holy Fire is instant.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Holy Fire is instant.', 'EquippedItemClass': -1, 'ProcChance': 101, 'ProcCharges': 1, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.HOLY_FIRE, 'EffectChainAmplitude_1': 1.0},
+    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your next Holy Fire is instant.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Holy Fire is instant.', 'EquippedItemClass': -1, 'ProcChance': 101, 'ProcCharges': 1, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.HOLY_FIRE, 'EffectChainAmplitude_1': 1.0},
 )
 
 
@@ -6774,8 +6774,10 @@ spirit_of_redemption_free_heals_200226 = spell(
     spell_icon_id=1654,
     notes='HOLY.md 4,1 ID map: "4th effect of the form" - a separate spell (not a 4th Effect slot, '
           'which does not exist) cast alongside 200193/200194 by spell_pri_spirit_of_redemption. '
-          '-100% cost (base_points=-101) scoped to PRIEST_HEAL_MASK on all three dwords, 5 s.',
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Holy Priest heals cost no mana.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals cost no mana.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.PRIEST_HEAL_MASK[0], 'EffectSpellClassMaskA_2': _masks.PRIEST_HEAL_MASK[1], 'EffectSpellClassMaskA_3': _masks.PRIEST_HEAL_MASK[2], 'EffectChainAmplitude_1': 1.0},
+          '-100% cost (base_points=-101) scoped to PRIEST_HEAL_MASK on all three dwords, 5 s. S1c (user ruling 2026-10-16): Lightwell\'s '
+          'dword-1 bit (0x40000000) stays, so Lightwell is free in the form; Resurrection, Mass Resurrection, '
+          'Shackle Undead, Shadowfiend and Guardian Spirit share the bit and are free too (harmless in a 5 s form).',
+    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Holy Priest heals cost no mana.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals cost no mana.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.PRIEST_HEAL_MASK[0], 'EffectSpellClassMaskA_2': _masks.PRIEST_HEAL_MASK[1], 'EffectSpellClassMaskA_3': _masks.PRIEST_HEAL_MASK[2], 'EffectChainAmplitude_1': 1.0},
 )
 
 
@@ -6793,7 +6795,7 @@ improved_prayer_of_mending_200195 = spell(
     spell_icon_id=2219,
     notes='HOLY.md 4,3: rank 1, healing +10% (base_points=9) and cooldown -2000 ms, both scoped to '
           "Prayer of Mending's dw2 bit 32 (also covers the 33110 heal jump, same bit).",
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the healing of your Prayer of Mending by $s1%, and reduces its cooldown by $/1000;s2 sec.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_2': _masks.POM, 'EffectSpellClassMaskB_2': _masks.POM, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the healing of your Prayer of Mending by $s1%, and reduces its cooldown by $/1000;s2 sec.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_2': _masks.POM, 'EffectSpellClassMaskB_2': _masks.POM, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
 )
 
 
@@ -6809,7 +6811,7 @@ improved_prayer_of_mending_200196 = spell(
     ],
     spell_icon_id=2219,
     notes='HOLY.md 4,3: rank 2, healing +20% (base_points=19), cooldown -4000 ms.',
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the healing of your Prayer of Mending by $s1%, and reduces its cooldown by $/1000;s2 sec.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_2': _masks.POM, 'EffectSpellClassMaskB_2': _masks.POM, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the healing of your Prayer of Mending by $s1%, and reduces its cooldown by $/1000;s2 sec.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_2': _masks.POM, 'EffectSpellClassMaskB_2': _masks.POM, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
 )
 
 
@@ -6974,7 +6976,7 @@ radiant_fury_200207 = spell(
           'Healing uses for "additional % of bonus") +7% (base_points=6) scoped Smite|HF|Holy Nova '
           'dmg. eff2 APPLY_AREA_AURA_RAID (65, precedent: Improved Icy Talons 55610) generalized '
           'haste (193) +1% (base_points=0) to raid within 50 yds.',
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the bonus spell damage of your Smite, Holy Fire and Holy Nova by $s1%, and increases the spell haste of party and raid members within 50 yds by $s2%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.SMITE | _masks.HOLY_FIRE | _masks.HOLY_NOVA_DMG, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the bonus spell damage of your Smite, Holy Fire and Holy Nova by $s1%, and increases the spell haste of party and raid members within 50 yds by $s2%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.SMITE | _masks.HOLY_FIRE | _masks.HOLY_NOVA_DMG, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
 )
 
 
@@ -6990,7 +6992,7 @@ radiant_fury_200208 = spell(
     ],
     spell_icon_id=2177,
     notes='HOLY.md 6,3: rank 2, +14% (base_points=13) / +2% raid haste (base_points=1).',
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the bonus spell damage of your Smite, Holy Fire and Holy Nova by $s1%, and increases the spell haste of party and raid members within 50 yds by $s2%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.SMITE | _masks.HOLY_FIRE | _masks.HOLY_NOVA_DMG, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the bonus spell damage of your Smite, Holy Fire and Holy Nova by $s1%, and increases the spell haste of party and raid members within 50 yds by $s2%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.SMITE | _masks.HOLY_FIRE | _masks.HOLY_NOVA_DMG, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
 )
 radiant_fury_200209 = spell(
     id=200209,
@@ -7005,7 +7007,7 @@ radiant_fury_200209 = spell(
     spell_icon_id=2177,
     notes='HOLY.md 6,3: rank 3, +20% (base_points=19) / +3% raid haste (base_points=2). PLAN §8 '
           'accepted risk #5 - this may collide with Improved Moonkin Form.',
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the bonus spell damage of your Smite, Holy Fire and Holy Nova by $s1%, and increases the spell haste of party and raid members within 50 yds by $s2%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.SMITE | _masks.HOLY_FIRE | _masks.HOLY_NOVA_DMG, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the bonus spell damage of your Smite, Holy Fire and Holy Nova by $s1%, and increases the spell haste of party and raid members within 50 yds by $s2%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.SMITE | _masks.HOLY_FIRE | _masks.HOLY_NOVA_DMG, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
 )
 # --- end Radiant Fury ---
 
@@ -7088,7 +7090,7 @@ holy_wrath_crit_200213 = spell(
           'Prayer of Mending/Prayer of Healing/Circle of Healing, same as Inspiration/Test of '
           "Faith's own scoping) PLUS Smite|Holy Fire (dw1), since \"next Holy spell\" in a damage "
           "capstone's own tooltip most plausibly includes the caster's direct Holy nukes, not only heals.",
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your next Holy spell by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Next Holy spell crit chance increased.', 'EquippedItemClass': -1, 'ProcChance': 101, 'ProcCharges': 1, 'CumulativeAura': 5, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': 420748992, 'EffectSpellClassMaskA_2': 134283268, 'EffectSpellClassMaskA_3': 4, 'EffectChainAmplitude_1': 1.0},
+    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your next Holy spell by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Next Holy spell crit chance increased.', 'EquippedItemClass': -1, 'ProcChance': 101, 'ProcCharges': 1, 'CumulativeAura': 5, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': 420748992, 'EffectSpellClassMaskA_2': 134283268, 'EffectSpellClassMaskA_3': 4, 'EffectChainAmplitude_1': 1.0},
 )
 
 
@@ -7127,7 +7129,7 @@ echo_of_light_200215 = spell(
           '_damage read via GetEchoOfLightBasePct and then AddPct by Mastery. Was 250/300/350% '
           '"of Mastery" (a pure multiplier, so 0 Mastery meant no Echo at all) - changed 2026-09-22 '
           'per the user: Mastery increases the Echo, it is not a prerequisite for it.',
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Holy Words are $s1% more effective. Holy Word: Serenity and Holy Word: Sanctify apply a healing Echo, and Holy Word: Chastise applies a damage Echo, for $s2% of the amount over 6 sec, increased by 3 times your Mastery.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_3': _ECHO_HOLY_WORD_MASK[2], 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Holy Words are $s1% more effective. Holy Word: Serenity and Holy Word: Sanctify apply a healing Echo, and Holy Word: Chastise applies a damage Echo, for $s2% of the amount over 6 sec, increased by 3 times your Mastery.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_3': _ECHO_HOLY_WORD_MASK[2], 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
 )
 
 
@@ -7143,7 +7145,7 @@ echo_of_light_200216 = spell(
     ],
     spell_icon_id=2382,
     notes='HOLY.md 8,3: rank 2, +20% (base_points=19), Echo base 30% (base_points=29).',
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Holy Words are $s1% more effective. Holy Word: Serenity and Holy Word: Sanctify apply a healing Echo, and Holy Word: Chastise applies a damage Echo, for $s2% of the amount over 6 sec, increased by 3 times your Mastery.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_3': _ECHO_HOLY_WORD_MASK[2], 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Holy Words are $s1% more effective. Holy Word: Serenity and Holy Word: Sanctify apply a healing Echo, and Holy Word: Chastise applies a damage Echo, for $s2% of the amount over 6 sec, increased by 3 times your Mastery.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_3': _ECHO_HOLY_WORD_MASK[2], 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
 )
 
 
@@ -7160,7 +7162,7 @@ echo_of_light_200217 = spell(
     spell_icon_id=2382,
     notes='HOLY.md 8,3: rank 3, +30% (base_points=29), Echo base 35% (base_points=34). The '
           'only Mastery consumer in this tree (design doc §1).',
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Holy Words are $s1% more effective. Holy Word: Serenity and Holy Word: Sanctify apply a healing Echo, and Holy Word: Chastise applies a damage Echo, for $s2% of the amount over 6 sec, increased by 3 times your Mastery.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_3': _ECHO_HOLY_WORD_MASK[2], 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Holy Words are $s1% more effective. Holy Word: Serenity and Holy Word: Sanctify apply a healing Echo, and Holy Word: Chastise applies a damage Echo, for $s2% of the amount over 6 sec, increased by 3 times your Mastery.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_3': _ECHO_HOLY_WORD_MASK[2], 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
 )
 
 
@@ -7237,7 +7239,7 @@ epiphany_of_light_200220 = spell(
     spell_icon_id=1876,
     notes='HOLY.md 9,2: rank 1 - eff1 SPELLMOD_DOT +20% (base_points=19) scoped Holy Fire. eff2 '
           'procs Surge of Light (33151) at 2% chance (procs_on below), 5 s internal lockout.',
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the periodic damage of your Holy Fire by $s1%, and gives it a 2% chance to trigger Surge of Light. Once per 5 sec.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.HOLY_FIRE, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the periodic damage of your Holy Fire by $s1%, and gives it a 2% chance to trigger Surge of Light. Once per 5 sec.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.HOLY_FIRE, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
 )
 procs_on(epiphany_of_light_200220, PROC_FLAG_DONE_PERIODIC, family_name=6, family_mask=(_masks.HOLY_FIRE, 0, 0),
          spell_type_mask=PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=PROC_SPELL_PHASE_HIT, chance=2, cooldown_ms=5000)
@@ -7255,7 +7257,7 @@ epiphany_of_light_200221 = spell(
     ],
     spell_icon_id=1876,
     notes='HOLY.md 9,2: rank 2, +40% (base_points=39), 4% chance.',
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the periodic damage of your Holy Fire by $s1%, and gives it a 4% chance to trigger Surge of Light. Once per 5 sec.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.HOLY_FIRE, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the periodic damage of your Holy Fire by $s1%, and gives it a 4% chance to trigger Surge of Light. Once per 5 sec.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.HOLY_FIRE, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
 )
 procs_on(epiphany_of_light_200221, PROC_FLAG_DONE_PERIODIC, family_name=6, family_mask=(_masks.HOLY_FIRE, 0, 0),
          spell_type_mask=PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=PROC_SPELL_PHASE_HIT, chance=4, cooldown_ms=5000)
@@ -7273,7 +7275,7 @@ epiphany_of_light_200222 = spell(
     ],
     spell_icon_id=1876,
     notes='HOLY.md 9,2: rank 3, +60% (base_points=59), 6% chance.',
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the periodic damage of your Holy Fire by $s1%, and gives it a 6% chance to trigger Surge of Light. Once per 5 sec.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.HOLY_FIRE, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
+    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the periodic damage of your Holy Fire by $s1%, and gives it a 6% chance to trigger Surge of Light. Once per 5 sec.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.HOLY_FIRE, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0},
 )
 procs_on(epiphany_of_light_200222, PROC_FLAG_DONE_PERIODIC, family_name=6, family_mask=(_masks.HOLY_FIRE, 0, 0),
          spell_type_mask=PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=PROC_SPELL_PHASE_HIT, chance=6, cooldown_ms=5000)
@@ -7291,7 +7293,7 @@ chastise_buff_200224 = spell(
     spell_icon_id=90104,
     notes='HOLY.md 9,3/§2 "Chastise follow-up": +30% Smite/Holy Fire damage (base_points=29), 10 s, '
           'applied by Holy Word: Chastise\'s own effect_2 TRIGGER_SPELL (self).',
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your next Smite or Holy Fire by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Smite and Holy Fire damage increased by $s1%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.SMITE | _masks.HOLY_FIRE, 'EffectChainAmplitude_1': 1.0},
+    raw_overrides={'SpellClassSet': 6, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your next Smite or Holy Fire by $s1%.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Smite and Holy Fire damage increased by $s1%.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectSpellClassMaskA_1': _masks.SMITE | _masks.HOLY_FIRE, 'EffectChainAmplitude_1': 1.0},
 )
 
 

@@ -19,6 +19,7 @@
 #define MODULE_DPSSIM_SIMACTOR_H
 
 #include "Define.h"
+#include "ObjectGuid.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -70,6 +71,22 @@ public:
         int32 AttackPower = 0;
     };
 
+    // run-sim.sh points the sim at a throwaway copy of the characters schema, never the live one. Defence in depth
+    // on top of that: sim actors take guids from this reserved block instead of the Player generator (which would
+    // give max(characters.guid)+1), so a stray write could never land on a real character even if the isolation
+    // failed. The low guid is 32 bits; a generator would need two billion characters to reach it.
+    static constexpr ObjectGuid::LowType SIM_GUID_BASE = 0x7FFF0000;
+
+    [[nodiscard]] static bool IsSimGuid(ObjectGuid guid)
+    {
+        return guid.IsPlayer() && guid.GetCounter() >= SIM_GUID_BASE;
+    }
+
+    // Times Player::SaveToDB() was entered for a sim actor, counted by DpsSimPlayerScript::OnPlayerSave(). Must stay
+    // 0: Create() zeroes the autosave interval, and nothing else in the sim path saves. Read by SimTests.
+    static uint32 GetSaveAttempts();
+    static void NoteSaveAttempt(ObjectGuid guid);
+
     ~SimActor();
 
     // Builds the socketless WorldSession + Player, levels it to Config.Level, applies the
@@ -83,6 +100,7 @@ public:
 private:
     WorldSession* _session = nullptr;
     Player* _player = nullptr;
+    ObjectGuid::LowType _guidLow = 0;
 };
 
 #endif

@@ -4834,6 +4834,14 @@ InfiniteAmmo.Enabled = 0
 Custom.XP.DungeonBoss.Rate = 10
 
 #
+#    Custom.Realm.Classless
+#        Description: 1 on the Classless realm. Read once at first use by class scripts that have
+#                     Classless values (hunter Lone Survivor 1/2%, HunterMechanics.cpp).
+#        Default:     0
+
+Custom.Realm.Classless = 0
+
+#
 ###################################################################################################
 
 ###################################################################################################

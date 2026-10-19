@@ -12,6 +12,15 @@ Usage:
   python3 apps/dbc-tools/pull_talents.py --class mage
   python3 apps/dbc-tools/pull_talents.py --tab 8,9,10
   python3 apps/dbc-tools/pull_talents.py --talent 1,2,3
+
+DSL mode (`--dsl`): prints ready-to-paste `tab(...)` / `talent(...)` declarations to stdout instead of
+appending to source/talents/*.yaml (the legacy format no class uses any more), the counterpart of
+pull_dsl.py for talents:
+  python3 apps/dbc-tools/pull_talents.py --tab 409,410,411 --dsl
+It never writes a file and skips every tab/talent id already declared under source/classes/ (or still in
+source/talents/). Rank ids stay bare ints in a plain `talent(...)`: no `granted_by_talent`, so no
+SkillLineAbility row is derived - an untouched reference copy that generate.py silently skips. `--tab`
+does not filter on ClassMask (only `--class` does), so pet tabs (ClassMask 0, PetTalentMask 1/2/4) come through.
 """
 
 from __future__ import annotations
@@ -51,6 +60,64 @@ def parse_id_spec(spec: str) -> list[int]:
     return ids
 
 
+def print_dsl(existing_tabs, existing_talents, wanted_tab_ids, wanted_talent_ids) -> int:
+    """`--dsl` mode: see the module docstring. Always returns 0 (nothing to print is not an error)."""
+    from csv_to_dsl import _plain_talent_call_lines, _slug, _tab_call_lines
+    from lib import spell_tables, trainer_state
+    from lib.dsl import registry as dsl_registry
+
+    creature_table_index = spell_tables.load_creature_table_index()
+    dsl = dsl_registry.load_classes_dir(
+        SOURCE_DIR / "classes", ids_cfg=source.load_ids(SOURCE_DIR / "ids.yaml"),
+        trainer_index=trainer_state.load_trainer_index(),
+        existing_group_ids={int(row["id"]) for row in trainer_state.load_table_rows("spell_group")},
+        shapeshift_index=state.load_stock_rows(dbcfmt.SPELLSHAPESHIFTFORM),
+        existing_creature_rows={int(r["entry"]): r for r in creature_table_index.live_rows("creature_template")},
+        creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
+        creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS,
+        live_data=spell_tables.load_dsl_live_data(),
+    )
+    declared_tabs = {e["id"] for e in dsl["tabs"]}
+    declared_talents = {e["id"] for e in dsl["talents"]}
+    if TALENTS_DIR.is_dir():
+        legacy = source.load_talents_yaml(TALENTS_DIR)
+        declared_tabs |= {e["id"] for e in legacy["tabs"]}
+        declared_talents |= {e["id"] for e in legacy["talents"]}
+
+    tab_vars: dict[int, str] = {}
+    chunks = []
+    for tab_id in wanted_tab_ids:
+        row = existing_tabs.get(tab_id)
+        if row is None:
+            print(f"# tab {tab_id}: not found in talenttab_dbc (base DBC + overlay)", file=sys.stderr)
+            continue
+        entry = source.talent_entry_to_yaml_safe(reverse.reverse_talenttab_row(row))
+        var = _slug(entry["name"], tab_id) + "_tab"
+        tab_vars[tab_id] = var
+        if tab_id in declared_tabs:
+            print(f"# skip tab {tab_id}: already declared under source/classes/", file=sys.stderr)
+            continue
+        chunks.append("\n".join(_tab_call_lines(entry, var, None)))
+    for talent_id in wanted_talent_ids:
+        row = existing_talents.get(talent_id)
+        if row is None:
+            print(f"# talent {talent_id}: not found in talent_dbc (base DBC + overlay)", file=sys.stderr)
+            continue
+        if talent_id in declared_talents:
+            print(f"# skip talent {talent_id}: already declared under source/classes/", file=sys.stderr)
+            continue
+        entry = source.talent_entry_to_yaml_safe(reverse.reverse_talent_row(row))
+        tab_var = tab_vars.get(entry["tab_id"])
+        if tab_var is None:
+            print(f"# talent {talent_id}: its tab {entry['tab_id']} is not among the pulled tabs; pull the tab "
+                  f"too (--tab {entry['tab_id']}) so the talent can reference it", file=sys.stderr)
+            continue
+        chunks.append("\n".join(_plain_talent_call_lines(entry, f"talent_{talent_id}", tab_var)))
+    if chunks:
+        print("\n\n\n".join(chunks))
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     group = ap.add_mutually_exclusive_group(required=True)
@@ -62,6 +129,10 @@ def main() -> int:
     group.add_argument("--talent", help="comma-separated Talent IDs and/or ranges")
     ap.add_argument(
         "--dest", help="destination file stem (default: --class, when given)",
+    )
+    ap.add_argument(
+        "--dsl", action="store_true",
+        help="print DSL tab(...)/talent(...) declarations to stdout instead of writing source/talents/*.yaml",
     )
     args = ap.parse_args()
 
@@ -81,14 +152,17 @@ def main() -> int:
             i for i, row in existing_talents.items() if row["TabID"] in wanted_tab_ids
         )
         dest = args.dest
-        if not dest:
+        if not dest and not args.dsl:
             ap.error("--dest is required when pulling by --tab (no --class to default to)")
     else:
         wanted_tab_ids = []
         wanted_talent_ids = parse_id_spec(args.talent)
         dest = args.dest
-        if not dest:
+        if not dest and not args.dsl:
             ap.error("--dest is required when pulling by --talent (no --class to default to)")
+
+    if args.dsl:
+        return print_dsl(existing_tabs, existing_talents, wanted_tab_ids, wanted_talent_ids)
 
     already = {}
     if TALENTS_DIR.is_dir():

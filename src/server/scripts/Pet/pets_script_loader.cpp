@@ -24,6 +24,7 @@ void AddSC_mage_pet_scripts();
 void AddSC_priest_pet_scripts();
 void AddSC_shaman_pet_scripts();
 void AddSC_warlock_rework_pet_scripts(); // Custom: warlock-rework Demonology pass
+void AddSC_hunter_rework_pet_scripts(); // Custom: hunter-rework
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
@@ -36,4 +37,5 @@ void AddPetScripts()
     AddSC_priest_pet_scripts();
     AddSC_shaman_pet_scripts();
     AddSC_warlock_rework_pet_scripts(); // Custom: warlock-rework Demonology pass
+    AddSC_hunter_rework_pet_scripts(); // Custom: hunter-rework
 }

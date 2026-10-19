@@ -35,6 +35,10 @@ level-up set, so the helper drops it again: the default list ends up exactly as 
 a record whose rank was never in that family's set (an off-family default) gets the survivor
 instead of the stale rank. These rows are server-only (`creaturespelldata_dbc`).
 
+`retire_pet_spell()` (hunter-rework T1, SHARED §C7.8) rides the same two paths: `retired_skilllineability_overrides`
+adds AcquireMethod 0 overrides for a retired pet ability and `spell_data_strips` plans the CreatureSpellData strip
+that `creaturespelldata_overrides` applies after the superseded-rank mapping (one row per record).
+
 Both rules read `existing_rows` (stock plus promoted migrations) to report a conflict: a row a
 migration changed to something that is neither stock nor this override. The CreatureSpellData rule
 also uses it to skip records already live; the SkillLineAbility entries get that from
@@ -68,6 +72,7 @@ class Overrides:
     superseded: dict[int, int] = field(default_factory=dict)  # superseded rank -> survivor
     collisions: list[str] = field(default_factory=list)  # IDs a declared row already owns
     warnings: list[str] = field(default_factory=list)
+    matched: set[int] = field(default_factory=set)  # retire_pet_spell spell ids that found a pet row in scope
 
 
 @dataclass
@@ -99,17 +104,23 @@ def superseded_ranks(chains: dict[int, list[tuple[int, int]]], survivors: set[in
     return superseded
 
 
-def _override_entry(stock: dict, survivor: int) -> dict:
+def _zero_acquire_entry(stock: dict, notes: str) -> dict:
+    """The stock row as a source-shaped `skill_line_ability` entry with `AcquireMethod` 0."""
     table = dbcfmt.SKILLLINEABILITY
     entry = {key: stock[column] for column, key in _TYPED_COLUMNS.items()}
     raw = {column: stock.get(column, 0) for column in table.columns if column not in _TYPED_COLUMNS}
     raw["AcquireMethod"] = 0
     entry["raw_overrides"] = raw
-    entry["notes"] = (
-        f"superseded rank of collapsed chain (survivor {survivor}): stock row with AcquireMethod "
-        f"{stock['AcquireMethod']} -> 0 so pets stop learning it (pet-stale-ranks)"
-    )
+    entry["notes"] = notes
     return entry
+
+
+def _override_entry(stock: dict, survivor: int) -> dict:
+    return _zero_acquire_entry(
+        stock,
+        f"superseded rank of collapsed chain (survivor {survivor}): stock row with AcquireMethod "
+        f"{stock['AcquireMethod']} -> 0 so pets stop learning it (pet-stale-ranks)",
+    )
 
 
 def skilllineability_overrides(
@@ -155,24 +166,202 @@ def _changed_elsewhere(existing: dict | None, stock: dict, override: dict) -> bo
     return existing is not None and existing != stock and existing != override
 
 
+PET_SHARED_SKILL_LINE = 270  # "Pet - Hunter": skillLine[1] of every hunter pet family
+
+
+def family_skill_lines(families: dict[int, dict]) -> dict[int, tuple[int, ...]]:
+    """CreatureFamily id -> its non-zero skill lines (`CreatureFamily.dbc` SkillLine_1/_2), from the
+    rows `state.load_stock_rows(dbcfmt.CREATUREFAMILY)` returns. Hunter families carry their own line and
+    the shared 270; warlock demons carry only their own."""
+    return {
+        fid: tuple(line for line in (int(row["SkillLine_1"]), int(row["SkillLine_2"])) if line)
+        for fid, row in families.items()
+    }
+
+
+def retired_skilllineability_overrides(
+    retirements: list[dict],
+    stock_rows: dict[int, dict],
+    lines_by_family: dict[int, tuple[int, ...]],
+    declared_entries: list[dict],
+    taken_ids: set[int] | frozenset[int] = frozenset(),
+    existing_rows: dict[int, dict] | None = None,
+) -> Overrides:
+    """AcquireMethod 0 overrides for `retire_pet_spell()` declarations (`retirements` are the registry's
+    `pet_spell_retirements` entries: `spell_id`, `families` = None or a tuple of CreatureFamily ids).
+
+    A retirement for every family hits the stock rows teaching the spell on 270 and on any family's line.
+    One scoped to families hits only the lines those families use *alone*: a line another family also
+    uses (the shared 270) would take the spell from them too, so that row is left and reported in
+    `warnings` - unless the retirement carries `shared_lines` (`retire_pet_spell(..., shared_lines=True)`),
+    which retires those rows for every family while the CreatureSpellData strip stays scoped to `families`
+    (PET §4.6's Cower 13012: a 270-only row retired for the non-Ferocity families' records). A shared-line row
+    that is declared in source is left to the declaration without the warning. A family id with no CreatureFamily row is reported too. A row already at AcquireMethod 0 is
+    skipped; so is an id in `taken_ids` (the superseded-rank pass already emits the identical row). An id
+    among `declared_entries` is left to the declaration and reported in `collisions`, like the rank pass."""
+    result = Overrides()
+    users: dict[int, set[int]] = {}
+    for family, lines in lines_by_family.items():
+        for line in lines:
+            users.setdefault(line, set()).add(family)
+    every_pet_line = {PET_SHARED_SKILL_LINE, *users}
+    declared_ids = {e["id"] for e in declared_entries}
+    emitted: set[int] = set()
+    for retirement in retirements:
+        spell_id, families = retirement["spell_id"], retirement["families"]
+        take_shared = bool(retirement.get("shared_lines"))
+        shared: set[int] = set()
+        if families is None:
+            lines = every_pet_line
+        else:
+            lines = set()
+            for family in families:
+                if family not in lines_by_family:
+                    result.warnings.append(
+                        f"retire_pet_spell({spell_id}, families=...): family {family} has no CreatureFamily.dbc row"
+                    )
+                    continue
+                for line in lines_by_family[family]:
+                    (lines if take_shared or users[line] <= set(families) else shared).add(line)
+        for row_id in sorted(stock_rows):
+            stock = stock_rows[row_id]
+            if stock["Spell"] != spell_id or stock["AcquireMethod"] == 0:
+                continue
+            if stock["SkillLine"] in shared:
+                result.matched.add(spell_id)
+                if row_id in declared_ids:
+                    continue
+                result.warnings.append(
+                    f"retire_pet_spell({spell_id}, families={list(families)}): SkillLineAbility {row_id} teaches "
+                    f"it on skill line {stock['SkillLine']}, which other families use too, so it stays; retire "
+                    f"the spell for every family (families=None), pass shared_lines=True, or give those families "
+                    f"their own row"
+                )
+                continue
+            if stock["SkillLine"] not in lines or row_id in emitted:
+                continue
+            result.matched.add(spell_id)
+            emitted.add(row_id)
+            if row_id in declared_ids:
+                result.collisions.append(
+                    f"SkillLineAbility {row_id} (spell {spell_id}, retired by retire_pet_spell) is declared in "
+                    f"source; the declared row wins over the retirement override"
+                )
+                continue
+            if row_id in taken_ids:
+                continue
+            entry = _zero_acquire_entry(
+                stock,
+                f"retired pet spell {spell_id}: stock row with AcquireMethod {stock['AcquireMethod']} -> 0 so "
+                f"pets stop learning it (retire_pet_spell)",
+            )
+            existing = (existing_rows or {}).get(row_id)
+            if _changed_elsewhere(existing, stock, build.build_skilllineability_row(entry)):
+                result.warnings.append(
+                    f"SkillLineAbility {row_id} (spell {spell_id}) was changed by a promoted migration; the "
+                    f"retire_pet_spell override is built from the stock row and replaces it"
+                )
+            result.entries.append(entry)
+    return result
+
+
+def spell_data_strips(
+    retirements: list[dict], creature_rows: dict[int, dict], spell_data_rows: dict[int, dict],
+    superseded: dict[int, int] | None = None,
+    lines_by_family: dict[int, tuple[int, ...]] | None = None,
+    effective_sla: dict[int, dict] | None = None,
+) -> tuple[dict[int, frozenset[int]], list[str]]:
+    """Which spells each CreatureSpellData record must lose: `(record id -> spells, warnings)`.
+
+    A retirement for every family strips the spell from every record some creature names in
+    `PetSpellDataId`. One scoped to families strips it from the records their creatures
+    (`creature_template.family`) name - unless a creature of another family names the same record and the
+    record holds the spell, in which case the record is left alone and reported (a record cannot be split) -
+    except when `lines_by_family` and `effective_sla` are given and every such other family still teaches the
+    spell through its own level-up set (`effective_sla`: SkillLineAbility id -> row after every override; a row
+    on one of the family's skill lines with AcquireMethod 2 and Spell == the retired spell). Its default copy
+    is then redundant (SpellMgr::LoadPetDefaultSpells_helper drops it), so the strip is lossless and silent.
+    `creature_rows` are the live `creature_template` rows, `spell_data_rows` the stock records.
+
+    A record "holds" the spell when a slot is the spell itself **or a superseded rank that
+    `creaturespelldata_overrides` maps onto it** (`superseded`: `Overrides.superseded`, rank -> survivor).
+    Without that, a record naming only an older rank of a collapsed chain (Spider Bite: 92 records) came out
+    of the mapping holding the retired survivor and was never stripped (T-FIX T1-2)."""
+    table = dbcfmt.CREATURESPELLDATA
+    spell_columns = [c for c in table.columns if c.startswith("Spells_")]
+    named_by: dict[int, set[int]] = {}  # record id -> families of the creatures naming it
+    for row in creature_rows.values():
+        record = int(row.get("PetSpellDataId") or 0)
+        if record:
+            named_by.setdefault(record, set()).add(int(row.get("family") or 0))
+    superseded = superseded or {}
+    taught: dict[int, set[int]] = {}  # family -> spells in its post-retirement level-up set
+    for row in (effective_sla or {}).values():
+        if int(row["AcquireMethod"]) != SKILL_LINE_ABILITY_LEARNED_ON_SKILL_LEARN:
+            continue
+        for family, lines in (lines_by_family or {}).items():
+            if int(row["SkillLine"]) in lines:
+                taught.setdefault(family, set()).add(int(row["Spell"]))
+    can_check = lines_by_family is not None and effective_sla is not None
+    strips: dict[int, set[int]] = {}
+    warnings: list[str] = []
+    for retirement in retirements:
+        spell_id, families = retirement["spell_id"], retirement["families"]
+        for record in sorted(named_by):
+            stock = spell_data_rows.get(record)
+            if stock is None or not any(
+                stock[c] and (stock[c] == spell_id or superseded.get(stock[c]) == spell_id) for c in spell_columns
+            ):
+                continue
+            if families is None:
+                strips.setdefault(record, set()).add(spell_id)
+            elif named_by[record] & set(families):
+                others = named_by[record] - set(families)
+                if others and can_check and all(spell_id in taught.get(f, ()) for f in others):
+                    strips.setdefault(record, set()).add(spell_id)
+                elif others:
+                    warnings.append(
+                        f"retire_pet_spell({spell_id}, families={list(families)}): CreatureSpellData {record} holds "
+                        f"it and is also named by creatures of families {sorted(named_by[record] - set(families))}, "
+                        f"so it is left alone; those families' pets keep it as a default spell"
+                    )
+                else:
+                    strips.setdefault(record, set()).add(spell_id)
+    return {record: frozenset(spells) for record, spells in strips.items()}, warnings
+
+
 def creaturespelldata_overrides(
     superseded: dict[int, int],
     stock_rows: dict[int, dict],
     existing_rows: dict[int, dict] | None = None,
+    strips: dict[int, frozenset[int]] | None = None,
 ) -> SpellDataOverrides:
     """Every stock CreatureSpellData record that names a superseded rank, rewritten with each such
     `Spells_N` replaced by the rank's survivor (`Availability_N` and every other slot stay stock), in
     ID order. `superseded` is `Overrides.superseded`. `to_emit` drops the records `existing_rows`
-    (stock plus promoted migrations) already carry, so a rerun after promotion emits nothing."""
+    (stock plus promoted migrations) already carry, so a rerun after promotion emits nothing.
+
+    `strips` (`spell_data_strips`: record id -> spells to remove) adds `retire_pet_spell()`'s second rule:
+    a record that holds a stripped spell - by its stock slot or after the survivor mapping above - gets
+    that slot (and its `Availability_N`) zeroed. One row per record: a record both rules touch is mapped
+    first, then stripped, so retiring a survivor also removes the superseded ranks that mapped onto it."""
     table = dbcfmt.CREATURESPELLDATA
     spell_columns = [c for c in table.columns if c.startswith("Spells_")]
+    strips = strips or {}
     result = SpellDataOverrides()
     existing_rows = existing_rows or {}
     for row_id in sorted(stock_rows):
         stock = stock_rows[row_id]
-        if not any(stock[c] in superseded for c in spell_columns):
+        strip = strips.get(row_id, frozenset())
+        mapped = any(stock[c] in superseded for c in spell_columns)
+        stripped = any(stock[c] in strip or superseded.get(stock[c]) in strip for c in spell_columns if stock[c])
+        if not mapped and not stripped:
             continue
         row = {**stock, **{c: superseded.get(stock[c], stock[c]) for c in spell_columns}}
+        for column in spell_columns:
+            if row[column] in strip or stock[column] in strip:
+                row[column] = 0
+                row[column.replace("Spells_", "Availability_")] = 0
         result.rows.append(row)
         existing = existing_rows.get(row_id)
         if _changed_elsewhere(existing, stock, row):

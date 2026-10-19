@@ -128,6 +128,13 @@ class ResolvedPotency:
     # scales with ranged attack power. resolve() has no spell context, so model.Spell sets it
     # (Spell._resolve_potency, uses_ranged_attack_power).
     ap_token: str = AP_TOKEN
+    # Pet ability tooltips (hunter-rework SHARED C7.11): the client renders `$AP` in a pet spell's tooltip
+    # from the *hunter's* melee attack power, but the server scales the pet's damage by the pet's own AP -
+    # after the hunter rework mostly `rap_pct`% of the owner's ranged attack power plus `sp_pct`% of the
+    # owner's spell power. With this set (model.Spell.pet_owner_scaling), the stat term is
+    # `c*rap_pct/100*$RAP+c*sp_pct/100*$SP` (c = ap_coefficient) instead of `c*<ap_token>`; a zero share drops
+    # its term, (0, 0) drops the stat term entirely. None = today's behaviour.
+    owner_scaling: tuple[float, float] | None = None
 
 
 def resolve(effect: PotencyEffect, spell_level: int, r: float = DEFAULT_R) -> ResolvedPotency:
@@ -297,6 +304,14 @@ def _stat_bonus_term(resolved: ResolvedPotency, ticks: float) -> str:
     randomizes the base value - the SP/AP bonus is added afterwards, unrolled, by a separate,
     later step (`Unit::SpellDamageBonusDone`), so both sides of a `{X} to {1.1X}` range must carry
     the identical bonus."""
+    if resolved.owner_scaling is not None:
+        rap_pct, sp_pct = resolved.owner_scaling
+        owner_terms = []
+        if resolved.ap_coefficient * rap_pct:
+            owner_terms.append(f"{_fmt(resolved.ap_coefficient * rap_pct / 100.0 * ticks)}*{RANGED_AP_TOKEN}")
+        if resolved.ap_coefficient * sp_pct:
+            owner_terms.append(f"{_fmt(resolved.ap_coefficient * sp_pct / 100.0 * ticks)}*$SP")
+        return "+".join(owner_terms)
     terms = []
     if resolved.sp_coefficient:
         terms.append(f"{_fmt(resolved.sp_coefficient * ticks)}*$SP")

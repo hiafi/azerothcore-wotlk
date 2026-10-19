@@ -35,6 +35,7 @@ from pathlib import Path
 
 from .. import potency as _potency
 from . import model, tooltip
+from .constants import AcquireMethod  # noqa: F401 - re-exported for class files (skill_line_ability(acquire_method=...))
 from .tooltip import has_aura, knows, product, talent_mult  # noqa: F401 - re-exported for class files
 
 # Unique-ifies the synthetic package name `load_class_package` registers in
@@ -136,6 +137,13 @@ class Registry:
     # docstring and lib/spell_tables.py's CREATURE_TABLES for the upsert-only emission this implies.
     creature_templates: list[dict] = field(default_factory=list)
     creature_template_models: list[dict] = field(default_factory=list)
+    # Hunter T1 (.agents/plans/hunter-rework/hunter-rework.T1-HANDOFF.md): retire_talent()'s bookkeeping
+    # (one {"id": talent_id} per retirement, so retiring a talent twice is a DuplicateIdError and
+    # check_retired_talent_tab() knows whether the holding tab is needed) and item_template()'s rows -
+    # an existing stock item's columns, upsert-only and never pruned like creature_templates.
+    retired_talents: list[dict] = field(default_factory=list)
+    pet_spell_retirements: list[dict] = field(default_factory=list)
+    item_templates: list[dict] = field(default_factory=list)
     # Potency system (docs/potency-system.md, PLAN P2): auto-emitted by spell() whenever a
     # declared Spell had any effect with sp_potency/ap_potency - see model.Spell._resolve_potency
     # and spell_bonus_data's own entry just above (potency reuses that exact table/mechanism for
@@ -170,6 +178,7 @@ MERGE_KEYS = (
     "script_removals", "linked_spell_removals", "spell_group_removals", "trainer_removals", "spell_required_removals", "spell_rank_removals",
     "bonus_removals", "proc_removals", "spell_categories",
     "creature_templates", "creature_template_models",
+    "retired_talents", "pet_spell_retirements", "item_templates",
     "potency_corrections",
     "consts",
     "tooltip_vars",
@@ -196,6 +205,11 @@ _active_creature_rows: dict[int, dict] | None = None  # live creature_template r
 # sql_dump/trainer_state itself, the same reasoning as _active_trainer_index/_active_shapeshift_index).
 _active_creature_columns: tuple[str, ...] | None = None
 _active_creature_defaults: dict[str, object] | None = None
+# Live rows for the helpers that edit an existing stock row (retire_talent(), item_template()), keyed
+# "talent_rows" (Talent.dbc rows by ID, base client file + promoted migrations), "item_template_rows"
+# (entry -> live item_template row), "item_template_columns" and "item_template_defaults" (the table's own
+# CREATE TABLE, parsed by the caller). One bundle so a new live-data helper doesn't add a fourth load_* kwarg.
+_active_live_data: dict | None = None
 
 
 def _require_active() -> Registry:
@@ -1150,6 +1164,166 @@ def creature_model(
     return row
 
 
+# --- Hunter T1: existing-row edits that need live data (retire_talent, item_template) -------------------
+
+
+def _require_live(key: str, helper: str):
+    if _active_live_data is None or _active_live_data.get(key) is None:
+        raise RuntimeError(
+            f"{helper}() needs the live {key.replace('_', ' ')} - pass them through "
+            f"registry.load_class_file(path, live_data={{...}}) / load_classes_dir(dir_path, live_data={{...}}) "
+            f"(generate.py already does)."
+        )
+    return _active_live_data[key]
+
+
+# The Talent.dbc tab every retired talent moves to (source/ids.yaml's `talenttab` block starts here).
+# A real tab whose ClassMask and PetTalentMask are 0: every core path and every mod-playerbots path that
+# walks Talent.dbc rows skips it, and the client never shows a tab that matches no class and no pet type.
+# TabID 0 would not do - mod-playerbots' InitPetTalents dereferences the tab without a null check.
+RETIRED_TAB_ID = 60800
+
+
+class MissingRetiredTabError(ValueError):
+    """`retire_talent()` was called but nothing declares the holding tab `RETIRED_TAB_ID`."""
+
+
+def retire_talent(talent_id: int) -> None:
+    """Moves a stock talent out of its tree without deleting the row: the live row re-emitted with
+    `TabID` = `RETIRED_TAB_ID` (the holding tab, declared once by the hunter package's
+    `hunter_retired_tab.py`), `TierID`/`ColumnIndex` 0, every `SpellRank_n` 0, `PrereqTalent_n`/`PrereqRank_n`
+    0, `CategoryMask_n` 0 and `Flags` 0. `RequiredSpellID` and any other column keep their live value.
+
+    Clearing the ranks matters, not just the tab: a talent whose rank spell is also a pet ability (61684
+    Dash, 53478 Last Stand, 53490 Bullheaded) comes back as a SkillLineAbility spell, and while a Talent
+    row still names it `Pet::GetTalentSpellCost` charges a talent point for it.
+
+    Errors when `talent_id` is not a live row (base client Talent.dbc plus promoted migrations). The
+    holding tab is checked at build time, by `check_retired_talent_tab()` - the loader order does not let
+    this call see a sibling file's `tab()`."""
+    live = _require_live("talent_rows", "retire_talent").get(talent_id)
+    if live is None:
+        raise ValueError(
+            f"retire_talent({talent_id}): no live Talent.dbc row with that ID (base client file plus "
+            f"promoted migrations) - only a stock or already-promoted talent can be retired"
+        )
+    zeroed = {
+        column: 0 for column in live
+        if column.startswith(("SpellRank_", "PrereqTalent_", "PrereqRank_", "CategoryMask_"))
+    }
+    entry = model.Talent(
+        id=talent_id, tab_id=RETIRED_TAB_ID, tier=0, column=0,
+        raw_overrides={**zeroed, "RequiredSpellID": live.get("RequiredSpellID", 0)},
+    ).to_entry()
+    registry = _require_active()
+    registry.talents.append(entry)
+    registry.retired_talents.append({"id": talent_id})
+
+
+def check_retired_talent_tab(dsl_classes: dict[str, list[dict]]) -> None:
+    """Raises `MissingRetiredTabError` when a `retire_talent()` call was merged in but no `tab()` with
+    `RETIRED_TAB_ID` was. `generate.py` calls it once everything is merged (class files, npcs, world)."""
+    if dsl_classes.get("retired_talents") and RETIRED_TAB_ID not in {t["id"] for t in dsl_classes.get("tabs", [])}:
+        raise MissingRetiredTabError(
+            f"retire_talent() was called for talent(s) {[r['id'] for r in dsl_classes['retired_talents']]} but no "
+            f"tab(id={RETIRED_TAB_ID}) declares the holding tab - declare it once (source/classes/hunter/"
+            f"hunter_retired_tab.py)"
+        )
+
+
+def retire_pet_spell(spell, families=None, shared_lines=False) -> None:
+    """Takes a stock pet ability away from pets (hunter-rework SHARED §C7.8): `spell` (an id or a declared
+    `Spell`) stops being taught to pets by the two server tables that teach it, and the data that lets it
+    come back is stripped.
+
+    Registers only the *declaration*; `generate.py` resolves it against the stock data
+    (`lib/superseded_ranks.py`'s `retired_skilllineability_overrides` / `spell_data_strips`):
+      1. `AcquireMethod 0` on every stock SkillLineAbility row that teaches `spell` on a pet skill line
+         (270 and every `CreatureFamily.dbc` skill line), or - with `families` (CreatureFamily ids, the
+         values of `creature_template.family`) - only on those families' own skill lines. A line some other
+         family also uses (the shared 270) cannot be retired for one family; that row is reported and left -
+         unless `shared_lines=True`, which retires those shared rows for every family while step 2 below stays
+         scoped to `families` (PET §4.6's Cower 13012: a 270-only row, retired with the strip on the
+         non-Ferocity families only; the Ferocity families' pets then still have the spell as a default, but
+         nothing teaches it). Ignored with `families=None`. A shared row declared in source with
+         `skill_line_ability()` is left to that declaration, without the warning.
+      2. The spell is stripped from the `CreatureSpellData` record of every creature of those families
+         (`creature_template.family` -> `PetSpellDataId`). Without it `LoadPetDefaultSpells_helper` keeps
+         the spell as a *default* once it leaves the family's level-up set, and
+         `Pet::InitLevelupSpellsForLevel` teaches it again (pet-stale-ranks review B1).
+      3. Both go through the pet-stale-ranks override path, one row per record (superseded rank -> survivor
+         first, then this strip). A declared `skill_line_ability()` with the same id still wins, with the
+         existing WARNING.
+
+    This never touches Talent.dbc: a pet talent whose rank spell is retired here also needs
+    `retire_talent()`."""
+    spell_id = int(getattr(spell, "id", spell))
+    wanted = None if families is None else tuple(sorted({int(f) for f in families}))
+    if wanted is not None and not wanted:
+        raise ValueError(f"retire_pet_spell({spell_id}, families=[]): an empty family list retires nothing - "
+                         f"pass None for every family")
+    shared = bool(shared_lines) and wanted is not None
+    _require_active().pet_spell_retirements.append({
+        "id": f"{spell_id}:{','.join(map(str, wanted)) if wanted else '*'}{'+shared' if shared else ''}",
+        "spell_id": spell_id, "families": wanted, "shared_lines": shared,
+    })
+
+
+def live_item_templates() -> dict[int, dict]:
+    """The live `item_template` rows by entry, for a source file that selects items by their live
+    columns (source/world/ranged_weapons.py picks every Bow/Gun/Crossbow by `class`/`subclass`).
+    Read-only: don't mutate the rows."""
+    return _require_live("item_template_rows", "live_item_templates")
+
+
+def item_template(entry: int, **columns) -> dict:
+    """Edits columns of an **existing** `item_template` row (the stock quivers' class, the ranged weapons'
+    `ammo_type`): `entry` must already exist (base dump plus migrations), otherwise it raises - a new
+    item is `source/items.csv` plus a hand-written row, not this. `class` is a Python keyword, so a caller
+    passes `**{"class": 1, "subclass": 0, "BagFamily": 0}`.
+
+    Builds the full row like `creature_template()`: a column you pass explicitly, else the entry's live
+    value, else the schema DEFAULT; an unknown column name raises `KeyError`. It is emitted as a column-limited
+    `UPDATE ... SET ... WHERE entry IN (...)` (`item_template` is on the SQL linter's do-not-delete list), naming
+    **only the columns you passed** (`lib.sql_out.render_update_block`, via the row's `_update_columns`), so a column
+    you left alone is never rewritten from the replayed live row - another migration or a module's runtime SQL
+    can have changed it since.
+
+    Never pruned: a declaration dropped from source is reported, not undone (see
+    `lib/spell_tables.py`'s `ITEM_TABLES`/`render_item_retirement_report`). The row is also the
+    `check_item_dbc_consistency` / `check_ranged_ammo_type` lints' input."""
+    all_columns = _require_live("item_template_columns", "item_template")
+    schema_defaults = _require_live("item_template_defaults", "item_template")
+    live_row = _require_live("item_template_rows", "item_template").get(entry)
+    if live_row is None:
+        raise ValueError(
+            f"item_template({entry}, ...): no live item_template row with that entry (base dump plus "
+            f"migrations) - this helper only edits an existing item"
+        )
+    unknown = [c for c in columns if c not in all_columns]
+    if unknown:
+        raise KeyError(
+            f"item_template({entry}): no such column(s): {', '.join(sorted(unknown))} - see "
+            f"data/sql/base/db_world/item_template.sql's CREATE TABLE for the real names"
+        )
+    row: dict = {}
+    for column in all_columns:
+        if column == "entry":
+            continue
+        if column in columns:
+            row[column] = columns[column]
+        elif column in live_row:
+            row[column] = live_row[column]
+        else:
+            row[column] = schema_defaults.get(column)
+    row["entry"] = entry
+    row["id"] = entry
+    row["_update_columns"] = tuple(columns)
+    _require_active().item_templates.append(row)
+    return row
+
+
+
 # SPELL_ATTR0_PASSIVE (src/server/shared/SharedDefines.h) - "Spell is
 # automatically cast on self by core", never player-cast from a Spellbook.
 _SPELL_ATTR0_PASSIVE = 0x00000040
@@ -1370,7 +1544,7 @@ def load_class_file(
     path: Path, ids_cfg: dict | None = None, trainer_index=None,
     existing_group_ids: set[int] | None = None, shapeshift_index: dict | None = None,
     existing_creature_rows: dict[int, dict] | None = None, creature_columns: tuple[str, ...] | None = None,
-    creature_defaults: dict[str, object] | None = None,
+    creature_defaults: dict[str, object] | None = None, live_data: dict | None = None,
 ) -> Registry:
     """Imports one `source/classes/<class>.py` file fresh and returns
     everything it registered via `spell()`/`talent()`/`tab()`/
@@ -1391,9 +1565,11 @@ def load_class_file(
     plain `dict[int, dict]`) is only needed for `shapeshift_form()` - see
     `_require_shapeshift_index`. `existing_creature_rows`/`creature_columns`/
     `creature_defaults` are only needed for `creature_template()` - see
-    `_require_creature_ids`/`_require_creature_columns`/`_require_creature_defaults`."""
+    `_require_creature_ids`/`_require_creature_columns`/`_require_creature_defaults`. `live_data`
+    (see `_active_live_data`) is only needed for `retire_talent()`/`item_template()` - see
+    `_require_live`."""
     global _active, _active_ids_cfg, _active_trainer_index, _active_group_ids, _active_shapeshift_index
-    global _active_creature_rows, _active_creature_columns, _active_creature_defaults
+    global _active_creature_rows, _active_creature_columns, _active_creature_defaults, _active_live_data
     registry = Registry()
     _active = registry
     _active_ids_cfg = ids_cfg
@@ -1403,6 +1579,7 @@ def load_class_file(
     _active_creature_rows = existing_creature_rows
     _active_creature_columns = creature_columns
     _active_creature_defaults = creature_defaults
+    _active_live_data = live_data
     mod_name = f"dsl_class_{path.stem}"
     try:
         module = _exec_fresh_module(mod_name, path)
@@ -1416,6 +1593,7 @@ def load_class_file(
         _active_creature_rows = None
         _active_creature_columns = None
         _active_creature_defaults = None
+        _active_live_data = None
         sys.modules.pop(mod_name, None)
     return registry
 
@@ -1424,7 +1602,7 @@ def load_class_package(
     dir_path: Path, ids_cfg: dict | None = None, trainer_index=None,
     existing_group_ids: set[int] | None = None, shapeshift_index: dict | None = None,
     existing_creature_rows: dict[int, dict] | None = None, creature_columns: tuple[str, ...] | None = None,
-    creature_defaults: dict[str, object] | None = None,
+    creature_defaults: dict[str, object] | None = None, live_data: dict | None = None,
 ) -> Registry:
     """Imports every `*.py` file inside `dir_path` (a `source/classes/<class>/`
     directory - the multi-file layout, one class split across e.g.
@@ -1449,7 +1627,7 @@ def load_class_package(
     the single-file case. Files starting with `_` are skipped, same
     convention as `load_classes_dir`."""
     global _active, _active_ids_cfg, _active_trainer_index, _active_group_ids, _active_shapeshift_index
-    global _active_creature_rows, _active_creature_columns, _active_creature_defaults
+    global _active_creature_rows, _active_creature_columns, _active_creature_defaults, _active_live_data
     pkg_name = f"dsl_classpkg_{dir_path.name}_{next(_package_load_counter)}"
     pkg_spec = importlib.util.spec_from_loader(pkg_name, loader=None, is_package=True)
     pkg_module = importlib.util.module_from_spec(pkg_spec)
@@ -1463,6 +1641,7 @@ def load_class_package(
     _active_creature_rows = existing_creature_rows
     _active_creature_columns = creature_columns
     _active_creature_defaults = creature_defaults
+    _active_live_data = live_data
     sys.modules[pkg_name] = pkg_module
     # A sibling's own `from .other import x` is resolved by Python's *standard* import
     # machinery (not our `_exec_fresh_module`, which only covers the files this loop reaches
@@ -1493,6 +1672,7 @@ def load_class_package(
         _active_creature_rows = None
         _active_creature_columns = None
         _active_creature_defaults = None
+        _active_live_data = None
         # Remove every module this call put in sys.modules - not just the ones our own loop
         # inserted directly, but also any sibling pulled in by another file's own relative
         # import (that insertion happens inside `exec`, via Python's normal import machinery,
@@ -1507,7 +1687,7 @@ def load_classes_dir(
     dir_path: Path, ids_cfg: dict | None = None, trainer_index=None,
     existing_group_ids: set[int] | None = None, shapeshift_index: dict | None = None,
     existing_creature_rows: dict[int, dict] | None = None, creature_columns: tuple[str, ...] | None = None,
-    creature_defaults: dict[str, object] | None = None,
+    creature_defaults: dict[str, object] | None = None, live_data: dict | None = None,
 ) -> dict[str, list[dict]]:
     """Merge every `source/classes/*` entry's registered spells/talents/
     tabs/skill_line_abilities/trainer_spells into one dict, in sorted-name
@@ -1549,7 +1729,7 @@ def load_classes_dir(
             ids_cfg=ids_cfg, trainer_index=trainer_index,
             existing_group_ids=existing_group_ids, shapeshift_index=shapeshift_index,
             existing_creature_rows=existing_creature_rows, creature_columns=creature_columns,
-            creature_defaults=creature_defaults,
+            creature_defaults=creature_defaults, live_data=live_data,
         )
         if path.is_dir():
             registry = load_class_package(path, **kwargs)
