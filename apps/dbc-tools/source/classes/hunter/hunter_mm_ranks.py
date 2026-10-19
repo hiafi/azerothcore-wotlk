@@ -126,7 +126,7 @@ def _precision(spell_id, rank, bp, last):
         effects.append(_dummy())
         raw = {'ProcTypeMask': 0x100, 'ProcChance': 100}
     return _rank(
-        spell_id, 'Precision', rank, effects, 3408, _desc(_PRECISION, _PRECISION_CAP, last=last), raw=raw,
+        spell_id, 'Precision', rank, effects, 90239, _desc(_PRECISION, _PRECISION_CAP, last=last), raw=raw,
     )
 
 
