@@ -7559,7 +7559,7 @@ explosive_shot_53352 = spell(
     range_yards=50000.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=6, ap_potency=32.5, potency_kind='direct'),
+        Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=6, ap_potency=26.0, potency_kind='direct'),
     ],
     spell_icon_id=3407,
     notes=(

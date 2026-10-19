@@ -2057,7 +2057,7 @@ explosive_shot_53301 = spell(
     duration_ms=2000,
     effects=[
         # The hit (SURVIVAL 5.5, V2): the only 53301 potency.
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=90.0, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=76.5, potency_kind='direct', implicit_target_a=6),
         # A bare 1 s timer (live 0, no potency, no potency_excluded): its d1 b31 hardcode (cast 53352 with BP0 =
         # m_amount, SpellAuraEffects.cpp) is prevented by spell_hun_explosive_shot_rework, which casts 53352 with no bp.
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DUMMY,
