@@ -136,6 +136,17 @@ ICON_ID_BULWARK = 90200  # Bulwark buff 201360 / 201361
 # Paladin rework Holy: block 90220-90229, 90221-90229 spare.
 ICON_ID_LIGHTS_HAMMER = 90220  # Light's Hammer 201200
 
+# Hunter icon pass (2026-10-19): block 90230-90238, Ascension icons for talents whose stock art didn't fit.
+ICON_ID_HUNTER_TRAP_MASTERY = 90230
+ICON_ID_HUNTER_IMPROVED_GLAIVE_TOSS = 90231
+ICON_ID_HUNTER_ENTRAPMENT = 90232
+ICON_ID_HUNTER_RESOURCEFULNESS = 90233
+ICON_ID_HUNTER_SHRAPNEL = 90234
+ICON_ID_HUNTER_BEAST_CLEAVE = 90235  # talent 201848 + buff 201806 / strike 201807
+ICON_ID_HUNTER_LONE_SURVIVOR = 90236
+ICON_ID_HUNTER_MASTER_MARKSMAN = 90237
+ICON_ID_HUNTER_TRIANGULATION = 90238
+
 ICONS = (
     (ICON_ID_ANGELIC_FEATHER, "Interface/icons/ability_priest_angelicfeather.blp"),
     (ICON_ID_DIVINE_STAR, "Interface/icons/spell_priest_divinestar.blp"),
@@ -171,6 +182,15 @@ ICONS = (
     (ICON_ID_BLADE_OF_WRATH, "Interface/icons/ability_paladin_bladeofjusticeblue.blp"),
     (ICON_ID_BULWARK, "Interface/icons/inv_ability_lightsmithpaladin_holybulwark.blp"),
     (ICON_ID_LIGHTS_HAMMER, "Interface/icons/spell_paladin_lightshammer.blp"),
+    (ICON_ID_HUNTER_TRAP_MASTERY, "Interface/icons/ability_hunter_traplauncher.blp"),
+    (ICON_ID_HUNTER_IMPROVED_GLAIVE_TOSS, "Interface/icons/inv_ability_hunter_deathchakram.blp"),
+    (ICON_ID_HUNTER_ENTRAPMENT, "Interface/icons/inv_pet_pettrap01.blp"),
+    (ICON_ID_HUNTER_RESOURCEFULNESS, "Interface/icons/inv_blacksmithing_toolbox_01.blp"),
+    (ICON_ID_HUNTER_SHRAPNEL, "Interface/icons/inv_wildfirebomb_shrapnel.blp"),
+    (ICON_ID_HUNTER_BEAST_CLEAVE, "Interface/icons/ability_xavius_tormentingswipe.blp"),
+    (ICON_ID_HUNTER_LONE_SURVIVOR, "Interface/icons/ability_hunter_camouflage.blp"),
+    (ICON_ID_HUNTER_MASTER_MARKSMAN, "Interface/icons/ability_rogue_combatexpertise.blp"),
+    (ICON_ID_HUNTER_TRIANGULATION, "Interface/icons/Essence_of_Convergence.blp"),
 )
 
 # "Stock path, no blp" entries (warlock-rework DESTRUCTION §2.6/§11 Q19): a SpellIcon.dbc row that

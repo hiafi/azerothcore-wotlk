@@ -78,12 +78,6 @@ namespace
         return rank ? sSpellMgr->AssertSpellInfo(rank)->Effects[EFFECT_0].CalcValue(player) : 0;
     }
 
-    uint32 GetSerpentsSwiftnessRank(Player const* player)
-    {
-        return GetKnownRank(player, { HunterData::SPELL_SERPENT_S_SWIFTNESS_34468,
-            HunterData::SPELL_SERPENT_S_SWIFTNESS_34467, HunterData::SPELL_SERPENT_S_SWIFTNESS });
-    }
-
     // The hunter Player behind `unit` (the unit itself, or the owner of its pet/guardian), nullptr otherwise.
     Player* GetOwningHunter(Unit* unit)
     {
@@ -507,7 +501,7 @@ class spell_hun_tbw_mastery : public AuraScript
     }
 };
 
-// 34466/34467/34468 Serpent's Swiftness, 201849/201850/201851 Cobra Shot - Steady Shot's Nature hit, and at
+// 34466/34467/34468 Serpent's Swiftness - Steady Shot's Nature hit, and at
 // Serpent's Swiftness 3/3 a Kill Command cut per Steady Shot cast (S1b B1, BEAST-MASTERY §4.2, §7.1). Every bound
 // rank has eff0 aura DUMMY. 34468's spell_proc row has phase 0x3 (CAST + HIT), the others 0x2 (HIT), so the two
 // branches are told apart by the event's phase in both hooks (L9).
@@ -519,15 +513,7 @@ class spell_hun_steady_shot_nature : public AuraScript
     {
         return ValidateSpellInfo({ HunterData::SPELL_STEADY_SHOT, HunterData::SPELL_KILL_COMMAND,
             HunterData::SPELL_STEADY_SHOT_NATURE, HunterData::SPELL_SERPENT_S_SWIFTNESS,
-            HunterData::SPELL_SERPENT_S_SWIFTNESS_34467, HunterData::SPELL_SERPENT_S_SWIFTNESS_34468,
-            HunterData::SPELL_COBRA_SHOT, HunterData::SPELL_COBRA_SHOT_201850, HunterData::SPELL_COBRA_SHOT_201851 });
-    }
-
-    bool IsCobraShotRank() const
-    {
-        uint32 const id = GetId();
-        return id == HunterData::SPELL_COBRA_SHOT || id == HunterData::SPELL_COBRA_SHOT_201850 ||
-            id == HunterData::SPELL_COBRA_SHOT_201851;
+            HunterData::SPELL_SERPENT_S_SWIFTNESS_34467, HunterData::SPELL_SERPENT_S_SWIFTNESS_34468 });
     }
 
     Player* GetHunter() const
@@ -564,9 +550,7 @@ class spell_hun_steady_shot_nature : public AuraScript
             if (!victim || !victim->IsAlive() || !player->IsValidAttackTarget(victim))
                 return false;
 
-            // One Nature hit per Steady Shot hit (BM WP4): with a Serpent's Swiftness rank known, that aura casts it
-            // for both talents and the Cobra Shot aura stands down
-            return !IsCobraShotRank() || !GetSerpentsSwiftnessRank(player);
+            return true;
         }
 
         return false;
@@ -600,9 +584,7 @@ class spell_hun_steady_shot_nature : public AuraScript
             return;
 
         int32 const pct = GetKnownRankValue(player, { HunterData::SPELL_SERPENT_S_SWIFTNESS_34468,
-                HunterData::SPELL_SERPENT_S_SWIFTNESS_34467, HunterData::SPELL_SERPENT_S_SWIFTNESS }) +
-            GetKnownRankValue(player, { HunterData::SPELL_COBRA_SHOT_201851, HunterData::SPELL_COBRA_SHOT_201850,
-                HunterData::SPELL_COBRA_SHOT });
+            HunterData::SPELL_SERPENT_S_SWIFTNESS_34467, HunterData::SPELL_SERPENT_S_SWIFTNESS });
         if (pct <= 0)
             return;
 

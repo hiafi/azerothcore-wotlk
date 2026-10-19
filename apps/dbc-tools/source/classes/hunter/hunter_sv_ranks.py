@@ -120,7 +120,7 @@ def _deadly_focus(spell_id, rank, bp, last):
         effects += [_flat(SpellModOp.RANGE, 9), _dummy(24)]
         masks[2] = m.THREE_STRIKES
     return _rank(
-        spell_id, 'Deadly Focus', rank, _level(0), effects, 161, _desc(_DF, _DF_CAP, last=last), masks=masks,
+        spell_id, 'Deadly Focus', rank, _level(0), effects, 538, _desc(_DF, _DF_CAP, last=last), masks=masks,
     )
 
 
@@ -140,7 +140,7 @@ def _favored_prey(spell_id, rank, bp, last):
     if last:
         effects.append(_dummy())
     return _rank(
-        spell_id, 'Favored Prey', rank, _level(0), effects, 3522, _desc(_FP, _FP_CAP, last=last),
+        spell_id, 'Favored Prey', rank, _level(0), effects, 2221, _desc(_FP, _FP_CAP, last=last),
         proc=(0x140, 5) if last else None,
     )
 
@@ -185,7 +185,7 @@ def _improved_glaive_toss(spell_id, rank, bp, last):
         effects.append(_flat(SpellModOp.JUMP_TARGETS, 1))
         masks[2] = (0, 0, m.GLAIVE_TOSS)
     return _rank(
-        spell_id, 'Improved Glaive Toss', rank, _level(1), effects, 1650, _desc(_IGT, _IGT_CAP, last=last),
+        spell_id, 'Improved Glaive Toss', rank, _level(1), effects, 90231, _desc(_IGT, _IGT_CAP, last=last),
         masks=masks,
     )
 
@@ -255,8 +255,8 @@ demolitions_202097 = _demolitions(202097, 3, 14, True)
 # ProcTypeMask 0). "Each blast" includes the initial hit (SV WP3).
 _SHRAPNEL = ("Each blast of your Explosive Shot has a $s1% chance to fling shrapnel at a random enemy near the "
              "target, dealing " + pot_text(shrapnel_hit_202053) + " Fire damage.")
-shrapnel_202098 = _rank(202098, 'Shrapnel', 1, _level(5), [_dummy(9)], 2147, _SHRAPNEL)
-shrapnel_202099 = _rank(202099, 'Shrapnel', 2, _level(5), [_dummy(19)], 2147, _SHRAPNEL)
+shrapnel_202098 = _rank(202098, 'Shrapnel', 1, _level(5), [_dummy(9)], 90234, _SHRAPNEL)
+shrapnel_202099 = _rank(202099, 'Shrapnel', 2, _level(5), [_dummy(19)], 90234, _SHRAPNEL)
 
 # ---- (6,0) Improved Mantis Strike 60254, learn 40: Mantis Strike damage +5/10/15%. r3 eff1 DUMMY bp 2999 (3000 ms
 # Wildfire Bomb cut, read by spell_hun_mantis_strike AfterCast; no row, ProcTypeMask 0).

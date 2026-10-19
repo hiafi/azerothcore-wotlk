@@ -896,7 +896,7 @@ granted_by_talent(
     id=2227,
     tab=beast_mastery_361_tab,
     tier=9,
-    column=2,
+    column=1,
     ranks=[kindred_spirits_56314, kindred_spirits_56315, kindred_spirits_56316],
     player_castable=False,
 )

@@ -46,6 +46,12 @@ STOCK_THROW_GLAIVE_SV = 9044
 EFFECT_GLAIVE_TOSS_MISSILE = 90090
 SV_GLAIVE_TOSS = 90090  # spell 201600
 
+# Cluster Bombs (202051 first blast + 202052 follow-ups): stock SV 148 ("Rough Dynamite", a ground-thrown bomb) with the
+# missile and the precast/cast kits stripped, leaving its ImpactKit 213 and ImpactAreaKit 9318 (the dynamite explosion on the units and on the ground). Each of the five
+# blasts is its own cast at its own destination, so each plays one explosion at its point.
+STOCK_DYNAMITE_SV = 148
+SV_CLUSTER_BOMB_BLAST = 90091  # spells 202051, 202052
+
 # Scale 1.0 = a ~1.5 yd flat disc; stock Illidan's glaive (the old missile) uses 1.35. Pinned by Min/Max.
 GLAIVE_SCALE = 1.0
 
@@ -74,13 +80,20 @@ def build_spellvisual_rows() -> list[dict]:
     row = dict(stock)
     row["ID"] = SV_GLAIVE_TOSS
     row["MissileModel"] = EFFECT_GLAIVE_TOSS_MISSILE
-    return [row]
+
+    dynamite = next(r for r in dbcfile.read_dbc(DBC_DIR / "SpellVisual.dbc", dbcfmt.SPELLVISUAL)
+                    if r["ID"] == STOCK_DYNAMITE_SV)
+    blast = dict(dynamite)
+    blast["ID"] = SV_CLUSTER_BOMB_BLAST
+    for field in ("PrecastKit", "CastKit", "StateKit", "HasMissile", "MissileModel"):
+        blast[field] = 0
+    return [row, blast]
 
 
 def build_pending_sql() -> str:
     """Server-side overlay for SpellVisual only (SpellVisualEffectName is client-only)."""
     return _table_block(
-        dbcfmt.SPELLVISUAL, {"start": SV_GLAIVE_TOSS, "end": SV_GLAIVE_TOSS}, build_spellvisual_rows(), []
+        dbcfmt.SPELLVISUAL, {"start": SV_GLAIVE_TOSS, "end": SV_CLUSTER_BOMB_BLAST}, build_spellvisual_rows(), []
     ) + "\n"
 
 

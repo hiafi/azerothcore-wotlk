@@ -76,7 +76,7 @@ command_i_201800 = spell(
     effects=[
         Effect(type=EffectType.DUMMY, base_points=0, implicit_target_a=6),
     ],
-    spell_icon_id=455,
+    spell_icon_id=3487,
     notes='S1a BM 4.3 / A1: Command I. DUMMY on the target (spell_hun_command), 30 s, 3% base mana, 40 yd, d2 b21 (COMMAND_PRESS), GCD 1500/133, AttributesEx 0.',
     raw_overrides={
         'EquippedItemClass': -1, 'SpellLevel': 20, 'BaseLevel': 20, 'DefenseType': 0, 'SpellClassSet': 9,
@@ -101,7 +101,7 @@ command_ii_201801 = spell(
     effects=[
         Effect(type=EffectType.DUMMY, base_points=0, implicit_target_a=6),
     ],
-    spell_icon_id=1511,
+    spell_icon_id=2318,
     notes='S1a BM 4.3 / A1: Command II. As Command I: 60 s, 4% base mana, learn level 30.',
     raw_overrides={
         'EquippedItemClass': -1, 'SpellLevel': 30, 'BaseLevel': 30, 'DefenseType': 0, 'SpellClassSet': 9,
@@ -182,7 +182,7 @@ beast_cleave_buff_201806 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.DUMMY),   # marker on the hunter
         Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=5, apply_aura=AuraType.DUMMY),   # pet: 50% share
     ],
-    spell_icon_id=277,
+    spell_icon_id=90235,
     notes='S1a BM 4.8 / A5: 12 s buff. eff0 marker on the hunter (bp -1), eff1 proc carrier on the pet (TargetA 5, bp 49 = 50%, the one place the share lives). procs_on: flags 0x10114, spell phase 0x2 (HIT), 100%, attributes_mask 0x2 (TRIGGERED_CAN_PROC) so triggered commands reach it (L8).',
     raw_overrides={
         'EquippedItemClass': -1, 'SpellLevel': 40, 'ProcTypeMask': 0x10114, 'ProcChance': 100,
@@ -205,7 +205,7 @@ beast_cleave_strike_201807 = spell(
         Effect(type=EffectType.SCHOOL_DAMAGE, implicit_target_a=6,
                potency_excluded='share of final pet/Kill Command damage; BP from script (PLAN 2, C30)'),
     ],
-    spell_icon_id=277,
+    spell_icon_id=90235,
     notes='S1a BM 4.8: Beast Cleave copy damage (pet- or hunter-cast), script BP. Physical, family 0, CANT_CRIT, IGNORE_CASTER_MODIFIERS | SUPPRESS_CASTER_PROCS | ALWAYS_HIT, custom attr IGNORE_ARMOR | NO_POSITIVE_TAKEN_BONUS (0x208000, S1a-3).',
     raw_overrides={**_COPY_RAW, 'SpellLevel': 40},
 )
@@ -272,7 +272,7 @@ cobra_shot_transform_201811 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-2001, implicit_target_a=1,
                apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CASTING_TIME),
     ],
-    spell_icon_id=3409,
+    spell_icon_id=2236,
     notes='S1a BM 4.11, S1b PT-2: hidden passive, Steady Shot cast time live -2000 ms (stored -2001), mask (0,0,0x20000000) in EffectSpellClassMaskA_3. CalcCastTime adds 500 ms to the ranged-slot Steady Shot before mods (live base 1000 ms index + 500 = 1500 after PT-3), so -2000 reaches 0 whatever the index. Granted by linked_spell(201851, 201811, 2); spell group 1231 (exclusive transforms).',
     raw_overrides={'EquippedItemClass': -1, 'SpellClassSet': 9, 'EffectSpellClassMaskA_3': m.STEADY_SHOT_MASK[2]},
 )
@@ -949,11 +949,10 @@ stampeding_beast_cunning_300207 = _stampede_beast(300207, 'Stampeding Beast', 24
 
 
 # ---- S1b proc rows (BM 7.1, S1b B1 / B4). Positive keys only (L7); chance 0 = the DBC ProcChance (CR4) ----
-# Steady Shot's Nature hit (spell_hun_steady_shot_nature): one row per rank (harness ruling: replaces BM 7.1's single
+# Steady Shot's Nature hit (spell_hun_steady_shot_nature, Serpent's Swiftness only): one row per rank (harness ruling: replaces BM 7.1's single
 # -34466 row, so only Serpent's Swiftness rank 3 sees the CAST phase, for its Kill Command cut). Steady Shot d2 b29 only.
 _STEADY_SHOT_NATURE_RANKS = (
     (34466, 0x2), (34467, 0x2), (34468, 0x3),       # Serpent's Swiftness r1-r3 (r3: CAST for the KC cut + HIT)
-    (201849, 0x2), (201850, 0x2), (201851, 0x2),    # Cobra Shot r1-r3
 )
 for _rank, _phase in _STEADY_SHOT_NATURE_RANKS:
     procs_on(_rank, proc_flags=0x100, family_name=9, family_mask=m.STEADY_SHOT_MASK, spell_phase_mask=_phase,

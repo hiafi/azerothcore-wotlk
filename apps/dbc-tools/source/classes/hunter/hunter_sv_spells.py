@@ -329,6 +329,7 @@ cluster_bombs_blast_202052 = _helper(
     'dst), RANGED, AttributesEx3 SUPPRESS_CASTER_PROCS (rolls nothing), d2 b5 (CLUSTER_BOMBS), no 0x4 (stale line 12: '
     'a scatter point the centre cannot see is replaced by the centre). Burning Tar via OnDirectFireHit (SV 0.23).',
     raw={'SpellClassMask_3': m.CLUSTER_BOMBS, 'DefenseType': 3, 'AttributesEx3': _SUPPRESS_CASTER_PROCS,
+         'SpellVisualID_1': 90091,   # patch_hunter_vfx_models.py: stock dynamite explosion, one per blast
          'Description_Lang_enUS': 'Deals {pot1} Fire damage to all enemies within $a1 yards.'},
 )
 cluster_bombs_202051 = _castable(
@@ -343,6 +344,7 @@ cluster_bombs_202051 = _castable(
     'M), d2 b5 (CLUSTER_BOMBS), CastingTimeIndex 1, tooltip_vars 1180.',
     bit=(3, m.CLUSTER_BOMBS), cooldown_ms=50000, mana_pct=10, range_yards=30.0, tooltip_vars=sv_explosive_1180,
     raw={'Targets': _TARGETS_DEST_LOCATION, 'FacingCasterFlags': 0,
+         'SpellVisualID_1': 90091,   # patch_hunter_vfx_models.py: the first of the five explosions
          'Description_Lang_enUS':
          'Hurl a cluster of bombs at the target location. The first blast deals {pot1*tnt} Fire damage to all '
          'enemies within $a1 yards. Over the next second, ' + _n(CLUSTER_BOMBS_FOLLOWUP_COUNT)

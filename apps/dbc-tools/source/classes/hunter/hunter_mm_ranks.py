@@ -179,7 +179,7 @@ deadeye_201971 = _deadeye(201971, 3, 11, True)
 # Arcane Shot half in S2a; the Multi-Shot half is S2b's.
 def _keen_eye(spell_id, rank, bp):
     return _rank(
-        spell_id, 'Keen Eye', rank, [_dummy(bp)], 2318,
+        spell_id, 'Keen Eye', rank, [_dummy(bp)], 2283,
         f"Your Arcane Shot and Multi-Shot have a $s1% chance to add {_c(KEEN_EYE_GAIN)} extra stacks to each of your "
         "marks on the target.",
     )
@@ -217,7 +217,7 @@ _TRIANGULATION_CAP = (
 
 def _triangulation(spell_id, rank, bp, last):
     return _rank(
-        spell_id, 'Triangulation', rank, [_dummy(bp)], 2235, _desc(_TRIANGULATION, _TRIANGULATION_CAP, last=last),
+        spell_id, 'Triangulation', rank, [_dummy(bp)], 90238, _desc(_TRIANGULATION, _TRIANGULATION_CAP, last=last),
         tooltip_vars=mm_convergence_1171,
     )
 

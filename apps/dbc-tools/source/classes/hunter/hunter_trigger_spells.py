@@ -613,7 +613,7 @@ entrapment_19184 = spell(
     effects=[
         _sv_aura(AuraType.ADD_FLAT_MODIFIER, -6, SpellModOp.EFFECT1),
     ],
-    spell_icon_id=20,
+    spell_icon_id=90232,
     notes=(
         'hunter-rework S3a A3 (SURVIVAL 6 (4,2)): stock row edited in place, stored = live - 1; eff0 '
         'PROC_TRIGGER_SPELL -> flat SPELLMOD_EFFECT1 -5/10/15 on FROST_TRAP_AURA (13810 eff0, the slow); '
@@ -659,7 +659,7 @@ survivalist_19255 = spell(
         _sv_aura(AuraType.MOD_TOTAL_STAT_PERCENTAGE, 0, 2),
         _sv_aura(AuraType.ADD_FLAT_MODIFIER, -3001, SpellModOp.COOLDOWN),
     ],
-    spell_icon_id=164,
+    spell_icon_id=3522,
     notes=(
         'hunter-rework S3a A3 (SURVIVAL 6 (2,3)): stock row edited in place, stored = live - 1; eff0 Agility '
         '/ eff1 Stamina +1/2/3% (aura 137 misc 1 / 2); eff2 Deterrence cooldown -3/6/10 s (C mask '
@@ -704,7 +704,7 @@ survivalist_19256 = spell(
         _sv_aura(AuraType.MOD_TOTAL_STAT_PERCENTAGE, 1, 2),
         _sv_aura(AuraType.ADD_FLAT_MODIFIER, -6001, SpellModOp.COOLDOWN),
     ],
-    spell_icon_id=164,
+    spell_icon_id=3522,
     notes=(
         'hunter-rework S3a A3 (SURVIVAL 6 (2,3)): stock row edited in place, stored = live - 1; eff0 Agility '
         '/ eff1 Stamina +1/2/3% (aura 137 misc 1 / 2); eff2 Deterrence cooldown -3/6/10 s (C mask '
@@ -749,7 +749,7 @@ survivalist_19257 = spell(
         _sv_aura(AuraType.MOD_TOTAL_STAT_PERCENTAGE, 2, 2),
         _sv_aura(AuraType.ADD_FLAT_MODIFIER, -10001, SpellModOp.COOLDOWN),
     ],
-    spell_icon_id=164,
+    spell_icon_id=3522,
     notes=(
         'hunter-rework S3a A3 (SURVIVAL 6 (2,3)): stock row edited in place, stored = live - 1; eff0 Agility '
         '/ eff1 Stamina +1/2/3% (aura 137 misc 1 / 2); eff2 Deterrence cooldown -3/6/10 s (C mask '
@@ -1006,7 +1006,7 @@ trap_mastery_19376 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=22),
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=107, misc_value=8),
     ],
-    spell_icon_id=69,
+    spell_icon_id=90230,
     notes=(
         'hunter-rework S3a A3 (SURVIVAL 6 (1,2)): stock row edited in place, stored = live - 1; eff0 DURATION '
         'A mask 0x18 -> FROST_TRAP_AURA (Frost Trap only); eff1 DOT B mask -> TRAP_MASTERY_DOT (stale B_2 '
@@ -1048,7 +1048,7 @@ entrapment_19387 = spell(
     effects=[
         _sv_aura(AuraType.ADD_FLAT_MODIFIER, -11, SpellModOp.EFFECT1),
     ],
-    spell_icon_id=20,
+    spell_icon_id=90232,
     notes=(
         'hunter-rework S3a A3 (SURVIVAL 6 (4,2)): stock row edited in place, stored = live - 1; eff0 '
         'PROC_TRIGGER_SPELL -> flat SPELLMOD_EFFECT1 -5/10/15 on FROST_TRAP_AURA (13810 eff0, the slow); '
@@ -1093,7 +1093,7 @@ entrapment_19388 = spell(
         _sv_aura(AuraType.ADD_FLAT_MODIFIER, -16, SpellModOp.EFFECT1),
         _sv_aura(AuraType.PROC_TRIGGER_SPELL, trigger_spell=64804),
     ],
-    spell_icon_id=20,
+    spell_icon_id=90232,
     notes=(
         'hunter-rework S3a A3 (SURVIVAL 6 (4,2)): stock row edited in place, stored = live - 1; eff0 '
         'PROC_TRIGGER_SPELL -> flat SPELLMOD_EFFECT1 -5/10/15 on FROST_TRAP_AURA (13810 eff0, the slow); eff1 '
@@ -1140,7 +1140,7 @@ lone_survivor_19407 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=500),
     ],
-    spell_icon_id=535,
+    spell_icon_id=90236,
     notes="hunter-rework S2a A3 (MARKSMANSHIP 6): stock rank edited in place, stored = live - 1; repurposed Improved Concussive Shot (row 1341): eff0 Classic % / eff1 Classless % (DUMMY, read by S2b's spell_hun_lone_survivor), eff2 PERIODIC_DUMMY 500 ms; stock masks cleared; attributes 448 kept (live).",
     raw_overrides={
         'AuraDescription_Lang_Mask': 16712188,
@@ -1180,7 +1180,7 @@ lone_survivor_19412 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=500),
     ],
-    spell_icon_id=535,
+    spell_icon_id=90236,
     notes="hunter-rework S2a A3 (MARKSMANSHIP 6): stock rank edited in place, stored = live - 1; repurposed Improved Concussive Shot (row 1341): eff0 Classic % / eff1 Classless % (DUMMY, read by S2b's spell_hun_lone_survivor), eff2 PERIODIC_DUMMY 500 ms; stock masks cleared; attributes 448 kept (live).",
     raw_overrides={
         'AuraDescription_Lang_Mask': 16712188,
@@ -1218,7 +1218,7 @@ efficiency_19416 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=133,
+    spell_icon_id=2120,
     notes='hunter-rework S2a A3 (MARKSMANSHIP 6): stock rank edited in place, stored = live - 1; eff0 SPELLMOD_COST -> DUMMY (the 201945 buff strength the Aimed Shot handler passes), stock masks cleared, ProcTypeMask 0.',
     raw_overrides={
         'AuraDescription_Lang_Mask': 16712188,
@@ -1256,7 +1256,7 @@ efficiency_19417 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=133,
+    spell_icon_id=2120,
     notes='hunter-rework S2a A3 (MARKSMANSHIP 6): stock rank edited in place, stored = live - 1; eff0 SPELLMOD_COST -> DUMMY (the 201945 buff strength the Aimed Shot handler passes), stock masks cleared, ProcTypeMask 0.',
     raw_overrides={
         'AuraDescription_Lang_Mask': 16712188,
@@ -1294,7 +1294,7 @@ efficiency_19418 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=133,
+    spell_icon_id=2120,
     notes='hunter-rework S2a A3 (MARKSMANSHIP 6): stock rank edited in place, stored = live - 1; eff0 SPELLMOD_COST -> DUMMY (the 201945 buff strength the Aimed Shot handler passes), stock masks cleared, ProcTypeMask 0.',
     raw_overrides={
         'AuraDescription_Lang_Mask': 16712188,
@@ -3491,7 +3491,7 @@ master_marksman_34485 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=fire_mm_buff_201940.id),
     ],
-    spell_icon_id=2230,
+    spell_icon_id=90237,
     notes='hunter-rework S2a A3 (MARKSMANSHIP 6): stock rank edited in place, stored = live - 1; eff0 PROC_TRIGGER_SPELL -> Fire! 201940 (spell_proc row -34485, A1), ProcChance 4/8/12, ProcTypeMask 0x100; stock crit and cost effects dropped, stale masks cleared.',
     raw_overrides={
         'AuraDescription_Lang_Mask': 16712188,
@@ -3528,7 +3528,7 @@ master_marksman_34486 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=fire_mm_buff_201940.id),
     ],
-    spell_icon_id=2230,
+    spell_icon_id=90237,
     notes='hunter-rework S2a A3 (MARKSMANSHIP 6): stock rank edited in place, stored = live - 1; eff0 PROC_TRIGGER_SPELL -> Fire! 201940 (spell_proc row -34485, A1), ProcChance 4/8/12, ProcTypeMask 0x100; stock crit and cost effects dropped, stale masks cleared.',
     raw_overrides={
         'AuraDescription_Lang_Mask': 16712188,
@@ -3565,7 +3565,7 @@ master_marksman_34487 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=fire_mm_buff_201940.id),
     ],
-    spell_icon_id=2230,
+    spell_icon_id=90237,
     notes='hunter-rework S2a A3 (MARKSMANSHIP 6): stock rank edited in place, stored = live - 1; eff0 PROC_TRIGGER_SPELL -> Fire! 201940 (spell_proc row -34485, A1), ProcChance 4/8/12, ProcTypeMask 0x100; stock crit and cost effects dropped, stale masks cleared.',
     raw_overrides={
         'AuraDescription_Lang_Mask': 16712188,
@@ -3645,7 +3645,7 @@ resourcefulness_34491 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=108, misc_value=14),
         _sv_aura(AuraType.ADD_FLAT_MODIFIER, -3001, SpellModOp.COOLDOWN),
     ],
-    spell_icon_id=2240,
+    spell_icon_id=90233,
     notes=(
         'hunter-rework S3a A3 (SURVIVAL 6 (5,2)): stock row edited in place, stored = live - 1; eff0 cost '
         '-22/42/62% A mask -> RESOURCEFULNESS_COST (stale A_1 222 / A_2 0x84000 replaced); eff1 trap cooldown '
@@ -3688,7 +3688,7 @@ resourcefulness_34492 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-41, implicit_target_a=1, apply_aura=108, misc_value=14),
         _sv_aura(AuraType.ADD_FLAT_MODIFIER, -6001, SpellModOp.COOLDOWN),
     ],
-    spell_icon_id=2240,
+    spell_icon_id=90233,
     notes=(
         'hunter-rework S3a A3 (SURVIVAL 6 (5,2)): stock row edited in place, stored = live - 1; eff0 cost '
         '-22/42/62% A mask -> RESOURCEFULNESS_COST (stale A_1 222 / A_2 0x84000 replaced); eff1 trap cooldown '
@@ -3732,7 +3732,7 @@ resourcefulness_34493 = spell(
         _sv_aura(AuraType.ADD_FLAT_MODIFIER, -10001, SpellModOp.COOLDOWN),
         _sv_aura(AuraType.PROC_TRIGGER_SPELL, trigger_spell=scavenger_energize_202044.id),
     ],
-    spell_icon_id=2240,
+    spell_icon_id=90233,
     notes=(
         'hunter-rework S3a A3 (SURVIVAL 6 (5,2)): stock row edited in place, stored = live - 1; eff0 cost '
         '-22/42/62% A mask -> RESOURCEFULNESS_COST (stale A_1 222 / A_2 0x84000 replaced); eff1 trap cooldown '
@@ -4112,7 +4112,7 @@ master_tactician_34506 = spell(
     effects=[
         _sv_aura(AuraType.PROC_TRIGGER_SPELL, -1, trigger_spell=34837),
     ],
-    spell_icon_id=2233,
+    spell_icon_id=2118,
     notes=(
         'hunter-rework S3a A3 (SURVIVAL 6 (7,3), stale line 22): stock row edited in place, stored = live - '
         '1; every rank triggers 34837 (was 34833/34834/34835); ProcChance 5/10/15; ProcTypeMask 0x140 kept '
@@ -4156,7 +4156,7 @@ master_tactician_34507 = spell(
     effects=[
         _sv_aura(AuraType.PROC_TRIGGER_SPELL, -1, trigger_spell=34837),
     ],
-    spell_icon_id=2233,
+    spell_icon_id=2118,
     notes=(
         'hunter-rework S3a A3 (SURVIVAL 6 (7,3), stale line 22): stock row edited in place, stored = live - '
         '1; every rank triggers 34837 (was 34833/34834/34835); ProcChance 5/10/15; ProcTypeMask 0x140 kept '
@@ -4200,7 +4200,7 @@ master_tactician_34508 = spell(
     effects=[
         _sv_aura(AuraType.PROC_TRIGGER_SPELL, -1, trigger_spell=34837),
     ],
-    spell_icon_id=2233,
+    spell_icon_id=2118,
     notes=(
         'hunter-rework S3a A3 (SURVIVAL 6 (7,3), stale line 22): stock row edited in place, stored = live - '
         '1; every rank triggers 34837 (was 34833/34834/34835); ProcChance 5/10/15; ProcTypeMask 0x140 kept '
@@ -6513,7 +6513,7 @@ trap_mastery_63457 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=22),
         Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=8),
     ],
-    spell_icon_id=69,
+    spell_icon_id=90230,
     notes=(
         'hunter-rework S3a A3 (SURVIVAL 6 (1,2)): stock row edited in place, stored = live - 1; eff0 DURATION '
         'A mask 0x18 -> FROST_TRAP_AURA (Frost Trap only); eff1 DOT B mask -> TRAP_MASTERY_DOT (stale B_2 '
@@ -6557,7 +6557,7 @@ trap_mastery_63458 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108, misc_value=22),
         Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=107, misc_value=8),
     ],
-    spell_icon_id=69,
+    spell_icon_id=90230,
     notes=(
         'hunter-rework S3a A3 (SURVIVAL 6 (1,2)): stock row edited in place, stored = live - 1; eff0 DURATION '
         'A mask 0x18 -> FROST_TRAP_AURA (Frost Trap only); eff1 DOT B mask -> TRAP_MASTERY_DOT (stale B_2 '
@@ -7816,7 +7816,7 @@ killer_instinct_19370 = spell(
     effects=[
         _sv_aura(AuraType.MOD_CRIT_PCT, 0),
     ],
-    spell_icon_id=238,
+    spell_icon_id=2114,
     notes=(
         'hunter-rework S3a A3 (SURVIVAL 6 (5,0)): stock row edited in place, stored = live - 1; eff0 aura 52 '
         '-> 290 (MOD_CRIT_PCT) +1/2/3%; stock family 0 kept (no SpellMod, N7).'
@@ -7855,7 +7855,7 @@ killer_instinct_19371 = spell(
     effects=[
         _sv_aura(AuraType.MOD_CRIT_PCT, 1),
     ],
-    spell_icon_id=238,
+    spell_icon_id=2114,
     notes=(
         'hunter-rework S3a A3 (SURVIVAL 6 (5,0)): stock row edited in place, stored = live - 1; eff0 aura 52 '
         '-> 290 (MOD_CRIT_PCT) +1/2/3%; stock family 0 kept (no SpellMod, N7).'
@@ -7895,7 +7895,7 @@ killer_instinct_19373 = spell(
         _sv_aura(AuraType.MOD_CRIT_PCT, 2),
         _sv_aura(AuraType.PROC_TRIGGER_SPELL, trigger_spell=mantis_strike_enable_202041.id),
     ],
-    spell_icon_id=238,
+    spell_icon_id=2114,
     notes=(
         'hunter-rework S3a A3 (SURVIVAL 6 (5,0)): stock row edited in place, stored = live - 1; eff0 aura 52 '
         '-> 290 (MOD_CRIT_PCT) +1/2/3%; stock family 0 kept (no SpellMod, N7); eff1 PROC_TRIGGER_SPELL -> '
