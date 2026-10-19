@@ -1173,6 +1173,19 @@ class FamilyBitRules:
     # spell and the pet's cast would need a ranged weapon.
     pet_group_bits: tuple[int, int, int] = (0, 0, 0)
     pet_required_bits: tuple[int, int, int] = (0, 0, 0)
+    # Message wording, so a rule set that is not the hunter's says its own thing. The defaults are the hunter's.
+    # An all-zero mask turns its rule into a no-op: (a) and (c) need a shared bit, (b) needs a carrier bit, (d)
+    # needs `pet_required_bits` non-zero. `exempt_name_prefix=""` means "no name exemption".
+    protected_label: str = "aspect"
+    protected_article: str = "an"
+    protected_effect: str = "SPELL_SPECIFIC_ASPECT and it knocks the active aspect off"
+    protected_hint: str = (
+        "Use another bit (a real aspect needs a SkillLineAbility row, or its id in the rule's exempt_ids)."
+    )
+    carrier_note: str = "d1 b0, the old Steady Shot bit that old readers and core hardcodes still key on"
+    reader_label: str = "the pet bit (d1 b28)"
+    reader_reaches: str = "every pet ability"
+    reader_hint: str = "Read a pet group through its d2 bit alone."
 
 
 HUNTER_FAMILY_RULES = FamilyBitRules(
@@ -1185,7 +1198,31 @@ HUNTER_FAMILY_RULES = FamilyBitRules(
     pet_group_bits=(0, 0, 0x400000 | 0x800000 | 0x1000000),          # d2 b22 / b23 / b24
     pet_required_bits=(0, 0x10000000, 0),                            # d1 b28
 )
-FAMILY_BIT_RULES = (HUNTER_FAMILY_RULES,)
+# Shaman T1 (.agents/plans/shaman-rework/shaman-rework.FAMILY-BITS.md s3.3, "never take"):
+#   d1 b5 | d1 b10 (0x420): SpellInfo::GetSpellSpecific makes any shaman-family spell carrying either bit
+#     SPELL_SPECIFIC_ELEMENTAL_SHIELD (SpellInfo.cpp:2241-2248), and IsAuraExclusiveBySpecificWith makes two of
+#     those mutually exclusive on a target. SH0 lists a custom real shield's id in `exempt_ids`.
+#   d2 b11 | d2 b31 (0x80000800): the Orc racial Command (65223, cast on pets by the core) and the Draenei racial
+#     Gift of the Naaru (59547); a reader mask containing either would modify a racial.
+# The other shaman "never take" bits (d0 b10 shield with NO_THREAT, d2 b14 root DR) and "imbue auras leave d1 b11"
+# depend on attributes or on the spell's role, which this table cannot express: SH0 pins them with targeted tests.
+SHAMAN_FAMILY_RULES = FamilyBitRules(
+    name="shaman",
+    spell_class_set=11,
+    protected_bits=(0, 0x420, 0),                                    # d1 b5, b10: ELEMENTAL_SHIELD_SPECIFIC
+    exempt_name_prefix="",
+    exempt_ids=frozenset(),
+    forbidden_reader_bits=(0, 0, 0x80000800),                        # d2 b11 (Orc racial), d2 b31 (Draenei racial)
+    protected_label="elemental shield",
+    protected_effect=(
+        "SPELL_SPECIFIC_ELEMENTAL_SHIELD, which is mutually exclusive with the shaman's real elemental shields"
+    ),
+    protected_hint="Use another bit, or list the id in the rule's exempt_ids if it really is a shield.",
+    reader_label="a racial's bit (d2 b11 Orc Command, d2 b31 Draenei Gift of the Naaru)",
+    reader_reaches="the racial",
+    reader_hint="Pick another bit for the reader.",
+)
+FAMILY_BIT_RULES = (HUNTER_FAMILY_RULES, SHAMAN_FAMILY_RULES)
 _CUSTOM_SPELL_ID_START = 200000
 PET_SHARED_SKILL_LINE = 270  # "Pet - Hunter": the skill line every hunter pet family shares
 
@@ -1202,13 +1239,15 @@ def _hex_mask(mask: tuple[int, int, int]) -> str:
     return "(" + ", ".join(f"0x{word:X}" for word in mask) + ")"
 
 
-def check_hunter_family_rules(
+def check_family_bit_rules(
     entries: list[dict], rows: list[dict], spell_procs: list[dict] | None = None,
     skill_line_abilities: list[dict] | None = None, pet_skill_lines: set[int] | frozenset[int] = frozenset(),
     rules: tuple[FamilyBitRules, ...] = FAMILY_BIT_RULES,
 ) -> list[str]:
-    """WARNINGs for the PLAN section 2 family-bit rules, on custom spell ids (>= 200000) of each rule set's
-    SpellClassSet. `entries`/`rows` are aligned like `check_classmask_scoping`'s (source entry, built row).
+    """WARNINGs for the family-bit rules of every `FamilyBitRules` set (the hunter's PLAN section 2 and, since shaman
+    T1, the shaman's FAMILY-BITS s3.3), on custom spell ids (>= 200000) of each rule set's SpellClassSet. A rule set
+    with a zero mask is silent for the rules that mask drives. Also exported as `check_hunter_family_rules`.
+    `entries`/`rows` are aligned like `check_classmask_scoping`'s (source entry, built row).
     Rules, per `FamilyBitRules`:
       (a) a non-aspect carrying an aspect bit (an "Aspect of ..." name only counts when the spell has a
           SkillLineAbility row; otherwise list its id in `exempt_ids`);
@@ -1236,36 +1275,35 @@ def check_hunter_family_rules(
             label = f"spell {spell_id} ({entry.get('name', '?')})"
             mask = _spell_class_mask(row)
             name = str(entry.get("name") or "")
-            if (
-                _shares_bit(mask, rule.protected_bits) and spell_id not in rule.exempt_ids
-                and not (
-                    rule.exempt_name_prefix and name.lower().startswith(rule.exempt_name_prefix.lower())
-                    and spell_id in learned
-                )
-            ):
+            # An empty prefix is "no name exemption": str.startswith("") is always True, so test it first.
+            name_exempt = bool(
+                rule.exempt_name_prefix and name.lower().startswith(rule.exempt_name_prefix.lower())
+                and spell_id in learned
+            )
+            if _shares_bit(mask, rule.protected_bits) and spell_id not in rule.exempt_ids and not name_exempt:
                 warnings.append(
-                    f"{label}: {rule.name} family-bit rule (a): carries an aspect bit {_hex_mask(mask)} "
-                    f"(aspect bits {_hex_mask(rule.protected_bits)}) but is not an aspect - the core makes it "
-                    f"SPELL_SPECIFIC_ASPECT and it knocks the active aspect off. Use another bit (a real aspect needs a "
-                    f"SkillLineAbility row, or its id in the rule's exempt_ids)."
+                    f"{label}: {rule.name} family-bit rule (a): carries "
+                    f"{rule.protected_article} {rule.protected_label} bit {_hex_mask(mask)} "
+                    f"({rule.protected_label} bits {_hex_mask(rule.protected_bits)}) but is "
+                    f"not {rule.protected_article} {rule.protected_label} - the core makes it "
+                    f"{rule.protected_effect}. {rule.protected_hint}"
                 )
             if _shares_bit(mask, rule.forbidden_carrier_bits):
                 warnings.append(
                     f"{label}: {rule.name} family-bit rule (b): carries a poisoned bit {_hex_mask(mask)} "
-                    f"(d1 b0, {_hex_mask(rule.forbidden_carrier_bits)}) that old Steady Shot readers and core "
-                    f"hardcodes still key on. Use another bit."
+                    f"({rule.carrier_note}, {_hex_mask(rule.forbidden_carrier_bits)}). Use another bit."
                 )
             for letter in _LETTERS:
                 reader = tuple(_u32(row.get(f"EffectSpellClassMask{letter}_{n}")) for n in (1, 2, 3))
                 if _shares_bit(reader, rule.forbidden_reader_bits):
                     warnings.append(
                         f"{label}: {rule.name} family-bit rule (c): effect {_LETTERS.index(letter) + 1}'s reader "
-                        f"mask {_hex_mask(reader)} contains the pet bit (d1 b28) - SpellInfo::IsAffected matches "
-                        f"on any shared bit, so it reaches every pet ability. Read a pet group through its d2 "
-                        f"bit alone."
+                        f"mask {_hex_mask(reader)} contains {rule.reader_label} - SpellInfo::IsAffected matches "
+                        f"on any shared bit, so it reaches {rule.reader_reaches}. {rule.reader_hint}"
                     )
             pet_cast = _shares_bit(mask, rule.pet_group_bits) or spell_id in taught_on_pet_line
-            if pet_cast and not all(m & b == b for m, b in zip(mask, rule.pet_required_bits)):
+            lacks_pet_bit = not all(m & b == b for m, b in zip(mask, rule.pet_required_bits))
+            if any(rule.pet_required_bits) and pet_cast and lacks_pet_bit:
                 warnings.append(
                     f"{label}: {rule.name} family-bit rule (d): a pet-cast spell without the pet bit "
                     f"{_hex_mask(rule.pet_required_bits)} (mask {_hex_mask(mask)}) - without it the core treats "
@@ -1280,7 +1318,506 @@ def check_hunter_family_rules(
             if _shares_bit(reader, rule.forbidden_reader_bits):
                 warnings.append(
                     f"spell_proc {proc['SpellId']}: {rule.name} family-bit rule (c): family mask "
-                    f"{_hex_mask(reader)} contains the pet bit (d1 b28), so the proc reaches every pet "
-                    f"ability. Use the pet group's d2 bit alone."
+                    f"{_hex_mask(reader)} contains {rule.reader_label}, so the proc reaches {rule.reader_reaches}. "
+                    f"{rule.reader_hint}"
                 )
+    return warnings
+
+
+# The hunter T1 name, kept so generate.py and every hunter test keep working.
+check_hunter_family_rules = check_family_bit_rules
+
+
+# --- Shaman T1 lints (.agents/plans/shaman-rework/shaman-rework.T1-HANDOFF.md steps 2-7) -----------------------
+#
+# Every check below takes already-built spell rows (`rows`, aligned with `entries` where both are passed) and runs
+# in generate.py's full run AND in its `--check` block (hunter T1-10: a lint that only runs on the full pipeline is
+# invisible to a `--check` session). `--check` has no live (promoted-aware) overlay, so each docstring says which
+# input falls back to the stock client rows there.
+
+
+def check_creature_spell_rows(rows: list[dict], known_spell_ids: set[int] | frozenset[int]) -> list[str]:
+    """WARNING for a declared `creature_spell()` row whose spell is in neither the spells this run builds nor the
+    stock/live spells (`known_spell_ids`): `ObjectMgr::LoadCreatureTemplateSpells` logs "has non existing spell" at
+    boot and leaves the slot empty. Pass the union of the declared spell ids and the existing Spell.dbc rows (the
+    `--check` run only has the stock client rows for the second half)."""
+    warnings = []
+    for row in rows:
+        spell_id = int(row["Spell"])
+        if spell_id in known_spell_ids:
+            continue
+        warnings.append(
+            f"creature_spell({row['CreatureID']}, {row['Index']}, {spell_id}): spell {spell_id} is neither declared "
+            f"in source/ nor a stock spell - ObjectMgr::LoadCreatureTemplateSpells drops the slot at boot. "
+            f"Check the id, or declare the spell."
+        )
+    return warnings
+
+
+# --- check_totem_tools (ruling 3A.8) ---
+
+# The only SpellClassSet whose custom spells must not need a totem tool item.
+TOTEM_TOOL_CLASS_SET = 11
+# SpellClassSets whose every declared spell, stock ones included, must be tool-free. Empty until SH0 strips the
+# stock shaman totem columns (the stock Earth/Fire/Water/Air Totem items 5175/5176/5177/5178); SH0 then adds 11,
+# and any stock family-11 spell it forgot to strip warns. Today's stock rows stay quiet.
+TOOL_FREE_CLASS_SETS: frozenset = frozenset()
+_TOTEM_TOOL_COLUMNS = ("Totem_1", "Totem_2", "RequiredTotemCategoryID_1", "RequiredTotemCategoryID_2")
+
+
+def check_totem_tools(
+    entries: list[dict], rows: list[dict], tool_free_class_sets: frozenset[int] | set[int] | None = None,
+    base_spells: dict[int, dict] | None = None,
+) -> list[str]:
+    """Ruling 3A.8 (P0-RESULTS "Other findings"): the rework drops the totem tool requirement, because a shaman
+    without the Earth/Fire/Water/Air Totem item fails the cast with SPELL_FAILED_TOTEMS (`Spell::CheckItems`). WARNING
+    for a custom spell (id >= 200000) of SpellClassSet 11 whose built row has a non-zero `Totem_1/2` (the item the
+    spell needs) or `RequiredTotemCategoryID_1/2` (the TotemCategory the spell needs). A SpellClassSet listed in
+    `TOOL_FREE_CLASS_SETS` widens the check to every declared spell of that set, stock ids included, and, when
+    `base_spells` is passed (spell id -> row: the stock client file under `--check`, the promoted-aware live rows in
+    the full run), to every UNDECLARED spell of that set in it too: a learnable stock rank SH0 forgot to declare and
+    strip is exactly the miss the opt-in exists to catch (117 stock family-11 spells hold a tool column, 42 of them
+    declared). `entries`/`rows` are aligned like `check_classmask_scoping`'s. Zero the columns with
+    `raw_overrides={'Totem_1': 0, 'Totem_2': 0, 'RequiredTotemCategoryID_1': 0, 'RequiredTotemCategoryID_2': 0}`."""
+    wide = TOOL_FREE_CLASS_SETS if tool_free_class_sets is None else frozenset(tool_free_class_sets)
+    warnings = []
+    for entry, row in zip(entries, rows):
+        spell_id = int(row["ID"])
+        class_set = int(row.get("SpellClassSet") or 0)
+        custom = spell_id >= _CUSTOM_SPELL_ID_START and class_set == TOTEM_TOOL_CLASS_SET
+        if not (custom or class_set in wide):
+            continue
+        held = [(column, int(row.get(column) or 0)) for column in _TOTEM_TOOL_COLUMNS if int(row.get(column) or 0)]
+        if not held:
+            continue
+        warnings.append(
+            f"spell {spell_id} ({entry.get('name', '?')}): requires a totem tool "
+            f"({', '.join(f'{column}={value}' for column, value in held)}) - Spell::CheckItems fails the cast with "
+            f"SPELL_FAILED_TOTEMS for a shaman without the totem item (ruling 3A.8 drops the tools). Zero "
+            f"Totem_1/2 and RequiredTotemCategoryID_1/2 in raw_overrides."
+        )
+    if wide and base_spells:
+        declared = {int(r["ID"]) for r in rows}
+        for spell_id in sorted(base_spells):
+            row = base_spells[spell_id]
+            if spell_id in declared or int(row.get("SpellClassSet") or 0) not in wide:
+                continue
+            held = [(c, int(row.get(c) or 0)) for c in _TOTEM_TOOL_COLUMNS if int(row.get(c) or 0)]
+            if not held:
+                continue
+            warnings.append(
+                f"spell {spell_id} ({row.get('Name_Lang_enUS', '?')}): an undeclared stock spell that requires a totem "
+                f"tool ({', '.join(f'{column}={value}' for column, value in held)}) - declare it with spell() and zero "
+                f"Totem_1/2 and RequiredTotemCategoryID_1/2 in raw_overrides, or the tool requirement stays."
+            )
+    return warnings
+
+
+# --- check_hidden_learned_spells (P0 6b-rain: AttributesEx 0x80 hid Healing Rain) ---
+
+_SPELL_ATTR0_DO_NOT_DISPLAY = 0x80
+
+# Hidden, non-passive spells a player learns on purpose. One comment per id. A pure LEARN_SPELL carrier needs no
+# entry (see `check_hidden_learned_spells`), so this is empty today.
+HIDDEN_LEARNED_ALLOW: frozenset[int] = frozenset()
+_EFFECT_LEARN_SPELL = 36
+
+
+def _learn_targets(row: dict) -> list[int]:
+    """The spells a row's LEARN_SPELL (effect 36) effects teach (`EffectTriggerSpell_n`)."""
+    return [
+        int(row.get(f"EffectTriggerSpell_{i}") or 0) for i in (1, 2, 3)
+        if int(row.get(f"Effect_{i}") or 0) == _EFFECT_LEARN_SPELL and int(row.get(f"EffectTriggerSpell_{i}") or 0)
+    ]
+
+
+def _is_learn_carrier(row: dict) -> bool:
+    """True when every non-empty effect is LEARN_SPELL: the stock 59672 talent-rank carrier pattern (hidden on
+    purpose; the spells it teaches are the visible ones)."""
+    effects = [int(row.get(f"Effect_{i}") or 0) for i in (1, 2, 3)]
+    effects = [e for e in effects if e]
+    return bool(effects) and all(e == _EFFECT_LEARN_SPELL for e in effects)
+
+
+def check_hidden_learned_spells(
+    entries: list[dict], rows: list[dict], skill_line_abilities: list[dict] | None = None,
+    trained_spell_ids: set[int] | frozenset[int] = frozenset(),
+    talent_rank_ids: set[int] | frozenset[int] = frozenset(),
+    pet_skill_lines: set[int] | frozenset[int] = frozenset(), allow: frozenset[int] | set[int] | None = None,
+) -> list[str]:
+    """WARNING for a custom spell (id >= 200000) with `Attributes & 0x80` (SPELL_ATTR0_DO_NOT_DISPLAY) and without
+    `0x40` (passive) that a player learns. The client hides a DO_NOT_DISPLAY spell from the spellbook and the
+    trainer window, so a learnable active spell is never shown or castable from a button: P0's Healing Rain was
+    invisible this way. "Learned" means a SkillLineAbility row on a non-pet skill line (`skill_line_abilities`: dicts
+    with Spell/SkillLine, the declared plus, in the full run, the live rows; `--check` only has the declared ones),
+    a `trained_by()` row (`trained_spell_ids`), a talent rank (`talent_rank_ids`), or a LEARN_SPELL (effect 36)
+    target of any learned spell in `rows` (followed transitively). Pet lines (270 plus `pet_skill_lines`) do not
+    count: a pet spell is shown on the pet bar. Silent: a hidden passive (a talent's aura), a hidden helper nobody
+    learns (cast by a script), and a pure LEARN_SPELL carrier (every effect is effect 36, the stock 59672 pattern: the
+    carrier is hidden on purpose and the spells it teaches are the visible ones). Clear 0x80, make the spell
+    passive, or add a deliberate hidden spell to `HIDDEN_LEARNED_ALLOW`. Note the P0 incident itself used `.learn`,
+    which no data lint can see; this catches the production shapes."""
+    allowed = HIDDEN_LEARNED_ALLOW if allow is None else allow
+    pet_lines = set(pet_skill_lines) | {PET_SHARED_SKILL_LINE}
+    learned_via: dict[int, str] = {}
+    for sla in skill_line_abilities or []:
+        if int(sla["SkillLine"]) not in pet_lines:
+            learned_via.setdefault(int(sla["Spell"]), f"SkillLineAbility on skill line {int(sla['SkillLine'])}")
+    for spell_id in trained_spell_ids:
+        learned_via.setdefault(int(spell_id), "a trained_by() row")
+    for spell_id in talent_rank_ids:
+        learned_via.setdefault(int(spell_id), "a talent rank")
+    by_id = {int(r["ID"]): r for r in rows}
+    queue = list(learned_via)
+    while queue:
+        source_id = queue.pop()
+        source_row = by_id.get(source_id)
+        if source_row is None:
+            continue
+        for target in _learn_targets(source_row):
+            if target not in learned_via:
+                learned_via[target] = f"LEARN_SPELL from spell {source_id}"
+                queue.append(target)
+    warnings = []
+    for entry, row in zip(entries, rows):
+        spell_id = int(row["ID"])
+        attributes = int(row.get("Attributes") or 0)
+        if spell_id < _CUSTOM_SPELL_ID_START or spell_id in allowed or spell_id not in learned_via:
+            continue
+        if not attributes & _SPELL_ATTR0_DO_NOT_DISPLAY or attributes & _SPELL_ATTR0_PASSIVE:
+            continue
+        if _is_learn_carrier(row):
+            continue
+        warnings.append(
+            f"spell {spell_id} ({entry.get('name', '?')}): Attributes has SPELL_ATTR0_DO_NOT_DISPLAY (0x80) but a "
+            f"player learns it ({learned_via[spell_id]}) and it is not passive - the client hides it from the "
+            f"spellbook and the trainer window (P0 Healing Rain was invisible this way). Clear 0x80 (use "
+            f"SPELL_ATTR5_NO_CASTER_AURA_ICON to hide only the buff), or make it passive (0x40) if it is an aura."
+        )
+    return warnings
+
+
+# --- check_ground_effect_haste (PLAN s3 periodic haste, ruling s7; T0b s4) ---
+
+_EFFECT_PERSISTENT_AREA_AURA = 27
+_SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC = 0x2000
+# SpellEffectInfo::IsAura(): APPLY_AURA and the area-aura effects, plus PERSISTENT_AREA_AURA (a dynobj aura).
+_AURA_EFFECTS = frozenset({6, 27, 35, 65, 119, 128, 129, 143})
+# SpellInfo::HasPeriodicDamageOrHealEffect (SpellInfo.cpp:935-942): PERIODIC_DAMAGE 3, PERIODIC_HEAL 8,
+# OBS_MOD_HEALTH 20, PERIODIC_LEECH 53, PERIODIC_DAMAGE_PERCENT 89. PERIODIC_DUMMY (226) and
+# PERIODIC_TRIGGER_SPELL (23) are not on it, so they tick at their fixed amplitude.
+_PERIODIC_DAMAGE_OR_HEAL_AURAS = frozenset({3, 8, 20, 53, 89})
+
+# Existing custom ground effects that tick hasted today. PLAN s7 keeps their behavior until their owner rules, so
+# they are listed, not changed. Keep one comment per id.
+# SpellAuraEffects.cpp FIXED_CADENCE_PERIODIC_SPELLS (IsFixedCadencePeriodic): spells whose periodic ticks the core
+# never hastes. Priest Echo of Light heal / damage today (PriestMechanics.h). Add an id here when that array grows.
+FIXED_CADENCE_PERIODIC_SPELLS: frozenset[int] = frozenset({200218, 200219})
+GROUND_HASTE_ALLOW: frozenset[int] = frozenset({
+    200096,  # mage Meteor: the ground burn is a persistent area aura carrying PERIODIC_DAMAGE, so it ticks hasted
+    201200,  # paladin Light's Hammer: AttributesEx5 0x2000 (cloned from a stock ground effect), so it ticks hasted
+})
+
+
+def check_ground_effect_haste(
+    entries: list[dict], rows: list[dict], allow: frozenset[int] | set[int] | None = None,
+) -> list[str]:
+    """WARNING for a custom spell (id >= 200000) with a PERSISTENT_AREA_AURA effect (27) that will tick hasted,
+    because the aura effect amplitude is scaled by cast speed when the spell has `AttributesEx5 & 0x2000`
+    (SPELL_HASTE_AFFECTS_PERIODIC: stock Blizzard 10 and Rain of Fire 5740 carry it, the clone trap) or an aura that
+    `SpellInfo::HasPeriodicDamageOrHealEffect` matches (SpellAuraEffects.cpp:660-680). Fixed-tick ground effects
+    (Healing Rain, Earthquake, Blizzard) use the trigger shape instead: a persistent area aura + a PERIODIC_DUMMY
+    aura + a script casting one single-target spell per target, which is not hasted and draws the ground kit.
+    Spells in `GROUND_HASTE_ALLOW` are exempt (existing effects whose owner has not ruled yet), and so are the core's
+    fixed-cadence ids (`FIXED_CADENCE_PERIODIC_SPELLS`, mirroring `IsFixedCadencePeriodic`)."""
+    allowed = GROUND_HASTE_ALLOW if allow is None else allow
+    warnings = []
+    for entry, row in zip(entries, rows):
+        spell_id = int(row["ID"])
+        if spell_id < _CUSTOM_SPELL_ID_START or spell_id in allowed or spell_id in FIXED_CADENCE_PERIODIC_SPELLS:
+            continue
+        effects = [(int(row.get(f"Effect_{i}") or 0), int(row.get(f"EffectAura_{i}") or 0)) for i in (1, 2, 3)]
+        if not any(effect == _EFFECT_PERSISTENT_AREA_AURA for effect, _ in effects):
+            continue
+        reasons = []
+        if int(row.get("AttributesEx5") or 0) & _SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC:
+            reasons.append("AttributesEx5 has SPELL_HASTE_AFFECTS_PERIODIC (0x2000)")
+        carried = {aura for effect, aura in effects if effect in _AURA_EFFECTS}
+        hasted_auras = sorted(carried & _PERIODIC_DAMAGE_OR_HEAL_AURAS)
+        if hasted_auras:
+            reasons.append(
+                f"it carries periodic damage/heal aura(s) {hasted_auras} (SpellInfo::HasPeriodicDamageOrHealEffect)"
+            )
+        if not reasons:
+            continue
+        warnings.append(
+            f"spell {spell_id} ({entry.get('name', '?')}): a persistent area aura that ticks hasted - "
+            f"{' and '.join(reasons)}, so every cast-speed point shortens its period (and adds ticks). For a "
+            f"fixed cadence use the trigger shape: PERSISTENT_AREA_AURA (dummy aura) + a PERIODIC_DUMMY aura on the "
+            f"caster + a script casting one single-target spell per target, with no 0x2000 and no periodic "
+            f"damage/heal aura on this spell. Do not clone Blizzard 10 or Rain of Fire 5740. If the haste is "
+            f"intended, add the id to lint.GROUND_HASTE_ALLOW."
+        )
+    return warnings
+
+
+# --- check_spell_proc_rows (P0 REPORT s3, the 202766 deviation) ---
+
+# SpellMgr.h ProcFlags (PROC_FLAG_*), copied: a lint must not import the engine header, and the values are fixed.
+_PROC_DONE_MELEE_AUTO_ATTACK = 0x00000004
+_PROC_TAKEN_MELEE_AUTO_ATTACK = 0x00000008
+_PROC_DONE_SPELL_MELEE_DMG_CLASS = 0x00000010
+_PROC_TAKEN_SPELL_MELEE_DMG_CLASS = 0x00000020
+_PROC_DONE_RANGED_AUTO_ATTACK = 0x00000040
+_PROC_TAKEN_RANGED_AUTO_ATTACK = 0x00000080
+_PROC_DONE_SPELL_RANGED_DMG_CLASS = 0x00000100
+_PROC_TAKEN_SPELL_RANGED_DMG_CLASS = 0x00000200
+_PROC_DONE_SPELL_NONE_DMG_CLASS_POS = 0x00000400
+_PROC_TAKEN_SPELL_NONE_DMG_CLASS_POS = 0x00000800
+_PROC_DONE_SPELL_NONE_DMG_CLASS_NEG = 0x00001000
+_PROC_TAKEN_SPELL_NONE_DMG_CLASS_NEG = 0x00002000
+_PROC_DONE_SPELL_MAGIC_DMG_CLASS_POS = 0x00004000
+_PROC_TAKEN_SPELL_MAGIC_DMG_CLASS_POS = 0x00008000
+_PROC_DONE_SPELL_MAGIC_DMG_CLASS_NEG = 0x00010000
+_PROC_TAKEN_SPELL_MAGIC_DMG_CLASS_NEG = 0x00020000
+_PROC_DONE_PERIODIC = 0x00040000
+_PROC_TAKEN_PERIODIC = 0x00080000
+_PROC_DONE_TRAP_ACTIVATION = 0x00200000
+_PROC_DONE_MAINHAND_ATTACK = 0x00400000
+_PROC_DONE_OFFHAND_ATTACK = 0x00800000
+SPELL_PROC_FLAG_MASK = (
+    _PROC_DONE_SPELL_MELEE_DMG_CLASS | _PROC_TAKEN_SPELL_MELEE_DMG_CLASS
+    | _PROC_DONE_RANGED_AUTO_ATTACK | _PROC_TAKEN_RANGED_AUTO_ATTACK
+    | _PROC_DONE_SPELL_RANGED_DMG_CLASS | _PROC_TAKEN_SPELL_RANGED_DMG_CLASS
+    | _PROC_DONE_SPELL_NONE_DMG_CLASS_POS | _PROC_TAKEN_SPELL_NONE_DMG_CLASS_POS
+    | _PROC_DONE_SPELL_NONE_DMG_CLASS_NEG | _PROC_TAKEN_SPELL_NONE_DMG_CLASS_NEG
+    | _PROC_DONE_SPELL_MAGIC_DMG_CLASS_POS | _PROC_TAKEN_SPELL_MAGIC_DMG_CLASS_POS
+    | _PROC_DONE_SPELL_MAGIC_DMG_CLASS_NEG | _PROC_TAKEN_SPELL_MAGIC_DMG_CLASS_NEG
+    | _PROC_DONE_PERIODIC | _PROC_TAKEN_PERIODIC | _PROC_DONE_TRAP_ACTIVATION
+)
+DONE_HIT_PROC_FLAG_MASK = (
+    _PROC_DONE_MELEE_AUTO_ATTACK | _PROC_DONE_RANGED_AUTO_ATTACK
+    | _PROC_DONE_SPELL_MELEE_DMG_CLASS | _PROC_DONE_SPELL_RANGED_DMG_CLASS
+    | _PROC_DONE_SPELL_NONE_DMG_CLASS_POS | _PROC_DONE_SPELL_NONE_DMG_CLASS_NEG
+    | _PROC_DONE_SPELL_MAGIC_DMG_CLASS_POS | _PROC_DONE_SPELL_MAGIC_DMG_CLASS_NEG
+    | _PROC_DONE_PERIODIC | _PROC_DONE_TRAP_ACTIVATION | _PROC_DONE_MAINHAND_ATTACK | _PROC_DONE_OFFHAND_ATTACK
+)
+REQ_SPELL_PHASE_PROC_FLAG_MASK = SPELL_PROC_FLAG_MASK & DONE_HIT_PROC_FLAG_MASK
+
+# Declared spell_proc rows that fail LoadSpellProcs' checks today (SpellId -> why it is accepted), found by the run
+# that introduced this lint. Each logs an error at boot; the owner triages whether the row was meant.
+_PROC_PHASE_UNUSED = (
+    "SpellPhaseMask 2 on taken-only ProcFlags: the phase is ignored (SpellMgr.cpp:917 checks it only for done-hit "
+    "flags), the proc still fires, boot logs 'won't be used'"
+)
+_PROC_PHASE_MISSING = (
+    "done-spell ProcFlags with SpellPhaseMask 0 (CanSpellTriggerProcOnEvent, SpellMgr.cpp:917-921, never matches); BUT "
+    "the row is shadowed by a stock rank-chain row (SHADOWED_PROC_ALLOW), so it is never even loaded: adding a phase "
+    "changes nothing until the priest rework removes the chain row. KNOWN LIVE BUG owned by the priest rework"
+)
+SPELL_PROC_ALLOW: dict[int, str] = {
+    -17106: "druid Intensity: ProcFlags 0 on purpose, it neutralises the stock Enrage-rage proc (druid_talents.py)",
+    20098: "paladin Anticipation: " + _PROC_PHASE_UNUSED,
+    -20127: "paladin Redoubt: " + _PROC_PHASE_UNUSED,
+    -53590: "paladin Touched by the Light: " + _PROC_PHASE_UNUSED,
+    201347: "paladin Bulwark of Faith: " + _PROC_PHASE_UNUSED,
+    201353: "paladin Avenging Light: " + _PROC_PHASE_UNUSED,
+    201354: "paladin Avenging Light: " + _PROC_PHASE_UNUSED,
+    201355: "paladin Avenging Light: " + _PROC_PHASE_UNUSED,
+    201365: "paladin Shroud of Light: " + _PROC_PHASE_UNUSED,
+    201367: "paladin Touched by the Light: " + _PROC_PHASE_UNUSED,
+    201374: "paladin Shield of the Templar: " + _PROC_PHASE_UNUSED,
+    -30299: "warlock Nether Protection: " + _PROC_PHASE_UNUSED,
+    27816: "priest Blessed Recovery: " + _PROC_PHASE_MISSING,
+    33150: "priest Surge of Light: " + _PROC_PHASE_MISSING,
+    33154: "priest Surge of Light: " + _PROC_PHASE_MISSING,
+    34753: "priest Holy Concentration: " + _PROC_PHASE_MISSING,
+    34859: "priest Holy Concentration: " + _PROC_PHASE_MISSING,
+    34860: "priest Holy Concentration: " + _PROC_PHASE_MISSING,
+}
+
+
+def check_spell_proc_rows(
+    spell_procs: list[dict], spell_rows: dict[int, dict], allow: dict[int, str] | set[int] | None = None,
+) -> list[str]:
+    """Mirrors the "proc will not be triggered" checks of `SpellMgr::LoadSpellProcs` (SpellMgr.cpp:2112-2117) for
+    every declared `spell_proc` row (`procs_on()`), whatever its spell id. The effective ProcFlags is the row's
+    value, or the spell's DBC `ProcTypeMask` when the row has 0 (`spell_rows`: spell id -> built or stock row; a
+    negative SpellId is a rank chain and is judged on its base id; a spell with no row is not judged on the flags).
+    WARNING when
+      - the effective ProcFlags is 0 ("doesn't have `ProcFlags` value defined, proc will not be triggered");
+      - `SpellPhaseMask` is 0 but ProcFlags intersects REQ_SPELL_PHASE_PROC_FLAG_MASK (SPELL_PROC_FLAG_MASK &
+        DONE_HIT_PROC_FLAG_MASK: a done-spell or periodic proc must say CAST, HIT or FINISH): the proc never fires -
+        the 202766 deviation (a Flametongue melee-spell proc with phase 0);
+      - `SpellPhaseMask` is set but ProcFlags is outside that mask ("won't be used"): LoadSpellProcs logs an error.
+    A row whose SpellId is in `allow` is exempt (a dict of id -> reason, or a set). A negative row is judged on its base
+    rank's DBC flags only, while the engine re-derives the flags per rank. A proc another row shadows is a different
+    failure: see `check_shadowed_spell_procs`."""
+    allowed = SPELL_PROC_ALLOW if allow is None else allow
+    warnings = []
+    for proc in spell_procs:
+        spell_id = int(proc["SpellId"])
+        if spell_id in allowed or abs(spell_id) in allowed:
+            continue
+        row = spell_rows.get(abs(spell_id))
+        flags = int(proc.get("ProcFlags") or 0)
+        inherited = False
+        if not flags and row is not None:
+            flags = int(row.get("ProcTypeMask") or 0)
+            inherited = True
+        phase = int(proc.get("SpellPhaseMask") or 0)
+        where = f"spell_proc {spell_id}"
+        source = " (inherited from the spell's DBC ProcTypeMask)" if inherited else ""
+        if not flags:
+            if row is not None:
+                warnings.append(
+                    f"{where}: ProcFlags is 0 and the spell's DBC ProcTypeMask is 0 - LoadSpellProcs logs "
+                    f"\"doesn't have `ProcFlags` value defined, proc will not be triggered\". "
+                    f"Set ProcFlags in procs_on()."
+                )
+            continue
+        if not phase and flags & REQ_SPELL_PHASE_PROC_FLAG_MASK:
+            warnings.append(
+                f"{where}: ProcFlags 0x{flags:X}{source} intersects REQ_SPELL_PHASE_PROC_FLAG_MASK "
+                f"(0x{REQ_SPELL_PHASE_PROC_FLAG_MASK:X}) but SpellPhaseMask is 0 - LoadSpellProcs logs \"doesn't have "
+                f"`SpellPhaseMask` value defined, but it's required ... proc will not be triggered\", so the "
+                f"done-spell half never procs (melee auto attacks still do). Set spell_phase_mask (1 CAST, 2 HIT, "
+                f"4 FINISH) in procs_on(), or add the id to lint.SPELL_PROC_ALLOW."
+            )
+        if phase and not flags & REQ_SPELL_PHASE_PROC_FLAG_MASK:
+            warnings.append(
+                f"{where}: SpellPhaseMask {phase} is set but ProcFlags 0x{flags:X}{source} is outside "
+                f"REQ_SPELL_PHASE_PROC_FLAG_MASK (0x{REQ_SPELL_PHASE_PROC_FLAG_MASK:X}) - LoadSpellProcs logs \"has "
+                f"`SpellPhaseMask` value defined, but it won't be used\". Drop the phase mask."
+            )
+    return warnings
+
+
+# Declared per-rank spell_proc rows that a negative rank-chain row shadows today (SpellId -> why it is accepted).
+SHADOWED_PROC_ALLOW: dict[int, str] = {
+    spell_id: (
+        f"priest {name}: the stock rank-chain row loads first and claims every rank, so this declared per-rank row "
+        f"is dropped with 'duplicate entry' at boot (live boot log, rev a5992f1a8); KNOWN LIVE BUG owned by the "
+        f"priest rework, which also zeroed the chain row's DBC ProcTypeMask, so the talent never procs. Fix there: "
+        f"remove_spell_proc() of the chain row, or move the declarations onto the chain key"
+    )
+    for spell_id, name in (
+        (27816, "Blessed Recovery (chain -27811)"),
+        (33150, "Surge of Light (chain -33150)"),
+        (33154, "Surge of Light (chain -33150)"),
+        (34753, "Holy Concentration (chain -34753)"),
+        (34859, "Holy Concentration (chain -34753)"),
+        (34860, "Holy Concentration (chain -34753)"),
+        (63730, "Serendipity (chain -63730)"),
+        (63733, "Serendipity (chain -63730)"),
+        (63737, "Serendipity (chain -63730)"),
+        (64127, "Body and Soul (chain -64127)"),
+        (64129, "Body and Soul (chain -64127)"),
+        (200163, "Grace rank 3 (chain -47516: it runs on the stock values, not its declared ones)"),
+    )
+}
+
+
+def check_shadowed_spell_procs(
+    declared_procs: list[dict], live_procs: list[dict], removed_ids: set[int] | frozenset[int],
+    rank_chains: dict[int, list[int]], allow: dict[int, str] | set[int] | None = None,
+) -> list[str]:
+    """WARNING for a declared per-rank `spell_proc` row that a negative rank-chain row in the final set shadows.
+    `SpellMgr::LoadSpellProcs` has no ORDER BY, so rows load in primary-key order and a negative `-first_rank` row
+    (negative SpellId = every rank) loads before every positive one; it claims all ranks, and the later row for a
+    rank of that chain is discarded ("listed in `spell_proc` has duplicate entry", SpellMgr.cpp:2068-2072). The
+    declared row never takes effect.
+
+    `declared_procs`: the registry's rows. `live_procs`: the live `spell_proc` rows (base dump + migrations + pending,
+    `SpellTableIndex.live_rows`). `removed_ids`: SpellIds a `remove_spell_proc()` or the prune pass deletes this run
+    (they leave the final set). `rank_chains`: spell id -> chain, first rank first (`spell_ranks` chains plus the
+    talent rank chains; a spell absent from it is its own first rank). The final set is the live rows minus the
+    removed ones, with the declared rows over them. Fix: `remove_spell_proc(-first_rank)`, or declare the row on the
+    chain key (`-first_rank`) instead."""
+    allowed = SHADOWED_PROC_ALLOW if allow is None else allow
+    declared_keys = {int(p["SpellId"]) for p in declared_procs}
+    negative_firsts = {
+        -int(r["SpellId"]) for r in live_procs
+        if int(r["SpellId"]) < 0 and int(r["SpellId"]) not in removed_ids and int(r["SpellId"]) not in declared_keys
+    } | {-key for key in declared_keys if key < 0}
+    warnings = []
+    for proc in declared_procs:
+        spell_id = int(proc["SpellId"])
+        if spell_id <= 0 or spell_id in allowed:
+            continue
+        chain = rank_chains.get(spell_id)
+        first = int(chain[0]) if chain else spell_id
+        if first not in negative_firsts:
+            continue
+        warnings.append(
+            f"spell_proc {spell_id}: shadowed by the rank-chain row -{first} (negative SpellId = every rank of "
+            f"{first}'s chain). LoadSpellProcs loads the negative row first and drops this one as a duplicate, so it "
+            f"never takes effect. remove_spell_proc(-{first}), or declare the proc on -{first} instead."
+        )
+    return warnings
+
+
+# --- check_trainer_spell_level (T0a s8 SpellLevel moves) ---
+
+# Class-trainer grants whose ReqLevel is below the spell's SpellLevel and that really need a rank for level (SpellId ->
+# why it is accepted). Empty: the two hits the first version printed (Savage Bite, Deep Freeze) were attacks, which the
+# rank-selection filter below no longer judges.
+TRAINER_SPELL_LEVEL_ALLOW: dict[int, str] = {}
+
+# Implicit targets of a friendly effect: the approximation of SpellInfo::IsPositiveEffect used below (the engine derives
+# it from the targets and the aura; an effect aimed at the caster, an ally, the party or the raid is positive).
+_FRIENDLY_TARGETS = frozenset({1, 3, 4, 5, 20, 21, 27, 30, 31, 33, 34, 35, 37, 45, 56, 57, 58, 59, 61})
+_RANK_SELECT_EFFECTS = frozenset({6, 35, 65})  # APPLY_AURA, APPLY_AREA_AURA_PARTY, APPLY_AREA_AURA_RAID
+_SPELL_ATTR0_COOLDOWN_ON_EVENT = 0x02000000
+_SPELL_ATTR2_ALLOW_LOW_LEVEL_BUFF = 0x00000008
+_SPELL_ATTR3_ONLY_PROC_ON_CASTER = 0x08000000
+
+
+def _needs_aura_rank_selection(row: dict) -> bool:
+    """`SpellInfo::GetAuraRankForLevel` (SpellInfo.cpp:2989-3014) only acts on a spell with a positive APPLY_AURA /
+    AREA_AURA_PARTY / AREA_AURA_RAID effect, and returns the spell unchanged for COOLDOWN_ON_EVENT,
+    ALLOW_LOW_LEVEL_BUFF and ONLY_PROC_ON_CASTER spells. Positive is approximated from the effect's implicit
+    target A."""
+    if (
+        int(row.get("Attributes") or 0) & _SPELL_ATTR0_COOLDOWN_ON_EVENT
+        or int(row.get("AttributesEx2") or 0) & _SPELL_ATTR2_ALLOW_LOW_LEVEL_BUFF
+        or int(row.get("AttributesEx3") or 0) & _SPELL_ATTR3_ONLY_PROC_ON_CASTER
+    ):
+        return False
+    return any(
+        int(row.get(f"Effect_{i}") or 0) in _RANK_SELECT_EFFECTS
+        and int(row.get(f"ImplicitTargetA_{i}") or 0) in _FRIENDLY_TARGETS
+        for i in (1, 2, 3)
+    )
+
+
+def check_trainer_spell_level(
+    trainer_spells: list[dict], spell_rows: dict[int, dict], class_trainer_ids: set[int] | frozenset[int],
+    allow: dict[int, str] | set[int] | None = None,
+) -> list[str]:
+    """WARNING for a declared `trained_by()` row on a class trainer (`class_trainer_ids`: `PRICED_TRAINER_IDS` plus
+    every `trainer` of Type 0) whose `ReqLevel` is below the spell's `SpellLevel` (`spell_rows`: spell id -> built
+    row, else the stock/live row; a spell with no row is not judged). `SpellInfo::GetAuraRankForLevel`
+    (SpellInfo.cpp:3023-3032) returns no rank when the target's level + 10 is below SpellLevel, so a single-rank buff
+    such as Bloodlust at SpellLevel 70 learned at 60 fails on lower-level group members. Only spells that go through
+    rank selection are judged (`_needs_aura_rank_selection`: a friendly APPLY_AURA / area-aura effect and none of the
+    three exempting attributes): an attack or a stun never reaches it, and SpellLevel's other effect, seeding a cast's
+    initial threat (Spell.cpp:5802), is negligible. Move SpellLevel down with the learn level (a `spell()` edit), or
+    add the spell to `TRAINER_SPELL_LEVEL_ALLOW`."""
+    allowed = TRAINER_SPELL_LEVEL_ALLOW if allow is None else allow
+    warnings = []
+    for row in trainer_spells:
+        trainer_id, spell_id, req_level = int(row["TrainerId"]), int(row["SpellId"]), int(row["ReqLevel"])
+        if trainer_id not in class_trainer_ids or spell_id in allowed:
+            continue
+        spell = spell_rows.get(spell_id)
+        spell_level = int(spell.get("SpellLevel") or 0) if spell is not None else 0
+        if req_level >= spell_level or not _needs_aura_rank_selection(spell):
+            continue
+        warnings.append(
+            f"trained_by(spell {spell_id}, trainer {trainer_id}, req_level {req_level}): the spell's SpellLevel is "
+            f"{spell_level}, above the learn level - SpellInfo::GetAuraRankForLevel returns no rank for a target "
+            f"below SpellLevel - 10, so a buff learned this early fails on lower-level group members. Lower "
+            f"SpellLevel to {req_level} with a spell() edit, or add the spell to lint.TRAINER_SPELL_LEVEL_ALLOW."
+        )
     return warnings

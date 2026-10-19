@@ -137,6 +137,10 @@ class Registry:
     # docstring and lib/spell_tables.py's CREATURE_TABLES for the upsert-only emission this implies.
     creature_templates: list[dict] = field(default_factory=list)
     creature_template_models: list[dict] = field(default_factory=list)
+    # Shaman T1: creature_spell()'s creature_template_spell rows (a plain SPELL_TABLES entry: DELETE-then-INSERT
+    # on the (CreatureID, Index) key, pruned when a declaration is dropped) and remove_creature_spell()'s removals.
+    creature_template_spells: list[dict] = field(default_factory=list)
+    creature_spell_removals: list[dict] = field(default_factory=list)
     # Hunter T1 (.agents/plans/hunter-rework/hunter-rework.T1-HANDOFF.md): retire_talent()'s bookkeeping
     # (one {"id": talent_id} per retirement, so retiring a talent twice is a DuplicateIdError and
     # check_retired_talent_tab() knows whether the holding tab is needed) and item_template()'s rows -
@@ -177,7 +181,7 @@ MERGE_KEYS = (
     "linked_spells", "spell_groups", "spell_group_rules", "custom_attrs", "shapeshift_forms",
     "script_removals", "linked_spell_removals", "spell_group_removals", "trainer_removals", "spell_required_removals", "spell_rank_removals",
     "bonus_removals", "proc_removals", "spell_categories",
-    "creature_templates", "creature_template_models",
+    "creature_templates", "creature_template_models", "creature_template_spells", "creature_spell_removals",
     "retired_talents", "pet_spell_retirements", "item_templates",
     "potency_corrections",
     "consts",
@@ -1161,6 +1165,76 @@ def creature_model(
         "VerifiedBuild": verified_build,
     }
     _require_active().creature_template_models.append(row)
+    return row
+
+
+# creature_template_spell's own CHECK constraint (data/sql/base/db_world/creature_template_spell.sql) and
+# CREATURE_MAX_SPELLS in the core: a creature has eight spell slots, m_spells[0..7].
+CREATURE_SPELL_SLOTS = 8
+
+
+def _validate_creature_spell_slot(caller: str, entry: int, index: int) -> None:
+    if not isinstance(index, int) or isinstance(index, bool) or not 0 <= index < CREATURE_SPELL_SLOTS:
+        raise ValueError(
+            f"{caller}({entry}, {index!r}, ...): index must be an int in 0..{CREATURE_SPELL_SLOTS - 1} "
+            f"(creature_template_spell.Index, the creature's spell slot m_spells[Index])"
+        )
+    _validate_creature_entry(entry)
+
+
+def creature_spell(entry: int, index: int, spell: model.Spell | int, verified_build: int | None = 0) -> dict:
+    """Declares one `creature_template_spell` row (`ObjectMgr::LoadCreatureTemplateSpells`): `spell` goes in
+    slot `index` (0-7) of creature `entry`'s `m_spells`. `spell` is a stock spell id or a declared `Spell`.
+    `entry` is a creature this run declares or one that already exists (`_validate_creature_entry`: inside
+    `source/ids.yaml`'s creature / npc_tools block, or a live row); a bad index or an unknown entry raises
+    `ValueError`. `verified_build` follows the other declared tables (0); `None` reproduces a live row whose
+    column is NULL.
+
+    **A totem's guardian summon must sit on Index 0.** When the totem is removed, `Unit::SetMinion(apply=false)`
+    despawns the guardians it summoned by reading only `Totem::GetSpell()`, which is `m_spells[0]`
+    (`Totem.h:59`, `Unit.cpp:7745-7759`): a summon spell in any other slot leaves the guardian standing after the
+    totem is gone (CORE-AUDIT-A A5). A totem's passive aura is cast from the same Index-0 spell, so a totem
+    needs one or the other there (P0's pulse totem 300299 puts its passive 202761 on Index 0; the fire elemental
+    totem 300298 puts the guardian summon 32982 there).
+
+    Emitted like the other plain spell tables (`lib/spell_tables.py`'s `SPELL_TABLES`): a DELETE on the
+    (CreatureID, Index) keys followed by the INSERT, diffed against the live table (base dump, every migration
+    and pending file) so an unchanged rerun emits nothing. Overriding a stock row (15439's Index 0, say) is
+    ordinary: the declared row replaces it. Dropping a declaration prunes only a row this tool emitted before;
+    a hand-written row (the P0 spike's `rev_1792393868936008368.sql`) is neither pruned nor re-emitted, and
+    removing one needs `remove_creature_spell()`. A declaration that overrode a stock row and is dropped later
+    is reported ("prune: NOT removing ... the stock dump owns this key too") and the stock row is left as the
+    declaration wrote it, the same as `procs_on()`. A spell that is neither declared in source nor a stock spell
+    prints a WARNING (`lint.check_creature_spell_rows`).
+
+    Limit inherited from the live-state reader (`trainer_state.load_table_rows` is a union of INSERTs and does not
+    replay DELETEs): after the prune pass deletes a row this tool emitted (the declaration was dropped), re-declaring
+    an identical row later is read as still live and is not re-emitted, so the slot stays empty. When iterating on a
+    totem, change the spell or `verified_build` of the restored row, or restore it by hand."""
+    _validate_creature_spell_slot("creature_spell", entry, index)
+    spell_id = _spell_id_of(spell)
+    if spell_id <= 0:
+        raise ValueError(f"creature_spell({entry}, {index}, {spell_id}): the spell id must be positive")
+    row = {
+        "id": f"{entry}:{index}",
+        "CreatureID": entry,
+        "Index": index,
+        "Spell": spell_id,
+        "VerifiedBuild": verified_build,
+    }
+    _require_active().creature_template_spells.append(row)
+    return row
+
+
+def remove_creature_spell(entry: int, index: int) -> dict:
+    """Declares a removal of the `creature_template_spell` row at (`entry`, `index`) - the counterpart to
+    `creature_spell()`, for a row this tool never emitted (a stock totem's slot, or the P0 spike's hand-written
+    rows: `remove_creature_spell(300298, 0)` and `remove_creature_spell(300299, 0)`). A key-exact DELETE, emitted
+    once, with the same mechanics and checks as `untrain()`; a key that exists nowhere prints a WARNING. Declaring
+    and removing the same key in one run raises."""
+    _validate_creature_spell_slot("remove_creature_spell", entry, index)
+    row = {"id": f"{entry}:{index}", "CreatureID": entry, "Index": index}
+    _require_active().creature_spell_removals.append(row)
     return row
 
 

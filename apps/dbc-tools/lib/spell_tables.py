@@ -64,6 +64,10 @@ SPELLSHAPESHIFTFORM_COLUMNS = dbcfmt.SPELLSHAPESHIFTFORM.columns
 # lfg_exclude() (source/world/): sourceType 8 rows only. The base dump and mod-progression's phase
 # SQL (which owns sourceType 1-5/9/10) have no sourceType 8 rows, so nothing else writes these keys.
 DISABLES_COLUMNS = ("sourceType", "entry", "flags", "params_0", "params_1", "comment")
+# Shaman T1: creature_template_spell (ObjectMgr::LoadCreatureTemplateSpells), a creature's spell slots
+# m_spells[0..7] - lib.dsl.registry.creature_spell(). Mirrors the base dump's CREATE TABLE; `Index` is the
+# slot (the table's own CHECK constraint is 0..7).
+CREATURE_TEMPLATE_SPELL_COLUMNS = ("CreatureID", "Index", "Spell", "VerifiedBuild")
 
 # T1 (.agents/plans/warlock-rework/warlock-rework.T1-HANDOFF.md): creature_template/
 # creature_template_model - a rework's own NPCs, previously always a hand-written migration (e.g.
@@ -250,6 +254,14 @@ SPELL_TABLES = (
         "disables", DISABLES_COLUMNS, ("sourceType", "entry"), "lfg_disables",
         defaults={"flags": 0, "params_0": "", "params_1": "", "comment": ""}, prune_when_empty=True,
     ),
+    # Shaman T1: a totem's passive and guardian-summon slots. Not on the SQL linter's do-not-delete list, so the
+    # usual DELETE-then-INSERT applies. The schema's DEFAULTs are Index 0 and NULL for Spell and VerifiedBuild;
+    # a hand-written INSERT that omitted VerifiedBuild reads back as NULL, which differs from a declared 0 and
+    # re-emits the row once (harmless, and it converges because the emitted INSERT names every column).
+    TableSpec(
+        "creature_template_spell", CREATURE_TEMPLATE_SPELL_COLUMNS, ("CreatureID", "Index"),
+        "creature_template_spells", defaults={"Index": 0, "Spell": None, "VerifiedBuild": None},
+    ),
 )
 
 
@@ -403,6 +415,7 @@ _PRUNE_WHY = {
     "spell_bonus_data": "Left in place, a stale row keeps overriding the\n"
                         "-- engine's own spell coefficient.",
     "disables": "Left in place, the dungeon stays out of the dungeon finder.",
+    "creature_template_spell": "Left in place, the creature keeps casting the spell in that slot.",
 }
 _PRUNE_WHY_DEFAULT = "Left in place it keeps applying."
 
@@ -782,6 +795,10 @@ REMOVAL_TABLES = (
     RemovalSpec(
         "proc_removals", "spell_proc", ("SpellId",),
         "spell_procs", "a rework retires this proc (zero the DBC ProcTypeMask too - see remove_spell_proc())",
+    ),
+    RemovalSpec(
+        "creature_spell_removals", "creature_template_spell", ("CreatureID", "Index"),
+        "creature_template_spells", "a rework frees this creature spell slot",
     ),
 )
 
