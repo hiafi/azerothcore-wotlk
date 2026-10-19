@@ -50,7 +50,7 @@ KNOWN_FLAGS = {"--no-prune", "--check"}
 # PLAN P2b step 4: adopted class by class, inside each class's own pass - not a side effect of
 # every generate.py run. Extend this tuple when a pass is ready to start generating/relying on its
 # own Generated/<Class>Data.h (warlock first, in P4).
-CLASSES_WITH_GENERATED_HEADERS = ("warlock", "paladin", "hunter")
+CLASSES_WITH_GENERATED_HEADERS = ("warlock", "paladin", "hunter", "shaman")
 GENERATED_HEADER_DIR = REPO_ROOT / "src" / "server" / "game" / "Entities" / "Unit" / "Generated"
 from lib.reuse import ReuseContext  # noqa: E402
 
