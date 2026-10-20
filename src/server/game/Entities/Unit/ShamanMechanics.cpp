@@ -18,11 +18,16 @@
 #include "ShamanMechanics.h"
 #include "Item.h"
 #include "ItemTemplate.h"
+#include "Log.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
 #include "Random.h"
 #include "SpellAuraEffects.h"
 #include "SpellAuras.h"
+#include "SpellInfo.h"
+#include "SpellMgr.h"
+#include "TemporarySummon.h"
+#include "Totem.h"
 #include "Unit.h"
 #include <algorithm>
 #include <array>
@@ -437,5 +442,221 @@ namespace Shaman
         auto itr = stoneskinStates.find(player->GetGUID());
         if (itr != stoneskinStates.end())
             stoneskinStates.erase(itr);
+    }
+}
+
+/*
+ * SH0b block: the four elementals. Shared lockout (CORE-AUDIT-A A14, P0 spike shape), elemental death empties its
+ * totem slot (A5 step 2) and the owner-stat aura (H1). No per-player state.
+ */
+namespace
+{
+    constexpr uint32 SPELL_WATER_ELEMENTAL_SUMMON = ShamanData::SPELL_WATER_ELEMENTAL_TOTEM;
+    constexpr uint32 SPELL_STORM_ELEMENTAL_SUMMON = ShamanData::SPELL_STORM_ELEMENTAL_TOTEM;
+    constexpr uint32 SPELL_ELEMENTAL_STATS = ShamanData::SPELL_ELEMENTAL_OWNER_STATS;
+    constexpr uint32 LOCKOUT_BASE_MS = ShamanData::ELEMENTAL_LOCKOUT_MS;
+
+    // Stock guardians (entries hard-coded in Pet.cpp) and the new ones.
+    constexpr uint32 NPC_GREATER_EARTH_ELEMENTAL = ShamanData::NPC_GREATER_EARTH_ELEMENTAL;
+    constexpr uint32 NPC_GREATER_FIRE_ELEMENTAL = ShamanData::NPC_GREATER_FIRE_ELEMENTAL;
+    constexpr uint32 NPC_WATER_ELEMENTAL = ShamanData::NPC_WATER_ELEMENTAL_GUARDIAN;
+    constexpr uint32 NPC_STORM_ELEMENTAL = ShamanData::NPC_STORM_ELEMENTAL_GUARDIAN;
+
+    // The player-side elemental totems (the stock 15430/15439 stay with NPC casters).
+    constexpr uint32 NPC_EARTH_ELEMENTAL_TOTEM = ShamanData::NPC_EARTH_ELEMENTAL_TOTEM;
+    constexpr uint32 NPC_FIRE_ELEMENTAL_TOTEM = ShamanData::NPC_FIRE_ELEMENTAL_TOTEM;
+    constexpr uint32 NPC_WATER_ELEMENTAL_TOTEM = ShamanData::NPC_WATER_ELEMENTAL_TOTEM;
+    constexpr uint32 NPC_STORM_ELEMENTAL_TOTEM = ShamanData::NPC_STORM_ELEMENTAL_TOTEM;
+
+    struct ElementalInfo
+    {
+        uint32 summonSpellId;
+        uint32 guardianEntry;
+        uint32 totemEntry;
+        uint8 slot;
+    };
+
+    constexpr std::array<ElementalInfo, 4> ELEMENTALS =
+    {{
+        { ShamanData::SPELL_EARTH_ELEMENTAL_TOTEM, NPC_GREATER_EARTH_ELEMENTAL, NPC_EARTH_ELEMENTAL_TOTEM,
+            SUMMON_SLOT_TOTEM_EARTH },
+        { ShamanData::SPELL_FIRE_ELEMENTAL_TOTEM, NPC_GREATER_FIRE_ELEMENTAL, NPC_FIRE_ELEMENTAL_TOTEM,
+            SUMMON_SLOT_TOTEM_FIRE },
+        { SPELL_WATER_ELEMENTAL_SUMMON, NPC_WATER_ELEMENTAL, NPC_WATER_ELEMENTAL_TOTEM, SUMMON_SLOT_TOTEM_WATER },
+        { SPELL_STORM_ELEMENTAL_SUMMON, NPC_STORM_ELEMENTAL, NPC_STORM_ELEMENTAL_TOTEM, SUMMON_SLOT_TOTEM_AIR }
+    }};
+
+    ElementalInfo const* FindElementalByGuardian(uint32 guardianEntry)
+    {
+        for (ElementalInfo const& info : ELEMENTALS)
+            if (info.guardianEntry == guardianEntry)
+                return &info;
+
+        return nullptr;
+    }
+
+    // The owner's spell power for the schools in `schoolMask` (0 = every magic school): the best single school in the
+    // mask. A guardian passes its bolt's own school, so a school-only bonus (+40 Fire Spell Damage) counts for that
+    // school's bolt and never for another guardian's.
+    int32 GetOwnerSpellDamage(Player* owner, uint32 schoolMask)
+    {
+        if (!schoolMask)
+            schoolMask = SPELL_SCHOOL_MASK_MAGIC;
+
+        int32 best = 0;
+        for (uint8 school = SPELL_SCHOOL_HOLY; school < MAX_SPELL_SCHOOL; ++school)
+            if (schoolMask & (1 << school))
+                best = std::max(best, owner->SpellBaseDamageBonusDone(SpellSchoolMask(1 << school)));
+
+        return best;
+    }
+
+    // The school of the guardian's bolt (read from the bolt spell, so it follows the DSL): Frost for the Water
+    // Elemental, Nature for the Storm Elemental. 0 for any other creature.
+    uint32 GetElementalBoltSchoolMask(uint32 guardianEntry)
+    {
+        uint32 boltSpellId;
+        switch (guardianEntry)
+        {
+            case NPC_WATER_ELEMENTAL:
+                boltSpellId = ShamanData::SPELL_WATER_BOLT;
+                break;
+            case NPC_STORM_ELEMENTAL:
+                boltSpellId = ShamanData::SPELL_STORM_BOLT;
+                break;
+            default:
+                return 0;
+        }
+
+        SpellInfo const* boltInfo = sSpellMgr->GetSpellInfo(boltSpellId);
+        return boltInfo ? boltInfo->GetSchoolMask() : 0;
+    }
+
+    int32 GetOwnerSpellHealing(Player* owner, uint32 schoolMask)
+    {
+        if (!schoolMask)
+            schoolMask = SPELL_SCHOOL_MASK_ALL;
+
+        return std::max(0, owner->SpellBaseHealingBonusDone(SpellSchoolMask(schoolMask)));
+    }
+}
+
+namespace Shaman
+{
+    uint32 GetElementalLockoutBaseMs(Player const* /*player*/)
+    {
+        // Elemental's Conduit of the Elements (30 s) hooks here.
+        return LOCKOUT_BASE_MS;
+    }
+
+    bool IsElementalSummonSpell(uint32 spellId)
+    {
+        return std::any_of(ELEMENTALS.begin(), ELEMENTALS.end(),
+            [spellId](ElementalInfo const& info) { return info.summonSpellId == spellId; });
+    }
+
+    void ApplyElementalLockout(Player* player, uint32 castSpellId)
+    {
+        if (!player || !IsElementalSummonSpell(castSpellId))
+            return;
+
+        float const cooldownHastePct = std::max(0.0f, player->GetCooldownHastePercentage());
+        uint32 const lockMs = uint32(float(GetElementalLockoutBaseMs(player)) / (1.0f + cooldownHastePct / 100.0f));
+        if (!lockMs)
+            return;
+
+        // One tick later, after SMSG_SPELL_GO and the cast spell's own Cooldown Haste correction (P0 spike,
+        // spell_pal_aura_press::FireBurst). The cast spell's own button, and so its GCD sweep, is never touched.
+        ObjectGuid const guid = player->GetGUID();
+        player->m_Events.AddEventAtOffset([guid, castSpellId, lockMs]()
+        {
+            Player* self = ObjectAccessor::FindPlayer(guid);
+            if (!self)
+                return;
+
+            for (ElementalInfo const& info : ELEMENTALS)
+            {
+                // Never shorten a longer cooldown (the other elemental's own 2 min, or a longer lockout).
+                if (info.summonSpellId == castSpellId || self->GetSpellCooldownDelay(info.summonSpellId) >= lockMs)
+                    continue;
+
+                // End = now + lockMs. The send flag keeps the entry in the login packet and the save (m1).
+                self->AddSpellCooldown(info.summonSpellId, 0, lockMs, true);
+                self->ResendSpellCooldown(info.summonSpellId);         // clear-then-set, so the button greys
+            }
+        }, 1ms);
+    }
+
+    void OnElementalDied(Creature* guardian)
+    {
+        if (!guardian)
+            return;
+
+        ElementalInfo const* info = FindElementalByGuardian(guardian->GetEntry());
+        if (!info)
+            return;
+
+        // SummonGuardian remaps a totem caster to its owner, so the guardian's owner is the slot holder.
+        Unit* owner = guardian->GetOwner();
+        if (!owner)
+            return;
+
+        ObjectGuid const slotGuid = owner->m_SummonSlot[info->slot];
+        if (slotGuid.IsEmpty())
+            return;
+
+        Creature* occupant = ObjectAccessor::GetCreature(*guardian, slotGuid);
+        if (!occupant || occupant->GetEntry() != info->totemEntry)
+            return;
+
+        // Totem::UnSummon clears the slot and defers the removal (AddObjectToRemoveList), so it is safe inside the
+        // guardian's JustDied.
+        if (Totem* totem = occupant->ToTotem())
+            totem->UnSummon();
+    }
+
+    void RefreshElementalAuras(Player* owner, Unit* guardian)
+    {
+        if (!owner || !guardian || !guardian->IsAlive())
+            return;
+
+        Aura* aura = guardian->GetAura(SPELL_ELEMENTAL_STATS);
+        if (!aura)
+            aura = guardian->AddAura(SPELL_ELEMENTAL_STATS, guardian);
+
+        if (!aura || aura->IsRemoved())
+        {
+            LOG_ERROR("scripts.spells", "Shaman::RefreshElementalAuras: could not apply aura {} to {} (owner {})",
+                SPELL_ELEMENTAL_STATS, guardian->GetGUID().ToString(), owner->GetGUID().ToString());
+            return;
+        }
+
+        // The aura's damage effect covers every magic school (one spell row serves both guardians), so the amount is
+        // taken from the guardian's own bolt school: the other schools stay unused by that guardian.
+        uint32 const boltSchoolMask = GetElementalBoltSchoolMask(guardian->GetEntry());
+
+        for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+        {
+            AuraEffect* effect = aura->GetEffect(i);
+            if (!effect)
+                continue;
+
+            int32 amount;
+            switch (effect->GetAuraType())
+            {
+                case SPELL_AURA_MOD_DAMAGE_DONE:
+                    amount = GetOwnerSpellDamage(owner,
+                        boltSchoolMask ? boltSchoolMask : uint32(effect->GetMiscValue()));
+                    break;
+                case SPELL_AURA_MOD_HEALING_DONE:
+                    amount = GetOwnerSpellHealing(owner, uint32(effect->GetMiscValue()));
+                    break;
+                default:
+                    continue;
+            }
+
+            if (effect->GetAmount() != amount)
+                effect->ChangeAmount(amount);
+        }
     }
 }

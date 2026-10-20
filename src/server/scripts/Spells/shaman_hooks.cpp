@@ -40,6 +40,16 @@ namespace
     {
         return player && player->getClass() == CLASS_SHAMAN;
     }
+
+    // Aura-based gates (SH0a review L2/m4): a hook acts on what the player owns, not on the class.
+    bool HasAttunementOrRockbiter(Player const* player)
+    {
+        return player->HasAura(ShamanData::SPELL_EARTH_ATTUNEMENT) ||
+            player->HasAura(ShamanData::SPELL_WATER_ATTUNEMENT) ||
+            player->HasAura(ShamanData::SPELL_FIRE_ATTUNEMENT) ||
+            player->HasAura(ShamanData::SPELL_AIR_ATTUNEMENT) ||
+            player->HasAura(ShamanData::SPELL_ROCKBITER_WEAPON);
+    }
 }
 
 class ShamanPlayerScript : public PlayerScript
@@ -48,7 +58,7 @@ public:
     ShamanPlayerScript() : PlayerScript("ShamanPlayerScript",
         { PLAYERHOOK_ON_AFTER_SET_VISIBLE_ITEM_SLOT, PLAYERHOOK_ON_LEVEL_CHANGED, PLAYERHOOK_ON_LOGIN,
           PLAYERHOOK_ON_LEARN_SPELL, PLAYERHOOK_ON_PLAYER_ENTER_COMBAT, PLAYERHOOK_ON_PLAYER_LEAVE_COMBAT,
-          PLAYERHOOK_ON_LOGOUT }) { }
+          PLAYERHOOK_ON_LOGOUT, PLAYERHOOK_ON_AFTER_SPEC_SLOT_CHANGED }) { }
 
     // Imbue glow (P0 section 5): SetVisibleItemSlot (equip, swap, enchant, login inventory load) just rewrote the
     // slot's real enchant visuals; write the active imbue's glow back over the temp half. Auras load before the
@@ -59,7 +69,7 @@ public:
         if (slot != EQUIPMENT_SLOT_MAINHAND && slot != EQUIPMENT_SLOT_OFFHAND)
             return;
 
-        if (!item || item->GetTemplate()->Class != ITEM_CLASS_WEAPON || !IsShaman(player))
+        if (!item || item->GetTemplate()->Class != ITEM_CLASS_WEAPON || !player)
             return;
 
         if (Shaman::GetActiveImbue(player))
@@ -70,11 +80,16 @@ public:
     // mod-playerbots' level changes also strip auras, so the Reincarnation grant is re-checked here too.
     void OnPlayerLevelChanged(Player* player, uint8 /*oldLevel*/) override
     {
-        if (!IsShaman(player))
+        if (!player)
+            return;
+
+        if (IsShaman(player))
+            Shaman::EnsureReincarnationAura(player);
+
+        if (!HasAttunementOrRockbiter(player))
             return;
 
         Shaman::RefreshAttunements(player);
-        Shaman::EnsureReincarnationAura(player);
 
         // Rockbiter's attack power scales with level and is computed at aura creation (SH0a review L1).
         if (Aura* rockbiter = player->GetAura(ShamanData::SPELL_ROCKBITER_WEAPON, player->GetGUID()))
@@ -87,17 +102,18 @@ public:
     // here is idempotent and covers any slot the load path wrote without that hook.
     void OnPlayerLogin(Player* player) override
     {
-        if (!IsShaman(player))
+        if (!player)
             return;
 
-        Shaman::EnsureReincarnationAura(player);
+        if (IsShaman(player))
+            Shaman::EnsureReincarnationAura(player);
 
         if (Shaman::GetActiveImbue(player))
             Shaman::ApplyImbueGlow(player);
 
-        // Stoneskin is saved with its stacks but the 2 min timer is not: re-arm it for a shaman who logs in out of
-        // combat (no-op without Stoneskin).
-        if (!player->IsInCombat())
+        // Stoneskin is saved with its stacks but the 2 min timer is not: re-arm it for a player who logs in out of
+        // combat with Stoneskin up.
+        if (player->HasAura(ShamanData::SPELL_STONESKIN_202206) && !player->IsInCombat())
             Shaman::OnCombatChange(player, false);
     }
 
@@ -114,14 +130,21 @@ public:
     // for one exit (CombatManager::UpdateOwnerCombatState and Unit::ClearInCombat); OnCombatChange re-arms.
     void OnPlayerEnterCombat(Player* player, Unit* /*enemy*/) override
     {
-        if (IsShaman(player))
+        if (player && player->HasAura(ShamanData::SPELL_STONESKIN_202206))
             Shaman::OnCombatChange(player, true);
     }
 
     void OnPlayerLeaveCombat(Player* player) override
     {
-        if (IsShaman(player))
+        if (player && player->HasAura(ShamanData::SPELL_STONESKIN_202206))
             Shaman::OnCombatChange(player, false);
+    }
+
+    // A spec-slot change can strip and re-grant auras; Reincarnation (a class gate) is re-checked (SH0a review m3).
+    void OnPlayerAfterSpecSlotChanged(Player* player, uint8 /*newSlot*/) override
+    {
+        if (IsShaman(player))
+            Shaman::EnsureReincarnationAura(player);
     }
 
     void OnPlayerLogout(Player* player) override
@@ -154,7 +177,7 @@ public:
             return damage;
 
         Player* shaman = victim->ToPlayer();
-        if (shaman->getClass() != CLASS_SHAMAN || !shaman->HasAura(ShamanData::SPELL_STONESKIN_202206))
+        if (!shaman->HasAura(ShamanData::SPELL_STONESKIN_202206))
             return damage;
 
         Shaman::ErodeStoneskin(shaman, damage);

@@ -23,6 +23,7 @@
 #include "SharedDefines.h"
 #include <cstdint>
 
+class Creature;
 class Player;
 class Unit;
 
@@ -76,6 +77,32 @@ namespace Shaman
 
     // Logout cleanup; each later section adds its own Clear* call here.
     void ClearState(Player* player);
+
+    // ---- SH0b ----
+    // Elementals (Earth 2062, Fire 2894, Water, Storm): a totem in the element's slot whose passive summons the
+    // guardian (CORE-AUDIT-A A5). The block keeps no per-player state, so ClearState needs no SH0b call.
+
+    // The shared lockout before Cooldown Haste: ELEMENTAL_LOCKOUT_MS (Elemental's Conduit of the Elements hooks here).
+    uint32 GetElementalLockoutBaseMs(Player const* player);
+
+    // A14: after a non-triggered cast of an elemental summon (the caller skips triggered casts), locks the other
+    // three for base / (1 + max(0, Cooldown Haste) / 100). Deferred 1 ms (after SMSG_SPELL_GO and the cast spell's
+    // own haste correction); never shortens a longer cooldown; clear-then-set resend so the buttons grey.
+    void ApplyElementalLockout(Player* player, uint32 castSpellId);
+
+    // True for the four elemental summon spells.
+    bool IsElementalSummonSpell(uint32 spellId);
+
+    // Guardian JustDied: unsummons the owner's totem in this elemental's slot when that totem is this elemental's
+    // totem entry, so the slot empties (the cooldown keeps running). Any other occupant, or an NPC owner's stock
+    // totem, is left alone.
+    void OnElementalDied(Creature* guardian);
+
+    // H1: adds the owner-stat aura (202279) to `guardian` if missing, then sets its MOD_DAMAGE_DONE amount to the
+    // owner's spell power in the guardian's own bolt school (Frost for Water, Nature for Storm; no other school's
+    // bonus is added) and its MOD_HEALING_DONE amount to the owner's healing power (live, nothing else). Called
+    // at IsSummonedBy and from the aura script's periodic refresh; never from the aura's own amount calculation.
+    void RefreshElementalAuras(Player* owner, Unit* guardian);
 }
 
 #endif
