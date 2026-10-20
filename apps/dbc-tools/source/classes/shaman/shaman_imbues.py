@@ -34,7 +34,8 @@ _ATTR0_PASSIVE = 0x40
 _ATTR0_DO_NOT_DISPLAY = 0x80
 _ATTR0_DO_NOT_SHEATH = 0x40000
 _ATTR2_ALLOW_DEAD_TARGET = 0x1
-_ATTR3_SUPPRESS_CASTER_PROCS = 0x10000  # "roll nothing": FT / FB Attacks (brief, known-hard item 3)
+_ATTR3_SUPPRESS_CASTER_PROCS = 0x10000  # FT / FB Attacks. NOT the no-proc guard: that is "triggered with no NOT_A_PROC"
+# (SpellAuras.cpp GetProcEffectMask); this bit is only a belt-and-braces marker.
 _ATTR3_ALLOW_AURA_WHILE_DEAD = 0x100000
 _ATTR3_REQUIRES_OFF_HAND_WEAPON = 0x1000000  # makes Spell::m_attackType OFF_ATTACK for a melee-class spell
 
@@ -168,7 +169,8 @@ flametongue_attack_202202 = spell(
           'of either hand. eff0 potency 8 Fire direct, T 1500, d0 b21. eff1 DUMMY carries the hitting hand\'s weapon speed '
           'in ms (SPELLVALUE_BASE_POINT1; stored 999 = live 1000 ms = 1 s = 8 potency when cast bare). '
           'spell_sha_flametongue_attack multiplies the hit by ms / 1000 (B4). AttributesEx 0x88, DO_NOT_SHEATH and '
-          'RangeIndex as stock 10444; AttributesEx3 SUPPRESS_CASTER_PROCS 0x10000, no NOT_A_PROC.',
+          'RangeIndex as stock 10444; AttributesEx3 0x10000 (marker only; the real no-proc guard is the cast being triggered with no NOT_A_PROC, '
+          'SpellAuras.cpp GetProcEffectMask).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'SpellClassMask_1': m.FLAMETONGUE_ATTACK, 'DefenseType': _DMG_MAGIC,
         'EquippedItemClass': -1, 'SpellLevel': 10, 'CastingTimeIndex': 1, 'AttributesEx': 0x88,
@@ -187,7 +189,8 @@ frostbrand_attack_202203 = spell(
     spell_icon_id=_ICON_FROSTBRAND,
     notes='SH0a A3, shared doc "Frostbrand": the 15% proc hit, triggered by spell_sha_frostbrand_proc (child 202201). Potency '
           '20 Frost direct, T 1500, d0 b24. Stock 8034\'s slow dropped (not in the rework text). AttributesEx 0x88 as '
-          'stock 8034/10444; AttributesEx3 SUPPRESS_CASTER_PROCS 0x10000, no NOT_A_PROC.',
+          'stock 8034/10444; AttributesEx3 0x10000 (marker only; the real no-proc guard is the cast being triggered with no NOT_A_PROC, '
+          'SpellAuras.cpp GetProcEffectMask).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'SpellClassMask_1': m.FROSTBRAND_ATTACK, 'DefenseType': _DMG_MAGIC,
         'EquippedItemClass': -1, 'SpellLevel': 20, 'CastingTimeIndex': 1, 'AttributesEx': 0x88,

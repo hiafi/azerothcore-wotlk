@@ -5,8 +5,10 @@ Split from a single source/classes/shaman.py via split_class_file.py (.agents/pl
 """
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, School, SpellModOp
-from lib.dsl.registry import pot_text, spell, trained_by
+from lib.dsl.registry import pot_text, spell, trained_by, untrain
 
+from . import _masks as m
+from .shaman_totems import healing_stream_heal_202271, searing_bolt_202270
 from .shaman_trigger_spells import stoneclaw_totem_absorb_55328
 
 
@@ -246,21 +248,21 @@ earth_elemental_totem_2062 = spell(
     name='Earth Elemental Totem',
     school=School.NORMAL,
     attributes=65536,
-    category=23,
     cast_time_ms=0,
-    cooldown_ms=600000,
-    category_cooldown_ms=120000,
+    cooldown_ms=120000,
+    category_cooldown_ms=0,
     mana_cost=0,
     mana_cost_pct=24,
     range_yards=0.0,
-    duration_ms=120000,
+    duration_ms=30000,
     effects=[
-        Effect(type=EffectType.SUMMON, base_points=7399, implicit_target_a=22, implicit_target_b=41, misc_value=15430, radius_yards=5.0),
+        Effect(type=EffectType.SUMMON, base_points=7399, implicit_target_a=22, implicit_target_b=41, misc_value=300270, radius_yards=5.0),
     ],
     spell_icon_id=2289,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx4': 65536, 'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 66, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summon an elemental totem that calls forth a greater earth elemental to protect the caster and $ghis:her; allies.  Lasts $d.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 81, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 2, 'SpellClassMask_1': 536870912, 'SpellClassMask_2': 4194304, 'SpellClassSet': 11, 'SpellLevel': 66, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    notes='SH0b (shared doc, Totems): learn level 66 -> 26 (raw BaseLevel and SpellLevel), Category 23 -> 0, RecoveryTime 600 s -> 120 s, category cooldown 120 s -> 0, duration 120 s -> 30 s, summon creature 15430 -> 300270 (invisible elemental totem; its Index 0 spell 33663 summons the guardian 15352), tooltip, tool strip. Stock GCD 1000/133 and cost 24% unchanged; no COOLDOWN_ON_EVENT. Was: pulled from existing data',
+    raw_overrides={'AttributesEx4': 65536, 'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 26, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Calls forth a greater earth elemental for $d to protect you and your allies. 2 min cooldown.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 81, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': 536870912, 'SpellClassMask_2': 4194304, 'SpellClassSet': 11, 'SpellLevel': 26, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
+trained_by(earth_elemental_totem_2062, 210, 26)
 
 
 earthbind_totem_2484 = spell(
@@ -269,18 +271,18 @@ earthbind_totem_2484 = spell(
     school=School.NORMAL,
     attributes=65536,
     cast_time_ms=0,
-    cooldown_ms=15000,
+    cooldown_ms=30000,
     category_cooldown_ms=0,
     mana_cost=0,
     mana_cost_pct=5,
     range_yards=0.0,
-    duration_ms=45000,
+    duration_ms=10000,
     effects=[
         Effect(type=EffectType.SUMMON, base_points=4, implicit_target_a=41, misc_value=2630),
     ],
     spell_icon_id=686,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 6, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons an Earthbind Totem with $s1 health at the feet of the caster for $d that slows the movement speed of enemies within $3600a1 yards.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 81, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 2, 'SpellClassMask_1': 536870912, 'SpellClassMask_3': 32, 'SpellClassSet': 11, 'SpellLevel': 6, 'SpellVisualID_1': 264, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    notes='SH0b (shared doc, Totems): cooldown 15 s -> 30 s, duration 45 s -> 10 s, tooltip (root on placement + slow, cooldown sentence), tool strip. Summon stays creature 2630 (NPC casters SAI 3270/4842 unchanged); d2 b5 kept. Was: pulled from existing data',
+    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 6, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons an Earthbind Totem for $d that roots nearby enemies for 2 sec when placed, then slows the movement speed of enemies within 10 yards by 50%. 30 sec cooldown.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 81, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': 536870912, 'SpellClassMask_3': 32, 'SpellClassSet': 11, 'SpellLevel': 6, 'SpellVisualID_1': 264, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -337,21 +339,21 @@ fire_elemental_totem_2894 = spell(
     name='Fire Elemental Totem',
     school=School.NORMAL,
     attributes=327680,
-    category=23,
     cast_time_ms=0,
-    cooldown_ms=600000,
-    category_cooldown_ms=120000,
+    cooldown_ms=120000,
+    category_cooldown_ms=0,
     mana_cost=0,
     mana_cost_pct=23,
     range_yards=0.0,
-    duration_ms=120000,
+    duration_ms=30000,
     effects=[
-        Effect(type=EffectType.SUMMON, base_points=3887, implicit_target_a=22, implicit_target_b=44, misc_value=15439, radius_yards=5.0),
+        Effect(type=EffectType.SUMMON, base_points=3887, implicit_target_a=22, implicit_target_b=44, misc_value=300271, radius_yards=5.0),
     ],
     spell_icon_id=2290,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx4': 65536, 'AttributesEx6': 2147483648, 'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 68, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Summons an elemental totem that calls forth a greater fire elemental to rain destruction on the caster's enemies.  Lasts $d.", 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 63, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 4, 'SpellClassMask_1': 536870912, 'SpellClassMask_2': 8388608, 'SpellClassSet': 11, 'SpellLevel': 68, 'SpellVisualID_1': 221, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    notes='SH0b (shared doc, Totems): learn level 68 -> 36 (raw BaseLevel and SpellLevel), Category 23 -> 0, RecoveryTime 600 s -> 120 s, category cooldown 120 s -> 0, duration 120 s -> 30 s, summon creature 15439 -> 300271 (invisible elemental totem; its Index 0 spell 32982 summons the guardian 15438), tooltip, tool strip. Stock GCD 1000/133, cost 23%, AttributesEx6 NO_CATEGORY_COOLDOWN_MODS unchanged; no COOLDOWN_ON_EVENT. Was: pulled from existing data',
+    raw_overrides={'AttributesEx4': 65536, 'AttributesEx6': 2147483648, 'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 36, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Calls forth a greater fire elemental for $d to rain destruction on your enemies. 2 min cooldown.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 63, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': 536870912, 'SpellClassMask_2': 8388608, 'SpellClassSet': 11, 'SpellLevel': 36, 'SpellVisualID_1': 221, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
+trained_by(fire_elemental_totem_2894, 210, 36)
 
 
 searing_totem_3599 = spell(
@@ -360,18 +362,18 @@ searing_totem_3599 = spell(
     school=School.NORMAL,
     attributes=65536,
     cast_time_ms=0,
-    cooldown_ms=0,
+    cooldown_ms=30000,
     category_cooldown_ms=0,
     mana_cost=0,
     mana_cost_pct=7,
     range_yards=0.0,
-    duration_ms=30000,
+    duration_ms=10000,
     effects=[
-        Effect(type=EffectType.SUMMON, base_points=4, implicit_target_a=44, misc_value=2523),
+        Effect(type=EffectType.SUMMON, base_points=4, implicit_target_a=44, misc_value=300278),
     ],
     spell_icon_id=680,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 10); RealPointsPerLevel from rank1->covers-60 (anchor rank 6 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 10, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Searing Totem with $s1 health at your feet for $d that repeatedly attacks an enemy within $3606r1 yards for $3606s1 Fire damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 63, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 4, 'SpellClassMask_1': 16, 'SpellClassSet': 11, 'SpellLevel': 10, 'SpellVisualID_1': 221, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    notes='SH0b (shared doc, Totems): cooldown 0 -> 30 s, duration 30 s -> 10 s, summon creature 2523 -> 300278 (passive totem driven by npc_sha_searing_totem; 2523 and 3606 stay for NPC casters), tooltip with the bolt potency (202270), tool strip. Was: pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 10); RealPointsPerLevel from rank1->covers-60 (anchor rank 6 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 10, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Searing Totem for $d that fires a bolt at an enemy within 20 yards every 1 sec, dealing ' + pot_text(searing_bolt_202270) + ' Fire damage. 30 sec cooldown.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 63, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': 16, 'SpellClassSet': 11, 'SpellLevel': 10, 'SpellVisualID_1': 221, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -411,7 +413,7 @@ wrath_of_air_totem_3738 = spell(
     ],
     spell_icon_id=340,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 64, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Wrath of Air Totem with $s1 health at the feet of the caster.  The totem provides $2895s1% spell haste to all party and raid members within $2895a1 yards.  Lasts $d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 83, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 3, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellLevel': 64, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 64, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Wrath of Air Totem with $s1 health at the feet of the caster.  The totem provides $2895s1% spell haste to all party and raid members within $2895a1 yards.  Lasts $d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 83, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellLevel': 64, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -421,18 +423,18 @@ healing_stream_totem_5394 = spell(
     school=School.NORMAL,
     attributes=65536,
     cast_time_ms=0,
-    cooldown_ms=0,
+    cooldown_ms=30000,
     category_cooldown_ms=0,
     mana_cost=0,
     mana_cost_pct=3,
     range_yards=0.0,
-    duration_ms=300000,
+    duration_ms=10000,
     effects=[
         Effect(type=EffectType.SUMMON, base_points=4, implicit_target_a=42, misc_value=3527),
     ],
     spell_icon_id=1647,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60 (anchor rank 5 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Healing Stream Totem with $s1 health at the feet of the caster for $d that heals group members within $52041a1 yards for $5672s1 every $5672t1 seconds.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 82, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 5, 'SpellClassMask_1': 524288, 'SpellClassSet': 11, 'SpellLevel': 20, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    notes='SH0b (shared doc, Totems): cooldown 0 -> 30 s, duration 300 s -> 10 s, tooltip with the heal potency (202271), tool strip. Summon stays creature 3527. Was: pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60 (anchor rank 5 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Healing Stream Totem for $d. When placed and every 2 sec, it heals the 5 most injured allies within 40 yards for ' + pot_text(healing_stream_heal_202271) + '. 30 sec cooldown.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 82, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': 524288, 'SpellClassSet': 11, 'SpellLevel': 20, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -453,7 +455,7 @@ mana_spring_totem_5675 = spell(
     ],
     spell_icon_id=338,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 26); RealPointsPerLevel from rank1->covers-60 (anchor rank 4 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 26, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Mana Spring Totem with $s1 health at the feet of the caster for $d that restores $5677s1 mana every 5 seconds to all party and raid members within $52031a1 yards.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 82, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 5, 'SpellClassMask_1': 524288, 'SpellClassSet': 11, 'SpellLevel': 26, 'SpellVisualID_1': 364, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 26, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Mana Spring Totem with $s1 health at the feet of the caster for $d that restores $5677s1 mana every 5 seconds to all party and raid members within $52031a1 yards.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 82, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': 524288, 'SpellClassSet': 11, 'SpellLevel': 26, 'SpellVisualID_1': 364, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -474,9 +476,10 @@ stoneclaw_totem_5730 = spell(
         Effect(type=EffectType.SUMMON, base_points=49, points_per_level=21.88888888888889, implicit_target_a=41, misc_value=3579),
     ],
     spell_icon_id=689,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 8); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 10 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Taunting creatures.', 'BaseLevel': 8, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Stoneclaw Totem with $s1 health at the feet of the caster for $d that taunts creatures within $5729a1 yards to attack it.  Enemies attacking the Stoneclaw Totem have a $5728h% chance to be stunned for $39796d. Stoneclaw totem also protects all your totems, causing them to absorb ' + pot_text(stoneclaw_totem_absorb_55328) + ' damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 81, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 2, 'SpellClassMask_1': 8, 'SpellClassSet': 11, 'SpellLevel': 8, 'SpellVisualID_1': 362, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    notes='SH0b (shared doc, Totems): retired (replaced by Earthen Wall): untrained from trainer 210, row kept, tool strip only (RequiredTotemCategoryID_1 -> 0). character_spell/action cleanup is in the characters SQL. Was: pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 8); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 10 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Taunting creatures.', 'BaseLevel': 8, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Stoneclaw Totem with $s1 health at the feet of the caster for $d that taunts creatures within $5729a1 yards to attack it.  Enemies attacking the Stoneclaw Totem have a $5728h% chance to be stunned for $39796d. Stoneclaw totem also protects all your totems, causing them to absorb ' + pot_text(stoneclaw_totem_absorb_55328) + ' damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 81, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': 8, 'SpellClassSet': 11, 'SpellLevel': 8, 'SpellVisualID_1': 362, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
+untrain(stoneclaw_totem_5730, [210])
 
 
 sentry_totem_6495 = spell(
@@ -497,7 +500,7 @@ sentry_totem_6495 = spell(
     ],
     spell_icon_id=195,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 139264, 'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Allows vision through Sentry Totem.  Right-Click on buff to switch back and forth between totem sight and shaman sight.', 'BaseLevel': 34, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons an immobile Sentry Totem with $s1 health at your feet for $d that allows vision of nearby area and warns of enemies that attack it.  Right-Click on buff to switch back and forth between totem sight and shaman sight.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 83, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 3, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellLevel': 34, 'SpellVisualID_1': 368, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    raw_overrides={'AttributesEx': 139264, 'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Allows vision through Sentry Totem.  Right-Click on buff to switch back and forth between totem sight and shaman sight.', 'BaseLevel': 34, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons an immobile Sentry Totem with $s1 health at your feet for $d that allows vision of nearby area and warns of enemies that attack it.  Right-Click on buff to switch back and forth between totem sight and shaman sight.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 83, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellLevel': 34, 'SpellVisualID_1': 368, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -684,7 +687,7 @@ stoneskin_totem_8071 = spell(
     ],
     spell_icon_id=690,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 4); RealPointsPerLevel from rank1->covers-60 (anchor rank 6 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx6': 67108864, 'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Stoneskin Totem with $s1 health at the feet of the caster.  The totem protects party and raid members within $8072a1 yards, increasing armor by $8072s1.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 81, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 2, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellLevel': 4, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    raw_overrides={'AttributesEx6': 67108864, 'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Stoneskin Totem with $s1 health at the feet of the caster.  The totem protects party and raid members within $8072a1 yards, increasing armor by $8072s1.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 81, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellLevel': 4, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -705,7 +708,7 @@ strength_of_earth_totem_8075 = spell(
     ],
     spell_icon_id=691,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 10); RealPointsPerLevel from rank1->covers-60 (anchor rank 5 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 10, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Strength of Earth Totem with $s1 health at the feet of the caster.  The totem increases the strength and agility of all party and raid members within $8076a1 yards by $8076s2.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 81, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 2, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellLevel': 10, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 10, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Strength of Earth Totem with $s1 health at the feet of the caster.  The totem increases the strength and agility of all party and raid members within $8076a1 yards by $8076s2.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 81, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellLevel': 10, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -715,18 +718,18 @@ tremor_totem_8143 = spell(
     school=School.NORMAL,
     attributes=65536,
     cast_time_ms=0,
-    cooldown_ms=0,
+    cooldown_ms=60000,
     category_cooldown_ms=0,
     mana_cost=0,
     mana_cost_pct=2,
     range_yards=0.0,
-    duration_ms=300000,
+    duration_ms=10000,
     effects=[
         Effect(type=EffectType.SUMMON, base_points=4, implicit_target_a=41, misc_value=5913),
     ],
     spell_icon_id=1676,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 18, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Tremor Totem with $s1 health at the feet of the caster that shakes the ground around it, removing Fear, Charm and Sleep effects from party members within $8146a1 yards.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 81, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 2, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellLevel': 18, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    notes='SH0b (shared doc, Totems): cooldown 0 -> 60 s, duration 300 s -> 10 s, + d0 b15, tooltip gains "1 min cooldown" (U11), tool strip. Was: pulled from existing data',
+    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 18, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Tremor Totem for $d that shakes the ground around it, removing Fear, Charm and Sleep effects from party members within 30 yards. 1 min cooldown.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 81, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': m.SUMMON_D0_B29 | m.TREMOR_SUMMON, 'SpellClassSet': 11, 'SpellLevel': 18, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -736,18 +739,18 @@ cleansing_totem_8170 = spell(
     school=School.NORMAL,
     attributes=65536,
     cast_time_ms=0,
-    cooldown_ms=0,
+    cooldown_ms=60000,
     category_cooldown_ms=0,
     mana_cost=0,
     mana_cost_pct=8,
     range_yards=0.0,
-    duration_ms=300000,
+    duration_ms=10000,
     effects=[
         Effect(type=EffectType.SUMMON, base_points=4, implicit_target_a=42, misc_value=5924),
     ],
     spell_icon_id=1673,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 38, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Cleansing Totem with $s1 health at the feet of the caster that attempts to remove 1 disease and 1 poison effect from party members within $8171a1 yards every $8172t1 seconds.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 82, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 5, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellLevel': 38, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    notes='SH0b (shared doc, Totems): cooldown 0 -> 60 s, duration 300 s -> 10 s, + d0 b16, tooltip, tool strip. Summon stays creature 5924. Was: pulled from existing data',
+    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 38, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Cleansing Totem for $d that removes 1 poison and 1 disease effect from party members within 30 yards when placed and every 3 sec. 1 min cooldown.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 82, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': m.SUMMON_D0_B29 | m.CLEANSING_SUMMON, 'SpellClassSet': 11, 'SpellLevel': 38, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -756,20 +759,19 @@ grounding_totem_8177 = spell(
     name='Grounding Totem',
     school=School.NORMAL,
     attributes=65536,
-    category=230,
     cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=15000,
+    cooldown_ms=30000,
+    category_cooldown_ms=0,
     mana_cost=0,
     mana_cost_pct=5,
     range_yards=0.0,
-    duration_ms=45000,
+    duration_ms=10000,
     effects=[
         Effect(type=EffectType.SUMMON, base_points=4, implicit_target_a=43, misc_value=5925),
     ],
     spell_icon_id=1677,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx2': 1073741824, 'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Grounding Totem with $s1 health at the feet of the caster that will redirect one harmful spell cast on a nearby party member to itself, destroying the totem.  Will not redirect area of effect spells.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 83, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 3, 'SpellClassMask_1': 537133056, 'SpellClassSet': 11, 'SpellLevel': 30, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    notes='SH0b (shared doc, Totems): Category 230 -> 0 (230 is shared with NPC Grounding 34079 / ToC 65989, which keep it), category cooldown 15 s -> 0, RecoveryTime 30 s, duration 45 s -> 10 s, tooltip, tool strip. Was: pulled from existing data',
+    raw_overrides={'AttributesEx2': 1073741824, 'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Grounding Totem at the feet of the caster for $d that will redirect one harmful spell cast on a nearby party member to itself, destroying the totem. Will not redirect area of effect spells. 30 sec cooldown.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 83, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': 537133056, 'SpellClassSet': 11, 'SpellLevel': 30, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -790,7 +792,7 @@ frost_resistance_totem_8181 = spell(
     ],
     spell_icon_id=1713,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 24); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx6': 67108864, 'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 24, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Summons a Frost Resistance Totem with $s1 health at the feet of the caster for $d.  The totem increases party and raid members' frost resistance by $8182s1, if within $8182a1 yards.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 63, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 4, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellLevel': 24, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    raw_overrides={'AttributesEx6': 67108864, 'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 24, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Summons a Frost Resistance Totem with $s1 health at the feet of the caster for $d.  The totem increases party and raid members' frost resistance by $8182s1, if within $8182a1 yards.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 63, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellLevel': 24, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -811,7 +813,7 @@ fire_resistance_totem_8184 = spell(
     ],
     spell_icon_id=1712,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 28); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx6': 67108864, 'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 28, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Fire Resistance Totem with $s1 health at the feet of the caster for $d that increases the fire resistance of party and raid members within $8185a1 yards by $8185s1.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 82, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 5, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellLevel': 28, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    raw_overrides={'AttributesEx6': 67108864, 'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 28, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Fire Resistance Totem with $s1 health at the feet of the caster for $d that increases the fire resistance of party and raid members within $8185a1 yards by $8185s1.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 82, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellLevel': 28, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -831,9 +833,10 @@ magma_totem_8190 = spell(
         Effect(type=EffectType.SUMMON, base_points=4, implicit_target_a=44, misc_value=5929),
     ],
     spell_icon_id=37,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 26); RealPointsPerLevel from rank1->covers-60 (anchor rank 4 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 26, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Magma Totem with $s1 health at the feet of the caster for ${$d-1} sec that causes $8187s1 Fire damage to creatures within $8187a1 yards every $8188t1 seconds.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 63, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 4, 'SpellClassMask_1': 4096, 'SpellClassSet': 11, 'SpellLevel': 26, 'SpellVisualID_1': 369, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    notes='SH0b (shared doc, Totems): NPC-only now (SAI 2555 / 17235 cast it; the player Magma is the ground summon 202268): untrained from trainer 210, stock row otherwise unchanged apart from the tool strip (RequiredTotemCategoryID_1 -> 0, required by lint.check_totem_tools). Was: pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 26); RealPointsPerLevel from rank1->covers-60 (anchor rank 4 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 26, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Magma Totem with $s1 health at the feet of the caster for ${$d-1} sec that causes $8187s1 Fire damage to creatures within $8187a1 yards every $8188t1 seconds.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 63, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': 4096, 'SpellClassSet': 11, 'SpellLevel': 26, 'SpellVisualID_1': 369, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
+untrain(magma_totem_8190, [210])
 
 
 flametongue_totem_8227 = spell(
@@ -853,7 +856,7 @@ flametongue_totem_8227 = spell(
     ],
     spell_icon_id=72,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 28); RealPointsPerLevel from rank1->covers-60 (anchor rank 4 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx6': 67108864, 'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 28, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Flametongue Totem with $s1 health at the feet of the caster.  Party and raid members within $52109a1 yards of the totem have their spell damage and healing increased by up to $52109s1.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 63, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 4, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellLevel': 28, 'SpellVisualID_1': 221, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    raw_overrides={'AttributesEx6': 67108864, 'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 28, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Flametongue Totem with $s1 health at the feet of the caster.  Party and raid members within $52109a1 yards of the totem have their spell damage and healing increased by up to $52109s1.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 63, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellLevel': 28, 'SpellVisualID_1': 221, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -896,7 +899,7 @@ windfury_totem_8512 = spell(
     ],
     spell_icon_id=1397,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases melee haste by $8515s1%.', 'BaseLevel': 32, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Windfury Totem with $s1 health at the feet of the caster.  The totem provides $8515s1% melee haste to all party and raid members within $8515a1 yards.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 83, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 3, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellLevel': 32, 'SpellVisualID_1': 221, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases melee haste by $8515s1%.', 'BaseLevel': 32, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Windfury Totem with $s1 health at the feet of the caster.  The totem provides $8515s1% melee haste to all party and raid members within $8515a1 yards.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 83, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellLevel': 32, 'SpellVisualID_1': 221, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -917,7 +920,7 @@ nature_resistance_totem_10595 = spell(
     ],
     spell_icon_id=1675,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 30); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx6': 67108864, 'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Nature Resistance Totem with $s1 health at the feet of the caster for $d that increases the nature resistance of party and raid members within $10596a1 yards by $10596s1.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 83, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 3, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellLevel': 30, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    raw_overrides={'AttributesEx6': 67108864, 'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Nature Resistance Totem with $s1 health at the feet of the caster for $d that increases the nature resistance of party and raid members within $10596a1 yards by $10596s1.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 83, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellLevel': 30, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -965,7 +968,7 @@ strength_of_earth_totem_25361 = spell(
     ],
     spell_icon_id=691,
     notes='pulled from existing data; step-7: superseded rank, kept (referenced by item_template spellid)',
-    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Strength of Earth Totem with $s1 health at the feet of the caster.  The totem increases the strength and agility of all party and raid members within $25362a1 yards by $25362s2.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 81, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 5', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 2, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellLevel': 60, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Strength of Earth Totem with $s1 health at the feet of the caster.  The totem increases the strength and agility of all party and raid members within $25362a1 yards by $25362s2.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 81, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 5', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellLevel': 60, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -1163,7 +1166,7 @@ totem_of_wrath_30706 = spell(
     ],
     spell_icon_id=2019,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60 (anchor rank 2 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 50, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Totem of Wrath with $s1 health at the feet of the caster.  The totem increases spell power by $57658s2 for all party and raid members, and increases the critical strike chance of all attacks by $30708s1% against all enemies within $30708a1 yards.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 63, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 4, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellLevel': 50, 'SpellVisualID_1': 221, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 50, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Totem of Wrath with $s1 health at the feet of the caster.  The totem increases spell power by $57658s2 for all party and raid members, and increases the critical strike chance of all attacks by $30708s1% against all enemies within $30708a1 yards.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 63, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellLevel': 50, 'SpellVisualID_1': 221, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -1281,7 +1284,7 @@ mana_tide_totem_16190 = spell(
     ],
     spell_icon_id=94,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Summons a Mana Tide Totem with $s2% of the caster's health at the feet of the caster for ${$d-1} sec that restores $<mana>% of total mana every $16191t1 seconds to group members within $39610a1 yards.", 'EffectBasePoints_2': 9, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectMiscValueB_1': 82, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 5, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellDescriptionVariableID': 61, 'SpellLevel': 40, 'SpellVisualID_1': 364, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Summons a Mana Tide Totem with $s2% of the caster's health at the feet of the caster for ${$d-1} sec that restores $<mana>% of total mana every $16191t1 seconds to group members within $39610a1 yards.", 'EffectBasePoints_2': 9, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectMiscValueB_1': 82, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellDescriptionVariableID': 61, 'SpellLevel': 40, 'SpellVisualID_1': 364, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 

@@ -14,6 +14,7 @@ asserts none of them sits on an SH0a row (some are allowed on specific rows, nam
 
 # --- d0 (SpellClassMask_1 / EffectSpellClassMaskX_1) ---
 EARTHEN_WALL_SUMMON = 0x8                # d0 b3 (+ SUMMON_D0_B29); SH0b
+MAGMA_SUMMON_D0_B12 = 0x1000             # d0 b12, stock Magma summon identity bit (FAMILY-BITS C4; SH0b)
 MAGMA_PULSE_B2 = 0x4                     # d0 b2, stock Magma pulse 8187 (SH0b)
 HEALING_STREAM_HEAL = 0x2000             # d0 b13 (SH0b)
 TREMOR_SUMMON = 0x8000                   # d0 b15, added to 8143's d0 b29 (SH0b)

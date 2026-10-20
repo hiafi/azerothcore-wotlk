@@ -58,9 +58,10 @@ class TotemToolsTest(unittest.TestCase):
     def test_another_class_set_is_out_of_scope(self):
         self.assertEqual(_run(lint.check_totem_tools, _row(SpellClassSet=7, RequiredTotemCategoryID_1=2)), [])
 
-    def test_stock_shaman_spells_stay_quiet_by_default(self):
-        self.assertEqual(lint.TOOL_FREE_CLASS_SETS, frozenset())
-        self.assertEqual(_run(lint.check_totem_tools, _row(2484, RequiredTotemCategoryID_1=2)), [])
+    def test_stock_shaman_spells_warn_by_default_since_sh0b(self):
+        self.assertEqual(lint.TOOL_FREE_CLASS_SETS, frozenset({11}))
+        self.assertEqual(len(_run(lint.check_totem_tools, _row(2484, RequiredTotemCategoryID_1=2))), 1)
+        self.assertEqual(_run(lint.check_totem_tools, _row(2484)), [])
 
     def test_the_opt_in_widens_the_check_to_stock_spells_of_that_set(self):
         stock = _row(2484, RequiredTotemCategoryID_1=2)
@@ -77,7 +78,11 @@ class TotemToolsTest(unittest.TestCase):
             self.assertEqual(len(_run(lint.check_totem_tools, _row(2484, RequiredTotemCategoryID_1=2))), 1)
         finally:
             lint.TOOL_FREE_CLASS_SETS = original
-        self.assertEqual(_run(lint.check_totem_tools, _row(2484, RequiredTotemCategoryID_1=2)), [])
+        lint.TOOL_FREE_CLASS_SETS = frozenset()
+        try:
+            self.assertEqual(_run(lint.check_totem_tools, _row(2484, RequiredTotemCategoryID_1=2)), [])
+        finally:
+            lint.TOOL_FREE_CLASS_SETS = original
 
     def test_the_opt_in_covers_undeclared_stock_spells_of_the_set(self):
         stock = {
@@ -95,7 +100,7 @@ class TotemToolsTest(unittest.TestCase):
 
     def test_undeclared_stock_spells_stay_quiet_without_the_opt_in(self):
         stock = {6365: _row(6365, RequiredTotemCategoryID_1=4)}
-        self.assertEqual(lint.check_totem_tools([], [], None, stock), [])
+        self.assertEqual(len(lint.check_totem_tools([], [], None, stock)), 1)  # default is {11} since SH0b
         self.assertEqual(lint.check_totem_tools([], [], frozenset(), stock), [])
 
     def test_the_opt_in_also_covers_a_stripped_stock_spell_staying_quiet(self):
@@ -721,25 +726,23 @@ class RealPopulationTest(unittest.TestCase):
         lookup = {int(r["ID"]): r for r in rows}
         self.assertEqual(lint.check_spell_proc_rows(procs, lookup, allow={}), [])
 
-    def test_the_stock_family_11_spells_that_still_hold_a_totem_tool(self):
-        # The strip list for SH0: every declared stock family-11 spell with a tool column, from the same data.
-        held = {
-            int(r["ID"]): {c: int(r[c]) for c in TOTEM_COLUMNS if int(r.get(c) or 0)}
-            for r in self.rows if int(r.get("SpellClassSet") or 0) == 11 and int(r["ID"]) < 200000
+    def test_no_declared_stock_family_11_spell_holds_a_totem_tool(self):
+        # SH0b stripped every declared stock family-11 spell (T1 listed 42 of 117; A1/A2/A7 cover all of them).
+        held = [
+            int(r["ID"]) for r in self.rows if int(r.get("SpellClassSet") or 0) == 11
             and any(int(r.get(c) or 0) for c in TOTEM_COLUMNS)
-        }
-        self.assertTrue(held)
-        self.assertEqual({c for cols in held.values() for c in cols}, {"RequiredTotemCategoryID_1"})
-        self.assertEqual(len(lint.check_totem_tools(self.entries, self.rows, {11})), len(held))
+        ]
+        self.assertEqual(held, [])
+        self.assertEqual(lint.check_totem_tools(self.entries, self.rows, {11}), [])
 
-    def test_the_full_strip_list_is_every_stock_family_11_spell_with_a_tool_column(self):
-        # Widened over the stock client rows too: the declared 42 plus the undeclared higher ranks.
+    def test_the_widened_lint_is_silent_over_stock_and_declared_rows(self):
+        # The stock client file still holds tool columns on family-11 rows (so the strip is real), and every one of
+        # them is declared and zeroed: no undeclared stock row is left for the widened check to flag.
         stock = {i: r for i, r in self.stock.items() if int(r.get("SpellClassSet") or 0) == 11}
-        expected = {i for i, r in stock.items() if any(int(r.get(c) or 0) for c in TOTEM_COLUMNS) and i < 200000}
-        warnings = lint.check_totem_tools(self.entries, self.rows, {11}, self.stock)
-        self.assertEqual({int(w.split()[1]) for w in warnings if int(w.split()[1]) < 200000}, expected)
-        self.assertGreater(len(expected), len({i for i in expected if any(
-            int(r["ID"]) == i for r in self.rows)}))  # there are undeclared rows to catch
+        stripped = {i for i, r in stock.items() if any(int(r.get(c) or 0) for c in TOTEM_COLUMNS) and i < 200000}
+        self.assertTrue(stripped)
+        self.assertEqual(lint.check_totem_tools(self.entries, self.rows, {11}, self.stock), [])
+        self.assertEqual(lint.check_totem_tools(self.entries, self.rows, base_spells=self.stock), [])  # default {11}
 
 
 if __name__ == "__main__":

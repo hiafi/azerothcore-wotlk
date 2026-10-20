@@ -26,7 +26,7 @@ lightning_shield_324 = spell(
     ],
     spell_icon_id=19,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 8); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 11 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 1024, 'AttributesEx3': 196608, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Causes $26364s1 Nature damage to attacker on hit.  $n charges.', 'BaseLevel': 8, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The caster is surrounded by $n balls of lightning.  When a spell, melee or ranged attack hits the caster, the attacker will be struck for $26364s1 Nature damage.  This expends one lightning ball.  Only one ball will fire every few seconds.  Lasts $d.  Only one Elemental Shield can be active on the Shaman at any one time.', 'EffectBonusMultiplier_1': 0.2669999897480011, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcCharges': 3, 'ProcTypeMask': 139944, 'RangeIndex': 1, 'SpellClassMask_1': 1024, 'SpellClassSet': 11, 'SpellLevel': 8, 'SpellVisualID_1': 37, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx': 1024, 'AttributesEx3': 196608, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Lightning Shield damages attackers.', 'BaseLevel': 8, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The caster is surrounded by $n balls of lightning.  When a spell, melee or ranged attack hits the caster, the attacker will be struck for $26364s1 Nature damage.  This expends one lightning ball.  Only one ball will fire every few seconds.  Lasts $d.  Only one Elemental Shield can be active on the Shaman at any one time.', 'EffectBonusMultiplier_1': 0.2669999897480011, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcCharges': 3, 'ProcTypeMask': 139944, 'RangeIndex': 1, 'SpellClassMask_1': 1024, 'SpellClassSet': 11, 'SpellLevel': 8, 'SpellVisualID_1': 37, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -46,7 +46,27 @@ healing_stream_5672 = spell(
     ],
     spell_icon_id=1647,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx3': 128, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals $s1 every $t1 seconds.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'RangeIndex': 1, 'SpellClassMask_1': 8192, 'SpellClassSet': 11, 'SpellLevel': 20, 'SpellVisualID_1': 366},
+    raw_overrides={'AttributesEx3': 128, 'AttributesEx5': 512, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals $s1 every $t1 seconds.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'RangeIndex': 1, 'SpellClassMask_1': 8192, 'SpellClassSet': 11, 'SpellLevel': 20, 'SpellVisualID_1': 366},
+)
+
+
+cleansing_totem_passive_8172 = spell(
+    id=8172,
+    name='Cleansing Totem Passive',
+    school=School.NATURE,
+    attributes=67904,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PERIODIC_TRIGGER_SPELL, amplitude=3000, trigger_spell=8171),
+    ],
+    spell_icon_id=1673,
+    notes='pulled from existing data; SH0b A2: AttributesEx5 0x200 (first pulse at t=0). Shared with NPC totems 22091/22487 (harmless).',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'BaseLevel': 38, 'SpellLevel': 38, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'AuraDescription_Lang_Mask': 16712188, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'AttributesEx5': 512},
 )
 
 
@@ -244,11 +264,11 @@ magma_totem_8187 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=92.3, implicit_target_a=22, implicit_target_b=15, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=20, implicit_target_a=22, implicit_target_b=15, radius_yards=8.0),
     ],
     spell_icon_id=37,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 26); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P8 (2026-10-02): converted to sp_potency=92.3 (base-implied, docs/potency-system.PLAN.md P8, shaman-potency-report.md) - Magma Totem\'s own periodic nova, cast via the generic TotemAI::UpdateAI loop, plain cast, no custom bp, T=1.5s (no cast_time/amplitude of its own).',
-    raw_overrides={'AttributesEx': 136, 'AttributesEx2': 1073741824, 'AttributesEx3': 64, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Magma Totem with $8190s1 health at the feet of the caster for ${$8190d-1} sec that causes {pot1} Fire damage to creatures within $a1 yards every $8188t1 seconds.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 1073741828, 'SpellClassSet': 11, 'SpellLevel': 26, 'SpellVisualID_1': 2107},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 26); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P8 (2026-10-02): converted to sp_potency=92.3 (base-implied, docs/potency-system.PLAN.md P8, shaman-potency-report.md) - Magma Totem\'s own periodic nova, cast via the generic TotemAI::UpdateAI loop, plain cast, no custom bp, T=1.5s (no cast_time/amplitude of its own). SH0b A2 (2026-10-19): sp_potency 92.3 -> 20 (shaman rework Magma Totem pulse; NPC Magma totem drift accepted), description rewritten.',
+    raw_overrides={'AttributesEx': 136, 'AttributesEx2': 1073741824, 'AttributesEx3': 64, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1} Fire damage to all enemies within $a1 yards every 1.5 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 1073741828, 'SpellClassSet': 11, 'SpellLevel': 26, 'SpellVisualID_1': 2107},
 )
 
 
@@ -500,7 +520,7 @@ stoneskin_totem_38115 = spell(
     ],
     spell_icon_id=690,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 14, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Stoneskin Totem with $s1 health at the feet of the caster.  The totem protects party members within $8156a1 yards, reducing melee damage taken by $8156s1.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 81, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 2, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellLevel': 14, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 14, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Stoneskin Totem with $s1 health at the feet of the caster.  The totem protects party members within $8156a1 yards, reducing melee damage taken by $8156s1.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 81, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellLevel': 14, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -521,7 +541,7 @@ searing_totem_38116 = spell(
     ],
     spell_icon_id=680,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Searing Totem with $s1 health at your feet for $d that repeatedly attacks an enemy within $6350r1 yards for $6350s1 Fire damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 63, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 4, 'SpellClassMask_1': 16, 'SpellClassSet': 11, 'SpellLevel': 20, 'SpellVisualID_1': 221, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Searing Totem with $s1 health at your feet for $d that repeatedly attacks an enemy within $6350r1 yards for $6350s1 Fire damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 63, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': 16, 'SpellClassSet': 11, 'SpellLevel': 20, 'SpellVisualID_1': 221, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -620,7 +640,7 @@ earthliving_51945 = spell(
     spell_icon_id=3060,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 30); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
           'Potency system P7-Shaman: converted to sp_potency=5.1 then SH0a A2 set 5.0 (12 s / 3 s) (shaman-potency-proposals.txt, mismatched row). Cast by the player via earthliving_weapon_passive_51940\'s own PROC_TRIGGER_SPELL aura (triggered off the player\'s own weapon-enchant buff, not a totem/pet).',
-    raw_overrides={'AttributesEx3': 128, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals {pot1} damage every $t1 seconds.', 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for {pot1.total} over $d.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 524288, 'SpellClassSet': 11, 'SpellLevel': 30, 'SpellVisualID_1': 11443, 'StartRecoveryCategory': 133},
+    raw_overrides={'AttributesEx3': 128, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Healing over time.', 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the target for {pot1.total} over $d.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_2': 524288, 'SpellClassSet': 11, 'SpellLevel': 30, 'SpellVisualID_1': 11443, 'StartRecoveryCategory': 133},
 )
 
 
@@ -664,7 +684,7 @@ water_shield_52127 = spell(
     ],
     spell_icon_id=2287,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 1024, 'AttributesEx3': 196608, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s2 mana per 5 sec.  Attacks and spells used against you restore $52128s1 mana.  $n charges.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The caster is surrounded by $52127n globes of water, granting $52127s2 mana per 5 sec.  When a spell, melee or ranged attack hits the caster, $52128s1 mana is restored to the caster. This expends one water globe.  Only one globe will activate every few seconds.  Lasts $52127d.  Only one Elemental Shield can be active on the Shaman at any one time.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 60, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcCharges': 3, 'ProcTypeMask': 139944, 'RangeIndex': 1, 'SpellClassMask_2': 32, 'SpellClassSet': 11, 'SpellLevel': 20, 'SpellVisualID_1': 7358, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx': 1024, 'AttributesEx3': 196608, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Water Shield restores mana.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The caster is surrounded by $52127n globes of water, granting $52127s2 mana per 5 sec.  When a spell, melee or ranged attack hits the caster, $52128s1 mana is restored to the caster. This expends one water globe.  Only one globe will activate every few seconds.  Lasts $52127d.  Only one Elemental Shield can be active on the Shaman at any one time.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 60, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcCharges': 3, 'ProcTypeMask': 139944, 'RangeIndex': 1, 'SpellClassMask_2': 32, 'SpellClassSet': 11, 'SpellLevel': 20, 'SpellVisualID_1': 7358, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 # Only on a stock TrainerId no NPC uses; 210 is the live Shaman trainer (docs/spell_learn_level.md).
 trained_by(water_shield_52127, trainer_id=210, req_level=20, money_cost=2200)

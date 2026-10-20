@@ -1358,10 +1358,10 @@ def check_creature_spell_rows(rows: list[dict], known_spell_ids: set[int] | froz
 
 # The only SpellClassSet whose custom spells must not need a totem tool item.
 TOTEM_TOOL_CLASS_SET = 11
-# SpellClassSets whose every declared spell, stock ones included, must be tool-free. Empty until SH0 strips the
-# stock shaman totem columns (the stock Earth/Fire/Water/Air Totem items 5175/5176/5177/5178); SH0 then adds 11,
-# and any stock family-11 spell it forgot to strip warns. Today's stock rows stay quiet.
-TOOL_FREE_CLASS_SETS: frozenset = frozenset()
+# SpellClassSets whose every declared spell, stock ones included, must be tool-free. 11 since SH0b stripped the stock
+# shaman totem columns (the Earth/Fire/Water/Air Totem items 5175/5176/5177/5178) from all 117 stock family-11 rows;
+# any stock family-11 spell a later change forgets to strip warns.
+TOOL_FREE_CLASS_SETS: frozenset = frozenset({11})
 _TOTEM_TOOL_COLUMNS = ("Totem_1", "Totem_2", "RequiredTotemCategoryID_1", "RequiredTotemCategoryID_2")
 
 
