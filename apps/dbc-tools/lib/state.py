@@ -63,6 +63,9 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 BASE_DBC_DIR = REPO_ROOT / "var" / "extractors" / "dbc"
 BASE_SQL_DIR = REPO_ROOT / "data" / "sql" / "base" / "db_world"
 PROMOTED_SQL_DIR = REPO_ROOT / "data" / "sql" / "updates" / "db_world"
+# Reserved-block secondary rows (durations, ranges, radii) that the live DB has but no db_world/ file inserts;
+# see the file's header.
+LIVE_SECONDARY_ROWS_SQL = REPO_ROOT / "apps" / "dbc-tools" / "source" / "live_secondary_rows.sql"
 
 
 def load_stock_rows(table: DbcTable) -> dict[int, dict]:
@@ -109,7 +112,13 @@ def load_existing_rows(table: DbcTable) -> dict[int, dict]:
     migration - "what the server's world DB actually has right now". Use
     this for deciding what a *SQL migration* needs to touch, never for
     deciding what the *client patch* needs to contain - see this module's
-    docstring for why those are different questions with different answers."""
+    docstring for why those are different questions with different answers.
+
+    `LIVE_SECONDARY_ROWS_SQL` then fills in the IDs still missing. It runs
+    last because promoted migrations wipe whole reserved blocks
+    (`DELETE ... BETWEEN`), and it never overrides a row they insert. Without
+    it a run that mints one new duration, range or radius rewrites that block
+    without the live-only rows other spells still point at."""
     rows = load_stock_rows(table)
     needle = f"`{table.sql_table}`"
     for path, text in _promoted_sql_files():
@@ -119,4 +128,10 @@ def load_existing_rows(table: DbcTable) -> dict[int, dict]:
             sql_dump.apply_statements(rows, table, text)
         except Exception as exc:  # pragma: no cover - defensive, see module docstring
             print(f"warning: state.py: skipping {path} for {table.sql_table}: {exc}")
+    seed = LIVE_SECONDARY_ROWS_SQL.read_text(encoding="utf-8")
+    if needle in seed:
+        live_rows: dict[int, dict] = {}
+        sql_dump.apply_statements(live_rows, table, seed)
+        for row_id, row in live_rows.items():
+            rows.setdefault(row_id, row)
     return rows
