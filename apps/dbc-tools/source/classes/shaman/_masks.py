@@ -49,6 +49,7 @@ CHAIN_HEAL_TOTEM_RESERVED = 0x800000     # d2 b23, reserved
 WATER_BOLT_HEAL = 0x1000000              # d2 b24 (SH0b)
 WATER_BOLT_DAMAGE = 0x2000000            # d2 b25 (SH0b)
 EM_HASTE_RESERVED = 0x4000000            # d2 b26, reserved for the Elemental stage
+EM_HASTE = EM_HASTE_RESERVED             # d2 b26, Elemental Mastery haste 64701 (S1a)
 
 # --- Never (FORBIDDEN_*): A6's test asserts none sits on an SH0a row ---
 # Allowed only on stock shields: d1 b5, d1 b10, d0 b10.

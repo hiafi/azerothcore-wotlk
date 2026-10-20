@@ -16,7 +16,7 @@ their ids and their stock passives (33663 / 32982) on the new totems' Index 0.
 
 Summon rows copy the stock 2062 / 2894 shape: Category 0, RecoveryTime 120000 (the elemental's own 2 min; the 2 min
 lockout over the other three is scripted, `spell_sha_elemental_lockout`), no category recovery, no COOLDOWN_ON_EVENT,
-GCD 1000 / 133 (the stock totem GCD, brief decision 4), cost 24 % of base mana (Earth's, [tune]), 30 s duration, instant,
+GCD 1000 / 133 (the stock totem GCD, brief decision 4), cost 8 % of base mana ([tune]; 24 % until the 2026-10-20 smoke-test fix pass), 30 s duration, instant,
 SUMMON with SummonProperties in EffectMiscValueB_1 (82 Water slot, 83 Air slot) so the totem is a real `Totem`. Family
 bits: summon-family d0 b29 plus the element's own bit (Water d1 b21, Storm d1 b8). No tool item (Totem_n and
 RequiredTotemCategoryID_n stay 0). AttributesEx6 NO_CATEGORY_COOLDOWN_MODS is Fire-only (stock 2894) and is not copied.
@@ -141,7 +141,7 @@ def _summon_raw(spell_level, props, description, element_mask):
 
 water_elemental_totem_202272 = spell(
     id=202272, name='Water Elemental Totem', school=School.NORMAL, attributes=SPELL_ATTR0_NOT_SHAPESHIFTED, category=0,
-    cast_time_ms=0, cooldown_ms=120000, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=24, range_yards=RANGE_SELF,
+    cast_time_ms=0, cooldown_ms=120000, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=8, range_yards=RANGE_SELF,
     duration_ms=30000,
     effects=[Effect(
         type=EffectType.SUMMON, base_points=3887, implicit_target_a=TARGET_DEST_CASTER_SUMMON,
@@ -150,7 +150,7 @@ water_elemental_totem_202272 = spell(
     spell_icon_id=ICON_WATER_ELEMENTAL,
     notes=NOTE + 'Water Elemental, learned at 46 (trainer 210). Summons the invisible Water slot totem 300272 (props 82), '
           'whose Index-0 passive 202274 summons the guardian 300260. Category 0 / RecoveryTime 120000 / no category '
-          'recovery / no COOLDOWN_ON_EVENT; GCD 1000/133 (stock totem); cost 24% of base mana [tune] (Earth Elemental\'s); '
+          'recovery / no COOLDOWN_ON_EVENT; GCD 1000/133 (stock totem); cost 8% of base mana [tune] (was 24%, Earth Elemental\'s; 2026-10-20 smoke-test fix pass); '
           'shape and HP (3887) copied from stock 2894 with Water\'s front-left spawn point (5394). Family d0 b29 + d1 b21. '
           'Bound to spell_sha_elemental_lockout. Icon 2134 = mage Summon Water Elemental.',
     raw_overrides=_summon_raw(
@@ -162,7 +162,7 @@ water_elemental_totem_202272 = spell(
 
 storm_elemental_totem_202273 = spell(
     id=202273, name='Storm Elemental Totem', school=School.NORMAL, attributes=SPELL_ATTR0_NOT_SHAPESHIFTED, category=0,
-    cast_time_ms=0, cooldown_ms=120000, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=24, range_yards=RANGE_SELF,
+    cast_time_ms=0, cooldown_ms=120000, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=8, range_yards=RANGE_SELF,
     duration_ms=30000,
     effects=[Effect(
         type=EffectType.SUMMON, base_points=3887, implicit_target_a=TARGET_DEST_CASTER_SUMMON,
@@ -231,11 +231,11 @@ water_bolt_202276 = spell(
     id=202276, name='Water Bolt', school=School.FROST, attributes=0, cast_time_ms=2000, cooldown_ms=0,
     category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=45.0,
     effects=[Effect(
-        type=EffectType.SCHOOL_DAMAGE, sp_potency=100.0, potency_kind='direct', implicit_target_a=TARGET_UNIT_TARGET_ENEMY,
+        type=EffectType.SCHOOL_DAMAGE, sp_potency=43.0, potency_kind='direct', implicit_target_a=TARGET_UNIT_TARGET_ENEMY,
     )],
     spell_icon_id=ICON_WATERBOLT,
-    notes=NOTE + 'the Water Elemental\'s only ability (shared doc "Water Elemental"): 2 s cast, 100 potency Frost damage '
-          '(T 2000 = the cast); spell_sha_water_bolt (eff0 hit) heals the 3 lowest players via 202277. Plain CastSpell from '
+    notes=NOTE + 'the Water Elemental\'s only ability (shared doc "Water Elemental"): 2 s cast, 43 potency Frost damage '
+          '(was 100; x0.43 smoke-test fix pass 2026-10-20) (T 2000 = the cast); spell_sha_water_bolt (eff0 hit) heals the 3 lowest players via 202277. Plain CastSpell from '
           'the guardian, SpellLevel 1 (warlock P8 shape). Range 45 yd = stock Waterbolt 31707 (RangeIndex 36); the AI '
           'chases to 30 yd and searches 40 yd (consts). Missile speed 16 and SV 7875 are Waterbolt\'s ("mage Waterbolt" '
           'visual). Family d2 b25.',
@@ -252,11 +252,11 @@ storm_bolt_202278 = spell(
     id=202278, name='Storm Bolt', school=School.NATURE, attributes=0, cast_time_ms=2000, cooldown_ms=0,
     category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=45.0,
     effects=[Effect(
-        type=EffectType.SCHOOL_DAMAGE, sp_potency=120.0, potency_kind='direct', implicit_target_a=TARGET_UNIT_TARGET_ENEMY,
+        type=EffectType.SCHOOL_DAMAGE, sp_potency=51.6, potency_kind='direct', implicit_target_a=TARGET_UNIT_TARGET_ENEMY,
     )],
     spell_icon_id=ICON_LIGHTNING_BOLT,
-    notes=NOTE + 'the Storm Elemental\'s only ability (shared doc "Storm Elemental"): 2 s cast, 120 potency Nature damage '
-          '(about 428 at 60, T 2000 = the cast), no heal, no family bit (SpellClassSet 11 with an empty mask). Plain '
+    notes=NOTE + 'the Storm Elemental\'s only ability (shared doc "Storm Elemental"): 2 s cast, 51.6 potency Nature damage '
+          '(was 120 / about 428 at 60; x0.43 smoke-test fix pass 2026-10-20; about 184 now, T 2000 = the cast), no heal, no family bit (SpellClassSet 11 with an empty mask). Plain '
           'CastSpell from the guardian, SpellLevel 1. Range 45 yd (same as Water Bolt, so both guardians have equal '
           'reach). Missile speed 20 and SV 173 are Lightning Bolt\'s.',
     raw_overrides={

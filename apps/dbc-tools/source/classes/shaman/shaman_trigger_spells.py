@@ -4,8 +4,94 @@ Shaman - spells that are never directly cast - proc/periodic-tick effects, trigg
 Split from a single source/classes/shaman.py via split_class_file.py (.agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md) - see source/classes/README.md for the multi-file layout and lib/dsl/registry.py's load_class_package for how cross-file references (`from .shaman_...` below) resolve.
 """
 
-from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, School
-from lib.dsl.registry import spell, trained_by, unbind_bonus_coefficients
+from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, School, SpellModOp
+from lib.dsl.registry import (
+    procs_on, remove_spell_proc, scripted_by, spell, trained_by, unbind_bonus_coefficients, unbind_script,
+)
+
+from . import _masks as m
+
+
+# =====================================================================================================================
+# S1a A2 (shaman-rework S1a WP brief, docs/reworks/shaman-elemental-rework.md section 5): the stock Elemental rank
+# spells below are rewritten in place (variable names, hence ShamanData:: names, are unchanged). Every row is built from
+# `_talent()`, so no stale raw twin from the stock row survives (the build starts from an empty row). Stored
+# base_points = live - 1. Masks are EffectSpellClassMask{A,B,C}_{1,2,3}: the letter is the effect, the number the dword
+# (README "Gotcha"); `masks={effect_index: (d0, d1, d2)}` below.
+# =====================================================================================================================
+
+_SHOCKS = 0x90100000          # d0: Earth b20, Flame b28, Frost b31
+_LB = 0x1                     # d0 b0
+_CL = 0x2                     # d0 b1
+_FLAME_SHOCK = 0x10000000     # d0 b28
+_LAVA_BURST = 0x1000          # d1 b12
+_THUNDERSTORM = 0x2000        # d1 b13
+_WIND_SHEAR = 0x8000000       # d1 b27 (57994 only; never b11, which Purge / Water Walking share)
+_LAVA_LASH = 0x4              # d2 b2 (Lava Lash's own bit; effect masks may target it)
+_SEARING_SUMMON = 0x10        # d0 b4 (Searing Totem 3599)
+_FIRE_NOVA_COST = 0x8000000   # d0 b27 (Fire Nova 1535)
+_FIRE_NOVA_DAMAGE = 0x40000   # d1 b18 (Fire Nova 8349)
+_RANK_SUBTEXT = 'Rank {}'
+_CR_VERSATILITY = 1 << 21     # 1 << CombatRating.VERSATILITY
+_PROC_DONE_SPELL_MAGIC_NEG = 0x10000
+_PROC_DONE_PERIODIC = 0x40000
+_PROC_PHASE_HIT = 0x2
+_PROC_TYPE_DAMAGE = 0x1
+_PROC_HIT_NORMAL_CRIT = 0x3
+_PROC_HIT_CRIT = 0x2
+_FFN = 0x1C                   # school mask Fire | Frost | Nature
+
+
+def _desc(text, capstone=None, last=False):
+    """Rank text from the doc; the capstone clause is grey on every rank below the last (hunter / paladin idiom)."""
+    if capstone is None:
+        return text
+    if last:
+        return f"{text}\n\nCapstone: {capstone}"
+    return f"{text}\n\n|cFF9D9D9DCapstone: {capstone}|r"
+
+
+def _aura(aura, base_points=0, misc_value=0, **kw):
+    """One self-targeted APPLY_AURA effect."""
+    return Effect(
+        type=EffectType.APPLY_AURA, base_points=base_points, implicit_target_a=1, apply_aura=aura,
+        misc_value=int(misc_value), **kw,
+    )
+
+
+def _mod(op, base_points, pct=True):
+    """A SpellMod effect (the class mask goes in `masks=` of `_talent`, keyed by this effect's 1-based index)."""
+    return _aura(AuraType.ADD_PCT_MODIFIER if pct else AuraType.ADD_FLAT_MODIFIER, base_points, int(op))
+
+
+def _dummy(base_points=0):
+    """A DUMMY effect: trigger_spell 0 and misc 0, so a spell_proc row on its spell never casts a stale trigger (X5).
+    On a proc talent it is also the effect CheckEffectProc passes (B2); its amount carries the rank value."""
+    return _aura(AuraType.DUMMY, base_points)
+
+
+def _talent(spell_id, name, rank, effects, icon, description, masks=None, level=0, school=School.NORMAL,
+            attributes=464, notes='', **raw_extra):
+    """A talent rank spell: passive, family 11, EquippedItemClass -1 (L1), no latent twin."""
+    raw = {
+        'EquippedItemClass': -1, 'SpellClassSet': 11, 'CastingTimeIndex': 1, 'RangeIndex': 1, 'ProcChance': 101,
+        'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': rank,
+        'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': description,
+        'AuraDescription_Lang_Mask': 16712188,
+        'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0,
+    }
+    if level:
+        raw['SpellLevel'] = level
+    for effect_index, triple in (masks or {}).items():
+        for dword, value in enumerate(triple, start=1):
+            if value:
+                raw[f'EffectSpellClassMask{"ABC"[effect_index - 1]}_{dword}'] = value
+    raw.update(raw_extra)
+    return spell(
+        id=spell_id, name=name, school=school, attributes=attributes, cast_time_ms=0, cooldown_ms=0,
+        category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0, effects=effects, spell_icon_id=icon,
+        notes=notes, raw_overrides=raw,
+    )
 
 
 lightning_shield_324 = spell(
@@ -264,10 +350,10 @@ magma_totem_8187 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=20, implicit_target_a=22, implicit_target_b=15, radius_yards=8.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=8.6, implicit_target_a=22, implicit_target_b=15, radius_yards=8.0),
     ],
     spell_icon_id=37,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 26); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P8 (2026-10-02): converted to sp_potency=92.3 (base-implied, docs/potency-system.PLAN.md P8, shaman-potency-report.md) - Magma Totem\'s own periodic nova, cast via the generic TotemAI::UpdateAI loop, plain cast, no custom bp, T=1.5s (no cast_time/amplitude of its own). SH0b A2 (2026-10-19): sp_potency 92.3 -> 20 (shaman rework Magma Totem pulse; NPC Magma totem drift accepted), description rewritten.',
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 26); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system P8 (2026-10-02): converted to sp_potency=92.3 (base-implied, docs/potency-system.PLAN.md P8, shaman-potency-report.md) - Magma Totem\'s own periodic nova, cast via the generic TotemAI::UpdateAI loop, plain cast, no custom bp, T=1.5s (no cast_time/amplitude of its own). SH0b A2 (2026-10-19): sp_potency 92.3 -> 20 (shaman rework Magma Totem pulse; NPC Magma totem drift accepted), description rewritten. 2026-10-20 smoke-test fix pass: 20 -> 8.6 (x0.43, rough damage cut).',
     raw_overrides={'AttributesEx': 136, 'AttributesEx2': 1073741824, 'AttributesEx3': 64, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1} Fire damage to all enemies within $a1 yards every 1.5 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 1073741828, 'SpellClassSet': 11, 'SpellLevel': 26, 'SpellVisualID_1': 2107},
 )
 
@@ -284,7 +370,7 @@ fire_nova_8349 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=242.2, potency_kind='direct', implicit_target_a=87, implicit_target_b=16, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=104.1, potency_kind='direct', implicit_target_a=87, implicit_target_b=16, radius_yards=10.0),
     ],
     spell_icon_id=33,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 12); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
@@ -711,7 +797,7 @@ totem_of_wrath_57658 = spell(
 )
 
 
-lava_flows_64694 = spell(
+lava_flows_haste_64694 = spell(
     id=64694,
     name='Lava Flows',
     school=School.NATURE,
@@ -722,115 +808,66 @@ lava_flows_64694 = spell(
     mana_cost=0,
     mana_cost_pct=0,
     range_yards=0.0,
-    duration_ms=6000,
+    duration_ms=12000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, points_per_level=0.3333333333333333, implicit_target_a=1, apply_aura=65, misc_value=5),
+        _aura(216, 1),
+        _aura(AuraType.MOD_MELEE_HASTE, 1),
     ],
     spell_icon_id=3087,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spell casting speed increased by $s1%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Iincreases the critical strike damage bonus of your Lava Burst spell by an additional $51480s2%, and when your Flame Shock is dispelled your spell casting speed is increased by $51480s1% for $64694d.', 'EffectBasePoints_2': -1, 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 268435456, 'EffectSpellClassMaskB_2': 4096, 'EffectSpellClassMaskC_1': 8388608, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712172, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+    notes='S1a A2 (docs/reworks/shaman-elemental-rework.md Lava Flows): rank 1 haste buff, spell + melee haste 2% for 12 s, '
+          'cast by spell_sha_ele_spell_hooks on Flame Shock / Lava Burst (Shaman::LavaFlowsHasteSpell). Not in the haste '
+          'group (brief Decision 8). Variable renamed from lava_flows_64694 so the header name is SPELL_LAVA_FLOWS_HASTE. '
+          'The stock aura 65 dispel clause and the latent raw effect 2/3 twins are gone.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Haste increased.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell and melee haste.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
 )
 
 
-concussion_16035 = spell(
-    id=16035,
-    name='Concussion',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=108, misc_value=22),
-    ],
-    spell_icon_id=12,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Lightning Bolt, Chain Lightning, Thunderstorm, Lava Burst and Shock spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2416967683, 'EffectSpellClassMaskA_2': 12288, 'EffectSpellClassMaskB_1': 268435456, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+concussion_16035 = _talent(
+    16035, 'Concussion', 'Rank 1',
+    [_mod(SpellModOp.DAMAGE, 4), _mod(SpellModOp.DAMAGE, 2), _mod(SpellModOp.DOT, 2)], 12,
+    'Increases the damage of your Lightning Bolt and Chain Lightning by 5%. Increases the damage of your Thunderstorm, Lava Burst, Earthquake, Elemental Blast and Shock spells by 3%.',
+    masks={1: (_LB | _CL, 0, 0), 2: (_SHOCKS, _LAVA_BURST | _THUNDERSTORM, m.EARTHQUAKE | m.ELEMENTAL_BLAST),
+           3: (_FLAME_SHOCK, 0, 0)},
+    notes='S1a A2: eff1 Lightning Bolt / Chain Lightning +5%, eff2 the rest +3% (talent_mult effect 2), eff3 the Flame Shock periodic at +3% (SPELLMOD_DOT, the engine never applies DAMAGE to a tick). Copies inherit by parent bit.',
 )
 
 
-call_of_flame_16038 = spell(
-    id=16038,
-    name='Call of Flame',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108),
-    ],
-    spell_icon_id=31,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Fire Totems and Fire Nova by $s1%, and damage done by your Lava Burst spell by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1073741824, 'EffectSpellClassMaskA_2': 262144, 'EffectSpellClassMaskB_2': 4096, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+call_of_flame_16038 = _talent(
+    16038, 'Call of Flame', 'Rank 1',
+    [_mod(SpellModOp.DAMAGE, 9), _mod(SpellModOp.DAMAGE, 4), _mod(SpellModOp.COST, -11)], 31,
+    'Increases the damage and reduces the mana cost of your Fire totems and Fire Nova by 10%. Increases the damage of your Lava Burst by 5%.',
+    masks={1: (m.SEARING_MAGMA_BOLT, _FIRE_NOVA_DAMAGE, 0), 2: (0, _LAVA_BURST, 0),
+           3: (_SEARING_SUMMON | m.MAGMA_SUMMON_D0_B12 | _FIRE_NOVA_COST, 0, 0)},
+    notes='S1a A2 (brief Decision 9): eff1 Searing bolt + Magma pulse (d0 b30) and Fire Nova 8349 (d1 b18) +10%, eff2 Lava Burst +5%, eff3 cost on Searing 3599 (d0 b4), Magma 202268 (d0 b12) and Fire Nova 1535 (d0 b27) -10%. Never d0 b29 or d1 b23 (the Fire Elemental is not a Fire totem).',
 )
 
 
-convection_16039 = spell(
-    id=16039,
-    name='Convection',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=108, misc_value=14),
-    ],
-    spell_icon_id=122,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Shock, Lightning Bolt, Chain Lightning, Lava Burst, and Wind Shear spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2416967683, 'EffectSpellClassMaskA_2': 134221824, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+convection_16039 = _talent(
+    16039, 'Convection', 'Rank 1',
+    [_mod(SpellModOp.COST, -6), _mod(SpellModOp.DAMAGE, 1), _mod(SpellModOp.DOT, 1)], 122,
+    'Reduces the mana cost of your Shock, Lightning Bolt, Chain Lightning, Lava Burst, Earthquake and Wind Shear spells by 5% and increases their damage by 2%.',
+    masks={1: (_SHOCKS | _LB | _CL, _LAVA_BURST | _WIND_SHEAR, m.EARTHQUAKE),
+           2: (_SHOCKS | _LB | _CL, _LAVA_BURST, m.EARTHQUAKE), 3: (_FLAME_SHOCK, 0, 0)},
+    notes='S1a A2 (brief Decision 7): eff1 cost (Wind Shear by its own d1 b27, never b11), eff2 damage on the same minus Wind Shear (talent_mult effect 2), eff3 the Flame Shock tick. Rank 2 no longer carries Thunderstorm (d1 b13).',
 )
 
 
-reverberation_16040 = spell(
-    id=16040,
-    name='Reverberation',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-201, implicit_target_a=1, apply_aura=107, misc_value=11),
-    ],
-    spell_icon_id=501,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Shock spells and Wind Shear by $/1000;S1 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2416967680, 'EffectSpellClassMaskA_2': 134217728, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+reverberation_16040 = _talent(
+    16040, 'Reverberation', 'Rank 1',
+    [_mod(SpellModOp.COOLDOWN, -501, pct=False)], 501,
+    'Reduces the cooldown of your Shock spells by 0.5 sec. When you deal damage with a Shock spell, the direct damage of your next different Shock spell or Elemental Blast within 8 sec is increased by 20%.',
+    masks={1: (_SHOCKS, 0, 0)},
+    notes='S1a A2 (brief Decision 7): cooldown on the three shocks only; Wind Shear (d1 b27) dropped from the mask. The grant is spell_sha_ele_spell_hooks, the buffs are the Reverberation variants.',
 )
 
 
-call_of_thunder_16041 = spell(
-    id=16041,
-    name='Call of Thunder',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=107, misc_value=7),
-    ],
-    spell_icon_id=141,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Lightning Bolt, Chain Lightning and Thunderstorm spells by an additional $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EffectSpellClassMaskA_2': 8192, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+call_of_thunder_16041 = _talent(
+    16041, 'Call of Thunder', 'Rank 1',
+    [_mod(SpellModOp.CRITICAL_CHANCE, 1, pct=False)], 141,
+    _desc('Increases the critical strike chance of your Lightning Bolt, Chain Lightning and Thunderstorm by 2%.',
+          'Thunderstorm can be cast while stunned.'),
+    masks={1: (_LB | _CL, _THUNDERSTORM, 0)},
+    notes='S1a A2: flat crit +2% on Lightning Bolt / Chain Lightning / Thunderstorm. The capstone (rank 3) is the second Thunderstorm rank 202594, granted by Shaman::SyncThunderstormRank.',
 )
 
 
@@ -856,86 +893,43 @@ earth_s_grasp_16043 = spell(
 )
 
 
-improved_fire_nova_16086 = spell(
-    id=16086,
-    name='Improved Fire Nova',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=-2001, implicit_target_a=1, apply_aura=107, misc_value=11),
-    ],
-    spell_icon_id=33,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Fire Nova by $s1% and reduces the cooldown by $/1000;S2 sec.', 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_2': 2147483648, 'EffectSpellClassMaskB_1': 134217728, 'EffectSpellClassMaskC_1': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'RangeIndex': 1, 'SpellClassSet': 11},
+improved_fire_nova_16086 = _talent(
+    16086, 'Rising Flames', 'Rank 1',
+    [_mod(SpellModOp.CRIT_DAMAGE_BONUS, 49), _mod(SpellModOp.COOLDOWN, -2001, pct=False)], 33,
+    _desc('Increases the critical strike damage bonus of your Searing Totem and Magma Totem by 50% and reduces the cooldown of your Fire Nova by 2 sec.',
+          'While your Magma Totem or Fire Elemental is active, you gain a stack of Rising Flames every 2 sec, up to 5. Each stack increases the damage of your next Fire Nova by 10%. Fire Nova consumes all stacks.'),
+    masks={1: (m.SEARING_MAGMA_BOLT, 0, 0), 2: (_FIRE_NOVA_COST, 0, 0)}, ProcChance=100,
+    notes='S1a A2: repurposed Improved Fire Nova. eff1 crit damage bonus on Searing bolt + Magma pulse (d0 b30), eff2 Fire Nova 1535 cooldown (d0 b27). The stock damage effect and the latent EffectBasePoints_3 twin are gone.',
 )
 
 
-elemental_fury_16089 = spell(
-    id=16089,
-    name='Elemental Fury',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=15),
-    ],
-    spell_icon_id=1137,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike damage bonus of your Searing and Magma Totems and your Fire, Frost, and Nature spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3509583875, 'EffectSpellClassMaskA_2': 274432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+elemental_fury_16089 = _talent(
+    16089, 'Elemental Fury', '',
+    [_mod(SpellModOp.CRIT_DAMAGE_BONUS, 29)], 1137,
+    _desc('Your spell critical strikes deal 165% damage. Does not stack with other similar effects.',
+          'While Clearcasting from Elemental Focus is active, your Nature damage is increased by 8% and your other magic damage by 5%.'),
+    masks={1: (0xD1300003, 0x43000, m.EARTHQUAKE | m.ELEMENTAL_BLAST)},
+    notes='S1a A2: crit damage bonus +30% of the 50% base bonus (165%). Stock mask plus d2 b19 / b20 (Earthquake, Elemental Blast). The capstone is the hidden aura 202584 (spell_sha_ele_fury_capstone on Clearcasting).',
 )
 
 
-concussion_16105 = spell(
-    id=16105,
-    name='Concussion',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=108, misc_value=22),
-    ],
-    spell_icon_id=12,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Lightning Bolt, Chain Lightning, Thunderstorm, Lava Burst and Shock spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2416967683, 'EffectSpellClassMaskA_2': 12288, 'EffectSpellClassMaskB_1': 268435456, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+concussion_16105 = _talent(
+    16105, 'Concussion', 'Rank 2',
+    [_mod(SpellModOp.DAMAGE, 9), _mod(SpellModOp.DAMAGE, 5), _mod(SpellModOp.DOT, 5)], 12,
+    'Increases the damage of your Lightning Bolt and Chain Lightning by 10%. Increases the damage of your Thunderstorm, Lava Burst, Earthquake, Elemental Blast and Shock spells by 6%.',
+    masks={1: (_LB | _CL, 0, 0), 2: (_SHOCKS, _LAVA_BURST | _THUNDERSTORM, m.EARTHQUAKE | m.ELEMENTAL_BLAST),
+           3: (_FLAME_SHOCK, 0, 0)},
+    notes='S1a A2: see concussion_16035.',
 )
 
 
-concussion_16106 = spell(
-    id=16106,
-    name='Concussion',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=108, misc_value=22),
-    ],
-    spell_icon_id=12,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Lightning Bolt, Chain Lightning, Thunderstorm, Lava Burst and Shock spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2416967683, 'EffectSpellClassMaskA_2': 12288, 'EffectSpellClassMaskB_1': 268435456, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+concussion_16106 = _talent(
+    16106, 'Concussion', 'Rank 3',
+    [_mod(SpellModOp.DAMAGE, 14), _mod(SpellModOp.DAMAGE, 9), _mod(SpellModOp.DOT, 9)], 12,
+    'Increases the damage of your Lightning Bolt and Chain Lightning by 15%. Increases the damage of your Thunderstorm, Lava Burst, Earthquake, Elemental Blast and Shock spells by 10%.',
+    masks={1: (_LB | _CL, 0, 0), 2: (_SHOCKS, _LAVA_BURST | _THUNDERSTORM, m.EARTHQUAKE | m.ELEMENTAL_BLAST),
+           3: (_FLAME_SHOCK, 0, 0)},
+    notes='S1a A2: see concussion_16035.',
 )
 
 
@@ -981,43 +975,23 @@ concussion_16108 = spell(
 )
 
 
-convection_16109 = spell(
-    id=16109,
-    name='Convection',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-5, implicit_target_a=1, apply_aura=108, misc_value=14),
-    ],
-    spell_icon_id=122,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Shock, Lightning Bolt, Chain Lightning, Lava Burst, and Wind Shear spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2416967683, 'EffectSpellClassMaskA_2': 134230016, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+convection_16109 = _talent(
+    16109, 'Convection', 'Rank 2',
+    [_mod(SpellModOp.COST, -11), _mod(SpellModOp.DAMAGE, 3), _mod(SpellModOp.DOT, 3)], 122,
+    'Reduces the mana cost of your Shock, Lightning Bolt, Chain Lightning, Lava Burst, Earthquake and Wind Shear spells by 10% and increases their damage by 4%.',
+    masks={1: (_SHOCKS | _LB | _CL, _LAVA_BURST | _WIND_SHEAR, m.EARTHQUAKE),
+           2: (_SHOCKS | _LB | _CL, _LAVA_BURST, m.EARTHQUAKE), 3: (_FLAME_SHOCK, 0, 0)},
+    notes='S1a A2: see convection_16039.',
 )
 
 
-convection_16110 = spell(
-    id=16110,
-    name='Convection',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=1, apply_aura=108, misc_value=14),
-    ],
-    spell_icon_id=122,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Shock, Lightning Bolt, Chain Lightning, Lava Burst, and Wind Shear spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2416967683, 'EffectSpellClassMaskA_2': 134221824, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+convection_16110 = _talent(
+    16110, 'Convection', 'Rank 3',
+    [_mod(SpellModOp.COST, -16), _mod(SpellModOp.DAMAGE, 5), _mod(SpellModOp.DOT, 5)], 122,
+    'Reduces the mana cost of your Shock, Lightning Bolt, Chain Lightning, Lava Burst, Earthquake and Wind Shear spells by 15% and increases their damage by 6%.',
+    masks={1: (_SHOCKS | _LB | _CL, _LAVA_BURST | _WIND_SHEAR, m.EARTHQUAKE),
+           2: (_SHOCKS | _LB | _CL, _LAVA_BURST, m.EARTHQUAKE), 3: (_FLAME_SHOCK, 0, 0)},
+    notes='S1a A2: see convection_16039.',
 )
 
 
@@ -1061,43 +1035,21 @@ convection_16112 = spell(
 )
 
 
-reverberation_16113 = spell(
-    id=16113,
-    name='Reverberation',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-401, implicit_target_a=1, apply_aura=107, misc_value=11),
-    ],
-    spell_icon_id=501,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Shock spells and Wind Shear by $/1000;S1 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2416967680, 'EffectSpellClassMaskA_2': 134217728, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+reverberation_16113 = _talent(
+    16113, 'Reverberation', 'Rank 2',
+    [_mod(SpellModOp.COOLDOWN, -1001, pct=False)], 501,
+    'Reduces the cooldown of your Shock spells by 1 sec. When you deal damage with a Shock spell, the direct damage of your next different Shock spell or Elemental Blast within 8 sec is increased by 20%.',
+    masks={1: (_SHOCKS, 0, 0)},
+    notes='S1a A2: see reverberation_16040.',
 )
 
 
-reverberation_16114 = spell(
-    id=16114,
-    name='Reverberation',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-601, implicit_target_a=1, apply_aura=107, misc_value=11),
-    ],
-    spell_icon_id=501,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Shock spells and Wind Shear by $/1000;S1 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2416967680, 'EffectSpellClassMaskA_2': 134217728, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+reverberation_16114 = _talent(
+    16114, 'Reverberation', 'Rank 3',
+    [_mod(SpellModOp.COOLDOWN, -1501, pct=False)], 501,
+    'Reduces the cooldown of your Shock spells by 1.5 sec. When you deal damage with a Shock spell, the direct damage of your next different Shock spell or Elemental Blast within 8 sec is increased by 20%.',
+    masks={1: (_SHOCKS, 0, 0)},
+    notes='S1a A2: see reverberation_16040.',
 )
 
 
@@ -1163,65 +1115,32 @@ earth_s_grasp_16130 = spell(
 )
 
 
-call_of_flame_16160 = spell(
-    id=16160,
-    name='Call of Flame',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=108),
-    ],
-    spell_icon_id=31,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Fire Totems and Fire Nova by $s1%, and damage done by your Lava Burst spell by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1073741824, 'EffectSpellClassMaskA_2': 262144, 'EffectSpellClassMaskB_2': 4096, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+call_of_flame_16160 = _talent(
+    16160, 'Call of Flame', 'Rank 2',
+    [_mod(SpellModOp.DAMAGE, 19), _mod(SpellModOp.DAMAGE, 9), _mod(SpellModOp.COST, -21)], 31,
+    'Increases the damage and reduces the mana cost of your Fire totems and Fire Nova by 20%. Increases the damage of your Lava Burst by 10%.',
+    masks={1: (m.SEARING_MAGMA_BOLT, _FIRE_NOVA_DAMAGE, 0), 2: (0, _LAVA_BURST, 0),
+           3: (_SEARING_SUMMON | m.MAGMA_SUMMON_D0_B12 | _FIRE_NOVA_COST, 0, 0)},
+    notes='S1a A2: see call_of_flame_16038.',
 )
 
 
-call_of_flame_16161 = spell(
-    id=16161,
-    name='Call of Flame',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108),
-    ],
-    spell_icon_id=31,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Fire Totems and Fire Nova by $s1%, and damage done by your Lava Burst spell by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1073741824, 'EffectSpellClassMaskA_2': 262144, 'EffectSpellClassMaskB_2': 4096, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+call_of_flame_16161 = _talent(
+    16161, 'Call of Flame', 'Rank 3',
+    [_mod(SpellModOp.DAMAGE, 29), _mod(SpellModOp.DAMAGE, 14), _mod(SpellModOp.COST, -31)], 31,
+    'Increases the damage and reduces the mana cost of your Fire totems and Fire Nova by 30%. Increases the damage of your Lava Burst by 15%.',
+    masks={1: (m.SEARING_MAGMA_BOLT, _FIRE_NOVA_DAMAGE, 0), 2: (0, _LAVA_BURST, 0),
+           3: (_SEARING_SUMMON | m.MAGMA_SUMMON_D0_B12 | _FIRE_NOVA_COST, 0, 0)},
+    notes='S1a A2: see call_of_flame_16038.',
 )
 
 
-elemental_focus_16164 = spell(
-    id=16164,
-    name='Elemental Focus',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=16246),
-    ],
-    spell_icon_id=212,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'After landing a non-periodic critical strike with a Fire, Frost, or Nature damage spell, you enter a Clearcasting state.  The Clearcasting state reduces the mana cost of your next $16246n damage or healing spells by $16246s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellPriority': 50},
+elemental_focus_16164 = _talent(
+    16164, 'Elemental Focus', '',
+    [_dummy(14)], 212,
+    'After landing a critical strike with a Fire, Frost or Nature damage spell, you enter a Clearcasting state that reduces the mana cost of your next two Fire, Frost or Nature spells by 15%.',
+    level=1, AttributesEx3=0x4000000, ProcTypeMask=_PROC_DONE_SPELL_MAGIC_NEG, ProcChance=100,
+    notes='S1a A2 (brief Decision 5): rank 1. The proc effect is a DUMMY (the PROC_TRIGGER_SPELL to 16246 is gone: spell_sha_ele_elemental_focus casts Clearcasting and sets the amount, here 15 live). Row moved to the chain key -16164.',
 )
 
 
@@ -2209,84 +2128,42 @@ enhancing_totems_16295 = spell(
 )
 
 
-improved_fire_nova_16544 = spell(
-    id=16544,
-    name='Improved Fire Nova',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=-4001, implicit_target_a=1, apply_aura=107, misc_value=11),
-    ],
-    spell_icon_id=33,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Fire Nova by $s1% and reduces the cooldown by $/1000;S2 sec.', 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_2': 2147483648, 'EffectSpellClassMaskB_1': 134217728, 'EffectSpellClassMaskC_1': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'RangeIndex': 1, 'SpellClassSet': 11},
+improved_fire_nova_16544 = _talent(
+    16544, 'Rising Flames', 'Rank 2',
+    [_mod(SpellModOp.CRIT_DAMAGE_BONUS, 99), _mod(SpellModOp.COOLDOWN, -4001, pct=False),
+     _aura(AuraType.PERIODIC_DUMMY, 0, amplitude=2000)], 33,
+    _desc('Increases the critical strike damage bonus of your Searing Totem and Magma Totem by 100% and reduces the cooldown of your Fire Nova by 4 sec.',
+          'While your Magma Totem or Fire Elemental is active, you gain a stack of Rising Flames every 2 sec, up to 5. Each stack increases the damage of your next Fire Nova by 10%. Fire Nova consumes all stacks.',
+          last=True),
+    masks={1: (m.SEARING_MAGMA_BOLT, 0, 0), 2: (_FIRE_NOVA_COST, 0, 0)}, ProcChance=100,
+    notes='S1a A2: rank 2 capstone. eff3 is the PERIODIC_DUMMY (amplitude 2000 = RISING_FLAMES_TICK_MS) spell_sha_ele_rising_flames hooks (EFFECT_FIRST_FOUND).',
 )
 
 
-lightning_mastery_16578 = spell(
-    id=16578,
-    name='Lightning Mastery',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=107, misc_value=10),
-    ],
-    spell_icon_id=320,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cast time of your Lightning Bolt, Chain Lightning, and Lava Burst spells by $/1000;S1 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EffectSpellClassMaskA_2': 4096, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+lightning_mastery_16578 = _talent(
+    16578, 'Lightning Mastery', 'Rank 1',
+    [_dummy(32)], 320,
+    'Your spell casts that critically strike have a 33% chance to grant you a stack of Raw Power. While Raw Power is active, your Lightning Bolt and Chain Lightning casts that critically strike have a 7% chance per stack to trigger Lightning Mastery, consuming all Raw Power to increase your spell critical strike damage bonus by 50% for 8 sec.',
+    ProcTypeMask=_PROC_DONE_SPELL_MAGIC_NEG, ProcChance=100,
+    notes='S1a A2: the cast time cut is gone. DUMMY proc carrier (amount = Raw Power chance 33 live); the rolls are spell_sha_ele_lightning_mastery.',
 )
 
 
-lightning_mastery_16579 = spell(
-    id=16579,
-    name='Lightning Mastery',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-201, implicit_target_a=1, apply_aura=107, misc_value=10),
-    ],
-    spell_icon_id=320,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cast time of your Lightning Bolt, Chain Lightning, and Lava Burst spells by $/1000;S1 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EffectSpellClassMaskA_2': 4096, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+lightning_mastery_16579 = _talent(
+    16579, 'Lightning Mastery', 'Rank 2',
+    [_dummy(65)], 320,
+    'Your spell casts that critically strike have a 66% chance to grant you a stack of Raw Power. While Raw Power is active, your Lightning Bolt and Chain Lightning casts that critically strike have a 7% chance per stack to trigger Lightning Mastery, consuming all Raw Power to increase your spell critical strike damage bonus by 50% for 8 sec.',
+    ProcTypeMask=_PROC_DONE_SPELL_MAGIC_NEG, ProcChance=100,
+    notes='S1a A2: see lightning_mastery_16578.',
 )
 
 
-lightning_mastery_16580 = spell(
-    id=16580,
-    name='Lightning Mastery',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-301, implicit_target_a=1, apply_aura=107, misc_value=10),
-    ],
-    spell_icon_id=320,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cast time of your Lightning Bolt, Chain Lightning, and Lava Burst spells by $/1000;S1 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EffectSpellClassMaskA_2': 4096, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+lightning_mastery_16580 = _talent(
+    16580, 'Lightning Mastery', 'Rank 3',
+    [_dummy(99)], 320,
+    'Your spell casts that critically strike have a 100% chance to grant you a stack of Raw Power. While Raw Power is active, your Lightning Bolt and Chain Lightning casts that critically strike have a 7% chance per stack to trigger Lightning Mastery, consuming all Raw Power to increase your spell critical strike damage bonus by 50% for 8 sec.',
+    ProcTypeMask=_PROC_DONE_SPELL_MAGIC_NEG, ProcChance=100,
+    notes='S1a A2: see lightning_mastery_16578.',
 )
 
 
@@ -2330,167 +2207,84 @@ lightning_mastery_16582 = spell(
 )
 
 
-elemental_warding_28996 = spell(
-    id=28996,
-    name='Elemental Warding',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
-    ],
-    spell_icon_id=198,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces all damage taken by $s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+elemental_warding_28996 = _talent(
+    28996, 'Elemental Warding', 'Rank 1',
+    [_aura(AuraType.MOD_CUSTOM_STAT_PCT, 0, _CR_VERSATILITY)], 198,
+    _desc('Increases your Versatility by 1%.',
+          'Your Earth Elemental deals 20% more damage, and while it is active your maximum health is increased by 10%.'),
+    notes='S1a A2: Versatility +1% (aura 306, misc 1 << 21). The capstone is C++ (Earth Elemental +20% guardian aura, +10% health aura 202585).',
 )
 
 
-elemental_warding_28997 = spell(
-    id=28997,
-    name='Elemental Warding',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-5, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
-    ],
-    spell_icon_id=198,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces all damage taken by $s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+elemental_warding_28997 = _talent(
+    28997, 'Elemental Warding', 'Rank 2',
+    [_aura(AuraType.MOD_CUSTOM_STAT_PCT, 1, _CR_VERSATILITY)], 198,
+    _desc('Increases your Versatility by 2%.',
+          'Your Earth Elemental deals 20% more damage, and while it is active your maximum health is increased by 10%.'),
+    notes='S1a A2: see elemental_warding_28996.',
 )
 
 
-elemental_warding_28998 = spell(
-    id=28998,
-    name='Elemental Warding',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
-    ],
-    spell_icon_id=198,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces all damage taken by $s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+elemental_warding_28998 = _talent(
+    28998, 'Elemental Warding', 'Rank 3',
+    [_aura(AuraType.MOD_CUSTOM_STAT_PCT, 2, _CR_VERSATILITY)], 198,
+    _desc('Increases your Versatility by 3%.',
+          'Your Earth Elemental deals 20% more damage, and while it is active your maximum health is increased by 10%.',
+          last=True),
+    notes='S1a A2: see elemental_warding_28996.',
 )
 
 
-elemental_reach_28999 = spell(
-    id=28999,
-    name='Elemental Reach',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=107, misc_value=5),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=6),
-        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=107, misc_value=5),
-    ],
-    spell_icon_id=1921,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your Lightning Bolt, Chain Lightning, Fire Nova, and Lava Burst spells by $s1 yards, increases the radius of your Thunderstorm spell by $s2%, and increases the range of your Flame Shock by $s3 yards.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 134217731, 'EffectSpellClassMaskA_2': 4096, 'EffectSpellClassMaskB_2': 8192, 'EffectSpellClassMaskC_1': 268435456, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+elemental_reach_28999 = _talent(
+    28999, 'Elemental Reach', 'Rank 1',
+    [_mod(SpellModOp.RANGE, 2, pct=False)], 1921,
+    _desc('Increases the range of your damaging spells by 3 yards. Does not stack with other similar effects.',
+          'Your direct damage Fire, Frost and Nature spells against targets more than 20 yards away have a 33% chance to increase your magic damage by 6% for 10 sec. This effect can only occur once every 15 sec.'),
+    masks={1: (_SHOCKS | _LB | _CL, _LAVA_BURST, m.EARTHQUAKE | m.ELEMENTAL_BLAST)},
+    notes='S1a A2: range +3 yd on shaman damage spells only (Lightning Bolt, Chain Lightning, Lava Burst, the shocks, Earthquake cast, Elemental Blast). The stock Fire Nova, Thunderstorm radius and Flame Shock effects are gone.',
 )
 
 
-elemental_reach_29000 = spell(
-    id=29000,
-    name='Elemental Reach',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=107, misc_value=5),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=6),
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=107, misc_value=5),
-    ],
-    spell_icon_id=1921,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the range of your Lightning Bolt, Chain Lightning, Fire Nova, and Lava Burst spells by $s1 yards, increases the radius of your Thunderstorm spell by $s2%, and increases the range of your Flame Shock by $s3 yards.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 134217731, 'EffectSpellClassMaskA_2': 4096, 'EffectSpellClassMaskB_2': 8192, 'EffectSpellClassMaskC_1': 268435456, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+elemental_reach_29000 = _talent(
+    29000, 'Elemental Reach', 'Rank 2',
+    [_mod(SpellModOp.RANGE, 5, pct=False), _dummy(0)], 1921,
+    _desc('Increases the range of your damaging spells by 6 yards. Does not stack with other similar effects.',
+          'Your direct damage Fire, Frost and Nature spells against targets more than 20 yards away have a 33% chance to increase your magic damage by 6% for 10 sec. This effect can only occur once every 15 sec.',
+          last=True),
+    masks={1: (_SHOCKS | _LB | _CL, _LAVA_BURST, m.EARTHQUAKE | m.ELEMENTAL_BLAST)},
+    ProcTypeMask=_PROC_DONE_SPELL_MAGIC_NEG, ProcChance=100,
+    notes='S1a A2: rank 2 capstone; eff2 DUMMY is the proc carrier for spell_sha_ele_reach_capstone (spell_proc 29000, 100% - the script rolls 33% x Proc Chance).',
 )
 
 
-eye_of_the_storm_29062 = spell(
-    id=29062,
-    name='Eye of the Storm',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=22, implicit_target_a=1, apply_aura=108, misc_value=9),
-    ],
-    spell_icon_id=2028,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the pushback suffered from damaging attacks while casting Lightning Bolt, Chain Lightning, Lava Burst and Hex spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EffectSpellClassMaskA_2': 36864, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+eye_of_the_storm_29062 = _talent(
+    29062, 'Eye of the Storm', 'Rank 1',
+    [_aura(AuraType.HASTE_ALL, 0), _mod(SpellModOp.NOT_LOSE_CASTING_TIME, 32)], 2028,
+    _desc('Increases your spell, ranged and melee haste by 1%. Reduces the pushback suffered from damaging attacks while casting by 33%.',
+          "Your Chain Lightning's damage is reduced by only 10% per jump, instead of 30%."),
+    masks={2: (_LB | _CL, 0x9000, 0)},
+    notes='S1a A2: eff1 haste +1% (aura 193), eff2 pushback (stock op and mask, values 33/66/100 stored 32/65/99 as the hunter precedent).',
 )
 
 
-eye_of_the_storm_29064 = spell(
-    id=29064,
-    name='Eye of the Storm',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=45, implicit_target_a=1, apply_aura=108, misc_value=9),
-    ],
-    spell_icon_id=2028,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the pushback suffered from damaging attacks while casting Lightning Bolt, Chain Lightning, Lava Burst and Hex spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EffectSpellClassMaskA_2': 36864, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+eye_of_the_storm_29064 = _talent(
+    29064, 'Eye of the Storm', 'Rank 2',
+    [_aura(AuraType.HASTE_ALL, 1), _mod(SpellModOp.NOT_LOSE_CASTING_TIME, 65)], 2028,
+    _desc('Increases your spell, ranged and melee haste by 2%. Reduces the pushback suffered from damaging attacks while casting by 66%.',
+          "Your Chain Lightning's damage is reduced by only 10% per jump, instead of 30%."),
+    masks={2: (_LB | _CL, 0x9000, 0)},
+    notes='S1a A2: see eye_of_the_storm_29062.',
 )
 
 
-eye_of_the_storm_29065 = spell(
-    id=29065,
-    name='Eye of the Storm',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=69, implicit_target_a=1, apply_aura=108, misc_value=9),
-    ],
-    spell_icon_id=2028,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the pushback suffered from damaging attacks while casting Lightning Bolt, Chain Lightning, Lava Burst and Hex spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EffectSpellClassMaskA_2': 36864, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+eye_of_the_storm_29065 = _talent(
+    29065, 'Eye of the Storm', 'Rank 3',
+    [_aura(AuraType.HASTE_ALL, 2), _mod(SpellModOp.NOT_LOSE_CASTING_TIME, 99),
+     _mod(SpellModOp.DAMAGE_MULTIPLIER, 28)], 2028,
+    _desc('Increases your spell, ranged and melee haste by 3%. Reduces the pushback suffered from damaging attacks while casting by 100%.',
+          "Your Chain Lightning's damage is reduced by only 10% per jump, instead of 30%.", last=True),
+    masks={2: (_LB | _CL, 0x9000, 0), 3: (_CL, 0, 0)},
+    notes='S1a A2 (brief Decision 2): eff3 capstone, SPELLMOD_DAMAGE_MULTIPLIER pct stored 28 (live 29): the per-jump factor 0.7 * 1.29 = 0.903, the nearest an additive percent mod reaches to the doc 0.9 (S1a 0-verify section 6). DEVIATION: 0.903, not 0.9.',
 )
 
 
@@ -2538,43 +2332,21 @@ elemental_weapons_29080 = spell(
 )
 
 
-elemental_devastation_29179 = spell(
-    id=29179,
-    name='Elemental Devastation',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=29177),
-    ],
-    spell_icon_id=1930,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your non-periodic offensive spell crits will increase your chance to get a critical strike with melee attacks by $29177s1% for $29177d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1073741824, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 11},
+elemental_devastation_29179 = _talent(
+    29179, 'Elemental Devastation', 'Rank 2',
+    [_dummy(5)], 1930,
+    'Your non-periodic Fire, Frost and Nature spell critical strikes increase your Proc Chance by 6% for 10 sec.',
+    AttributesEx3=0x4000000, ProcTypeMask=_PROC_DONE_SPELL_MAGIC_NEG, ProcChance=100,
+    notes='S1a A2: rank 2. DUMMY proc carrier (amount = Proc Chance 6 live); spell_sha_ele_devastation casts the buff 202580 and sets its amount by rank. The stock melee-crit buffs 30165 / 29177 / 29178 are no longer triggered.',
 )
 
 
-elemental_devastation_29180 = spell(
-    id=29180,
-    name='Elemental Devastation',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=29178),
-    ],
-    spell_icon_id=1930,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your non-periodic offensive spell crits will increase your chance to get a critical strike with melee attacks by $29178s1% for $29178d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1073741824, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 11},
+elemental_devastation_29180 = _talent(
+    29180, 'Elemental Devastation', 'Rank 3',
+    [_dummy(9)], 1930,
+    'Your non-periodic Fire, Frost and Nature spell critical strikes increase your Proc Chance by 10% for 10 sec.',
+    AttributesEx3=0x4000000, ProcTypeMask=_PROC_DONE_SPELL_MAGIC_NEG, ProcChance=100,
+    notes='S1a A2: see elemental_devastation_29179.',
 )
 
 
@@ -2741,206 +2513,100 @@ healing_way_29206 = spell(
 )
 
 
-elemental_devastation_30160 = spell(
-    id=30160,
-    name='Elemental Devastation',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=elemental_devastation_30165.id),
-    ],
-    spell_icon_id=1930,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your non-periodic offensive spell crits will increase your chance to get a critical strike with melee attacks by $30165s1% for $30165d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1073741824, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 11},
+elemental_devastation_30160 = _talent(
+    30160, 'Elemental Devastation', 'Rank 1',
+    [_dummy(2)], 1930,
+    'Your non-periodic Fire, Frost and Nature spell critical strikes increase your Proc Chance by 3% for 10 sec.',
+    AttributesEx3=0x4000000, ProcTypeMask=_PROC_DONE_SPELL_MAGIC_NEG, ProcChance=100,
+    notes='S1a A2: see elemental_devastation_29179 (rank 1, Proc Chance 3 live).',
 )
 
 
-unrelenting_storm_30664 = spell(
-    id=30664,
-    name='Unrelenting Storm',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=219, misc_value=3),
-    ],
-    spell_icon_id=2010,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Regenerate mana equal to $s1% of your Intellect every 5 sec, even while casting.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EffectSpellClassMaskB_1': 576, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+unrelenting_storm_30664 = _talent(
+    30664, 'Unrelenting Storm', 'Rank 1',
+    [_dummy(0)], 2010,
+    _desc('Casting Lightning Bolt, Lava Burst or Elemental Blast increases your spell and melee haste by 0.5% for 8 sec, stacking up to 3 times.',
+          'At 3 stacks, your next Chain Lightning consumes them to deal 15% more damage and causes its primary target to take 10% more spell damage from you for 12 sec. Does not stack with other similar effects.'),
+    notes='S1a A2: marker only. The stock Lightning Shield mana clause is gone; the stacks, the haste (0.5 / 1 / 1.5 per stack) and the capstone are spell_sha_ele_spell_hooks + the buff rows.',
 )
 
 
-unrelenting_storm_30665 = spell(
-    id=30665,
-    name='Unrelenting Storm',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=219, misc_value=3),
-    ],
-    spell_icon_id=2010,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Regenerate mana equal to $s1% of your Intellect every 5 sec, even while casting.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EffectSpellClassMaskB_1': 576, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+unrelenting_storm_30665 = _talent(
+    30665, 'Unrelenting Storm', 'Rank 2',
+    [_dummy(0)], 2010,
+    _desc('Casting Lightning Bolt, Lava Burst or Elemental Blast increases your spell and melee haste by 1% for 8 sec, stacking up to 3 times.',
+          'At 3 stacks, your next Chain Lightning consumes them to deal 15% more damage and causes its primary target to take 10% more spell damage from you for 12 sec. Does not stack with other similar effects.'),
+    notes='S1a A2: see unrelenting_storm_30664.',
 )
 
 
-unrelenting_storm_30666 = spell(
-    id=30666,
-    name='Unrelenting Storm',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=219, misc_value=3),
-    ],
-    spell_icon_id=2010,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Regenerate mana equal to $s1% of your Intellect every 5 sec, even while casting.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EffectSpellClassMaskB_1': 576, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+unrelenting_storm_30666 = _talent(
+    30666, 'Unrelenting Storm', 'Rank 3',
+    [_dummy(0)], 2010,
+    _desc('Casting Lightning Bolt, Lava Burst or Elemental Blast increases your spell and melee haste by 1.5% for 8 sec, stacking up to 3 times.',
+          'At 3 stacks, your next Chain Lightning consumes them to deal 15% more damage and causes its primary target to take 10% more spell damage from you for 12 sec. Does not stack with other similar effects.',
+          last=True),
+    notes='S1a A2: see unrelenting_storm_30664.',
 )
 
 
-elemental_precision_30672 = spell(
-    id=30672,
-    name='Elemental Precision',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=199, misc_value=28),
-        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=AuraType.MOD_THREAT, misc_value=28),
-    ],
-    spell_icon_id=2017,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to hit with Fire, Frost and Nature spells by $s1% and reduces the threat caused by Fire, Frost and Nature spells by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EffectSpellClassMaskB_1': 576, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+elemental_precision_30672 = _talent(
+    30672, 'Elemental Precision', 'Rank 1',
+    [_aura(AuraType.MOD_SPELL_CRIT_CHANCE, 0)], 2017,
+    _desc('Increases your spell critical strike chance by 1%.',
+          'Your non-periodic spell critical strikes have a 10% chance to reset the cooldown of your Elemental Blast and make your next Elemental Blast within 20 sec a guaranteed critical strike.'),
+    notes='S1a A2: spell crit +1% (aura 57); the stock hit and threat clauses are gone.',
 )
 
 
-elemental_precision_30673 = spell(
-    id=30673,
-    name='Elemental Precision',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=199, misc_value=28),
-        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=AuraType.MOD_THREAT, misc_value=28),
-    ],
-    spell_icon_id=2017,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to hit with Fire, Frost and Nature spells by $s1% and reduces the threat caused by Fire, Frost and Nature spells by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EffectSpellClassMaskB_1': 576, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+elemental_precision_30673 = _talent(
+    30673, 'Elemental Precision', 'Rank 2',
+    [_aura(AuraType.MOD_SPELL_CRIT_CHANCE, 1)], 2017,
+    _desc('Increases your spell critical strike chance by 2%.',
+          'Your non-periodic spell critical strikes have a 10% chance to reset the cooldown of your Elemental Blast and make your next Elemental Blast within 20 sec a guaranteed critical strike.'),
+    notes='S1a A2: see elemental_precision_30672.',
 )
 
 
-elemental_precision_30674 = spell(
-    id=30674,
-    name='Elemental Precision',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=199, misc_value=28),
-        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=AuraType.MOD_THREAT, misc_value=28),
-    ],
-    spell_icon_id=2017,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to hit with Fire, Frost and Nature spells by $s1% and reduces the threat caused by Fire, Frost and Nature spells by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EffectSpellClassMaskB_1': 576, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+elemental_precision_30674 = _talent(
+    30674, 'Elemental Precision', 'Rank 3',
+    [_aura(AuraType.MOD_SPELL_CRIT_CHANCE, 2), _dummy(0)], 2017,
+    _desc('Increases your spell critical strike chance by 3%.',
+          'Your non-periodic spell critical strikes have a 10% chance to reset the cooldown of your Elemental Blast and make your next Elemental Blast within 20 sec a guaranteed critical strike.',
+          last=True),
+    ProcTypeMask=_PROC_DONE_SPELL_MAGIC_NEG, ProcChance=100,
+    notes='S1a A2: rank 3 capstone; eff2 DUMMY is the proc carrier for spell_sha_ele_precision_capstone (spell_proc 30674, 100%: the script rolls 10% x Proc Chance once per cast).',
 )
 
 
-lightning_overload_30675 = spell(
-    id=30675,
-    name='Lightning Overload',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-    ],
-    spell_icon_id=2018,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your Lightning Bolt and Chain Lightning spells a $h% chance to cast a second, similar spell on the same target at no additional cost that causes half damage and no threat.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EffectSpellClassMaskB_1': 576, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 11, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 11},
+lightning_overload_30675 = _talent(
+    30675, 'Lightning Overload', 'Rank 1',
+    [_dummy(5)], 2018,
+    _desc('Gives your Lightning Bolt and Chain Lightning a 6% chance to cast a second, similar spell on the same target at no additional cost that deals half damage and no threat. This chance is tripled for critical strikes.',
+          'While your Fire Elemental is active, your Lava Burst can also trigger Lightning Overload.'),
+    ProcTypeMask=_PROC_DONE_SPELL_MAGIC_NEG, ProcChance=100,
+    notes='S1a A2: DUMMY proc carrier (amount = the rank chance, 6 live). spell_proc -30675 now procs at 100% (the scripted roll is the only one) on Lightning Bolt, Chain Lightning and Lava Burst; spell_sha_ele_lightning_overload.',
 )
 
 
-lightning_overload_30678 = spell(
-    id=30678,
-    name='Lightning Overload',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=13, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-    ],
-    spell_icon_id=2018,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your Lightning Bolt and Chain Lightning spells a $h% chance to cast a second, similar spell on the same target at no additional cost that causes half damage and no threat.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EffectSpellClassMaskB_1': 576, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 22, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 11},
+lightning_overload_30678 = _talent(
+    30678, 'Lightning Overload', 'Rank 2',
+    [_dummy(12)], 2018,
+    _desc('Gives your Lightning Bolt and Chain Lightning a 13% chance to cast a second, similar spell on the same target at no additional cost that deals half damage and no threat. This chance is tripled for critical strikes.',
+          'While your Fire Elemental is active, your Lava Burst can also trigger Lightning Overload.'),
+    ProcTypeMask=_PROC_DONE_SPELL_MAGIC_NEG, ProcChance=100,
+    notes='S1a A2: see lightning_overload_30675.',
 )
 
 
-lightning_overload_30679 = spell(
-    id=30679,
-    name='Lightning Overload',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-    ],
-    spell_icon_id=2018,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Gives your Lightning Bolt and Chain Lightning spells a $h% chance to cast a second, similar spell on the same target at no additional cost that causes half damage and no threat.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EffectSpellClassMaskB_1': 576, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 33, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 11},
+lightning_overload_30679 = _talent(
+    30679, 'Lightning Overload', 'Rank 3',
+    [_dummy(19)], 2018,
+    _desc('Gives your Lightning Bolt and Chain Lightning a 20% chance to cast a second, similar spell on the same target at no additional cost that deals half damage and no threat. This chance is tripled for critical strikes.',
+          'While your Fire Elemental is active, your Lava Burst can also trigger Lightning Overload.',
+          last=True),
+    ProcTypeMask=_PROC_DONE_SPELL_MAGIC_NEG, ProcChance=100,
+    notes='S1a A2: see lightning_overload_30675.',
 )
 
 
@@ -3298,227 +2964,107 @@ shamanistic_focus_43338 = spell(
 )
 
 
-elemental_oath_51466 = spell(
-    id=51466,
-    name='Elemental Oath',
-    school=School.NORMAL,
-    attributes=80,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=65, base_points=2, implicit_target_a=1, apply_aura=57, misc_value=23, radius_yards=100.0),
-    ],
-    spell_icon_id=3053,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx6': 1073741824, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases spell critical chance by $s1%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While Clearcasting from Elemental Focus is active, you deal $s2% more spell damage. In addition, party and raid members within $a1 yards receive a $s1% bonus to their spell critical strike chance.', 'EffectBasePoints_2': 4, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskB_1': 2099200, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellPriority': 50},
+elemental_oath_51466 = _talent(
+    51466, 'Elemental Oath', 'Rank 1',
+    [Effect(type=65, base_points=0, implicit_target_a=1, apply_aura=AuraType.MOD_SPELL_CRIT_CHANCE, radius_yards=100.0),
+     _aura(AuraType.ADD_FLAT_MODIFIER, 0, int(SpellModOp.EFFECT2), die_sides=0)], 3053,
+    'Increases your spell critical strike chance by 1%. Increases the spell critical strike chance of all party and raid members by 1%. Does not stack with other similar effects.',
+    masks={2: (0, 0x4000, 0)}, level=1, attributes=80, SpellPriority=50, AttributesEx6=1073741824,
+    AuraDescription_Lang_Mask=16712190, AuraDescription_Lang_enUS='Spell critical strike chance increased.',
+    ProcChance=0,
+    notes='S1a A2 (brief Decision 1): party / raid spell crit +1% (self included). The stock Clearcasting damage clause is NOT in the doc: eff2 is the slot SpellInfoCorrections.cpp:333 forces to a flat SPELLMOD_EFFECT2 mask d1 0x4000, so it is declared with the same shape at value 0 (base_points 0, die_sides 0 -> 0): inert. The raw eff2 twins, the stock ProcTypeMask and the consolidated-buff flag are gone.',
 )
 
 
-elemental_oath_51470 = spell(
-    id=51470,
-    name='Elemental Oath',
-    school=School.NORMAL,
-    attributes=80,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=65, base_points=4, implicit_target_a=1, apply_aura=57, radius_yards=100.0),
-    ],
-    spell_icon_id=3053,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx6': 1073741824, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases spell critical chance by $s1%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'While Clearcasting from Elemental Focus is active, you deal $s2% more spell damage. In addition, party and raid members within $a1 yards receive a $s1% bonus to their spell critical strike chance.', 'EffectBasePoints_2': 9, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_2': 16384, 'EffectSpellClassMaskB_1': 2099200, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87040, 'RangeIndex': 1, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellPriority': 50},
+elemental_oath_51470 = _talent(
+    51470, 'Elemental Oath', 'Rank 2',
+    [Effect(type=65, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_SPELL_CRIT_CHANCE, radius_yards=100.0),
+     _aura(AuraType.ADD_FLAT_MODIFIER, 0, int(SpellModOp.EFFECT2), die_sides=0)], 3053,
+    'Increases your spell critical strike chance by 2%. Increases the spell critical strike chance of all party and raid members by 2%. Does not stack with other similar effects.',
+    masks={2: (0, 0x4000, 0)}, level=1, attributes=80, SpellPriority=50, AttributesEx6=1073741824,
+    AuraDescription_Lang_Mask=16712190, AuraDescription_Lang_enUS='Spell critical strike chance increased.',
+    ProcChance=0,
+    notes='S1a A2: see elemental_oath_51466.',
 )
 
 
-astral_shift_51474 = spell(
-    id=51474,
-    name='Astral Shift',
-    school=School.NORMAL,
-    attributes=262352,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(
-            type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=69, misc_value=127,
-            potency_excluded="percent-of-other-damage: despite the SCHOOL_ABSORB aura type, spell_sha_astral_shift "
-            "(spell_shaman.cpp) reads this effect's base points as a flat PERCENT (via CalcValue in its own "
-            "Load()) and applies it as CalculatePct(damage, absorbPct) in its Absorb() hook - not a flat HP "
-            "absorb amount. Converting it to potency would scale the percentage itself by level/C(L), which "
-            "is wrong for a fixed damage-reduction percent; same category as Warlock's percent-of-other-damage "
-            "exclusions despite the DBC aura type looking like an ordinary absorb.",
-        ),
-        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=52179),
-    ],
-    spell_icon_id=3066,
-    notes="pulled from existing data. Potency system P7-Shaman: NOT converted despite shaman-potency-report.md classifying eff0 as a non-mismatched 'absorb' row (potency 0.9) - it's really a flat damage-reduction percent, not an absorb amount, see eff0's reason.",
-    raw_overrides={'AttributesEx3': 67108864, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When stunned, feared or silenced you  shift into the Astral Plane reducing all damage taken by $s1% for the duration of the stun, fear or silence effect.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194325, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 174624, 'RangeIndex': 1, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellPriority': 50},
+astral_shift_51474 = _talent(
+    51474, 'Astral Shift', 'Rank 1',
+    [_aura(AuraType.MOD_SPELL_CRIT_CHANCE, 0)], 3066,
+    _desc('Increases your spell critical strike chance by 1%. When you are stunned, feared or silenced, you shift into the Astral Plane, reducing all damage taken by 10% for the duration.',
+          'Being stunned, feared or silenced while casting an offensive Nature spell grants an empowered Astral Shift, reducing all damage taken by 25% for 6 sec.'),
+    level=1, attributes=262352, AttributesEx3=67108864, AttributesEx4=524288, ProcTypeMask=0, ProcChance=0,
+    SpellPriority=50,
+    notes='S1a A2: eff1 spell crit +1%. The damage-taken buff 202590 is cast by ShamanAstralShiftUnitScript (UnitScript OnAuraApply, spell_shaman_elemental.cpp), so the talent carries no proc and no effect 2 (S1a review M1: a proc never fires for triggered or script-added controls). The stock SCHOOL_ABSORB percent and the 52179 visual trigger are gone.',
 )
 
 
-astral_shift_51478 = spell(
-    id=51478,
-    name='Astral Shift',
-    school=School.NORMAL,
-    attributes=262352,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(
-            type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=69, misc_value=127,
-            potency_excluded="percent-of-other-damage: same reason as astral_shift_51474's eff0 - "
-            "spell_sha_astral_shift (spell_shaman.cpp) reads this as a flat PERCENT via CalcValue, not a "
-            "flat HP absorb amount.",
-        ),
-        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=52179),
-    ],
-    spell_icon_id=3066,
-    notes="pulled from existing data. Potency system P7-Shaman: NOT converted, same reason as astral_shift_51474 - see eff0's reason.",
-    raw_overrides={'AttributesEx3': 67108864, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When stunned, feared or silenced you  shift into the Astral Plane reducing all damage taken by $s1% for the duration of the stun, fear or silence effect.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194325, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 174624, 'RangeIndex': 1, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellPriority': 50},
+astral_shift_51478 = _talent(
+    51478, 'Astral Shift', 'Rank 2',
+    [_aura(AuraType.MOD_SPELL_CRIT_CHANCE, 1)], 3066,
+    _desc('Increases your spell critical strike chance by 2%. When you are stunned, feared or silenced, you shift into the Astral Plane, reducing all damage taken by 10% for the duration.',
+          'Being stunned, feared or silenced while casting an offensive Nature spell grants an empowered Astral Shift, reducing all damage taken by 25% for 6 sec.'),
+    level=1, attributes=262352, AttributesEx3=67108864, AttributesEx4=524288, ProcTypeMask=0, ProcChance=0,
+    SpellPriority=50,
+    notes='S1a A2: see astral_shift_51474.',
 )
 
 
-lava_flows_51480 = spell(
-    id=51480,
-    name='Lava Flows',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=5),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108, misc_value=15),
-    ],
-    spell_icon_id=3087,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike damage bonus of your Lava Burst spell by an additional $51480s2%, and when your Flame Shock is dispelled your spell casting speed is increased by $51480s1% for $64694d.', 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 268435456, 'EffectSpellClassMaskB_2': 4096, 'EffectSpellClassMaskC_1': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+lava_flows_51480 = _talent(
+    51480, 'Lava Flows', 'Rank 1',
+    [_mod(SpellModOp.CRIT_DAMAGE_BONUS, 7)], 3087,
+    _desc('Increases the critical strike damage bonus of your Lava Burst, Flame Shock and Lava Lash by 8%. Casting Flame Shock or Lava Burst increases your spell and melee haste by 2% for 12 sec.',
+          "Lava Surge. Your Flame Shock's periodic damage has a 15% chance to reset the cooldown of your Lava Burst and make your next Lava Burst within 15 sec instant. This effect can only occur once every 6 sec."),
+    masks={1: (_FLAME_SHOCK, _LAVA_BURST, _LAVA_LASH)},
+    notes='S1a A2: crit damage bonus +8% on Flame Shock, Lava Burst and Lava Lash (the Lava Lash clause is kept for the classless realm, d2 b2 is a target here, not an identity). The Sundering / dispel clause and the latent EffectBasePoints_3 twin are gone; the haste is Shaman::LavaFlowsHasteSpell.',
 )
 
 
-lava_flows_51481 = spell(
-    id=51481,
-    name='Lava Flows',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=5),
-        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=108, misc_value=15),
-    ],
-    spell_icon_id=3087,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike damage bonus of your Lava Burst spell by an additional $51481s2%, and when your Flame Shock is dispelled your spell casting speed is increased by $51481s1% for $64694d.', 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 268435456, 'EffectSpellClassMaskB_2': 4096, 'EffectSpellClassMaskC_1': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+lava_flows_51481 = _talent(
+    51481, 'Lava Flows', 'Rank 2',
+    [_mod(SpellModOp.CRIT_DAMAGE_BONUS, 15)], 3087,
+    _desc('Increases the critical strike damage bonus of your Lava Burst, Flame Shock and Lava Lash by 16%. Casting Flame Shock or Lava Burst increases your spell and melee haste by 4% for 12 sec.',
+          "Lava Surge. Your Flame Shock's periodic damage has a 15% chance to reset the cooldown of your Lava Burst and make your next Lava Burst within 15 sec instant. This effect can only occur once every 6 sec."),
+    masks={1: (_FLAME_SHOCK, _LAVA_BURST, _LAVA_LASH)},
+    notes='S1a A2: see lava_flows_51480.',
 )
 
 
-lava_flows_51482 = spell(
-    id=51482,
-    name='Lava Flows',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=5),
-        Effect(type=EffectType.APPLY_AURA, base_points=23, implicit_target_a=1, apply_aura=108, misc_value=15),
-    ],
-    spell_icon_id=3087,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike damage bonus of your Lava Burst spell by an additional $51482s2%, and when your Flame Shock is dispelled your spell casting speed is increased by $51482s1% for $64694d.', 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_2': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 268435456, 'EffectSpellClassMaskB_2': 4096, 'EffectSpellClassMaskC_1': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+lava_flows_51482 = _talent(
+    51482, 'Lava Flows', 'Rank 3',
+    [_mod(SpellModOp.CRIT_DAMAGE_BONUS, 24), _dummy(0)], 3087,
+    _desc('Increases the critical strike damage bonus of your Lava Burst, Flame Shock and Lava Lash by 25%. Casting Flame Shock or Lava Burst increases your spell and melee haste by 6% for 12 sec.',
+          "Lava Surge. Your Flame Shock's periodic damage has a 15% chance to reset the cooldown of your Lava Burst and make your next Lava Burst within 15 sec instant. This effect can only occur once every 6 sec.",
+          last=True),
+    masks={1: (_FLAME_SHOCK, _LAVA_BURST, _LAVA_LASH)}, ProcTypeMask=_PROC_DONE_PERIODIC, ProcChance=15,
+    notes='S1a A2: rank 3 (Lava Surge). eff2 DUMMY is the proc carrier; spell_proc 51482 is DONE_PERIODIC on Flame Shock, 15% native (Proc Chance applies), ICD 6000; spell_sha_ele_lava_surge.',
 )
 
 
-storm_earth_and_fire_51483 = spell(
-    id=51483,
-    name='Storm, Earth and Fire',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-751, implicit_target_a=1, apply_aura=107, misc_value=11),
-        Effect(type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=5),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=22),
-    ],
-    spell_icon_id=3063,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Chain Lightning spell by .75 sec, your Earthbind Totem also has a $s2% chance to root targets for $64695d when cast and the periodic damage done by your Flame Shock is increased by $s3%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2, 'EffectSpellClassMaskB_1': 1048576, 'EffectSpellClassMaskB_2': 134217728, 'EffectSpellClassMaskC_1': 268435456, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellPriority': 50},
+storm_earth_and_fire_51483 = _talent(
+    51483, 'Storm, Earth and Fire', 'Rank 1',
+    [_mod(SpellModOp.COOLDOWN, -751, pct=False), _mod(SpellModOp.DOT, 9)], 3063,
+    'Reduces the cooldown of your Chain Lightning by 0.75 sec. Increases the periodic damage of your Flame Shock by 10%.',
+    masks={1: (_CL, 0, 0), 2: (_FLAME_SHOCK, 0, 0)}, level=1, SpellPriority=50,
+    notes='S1a A2 (Q7): two clauses. The Earthbind root clause (stock eff2, d1 b27) is gone; the periodic effect moved from eff3 to eff2.',
 )
 
 
-storm_earth_and_fire_51485 = spell(
-    id=51485,
-    name='Storm, Earth and Fire',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1501, implicit_target_a=1, apply_aura=107, misc_value=11),
-        Effect(type=EffectType.APPLY_AURA, base_points=65, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=5),
-        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=108, misc_value=22),
-    ],
-    spell_icon_id=3063,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Chain Lightning spell by 1.5 sec, your Earthbind Totem also has a $s2% chance to root targets for $64695d when cast and the periodic damage done by your Flame Shock is increased by $s3%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2, 'EffectSpellClassMaskB_1': 1048576, 'EffectSpellClassMaskB_2': 134217728, 'EffectSpellClassMaskC_1': 268435456, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellPriority': 50},
+storm_earth_and_fire_51485 = _talent(
+    51485, 'Storm, Earth and Fire', 'Rank 2',
+    [_mod(SpellModOp.COOLDOWN, -1501, pct=False), _mod(SpellModOp.DOT, 19)], 3063,
+    'Reduces the cooldown of your Chain Lightning by 1.5 sec. Increases the periodic damage of your Flame Shock by 20%.',
+    masks={1: (_CL, 0, 0), 2: (_FLAME_SHOCK, 0, 0)}, level=1, SpellPriority=50,
+    notes='S1a A2: see storm_earth_and_fire_51483.',
 )
 
 
-storm_earth_and_fire_51486 = spell(
-    id=51486,
-    name='Storm, Earth and Fire',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-2501, implicit_target_a=1, apply_aura=107, misc_value=11),
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=5),
-        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=1, apply_aura=108, misc_value=22),
-    ],
-    spell_icon_id=3063,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Chain Lightning spell by 2.5 sec, your Earthbind Totem also has a $s2% chance to root targets for $64695d when cast and the periodic damage done by your Flame Shock is increased by $s3%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2, 'EffectSpellClassMaskB_1': 1048576, 'EffectSpellClassMaskB_2': 134217728, 'EffectSpellClassMaskC_1': 268435456, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellPriority': 50},
+storm_earth_and_fire_51486 = _talent(
+    51486, 'Storm, Earth and Fire', 'Rank 3',
+    [_mod(SpellModOp.COOLDOWN, -2501, pct=False), _mod(SpellModOp.DOT, 29)], 3063,
+    'Reduces the cooldown of your Chain Lightning by 2.5 sec. Increases the periodic damage of your Flame Shock by 30%.',
+    masks={1: (_CL, 0, 0), 2: (_FLAME_SHOCK, 0, 0)}, level=1, SpellPriority=50,
+    notes='S1a A2: see storm_earth_and_fire_51483.',
 )
 
 
@@ -4123,43 +3669,24 @@ enhancing_totems_52456 = spell(
 )
 
 
-elemental_fury_60184 = spell(
-    id=60184,
-    name='Elemental Fury',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=108, misc_value=15),
-    ],
-    spell_icon_id=1137,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike damage bonus of your Searing and Magma Totems and your Fire, Frost, and Nature spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3509583875, 'EffectSpellClassMaskA_2': 274432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+elemental_fury_60184 = _talent(
+    60184, 'Elemental Fury', '',
+    [_mod(SpellModOp.CRIT_DAMAGE_BONUS, 59)], 1137,
+    _desc('Your spell critical strikes deal 180% damage. Does not stack with other similar effects.',
+          'While Clearcasting from Elemental Focus is active, your Nature damage is increased by 8% and your other magic damage by 5%.'),
+    masks={1: (0xD1300003, 0x43000, m.EARTHQUAKE | m.ELEMENTAL_BLAST)},
+    notes='S1a A2: see elemental_fury_16089 (+60% of the base bonus).',
 )
 
 
-elemental_fury_60185 = spell(
-    id=60185,
-    name='Elemental Fury',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=1, apply_aura=108, misc_value=15),
-    ],
-    spell_icon_id=1137,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike damage bonus of your Searing and Magma Totems and your Fire, Frost, and Nature spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3509583875, 'EffectSpellClassMaskA_2': 274432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+elemental_fury_60185 = _talent(
+    60185, 'Elemental Fury', '',
+    [_mod(SpellModOp.CRIT_DAMAGE_BONUS, 99)], 1137,
+    _desc('Your spell critical strikes deal 200% damage. Does not stack with other similar effects.',
+          'While Clearcasting from Elemental Focus is active, your Nature damage is increased by 8% and your other magic damage by 5%.',
+          last=True),
+    masks={1: (0xD1300003, 0x43000, m.EARTHQUAKE | m.ELEMENTAL_BLAST)},
+    notes='S1a A2: see elemental_fury_16089 (+100% of the base bonus). Rank 3 is the capstone rank the Clearcasting script reads.',
 )
 
 
@@ -4224,69 +3751,34 @@ cobra_reflexes_61683 = spell(
 )
 
 
-shamanism_62097 = spell(
-    id=62097,
-    name='Shamanism',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=107, misc_value=24),
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=107, misc_value=24),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=107, misc_value=24),
-    ],
-    spell_icon_id=2427,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Lightning Bolt and Chain Lightning spells gain an additional $s1% and your Lava Burst gains an additional $s2% of your bonus damage effects.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1, 'EffectSpellClassMaskB_2': 4096, 'EffectSpellClassMaskC_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellPriority': 50},
+shamanism_62097 = _talent(
+    62097, 'Shamanism', 'Rank 1',
+    [_mod(SpellModOp.DAMAGE, 4)], 2427,
+    _desc('Increases the damage of your Lightning Bolt and Chain Lightning by 5%. Each time your Lightning Bolt or Chain Lightning deals damage, including Lightning Overloads, you have a 33% chance to reduce the remaining cooldown of Elemental Mastery and Thunderstorm by 1 sec.',
+          'Increases the haste granted by Elemental Mastery by an additional 5%.'),
+    masks={1: (_LB | _CL, 0, 0)}, level=1, SpellPriority=50,
+    notes='S1a A2: Lightning Bolt / Chain Lightning +5% damage (the stock bonus-multiplier clauses are gone). The cooldown roll is spell_sha_ele_spell_hooks / the overload copy script.',
 )
 
 
-shamanism_62098 = spell(
-    id=62098,
-    name='Shamanism',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=107, misc_value=24),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=107, misc_value=24),
-        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=107, misc_value=24),
-    ],
-    spell_icon_id=2427,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Lightning Bolt and Chain Lightning spells gain an additional $s1% and your Lava Burst gains an additional $s2% of your bonus damage effects.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1, 'EffectSpellClassMaskB_2': 4096, 'EffectSpellClassMaskC_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellPriority': 50},
+shamanism_62098 = _talent(
+    62098, 'Shamanism', 'Rank 2',
+    [_mod(SpellModOp.DAMAGE, 9)], 2427,
+    _desc('Increases the damage of your Lightning Bolt and Chain Lightning by 10%. Each time your Lightning Bolt or Chain Lightning deals damage, including Lightning Overloads, you have a 33% chance to reduce the remaining cooldown of Elemental Mastery and Thunderstorm by 1 sec.',
+          'Increases the haste granted by Elemental Mastery by an additional 5%.'),
+    masks={1: (_LB | _CL, 0, 0)}, level=1, SpellPriority=50,
+    notes='S1a A2: see shamanism_62097.',
 )
 
 
-shamanism_62099 = spell(
-    id=62099,
-    name='Shamanism',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=107, misc_value=24),
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=107, misc_value=24),
-        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=107, misc_value=24),
-    ],
-    spell_icon_id=2427,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Lightning Bolt and Chain Lightning spells gain an additional $s1% and your Lava Burst gains an additional $s2% of your bonus damage effects.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1, 'EffectSpellClassMaskB_2': 4096, 'EffectSpellClassMaskC_1': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellPriority': 50},
+shamanism_62099 = _talent(
+    62099, 'Shamanism', 'Rank 3',
+    [_mod(SpellModOp.DAMAGE, 14), _mod(SpellModOp.EFFECT1, 4, pct=False)], 2427,
+    _desc('Increases the damage of your Lightning Bolt and Chain Lightning by 15%. Each time your Lightning Bolt or Chain Lightning deals damage, including Lightning Overloads, you have a 33% chance to reduce the remaining cooldown of Elemental Mastery and Thunderstorm by 1 sec.',
+          'Increases the haste granted by Elemental Mastery by an additional 5%.',
+          last=True),
+    masks={1: (_LB | _CL, 0, 0), 2: (0, 0, m.EM_HASTE)}, level=1, SpellPriority=50,
+    notes='S1a A2 (brief Decision 11): rank 3 capstone, eff2 flat SPELLMOD_EFFECT1 +5 on d2 b26 (Elemental Mastery haste 64701, effect 1 = the 10% haste -> 15%).',
 )
 
 
@@ -4334,45 +3826,23 @@ shamanism_62101 = spell(
 )
 
 
-booming_echoes_63370 = spell(
-    id=63370,
-    name='Booming Echoes',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1001, implicit_target_a=1, apply_aura=107, misc_value=11),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
-    ],
-    spell_icon_id=2460,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Flame Shock and Frost Shock spells by an additional $/1000;S1 sec., and increases the direct damage done by your Flame Shock and Frost Shock spells by an additional $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2415919104, 'EffectSpellClassMaskB_1': 2415919104, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+booming_echoes_63370 = _talent(
+    63370, 'Booming Echoes', 'Rank 1',
+    [_mod(SpellModOp.DAMAGE, 4), _mod(SpellModOp.DOT, 4)], 2460,
+    _desc('Increases the damage of your Shock spells and Elemental Blast by 5%.',
+          'Each of your Lightning Overloads grants 1 Echo, stacking up to 10 times. Lasts 30 sec. Each Echo increases the damage of your next Earth Shock by 30% and its critical strike damage bonus by 10%. Summoning your Earth Elemental grants 5 Echoes. Earth Shock consumes all Echoes, or half of them while your Earth Elemental is active.'),
+    masks={1: (_SHOCKS, 0, m.ELEMENTAL_BLAST), 2: (_FLAME_SHOCK, 0, 0)},
+    notes='S1a A2: shocks + Elemental Blast +5% (talent_mult effect 1), eff2 the Flame Shock tick. The stock shock cooldown clause is gone.',
 )
 
 
-booming_echoes_63372 = spell(
-    id=63372,
-    name='Booming Echoes',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-2001, implicit_target_a=1, apply_aura=107, misc_value=11),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108),
-    ],
-    spell_icon_id=2460,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Flame Shock and Frost Shock spells by an additional $/1000;S1 sec., and increases the direct damage done by your Flame Shock and Frost Shock spells by an additional $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2415919104, 'EffectSpellClassMaskB_1': 2415919104, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+booming_echoes_63372 = _talent(
+    63372, 'Booming Echoes', 'Rank 2',
+    [_mod(SpellModOp.DAMAGE, 9), _mod(SpellModOp.DOT, 9)], 2460,
+    _desc('Increases the damage of your Shock spells and Elemental Blast by 10%.',
+          'Each of your Lightning Overloads grants 1 Echo, stacking up to 10 times. Lasts 30 sec. Each Echo increases the damage of your next Earth Shock by 30% and its critical strike damage bonus by 10%. Summoning your Earth Elemental grants 5 Echoes. Earth Shock consumes all Echoes, or half of them while your Earth Elemental is active.'),
+    masks={1: (_SHOCKS, 0, m.ELEMENTAL_BLAST), 2: (_FLAME_SHOCK, 0, 0)},
+    notes='S1a A2: see booming_echoes_63370.',
 )
 
 
@@ -4521,7 +3991,7 @@ fire_elemental_fire_nova_12470 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=44.6, implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=19.2, implicit_target_a=22, implicit_target_b=15, radius_yards=10.0),
     ],
     spell_icon_id=33,
     notes=(
@@ -4556,7 +4026,7 @@ fire_elemental_fire_blast_57984 = spell(
     range_yards=20.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=44.9, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=19.3, implicit_target_a=6),
     ],
     spell_icon_id=12,
     notes=(
@@ -4618,7 +4088,7 @@ fire_elemental_fire_shield_pulse_13376 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=13.1, potency_kind='periodic', time_basis_ms=3000, implicit_target_a=22, implicit_target_b=15, radius_yards=5.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=5.6, potency_kind='periodic', time_basis_ms=3000, implicit_target_a=22, implicit_target_b=15, radius_yards=5.0),
     ],
     spell_icon_id=31,
     notes=(
@@ -4682,3 +4152,167 @@ glyph_of_fire_elemental_totem_55455 = spell(
     notes='pulled from existing data; SH0a A2 (T0a-REPORT s2): EffectBasePoints_1 -1 (value 0, die 1) so the glyph no longer floors the reworked 2 min Fire Elemental cooldown to 0; class mask kept (an all-zero mask matches the whole family); retired with the glyph project.',
     raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_2': 8388608, 'EffectSpellClassMaskB_1': 16384, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'This glyph no longer has any effect.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 11, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
+
+
+clearcasting_16246 = spell(
+    id=16246,
+    name='Clearcasting',
+    school=64,
+    dispel=1,
+    attributes=327680,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    duration_ms=15000,
+    effects=[
+        _mod(SpellModOp.COST, -16),
+    ],
+    spell_icon_id=212,
+    notes='S1a A2 (brief Decisions 1 and 5): pulled from source/spells/npc.csv (row deleted in the same change). Elemental Focus Clearcasting: 2 charges, 15 s, eff1 mana cost -15 base (spell_sha_ele_elemental_focus sets 15 / 30 by rank). The stock eff2 (MOD_DAMAGE_PERCENT_DONE, the Elemental Oath damage carrier) is removed: the Oath clause is not in the doc. Cost and consume masks gain d2 b19 / b20 (Earthquake, Elemental Blast); spell_proc 16246 carries the same consume mask.',
+    raw_overrides={'CastingTimeIndex': 1, 'ProcTypeMask': 87376, 'ProcChance': 100, 'ProcCharges': 2, 'BaseLevel': 10, 'SpellLevel': 10, 'EquippedItemClass': -1, 'EffectSpellClassMaskA_1': 2551185859, 'EffectSpellClassMaskA_2': 5120, 'EffectSpellClassMaskA_3': 16 | m.EARTHQUAKE | m.ELEMENTAL_BLAST, 'SpellVisualID_1': 2736, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Reduces the mana cost of your next two Fire, Frost or Nature spells.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next spells cost less mana.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 11, 'SpellClassMask_2': 16384, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+lava_flows_haste_65263 = spell(
+    id=65263,
+    name='Lava Flows',
+    school=School.NATURE,
+    dispel=DispelType.MAGIC,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=12000,
+    effects=[
+        _aura(216, 3),
+        _aura(AuraType.MOD_MELEE_HASTE, 3),
+    ],
+    spell_icon_id=3087,
+    notes='S1a A2: pulled from existing data; rank 2 haste buff, spell + melee haste 4% for 12 s (see lava_flows_haste_64694). Not a chain rank: Shaman::LavaFlowsHasteSpell maps talent rank -> this id.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Haste increased.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell and melee haste.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+)
+
+
+lava_flows_haste_65264 = spell(
+    id=65264,
+    name='Lava Flows',
+    school=School.NATURE,
+    dispel=DispelType.MAGIC,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=12000,
+    effects=[
+        _aura(216, 5),
+        _aura(AuraType.MOD_MELEE_HASTE, 5),
+    ],
+    spell_icon_id=3087,
+    notes='S1a A2: pulled from existing data; rank 3 haste buff, spell + melee haste 6% for 12 s (see lava_flows_haste_64694).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Haste increased.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your spell and melee haste.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+)
+
+
+astral_shift_51479 = _talent(
+    51479, 'Astral Shift', 'Rank 3',
+    [_aura(AuraType.MOD_SPELL_CRIT_CHANCE, 2)], 3066,
+    _desc('Increases your spell critical strike chance by 3%. When you are stunned, feared or silenced, you shift into the Astral Plane, reducing all damage taken by 10% for the duration.',
+          'Being stunned, feared or silenced while casting an offensive Nature spell grants an empowered Astral Shift, reducing all damage taken by 25% for 6 sec.',
+          last=True),
+    level=1, attributes=262352, AttributesEx3=67108864, AttributesEx4=524288, ProcTypeMask=0, ProcChance=0,
+    SpellPriority=50,
+    notes='S1a A2: pulled from existing data; rank 3 (capstone: the empowered shift is chosen by rank in ShamanAstralShiftUnitScript). See astral_shift_51474.',
+)
+
+
+# =====================================================================================================================
+# S1a A2: spell_proc rows and script bindings for the Elemental rank spells (WP brief class table, B2's constraints:
+# the scripted rolls proc at 100%, every proc talent has a DUMMY effect, Lava Surge keeps the native 15% + ICD 6 s).
+# Every row with a done-spell / periodic ProcFlags carries SpellPhaseMask HIT (L9).
+# =====================================================================================================================
+
+# Lightning Overload: Lightning Bolt, Chain Lightning and (capstone, script-gated) Lava Burst, every damaging hit.
+procs_on(
+    -30675, proc_flags=_PROC_DONE_SPELL_MAGIC_NEG, family_name=11, family_mask=(_LB | _CL, _LAVA_BURST, 0),
+    spell_type_mask=_PROC_TYPE_DAMAGE, spell_phase_mask=_PROC_PHASE_HIT, hit_mask=_PROC_HIT_NORMAL_CRIT, chance=100,
+)
+unbind_script(-30675, 'spell_sha_lightning_overload')
+scripted_by(-30675, 'spell_sha_ele_lightning_overload')
+
+# Elemental Focus (Decision 5): the chain key carries rank 2; the positive row and script key of rank 1 go. No proc
+# cooldown (S1a review m4): the refresh to 2 charges is idempotent and must follow every crit, even one 0.5 s after the
+# last (a hard-cast Lightning Bolt crit, then an instant Frost Shock crit).
+remove_spell_proc(16164)
+procs_on(
+    -16164, proc_flags=_PROC_DONE_SPELL_MAGIC_NEG, school_mask=_FFN, spell_type_mask=_PROC_TYPE_DAMAGE,
+    spell_phase_mask=_PROC_PHASE_HIT, hit_mask=_PROC_HIT_CRIT, chance=100,
+)
+unbind_script(16164, 'spell_sha_elemental_focus')
+scripted_by(-16164, 'spell_sha_ele_elemental_focus')
+
+# Clearcasting 16246: the consume mask gains d2 b19 / b20 (same as its cost effect); Oath's damage script is unbound.
+procs_on(
+    16246, proc_flags=0, family_name=11, family_mask=(2551185859, 5120, 16 | m.EARTHQUAKE | m.ELEMENTAL_BLAST),
+    spell_phase_mask=1, attributes_mask=12,
+)
+unbind_script(16246, 'spell_sha_clearcasting')
+scripted_by(16246, 'spell_sha_ele_fury_capstone')
+
+# Elemental Devastation: non-periodic Fire / Frost / Nature crit of a shaman spell.
+procs_on(
+    -30160, proc_flags=_PROC_DONE_SPELL_MAGIC_NEG, school_mask=_FFN, family_name=11, spell_type_mask=_PROC_TYPE_DAMAGE,
+    spell_phase_mask=_PROC_PHASE_HIT, hit_mask=_PROC_HIT_CRIT, chance=100,
+)
+scripted_by(-30160, 'spell_sha_ele_devastation')
+
+# Lightning Mastery: Raw Power / Lightning Mastery rolls on any non-periodic spell crit (once per cast in the script).
+procs_on(
+    -16578, proc_flags=_PROC_DONE_SPELL_MAGIC_NEG, school_mask=_FFN, family_name=11, spell_type_mask=_PROC_TYPE_DAMAGE,
+    spell_phase_mask=_PROC_PHASE_HIT, hit_mask=_PROC_HIT_CRIT, chance=100,
+)
+scripted_by(-16578, 'spell_sha_ele_lightning_mastery')
+
+# Elemental Precision capstone (rank 3 only).
+procs_on(
+    30674, proc_flags=_PROC_DONE_SPELL_MAGIC_NEG, family_name=11, spell_type_mask=_PROC_TYPE_DAMAGE,
+    spell_phase_mask=_PROC_PHASE_HIT, hit_mask=_PROC_HIT_CRIT, chance=100,
+)
+scripted_by(30674, 'spell_sha_ele_precision_capstone')
+
+# Elemental Reach capstone (rank 2 only): distance and ICD in the script.
+procs_on(
+    29000, proc_flags=_PROC_DONE_SPELL_MAGIC_NEG, school_mask=_FFN, family_name=11, spell_type_mask=_PROC_TYPE_DAMAGE,
+    spell_phase_mask=_PROC_PHASE_HIT, hit_mask=_PROC_HIT_NORMAL_CRIT, chance=100,
+)
+scripted_by(29000, 'spell_sha_ele_reach_capstone')
+
+# Lava Surge (Lava Flows rank 3): Flame Shock periodic damage, 15% native, ICD 6 s.
+procs_on(
+    51482, proc_flags=_PROC_DONE_PERIODIC, family_name=11, family_mask=(_FLAME_SHOCK, 0, 0),
+    spell_type_mask=_PROC_TYPE_DAMAGE, spell_phase_mask=_PROC_PHASE_HIT, hit_mask=_PROC_HIT_NORMAL_CRIT, chance=15,
+    cooldown_ms=6000,
+)
+scripted_by(51482, 'spell_sha_ele_lava_surge')
+
+# Rising Flames capstone (rank 2): the stack tick.
+scripted_by(16544, 'spell_sha_ele_rising_flames')
+
+# Astral Shift: the stock pair is unbound and nothing replaces it. The shift is started from ShamanAstralShiftUnitScript
+# (UnitScript OnAuraApply, spell_shaman_elemental.cpp) so every stun, fear or silence counts, triggered ones included
+# (S1a review M1). The talent has no proc, so there is no spell_proc row and no script on the chain.
+unbind_script(-51474, 'spell_sha_astral_shift')
+unbind_script(-51474, 'spell_sha_astral_shift_aura')
+# The live all-zero row -51474 only worked by inheriting the DBC proc flags; with the flags now 0 it would log a boot
+# error ("doesn't have ProcFlags value defined"), so it goes.
+remove_spell_proc(-51474)
+
+# Fire Nova damage 8349: the Rising Flames stack scaling (B3, spell_shaman_totems.cpp). The Rising Flames buff carries no
+# SPELLMOD_DAMAGE on these masks: the script scales the hit, a mod would count twice.
+scripted_by(fire_nova_8349, 'spell_sha_fire_nova_rework_damage')

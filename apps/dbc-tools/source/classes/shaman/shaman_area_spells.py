@@ -27,7 +27,9 @@ owns BaseLevel / MaxLevel); helpers triggered at another unit have range_yards=5
 """
 
 from lib.dsl import AuraType, Effect, EffectType, School
-from lib.dsl.registry import const, pot_text, scripted_by, skill_line_ability, spell, trained_by
+from lib.dsl.registry import (
+    const, pot_text, product, scripted_by, skill_line_ability, spell, talent_mult, tooltip_vars, trained_by,
+)
 
 from . import _masks as m
 
@@ -62,6 +64,23 @@ _SV_EARTHQUAKE = 10405
 _SV_ELEMENTAL_BLAST = 11565
 _SV_HEALING_RAIN_RING = 90130
 
+# tooltip_vars 1213 / 1214 (S1a A4; S1-NOTES section 5): Elemental-tree, unconditional % talents only, bare rank ids.
+# Earthquake's tick number (shown on the ground cast through pot_text): Concussion eff B and Convection eff B. Elemental
+# Blast: Concussion eff B, Booming Echoes (shock + EB damage), Fusion of Elements (EB damage, eff A; ranks 202529 / 202530).
+shaman_quake_1213 = tooltip_vars(
+    1213, "Earthquake tick: Concussion (eff B), Convection (eff B)",
+    cnc=talent_mult([16035, 16105, 16106], effect=2),
+    cnv=talent_mult([16039, 16109, 16110], effect=2),
+    mult=product('cnc', 'cnv'),
+)
+shaman_blast_1214 = tooltip_vars(
+    1214, "Elemental Blast: Concussion (eff B), Booming Echoes, Fusion of Elements",
+    cnc=talent_mult([16035, 16105, 16106], effect=2),
+    bme=talent_mult([63370, 63372, 202535], effect=1),
+    fus=talent_mult([202529, 202530], effect=1),
+    mult=product('cnc', 'bme', 'fus'),
+)
+
 HEALING_RAIN_TARGETS = const(
     'HEALING_RAIN_TARGETS', 5, 'Allies Healing Rain heals per pulse, most injured first, players only [fixed].',
     cpp_type='uint8',
@@ -81,11 +100,11 @@ HEALING_RAIN_TARGETS = const(
 earthquake_tick_202281 = spell(
     id=202281, name='Earthquake', school=School.NATURE, attributes=0,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
-    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=50.0, potency_kind='direct', time_basis_ms=1000,
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=21.5, potency_kind='direct', time_basis_ms=1000,
                     implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
     spell_icon_id=_ICON_EARTHQUAKE,
     notes='SH0b A5, shared doc "Earthquake": the per-target tick, never player-cast (no SkillLineAbility, no trainer). '
-          'Nature SCHOOL_DAMAGE, sp_potency 50 direct, T 1000, SpellLevel 38, d2 b19. AttributesEx3 0x10000 '
+          'Nature SCHOOL_DAMAGE, sp_potency 21.5 direct (was 50; x0.43 smoke-test fix pass 2026-10-20), T 1000, SpellLevel 38, d2 b19. AttributesEx3 0x10000 '
           '(SUPPRESS_CASTER_PROCS, H8: the tick rolls no caster procs; the mask exclusions per talent are the Elemental '
           'stage\'s to revisit). range_yards 50000 (L6: the shaman casts it at enemies up to 35 yd + 8 yd away). '
           'AttributesEx2 0x4 (ignore LoS) IS set (orchestrator, after B3): spell_sha_earthquake filters LoS from the zone '
@@ -127,10 +146,11 @@ earthquake_202280 = spell(
         'Targets': _TARGETS_DEST_LOCATION, 'AttributesEx5': _ATTR5_NO_CASTER_AURA_ICON,
         'SpellVisualID_1': _SV_EARTHQUAKE,
         'Description_Lang_enUS': 'Causes the earth to shake beneath the target area, dealing '
-                                 + pot_text(earthquake_tick_202281) + ' Nature damage every $t2 sec for $d to all '
-                                 'enemies inside it. 30 sec cooldown.',
+                                 + pot_text(earthquake_tick_202281, var='mult')
+                                 + ' Nature damage every $t2 sec for $d to all enemies inside it. 30 sec cooldown.',
         'AuraDescription_Lang_enUS': 'Shaken by an earthquake.',
     },
+    tooltip_vars=shaman_quake_1213,
 )
 scripted_by(earthquake_202280, 'spell_sha_earthquake')
 
@@ -140,11 +160,11 @@ scripted_by(earthquake_202280, 'spell_sha_earthquake')
 elemental_blast_202282 = spell(
     id=202282, name='Elemental Blast', school=School.FIRE | School.FROST | School.NATURE, attributes=0,
     cast_time_ms=0, cooldown_ms=12000, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=8, range_yards=40.0,
-    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=100.0, potency_kind='direct', time_basis_ms=1500,
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=43.0, potency_kind='direct', time_basis_ms=1500,
                     implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
     spell_icon_id=_ICON_ELEMENTAL_BLAST,
     notes='SH0b A5, shared doc "Elemental Blast": instant, SchoolMask 0x1C (Fire 4 + Frost 16 + Nature 8: counts as '
-          'all three for every school bonus), sp_potency 100 direct, T 1500, RecoveryTime 12000 (not Cooldown Haste: '
+          'all three for every school bonus), sp_potency 43 direct (was 100; x0.43 smoke-test fix pass 2026-10-20), T 1500, RecoveryTime 12000 (not Cooldown Haste: '
           '< 30 s), 40 yd, 8% base mana, GCD 1500 / 133 (an explicit spell-GCD like Lava Burst, brief decision 4), '
           'd2 b20 (no d0 b0 / b1, d1 b12). Speed 24 and SpellVisualID 11565 = Lava Burst\'s missile and impact (a '
           'lightning-impact clone of 11565 in the 90131+ block is the V stage). SpellLevel 50. Icon 1930 is a '
@@ -154,9 +174,10 @@ elemental_blast_202282 = spell(
         'PreventionType': 1, 'EquippedItemClass': -1, 'SpellLevel': 50, 'CastingTimeIndex': 1,
         'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Speed': 24.0,
         'SpellVisualID_1': _SV_ELEMENTAL_BLAST,
-        'Description_Lang_enUS': 'Harnesses the raw power of the elements, dealing {pot1} Fire, Frost and Nature '
+        'Description_Lang_enUS': 'Harnesses the raw power of the elements, dealing {pot1*mult} Fire, Frost and Nature '
                                  'damage to the target. 12 sec cooldown.',
     },
+    tooltip_vars=shaman_blast_1214,
 )
 
 # =====================================================================================================================

@@ -307,7 +307,7 @@ def check_magma_potency(entries: dict[int, dict]) -> list[str]:
         return []
     pot = (e.get("effect1") or {}).get("_potency") or {}
     got = pot.get("total_potency")
-    return [] if got == 20.0 else [f"8187: effect 1 total potency {got!r}, expected 20"]
+    return [] if got == 8.6 else [f"8187: effect 1 total potency {got!r}, expected 8.6"]
 
 
 def check_npc_csv_strip(npc: dict[int, dict], stock: dict[int, dict], ids) -> list[str]:
@@ -677,8 +677,8 @@ class ShamanSH0bNegativeTest(unittest.TestCase):
         self.assertEqual(len(check_magma_ground_mask({202268: _row(202268, SpellClassMask_1=0x20001000)})), 1)
 
     def test_magma_potency(self):
-        self.assertEqual(check_magma_potency({8187: {"effect1": {"_potency": {"total_potency": 20.0}}}}), [])
-        self.assertEqual(len(check_magma_potency({8187: {"effect1": {"_potency": {"total_potency": 92.3}}}})), 1)
+        self.assertEqual(check_magma_potency({8187: {"effect1": {"_potency": {"total_potency": 8.6}}}}), [])
+        self.assertEqual(len(check_magma_potency({8187: {"effect1": {"_potency": {"total_potency": 20.0}}}})), 1)
         self.assertEqual(len(check_magma_potency({8187: {"effect1": {}}})), 1)
 
     def test_npc_csv_strip(self):

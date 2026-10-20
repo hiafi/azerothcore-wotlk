@@ -45,7 +45,7 @@ Costs (new totems; the nearest stock analog's %, every one [tune]): Earthen Wall
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, RANGE_SELF, School
 from lib.dsl.registry import (
     const, creature_model, creature_spell, creature_template, pot_text, scripted_by, skill_line_ability, spell,
-    trained_by, unbind_script,
+    talent_mult, tooltip_vars, trained_by, unbind_script,
 )
 
 from . import _masks as m
@@ -119,6 +119,14 @@ DISPLAY_AIR_TOTEM = 4590
 
 NOTE = 'shaman-rework SH0b A3: '
 
+# tooltip_vars 1216 (S1a A4; S1-NOTES section 5): Call of Flame's damage effect (eff1: Fire totems, Fire Nova) on the
+# Searing Totem 3599, Magma Totem 202268 and Fire Nova 1535 tooltips, `{pot1*cof}` through pot_text(..., var='cof'). The
+# rank ids are bare ints (the talent file imports the spell files). Lava Burst's own effect is in entry 1211.
+shaman_firetotems_1216 = tooltip_vars(
+    1216, "Fire totems and Fire Nova: Call of Flame damage (eff A)",
+    cof=talent_mult([16038, 16160, 16161], effect=1),
+)
+
 # =====================================================================================================================
 # Script numbers (generated into ShamanData::)
 # =====================================================================================================================
@@ -163,7 +171,7 @@ def _raw(spell_level, description='', aura_description=None, instant=True, gcd=F
 
 def _summon(spell_id, name, creature, props, target_a, duration_ms, cooldown_ms, mana_pct, range_yards, icon,
             spell_level, description, notes, *, target_b=0, attributes=SPELL_ATTR0_NOT_SHAPESHIFTED, effects_extra=None,
-            **raw_extra):
+            tooltip_vars=None, **raw_extra):
     """A player totem summon in the stock totem shape: SUMMON creature (HP 5, base_points 4 as stock 3738 / 5394 /
     8190), SummonProperties in EffectMiscValueB_1, AttributesEx7 SUMMON_PLAYER_TOTEM, Category 0, no category
     cooldown, instant, GCD 1000 / 133, no tool column."""
@@ -180,6 +188,7 @@ def _summon(spell_id, name, creature, props, target_a, duration_ms, cooldown_ms,
         id=spell_id, name=name, school=School.NORMAL, attributes=attributes, category=0, cast_time_ms=0,
         cooldown_ms=cooldown_ms, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=mana_pct, range_yards=range_yards,
         duration_ms=duration_ms, effects=effects, spell_icon_id=icon, notes=NOTE + notes, raw_overrides=raw,
+        tooltip_vars=tooltip_vars,
     )
 
 
@@ -382,13 +391,14 @@ magma_totem_passive_202269 = spell(
 
 magma_totem_ground_202268 = _summon(
     202268, 'Magma Totem', 300277, SUMMON_PROPS_FIRE, TARGET_DEST_DEST, 15000, 30000, 27, 30.0, ICON_MAGMA, 26,
-    'Summons a Magma Totem at the target location for $d that deals ' + pot_text(magma_totem_8187) + ' Fire damage '
-    'to all enemies within 8 yards every 1.5 sec. 30 sec cooldown.',
+    'Summons a Magma Totem at the target location for $d that deals ' + pot_text(magma_totem_8187, var='cof')
+    + ' Fire damage to all enemies within 8 yards every 1.5 sec. 30 sec cooldown.',
     'Magma Totem, learned at 26 (trainer 210); the player id (ground targeting would break the NPC casters of 8190, '
     'SAI 2555 / 17235, which keep the stock spell, creature 5929 and passive 8188). Ground-targeted (A=87 + Targets '
     '0x40), 30 yd [tune], Fire props 63 (Fire Nova needs a real Totem in the fire slot). 15 s, 30 s cooldown, 27% '
     'base mana [tune] (stock 8190), GCD 1000 / 133. Family d0 b12 (the stock Magma identity bit, in the "any totem" '
     'mask), not b29. Visual: stock 369.',
+    tooltip_vars=shaman_firetotems_1216,
     SpellClassMask_1=MAGMA_SUMMON_D0_B12,
     Targets=TARGET_FLAG_DEST_LOCATION,
     SpellVisualID_1=SV_MAGMA_SUMMON,
@@ -401,11 +411,11 @@ searing_bolt_202270 = spell(
     id=202270, name='Searing Bolt', school=School.FIRE, attributes=0, category=0, cast_time_ms=0, cooldown_ms=0,
     category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=20.0,
     effects=[Effect(
-        type=EffectType.SCHOOL_DAMAGE, sp_potency=25.0, potency_kind='direct', time_basis_ms=1000,
+        type=EffectType.SCHOOL_DAMAGE, sp_potency=10.8, potency_kind='direct', time_basis_ms=1000,
         implicit_target_a=6,
     )],
     spell_icon_id=ICON_SEARING,
-    notes=NOTE + 'the Searing Totem\'s bolt: instant Fire, 25 potency on T 1000 (about 45 at 60 [tune]), 20 yd '
+    notes=NOTE + 'the Searing Totem\'s bolt: instant Fire, 10.8 potency on T 1000 (about 19 at 60 [tune]; was 25 / about 45, x0.43 smoke-test fix pass 2026-10-20), 20 yd '
           '(stock). Cast by npc_sha_searing_totem (300278) at an engaged enemy each second from placement, plain '
           'cast, no owner GUID, so none of the shaman\'s procs roll. The stock 3606 (2.2 s cast, creatures 2523 / '
           '21995) is left alone: an instant 3606 would flip those totems to TOTEM_PASSIVE. Family d0 b30 (the '
