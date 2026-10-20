@@ -22,6 +22,8 @@
 #include "Generated/ShamanData.h"
 #include "SharedDefines.h"
 #include <cstdint>
+#include <initializer_list>
+#include <span>
 
 class Creature;
 class Player;
@@ -82,7 +84,8 @@ namespace Shaman
     // Elementals (Earth 2062, Fire 2894, Water, Storm): a totem in the element's slot whose passive summons the
     // guardian (CORE-AUDIT-A A5). The block keeps no per-player state, so ClearState needs no SH0b call.
 
-    // The shared lockout before Cooldown Haste: ELEMENTAL_LOCKOUT_MS (Elemental's Conduit of the Elements hooks here).
+    // The shared lockout before Cooldown Haste: ELEMENTAL_LOCKOUT_MS, or CONDUIT_LOCKOUT_MS while the player knows
+    // Elemental's Conduit of the Elements (S1).
     uint32 GetElementalLockoutBaseMs(Player const* player);
 
     // A14: after a non-triggered cast of an elemental summon (the caller skips triggered casts), locks the other
@@ -103,6 +106,59 @@ namespace Shaman
     // bonus is added) and its MOD_HEALING_DONE amount to the owner's healing power (live, nothing else). Called
     // at IsSummonedBy and from the aura script's periodic refresh; never from the aura's own amount calculation.
     void RefreshElementalAuras(Player* owner, Unit* guardian);
+
+    // ---- S1 ----
+    // Elemental spec (docs/reworks/shaman-elemental-rework.md). No per-player state: every function reads the
+    // shaman's own talents, auras and totem slots, so a non-shaman with the talents gets do-nothing (Q21).
+
+    // GetActiveElementals bits, one per elemental whose player-side totem (300270-300273) holds its slot.
+    enum ElementalMask : uint8
+    {
+        ELEMENTAL_MASK_EARTH = 0x1,
+        ELEMENTAL_MASK_FIRE  = 0x2,
+        ELEMENTAL_MASK_WATER = 0x4,
+        ELEMENTAL_MASK_STORM = 0x8
+    };
+
+    // 1-based rank of the highest rank id the player has (talent in the active spec, or its passive aura); 0 if
+    // none. Pass the talent's rank ids in rank order. Never reads HasSpell.
+    uint8 GetTalentRank(Player const* player, std::span<uint32 const> rankIds);
+    uint8 GetTalentRank(Player const* player, std::initializer_list<uint32> rankIds);
+
+    // ElementalMask bits of the elementals currently active for `player` (0 for nullptr).
+    uint8 GetActiveElementals(Player const* player);
+
+    // Called from the AllCreatureScript add/remove hook of the four elemental totems. Both reconcile the whole
+    // Elemental state against the totem slots, so the order of a replacement (new totem added before the old one
+    // leaves the world) never matters: Empowerment buffs on/off (Power of the Elements), Gathering Flames cleared
+    // when no Fire Elemental is active, the Elemental Warding capstone health aura, the Empowerment amount, and
+    // (one tick later, after the totem's passive summoned it) the guardian auras added by the owner (L5). `totem`
+    // may be nullptr and `totemEntry` 0: a plain reconcile (login, map change, talent change).
+    // A non-null Earth Elemental `totem` is a real summon: with the Booming Echoes capstone it grants
+    // ECHO_EARTH_ELEMENTAL_GRANT Echo.
+    void OnElementalAdded(Player* player, Creature* totem);
+    void OnElementalRemoved(Player* player, uint32 totemEntry);
+
+    // Sets the live Empowerment amount (EMPOWERMENT_PCT, plus the live Mastery with Conduit of the Elements) on
+    // the player's Empowerment buffs and on the guardian-side Empowerment; changes an effect only when it moved.
+    void RefreshEmpowerment(Player* player);
+
+    // True for the three Lightning Overload copies (Lightning Bolt, Chain Lightning, Lava Burst).
+    bool IsOverloadCopy(uint32 spellId);
+
+    // Booming Echoes: adds `stacks` Echo (cap ECHO_MAX) and refreshes it to ECHO_DURATION_MS.
+    void AddEcho(Player* player, uint8 stacks);
+
+    // Call of the Elements: every active elemental totem (and its guardian) gains `ms`; the totem bar is retimed.
+    // Call it before summoning the inactive elementals, so the new ones are not extended.
+    void ExtendElementals(Player* player, uint32 ms);
+
+    // Thunderstorm rank 2 (usable while stunned) is known exactly while Thunderstorm and Call of Thunder rank 3
+    // are known; learns or removes it to match.
+    void SyncThunderstormRank(Player* player);
+
+    // Lava Flows talent rank (1-3) -> its haste buff id; 0 for any other rank.
+    uint32 LavaFlowsHasteSpell(uint8 rank);
 }
 
 #endif

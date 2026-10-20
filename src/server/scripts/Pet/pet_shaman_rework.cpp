@@ -124,6 +124,11 @@ namespace
         return owner ? owner->ToPlayer() : nullptr;
     }
 
+    bool HasPowerOfTheElements(Player const* owner)
+    {
+        return Shaman::GetTalentRank(owner, { ShamanData::SPELL_POWER_OF_THE_ELEMENTS }) != 0;
+    }
+
     // The amount left on the aura's absorb effect(s); -1 when the aura has none.
     int32 GetRemainingAbsorb(Aura const* aura)
     {
@@ -434,7 +439,8 @@ private:
 
 /*
  * 15352 - Greater Earth Elemental (ScriptName override, entry kept for Pet.cpp's stats). Stock
- * npc_pet_shaman_earth_elemental: Angered Earth (AoE taunt) on engage, then every 5-20 sec.
+ * npc_pet_shaman_earth_elemental: Angered Earth (AoE taunt) on engage, then every 5-20 sec. With the owner's Power of
+ * the Elements it never taunts: the cast is skipped (the zero-threat aura is the owner's, Shaman::OnElementalAdded).
  */
 struct npc_sha_earth_elemental_rework : public ShamanMeleeElementalAI
 {
@@ -457,7 +463,11 @@ struct npc_sha_earth_elemental_rework : public ShamanMeleeElementalAI
 
         if (_events.ExecuteEvent() == EVENT_EARTH_ELEMENTAL_ANGERED_EARTH)
         {
-            DoCastVictim(ShamanData::SPELL_ANGERED_EARTH);
+            // Checked on every cast, so learning or respeccing Power of the Elements mid-fight takes effect
+            Player const* owner = GetOwnerPlayer(me);
+            if (!owner || !HasPowerOfTheElements(owner))
+                DoCastVictim(ShamanData::SPELL_ANGERED_EARTH);
+
             _events.ScheduleEvent(EVENT_EARTH_ELEMENTAL_ANGERED_EARTH, ANGERED_EARTH_REPEAT_MIN,
                 ANGERED_EARTH_REPEAT_MAX);
         }

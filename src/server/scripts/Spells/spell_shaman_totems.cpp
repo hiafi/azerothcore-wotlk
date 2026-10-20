@@ -20,7 +20,8 @@
  * The elemental lockout, the Earthbind root and Healing Stream pulses, Earthen Wall, the Water Bolt heal, the
  * elemental owner-stat refresh, Earthquake and Healing Rain. Ids and tunables come from ShamanData::; the totem and
  * guardian creature AIs live in pet_shaman_rework.cpp. Every script treats a non-player or missing owner as "keep the
- * stock behaviour" (NPC shamans keep the stock spell ids).
+ * stock behaviour" (NPC shamans keep the stock spell ids). shaman-rework S1a adds the Fire Nova rework (baseline Fire
+ * Elemental origin, Rising Flames) and Call of the Elements (docs/reworks/shaman-elemental-rework.md).
  */
 
 #include "Cell.h"
@@ -43,7 +44,10 @@
 #include "SpellInfo.h"
 #include "SpellMgr.h"
 #include "SpellScript.h"
+#include "Totem.h"
+#include "TotemPackets.h"
 #include "Unit.h"
+#include <array>
 #include <list>
 #include <vector>
 
@@ -106,6 +110,57 @@ namespace
             ScheduleElementalStatRefresh(guardian, ownerGuid, aura);
         }, Milliseconds(ShamanData::ELEMENTAL_STAT_REFRESH_MS));
     }
+
+    // Fire Nova: the owner's Fire-slot occupant (any totem), or nullptr
+    Creature* GetFireSlotTotem(Unit* caster)
+    {
+        ObjectGuid const guid = caster->m_SummonSlot[SUMMON_SLOT_TOTEM_FIRE];
+        return guid.IsEmpty() ? nullptr : ObjectAccessor::GetCreature(*caster, guid);
+    }
+
+    // The owner's live Greater Fire Elemental guardian, or nullptr
+    Creature* GetLiveFireElemental(Unit* caster)
+    {
+        std::list<Creature*> guardians;
+        caster->GetAllMinionsByEntry(guardians, ShamanData::NPC_GREATER_FIRE_ELEMENTAL);
+        for (Creature* guardian : guardians)
+            if (guardian->IsInWorld() && guardian->IsAlive())
+                return guardian;
+
+        return nullptr;
+    }
+
+    // The unit Fire Nova erupts from. A player whose Fire slot holds the invisible Fire Elemental totem erupts from the
+    // live Fire Elemental (no Fire totem needed, baseline for every shaman); that totem without a live guardian
+    // yields nullptr, never an eruption from the invisible totem's drop point. Any other player or NPC Fire-slot
+    // totem is the stock origin.
+    Unit* GetFireNovaOrigin(Unit* caster)
+    {
+        Creature* totem = GetFireSlotTotem(caster);
+        if (!totem)
+            return nullptr;
+
+        if (caster->IsPlayer() && totem->GetEntry() == ShamanData::NPC_FIRE_ELEMENTAL_TOTEM)
+            return GetLiveFireElemental(caster);
+
+        return totem->IsTotem() ? totem : nullptr;
+    }
+
+    // The four elementals' summon spell, player-side totem entry and totem slot (Call of the Elements)
+    struct ElementalSummonInfo
+    {
+        uint32 summonSpellId;
+        uint32 totemEntry;
+        uint8 slot;
+    };
+
+    constexpr std::array<ElementalSummonInfo, 4> ELEMENTAL_SUMMONS =
+    {{
+        { ShamanData::SPELL_EARTH_ELEMENTAL_TOTEM, ShamanData::NPC_EARTH_ELEMENTAL_TOTEM, SUMMON_SLOT_TOTEM_EARTH },
+        { ShamanData::SPELL_FIRE_ELEMENTAL_TOTEM, ShamanData::NPC_FIRE_ELEMENTAL_TOTEM, SUMMON_SLOT_TOTEM_FIRE },
+        { ShamanData::SPELL_WATER_ELEMENTAL_TOTEM, ShamanData::NPC_WATER_ELEMENTAL_TOTEM, SUMMON_SLOT_TOTEM_WATER },
+        { ShamanData::SPELL_STORM_ELEMENTAL_TOTEM, ShamanData::NPC_STORM_ELEMENTAL_TOTEM, SUMMON_SLOT_TOTEM_AIR }
+    }};
 }
 
 // 2062 Earth Elemental, 2894 Fire Elemental, Water Elemental, Storm Elemental - summoning one locks the other three
@@ -553,6 +608,180 @@ class spell_sha_angered_earth_engaged : public SpellScript
     }
 };
 
+// -1535 Fire Nova (replaces spell_sha_fire_nova): baseline Fire Elemental origin and Rising Flames (docs/reworks/
+// shaman-shared-rework.md Fire Elemental, shaman-elemental-rework.md Rising Flames).
+//  - A player whose Fire slot holds the Fire Elemental totem (300271) needs no Fire totem: the nova is cast at the live
+//    Fire Elemental, which sets the eruption point (8349 erupts at its explicit target's position) and the range
+//    check. Any other Fire-slot totem, and every NPC caster, keeps the stock behaviour, error message included.
+//  - Rising Flames: the stack count of the player's buff is passed to the nova as MISCVALUE0 (read by
+//    spell_sha_fire_nova_rework_damage on 8349), then all stacks are consumed.
+class spell_sha_fire_nova_rework : public SpellScript
+{
+    PrepareSpellScript(spell_sha_fire_nova_rework);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ ShamanData::SPELL_FIRE_NOVA_8349, ShamanData::SPELL_RISING_FLAMES_BUFF });
+    }
+
+    SpellCastResult CheckFireTotem()
+    {
+        Unit* caster = GetCaster();
+        Unit* origin = GetFireNovaOrigin(caster);
+        if (!origin)
+        {
+            SetCustomCastResultMessage(SPELL_CUSTOM_ERROR_MUST_HAVE_FIRE_TOTEM);
+            return SPELL_FAILED_CUSTOM_ERROR;
+        }
+
+        if (!caster->IsWithinDistInMap(origin, caster->GetSpellMaxRangeForTarget(origin, GetSpellInfo())))
+            return SPELL_FAILED_OUT_OF_RANGE;
+
+        return SPELL_CAST_OK;
+    }
+
+    void HandleDummy(SpellEffIndex /*effIndex*/)
+    {
+        Unit* caster = GetCaster();
+        Unit* origin = GetFireNovaOrigin(caster);
+        if (!origin)
+            return;
+
+        int32 stacks = 0;
+        if (caster->IsPlayer())
+            if (Aura const* risingFlames = caster->GetAura(ShamanData::SPELL_RISING_FLAMES_BUFF))
+                stacks = int32(risingFlames->GetStackAmount());
+
+        LogCastFailure("spell_sha_fire_nova_rework", ShamanData::SPELL_FIRE_NOVA_8349, caster, origin,
+            caster->CastCustomSpell(ShamanData::SPELL_FIRE_NOVA_8349, SPELLVALUE_MISCVALUE0, stacks, origin, true));
+
+        if (stacks)
+            caster->RemoveAurasDueToSpell(ShamanData::SPELL_RISING_FLAMES_BUFF);
+    }
+
+    void Register() override
+    {
+        OnCheckCast += SpellCheckCastFn(spell_sha_fire_nova_rework::CheckFireTotem);
+        OnEffectHitTarget += SpellEffectFn(spell_sha_fire_nova_rework::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+    }
+};
+
+// 8349 Fire Nova (the eruption): +RISING_FLAMES_PCT_PER_STACK% damage per Rising Flames stack the player's Fire Nova
+// (spell_sha_fire_nova_rework) passed in MISCVALUE0. Any other cast of 8349 carries 0 and is untouched.
+class spell_sha_fire_nova_rework_damage : public SpellScript
+{
+    PrepareSpellScript(spell_sha_fire_nova_rework_damage);
+
+    void HandleHit()
+    {
+        uint32 const stacks = GetSpell()->GetSpellValue()->MiscVal[0];
+        if (!stacks)
+            return;
+
+        float const factor = 1.0f + float(stacks * uint32(ShamanData::RISING_FLAMES_PCT_PER_STACK)) / 100.0f;
+        SetHitDamage(int32(float(GetHitDamage()) * factor));
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_sha_fire_nova_rework_damage::HandleHit);
+    }
+};
+
+// 202531 Call of the Elements: summons every known elemental that is not already out for COTE_SUMMON_MS and extends
+// the active ones by COTE_EXTEND_MS. The summons are triggered full-mask casts, so they start neither their own 2 min
+// cooldown nor the shared lockout (Spell::SendSpellCooldown returns on TRIGGERED_IGNORE_SPELL_AND_CATEGORY_CD, and
+// spell_sha_elemental_lockout skips triggered casts). A totem in a slot being taken is dismissed first. The summon
+// spells' own duration is 30 s, so each new totem is cut to COTE_SUMMON_MS after it appears (its guardian leaves
+// with it) and its totem bar entry is re-sent with the new time.
+class spell_sha_ele_call_of_the_elements : public SpellScript
+{
+    PrepareSpellScript(spell_sha_ele_call_of_the_elements);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ ShamanData::SPELL_EARTH_ELEMENTAL_TOTEM, ShamanData::SPELL_FIRE_ELEMENTAL_TOTEM,
+            ShamanData::SPELL_WATER_ELEMENTAL_TOTEM, ShamanData::SPELL_STORM_ELEMENTAL_TOTEM });
+    }
+
+    static Creature* GetSlotTotem(Player* player, uint8 slot)
+    {
+        ObjectGuid const guid = player->m_SummonSlot[slot];
+        return guid.IsEmpty() ? nullptr : ObjectAccessor::GetCreature(*player, guid);
+    }
+
+    static void CutSummonDuration(Player* player, ElementalSummonInfo const& info)
+    {
+        Creature* creature = GetSlotTotem(player, info.slot);
+        if (!creature || creature->GetEntry() != info.totemEntry)
+            return;
+
+        Totem* totem = creature->ToTotem();
+        if (!totem)
+            return;
+
+        uint32 const duration = uint32(ShamanData::COTE_SUMMON_MS);
+        if (totem->GetTotemDuration() <= duration)
+            return;
+
+        totem->SetTotemDuration(duration);
+
+        // The first packet carried the summon spell's own duration. P0 2d: a plain re-send retimes the bar text but not
+        // the swipe, so the slot is cleared first (empty GUID, 0 duration), exactly as Shaman::SendTotemTimer does.
+        uint8 const barSlot = uint8(info.slot - SUMMON_SLOT_TOTEM_FIRE);
+
+        WorldPackets::Totem::TotemCreated clear;
+        clear.Slot = barSlot;
+        player->SendDirectMessage(clear.Write());
+
+        // Same fields as Totem::InitStats
+        WorldPackets::Totem::TotemCreated data;
+        data.Totem = totem->GetGUID();
+        data.Slot = barSlot;
+        data.Duration = duration;
+        data.SpellID = totem->GetUInt32Value(UNIT_CREATED_BY_SPELL);
+        player->SendDirectMessage(data.Write());
+    }
+
+    void HandleAfterCast()
+    {
+        Unit* caster = GetCaster();
+        Player* player = caster ? caster->ToPlayer() : nullptr;
+        if (!player)
+            return;
+
+        // Extend first, so an elemental summoned below is not extended again
+        Shaman::ExtendElementals(player, uint32(ShamanData::COTE_EXTEND_MS));
+
+        for (ElementalSummonInfo const& info : ELEMENTAL_SUMMONS)
+        {
+            // Below the level of a summon the shaman simply does not know it
+            if (!player->HasSpell(info.summonSpellId))
+                continue;
+
+            Creature* occupant = GetSlotTotem(player, info.slot);
+            if (occupant)
+            {
+                if (occupant->GetEntry() == info.totemEntry && occupant->IsAlive())
+                    continue;
+
+                // Another totem holds the slot: dismiss it
+                if (Totem* totem = occupant->ToTotem())
+                    totem->UnSummon();
+            }
+
+            LogCastFailure("spell_sha_ele_call_of_the_elements", info.summonSpellId, player, player,
+                player->CastSpell(player, info.summonSpellId, TRIGGERED_FULL_MASK));
+            CutSummonDuration(player, info);
+        }
+    }
+
+    void Register() override
+    {
+        AfterCast += SpellCastFn(spell_sha_ele_call_of_the_elements::HandleAfterCast);
+    }
+};
+
 void AddSC_shaman_totem_spell_scripts()
 {
     RegisterSpellScript(spell_sha_elemental_lockout);
@@ -567,4 +796,7 @@ void AddSC_shaman_totem_spell_scripts()
     RegisterSpellAndAuraScriptPair(spell_sha_healing_rain, spell_sha_healing_rain_aura);
     RegisterSpellScript(spell_sha_elemental_engaged_aoe);
     RegisterSpellScript(spell_sha_angered_earth_engaged);
+    RegisterSpellScript(spell_sha_fire_nova_rework);
+    RegisterSpellScript(spell_sha_fire_nova_rework_damage);
+    RegisterSpellScript(spell_sha_ele_call_of_the_elements);
 }

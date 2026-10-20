@@ -28,10 +28,12 @@
 #include "SpellMgr.h"
 #include "TemporarySummon.h"
 #include "Totem.h"
+#include "TotemPackets.h"
 #include "Unit.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <list>
 #include <mutex>
 #include <unordered_map>
 #include <vector>
@@ -434,7 +436,8 @@ namespace Shaman
 
     void ClearState(Player* player)
     {
-        // Later sections add their Clear* calls here; removal paths use find-only map access.
+        // Later sections add their Clear* calls here; removal paths use find-only map access. The SH0b and S1 blocks
+        // keep no per-player state (Elemental buffs left by a logout are reconciled on the next map entry).
         if (!player)
             return;
 
@@ -543,9 +546,12 @@ namespace
 
 namespace Shaman
 {
-    uint32 GetElementalLockoutBaseMs(Player const* /*player*/)
+    uint32 GetElementalLockoutBaseMs(Player const* player)
     {
-        // Elemental's Conduit of the Elements (30 s) hooks here.
+        // Elemental's Conduit of the Elements (S1): the shorter lockout. The elementals' own 2 min stay.
+        if (GetTalentRank(player, { ShamanData::SPELL_CONDUIT_OF_THE_ELEMENTS }))
+            return uint32(ShamanData::CONDUIT_LOCKOUT_MS);
+
         return LOCKOUT_BASE_MS;
     }
 
@@ -657,6 +663,435 @@ namespace Shaman
 
             if (effect->GetAmount() != amount)
                 effect->ChangeAmount(amount);
+        }
+    }
+}
+
+/*
+ * S1 block: Elemental (docs/reworks/shaman-elemental-rework.md). Talent ranks, the active elementals, Power of the
+ * Elements' Empowerment buffs and guardian auras, Gathering Flames clearing, the Elemental Warding capstone, the
+ * Conduit of the Elements Mastery amount, Echo, the Call of the Elements extension, the Thunderstorm stun rank and the
+ * Lava Flows haste map. No per-player state: everything is reconciled from the shaman's own auras, talents and slots.
+ */
+namespace
+{
+    struct EmpowermentBuff
+    {
+        uint8 elementalBit;
+        uint32 spellId;
+    };
+
+    constexpr std::array<EmpowermentBuff, 4> EMPOWERMENT_BUFFS =
+    {{
+        { Shaman::ELEMENTAL_MASK_EARTH, ShamanData::SPELL_EMPOWERMENT_EARTH },
+        { Shaman::ELEMENTAL_MASK_FIRE, ShamanData::SPELL_EMPOWERMENT_FIRE },
+        { Shaman::ELEMENTAL_MASK_WATER, ShamanData::SPELL_EMPOWERMENT_WATER },
+        { Shaman::ELEMENTAL_MASK_STORM, ShamanData::SPELL_EMPOWERMENT_STORM }
+    }};
+
+    constexpr std::array<uint32, 3> OVERLOAD_COPIES =
+    {
+        ShamanData::SPELL_LIGHTNING_BOLT_OVERLOAD,
+        ShamanData::SPELL_CHAIN_LIGHTNING_OVERLOAD,
+        ShamanData::SPELL_LAVA_BURST_OVERLOAD
+    };
+
+    constexpr std::array<uint32, 3> ELEMENTAL_WARDING_RANKS =
+    {
+        ShamanData::SPELL_ELEMENTAL_WARDING,
+        ShamanData::SPELL_ELEMENTAL_WARDING_28997,
+        ShamanData::SPELL_ELEMENTAL_WARDING_28998
+    };
+
+    constexpr std::array<uint32, 3> CALL_OF_THUNDER_RANKS =
+    {
+        ShamanData::SPELL_CALL_OF_THUNDER,
+        ShamanData::SPELL_CALL_OF_THUNDER_RANK2,
+        ShamanData::SPELL_CALL_OF_THUNDER_RANK3
+    };
+
+    constexpr uint8 ELEMENTAL_WARDING_CAPSTONE_RANK = 3;
+    constexpr uint8 CALL_OF_THUNDER_CAPSTONE_RANK = 3;
+
+    uint8 GetElementalBit(ElementalInfo const& info)
+    {
+        switch (info.totemEntry)
+        {
+            case NPC_EARTH_ELEMENTAL_TOTEM:
+                return Shaman::ELEMENTAL_MASK_EARTH;
+            case NPC_FIRE_ELEMENTAL_TOTEM:
+                return Shaman::ELEMENTAL_MASK_FIRE;
+            case NPC_WATER_ELEMENTAL_TOTEM:
+                return Shaman::ELEMENTAL_MASK_WATER;
+            case NPC_STORM_ELEMENTAL_TOTEM:
+                return Shaman::ELEMENTAL_MASK_STORM;
+            default:
+                return 0;
+        }
+    }
+
+    // The player's elemental totem in `info`'s slot, or nullptr (empty slot, another totem, despawning).
+    Creature* GetElementalTotem(Player const* player, ElementalInfo const& info)
+    {
+        ObjectGuid const guid = player->m_SummonSlot[info.slot];
+        if (guid.IsEmpty())
+            return nullptr;
+
+        Creature* creature = ObjectAccessor::GetCreature(*player, guid);
+        if (!creature || creature->GetEntry() != info.totemEntry || !creature->IsTotem() || !creature->IsInWorld() ||
+            !creature->IsAlive())
+            return nullptr;
+
+        return creature;
+    }
+
+    bool IsUsablePlayer(Player const* player)
+    {
+        return player && player->IsInWorld() && !player->IsDuringRemoveFromWorld();
+    }
+
+    // A self-cast aura kept on or off: added by the player when wanted and missing, removed (this caster's only)
+    // when not wanted. `target` is the player itself or one of its guardians (owner-cast aura, L5).
+    void SetOwnerAura(Player* owner, Unit* target, uint32 spellId, bool wanted)
+    {
+        ObjectGuid const ownerGuid = owner->GetGUID();
+        if (!wanted)
+        {
+            target->RemoveAurasDueToSpell(spellId, ownerGuid);
+            return;
+        }
+
+        if (target->HasAura(spellId, ownerGuid))
+            return;
+
+        if (!owner->AddAura(spellId, target))
+            LOG_ERROR("scripts.spells", "Shaman S1: could not apply aura {} to {} (owner {})", spellId,
+                target->GetGUID().ToString(), ownerGuid.ToString());
+    }
+
+    // Empowerment: EMPOWERMENT_PCT, plus the live Mastery with Conduit of the Elements' capstone (rounded). Scripts
+    // pass live values (SKILL "Sign convention").
+    int32 GetEmpowermentAmount(Player const* player)
+    {
+        int32 amount = int32(ShamanData::EMPOWERMENT_PCT);
+        if (Shaman::GetTalentRank(player, { ShamanData::SPELL_CONDUIT_OF_THE_ELEMENTS }))
+            amount += std::max<int32>(0, int32(std::lround(player->GetMasteryPercentage())));
+
+        return amount;
+    }
+
+    // The damage effects of an Empowerment aura (player side: SPELLMOD_DAMAGE / SPELLMOD_DOT percent modifiers;
+    // guardian side: MOD_DAMAGE_PERCENT_DONE) take `amount`; other effects (the Storm buff's jump modifier) are left
+    // alone. Changing a spell mod re-sends it to the client, so only a moved value is written.
+    void SetEmpowermentAmount(Aura* aura, int32 amount)
+    {
+        if (!aura || aura->IsRemoved())
+            return;
+
+        for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+        {
+            AuraEffect* effect = aura->GetEffect(i);
+            if (!effect)
+                continue;
+
+            bool isDamage = false;
+            switch (effect->GetAuraType())
+            {
+                case SPELL_AURA_ADD_PCT_MODIFIER:
+                    isDamage = effect->GetMiscValue() == int32(SPELLMOD_DAMAGE) ||
+                        effect->GetMiscValue() == int32(SPELLMOD_DOT);
+                    break;
+                case SPELL_AURA_MOD_DAMAGE_PERCENT_DONE:
+                    isDamage = true;
+                    break;
+                default:
+                    break;
+            }
+
+            if (isDamage && effect->GetAmount() != amount)
+                effect->ChangeAmount(amount, false);
+        }
+    }
+
+    // Guardian auras added by the owner (L5): the guardian-side Empowerment on every elemental and the Water
+    // Elemental's bonus damage and the Earth Elemental's no-threat aura (Power of the Elements); the Earth Elemental's
+    // bonus damage (Elemental Warding capstone).
+    void SyncGuardianAuras(Player* player)
+    {
+        bool const powerOfTheElements = Shaman::GetTalentRank(player,
+            { ShamanData::SPELL_POWER_OF_THE_ELEMENTS }) > 0;
+        bool const wardingCapstone = Shaman::GetTalentRank(player, ELEMENTAL_WARDING_RANKS) >=
+            ELEMENTAL_WARDING_CAPSTONE_RANK;
+        int32 const amount = GetEmpowermentAmount(player);
+
+        for (ElementalInfo const& info : ELEMENTALS)
+        {
+            std::list<Creature*> guardians;
+            player->GetAllMinionsByEntry(guardians, info.guardianEntry);
+            for (Creature* guardian : guardians)
+            {
+                if (!guardian || !guardian->IsInWorld() || !guardian->IsAlive())
+                    continue;
+
+                SetOwnerAura(player, guardian, ShamanData::SPELL_ELEMENTAL_EMPOWERED, powerOfTheElements);
+                if (powerOfTheElements)
+                    SetEmpowermentAmount(guardian->GetAura(ShamanData::SPELL_ELEMENTAL_EMPOWERED, player->GetGUID()),
+                        amount);
+
+                if (info.guardianEntry == NPC_WATER_ELEMENTAL)
+                    SetOwnerAura(player, guardian, ShamanData::SPELL_WATER_ELEMENTAL_DAMAGE, powerOfTheElements);
+                else if (info.guardianEntry == NPC_GREATER_EARTH_ELEMENTAL)
+                {
+                    SetOwnerAura(player, guardian, ShamanData::SPELL_EARTH_ELEMENTAL_NO_THREAT, powerOfTheElements);
+                    SetOwnerAura(player, guardian, ShamanData::SPELL_EARTH_ELEMENTAL_DAMAGE, wardingCapstone);
+                }
+            }
+        }
+    }
+
+    // Player-side state against the slots: Empowerment buffs (Power of the Elements), Gathering Flames (cleared
+    // whenever no Fire Elemental is active, so an extension never clears it and any removal path does), the
+    // Elemental Warding capstone health aura, then the live Empowerment amount.
+    void SyncElementalState(Player* player)
+    {
+        uint8 const active = Shaman::GetActiveElementals(player);
+        bool const powerOfTheElements = Shaman::GetTalentRank(player,
+            { ShamanData::SPELL_POWER_OF_THE_ELEMENTS }) > 0;
+        bool const wardingCapstone = Shaman::GetTalentRank(player, ELEMENTAL_WARDING_RANKS) >=
+            ELEMENTAL_WARDING_CAPSTONE_RANK;
+
+        for (EmpowermentBuff const& buff : EMPOWERMENT_BUFFS)
+            SetOwnerAura(player, player, buff.spellId, powerOfTheElements && (active & buff.elementalBit));
+
+        if (!(active & Shaman::ELEMENTAL_MASK_FIRE))
+            player->RemoveAurasDueToSpell(ShamanData::SPELL_GATHERING_FLAMES);
+
+        SetOwnerAura(player, player, ShamanData::SPELL_WARDING_HEALTH,
+            wardingCapstone && (active & Shaman::ELEMENTAL_MASK_EARTH));
+
+        Shaman::RefreshEmpowerment(player);
+    }
+
+    // SMSG_TOTEM_CREATED for an extended totem (same fields as Totem::InitStats). P0 2d: a plain re-send retimes the
+    // bar text but not the swipe, so the slot is first cleared (empty GUID, 0 duration) and then re-sent.
+    void SendTotemTimer(Player* player, Totem* totem, uint8 slot, uint32 duration)
+    {
+        uint8 const barSlot = uint8(slot - SUMMON_SLOT_TOTEM_FIRE);
+
+        WorldPackets::Totem::TotemCreated clear;
+        clear.Slot = barSlot;
+        player->SendDirectMessage(clear.Write());
+
+        WorldPackets::Totem::TotemCreated data;
+        data.Totem = totem->GetGUID();
+        data.Slot = barSlot;
+        data.Duration = duration;
+        data.SpellID = totem->GetUInt32Value(UNIT_CREATED_BY_SPELL);
+        player->SendDirectMessage(data.Write());
+    }
+}
+
+namespace Shaman
+{
+    uint8 GetTalentRank(Player const* player, std::span<uint32 const> rankIds)
+    {
+        if (!player)
+            return 0;
+
+        uint8 const spec = player->GetActiveSpec();
+        for (size_t i = rankIds.size(); i > 0; --i)
+        {
+            uint32 const spellId = rankIds[i - 1];
+            if (spellId && (player->HasTalent(spellId, spec) || player->HasAura(spellId)))
+                return uint8(i);
+        }
+
+        return 0;
+    }
+
+    uint8 GetTalentRank(Player const* player, std::initializer_list<uint32> rankIds)
+    {
+        return GetTalentRank(player, std::span<uint32 const>(rankIds.begin(), rankIds.size()));
+    }
+
+    uint8 GetActiveElementals(Player const* player)
+    {
+        if (!player)
+            return 0;
+
+        uint8 mask = 0;
+        for (ElementalInfo const& info : ELEMENTALS)
+            if (GetElementalTotem(player, info))
+                mask |= GetElementalBit(info);
+
+        return mask;
+    }
+
+    void OnElementalAdded(Player* player, Creature* totem)
+    {
+        // The slot already holds the new totem (TempSummon::InitStats runs before AddToMap), so the reconcile reads
+        // it; the totem pointer only tells a real Earth Elemental summon from a plain reconcile (nullptr).
+        if (!IsUsablePlayer(player))
+            return;
+
+        SyncElementalState(player);
+
+        // Booming Echoes capstone: every Earth Elemental summon (Call of the Elements' included) grants Echoes,
+        // capped at ECHO_MAX by AddEcho (2026-10-20 Earth Shock burst).
+        if (totem && totem->GetEntry() == NPC_EARTH_ELEMENTAL_TOTEM &&
+            Shaman::GetTalentRank(player, { ShamanData::SPELL_BOOMING_ECHOES_RANK3 }) > 0)
+            Shaman::AddEcho(player, uint8(ShamanData::ECHO_EARTH_ELEMENTAL_GRANT));
+
+        // The totem's passive summons the guardian in Totem::InitSummon, after the add hook: add its auras one tick
+        // later (the ApplyElementalLockout shape).
+        ObjectGuid const guid = player->GetGUID();
+        player->m_Events.AddEventAtOffset([guid]()
+        {
+            Player* self = ObjectAccessor::FindPlayer(guid);
+            if (!IsUsablePlayer(self))
+                return;
+
+            SyncGuardianAuras(self);
+        }, 1ms);
+    }
+
+    void OnElementalRemoved(Player* player, uint32 /*totemEntry*/)
+    {
+        // Totem::UnSummon and TempSummon::RemoveFromWorld clear the slot before the remove hook, and a replacing
+        // totem already holds it: reading the slots is right for death, expiry, dismissal, Recall and replacement.
+        // A Call of the Elements extension removes nothing, so Gathering Flames survives it.
+        if (!IsUsablePlayer(player))
+            return;
+
+        SyncElementalState(player);
+    }
+
+    void RefreshEmpowerment(Player* player)
+    {
+        if (!player)
+            return;
+
+        int32 const amount = GetEmpowermentAmount(player);
+        ObjectGuid const guid = player->GetGUID();
+
+        for (EmpowermentBuff const& buff : EMPOWERMENT_BUFFS)
+            SetEmpowermentAmount(player->GetAura(buff.spellId, guid), amount);
+
+        for (ElementalInfo const& info : ELEMENTALS)
+        {
+            std::list<Creature*> guardians;
+            player->GetAllMinionsByEntry(guardians, info.guardianEntry);
+            for (Creature* guardian : guardians)
+                if (guardian && guardian->IsInWorld())
+                    SetEmpowermentAmount(guardian->GetAura(ShamanData::SPELL_ELEMENTAL_EMPOWERED, guid), amount);
+        }
+    }
+
+    bool IsOverloadCopy(uint32 spellId)
+    {
+        return std::find(OVERLOAD_COPIES.begin(), OVERLOAD_COPIES.end(), spellId) != OVERLOAD_COPIES.end();
+    }
+
+    void AddEcho(Player* player, uint8 stacks)
+    {
+        if (!player || !stacks)
+            return;
+
+        int32 const cap = int32(ShamanData::ECHO_MAX);
+        int32 const grant = std::min<int32>(stacks, cap);
+
+        Aura* aura = player->GetAura(ShamanData::SPELL_BOOMING_ECHO, player->GetGUID());
+        if (aura)
+        {
+            // At the cap the delta is 0, which still refreshes the aura (ModStackAmount's refresh branch).
+            int32 const delta = std::max(0, std::min(grant, cap - int32(aura->GetStackAmount())));
+            aura->ModStackAmount(delta);
+        }
+        else
+        {
+            aura = player->AddAura(ShamanData::SPELL_BOOMING_ECHO, player);
+            if (!aura)
+            {
+                LOG_ERROR("scripts.spells", "Shaman::AddEcho: could not apply aura {} to {}",
+                    ShamanData::SPELL_BOOMING_ECHO, player->GetGUID().ToString());
+                return;
+            }
+
+            // A new aura starts at one stack.
+            if (grant > 1)
+                aura->ModStackAmount(grant - 1);
+        }
+
+        if (aura->IsRemoved())
+            return;
+
+        // The const is the source of truth for the window, whatever the row's duration says.
+        int32 const duration = int32(ShamanData::ECHO_DURATION_MS);
+        if (aura->GetMaxDuration() != duration)
+            aura->SetMaxDuration(duration);
+
+        aura->SetDuration(duration);
+    }
+
+    void ExtendElementals(Player* player, uint32 ms)
+    {
+        if (!player || !ms)
+            return;
+
+        for (ElementalInfo const& info : ELEMENTALS)
+        {
+            Creature* creature = GetElementalTotem(player, info);
+            Totem* totem = creature ? creature->ToTotem() : nullptr;
+            if (!totem)
+                continue;
+
+            uint32 const remaining = totem->GetTotemDuration() + ms;
+            totem->SetTotemDuration(remaining);
+            SendTotemTimer(player, totem, info.slot, remaining);
+
+            // The guardian keeps its own summon timer (P0 2d): raise it when shorter, so it outlives nothing it
+            // should not (the totem leaving the world still takes it).
+            std::list<Creature*> guardians;
+            player->GetAllMinionsByEntry(guardians, info.guardianEntry);
+            for (Creature* guardian : guardians)
+                if (TempSummon* summon = guardian ? guardian->ToTempSummon() : nullptr)
+                    if (summon->GetTimer() < remaining)
+                        summon->SetTimer(remaining);
+        }
+    }
+
+    void SyncThunderstormRank(Player* player)
+    {
+        if (!player)
+            return;
+
+        // Thunderstorm is a talent rank put in the spellbook: the talent in the active spec, or the spell itself
+        // (learned by a command).
+        bool const knowsThunderstorm = GetTalentRank(player, { ShamanData::SPELL_THUNDERSTORM }) > 0 ||
+            player->HasSpell(ShamanData::SPELL_THUNDERSTORM);
+        bool const wanted = knowsThunderstorm &&
+            GetTalentRank(player, CALL_OF_THUNDER_RANKS) >= CALL_OF_THUNDER_CAPSTONE_RANK;
+        bool const known = player->HasSpell(ShamanData::SPELL_THUNDERSTORM_RANK2);
+
+        // Rank 2 is no talent: learnSpell gives it every spec, and a spec swap re-runs this sync.
+        if (wanted && !known)
+            player->learnSpell(ShamanData::SPELL_THUNDERSTORM_RANK2);
+        else if (!wanted && known)
+            player->removeSpell(ShamanData::SPELL_THUNDERSTORM_RANK2, SPEC_MASK_ALL, false);
+    }
+
+    uint32 LavaFlowsHasteSpell(uint8 rank)
+    {
+        switch (rank)
+        {
+            case 1:
+                return ShamanData::SPELL_LAVA_FLOWS_HASTE;
+            case 2:
+                return ShamanData::SPELL_LAVA_FLOWS_HASTE_65263;
+            case 3:
+                return ShamanData::SPELL_LAVA_FLOWS_HASTE_65264;
+            default:
+                return 0;
         }
     }
 }
