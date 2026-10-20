@@ -20,8 +20,12 @@ playtest only caught after a deploy. Each cost a fix cycle in a past rework. Che
   faces the target.
 - The DSL's default for an instant is `CastingTimeIndex 0`, which has no row in the client's SpellCastTimes.dbc. Stock
   non-ranged instants use 1. Harmless so far, but use 1 when touching a row anyway.
-- Ranged attack speed (`SPELL_AURA_MOD_RANGED_HASTE`) speeds up ranged cast times and the hasted GCD. Check class
-  passives for hidden haste. Hunters had 15% from Advantaged State 34082 until the rework removed it.
+- Ranged attack speed (`SPELL_AURA_MOD_RANGED_HASTE`) speeds up ranged cast times. Check class passives for hidden
+  haste. Hunters had 15% from Advantaged State 34082 until the rework removed it.
+- Spell haste (`UNIT_MOD_CAST_SPEED`) is the one haste for GCDs and for any haste-scaled resource gain. It holds
+  haste rating, casting speed auras (65/216, e.g. Heroism, Wrath of Air) and combat speed (193). Melee strikes and
+  ranged shots follow it too (`custom_haste_gcd.cpp`). Melee-only (138), melee + ranged (192) and ranged-only
+  (140/141) attack speed speed up auto attacks alone, so a talent meant to shorten the GCD needs 65, 216 or 193.
 
 ## Auras the player must see
 

@@ -17,8 +17,10 @@
 
 // Haste shortens the global cooldown of melee strikes, ranged shots and "ability"-flagged utility spells.
 // The core only hastes the GCD of spells, so dbc-tools generates one hidden passive aura per class family
-// whose FLAT SPELLMOD_GLOBAL_COOLDOWN effects cover those abilities (effect 0 follows melee haste, effect 1
-// ranged haste, effect 2 is a 500ms periodic dummy). The mods are flat because Player::ApplySpellMod ignores a
+// whose FLAT SPELLMOD_GLOBAL_COOLDOWN effects cover those abilities (effect 0 the melee-class bits, effect 1
+// the ranged-class bits, effect 2 is a 500ms periodic dummy). Both follow spell haste, the same value the core
+// hastes spell GCDs with: melee- or ranged-only attack speed (Flurry, Slice and Dice, Windfury Totem, quivers)
+// speeds up auto attacks alone. The mods are flat because Player::ApplySpellMod ignores a
 // pct GCD mod unless the same aura applied another mod to the spell. This file keeps the mod amounts in sync
 // with the owner's haste and teaches each player the aura of their own class (own family only: spell-mod
 // packets carry just a bit index and the client applies them to its own class's spells only, plan D8),
@@ -57,26 +59,17 @@ namespace
     // Every masked ability has a 1500ms GCD, so each percent of haste is exactly 15ms.
     constexpr int32 GCD_MS_PER_HASTE_PCT = 15;
 
-    // FLAT spell-mod amount in ms (-750..0) for the owner's current haste on the given weapon slot, in 1% steps.
-    int32 GetHasteGcdMs(Unit const* owner, WeaponAttackType attackType)
+    // FLAT spell-mod amount in ms (-750..0) for the owner's spell haste, in 1% steps.
+    int32 GetHasteGcdMs(Unit const* owner)
     {
-        // GetAttackTime() is the unhasted time; the base attack time field holds it times the haste multiplier.
-        float const base = float(owner->GetAttackTime(attackType));
-        float const hasted = owner->GetFloatValue(static_cast<uint16>(UNIT_FIELD_BASEATTACKTIME) + attackType);
-        if (base <= 0.0f || hasted <= 0.0f)
+        // UNIT_MOD_CAST_SPEED is the cast time multiplier: haste rating, casting speed auras (Heroism, Wrath of Air)
+        // and combat speed auras (Berserking). A net slow is clamped so it never lengthens the GCD.
+        float const castSpeed = owner->GetFloatValue(UNIT_MOD_CAST_SPEED);
+        if (castSpeed <= 0.0f || castSpeed >= 1.0f)
             return 0;
 
-        float const mult = hasted / base;
-        if (mult >= 1.0f)
-            return 0;
-
-        int32 const pct = std::clamp(int32(std::lround((1.0f - mult) * 100.0f)), 0, MAX_GCD_REDUCTION_PCT);
+        int32 const pct = std::clamp(int32(std::lround((1.0f - castSpeed) * 100.0f)), 0, MAX_GCD_REDUCTION_PCT);
         return -GCD_MS_PER_HASTE_PCT * pct;
-    }
-
-    WeaponAttackType GetAttackTypeForEffect(uint8 effIndex)
-    {
-        return effIndex == EFFECT_1 ? RANGED_ATTACK : BASE_ATTACK;
     }
 }
 
@@ -84,13 +77,13 @@ class spell_custom_haste_gcd : public AuraScript
 {
     PrepareAuraScript(spell_custom_haste_gcd);
 
-    void CalculateAmount(AuraEffect const* aurEff, int32& amount, bool& /*canBeRecalculated*/)
+    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
     {
         Unit* owner = GetUnitOwner();
         if (!owner || !owner->IsPlayer())
             return;
 
-        amount = GetHasteGcdMs(owner, GetAttackTypeForEffect(aurEff->GetEffIndex()));
+        amount = GetHasteGcdMs(owner);
     }
 
     void HandlePeriodic(AuraEffect const* /*aurEff*/)
@@ -99,6 +92,7 @@ class spell_custom_haste_gcd : public AuraScript
         if (!owner || !owner->IsPlayer())
             return;
 
+        int32 const amount = GetHasteGcdMs(owner);
         for (uint8 i = EFFECT_0; i <= EFFECT_1; ++i)
         {
             AuraEffect* modEffect = GetEffect(i);
@@ -106,7 +100,6 @@ class spell_custom_haste_gcd : public AuraScript
                 continue;
 
             // Changing the amount re-sends the spell mod to the client, so only do it when it moved.
-            int32 const amount = GetHasteGcdMs(owner, GetAttackTypeForEffect(i));
             if (amount != modEffect->GetAmount())
                 modEffect->ChangeAmount(amount, false);
         }
