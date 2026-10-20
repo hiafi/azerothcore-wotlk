@@ -18,10 +18,12 @@
 // From SC
 void AddSC_DpsSim();
 void AddSC_SimDummyAI();
+void AddSC_SimHealBossAI();
 
 // Add all
 void Addmod_dpssimScripts()
 {
     AddSC_DpsSim();
     AddSC_SimDummyAI();
+    AddSC_SimHealBossAI();
 }

@@ -61,6 +61,18 @@ void ScriptMgr::OnPeriodicDamageFinal(Unit* target, Unit* attacker, uint32 damag
         script->OnPeriodicDamageFinal(target, attacker, damage, spellInfo, isCrit));
 }
 
+void ScriptMgr::OnHealFinal(Unit* healer, Unit* target, SpellInfo const* spellInfo, uint32 heal, uint32 effective, uint32 healAbsorbed, bool isCrit, bool isPeriodic)
+{
+    CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_HEAL_FINAL,
+        script->OnHealFinal(healer, target, spellInfo, heal, effective, healAbsorbed, isCrit, isPeriodic));
+}
+
+void ScriptMgr::OnAbsorbFinal(Unit* victim, Unit* attacker, AuraEffect const* absorbAurEff, uint32 absorbed)
+{
+    CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_ABSORB_FINAL,
+        script->OnAbsorbFinal(victim, attacker, absorbAurEff, absorbed));
+}
+
 void ScriptMgr::ModifyHealReceived(Unit* target, Unit* healer, uint32& heal, SpellInfo const* spellInfo)
 {
     CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_MODIFY_HEAL_RECEIVED, script->ModifyHealReceived(target, healer, heal, spellInfo));

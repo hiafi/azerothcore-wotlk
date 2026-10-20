@@ -77,3 +77,35 @@ creature_template(
     ScriptName="npc_healing_dummy_combat_anchor", VerifiedBuild=0,
 )
 creature_model(900014, display_id=11686)
+
+# --- healsim boss (900015-900017) ---------------------------------------------------------------
+# "Sim Raid Boss": the healing sim's damage source and the healer's optional DPS target (healing-sim PLAN
+# section 1, D4), at levels 60/70/80. modules/mod-dpssim's npc_healsim_boss (SimHealBossAI.cpp) is its AI: it never
+# swings, moves or evades, and the sim's Sim Damage Pulse 202900 / Sim Pin Hit 202901 casts
+# (source/npcs/healsim_spells.py) are its only damage. Re-derived for that role, not cloned from the dummies above:
+#   faction 14        hostile to every player (the dummies' 31 is not), so the healer can attack it and it holds combat
+#                     references with the whole group.
+#   rank 3            boss rank; type_flags 4 is CREATURE_TYPE_FLAG_BOSS_MOB, so boss-only branches (world-boss level
+#                     difference, knockback immunity, boss triggers) behave as on a raid boss.
+#   type 5 (Giant)    deliberately inert: not 9/mechanical (the dummies', which carries mechanical-only immunities and
+#                     bonuses), not 7/humanoid (Mind Control, Polymorph and Sap rules apply) and not 10/unspecified
+#                     (what trigger-like NPCs use).
+#   HealthModifier    the dummies' 23809.5 (a pool the healer's DPS cannot dent) with RegenHealth 0, so it never
+#                     regenerates; the AI also clamps damage so it never drops below 1 health.
+#   DamageModifier 0  it never melees; a stray swing would deal nothing.
+#   detection_range 0 it never aggroes anything by itself; the sim engages the group explicitly.
+#   CreatureImmunitiesId -362  the boss set Gruul / Illidan / Lady Sacrolash use: every control mechanic, interrupt and
+#                     disarm, knockback / pull, taunt and bind. A healer bot's stun or fear cannot disturb the boss.
+#   flags_extra       NO_XP | NO_SKILL_GAINS | DONT_CALL_ASSISTANCE | IGNORE_ALL_ASSISTANCE_CALLS (0x06040040 =
+#                     100925504): no XP, no weapon skill gains and no pulling of neighbouring creatures. unit_flags
+#                     stays 0, so none of NOT_SELECTABLE / NON_ATTACKABLE / IMMUNE_TO_PC is set.
+_HEALSIM_BOSS = dict(
+    IconName="", faction=14, rank=3, detection_range=0, DamageModifier=0, BaseAttackTime=2000, RangeAttackTime=2000,
+    unit_class=1, unit_flags2=2048, type=5, type_flags=4, HealthModifier=23809.5, RegenHealth=0,
+    CreatureImmunitiesId=-362, flags_extra=100925504, ScriptName="npc_healsim_boss", VerifiedBuild=0,
+)
+for _entry, _level in ((900015, 60), (900016, 70), (900017, 80)):
+    creature_template(
+        _entry, "Sim Raid Boss", subname=f"Level {_level}", minlevel=_level, maxlevel=_level, **_HEALSIM_BOSS,
+    )
+    creature_model(_entry, display_id=3019)

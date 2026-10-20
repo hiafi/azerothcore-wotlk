@@ -6716,6 +6716,11 @@ void AuraEffect::HandlePeriodicHealAurasTick(Unit* target, Unit* caster) const
     int32 gain = Unit::DealHeal(caster, target, healInfo.GetHeal());
     healInfo.SetEffectiveHeal(gain);
 
+    // Custom: observational hook for mod-dpssim's heal mode (see OnHealFinal in UnitScript.h) - the tick before
+    // heal-absorb
+    sScriptMgr->OnHealFinal(caster, target, GetSpellInfo(), healInfo.GetHeal() + healInfo.GetAbsorb(),
+        uint32(std::max(gain, 0)), healInfo.GetAbsorb(), crit, true);
+
     SpellPeriodicAuraLogInfo pInfo(this, healInfo.GetHeal(), healInfo.GetHeal() - healInfo.GetEffectiveHeal(), healInfo.GetAbsorb(), 0, 0.0f, crit);
     target->SendPeriodicAuraLog(&pInfo);
 

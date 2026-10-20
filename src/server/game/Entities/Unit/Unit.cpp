@@ -1367,6 +1367,10 @@ uint32 Unit::DealDamage(Unit* attacker, Unit* victim, uint32 damage, CleanDamage
             {
                 HealInfo leechHealInfo(attacker, attacker, leechHeal, spellProto, damageSchoolMask);
                 leechHealInfo.SetEffectiveHeal(Unit::DealHeal(attacker, attacker, leechHeal));
+                // Custom: observational hook for mod-dpssim's heal mode (see OnHealFinal in UnitScript.h).
+                // spellProto is nullptr for a melee auto-attack; a leech never crits or meets a heal-absorb aura
+                sScriptMgr->OnHealFinal(attacker, attacker, spellProto, leechHeal, leechHealInfo.GetEffectiveHeal(), 0,
+                    false, damagetype == DOT);
                 if (spellProto)
                     attacker->SendHealSpellLog(leechHealInfo, false);
             }
@@ -2575,6 +2579,10 @@ void Unit::CalcAbsorbResist(DamageInfo& dmgInfo, bool Splited, uint8 casterLevel
 
         dmgInfo.AbsorbDamage(currentAbsorb);
 
+        // Custom: observational hook for mod-dpssim's heal mode (see OnAbsorbFinal in UnitScript.h)
+        if (currentAbsorb > 0)
+            sScriptMgr->OnAbsorbFinal(victim, attacker, absorbAurEff, uint32(currentAbsorb));
+
         if (currentAbsorb > 0)
             BroadcastAbsorbAttribution(victim, attacker, absorbAurEff->GetCaster(), absorbAurEff->GetId(), spellInfo, uint32(currentAbsorb));
 
@@ -2639,6 +2647,10 @@ void Unit::CalcAbsorbResist(DamageInfo& dmgInfo, bool Splited, uint8 casterLevel
         currentAbsorb = currentAbsorb ? int32(float(currentAbsorb) * (float(manaTaken) / float(manaReduction))) : 0;
 
         dmgInfo.AbsorbDamage(currentAbsorb);
+
+        // Custom: observational hook for mod-dpssim's heal mode (see OnAbsorbFinal in UnitScript.h)
+        if (currentAbsorb > 0)
+            sScriptMgr->OnAbsorbFinal(victim, attacker, absorbAurEff, uint32(currentAbsorb));
 
         if (currentAbsorb > 0)
             BroadcastAbsorbAttribution(victim, attacker, absorbAurEff->GetCaster(), absorbAurEff->GetId(), spellInfo, uint32(currentAbsorb));
@@ -8226,6 +8238,11 @@ int32 Unit::HealBySpell(HealInfo& healInfo, bool critical)
 
     int32 gain = Unit::DealHeal(healInfo.GetHealer(), healInfo.GetTarget(), healInfo.GetHeal());
     healInfo.SetEffectiveHeal(gain);
+
+    // Custom: observational hook for mod-dpssim's heal mode (see OnHealFinal in UnitScript.h) - the heal before
+    // heal-absorb (GetHeal() is already net of it after CalcHealAbsorb), what landed, and what was absorbed
+    sScriptMgr->OnHealFinal(healInfo.GetHealer(), healInfo.GetTarget(), healInfo.GetSpellInfo(),
+        healInfo.GetHeal() + healInfo.GetAbsorb(), uint32(std::max(gain, 0)), healInfo.GetAbsorb(), critical, false);
 
     SendHealSpellLog(healInfo, critical);
     return gain;

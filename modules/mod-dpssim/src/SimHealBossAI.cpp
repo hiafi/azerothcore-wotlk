@@ -1,0 +1,85 @@
+/*
+ * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include "SimHealBossAI.h"
+#include "Creature.h"
+#include "CreatureScript.h"
+#include "PassiveAI.h"
+#include <algorithm>
+
+namespace
+{
+    // How often the boss tops its health back up to full. The creature has a huge health pool and the clamp in
+    // DamageTaken below already stops it from dying, so this only keeps the health bar full for display.
+    constexpr uint32 HEALTH_TOP_UP_MS = 1000;
+
+    // The healing sim's damage source (creature entries 900015-900017, "Sim Raid Boss"; plan section 1). Hostile and
+    // attackable, so the healer bot can attack it (that damage is recorded as the healer's secondary "damage done") and
+    // so it can hold combat references with every group member. Its damage to the group comes only from the sim's
+    // damage drivers (Sim Damage Pulse / Sim Pin Hit casts, HS1), never from melee.
+    //
+    // Built on NullCreatureAI, which is exactly the passive shell this stage needs: REACT_PASSIVE, no UpdateAI work, no
+    // chasing (AttackStart does nothing), no melee swings (nothing calls DoMeleeAttackIfReady), and no evading back
+    // home (EnterEvadeMode does nothing), so the boss stays where it was placed for the whole iteration.
+    //
+    // HS1 extends this struct in place: JustEnteredCombat / the engage-everyone step, the main-tank victim pin
+    // (Attack(tank, false) so it never swings), and the drain and pin drivers cast from UpdateAI.
+    struct npc_healsim_boss : NullCreatureAI
+    {
+        explicit npc_healsim_boss(Creature* creature) : NullCreatureAI(creature) { }
+
+        void Reset() override
+        {
+            // Rooted so a stray knockback or pull can't carry it away from the layout the sim built around it. The boss
+            // data carries the boss immunity set, which already covers those effects; this is the second line.
+            me->SetReactState(REACT_PASSIVE);
+            me->SetControlled(true, UNIT_STATE_ROOT);
+            _topUpTimer = HEALTH_TOP_UP_MS;
+        }
+
+        void DamageTaken(Unit* /*attacker*/, uint32& damage, DamageEffectType /*damageType*/,
+            SpellSchoolMask /*schoolMask*/) override
+        {
+            // Real damage that is shown and recorded (the healer's damage to it counts as damage done), but never
+            // lethal: the same "never below 1 health" rule as the dpssim dummy's health drain (SimDummyAI.cpp).
+            uint32 const health = me->GetHealth();
+            damage = health > 1 ? std::min(damage, health - 1) : 0;
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (_topUpTimer > diff)
+            {
+                _topUpTimer -= diff;
+                return;
+            }
+
+            _topUpTimer = HEALTH_TOP_UP_MS;
+
+            if (me->GetHealth() < me->GetMaxHealth())
+                me->SetFullHealth();
+        }
+
+    private:
+        uint32 _topUpTimer = HEALTH_TOP_UP_MS;
+    };
+}
+
+void AddSC_SimHealBossAI()
+{
+    RegisterCreatureAI(npc_healsim_boss);
+}
