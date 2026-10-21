@@ -199,6 +199,49 @@ void DpsSimWorldScript::OnDpsSimRun()
                 config.PrePullBuffMs = profile.PrePullBuffMs;
                 config.PlayerbotGlyphs = profile.PlayerbotGlyphs;
                 config.PetCreatureEntry = profile.PetCreatureEntry;
+                if (profile.HealMode)
+                {
+                    // DpsSim.HealGroup / DpsSim.HealTargets in the conf override the profile's HealGroup / HealTargets
+                    // (run-sim.sh sets them per run, so one profile covers every scenario)
+                    std::string groupText = sConfigMgr->GetOption<std::string>("DpsSim.HealGroup", "");
+                    std::string targetsText = sConfigMgr->GetOption<std::string>("DpsSim.HealTargets", "");
+                    if (groupText.empty())
+                        groupText = profile.HealGroup;
+                    if (targetsText.empty())
+                        targetsText = profile.HealTargets;
+
+                    std::string error;
+                    bool valid = !groupText.empty() && !targetsText.empty();
+                    if (!valid)
+                        error = "a Heal profile needs HealGroup and HealTargets (in the profile or as "
+                            "DpsSim.HealGroup / DpsSim.HealTargets)";
+                    else
+                        valid = SimHeal::ParseGroup(groupText, config.HealGroupSize, error) &&
+                            SimHeal::ParseTargets(targetsText, config.HealTargets, error) &&
+                            SimHeal::Validate(config.HealGroupSize, config.HealTargets, error);
+                    if (valid && profile.AllyTankTalents.empty())
+                    {
+                        valid = false;
+                        error = "AllyTankTalents is empty - the tank allies need a Protection talent string";
+                    }
+
+                    if (!valid)
+                    {
+                        LOG_ERROR("server.dpssim", "mod-dpssim: DpsSim.Profile '{}': {} - aborting DpsSim.RunPlayerbot "
+                            "job.", profilePath, error);
+                        ready = false;
+                    }
+
+                    config.RunMode = SimDaemon::Mode::Heal;
+                    config.AllyMaxHealthTank = profile.AllyMaxHealthTank;
+                    config.AllyMaxHealthDps = profile.AllyMaxHealthDps;
+                    config.PinMaxHealth = profile.PinMaxHealth;
+                    config.AllyTankTalents = profile.AllyTankTalents;
+                    config.AllySpreadYards = profile.AllySpreadYards;
+                    config.DrainPulseMs = profile.DrainPulseMs;
+                    LOG_INFO("server.dpssim", "mod-dpssim: heal mode - group '{}' ({} members), targets '{}'.",
+                        groupText, config.HealGroupSize, targetsText);
+                }
                 LOG_INFO("server.dpssim",
                     "mod-dpssim: loaded DpsSim.Profile '{}' (class {}, {} gear item(s), spellPower {}, attackPower {}, "
                     "{} synthetic rating(s), {} synthetic stat(s)).",
@@ -219,7 +262,9 @@ void DpsSimWorldScript::OnDpsSimRun()
         // timeline - that much log detail times a real iteration count would be unreadable.
         uint32 const iterations = sConfigMgr->GetOption<uint32>("DpsSim.Iterations", 1);
 
-        if (ready && iterations <= 1)
+        // A heal-mode job always runs as a batch (the group persists across iterations); it logs its own summary lines
+        bool const heal = config.RunMode == SimDaemon::Mode::Heal;
+        if (ready && iterations <= 1 && !heal)
             SimDaemon::RunPlayerbot(config);
         else if (ready)
         {
@@ -233,6 +278,13 @@ void DpsSimWorldScript::OnDpsSimRun()
             {
                 LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbotBatch() failed - aborting DpsSim.RunPlayerbot job.");
                 return;
+            }
+
+            // HS1: the heal summaries are logged by RunHealBatch(); the JSON report is HS2
+            if (heal)
+            {
+                LOG_INFO("server.dpssim", "mod-dpssim: heal batch complete - {} iteration(s).", results.size());
+                results.clear();
             }
 
             std::string const reportPath = sConfigMgr->GetOption<std::string>("DpsSim.ReportPath", "");

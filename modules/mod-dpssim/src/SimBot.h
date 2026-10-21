@@ -26,6 +26,7 @@
 class Creature;
 class Player;
 class PlayerbotAI;
+class Unit;
 
 // Wraps a real mod-playerbots PlayerbotAI on top of an existing SimActor's Player, so the sim's
 // hardcoded Phase 1 rotation (SimDaemon.cpp's RotationTick()) can be replaced with
@@ -127,6 +128,30 @@ public:
     // park the bot in "minimal" mode out of combat (AllowActivity() false), in which case the phase does nothing.
     bool BeginBuffPhase();
     void EndBuffPhase();
+
+    // Heal mode, once after Create(): gives the bot the master PlayerbotAI::UpdateAIGroupMaster() would give it on its
+    // first
+    // tick, now. The healer leads the group (plan R1) but the headless allies are group members without a PlayerbotAI,
+    // so
+    // FindNewMaster() takes the first of them as "the real player" and resets the bot's strategies (a "follow"
+    // included).
+    // Left to the first tick, that reset would land inside the first iteration's pre-pull buff phase, after
+    // BeginBuffPhase() trimmed the strategies, and make iteration 1 differ from the rest. The master is a headless
+    // Player,
+    // as a human's client-less stand-in; the bot never follows it into combat (non-combat strategy, stripped by the
+    // phase).
+    void ResolveGroupMaster();
+
+    // Heal mode: the unit the bot's "party member to heal" value picks right now (nullptr when none, or without an AI).
+    // It only returns the single best candidate, so SimHealScenario::Pull() checks it once next to
+    // LogHealTargetVisibility().
+    [[nodiscard]] Unit* GetPartyMemberToHeal() const;
+
+    // Heal mode, logged once at the pull: how many of `members` meet the conditions PartyMemberToHeal::Check() puts on
+    // a
+    // heal target (same map, not charmed, alive, within 2 * AiPlayerbot.HealDistance, in line of sight), and what the
+    // value picks
+    void LogHealTargetVisibility(std::vector<Player*> const& members) const;
 
 private:
     // Every enemy count the bot strategies use is built from the bot's threat list ("attackers" walks

@@ -18,11 +18,17 @@
 #include "SimHealBossAI.h"
 #include "Creature.h"
 #include "CreatureScript.h"
+#include "ObjectAccessor.h"
 #include "PassiveAI.h"
+#include "Player.h"
 #include <algorithm>
 
 namespace
 {
+    // The group's main tank (SimHealBoss::SetMainTank). A process runs one healing scenario, so a static is enough,
+    // like SimDummyAI's health-drain flag.
+    ObjectGuid s_mainTank;
+
     // How often the boss tops its health back up to full. The creature has a huge health pool and the clamp in
     // DamageTaken below already stops it from dying, so this only keeps the health bar full for display.
     constexpr uint32 HEALTH_TOP_UP_MS = 1000;
@@ -36,8 +42,9 @@ namespace
     // chasing (AttackStart does nothing), no melee swings (nothing calls DoMeleeAttackIfReady), and no evading back
     // home (EnterEvadeMode does nothing), so the boss stays where it was placed for the whole iteration.
     //
-    // HS1 extends this struct in place: JustEnteredCombat / the engage-everyone step, the main-tank victim pin
-    // (Attack(tank, false) so it never swings), and the drain and pin drivers cast from UpdateAI.
+    // HS1 adds the main-tank victim pin to UpdateAI (Attack(tank, false) so it never swings). Engaging the group and
+    // the
+    // drain and pin drivers live in SimHealBoss::Engage() and SimHealScenario.cpp, run from the sim step.
     struct npc_healsim_boss : NullCreatureAI
     {
         explicit npc_healsim_boss(Creature* creature) : NullCreatureAI(creature) { }
@@ -62,6 +69,17 @@ namespace
 
         void UpdateAI(uint32 diff) override
         {
+            // Nothing re-targets the boss (no threat-based victim selection runs for it), but an AttackStop() from
+            // somewhere else in the core would leave the Holy Paladin values without a tank to find. Only while it is
+            // in combat: between iterations the sim ends combat on purpose (the pre-pull buff phase).
+            if (!s_mainTank.IsEmpty() && me->IsInCombat())
+            {
+                Unit* victim = me->GetVictim();
+                if (!victim || victim->GetGUID() != s_mainTank)
+                    if (Player* tank = ObjectAccessor::FindPlayer(s_mainTank); tank && tank->IsAlive())
+                        me->Attack(tank, false);
+            }
+
             if (_topUpTimer > diff)
             {
                 _topUpTimer -= diff;
@@ -77,6 +95,40 @@ namespace
     private:
         uint32 _topUpTimer = HEALTH_TOP_UP_MS;
     };
+}
+
+uint32 SimHealBoss::EntryForLevel(uint8 level)
+{
+    if (level >= 80)
+        return ENTRY_LEVEL_80;
+
+    return level >= 70 ? ENTRY_LEVEL_70 : ENTRY_LEVEL_60;
+}
+
+void SimHealBoss::SetMainTank(ObjectGuid tank)
+{
+    s_mainTank = tank;
+}
+
+uint32 SimHealBoss::Engage(Creature* boss, std::vector<Player*> const& members)
+{
+    uint32 missing = 0;
+    for (Player* member : members)
+    {
+        if (!member || !member->IsAlive())
+            continue;
+
+        boss->EngageWithTarget(member);
+        if (!member->IsInCombatWith(boss))
+            member->SetInCombatWith(boss);
+        if (!member->IsInCombatWith(boss))
+            ++missing;
+    }
+
+    if (Player* tank = ObjectAccessor::FindPlayer(s_mainTank); tank && tank->IsAlive())
+        boss->Attack(tank, false);
+
+    return missing;
 }
 
 void AddSC_SimHealBossAI()

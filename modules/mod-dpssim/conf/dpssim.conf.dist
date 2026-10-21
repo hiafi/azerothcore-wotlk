@@ -316,6 +316,29 @@ DpsSim.ReportPath =
 DpsSim.RunLevelCheck = 0
 
 #
+#    DpsSim.HealGroup
+#    DpsSim.HealTargets
+#        Description: Heal mode only (a profile with "Mode = Heal", see SimProfile.h): override the profile's HealGroup
+#        and
+#                      HealTargets for this run, so one healer profile covers every scenario. HealGroup is party, raid10
+#                      or
+#                      raid20 (the healer is always one of the members). HealTargets lists the members in index order as
+#                      "<count>*<role>:<mode>:<value>" entries: role tank | dps | self (exactly one self, the healer),
+#                      mode
+#                      drain | pin. drain:<hp> is that many hit points per pulse and drain:<pct>% a percent of the
+#                      member's
+#                      max health; pin:<pct> (1-99) holds the member at that percent with real damage hits. The count
+#                      must
+#                      match the group size and at least one tank is needed, e.g.
+#                      "tank:drain:450, 3*dps:drain:150, self:drain:100" or "tank:pin:50, 3*dps:pin:50, self:pin:50".
+#                      Both are ignored by a DPS profile. See SimHeal.h.
+#        Default:     "" - (Use the profile's own values)
+#
+
+DpsSim.HealGroup =
+DpsSim.HealTargets =
+
+#
 # Console.Enable is force-disabled by the core in sim mode (no attached TTY to read from in a
 # typical headless/scripted run) and MapUpdate.Threads is force-set to 0 (synchronous, deterministic
 # map updates - the sim daemon's own loop calls map->Update(diff) directly rather than going through

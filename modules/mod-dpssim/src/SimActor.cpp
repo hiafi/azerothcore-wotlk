@@ -225,6 +225,9 @@ bool SimActor::Create(Config const& config)
         _player->SetPower(POWER_MANA, _player->GetMaxPower(POWER_MANA));
     }
 
+    if (config.HasPosition)
+        _player->Relocate(config.PositionX, config.PositionY, config.PositionZ, config.PositionO);
+
     ObjectAccessor::AddObject(_player);
     if (!_player->GetMap()->AddPlayerToMap(_player))
     {

@@ -20,6 +20,7 @@
 
 #include "Define.h"
 #include "ObjectGuid.h"
+#include "SimHeal.h"
 #include "SimTarget.h"
 #include <map>
 #include <string>
@@ -51,6 +52,14 @@ namespace SimDaemon
     // RunConfig::SpellId's real-world override (RunOnce()). It was also SimBot's pull spell until
     // 2026-10-05; SimBot now pulls by engaging each dummy (Unit::EngageWithTarget()) and casts nothing.
     constexpr uint32 SINGLE_RANK_FROSTBOLT_SPELL_ID = 116;
+
+    // What a batch simulates: the DPS sim (every profile without `Mode = Heal`) or the healing sim (SimHeal.h,
+    // SimHealScenario.h)
+    enum class Mode : uint8
+    {
+        Dps,
+        Heal
+    };
 
     // One sim job's parameters. Defaults match the M1 smoke-test job Run() has always used
     // (level-80 Troll Mage, unbuffed, vs. a level-80 zero-armor target, 30s at a 10ms step) - see
@@ -152,6 +161,23 @@ namespace SimDaemon
         // an actual real-time-paced run to compare against an accelerated one. Never use this for
         // anything else: at a 10ms step it makes a 30s sim job take 30 real seconds.
         bool RealTimePaced = false;
+
+        // ---- Heal mode (RunMode == Mode::Heal) ----
+        // The actor is the healer. It heals a group of HealGroupSize members (HealTargets, one per member in index
+        // order,
+        // the healer's own slot included) that a boss damages with real hits; see SimHealScenario.h. The profile's
+        // Mode / HealGroup / HealTargets / Ally* / DrainPulseMs keys, with DpsSim.HealGroup / DpsSim.HealTargets in the
+        // conf
+        // overriding the first two (DpsSim.cpp). TargetCount, TargetRank and the dummy settings play no part.
+        Mode RunMode = Mode::Dps;
+        uint32 HealGroupSize = SimHeal::PARTY_SIZE;
+        std::vector<SimHeal::TargetSpec> HealTargets;
+        uint32 AllyMaxHealthTank = 9000;
+        uint32 AllyMaxHealthDps = 5000;
+        uint32 PinMaxHealth = 1000000;
+        std::string AllyTankTalents;
+        float AllySpreadYards = 10.0f;
+        uint32 DrainPulseMs = 1000;
     };
 
     // One sim job's result. HitDamages/HitCrits are parallel vectors, one entry per landed hit, in
@@ -234,8 +260,37 @@ namespace SimDaemon
             bool Triggered = false;
             // See CastRecorder::CastEvent::TargetIndex - the explicit target's dummy index, else -1
             int8 TargetIndex = -1;
+            // See CastRecorder::CastEvent::PowerCost
+            int32 PowerCost = 0;
         };
         std::vector<CastEvent> CastEvents;
+
+        // ---- Heal mode (RunConfig::RunMode == Mode::Heal; empty in a DPS run) ----
+        // Timestamps are ms since the iteration start. In a heal run the DPS fields above describe the healer's damage
+        // to the boss (the EventRecorder pointed at it), CastEvents' TargetIndex is the group member index, and the
+        // mana
+        // samples are the healer's.
+        bool HealMode = false;
+        // One per group member in target index order: role, mode, raid subgroup and max health at the pull
+        std::vector<SimHeal::TargetInfo> HealTargetInfo;
+        std::vector<SimHeal::HealEvent> HealEvents;
+        std::vector<SimHeal::AbsorbEvent> AbsorbEvents;
+        std::vector<SimHeal::DamageEvent> DamageTakenEvents;
+        std::vector<SimHeal::GroupAuraEvent> GroupAuraEvents;
+        std::vector<SimHeal::HealthSample> HealthSamples;
+        std::vector<SimHeal::LifeEvent> Deaths;
+        std::vector<SimHeal::LifeEvent> Resurrections;
+        // The damage drivers' counters: Sim Pin Hits and Sim Damage Pulses cast, raw SetHealth raises after a pin hit
+        // left a
+        // target below its pin (a high count means the pin formula is off), and boss casts that failed
+        uint32 PinHits = 0;
+        uint32 PinRaises = 0;
+        uint32 DrainHits = 0;
+        uint32 DriverCastFailures = 0;
+        std::vector<uint32> TargetPinHits;
+        std::vector<uint32> TargetPinRaises;
+        // Wall-clock time the iteration took, ms (plan R9: the cost of 20 headless players)
+        uint32 WallClockMs = 0;
     };
 
     // Runs one sim job per `config` and fills `result`. Returns false (result.Success also false)

@@ -19,6 +19,7 @@
 #define MODULE_DPSSIM_SIMPROFILE_H
 
 #include "Define.h"
+#include "SimHeal.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -170,6 +171,40 @@ namespace SimProfile
         // CombatRatings/Stats above) since some tested "stats" - SpellPower, AttackPower - aren't
         // CombatRatings or Stats at all.
         std::map<std::string, bool> StatWeightTests;
+
+        // ---- Heal mode (plan .agents/plans/healing-sim/healing-sim.PLAN.md, section 3) ----
+        // `Mode = Heal` switches SimDaemon::RunPlayerbotBatch() to the healing sim: the profile's class is the healer
+        // and it heals a group of headless allies that a boss damages with real hits. Absent (or `Mode = Dps`) is
+        // every existing profile, unchanged. The keys below are read only by a Heal profile.
+        bool HealMode = false;
+
+        // `HealGroup = party | raid10 | raid20` and `HealTargets = <count>*<role>:<mode>:<value>, ...` (SimHeal.h
+        // documents the syntax). Kept as text here: DpsSim.HealGroup / DpsSim.HealTargets in the conf override them
+        // (run-sim.sh sets those per run), so the final parse and size check happen in DpsSim.cpp. Load() checks the
+        // syntax of whatever is present, and the size match when both are.
+        std::string HealGroup;
+        std::string HealTargets;
+
+        // Max health of the headless allies, per role. Only the BASE part of the health modifier is pinned, so
+        // Fortitude, Mark of the Wild and Kings still add as in game (plan R4).
+        uint32 AllyMaxHealthTank = 9000;
+        uint32 AllyMaxHealthDps = 5000;
+
+        // Max health of every PINNED target, the healer's own slot included (`PinMaxHealth`, default 1,000,000), instead of
+        // the role values above, which then only apply to drain targets. A huge pool cannot be filled by the heals that land
+        // between two pin hits, so a pinned target has no overheal and a percent-of-max-health pin is not a tiny number.
+        // Note that heals and shields scaled by max health are scaled with it. Same BASE-only pin as the allies' health.
+        uint32 PinMaxHealth = 1000000;
+
+        // Positional talent string spent on the tank allies (Warriors); must make PlayerbotAI::IsTank(tank, true) true,
+        // which SimHealScenario checks at the pull. The default is the Protection string of ProtWarriorSim.conf.
+        std::string AllyTankTalents = "--2331303122023321020330030123030";
+
+        // Diameter of the cluster the allies stand in, around a point 8 yd in front of the healer. At most 25.
+        float AllySpreadYards = 10.0f;
+
+        // Time between the drain pulses (`drain:` targets), in sim ms. At least 100.
+        uint32 DrainPulseMs = 1000;
     };
 
     // Loads `path` (a full file path - see dpssim.conf.dist's DpsSim.Profile doc comment for why
