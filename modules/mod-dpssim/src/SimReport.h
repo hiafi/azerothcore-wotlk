@@ -71,6 +71,43 @@ namespace SimReport
     //             dummy index, -1 for self, none, ground or a non-dummy.
     //   "targets": [{index, totalDamage, pctOfTotal}, ...] - damage per dummy, in index order.
     bool WriteJson(std::string const& path, SimDaemon::RunConfig const& config, SimDaemon::RunResult const& result);
+
+    // The heal-mode counterpart (plan .agents/plans/healing-sim/healing-sim.PLAN.md, section 5): one file per
+    // iteration of a heal run, "kind": "heal" at the top level (a DPS report has no "kind"). Hand-written like
+    // WriteJson(), spell names stay out of it (looked up when the report is built). All times are ms since the pull.
+    //
+    // Schema (top-level object):
+    //   "kind":    "heal"
+    //   "config":  {actorLevel, actorRace, actorClass, durationMs, stepMs, group ("party"|"raid10"|"raid20"),
+    //               healTargets (canonical text, SimHeal::TargetsText()), infiniteMana, pinMaxHealth,
+    //               allyMaxHealthTank, allyMaxHealthDps, drainPulseMs, allySpreadYards}
+    //   "summary": {elapsedMs, effectiveHealing, rawHealing, overhealing, overhealPct, healAbsorbed, absorbHealing,
+    //               hps, rawHps, hpsBeforeOom, castCount, triggeredCasts, critRatePct, manaSpent, healingPerMana,
+    //               oomAtMs, deaths, firstDeathAtMs, resurrections, actorDiedAtMs, damageDone, dps, wallClockMs,
+    //               pinHits, pinRaises, drainHits, driverCastFailures}
+    //                hps = (effective healing + absorbs) / elapsed seconds, the headline; rawHps = (raw healing +
+    //                absorbs) / seconds, before overheal and heal-absorb. overhealPct = overhealing / rawHealing.
+    //                oomAtMs = first mana sample under 5% (null if never, or if the healer had no mana at all);
+    //                hpsBeforeOom = (effective + absorbs up to oomAtMs) / oomAtMs, equal to hps when oomAtMs is null.
+    //                castCount counts the healer's deliberate casts (not triggered ones); manaSpent sums the power
+    //                cost paid at cast time, healingPerMana = (effective + absorbs) / manaSpent. critRatePct =
+    //                crits / (direct heals + ticks). damageDone / dps are the healer's own damage to the boss.
+    //                deaths counts every death of every target (the healer's own included).
+    //   "spells":  [{spellId, isPet, casts, hits, ticks, crits, effective, overheal, overhealPct, healAbsorbed,
+    //                absorbed, events, total, pctOfTotal, avgHit, manaSpent, hpm, targetsHit}, ...] by (spellId,
+    //                isPet), sorted by total descending. total = effective + absorbed, events = hits + ticks + shield
+    //                hits, avgHit = total / events. casts = the cast log's count for that id (triggered included, 0
+    //                for a pet row). A spell that was only cast (a buff) has a row with zeros when it cost mana.
+    //                hpm = total / manaSpent, null without mana.
+    //   "targets": [{index, role, mode ("pin"|"drain"), value, percent, subgroup, maxHealth, healingReceived,
+    //                effectiveReceived, absorbReceived, overheal, damageRequested, damageMitigated, damageAbsorbed,
+    //                damageTaken, damagePrevented, deaths, diedAtMs, minHealthPct, avgHealthPct, msBelow35Pct,
+    //                pinHits, pinRaises}, ...] in index order. damageTaken = health lost to the boss's hits (after
+    //                mitigation and shields); damagePrevented = damageAbsorbed + damageMitigated.
+    //   "heals", "absorbs", "damageTaken", "healthSamples", "deaths", "resurrections", "groupAuraEvents", "casts"
+    //   (with powerCost), "manaSamples": the event arrays of the iteration, field names as in SimHeal.h and
+    //   SimDaemon::RunResult.
+    bool WriteHealJson(std::string const& path, SimDaemon::RunConfig const& config, SimDaemon::RunResult const& result);
 }
 
 #endif

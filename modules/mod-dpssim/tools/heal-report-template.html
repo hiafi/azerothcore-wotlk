@@ -1,0 +1,979 @@
+<!doctype html>
+<title>__PAGE_TITLE__</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #12151d;
+  --surface: #1a1f2b;
+  --surface-2: #212736;
+  --border: #2b3244;
+  --text: #e7ebf3;
+  --text-dim: #8993a8;
+  --text-faint: #5b6377;
+  --accent: #4fd3ea;
+  --crit: #ffb454;
+  --good: #5fd98a;
+  --bad: #ef6a6a;
+  --shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f3f4f8;
+    --surface: #ffffff;
+    --surface-2: #eef0f6;
+    --border: #dde1ea;
+    --text: #1a1e29;
+    --text-dim: #5c6478;
+    --text-faint: #8891a3;
+    --accent: #0891a8;
+    --crit: #b45309;
+    --good: #15803d;
+    --bad: #b91c1c;
+    --shadow: 0 8px 24px rgba(20,25,40,0.08);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12151d;
+  --surface: #1a1f2b;
+  --surface-2: #212736;
+  --border: #2b3244;
+  --text: #e7ebf3;
+  --text-dim: #8993a8;
+  --text-faint: #5b6377;
+  --accent: #4fd3ea;
+  --crit: #ffb454;
+  --good: #5fd98a;
+  --bad: #ef6a6a;
+  --shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 980px; margin: 0 auto; padding: 32px 24px 64px; }
+
+h1, h2, h3 { font-family: "Chakra Petch", ui-sans-serif, system-ui, sans-serif; text-wrap: balance; margin: 0; }
+.mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+header.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; margin-bottom: 28px; }
+header.top h1 { font-size: 30px; font-weight: 700; letter-spacing: 0.01em; }
+header.top .tagline { color: var(--text-dim); font-size: 14px; margin-top: 4px; }
+header.top .meta { color: var(--text-faint); font-size: 12px; margin-top: 2px; }
+
+.loader-btn {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 14px; font-size: 13px; color: var(--text); cursor: pointer;
+  font-family: "IBM Plex Sans", sans-serif;
+}
+.loader-btn:hover { border-color: var(--text-faint); }
+.loader-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+input[type="file"] { display: none; }
+
+section { margin-bottom: 36px; }
+section > h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); font-weight: 600; margin-bottom: 14px; }
+
+.summary-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 24px 26px; box-shadow: var(--shadow); border-top: 3px solid var(--accent);
+}
+.summary-card .card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+.summary-card .card-title { font-family: "Chakra Petch", sans-serif; font-weight: 700; font-size: 22px; }
+.summary-card .card-sub { color: var(--text-faint); font-size: 13px; margin-top: 3px; }
+.summary-card .badge {
+  font-size: 12px; padding: 4px 11px; border-radius: 999px; font-weight: 600;
+  color: var(--bg); background: var(--accent);
+}
+.stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px 22px; }
+.stat .label { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+.stat .value { font-family: "Chakra Petch", sans-serif; font-size: 28px; font-weight: 700; margin-top: 3px; }
+.stat .value.dps { color: var(--accent); }
+.stat .value small { font-size: 13px; color: var(--text-dim); font-weight: 500; margin-left: 4px; }
+@media (max-width: 640px) { .stat-row { grid-template-columns: repeat(2, 1fr); } }
+
+.spell-block { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; box-shadow: var(--shadow); }
+.stackbar { display: flex; height: 28px; border-radius: 6px; overflow: hidden; background: var(--surface-2); margin-bottom: 14px; }
+.stackbar .seg { display: flex; align-items: center; justify-content: center; font-size: 11px; color: #0b0d12; font-weight: 600; white-space: nowrap; overflow: hidden; }
+table.spells { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+table.spells th { text-align: left; color: var(--text-faint); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 8px; border-bottom: 1px solid var(--border); }
+table.spells td { padding: 7px 8px; border-bottom: 1px solid var(--surface-2); }
+table.spells tr:last-child td { border-bottom: none; }
+table.spells .swatch { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; }
+table.spells td.num { text-align: right; font-family: "IBM Plex Mono", monospace; }
+
+.chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px 12px; box-shadow: var(--shadow); overflow-x: auto; }
+.chart-card svg { display: block; width: 100%; height: auto; min-width: 520px; }
+.chart-legend { display: flex; gap: 18px; margin-top: 4px; flex-wrap: wrap; }
+.chart-legend .item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); }
+.chart-legend .swatch { width: 14px; height: 3px; border-radius: 2px; background: var(--accent); }
+
+.log-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+.log-scroll { max-height: 320px; overflow-y: auto; }
+table.log { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+table.log th { position: sticky; top: 0; background: var(--surface-2); text-align: left; color: var(--text-faint); font-weight: 500; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+table.log td { padding: 5px 12px; border-bottom: 1px solid var(--surface-2); }
+table.log td.t { color: var(--text-faint); }
+table.log td.dmg { text-align: right; font-family: "IBM Plex Mono", monospace; }
+table.log .crit-badge { color: var(--crit); font-size: 10px; font-weight: 700; margin-left: 6px; letter-spacing: 0.04em; }
+
+details.aura-details { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+details.aura-details > summary { cursor: pointer; padding: 14px 20px; font-family: "Chakra Petch", sans-serif; font-weight: 600; font-size: 14px; list-style: none; display: flex; align-items: center; justify-content: space-between; }
+details.aura-details > summary::-webkit-details-marker { display: none; }
+details.aura-details > summary .chev { color: var(--text-faint); font-size: 12px; transition: transform 0.15s; }
+details.aura-details[open] > summary .chev { transform: rotate(90deg); }
+details.aura-details > summary:hover { background: var(--surface-2); }
+
+.empty-note { color: var(--text-faint); font-size: 13px; text-align: center; padding: 40px 20px; }
+.aggregate-note { color: var(--text-dim); font-size: 12.5px; line-height: 1.6; background: var(--surface-2); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 6px; padding: 10px 14px; }
+.aggregate-note .mono { color: var(--text-faint); }
+.pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-dim); background: var(--surface-2); border-radius: 999px; padding: 2px 9px; }
+footer.note { color: var(--text-faint); font-size: 12px; margin-top: 8px; line-height: 1.6; }
+
+.uptime-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 18px; }
+.uptime-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; box-shadow: var(--shadow); }
+.uptime-card .uptime-head { font-family: "Chakra Petch", sans-serif; font-weight: 600; font-size: 15px; margin-bottom: 12px; }
+table.uptime { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.uptime th { text-align: left; color: var(--text-faint); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 8px; border-bottom: 1px solid var(--border); }
+table.uptime td { padding: 8px 8px; border-bottom: 1px solid var(--surface-2); vertical-align: middle; }
+table.uptime tr:last-child td { border-bottom: none; }
+table.uptime td.num { text-align: right; font-family: "IBM Plex Mono", monospace; white-space: nowrap; }
+.uptime-bar-cell { min-width: 120px; }
+.uptime-bar-track { position: relative; height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.uptime-bar-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; }
+.uptime-bar-fill.buff { background: var(--good); }
+.uptime-bar-fill.debuff { background: var(--bad); }
+.target-note { color: var(--text-dim); font-size: 12.5px; margin-top: 4px; }
+table.spells th.num { text-align: right; }
+table.uptime td.pt { text-align: right; font-family: "IBM Plex Mono", monospace; white-space: nowrap; }
+.type-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; padding: 2px 7px; border-radius: 999px; }
+.type-badge.buff { color: var(--good); background: color-mix(in srgb, var(--good) 18%, transparent); }
+.type-badge.debuff { color: var(--bad); background: color-mix(in srgb, var(--bad) 18%, transparent); }
+
+/* ---- heal report additions (series colours validated with the dataviz skill's validate_palette.js against the page's
+   surfaces: --eff/--abs/--over as a 3-slot set, --s1..--s5 as a 5-slot set, dark and light) ---- */
+:root {
+  --eff: #1fa0b8; --abs: #9368dc; --over: #c98300;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --eff: #0891a8; --abs: #7c4dcc; --over: #b45309;
+    --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4;
+  }
+}
+:root[data-theme="dark"] {
+  --eff: #1fa0b8; --abs: #9368dc; --over: #c98300;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181;
+}
+
+.howto { color: var(--text-dim); font-size: 12.5px; line-height: 1.6; background: var(--surface-2); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 6px; padding: 10px 14px; margin: 0 0 28px; }
+.howto b { color: var(--text); font-weight: 600; }
+.stat .value.hps { color: var(--accent); }
+.stat .sub { color: var(--text-faint); font-size: 12px; margin-top: 2px; }
+.stat-row.small .value { font-size: 17px; }
+.stat-row + .stat-row { margin-top: 14px; }
+
+.key-legend { display: flex; gap: 18px; flex-wrap: wrap; margin: 0 0 12px; }
+.key-legend .item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); }
+.key-legend .sw { width: 12px; height: 12px; border-radius: 2px; }
+.key-legend .ln { width: 14px; height: 2px; border-radius: 1px; }
+
+.hbar { display: flex; gap: 2px; height: 14px; align-items: stretch; min-width: 150px; }
+.hbar > span { display: block; min-width: 2px; }
+.hbar > span:first-child { border-radius: 0; }
+.hbar > span:last-child { border-radius: 0 4px 4px 0; }
+.hbar-wrap { width: 100%; }
+.seg-eff { background: var(--eff); }
+.seg-abs { background: var(--abs); }
+.seg-over { background: var(--over); }
+table.spells td.bar { width: 26%; min-width: 150px; }
+table.spells td.sp { max-width: 220px; overflow-wrap: anywhere; }
+table.spells td.num, table.spells td.nw { white-space: nowrap; }
+table.spells .dim { color: var(--text-faint); }
+.tbl-scroll { overflow-x: auto; }
+
+.role { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; padding: 2px 7px; border-radius: 999px; background: var(--surface-2); color: var(--text-dim); text-transform: uppercase; }
+.role.tank { color: var(--s1); }
+.role.self { color: var(--accent); }
+
+.tip { position: fixed; z-index: 20; pointer-events: none; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: var(--shadow); max-width: 300px; }
+.tip[hidden] { display: none; }
+.tip .tt { color: var(--text-dim); margin-bottom: 4px; font-size: 11px; }
+.tip .row { display: flex; align-items: center; gap: 8px; line-height: 1.5; }
+.tip .row .k { width: 12px; height: 2px; flex: none; border-radius: 1px; }
+.tip .row .k.box { height: 8px; border-radius: 2px; }
+.tip .row .l { color: var(--text-dim); }
+.tip .row .v { margin-left: auto; padding-left: 12px; font-weight: 600; color: var(--text); font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
+
+.minis { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 12px; }
+.mini { background: var(--surface-2); border-radius: 8px; padding: 8px 8px 2px; }
+.mini .mini-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 11.5px; color: var(--text-dim); margin-bottom: 2px; }
+.chart-card .mini svg { display: block; width: 100%; height: auto; min-width: 0; }
+.chart-card svg.heat { min-width: 520px; }
+.grad { display: inline-block; width: 120px; height: 10px; border-radius: 2px; vertical-align: middle; background: linear-gradient(to right, var(--bad), var(--surface-2)); }
+.hatch { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: middle; background: repeating-linear-gradient(45deg, var(--text-faint) 0 2px, var(--surface) 2px 4px); }
+
+.matrix td.pt, .matrix th.num { text-align: right; }
+.matrix td.cellv { text-align: right; font-family: "IBM Plex Mono", monospace; white-space: nowrap; }
+.num-big { font-family: "IBM Plex Mono", monospace; }
+.dead { color: var(--bad); font-weight: 600; }
+.alive { color: var(--good); font-weight: 600; }
+.ev-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; margin-left: 6px; color: var(--text-faint); }
+table.log td.r { text-align: right; font-family: "IBM Plex Mono", monospace; }
+table.log th.r { text-align: right; }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1 id="page-title">__LABEL__</h1>
+      <div class="tagline">mod-dpssim healing report &mdash; generated by <span class="mono">run-sim.sh</span>, values baked in at generation time.</div>
+      <div class="meta mono" id="dur-meta"></div>
+      <div class="target-note" id="scenario-meta"></div>
+    </div>
+    <button class="loader-btn" id="btn-load"><span id="label-load">Load a different report</span></button>
+    <input type="file" id="file-load" accept="application/json">
+  </header>
+
+  <div class="howto"><b>How to read this.</b> A <b>pin</b> scenario (targets held at a fixed health by the sim) is the pure-HPS measurement: nobody fills up, overheal stays near zero and nobody dies. A <b>drain</b> scenario caps healing at the incoming damage, so read <b>deaths</b>, <b>overheal</b> and <b>mana</b> (when the healer ran out) instead of HPS. A mixed scenario shows triage.</div>
+
+  <section>
+    <h2>Summary</h2>
+    <div id="summary-card"></div>
+  </section>
+
+  <section>
+    <h2>Healing by spell</h2>
+    <div id="spell-block"></div>
+    <footer class="note" id="spell-note">Healing counts effective heals plus the damage absorbed by the healer's shields; overheal is the part of a heal that landed on a full target. HPM is healing per mana of the spell id that cost the mana: a heal that lands under a different id than the cast (a proc, a bouncing heal) shows its mana on the cast row and its healing on the heal row.</footer>
+  </section>
+
+  <section>
+    <h2>Healing by target</h2>
+    <div id="target-block"></div>
+  </section>
+
+  <section>
+    <h2>Health over time</h2>
+    <div id="health-block"></div>
+  </section>
+
+  <section>
+    <h2>Mana over time</h2>
+    <div class="chart-card">
+      <svg id="mana-chart" viewBox="0 0 900 320" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="chart-legend" id="mana-chart-legend"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>HoT &amp; shield uptime per target</h2>
+    <div id="uptime-block"></div>
+  </section>
+
+  <section>
+    <h2>Deaths &amp; resurrections</h2>
+    <div id="death-block"></div>
+  </section>
+
+  <section>
+    <h2>Cast log</h2>
+    <div class="log-card">
+      <div class="log-scroll">
+        <table class="log">
+          <thead><tr><th>Time</th><th>Spell</th><th>Target</th><th class="r">Cost</th></tr></thead>
+          <tbody id="cast-log-body"></tbody>
+        </table>
+      </div>
+    </div>
+    <footer class="note">Only deliberate casts (<span class="mono">!triggered</span>) are listed; procs and internal triggers are left out. Cost is the mana paid at cast time.</footer>
+  </section>
+
+  <section>
+    <h2>Heal log</h2>
+    <div class="log-card">
+      <div class="log-scroll">
+        <table class="log">
+          <thead><tr><th>Time</th><th>Spell</th><th>Target</th><th class="r">Healed</th><th class="r">Overheal</th></tr></thead>
+          <tbody id="heal-log-body"></tbody>
+        </table>
+      </div>
+    </div>
+    <footer class="note" id="heal-log-note">Direct heals and HoT ticks (<span class="mono">tick</span>) as healed; a shield row (<span class="mono">absorb</span>) shows the damage it took off the target. Spell names come from this deployment's own world DB (<span class="mono">spell_dbc.Name_Lang_enUS</span>, looked up when this report was built), with a small hand-curated override table; an id neither source recognizes shows as &ldquo;Spell #id&rdquo;. Report JSON is <span class="mono">SimReport::WriteHealJson()</span>'s schema. Generated __GENERATED_AT__.</footer>
+  </section>
+</div>
+
+<div class="tip" id="tip" hidden></div>
+<script type="application/json" id="data">__DATA_JSON__</script>
+
+<script>
+(function () {
+  "use strict";
+
+  // Cosmetic overrides only (same table as the DPS report); everything else is resolved from DB_SPELL_NAMES, baked in
+  // by build_report_html.py's own DB lookup at report-build time.
+  var SPELL_NAMES = {
+    7268: "Arcane Missile (tick)", 44401: "Missile Barrage (proc)", 36032: "Arcane Blast (stack)"
+  };
+  var DB_SPELL_NAMES = __SPELL_NAMES_JSON__;
+  function spellName(id, isPet) {
+    var n = SPELL_NAMES[id] || DB_SPELL_NAMES[id] || ("Spell #" + id);
+    return (isPet && id !== 4294967294) ? n + " (pet)" : n;
+  }
+
+  var CLASS_NAMES = { 1: "Warrior", 2: "Paladin", 3: "Hunter", 4: "Rogue", 5: "Priest", 6: "Death Knight",
+    7: "Shaman", 8: "Mage", 9: "Warlock", 11: "Druid" };
+  var SERIES = ["var(--s1)", "var(--s2)", "var(--s3)", "var(--s4)", "var(--s5)"];
+  var LOG_ROW_CAP = 4000;
+
+  var report = { label: "__LABEL__", data: null };
+
+  function readEmbedded(id) {
+    var el = document.getElementById(id);
+    if (!el) return null;
+    try { return JSON.parse(el.textContent); } catch (e) { return null; }
+  }
+  function esc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function fmtNum(n, digits) {
+    if (n === undefined || n === null) return "–";
+    return Number(n).toLocaleString("en-US", { maximumFractionDigits: digits === undefined ? 0 : digits });
+  }
+  // A count that is whole in one run and fractional in an average
+  function fmtCount(n) { return n === undefined || n === null ? "–" : fmtNum(n, Math.round(n) === n ? 0 : 1); }
+  function fmtSeconds(ms) { return (ms / 1000).toFixed(0) + "s"; }
+  function fmtSec1(ms) { return (ms / 1000).toFixed(1) + "s"; }
+  function byTime(a, b) { return a.timestampMs - b.timestampMs; }
+  function sumOf(arr) { return arr.reduce(function (x, y) { return x + y; }, 0); }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+
+  // ---- the one shared tooltip (every label goes in through textContent) ----
+  var tipEl = document.getElementById("tip");
+  function showTip(ev, title, rows) {
+    tipEl.textContent = "";
+    if (title) tipEl.appendChild(el("div", "tt", title));
+    rows.forEach(function (r) {
+      var row = el("div", "row");
+      if (r.key) {
+        var k = el("span", "k" + (r.box ? " box" : ""));
+        k.style.background = r.key;
+        row.appendChild(k);
+      }
+      row.appendChild(el("span", "l", r.label));
+      row.appendChild(el("span", "v", r.value));
+      tipEl.appendChild(row);
+    });
+    tipEl.hidden = false;
+    var w = tipEl.offsetWidth, h = tipEl.offsetHeight;
+    var x = ev.clientX + 14, y = ev.clientY + 14;
+    if (x + w > window.innerWidth - 8) x = ev.clientX - w - 14;
+    if (y + h > window.innerHeight - 8) y = ev.clientY - h - 14;
+    tipEl.style.left = Math.max(4, x) + "px";
+    tipEl.style.top = Math.max(4, y) + "px";
+  }
+  function hideTip() { tipEl.hidden = true; }
+
+  // ---- data helpers ----
+  function targetsOf(d) { return d.targets || []; }
+  function tName(d, i) {
+    var t = targetsOf(d)[i];
+    return t ? "#" + t.index + " " + t.role : "#" + i;
+  }
+  function modeText(t) {
+    return t.mode === "pin" ? "pin:" + fmtNum(t.value, 0) :
+      "drain:" + fmtNum(t.value, Math.round(t.value) === t.value ? 0 : 1) + (t.percent ? "%" : "");
+  }
+  function roleBadge(t) { return '<span class="role ' + esc(t.role) + '">' + esc(t.role) + '</span>'; }
+  function elapsedOf(d) { return d.summary.elapsedMs || (d.config && d.config.durationMs) || 1; }
+
+  function render() {
+    var d = report.data;
+    document.getElementById("page-title").textContent = report.label;
+    document.title = report.label;
+    renderMeta();
+    renderSummary();
+    renderSpells();
+    renderTargets();
+    renderHealth();
+    renderManaChart();
+    renderUptime();
+    renderDeaths();
+    renderCastLog();
+    renderHealLog();
+    if (!d) hideTip();
+  }
+
+  function renderMeta() {
+    var meta = document.getElementById("dur-meta");
+    var sc = document.getElementById("scenario-meta");
+    var d = report.data;
+    meta.textContent = d ? fmtSeconds(d.summary.elapsedMs) + " sim" : "";
+    sc.textContent = "";
+    if (!d) return;
+    var c = d.config || {};
+    sc.textContent = (c.group || "?") + " · " + (c.healTargets || "?") + " · " +
+      (c.infiniteMana ? "infinite mana (the pool is refilled every step)" : "normal mana");
+  }
+
+  // ---- summary ----
+  function tile(label, value, cls, sub) {
+    return '<div class="stat"><div class="label">' + label + '</div><div class="value ' + (cls || "") + '">' + value +
+      '</div>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>';
+  }
+
+  function renderSummary() {
+    var box = document.getElementById("summary-card");
+    var d = report.data;
+    if (!d) {
+      box.innerHTML = '<div class="summary-card"><div class="empty-note">Click &ldquo;Load a different report&rdquo; above and pick a heal report JSON file.</div></div>';
+      return;
+    }
+    var s = d.summary, c = d.config || {}, agg = d.aggregate, trim = agg ? agg.trim : null;
+    var inf = !!c.infiniteMana;
+
+    var hpsSub = "";
+    if (agg) {
+      var hv = agg.perIteration.hps;
+      hpsSub = fmtNum(Math.min.apply(null, hv), 1) + '&ndash;' + fmtNum(Math.max.apply(null, hv), 1) + ' across ' +
+        agg.iterations + ' runs' + (trim ? ' (' + fmtNum(trim.rawMean.hps, 1) + ' untrimmed)' : '');
+    }
+
+    var deathsValue, deathsSub = "";
+    if (agg) {
+      deathsValue = fmtNum(agg.meanDeaths, Math.round(agg.meanDeaths) === agg.meanDeaths ? 0 : 2);
+      deathsSub = 'per run; ' + agg.deathIterations + ' of ' + agg.iterations + ' runs had one' +
+        (agg.actorDeathCount ? ' (healer died in ' + agg.actorDeathCount + ')' : '');
+    } else {
+      deathsValue = fmtNum(s.deaths);
+      deathsSub = s.deaths > 0 ? 'first at ' + fmtSec1(s.firstDeathAtMs) + (s.actorDiedAtMs !== null ? ' (healer died)' : '') : 'nobody died';
+    }
+
+    var oomValue, oomSub;
+    if (inf) { oomValue = 'n/a'; oomSub = 'infinite mana'; }
+    else if (s.oomAtMs === null || s.oomAtMs === undefined) { oomValue = 'never'; oomSub = 'mana stayed above 5%'; }
+    else {
+      oomValue = fmtSec1(s.oomAtMs);
+      oomSub = agg ? 'average of the ' + s.oomAtMsRuns + ' of ' + trim.keptCount + ' kept runs that ran out' : 'first sample under 5% mana';
+    }
+
+    var note = "";
+    if (agg) {
+      note = '<div class="aggregate-note" style="margin-bottom:16px">HPS, healing, overheal and the other figures below are averaged over ' +
+        (trim ? (trim.droppedLowCount + trim.droppedHighCount === 0 ?
+          'all ' + agg.iterations + ' back-to-back runs (a trim of 10% per end rounds down to no run at this count)' :
+          'the middle ' + trim.keptCount + ' of ' + agg.iterations + ' back-to-back runs &ndash; the ' + trim.droppedLowCount +
+          ' lowest (' + trim.droppedLowHps.map(function (v) { return fmtNum(v, 0); }).join(', ') + ' HPS) and ' + trim.droppedHighCount +
+          ' highest (' + trim.droppedHighHps.map(function (v) { return fmtNum(v, 0); }).join(', ') + ' HPS) were trimmed as outliers before averaging' +
+          ' (untrimmed mean ' + fmtNum(trim.rawMean.hps, 1) + ' HPS). A run in which anyone died is never trimmed.')
+          : agg.iterations + ' back-to-back runs') +
+        ' The deaths tile is the mean over all ' + agg.iterations + ' runs. The charts and logs on this page show the kept run closest to the median HPS (' +
+        fmtNum(agg.representativeHps, 1) + '), not necessarily run 1 and never a trimmed-away outlier.</div>';
+    }
+
+    var cls = CLASS_NAMES[c.actorClass] || "Healer";
+    var badgeRuns = agg ? (trim ? trim.keptCount + '/' + agg.iterations : agg.iterations) : null;
+    box.innerHTML =
+      '<div class="summary-card">' +
+        '<div class="card-head">' +
+          '<div><div class="card-title">' + esc(report.label) + '</div><div class="card-sub">Level ' + esc(c.actorLevel) + ' ' + esc(cls) +
+            ' healing a ' + esc(c.group || "?") + (inf ? ' &middot; infinite mana' : '') + '</div></div>' +
+          '<span class="badge">' + fmtSeconds(s.elapsedMs) + ' sim' + (agg ? ' &middot; avg of ' + badgeRuns + ' runs' : '') + '</span>' +
+        '</div>' + note +
+        '<div class="stat-row">' +
+          tile("HPS", fmtNum(s.hps, 1), "hps", hpsSub) +
+          tile("HPS before OOM", fmtNum(s.hpsBeforeOom, 1), "", inf ? "same as HPS (mana never limits)" :
+            (s.oomAtMs === null || s.oomAtMs === undefined ? "same as HPS (never ran out)" : "pull to out of mana")) +
+          tile("Effective healing", fmtNum(s.effectiveHealing), "", fmtNum(s.rawHps, 1) + " raw HPS") +
+          tile("Absorbs", fmtNum(s.absorbHealing), "", "damage taken by the healer's shields") +
+        '</div>' +
+        '<div class="stat-row">' +
+          tile("Overheal", fmtNum(s.overhealPct, 1) + '<small>%</small>', "", fmtNum(s.overhealing) + " of " + fmtNum(s.rawHealing) + " raw") +
+          tile("Deaths", deathsValue, s.deaths > 0 || (agg && agg.meanDeaths > 0) ? "dead" : "", deathsSub) +
+          tile("Out of mana", oomValue, "", oomSub) +
+          tile("Healing per mana", fmtNum(s.healingPerMana, 2), "", fmtNum(s.manaSpent) + " mana spent") +
+        '</div>' +
+        '<div class="stat-row small">' +
+          tile("Healer DPS", fmtNum(s.dps, 1), "", fmtNum(s.damageDone) + " damage to the boss") +
+          tile("Crit rate", fmtNum(s.critRatePct, 1) + '<small>%</small>', "", "of heals and ticks") +
+          tile("Casts", fmtCount(s.castCount), "", fmtCount(s.triggeredCasts) + " triggered") +
+          tile("Resurrections", fmtCount(s.resurrections), "", "recorded, not prevented") +
+        '</div>' +
+      '</div>';
+  }
+
+  // ---- healing by spell ----
+  function legendKeys() {
+    return '<div class="key-legend"><span class="item"><span class="sw seg-eff"></span>Effective</span>' +
+      '<span class="item"><span class="sw seg-abs"></span>Absorbed</span>' +
+      '<span class="item"><span class="sw seg-over"></span>Overheal</span></div>';
+  }
+  // Three stacked segments with 2px gaps, scaled to `max`; each carries its own tooltip data
+  function stackBar(name, eff, abs, over, max) {
+    var parts = [["seg-eff", "Effective", eff], ["seg-abs", "Absorbed", abs], ["seg-over", "Overheal", over]];
+    var html = "";
+    parts.forEach(function (p) {
+      if (p[2] <= 0 || max <= 0) return;
+      html += '<span class="' + p[0] + '" style="width:' + Math.max(0.4, p[2] / max * 100) + '%" data-seg="' + p[1] +
+        '" data-name="' + esc(name) + '" data-val="' + fmtNum(p[2]) + '" data-cls="' + p[0] + '"></span>';
+    });
+    return '<div class="hbar-wrap"><div class="hbar">' + html + '</div></div>';
+  }
+  var SEG_COLOR = { "seg-eff": "var(--eff)", "seg-abs": "var(--abs)", "seg-over": "var(--over)" };
+  function wireSegTips(root) {
+    root.addEventListener("pointermove", function (ev) {
+      var seg = ev.target.closest ? ev.target.closest("[data-seg]") : null;
+      if (!seg) { hideTip(); return; }
+      showTip(ev, seg.getAttribute("data-name"), [{ key: SEG_COLOR[seg.getAttribute("data-cls")], box: true,
+        label: seg.getAttribute("data-seg"), value: seg.getAttribute("data-val") }]);
+    });
+    root.addEventListener("pointerleave", hideTip);
+  }
+
+  function renderSpells() {
+    var box = document.getElementById("spell-block");
+    var d = report.data;
+    if (!d) { box.innerHTML = '<div class="empty-note">Load a report to see its healing breakdown.</div>'; return; }
+    var spells = (d.spells || []).slice().sort(function (x, y) { return y.total - x.total || y.manaSpent - x.manaSpent; });
+    if (!spells.length) { box.innerHTML = '<div class="spell-block"><div class="empty-note">The healer healed nothing in this run.</div></div>'; return; }
+    var max = Math.max.apply(null, spells.map(function (sp) { return sp.effective + sp.absorbed + sp.overheal; }));
+    var rows = spells.map(function (sp) {
+      var name = spellName(sp.spellId, sp.isPet);
+      var swings = sp.hits + sp.ticks;
+      return '<tr><td class="sp">' + esc(name) + '</td>' +
+        '<td class="bar">' + stackBar(name, sp.effective, sp.absorbed, sp.overheal, max) + '</td>' +
+        '<td class="num">' + fmtCount(sp.casts) + '</td>' +
+        '<td class="num">' + (swings > 0 ? fmtNum(sp.crits / swings * 100, 1) + '%' : '<span class="dim">–</span>') + '</td>' +
+        '<td class="num">' + fmtNum(sp.effective) + '</td>' +
+        '<td class="num">' + (sp.absorbed > 0 ? fmtNum(sp.absorbed) : '<span class="dim">–</span>') + '</td>' +
+        '<td class="num">' + fmtNum(sp.overheal) + ' <span class="dim">(' + fmtNum(sp.overhealPct, 0) + '%)</span></td>' +
+        '<td class="num">' + fmtNum(sp.pctOfTotal, 1) + '%</td>' +
+        '<td class="num">' + (sp.manaSpent > 0 ? fmtNum(sp.manaSpent) : '<span class="dim">–</span>') + '</td>' +
+        '<td class="num">' + (sp.hpm !== null && sp.hpm !== undefined ? fmtNum(sp.hpm, 2) : '<span class="dim">–</span>') + '</td></tr>';
+    }).join("");
+    box.innerHTML = '<div class="spell-block">' + legendKeys() + '<div class="tbl-scroll"><table class="spells"><thead><tr><th>Spell</th><th>Healing</th>' +
+      '<th class="num">Casts</th><th class="num">Crit</th><th class="num">Effective</th><th class="num">Absorbed</th>' +
+      '<th class="num">Overheal</th><th class="num">Share</th><th class="num">Mana</th><th class="num">HPM</th></tr></thead><tbody>' +
+      rows + '</tbody></table></div></div>';
+    wireSegTips(box);
+  }
+
+  // ---- healing by target ----
+  function renderTargets() {
+    var box = document.getElementById("target-block");
+    var d = report.data;
+    if (!d) { box.innerHTML = '<div class="empty-note">Load a report to see the targets.</div>'; return; }
+    var ts = targetsOf(d);
+    var raid = ts.some(function (t) { return t.subgroup > 0; });
+    var max = Math.max.apply(null, ts.map(function (t) { return t.effectiveReceived + t.absorbReceived + t.overheal; }).concat([1]));
+    var rows = ts.map(function (t) {
+      var name = "#" + t.index + " " + t.role;
+      var died = t.deaths > 0;
+      return '<tr><td class="nw">#' + t.index + ' ' + roleBadge(t) + (raid ? ' <span class="pill">G' + (t.subgroup + 1) + '</span>' : '') + '</td>' +
+        '<td class="mono">' + esc(modeText(t)) + '</td>' +
+        '<td class="bar">' + stackBar(name, t.effectiveReceived, t.absorbReceived, t.overheal, max) + '</td>' +
+        '<td class="num">' + fmtNum(t.healingReceived) + '</td>' +
+        '<td class="num">' + fmtNum(t.damageTaken) + '</td>' +
+        '<td class="num">' + fmtNum(t.damagePrevented) + '</td>' +
+        '<td class="num">' + (died ? '<span class="dead">' + fmtCount(t.deaths) + '</span>' + (t.diedAtMs !== null ? ' <span class="dim">@' + fmtSec1(t.diedAtMs) + '</span>' : '') : '<span class="dim">0</span>') + '</td>' +
+        '<td class="num">' + fmtNum(t.minHealthPct, 0) + '%</td>' +
+        '<td class="num">' + fmtNum(t.avgHealthPct, 0) + '%</td>' +
+        '<td class="num">' + fmtSec1(t.msBelow35Pct) + '</td></tr>';
+    }).join("");
+    box.innerHTML = '<div class="spell-block">' + legendKeys() + '<div class="tbl-scroll"><table class="spells"><thead><tr><th>Target</th><th>Mode</th><th>Healing received</th>' +
+      '<th class="num">Healing</th><th class="num">Damage taken</th><th class="num">Prevented</th><th class="num">Deaths</th>' +
+      '<th class="num">Min HP</th><th class="num">Avg HP</th><th class="num">Below 35%</th></tr></thead><tbody>' + rows +
+      '</tbody></table></div></div>' +
+      '<footer class="note">Damage taken is the health the boss’s hits removed after mitigation and shields; prevented is what shields absorbed plus what damage-taken reductions removed. Min / Avg HP and the time below 35% come from the 500 ms health samples (a dead target counts as 0%).</footer>';
+    wireSegTips(box);
+  }
+
+  // ---- health over time ----
+  function healthSeries(d) {
+    var n = targetsOf(d).length;
+    var series = [];
+    for (var i = 0; i < n; i++) series.push([]);
+    (d.healthSamples || []).slice().sort(byTime).forEach(function (h) {
+      if (h.target < n) series[h.target].push({ t: h.timestampMs, pct: h.maxHealth > 0 ? h.health / h.maxHealth * 100 : 0, hp: h.health, max: h.maxHealth });
+    });
+    return series;
+  }
+
+  function axisSvg(W, H, pad, xmax, yTicks, yFmt, small) {
+    var plotW = W - pad.l - pad.r, plotH = H - pad.t - pad.b;
+    var fs = small ? 9 : 11, parts = [];
+    yTicks.forEach(function (v) {
+      var y = pad.t + plotH - (v.pos) * plotH;
+      parts.push('<line x1="' + pad.l + '" y1="' + y + '" x2="' + (W - pad.r) + '" y2="' + y + '" stroke="var(--border)" stroke-width="1"/>');
+      parts.push('<text x="' + (pad.l - 6) + '" y="' + (y + 3.5) + '" text-anchor="end" font-size="' + fs + '" fill="var(--text-faint)" font-family="IBM Plex Mono, monospace">' + yFmt(v.val) + '</text>');
+    });
+    var xt = small ? 2 : 6;
+    for (var j = 0; j <= xt; j++) {
+      var t = xmax / xt * j;
+      parts.push('<text x="' + (pad.l + t / xmax * plotW) + '" y="' + (H - pad.b + (small ? 13 : 22)) + '" text-anchor="middle" font-size="' + fs + '" fill="var(--text-faint)" font-family="IBM Plex Mono, monospace">' + Math.round(t / 1000) + 's</text>');
+    }
+    parts.push('<line x1="' + pad.l + '" y1="' + (pad.t + plotH) + '" x2="' + (W - pad.r) + '" y2="' + (pad.t + plotH) + '" stroke="var(--text-faint)" stroke-width="1"/>');
+    return parts.join("");
+  }
+
+  // Health lines in `container`: lines = [{name, color, pts:[{t,pct,hp,max}], deathsAt:[ms]}]. A crosshair snaps to the
+  // nearest sample time and the tooltip lists every line at that time.
+  function healthLineChart(container, lines, xmax, small) {
+    var W = small ? 200 : 900, H = small ? 112 : 320;
+    var pad = small ? { l: 30, r: 14, t: 8, b: 20 } : { l: 56, r: 20, t: 20, b: 40 };
+    var plotW = W - pad.l - pad.r, plotH = H - pad.t - pad.b;
+    function xp(t) { return pad.l + t / xmax * plotW; }
+    function yp(p) { return pad.t + plotH - p / 100 * plotH; }
+    var svg = axisSvg(W, H, pad, xmax, [0, 25, 50, 75, 100].map(function (v) { return { pos: v / 100, val: v }; }),
+      function (v) { return v + "%"; }, small);
+    lines.forEach(function (ln) {
+      if (!ln.pts.length) return;
+      var dAttr = ln.pts.map(function (p, i) { return (i ? "L" : "M") + xp(p.t).toFixed(1) + "," + yp(p.pct).toFixed(1); }).join(" ");
+      svg += '<path d="' + dAttr + '" fill="none" stroke="' + ln.color + '" stroke-width="' + (small ? 1.5 : 2) + '" stroke-linejoin="round" stroke-linecap="round"/>';
+      (ln.deathsAt || []).forEach(function (t) {
+        var x = xp(t), y = yp(0), r = small ? 3 : 4;
+        svg += '<path d="M' + (x - r) + ',' + (y - r) + 'L' + (x + r) + ',' + (y + r) + 'M' + (x + r) + ',' + (y - r) + 'L' + (x - r) + ',' + (y + r) + '" stroke="' + ln.color + '" stroke-width="2" stroke-linecap="round" fill="none"/>';
+      });
+    });
+    svg += '<line class="xh" x1="0" x2="0" y1="' + pad.t + '" y2="' + (pad.t + plotH) + '" stroke="var(--text-faint)" stroke-width="1" visibility="hidden"/>';
+    svg += '<rect class="hit" x="' + pad.l + '" y="' + pad.t + '" width="' + plotW + '" height="' + plotH + '" fill="transparent" tabindex="0"/>';
+    container.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet"' + (small ? '' : ' role="img" aria-label="Health over time per target"') + '>' + svg + '</svg>';
+    var root = container.querySelector("svg"), xh = root.querySelector(".xh"), hit = root.querySelector(".hit");
+    var times = (lines.filter(function (l) { return l.pts.length; })[0] || { pts: [] }).pts.map(function (p) { return p.t; });
+    function at(ev) {
+      var r = root.getBoundingClientRect();
+      var t = ((ev.clientX - r.left) / r.width * W - pad.l) / plotW * xmax;
+      var best = 0;
+      for (var i = 1; i < times.length; i++) if (Math.abs(times[i] - t) < Math.abs(times[best] - t)) best = i;
+      return times.length ? best : -1;
+    }
+    hit.addEventListener("pointermove", function (ev) {
+      var idx = at(ev);
+      if (idx < 0) return;
+      var t = times[idx];
+      xh.setAttribute("x1", xp(t)); xh.setAttribute("x2", xp(t)); xh.setAttribute("visibility", "visible");
+      showTip(ev, fmtSec1(t), lines.map(function (ln) {
+        var p = ln.pts[idx];
+        return { key: ln.color, label: ln.name, value: p ? (p.hp === 0 ? "dead" : fmtNum(p.pct, 0) + "% · " + fmtNum(p.hp)) : "–" };
+      }));
+    });
+    hit.addEventListener("pointerleave", function () { xh.setAttribute("visibility", "hidden"); hideTip(); });
+  }
+
+  // Raid-sized groups: one heat strip per target (the worst health in each time bin; dead cells hatched)
+  function mixColor(a, b, f) {
+    function parse(h) { h = h.trim().replace("#", ""); if (h.length === 3) h = h.replace(/(.)/g, "$1$1"); return [0, 2, 4].map(function (i) { return parseInt(h.substr(i, 2), 16); }); }
+    var ca = parse(a), cb = parse(b);
+    return "rgb(" + ca.map(function (v, i) { return Math.round(v + (cb[i] - v) * f); }).join(",") + ")";
+  }
+  function cssVar(name, fallback) {
+    var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return /^#[0-9a-f]{3,6}$/i.test(v) ? v : fallback;
+  }
+
+  function healthHeatmap(container, d, series, xmax) {
+    var rowsN = series.length, rowH = 16, gap = 2;
+    var W = 900, pad = { l: 64, r: 20, t: 12, b: 34 };
+    var H = pad.t + pad.b + rowsN * (rowH + gap);
+    var plotW = W - pad.l - pad.r;
+    var bins = Math.min(240, Math.max(1, Math.ceil(xmax / 500)));
+    var binMs = xmax / bins;
+    var base = cssVar("--surface-2", "#212736"), bad = cssVar("--bad", "#ef6a6a");
+    var cellW = plotW / bins;
+    var svg = '<defs><pattern id="hatch" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="4" height="4" fill="var(--surface)"/><rect width="2" height="4" fill="var(--text-faint)"/></pattern></defs>';
+    var cells = [];
+    series.forEach(function (pts, row) {
+      var worst = new Array(bins), dead = new Array(bins);
+      pts.forEach(function (p) {
+        var b = Math.min(bins - 1, Math.floor(p.t / binMs));
+        if (worst[b] === undefined || p.pct < worst[b]) worst[b] = p.pct;
+        if (p.hp === 0) dead[b] = true;
+      });
+      var y = pad.t + row * (rowH + gap), t = targetsOf(d)[row];
+      svg += '<text x="' + (pad.l - 8) + '" y="' + (y + rowH - 4) + '" text-anchor="end" font-size="10.5" fill="var(--text-dim)" font-family="IBM Plex Mono, monospace">#' + row + ' ' + (t ? t.role : '') + '</text>';
+      var last;
+      for (var b = 0; b < bins; b++) {
+        var v = worst[b] === undefined ? last : worst[b];
+        if (v === undefined) continue;
+        last = v;
+        var fill = dead[b] ? "url(#hatch)" : mixColor(base, bad, Math.max(0, Math.min(1, (100 - v) / 100)));
+        svg += '<rect x="' + (pad.l + b * cellW).toFixed(2) + '" y="' + y + '" width="' + (cellW + 0.4).toFixed(2) + '" height="' + rowH + '" fill="' + fill + '"/>';
+      }
+    });
+    var axisY = pad.t + rowsN * (rowH + gap);
+    for (var j = 0; j <= 6; j++) {
+      svg += '<text x="' + (pad.l + xmax / 6 * j / xmax * plotW) + '" y="' + (axisY + 16) + '" text-anchor="middle" font-size="11" fill="var(--text-faint)" font-family="IBM Plex Mono, monospace">' + Math.round(xmax / 6 * j / 1000) + 's</text>';
+    }
+    svg += '<rect class="hit" x="' + pad.l + '" y="' + pad.t + '" width="' + plotW + '" height="' + (rowsN * (rowH + gap)) + '" fill="transparent"/>';
+    container.innerHTML = '<svg class="heat" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Health over time per target, one strip per target">' + svg + '</svg>' +
+      '<div class="chart-legend"><span class="item"><span class="grad"></span>&nbsp;full health &rarr; 0%</span><span class="item"><span class="hatch"></span>&nbsp;dead</span><span class="item">worst health in each ' + fmtNum(binMs / 1000, 2) + ' s bin</span></div>';
+    var root = container.querySelector("svg"), hit = root.querySelector(".hit");
+    hit.addEventListener("pointermove", function (ev) {
+      var r = root.getBoundingClientRect();
+      var x = (ev.clientX - r.left) / r.width * W, y = (ev.clientY - r.top) / r.height * H;
+      var row = Math.floor((y - pad.t) / (rowH + gap)), t = (x - pad.l) / plotW * xmax;
+      if (row < 0 || row >= rowsN) { hideTip(); return; }
+      var pts = series[row], best = null;
+      pts.forEach(function (p) { if (!best || Math.abs(p.t - t) < Math.abs(best.t - t)) best = p; });
+      if (!best) return;
+      showTip(ev, fmtSec1(best.t), [{ key: "var(--bad)", box: true, label: tName(d, row), value: best.hp === 0 ? "dead" : fmtNum(best.pct, 0) + "% · " + fmtNum(best.hp) }]);
+    });
+    hit.addEventListener("pointerleave", hideTip);
+  }
+
+  function renderHealth() {
+    var box = document.getElementById("health-block");
+    var d = report.data;
+    if (!d) { box.innerHTML = '<div class="empty-note">Load a report to see the health curves.</div>'; return; }
+    var ts = targetsOf(d), series = healthSeries(d), xmax = elapsedOf(d);
+    var n = ts.length;
+    if (!series.some(function (s) { return s.length; })) { box.innerHTML = '<div class="chart-card"><div class="empty-note">This report has no health samples.</div></div>'; return; }
+    var deathTimes = {};
+    (d.deaths || []).forEach(function (e) { (deathTimes[e.target] = deathTimes[e.target] || []).push(e.timestampMs); });
+
+    if (n <= 5) {
+      var lines = series.map(function (pts, i) {
+        return { name: tName(d, i) + " · " + modeText(ts[i]), color: SERIES[i % SERIES.length], pts: pts, deathsAt: deathTimes[i] };
+      });
+      box.innerHTML = '<div class="chart-card"><div id="health-chart"></div><div class="chart-legend">' +
+        lines.map(function (l) { return '<span class="item"><span class="swatch" style="background:' + l.color + '"></span>' + esc(l.name) + '</span>'; }).join("") +
+        '<span class="item">&times; = death</span></div></div>';
+      healthLineChart(document.getElementById("health-chart"), lines, xmax, false);
+    } else if (n <= 10) {
+      box.innerHTML = '<div class="chart-card" style="overflow-x:visible"><div class="minis" id="minis"></div><div class="chart-legend"><span class="item">health % of max, one panel per target; &times; = death</span></div></div>';
+      var minis = document.getElementById("minis");
+      series.forEach(function (pts, i) {
+        var card = el("div", "mini"), head = el("div", "mini-head");
+        head.appendChild(el("span", "", tName(d, i)));
+        head.appendChild(el("span", "mono", modeText(ts[i])));
+        var host = el("div");
+        card.appendChild(head); card.appendChild(host); minis.appendChild(card);
+        healthLineChart(host, [{ name: tName(d, i), color: "var(--s1)", pts: pts, deathsAt: deathTimes[i] }], xmax, true);
+      });
+    } else {
+      box.innerHTML = '<div class="chart-card"><div id="health-heat"></div></div>';
+      healthHeatmap(document.getElementById("health-heat"), d, series, xmax);
+    }
+  }
+
+  // ---- mana ----
+  function renderManaChart() {
+    var svg = document.getElementById("mana-chart");
+    var legend = document.getElementById("mana-chart-legend");
+    var d = report.data;
+    var samples = d ? (d.manaSamples || []).slice().sort(byTime) : [];
+    if (!samples.length) {
+      svg.innerHTML = '<text x="450" y="160" text-anchor="middle" fill="var(--text-faint)" font-size="14">' +
+        (d ? "This report has no mana samples." : "Load a report to see its mana curve.") + '</text>';
+      legend.innerHTML = "";
+      return;
+    }
+    var W = 900, H = 320, pad = { l: 56, r: 20, t: 20, b: 40 };
+    var plotW = W - pad.l - pad.r, plotH = H - pad.t - pad.b, xmax = elapsedOf(d);
+    function xp(t) { return pad.l + t / xmax * plotW; }
+    function yp(p) { return pad.t + plotH - p / 100 * plotH; }
+    var parts = [axisSvg(W, H, pad, xmax, [0, 25, 50, 75, 100].map(function (v) { return { pos: v / 100, val: v }; }), function (v) { return v + "%"; }, false)];
+    var dAttr = samples.map(function (p, i) { return (i ? "L" : "M") + xp(p.timestampMs).toFixed(1) + "," + yp(p.manaPct).toFixed(1); }).join(" ");
+    parts.push('<path d="' + dAttr + '" fill="none" stroke="var(--eff)" stroke-width="2" stroke-linejoin="round"/>');
+    // The OOM marker: the first sample under 5% after the pool had mana (the same rule as the report's oomAtMs)
+    var seen = false, oom = null;
+    samples.forEach(function (p) {
+      if (p.manaPct >= 5) seen = true;
+      else if (seen && !oom) oom = p;
+    });
+    if (oom) {
+      var ox = xp(oom.timestampMs), oy = yp(oom.manaPct);
+      parts.push('<circle cx="' + ox.toFixed(1) + '" cy="' + oy.toFixed(1) + '" r="4" fill="var(--bad)" stroke="var(--surface)" stroke-width="2"/>');
+      var anchor = ox > W - 120 ? "end" : "start", lx = anchor === "end" ? ox - 9 : ox + 9;
+      parts.push('<text x="' + lx.toFixed(1) + '" y="' + (oy - 10).toFixed(1) + '" text-anchor="' + anchor + '" font-size="11.5" fill="var(--text)" font-family="IBM Plex Mono, monospace">out of mana at ' + fmtSec1(oom.timestampMs) + '</text>');
+    }
+    parts.push('<line class="xh" x1="0" x2="0" y1="' + pad.t + '" y2="' + (pad.t + plotH) + '" stroke="var(--text-faint)" stroke-width="1" visibility="hidden"/>');
+    parts.push('<rect class="hit" x="' + pad.l + '" y="' + pad.t + '" width="' + plotW + '" height="' + plotH + '" fill="transparent"/>');
+    svg.innerHTML = parts.join("");
+    var xh = svg.querySelector(".xh"), hit = svg.querySelector(".hit");
+    hit.addEventListener("pointermove", function (ev) {
+      var r = svg.getBoundingClientRect();
+      var t = ((ev.clientX - r.left) / r.width * W - pad.l) / plotW * xmax, best = samples[0];
+      samples.forEach(function (p) { if (Math.abs(p.timestampMs - t) < Math.abs(best.timestampMs - t)) best = p; });
+      xh.setAttribute("x1", xp(best.timestampMs)); xh.setAttribute("x2", xp(best.timestampMs)); xh.setAttribute("visibility", "visible");
+      showTip(ev, fmtSec1(best.timestampMs), [{ key: "var(--eff)", label: "Mana", value: fmtNum(best.manaPct, 1) + "%" }]);
+    });
+    hit.addEventListener("pointerleave", function () { xh.setAttribute("visibility", "hidden"); hideTip(); });
+    var avg = sumOf(samples.map(function (p) { return p.manaPct; })) / samples.length;
+    var min = Math.min.apply(null, samples.map(function (p) { return p.manaPct; }));
+    legend.innerHTML = '<span class="item"><span class="swatch" style="background:var(--eff)"></span>' + esc(report.label) +
+      ' — avg ' + fmtNum(avg, 1) + '%, min ' + fmtNum(min, 1) + '%' +
+      ((d.config && d.config.infiniteMana) ? ' (infinite mana: refilled every step)' : '') + '</span>';
+  }
+
+  // ---- HoT and shield uptime ----
+  // Pairs each (target, spell) aura's applied / removed events into intervals. Only auras that the healer applied to the
+  // target count (a removal is attributed through the caster, which may be gone by then, so pairs are chosen by the
+  // apply). An aura open at the end counts to the end.
+  function groupUptimes(d) {
+    var elapsed = elapsedOf(d), ev = (d.groupAuraEvents || []).slice().sort(byTime), mine = {}, open = {}, up = {};
+    ev.forEach(function (e) { if (e.applied && e.byHealer && e.positive) mine[e.target + ":" + e.spellId] = true; });
+    function add(spellId, target, ms) {
+      up[spellId] = up[spellId] || {};
+      up[spellId][target] = (up[spellId][target] || 0) + ms;
+    }
+    ev.forEach(function (e) {
+      var k = e.target + ":" + e.spellId;
+      if (!mine[k]) return;
+      if (e.applied) { if (open[k] === undefined) open[k] = e.timestampMs; }
+      else if (open[k] !== undefined) { add(e.spellId, e.target, e.timestampMs - open[k]); delete open[k]; }
+    });
+    Object.keys(open).forEach(function (k) {
+      var parts = k.split(":");
+      add(Number(parts[1]), Number(parts[0]), Math.max(0, elapsed - open[k]));
+    });
+    return up;
+  }
+
+  function renderUptime() {
+    var box = document.getElementById("uptime-block");
+    var d = report.data;
+    if (!d) { box.innerHTML = '<div class="empty-note">Load a report to see aura uptime.</div>'; return; }
+    var up = groupUptimes(d), elapsed = elapsedOf(d), n = targetsOf(d).length;
+    var ids = Object.keys(up).map(Number);
+    if (!ids.length) { box.innerHTML = '<div class="spell-block"><div class="empty-note">The healer put no auras on the group.</div></div>'; return; }
+    function pct(id, t) { return Math.min(100, (up[id][t] || 0) / elapsed * 100); }
+    function total(id) { var s = 0; for (var t = 0; t < n; t++) s += pct(id, t); return s; }
+    var main = [], whole = [];
+    ids.forEach(function (id) {
+      var full = true;
+      for (var t = 0; t < n; t++) if (pct(id, t) < 99.5) full = false;
+      (full ? whole : main).push(id);
+    });
+    function sortIds(a) { a.sort(function (x, y) { return total(y) - total(x); }); }
+    sortIds(main); sortIds(whole);
+    function table(list) {
+      var head = '<tr><th>Aura</th>';
+      for (var t = 0; t < n; t++) {
+        var tg = targetsOf(d)[t];
+        head += '<th class="num" title="' + esc(tName(d, t)) + '">#' + t + '</th>';
+      }
+      head += '</tr>';
+      var body = list.map(function (id) {
+        var row = '<tr><td>' + esc(spellName(id)) + '</td>';
+        for (var t = 0; t < n; t++) {
+          var p = pct(id, t);
+          row += '<td class="cellv" style="background:color-mix(in srgb, var(--good) ' + Math.round(p * 0.45) + '%, transparent)">' + (p > 0 ? fmtNum(p, 0) + '%' : '<span style="color:var(--text-faint)">–</span>') + '</td>';
+        }
+        return row + '</tr>';
+      }).join("");
+      return '<div class="tbl-scroll"><table class="uptime matrix"><thead>' + head + '</thead><tbody>' + body + '</tbody></table></div>';
+    }
+    box.innerHTML = '<div class="spell-block">' +
+      (main.length ? table(main) : '<div class="empty-note">No HoT or shield lasted less than the whole fight.</div>') +
+      '</div>' +
+      (whole.length ? '<details class="aura-details" style="margin-top:14px"><summary>Buffs up on every target the whole fight (' + whole.length + ') <span class="chev">&#9656;</span></summary><div class="tbl-scroll" style="padding:0 14px 14px">' + table(whole) + '</div></details>' : '') +
+      '<footer class="note">Uptime is the share of the fight an aura the healer applied was on each target (columns are the target numbers of the table above), counted from the pull. Buffs cast before the pull count from the start.</footer>';
+  }
+
+  // ---- deaths ----
+  function renderDeaths() {
+    var box = document.getElementById("death-block");
+    var d = report.data;
+    if (!d) { box.innerHTML = '<div class="empty-note">Load a report to see deaths.</div>'; return; }
+    var agg = d.aggregate, ev = [];
+    (d.deaths || []).forEach(function (e) { ev.push({ t: e.timestampMs, target: e.target, died: true }); });
+    (d.resurrections || []).forEach(function (e) { ev.push({ t: e.timestampMs, target: e.target, died: false }); });
+    ev.sort(function (a, b) { return a.t - b.t; });
+    var html = '';
+    if (!ev.length) {
+      html += '<div class="spell-block"><div class="empty-note">' + (agg ? 'Nobody died in the run shown on this page; every run is listed below.' : 'Nobody died.') + '</div></div>';
+    } else {
+      html += '<div class="log-card"><div class="log-scroll"><table class="log"><thead><tr><th>Time</th><th>Target</th><th>Event</th></tr></thead><tbody>' +
+        ev.map(function (e) {
+          return '<tr><td class="t mono">' + (e.t / 1000).toFixed(2) + 's</td><td>' + esc(tName(d, e.target)) + ' <span class="mono" style="color:var(--text-faint)">' + esc(targetsOf(d)[e.target] ? modeText(targetsOf(d)[e.target]) : "") + '</span></td>' +
+            '<td>' + (e.died ? '<span class="dead">died</span>' : '<span class="alive">resurrected</span>') + '</td></tr>';
+        }).join("") + '</tbody></table></div></div>';
+    }
+    if (agg && agg.deathLists) {
+      var rows = agg.deathLists.map(function (list, i) {
+        var txt = list.length ? list.map(function (e) { return tName(d, e.target) + " @" + fmtSec1(e.timestampMs); }).join(", ") : "";
+        return '<tr><td class="mono">' + (i + 1) + '</td><td class="num">' + list.length + '</td><td>' + (txt ? esc(txt) : '<span style="color:var(--text-faint)">–</span>') + '</td></tr>';
+      }).join("");
+      html += '<details class="aura-details" style="margin-top:14px"' + (agg.deathIterations ? ' open' : '') + '><summary>Deaths in every run (' + agg.iterations + ') <span class="chev">&#9656;</span></summary>' +
+        '<div class="log-scroll"><table class="log"><thead><tr><th>Run</th><th class="r">Deaths</th><th>Who and when</th></tr></thead><tbody>' + rows + '</tbody></table></div></details>';
+    }
+    box.innerHTML = html;
+  }
+
+  // ---- logs ----
+  function capNote(total) { return total > LOG_ROW_CAP ? '<tr><td colspan="5" class="t" style="padding:10px 12px;text-align:center">Showing the first ' + LOG_ROW_CAP + ' of ' + total + ' rows.</td></tr>' : ""; }
+
+  function renderCastLog() {
+    var body = document.getElementById("cast-log-body");
+    var d = report.data;
+    var casts = d ? (d.casts || []).filter(function (c) { return !c.triggered; }).sort(byTime) : [];
+    if (!casts.length) { body.innerHTML = '<tr><td colspan="4" class="t" style="padding:20px;text-align:center">No casts' + (d ? '' : ' &mdash; load a report above') + '.</td></tr>'; return; }
+    body.innerHTML = casts.slice(0, LOG_ROW_CAP).map(function (c) {
+      return '<tr><td class="t mono">' + (c.timestampMs / 1000).toFixed(2) + 's</td><td>' + esc(spellName(c.spellId)) + '</td>' +
+        '<td>' + (c.target >= 0 ? esc(tName(d, c.target)) : '<span style="color:var(--text-faint)">–</span>') + '</td>' +
+        '<td class="r">' + (c.powerCost > 0 ? fmtNum(c.powerCost) : '<span style="color:var(--text-faint)">–</span>') + '</td></tr>';
+    }).join("") + capNote(casts.length).replace('colspan="5"', 'colspan="4"');
+  }
+
+  function renderHealLog() {
+    var body = document.getElementById("heal-log-body");
+    var d = report.data;
+    var rows = [];
+    if (d) {
+      (d.heals || []).forEach(function (h) { rows.push({ t: h.timestampMs, kind: "heal", h: h }); });
+      (d.absorbs || []).forEach(function (a) { rows.push({ t: a.timestampMs, kind: "absorb", a: a }); });
+      rows.sort(function (x, y) { return x.t - y.t; });
+    }
+    if (!rows.length) { body.innerHTML = '<tr><td colspan="5" class="t" style="padding:20px;text-align:center">No heals' + (d ? '' : ' &mdash; load a report above') + '.</td></tr>'; return; }
+    body.innerHTML = rows.slice(0, LOG_ROW_CAP).map(function (r) {
+      if (r.kind === "absorb") {
+        var a = r.a;
+        return '<tr><td class="t mono">' + (a.timestampMs / 1000).toFixed(2) + 's</td><td>' + esc(spellName(a.spellId, a.isPet)) + '<span class="ev-badge">ABSORB</span></td>' +
+          '<td>' + esc(tName(d, a.target)) + '</td><td class="r">' + fmtNum(a.amount) + '</td><td class="r"><span style="color:var(--text-faint)">–</span></td></tr>';
+      }
+      var h = r.h;
+      return '<tr><td class="t mono">' + (h.timestampMs / 1000).toFixed(2) + 's</td><td>' + esc(spellName(h.spellId, h.isPet)) +
+        (h.periodic ? '<span class="ev-badge">TICK</span>' : '') + (h.crit ? '<span class="crit-badge">CRIT</span>' : '') + '</td>' +
+        '<td>' + esc(tName(d, h.target)) + '</td><td class="r">' + fmtNum(h.effective) + '</td>' +
+        '<td class="r">' + (h.overheal > 0 ? fmtNum(h.overheal) : '<span style="color:var(--text-faint)">–</span>') + '</td></tr>';
+    }).join("") + capNote(rows.length);
+  }
+
+  // ---- loading another report ----
+  document.getElementById("btn-load").addEventListener("click", function () { document.getElementById("file-load").click(); });
+  document.getElementById("file-load").addEventListener("change", function (e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var parsed = JSON.parse(reader.result);
+        if (parsed.kind !== "heal") { alert("That is not a heal report (it has no \"kind\": \"heal\"). Open DPS reports with the DPS report page."); return; }
+        report.data = parsed;
+        report.label = file.name.replace(/\.report\.json$/, "").replace(/\.[0-9]{8}-[0-9]{6}$/, "");
+        render();
+      } catch (err) {
+        alert("Couldn't parse that file as JSON: " + err.message);
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  report.data = readEmbedded("data");
+  render();
+})();
+</script>

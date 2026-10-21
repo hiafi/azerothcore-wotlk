@@ -313,6 +313,12 @@ void SimBot::UpdateAI(uint32 diff)
         _ai->UpdateAI(diff);
 }
 
+void SimBot::SilenceAI()
+{
+    if (_ai)
+        _ai->SetNextCheckDelay(0x7FFFFFFF);
+}
+
 bool SimBot::EngageTargets(std::vector<Creature*> const& targets)
 {
     Player* bot = _ai ? _ai->GetBot() : nullptr;
@@ -355,6 +361,65 @@ ObjectGuid SimBot::GetCurrentTarget() const
 
     Unit* target = _ai->GetAiObjectContext()->GetValue<Unit*>("current target")->Get();
     return target ? target->GetGUID() : ObjectGuid::Empty;
+}
+
+void SimBot::ResolveGroupMaster()
+{
+    if (!_ai || _ai->GetMaster())
+        return;
+
+    Player* master = _ai->FindNewMaster();
+    if (!master)
+        return;
+
+    _ai->SetMaster(master);
+    _ai->ResetStrategies();
+    _ai->ChangeEngine(BOT_STATE_COMBAT);
+
+    auto const join = [](std::vector<std::string> const& names)
+    {
+        std::string joined;
+        for (std::string const& name : names)
+            joined += (joined.empty() ? "" : ", ") + name;
+        return joined;
+    };
+    LOG_INFO("server.dpssim", "mod-dpssim: SimBot::ResolveGroupMaster() - master is group member '{}' (guid {}); "
+        "strategies after the reset: combat [{}], non-combat [{}].", master->GetName(), master->GetGUID().ToString(),
+        join(_ai->GetStrategies(BOT_STATE_COMBAT)), join(_ai->GetStrategies(BOT_STATE_NON_COMBAT)));
+}
+
+Unit* SimBot::GetPartyMemberToHeal() const
+{
+    if (!_ai)
+        return nullptr;
+
+    return _ai->GetAiObjectContext()->GetValue<Unit*>("party member to heal")->Get();
+}
+
+void SimBot::LogHealTargetVisibility(std::vector<Player*> const& members) const
+{
+    if (!_ai)
+        return;
+
+    Player* bot = _ai->GetBot();
+    float const range = sPlayerbotAIConfig.healDistance * 2;
+    size_t visible = 0;
+    std::string hidden;
+    for (size_t i = 0; i < members.size(); ++i)
+    {
+        Player* member = members[i];
+        if (member->IsAlive() && member->GetMapId() == bot->GetMapId() && !member->IsCharmed() &&
+            bot->GetDistance2d(member) < range && bot->IsWithinLOSInMap(member))
+            ++visible;
+        else
+            hidden += (hidden.empty() ? "" : ", ") + std::to_string(i);
+    }
+
+    Unit* picked = GetPartyMemberToHeal();
+    LOG_INFO("server.dpssim", "mod-dpssim: party member to heal - {} of {} members meet the heal-target conditions "
+        "(range {:.0f} yd, line of sight){}{}; the bot's \"party member to heal\" is {} ({:.0f}% health).", visible,
+        members.size(), range, hidden.empty() ? "" : "; not: ", hidden,
+        picked ? picked->GetName() : std::string("nobody"), picked ? picked->GetHealthPct() : 0.0f);
 }
 
 void SimBot::HandleTeleportAck()

@@ -43,6 +43,7 @@
 spell:
   start: 200000
   end: 209999
+  # 202900-202909: healing sim (source/npcs/healsim_spells.py); 202902-202909 are spare for that project.
 
 talent:
   start: 60000

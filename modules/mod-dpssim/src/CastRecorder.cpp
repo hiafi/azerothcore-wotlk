@@ -44,5 +44,5 @@ void CastRecorder::OnSpellCast(Spell* spell, Unit* caster, SpellInfo const* spel
         }
     }
 
-    _castEvents.push_back({getMSTime(), spellInfo->Id, spell->IsTriggered(), targetIndex});
+    _castEvents.push_back({getMSTime(), spellInfo->Id, spell->IsTriggered(), targetIndex, spell->GetPowerCost()});
 }

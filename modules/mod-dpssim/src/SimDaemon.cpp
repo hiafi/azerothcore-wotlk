@@ -23,6 +23,7 @@
 #include "GameTime.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
+#include "HealRecorder.h"
 #include "Log.h"
 #include "Map.h"
 #include "Pet.h"
@@ -32,6 +33,7 @@
 #include "SimBot.h"
 #include "SimClock.h"
 #include "SimDummyAI.h"
+#include "SimHealScenario.h"
 #include "SimReport.h"
 #include "SimTarget.h"
 #include "Spell.h"
@@ -45,6 +47,7 @@
 #include <chrono>
 #include <iterator>
 #include <list>
+#include <map>
 #include <set>
 #include <string>
 #include <thread>
@@ -122,7 +125,7 @@ namespace
         std::vector<SimDaemon::RunResult::CastEvent> result;
         result.reserve(events.size());
         for (CastRecorder::CastEvent const& e : events)
-            result.push_back({e.TimestampMs, e.SpellId, e.IsTriggered, e.TargetIndex});
+            result.push_back({e.TimestampMs, e.SpellId, e.IsTriggered, e.TargetIndex, e.PowerCost});
         return result;
     }
 
@@ -533,6 +536,466 @@ namespace
         recorder->Reset();
         castRecorder->Reset();
     }
+
+    // ---- Heal mode (the heal branch of RunPlayerbotBatch(); plan .agents/plans/healing-sim/healing-sim.PLAN.md) ----
+
+    // One heal-mode iteration, the counterpart of RunPlayerbotIteration(): the same pre-pull buff phase and sim clock
+    // rules, then the pull (SimHealScenario::Pull()) and a tick loop in which the scenario's drivers damage the group
+    // and the healer's bot heals it. Assumes the recorders are rewound (ResetForNextIteration() does that between
+    // iterations; the first iteration has nothing recorded yet) and the allies reset (SimHealScenario::ResetAllies()).
+    void RunHealIteration(SimDaemon::RunConfig const& config, Player* player, Map* map, SimBot& bot,
+        SimHealScenario& scenario, EventRecorder* recorder, CastRecorder* castRecorder, HealRecorder* healRecorder,
+        SimDaemon::RunResult& result)
+    {
+        auto const wallStart = std::chrono::steady_clock::now();
+        Creature* boss = scenario.GetBoss();
+        std::vector<Creature*> const bossList = {boss};
+
+        // Same start-of-iteration housekeeping as RunPlayerbotIteration()
+        player->RemoveAllSpellCooldown();
+        if (!bot.EnsurePet())
+            LOG_ERROR("server.dpssim", "mod-dpssim: the hunter pet could not be restored for this iteration - it runs "
+                "without one.");
+        for (auto const& [spellId, aura] : player->GetOwnedAuras())
+            aura->ResetProcCooldown();
+
+        uint32 const nowMs = std::max(getMSTime(), uint32(GameTime::GetGameTimeMS().count()));
+        uint32 const measuredStartMs = nowMs + ITERATION_GAP_MS;
+
+        // The buff phase needs the whole group out of combat: a buff on an ally that is in combat pulls the healer into
+        // combat (Spell::DoSpellHitOnUnit's assist rule) and ends the phase early. Afterwards the healer buffed the
+        // group as it would in game; the recorders are rewound, its spending refilled and the pull engages everyone.
+        if (config.PrePullBuffMs > 0)
+        {
+            scenario.EndCombat();
+            uint32 const buffMs = std::min(config.PrePullBuffMs, ITERATION_GAP_MS);
+            RunBuffPhase(config, buffMs, measuredStartMs, player, map, bot, castRecorder);
+            recorder->Reset();
+            castRecorder->Reset();
+            healRecorder->Reset();
+            recorder->RecordAurasPresent(player);
+            recorder->RecordAurasPresent(boss);
+            RefillResources(player, bossList);
+            bot.ReestablishCombatState(bossList);
+        }
+        else
+            healRecorder->Reset();
+
+        // The auras on the group at the pull, with or without a buff phase, so uptime counts from the pull
+        for (Player* member : scenario.GetMembers())
+            healRecorder->RecordAurasPresent(member);
+
+        scenario.Pull();
+        LogAurasAtPull(player);
+
+        // A scripted healer (tests): its AI must not act in the first Tick(), before the hook has run once
+        if (config.HealStepHook)
+            bot.SilenceAI();
+
+        // Once per process: whether the bot's heal-target value can see the whole group (plan section 7, R2)
+        static bool loggedVisibility = false;
+        if (!loggedVisibility)
+        {
+            loggedVisibility = true;
+            bot.LogHealTargetVisibility(scenario.GetMembers());
+        }
+
+        SimClock clock(config.StepMs, measuredStartMs);
+        uint32 lastManaSampleMs = 0;
+        bool sampledManaOnce = false;
+        std::vector<SimDaemon::RunResult::ManaSample> manaSamples;
+        auto const noteActorDeath = [&](uint32 atMs)
+        {
+            result.ActorDied = true;
+            result.ActorDiedAtMs = atMs;
+            // Whatever found the death, the healer's slot is in Deaths
+            scenario.RecordDeath(scenario.GetSelfIndex());
+            LOG_WARN("server.dpssim", "mod-dpssim: the healer DIED {} ms into the iteration - iteration ended, its "
+                "healing counts the full {} ms.", atMs, config.DurationMs);
+        };
+
+        while (clock.GetElapsedMs() < config.DurationMs)
+        {
+            clock.Tick(map);
+
+            // The existing actor-death rule (RunPlayerbotIteration()): check after every Tick, before the AI's auto
+            // release can run, and once more after the drivers, which can kill the healer when it is a drain target
+            if (!player->IsAlive())
+            {
+                noteActorDeath(clock.GetElapsedMs());
+                break;
+            }
+
+            scenario.Step(clock.GetElapsedMs());
+            if (!player->IsAlive())
+            {
+                noteActorDeath(clock.GetElapsedMs());
+                break;
+            }
+
+            // InfiniteMana: the healer starts every step with a full pool, so a cast is never refused for mana and
+            // the mana samples stay near 100% (a pure-throughput run, plan D8)
+            if (config.InfiniteMana)
+                player->SetPower(POWER_MANA, player->GetMaxPower(POWER_MANA));
+
+            if (config.HealStepHook)
+            {
+                bot.SilenceAI();
+                config.HealStepHook(clock.GetElapsedMs(), player, scenario.GetMembers());
+            }
+            else
+                bot.UpdateAI(config.StepMs);
+            MaybeSampleMana(player, clock.GetElapsedMs(), lastManaSampleMs, sampledManaOnce, manaSamples);
+
+            if (config.RealTimePaced)
+                std::this_thread::sleep_for(std::chrono::milliseconds(config.StepMs));
+        }
+
+        if (!result.ActorDied && !player->IsAlive())
+            noteActorDeath(config.DurationMs);
+
+        result.Success = true;
+        result.HealMode = true;
+        result.ElapsedMs = result.ActorDied ? config.DurationMs : clock.GetElapsedMs();
+
+        // The healer's damage to the boss (secondary), by the same recorder the DPS sim uses
+        result.CastAttempts = recorder->GetCastCount();
+        result.TotalDamage = recorder->GetTotalDamage();
+        result.CastCount = recorder->GetCastCount();
+        result.CritCount = recorder->GetCritCount();
+        result.HitDamages = recorder->GetHitDamages();
+        result.HitCrits = recorder->GetHitCrits();
+        result.HitSpellIds = recorder->GetHitSpellIds();
+        result.HitTimestamps = recorder->GetHitTimestamps();
+        result.HitIsPet = recorder->GetHitIsPet();
+        result.HitTargetIndex = recorder->GetHitTargetIndex();
+        result.AuraEvents = ToRunResultAuraEvents(recorder->GetAuraEvents());
+        result.ManaSamples = std::move(manaSamples);
+        result.CastEvents = ToRunResultCastEvents(castRecorder->GetCastEvents());
+
+        result.HealTargetInfo = scenario.GetTargetInfo();
+        result.HealEvents = healRecorder->GetHealEvents();
+        result.AbsorbEvents = healRecorder->GetAbsorbEvents();
+        result.DamageTakenEvents = healRecorder->GetDamageEvents();
+        result.GroupAuraEvents = healRecorder->GetAuraEvents();
+        result.HealthSamples = scenario.GetHealthSamples();
+        result.Deaths = scenario.GetDeaths();
+        result.Resurrections = scenario.GetResurrections();
+        result.PinHits = scenario.GetPinHits();
+        result.PinRaises = scenario.GetPinRaises();
+        result.DrainHits = scenario.GetDrainHits();
+        result.DriverCastFailures = scenario.GetCastFailures();
+        result.TargetPinHits = scenario.GetTargetPinHits();
+        result.TargetPinRaises = scenario.GetTargetPinRaises();
+
+        // Recorders stamp raw getMSTime(); reports count from the iteration start, and events before it clamp to 0
+        uint32 const startMs = clock.GetStartMs();
+        auto const rebase = [startMs](uint32& timestampMs)
+        {
+            timestampMs = timestampMs >= startMs ? timestampMs - startMs : 0;
+        };
+        for (uint32& timestampMs : result.HitTimestamps)
+            rebase(timestampMs);
+        for (SimDaemon::RunResult::AuraEvent& e : result.AuraEvents)
+            rebase(e.TimestampMs);
+        for (SimDaemon::RunResult::CastEvent& e : result.CastEvents)
+            rebase(e.TimestampMs);
+        for (SimHeal::HealEvent& e : result.HealEvents)
+            rebase(e.TimestampMs);
+        for (SimHeal::AbsorbEvent& e : result.AbsorbEvents)
+            rebase(e.TimestampMs);
+        for (SimHeal::DamageEvent& e : result.DamageTakenEvents)
+            rebase(e.TimestampMs);
+        for (SimHeal::GroupAuraEvent& e : result.GroupAuraEvents)
+            rebase(e.TimestampMs);
+        for (SimHeal::HealthSample& e : result.HealthSamples)
+            rebase(e.TimestampMs);
+        for (SimHeal::LifeEvent& e : result.Deaths)
+            rebase(e.TimestampMs);
+        for (SimHeal::LifeEvent& e : result.Resurrections)
+            rebase(e.TimestampMs);
+
+        result.WallClockMs = uint32(std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - wallStart).count());
+    }
+
+    // One summary line per iteration plus a per-spell and a per-target line: HPS (effective healing plus absorbs, over
+    // the full duration), effective, overheal, absorbs, deaths, the top 5 spells and the healing each target received.
+    // HS1 is validated from these lines; HS2 writes the JSON report.
+    void LogHealSummary(SimDaemon::RunResult const& result, uint32 iteration, uint32 iterations)
+    {
+        struct SpellTotals
+        {
+            uint64 Effective = 0;
+            uint64 Overheal = 0;
+            uint64 Absorbed = 0;
+            uint32 Events = 0;
+        };
+        std::map<uint32, SpellTotals> spells;
+        std::vector<uint64> received(result.HealTargetInfo.size(), 0);
+        uint64 effective = 0, overheal = 0, absorbs = 0, raw = 0;
+        for (SimHeal::HealEvent const& e : result.HealEvents)
+        {
+            effective += e.Effective;
+            overheal += e.Overheal;
+            raw += e.Raw;
+            SpellTotals& totals = spells[e.SpellId];
+            totals.Effective += e.Effective;
+            totals.Overheal += e.Overheal;
+            ++totals.Events;
+            if (e.TargetIndex < received.size())
+                received[e.TargetIndex] += e.Effective;
+        }
+        for (SimHeal::AbsorbEvent const& e : result.AbsorbEvents)
+        {
+            absorbs += e.Amount;
+            SpellTotals& totals = spells[e.SpellId];
+            totals.Absorbed += e.Amount;
+            ++totals.Events;
+            if (e.TargetIndex < received.size())
+                received[e.TargetIndex] += e.Amount;
+        }
+
+        double const seconds = double(result.ElapsedMs) / 1000.0;
+        double const hps = seconds > 0.0 ? double(effective + absorbs) / seconds : 0.0;
+        double const overhealPct = raw > 0 ? 100.0 * double(overheal) / double(raw) : 0.0;
+
+        uint32 oomAtMs = 0;
+        for (SimDaemon::RunResult::ManaSample const& sample : result.ManaSamples)
+            if (sample.ManaPct < 5.0f)
+            {
+                oomAtMs = std::max(sample.TimestampMs, 1u);
+                break;
+            }
+        float const endMana = result.ManaSamples.empty() ? 0.0f : result.ManaSamples.back().ManaPct;
+
+        std::string deaths;
+        for (SimHeal::LifeEvent const& e : result.Deaths)
+            deaths += Acore::StringFormat("{}#{}@{}ms", deaths.empty() ? "" : ", ", uint32(e.TargetIndex),
+                e.TimestampMs);
+
+        LOG_INFO("server.dpssim", "mod-dpssim:   heal iteration {}/{} - {} ms ({} wall ms): HPS {:.1f}, effective {}, "
+            "overheal {} ({:.1f}%), absorbs {}, {} heal event(s), {} deaths [{}], {} resurrection(s), healer "
+            "died: {}, OOM at {} ms, end mana {:.0f}%, {} damage to the boss.", iteration, iterations, result.ElapsedMs,
+            result.WallClockMs, hps, effective, overheal, overhealPct, absorbs, result.HealEvents.size(),
+            result.Deaths.size(), deaths, result.Resurrections.size(), result.ActorDied ? "yes" : "no", oomAtMs,
+            endMana, result.TotalDamage);
+
+        std::vector<std::pair<uint32, SpellTotals>> sorted(spells.begin(), spells.end());
+        std::stable_sort(sorted.begin(), sorted.end(), [](auto const& a, auto const& b)
+        {
+            return a.second.Effective + a.second.Absorbed > b.second.Effective + b.second.Absorbed;
+        });
+        std::string top;
+        for (size_t i = 0; i < sorted.size() && i < 5; ++i)
+        {
+            SpellInfo const* info = sSpellMgr->GetSpellInfo(sorted[i].first);
+            top += Acore::StringFormat("{}{} ({}): {} eff + {} abs, {} over", top.empty() ? "" : "; ",
+                info ? info->SpellName[0] : "melee", sorted[i].first, sorted[i].second.Effective,
+                sorted[i].second.Absorbed, sorted[i].second.Overheal);
+        }
+        LOG_INFO("server.dpssim", "mod-dpssim:     top spells: {}", top.empty() ? std::string("none") : top);
+
+        // Every spell with its event count (hits and ticks), and the auras the healer put on the group: the evidence
+        // that a Prayer of Mending jumps, a Renew ticks or a shield was applied and consumed
+        std::string all;
+        for (auto const& [spellId, totals] : sorted)
+        {
+            SpellInfo const* info = sSpellMgr->GetSpellInfo(spellId);
+            all += Acore::StringFormat("{}{} ({}) x{}", all.empty() ? "" : "; ", info ? info->SpellName[0] : "melee",
+                spellId, totals.Events);
+        }
+        LOG_INFO("server.dpssim", "mod-dpssim:     all healing spells (events): {}",
+            all.empty() ? std::string("none") : all);
+
+        std::map<uint32, uint32> applied;
+        for (SimHeal::GroupAuraEvent const& e : result.GroupAuraEvents)
+            if (e.Applied && e.ByHealer)
+                ++applied[e.SpellId];
+        std::string auras;
+        for (auto const& [spellId, count] : applied)
+        {
+            SpellInfo const* info = sSpellMgr->GetSpellInfo(spellId);
+            auras += Acore::StringFormat("{}{} ({}) x{}", auras.empty() ? "" : "; ", info ? info->SpellName[0] : "?",
+                spellId, count);
+        }
+        LOG_INFO("server.dpssim", "mod-dpssim:     auras the healer applied to the group: {}",
+            auras.empty() ? std::string("none") : auras);
+
+        // The first two shields of every shield spell: when the aura went on and when it first took damage (the evidence
+        // that a shield is used up by the next hit, whatever else is healed)
+        std::string shields;
+        std::map<uint32, uint32> shieldsPerSpell;
+        for (SimHeal::AbsorbEvent const& absorb : result.AbsorbEvents)
+        {
+            if (shieldsPerSpell[absorb.SpellId] >= 2)
+                continue;
+
+            SimHeal::GroupAuraEvent const* applied = nullptr;
+            for (SimHeal::GroupAuraEvent const& e : result.GroupAuraEvents)
+                if (e.Applied && e.TargetIndex == absorb.TargetIndex && e.SpellId == absorb.SpellId &&
+                    e.TimestampMs <= absorb.TimestampMs)
+                    applied = &e;
+            if (!applied)
+                continue;
+
+            ++shieldsPerSpell[absorb.SpellId];
+            shields += Acore::StringFormat("{}spell {} on #{}: applied {} ms, absorbed {} at {} ms", shields.empty() ?
+                "" : "; ", absorb.SpellId, uint32(absorb.TargetIndex), applied->TimestampMs, absorb.Amount,
+                absorb.TimestampMs);
+        }
+        if (!shields.empty())
+            LOG_INFO("server.dpssim", "mod-dpssim:     first shields: {}", shields);
+
+        std::string perTarget;
+        for (size_t i = 0; i < received.size(); ++i)
+            perTarget += Acore::StringFormat("{}#{} {} {}: {}", i == 0 ? "" : "; ", i,
+                SimHeal::RoleName(result.HealTargetInfo[i].Spec.TargetRole),
+                SimHeal::ModeText(result.HealTargetInfo[i].Spec), received[i]);
+        LOG_INFO("server.dpssim", "mod-dpssim:     healing received per target: {}", perTarget);
+
+        // The boss's damage and each target's health range: the evidence for the known-value and pin-hold checks
+        struct TargetDamage
+        {
+            uint32 Hits = 0;
+            uint32 PinHits = 0;
+            uint64 Requested = 0;
+            uint64 Raw = 0;
+            uint64 Absorbed = 0;
+            uint32 MinHit = 0;
+            uint32 MaxHit = 0;
+            uint32 MinHealth = 0xFFFFFFFF;
+            uint32 MaxHealth = 0;
+        };
+        std::vector<TargetDamage> damage(result.HealTargetInfo.size());
+        for (SimHeal::DamageEvent const& e : result.DamageTakenEvents)
+        {
+            if (e.TargetIndex >= damage.size())
+                continue;
+            TargetDamage& d = damage[e.TargetIndex];
+            d.MinHit = d.Hits == 0 ? e.Raw : std::min(d.MinHit, e.Raw);
+            d.MaxHit = std::max(d.MaxHit, e.Raw);
+            ++d.Hits;
+            d.PinHits += e.Pin ? 1 : 0;
+            d.Requested += e.Requested;
+            d.Raw += e.Raw;
+            d.Absorbed += e.Absorbed;
+        }
+        for (SimHeal::HealthSample const& e : result.HealthSamples)
+            if (e.TargetIndex < damage.size())
+            {
+                damage[e.TargetIndex].MinHealth = std::min(damage[e.TargetIndex].MinHealth, e.Health);
+                damage[e.TargetIndex].MaxHealth = std::max(damage[e.TargetIndex].MaxHealth, e.Health);
+            }
+        std::string damageText;
+        for (size_t i = 0; i < damage.size(); ++i)
+            damageText += Acore::StringFormat("{}#{} max {}: {} hit(s) ({} pin) requested {} raw {} (each {}-{}) "
+                "absorbed {}, health {}-{}", i == 0 ? "" : "; ", i, result.HealTargetInfo[i].MaxHealth, damage[i].Hits,
+                damage[i].PinHits, damage[i].Requested, damage[i].Raw, damage[i].MinHit, damage[i].MaxHit,
+                damage[i].Absorbed, damage[i].MinHealth == 0xFFFFFFFF ? 0 : damage[i].MinHealth, damage[i].MaxHealth);
+        LOG_INFO("server.dpssim", "mod-dpssim:     damage taken per target: {}", damageText);
+
+        LOG_INFO("server.dpssim", "mod-dpssim:     drivers - {} pin hit(s), {} pin raise(s) by SetHealth, {} drain "
+            "hit(s), {} failed cast(s); {} damage event(s).", result.PinHits, result.PinRaises, result.DrainHits,
+            result.DriverCastFailures, result.DamageTakenEvents.size());
+    }
+
+    // RunPlayerbotBatch()'s heal branch: one healer bot, one group and boss for every iteration (the group persists),
+    // the per-iteration reset of the healer (ResetForNextIteration(), exactly as in a DPS batch) and of the allies
+    bool RunHealBatch(SimDaemon::RunConfig const& config, uint32 iterations,
+        std::vector<SimDaemon::RunResult>& results)
+    {
+        // A dead ally releases its spirit after 6 minutes (SimHeal::MAX_HEAL_DURATION_MS)
+        if (config.DurationMs > SimHeal::MAX_HEAL_DURATION_MS)
+        {
+            LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunHealBatch() - a heal run of {} ms is over the {} ms "
+                "limit (a dead ally would release its spirit and leave its slot) - aborting.", config.DurationMs,
+                SimHeal::MAX_HEAL_DURATION_MS);
+            return false;
+        }
+
+        SimActor actor;
+        SimActor::Config actorConfig;
+        actorConfig.Name = "SimBot";
+        actorConfig.Race = config.ActorRace;
+        actorConfig.Class = config.ActorClass;
+        actorConfig.Gender = GENDER_MALE;
+        actorConfig.Level = uint8(config.ActorLevel);
+        actorConfig.SpellPower = config.SpellPower;
+        actorConfig.GearItemIds = config.GearItemIds;
+        actorConfig.CombatRatings = config.CombatRatings;
+        actorConfig.Stats = config.Stats;
+        actorConfig.AttackPower = config.AttackPower;
+        if (!actor.Create(actorConfig))
+        {
+            LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunHealBatch() - SimActor::Create() failed - aborting.");
+            return false;
+        }
+
+        Player* player = actor.GetPlayer();
+        Map* map = player->GetMap();
+
+        // The group exists before the bot does, as it does for a live healer: strategy resolution sees a grouped bot
+        SimHealScenario scenario;
+        SimHealScenario::Setup setup;
+        setup.GroupSize = config.HealGroupSize;
+        setup.Targets = config.HealTargets;
+        setup.AllyMaxHealthTank = config.AllyMaxHealthTank;
+        setup.AllyMaxHealthDps = config.AllyMaxHealthDps;
+        setup.PinMaxHealth = config.PinMaxHealth;
+        setup.AllyTankTalents = config.AllyTankTalents;
+        setup.SpreadYards = config.AllySpreadYards;
+        setup.DrainPulseMs = config.DrainPulseMs;
+        if (!scenario.Create(player, setup))
+        {
+            LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunHealBatch() - building the group failed - aborting.");
+            return false;
+        }
+
+        Creature* boss = scenario.GetBoss();
+        std::vector<Creature*> const bossList = {boss};
+
+        // The healer's damage goes through the existing recorder, pointed at the boss. The cast log's target index is
+        // the group member the cast was aimed at.
+        EventRecorder* recorder = new EventRecorder(player->GetGUID(), {boss->GetGUID()});
+        CastRecorder* castRecorder = new CastRecorder(player->GetGUID(), scenario.GetMemberGuids());
+        HealRecorder* healRecorder = new HealRecorder(player->GetGUID(), scenario.GetMemberGuids());
+        scenario.SetRecorder(healRecorder);
+
+        SimBot bot;
+        if (!bot.Create(player, bossList, config.PlayerbotTalents, config.PlayerbotGlyphs, config.PetCreatureEntry))
+        {
+            LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunHealBatch() - SimBot::Create() failed - aborting.");
+            return false;
+        }
+
+        bot.ResolveGroupMaster();
+        // After the bot spent its talents (stamina talents move max health): the healer's own pinned slot
+        scenario.PinHealerMaxHealth();
+
+        // The role table, now that the healer's talents are spent: its own row reads its real spec tab
+        scenario.LogRoles();
+
+        Position const startPosition = player->GetPosition();
+
+        for (uint32 i = 0; i < iterations; ++i)
+        {
+            if (i > 0)
+            {
+                ResetForNextIteration(player, bossList, bot, recorder, castRecorder, startPosition);
+                scenario.ResetAllies();
+                healRecorder->Reset();
+            }
+
+            SimDaemon::RunResult result;
+            RunHealIteration(config, player, map, bot, scenario, recorder, castRecorder, healRecorder, result);
+            LogHealSummary(result, i + 1, iterations);
+
+            results.push_back(std::move(result));
+        }
+
+        return true;
+    }
 }
 
 bool SimDaemon::RunOnce(RunConfig const& config, RunResult& result)
@@ -639,6 +1102,13 @@ bool SimDaemon::RunPlayerbotOnce(RunConfig const& config, RunResult& result)
 {
     result = RunResult{};
 
+    if (config.RunMode == Mode::Heal)
+    {
+        LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunPlayerbotOnce() - a heal-mode profile runs through "
+            "RunPlayerbotBatch() only.");
+        return false;
+    }
+
     SimActor actor;
     SimActor::Config actorConfig;
     actorConfig.Name = "SimBot";
@@ -698,6 +1168,11 @@ bool SimDaemon::RunPlayerbotBatch(RunConfig const& config, uint32 iterations, st
     if (iterations == 0)
         return true;
     results.reserve(iterations);
+
+    // The healing sim shares the batch contract (one process, the actor and the recorders reused, `iterations` results)
+    // but not the setup or the loop; the DPS path below is untouched
+    if (config.RunMode == Mode::Heal)
+        return RunHealBatch(config, iterations, results);
 
     // Identical setup to RunPlayerbotOnce() above - see its own inline comments for what each step
     // does. Done once here rather than once per iteration - see this function's own doc comment

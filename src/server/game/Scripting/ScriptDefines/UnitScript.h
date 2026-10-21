@@ -31,6 +31,8 @@ enum UnitHook
     UNITHOOK_ON_SPELL_DAMAGE_TAKEN_FINAL,
     UNITHOOK_ON_MELEE_DAMAGE_FINAL,
     UNITHOOK_ON_PERIODIC_DAMAGE_FINAL,
+    UNITHOOK_ON_HEAL_FINAL,
+    UNITHOOK_ON_ABSORB_FINAL,
     UNITHOOK_MODIFY_HEAL_RECEIVED,
     UNITHOOK_ON_BEFORE_ROLL_MELEE_OUTCOME_AGAINST,
     UNITHOOK_ON_AURA_APPLY,
@@ -51,6 +53,7 @@ enum UnitHook
 };
 
 enum ReputationRank : uint8;
+class AuraEffect;
 class ByteBuffer;
 struct BuildValuesCachePosPointers;
 
@@ -98,6 +101,23 @@ public:
     // Purely observational, for mod-dpssim's EventRecorder: ModifyPeriodicDamageAurasTick fires before crit and
     // mitigation. `attacker` can be nullptr if the caster despawned while the aura still exists on the target.
     virtual void OnPeriodicDamageFinal(Unit* /*target*/, Unit* /*attacker*/, uint32 /*damage*/, SpellInfo const* /*spellInfo*/, bool /*isCrit*/) { }
+
+    // Custom: the healing twin of OnSpellDamageTakenFinal - fires once per heal event from Unit::HealBySpell (direct
+    // heals; also the health leech and health funnel tick heals, which reach it with `isPeriodic` false),
+    // AuraEffect::HandlePeriodicHealAurasTick (HoT ticks, `isPeriodic` true) and the leech-stat heal in
+    // Unit::DealDamage, after crit and every healing modifier. `heal` is the amount before heal-absorb, `effective` is what landed on the
+    // target (capped by missing health) and `healAbsorbed` is what a heal-absorb aura took, so
+    // overheal = heal - effective - healAbsorbed. `healer` can be nullptr if the caster despawned while the aura
+    // still exists on the target. `spellInfo` is nullptr only for a melee auto-attack's leech heal
+    // (SPELL_AURA_MOD_LEECH_PCT). Purely observational, for mod-dpssim's heal mode: OnHeal has no spell, no crit and
+    // only the effective amount, and ModifyHealReceived fires before heal-absorb and the other modifiers.
+    virtual void OnHealFinal(Unit* /*healer*/, Unit* /*target*/, SpellInfo const* /*spellInfo*/, uint32 /*heal*/, uint32 /*effective*/, uint32 /*healAbsorbed*/, bool /*isCrit*/, bool /*isPeriodic*/) { }
+
+    // Custom: fires from Unit::CalcAbsorbResist right after a school-absorb or mana-shield aura took `absorbed` (> 0)
+    // out of an incoming hit. The shield's caster (for attribution) is absorbAurEff->GetCasterGUID(); the effect is
+    // still valid during the call (an exhausted shield is removed afterwards). `attacker` can be nullptr. Purely
+    // observational, for mod-dpssim's heal mode, which counts absorbed damage as healing done by the shield's caster.
+    virtual void OnAbsorbFinal(Unit* /*victim*/, Unit* /*attacker*/, AuraEffect const* /*absorbAurEff*/, uint32 /*absorbed*/) { }
 
     // Called when Heal is Recieved
     virtual void ModifyHealReceived(Unit* /*target*/, Unit* /*healer*/, uint32& /*heal*/, SpellInfo const* /*spellInfo*/) { }

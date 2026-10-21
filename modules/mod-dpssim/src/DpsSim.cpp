@@ -25,6 +25,7 @@
 #include "SimProfile.h"
 #include "SimReport.h"
 #include "SimTests.h"
+#include "StringFormat.h"
 #include "Timer.h"
 #include "Util.h"
 #include <algorithm>
@@ -199,6 +200,81 @@ void DpsSimWorldScript::OnDpsSimRun()
                 config.PrePullBuffMs = profile.PrePullBuffMs;
                 config.PlayerbotGlyphs = profile.PlayerbotGlyphs;
                 config.PetCreatureEntry = profile.PetCreatureEntry;
+                if (profile.HealMode)
+                {
+                    // DpsSim.HealGroup / DpsSim.HealTargets in the conf override the profile's HealGroup / HealTargets
+                    // (run-sim.sh sets them per run, so one profile covers every scenario)
+                    std::string groupText = sConfigMgr->GetOption<std::string>("DpsSim.HealGroup", "");
+                    std::string targetsText = sConfigMgr->GetOption<std::string>("DpsSim.HealTargets", "");
+                    if (groupText.empty())
+                        groupText = profile.HealGroup;
+                    if (targetsText.empty())
+                        targetsText = profile.HealTargets;
+
+                    std::string error;
+                    bool valid = !groupText.empty() && !targetsText.empty();
+                    if (!valid)
+                        error = "a Heal profile needs HealGroup and HealTargets (in the profile or as "
+                            "DpsSim.HealGroup / DpsSim.HealTargets)";
+                    else
+                        valid = SimHeal::ParseGroup(groupText, config.HealGroupSize, error) &&
+                            SimHeal::ParseTargets(targetsText, config.HealTargets, error) &&
+                            SimHeal::Validate(config.HealGroupSize, config.HealTargets, error);
+                    if (valid && profile.AllyTankTalents.empty())
+                    {
+                        valid = false;
+                        error = "AllyTankTalents is empty - the tank allies need a Protection talent string";
+                    }
+
+                    if (valid && config.DurationMs > SimHeal::MAX_HEAL_DURATION_MS)
+                    {
+                        // A dead ally releases its spirit after 6 minutes and leaves its slot
+                        valid = false;
+                        error = Acore::StringFormat("DpsSim.DurationSeconds {} is over the {} s limit of a heal run (a "
+                            "dead ally would release its spirit after 6 minutes)", config.DurationMs / 1000,
+                            SimHeal::MAX_HEAL_DURATION_MS / 1000);
+                    }
+
+                    if (!valid)
+                    {
+                        LOG_ERROR("server.dpssim", "mod-dpssim: DpsSim.Profile '{}': {} - aborting DpsSim.RunPlayerbot "
+                            "job.", profilePath, error);
+                        ready = false;
+                    }
+
+                    config.RunMode = SimDaemon::Mode::Heal;
+                    config.AllyMaxHealthTank = profile.AllyMaxHealthTank;
+                    config.AllyMaxHealthDps = profile.AllyMaxHealthDps;
+                    config.PinMaxHealth = profile.PinMaxHealth;
+                    config.AllyTankTalents = profile.AllyTankTalents;
+                    config.AllySpreadYards = profile.AllySpreadYards;
+                    config.DrainPulseMs = profile.DrainPulseMs;
+
+                    // DpsSim.InfiniteMana (true/false) overrides the profile's InfiniteMana; empty = the profile's
+                    config.InfiniteMana = profile.InfiniteMana;
+                    std::string const manaText = sConfigMgr->GetOption<std::string>("DpsSim.InfiniteMana", "");
+                    if (StringEqualI(manaText, "1") || StringEqualI(manaText, "true"))
+                        config.InfiniteMana = true;
+                    else if (StringEqualI(manaText, "0") || StringEqualI(manaText, "false"))
+                        config.InfiniteMana = false;
+                    else if (!manaText.empty())
+                    {
+                        LOG_ERROR("server.dpssim", "mod-dpssim: DpsSim.InfiniteMana '{}' is not true or false - "
+                            "aborting DpsSim.RunPlayerbot job.", manaText);
+                        ready = false;
+                    }
+
+                    LOG_INFO("server.dpssim", "mod-dpssim: heal mode - group '{}' ({} members), targets '{}', "
+                        "infinite mana {}.", groupText, config.HealGroupSize, targetsText,
+                        config.InfiniteMana ? "on" : "off");
+                }
+                else if (!sConfigMgr->GetOption<std::string>("DpsSim.InfiniteMana", "").empty())
+                {
+                    // A DPS run has no mana to refill: refuse rather than silently ignore the override
+                    LOG_ERROR("server.dpssim", "mod-dpssim: DpsSim.InfiniteMana is set but profile '{}' is not a "
+                        "Heal profile (Mode = Heal) - aborting DpsSim.RunPlayerbot job.", profilePath);
+                    ready = false;
+                }
                 LOG_INFO("server.dpssim",
                     "mod-dpssim: loaded DpsSim.Profile '{}' (class {}, {} gear item(s), spellPower {}, attackPower {}, "
                     "{} synthetic rating(s), {} synthetic stat(s)).",
@@ -219,7 +295,9 @@ void DpsSimWorldScript::OnDpsSimRun()
         // timeline - that much log detail times a real iteration count would be unreadable.
         uint32 const iterations = sConfigMgr->GetOption<uint32>("DpsSim.Iterations", 1);
 
-        if (ready && iterations <= 1)
+        // A heal-mode job always runs as a batch (the group persists across iterations); it logs its own summary lines
+        bool const heal = config.RunMode == SimDaemon::Mode::Heal;
+        if (ready && iterations <= 1 && !heal)
             SimDaemon::RunPlayerbot(config);
         else if (ready)
         {
@@ -236,6 +314,20 @@ void DpsSimWorldScript::OnDpsSimRun()
             }
 
             std::string const reportPath = sConfigMgr->GetOption<std::string>("DpsSim.ReportPath", "");
+
+            // The heal summaries are logged by RunHealBatch(); the JSON report is one file per iteration, named the
+            // way a DPS run's are (the bare path for a single iteration)
+            if (heal)
+            {
+                LOG_INFO("server.dpssim", "mod-dpssim: heal batch complete - {} iteration(s).", results.size());
+                if (!reportPath.empty())
+                    for (size_t i = 0; i < results.size(); ++i)
+                        SimReport::WriteHealJson(results.size() == 1 ? reportPath :
+                            IterationReportPath(reportPath, uint32(i + 1)), config, results[i]);
+
+                results.clear();
+            }
+
             for (size_t i = 0; i < results.size(); ++i)
             {
                 SimDaemon::RunResult const& result = results[i];

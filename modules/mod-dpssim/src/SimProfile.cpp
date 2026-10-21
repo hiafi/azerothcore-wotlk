@@ -17,7 +17,9 @@
 
 #include "SimProfile.h"
 #include "Log.h"
+#include "StringFormat.h"
 #include "Unit.h"
+#include "Util.h"
 #include <algorithm>
 #include <fstream>
 #include <sstream>
@@ -296,6 +298,82 @@ bool SimProfile::Load(std::string const& path, Profile& out)
 
             parsed.StatWeightsEnabled = flagValue;
         }
+        else if (key == "Mode")
+        {
+            if (StringEqualI(value, "Heal"))
+                parsed.HealMode = true;
+            else if (StringEqualI(value, "Dps"))
+                parsed.HealMode = false;
+            else
+            {
+                LOG_ERROR("server.dpssim",
+                    "mod-dpssim: SimProfile::Load() - '{}' line {}: 'Mode' value '{}' is not Heal or Dps.",
+                    path, lineNo, value);
+                return false;
+            }
+        }
+        else if (key == "HealGroup")
+            parsed.HealGroup = value;
+        else if (key == "HealTargets")
+            parsed.HealTargets = value;
+        else if (key == "AllyTankTalents")
+            parsed.AllyTankTalents = value;
+        else if (key == "InfiniteMana")
+        {
+            bool ok = false;
+            bool const flagValue = ParseBool(value, ok);
+            if (!ok)
+            {
+                LOG_ERROR("server.dpssim",
+                    "mod-dpssim: SimProfile::Load() - '{}' line {}: 'InfiniteMana' value '{}' is not true/false.",
+                    path, lineNo, value);
+                return false;
+            }
+
+            parsed.InfiniteMana = flagValue;
+            parsed.InfiniteManaSet = true;
+        }
+        else if (key == "AllyMaxHealth.Tank" || key == "AllyMaxHealth.Dps" || key == "PinMaxHealth" ||
+            key == "DrainPulseMs")
+        {
+            uint32 number = 0;
+            try
+            {
+                if (value.find('-') != std::string::npos)
+                    throw std::invalid_argument("negative");
+                number = uint32(std::stoul(value));
+            }
+            catch (std::exception const&)
+            {
+                LOG_ERROR("server.dpssim",
+                    "mod-dpssim: SimProfile::Load() - '{}' line {}: '{}' value '{}' is not a number.",
+                    path, lineNo, key, value);
+                return false;
+            }
+
+            if (key == "DrainPulseMs")
+                parsed.DrainPulseMs = number;
+            else if (key == "PinMaxHealth")
+                parsed.PinMaxHealth = number;
+            else if (key == "AllyMaxHealth.Tank")
+                parsed.AllyMaxHealthTank = number;
+            else
+                parsed.AllyMaxHealthDps = number;
+        }
+        else if (key == "AllySpreadYards")
+        {
+            try
+            {
+                parsed.AllySpreadYards = std::stof(value);
+            }
+            catch (std::exception const&)
+            {
+                LOG_ERROR("server.dpssim",
+                    "mod-dpssim: SimProfile::Load() - '{}' line {}: 'AllySpreadYards' value '{}' is not a number.",
+                    path, lineNo, value);
+                return false;
+            }
+        }
         else if (auto const it = RATING_KEYS.find(key); it != RATING_KEYS.end())
         {
             int32 ratingValue = 0;
@@ -361,6 +439,53 @@ bool SimProfile::Load(std::string const& path, Profile& out)
         LOG_ERROR("server.dpssim", "mod-dpssim: SimProfile::Load() - '{}': 'PetCreatureEntry' is for hunter profiles "
             "(Class {}), this one is class {}.", path, uint32(CLASS_HUNTER), parsed.Class);
         return false;
+    }
+
+    if (!parsed.HealMode && parsed.InfiniteManaSet)
+    {
+        LOG_ERROR("server.dpssim", "mod-dpssim: SimProfile::Load() - '{}': 'InfiniteMana' is for Heal profiles "
+            "(add 'Mode = Heal'); a DPS run has no mana to refill.", path);
+        return false;
+    }
+
+    if (parsed.HealMode)
+    {
+        std::string error;
+        uint32 groupSize = 0;
+        std::vector<SimHeal::TargetSpec> targets;
+        bool haveGroup = !parsed.HealGroup.empty();
+        bool haveTargets = !parsed.HealTargets.empty();
+        bool ok = true;
+        if (haveGroup && !SimHeal::ParseGroup(parsed.HealGroup, groupSize, error))
+            ok = false;
+        else if (haveTargets && !SimHeal::ParseTargets(parsed.HealTargets, targets, error))
+            ok = false;
+        else if (haveGroup && haveTargets && !SimHeal::Validate(groupSize, targets, error))
+            ok = false;
+        else if (parsed.AllyMaxHealthTank < SimHeal::MIN_TARGET_MAX_HEALTH ||
+            parsed.AllyMaxHealthDps < SimHeal::MIN_TARGET_MAX_HEALTH ||
+            parsed.PinMaxHealth < SimHeal::MIN_TARGET_MAX_HEALTH)
+        {
+            error = Acore::StringFormat("AllyMaxHealth.Tank, AllyMaxHealth.Dps and PinMaxHealth must be at least {}",
+                SimHeal::MIN_TARGET_MAX_HEALTH);
+            ok = false;
+        }
+        else if (!(parsed.AllySpreadYards >= 0.0f && parsed.AllySpreadYards <= 25.0f))
+        {
+            error = "AllySpreadYards must be between 0 and 25";
+            ok = false;
+        }
+        else if (parsed.DrainPulseMs < 100)
+        {
+            error = "DrainPulseMs must be at least 100";
+            ok = false;
+        }
+
+        if (!ok)
+        {
+            LOG_ERROR("server.dpssim", "mod-dpssim: SimProfile::Load() - '{}': {}.", path, error);
+            return false;
+        }
     }
 
     out = parsed;
