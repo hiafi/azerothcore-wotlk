@@ -190,11 +190,11 @@ namespace SimProfile
         uint32 AllyMaxHealthTank = 9000;
         uint32 AllyMaxHealthDps = 5000;
 
-        // Max health of every PINNED target, the healer's own slot included (`PinMaxHealth`, default 1,000,000), instead of
+        // Max health of every PINNED target, the healer's own slot included (`PinMaxHealth`, default 30,000), instead of
         // the role values above, which then only apply to drain targets. A huge pool cannot be filled by the heals that land
         // between two pin hits, so a pinned target has no overheal and a percent-of-max-health pin is not a tiny number.
         // Note that heals and shields scaled by max health are scaled with it. Same BASE-only pin as the allies' health.
-        uint32 PinMaxHealth = 1000000;
+        uint32 PinMaxHealth = 30000;
 
         // Positional talent string spent on the tank allies (Warriors); must make PlayerbotAI::IsTank(tank, true) true,
         // which SimHealScenario checks at the pull. The default is the Protection string of ProtWarriorSim.conf.

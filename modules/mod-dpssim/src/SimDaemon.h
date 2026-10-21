@@ -174,7 +174,7 @@ namespace SimDaemon
         std::vector<SimHeal::TargetSpec> HealTargets;
         uint32 AllyMaxHealthTank = 9000;
         uint32 AllyMaxHealthDps = 5000;
-        uint32 PinMaxHealth = 1000000;
+        uint32 PinMaxHealth = 30000;
         std::string AllyTankTalents;
         float AllySpreadYards = 10.0f;
         uint32 DrainPulseMs = 1000;

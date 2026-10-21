@@ -60,7 +60,7 @@ public:
         uint32 AllyMaxHealthTank = 9000;
         uint32 AllyMaxHealthDps = 5000;
         // Max health of every pinned target (profile PinMaxHealth); AllyMaxHealth.* then only applies to drain targets
-        uint32 PinMaxHealth = 1000000;
+        uint32 PinMaxHealth = 30000;
         std::string AllyTankTalents;
         float SpreadYards = 10.0f;
         uint32 DrainPulseMs = 1000;
@@ -135,7 +135,7 @@ private:
     Player* _mainTank = nullptr;
     size_t _selfIndex = 0;
     uint32 _drainPulseMs = 1000;
-    uint32 _pinMaxHealth = 1000000;
+    uint32 _pinMaxHealth = 30000;
 
     // Per iteration
     std::vector<SimHeal::TargetInfo> _targetInfo;
