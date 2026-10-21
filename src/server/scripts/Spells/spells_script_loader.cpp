@@ -53,6 +53,7 @@ void AddSC_shaman_shared_spell_scripts(); // Custom: shaman-rework
 void AddSC_shaman_hooks(); // Custom: shaman-rework
 void AddSC_shaman_totem_spell_scripts(); // Custom: shaman-rework
 void AddSC_shaman_elemental_spell_scripts(); // Custom: shaman-rework
+void AddSC_shaman_restoration_spell_scripts(); // Custom: shaman-rework
 void AddSC_warrior_spell_scripts();
 void AddSC_quest_spell_scripts();
 void AddSC_item_spell_scripts();
@@ -98,6 +99,7 @@ void AddSpellsScripts()
     AddSC_shaman_hooks(); // Custom: shaman-rework
     AddSC_shaman_totem_spell_scripts(); // Custom: shaman-rework
     AddSC_shaman_elemental_spell_scripts(); // Custom: shaman-rework
+    AddSC_shaman_restoration_spell_scripts(); // Custom: shaman-rework
     AddSC_warrior_spell_scripts();
     AddSC_quest_spell_scripts();
     AddSC_item_spell_scripts();

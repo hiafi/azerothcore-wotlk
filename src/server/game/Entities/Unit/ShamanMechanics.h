@@ -27,6 +27,7 @@
 
 class Creature;
 class Player;
+class SpellInfo;
 class Unit;
 
 /*
@@ -159,6 +160,61 @@ namespace Shaman
 
     // Lava Flows talent rank (1-3) -> its haste buff id; 0 for any other rank.
     uint32 LavaFlowsHasteSpell(uint8 rank);
+
+    // ---- S2 ----
+    // Restoration spec (docs/reworks/shaman-restoration-rework.md). Per-player state (the Cloudburst store and the
+    // Improved Chain Heal count) lives in the player's CustomData and is dropped by ClearState; everything else is
+    // read from the shaman's own talents, auras and totem slots, so a non-shaman with a talent gets do-nothing.
+
+    // Totemic Resonance's healing totems: Healing Stream (stock 3527), Healing Tide, Earthen Wall, Undulating
+    // Currents, Cloudburst, Spirit Link and the Water Elemental's totem.
+    bool IsHealingTotemEntry(uint32 entry);
+
+    // Called from the AllCreatureScript add/remove hook for every player-owned totem (A15; the elemental totems also
+    // keep OnElementalAdded/OnElementalRemoved). Added: Totemic Resonance recount, the Totemic Focus capstone
+    // placement heal (cast by the totem 1 ms later), and the Cloudburst placement record plus its store buff.
+    // Removed: Totemic Resonance recount and, for the recorded Cloudburst totem, the release (discarded when the
+    // shaman is dead). Both run with the slot already holding the new totem or cleared.
+    void OnPlayerTotemAdded(Player* player, Creature* totem);
+    void OnPlayerTotemRemoved(Player* player, Creature* totem);
+
+    // Puts the Totemic Resonance aura in line with the slots: removed without the talent or without a counted totem,
+    // otherwise stacks = counted totems and the healing-done amount = GetTotemicResonancePct (rounded). Changes an
+    // effect only when it moved, so it is also the periodic refresh for the live Mastery part (TR_REFRESH_MS).
+    void RecountTotemicResonance(Player* player);
+
+    // Live Totemic Resonance bonus in percent: count x (TR_PCT_PER_COUNT + TR_MASTERY_COEFF_PCT% of Mastery); 0
+    // without the talent. Used as an explicit multiplier where the aura cannot reach (absorbs, the Water Bolt heal).
+    float GetTotemicResonancePct(Player const* player);
+
+    // Earthen Wall absorb for `owner`'s totem: the effect's base plus the owner's healing power times the generated
+    // coefficient (and level penalty), times (1 + Totemic Resonance). Earthen Bulwark takes its share of this.
+    uint32 GetEarthenWallAbsorb(Player const* owner, SpellInfo const* shield, uint8 effIndex);
+
+    // Tidal Waves charges: a grant raises the charges to `amount` (cap TIDAL_WAVES_MAX), never lowers them, and
+    // refreshes the duration to TIDAL_WAVES_DURATION_MS.
+    void GrantTidalWaves(Player* player, uint8 amount);
+    // Drops one charge; true when one was consumed. With the Improved Chain Heal capstone every consumed charge counts
+    // toward its buff (ICH_CHARGES_NEEDED); charges consumed while the buff is up do not count.
+    bool ConsumeTidalWaves(Player* player);
+    uint8 GetTidalWavesCharges(Player const* player);
+
+    // Cloudburst: stores CLOUDBURST_STORE_PCT of `effectiveHeal` while a Cloudburst totem placed by the player stands.
+    void AddCloudburstStore(Player* player, uint32 effectiveHeal);
+    // Ends the active Cloudburst (no-op when none): drops the store buff, unsummons the totem if it still holds the
+    // Air slot, splits the store evenly among the injured players within CLOUDBURST_RADIUS_YD of the totem (cast by
+    // the player, CLOUDBURST_RELEASE) unless `discard`, and sets the castable's cooldown to
+    // max(0, CLOUDBURST_COOLDOWN_MS / (1 + Cooldown Haste) - time since placement), 1 ms later.
+    void ReleaseCloudburst(Player* player, bool discard);
+    // Logout, before the save: adds the remaining Cloudburst cooldown of a placement still recorded (the totem's removal
+    // runs after the Player is gone), so the saved cooldown survives a relog. No-op without an active Cloudburst.
+    void OnPlayerBeforeLogout(Player* player);
+
+    // Lengthens the active Tidal Force caster aura by `ms` (no cap).
+    void ExtendTidalForce(Player* player, uint32 ms);
+
+    // Counted healing totems (Totemic Resonance's count source), capped at TR_MAX_COUNT; 0 for nullptr.
+    uint8 GetRestorationTotemCount(Player const* player);
 }
 
 #endif

@@ -311,6 +311,8 @@ class spell_sha_windfury_attack : public SpellScript
 
 // 51730 Earthliving - 20% (scripted roll, Proc Chance applies) on a direct heal the shaman casts, once per target
 // healed (each Chain Heal target is its own event): the Earthliving HoT from the shaman, snapshotting at apply.
+// Blessing of the Eternals (S2a) raises the chance by 40/80% (relative: 20% becomes 28/36%, before Proc Chance) on a
+// target at or below 35% health, judged on the health the target had before this heal landed.
 // Periodic, totem, pet and triggered heals never reach the roll (periodic flag, actor guard, no TRIGGERED_CAN_PROC).
 class spell_sha_earthliving_proc : public AuraScript
 {
@@ -337,7 +339,33 @@ class spell_sha_earthliving_proc : public AuraScript
         if (!target || !target->IsAlive())
             return false;
 
-        return Shaman::RollProcChance(owner, EARTHLIVING_CHANCE_PCT);
+        return Shaman::RollProcChance(owner, EARTHLIVING_CHANCE_PCT * GetBlessingOfTheEternalsFactor(owner,
+            target, eventInfo.GetHealInfo()));
+    }
+
+    // 1 + the Blessing of the Eternals bonus when the target was at or below the threshold before the heal, else 1
+    static float GetBlessingOfTheEternalsFactor(Unit* owner, Unit const* target, HealInfo const* healInfo)
+    {
+        uint32 const maxHealth = target->GetMaxHealth();
+        if (!maxHealth)
+            return 1.0f;
+
+        uint32 const effective = healInfo->GetEffectiveHeal();
+        uint32 const health = target->GetHealth();
+        float const healthBefore = float(health > effective ? health - effective : 0);
+        if (healthBefore * 100.0f > float(ShamanData::BOTE_THRESHOLD_PCT) * float(maxHealth))
+            return 1.0f;
+
+        switch (Shaman::GetTalentRank(owner->ToPlayer(), { ShamanData::SPELL_BLESSING_OF_THE_ETERNALS,
+            ShamanData::SPELL_BLESSING_OF_THE_ETERNALS_51555 }))
+        {
+            case 1:
+                return 1.0f + float(ShamanData::BOTE_BONUS_R1) / 100.0f;
+            case 2:
+                return 1.0f + float(ShamanData::BOTE_BONUS_R2) / 100.0f;
+            default:
+                return 1.0f;
+        }
     }
 
     void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)

@@ -32,6 +32,7 @@
 #include "EngagementMechanics.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
+#include "Group.h"
 #include "HealMechanics.h"
 #include "Log.h"
 #include "ObjectAccessor.h"
@@ -231,13 +232,15 @@ class spell_sha_earthbind_pulse : public AuraScript
 // shaman's own party within 30 yd of the totem to hit anything, which would gate the 40 yd pulse (solo, or a raid
 // subgroup standing far from the totem). The 5 most injured players around the totem (never pets) get the heal, cast
 // by the totem with no owner GUID (CORE-AUDIT-A A11). A non-player owner keeps the stock trigger of 52041.
+// The Healing Tide Totem (Improved Healing Stream capstone, S2a) shares this passive: it heals the TIDE_TARGETS most
+// injured players, and in a 5-player (non-raid) party with the 30-potency party heal instead of the normal one.
 class spell_sha_healing_stream_passive : public AuraScript
 {
     PrepareAuraScript(spell_sha_healing_stream_passive);
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ ShamanData::SPELL_HEALING_STREAM_HEAL });
+        return ValidateSpellInfo({ ShamanData::SPELL_HEALING_STREAM_HEAL, ShamanData::SPELL_HEALING_TIDE_PARTY_HEAL });
     }
 
     void HandlePeriodic(AuraEffect const* /*aurEff*/)
@@ -249,12 +252,22 @@ class spell_sha_healing_stream_passive : public AuraScript
 
         PreventDefaultAction();
 
+        uint32 healId = ShamanData::SPELL_HEALING_STREAM_HEAL;
+        uint8 targets = uint8(ShamanData::HEALING_STREAM_TARGETS);
+        if (totem->GetEntry() == ShamanData::NPC_HEALING_TIDE_TOTEM)
+        {
+            targets = uint8(ShamanData::TIDE_TARGETS);
+
+            Group const* group = owner->GetGroup();
+            if (group && !group->isRaidGroup())
+                healId = ShamanData::SPELL_HEALING_TIDE_PARTY_HEAL;
+        }
+
         std::vector<Unit*> allies;
-        Heal::SelectMostInjured(owner, totem, ShamanData::HEALING_STREAM_RANGE_YD,
-            uint8(ShamanData::HEALING_STREAM_TARGETS), allies);
+        Heal::SelectMostInjured(owner, totem, ShamanData::HEALING_STREAM_RANGE_YD, targets, allies);
         for (Unit* ally : allies)
-            LogCastFailure("spell_sha_healing_stream_passive", ShamanData::SPELL_HEALING_STREAM_HEAL, totem, ally,
-                totem->CastSpell(ally, ShamanData::SPELL_HEALING_STREAM_HEAL, TRIGGERED_FULL_MASK));
+            LogCastFailure("spell_sha_healing_stream_passive", healId, totem, ally,
+                totem->CastSpell(ally, healId, TRIGGERED_FULL_MASK));
     }
 
     void Register() override
@@ -350,8 +363,10 @@ private:
     ObjectGuid _target;
 };
 
-// 202262 - Earthen Wall shield: the absorb gets no engine spell power, so the script adds the owner's healing power
-// times the generated coefficient (potency.md). The caster is the totem; the power is the owner's (S1.2).
+// 202262 - Earthen Wall shield: the absorb gets no engine spell power, so the amount comes from
+// Shaman::GetEarthenWallAbsorb (base plus the owner's healing power times the generated coefficient, times Totemic
+// Resonance; potency.md). The caster is the totem; the power is the owner's (S1.2). The Earthen Bulwark pulse
+// (npc_sha_earthen_wall_totem) sizes its shields from the same helper. A non-player owner keeps the plain formula.
 class spell_sha_earthen_wall_shield : public AuraScript
 {
     PrepareAuraScript(spell_sha_earthen_wall_shield);
@@ -364,9 +379,14 @@ class spell_sha_earthen_wall_shield : public AuraScript
         if (!totem)
             return;
 
-        Unit* owner = totem->GetCharmerOrOwnerOrSelf();
         SpellInfo const* spellInfo = GetSpellInfo();
+        if (Player const* player = Shaman::GetOwningPlayer(totem))
+        {
+            amount = int32(Shaman::GetEarthenWallAbsorb(player, spellInfo, aurEff->GetEffIndex()));
+            return;
+        }
 
+        Unit* owner = totem->GetCharmerOrOwnerOrSelf();
         float bonus = spellInfo->Effects[aurEff->GetEffIndex()].BonusMultiplier;
         bonus *= owner->SpellBaseHealingBonusDone(spellInfo->GetSchoolMask());
         bonus *= owner->CalculateLevelPenalty(spellInfo);

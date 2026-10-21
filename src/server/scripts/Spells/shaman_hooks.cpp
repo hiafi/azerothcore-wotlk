@@ -29,6 +29,8 @@
 #include "ScriptMgr.h"
 #include "ShamanMechanics.h"
 #include "SpellAuras.h"
+#include "SpellInfo.h"
+#include "SpellMgr.h"
 #include "Unit.h"
 #include "UnitScript.h"
 
@@ -76,9 +78,16 @@ namespace
         }
     }
 
+    // S2: spells whose learn/unlearn changes the Totemic Resonance aura (the talent's one rank).
+    bool IsRestorationSyncSpell(uint32 spellId)
+    {
+        return spellId == ShamanData::SPELL_TOTEMIC_RESONANCE;
+    }
+
     // The Thunderstorm stun rank and the Elemental auras follow the talents (no class gate: Classless reads the
     // player's own state). One tick later, so a talent reset or unlearn has finished removing every rank (the
-    // reset hook fires before it, the forget hook between a spell's and its talent's removal).
+    // reset hook fires before it, the forget hook between a spell's and its talent's removal). S2: the Totemic
+    // Resonance aura too.
     void QueueElementalTalentSync(Player* player)
     {
         if (!player)
@@ -93,6 +102,7 @@ namespace
 
             Shaman::SyncThunderstormRank(self);
             Shaman::OnElementalAdded(self, nullptr);
+            Shaman::RecountTotemicResonance(self);
         }, 1ms);
     }
 
@@ -118,7 +128,7 @@ public:
     ShamanPlayerScript() : PlayerScript("ShamanPlayerScript",
         { PLAYERHOOK_ON_AFTER_SET_VISIBLE_ITEM_SLOT, PLAYERHOOK_ON_LEVEL_CHANGED, PLAYERHOOK_ON_LOGIN,
           PLAYERHOOK_ON_LEARN_SPELL, PLAYERHOOK_ON_PLAYER_ENTER_COMBAT, PLAYERHOOK_ON_PLAYER_LEAVE_COMBAT,
-          PLAYERHOOK_ON_LOGOUT, PLAYERHOOK_ON_AFTER_SPEC_SLOT_CHANGED, PLAYERHOOK_ON_FORGOT_SPELL,
+          PLAYERHOOK_ON_BEFORE_LOGOUT, PLAYERHOOK_ON_LOGOUT, PLAYERHOOK_ON_AFTER_SPEC_SLOT_CHANGED, PLAYERHOOK_ON_FORGOT_SPELL,
           PLAYERHOOK_ON_TALENTS_RESET, PLAYERHOOK_ON_PLAYER_LEARN_TALENTS, PLAYERHOOK_ON_MAP_CHANGED }) { }
 
     // Imbue glow (P0 section 5): SetVisibleItemSlot (equip, swap, enchant, login inventory load) just rewrote the
@@ -179,6 +189,11 @@ public:
 
         // S1: the Thunderstorm stun rank follows the talents loaded from the DB.
         Shaman::SyncThunderstormRank(player);
+
+        // S2: a Totemic Resonance aura or a Cloudburst store buff saved at logout has no totem behind it.
+        Shaman::RecountTotemicResonance(player);
+        Shaman::ReleaseCloudburst(player, true);
+        player->RemoveAurasDueToSpell(ShamanData::SPELL_CLOUDBURST_STORE, player->GetGUID());
     }
 
     // S1: every map entry (login included, before OnPlayerLogin): the totems never follow the player (the old map
@@ -190,6 +205,13 @@ public:
             return;
 
         Shaman::OnElementalRemoved(player, 0);
+
+        // S2: the old map's totems are gone (their remove hook found no owner): Totemic Resonance follows the empty
+        // slots, and a Cloudburst still recorded is discarded (no totem left to release around; the cooldown runs).
+        // The infinite store buff can also come back from a logout save with nothing recorded: drop it.
+        Shaman::RecountTotemicResonance(player);
+        Shaman::ReleaseCloudburst(player, true);
+        player->RemoveAurasDueToSpell(ShamanData::SPELL_CLOUDBURST_STORE, player->GetGUID());
 
         // WP-R m3: the plain Astral Shift buff is infinite and only removed when the control ends; a logout while
         // stunned, feared or silenced saves it. Drop it unless the player is still under such a control.
@@ -207,7 +229,7 @@ public:
         if (!player)
             return;
 
-        if (IsElementalSyncSpell(spellID))
+        if (IsElementalSyncSpell(spellID) || IsRestorationSyncSpell(spellID))
             QueueElementalTalentSync(player);
 
         if (spellID != ShamanData::SPELL_REINCARNATION || !IsShaman(player))
@@ -219,14 +241,14 @@ public:
     // S1: .unlearn and talent-rank removal (resetTalents, spec data) of the same spells.
     void OnPlayerForgotSpell(Player* player, uint32 spellID) override
     {
-        if (IsElementalSyncSpell(spellID))
+        if (IsElementalSyncSpell(spellID) || IsRestorationSyncSpell(spellID))
             QueueElementalTalentSync(player);
     }
 
     // S1: a talent point spent (passive ranks never reach the learn-spell hook).
     void OnPlayerLearnTalents(Player* player, uint32 /*talentId*/, uint32 /*talentRank*/, uint32 spellid) override
     {
-        if (IsElementalSyncSpell(spellid))
+        if (IsElementalSyncSpell(spellid) || IsRestorationSyncSpell(spellid))
             QueueElementalTalentSync(player);
     }
 
@@ -260,6 +282,13 @@ public:
         QueueElementalTalentSync(player);
     }
 
+    // S2 m1: before WorldSession::LogoutPlayer saves, so the Cloudburst cooldown reaches the character save.
+    void OnPlayerBeforeLogout(Player* player) override
+    {
+        if (IsShaman(player))
+            Shaman::OnPlayerBeforeLogout(player);
+    }
+
     void OnPlayerLogout(Player* player) override
     {
         if (IsShaman(player))
@@ -268,11 +297,40 @@ public:
 };
 
 // ScriptMgr::DealDamage calls every UnitScript's DealDamage with no hook-enable check; an empty enable list would
-// enable all UnitHook entries, so the list names one rare hook this class does not override.
+// enable all UnitHook entries, so the list names only the hooks this class overrides (S2: OnHeal).
 class ShamanUnitScript : public UnitScript
 {
 public:
-    ShamanUnitScript() : UnitScript("ShamanUnitScript", true, { UNITHOOK_ON_UNIT_SET_SHAPESHIFT_FORM }) { }
+    ShamanUnitScript() : UnitScript("ShamanUnitScript", true, { UNITHOOK_ON_HEAL }) { }
+
+    // S2 Cloudburst (CORE-AUDIT-A A13): the totems' and the Water Elemental's heals are stored for their owner.
+    // Unit::DealHeal calls this for every heal and tick with the effective (non-overheal) amount and no spell, so the
+    // checks run cheapest first. Every shaman totem and Water Elemental heal is Nature (ruled 2026-10-18); absorbs and
+    // Spirit Link's SetHealth never come here. The shaman's own heals are stored by the store buff's proc (B2), and the
+    // release (cast by the player) is skipped by the healer check.
+    void OnHeal(Unit* healer, Unit* /*receiver*/, uint32& gain) override
+    {
+        if (!gain || !healer || !healer->IsCreature())
+            return;
+
+        Creature* creature = healer->ToCreature();
+        if (!creature->IsTotem() && creature->GetEntry() != ShamanData::NPC_WATER_ELEMENTAL_GUARDIAN)
+            return;
+
+        // S2 m2: only totems the shaman spells summon (a Freepick Lightwell is a Totem too and heals Holy).
+        if (creature->IsTotem())
+        {
+            SpellInfo const* creator = sSpellMgr->GetSpellInfo(creature->GetUInt32Value(UNIT_CREATED_BY_SPELL));
+            if (!creator || creator->SpellFamilyName != SPELLFAMILY_SHAMAN)
+                return;
+        }
+
+        Player* owner = Shaman::GetOwningPlayer(healer);
+        if (!owner || !owner->HasAura(ShamanData::SPELL_CLOUDBURST_STORE, owner->GetGUID()))
+            return;
+
+        Shaman::AddCloudburstStore(owner, gain);
+    }
 
     // B15 Stoneskin erosion. Unit::DealDamage calls this first, with the amount that lands on health: armor, every
     // % reduction (Stoneskin included), block, resilience, resist and absorbs are already taken off (melee
@@ -303,6 +361,8 @@ public:
 // hook runs for every way a totem goes (guardian death -> OnElementalDied, expiry, right-click/Recall, replacement,
 // owner death or logout) with the slot already cleared or held by the replacement. The owner is resolved on the
 // totem's map and may be missing (logout, teleport): then nothing happens and the next map entry reconciles (L4).
+// S2 (A15): every player-owned totem (the elemental totems included) also reaches OnPlayerTotemAdded/Removed:
+// Totemic Resonance, the Totemic Focus placement heal and Cloudburst. NPC-owned totems have no owning player.
 class ShamanElementalTotemScript : public AllCreatureScript
 {
 public:
@@ -310,20 +370,32 @@ public:
 
     void OnCreatureAddWorld(Creature* creature) override
     {
-        if (!creature || !IsElementalTotemEntry(creature->GetEntry()) || !creature->IsTotem())
+        if (!creature || !creature->IsTotem())
             return;
 
-        if (Player* owner = Shaman::GetOwningPlayer(creature))
+        Player* owner = Shaman::GetOwningPlayer(creature);
+        if (!owner)
+            return;
+
+        if (IsElementalTotemEntry(creature->GetEntry()))
             Shaman::OnElementalAdded(owner, creature);
+
+        Shaman::OnPlayerTotemAdded(owner, creature);
     }
 
     void OnCreatureRemoveWorld(Creature* creature) override
     {
-        if (!creature || !IsElementalTotemEntry(creature->GetEntry()) || !creature->IsTotem())
+        if (!creature || !creature->IsTotem())
             return;
 
-        if (Player* owner = Shaman::GetOwningPlayer(creature))
+        Player* owner = Shaman::GetOwningPlayer(creature);
+        if (!owner)
+            return;
+
+        if (IsElementalTotemEntry(creature->GetEntry()))
             Shaman::OnElementalRemoved(owner, creature->GetEntry());
+
+        Shaman::OnPlayerTotemRemoved(owner, creature);
     }
 };
 

@@ -26,7 +26,11 @@
  *    instant Searing bolt every SEARING_BOLT_PERIOD_MS from placement, SEARING_BOLT_COUNT bolts, only at enemies
  *    engaged with the shaman or the group (A35, T0b section 5).
  *  - npc_sha_earthen_wall_totem (300274): empty m_spells[0]; EARTHEN_WALL_PULSES pulses from placement, every
- *    EARTHEN_WALL_PERIOD_MS (A32).
+ *    EARTHEN_WALL_PERIOD_MS (A32). With Earthen Bulwark (S2a) each pulse also shields the other players nearby.
+ *  - npc_sha_undulating_currents_totem (Restoration, S2a): empty m_spells[0]; casts the Chain Heal of the totem on the
+ *    most injured player in range from placement, UCT_CASTS casts, every UCT_INTERVAL_MS.
+ *  - npc_sha_spirit_link_totem (Restoration, S2a): empty m_spells[0]; from placement, every SPIRIT_LINK_INTERVAL_MS,
+ *    refreshes the Spirit Link aura on the players around it and sets them all to the average health percent.
  *
  * Guardians (owner = the shaman: Spell::SummonGuardian remaps the totem caster to its owner):
  *  - npc_sha_fire_elemental_rework (15438), npc_sha_earth_elemental_rework (15352): the stock pet_shaman.cpp AIs,
@@ -54,6 +58,8 @@
 #include "ShamanMechanics.h"
 #include "SpellAuraEffects.h"
 #include "SpellAuras.h"
+#include "SpellInfo.h"
+#include "SpellMgr.h"
 #include "TaskScheduler.h"
 #include "Totem.h"
 #include "TotemAI.h"
@@ -70,7 +76,8 @@ namespace
     constexpr uint32 CASTER_ELEMENTAL_POLL_MS = 250;
 
     // Earthen Wall spill: SelectMostInjured returns at most this many candidates (a full raid) before the
-    // "no shield from this shaman" filter runs, so the filter never starves on a capped list.
+    // "no shield from this shaman" filter runs, so the filter never starves on a capped list. The Bulwark and Spirit
+    // Link area picks use the same cap (a full raid).
     constexpr uint8 EARTHEN_WALL_SPILL_CANDIDATES = 40;
 
     // Fire/Earth elemental timers: the stock npc_pet_shaman_* values (pet_shaman.cpp).
@@ -93,6 +100,16 @@ namespace
     enum EarthenWallTotemEvents : uint32
     {
         EVENT_EARTHEN_WALL_PULSE = 1
+    };
+
+    enum UndulatingCurrentsTotemEvents : uint32
+    {
+        EVENT_UNDULATING_CURRENTS_CAST = 1
+    };
+
+    enum SpiritLinkTotemEvents : uint32
+    {
+        EVENT_SPIRIT_LINK_PULSE = 1
     };
 
     // SetGUID id for the Earthen Wall cast target (sent by spell_sha_earthen_wall, spell_shaman_totems.cpp).
@@ -270,6 +287,12 @@ private:
         if (!owner)
             return;
 
+        PulseMainShield(owner);
+        PulseBulwark(owner);
+    }
+
+    void PulseMainShield(Unit* owner)
+    {
         Unit* primary = _primaryGUID ? ObjectAccessor::GetUnit(*me, _primaryGUID) : nullptr;
         if (primary && IsValidPrimary(primary))
         {
@@ -292,6 +315,36 @@ private:
 
             me->CastSpell(candidate, ShamanData::SPELL_EARTHEN_WALL_SHIELD, true);
             return;
+        }
+    }
+
+    // Earthen Bulwark: every pulse also shields each other player within BULWARK_RADIUS_YD of the totem (never one
+    // holding a shield of this shaman's wall, so the main shield's holder is skipped, and never a pet) for BULWARK_PCT
+    // of the main shield. The main amount is the shared helper's (Totemic Resonance included), so the Bulwark
+    // shield, which carries no engine healing bonus, is not multiplied a second time.
+    void PulseBulwark(Unit* owner)
+    {
+        Player* player = owner->ToPlayer();
+        if (!player || !Shaman::GetTalentRank(player, { ShamanData::SPELL_EARTHEN_BULWARK }))
+            return;
+
+        SpellInfo const* mainShield = sSpellMgr->GetSpellInfo(ShamanData::SPELL_EARTHEN_WALL_SHIELD);
+        if (!mainShield)
+            return;
+
+        int32 const amount = int32(CalculatePct(Shaman::GetEarthenWallAbsorb(player, mainShield, EFFECT_0),
+            ShamanData::BULWARK_PCT));
+        if (amount <= 0)
+            return;
+
+        std::vector<Unit*> allies;
+        Heal::SelectMostInjured(owner, me, ShamanData::BULWARK_RADIUS_YD, EARTHEN_WALL_SPILL_CANDIDATES, allies);
+        for (Unit* ally : allies)
+        {
+            if (!ally->IsAlive() || HasShieldFromOwner(ally, owner->GetGUID()))
+                continue;
+
+            me->CastCustomSpell(ShamanData::SPELL_EARTHEN_BULWARK_SHIELD, SPELLVALUE_BASE_POINT0, amount, ally, true);
         }
     }
 
@@ -335,6 +388,131 @@ private:
     uint32 _pulses = 0;
     int32 _primaryFullAmount = 0;
     ObjectGuid _primaryGUID;
+};
+
+/*
+ * Undulating Currents Totem (Restoration, Fire slot). TotemAI's UpdateAI does nothing for a totem with no spell, so
+ * this drives itself like the Earthen Wall: the first cast on placement, then one per UCT_INTERVAL_MS, UCT_CASTS casts
+ * in all. Each cast is the totem's own Chain Heal (the UCT heal, which has no Chain Heal talents and rolls none of the
+ * shaman's procs: cast by the totem with no owner GUID, A11) at the lowest-health-percent player within UCT_RANGE_YD
+ * of the totem. Heal::SelectMostInjured returns players only, so pets are never picked; the jumps are filtered by the
+ * heal's own script. The Lightwell shape (pet_priest.cpp), a counted cast loop.
+ */
+struct npc_sha_undulating_currents_totem : public TotemAI
+{
+    explicit npc_sha_undulating_currents_totem(Creature* creature) : TotemAI(creature) { }
+
+    void IsSummonedBy(WorldObject* /*summoner*/) override
+    {
+        _casts = 0;
+        events.Reset();
+        events.ScheduleEvent(EVENT_UNDULATING_CURRENTS_CAST, 0ms);
+    }
+
+    void UpdateAI(uint32 diff) override
+    {
+        if (!me->IsAlive())
+            return;
+
+        events.Update(diff);
+
+        while (uint32 eventId = events.ExecuteEvent())
+        {
+            if (eventId != EVENT_UNDULATING_CURRENTS_CAST)
+                continue;
+
+            DoCast();
+            if (++_casts < uint32(ShamanData::UCT_CASTS))
+                events.ScheduleEvent(EVENT_UNDULATING_CURRENTS_CAST, Milliseconds(ShamanData::UCT_INTERVAL_MS));
+        }
+    }
+
+private:
+    void DoCast()
+    {
+        Player* owner = GetOwnerPlayer(me);
+        if (!owner)
+            return;
+
+        std::vector<Unit*> allies;
+        Heal::SelectMostInjured(owner, me, ShamanData::UCT_RANGE_YD, 1, allies);
+        if (allies.empty())
+            return;
+
+        if (me->CastSpell(allies.front(), ShamanData::SPELL_UNDULATING_CURRENTS_HEAL, TRIGGERED_FULL_MASK) !=
+            SPELL_CAST_OK)
+            LOG_ERROR("scripts.ai", "npc_sha_undulating_currents_totem: cast of {} at {} failed",
+                uint32(ShamanData::SPELL_UNDULATING_CURRENTS_HEAL), allies.front()->GetGUID().ToString());
+    }
+
+    uint32 _casts = 0;
+};
+
+/*
+ * Spirit Link Totem (Restoration, Air slot). From placement and then every SPIRIT_LINK_INTERVAL_MS until the totem
+ * expires: every player (party and raid members, the shaman included; never a pet) within SPIRIT_LINK_RADIUS_YD of the
+ * totem gets the Spirit Link aura refreshed (damage taken reduced, short duration so it ends soon after the totem or a
+ * step out of range) and all of them are set to the same health percent, the average of their current percents. This
+ * is a plain SetHealth, not a heal: no heal event, so no healing bonus, no Cloudburst store and no procs.
+ */
+struct npc_sha_spirit_link_totem : public TotemAI
+{
+    explicit npc_sha_spirit_link_totem(Creature* creature) : TotemAI(creature) { }
+
+    void IsSummonedBy(WorldObject* /*summoner*/) override
+    {
+        events.Reset();
+        events.ScheduleEvent(EVENT_SPIRIT_LINK_PULSE, 0ms);
+    }
+
+    void UpdateAI(uint32 diff) override
+    {
+        if (!me->IsAlive())
+            return;
+
+        events.Update(diff);
+
+        while (uint32 eventId = events.ExecuteEvent())
+        {
+            if (eventId != EVENT_SPIRIT_LINK_PULSE)
+                continue;
+
+            DoLink();
+            events.ScheduleEvent(EVENT_SPIRIT_LINK_PULSE, Milliseconds(ShamanData::SPIRIT_LINK_INTERVAL_MS));
+        }
+    }
+
+private:
+    void DoLink()
+    {
+        Player* owner = GetOwnerPlayer(me);
+        if (!owner)
+            return;
+
+        std::vector<Unit*> linked;
+        Heal::SelectMostInjured(owner, me, ShamanData::SPIRIT_LINK_RADIUS_YD, EARTHEN_WALL_SPILL_CANDIDATES, linked);
+        linked.erase(std::remove_if(linked.begin(), linked.end(), [](Unit const* unit)
+        {
+            return !unit->IsAlive() || unit->GetMaxHealth() == 0;
+        }), linked.end());
+        if (linked.empty())
+            return;
+
+        float total = 0.0f;
+        for (Unit const* unit : linked)
+            total += unit->GetHealthPct();
+        float const average = total / float(linked.size());
+
+        for (Unit* unit : linked)
+        {
+            me->CastSpell(unit, ShamanData::SPELL_SPIRIT_LINK_AURA, true);
+
+            uint32 const maxHealth = unit->GetMaxHealth();
+            uint32 const health = std::clamp<uint32>(uint32(float(maxHealth) * average / 100.0f + 0.5f), 1, maxHealth);
+            if (health != unit->GetHealth())
+                unit->SetHealth(health);
+        }
+    }
 };
 
 /*
@@ -619,6 +797,8 @@ void AddSC_shaman_rework_pet_scripts()
     RegisterCreatureAI(npc_sha_elemental_totem);
     RegisterCreatureAI(npc_sha_searing_totem);
     RegisterCreatureAI(npc_sha_earthen_wall_totem);
+    RegisterCreatureAI(npc_sha_undulating_currents_totem);
+    RegisterCreatureAI(npc_sha_spirit_link_totem);
     RegisterCreatureAI(npc_sha_fire_elemental_rework);
     RegisterCreatureAI(npc_sha_earth_elemental_rework);
     RegisterCreatureAI(npc_sha_water_elemental);

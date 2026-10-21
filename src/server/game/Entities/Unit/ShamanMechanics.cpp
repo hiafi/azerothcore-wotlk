@@ -16,6 +16,10 @@
  */
 
 #include "ShamanMechanics.h"
+#include "Creature.h"
+#include "DataMap.h"
+#include "GameTime.h"
+#include "HealMechanics.h"
 #include "Item.h"
 #include "ItemTemplate.h"
 #include "Log.h"
@@ -160,6 +164,9 @@ namespace
             self->RemoveAurasDueToSpell(SPELL_STONESKIN_STACKS, guid);
         }, Milliseconds(ShamanData::STONESKIN_OOC_MS));
     }
+
+    // S2: drops the Restoration state (defined in the S2 block); called by Shaman::ClearState.
+    void ClearRestorationState(Player* player);
 }
 
 namespace Shaman
@@ -440,6 +447,9 @@ namespace Shaman
         // keep no per-player state (Elemental buffs left by a logout are reconciled on the next map entry).
         if (!player)
             return;
+
+        // S2: the Cloudburst store and the Improved Chain Heal count (player CustomData, no lock needed).
+        ClearRestorationState(player);
 
         std::lock_guard<std::mutex> lock(stateLock);
         auto itr = stoneskinStates.find(player->GetGUID());
@@ -1093,5 +1103,542 @@ namespace Shaman
             default:
                 return 0;
         }
+    }
+}
+
+/*
+ * S2 block: Restoration (docs/reworks/shaman-restoration-rework.md). Totemic Resonance (counted totems and the live
+ * Mastery part), the Totemic Focus placement heal, the Earthen Wall absorb, Tidal Waves charges with the Improved Chain
+ * Heal count, Cloudburst (store, release, cooldown) and the Tidal Force extension. The Cloudburst store and the
+ * Improved Chain Heal count live in the player's CustomData (one map thread; ClearState drops them); everything else is
+ * read from the shaman's own talents, auras and slots.
+ */
+namespace
+{
+    // The stock Healing Stream Totem creature: 5394's summon (shaman_spells.py), not declared in the DSL.
+    constexpr uint32 NPC_HEALING_STREAM_TOTEM = 3527;
+
+    constexpr std::array<uint32, 3> TOTEMIC_FOCUS_RANKS =
+    {
+        ShamanData::SPELL_TOTEMIC_FOCUS,
+        ShamanData::SPELL_TOTEMIC_FOCUS_16222,
+        ShamanData::SPELL_TOTEMIC_FOCUS_16223
+    };
+
+    constexpr std::array<uint32, 2> IMPROVED_CHAIN_HEAL_RANKS =
+    {
+        ShamanData::SPELL_IMPROVED_CHAIN_HEAL,
+        ShamanData::SPELL_IMPROVED_CHAIN_HEAL_30873
+    };
+
+    constexpr uint8 TOTEMIC_FOCUS_CAPSTONE_RANK = 3;
+    constexpr uint8 IMPROVED_CHAIN_HEAL_CAPSTONE_RANK = 2;
+
+    // The Cloudburst release splits among every injured player in range: a full raid (MAXRAIDSIZE).
+    constexpr uint8 CLOUDBURST_MAX_TARGETS = 40;
+
+    struct RestorationState : DataMap::Base
+    {
+        bool cloudburstActive = false;   // a Cloudburst placed by this player is recorded and not yet released
+        ObjectGuid cloudburstTotem;      // that totem
+        uint32 cloudburstPlacedMs = 0;   // GameTime ms of its placement (the cooldown runs from here)
+        double cloudburstStored = 0.0;   // already scaled by CLOUDBURST_STORE_PCT
+        uint8 chainHealCount = 0;        // Tidal Waves charges consumed toward the Improved Chain Heal buff
+    };
+
+    constexpr char const* RESTORATION_STATE_KEY = "shaman_restoration_state";
+
+    RestorationState* GetRestorationState(Player* player)
+    {
+        return player->CustomData.GetDefault<RestorationState>(RESTORATION_STATE_KEY);
+    }
+
+    RestorationState* FindRestorationState(Player const* player)
+    {
+        return player->CustomData.Get<RestorationState>(RESTORATION_STATE_KEY);
+    }
+
+    uint32 NowMs()
+    {
+        return uint32(GameTime::GetGameTimeMS().count());
+    }
+
+    void LogRestoCastFailure(char const* what, uint32 spellId, Unit const* caster, Unit const* target,
+        SpellCastResult result)
+    {
+        if (result == SPELL_CAST_OK || result == SPELL_FAILED_LINE_OF_SIGHT)
+            return;
+
+        LOG_ERROR("scripts.spells", "Shaman S2 {}: cast of {} by {} at {} failed (result {})", what, spellId,
+            caster ? caster->GetGUID().ToString() : "none", target ? target->GetGUID().ToString() : "none",
+            uint32(result));
+    }
+
+    // The player's living totem in `slot` (SUMMON_SLOT_TOTEM_*), or nullptr.
+    Creature* GetSlotTotem(Player const* player, uint8 slot)
+    {
+        ObjectGuid const guid = player->m_SummonSlot[slot];
+        if (guid.IsEmpty())
+            return nullptr;
+
+        Creature* creature = ObjectAccessor::GetCreature(*player, guid);
+        if (!creature || !creature->IsTotem() || !creature->IsInWorld() || !creature->IsAlive())
+            return nullptr;
+
+        return creature;
+    }
+
+    // Totemic Focus capstone: 1 ms after the placement (the totem is in the grid by then), the totem heals up to
+    // TOTEMIC_FOCUS_TARGETS injured players around it. The event lives on the totem, so it dies with it. Cast by the
+    // totem (A11): it rolls none of the shaman's procs.
+    void QueuePlacementHeal(Player* player, Creature* totem)
+    {
+        if (Shaman::GetTalentRank(player, TOTEMIC_FOCUS_RANKS) < TOTEMIC_FOCUS_CAPSTONE_RANK)
+            return;
+
+        ObjectGuid const ownerGuid = player->GetGUID();
+        totem->m_Events.AddEventAtOffset([totem, ownerGuid]()
+        {
+            if (!totem->IsInWorld() || !totem->IsAlive())
+                return;
+
+            Player* owner = Shaman::GetOwningPlayer(totem);
+            if (!owner || owner->GetGUID() != ownerGuid)
+                return;
+
+            // Lowest health percent first, so the injured come before anyone at full health.
+            std::vector<Unit*> allies;
+            Heal::SelectMostInjured(owner, totem, ShamanData::TOTEMIC_FOCUS_RADIUS_YD,
+                uint8(ShamanData::TOTEMIC_FOCUS_TARGETS), allies);
+            for (Unit* ally : allies)
+            {
+                if (ally->IsFullHealth())
+                    continue;
+
+                LogRestoCastFailure("Totemic Focus", ShamanData::SPELL_TOTEMIC_FOCUS_HEAL, totem, ally,
+                    totem->CastSpell(ally, ShamanData::SPELL_TOTEMIC_FOCUS_HEAL, TRIGGERED_FULL_MASK));
+            }
+        }, Milliseconds(ShamanData::TOTEMIC_FOCUS_DELAY_MS));
+    }
+
+    // The healing-done effect(s) of the Totemic Resonance aura take `amount` (live); only a moved value is written.
+    void SetResonanceAmount(Aura* aura, int32 amount)
+    {
+        for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+        {
+            AuraEffect* effect = aura->GetEffect(i);
+            if (effect && effect->GetAuraType() == SPELL_AURA_MOD_HEALING_DONE_PERCENT && effect->GetAmount() != amount)
+                effect->ChangeAmount(amount);
+        }
+    }
+
+    // Cloudburst cooldown (known-hard 1): the castable has no DBC cooldown, so the button recalls while the totem
+    // stands; any release sets max(0, CLOUDBURST_COOLDOWN_MS / (1 + Cooldown Haste) - time since placement). One tick
+    // later (A14 shape), so the packets of the cast or the unsummon that released it land first; clear-then-set resend
+    // so the button greys. Never shortens a longer cooldown.
+    void ApplyCloudburstCooldown(Player* player, uint32 placedMs, bool immediate = false)
+    {
+        float const cooldownHastePct = std::max(0.0f, player->GetCooldownHastePercentage());
+        uint32 const fullMs = uint32(float(ShamanData::CLOUDBURST_COOLDOWN_MS) / (1.0f + cooldownHastePct / 100.0f));
+        uint32 const elapsedMs = NowMs() - placedMs;
+        if (elapsedMs >= fullMs)
+            return;
+
+        uint32 const remainingMs = fullMs - elapsedMs;
+        if (immediate)
+        {
+            // Logout / teleport in progress: no later tick will run, and the saved cooldown must survive (WP-R L6).
+            if (player->GetSpellCooldownDelay(ShamanData::SPELL_CLOUDBURST_TOTEM) < remainingMs)
+                player->AddSpellCooldown(ShamanData::SPELL_CLOUDBURST_TOTEM, 0, remainingMs, true);
+            return;
+        }
+
+        ObjectGuid const guid = player->GetGUID();
+        player->m_Events.AddEventAtOffset([guid, remainingMs]()
+        {
+            Player* self = ObjectAccessor::FindPlayer(guid);
+            if (!self || self->GetSpellCooldownDelay(ShamanData::SPELL_CLOUDBURST_TOTEM) >= remainingMs)
+                return;
+
+            self->AddSpellCooldown(ShamanData::SPELL_CLOUDBURST_TOTEM, 0, remainingMs, true);
+            self->ResendSpellCooldown(ShamanData::SPELL_CLOUDBURST_TOTEM);
+        }, 1ms);
+    }
+
+    // The store split evenly among the injured players within CLOUDBURST_RADIUS_YD of the totem (never pets; line of
+    // sight from the totem). Cast by the player with its own id: the release has no family bits and ignores caster
+    // modifiers (no Purification, no Totemic Resonance, no crit), it is not a totem heal (no OnHeal store) and the
+    // store buff is already gone (no proc store).
+    void HealFromCloudburst(Player* player, Creature* totem, double stored)
+    {
+        std::vector<Unit*> allies;
+        Heal::SelectMostInjured(player, totem, ShamanData::CLOUDBURST_RADIUS_YD, CLOUDBURST_MAX_TARGETS, allies);
+        std::erase_if(allies, [totem](Unit const* ally)
+        {
+            return ally->IsFullHealth() || !totem->IsWithinLOSInMap(ally);
+        });
+
+        if (allies.empty())
+            return;
+
+        int32 const share = int32(stored / double(allies.size()));
+        if (share <= 0)
+            return;
+
+        // SPELLVALUE_BASE_POINT0 takes the live amount (SKILL "Sign convention").
+        for (Unit* ally : allies)
+            LogRestoCastFailure("Cloudburst release", ShamanData::SPELL_CLOUDBURST_RELEASE, player, ally,
+                player->CastCustomSpell(ShamanData::SPELL_CLOUDBURST_RELEASE, SPELLVALUE_BASE_POINT0, share, ally,
+                    TRIGGERED_FULL_MASK));
+    }
+
+    // Ends the recorded Cloudburst. The state is cleared first, so the store buff's own remove handler (or a second
+    // release path for the same totem) finds nothing to release. `totem` may be nullptr (gone, another map): then
+    // nothing heals.
+    void ReleaseCloudburstAt(Player* player, Creature* totem, bool discard, bool applyCooldown)
+    {
+        RestorationState* state = FindRestorationState(player);
+        if (!state || !state->cloudburstActive)
+            return;
+
+        double const stored = state->cloudburstStored;
+        uint32 const placedMs = state->cloudburstPlacedMs;
+        state->cloudburstActive = false;
+        state->cloudburstTotem.Clear();
+        state->cloudburstStored = 0.0;
+
+        player->RemoveAurasDueToSpell(ShamanData::SPELL_CLOUDBURST_STORE, player->GetGUID());
+
+        // Recall (recast) and a store-buff release: the totem still holds the Air slot. Totem::UnSummon clears the slot
+        // and defers the removal; the remove hook then finds no recorded Cloudburst.
+        if (totem && player->m_SummonSlot[SUMMON_SLOT_TOTEM_AIR] == totem->GetGUID())
+            if (Totem* summon = totem->ToTotem())
+                summon->UnSummon();
+
+        if (!discard && totem && stored >= 1.0)
+            HealFromCloudburst(player, totem, stored);
+
+        if (applyCooldown)
+            ApplyCloudburstCooldown(player, placedMs);
+    }
+
+    // A new Cloudburst: records the placement and shows the store buff for as long as the totem stands (added here if
+    // the cast did not apply it already). A Cloudburst still recorded (no recall ran) releases first, without a
+    // cooldown on the button of the new one.
+    void RecordCloudburstPlacement(Player* player, Creature* totem)
+    {
+        RestorationState* state = GetRestorationState(player);
+        if (state->cloudburstActive && state->cloudburstTotem != totem->GetGUID())
+        {
+            Creature* previous = ObjectAccessor::GetCreature(*player, state->cloudburstTotem);
+            ReleaseCloudburstAt(player, previous, !player->IsAlive(), false);
+        }
+
+        state->cloudburstActive = true;
+        state->cloudburstTotem = totem->GetGUID();
+        state->cloudburstPlacedMs = NowMs();
+        state->cloudburstStored = 0.0;
+
+        Aura* store = player->GetAura(ShamanData::SPELL_CLOUDBURST_STORE, player->GetGUID());
+        if (!store)
+            store = player->AddAura(ShamanData::SPELL_CLOUDBURST_STORE, player);
+
+        // The buff is infinite: the release (any way the totem goes) removes it.
+        if (!store || store->IsRemoved())
+            LOG_ERROR("scripts.spells", "Shaman S2: could not apply Cloudburst store {} to {}",
+                ShamanData::SPELL_CLOUDBURST_STORE, player->GetGUID().ToString());
+    }
+
+    void ClearRestorationState(Player* player)
+    {
+        player->CustomData.Erase(RESTORATION_STATE_KEY);
+    }
+}
+
+namespace Shaman
+{
+    bool IsHealingTotemEntry(uint32 entry)
+    {
+        switch (entry)
+        {
+            case NPC_HEALING_STREAM_TOTEM:
+            case ShamanData::NPC_HEALING_TIDE_TOTEM:
+            case ShamanData::NPC_EARTHEN_WALL_TOTEM:
+            case ShamanData::NPC_UNDULATING_CURRENTS_TOTEM:
+            case ShamanData::NPC_CLOUDBURST_TOTEM:
+            case ShamanData::NPC_SPIRIT_LINK_TOTEM:
+            case ShamanData::NPC_WATER_ELEMENTAL_TOTEM:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    uint8 GetRestorationTotemCount(Player const* player)
+    {
+        if (!player)
+            return 0;
+
+        uint8 count = 0;
+        for (uint8 slot = SUMMON_SLOT_TOTEM_FIRE; slot < MAX_TOTEM_SLOT; ++slot)
+            if (Creature const* totem = GetSlotTotem(player, slot))
+                if (IsHealingTotemEntry(totem->GetEntry()))
+                    ++count;
+
+        return std::min<uint8>(count, uint8(ShamanData::TR_MAX_COUNT));
+    }
+
+    float GetTotemicResonancePct(Player const* player)
+    {
+        if (!player || !GetTalentRank(player, { ShamanData::SPELL_TOTEMIC_RESONANCE }))
+            return 0.0f;
+
+        uint8 const count = GetRestorationTotemCount(player);
+        if (!count)
+            return 0.0f;
+
+        // One rank, so the capstone (the Mastery part) is always on.
+        float const mastery = std::max(0.0f, player->GetMasteryPercentage());
+        float const perCount = float(ShamanData::TR_PCT_PER_COUNT) +
+            float(ShamanData::TR_MASTERY_COEFF_PCT) / 100.0f * mastery;
+        return float(count) * perCount;
+    }
+
+    void RecountTotemicResonance(Player* player)
+    {
+        if (!IsUsablePlayer(player))
+            return;
+
+        ObjectGuid const guid = player->GetGUID();
+        uint8 const count = GetTalentRank(player, { ShamanData::SPELL_TOTEMIC_RESONANCE }) ?
+            GetRestorationTotemCount(player) : 0;
+
+        Aura* aura = player->GetAura(ShamanData::SPELL_TOTEMIC_RESONANCE_AURA, guid);
+        if (!count)
+        {
+            if (aura)
+                player->RemoveAurasDueToSpell(ShamanData::SPELL_TOTEMIC_RESONANCE_AURA, guid);
+
+            return;
+        }
+
+        if (!aura)
+        {
+            aura = player->AddAura(ShamanData::SPELL_TOTEMIC_RESONANCE_AURA, player);
+            if (!aura)
+            {
+                LOG_ERROR("scripts.spells", "Shaman::RecountTotemicResonance: could not apply aura {} to {}",
+                    ShamanData::SPELL_TOTEMIC_RESONANCE_AURA, guid.ToString());
+                return;
+            }
+        }
+
+        if (aura->IsRemoved())
+            return;
+
+        // A stack change recalculates every effect from the row (base x stacks); the live amount is written after.
+        if (aura->GetStackAmount() != count)
+            aura->SetStackAmount(count);
+
+        SetResonanceAmount(aura, int32(std::lround(GetTotemicResonancePct(player))));
+    }
+
+    uint32 GetEarthenWallAbsorb(Player const* owner, SpellInfo const* shield, uint8 effIndex)
+    {
+        if (!owner || !shield || effIndex >= MAX_SPELL_EFFECTS)
+            return 0;
+
+        // Absorbs get no engine spell power (potency.md): base (level scaling and SpellMods through the owner, the
+        // totem's mod owner and level) plus the owner's healing power times the generated coefficient. The power
+        // getter is non-const only because it caches nothing; it reads the owner's auras and stats.
+        Player* source = const_cast<Player*>(owner);
+        SpellEffectInfo const& effect = shield->Effects[effIndex];
+
+        float bonus = effect.BonusMultiplier * float(source->SpellBaseHealingBonusDone(shield->GetSchoolMask()));
+        bonus *= owner->CalculateLevelPenalty(shield);
+
+        float amount = float(effect.CalcValue(owner)) + bonus;
+
+        // Totemic Resonance raises absorbs too; the aura's healing-done percent never reaches an absorb.
+        amount *= 1.0f + GetTotemicResonancePct(owner) / 100.0f;
+        return uint32(std::max(0.0f, amount));
+    }
+
+    void GrantTidalWaves(Player* player, uint8 amount)
+    {
+        if (!player || !amount)
+            return;
+
+        int32 const cap = int32(ShamanData::TIDAL_WAVES_MAX);
+        int32 const grant = std::min<int32>(amount, cap);
+
+        Aura* aura = player->GetAura(ShamanData::SPELL_TIDAL_WAVES_BUFF, player->GetGUID());
+        if (aura)
+        {
+            // Raise to the grant, never lower; a delta of 0 still refreshes (ModStackAmount's refresh branch).
+            int32 const delta = std::max(0, grant - int32(aura->GetStackAmount()));
+            aura->ModStackAmount(delta);
+        }
+        else
+        {
+            aura = player->AddAura(ShamanData::SPELL_TIDAL_WAVES_BUFF, player);
+            if (!aura)
+            {
+                LOG_ERROR("scripts.spells", "Shaman::GrantTidalWaves: could not apply aura {} to {}",
+                    ShamanData::SPELL_TIDAL_WAVES_BUFF, player->GetGUID().ToString());
+                return;
+            }
+
+            // A new aura starts at one stack.
+            if (grant > 1)
+                aura->ModStackAmount(grant - 1);
+        }
+
+        if (aura->IsRemoved())
+            return;
+
+        int32 const duration = int32(ShamanData::TIDAL_WAVES_DURATION_MS);
+        if (aura->GetMaxDuration() != duration)
+            aura->SetMaxDuration(duration);
+
+        aura->SetDuration(duration);
+    }
+
+    bool ConsumeTidalWaves(Player* player)
+    {
+        if (!player)
+            return false;
+
+        Aura* aura = player->GetAura(ShamanData::SPELL_TIDAL_WAVES_BUFF, player->GetGUID());
+        if (!aura || aura->IsRemoved() || !aura->GetStackAmount())
+            return false;
+
+        // A negative ModStackAmount neither refreshes the duration nor the timers, and removes the aura at 0.
+        aura->ModStackAmount(-1);
+
+        // Improved Chain Heal capstone: the count resets when the buff is used, so consumptions while it is up do not
+        // count; the next count starts once the Chain Heal has spent it.
+        if (GetTalentRank(player, IMPROVED_CHAIN_HEAL_RANKS) < IMPROVED_CHAIN_HEAL_CAPSTONE_RANK ||
+            player->HasAura(ShamanData::SPELL_IMPROVED_CHAIN_HEAL_BUFF, player->GetGUID()))
+            return true;
+
+        RestorationState* state = GetRestorationState(player);
+        if (++state->chainHealCount < uint8(ShamanData::ICH_CHARGES_NEEDED))
+            return true;
+
+        state->chainHealCount = 0;
+        if (!player->AddAura(ShamanData::SPELL_IMPROVED_CHAIN_HEAL_BUFF, player))
+            LOG_ERROR("scripts.spells", "Shaman::ConsumeTidalWaves: could not apply aura {} to {}",
+                ShamanData::SPELL_IMPROVED_CHAIN_HEAL_BUFF, player->GetGUID().ToString());
+
+        return true;
+    }
+
+    uint8 GetTidalWavesCharges(Player const* player)
+    {
+        if (!player)
+            return 0;
+
+        Aura const* aura = player->GetAura(ShamanData::SPELL_TIDAL_WAVES_BUFF, player->GetGUID());
+        return (aura && !aura->IsRemoved()) ? aura->GetStackAmount() : 0;
+    }
+
+    void AddCloudburstStore(Player* player, uint32 effectiveHeal)
+    {
+        if (!player || !effectiveHeal)
+            return;
+
+        RestorationState* state = FindRestorationState(player);
+        if (!state || !state->cloudburstActive)
+            return;
+
+        state->cloudburstStored += double(effectiveHeal) * double(ShamanData::CLOUDBURST_STORE_PCT) / 100.0;
+    }
+
+    void ReleaseCloudburst(Player* player, bool discard)
+    {
+        if (!player)
+            return;
+
+        RestorationState const* state = FindRestorationState(player);
+        if (!state || !state->cloudburstActive)
+            return;
+
+        // The recorded totem, when it is still on the player's map (the remove hook runs while it is in the store).
+        Creature* totem = ObjectAccessor::GetCreature(*player, state->cloudburstTotem);
+        ReleaseCloudburstAt(player, totem, discard || !player->IsAlive(), true);
+    }
+
+    void OnPlayerBeforeLogout(Player* player)
+    {
+        if (!player)
+            return;
+
+        // The totem's removal is deferred past the Player's deletion (Totem::UnSummon -> AddObjectToRemoveList), so its
+        // remove hook finds no owner, and WorldSession::LogoutPlayer saves right after this hook: add the remaining
+        // cooldown now. The record stays; OnPlayerLogout's ClearState drops it.
+        RestorationState const* state = FindRestorationState(player);
+        if (!state || !state->cloudburstActive)
+            return;
+
+        ApplyCloudburstCooldown(player, state->cloudburstPlacedMs, true);
+    }
+
+    void ExtendTidalForce(Player* player, uint32 ms)
+    {
+        if (!player || !ms)
+            return;
+
+        Aura* aura = player->GetAura(ShamanData::SPELL_TIDAL_FORCE_AURA, player->GetGUID());
+        if (!aura || aura->IsRemoved() || aura->GetDuration() <= 0)
+            return;
+
+        // The max duration grows with it, so the client's timer shows the longer window.
+        int32 const duration = aura->GetDuration() + int32(ms);
+        if (duration > aura->GetMaxDuration())
+            aura->SetMaxDuration(duration);
+
+        aura->SetDuration(duration);
+    }
+
+    void OnPlayerTotemAdded(Player* player, Creature* totem)
+    {
+        if (!IsUsablePlayer(player) || !totem)
+            return;
+
+        RecountTotemicResonance(player);
+        QueuePlacementHeal(player, totem);
+
+        if (totem->GetEntry() == ShamanData::NPC_CLOUDBURST_TOTEM)
+            RecordCloudburstPlacement(player, totem);
+    }
+
+    void OnPlayerTotemRemoved(Player* player, Creature* totem)
+    {
+        if (!player || !totem)
+            return;
+
+        if (totem->GetEntry() == ShamanData::NPC_CLOUDBURST_TOTEM)
+        {
+            RestorationState* state = FindRestorationState(player);
+            if (state && state->cloudburstActive && state->cloudburstTotem == totem->GetGUID())
+            {
+                // Expiry, Totemic Recall, Air replacement, right-click and death. A logout never gets here: the totem's
+                // removal is deferred past the Player's deletion (no owner), so OnPlayerBeforeLogout applies the
+                // cooldown. The branch below covers only a removal that runs while the Player leaves the world: the
+                // record drops quietly (nothing can be healed) and the cooldown is applied at once.
+                if (IsUsablePlayer(player))
+                    ReleaseCloudburstAt(player, totem, !player->IsAlive(), true);
+                else
+                {
+                    ApplyCloudburstCooldown(player, state->cloudburstPlacedMs, true);
+                    state->cloudburstActive = false;
+                    state->cloudburstTotem.Clear();
+                    state->cloudburstStored = 0.0;
+                }
+            }
+        }
+
+        RecountTotemicResonance(player);
     }
 }
