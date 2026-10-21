@@ -33,6 +33,7 @@ enum UnitHook
     UNITHOOK_ON_PERIODIC_DAMAGE_FINAL,
     UNITHOOK_ON_HEAL_FINAL,
     UNITHOOK_ON_ABSORB_FINAL,
+    UNITHOOK_ON_MELEE_OUTCOME_FINAL,
     UNITHOOK_MODIFY_HEAL_RECEIVED,
     UNITHOOK_ON_BEFORE_ROLL_MELEE_OUTCOME_AGAINST,
     UNITHOOK_ON_AURA_APPLY,
@@ -56,6 +57,7 @@ enum ReputationRank : uint8;
 class AuraEffect;
 class ByteBuffer;
 struct BuildValuesCachePosPointers;
+struct CalcDamageInfo;
 
 class UnitScript : public ScriptObject
 {
@@ -118,6 +120,12 @@ public:
     // still valid during the call (an exhausted shield is removed afterwards). `attacker` can be nullptr. Purely
     // observational, for mod-dpssim's heal mode, which counts absorbed damage as healing done by the shield's caster.
     virtual void OnAbsorbFinal(Unit* /*victim*/, Unit* /*attacker*/, AuraEffect const* /*absorbAurEff*/, uint32 /*absorbed*/) { }
+
+    // Custom: fires from Unit::CalculateMeleeDamage right after OnMeleeDamageFinal, with the whole swing: hitOutCome,
+    // TargetState (VICTIMSTATE_BLOCKS = full block), blocked_amount, cleanDamage (armor + block + avoided) and each
+    // damage index's final damage/absorb/resist. Absorbs have already fired OnAbsorbFinal by this point. Purely
+    // observational, for mod-dpssim's tank mode: OnMeleeDamageFinal has no outcome, block or mitigation split.
+    virtual void OnMeleeOutcomeFinal(CalcDamageInfo const* /*damageInfo*/) { }
 
     // Called when Heal is Recieved
     virtual void ModifyHealReceived(Unit* /*target*/, Unit* /*healer*/, uint32& /*heal*/, SpellInfo const* /*spellInfo*/) { }
