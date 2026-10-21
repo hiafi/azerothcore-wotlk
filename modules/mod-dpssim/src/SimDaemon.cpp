@@ -629,6 +629,11 @@ namespace
                 break;
             }
 
+            // InfiniteMana: the healer starts every step with a full pool, so a cast is never refused for mana and
+            // the mana samples stay near 100% (a pure-throughput run, plan D8)
+            if (config.InfiniteMana)
+                player->SetPower(POWER_MANA, player->GetMaxPower(POWER_MANA));
+
             bot.UpdateAI(config.StepMs);
             MaybeSampleMana(player, clock.GetElapsedMs(), lastManaSampleMs, sampledManaOnce, manaSamples);
 

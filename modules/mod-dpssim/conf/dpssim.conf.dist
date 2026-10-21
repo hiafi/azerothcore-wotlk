@@ -335,6 +335,18 @@ DpsSim.HealGroup =
 DpsSim.HealTargets =
 
 #
+#    DpsSim.InfiniteMana
+#        Description: Heal mode only: true/false overrides the profile's InfiniteMana key for this run. When on, the
+#                      healer's mana is set to full at the start of every step of the measured fight (the pre-pull buff
+#                      phase is untouched), for a pure-throughput run: HPS with no out-of-mana limit. Reports of an
+#                      infinite-mana run say so and never aggregate with a normal run. Setting it for a DPS profile
+#                      aborts the job.
+#        Default:     "" - (Use the profile's own value, false when it has none)
+#
+
+DpsSim.InfiniteMana =
+
+#
 # Console.Enable is force-disabled by the core in sim mode (no attached TTY to read from in a
 # typical headless/scripted run) and MapUpdate.Threads is force-set to 0 (synchronous, deterministic
 # map updates - the sim daemon's own loop calls map->Update(diff) directly rather than going through

@@ -249,8 +249,31 @@ void DpsSimWorldScript::OnDpsSimRun()
                     config.AllyTankTalents = profile.AllyTankTalents;
                     config.AllySpreadYards = profile.AllySpreadYards;
                     config.DrainPulseMs = profile.DrainPulseMs;
-                    LOG_INFO("server.dpssim", "mod-dpssim: heal mode - group '{}' ({} members), targets '{}'.",
-                        groupText, config.HealGroupSize, targetsText);
+
+                    // DpsSim.InfiniteMana (true/false) overrides the profile's InfiniteMana; empty = the profile's
+                    config.InfiniteMana = profile.InfiniteMana;
+                    std::string const manaText = sConfigMgr->GetOption<std::string>("DpsSim.InfiniteMana", "");
+                    if (StringEqualI(manaText, "1") || StringEqualI(manaText, "true"))
+                        config.InfiniteMana = true;
+                    else if (StringEqualI(manaText, "0") || StringEqualI(manaText, "false"))
+                        config.InfiniteMana = false;
+                    else if (!manaText.empty())
+                    {
+                        LOG_ERROR("server.dpssim", "mod-dpssim: DpsSim.InfiniteMana '{}' is not true or false - "
+                            "aborting DpsSim.RunPlayerbot job.", manaText);
+                        ready = false;
+                    }
+
+                    LOG_INFO("server.dpssim", "mod-dpssim: heal mode - group '{}' ({} members), targets '{}', "
+                        "infinite mana {}.", groupText, config.HealGroupSize, targetsText,
+                        config.InfiniteMana ? "on" : "off");
+                }
+                else if (!sConfigMgr->GetOption<std::string>("DpsSim.InfiniteMana", "").empty())
+                {
+                    // A DPS run has no mana to refill: refuse rather than silently ignore the override
+                    LOG_ERROR("server.dpssim", "mod-dpssim: DpsSim.InfiniteMana is set but profile '{}' is not a "
+                        "Heal profile (Mode = Heal) - aborting DpsSim.RunPlayerbot job.", profilePath);
+                    ready = false;
                 }
                 LOG_INFO("server.dpssim",
                     "mod-dpssim: loaded DpsSim.Profile '{}' (class {}, {} gear item(s), spellPower {}, attackPower {}, "
@@ -290,14 +313,21 @@ void DpsSimWorldScript::OnDpsSimRun()
                 return;
             }
 
-            // HS1: the heal summaries are logged by RunHealBatch(); the JSON report is HS2
+            std::string const reportPath = sConfigMgr->GetOption<std::string>("DpsSim.ReportPath", "");
+
+            // The heal summaries are logged by RunHealBatch(); the JSON report is one file per iteration, named the
+            // way a DPS run's are (the bare path for a single iteration)
             if (heal)
             {
                 LOG_INFO("server.dpssim", "mod-dpssim: heal batch complete - {} iteration(s).", results.size());
+                if (!reportPath.empty())
+                    for (size_t i = 0; i < results.size(); ++i)
+                        SimReport::WriteHealJson(results.size() == 1 ? reportPath :
+                            IterationReportPath(reportPath, uint32(i + 1)), config, results[i]);
+
                 results.clear();
             }
 
-            std::string const reportPath = sConfigMgr->GetOption<std::string>("DpsSim.ReportPath", "");
             for (size_t i = 0; i < results.size(); ++i)
             {
                 SimDaemon::RunResult const& result = results[i];

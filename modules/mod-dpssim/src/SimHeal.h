@@ -169,6 +169,14 @@ namespace SimHeal
     // "tank", "dps", "self"
     char const* RoleName(Role role);
 
+    // "party" / "raid10" / "raid20" for a group size, "" for any other size
+    char const* GroupName(uint32 size);
+
+    // The canonical text of a target list, equal consecutive entries folded into "<count>*" ones, e.g.
+    // "tank:pin:50, 3*dps:pin:50, self:pin:50". Parses back to the same list; the report carries it so runs of the
+    // same scenario compare equal whatever spelling the conf used
+    std::string TargetsText(std::vector<TargetSpec> const& targets);
+
     // "drain:450", "drain:3.5%", "pin:50", for logs
     std::string ModeText(TargetSpec const& spec);
 }

@@ -177,6 +177,9 @@ namespace SimDaemon
         std::string AllyTankTalents;
         float AllySpreadYards = 10.0f;
         uint32 DrainPulseMs = 1000;
+        // Heal mode: set the healer's mana to full every step of the measured fight (profile key InfiniteMana, with
+        // DpsSim.InfiniteMana overriding it). The buff phase is untouched.
+        bool InfiniteMana = false;
     };
 
     // One sim job's result. HitDamages/HitCrits are parallel vectors, one entry per landed hit, in

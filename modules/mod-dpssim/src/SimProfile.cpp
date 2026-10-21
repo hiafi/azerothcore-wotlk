@@ -318,6 +318,21 @@ bool SimProfile::Load(std::string const& path, Profile& out)
             parsed.HealTargets = value;
         else if (key == "AllyTankTalents")
             parsed.AllyTankTalents = value;
+        else if (key == "InfiniteMana")
+        {
+            bool ok = false;
+            bool const flagValue = ParseBool(value, ok);
+            if (!ok)
+            {
+                LOG_ERROR("server.dpssim",
+                    "mod-dpssim: SimProfile::Load() - '{}' line {}: 'InfiniteMana' value '{}' is not true/false.",
+                    path, lineNo, value);
+                return false;
+            }
+
+            parsed.InfiniteMana = flagValue;
+            parsed.InfiniteManaSet = true;
+        }
         else if (key == "AllyMaxHealth.Tank" || key == "AllyMaxHealth.Dps" || key == "PinMaxHealth" ||
             key == "DrainPulseMs")
         {
@@ -423,6 +438,13 @@ bool SimProfile::Load(std::string const& path, Profile& out)
     {
         LOG_ERROR("server.dpssim", "mod-dpssim: SimProfile::Load() - '{}': 'PetCreatureEntry' is for hunter profiles "
             "(Class {}), this one is class {}.", path, uint32(CLASS_HUNTER), parsed.Class);
+        return false;
+    }
+
+    if (!parsed.HealMode && parsed.InfiniteManaSet)
+    {
+        LOG_ERROR("server.dpssim", "mod-dpssim: SimProfile::Load() - '{}': 'InfiniteMana' is for Heal profiles "
+            "(add 'Mode = Heal'); a DPS run has no mana to refill.", path);
         return false;
     }
 

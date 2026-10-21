@@ -206,6 +206,13 @@ namespace SimProfile
 
         // Time between the drain pulses (`drain:` targets), in sim ms. At least 100.
         uint32 DrainPulseMs = 1000;
+
+        // `InfiniteMana = true`: the healer's mana is set to full every step of the measured fight (not the buff
+        // phase), for a pure-throughput run (plan D8). DpsSim.InfiniteMana in the conf overrides it. Heal profiles
+        // only: the key is refused in a DPS profile.
+        bool InfiniteMana = false;
+        // Whether the profile set the key at all, for that refusal
+        bool InfiniteManaSet = false;
     };
 
     // Loads `path` (a full file path - see dpssim.conf.dist's DpsSim.Profile doc comment for why

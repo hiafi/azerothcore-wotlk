@@ -257,3 +257,40 @@ std::string SimHeal::ModeText(TargetSpec const& spec)
 
     return Acore::StringFormat("drain:{}{}", spec.Value, spec.Percent ? "%" : "");
 }
+
+char const* SimHeal::GroupName(uint32 size)
+{
+    switch (size)
+    {
+        case PARTY_SIZE:
+            return "party";
+        case RAID10_SIZE:
+            return "raid10";
+        case RAID20_SIZE:
+            return "raid20";
+    }
+
+    return "";
+}
+
+std::string SimHeal::TargetsText(std::vector<TargetSpec> const& targets)
+{
+    std::string text;
+    for (size_t i = 0; i < targets.size();)
+    {
+        size_t run = 1;
+        while (i + run < targets.size() && targets[i + run].TargetRole == targets[i].TargetRole &&
+            targets[i + run].Kind == targets[i].Kind && targets[i + run].Percent == targets[i].Percent &&
+            targets[i + run].Value == targets[i].Value)
+            ++run;
+
+        if (!text.empty())
+            text += ", ";
+        if (run > 1)
+            text += Acore::StringFormat("{}*", run);
+        text += Acore::StringFormat("{}:{}", RoleName(targets[i].TargetRole), ModeText(targets[i]));
+        i += run;
+    }
+
+    return text;
+}
