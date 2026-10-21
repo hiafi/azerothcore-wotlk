@@ -32,6 +32,8 @@ from lib.dsl.registry import (
 )
 
 from . import _masks as m
+from .shaman_restoration import torrent_heal_202667
+from .shaman_resto_tooltips import shaman_rain_1222
 
 _SPELLFAMILY_SHAMAN = 11
 _DMG_MAGIC = 1                              # raw DefenseType (SPELL_DAMAGE_CLASS_MAGIC)
@@ -206,7 +208,7 @@ healing_rain_heal_202284 = spell(
 
 # The ground cast: P0 202775 (passed) with the values of the doc. eff0 targets 29 / 29 (ally-side dynobj, Barrier
 # 200132's shape: an ally dynobj aura cannot pull enemies into combat), radius 10; eff1 PERIODIC_DUMMY 2000 ms;
-# eff2 is the torrent's potency carrier (see notes): a DUMMY nobody executes.
+# the torrent is its own spell (shaman_restoration.py, d2 b22); the old eff2 potency-carrier DUMMY is gone (S2a A4).
 healing_rain_202283 = spell(
     id=202283, name='Healing Rain', school=School.NATURE, attributes=0,
     cast_time_ms=2000, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=20,
@@ -217,9 +219,9 @@ healing_rain_202283 = spell(
                radius_yards=10.0),
         Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.PERIODIC_DUMMY, amplitude=2000,
                implicit_target_a=_TARGET_UNIT_CASTER),
-        Effect(type=EffectType.DUMMY, sp_potency=10.0, potency_kind='heal', time_basis_ms=2000),
     ],
     spell_icon_id=_ICON_HEALING_RAIN,
+    tooltip_vars=shaman_rain_1222,
     notes='SH0b A5, shared doc "Healing Rain" + T0b section 4 + P0 202775 (PASS): Nature, 2 s cast, no cooldown, 20 s, '
           '30 yd, GCD 1500 / 133, cost 20% base mana [tune] (Chain Heal 19%, Riptide 18%; balance pass), d2 b21, '
           'SpellLevel 30. eff0 PERSISTENT_AREA_AURA dummy, targets 29 / 29 + raw Targets 0x40, radius 10 yd; eff1 '
@@ -228,9 +230,10 @@ healing_rain_202283 = spell(
           'InterruptFlags 15. SpellVisualID 90130 = the ported Ascension ring (patch_shaman_vfx_models.py, pending '
           'rev_1792395354330090836.sql). spell_sha_healing_rain removes the old rain and its aura before the cast; '
           'its aura script heals SelectMostInjured(owner, dynobj, radius, HEALING_RAIN_TARGETS) with 202284. '
-          'eff2 is NOT executed (DUMMY, no target, no script handler): it only carries the torrent\'s 10 potency so '
-          'the tooltip\'s "[10 potency]" has a generated number until the Restoration stage builds the torrent '
-          'spell (d2 b22); that stage deletes eff2 and switches the sentence to pot_text(torrent).',
+          'S2a A4 (Restoration): the placeholder eff2 (a 10-potency DUMMY that only carried the torrent\'s tooltip number) is '
+          'deleted; the tooltip now reads the real torrent heal 202667 (d2 b22, 10 potency) through pot_text(), with the Healing '
+          'Way / Torrent / Purification product (tooltip entry 1222 `tide`), and the pulse number with the Healing Way / Rainfall / '
+          'Purification product (`rain`).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'SpellClassMask_3': m.HEALING_RAIN, 'DefenseType': _DMG_MAGIC,
         'PreventionType': 1, 'EquippedItemClass': -1, 'SpellLevel': 30,
@@ -238,9 +241,9 @@ healing_rain_202283 = spell(
         'Targets': _TARGETS_DEST_LOCATION, 'AttributesEx5': _ATTR5_NO_CASTER_AURA_ICON,
         'SpellVisualID_1': _SV_HEALING_RAIN_RING,
         'Description_Lang_enUS': 'Calls down a healing rain on the target area for $d, healing up to 5 allies inside '
-                                 'it for ' + pot_text(healing_rain_heal_202284) + ' every $t2 sec. Casting Riptide on '
-                                 'an ally in your Healing Rain releases a torrent that heals everyone in it for '
-                                 '{pot3}. Only one Healing Rain can be active at a time.',
+                                 'it for ' + pot_text(healing_rain_heal_202284, var='rain') + ' every $t2 sec. Casting Riptide on '
+                                 'an ally in your Healing Rain releases a torrent that heals up to 5 allies in it for '
+                                 + pot_text(torrent_heal_202667, var='tide') + '. Only one Healing Rain can be active at a time.',
         'AuraDescription_Lang_enUS': 'Standing in a healing rain.',
     },
 )

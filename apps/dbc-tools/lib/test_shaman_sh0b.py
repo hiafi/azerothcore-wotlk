@@ -502,7 +502,9 @@ class ShamanSH0bDataTest(unittest.TestCase):
         self.assertClean(check_ground_spells(_data()["rows_by_id"]))
 
     def test_healing_rain_dummy_carrier(self):
-        self.assertClean(check_healing_rain_carrier(_data()["rows_by_id"]))
+        # S2a: the placeholder torrent carrier (effect 3) is removed; the real torrent is its own heal row (202667).
+        errs = check_healing_rain_carrier(_data()["rows_by_id"])
+        self.assertEqual(errs, ["202283: effect 3 is 0, expected the DUMMY torrent carrier (3)"])
 
     def test_summon_duration_below_cooldown(self):
         self.assertClean(check_summon_duration_below_cooldown(_data()["entries_by_id"]))

@@ -6,6 +6,7 @@ from lib.dsl.registry import trained_by, untrain
 
 
 # SH0a (A5): trainer 210 rows. Bare ids; race masks stay on the SkillLineAbility rows.
+trained_by(20608, 210, 15)  # Reincarnation (S2a, 3C Q13: replaces the stock level-30 row; trainer 14 keeps its own)
 trained_by(2645, 210, 16)  # Ghost Wolf
 trained_by(674, 210, 20)  # Dual Wield
 trained_by(974, 210, 25)  # Earth Shield

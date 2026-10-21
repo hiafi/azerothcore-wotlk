@@ -6,10 +6,13 @@ Split from a single source/classes/shaman.py via split_class_file.py (.agents/pl
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, School, SpellModOp
 from lib.dsl.registry import (
-    procs_on, remove_spell_proc, scripted_by, spell, trained_by, unbind_bonus_coefficients, unbind_script,
+    pot_text, procs_on, remove_spell_proc, scripted_by, spell, spell_group, trained_by, unbind_bonus_coefficients,
+    unbind_script,
 )
 
 from . import _masks as m
+# A3's Restoration rows (shaman_restoration.py has no import from this file), for the two capstone tooltips that quote a heal.
+from .shaman_restoration import natures_guardian_heal_202675, totemic_focus_heal_202677
 
 
 # =====================================================================================================================
@@ -41,6 +44,21 @@ _PROC_HIT_NORMAL_CRIT = 0x3
 _PROC_HIT_CRIT = 0x2
 _FFN = 0x1C                   # school mask Fire | Frost | Nature
 
+# S2a A2 (Restoration rank spells; shaman-rework.S2a-WP-BRIEF.md data decisions 14 and 15). Effect-mask dwords
+# d0 / d1 / d2 = EffectSpellClassMask{A,B,C}_{1,2,3} of the effect that carries them.
+_HW_LHW = 0xC0                # d0 b6 Healing Wave + b7 Lesser Healing Wave
+_CH = 0x100                   # d0 b8 Chain Heal
+_ES_D1 = 0x400                # d1 b10 Earth Shield 974 (stock shield bit: allowed as a mod target)
+_EARTHLIVING_HOT = 0x80000    # d1 b19 Earthliving HoT 51945
+_RIPTIDE = 0x10               # d2 b4 Riptide (direct, HoT, Rip Current copy)
+_MINOR_HEAL = m.MINOR_HEAL    # d2 b27: Totemic Focus heal 202677, Nature's Guardian heal 202675
+_TIDAL_FORCE_CAST = m.TIDAL_FORCE_CAST  # d2 b28: the Tidal Force castable 202654
+_WATER_SHIELD_D1 = 0x20       # d1 b5 Water Shield's own bit (a SPELLMOD target only, never an identity on a new row)
+_TOTEM_SUMMONS = 0x20081018   # d0 b3 + b4 + b12 + b19 + b29: the stock Totemic Focus mask, covers every totem summon
+_PURIFICATION_D0 = _HW_LHW | _CH | m.HEALING_STREAM_HEAL
+_PURIFICATION_D1 = _ES_D1 | _EARTHLIVING_HOT
+_PURIFICATION_D2 = (_RIPTIDE | m.HEALING_RAIN | m.TORRENT | m.UNDULATING_HEAL | m.WATER_BOLT_HEAL | _MINOR_HEAL)
+
 
 def _desc(text, capstone=None, last=False):
     """Rank text from the doc; the capstone clause is grey on every rank below the last (hunter / paladin idiom)."""
@@ -49,6 +67,14 @@ def _desc(text, capstone=None, last=False):
     if last:
         return f"{text}\n\nCapstone: {capstone}"
     return f"{text}\n\n|cFF9D9D9DCapstone: {capstone}|r"
+
+
+def _cap(text, capstone, last=False):
+    """S2a rank text with the repo's established capstone clause (talent-tooltip-audit step 5): the label is
+    "Capstone Bonus: ", grey on every rank below the last, plain on the last. (`_desc` above is the S1 spelling.)"""
+    if last:
+        return f"{text}\n\nCapstone Bonus: {capstone}"
+    return f"{text}\n\n|cFF9D9D9DCapstone Bonus: {capstone}|r"
 
 
 def _aura(aura, base_points=0, misc_value=0, **kw):
@@ -434,11 +460,53 @@ ancestral_fortitude_16177 = spell(
     range_yards=0.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-4, points_per_level=-0.11666666666666667, implicit_target_a=21, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=-4, implicit_target_a=21, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=1),
     ],
     spell_icon_id=200,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Reduces physical damage taken by $s1%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces physical damage taken by $s1%. Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 4, 'RangeIndex': 1, 'SpellClassMask_2': 67108864, 'SpellClassSet': 11},
+    notes='S2a A2: Physical damage taken -3% for 15 s (flat, no per-level term), number-free aura text. Group 1095 (stack rule 4) with Inspiration.',
+    raw_overrides={'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Physical damage taken reduced.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces physical damage taken by $s1%. Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 4, 'RangeIndex': 1, 'SpellClassMask_2': 67108864, 'SpellClassSet': 11},
+)
+
+
+ancestral_fortitude_16236 = spell(
+    id=16236,
+    name='Ancestral Fortitude',
+    school=School.HOLY,
+    dispel=DispelType.MAGIC,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=21, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=1),
+    ],
+    spell_icon_id=200,
+    notes='S2a A2: Physical damage taken -6% for 15 s (flat, no per-level term), number-free aura text. Group 1095 (stack rule 4) with Inspiration.',
+    raw_overrides={'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Physical damage taken reduced.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces physical damage taken by $s1%. Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 4, 'RangeIndex': 1, 'SpellClassMask_2': 67108864, 'SpellClassSet': 11},
+)
+
+
+ancestral_fortitude_16237 = spell(
+    id=16237,
+    name='Ancestral Fortitude',
+    school=School.HOLY,
+    dispel=DispelType.MAGIC,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=15000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=21, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=1),
+    ],
+    spell_icon_id=200,
+    notes='S2a A2: Physical damage taken -10% for 15 s (flat, no per-level term), number-free aura text. Group 1095 (stack rule 4) with Inspiration.',
+    raw_overrides={'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Physical damage taken reduced.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces physical damage taken by $s1%. Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 4, 'RangeIndex': 1, 'SpellClassMask_2': 67108864, 'SpellClassSet': 11},
 )
 
 
@@ -479,7 +547,7 @@ reincarnation_20608 = spell(
     ],
     spell_icon_id=24,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 1048576, 'AttributesEx4': 65536, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 30, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Allows you to resurrect yourself upon death with $21169s1% health and mana.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Passive', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassMask_1': 512, 'SpellClassSet': 11, 'SpellLevel': 30},
+    raw_overrides={'AttributesEx3': 1048576, 'AttributesEx4': 65536, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 15, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Allows you to resurrect yourself upon death with $21169s1% health and mana.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Passive', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassMask_1': 512, 'SpellClassSet': 11, 'SpellLevel': 15},
 )
 
 
@@ -1144,24 +1212,13 @@ elemental_focus_16164 = _talent(
 )
 
 
-totemic_focus_16173 = spell(
-    id=16173,
-    name='Totemic Focus',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    duration_ms=-1,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-6, implicit_target_a=1, apply_aura=108, misc_value=14),
-    ],
-    spell_icon_id=46,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your totems by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 537399320, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+totemic_focus_16173 = _talent(
+    16173, 'Totemic Focus', 'Rank 1',
+    [_mod(SpellModOp.COST, -16)], 46,
+    _cap('Reduces the mana cost of your totems by 15%.',
+          'Placing a totem heals up to 5 injured allies within 20 yards of it for ' + pot_text(totemic_focus_heal_202677) + '.', last=False),
+    masks={1: (_TOTEM_SUMMONS, 0, 0)},
+    notes='S2a A2: totem cost -15/30/45% (SPELLMOD_COST pct). The stock mask 0x20081018 already covers every totem summon (X10: Earth Wall d0 b3, Searing b4, Magma b12, HST b19, b29). Rank 3 eff2 is the capstone marker (the placement heal 202677 is cast by the Totem hooks, A3 row). ',
 )
 
 
@@ -1181,108 +1238,54 @@ ancestral_healing_16176 = spell(
     ],
     spell_icon_id=200,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces your target's physical damage taken by $16177s1% for $16177d after getting a critical effect from one of your healing spells.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 11},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your critical effects from direct Nature healing spells reduce the target's Physical damage taken by 3% for 15 sec. Does not stack with other similar effects.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 11},
 )
 
 
-purification_16178 = spell(
-    id=16178,
-    name='Purification',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=136, misc_value=127),
-    ],
-    spell_icon_id=133,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effectiveness of your healing spells by $s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 448, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+purification_16178 = _talent(
+    16178, 'Purification', 'Rank 1',
+    [_mod(SpellModOp.DAMAGE, 2), _mod(SpellModOp.DOT, 2)], 133,
+    'Increases the healing of your Nature spells by 3%.',
+    masks={1: (_PURIFICATION_D0, _PURIFICATION_D1, _PURIFICATION_D2), 2: (_PURIFICATION_D0, _PURIFICATION_D1, _PURIFICATION_D2)},
+    notes="S2a A2 (brief decision 14): the stock all-healing aura 136 ignored its class mask (X9), so Purification is a class-masked SPELLMOD_DAMAGE + SPELLMOD_DOT over every shaman Nature heal: HW, LHW, CH, Healing Stream and Tide heal (d0 b6/b7/b8/b13); Earth Shield d1 b10, Earthliving d1 b19; Riptide d2 b4, Healing Rain b21, torrent b22, Undulating Currents b23, Water Bolt heal b24, and d2 b27 (placement heal 202677 + Nature's Guardian heal 202675). Never the Tidal Force echo, the Cloudburst release or Ancestral Awakening 52752.",
 )
 
 
-tidal_focus_16179 = spell(
-    id=16179,
-    name='Tidal Focus',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-2, implicit_target_a=1, apply_aura=108, misc_value=14),
-    ],
-    spell_icon_id=36,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your healing spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 448, 'EffectSpellClassMaskA_2': 1024, 'EffectSpellClassMaskA_3': 16, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+tidal_focus_16179 = _talent(
+    16179, 'Tidal Focus', 'Rank 1',
+    [_mod(SpellModOp.COST, -5), _mod(SpellModOp.DURATION, 1999, pct=False)], 36,
+    _cap('Reduces the mana cost of your Shaman healing spells by 4%. Increases the duration of your Cleansing Totem by 2 sec.',
+          'Placing your Cleansing Totem instantly removes 2 disease and 2 poison effects from each party member within 40 yards.', last=False),
+    masks={1: (_HW_LHW | _CH, _ES_D1, _RIPTIDE | m.HEALING_RAIN), 2: (m.CLEANSING_SUMMON, 0, 0)},
+    notes='S2a A2: cost -4/8/12% on Healing Wave, Lesser Healing Wave, Chain Heal (d0), Earth Shield (d1 b10), Riptide and Healing Rain (d2); Cleansing Totem duration +2/4/6 s (flat SPELLMOD_DURATION on d0 b16). Rank 3 eff3 is the capstone marker.',
 )
 
 
-improved_water_shield_16180 = spell(
-    id=16180,
-    name='Improved Water Shield',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-    ],
-    spell_icon_id=2287,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have a $s1% chance to instantly gain mana as if you consumed a Water Shield Orb when you gain a critical effect from your Healing Wave or Riptide spells, a ${$m1*0.6}% chance when you gain a critical effect from your Lesser Healing Wave spell, and a ${$m1*0.3}% chance when you gain a critical effect from your Chain Heal spell.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 33, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 11},
+improved_water_shield_16180 = _talent(
+    16180, 'Improved Water Shield', 'Rank 1',
+    [_mod(SpellModOp.EFFECT2, 9), _aura(AuraType.DUMMY, 0, die_sides=0)], 2287,
+    _cap("Increases the mana restored by your Water Shield's passive effect by 10%.",
+          'Your direct heal critical strikes restore 1% of your maximum mana.', last=False),
+    masks={1: (0, _WATER_SHIELD_D1, 0)},
+    ProcChance=100, ProcTypeMask=16384,
+    notes='S2a A2: Water Shield passive (52127 effect 2, the MP5) +10/20/30% through SPELLMOD_EFFECT2 on its own d1 b5. eff2 is the capstone carrier: value 1 on rank 3, value 0 on ranks 1-2 (every rank shares the shape so the chain -16180 binding and proc row see the same effects; the script must return early when the DUMMY amount is 0). The stock raw twins (EffectBasePoints_2/EffectDieSides_2) and the orb-chance clause are gone. spell_proc -16180 (live: heal, HIT, crit, HW/LHW/CH + Riptide) is kept.',
 )
 
 
-healing_focus_16181 = spell(
-    id=16181,
-    name='Healing Focus',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=22, implicit_target_a=1, apply_aura=108, misc_value=9),
-    ],
-    spell_icon_id=964,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the pushback suffered from damaging attacks while casting any Shaman healing spell by $s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 448, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+earthen_bulwark_16181 = _talent(
+    16181, 'Earthen Bulwark', 'Rank 1',
+    [_dummy(0)], 964,
+    'Each pulse of your Earthen Wall Totem also shields every other ally within 10 yards of the totem for 40% of the amount of the main shield.',
+    notes="S2a A2: renamed from Healing Focus (variable name unchanged). Marker only; the shield row 202678 and the pulse are scripted (Shaman::GetEarthenWallAbsorb). Stock pushback clause gone (moved to Nature's Guardian).",
 )
 
 
-improved_healing_wave_16182 = spell(
-    id=16182,
-    name='Improved Healing Wave',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    duration_ms=-1,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=107, misc_value=10),
-    ],
-    spell_icon_id=13,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the casting time of your Healing Wave spell by $/1000;S1 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectItemType_1': 64, 'EffectSpellClassMaskA_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+improved_healing_wave_16182 = _talent(
+    16182, 'Improved Healing Wave', 'Rank 1',
+    [_mod(SpellModOp.DAMAGE, 1), _mod(SpellModOp.CRITICAL_CHANCE, 0, pct=False)], 13,
+    'Increases the healing done by your Healing Wave and Lesser Healing Wave by 2% and their critical effect chance by 1%.',
+    masks={1: (_HW_LHW, 0, 0), 2: (_HW_LHW, 0, 0)},
+    notes='S2a A2: healing +2/4/6% (SPELLMOD_DAMAGE) and crit +1/2/3% on Healing Wave d0 b6 + Lesser Healing Wave d0 b7. The stock cast-time cut is gone.',
 )
 
 
@@ -1303,130 +1306,66 @@ improved_reincarnation_16184 = spell(
     ],
     spell_icon_id=24,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Reincarnation spell by $/60000;s1 min and increases the amount of health and mana recovered when reincarnating by an additional $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 512, 'EffectSpellClassMaskB_1': 512, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Reincarnation by $/60000;s1 min and increases the health and mana you return with by an additional $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 512, 'EffectSpellClassMaskB_1': 512, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
 )
 
 
-restorative_totems_16187 = spell(
-    id=16187,
-    name='Restorative Totems',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=108, misc_value=8),
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=8),
-    ],
-    spell_icon_id=338,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effect of your Mana Spring Totem by $s1%, and increases the amount healed by your Healing Stream Totem by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16384, 'EffectSpellClassMaskB_1': 16384, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+restorative_totems_16187 = _talent(
+    16187, 'Restorative Totems', 'Rank 1',
+    [_mod(SpellModOp.COOLDOWN, -10001, pct=False), _aura(AuraType.DUMMY, 9)], 338,
+    'Increases the mana restored by your Mana Tide Totem by 10% and reduces its cooldown by 10 sec.',
+    masks={1: (m.MANA_TIDE_SUMMON, 0, 0)},
+    notes='S2a A2: Mana Tide cooldown -10/20/30 s (flat SPELLMOD_COOLDOWN on the summon d0 b25, before Cooldown Haste). eff2 DUMMY = +10/20/30 (live) read by spell_sha_resto_mana_tide_totem. The stock Mana Spring / Healing Stream clauses are gone.',
 )
 
 
-tidal_mastery_16194 = spell(
-    id=16194,
-    name='Tidal Mastery',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=107, misc_value=7),
-    ],
-    spell_icon_id=100,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical effect chance of your healing and lightning spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1475, 'EffectSpellClassMaskA_2': 8192, 'EffectSpellClassMaskA_3': 16, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_3': 64, 'SpellClassSet': 11},
+tidal_mastery_16194 = _talent(
+    16194, 'Tidal Mastery', 'Rank 1',
+    [_mod(SpellModOp.CRITICAL_CHANCE, 0, pct=False), _mod(SpellModOp.COOLDOWN, -3001, pct=False)], 100,
+    _cap('Increases the critical effect chance of your Shaman healing spells, Lightning Bolt and Chain Lightning by 1%. Reduces the cooldown of your Tidal Force by 3 sec.',
+          "While Tidal Force is active, critical effects from your Healing Wave and Riptide's direct heal extend it by 2 sec, from Lesser Healing Wave by 1 sec and from Chain Heal by 0.5 sec.", last=False),
+    masks={1: (_HW_LHW | _CH | _LB | _CL, _ES_D1, _RIPTIDE | m.HEALING_RAIN | m.TORRENT), 2: (0, 0, _TIDAL_FORCE_CAST)},
+    notes='S2a A2: crit +1/2/3% on Healing Wave, Lesser Healing Wave, Chain Heal, Lightning Bolt (d0 b0), Chain Lightning (d0 b1), Earth Shield, Riptide, Healing Rain, torrent (the stock d0 b10 / d1 b13 / d2 bits are gone); Tidal Force (castable 202654, d2 b28) cooldown -3/6/9 s as a flat SPELLMOD_COOLDOWN, applied before Cooldown Haste. Rank 3 eff3 is the capstone marker.',
 )
 
 
-improved_water_shield_16196 = spell(
-    id=16196,
-    name='Improved Water Shield',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=65, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-    ],
-    spell_icon_id=2287,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have a $s1% chance to instantly gain mana as if you consumed a Water Shield Orb when you gain a critical effect from your Healing Wave or Riptide spells, a ${$m1*0.6}% chance when you gain a critical effect from your Lesser Healing Wave spell, and a ${$m1*0.3}% chance when you gain a critical effect from your Chain Heal spell.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 66, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 11},
+improved_water_shield_16196 = _talent(
+    16196, 'Improved Water Shield', 'Rank 2',
+    [_mod(SpellModOp.EFFECT2, 19), _aura(AuraType.DUMMY, 0, die_sides=0)], 2287,
+    _cap("Increases the mana restored by your Water Shield's passive effect by 20%.",
+          'Your direct heal critical strikes restore 1% of your maximum mana.', last=False),
+    masks={1: (0, _WATER_SHIELD_D1, 0)},
+    ProcChance=100, ProcTypeMask=16384,
+    notes='S2a A2: Water Shield passive (52127 effect 2, the MP5) +10/20/30% through SPELLMOD_EFFECT2 on its own d1 b5. eff2 is the capstone carrier: value 1 on rank 3, value 0 on ranks 1-2 (every rank shares the shape so the chain -16180 binding and proc row see the same effects; the script must return early when the DUMMY amount is 0). The stock raw twins (EffectBasePoints_2/EffectDieSides_2) and the orb-chance clause are gone. spell_proc -16180 (live: heal, HIT, crit, HW/LHW/CH + Riptide) is kept.',
 )
 
 
-improved_water_shield_16198 = spell(
-    id=16198,
-    name='Improved Water Shield',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-    ],
-    spell_icon_id=2287,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have a $s1% chance to instantly gain mana as if you consumed a Water Shield Orb when you gain a critical effect from your Healing Wave or Riptide spells, a ${$m1*0.6}% chance when you gain a critical effect from your Lesser Healing Wave spell, and a ${$m1*0.3}% chance when you gain a critical effect from your Chain Heal spell.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 11},
+improved_water_shield_16198 = _talent(
+    16198, 'Improved Water Shield', 'Rank 3',
+    [_mod(SpellModOp.EFFECT2, 29), _dummy(0)], 2287,
+    _cap("Increases the mana restored by your Water Shield's passive effect by 30%.",
+          'Your direct heal critical strikes restore 1% of your maximum mana.', last=True),
+    masks={1: (0, _WATER_SHIELD_D1, 0)},
+    ProcChance=100, ProcTypeMask=16384,
+    notes='S2a A2: Water Shield passive (52127 effect 2, the MP5) +10/20/30% through SPELLMOD_EFFECT2 on its own d1 b5. eff2 is the capstone carrier: value 1 on rank 3, value 0 on ranks 1-2 (every rank shares the shape so the chain -16180 binding and proc row see the same effects; the script must return early when the DUMMY amount is 0). The stock raw twins (EffectBasePoints_2/EffectDieSides_2) and the orb-chance clause are gone. spell_proc -16180 (live: heal, HIT, crit, HW/LHW/CH + Riptide) is kept.',
 )
 
 
-restorative_totems_16205 = spell(
-    id=16205,
-    name='Restorative Totems',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=108, misc_value=8),
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=8),
-    ],
-    spell_icon_id=338,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effect of your Mana Spring Totem by $s1%, and increases the amount healed by your Healing Stream Totem by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16384, 'EffectSpellClassMaskB_1': 16384, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+restorative_totems_16205 = _talent(
+    16205, 'Restorative Totems', 'Rank 2',
+    [_mod(SpellModOp.COOLDOWN, -20001, pct=False), _aura(AuraType.DUMMY, 19)], 338,
+    'Increases the mana restored by your Mana Tide Totem by 20% and reduces its cooldown by 20 sec.',
+    masks={1: (m.MANA_TIDE_SUMMON, 0, 0)},
+    notes='S2a A2: Mana Tide cooldown -10/20/30 s (flat SPELLMOD_COOLDOWN on the summon d0 b25, before Cooldown Haste). eff2 DUMMY = +10/20/30 (live) read by spell_sha_resto_mana_tide_totem. The stock Mana Spring / Healing Stream clauses are gone.',
 )
 
 
-restorative_totems_16206 = spell(
-    id=16206,
-    name='Restorative Totems',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=8),
-        Effect(type=EffectType.APPLY_AURA, base_points=44, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=8),
-    ],
-    spell_icon_id=338,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effect of your Mana Spring Totem by $s1%, and increases the amount healed by your Healing Stream Totem by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16384, 'EffectSpellClassMaskB_1': 16384, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+restorative_totems_16206 = _talent(
+    16206, 'Restorative Totems', 'Rank 3',
+    [_mod(SpellModOp.COOLDOWN, -30001, pct=False), _aura(AuraType.DUMMY, 29)], 338,
+    'Increases the mana restored by your Mana Tide Totem by 30% and reduces its cooldown by 30 sec.',
+    masks={1: (m.MANA_TIDE_SUMMON, 0, 0)},
+    notes='S2a A2: Mana Tide cooldown -10/20/30 s (flat SPELLMOD_COOLDOWN on the summon d0 b25, before Cooldown Haste). eff2 DUMMY = +10/20/30 (live) read by spell_sha_resto_mana_tide_totem. The stock Mana Spring / Healing Stream clauses are gone.',
 )
 
 
@@ -1447,47 +1386,25 @@ improved_reincarnation_16209 = spell(
     ],
     spell_icon_id=24,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Reincarnation spell by $/60000;s1 min and increases the amount of health and mana recovered when reincarnating by an additional $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 512, 'EffectSpellClassMaskB_1': 512, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Reincarnation by $/60000;s1 min and increases the health and mana you return with by an additional $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 512, 'EffectSpellClassMaskB_1': 512, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
 )
 
 
-purification_16210 = spell(
-    id=16210,
-    name='Purification',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=136, misc_value=127),
-    ],
-    spell_icon_id=133,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effectiveness of your healing spells by $s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 448, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+purification_16210 = _talent(
+    16210, 'Purification', 'Rank 2',
+    [_mod(SpellModOp.DAMAGE, 5), _mod(SpellModOp.DOT, 5)], 133,
+    'Increases the healing of your Nature spells by 6%.',
+    masks={1: (_PURIFICATION_D0, _PURIFICATION_D1, _PURIFICATION_D2), 2: (_PURIFICATION_D0, _PURIFICATION_D1, _PURIFICATION_D2)},
+    notes="S2a A2 (brief decision 14): the stock all-healing aura 136 ignored its class mask (X9), so Purification is a class-masked SPELLMOD_DAMAGE + SPELLMOD_DOT over every shaman Nature heal: HW, LHW, CH, Healing Stream and Tide heal (d0 b6/b7/b8/b13); Earth Shield d1 b10, Earthliving d1 b19; Riptide d2 b4, Healing Rain b21, torrent b22, Undulating Currents b23, Water Bolt heal b24, and d2 b27 (placement heal 202677 + Nature's Guardian heal 202675). Never the Tidal Force echo, the Cloudburst release or Ancestral Awakening 52752.",
 )
 
 
-purification_16211 = spell(
-    id=16211,
-    name='Purification',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=136, misc_value=127),
-    ],
-    spell_icon_id=133,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effectiveness of your healing spells by $s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 448, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+purification_16211 = _talent(
+    16211, 'Purification', 'Rank 3',
+    [_mod(SpellModOp.DAMAGE, 9), _mod(SpellModOp.DOT, 9)], 133,
+    'Increases the healing of your Nature spells by 10%.',
+    masks={1: (_PURIFICATION_D0, _PURIFICATION_D1, _PURIFICATION_D2), 2: (_PURIFICATION_D0, _PURIFICATION_D1, _PURIFICATION_D2)},
+    notes="S2a A2 (brief decision 14): the stock all-healing aura 136 ignored its class mask (X9), so Purification is a class-masked SPELLMOD_DAMAGE + SPELLMOD_DOT over every shaman Nature heal: HW, LHW, CH, Healing Stream and Tide heal (d0 b6/b7/b8/b13); Earth Shield d1 b10, Earthliving d1 b19; Riptide d2 b4, Healing Rain b21, torrent b22, Undulating Currents b23, Water Bolt heal b24, and d2 b27 (placement heal 202677 + Nature's Guardian heal 202675). Never the Tidal Force echo, the Cloudburst release or Ancestral Awakening 52752.",
 )
 
 
@@ -1531,43 +1448,23 @@ purification_16213 = spell(
 )
 
 
-tidal_focus_16214 = spell(
-    id=16214,
-    name='Tidal Focus',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=108, misc_value=14),
-    ],
-    spell_icon_id=36,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your healing spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 448, 'EffectSpellClassMaskA_2': 1024, 'EffectSpellClassMaskA_3': 16, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+tidal_focus_16214 = _talent(
+    16214, 'Tidal Focus', 'Rank 2',
+    [_mod(SpellModOp.COST, -9), _mod(SpellModOp.DURATION, 3999, pct=False)], 36,
+    _cap('Reduces the mana cost of your Shaman healing spells by 8%. Increases the duration of your Cleansing Totem by 4 sec.',
+          'Placing your Cleansing Totem instantly removes 2 disease and 2 poison effects from each party member within 40 yards.', last=False),
+    masks={1: (_HW_LHW | _CH, _ES_D1, _RIPTIDE | m.HEALING_RAIN), 2: (m.CLEANSING_SUMMON, 0, 0)},
+    notes='S2a A2: cost -4/8/12% on Healing Wave, Lesser Healing Wave, Chain Heal (d0), Earth Shield (d1 b10), Riptide and Healing Rain (d2); Cleansing Totem duration +2/4/6 s (flat SPELLMOD_DURATION on d0 b16). Rank 3 eff3 is the capstone marker.',
 )
 
 
-tidal_focus_16215 = spell(
-    id=16215,
-    name='Tidal Focus',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-4, implicit_target_a=1, apply_aura=108, misc_value=14),
-    ],
-    spell_icon_id=36,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your healing spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 448, 'EffectSpellClassMaskA_2': 1024, 'EffectSpellClassMaskA_3': 16, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+tidal_focus_16215 = _talent(
+    16215, 'Tidal Focus', 'Rank 3',
+    [_mod(SpellModOp.COST, -13), _mod(SpellModOp.DURATION, 5999, pct=False), _dummy(0)], 36,
+    _cap('Reduces the mana cost of your Shaman healing spells by 12%. Increases the duration of your Cleansing Totem by 6 sec.',
+          'Placing your Cleansing Totem instantly removes 2 disease and 2 poison effects from each party member within 40 yards.', last=True),
+    masks={1: (_HW_LHW | _CH, _ES_D1, _RIPTIDE | m.HEALING_RAIN), 2: (m.CLEANSING_SUMMON, 0, 0)},
+    notes='S2a A2: cost -4/8/12% on Healing Wave, Lesser Healing Wave, Chain Heal (d0), Earth Shield (d1 b10), Riptide and Healing Rain (d2); Cleansing Totem duration +2/4/6 s (flat SPELLMOD_DURATION on d0 b16). Rank 3 eff3 is the capstone marker.',
 )
 
 
@@ -1611,43 +1508,23 @@ tidal_focus_16217 = spell(
 )
 
 
-tidal_mastery_16218 = spell(
-    id=16218,
-    name='Tidal Mastery',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=7),
-    ],
-    spell_icon_id=100,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical effect chance of your healing and lightning spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1475, 'EffectSpellClassMaskA_2': 8192, 'EffectSpellClassMaskA_3': 16, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_3': 64, 'SpellClassSet': 11},
+tidal_mastery_16218 = _talent(
+    16218, 'Tidal Mastery', 'Rank 2',
+    [_mod(SpellModOp.CRITICAL_CHANCE, 1, pct=False), _mod(SpellModOp.COOLDOWN, -6001, pct=False)], 100,
+    _cap('Increases the critical effect chance of your Shaman healing spells, Lightning Bolt and Chain Lightning by 2%. Reduces the cooldown of your Tidal Force by 6 sec.',
+          "While Tidal Force is active, critical effects from your Healing Wave and Riptide's direct heal extend it by 2 sec, from Lesser Healing Wave by 1 sec and from Chain Heal by 0.5 sec.", last=False),
+    masks={1: (_HW_LHW | _CH | _LB | _CL, _ES_D1, _RIPTIDE | m.HEALING_RAIN | m.TORRENT), 2: (0, 0, _TIDAL_FORCE_CAST)},
+    notes='S2a A2: crit +1/2/3% on Healing Wave, Lesser Healing Wave, Chain Heal, Lightning Bolt (d0 b0), Chain Lightning (d0 b1), Earth Shield, Riptide, Healing Rain, torrent (the stock d0 b10 / d1 b13 / d2 bits are gone); Tidal Force (castable 202654, d2 b28) cooldown -3/6/9 s as a flat SPELLMOD_COOLDOWN, applied before Cooldown Haste. Rank 3 eff3 is the capstone marker.',
 )
 
 
-tidal_mastery_16219 = spell(
-    id=16219,
-    name='Tidal Mastery',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=107, misc_value=7),
-    ],
-    spell_icon_id=100,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical effect chance of your healing and lightning spells by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1475, 'EffectSpellClassMaskA_2': 8192, 'EffectSpellClassMaskA_3': 16, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_3': 64, 'SpellClassSet': 11},
+tidal_mastery_16219 = _talent(
+    16219, 'Tidal Mastery', 'Rank 3',
+    [_mod(SpellModOp.CRITICAL_CHANCE, 2, pct=False), _mod(SpellModOp.COOLDOWN, -9001, pct=False), _dummy(0)], 100,
+    _cap('Increases the critical effect chance of your Shaman healing spells, Lightning Bolt and Chain Lightning by 3%. Reduces the cooldown of your Tidal Force by 9 sec.',
+          "While Tidal Force is active, critical effects from your Healing Wave and Riptide's direct heal extend it by 2 sec, from Lesser Healing Wave by 1 sec and from Chain Heal by 0.5 sec.", last=True),
+    masks={1: (_HW_LHW | _CH | _LB | _CL, _ES_D1, _RIPTIDE | m.HEALING_RAIN | m.TORRENT), 2: (0, 0, _TIDAL_FORCE_CAST)},
+    notes='S2a A2: crit +1/2/3% on Healing Wave, Lesser Healing Wave, Chain Heal, Lightning Bolt (d0 b0), Chain Lightning (d0 b1), Earth Shield, Riptide, Healing Rain, torrent (the stock d0 b10 / d1 b13 / d2 bits are gone); Tidal Force (castable 202654, d2 b28) cooldown -3/6/9 s as a flat SPELLMOD_COOLDOWN, applied before Cooldown Haste. Rank 3 eff3 is the capstone marker.',
 )
 
 
@@ -1691,45 +1568,23 @@ tidal_mastery_16221 = spell(
 )
 
 
-totemic_focus_16222 = spell(
-    id=16222,
-    name='Totemic Focus',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    duration_ms=-1,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=108, misc_value=14),
-    ],
-    spell_icon_id=46,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your totems by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 537399320, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+totemic_focus_16222 = _talent(
+    16222, 'Totemic Focus', 'Rank 2',
+    [_mod(SpellModOp.COST, -31)], 46,
+    _cap('Reduces the mana cost of your totems by 30%.',
+          'Placing a totem heals up to 5 injured allies within 20 yards of it for ' + pot_text(totemic_focus_heal_202677) + '.', last=False),
+    masks={1: (_TOTEM_SUMMONS, 0, 0)},
+    notes='S2a A2: totem cost -15/30/45% (SPELLMOD_COST pct). The stock mask 0x20081018 already covers every totem summon (X10: Earth Wall d0 b3, Searing b4, Magma b12, HST b19, b29). Rank 3 eff2 is the capstone marker (the placement heal 202677 is cast by the Totem hooks, A3 row). ',
 )
 
 
-totemic_focus_16223 = spell(
-    id=16223,
-    name='Totemic Focus',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    duration_ms=-1,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-16, implicit_target_a=1, apply_aura=108, misc_value=14),
-    ],
-    spell_icon_id=46,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your totems by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 537399320, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+totemic_focus_16223 = _talent(
+    16223, 'Totemic Focus', 'Rank 3',
+    [_mod(SpellModOp.COST, -46), _dummy(0)], 46,
+    _cap('Reduces the mana cost of your totems by 45%.',
+          'Placing a totem heals up to 5 injured allies within 20 yards of it for ' + pot_text(totemic_focus_heal_202677) + '.', last=True),
+    masks={1: (_TOTEM_SUMMONS, 0, 0)},
+    notes='S2a A2: totem cost -15/30/45% (SPELLMOD_COST pct). The stock mask 0x20081018 already covers every totem summon (X10: Earth Wall d0 b3, Searing b4, Magma b12, HST b19, b29). Rank 3 eff2 is the capstone marker (the placement heal 202677 is cast by the Totem hooks, A3 row). ',
 )
 
 
@@ -1775,45 +1630,21 @@ totemic_focus_16225 = spell(
 )
 
 
-improved_healing_wave_16226 = spell(
-    id=16226,
-    name='Improved Healing Wave',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    duration_ms=-1,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-201, implicit_target_a=1, apply_aura=107, misc_value=10),
-    ],
-    spell_icon_id=13,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the casting time of your Healing Wave spell by $/1000;S1 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectItemType_1': 64, 'EffectSpellClassMaskA_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+improved_healing_wave_16226 = _talent(
+    16226, 'Improved Healing Wave', 'Rank 2',
+    [_mod(SpellModOp.DAMAGE, 3), _mod(SpellModOp.CRITICAL_CHANCE, 1, pct=False)], 13,
+    'Increases the healing done by your Healing Wave and Lesser Healing Wave by 4% and their critical effect chance by 2%.',
+    masks={1: (_HW_LHW, 0, 0), 2: (_HW_LHW, 0, 0)},
+    notes='S2a A2: healing +2/4/6% (SPELLMOD_DAMAGE) and crit +1/2/3% on Healing Wave d0 b6 + Lesser Healing Wave d0 b7. The stock cast-time cut is gone.',
 )
 
 
-improved_healing_wave_16227 = spell(
-    id=16227,
-    name='Improved Healing Wave',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    duration_ms=-1,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-301, implicit_target_a=1, apply_aura=107, misc_value=10),
-    ],
-    spell_icon_id=13,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the casting time of your Healing Wave spell by $/1000;S1 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectItemType_1': 64, 'EffectSpellClassMaskA_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+improved_healing_wave_16227 = _talent(
+    16227, 'Improved Healing Wave', 'Rank 3',
+    [_mod(SpellModOp.DAMAGE, 5), _mod(SpellModOp.CRITICAL_CHANCE, 2, pct=False)], 13,
+    'Increases the healing done by your Healing Wave and Lesser Healing Wave by 6% and their critical effect chance by 3%.',
+    masks={1: (_HW_LHW, 0, 0), 2: (_HW_LHW, 0, 0)},
+    notes='S2a A2: healing +2/4/6% (SPELLMOD_DAMAGE) and crit +1/2/3% on Healing Wave d0 b6 + Lesser Healing Wave d0 b7. The stock cast-time cut is gone.',
 )
 
 
@@ -1915,7 +1746,7 @@ ancestral_healing_16235 = spell(
     ],
     spell_icon_id=200,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces your target's physical damage taken by $16236s1% for $16236d after getting a critical effect from one of your healing spells.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 11},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your critical effects from direct Nature healing spells reduce the target's Physical damage taken by 6% for 15 sec. Does not stack with other similar effects.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 11},
 )
 
 
@@ -1935,7 +1766,7 @@ ancestral_healing_16240 = spell(
     ],
     spell_icon_id=200,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces your target's physical damage taken by $16237s1% for $16237d after getting a critical effect from one of your healing spells.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 11},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your critical effects from direct Nature healing spells reduce the target's Physical damage taken by 10% for 15 sec. Does not stack with other similar effects.", 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 11},
 )
 
 
@@ -2350,66 +2181,33 @@ elemental_devastation_29180 = _talent(
 )
 
 
-healing_grace_29187 = spell(
-    id=29187,
-    name='Healing Grace',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-6, implicit_target_a=1, apply_aura=108, misc_value=2),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=107, misc_value=28),
-    ],
-    spell_icon_id=962,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the threat generated by your healing spells by $s1% and reduces the chance your helpful spells and damage over time effects will be dispelled by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 448, 'EffectSpellClassMaskA_2': 524288, 'EffectSpellClassMaskA_3': 16, 'EffectSpellClassMaskB_1': 268438528, 'EffectSpellClassMaskB_2': 67636452, 'EffectSpellClassMaskB_3': 17, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+healing_grace_29187 = _talent(
+    29187, 'Improved Healing Stream', 'Rank 1',
+    [_mod(SpellModOp.DAMAGE, 4)], 962,
+    _cap('Increases the healing done by your Healing Stream Totem by 5%.',
+          'Every third Healing Stream Totem you place becomes a Healing Tide Totem, healing the 10 most injured allies within 40 yards instead of 5, and heals 50% more while you are in a 5-player party.', last=False),
+    masks={1: (m.HEALING_STREAM_HEAL, 0, 0)},
+    notes='S2a A2: renamed from Healing Grace (variable name unchanged). Healing +5/10/15% (SPELLMOD_DAMAGE) on d0 b13 (Healing Stream heal 202271 and the Healing Tide party heal). Rank 3 eff2 is the capstone marker; the counter buff (A3 202660) and the Tide swap are scripted.',
 )
 
 
-healing_grace_29189 = spell(
-    id=29189,
-    name='Healing Grace',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=108, misc_value=2),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=107, misc_value=28),
-    ],
-    spell_icon_id=962,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the threat generated by your healing spells by $s1% and reduces the chance your helpful spells and damage over time effects will be dispelled by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 448, 'EffectSpellClassMaskA_2': 524288, 'EffectSpellClassMaskA_3': 16, 'EffectSpellClassMaskB_1': 268438528, 'EffectSpellClassMaskB_2': 67636452, 'EffectSpellClassMaskB_3': 17, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+healing_grace_29189 = _talent(
+    29189, 'Improved Healing Stream', 'Rank 2',
+    [_mod(SpellModOp.DAMAGE, 9)], 962,
+    _cap('Increases the healing done by your Healing Stream Totem by 10%.',
+          'Every third Healing Stream Totem you place becomes a Healing Tide Totem, healing the 10 most injured allies within 40 yards instead of 5, and heals 50% more while you are in a 5-player party.', last=False),
+    masks={1: (m.HEALING_STREAM_HEAL, 0, 0)},
+    notes='S2a A2: renamed from Healing Grace (variable name unchanged). Healing +5/10/15% (SPELLMOD_DAMAGE) on d0 b13 (Healing Stream heal 202271 and the Healing Tide party heal). Rank 3 eff2 is the capstone marker; the counter buff (A3 202660) and the Tide swap are scripted.',
 )
 
 
-healing_grace_29191 = spell(
-    id=29191,
-    name='Healing Grace',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-16, implicit_target_a=1, apply_aura=108, misc_value=2),
-        Effect(type=EffectType.APPLY_AURA, base_points=29, apply_aura=107, misc_value=28),
-    ],
-    spell_icon_id=962,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the threat generated by your healing spells by $s1% and reduces the chance your helpful spells and damage over time effects will be dispelled by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 448, 'EffectSpellClassMaskA_2': 524288, 'EffectSpellClassMaskA_3': 16, 'EffectSpellClassMaskB_1': 268438528, 'EffectSpellClassMaskB_2': 67636452, 'EffectSpellClassMaskB_3': 17, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+healing_grace_29191 = _talent(
+    29191, 'Improved Healing Stream', 'Rank 3',
+    [_mod(SpellModOp.DAMAGE, 14), _dummy(0)], 962,
+    _cap('Increases the healing done by your Healing Stream Totem by 15%.',
+          'Every third Healing Stream Totem you place becomes a Healing Tide Totem, healing the 10 most injured allies within 40 yards instead of 5, and heals 50% more while you are in a 5-player party.', last=True),
+    masks={1: (m.HEALING_STREAM_HEAL, 0, 0)},
+    notes='S2a A2: renamed from Healing Grace (variable name unchanged). Healing +5/10/15% (SPELLMOD_DAMAGE) on d0 b13 (Healing Stream heal 202271 and the Healing Tide party heal). Rank 3 eff2 is the capstone marker; the counter buff (A3 202660) and the Tide swap are scripted.',
 )
 
 
@@ -2453,63 +2251,30 @@ improved_windfury_totem_29193 = spell(
 )
 
 
-healing_way_29202 = spell(
-    id=29202,
-    name='Healing Way',
-    school=School.NORMAL,
-    attributes=448,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=108),
-    ],
-    spell_icon_id=1929,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by your Healing Wave spell by $s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+healing_way_29202 = _talent(
+    29202, 'Healing Way', 'Rank 3',
+    [_mod(SpellModOp.DAMAGE, 24), _mod(SpellModOp.DOT, 24)], 1929,
+    'Increases the healing done by your Chain Heal, Earth Shield, Healing Rain and Riptide by 25%.',
+    masks={1: (_CH, _ES_D1, _RIPTIDE | m.HEALING_RAIN | m.TORRENT), 2: (_CH, _ES_D1, _RIPTIDE | m.HEALING_RAIN | m.TORRENT)},
+    notes='S2a A2: healing +8/16/25% as SPELLMOD_DAMAGE and SPELLMOD_DOT on Chain Heal d0 b8, Earth Shield d1 b10, Riptide d2 b4 (direct and HoT, and the Rip Current copy), Healing Rain d2 b21 and the torrent d2 b22. Never the Undulating Currents heal (d2 b23). The stock Healing Wave-only mask is gone.',
 )
 
 
-healing_way_29205 = spell(
-    id=29205,
-    name='Healing Way',
-    school=School.NORMAL,
-    attributes=448,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=15, implicit_target_a=1, apply_aura=108),
-    ],
-    spell_icon_id=1929,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by your Healing Wave spell by $s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+healing_way_29205 = _talent(
+    29205, 'Healing Way', 'Rank 2',
+    [_mod(SpellModOp.DAMAGE, 15), _mod(SpellModOp.DOT, 15)], 1929,
+    'Increases the healing done by your Chain Heal, Earth Shield, Healing Rain and Riptide by 16%.',
+    masks={1: (_CH, _ES_D1, _RIPTIDE | m.HEALING_RAIN | m.TORRENT), 2: (_CH, _ES_D1, _RIPTIDE | m.HEALING_RAIN | m.TORRENT)},
+    notes='S2a A2: healing +8/16/25% as SPELLMOD_DAMAGE and SPELLMOD_DOT on Chain Heal d0 b8, Earth Shield d1 b10, Riptide d2 b4 (direct and HoT, and the Rip Current copy), Healing Rain d2 b21 and the torrent d2 b22. Never the Undulating Currents heal (d2 b23). The stock Healing Wave-only mask is gone.',
 )
 
 
-healing_way_29206 = spell(
-    id=29206,
-    name='Healing Way',
-    school=School.NORMAL,
-    attributes=448,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=108),
-    ],
-    spell_icon_id=1929,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by your Healing Wave spell by $s1%.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 64, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+healing_way_29206 = _talent(
+    29206, 'Healing Way', 'Rank 1',
+    [_mod(SpellModOp.DAMAGE, 7), _mod(SpellModOp.DOT, 7)], 1929,
+    'Increases the healing done by your Chain Heal, Earth Shield, Healing Rain and Riptide by 8%.',
+    masks={1: (_CH, _ES_D1, _RIPTIDE | m.HEALING_RAIN | m.TORRENT), 2: (_CH, _ES_D1, _RIPTIDE | m.HEALING_RAIN | m.TORRENT)},
+    notes='S2a A2: healing +8/16/25% as SPELLMOD_DAMAGE and SPELLMOD_DOT on Chain Heal d0 b8, Earth Shield d1 b10, Riptide d2 b4 (direct and HoT, and the Rip Current copy), Healing Rain d2 b21 and the torrent d2 b22. Never the Undulating Currents heal (d2 b23). The stock Healing Wave-only mask is gone.',
 )
 
 
@@ -2676,47 +2441,23 @@ mental_quickness_30814 = spell(
 )
 
 
-focused_mind_30864 = spell(
-    id=30864,
-    name='Focused Mind',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    duration_ms=-1,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=234, misc_value=26),
-        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=234, misc_value=9),
-    ],
-    spell_icon_id=2014,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the duration of any Silence or Interrupt effects used against the Shaman by $s1%. This effect does not stack with other similar effects.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 448, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+focused_mind_30864 = _talent(
+    30864, 'Torrent', 'Rank 1',
+    [_mod(SpellModOp.DAMAGE, 9), _mod(SpellModOp.DOT, 9)], 2014,
+    _cap('Increases the healing done by your Riptide, and by the torrent it releases inside your Healing Rain, by 10%.',
+          'Rip Current. Your Riptide has a 20% chance to also cast Riptide on the most injured ally within 20 yards.', last=False),
+    masks={1: (0, 0, _RIPTIDE | m.TORRENT), 2: (0, 0, _RIPTIDE | m.TORRENT)},
+    notes='S2a A2: renamed from Focused Mind (variable name unchanged). +10/20% SPELLMOD_DAMAGE and SPELLMOD_DOT on Riptide d2 b4 and the torrent d2 b22. Rank 2 eff3 is the Rip Current marker (rolled in spell_sha_resto_riptide). The stock silence/interrupt duration clause is gone.',
 )
 
 
-focused_mind_30865 = spell(
-    id=30865,
-    name='Focused Mind',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    duration_ms=-1,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=234, misc_value=26),
-        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=234, misc_value=9),
-    ],
-    spell_icon_id=2014,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the duration of any Silence or Interrupt effects used against the Shaman by $s1%. This effect does not stack with other similar effects.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 448, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+focused_mind_30865 = _talent(
+    30865, 'Torrent', 'Rank 2',
+    [_mod(SpellModOp.DAMAGE, 19), _mod(SpellModOp.DOT, 19), _dummy(0)], 2014,
+    _cap('Increases the healing done by your Riptide, and by the torrent it releases inside your Healing Rain, by 20%.',
+          'Rip Current. Your Riptide has a 20% chance to also cast Riptide on the most injured ally within 20 yards.', last=True),
+    masks={1: (0, 0, _RIPTIDE | m.TORRENT), 2: (0, 0, _RIPTIDE | m.TORRENT)},
+    notes='S2a A2: renamed from Focused Mind (variable name unchanged). +10/20% SPELLMOD_DAMAGE and SPELLMOD_DOT on Riptide d2 b4 and the torrent d2 b22. Rank 2 eff3 is the Rip Current marker (rolled in spell_sha_resto_riptide). The stock silence/interrupt duration clause is gone.',
 )
 
 
@@ -2742,145 +2483,69 @@ focused_mind_30866 = spell(
 )
 
 
-nature_s_blessing_30867 = spell(
-    id=30867,
-    name="Nature's Blessing",
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=175, misc_value=3),
-    ],
-    spell_icon_id=2012,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your healing by an amount equal to $s1% of your Intellect.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 448, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+nature_s_blessing_30867 = _talent(
+    30867, "Nature's Blessing", 'Rank 1',
+    [_aura(AuraType.MOD_SPELL_HEALING_OF_STAT_PERCENT, 3, 3)], 2012,
+    'Increases your healing power by an amount equal to 4% of your Intellect.',
+    notes='S2a A2 (X9): aura 175 ignores class masks (all healing of that player and of its totems, not the Water Elemental); stored 3/7/11 = live 4/8/12% of Intellect. The latent EffectBasePoints_2/EffectDieSides_2 twin is gone.',
 )
 
 
-nature_s_blessing_30868 = spell(
-    id=30868,
-    name="Nature's Blessing",
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=175, misc_value=3),
-    ],
-    spell_icon_id=2012,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your healing by an amount equal to $s1% of your Intellect.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 448, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+nature_s_blessing_30868 = _talent(
+    30868, "Nature's Blessing", 'Rank 2',
+    [_aura(AuraType.MOD_SPELL_HEALING_OF_STAT_PERCENT, 7, 3)], 2012,
+    'Increases your healing power by an amount equal to 8% of your Intellect.',
+    notes='S2a A2 (X9): aura 175 ignores class masks (all healing of that player and of its totems, not the Water Elemental); stored 3/7/11 = live 4/8/12% of Intellect. The latent EffectBasePoints_2/EffectDieSides_2 twin is gone.',
 )
 
 
-nature_s_blessing_30869 = spell(
-    id=30869,
-    name="Nature's Blessing",
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=175, misc_value=3),
-    ],
-    spell_icon_id=2012,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your healing by an amount equal to $s1% of your Intellect.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 448, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+nature_s_blessing_30869 = _talent(
+    30869, "Nature's Blessing", 'Rank 3',
+    [_aura(AuraType.MOD_SPELL_HEALING_OF_STAT_PERCENT, 11, 3)], 2012,
+    'Increases your healing power by an amount equal to 12% of your Intellect.',
+    notes='S2a A2 (X9): aura 175 ignores class masks (all healing of that player and of its totems, not the Water Elemental); stored 3/7/11 = live 4/8/12% of Intellect. The latent EffectBasePoints_2/EffectDieSides_2 twin is gone.',
 )
 
 
-improved_chain_heal_30872 = spell(
-    id=30872,
-    name='Improved Chain Heal',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    duration_ms=-1,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
-    ],
-    spell_icon_id=963,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by your Chain Heal spell by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 256, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+improved_chain_heal_30872 = _talent(
+    30872, 'Improved Chain Heal', 'Rank 1',
+    [_mod(SpellModOp.DAMAGE, 9)], 963,
+    _cap('Increases the amount healed by your Chain Heal by 10%.',
+          'After you consume 2 charges of Tidal Waves, your next Chain Heal does not consume Riptide.', last=False),
+    masks={1: (_CH, 0, 0)},
+    notes='S2a A2: Chain Heal +10/20% (SPELLMOD_DAMAGE d0 b8). Rank 2 eff2 is the capstone marker (buff row 202671 is A3).',
 )
 
 
-improved_chain_heal_30873 = spell(
-    id=30873,
-    name='Improved Chain Heal',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    duration_ms=-1,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108),
-    ],
-    spell_icon_id=963,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount healed by your Chain Heal spell by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectSpellClassMaskA_1': 256, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+improved_chain_heal_30873 = _talent(
+    30873, 'Improved Chain Heal', 'Rank 2',
+    [_mod(SpellModOp.DAMAGE, 19), _dummy(0)], 963,
+    _cap('Increases the amount healed by your Chain Heal by 20%.',
+          'After you consume 2 charges of Tidal Waves, your next Chain Heal does not consume Riptide.', last=True),
+    masks={1: (_CH, 0, 0)},
+    notes='S2a A2: Chain Heal +10/20% (SPELLMOD_DAMAGE d0 b8). Rank 2 eff2 is the capstone marker (buff row 202671 is A3).',
 )
 
 
-nature_s_guardian_30881 = spell(
-    id=30881,
-    name="Nature's Guardian",
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=18350),
-    ],
-    spell_icon_id=2013,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever a damaging attack brings you below $s2% health, your maximum health is increased by $s1% for $31616d and your threat level towards the attacker is reduced.  30 second cooldown.', 'EffectBasePoints_2': 29, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 448, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 664232, 'RangeIndex': 1, 'SpellClassSet': 11},
+nature_s_guardian_30881 = _talent(
+    30881, "Nature's Guardian", 'Rank 1',
+    [_aura(AuraType.HASTE_ALL, 0), _mod(SpellModOp.NOT_LOSE_CASTING_TIME, 49), _aura(AuraType.DUMMY, 0, die_sides=0)], 2013,
+    _cap('Increases your spell, ranged and melee haste by 1%. Reduces the pushback suffered from damaging attacks while casting by 50%.',
+          'Whenever a damaging non-periodic attack brings you below 30% health, you are healed for ' + pot_text(natures_guardian_heal_202675) + ' and your next Nature spell is a guaranteed critical strike. This effect can only occur once every 30 sec.', last=False),
+    masks={2: (0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF)},
+    AttributesEx3=67108864, AttributesEx4=524288, ProcChance=100, ProcTypeMask=139944,
+    notes='S2a A2: haste +1/2% (aura 193, spell + ranged + melee), pushback -50/-100% on every Shaman spell (SPELLMOD_NOT_LOSE_CASTING_TIME, all-bit family mask: the doc says "while casting", not healing only). eff3 is the capstone carrier: value 1 on rank 2, 0 on rank 1 (shared shape for the chain -30881; the script returns early on 0). ProcTypeMask 139944 = the stock 664232 minus TAKEN_PERIODIC (the capstone is non-periodic only). The stock proc-for-max-health effect, threat clause and the latent EffectBasePoints_2 twin are gone.',
 )
 
 
-nature_s_guardian_30883 = spell(
-    id=30883,
-    name="Nature's Guardian",
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=18350),
-    ],
-    spell_icon_id=2013,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever a damaging attack brings you below $s2% health, your maximum health is increased by $s1% for $31616d and your threat level towards the attacker is reduced.  30 second cooldown.', 'EffectBasePoints_2': 29, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 448, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 664232, 'RangeIndex': 1, 'SpellClassSet': 11},
+nature_s_guardian_30883 = _talent(
+    30883, "Nature's Guardian", 'Rank 2',
+    [_aura(AuraType.HASTE_ALL, 1), _mod(SpellModOp.NOT_LOSE_CASTING_TIME, 99), _dummy(0)], 2013,
+    _cap('Increases your spell, ranged and melee haste by 2%. Reduces the pushback suffered from damaging attacks while casting by 100%.',
+          'Whenever a damaging non-periodic attack brings you below 30% health, you are healed for ' + pot_text(natures_guardian_heal_202675) + ' and your next Nature spell is a guaranteed critical strike. This effect can only occur once every 30 sec.', last=True),
+    masks={2: (0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF)},
+    AttributesEx3=67108864, AttributesEx4=524288, ProcChance=100, ProcTypeMask=139944,
+    notes='S2a A2: haste +1/2% (aura 193, spell + ranged + melee), pushback -50/-100% on every Shaman spell (SPELLMOD_NOT_LOSE_CASTING_TIME, all-bit family mask: the doc says "while casting", not healing only). eff3 is the capstone carrier: value 1 on rank 2, 0 on rank 1 (shared shape for the chain -30881; the script returns early on 0). ProcTypeMask 139944 = the stock 664232 minus TAKEN_PERIODIC (the capstone is non-periodic only). The stock proc-for-max-health effect, threat clause and the latent EffectBasePoints_2 twin are gone.',
 )
 
 
@@ -2900,7 +2565,7 @@ nature_s_guardian_30884 = spell(
     ],
     spell_icon_id=2013,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever a damaging attack brings you below $s2% health, your maximum health is increased by $s1% for $31616d and your threat level towards the attacker is reduced.  30 second cooldown.', 'EffectBasePoints_2': 29, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 448, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 664232, 'RangeIndex': 1, 'SpellClassSet': 11},
+    raw_overrides={'AttributesEx3': 67108864, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever a damaging attack brings you below $s2% health, your maximum health is increased by $s1% for $31616d and your threat level towards the attacker is reduced.  30 second cooldown.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 448, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 664232, 'RangeIndex': 1, 'SpellClassSet': 11},
 )
 
 
@@ -2920,7 +2585,7 @@ nature_s_guardian_30885 = spell(
     ],
     spell_icon_id=2013,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever a damaging attack brings you below $s2% health, your maximum health is increased by $s1% for $31616d and your threat level towards the attacker is reduced.  30 second cooldown.', 'EffectBasePoints_2': 29, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 448, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 4', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 664232, 'RangeIndex': 1, 'SpellClassSet': 11},
+    raw_overrides={'AttributesEx3': 67108864, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever a damaging attack brings you below $s2% health, your maximum health is increased by $s1% for $31616d and your threat level towards the attacker is reduced.  30 second cooldown.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 448, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 4', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 664232, 'RangeIndex': 1, 'SpellClassSet': 11},
 )
 
 
@@ -2940,7 +2605,7 @@ nature_s_guardian_30886 = spell(
     ],
     spell_icon_id=2013,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever a damaging attack brings you below $s2% health, your maximum health is increased by $s1% for $31616d and your threat level towards the attacker is reduced.  30 second cooldown.', 'EffectBasePoints_2': 29, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 448, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 5', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 664232, 'RangeIndex': 1, 'SpellClassSet': 11},
+    raw_overrides={'AttributesEx3': 67108864, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever a damaging attack brings you below $s2% health, your maximum health is increased by $s1% for $31616d and your threat level towards the attacker is reduced.  30 second cooldown.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 448, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 5', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 664232, 'RangeIndex': 1, 'SpellClassSet': 11},
 )
 
 
@@ -3325,12 +2990,12 @@ blessing_of_the_eternals_51554 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=57, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.MOD_CRIT_PCT),
         Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=12),
     ],
     spell_icon_id=3157,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical effect chance of your spells by $s1%, and increases the chance to apply the Earthliving heal over time effect on the target by $s2% when they are at or under 35% total health.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 32, 'EffectSpellClassMaskB_2': 1048576, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+    notes='pulled from existing data. S2a review (user ruling 2026-10-20): eff1 aura 57 MOD_SPELL_CRIT_CHANCE -> 290 MOD_CRIT_PCT (misc 127 dropped, the handler ignores it), same value: melee, ranged and spell crit, matching the tooltip. No second crit effect.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your critical strike chance with all spells and abilities by 2%. Increases the chance to apply the Earthliving heal over time effect by 40% on targets at or below 35% health.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 32, 'EffectSpellClassMaskB_2': 1048576, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
 )
 
 
@@ -3346,12 +3011,12 @@ blessing_of_the_eternals_51555 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=57, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.MOD_CRIT_PCT),
         Effect(type=EffectType.APPLY_AURA, base_points=79, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=12),
     ],
     spell_icon_id=3157,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical effect chance of your spells by $s1%, and increases the chance to apply the Earthliving heal over time effect on the target by $s2% when they are at or under 35% total health.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 32, 'EffectSpellClassMaskB_2': 1048576, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+    notes='pulled from existing data. S2a review (user ruling 2026-10-20): eff1 aura 57 MOD_SPELL_CRIT_CHANCE -> 290 MOD_CRIT_PCT (misc 127 dropped, the handler ignores it), same value: melee, ranged and spell crit, matching the tooltip. No second crit effect.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your critical strike chance with all spells and abilities by 4%. Increases the chance to apply the Earthliving heal over time effect by 80% on targets at or below 35% health.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 32, 'EffectSpellClassMaskB_2': 1048576, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
 )
 
 
@@ -3371,7 +3036,7 @@ ancestral_awakening_51556 = spell(
     ],
     spell_icon_id=3065,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you critically heal with your Healing Wave, Lesser Healing Wave or Riptide you summon an Ancestral spirit to aid you, instantly healing the lowest percentage health friendly party or raid target within 40 yards for $s1% of the amount healed.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 11},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you critically heal with your Healing Wave, Lesser Healing Wave or Riptide, you summon an Ancestral spirit to aid you, instantly healing the most injured party or raid member within 40 yards for 10% of the amount healed.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 11},
 )
 
 
@@ -3391,7 +3056,7 @@ ancestral_awakening_51557 = spell(
     ],
     spell_icon_id=3065,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you critically heal with your Healing Wave, Lesser Healing Wave or Riptide you summon an Ancestral spirit to aid you, instantly healing the lowest percentage health friendly party or raid target within 40 yards for $s1% of the amount healed.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 11},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you critically heal with your Healing Wave, Lesser Healing Wave or Riptide, you summon an Ancestral spirit to aid you, instantly healing the most injured party or raid member within 40 yards for 20% of the amount healed.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 11},
 )
 
 
@@ -3411,115 +3076,60 @@ ancestral_awakening_51558 = spell(
     ],
     spell_icon_id=3065,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you critically heal with your Healing Wave, Lesser Healing Wave or Riptide you summon an Ancestral spirit to aid you, instantly healing the lowest percentage health friendly party or raid target within 40 yards for $s1% of the amount healed.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 11},
+    raw_overrides={'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you critically heal with your Healing Wave, Lesser Healing Wave or Riptide, you summon an Ancestral spirit to aid you, instantly healing the most injured party or raid member within 40 yards for 30% of the amount healed.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16384, 'RangeIndex': 1, 'SpellClassSet': 11},
 )
 
 
-improved_earth_shield_51560 = spell(
-    id=51560,
-    name='Improved Earth Shield',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=107, misc_value=4),
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108, misc_value=3),
-    ],
-    spell_icon_id=2015,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount of charges for your Earth Shield by $s1, and increases the healing done by your Earth Shield by $s2%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 3, 'EffectSpellClassMaskA_2': 1024, 'EffectSpellClassMaskB_2': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+improved_earth_shield_51560 = _talent(
+    51560, 'Improved Earth Shield', 'Rank 1',
+    [_mod(SpellModOp.CHARGES, 0, pct=False), _mod(SpellModOp.DAMAGE, 4)], 2015,
+    _cap('Increases the number of charges of your Earth Shield by 1 and the healing it does by 5%.',
+          'Healing with Earth Shield grants you 1 charge of Tidal Waves. This effect can only occur once every 5 sec. Requires the final rank of Tidal Waves.', last=False),
+    masks={1: (0, _ES_D1, 0), 2: (0, _ES_D1, 0)},
+    notes="S2a A2 (X2): eff1 charges +1/+2 (flat SPELLMOD_CHARGES), eff2 healing +5/10% (SPELLMOD_DAMAGE; SpellInfoCorrections.cpp forces misc 0 on effect index 1 of 51560/51561, which this already is). Earth Shield's heal 379 ignores caster modifiers, so the percent reaches the heal through 974's own effect (spell_sha_resto_earth_shield). Rank 3 (202653, A3) carries the capstone.",
 )
 
 
-improved_earth_shield_51561 = spell(
-    id=51561,
-    name='Improved Earth Shield',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=4),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=3),
-    ],
-    spell_icon_id=2015,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount of charges for your Earth Shield by $s1, and increases the healing done by your Earth Shield by $s2%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 3, 'EffectSpellClassMaskA_2': 1024, 'EffectSpellClassMaskB_2': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+improved_earth_shield_51561 = _talent(
+    51561, 'Improved Earth Shield', 'Rank 2',
+    [_mod(SpellModOp.CHARGES, 1, pct=False), _mod(SpellModOp.DAMAGE, 9)], 2015,
+    _cap('Increases the number of charges of your Earth Shield by 2 and the healing it does by 10%.',
+          'Healing with Earth Shield grants you 1 charge of Tidal Waves. This effect can only occur once every 5 sec. Requires the final rank of Tidal Waves.', last=False),
+    masks={1: (0, _ES_D1, 0), 2: (0, _ES_D1, 0)},
+    notes="S2a A2 (X2): eff1 charges +1/+2 (flat SPELLMOD_CHARGES), eff2 healing +5/10% (SPELLMOD_DAMAGE; SpellInfoCorrections.cpp forces misc 0 on effect index 1 of 51560/51561, which this already is). Earth Shield's heal 379 ignores caster modifiers, so the percent reaches the heal through 974's own effect (spell_sha_resto_earth_shield). Rank 3 (202653, A3) carries the capstone.",
 )
 
 
-tidal_waves_51562 = spell(
-    id=51562,
-    name='Tidal Waves',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=7, trigger_spell=53390),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=107, misc_value=24),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=24),
-    ],
-    spell_icon_id=3057,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you cast Chain Heal or Riptide, you have a $s1% chance to lower the cast time of your Healing Wave spell by $53390s1% and increase the critical effect chance of your Lesser Healing Wave spell by $53390s2%, until two such spells have been cast. In addition, your Healing Wave gains an additional $s2% of your bonus healing effects and your Lesser Healing Wave gains an additional $s3% of your bonus healing effects.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 192, 'EffectSpellClassMaskA_2': 8192, 'EffectSpellClassMaskB_1': 64, 'EffectSpellClassMaskC_1': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 17408, 'RangeIndex': 1, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellPriority': 50},
+tidal_waves_51562 = _talent(
+    51562, 'Tidal Waves', 'Rank 1',
+    [_mod(SpellModOp.DAMAGE, 3)], 3057,
+    _cap('Your Chain Heal and Riptide have a 33% chance to grant you Tidal Waves: Chain Heal grants 3 charges and Riptide grants 2. Your next Healing Wave has its cast time reduced by 10% for each charge you hold, and your next Lesser Healing Wave has its critical effect chance increased by 10% for each charge you hold; either cast then consumes one charge. A grant raises your charges to the amount it grants and refreshes the duration; you hold at most 3. Increases the healing done by your Healing Wave and Lesser Healing Wave by 4%.',
+          'Undulation. Every third Healing Wave or Lesser Healing Wave you cast heals for 50% more.', last=False),
+    masks={1: (_HW_LHW, 0, 0)},
+    level=1, SpellPriority=50, ProcChance=0, ProcTypeMask=0,
+    notes='S2a A2: healing +4/8/12% on Healing Wave d0 b6 and Lesser Healing Wave d0 b7 (SPELLMOD_DAMAGE). No proc: the stock PROC_TRIGGER_SPELL 53390 effect, both haste effects, the proc flags and spell_proc -51562 are gone; the grant (33/66/100% by rank, consts TW_CHANCE_*) is scripted in Chain Heal / Riptide. Rank 3 eff2 is the Undulation marker.',
 )
 
 
-tidal_waves_51563 = spell(
-    id=51563,
-    name='Tidal Waves',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=7, trigger_spell=53390),
-        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=107, misc_value=24),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=107, misc_value=24),
-    ],
-    spell_icon_id=3057,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you cast Chain Heal or Riptide, you have a $s1% chance to lower the cast time of your Healing Wave spell by $53390s1% and increase the critical effect chance of your Lesser Healing Wave spell by $53390s2%, until two such spells have been cast. In addition, your Healing Wave gains an additional $s2% of your bonus healing effects and your Lesser Healing Wave gains an additional $s3% of your bonus healing effects.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 192, 'EffectSpellClassMaskA_2': 8192, 'EffectSpellClassMaskB_1': 64, 'EffectSpellClassMaskC_1': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 40, 'ProcTypeMask': 17408, 'RangeIndex': 1, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellPriority': 50},
+tidal_waves_51563 = _talent(
+    51563, 'Tidal Waves', 'Rank 2',
+    [_mod(SpellModOp.DAMAGE, 7)], 3057,
+    _cap('Your Chain Heal and Riptide have a 66% chance to grant you Tidal Waves: Chain Heal grants 3 charges and Riptide grants 2. Your next Healing Wave has its cast time reduced by 10% for each charge you hold, and your next Lesser Healing Wave has its critical effect chance increased by 10% for each charge you hold; either cast then consumes one charge. A grant raises your charges to the amount it grants and refreshes the duration; you hold at most 3. Increases the healing done by your Healing Wave and Lesser Healing Wave by 8%.',
+          'Undulation. Every third Healing Wave or Lesser Healing Wave you cast heals for 50% more.', last=False),
+    masks={1: (_HW_LHW, 0, 0)},
+    level=1, SpellPriority=50, ProcChance=0, ProcTypeMask=0,
+    notes='S2a A2: healing +4/8/12% on Healing Wave d0 b6 and Lesser Healing Wave d0 b7 (SPELLMOD_DAMAGE). No proc: the stock PROC_TRIGGER_SPELL 53390 effect, both haste effects, the proc flags and spell_proc -51562 are gone; the grant (33/66/100% by rank, consts TW_CHANCE_*) is scripted in Chain Heal / Riptide. Rank 3 eff2 is the Undulation marker.',
 )
 
 
-tidal_waves_51564 = spell(
-    id=51564,
-    name='Tidal Waves',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=7, trigger_spell=53390),
-        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=107, misc_value=24),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=107, misc_value=24),
-    ],
-    spell_icon_id=3057,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you cast Chain Heal or Riptide, you have a $s1% chance to lower the cast time of your Healing Wave spell by $53390s1% and increase the critical effect chance of your Lesser Healing Wave spell by $53390s2%, until two such spells have been cast. In addition, your Healing Wave gains an additional $s2% of your bonus healing effects and your Lesser Healing Wave gains an additional $s3% of your bonus healing effects.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 192, 'EffectSpellClassMaskA_2': 8192, 'EffectSpellClassMaskB_1': 64, 'EffectSpellClassMaskC_1': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 60, 'ProcTypeMask': 17408, 'RangeIndex': 1, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellPriority': 50},
+tidal_waves_51564 = _talent(
+    51564, 'Tidal Waves', 'Rank 3',
+    [_mod(SpellModOp.DAMAGE, 11), _dummy(0)], 3057,
+    _cap('Your Chain Heal and Riptide have a 100% chance to grant you Tidal Waves: Chain Heal grants 3 charges and Riptide grants 2. Your next Healing Wave has its cast time reduced by 10% for each charge you hold, and your next Lesser Healing Wave has its critical effect chance increased by 10% for each charge you hold; either cast then consumes one charge. A grant raises your charges to the amount it grants and refreshes the duration; you hold at most 3. Increases the healing done by your Healing Wave and Lesser Healing Wave by 12%.',
+          'Undulation. Every third Healing Wave or Lesser Healing Wave you cast heals for 50% more.', last=True),
+    masks={1: (_HW_LHW, 0, 0)},
+    level=1, SpellPriority=50, ProcChance=0, ProcTypeMask=0,
+    notes='S2a A2: healing +4/8/12% on Healing Wave d0 b6 and Lesser Healing Wave d0 b7 (SPELLMOD_DAMAGE). No proc: the stock PROC_TRIGGER_SPELL 53390 effect, both haste effects, the proc flags and spell_proc -51562 are gone; the grant (33/66/100% by rank, consts TW_CHANCE_*) is scripted in Chain Heal / Riptide. Rank 3 eff2 is the Undulation marker.',
 )
 
 
@@ -4316,3 +3926,93 @@ remove_spell_proc(-51474)
 # Fire Nova damage 8349: the Rising Flames stack scaling (B3, spell_shaman_totems.cpp). The Rising Flames buff carries no
 # SPELLMOD_DAMAGE on these masks: the script scales the hit, a mod would count twice.
 scripted_by(fire_nova_8349, 'spell_sha_fire_nova_rework_damage')
+
+
+# =====================================================================================================================
+# S2a A2: Restoration bindings, proc rows, the Mana Tide passives and group 1095 (shaman-rework.S2a-WP-BRIEF.md class
+# table). Stock names are swapped off the live keys (L7: exact keys read from the live spell_script_names).
+# =====================================================================================================================
+
+# Mana Tide's passive (16191, cast by the Mana Tide Totem 10467 at summon): now pulses every 2 s, and the first pulse is on
+# placement (AttributesEx5 0x200, SPELL_ATTR5_EXTRA_INITIAL_PERIOD, the Healing Stream 5672 idiom): 10 s = pulses at
+# 0 / 2 / 4 / 6 / 8 s. Declared here (untouched copy of the npc.csv row apart from the period, the flag and the text).
+mana_tide_16191 = spell(
+    id=16191,
+    name='Mana Tide',
+    school=School.NATURE,
+    attributes=64,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.PERIODIC_TRIGGER_SPELL, amplitude=2000, trigger_spell=39610),
+    ],
+    spell_icon_id=94,
+    notes='S2a A2: pulled from npc.csv:2957 (row deleted); period 3000 -> 2000, AttributesEx5 0x200 (first pulse on placement). The scripted pulse is 39610 (spell_sha_resto_mana_tide_totem); the script binding spell_sha_mana_tide on 16191 is kept.',
+    raw_overrides={'AttributesEx5': 512, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Restores mana to your party and to you over time.', 'BaseLevel': 40, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Restores mana to your party members and to you every 2 seconds while the Mana Tide Totem stands.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'RangeIndex': 1, 'SpellClassMask_1': 67108864, 'SpellClassSet': 11, 'SpellLevel': 40, 'SpellVisualID_1': 4279},
+)
+
+
+# Mana Tide Totem's pulse (39610): unchanged data, declared so the npc.csv row (:3119) can go and the binding swap below sits
+# next to it. Party-area dummy (target 20, 30 yd); Restorative Totems' +% is read by the script from its DUMMY.
+mana_tide_totem_39610 = spell(
+    id=39610,
+    name='Mana Tide Totem',
+    school=School.SHADOW,
+    attributes=134218112,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    duration_ms=-1,
+    effects=[
+        Effect(type=EffectType.DUMMY, die_sides=0, implicit_target_a=20, radius_yards=30.0),
+    ],
+    spell_icon_id=2213,
+    notes='S2a A2: pulled from npc.csv:3119 (row deleted), data unchanged. range_yards dropped (stock RangeIndex 1 in raw_overrides always won).',
+    raw_overrides={'AttributesEx2': 268435456, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712188, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 67108864, 'SpellClassSet': 11, 'SpellLevel': 1},
+)
+
+# Ancestral Fortitude ranks 2 and 3 join the stock "Physical Taken Buffs" group (rule 4) with Inspiration and rank 1 (X7).
+spell_group(1095, ancestral_fortitude_16236, ancestral_fortitude_16237)
+
+# Tidal Waves: the stock proc row (-51562, the CH / Riptide trigger of 53390) goes with the proc flags of the ranks; the
+# grant is scripted in Chain Heal and Riptide (spell_sha_resto_chain_heal / spell_sha_resto_riptide).
+remove_spell_proc(-51562)
+
+# Nature's Guardian capstone: damage taken (non-periodic) from any source, triggered boss hits included (S1-L6:
+# PROC_ATTR_TRIGGERED_CAN_PROC), 30 s ICD. The row inherited the stock 664232 flags before; TAKEN_PERIODIC (0x80000) is
+# dropped. No SpellPhaseMask: these are TAKEN flags, outside REQ_SPELL_PHASE_PROC_FLAG_MASK (L9 is for done-spell rows;
+# a phase here logs "won't be used" and check_spell_proc_rows warns).
+procs_on(
+    -30881, proc_flags=139944, spell_type_mask=_PROC_TYPE_DAMAGE, attributes_mask=2, chance=100, cooldown_ms=30000,
+)
+
+# Restoration script swaps: each stock name is unbound from its live key and the S2a class takes its place.
+unbind_script(-1064, 'spell_sha_chain_heal')
+scripted_by(-1064, 'spell_sha_resto_chain_heal')
+unbind_script(-974, 'spell_sha_earth_shield')
+scripted_by(-974, 'spell_sha_resto_earth_shield')
+unbind_script(52759, 'spell_sha_ancestral_awakening_proc')
+scripted_by(52759, 'spell_sha_resto_ancestral_awakening_proc')
+unbind_script(-16180, 'spell_sha_imp_water_shield')
+scripted_by(-16180, 'spell_sha_resto_imp_water_shield')
+unbind_script(-30881, 'spell_sha_nature_guardian')
+scripted_by(-30881, 'spell_sha_resto_nature_guardian')
+unbind_script(mana_tide_totem_39610, 'spell_sha_mana_tide_totem')
+scripted_by(mana_tide_totem_39610, 'spell_sha_resto_mana_tide_totem')
+# Tidal Force 55198 leaves the talent; A3 (shaman_restoration.py) declares the unbind of spell_sha_tidal_force_dummy from it
+# together with the binding of the new castable 202654, so it is not repeated here.
+
+# New scripts on spells that had none (player-caster gates in the scripts: Nak 3434 casts 8004, the Timbermaw Ancestor 15720
+# casts 25357).
+scripted_by(61295, 'spell_sha_resto_riptide')
+scripted_by(331, 'spell_sha_resto_healing_wave')
+scripted_by(8004, 'spell_sha_resto_healing_wave')
+scripted_by(5394, 'spell_sha_resto_healing_stream_totem')
+scripted_by(8170, 'spell_sha_resto_cleansing_totem')

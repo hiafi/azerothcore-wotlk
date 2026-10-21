@@ -40,6 +40,7 @@ from lib.dsl.registry import (
 )
 
 from . import _masks as m
+from .shaman_resto_tooltips import shaman_healtotems_1224
 
 SPELLFAMILY_SHAMAN = 11
 
@@ -139,27 +140,6 @@ def _summon_raw(spell_level, props, description, element_mask):
     }
 
 
-water_elemental_totem_202272 = spell(
-    id=202272, name='Water Elemental Totem', school=School.NORMAL, attributes=SPELL_ATTR0_NOT_SHAPESHIFTED, category=0,
-    cast_time_ms=0, cooldown_ms=120000, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=8, range_yards=RANGE_SELF,
-    duration_ms=30000,
-    effects=[Effect(
-        type=EffectType.SUMMON, base_points=3887, implicit_target_a=TARGET_DEST_CASTER_SUMMON,
-        implicit_target_b=TARGET_DEST_CASTER_FRONT_LEFT, misc_value=300272, radius_yards=5.0,
-    )],
-    spell_icon_id=ICON_WATER_ELEMENTAL,
-    notes=NOTE + 'Water Elemental, learned at 46 (trainer 210). Summons the invisible Water slot totem 300272 (props 82), '
-          'whose Index-0 passive 202274 summons the guardian 300260. Category 0 / RecoveryTime 120000 / no category '
-          'recovery / no COOLDOWN_ON_EVENT; GCD 1000/133 (stock totem); cost 8% of base mana [tune] (was 24%, Earth Elemental\'s; 2026-10-20 smoke-test fix pass); '
-          'shape and HP (3887) copied from stock 2894 with Water\'s front-left spawn point (5394). Family d0 b29 + d1 b21. '
-          'Bound to spell_sha_elemental_lockout. Icon 2134 = mage Summon Water Elemental.',
-    raw_overrides=_summon_raw(
-        46, SUMMON_PROPS_WATER,
-        'Calls forth a greater water elemental for $d. Its Water Bolt damages an enemy and heals your 3 most injured '
-        'allies. 2 min cooldown.',
-        m.WATER_ELEMENTAL_SUMMON),
-)
-
 storm_elemental_totem_202273 = spell(
     id=202273, name='Storm Elemental Totem', school=School.NORMAL, attributes=SPELL_ATTR0_NOT_SHAPESHIFTED, category=0,
     cast_time_ms=0, cooldown_ms=120000, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=8, range_yards=RANGE_SELF,
@@ -243,8 +223,31 @@ water_bolt_202276 = spell(
         'SpellClassSet': SPELLFAMILY_SHAMAN, 'SpellClassMask_3': m.WATER_BOLT_DAMAGE, 'EquippedItemClass': -1,
         'DefenseType': 1, 'PreventionType': 1, 'SpellLevel': 1, 'Speed': 16.0, 'SpellVisualID_1': SV_WATERBOLT,
         'Description_Lang_enUS': 'Hurls a bolt of water that deals {pot1} Frost damage to an enemy and heals the 3 most '
-                                 'injured allies within 40 yards for ' + pot_text(water_bolt_heal_202277) + ' each.',
+                                 'injured allies within 40 yards for ' + pot_text(water_bolt_heal_202277, var='wel') + ' each.',
     },
+    tooltip_vars=shaman_healtotems_1224,
+)
+
+water_elemental_totem_202272 = spell(
+    id=202272, name='Water Elemental Totem', school=School.NORMAL, attributes=SPELL_ATTR0_NOT_SHAPESHIFTED, category=0,
+    cast_time_ms=0, cooldown_ms=120000, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=8, range_yards=RANGE_SELF,
+    duration_ms=30000,
+    effects=[Effect(
+        type=EffectType.SUMMON, base_points=3887, implicit_target_a=TARGET_DEST_CASTER_SUMMON,
+        implicit_target_b=TARGET_DEST_CASTER_FRONT_LEFT, misc_value=300272, radius_yards=5.0,
+    )],
+    spell_icon_id=ICON_WATER_ELEMENTAL,
+    notes=NOTE + 'Water Elemental, learned at 46 (trainer 210). Summons the invisible Water slot totem 300272 (props 82), '
+          'whose Index-0 passive 202274 summons the guardian 300260. Category 0 / RecoveryTime 120000 / no category '
+          'recovery / no COOLDOWN_ON_EVENT; GCD 1000/133 (stock totem); cost 8% of base mana [tune] (was 24%, Earth Elemental\'s; 2026-10-20 smoke-test fix pass); '
+          'shape and HP (3887) copied from stock 2894 with Water\'s front-left spawn point (5394). Family d0 b29 + d1 b21. '
+          'Bound to spell_sha_elemental_lockout. Icon 2134 = mage Summon Water Elemental.',
+    raw_overrides=_summon_raw(
+        46, SUMMON_PROPS_WATER,
+        'Calls forth a greater water elemental for $d. Its Water Bolt damages an enemy and heals your 3 most injured '
+        'allies for ' + pot_text(water_bolt_heal_202277, var='wel') + ' each. 2 min cooldown.',
+        m.WATER_ELEMENTAL_SUMMON),
+    tooltip_vars=shaman_healtotems_1224,   # S2a WP-R L4: the heal number (Tidecaller, Purification) on the tooltip the player reads
 )
 
 # ---- Storm Bolt (guardian-cast, potency 120 Nature, no family bit) ----
@@ -351,6 +354,7 @@ greater_earth_elemental_15352 = creature_template(15352, 'Greater Earth Elementa
 for _lockout_spell in (2062, 2894, water_elemental_totem_202272, storm_elemental_totem_202273):
     scripted_by(_lockout_spell, 'spell_sha_elemental_lockout')
 scripted_by(water_bolt_202276, 'spell_sha_water_bolt')
+scripted_by(water_bolt_heal_202277, 'spell_sha_resto_water_bolt_heal')   # S2a: x Totemic Resonance (guardian heal)
 scripted_by(elemental_owner_stats_202279, 'spell_sha_elemental_owner_stats')
 # SH0b m2: the stock area abilities of the Earth / Fire Elementals hit only enemies already engaged with the owner or the
 # group (a player-owned elemental only; NPC casters keep the stock targeting). Stock ids by bare number, no prior binding.

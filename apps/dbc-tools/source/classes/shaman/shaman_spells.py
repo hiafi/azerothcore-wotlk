@@ -8,6 +8,9 @@ from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, School, 
 from lib.dsl.registry import pot_text, product, spell, talent_mult, tooltip_vars, trained_by, untrain
 
 from . import _masks as m
+from .shaman_resto_tooltips import (
+    shaman_chainheal_1221, shaman_healtotems_1224, shaman_rain_1222, shaman_shield_1223, shaman_waves_1220,
+)
 from .shaman_totems import healing_stream_heal_202271, searing_bolt_202270, shaman_firetotems_1216
 from .shaman_trigger_spells import fire_nova_8349, stoneclaw_totem_absorb_55328
 
@@ -91,7 +94,8 @@ healing_wave_331 = spell(
     spell_icon_id=13,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 14 @ level 80); coefficient/mana_cost_pct from max rank; MaxLevel set to 80. PLAN A9 (druid-rework code review finding #9): cast_time_ms=2500, raw CastingTimeIndex (16, 1500ms) dropped. '
           'Potency system P7-Shaman: converted to sp_potency=129.1 (shaman-potency-report.md base-implied default, not mismatched - old coefficient 1.611 was already consistent with the base).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for {pot1}.', 'EffectChainAmplitude_1': 0.20000000298023224, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 64, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellVisualID_1': 58, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    tooltip_vars=shaman_waves_1220,
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for {pot1*mult}.', 'EffectChainAmplitude_1': 0.20000000298023224, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 64, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellVisualID_1': 58, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -241,7 +245,8 @@ chain_heal_1064 = spell(
     spell_icon_id=963,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 40); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 7 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
           'Potency system P7-Shaman: converted to sp_potency=52.0 - docs/potency-system.md ("Healing" table, "Decided so far") explicitly resolves Chain Heal to 52, NOT the shaman-potency-proposals.txt/base-implied value of 40.3, because 52 preserves Chain Heal\'s total healing at 500 spell power against stock (1,267 vs 1,278); its base runs ~50% over stock and its coefficient ~48% under as a result.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 19, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the friendly target for {pot1}, then jumps to heal additional nearby targets.  If cast on a party member, the heal will only jump to other party members.  Each jump reduces the effectiveness of the heal by 40%.  Heals $x1 total targets.', 'EffectChainAmplitude_1': 0.6000000238418579, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 256, 'SpellClassSet': 11, 'SpellLevel': 40, 'SpellVisualID_1': 3659, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    tooltip_vars=shaman_chainheal_1221,
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 19, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals the friendly target for {pot1*mult}, then jumps to heal additional nearby targets.  If cast on a party member, the heal will only jump to other party members.  Each jump reduces the effectiveness of the heal by 40%.  Heals $x1 total targets.', 'EffectChainAmplitude_1': 0.6000000238418579, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 256, 'SpellClassSet': 11, 'SpellLevel': 40, 'SpellVisualID_1': 3659, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -478,7 +483,8 @@ healing_stream_totem_5394 = spell(
     ],
     spell_icon_id=1647,
     notes='SH0b (shared doc, Totems): cooldown 0 -> 30 s, duration 300 s -> 10 s, tooltip with the heal potency (202271), tool strip. Summon stays creature 3527. Was: pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60 (anchor rank 5 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Healing Stream Totem for $d. When placed and every 2 sec, it heals the 5 most injured allies within 40 yards for ' + pot_text(healing_stream_heal_202271) + '. 30 sec cooldown.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 82, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': 524288, 'SpellClassSet': 11, 'SpellLevel': 20, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    tooltip_vars=shaman_healtotems_1224,
+    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a Healing Stream Totem for $d. When placed and every 2 sec, it heals the 5 most injured allies within 40 yards for ' + pot_text(healing_stream_heal_202271, var='hst') + '. 30 sec cooldown.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 82, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': 524288, 'SpellClassSet': 11, 'SpellLevel': 20, 'SpellVisualID_1': 319, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -565,7 +571,8 @@ lesser_healing_wave_8004 = spell(
     spell_icon_id=964,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 9 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
           'Potency system P7-Shaman: converted to sp_potency=108.4 (shaman-potency-report.md base-implied default, not mismatched).',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for {pot1}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 128, 'SpellClassSet': 11, 'SpellLevel': 20, 'SpellVisualID_1': 58, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    tooltip_vars=shaman_waves_1220,
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 16, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for {pot1*mult}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 128, 'SpellClassSet': 11, 'SpellLevel': 20, 'SpellVisualID_1': 58, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1198,7 +1205,8 @@ earth_shield_974 = spell(
     ],
     spell_icon_id=2015,
     notes='SH0a: now baseline at 25 (was Restoration talent 1698); heal per charge is potency 25 T 1500 on eff0 (the DUMMY the spell_sha_earth_shield script reads; 379 untouched). Was: pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 50); RealPointsPerLevel from rank1->covers-60 (anchor rank 2 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx4': 524288, 'AttributesEx5': 32, 'AttributesEx6': 67108864, 'AttributesEx7': 1073742848, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals you when you take damage.', 'AuraInterruptFlags': 524288, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Protects the target with an earthen shield, reducing casting or channeling time lost when damaged by $s2%  and causing attacks to heal the shielded target for {pot1}.  This effect can only occur once every few seconds.  $n charges.  Lasts $d.  Earth Shield can only be placed on one target at a time and only one Elemental Shield can be active on a target at a time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcCharges': 6, 'ProcTypeMask': 172712, 'SpellClassMask_2': 1024, 'SpellClassSet': 11, 'SpellLevel': 25, 'SpellVisualID_1': 7362, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    tooltip_vars=shaman_shield_1223,
+    raw_overrides={'AttributesEx4': 524288, 'AttributesEx5': 32, 'AttributesEx6': 67108864, 'AttributesEx7': 1073742848, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Heals you when you take damage.', 'AuraInterruptFlags': 524288, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Protects the target with an earthen shield, reducing casting or channeling time lost when damaged by $s2%  and causing attacks to heal the shielded target for {pot1*mult}.  This effect can only occur once every few seconds.  $n charges.  Lasts $d.  Earth Shield can only be placed on one target at a time and only one Elemental Shield can be active on a target at a time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcCharges': 6, 'ProcTypeMask': 172712, 'SpellClassMask_2': 1024, 'SpellClassSet': 11, 'SpellLevel': 25, 'SpellVisualID_1': 7362, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1270,13 +1278,21 @@ riptide_61295 = spell(
     range_yards=40.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.HEAL, sp_potency=62.8, potency_kind='heal', implicit_target_a=21),
-        Effect(type=EffectType.APPLY_AURA, sp_potency=6.3, potency_kind='heal_periodic', implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=3000),
+        Effect(type=EffectType.HEAL, sp_potency=43.0, potency_kind='heal', time_basis_ms=1500, implicit_target_a=21),
+        Effect(type=EffectType.APPLY_AURA, sp_potency=5.0, potency_kind='heal_periodic', time_basis_ms=3000, implicit_target_a=21, apply_aura=AuraType.PERIODIC_HEAL, amplitude=3000),
     ],
     spell_icon_id=3786,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
-          'Potency system P7-Shaman: eff1 converted to sp_potency=62.8, eff2 (per tick) to sp_potency=6.3 (both shaman-potency-proposals.txt, mismatched rows); eff3 (Chain Heal bonus %) is not a damage/heal/absorb effect, left untouched.',
-    raw_overrides={'AttributesEx3': 128, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Heals {pot2} every $t2 seconds.  Increases caster's Chain Heal by $s3%.", 'BaseLevel': 60, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for {pot1} and another {pot2.total} over $d.  Your next Chain Heal cast on that primary target within $d will consume the healing over time effect and increase the amount of the Chain Heal by $s3%.', 'EffectBasePoints_3': 24, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': 16, 'SpellClassSet': 11, 'SpellLevel': 60, 'SpellVisualID_1': 12994, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    tooltip_vars=shaman_rain_1222,
+    notes='S2a A4 (shaman-rework Restoration, 3C Q3): 43 potency direct (T 1500) + 5 per 3 s tick (T 3000), healing scales with '
+          'level from 30 (SpellLevel and BaseLevel 30 on both potency effects; was the stock-converted 62.8 + 6.3 flat at 60). '
+          'Talent 2064 moves to (4,1), learned at 30 (tier 4) with the talent: a talent-rank spell, so no trainer row (L13). 15 s, '
+          '6 s cooldown (Category 1228 / CategoryRecoveryTime 6000, no Cooldown Haste), 18% mana (stock, [tune]), instant, 40 yd, '
+          'family d2 b4 (Healing Way, Torrent, Purification, Tidal Focus, Tidal Mastery, the torrent hook). Description and aura '
+          'text per the doc, aura text number-free; the potency numbers go through tooltip entry 1222 `tide` (Healing Way, '
+          'Torrent, Purification). The latent raw EffectBasePoints_3 24 / EffectDieSides_3 1 twin (the stock +25% Chain Heal '
+          'effect, absent from the typed effects) is deleted: the +25% is the Chain Heal script\'s (X3). Was: pulled from existing '
+          'data; Potency system P7-Shaman 62.8 / 6.3.',
+    raw_overrides={'AttributesEx3': 128, 'AttributesEx6': 67108864, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Healing over time. The shaman's next Chain Heal on you is stronger.", 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals a friendly target for {pot1*tide} and another {pot2*tide} every 3 sec over $d. Your next Chain Heal on that primary target within $d consumes the heal over time effect and heals for 25% more. 6 sec cooldown.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_3': 16, 'SpellClassSet': 11, 'SpellLevel': 30, 'SpellVisualID_1': 12994, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -1368,20 +1384,25 @@ mana_tide_totem_16190 = spell(
     name='Mana Tide Totem',
     school=School.NORMAL,
     attributes=65536,
-    category=591,
+    category=0,
     cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=300000,
+    cooldown_ms=180000,
+    category_cooldown_ms=0,
     mana_cost=0,
     mana_cost_pct=0,
     range_yards=0.0,
-    duration_ms=13000,
+    duration_ms=10000,
     effects=[
         Effect(type=EffectType.SUMMON, base_points=4, implicit_target_a=42, misc_value=10467),
     ],
     spell_icon_id=94,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Summons a Mana Tide Totem with $s2% of the caster's health at the feet of the caster for ${$d-1} sec that restores $<mana>% of total mana every $16191t1 seconds to group members within $39610a1 yards.", 'EffectBasePoints_2': 9, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectMiscValueB_1': 82, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': 536870912, 'SpellClassSet': 11, 'SpellDescriptionVariableID': 61, 'SpellLevel': 40, 'SpellVisualID_1': 364, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    notes='S2a A4 (shaman-rework Restoration, Mana Tide Totem): duration 13 s -> 10 s (5 pulses incl. the one on placement at a 2 s '
+          'period), cooldown 5 min -> 3 min as RecoveryTime 180000 with Category 0 / CategoryRecoveryTime 0 (Elemental Mastery shape) '
+          'so Cooldown Haste applies and Restorative Totems\' SPELLMOD_COOLDOWN (d0 b25) reaches it. Summon mask d0 b29 (stock) + '
+          'b25 MANA_TIDE_SUMMON, the one identity bit for that mod. The stock SpellDescriptionVariableID 61 and the latent raw '
+          'EffectBasePoints_2 9 / EffectDieSides_2 1 twin are deleted. No mana cost (stock), instant, GCD 1000/133 (stock). Totem '
+          'health keeps the id (SpellEffects.cpp:2636). Tooltip per the doc. Was: pulled from existing data',
+    raw_overrides={'AttributesEx7': 32, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 40, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Summons a Mana Tide Totem for $d that restores 2.5% of maximum mana every 2 sec to the other members of your party within 30 yards, and 5% of your maximum mana to you. 3 min cooldown.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 82, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RequiredTotemCategoryID_1': 0, 'SpellClassMask_1': m.SUMMON_D0_B29 | m.MANA_TIDE_SUMMON, 'SpellClassSet': 11, 'SpellLevel': 40, 'SpellVisualID_1': 364, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 

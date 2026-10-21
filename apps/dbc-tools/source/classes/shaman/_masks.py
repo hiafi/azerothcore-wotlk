@@ -74,3 +74,10 @@ FORBIDDEN_D0 = (FORBIDDEN_D0_B0 | FORBIDDEN_D0_B1 | FORBIDDEN_D0_B10 | FORBIDDEN
 FORBIDDEN_D1 = (FORBIDDEN_D1_B4 | FORBIDDEN_D1_B5 | FORBIDDEN_D1_B10 | FORBIDDEN_D1_B11 | FORBIDDEN_D1_B12
                 | FORBIDDEN_D1_B17 | FORBIDDEN_D1_B24)
 FORBIDDEN_D2 = (FORBIDDEN_D2_B2 | FORBIDDEN_D2_B11 | FORBIDDEN_D2_B31)
+
+# --- S2a (Restoration) aliases for the reserved bits ---
+TORRENT = TORRENT_RESERVED                       # d2 b22, Healing Rain torrent heal
+UNDULATING_HEAL = CHAIN_HEAL_TOTEM_RESERVED      # d2 b23, Undulating Currents Totem heal
+MANA_TIDE_SUMMON = MANA_TIDE_RESERVED            # d0 b25, Mana Tide Totem summon
+MINOR_HEAL = 0x8000000                           # d2 b27, Purification reach: Totemic Focus placement heal + Nature's Guardian heal
+TIDAL_FORCE_CAST = 0x10000000                    # d2 b28, the Tidal Force castable 202654 (Tidal Mastery's cooldown cut)
