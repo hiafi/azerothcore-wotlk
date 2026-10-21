@@ -2,7 +2,8 @@
 """
 Bakes one mod-dpssim report JSON file (SimReport::WriteJson()'s schema) directly into a copy of
 report-template.html - no file picker, no "load report" click needed, the page just shows the
-data the moment it's opened. Used by run-sim.sh; not usually invoked by hand.
+data the moment it's opened. A heal report ("kind": "heal", SimReport::WriteHealJson()'s schema) is baked into
+heal-report-template.html instead. Used by run-sim.sh; not usually invoked by hand.
 
 Usage:
     build_report_html.py <output.html> <label> <report.json>
@@ -18,6 +19,12 @@ from pathlib import Path
 
 TOOLS_DIR = Path(__file__).resolve().parent
 TEMPLATE_PATH = TOOLS_DIR / "report-template.html"
+# Heal reports ("kind": "heal", SimReport::WriteHealJson()) render through their own template
+HEAL_TEMPLATE_PATH = TOOLS_DIR / "heal-report-template.html"
+
+
+def is_heal(data: dict) -> bool:
+    return data.get("kind") == "heal"
 
 
 def safe_json(obj) -> str:
@@ -37,6 +44,10 @@ def collect_spell_ids(data: dict) -> list[int]:
         ids.add(e["spellId"])
     for c in data.get("casts", []):
         ids.add(c["spellId"])
+    # Heal reports: the healer's heals, shields and the auras it put on the group (their spell rows are in "spells")
+    for key in ("heals", "absorbs", "groupAuraEvents"):
+        for e in data.get(key, []):
+            ids.add(e["spellId"])
     return sorted(ids)
 
 
@@ -102,10 +113,10 @@ def fetch_spell_names(spell_ids: list[int]) -> dict[int, str]:
 def render_report_html(data: dict, label: str) -> str:
     spell_names = fetch_spell_names(collect_spell_ids(data))
     # Pseudo id 0 is a melee auto-attack swing (EventRecorder::MELEE_SPELL_ID), not a real spell row
-    spell_names.setdefault(0, "Melee")
+    spell_names.setdefault(0, "Melee leech" if is_heal(data) else "Melee")
     # EventRecorder::PET_MELEE_SPELL_ID: a pet/guardian/totem's white swings
     spell_names.setdefault(4294967294, "Pet Melee")
-    html = TEMPLATE_PATH.read_text()
+    html = (HEAL_TEMPLATE_PATH if is_heal(data) else TEMPLATE_PATH).read_text()
     return (
         html.replace("__PAGE_TITLE__", label)
         .replace("__LABEL__", label)

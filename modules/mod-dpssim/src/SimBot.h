@@ -26,6 +26,7 @@
 class Creature;
 class Player;
 class PlayerbotAI;
+class Unit;
 
 // Wraps a real mod-playerbots PlayerbotAI on top of an existing SimActor's Player, so the sim's
 // hardcoded Phase 1 rotation (SimDaemon.cpp's RotationTick()) can be replaced with
@@ -99,6 +100,12 @@ public:
     // reading its implementation, not assumed.
     void UpdateAI(uint32 diff);
 
+    // Tests only (RunConfig::HealStepHook): makes the bot's AI do nothing. PlayerbotAI::UpdateAI() is also driven by
+    // mod-playerbots' own PlayerScript::OnPlayerAfterUpdate() on every Player::Update(), not only by UpdateAI() above,
+    // so simply not calling UpdateAI() leaves the healer casting. A next-check delay that long (the AI counts it down
+    // by the diffs of both callers) keeps both quiet for the rest of the run.
+    void SilenceAI();
+
     // Acknowledges a teleport the sim bot's own death started (the engine's auto release repops it at a graveyard).
     // Live bots get this from PlayerbotHolder::UpdateSessions, which the sim bot is not in; without it
     // IsBeingTeleported() stays true and PlayerbotAI::UpdateAI() returns early forever.
@@ -127,6 +134,27 @@ public:
     // park the bot in "minimal" mode out of combat (AllowActivity() false), in which case the phase does nothing.
     bool BeginBuffPhase();
     void EndBuffPhase();
+
+    // Heal mode, once after Create(): gives the bot the master PlayerbotAI::UpdateAIGroupMaster() would give it on its
+    // first tick, now. The healer leads the group (plan R1) but the headless allies are group members without a
+    // PlayerbotAI, so FindNewMaster() takes the first of them as "the real player" and resets the bot's strategies (a
+    // "follow" included). Left to the first tick, that reset would land inside the first iteration's pre-pull buff
+    // phase, after BeginBuffPhase() trimmed the strategies, and make iteration 1 differ from the rest. The master is a
+    // headless, stationary ally, as a human's client-less stand-in. The buff phase strips "follow" and EndBuffPhase()
+    // puts it back, so it is active again during the measured fight; that is harmless, because the bot stays in
+    // combat (Step re-engages everyone) and the non-combat engine that follows the master never runs, and the master
+    // does not move anyway.
+    void ResolveGroupMaster();
+
+    // Heal mode: the unit the bot's "party member to heal" value picks right now (nullptr when none, or without an AI).
+    // It only returns the single best candidate, so SimHealScenario::Pull() checks it once next to
+    // LogHealTargetVisibility().
+    [[nodiscard]] Unit* GetPartyMemberToHeal() const;
+
+    // Heal mode, logged once at the pull: how many of `members` meet the conditions PartyMemberToHeal::Check() puts on
+    // a heal target (same map, not charmed, alive, within 2 * AiPlayerbot.HealDistance, in line of sight), and what the
+    // value picks
+    void LogHealTargetVisibility(std::vector<Player*> const& members) const;
 
 private:
     // Every enemy count the bot strategies use is built from the bot's threat list ("attackers" walks

@@ -58,6 +58,29 @@
 # Environment:
 #   DPSSIM_TARGET_RANK  Dummy rank (DpsSim.TargetRank): boss, elite or auto. Default: auto.
 #   DPSSIM_KEEP_LOG=1   Keep the container's log next to the reports.
+#   DPSSIM_IMAGE        Worldserver image to run instead of the one the live ac-worldserver container was started from
+#                       (e.g. acore/ac-wotlk-worldserver:master after a `docker compose build` the live container has
+#                       not been recreated for).
+#   DPSSIM_EXTRA_CONF   Extra lines appended to the generated dpssim.conf (printf %b, so "\n" separates lines).
+#
+# Healing runs: a profile with "Mode = Heal" (see SimProfile.h) runs the healing sim. Everything above applies, with
+# these differences: [targets] must be 1, [durationSeconds] is at most 300, the reports are named
+# "<Profile>.<group>.<tag>.<ts>..." (the tag is explained below) and the baked page is
+# modules/mod-dpssim/reports/HealProfileReport.html. Environment, all optional (without them the profile's own
+# HealGroup / HealTargets / InfiniteMana apply):
+#   HEALSIM_GROUP          party | raid10 | raid20 (DpsSim.HealGroup). The healer is always one of the members.
+#   HEALSIM_TARGETS        what each member suffers (DpsSim.HealTargets). A preset applies one mode to every member
+#                          of the group (party = 1 tank, 3 dps and the healer; raid10 = 2 tanks, 7 dps and the healer;
+#                          raid20 = 2 tanks, 17 dps and the healer):
+#                            pin50 / pin20   every member is kept at 50% / 20% health by real damage hits (the pure
+#                                            HPS measurement)
+#                            drain:<n>       every member takes <n> damage a second; the tanks take 3x <n>, the DPS and
+#                                            the healer <n> (the survival measurement)
+#                          or a full list such as "tank:drain:450, 3*dps:drain:150, self:drain:100" (SimHeal.h has the
+#                          syntax). The key handed to the worldserver always holds the full expanded list.
+#   HEALSIM_INFINITE_MANA  1/true or 0/false (DpsSim.InfiniteMana): keep the healer's mana full during the fight.
+# File tag: the preset name (pin50, drain150, ...) or, for a full HEALSIM_TARGETS list (or none at all, the profile's
+# own), "x" and a short hash of the list; "-inf" is appended for infinite mana.
 #
 # Examples:
 #   modules/mod-dpssim/tools/run-sim.sh ArcaneMageSim              # 180s @ level 60, avg of 10 @ 100ms (the defaults)
@@ -101,6 +124,8 @@ fi
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 cd "$REPO_ROOT"
 
+die() { echo "error: $*" >&2; exit 1; }
+
 # --- resolve the profile file -------------------------------------------------------------
 if [[ -f "$PROFILE_ARG" ]]; then
     PROFILE_HOST_PATH="$(cd "$(dirname "$PROFILE_ARG")" && pwd)/$(basename "$PROFILE_ARG")"
@@ -116,6 +141,95 @@ PROFILE_NAME="$(basename "$PROFILE_HOST_PATH" .conf)"
 # override's ac-worldserver.volumes) - translate the host path to that container path.
 PROFILE_CONTAINER_PATH="/azerothcore/modules/${PROFILE_HOST_PATH#"$REPO_ROOT"/modules/}"
 
+# --- healing sim: detect a heal profile and resolve the scenario (group, target list, tag) ---------------------------
+# profile_key <Key>: the last "Key = value" line of the profile, without the comment or blanks around the value
+profile_key() {
+    { grep -iE "^[[:space:]]*$1[[:space:]]*=" "$PROFILE_HOST_PATH" || true; } | tail -1 \
+        | sed -E 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*#.*$//; s/[[:space:]]+$//'
+}
+short_hash() { printf '%s' "$1" | tr -d ' \t' | tr 'A-Z' 'a-z' | sha1sum | cut -c1-6; }
+
+IS_HEAL=0
+if [[ "$(profile_key Mode | tr 'A-Z' 'a-z')" == "heal" ]]; then IS_HEAL=1; fi
+HEAL_CONF=""
+BATCH_SCENARIO=""
+if [[ "$IS_HEAL" -eq 1 ]]; then
+    if [[ "$TARGETS" -ne 1 ]]; then
+        die "[targets] is for DPS profiles; '$PROFILE_NAME' is a heal profile (its group is HEALSIM_GROUP /" \
+            "HEALSIM_TARGETS), got $TARGETS"
+    fi
+    if ! [[ "$DURATION_SECONDS" =~ ^[0-9]+$ ]]; then
+        die "[durationSeconds] must be a whole number, got '$DURATION_SECONDS'"
+    fi
+    if (( DURATION_SECONDS > 300 )); then
+        die "a heal run is at most 300 s (a dead ally would release its spirit after 6 minutes), got $DURATION_SECONDS"
+    fi
+
+    PROFILE_GROUP="$(profile_key HealGroup | tr 'A-Z' 'a-z')"
+    HEAL_GROUP="$(printf '%s' "${HEALSIM_GROUP:-$PROFILE_GROUP}" | tr 'A-Z' 'a-z')"
+    if ! [[ "$HEAL_GROUP" =~ ^(party|raid10|raid20)$ ]]; then
+        die "HEALSIM_GROUP must be party, raid10 or raid20," \
+            "got '${HEAL_GROUP:-<unset, and the profile has no HealGroup>}'"
+    fi
+
+    HEAL_INF=0
+    if [[ -n "${HEALSIM_INFINITE_MANA:-}" ]]; then
+        case "$(printf '%s' "$HEALSIM_INFINITE_MANA" | tr 'A-Z' 'a-z')" in
+            1|true) HEAL_INF=1 ;;
+            0|false) HEAL_INF=0 ;;
+            *) die "HEALSIM_INFINITE_MANA must be 1/true or 0/false, got '$HEALSIM_INFINITE_MANA'" ;;
+        esac
+        HEAL_CONF+="DpsSim.InfiniteMana = ${HEAL_INF}"$'\n'
+    elif [[ "$(profile_key InfiniteMana | tr 'A-Z' 'a-z')" =~ ^(1|true)$ ]]; then
+        HEAL_INF=1
+    fi
+
+    HEAL_TAG=""
+    HEAL_TARGETS_STR=""
+    if [[ -n "${HEALSIM_TARGETS:-}" ]]; then
+        T="${HEALSIM_TARGETS}"
+        if [[ "$T" =~ (tank|dps|self): ]]; then
+            # A full list: the worldserver validates the syntax and the size against the group
+            HEAL_TARGETS_STR="$T"
+            HEAL_TAG="x$(short_hash "$T")"
+        else
+            # A preset: one mode for every member. party = 1 tank, 3 dps + the healer; raid10 = 2 tanks, 7 dps + the
+            # healer; raid20 = 2 tanks, 17 dps + the healer (the plan's compositions)
+            case "$HEAL_GROUP" in
+                party) N_TANK=1; N_DPS=3 ;;
+                raid10) N_TANK=2; N_DPS=7 ;;
+                raid20) N_TANK=2; N_DPS=17 ;;
+            esac
+            if [[ "$T" =~ ^pin(50|20)$ ]]; then
+                TANK_MODE="pin:${T#pin}"
+                DPS_MODE="$TANK_MODE"
+                HEAL_TAG="$T"
+            elif [[ "$T" =~ ^drain:([0-9]+([.][0-9]+)?)$ ]] &&
+                    awk -v n="${BASH_REMATCH[1]}" 'BEGIN { exit !(n > 0) }'; then
+                N="${BASH_REMATCH[1]}"
+                DPS_MODE="drain:${N}"
+                TANK_MODE="drain:$(awk -v n="$N" 'BEGIN { printf "%g", n * 3 }')"
+                HEAL_TAG="drain${N//./_}"
+            else
+                die "HEALSIM_TARGETS '$T' is neither a preset (pin50, pin20, drain:<damage per second above 0>)" \
+                    "nor a full target list like 'tank:pin:50, 3*dps:pin:50, self:pin:50'"
+            fi
+            HEAL_TARGETS_STR="${N_TANK}*tank:${TANK_MODE}, ${N_DPS}*dps:${DPS_MODE}, self:${DPS_MODE}"
+        fi
+        HEAL_CONF+="DpsSim.HealGroup = ${HEAL_GROUP}"$'\n'
+        HEAL_CONF+="DpsSim.HealTargets = ${HEAL_TARGETS_STR}"$'\n'
+    else
+        # Only the group overridden: the profile's own target list must be for the same group
+        if [[ -n "${HEALSIM_GROUP:-}" && "$HEAL_GROUP" != "$PROFILE_GROUP" ]]; then
+            die "HEALSIM_GROUP=$HEAL_GROUP needs a matching HEALSIM_TARGETS: the profile's own HealTargets is" \
+                "for '${PROFILE_GROUP:-no group}'"
+        fi
+        HEAL_TAG="x$(short_hash "$(profile_key HealTargets)")"
+    fi
+    if [[ "$HEAL_INF" -eq 1 ]]; then HEAL_TAG+="-inf"; fi
+    BATCH_SCENARIO="${HEAL_GROUP}.${HEAL_TAG}"
+fi
+
 # --- discover the live stack's real network / image / volume / DB creds ------------------
 if ! docker inspect ac-worldserver >/dev/null 2>&1; then
     echo "error: no 'ac-worldserver' container found - is the normal stack up" \
@@ -124,7 +238,7 @@ if ! docker inspect ac-worldserver >/dev/null 2>&1; then
 fi
 
 NETWORK="$(docker inspect ac-worldserver --format '{{range $k, $v := .NetworkSettings.Networks}}{{$k}}{{end}}')"
-IMAGE="$(docker inspect ac-worldserver --format '{{.Config.Image}}')"
+IMAGE="${DPSSIM_IMAGE:-$(docker inspect ac-worldserver --format '{{.Config.Image}}')}"
 CLIENT_DATA_VOLUME="$(docker inspect ac-worldserver --format '{{range .Mounts}}{{if eq .Type "volume"}}{{.Name}}{{end}}{{end}}')"
 
 if [[ -z "$NETWORK" || -z "$IMAGE" || -z "$CLIENT_DATA_VOLUME" ]]; then
@@ -248,6 +362,8 @@ DpsSim.TargetSpreadYards = 3
 DpsSim.Iterations = ${ITERATIONS}
 DpsSim.ReportPath = ${REPORT_CONTAINER_PATH}
 EOF
+if [[ -n "$HEAL_CONF" ]]; then printf '%s' "$HEAL_CONF" >> "$SCRATCH/etc/modules/dpssim.conf"; fi
+if [[ -n "${DPSSIM_EXTRA_CONF:-}" ]]; then printf '%b\n' "$DPSSIM_EXTRA_CONF" >> "$SCRATCH/etc/modules/dpssim.conf"; fi
 
 REPORTS_DIR="$REPO_ROOT/modules/mod-dpssim/reports"
 mkdir -p "$REPORTS_DIR"
@@ -255,10 +371,19 @@ BATCH_TS="$(date +%Y%m%d-%H%M%S)"
 # Multi-target batches carry the count in their file names ("<Profile>.T5.<ts>..."); T1 keeps the old names.
 BATCH_NAME="${PROFILE_NAME}"
 if [[ "$TARGETS" -gt 1 ]]; then BATCH_NAME="${PROFILE_NAME}.T${TARGETS}"; fi
+# Heal batches carry the group and the scenario tag ("<Profile>.party.pin50.<ts>...")
+if [[ "$IS_HEAL" -eq 1 ]]; then BATCH_NAME="${PROFILE_NAME}.${BATCH_SCENARIO}"; fi
 
-echo "Running '${PROFILE_NAME}' (${ITERATIONS} iteration(s), in one container) for ${DURATION_SECONDS}s" \
-    "(sim time) each at level ${LEVEL}, race ${RACE}, ${STEP_MS}ms step," \
-    "${TARGETS} target(s), rank ${TARGET_RANK}..." >&2
+if [[ "$IS_HEAL" -eq 1 ]]; then
+    echo "Running heal profile '${PROFILE_NAME}' (${ITERATIONS} iteration(s), in one container)" \
+        "for ${DURATION_SECONDS}s (sim time) each at level ${LEVEL}, race ${RACE}, ${STEP_MS}ms step," \
+        "group ${HEAL_GROUP}, scenario ${HEAL_TAG}," \
+        "infinite mana $([[ "$HEAL_INF" -eq 1 ]] && echo on || echo off)..." >&2
+else
+    echo "Running '${PROFILE_NAME}' (${ITERATIONS} iteration(s), in one container) for ${DURATION_SECONDS}s" \
+        "(sim time) each at level ${LEVEL}, race ${RACE}, ${STEP_MS}ms step," \
+        "${TARGETS} target(s), rank ${TARGET_RANK}..." >&2
+fi
 
 # --- throwaway characters DB ----------------------------------------------------------------------------------------
 # Structure of every live base table (CREATE TABLE ... LIKE keeps columns, keys and defaults), then the rows of only
@@ -319,6 +444,11 @@ if [[ $STATUS -ne 0 ]]; then
     tail -40 "$RUN_LOG" >&2
     exit 1
 fi
+# A heal run's per-iteration summary lines (the JSON reports carry the same numbers)
+if [[ "$IS_HEAL" -eq 1 ]]; then
+    { grep -E "heal mode - group|heal iteration [0-9]+/[0-9]+ - |healer DIED" "$RUN_LOG" || true; } \
+        | sed -E 's/^.*mod-dpssim: *//' >&2
+fi
 
 # Collect every iteration's report out of the scratch dir before the EXIT trap removes it, renaming
 # into $REPORTS_DIR under the same external naming convention (aggregate_reports.py, apps/
@@ -363,6 +493,8 @@ fi
 # Bake this run straight into SimProfileReport.html - single spec, no comparison slot, no
 # "load report" click needed, just open the file.
 HTML_PATH="$REPORTS_DIR/SimProfileReport.html"
+# Heal pages are baked to their own file, so a heal run never overwrites the last DPS page
+if [[ "$IS_HEAL" -eq 1 ]]; then HTML_PATH="$REPORTS_DIR/HealProfileReport.html"; fi
 python3 "$REPO_ROOT/modules/mod-dpssim/tools/build_report_html.py" "$HTML_PATH" \
     "$PROFILE_NAME" "$FINAL_PATH" >&2
 

@@ -29,9 +29,12 @@
 // manually via DpsSim.RunTests=1 (alongside DpsSim.Enabled=1) - see dpssim.conf.dist.
 namespace SimTests
 {
-    // Runs all three tests in one process boot (each construct-and-tear-down actor/target pair is
+    // Runs every test in one process boot (each construct-and-tear-down actor/target pair is
     // independent - see SimDaemon::RunOnce()'s own doc comment on why this is safe to call
-    // repeatedly) and logs a PASS/FAIL verdict for each plus a final summary line.
+    // repeatedly) and logs a PASS/FAIL verdict for each plus a final summary line. Besides the four
+    // damage-sim tests there are six healing-sim known-value tests (stage HS3, SimTests.cpp): they run
+    // real heal-mode batches with the healer's bot AI replaced by a scripted
+    // SimDaemon::RunConfig::HealStepHook. DpsSim.TestFilter picks a subset by key.
     void RunAll();
 }
 

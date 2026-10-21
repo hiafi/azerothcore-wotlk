@@ -4,6 +4,9 @@ sim-reports web viewer - lists and renders modules/mod-dpssim's DPS-sim report J
 (SimReport::WriteJson()'s schema, one per modules/mod-dpssim/tools/run-sim.sh run) without needing
 to hunt through modules/mod-dpssim/reports/ by hand or re-run a sim just to see a past result.
 
+Heal-mode reports ("kind": "heal", SimReport::WriteHealJson()) are listed beside the DPS ones and rendered through the
+heal template (build_report_html.render_report_html() picks the template by kind).
+
 Does no templating of its own for the report page itself - it imports
 render_report_html()/fetch_spell_names() straight from
 modules/mod-dpssim/tools/build_report_html.py (the same code run-sim.sh uses to bake
@@ -36,6 +39,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 REPORTS_DIR = REPO_ROOT / "modules" / "mod-dpssim" / "reports"
 BUILD_SCRIPT_PATH = REPO_ROOT / "modules" / "mod-dpssim" / "tools" / "build_report_html.py"
 LATEST_HTML_PATH = REPORTS_DIR / "SimProfileReport.html"
+LATEST_HEAL_HTML_PATH = REPORTS_DIR / "HealProfileReport.html"
 
 # modules/mod-dpssim has a hyphen, so it can't be a normal dotted import target - load
 # build_report_html.py by file path instead, same trick apps/wow-tools-webui/app.py uses for
@@ -53,10 +57,15 @@ build_report_html = _load_build_report_html()
 bp = Blueprint("reports", __name__, template_folder="templates", static_folder="static")
 
 # run-sim.sh's reports end up named "<Profile>.<YYYYMMDD-HHMMSS>.report.json", or
-# "<Profile>.T<N>.<YYYYMMDD-HHMMSS>.report.json" for an N > 1 target run - see its own FINAL_PATH construction.
+# "<Profile>.T<N>.<YYYYMMDD-HHMMSS>.report.json" for an N > 1 target run, or, for a heal run,
+# "<Profile>.<group>.<tag>.<YYYYMMDD-HHMMSS>.report.json" (group party|raid10|raid20, tag e.g. pin50, drain150,
+# x1a2b3c or pin50-inf) - see its own BATCH_NAME construction.
 # Sorting on the timestamp group (a plain string) sorts newest-first
 # correctly without parsing it into a real datetime, since the format is fixed-width and zero-padded.
-REPORT_FILENAME_RE = re.compile(r"^(?P<profile>.+?)(?:\.T(?P<targets>\d+))?\.(?P<timestamp>\d{8}-\d{6})\.report\.json$")
+REPORT_FILENAME_RE = re.compile(
+    r"^(?P<profile>.+?)"
+    r"(?:\.T(?P<targets>\d+)|\.(?P<group>party|raid10|raid20)\.(?P<tag>[A-Za-z0-9_-]+))?"
+    r"\.(?P<timestamp>\d{8}-\d{6})\.report\.json$")
 
 
 def _list_reports() -> list[dict]:
@@ -68,19 +77,36 @@ def _list_reports() -> list[dict]:
         m = REPORT_FILENAME_RE.match(path.name)
         if not m:
             continue
+        heal_name = m["group"] is not None
         try:
             data = json.loads(path.read_text())
         except (OSError, json.JSONDecodeError) as exc:
             runs.append({"filename": path.name, "profile": m["profile"], "timestamp": m["timestamp"],
+                         "kind": "heal" if heal_name else "dps", "group": m["group"], "tag": m["tag"],
                          "targets": int(m["targets"] or 1), "target_rank": "boss", "error": str(exc)})
             continue
         summary = data.get("summary", {})
         config = data.get("config", {})
+        if data.get("kind") == "heal":
+            agg = data.get("aggregate") or {}
+            # An aggregated report's deaths tile is the mean over every run; a single run's is its own count
+            deaths = agg.get("meanDeaths", summary.get("deaths"))
+            runs.append({
+                "filename": path.name, "profile": m["profile"], "timestamp": m["timestamp"], "error": None,
+                "kind": "heal", "group": config.get("group") or m["group"], "tag": m["tag"],
+                "infinite_mana": bool(config.get("infiniteMana")),
+                "rate": summary.get("hps"),
+                "total": (summary.get("effectiveHealing", 0) + summary.get("absorbHealing", 0))
+                if "effectiveHealing" in summary else None,
+                "cast_count": summary.get("castCount"), "crit_rate_pct": summary.get("critRatePct"),
+                "deaths": deaths, "duration_ms": config.get("durationMs"), "iterations": agg.get("iterations", 1),
+            })
+            continue
         runs.append({
             "filename": path.name, "profile": m["profile"], "timestamp": m["timestamp"],
-            "error": None, "dps": summary.get("dps"), "total_damage": summary.get("totalDamage"),
+            "error": None, "kind": "dps", "rate": summary.get("dps"), "total": summary.get("totalDamage"),
             "cast_count": summary.get("castCount"), "crit_rate_pct": summary.get("critRatePct"),
-            "duration_ms": config.get("durationMs"),
+            "duration_ms": config.get("durationMs"), "deaths": None,
             # reports from before multi-target support carry neither field: 1 boss dummy
             "targets": config.get("targetCount", int(m["targets"] or 1)),
             "target_rank": config.get("targetRank", "boss"),
@@ -102,6 +128,7 @@ def _resolve_report_path(filename: str) -> Path:
 def index():
     return render_template(
         "reports/index.html", runs=_list_reports(), has_latest=LATEST_HTML_PATH.is_file(),
+        has_latest_heal=LATEST_HEAL_HTML_PATH.is_file(),
     )
 
 
@@ -110,6 +137,13 @@ def latest():
     if not LATEST_HTML_PATH.is_file():
         abort(404, "No baked report yet - run modules/mod-dpssim/tools/run-sim.sh first.")
     return send_file(LATEST_HTML_PATH)
+
+
+@bp.route("/latest-heal")
+def latest_heal():
+    if not LATEST_HEAL_HTML_PATH.is_file():
+        abort(404, "No baked heal report yet - run modules/mod-dpssim/tools/run-sim.sh on a heal profile first.")
+    return send_file(LATEST_HEAL_HTML_PATH)
 
 
 @bp.route("/view/<path:filename>")
@@ -121,6 +155,9 @@ def view(filename: str):
     n = data.get("config", {}).get("targetCount") or (m and m["targets"])
     if m and n and int(n) > 1:
         label = f"{m['profile']} T{n} ({m['timestamp']})"
+    if m and m["group"]:
+        # a heal report (rendered through the heal template by render_report_html)
+        label = f"{m['profile']} {m['group']} {m['tag']} ({m['timestamp']})"
     html = build_report_html.render_report_html(data, label)
     return html
 

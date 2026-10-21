@@ -33,6 +33,38 @@ A dead pet is revived and a missing one tamed again. The pet's swings and spells
 read "(pet)" in the report). A hunter actor also gets the "Requires No Ammo" aura, so its ranged weapon needs no
 arrows. The run log shows what ran: "tamed pet ...", and "strategies resolved: combat [...], non-combat [...]".
 
+## Healing sim (heal mode)
+
+A profile with `Mode = Heal` (`conf/profiles/HolyPriestHealSim.conf`) runs the healing sim: the profile's class is the
+healer, it heals a party or raid of headless allies that a "Sim Raid Boss" damages with real hits. The healer is always
+one of the targets. Plan: `.agents/plans/healing-sim/healing-sim.PLAN.md`.
+
+```
+HEALSIM_GROUP=party HEALSIM_TARGETS=pin50 tools/run-sim.sh HolyPriestHealSim 60 60 1 3
+HEALSIM_TARGETS=drain:150 tools/run-sim.sh HolyPriestHealSim 120 60 1 3          # the group defaults to the profile's
+HEALSIM_INFINITE_MANA=1 HEALSIM_TARGETS=pin50 tools/run-sim.sh HolyPriestHealSim 60 60 1 3
+```
+
+- `HEALSIM_GROUP`: `party`, `raid10` or `raid20`. `HEALSIM_TARGETS`: the preset `pin50` / `pin20` (every member held at
+  that health by real hits: the pure-HPS measurement), `drain:<n>` (every member takes n damage a second, tanks 3x; the
+  survival measurement), or a full list such as `tank:drain:450, 3*dps:drain:150, self:drain:100`.
+  `HEALSIM_INFINITE_MANA=1` keeps the healer's mana full during the fight.
+- Profiles: `DiscPriestHealSim`, `HolyPriestHealSim` (Human, race 1), `RestoDruidHealSim` (Tauren, race 6) and
+  `HolyPaladinHealSim` (Human); each one's header has its talent decode, gear arithmetic and the sweep commands.
+  `NoHealerHealSim` is the harness test profile.
+- A heal run is at most 300 s and takes no `[targets]` argument.
+- Reports are `reports/<Profile>.<group>.<tag>.<ts>.report.json` (the tag is the preset, `x<hash>` for a custom list,
+  `-inf` for infinite mana) and the baked page is `reports/HealProfileReport.html`. `tools/aggregate_reports.py`
+  trims by HPS (a run with any death is never trimmed) and refuses to merge different scenarios;
+  `tools/heal-report-template.html` is the page. Pin scenarios read as HPS; drain scenarios read as deaths, overheal and
+  mana.
+- Known-value tests: `DpsSim.RunTests=1` (optionally `DpsSim.TestFilter=heal`) also runs six heal-mode tests (a Flash
+  Heal's amount, an undefended drain target's death, a Power Word: Shield's absorb, Renew's ticks, no pushback on a
+  pinned healer, Guardian Spirit's credit). They replace the healer's bot AI with a scripted cast
+  (`RunConfig::HealStepHook`) on an untalented, ungeared Priest. Run one with
+  `DPSSIM_EXTRA_CONF='DpsSim.RunTests = 1\nDpsSim.TestFilter = heal' tools/run-sim.sh NoHealerHealSim 10 60 1 1`
+  (the script then exits 1, as no report is written; keep the log with `DPSSIM_KEEP_LOG=1` and grep `[PASS]`/`[FAIL]`).
+
 ## The sim never touches the live characters DB
 
 The sim actor is a real `Player` with no `characters` row, and it creates pets, level-up mail and items whose ids come

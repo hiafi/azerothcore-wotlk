@@ -9,7 +9,8 @@ database itself - it exists so a past run is a click away in a browser instead o
 ## Why this isn't its own templating engine
 
 The actual report page (charts, tables, spell-name resolution) is one thing:
-`modules/mod-dpssim/tools/report-template.html`, filled in by
+`modules/mod-dpssim/tools/report-template.html` (`heal-report-template.html` for a `"kind": "heal"` report),
+filled in by
 `modules/mod-dpssim/tools/build_report_html.py`'s `render_report_html()`. This app imports
 that function directly (loaded by file path - `mod-dpssim` has a hyphen, so it can't be a
 normal dotted import) rather than re-implementing or shelling out to it, so a report viewed
@@ -19,7 +20,10 @@ live world DB.
 
 ## Routes (mounted at `/reports/` under apps/wow-tools-webui)
 
-- `/` - table of every `<Profile>[.T<N>].<timestamp>.report.json` (`T<N>` = N stacked target dummies; none = T1) under
+- `/` - table of every `<Profile>[.T<N>].<timestamp>.report.json` (`T<N>` = N stacked target dummies; none = T1) or heal
+  report `<Profile>.<group>.<tag>.<timestamp>.report.json` (group party|raid10|raid20, tag = the scenario: `pin50`,
+  `pin20`, `drain150`, `x<hash>` for a custom target list, `-inf` appended for infinite mana; the page shows kind, group
+  and tag, HPS, healing, casts, crit % and deaths for these) under
   `modules/mod-dpssim/reports/`, newest first, with each run's DPS/total damage/cast
   count/crit rate read straight from its `summary` block, plus its target count and rank (`T5 elite`; a report without
   those fields is `T1 boss`).
@@ -27,6 +31,7 @@ live world DB.
   written to disk - this is a GET, not a rebuild of `SimProfileReport.html`).
 - `/raw/<filename>` - the underlying report JSON, unmodified.
 - `/latest` - the most recently baked `SimProfileReport.html`, served as-is, if one exists.
+- `/latest-heal` - the same for the most recently baked heal page, `HealProfileReport.html`.
 
 ## Running it
 

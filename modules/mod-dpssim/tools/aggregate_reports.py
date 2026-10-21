@@ -37,6 +37,11 @@ Multi-target reports (config.targetCount > 1) are aggregated the same way, plus 
 runs). Reports whose targetCount or targetRank differ are refused: averaging a 1-target run with a 5-target run
 would be meaningless. A report from before multi-target support counts as targetCount 1, rank "boss".
 
+Heal reports ("kind": "heal", SimReport::WriteHealJson()) are aggregated by the same recipe in main_heal() below:
+trimmed by hps instead of dps, an iteration with a death (healer or ally) is never trimmed, the representative run is
+the median-hps kept one, and reports of a different group, HealTargets or infiniteMana are refused. The DPS path above
+is untouched.
+
 Usage:
     aggregate_reports.py <output.json> <report1.json> [<report2.json> ...]
 """
@@ -177,6 +182,181 @@ def aggregate_targets(reports: list[dict], kept_idx: set[int]) -> list[dict]:
             for idx, dmg in enumerate(damages)]
 
 
+# ---------------------------------------------------------------------------------------------------------------------
+# Heal reports (SimReport::WriteHealJson()'s schema, "kind": "heal")
+# ---------------------------------------------------------------------------------------------------------------------
+
+# Summary fields that are always numbers; averaged over the kept runs.
+HEAL_SUMMARY_KEYS = [
+    "elapsedMs", "effectiveHealing", "rawHealing", "overhealing", "overhealPct", "healAbsorbed", "absorbHealing",
+    "hps", "rawHps", "hpsBeforeOom", "castCount", "triggeredCasts", "critRatePct", "manaSpent", "healingPerMana",
+    "deaths", "resurrections", "damageDone", "dps", "wallClockMs", "pinHits", "pinRaises", "drainHits",
+    "driverCastFailures",
+]
+# Summary fields that are null when the event never happened in a run: averaged over the kept runs where it did, with
+# the number of such runs next to it ("<key>Runs" in the aggregate summary).
+HEAL_NULLABLE_SUMMARY_KEYS = ["oomAtMs", "firstDeathAtMs", "actorDiedAtMs"]
+# Per-spell fields averaged (a spell missing from a kept run counts as 0 for that run)
+HEAL_SPELL_SUM_KEYS = ["casts", "hits", "ticks", "crits", "effective", "overheal", "healAbsorbed", "absorbed", "events",
+                       "total", "manaSpent"]
+# Per-target fields averaged over the kept runs
+HEAL_TARGET_MEAN_KEYS = ["maxHealth", "healingReceived", "effectiveReceived", "absorbReceived", "overheal",
+                         "damageRequested", "damageMitigated", "damageAbsorbed", "damageTaken", "damagePrevented",
+                         "deaths", "minHealthPct", "avgHealthPct", "msBelow35Pct", "pinHits", "pinRaises"]
+# Per-run timelines taken verbatim from the representative run
+HEAL_TIMELINE_KEYS = ["heals", "absorbs", "damageTaken", "healthSamples", "deaths", "resurrections",
+                      "groupAuraEvents", "casts", "manaSamples"]
+
+
+def heal_setup(r: dict) -> tuple:
+    c = r.get("config", {})
+    return c.get("group"), c.get("healTargets"), bool(c.get("infiniteMana", False))
+
+
+# Like trim_by_dps(), on hps. An iteration with a death (a healer or ally dying) is never trimmed, from either end: a
+# run that lost someone must stay in the headline means.
+def trim_by_hps(reports: list[dict]) -> tuple[set[int], list[float], list[float]]:
+    n = len(reports)
+    k = int(n * TRIM_FRACTION)
+    order = sorted(range(n), key=lambda i: reports[i]["summary"]["hps"])
+    died = {i for i, r in enumerate(reports) if r["summary"].get("deaths", 0) > 0}
+    dropped_low_idx = [i for i in order[:k] if i not in died]
+    dropped_high_idx = [i for i in (order[n - k:] if k > 0 else []) if i not in died]
+    kept_idx = set(range(n)) - set(dropped_low_idx) - set(dropped_high_idx)
+    dropped_low = sorted(reports[i]["summary"]["hps"] for i in dropped_low_idx)
+    dropped_high = sorted(reports[i]["summary"]["hps"] for i in dropped_high_idx)
+    return kept_idx, dropped_low, dropped_high
+
+
+# The kept run whose hps sits at or just below the kept set's median (an actual run, see median_report())
+def median_heal_report(reports: list[dict], kept_idx: set[int]) -> dict:
+    kept = [reports[i] for i in sorted(kept_idx)]
+    by_hps = sorted(kept, key=lambda r: r["summary"]["hps"])
+    median_hps = statistics.median_low(r["summary"]["hps"] for r in kept)
+    return next(r for r in by_hps if r["summary"]["hps"] == median_hps)
+
+
+def aggregate_heal_summary(reports: list[dict], kept_idx: set[int]) -> tuple[dict, dict, dict]:
+    trimmed: dict = {}
+    raw: dict = {}
+    per_iteration: dict = {}
+    for key in HEAL_SUMMARY_KEYS:
+        values = [r["summary"].get(key, 0) for r in reports]
+        per_iteration[key] = values
+        raw[key] = mean(values)
+        trimmed[key] = mean([v for i, v in enumerate(values) if i in kept_idx])
+    for key in HEAL_NULLABLE_SUMMARY_KEYS:
+        values = [r["summary"].get(key) for r in reports]
+        per_iteration[key] = values
+        for target, picked in ((raw, [v for v in values if v is not None]),
+                               (trimmed, [v for i, v in enumerate(values) if i in kept_idx and v is not None])):
+            target[key] = mean(picked) if picked else None
+            target[key + "Runs"] = len(picked)
+    return trimmed, raw, per_iteration
+
+
+def aggregate_heal_spells(reports: list[dict], kept_idx: set[int]) -> list[dict]:
+    kept = [r for i, r in enumerate(reports) if i in kept_idx]
+    per_report = [{(s["spellId"], s.get("isPet", False)): s for s in r.get("spells", [])} for r in kept]
+    all_ids = set().union(*[set(d) for d in per_report]) if per_report else set()
+    merged = []
+    for spell_id, is_pet in all_ids:
+        row = {"spellId": spell_id, "isPet": is_pet}
+        for key in HEAL_SPELL_SUM_KEYS:
+            row[key] = mean([d[(spell_id, is_pet)][key] if (spell_id, is_pet) in d else 0 for d in per_report])
+        # Max, not mean: a property of the spell, like targetsHit in the DPS aggregate
+        row["targetsHit"] = max((d[(spell_id, is_pet)]["targetsHit"] for d in per_report if (spell_id, is_pet) in d),
+                                default=0)
+        raw = row["effective"] + row["overheal"] + row["healAbsorbed"]
+        row["overhealPct"] = 100.0 * row["overheal"] / raw if raw > 0 else 0.0
+        row["avgHit"] = row["total"] / row["events"] if row["events"] > 0 else 0.0
+        row["hpm"] = row["total"] / row["manaSpent"] if row["manaSpent"] > 0 else None
+        merged.append(row)
+    grand = sum(row["total"] for row in merged)
+    for row in merged:
+        row["pctOfTotal"] = 100.0 * row["total"] / grand if grand > 0 else 0.0
+    merged.sort(key=lambda s: (s["total"], s["manaSpent"]), reverse=True)
+    return merged
+
+
+def aggregate_heal_targets(reports: list[dict], kept_idx: set[int], representative: dict) -> list[dict]:
+    kept = [r.get("targets", []) for i, r in enumerate(reports) if i in kept_idx]
+    merged = []
+    for idx, base in enumerate(representative.get("targets", [])):
+        rows = [t[idx] for t in kept if idx < len(t)]
+        row = {k: base[k] for k in ("index", "role", "mode", "value", "percent", "subgroup")}
+        for key in HEAL_TARGET_MEAN_KEYS:
+            row[key] = mean([x[key] for x in rows])
+        died = [x["diedAtMs"] for x in rows if x.get("diedAtMs") is not None]
+        row["diedAtMs"] = mean(died) if died else None
+        row["diedRuns"] = len(died)
+        row["worstMinHealthPct"] = min((x["minHealthPct"] for x in rows), default=0.0)
+        merged.append(row)
+    return merged
+
+
+def main_heal(out_path: Path, report_paths: list[Path], reports: list[dict]) -> int:
+    for path, r in zip(report_paths, reports):
+        if heal_setup(r) != heal_setup(reports[0]):
+            g0, t0, m0 = heal_setup(reports[0])
+            g1, t1, m1 = heal_setup(r)
+            print(f"error: refusing to aggregate heal reports of different scenarios: {report_paths[0].name} has "
+                  f"group {g0!r} / HealTargets {t0!r} / infiniteMana {m0}, {path.name} has group {g1!r} / "
+                  f"HealTargets {t1!r} / infiniteMana {m1}", file=sys.stderr)
+            return 1
+
+    kept_idx, dropped_low, dropped_high = trim_by_hps(reports)
+    summary, raw_mean, per_iteration = aggregate_heal_summary(reports, kept_idx)
+    representative = median_heal_report(reports, kept_idx)
+    death_lists = [r.get("deaths", []) for r in reports]
+    death_counts = [r["summary"].get("deaths", 0) for r in reports]
+    actor_deaths = [r["summary"]["actorDiedAtMs"] for r in reports if r["summary"].get("actorDiedAtMs") is not None]
+    merged = {
+        "kind": "heal",
+        "config": representative["config"],
+        "summary": summary,
+        "spells": aggregate_heal_spells(reports, kept_idx),
+        "targets": aggregate_heal_targets(reports, kept_idx, representative),
+    }
+    for key in HEAL_TIMELINE_KEYS:
+        merged[key] = representative.get(key, [])
+    merged["aggregate"] = {
+        "iterations": len(reports),
+        # Over ALL iterations (the headline deaths tile): death runs are never trimmed, but the trimmed means above
+        # still leave out the few non-death runs that were
+        "meanDeaths": mean(death_counts),
+        "deathIterations": sum(1 for c in death_counts if c > 0),
+        "deathCounts": death_counts,
+        "deathLists": death_lists,
+        "actorDeathCount": len(actor_deaths),
+        "actorDiedAtMs": actor_deaths,
+        "sourceReports": [p.name for p in report_paths],
+        "representativeHps": representative["summary"]["hps"],
+        "trim": {
+            "fraction": TRIM_FRACTION,
+            "droppedLowCount": len(dropped_low),
+            "droppedHighCount": len(dropped_high),
+            "keptCount": len(kept_idx),
+            "droppedLowHps": dropped_low,
+            "droppedHighHps": dropped_high,
+            "rawMean": raw_mean,
+        },
+        "perIteration": per_iteration,
+    }
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(merged))
+    print(f"wrote {out_path} (heal: trimmed mean over {len(kept_idx)}/{len(reports)} iterations, "
+          f"dropped {len(dropped_low)} low + {len(dropped_high)} high)")
+    if any(death_counts):
+        print(f"NOTE: {merged['aggregate']['deathIterations']}/{len(reports)} iterations had a death "
+              f"(mean {merged['aggregate']['meanDeaths']:.2f} per iteration); those iterations are never trimmed.")
+    if actor_deaths:
+        print(f"WARNING: the healer DIED in {len(actor_deaths)}/{len(reports)} iterations (at sim ms {actor_deaths}); "
+              f"those iterations are scored on the full duration.")
+    return 0
+
+
 def main() -> int:
     if len(sys.argv) < 3:
         print(__doc__, file=sys.stderr)
@@ -185,6 +365,14 @@ def main() -> int:
     out_path = Path(sys.argv[1])
     report_paths = [Path(p) for p in sys.argv[2:]]
     reports = [json.loads(p.read_text()) for p in report_paths]
+
+    # A heal report carries "kind": "heal"; a DPS report has no kind. The two are never merged.
+    kinds = {r.get("kind", "dps") for r in reports}
+    if len(kinds) > 1:
+        print(f"error: refusing to aggregate reports of different kinds: {sorted(kinds)}", file=sys.stderr)
+        return 1
+    if kinds == {"heal"}:
+        return main_heal(out_path, report_paths, reports)
 
     for path, r in zip(report_paths, reports):
         if target_count(r) != target_count(reports[0]) or target_rank(r) != target_rank(reports[0]):

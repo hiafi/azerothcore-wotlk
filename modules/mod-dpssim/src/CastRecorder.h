@@ -79,6 +79,9 @@ public:
         // The index of the cast's explicit unit target among the dummies, or -1 (self, no unit target, a ground
         // target or a unit that isn't a dummy). Shows a DoT spread across the pack.
         int8 TargetIndex;
+        // Spell::GetPowerCost() at cast time: the cost the cast paid in its power type (mana for a healer), 0 for a
+        // free or triggered spell. Lets the healing report work out healing per mana for each spell.
+        int32 PowerCost;
     };
     [[nodiscard]] std::vector<CastEvent> const& GetCastEvents() const { return _castEvents; }
 
