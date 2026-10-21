@@ -25,6 +25,7 @@
 #include "SimProfile.h"
 #include "SimReport.h"
 #include "SimTests.h"
+#include "StringFormat.h"
 #include "Timer.h"
 #include "Util.h"
 #include <algorithm>
@@ -223,6 +224,15 @@ void DpsSimWorldScript::OnDpsSimRun()
                     {
                         valid = false;
                         error = "AllyTankTalents is empty - the tank allies need a Protection talent string";
+                    }
+
+                    if (valid && config.DurationMs > SimHeal::MAX_HEAL_DURATION_MS)
+                    {
+                        // A dead ally releases its spirit after 6 minutes and leaves its slot
+                        valid = false;
+                        error = Acore::StringFormat("DpsSim.DurationSeconds {} is over the {} s limit of a heal run (a "
+                            "dead ally would release its spirit after 6 minutes)", config.DurationMs / 1000,
+                            SimHeal::MAX_HEAL_DURATION_MS / 1000);
                     }
 
                     if (!valid)

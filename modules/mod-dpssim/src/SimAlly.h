@@ -55,8 +55,8 @@ public:
     // a Rogue)
     static uint8 ClassFor(SimHeal::Role role, uint8 race);
 
-    // Moves the BASE part of `player`'s health modifier so that its unbuffed max health is exactly `maxHealth` (plan R4),
-    // and fills it. Also used for the healer's own slot.
+    // Moves the BASE part of `player`'s health modifier so that its unbuffed max health is exactly `maxHealth` (plan
+    // R4), and fills it. Also used for the healer's own slot.
     static void PinBaseMaxHealth(Player* player, uint32 maxHealth);
 
     // Builds the Player, spends the talents, pins the base max health and fills it. False (logging why) on failure.
@@ -64,8 +64,21 @@ public:
 
     [[nodiscard]] Player* GetPlayer() const { return _actor.GetPlayer(); }
 
+    // If the ally is no longer standing at its slot on its start map (a teleport nobody acknowledged, or a spirit that
+    // released at a graveyard), acknowledges any pending teleport, puts it back and logs a warning. Dead or ghost, it
+    // is left for the caller to resurrect. True when it had to be moved.
+    bool ReturnToSlot();
+
 private:
+    // The teleport acknowledgements a client would send; the ally has no client and no PlayerbotAI
+    void AcknowledgeTeleport();
+
     SimActor _actor;
+    uint32 _slotMapId = 0;
+    float _slotX = 0.0f;
+    float _slotY = 0.0f;
+    float _slotZ = 0.0f;
+    float _slotO = 0.0f;
 };
 
 #endif

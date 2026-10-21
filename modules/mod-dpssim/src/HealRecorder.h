@@ -24,20 +24,17 @@
 #include <vector>
 
 // The healing sim's counterpart of EventRecorder (plan .agents/plans/healing-sim/healing-sim.PLAN.md, section 4):
-// records
-// what the healer, its pets, guardians and totems do for the group, and what the boss does to it.
+// records what the healer, its pets, guardians and totems do for the group, and what the boss does to it.
 //
 //  - Heals: OnHealFinal (UNITHOOK_ON_HEAL_FINAL, the HS0 core hook), one event per direct heal or HoT tick from the
 //    healer side to a group member, with the amount before heal-absorb, the effective amount, the overheal and the
 //    crit/periodic flags. Zero-amount events (a Spirit Shell style shield-converted heal) are skipped. Heals to
-//    anything
-//    outside the group (the boss, a pet) are ignored.
+//    anything outside the group (the boss, a pet) are ignored.
 //  - Absorbs: OnAbsorbFinal (UNITHOOK_ON_ABSORB_FINAL), one event per shield that took damage off a group member,
-//  attributed
-//    through the shield's caster. Counted as healing in the headline, as meters do.
+//    attributed through the shield's caster. Counted as healing in the headline, as meters do.
 //  - Damage taken: OnSpellDamageTakenFinal for the boss's two spells only (Sim Damage Pulse / Sim Pin Hit), with the
-//    shield absorption of the same hit added from the absorb events that follow it in the same call
-//    (Unit::CalculateSpellDamageTaken fires the damage hook, then runs the absorb loop).
+//    amount the driver asked for (BeginHit) and the shield absorption of the same hit added from the absorb events that
+//    follow it in the same call (Unit::CalculateSpellDamageTaken fires the damage hook, then runs the absorb loop).
 //  - Auras applied to and removed from group members, for HoT and shield uptime.
 //
 // Attribution to the healer follows EventRecorder::AttributeToActor(): the actor itself, or anything it owns, charms or
@@ -57,6 +54,12 @@ public:
         bool isCrit) override;
     void OnAuraApply(Unit* unit, Aura* aura) override;
     void OnAuraRemove(Unit* unit, AuraApplication* aurApp, AuraRemoveMode mode) override;
+
+    // The scenario's hit driver brackets each cast of the Sim Damage Pulse / Sim Pin Hit: BeginHit() tells the recorder
+    // which target the hit is aimed at and how much damage was asked for (stored as DamageEvent::Requested), EndHit()
+    // closes the hit, so an absorb that comes later cannot be linked to its damage event
+    void BeginHit(uint8 targetIndex, uint32 requested);
+    void EndHit();
 
     // Clears every recorded event, between iterations (see EventRecorder::Reset())
     void Reset();
@@ -85,8 +88,13 @@ private:
     std::vector<SimHeal::GroupAuraEvent> _auraEvents;
 
     // The damage event the absorb events that follow it belong to: set by a boss hit, read by the absorbs of the same
-    // CalculateSpellDamageTaken call, -1 otherwise
+    // CalculateSpellDamageTaken call, -1 otherwise (cleared by the next damage hook of any spell, and by EndHit())
     int32 _openDamage = -1;
+
+    // The hit BeginHit() announced: its target and requested amount, valid until EndHit()
+    bool _hitOpen = false;
+    uint8 _hitTarget = 0;
+    uint32 _hitRequested = 0;
 };
 
 #endif

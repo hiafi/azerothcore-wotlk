@@ -164,11 +164,10 @@ namespace SimDaemon
 
         // ---- Heal mode (RunMode == Mode::Heal) ----
         // The actor is the healer. It heals a group of HealGroupSize members (HealTargets, one per member in index
-        // order,
-        // the healer's own slot included) that a boss damages with real hits; see SimHealScenario.h. The profile's
-        // Mode / HealGroup / HealTargets / Ally* / DrainPulseMs keys, with DpsSim.HealGroup / DpsSim.HealTargets in the
-        // conf
-        // overriding the first two (DpsSim.cpp). TargetCount, TargetRank and the dummy settings play no part.
+        // order, the healer's own slot included) that a boss damages with real hits; see SimHealScenario.h. The
+        // profile's Mode / HealGroup / HealTargets / Ally* / DrainPulseMs keys, with DpsSim.HealGroup /
+        // DpsSim.HealTargets in the conf overriding the first two (DpsSim.cpp). TargetCount, TargetRank and the dummy
+        // settings play no part.
         Mode RunMode = Mode::Dps;
         uint32 HealGroupSize = SimHeal::PARTY_SIZE;
         std::vector<SimHeal::TargetSpec> HealTargets;
@@ -268,8 +267,7 @@ namespace SimDaemon
         // ---- Heal mode (RunConfig::RunMode == Mode::Heal; empty in a DPS run) ----
         // Timestamps are ms since the iteration start. In a heal run the DPS fields above describe the healer's damage
         // to the boss (the EventRecorder pointed at it), CastEvents' TargetIndex is the group member index, and the
-        // mana
-        // samples are the healer's.
+        // mana samples are the healer's.
         bool HealMode = false;
         // One per group member in target index order: role, mode, raid subgroup and max health at the pull
         std::vector<SimHeal::TargetInfo> HealTargetInfo;
@@ -280,9 +278,8 @@ namespace SimDaemon
         std::vector<SimHeal::HealthSample> HealthSamples;
         std::vector<SimHeal::LifeEvent> Deaths;
         std::vector<SimHeal::LifeEvent> Resurrections;
-        // The damage drivers' counters: Sim Pin Hits and Sim Damage Pulses cast, raw SetHealth raises after a pin hit
-        // left a
-        // target below its pin (a high count means the pin formula is off), and boss casts that failed
+        // The damage drivers' counters: Sim Pin Hits and Sim Damage Pulses landed, raw SetHealth raises after a pin hit
+        // left a target below its pin (a high count means the pin formula is off), and boss casts that failed
         uint32 PinHits = 0;
         uint32 PinRaises = 0;
         uint32 DrainHits = 0;

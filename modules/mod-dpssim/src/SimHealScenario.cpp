@@ -20,6 +20,7 @@
 #include "Creature.h"
 #include "Group.h"
 #include "GroupMgr.h"
+#include "HealRecorder.h"
 #include "Log.h"
 #include "Map.h"
 #include "ObjectAccessor.h"
@@ -38,8 +39,7 @@
 namespace
 {
     // The boss stands this far past the centre of the group, away from the healer: close enough for a healer's DPS
-    // spells
-    // (it may attack the boss; R5), far enough to read as a separate target
+    // spells (it may attack the boss; R5), far enough to read as a separate target
     constexpr float BOSS_DISTANCE_BEYOND_GROUP = 14.0f;
 
     // The group's centre, in front of the healer (the same 8 yd as the DPS sim's primary dummy)
@@ -50,6 +50,10 @@ namespace
 
     // The boss's pool; the AI clamps damage to health - 1 and tops it up, so it is only for display
     constexpr float BOSS_MAX_HEALTH = 100000000.0f;
+
+    // The extra damage a pin hit may carry to beat the 1-point truncation of a damage reduction (see Step()). Its upper
+    // bound, and the most a hit can overshoot the pin by
+    constexpr uint32 PIN_STUCK_MAX = 16;
 
     // Health a pinned target is held at: `percent` of its current max health, rounded down
     uint32 PinHealth(uint32 maxHealth, float percent)
@@ -117,11 +121,7 @@ bool SimHealScenario::Create(Player* healer, Setup const& setup)
     _drainPulseMs = setup.DrainPulseMs;
     _pinMaxHealth = setup.PinMaxHealth;
 
-    if (!CreateBoss(healer) || !CreateAllies(healer, setup) || !CreateGroup(healer, setup))
-        return false;
-
-    LogRoles();
-    return true;
+    return CreateBoss(healer) && CreateAllies(healer, setup) && CreateGroup(healer, setup);
 }
 
 bool SimHealScenario::CreateBoss(Player* healer)
@@ -235,7 +235,17 @@ bool SimHealScenario::CreateAllies(Player* healer, Setup const& setup)
     }
 
     _mainTank = _members[mainTankIndex];
-    SimHealBoss::SetMainTank(_mainTank->GetGUID());
+
+    // The boss's victim: the main tank, the other tanks in index order when it is dead, then anyone alive
+    std::vector<ObjectGuid> victimOrder;
+    victimOrder.push_back(_mainTank->GetGUID());
+    for (size_t i = 0; i < size; ++i)
+        if (_members[i] != _mainTank && setup.Targets[i].TargetRole == SimHeal::Role::Tank)
+            victimOrder.push_back(_members[i]->GetGUID());
+    for (size_t i = 0; i < size; ++i)
+        if (std::find(victimOrder.begin(), victimOrder.end(), _members[i]->GetGUID()) == victimOrder.end())
+            victimOrder.push_back(_members[i]->GetGUID());
+    SimHealBoss::SetVictimOrder(victimOrder);
     return true;
 }
 
@@ -341,6 +351,11 @@ void SimHealScenario::ResetAllies()
     for (std::unique_ptr<SimAlly> const& ally : _allies)
     {
         Player* player = ally->GetPlayer();
+
+        // A dead ally that stayed dead for 6 minutes released its spirit (the run length guard keeps that from
+        // happening; this is the net under it): back to its slot before anything else
+        ally->ReturnToSlot();
+
         if (!player->IsAlive())
         {
             // false: no ghost/aura rows - the ally has no characters row (SimActor.cpp, zero SQL)
@@ -353,6 +368,15 @@ void SimHealScenario::ResetAllies()
         player->RemoveAppliedAuras(removeNonPassive);
         player->SetFullHealth();
     }
+}
+
+void SimHealScenario::RecordDeath(size_t index)
+{
+    if (index >= _wasAlive.size() || !_wasAlive[index])
+        return;
+
+    _deaths.push_back({getMSTime(), uint8(index)});
+    _wasAlive[index] = false;
 }
 
 void SimHealScenario::EndCombat()
@@ -418,18 +442,29 @@ uint32 SimHealScenario::DrainAmount(SimHeal::TargetSpec const& spec, Player* tar
     return std::max(1u, uint32(spec.Value + 0.5f));
 }
 
-void SimHealScenario::CastHit(uint32 spellId, Player* target, int32 amount)
+bool SimHealScenario::CastHit(uint32 spellId, size_t targetIndex, int32 amount)
 {
+    Player* target = _members[targetIndex];
+
+    // The recorder learns the request, so a damage event can tell mitigation from the hit the driver asked for
+    if (_recorder)
+        _recorder->BeginHit(uint8(targetIndex), uint32(std::max(amount, 0)));
+
     // HS0 report section 4: the full triggered mask minus DISALLOW_PROC_EVENTS, so the victim's taken-damage procs
     // (Prayer of Mending, Earth Shield, ...) fire as they would from a real boss cast
     SpellCastResult const result = _boss->CastCustomSpell(spellId, SPELLVALUE_BASE_POINT0, amount, target,
         TriggerCastFlags(TRIGGERED_FULL_MASK & ~TRIGGERED_DISALLOW_PROC_EVENTS));
-    if (result != SPELL_CAST_OK)
-    {
-        if (++_castFailures <= 5)
-            LOG_WARN("server.dpssim", "mod-dpssim: the boss's cast of spell {} on '{}' for {} failed: SpellCastResult "
-                "{}.", spellId, target->GetName(), amount, uint32(result));
-    }
+
+    if (_recorder)
+        _recorder->EndHit();
+
+    if (result == SPELL_CAST_OK)
+        return true;
+
+    if (++_castFailures <= 5)
+        LOG_WARN("server.dpssim", "mod-dpssim: the boss's cast of spell {} on '{}' for {} failed: SpellCastResult {}.",
+            spellId, target->GetName(), amount, uint32(result));
+    return false;
 }
 
 void SimHealScenario::UpdateLife()
@@ -477,8 +512,9 @@ void SimHealScenario::Step(uint32 elapsedMs)
     if (!outOfCombat.empty())
         SimHealBoss::Engage(_boss, outOfCombat);
 
-    // Drain: every DrainPulseMs, the Sim Damage Pulse on every living draining target
-    if (elapsedMs >= _nextDrainMs)
+    // Drain: every DrainPulseMs, the Sim Damage Pulse on every living draining target. A step longer than the pulse
+    // interval delivers every pulse that fell due in it.
+    while (elapsedMs >= _nextDrainMs)
     {
         _nextDrainMs += _drainPulseMs;
         for (size_t i = 0; i < _members.size(); ++i)
@@ -487,15 +523,16 @@ void SimHealScenario::Step(uint32 elapsedMs)
             if (_specs[i].Kind != SimHeal::ModeKind::Drain || !member->IsAlive())
                 continue;
 
-            CastHit(SimHeal::SPELL_DAMAGE_PULSE, member, int32(DrainAmount(_specs[i], member)));
-            ++_drainHits;
+            if (CastHit(SimHeal::SPELL_DAMAGE_PULSE, i, int32(DrainAmount(_specs[i], member))))
+                ++_drainHits;
         }
     }
 
-    // Pin: every step, each living pinned target above its pin takes the Sim Pin Hit for the distance to the pin plus
-    // the shields it still has, so the hit uses them up and lands the target on the pin. Damage reduction or
-    // resilience can leave it above the pin, and the next step hits again; an overestimate that leaves it below the
-    // pin is lifted back with a raw SetHealth, which no recorder sees (counted in _pinRaises).
+    // Pin: every step, each living pinned target above its pin, or with a shield still on it, takes the Sim Pin Hit for
+    // the distance to the pin plus the shields it has, so the hit uses every shield up (ruling D2) and lands the target
+    // on the pin. Damage reduction or resilience can leave it above the pin, and the next step hits again; an
+    // overestimate that leaves it below the pin is lifted back with a raw SetHealth, which no recorder sees (counted in
+    // _pinRaises).
     for (size_t i = 0; i < _members.size(); ++i)
     {
         Player* member = _members[i];
@@ -503,25 +540,36 @@ void SimHealScenario::Step(uint32 elapsedMs)
             continue;
 
         uint32 const pin = PinHealth(member->GetMaxHealth(), _specs[i].Value);
-        if (member->GetHealth() <= pin)
+        uint32 const excess = member->GetHealth() > pin ? member->GetHealth() - pin : 0;
+        int64 const shields = AbsorbRemaining(member);
+        if (excess == 0 && shields <= 0)
+        {
+            // At (or below) the pin with nothing to consume: nothing to do, and nothing left to be stuck on
+            _pinStuck[i] = 0;
+            continue;
+        }
+
+        // The request is the distance to the pin plus the shields, plus up to PIN_STUCK_MAX more points while hits make
+        // no progress: a 3% damage reduction truncates a 1-point hit to 0 and would leave the target one point above
+        // its pin for ever. The extra is bounded three ways (the clamp, the cap below, and half the pin) so it can only
+        // overshoot into a small SetHealth raise, never into a death, whatever the target does meanwhile (an immune
+        // target that cannot be hit builds the counter up to the clamp and stops there). A hit that comes up short by
+        // the reduction is simply repeated by the next step. (The share that got through is not learned from the
+        // health change: a taken-damage proc such as Prayer of Mending heals the target inside the same cast.)
+        uint32 const stuck = std::min({_pinStuck[i], PIN_STUCK_MAX, pin / 2});
+        int64 const cap = std::min<int64>(int64(excess) + shields + PIN_STUCK_MAX, INT32_MAX);
+        int32 const amount = int32(std::min<int64>(int64(excess) + shields + stuck, cap));
+        uint32 const before = member->GetHealth();
+        if (!CastHit(SimHeal::SPELL_PIN_HIT, i, amount))
             continue;
 
-        // The request is the distance to the pin plus the shields, plus one more point for every step in a row the target
-        // did not move: a 3% damage reduction truncates a 1-point hit to 0 and would leave the target one point above its
-        // pin for ever. A hit that comes up short by the reduction is simply repeated by the next step. Capped well short
-        // of the target's health, so a bad estimate overshoots into a small SetHealth raise and never into a death.
-        // (The share that got through is not learned from the health change: a taken-damage proc such as Prayer of
-        // Mending heals the target inside the same cast.)
-        uint32 const excess = member->GetHealth() - pin;
-        int64 const shields = AbsorbRemaining(member);
-        int64 const cap = std::min<int64>(2 * int64(excess) + shields + 16, INT32_MAX);
-        int32 const amount = int32(std::min<int64>(int64(excess) + shields + _pinStuck[i], cap));
-        uint32 const before = member->GetHealth();
-        CastHit(SimHeal::SPELL_PIN_HIT, member, amount);
-        uint32 const delivered = member->IsAlive() && before > member->GetHealth() ? before - member->GetHealth() : 0;
-        _pinStuck[i] = delivered == 0 ? _pinStuck[i] + 1 : 0;
         ++_pinHits;
         ++_targetPinHits[i];
+
+        // Progress: health went down, or a shield took part of the hit. Only a hit that moved neither counts as stuck
+        uint32 const delivered = member->IsAlive() && before > member->GetHealth() ? before - member->GetHealth() : 0;
+        bool const progress = delivered > 0 || !member->IsAlive() || AbsorbRemaining(member) < shields;
+        _pinStuck[i] = progress ? 0 : std::min(_pinStuck[i] + 1, PIN_STUCK_MAX);
 
         if (member->IsAlive() && member->GetHealth() < pin)
         {

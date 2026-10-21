@@ -79,6 +79,9 @@ void HealRecorder::OnHealFinal(Unit* healer, Unit* target, SpellInfo const* spel
 void HealRecorder::OnSpellDamageTakenFinal(Unit* target, Unit* attacker, int32 damage, SpellInfo const* spellInfo,
     bool /*isCrit*/)
 {
+    // Whatever absorb comes next belongs to this damage, not to an older boss hit
+    _openDamage = -1;
+
     if (!spellInfo || !target || !attacker)
         return;
 
@@ -91,8 +94,24 @@ void HealRecorder::OnSpellDamageTakenFinal(Unit* target, Unit* attacker, int32 d
         return;
 
     uint32 const raw = damage > 0 ? uint32(damage) : 0;
-    _damageEvents.push_back({getMSTime(), uint8(targetIndex), pin, raw, 0, raw});
+    // Without a BeginHit() for this target (not expected: the scenario's driver is the only caster) nothing is known
+    // about mitigation, so the request reads as the hit itself
+    uint32 const requested = _hitOpen && _hitTarget == uint8(targetIndex) ? _hitRequested : raw;
+    _damageEvents.push_back({getMSTime(), uint8(targetIndex), pin, requested, raw, 0, raw});
     _openDamage = int32(_damageEvents.size()) - 1;
+}
+
+void HealRecorder::BeginHit(uint8 targetIndex, uint32 requested)
+{
+    _hitOpen = true;
+    _hitTarget = targetIndex;
+    _hitRequested = requested;
+}
+
+void HealRecorder::EndHit()
+{
+    _hitOpen = false;
+    _openDamage = -1;
 }
 
 void HealRecorder::OnAbsorbFinal(Unit* victim, Unit* attacker, AuraEffect const* absorbAurEff, uint32 absorbed)
@@ -180,4 +199,5 @@ void HealRecorder::Reset()
     _damageEvents.clear();
     _auraEvents.clear();
     _openDamage = -1;
+    _hitOpen = false;
 }

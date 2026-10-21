@@ -185,15 +185,16 @@ namespace SimProfile
         std::string HealGroup;
         std::string HealTargets;
 
-        // Max health of the headless allies, per role. Only the BASE part of the health modifier is pinned, so
-        // Fortitude, Mark of the Wild and Kings still add as in game (plan R4).
+        // Max health of the headless allies, per role (at least 1,000). Only the BASE part of the health modifier is
+        // pinned, so Fortitude, Mark of the Wild and Kings still add as in game (plan R4).
         uint32 AllyMaxHealthTank = 9000;
         uint32 AllyMaxHealthDps = 5000;
 
-        // Max health of every PINNED target, the healer's own slot included (`PinMaxHealth`, default 30,000), instead of
-        // the role values above, which then only apply to drain targets. A huge pool cannot be filled by the heals that land
-        // between two pin hits, so a pinned target has no overheal and a percent-of-max-health pin is not a tiny number.
-        // Note that heals and shields scaled by max health are scaled with it. Same BASE-only pin as the allies' health.
+        // Max health of every PINNED target, the healer's own slot included (`PinMaxHealth`, default 30,000, at least
+        // 1,000), instead of the role values above, which then only apply to drain targets. A big pool cannot be filled
+        // by the heals that land between two pin hits, so a pinned target has no overheal and a percent-of-max-health
+        // pin is not a tiny number. Note that heals and shields scaled by max health are scaled with it. Same BASE-only
+        // pin as the allies' health.
         uint32 PinMaxHealth = 30000;
 
         // Positional talent string spent on the tank allies (Warriors); must make PlayerbotAI::IsTank(tank, true) true,

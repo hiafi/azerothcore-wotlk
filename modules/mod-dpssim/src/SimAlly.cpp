@@ -18,12 +18,21 @@
 #include "SimAlly.h"
 #include "Log.h"
 #include "ObjectMgr.h"
+#include "Opcodes.h"
 #include "Player.h"
 #include "PlayerbotAIConfig.h"
 #include "PlayerbotFactory.h"
 #include "Playerbots.h"
+#include "WorldPacket.h"
+#include "WorldSession.h"
 #include <cmath>
 #include <vector>
+
+namespace
+{
+    // How far from its slot an ally may be before the iteration reset calls it displaced
+    constexpr float SLOT_TOLERANCE_YARDS = 2.0f;
+}
 
 uint8 SimAlly::ClassFor(SimHeal::Role role, uint8 race)
 {
@@ -38,8 +47,8 @@ uint8 SimAlly::ClassFor(SimHeal::Role role, uint8 race)
 void SimAlly::PinBaseMaxHealth(Player* player, uint32 maxHealth)
 {
     // Max health is pinned through the BASE part of UNIT_MOD_HEALTH alone (plan R4): Player::UpdateMaxHealth() is
-    // ((BASE flat + create health) * BASE pct + TOTAL flat + stamina bonus) * TOTAL pct. The base flat value is moved so
-    // that the unbuffed total is exactly maxHealth, the class's create health and base stamina included, and a
+    // ((BASE flat + create health) * BASE pct + TOTAL flat + stamina bonus) * TOTAL pct. The base flat value is moved
+    // so that the unbuffed total is exactly maxHealth, the class's create health and base stamina included, and a
     // Fortitude, Mark of the Wild or Kings later raises Stamina on top as in game.
     float const basePct = player->GetPctModifierValue(UNIT_MOD_HEALTH, BASE_PCT);
     float const totalPct = player->GetPctModifierValue(UNIT_MOD_HEALTH, TOTAL_PCT);
@@ -92,8 +101,74 @@ bool SimAlly::Create(Config const& config)
 
     PinBaseMaxHealth(player, config.BaseMaxHealth);
 
+    _slotMapId = player->GetMapId();
+    _slotX = config.PositionX;
+    _slotY = config.PositionY;
+    _slotZ = config.PositionZ;
+    _slotO = config.PositionO;
+
     LOG_INFO("server.dpssim", "mod-dpssim: SimAlly '{}' - {} class {}, level {}, max health {}, at ({:.1f}, {:.1f}).",
         config.Name, SimHeal::RoleName(config.AllyRole), uint32(player->getClass()), uint32(player->GetLevel()),
         player->GetMaxHealth(), player->GetPositionX(), player->GetPositionY());
+    return true;
+}
+
+void SimAlly::AcknowledgeTeleport()
+{
+    Player* player = _actor.GetPlayer();
+    if (!player->GetSession())
+        return;
+
+    // The same two acknowledgements PlayerbotAI::HandleTeleportAck() sends for a bot: a far teleport (map change) by
+    // the worldport ack, a near one by the teleport ack
+    if (player->IsBeingTeleportedFar())
+        player->GetSession()->HandleMoveWorldportAck();
+    else if (player->IsBeingTeleportedNear() && player->IsInWorld())
+    {
+        Player* mover = player->m_mover ? player->m_mover->ToPlayer() : nullptr;
+        if (!mover)
+            return;
+
+        WorldPacket packet(MSG_MOVE_TELEPORT_ACK, 20);
+        packet << mover->GetPackGUID();
+        packet << uint32(0);  // flags
+        packet << uint32(0);  // time
+        player->GetSession()->HandleMoveTeleportAck(packet);
+    }
+}
+
+bool SimAlly::ReturnToSlot()
+{
+    Player* player = _actor.GetPlayer();
+    bool const teleporting = player->IsBeingTeleported();
+    if (teleporting)
+        AcknowledgeTeleport();
+
+    bool const ghost = player->HasPlayerFlag(PLAYER_FLAGS_GHOST);
+    bool const away = !player->IsInWorld() || player->GetMapId() != _slotMapId ||
+        player->GetExactDist2d(_slotX, _slotY) > SLOT_TOLERANCE_YARDS;
+    if (!teleporting && !ghost && !away)
+        return false;
+
+    LOG_WARN("server.dpssim", "mod-dpssim: SimAlly '{}' was off its slot at the iteration reset (teleporting {}, ghost "
+        "{}, {:.1f} yd away on map {}) - putting it back; a dead ally releases after 6 minutes, keep heal runs under "
+        "300 s.", player->GetName(), teleporting ? "yes" : "no", ghost ? "yes" : "no",
+        player->GetExactDist2d(_slotX, _slotY), player->GetMapId());
+
+    // Back to the slot; the caller resurrects a ghost (ResetAllies) once it stands there
+    if (player->GetMapId() != _slotMapId)
+    {
+        player->TeleportTo(_slotMapId, _slotX, _slotY, _slotZ, _slotO);
+        AcknowledgeTeleport();
+    }
+    else if (player->IsInWorld())
+    {
+        player->NearTeleportTo(_slotX, _slotY, _slotZ, _slotO);
+        AcknowledgeTeleport();
+    }
+
+    if (player->GetMapId() != _slotMapId || player->GetExactDist2d(_slotX, _slotY) > SLOT_TOLERANCE_YARDS)
+        LOG_ERROR("server.dpssim", "mod-dpssim: SimAlly '{}' could not be returned to its slot - the layout of the "
+            "following iterations is wrong.", player->GetName());
     return true;
 }

@@ -28,26 +28,24 @@
 
 class Creature;
 class Group;
+class HealRecorder;
 class Player;
 class TempSummon;
 class Unit;
 
 // Everything around the healer in a healing-sim run (plan .agents/plans/healing-sim/healing-sim.PLAN.md, sections 1-2
-// and
-// HS1 handoff): the group of headless allies, the boss that damages it, and the damage drivers.
+// and the HS1 handoff): the group of headless allies, the boss that damages it, and the damage drivers.
 //
 //  - Group: a real in-memory Group with the healer as leader (plan R1), so the bot's PartyMemberToHeal sees every
-//  member.
-//    A party is the healer and 4 allies; raid10/raid20 are raids whose first subgroup is the healer, the main tank and
-//    3 DPS. The healer is one of the targets: its index is the `self` slot of HealTargets, and the other slots are
-//    SimAlly players in index order.
+//    member. A party is the healer and 4 allies; raid10/raid20 are raids whose first subgroup is the healer, the main
+//    tank and 3 DPS. The healer is one of the targets: its index is the `self` slot of HealTargets, and the other slots
+//    are SimAlly players in index order.
 //  - Boss: one "Sim Raid Boss" (SimHealBossAI.cpp) standing past the group. At each pull it engages the healer and
-//  every
-//    ally and keeps the first tank as its victim.
+//    every ally and keeps the first living tank as its victim.
 //  - Drivers, run from the sim step (never from inside a hook callback, HS0 report section 4): the drain driver casts
-//  the
-//    Sim Damage Pulse on every living draining target each DrainPulseMs; the pin driver casts the Sim Pin Hit on every
-//    pinned target above its pin, with exactly enough damage to bring it to the pin through its shields.
+//    the Sim Damage Pulse on every living draining target each DrainPulseMs; the pin driver casts the Sim Pin Hit on
+//    every pinned target above its pin or with a shield on it, with exactly enough damage to bring it to the pin
+//    through its shields (ruling D2: a real hit uses up every shield).
 //  - Bookkeeping: health samples, deaths and resurrections, and the driver counters.
 class SimHealScenario
 {
@@ -68,9 +66,17 @@ public:
 
     ~SimHealScenario();
 
-    // Spawns the boss and the allies around `healer` (on its map), builds the group and logs the roles table. False
-    // (logging why) on failure; the half-built scenario is torn down by the destructor.
+    // Spawns the boss and the allies around `healer` (on its map) and builds the group. False (logging why) on
+    // failure; the half-built scenario is torn down by the destructor.
     bool Create(Player* healer, Setup const& setup);
+
+    // The recorder the drivers tell about each hit they cast (HealRecorder::BeginHit), so a damage event keeps the
+    // requested amount. Optional; the recorder outlives the scenario (it is never deleted).
+    void SetRecorder(HealRecorder* recorder) { _recorder = recorder; }
+
+    // Logs the IsTank/IsHeal/IsDps row of every member. After the healer's bot spent its talents, or its own row reads
+    // the class default spec.
+    void LogRoles() const;
 
     [[nodiscard]] Creature* GetBoss() const;
     // The group in target index order, the healer in its self slot
@@ -82,18 +88,22 @@ public:
     // Pins the healer's own max health when its slot is a pinned one (after the bot spent its talents)
     void PinHealerMaxHealth();
 
-    // Between iterations: revives the dead allies, strips every non-passive aura and fills health. The healer is reset
-    // by the caller, like the DPS sim's actor.
+    // Between iterations: puts any ally that was teleported or released back at its slot (logging a warning), revives
+    // the dead allies, strips every non-passive aura and fills health. The healer is reset by the caller, like the DPS
+    // sim's actor.
     void ResetAllies();
 
+    // Records the death of member `index` that something other than the drivers found (the healer dying in the bot's
+    // own tick, say), so that every death is in GetDeaths(). A no-op for a member whose death is already recorded.
+    void RecordDeath(size_t index);
+
     // Ends combat between the boss and the whole group, before the pre-pull buff phase (buffing allies that are in
-    // combat
-    // would pull the healer into combat and cut the phase short)
+    // combat would pull the healer into combat and cut the phase short)
     void EndCombat();
 
     // The pull, after the buff phase: records each target's max health, sets pinned targets to their pin and drain
-    // targets
-    // to full health, engages the healer and every ally with the boss, and zeroes the per-iteration counters and logs
+    // targets to full health, engages the healer and every ally with the boss, and zeroes the per-iteration counters
+    // and logs
     void Pull();
 
     // One sim step, `elapsedMs` into the iteration: accepts resurrections, re-engages anyone out of combat with the
@@ -105,13 +115,13 @@ public:
     [[nodiscard]] std::vector<SimHeal::HealthSample> const& GetHealthSamples() const { return _healthSamples; }
     [[nodiscard]] std::vector<SimHeal::LifeEvent> const& GetDeaths() const { return _deaths; }
     [[nodiscard]] std::vector<SimHeal::LifeEvent> const& GetResurrections() const { return _resurrections; }
-    // Pin Hits cast (all targets), raw SetHealth raises after a hit left a target below its pin, drain pulses cast
-    // (all targets), and spell casts that did not return SPELL_CAST_OK
+    // Pin Hits landed (all targets), raw SetHealth raises after a hit left a target below its pin, drain pulses landed
+    // (all targets), and spell casts that did not return SPELL_CAST_OK (those count only here)
     [[nodiscard]] uint32 GetPinHits() const { return _pinHits; }
     [[nodiscard]] uint32 GetPinRaises() const { return _pinRaises; }
     [[nodiscard]] uint32 GetDrainHits() const { return _drainHits; }
     [[nodiscard]] uint32 GetCastFailures() const { return _castFailures; }
-    // Per target: Pin Hits received and raw raises
+    // Per target: Pin Hits landed and raw raises
     [[nodiscard]] std::vector<uint32> const& GetTargetPinHits() const { return _targetPinHits; }
     [[nodiscard]] std::vector<uint32> const& GetTargetPinRaises() const { return _targetPinRaises; }
 
@@ -119,10 +129,10 @@ private:
     bool CreateBoss(Player* healer);
     bool CreateAllies(Player* healer, Setup const& setup);
     bool CreateGroup(Player* healer, Setup const& setup);
-    void LogRoles() const;
 
-    // The drivers' shared cast: the boss casts `spellId` at `target` for `amount`, as HS0 section 4 prescribes
-    void CastHit(uint32 spellId, Player* target, int32 amount);
+    // The drivers' shared cast: the boss casts `spellId` at member `targetIndex` for `amount`, as HS0 section 4
+    // prescribes. True when the cast went off (SPELL_CAST_OK).
+    bool CastHit(uint32 spellId, size_t targetIndex, int32 amount);
     void UpdateLife();
     void SampleHealth();
     [[nodiscard]] uint32 DrainAmount(SimHeal::TargetSpec const& spec, Player* target) const;
@@ -152,8 +162,10 @@ private:
     uint32 _drainHits = 0;
     uint32 _castFailures = 0;
     bool _loggedPull = false;
-    // Per target: the steps in a row a pin hit did not move it
+    // Per target: the steps in a row a pin hit moved neither its health nor a shield on it (clamped, see Step())
     std::vector<uint32> _pinStuck;
+
+    HealRecorder* _recorder = nullptr;
 };
 
 #endif

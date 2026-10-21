@@ -18,6 +18,7 @@
 #include "SimHealBossAI.h"
 #include "Creature.h"
 #include "CreatureScript.h"
+#include "Log.h"
 #include "ObjectAccessor.h"
 #include "PassiveAI.h"
 #include "Player.h"
@@ -25,9 +26,18 @@
 
 namespace
 {
-    // The group's main tank (SimHealBoss::SetMainTank). A process runs one healing scenario, so a static is enough,
-    // like SimDummyAI's health-drain flag.
-    ObjectGuid s_mainTank;
+    // The boss's victim candidates, best first (SimHealBoss::SetVictimOrder). A process runs one healing scenario, so a
+    // static is enough, like SimDummyAI's health-drain flag.
+    std::vector<ObjectGuid> s_victimOrder;
+
+    // The first living candidate, nullptr when none is alive
+    Player* PickVictim()
+    {
+        for (ObjectGuid const& guid : s_victimOrder)
+            if (Player* player = ObjectAccessor::FindPlayer(guid); player && player->IsAlive())
+                return player;
+        return nullptr;
+    }
 
     // How often the boss tops its health back up to full. The creature has a huge health pool and the clamp in
     // DamageTaken below already stops it from dying, so this only keeps the health bar full for display.
@@ -42,9 +52,9 @@ namespace
     // chasing (AttackStart does nothing), no melee swings (nothing calls DoMeleeAttackIfReady), and no evading back
     // home (EnterEvadeMode does nothing), so the boss stays where it was placed for the whole iteration.
     //
-    // HS1 adds the main-tank victim pin to UpdateAI (Attack(tank, false) so it never swings). Engaging the group and
-    // the
-    // drain and pin drivers live in SimHealBoss::Engage() and SimHealScenario.cpp, run from the sim step.
+    // HS1 adds the victim pin to UpdateAI (Attack(victim, false) so it never swings): the main tank, or the next living
+    // candidate when it is dead. Engaging the group and the drain and pin drivers live in SimHealBoss::Engage() and
+    // SimHealScenario.cpp, run from the sim step.
     struct npc_healsim_boss : NullCreatureAI
     {
         explicit npc_healsim_boss(Creature* creature) : NullCreatureAI(creature) { }
@@ -72,13 +82,24 @@ namespace
             // Nothing re-targets the boss (no threat-based victim selection runs for it), but an AttackStop() from
             // somewhere else in the core would leave the Holy Paladin values without a tank to find. Only while it is
             // in combat: between iterations the sim ends combat on purpose (the pre-pull buff phase).
-            if (!s_mainTank.IsEmpty() && me->IsInCombat())
-            {
-                Unit* victim = me->GetVictim();
-                if (!victim || victim->GetGUID() != s_mainTank)
-                    if (Player* tank = ObjectAccessor::FindPlayer(s_mainTank); tank && tank->IsAlive())
-                        me->Attack(tank, false);
-            }
+            if (!s_victimOrder.empty() && me->IsInCombat())
+                if (Player* wanted = PickVictim())
+                {
+                    Unit* victim = me->GetVictim();
+                    if (!victim || victim->GetGUID() != wanted->GetGUID())
+                    {
+                        // Once per switch, even if the attack does not take
+                        if (_lastLogged != wanted->GetGUID())
+                        {
+                            _lastLogged = wanted->GetGUID();
+                            LOG_INFO("server.dpssim", "mod-dpssim: the boss's victim changes from {} to {}.",
+                                victim ? victim->GetName() : std::string("nobody"), wanted->GetName());
+                        }
+                        me->Attack(wanted, false);
+                    }
+                    else
+                        _lastLogged = ObjectGuid::Empty;
+                }
 
             if (_topUpTimer > diff)
             {
@@ -94,6 +115,7 @@ namespace
 
     private:
         uint32 _topUpTimer = HEALTH_TOP_UP_MS;
+        ObjectGuid _lastLogged;
     };
 }
 
@@ -105,9 +127,9 @@ uint32 SimHealBoss::EntryForLevel(uint8 level)
     return level >= 70 ? ENTRY_LEVEL_70 : ENTRY_LEVEL_60;
 }
 
-void SimHealBoss::SetMainTank(ObjectGuid tank)
+void SimHealBoss::SetVictimOrder(std::vector<ObjectGuid> const& order)
 {
-    s_mainTank = tank;
+    s_victimOrder = order;
 }
 
 uint32 SimHealBoss::Engage(Creature* boss, std::vector<Player*> const& members)
@@ -125,8 +147,8 @@ uint32 SimHealBoss::Engage(Creature* boss, std::vector<Player*> const& members)
             ++missing;
     }
 
-    if (Player* tank = ObjectAccessor::FindPlayer(s_mainTank); tank && tank->IsAlive())
-        boss->Attack(tank, false);
+    if (Player* victim = PickVictim())
+        boss->Attack(victim, false);
 
     return missing;
 }

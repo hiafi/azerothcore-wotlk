@@ -130,16 +130,14 @@ public:
     void EndBuffPhase();
 
     // Heal mode, once after Create(): gives the bot the master PlayerbotAI::UpdateAIGroupMaster() would give it on its
-    // first
-    // tick, now. The healer leads the group (plan R1) but the headless allies are group members without a PlayerbotAI,
-    // so
-    // FindNewMaster() takes the first of them as "the real player" and resets the bot's strategies (a "follow"
-    // included).
-    // Left to the first tick, that reset would land inside the first iteration's pre-pull buff phase, after
-    // BeginBuffPhase() trimmed the strategies, and make iteration 1 differ from the rest. The master is a headless
-    // Player,
-    // as a human's client-less stand-in; the bot never follows it into combat (non-combat strategy, stripped by the
-    // phase).
+    // first tick, now. The healer leads the group (plan R1) but the headless allies are group members without a
+    // PlayerbotAI, so FindNewMaster() takes the first of them as "the real player" and resets the bot's strategies (a
+    // "follow" included). Left to the first tick, that reset would land inside the first iteration's pre-pull buff
+    // phase, after BeginBuffPhase() trimmed the strategies, and make iteration 1 differ from the rest. The master is a
+    // headless, stationary ally, as a human's client-less stand-in. The buff phase strips "follow" and EndBuffPhase()
+    // puts it back, so it is active again during the measured fight; that is harmless, because the bot stays in
+    // combat (Step re-engages everyone) and the non-combat engine that follows the master never runs, and the master
+    // does not move anyway.
     void ResolveGroupMaster();
 
     // Heal mode: the unit the bot's "party member to heal" value picks right now (nullptr when none, or without an AI).
@@ -148,8 +146,7 @@ public:
     [[nodiscard]] Unit* GetPartyMemberToHeal() const;
 
     // Heal mode, logged once at the pull: how many of `members` meet the conditions PartyMemberToHeal::Check() puts on
-    // a
-    // heal target (same map, not charmed, alive, within 2 * AiPlayerbot.HealDistance, in line of sight), and what the
+    // a heal target (same map, not charmed, alive, within 2 * AiPlayerbot.HealDistance, in line of sight), and what the
     // value picks
     void LogHealTargetVisibility(std::vector<Player*> const& members) const;
 

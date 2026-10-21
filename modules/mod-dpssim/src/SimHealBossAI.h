@@ -31,7 +31,7 @@ class Player;
 //
 // The boss never swings, never moves, never evades and never dies. Its damage to the group comes only from the sim's
 // damage drivers (the Sim Damage Pulse 202900 and Sim Pin Hit 202901 casts, SimHealScenario.cpp); the AI itself only
-// keeps its victim on the group's main tank (below).
+// keeps its victim on the group's main tank, or the next living candidate (below).
 void AddSC_SimHealBossAI();
 
 namespace SimHealBoss
@@ -45,14 +45,16 @@ namespace SimHealBoss
     // dummies
     uint32 EntryForLevel(uint8 level);
 
-    // The player the boss keeps as its victim while it is in combat: Unit::Attack(tank, false), so it never swings. The
-    // Holy Paladin values read attacker->GetVictim() to find the tank. The AI re-applies it whenever the victim is lost
-    // or changed. Empty = no victim pin.
-    void SetMainTank(ObjectGuid tank);
+    // The players the boss may keep as its victim while it is in combat, best first (the main tank, the other tanks,
+    // then everyone else). It attacks the first living one with Unit::Attack(victim, false), so it never swings. The
+    // Holy Paladin values read attacker->GetVictim() to find the tank. The AI re-applies it whenever the victim is
+    // lost or changed, and logs each switch. Empty = no victim pin.
+    void SetVictimOrder(std::vector<ObjectGuid> const& order);
 
     // The pull: the boss engages every living member (Unit::EngageWithTarget(), a zero-threat entry on its list plus
-    // combat; a hit from the NO_THREAT damage spells never starts combat on its own), then takes the main tank as its
-    // victim. Returns how many members are still not in combat with the boss afterwards.
+    // combat; a hit from the NO_THREAT damage spells never starts combat on its own), then takes the first living
+    // candidate of SetVictimOrder() as its victim. Returns how many members are still not in combat with the boss
+    // afterwards.
     uint32 Engage(Creature* boss, std::vector<Player*> const& members);
 }
 

@@ -88,14 +88,16 @@ namespace SimHeal
         uint32 Amount = 0;
     };
 
-    // One hit of the boss on a group member. Raw is the hit after the target's mitigation, before shields; Final is
-    // what
-    // was left after the shields, Absorbed = Raw - Final.
+    // One hit of the boss on a group member. Requested is the damage the driver asked for (the spell's bp0), Raw the
+    // hit after the target's damage-taken modifiers and resilience, before shields; Final is what was left after the
+    // shields, Absorbed = Raw - Final, and the target's mitigation is Requested - Raw (a Pain Suppression or Divine
+    // Protection style effect shows up there).
     struct DamageEvent
     {
         uint32 TimestampMs = 0;
         uint8 TargetIndex = 0;
         bool Pin = false;
+        uint32 Requested = 0;
         uint32 Raw = 0;
         uint32 Absorbed = 0;
         uint32 Final = 0;
@@ -138,6 +140,14 @@ namespace SimHeal
         uint8 Subgroup = 0;
         uint32 MaxHealth = 0;
     };
+
+    // Longest heal run, in ms of iteration time. A dead ally releases its spirit after 6 minutes (Player::Update counts
+    // m_deathTimer down), and the graveyard teleport would break the layout; 300 s keeps a margin
+    constexpr uint32 MAX_HEAL_DURATION_MS = 300000;
+
+    // Smallest accepted PinMaxHealth / AllyMaxHealth.*: below a player's stamina bonus the base health modifier would
+    // go negative and the unsigned max health in Player::UpdateMaxHealth() would wrap
+    constexpr uint32 MIN_TARGET_MAX_HEALTH = 1000;
 
     // Group sizes: party (5), raid10 (10) and raid20 (20); the healer counts as one of them
     constexpr uint32 PARTY_SIZE = 5;

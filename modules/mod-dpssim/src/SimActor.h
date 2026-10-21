@@ -71,11 +71,9 @@ public:
         int32 AttackPower = 0;
 
         // Optional start position on the map the Player is created on (the start map of Race/Class). Used by the
-        // healing
-        // sim's allies, which must stand next to the healer; they take the healer's race, so both start on the same
-        // map.
-        // Applied before the Player is added to the map, so no relocation or visibility update is involved. Unset: the
-        // race's start position, as for every DPS-sim actor.
+        // healing sim's allies, which must stand next to the healer; they take the healer's race, so both start on the
+        // same map. Applied before the Player is added to the map, so no relocation or visibility update is involved.
+        // Unset: the race's start position, as for every DPS-sim actor.
         bool HasPosition = false;
         float PositionX = 0.0f;
         float PositionY = 0.0f;

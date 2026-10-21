@@ -319,19 +319,15 @@ DpsSim.RunLevelCheck = 0
 #    DpsSim.HealGroup
 #    DpsSim.HealTargets
 #        Description: Heal mode only (a profile with "Mode = Heal", see SimProfile.h): override the profile's HealGroup
-#        and
-#                      HealTargets for this run, so one healer profile covers every scenario. HealGroup is party, raid10
-#                      or
-#                      raid20 (the healer is always one of the members). HealTargets lists the members in index order as
-#                      "<count>*<role>:<mode>:<value>" entries: role tank | dps | self (exactly one self, the healer),
-#                      mode
-#                      drain | pin. drain:<hp> is that many hit points per pulse and drain:<pct>% a percent of the
-#                      member's
-#                      max health; pin:<pct> (1-99) holds the member at that percent with real damage hits. The count
-#                      must
-#                      match the group size and at least one tank is needed, e.g.
+#                      and HealTargets for this run, so one healer profile covers every scenario. HealGroup is party,
+#                      raid10 or raid20 (the healer is always one of the members). HealTargets lists the members in
+#                      index order as "<count>*<role>:<mode>:<value>" entries: role tank | dps | self (exactly one self,
+#                      the healer), mode drain | pin. drain:<hp> is that many hit points per pulse and drain:<pct>% a
+#                      percent of the member's max health; pin:<pct> (1-99) holds the member at that percent with real
+#                      damage hits. The count must match the group size and at least one tank is needed, e.g.
 #                      "tank:drain:450, 3*dps:drain:150, self:drain:100" or "tank:pin:50, 3*dps:pin:50, self:pin:50".
-#                      Both are ignored by a DPS profile. See SimHeal.h.
+#                      Both are ignored by a DPS profile. A heal run is at most 300 s (DpsSim.DurationSeconds): a dead
+#                      ally releases its spirit after 6 minutes. See SimHeal.h.
 #        Default:     "" - (Use the profile's own values)
 #
 

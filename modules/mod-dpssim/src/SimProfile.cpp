@@ -17,6 +17,7 @@
 
 #include "SimProfile.h"
 #include "Log.h"
+#include "StringFormat.h"
 #include "Unit.h"
 #include "Util.h"
 #include <algorithm>
@@ -317,7 +318,8 @@ bool SimProfile::Load(std::string const& path, Profile& out)
             parsed.HealTargets = value;
         else if (key == "AllyTankTalents")
             parsed.AllyTankTalents = value;
-        else if (key == "AllyMaxHealth.Tank" || key == "AllyMaxHealth.Dps" || key == "PinMaxHealth" || key == "DrainPulseMs")
+        else if (key == "AllyMaxHealth.Tank" || key == "AllyMaxHealth.Dps" || key == "PinMaxHealth" ||
+            key == "DrainPulseMs")
         {
             uint32 number = 0;
             try
@@ -438,9 +440,12 @@ bool SimProfile::Load(std::string const& path, Profile& out)
             ok = false;
         else if (haveGroup && haveTargets && !SimHeal::Validate(groupSize, targets, error))
             ok = false;
-        else if (parsed.AllyMaxHealthTank == 0 || parsed.AllyMaxHealthDps == 0 || parsed.PinMaxHealth == 0)
+        else if (parsed.AllyMaxHealthTank < SimHeal::MIN_TARGET_MAX_HEALTH ||
+            parsed.AllyMaxHealthDps < SimHeal::MIN_TARGET_MAX_HEALTH ||
+            parsed.PinMaxHealth < SimHeal::MIN_TARGET_MAX_HEALTH)
         {
-            error = "AllyMaxHealth.Tank, AllyMaxHealth.Dps and PinMaxHealth must be above 0";
+            error = Acore::StringFormat("AllyMaxHealth.Tank, AllyMaxHealth.Dps and PinMaxHealth must be at least {}",
+                SimHeal::MIN_TARGET_MAX_HEALTH);
             ok = false;
         }
         else if (!(parsed.AllySpreadYards >= 0.0f && parsed.AllySpreadYards <= 25.0f))
