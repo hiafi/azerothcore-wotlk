@@ -22,9 +22,12 @@
 #include "ObjectGuid.h"
 #include "SimHeal.h"
 #include "SimTarget.h"
+#include <functional>
 #include <map>
 #include <string>
 #include <vector>
+
+class Player;
 
 // M1 in-process entry point: wires SimActor + SimTarget + SimClock + the hardcoded Frostbolt
 // rotation + EventRecorder together into one fixed-timestep sim run.
@@ -180,6 +183,11 @@ namespace SimDaemon
         // Heal mode: set the healer's mana to full every step of the measured fight (profile key InfiniteMana, with
         // DpsSim.InfiniteMana overriding it). The buff phase is untouched.
         bool InfiniteMana = false;
+        // Tests only (SimTests.cpp). When set, a heal-mode iteration calls it every step instead of running the
+        // healer's bot AI, after the damage drivers and the InfiniteMana refill: (ms into the iteration, the healer,
+        // the group in target index order). The healer then does exactly what the hook casts, so a known-value test
+        // controls every heal.
+        std::function<void(uint32, Player*, std::vector<Player*> const&)> HealStepHook;
     };
 
     // One sim job's result. HitDamages/HitCrits are parallel vectors, one entry per landed hit, in

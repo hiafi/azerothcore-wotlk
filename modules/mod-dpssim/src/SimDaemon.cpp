@@ -588,6 +588,10 @@ namespace
         scenario.Pull();
         LogAurasAtPull(player);
 
+        // A scripted healer (tests): its AI must not act in the first Tick(), before the hook has run once
+        if (config.HealStepHook)
+            bot.SilenceAI();
+
         // Once per process: whether the bot's heal-target value can see the whole group (plan section 7, R2)
         static bool loggedVisibility = false;
         if (!loggedVisibility)
@@ -634,7 +638,13 @@ namespace
             if (config.InfiniteMana)
                 player->SetPower(POWER_MANA, player->GetMaxPower(POWER_MANA));
 
-            bot.UpdateAI(config.StepMs);
+            if (config.HealStepHook)
+            {
+                bot.SilenceAI();
+                config.HealStepHook(clock.GetElapsedMs(), player, scenario.GetMembers());
+            }
+            else
+                bot.UpdateAI(config.StepMs);
             MaybeSampleMana(player, clock.GetElapsedMs(), lastManaSampleMs, sampledManaOnce, manaSamples);
 
             if (config.RealTimePaced)

@@ -49,12 +49,21 @@ HEALSIM_INFINITE_MANA=1 HEALSIM_TARGETS=pin50 tools/run-sim.sh HolyPriestHealSim
   that health by real hits: the pure-HPS measurement), `drain:<n>` (every member takes n damage a second, tanks 3x; the
   survival measurement), or a full list such as `tank:drain:450, 3*dps:drain:150, self:drain:100`.
   `HEALSIM_INFINITE_MANA=1` keeps the healer's mana full during the fight.
+- Profiles: `DiscPriestHealSim`, `HolyPriestHealSim` (Human, race 1), `RestoDruidHealSim` (Tauren, race 6) and
+  `HolyPaladinHealSim` (Human); each one's header has its talent decode, gear arithmetic and the sweep commands.
+  `NoHealerHealSim` is the harness test profile.
 - A heal run is at most 300 s and takes no `[targets]` argument.
 - Reports are `reports/<Profile>.<group>.<tag>.<ts>.report.json` (the tag is the preset, `x<hash>` for a custom list,
   `-inf` for infinite mana) and the baked page is `reports/HealProfileReport.html`. `tools/aggregate_reports.py`
   trims by HPS (a run with any death is never trimmed) and refuses to merge different scenarios;
   `tools/heal-report-template.html` is the page. Pin scenarios read as HPS; drain scenarios read as deaths, overheal and
   mana.
+- Known-value tests: `DpsSim.RunTests=1` (optionally `DpsSim.TestFilter=heal`) also runs six heal-mode tests (a Flash
+  Heal's amount, an undefended drain target's death, a Power Word: Shield's absorb, Renew's ticks, no pushback on a
+  pinned healer, Guardian Spirit's credit). They replace the healer's bot AI with a scripted cast
+  (`RunConfig::HealStepHook`) on an untalented, ungeared Priest. Run one with
+  `DPSSIM_EXTRA_CONF='DpsSim.RunTests = 1\nDpsSim.TestFilter = heal' tools/run-sim.sh NoHealerHealSim 10 60 1 1`
+  (the script then exits 1, as no report is written; keep the log with `DPSSIM_KEEP_LOG=1` and grep `[PASS]`/`[FAIL]`).
 
 ## The sim never touches the live characters DB
 

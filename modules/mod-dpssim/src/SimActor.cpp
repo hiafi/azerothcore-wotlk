@@ -246,5 +246,21 @@ bool SimActor::Create(Config const& config)
         config.SpellPower, config.AttackPower, config.GearItemIds.size(),
         config.CombatRatings.size(), config.Stats.size(),
         _player->GetTotalAttackPowerValue(BASE_ATTACK), mainHand ? mainHand->GetEntry() : 0);
+
+    // The actor's character sheet, so a profile's flat Stats / SpellPower / ratings can be calibrated against real
+    // gear: run the same profile with its GearItemIds and without them and subtract. Spell power is the flat part
+    // (gear and SpellPower); the Intellect/2 + Spirit/2 part comes on top of it, see
+    // Unit::SpellBaseHealingBonusDone().
+    auto const rating = [this](CombatRating cr) { return _player->GetUInt32Value(PLAYER_FIELD_COMBAT_RATING_1 + cr); };
+    LOG_INFO("server.dpssim",
+        "mod-dpssim: SimActor sheet - '{}': Strength {}, Agility {}, Stamina {}, Intellect {}, Spirit {}, flat spell "
+        "power {}, healing power {}, armor {}; ratings: crit {}, haste {}, mastery {}, versatility {}, cooldown haste "
+        "{}, proc chance {}; max health {}, max mana {}.",
+        config.Name, uint32(_player->GetStat(STAT_STRENGTH)), uint32(_player->GetStat(STAT_AGILITY)),
+        uint32(_player->GetStat(STAT_STAMINA)), uint32(_player->GetStat(STAT_INTELLECT)),
+        uint32(_player->GetStat(STAT_SPIRIT)), _player->GetBaseSpellPowerBonus(),
+        _player->SpellBaseHealingBonusDone(SPELL_SCHOOL_MASK_ALL), _player->GetArmor(), rating(CR_CRIT_SPELL),
+        rating(CR_HASTE_SPELL), rating(CR_MASTERY), rating(CR_VERSATILITY), rating(CR_COOLDOWN_HASTE),
+        rating(CR_PROC_CHANCE), _player->GetMaxHealth(), _player->GetMaxPower(POWER_MANA));
     return true;
 }

@@ -313,6 +313,12 @@ void SimBot::UpdateAI(uint32 diff)
         _ai->UpdateAI(diff);
 }
 
+void SimBot::SilenceAI()
+{
+    if (_ai)
+        _ai->SetNextCheckDelay(0x7FFFFFFF);
+}
+
 bool SimBot::EngageTargets(std::vector<Creature*> const& targets)
 {
     Player* bot = _ai ? _ai->GetBot() : nullptr;

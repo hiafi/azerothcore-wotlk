@@ -100,6 +100,12 @@ public:
     // reading its implementation, not assumed.
     void UpdateAI(uint32 diff);
 
+    // Tests only (RunConfig::HealStepHook): makes the bot's AI do nothing. PlayerbotAI::UpdateAI() is also driven by
+    // mod-playerbots' own PlayerScript::OnPlayerAfterUpdate() on every Player::Update(), not only by UpdateAI() above,
+    // so simply not calling UpdateAI() leaves the healer casting. A next-check delay that long (the AI counts it down
+    // by the diffs of both callers) keeps both quiet for the rest of the run.
+    void SilenceAI();
+
     // Acknowledges a teleport the sim bot's own death started (the engine's auto release repops it at a graveyard).
     // Live bots get this from PlayerbotHolder::UpdateSessions, which the sim bot is not in; without it
     // IsBeingTeleported() stays true and PlayerbotAI::UpdateAI() returns early forever.
