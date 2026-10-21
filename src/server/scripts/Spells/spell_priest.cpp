@@ -601,9 +601,13 @@ class spell_pri_guardian_spirit : public AuraScript
             return;
 
         int32 healAmount = int32(target->CountPctFromMaxHealth(healPct));
+        // Custom: read the priest before the aura is removed and pass it as the heal's original caster, so the
+        // combat log and the healing sim credit the heal to the priest instead of to the target
+        ObjectGuid const casterGuid = GetCasterGUID();
         // remove the aura now, we don't want 40% healing bonus
         Remove(AURA_REMOVE_BY_ENEMY_SPELL);
-        target->CastCustomSpell(target, SPELL_PRIEST_GUARDIAN_SPIRIT_HEAL, &healAmount, nullptr, nullptr, true);
+        target->CastCustomSpell(target, SPELL_PRIEST_GUARDIAN_SPIRIT_HEAL, &healAmount, nullptr, nullptr, true, nullptr,
+            nullptr, casterGuid);
         absorbAmount = dmgInfo.GetDamage();
     }
 
