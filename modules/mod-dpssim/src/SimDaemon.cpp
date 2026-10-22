@@ -511,10 +511,18 @@ namespace
             if (guardian)
                 guardian->UnSummon();
 
+        // Every aura the fight put on, and nothing the character is: non-passive auras, plus passive-flagged ones with
+        // a duration. A timed passive is a spell's delay holder, never a talent or an item's equip aura (those are
+        // permanent), and it would fire into the next iteration: Thunderstruck's echo holder (200066,
+        // SPELL_ATTR0_PASSIVE, 3 s PERIODIC_TRIGGER_SPELL of Thunder Clap Echo 200065) applied in the last 3 s of a
+        // fight survived the reset, ticked during the next pre-pull buff phase and put the bot in combat there ("ended
+        // early ... last cast spell 200065"). Removing an aura does not run its periodic trigger, so nothing it holds
+        // goes off.
         auto removeNonPassive = [](AuraApplication const* aurApp)
         {
-            SpellInfo const* info = aurApp->GetBase()->GetSpellInfo();
-            return !info || !info->IsPassive();
+            Aura const* aura = aurApp->GetBase();
+            SpellInfo const* info = aura->GetSpellInfo();
+            return !info || !info->IsPassive() || !aura->IsPermanent();
         };
         player->RemoveAppliedAuras(removeNonPassive);
         for (Creature* dummy : dummies)
@@ -1009,7 +1017,6 @@ namespace
         settings.Hit = config.TargetCount > 1 ? config.TankPackHit : config.TankHit;
         settings.SwingMs = config.TankSwingMs;
         settings.Crit = config.TankDummyCrit;
-        settings.ParryHaste = config.TankDummyParryHaste;
         return settings;
     }
 
@@ -1029,7 +1036,7 @@ namespace
         return sample;
     }
 
-    // The actor as the iteration starts, from the core's own getters
+    // The actor's character sheet, from the core's own getters (taken at the pull and again after the first second)
     SimTank::ActorInfo DescribeTankActor(Player* actor, Creature* primary, float primaryExpectedCrit)
     {
         SimTank::ActorInfo info;
@@ -1046,10 +1053,10 @@ namespace
         return info;
     }
 
-    // One tank-mode iteration, the counterpart of RunPlayerbotIteration(): the same housekeeping, pre-pull buff phase and
-    // sim clock rules, then the pull (the dummies attack the actor) and a tick loop in which the dummies swing, the bot
-    // tanks, and in the dps scenario the actor's health is refilled after every step. Assumes the recorders are rewound
-    // (ResetForNextIteration() does that between iterations; the first iteration has nothing recorded yet).
+    // One tank-mode iteration, the counterpart of RunPlayerbotIteration(): the same housekeeping, pre-pull buff phase
+    // and sim clock rules, then the pull (the dummies attack the actor) and a tick loop in which the dummies swing, the
+    // bot tanks, and in the dps scenario the actor's health is refilled after every step. Assumes the recorders are
+    // rewound (ResetForNextIteration() does that between iterations; the first iteration has nothing recorded yet).
     void RunTankIteration(SimDaemon::RunConfig const& config, Player* player, std::vector<Creature*> const& dummies,
         Map* map, SimBot& bot, EventRecorder* recorder, CastRecorder* castRecorder, HealRecorder* healRecorder,
         DamageTakenRecorder* damageRecorder, SimDaemon::RunResult& result)
@@ -1096,7 +1103,9 @@ namespace
         // The pull: the dummies attack the actor and start their swing timers; the damage is solved first (plan R2)
         SimTankDummy::Settings const settings = MakeTankSettings(config);
         result.TankDummies = SimTankDummy::BeginFight(dummies, player, settings);
-        result.TankActor = DescribeTankActor(player, dummies.front(), result.TankDummies.front().ExpectedCritPct);
+        result.TankActorAtPull = DescribeTankActor(player, dummies.front(), result.TankDummies.front().ExpectedCritPct);
+        // Replaced after the first second (stance and buffs up); the pull's stays in TankActorAtPull
+        result.TankActor = result.TankActorAtPull;
         result.TankMode = true;
         result.TankScenario = config.TankScenario;
 
@@ -1120,19 +1129,20 @@ namespace
 
         {
             // The actor's damage-taken multiplier on a physical melee hit (Defensive Stance, talents), the reason a
-            // recorded pre-armor value sits below the solved range; measured on a large hit through the core's own function
-            LOG_INFO("server.dpssim", "mod-dpssim:   actor's damage-taken multiplier on a physical melee hit at the pull: "
-                "{:.4f}.", float(player->MeleeDamageBonusTaken(dummies.front(), 1000000, BASE_ATTACK, nullptr,
+            // recorded pre-armor value sits below the solved range; measured on a large hit through the core's function
+            LOG_INFO("server.dpssim", "mod-dpssim:   actor's damage-taken multiplier on a physical melee hit at the "
+                "pull: {:.4f}.", float(player->MeleeDamageBonusTaken(dummies.front(), 1000000, BASE_ATTACK, nullptr,
                 SPELL_SCHOOL_MASK_NORMAL)) / 1000000.0f);
-            SimTank::ActorInfo const& a = result.TankActor;
+            SimTank::ActorInfo const& a = result.TankActorAtPull;
             std::string layout;
             for (size_t i = 0; i < dummies.size(); ++i)
-                layout += Acore::StringFormat("{}#{} {:.1f} yd{}{}", i == 0 ? "" : ", ", i, player->GetExactDist(dummies[i]),
+                layout += Acore::StringFormat("{}#{} {:.1f} yd{}{}", i == 0 ? "" : ", ", i,
+                    player->GetExactDist(dummies[i]),
                     player->IsWithinMeleeRange(dummies[i]) ? "" : " OUT OF MELEE RANGE",
                     player->HasInArc(M_PI, dummies[i]) ? "" : " OUTSIDE THE FRONT ARC");
-            LOG_INFO("server.dpssim", "mod-dpssim:   tank pull - scenario {}, {} dummy(ies): {}; attackers on the actor: "
-                "{} (bot's \"my attacker count\": {}).", SimTank::ScenarioName(config.TankScenario), dummies.size(),
-                layout, player->getAttackers().size(), bot.GetMyAttackerCount());
+            LOG_INFO("server.dpssim", "mod-dpssim:   tank pull - scenario {}, {} dummy(ies): {}; attackers on the "
+                "actor: {} (bot's \"my attacker count\": {}).", SimTank::ScenarioName(config.TankScenario),
+                dummies.size(), layout, player->getAttackers().size(), bot.GetMyAttackerCount());
             LOG_INFO("server.dpssim", "mod-dpssim:   actor level {}, {} health, armor {}, defense {} (max for level vs "
                 "the primary {}; AlwaysMaxSkillForLevel {}), dodge {:.2f}% parry {:.2f}% block {:.2f}% (value {}), "
                 "primary expected crit chance {:.2f}%{}.", a.Level, a.Health, a.Armor, a.DefenseSkill,
@@ -1172,20 +1182,23 @@ namespace
         {
             clock.Tick(map);
 
-            // The existing actor-death rule (RunPlayerbotIteration()): check after every Tick, before the AI's auto release
-            // can run. In the survive scenario the time of death is the headline (ActorDiedAtMs).
+            // The existing actor-death rule (RunPlayerbotIteration()): check after every Tick, before the AI's auto
+            // release can run. In the survive scenario the time of death is the headline (ActorDiedAtMs).
             if (!player->IsAlive())
             {
                 result.ActorDied = true;
                 result.ActorDiedAtMs = clock.GetElapsedMs();
+                // The killing tick is not sampled below: the lowest health is the death's
+                minHealthPct = 0.0f;
                 LOG_WARN("server.dpssim", "mod-dpssim: the actor DIED {} ms into the tank iteration - iteration ended, "
                     "its DPS counts the full {} ms.", result.ActorDiedAtMs, config.DurationMs);
                 break;
             }
 
-            // After the swings of this tick, before the AI heals and before the refill: the lowest health the actor reached
+            // After the swings of this tick, before the AI heals and before the refill: the actor's lowest health
             if (player->GetMaxHealth() > 0)
-                minHealthPct = std::min(minHealthPct, 100.0f * float(player->GetHealth()) / float(player->GetMaxHealth()));
+                minHealthPct = std::min(minHealthPct,
+                    100.0f * float(player->GetHealth()) / float(player->GetMaxHealth()));
 
             if (!sampledTankOnce || clock.GetElapsedMs() - lastTankSampleMs >= SimTank::TANK_SAMPLE_INTERVAL_MS)
             {
@@ -1212,11 +1225,18 @@ namespace
                 for (size_t i = 0; i < dummies.size(); ++i)
                 {
                     result.TankDummies[i].ExpectedCritPct = dummies[i]->GetUnitCriticalChance(BASE_ATTACK, player);
-                    chances += Acore::StringFormat("{}{:.2f}%", i == 0 ? "" : ", ", result.TankDummies[i].ExpectedCritPct);
+                    chances += Acore::StringFormat("{}{:.2f}%", i == 0 ? "" : ", ",
+                        result.TankDummies[i].ExpectedCritPct);
                 }
-                result.TankActor.CritImmune = result.TankDummies.front().ExpectedCritPct <= 0.0f;
-                LOG_INFO("server.dpssim", "mod-dpssim:   dummies' expected crit chance against the actor after the first "
-                    "second (stance, buffs up): {}{}.", chances, result.TankActor.CritImmune ? " (CRIT IMMUNE)" : "");
+                // The character sheet with the stance and the first buffs up: this is the one the report shows
+                result.TankActor = DescribeTankActor(player, dummies.front(),
+                    result.TankDummies.front().ExpectedCritPct);
+                SimTank::ActorInfo const& a = result.TankActor;
+                LOG_INFO("server.dpssim", "mod-dpssim:   dummies' expected crit chance against the actor after the "
+                    "first second (stance, buffs up): {}{}.", chances, a.CritImmune ? " (CRIT IMMUNE)" : "");
+                LOG_INFO("server.dpssim", "mod-dpssim:   actor after the first second - {} health, armor {}, "
+                    "defense {}, dodge {:.2f}% parry {:.2f}% block {:.2f}% (value {}).", a.Health, a.Armor,
+                    a.DefenseSkill, a.Dodge, a.Parry, a.Block, a.BlockValue);
             }
             minAttackers = std::min(minAttackers, uint32(bot.GetMyAttackerCount()));
 
@@ -1242,7 +1262,11 @@ namespace
         {
             result.ActorDied = true;
             result.ActorDiedAtMs = config.DurationMs;
+            minHealthPct = 0.0f;
         }
+
+        // Plan T11: a survive run the actor lived through to the end; its TTD counts as the full duration
+        result.TankSurvived = config.TankScenario == SimTank::Scenario::Survive && !result.ActorDied;
 
         // A dead actor holds no threat any more: the last sample taken while it lived stands
         if (!result.ActorDied)
@@ -1308,8 +1332,8 @@ namespace
         using SimTank::Outcome;
         constexpr size_t OUTCOMES = size_t(Outcome::Other) + 1;
 
-        // The seconds the tank metrics divide by: the fight to the death in survive, the full duration otherwise. DPS keeps
-        // the full duration (a dead actor is charged all of it, as everywhere).
+        // The seconds the tank metrics divide by: the fight to the death in survive, the full duration otherwise. DPS
+        // keeps the full duration (a dead actor is charged all of it, as everywhere).
         double const fullSeconds = double(result.ElapsedMs) / 1000.0;
         double const fightSeconds = result.ActorDied ? double(result.ActorDiedAtMs) / 1000.0 : fullSeconds;
         double const dps = fullSeconds > 0.0 ? double(result.TotalDamage) / fullSeconds : 0.0;
@@ -1400,7 +1424,10 @@ namespace
 
         uint32 const swings = uint32(result.Swings.size());
         auto const pct = [swings](uint32 n) { return swings > 0 ? 100.0 * double(n) / double(swings) : 0.0; };
-        auto const meanPct = [swings](double hundredths) { return swings > 0 ? hundredths / 100.0 / double(swings) : 0.0; };
+        auto const meanPct = [swings](double hundredths)
+        {
+            return swings > 0 ? hundredths / 100.0 / double(swings) : 0.0;
+        };
         uint32 const avoids = counts[size_t(Outcome::Miss)] + counts[size_t(Outcome::Dodge)] +
             counts[size_t(Outcome::Parry)];
 
@@ -1430,24 +1457,32 @@ namespace
             if (swing.Result == Outcome::Crit && swing.ExpectedCrit == 0)
                 ++critWithZeroChance;
 
-        LOG_INFO("server.dpssim", "mod-dpssim:   tank iteration {}/{} ({}) - {} ms ({} wall ms): DPS {:.1f}, TPS {:.1f}, "
-            "{} swings, hit {:.1f}% crit {:.1f}% crush {:.1f}% block {:.1f}% (full {}) dodge {:.1f}% parry {:.1f}% miss "
-            "{:.1f}% (avoided {:.1f}%), damage taken {} (+{} absorbed), DTPS {:.1f}, self-healing {} effective / {} "
-            "overheal (HPS {:.1f}) + {} self-shields, net DTPS {:.1f}, TTD {}, min HP {:.1f}%, rage from hits {:.1f} "
-            "({} swings measured), expected vs observed crit {:.2f}% / {:.2f}%.", iteration, iterations,
-            SimTank::ScenarioName(config.TankScenario), result.ElapsedMs, result.WallClockMs, dps, tps, swings,
+        // TTD: the time of death; a survive run that lived to the end counts the full duration and says so (plan T11);
+        // the dps scenario refills health, so it has none
+        std::string ttdText = "n/a";
+        if (result.ActorDied)
+            ttdText = Acore::StringFormat("{} ms", result.ActorDiedAtMs);
+        else if (result.TankSurvived)
+            ttdText = Acore::StringFormat("{} ms (survived)", result.ElapsedMs);
+
+        LOG_INFO("server.dpssim", "mod-dpssim:   tank iteration {}/{} ({}) - {} ms ({} wall ms): DPS {:.1f}, TPS "
+            "{:.1f}, {} swings, hit {:.1f}% crit {:.1f}% crush {:.1f}% block {:.1f}% (full {}) dodge {:.1f}% parry "
+            "{:.1f}% miss {:.1f}% (avoided {:.1f}%), damage taken {} (+{} absorbed), DTPS {:.1f}, self-healing {} "
+            "effective / {} overheal (HPS {:.1f}) + {} self-shields, net DTPS {:.1f}, TTD {}, survived {}, min HP "
+            "{:.1f}%, rage from hits {:.1f} ({} swings measured), expected vs observed crit {:.2f}% / {:.2f}%.",
+            iteration, iterations, SimTank::ScenarioName(config.TankScenario), result.ElapsedMs, result.WallClockMs,
+            dps, tps, swings,
             pct(counts[size_t(Outcome::Hit)]), pct(counts[size_t(Outcome::Crit)]), pct(counts[size_t(Outcome::Crush)]),
             pct(counts[size_t(Outcome::Block)] + counts[size_t(Outcome::FullBlock)]),
             counts[size_t(Outcome::FullBlock)], pct(counts[size_t(Outcome::Dodge)]),
             pct(counts[size_t(Outcome::Parry)]), pct(counts[size_t(Outcome::Miss)]), pct(avoids), finalSum, absorbedSum,
-            damageTakenDtps, healEffective, healOverheal, selfHps, selfAbsorb, netDtps,
-            result.ActorDied ? Acore::StringFormat("{} ms", result.ActorDiedAtMs) : std::string("survived"),
-            result.TankMinHealthPct, double(rageTenths) / 10.0, rageSwings, meanPct(expCrit),
-            pct(counts[size_t(Outcome::Crit)]));
+            damageTakenDtps, healEffective, healOverheal, selfHps, selfAbsorb, netDtps, ttdText,
+            result.TankSurvived ? "yes" : "no", result.TankMinHealthPct, double(rageTenths) / 10.0, rageSwings,
+            meanPct(expCrit), pct(counts[size_t(Outcome::Crit)]));
 
         // Expected (what the core rolled, per swing) vs observed outcome rates, and the armor reduction
         double const armorPctObserved = landedPreArmor > 0 ? 100.0 * double(armorSum) / double(landedPreArmor) : 0.0;
-        // Swing intervals per dummy, rounded to 100 ms: the swing speed, a slow (Thunder Clap) and parry haste
+        // Swing intervals per dummy, rounded to 100 ms: the swing speed and a slow (Thunder Clap)
         std::map<uint32, uint32> intervals;
         std::vector<uint32> lastSwing(result.TankDummies.size(), 0);
         std::vector<bool> haveLast(result.TankDummies.size(), false);
@@ -1474,19 +1509,19 @@ namespace
         std::string firstSwings;
         for (size_t i = 0; i < result.Swings.size() && i < 6; ++i)
             firstSwings += Acore::StringFormat("{}{}", firstSwings.empty() ? "" : " ", result.Swings[i].TimestampMs);
-        LOG_INFO("server.dpssim", "mod-dpssim:     first swings at (ms) {}.", firstSwings.empty() ? std::string("none") :
-            firstSwings);
-        LOG_INFO("server.dpssim", "mod-dpssim:     swing intervals (ms:count) {}; armor formula at the pull says {:.2f}%; "
-            "dummy rolls {:.0f}-{:.0f} with the actor's damage-taken multiplier taken back out (damage fields at the "
-            "pull {:.0f}-{:.0f}).", intervalText.empty() ? std::string("none") : intervalText, expectedArmorPct,
-            baseRollMax > 0.0 ? baseRollMin : 0.0, baseRollMax,
+        LOG_INFO("server.dpssim", "mod-dpssim:     first swings at (ms) {}.",
+            firstSwings.empty() ? std::string("none") : firstSwings);
+        LOG_INFO("server.dpssim", "mod-dpssim:     swing intervals (ms:count) {}; armor formula at the pull says "
+            "{:.2f}%; dummy rolls {:.0f}-{:.0f} with the actor's damage-taken multiplier taken back out (damage "
+            "fields at the pull {:.0f}-{:.0f}).", intervalText.empty() ? std::string("none") : intervalText,
+            expectedArmorPct, baseRollMax > 0.0 ? baseRollMin : 0.0, baseRollMax,
             result.TankDummies.empty() ? 0.0f : result.TankDummies.front().FieldMin,
             result.TankDummies.empty() ? 0.0f : result.TankDummies.front().FieldMax);
 
-        LOG_INFO("server.dpssim", "mod-dpssim:     outcomes observed vs expected (percent): miss {:.2f} / {:.2f}, dodge "
-            "{:.2f} / {:.2f}, parry {:.2f} / {:.2f}, block {:.2f} / {:.2f}, crit {:.2f} / {:.2f}; {} swing(s) from "
-            "outside the front arc; pre-armor {}-{} (mean {:.0f}); armor took {:.2f}% of the landed swings' pre-armor "
-            "({} total), blocks took {}, shields {}, resists {}.", pct(counts[size_t(Outcome::Miss)]),
+        LOG_INFO("server.dpssim", "mod-dpssim:     outcomes observed vs expected (percent): miss {:.2f} / {:.2f}, "
+            "dodge {:.2f} / {:.2f}, parry {:.2f} / {:.2f}, block {:.2f} / {:.2f}, crit {:.2f} / {:.2f}; {} swing(s) "
+            "from outside the front arc; pre-armor {}-{} (mean {:.0f}); armor took {:.2f}% of the landed swings' "
+            "pre-armor ({} total), blocks took {}, shields {}, resists {}.", pct(counts[size_t(Outcome::Miss)]),
             meanPct(expMiss), pct(counts[size_t(Outcome::Dodge)]), meanPct(expDodge),
             pct(counts[size_t(Outcome::Parry)]), meanPct(expParry),
             pct(counts[size_t(Outcome::Block)] + counts[size_t(Outcome::FullBlock)]), meanPct(expBlock),
@@ -1511,7 +1546,8 @@ namespace
             perDummy += Acore::StringFormat("{}#{}: {} swings, {} dodge/parry, threat {:.0f}", i == 0 ? "" : "; ", i,
                 swingsPerDummy[i], avoidsPerDummy[i], threat[i]);
         LOG_INFO("server.dpssim", "mod-dpssim:     per dummy - {}; lowest threat {:.0f}; rage swings measured {} "
-            "(dodged, parried or fully blocked swings that gave rage: {}).", perDummy, lowestThreat, rageSwings, avoidRageSwings);
+            "(dodged, parried or fully blocked swings that gave rage: {}).", perDummy, lowestThreat, rageSwings,
+            avoidRageSwings);
 
         // The actor's own heals and shields by spell, the casts by spell and the auras it gained
         auto const spellName = [](uint32 spellId) -> std::string
@@ -1569,7 +1605,11 @@ namespace
         using SimTank::Outcome;
         uint64 swings = 0, miss = 0, dodge = 0, parry = 0, block = 0, crit = 0;
         double expMiss = 0, expDodge = 0, expParry = 0, expBlock = 0, expCrit = 0;
+        uint32 survived = 0, died = 0;
         for (SimDaemon::RunResult const& result : results)
+        {
+            survived += result.TankSurvived;
+            died += result.ActorDied;
             for (SimTank::SwingEvent const& swing : result.Swings)
             {
                 ++swings;
@@ -1584,6 +1624,7 @@ namespace
                 expBlock += swing.ExpectedBlock;
                 expCrit += swing.ExpectedCrit;
             }
+        }
         if (swings == 0)
         {
             LOG_INFO("server.dpssim", "mod-dpssim: tank batch complete - {} iteration(s), no swings.", results.size());
@@ -1594,8 +1635,9 @@ namespace
         auto const mean = [n](double hundredths) { return hundredths / 100.0 / n; };
         LOG_INFO("server.dpssim", "mod-dpssim: tank batch complete - {} iteration(s), {} swings; observed / expected "
             "percent: miss {:.2f} / {:.2f}, dodge {:.2f} / {:.2f}, parry {:.2f} / {:.2f}, block {:.2f} / {:.2f}, crit "
-            "{:.2f} / {:.2f}.", results.size(), swings, pct(miss), mean(expMiss), pct(dodge), mean(expDodge), pct(parry),
-            mean(expParry), pct(block), mean(expBlock), pct(crit), mean(expCrit));
+            "{:.2f} / {:.2f}; the actor survived {} and died in {} iteration(s).", results.size(), swings, pct(miss),
+            mean(expMiss), pct(dodge), mean(expDodge), pct(parry), mean(expParry), pct(block), mean(expBlock),
+            pct(crit), mean(expCrit), survived, died);
     }
 
     // RunPlayerbotBatch()'s tank branch: the DPS batch with the dummies swinging at the actor. One actor, one set of
@@ -1630,16 +1672,18 @@ namespace
         if (!targets.Create(player, config.TargetCount, config.TargetSpreadYards, MakeTargetConfig(config),
             SimTargetGroup::Layout::Tank))
         {
-            LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunTankBatch() - SimTarget::Create() failed - aborting.");
+            LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunTankBatch() - SimTarget::Create() failed - "
+                "aborting.");
             return false;
         }
 
         std::vector<Creature*> const dummies = targets.GetCreatures();
 
         // The tank AI goes on the summoned dummies now, before the bot engages them; DPS and heal runs never reach here
-        if (!SimTankDummy::Install(dummies, MakeTankSettings(config)))
+        if (!SimTankDummy::Install(dummies, player, MakeTankSettings(config)))
         {
-            LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunTankBatch() - installing the tank AI failed - aborting.");
+            LOG_ERROR("server.dpssim", "mod-dpssim: SimDaemon::RunTankBatch() - installing the tank AI failed - "
+                "aborting.");
             return false;
         }
 
@@ -1657,10 +1701,9 @@ namespace
             return false;
         }
 
-        LOG_INFO("server.dpssim", "mod-dpssim: tank mode - scenario {}, boss hit {}, pack hit {}, swing {} ms, dummy crit "
-            "{}, dummy parry haste {}.", SimTank::ScenarioName(config.TankScenario),
-            SimTank::HitRangeText(config.TankHit), SimTank::HitRangeText(config.TankPackHit), config.TankSwingMs,
-            config.TankDummyCrit ? "on" : "off", config.TankDummyParryHaste ? "on" : "off");
+        LOG_INFO("server.dpssim", "mod-dpssim: tank mode - scenario {}, boss hit {}, pack hit {}, swing {} ms, dummy "
+            "crit {}.", SimTank::ScenarioName(config.TankScenario), SimTank::HitRangeText(config.TankHit),
+            SimTank::HitRangeText(config.TankPackHit), config.TankSwingMs, config.TankDummyCrit ? "on" : "off");
 
         Position const startPosition = player->GetPosition();
 

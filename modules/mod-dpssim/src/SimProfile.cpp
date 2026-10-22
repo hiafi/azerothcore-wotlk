@@ -315,7 +315,7 @@ bool SimProfile::Load(std::string const& path, Profile& out)
             }
         }
         else if (key == "TankScenario" || key == "TankHitDamage" || key == "TankPackHitDamage" ||
-            key == "TankSwingMs" || key == "TankDummyCrit" || key == "TankDummyParryHaste")
+            key == "TankSwingMs" || key == "TankDummyCrit")
         {
             parsed.TankKeySet = true;
             std::string error;
@@ -353,10 +353,8 @@ bool SimProfile::Load(std::string const& path, Profile& out)
                     error = Acore::StringFormat("'{}' is not true/false", value);
                     ok = false;
                 }
-                else if (key == "TankDummyCrit")
-                    parsed.TankDummyCrit = flag;
                 else
-                    parsed.TankDummyParryHaste = flag;
+                    parsed.TankDummyCrit = flag;
             }
 
             if (!ok)

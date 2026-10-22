@@ -342,10 +342,12 @@ void SimHealScenario::PinHealerMaxHealth()
 
 void SimHealScenario::ResetAllies()
 {
+    // Non-passive auras plus timed passive ones (a delay holder), as ResetForNextIteration() does for the healer
     auto const removeNonPassive = [](AuraApplication const* aurApp)
     {
-        SpellInfo const* info = aurApp->GetBase()->GetSpellInfo();
-        return !info || !info->IsPassive();
+        Aura const* aura = aurApp->GetBase();
+        SpellInfo const* info = aura->GetSpellInfo();
+        return !info || !info->IsPassive() || !aura->IsPermanent();
     };
 
     for (std::unique_ptr<SimAlly> const& ally : _allies)

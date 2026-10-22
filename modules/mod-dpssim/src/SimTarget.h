@@ -159,10 +159,11 @@ public:
     // swings at the actor, so every one must be within melee reach of the actor's standing point and inside its front
     // arc (dodge, parry and block need the attacker in front, and a hit from behind can daze). One target stands
     // TANK_BOSS_YARDS dead ahead; a pack stands on an arc of TANK_PACK_YARDS radius around the actor, within
-    // +-TANK_PACK_HALF_ARC_DEGREES of its facing, the primary dead ahead and the rest alternating left and right of it. The
-    // arc is narrow on purpose: a bot that turns to face one dummy must still have every other one inside its 180 degree
-    // front arc, and two dummies at the arc's ends are 2 x 30 = 60 degrees apart (at +-60 the far end was behind it).
-    // Every dummy faces the actor, so it can parry and block the actor's swings. `spreadYards` plays no part.
+    // +-TANK_PACK_HALF_ARC_DEGREES of its facing, the primary dead ahead and the rest alternating left and right of it.
+    // The arc is narrow on purpose: a bot that turns to face one dummy must still have every other one inside its 180
+    // degree front arc, and two dummies at the arc's ends are 2 x 30 = 60 degrees apart (at +-60 the far end was behind
+    // it). Every dummy faces the actor, so it can block the actor's swings (the PvE always-hit rule,
+    // custom_pve_always_hit.cpp, stops a dummy from dodging or parrying them). `spreadYards` plays no part.
     enum class Layout : uint8
     {
         Stack,

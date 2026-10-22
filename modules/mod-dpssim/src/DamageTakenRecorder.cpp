@@ -28,7 +28,7 @@
 
 namespace
 {
-    // Hundredths of a percent as the 16 bits SwingEvent keeps (the core's own chances are int32 hundredths, at most 10000)
+    // Hundredths of a percent as the 16 bits SwingEvent keeps (the core's chances are int32 hundredths, at most 10000)
     uint16 ToHundredths(int32 value)
     {
         return uint16(std::clamp(value, 0, 10000));
@@ -118,8 +118,8 @@ void DamageTakenRecorder::OnBeforeRollMeleeOutcomeAgainst(Unit const* attacker, 
         return std::max(chance, 0);
     };
 
-    // The outcomes share one 0-10000 roll, in this order (miss, dodge, parry, block, then crit), so a later one only has
-    // what the earlier ones left: Shield Block pushes the block chance past 100%, and everything after it gets nothing
+    // The outcomes share one 0-10000 roll, in this order (miss, dodge, parry, block, then crit), so a later one only
+    // has what the earlier ones left: Shield Block pushes the block chance past 100%, and everything after it gets 0
     int32 const miss = std::min(std::max(miss_chance, 0), 10000);
     int32 const dodge = std::min(avoid(dodge_chance - expertise, inFront), 10000 - miss);
     int32 const parry = std::min(avoid(parry_chance - expertise, inFront), 10000 - miss - dodge);
@@ -136,10 +136,10 @@ void DamageTakenRecorder::OnBeforeRollMeleeOutcomeAgainst(Unit const* attacker, 
     if (!loggedFirstRoll)
     {
         loggedFirstRoll = true;
-        LOG_INFO("server.dpssim", "mod-dpssim: first dummy swing's roll inputs (hundredths of a percent): crit {}, miss "
-            "{}, dodge {}, parry {}, block {}; attacker weapon skill {}, actor max skill {}, defense {}; effective: "
-            "crit {}, miss {}, dodge {}, parry {}, block {}; actor in front arc: {}.", crit_chance, miss_chance,
-            dodge_chance, parry_chance, block_chance, attackerWeaponSkill, victimMaxSkillValueForLevel,
+        LOG_INFO("server.dpssim", "mod-dpssim: first dummy swing's roll inputs (hundredths of a percent): crit {}, "
+            "miss {}, dodge {}, parry {}, block {}; attacker weapon skill {}, actor max skill {}, defense {}; "
+            "effective: crit {}, miss {}, dodge {}, parry {}, block {}; actor in front arc: {}.", crit_chance,
+            miss_chance, dodge_chance, parry_chance, block_chance, attackerWeaponSkill, victimMaxSkillValueForLevel,
             victimDefenseSkill, crit, miss, dodge, parry, block, inFront ? "yes" : "no");
     }
 

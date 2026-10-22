@@ -37,16 +37,17 @@ public:
     virtual void EndSwing() = 0;
 };
 
-// The tank sim's dummy brain (plan .agents/plans/tank-sim/tank-sim.PLAN.md, section 1 and risks R1, R2, R5). The dummies
-// are the same creature entries the DPS sim uses (900004-900009), whose AI is the passive npc_dpssim_training_dummy; in
-// tank mode the batch swaps this AI in on the summoned creatures at run time (Creature::AIM_Initialize), so a DPS or
-// heal run never sees it and no creature data changed. The summons live for the whole process and a tank batch is its
-// own process, so the swap is never undone: the process ends with the batch.
+// The tank sim's dummy brain (plan .agents/plans/tank-sim/tank-sim.PLAN.md, section 1 and risks R1, R2, R5). The
+// dummies are the same creature entries the DPS sim uses (900004-900009), whose AI is the passive
+// npc_dpssim_training_dummy; in tank mode the batch swaps this AI in on the summoned creatures at run time
+// (Creature::AIM_Initialize), so a DPS or heal run never sees it and no creature data changed. The summons live for the
+// whole process and a tank batch is its own process, so the swap is never undone: the process ends with the batch.
 //
-// It does exactly what the passive dummy did (never evades or leashes, never chases, never dies: DamageTaken is the same
-// rule) plus one thing: after BeginFight() it keeps the actor as its victim and swings at it every swing interval with
-// the core's own melee path. Rooted and passive, so it never moves; it only swings while in melee range of the actor.
-// Before BeginFight() (the pre-pull buff phase) and after EndFight() it does nothing at all.
+// It does exactly what the passive dummy did (never evades or leashes, never chases, never dies: DamageTaken is the
+// same rule) plus one thing: after BeginFight() it keeps the actor as its victim and swings at it every swing interval
+// with the core's own melee path. Rooted and passive, so it never moves (a root aura that expires lifts the AI's root
+// too, so UpdateAI puts it back); it only swings while in melee range of the actor. Before BeginFight() (the pre-pull
+// buff phase) and after EndFight() it does nothing at all.
 class SimTankDummyAI : public NullCreatureAI
 {
 public:
@@ -71,29 +72,38 @@ private:
 
 namespace SimTankDummy
 {
+    // The attack power's share of the undebuffed minimum hit (plan T10). The creature formula adds AP / 14 to the base
+    // weapon damage, so with the template's own AP the solver scales the dummy's damage multiplier until the AP part
+    // is exactly this share and the weapon damage carries the rest: Demoralizing Shout or Roar (the dummy's whole AP)
+    // then takes ~15% off a hit, as on a raid boss, not the ~50% the AP alone would be.
+    constexpr float AP_SHARE_OF_MIN = 0.15f;
+
     // What the dummies of a run are told to do
     struct Settings
     {
         SimTank::HitRange Hit;
         uint32 SwingMs = SimTank::DEFAULT_SWING_MS;
         bool Crit = true;
-        bool ParryHaste = true;
     };
 
     // The observer every dummy's swing is reported to (nullptr = none). A process runs one tank batch, so a static is
     // enough, like SimDummyAI's health-drain flag.
     void SetObserver(SimTankSwingObserver* observer);
 
-    // Swaps SimTankDummyAI in on each dummy, sets the swing interval and applies the crit and parry-haste switches (the
-    // creature template's flags_extra: CREATURE_FLAG_EXTRA_NO_CRIT / NO_PARRY_HASTEN, read through the template by the
-    // core, so the switch is per entry; these entries are only ever the sim's dummies and the process is the batch's own).
-    // False (logged) if a swap was refused.
-    bool Install(std::vector<Creature*> const& dummies, Settings const& settings);
+    // Swaps SimTankDummyAI in on each dummy, sets the swing interval and applies the crit switch (the creature
+    // template's flags_extra CREATURE_FLAG_EXTRA_NO_CRIT, read through the template by the core, so the switch is per
+    // entry; these entries are only ever the sim's dummies and the process is the batch's own). The template is only
+    // changed once the dummy took the AI. A boss dummy (BOSS_MOB) also becomes what a raid boss is to `actor` (plan T8,
+    // T9): its real level is the level it fights the actor at (Creature::getLevelForTarget, actor level + 3), so armor
+    // reduction and the outcome roll use the same level, and it is immune to stuns. Pack dummies keep their level and
+    // stay stunnable. False (logged) if a swap was refused.
+    bool Install(std::vector<Creature*> const& dummies, Player* actor, Settings const& settings);
 
     // Solves the dummy's base weapon damage so its undebuffed swing lands in `range` before the victim's damage-taken
-    // modifiers and armor (plan R2). The attack power stays in the formula, so an attack-power debuff still lowers the
-    // hit. Returns what the damage fields are made of. Run at the pull; running it again with the same range is a no-op
-    // apart from the same result.
+    // modifiers and armor (plan R2). The attack power stays in the formula at AP_SHARE_OF_MIN of the minimum hit (plan
+    // T10), so an attack-power debuff still lowers the hit, by at most that share. Returns what the damage fields are
+    // made of. Run at the pull; running it again with the same range and swing only refreshes the live values (attack
+    // power, level, armor, damage fields) in the result.
     SimTank::DummyInfo SolveHit(Creature* dummy, SimTank::HitRange const& range, uint32 swingMs);
 
     // Pull / reset every dummy of the run (they must have been installed). BeginFight solves the damage first (every

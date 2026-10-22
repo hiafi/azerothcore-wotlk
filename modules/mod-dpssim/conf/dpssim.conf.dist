@@ -366,17 +366,17 @@ DpsSim.InfiniteMana =
 #    DpsSim.TankPackHitDamage
 #    DpsSim.TankSwingMs
 #    DpsSim.TankDummyCrit
-#    DpsSim.TankDummyParryHaste
 #        Description: Tank mode only (a profile with "Mode = Tank", see SimProfile.h and SimTank.h): override the
 #                      profile's key of the same name (without the DpsSim. prefix) for this run, so one tank profile
 #                      covers every scenario. TankScenario is dps (the actor's health is refilled after every step, it
 #                      never dies) or survive (no refill, the run ends at the actor's death). TankHitDamage is a boss's
 #                      swing damage before armor and before the victim's damage-taken modifiers, "<min>-<max>" or one
 #                      value, used for a 1-target run; TankPackHitDamage is the same for each dummy of a 2+ target run.
-#                      TankSwingMs is the swing interval (500-10000). TankDummyCrit / TankDummyParryHaste are true/false.
+#                      TankSwingMs is the swing interval (500-10000). TankDummyCrit is true/false.
 #                      Setting any of them for a DPS or heal profile aborts the job. DpsSim.TargetCount works as in DPS
-#                      mode (1 = the boss dummy, 2+ = the elite pack); every dummy swings.
-#        Default:     "" - (Use the profile's own values: dps, 2250-2750, 500-600, 2000, true, true)
+#                      mode (1 = the boss dummy, 2+ = the elite pack); every dummy swings. The boss dummy is a real
+#                      level actor + 3 and stun immune in tank mode; the pack dummies keep the actor's level.
+#        Default:     "" - (Use the profile's own values: dps, 2250-2750, 500-600, 2000, true)
 #
 
 DpsSim.TankScenario =
@@ -384,7 +384,17 @@ DpsSim.TankHitDamage =
 DpsSim.TankPackHitDamage =
 DpsSim.TankSwingMs =
 DpsSim.TankDummyCrit =
-DpsSim.TankDummyParryHaste =
+
+#
+#    DpsSim.TankPullAuras
+#        Description: Tank mode only, conf only (no profile key): spell ids, comma separated, the actor casts
+#                      (triggered) on every dummy at the pull, after the damage solver ran, for known-value runs, e.g.
+#                      "6343, 1160" (Thunder Clap's slow and Demoralizing Shout's attack-power debuff). Setting it for
+#                      a DPS or heal profile aborts the job.
+#        Default:     "" - (None)
+#
+
+DpsSim.TankPullAuras =
 
 #
 # Console.Enable is force-disabled by the core in sim mode (no attached TTY to read from in a

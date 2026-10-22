@@ -41,14 +41,28 @@ change: the dummies swing at the actor. Plan: `.agents/plans/tank-sim/tank-sim.P
 - Profile keys: `TankScenario` (`dps` refills the actor's health after every step so it never dies; `survive` does not,
   the run ends at its death and `ActorDiedAtMs` is the time to death), `TankHitDamage` (the boss, 1 target, default
   `2250-2750` before armor) and `TankPackHitDamage` (each dummy of a 2+ target run, `500-600`), `TankSwingMs` (2000),
-  `TankDummyCrit` and `TankDummyParryHaste` (both true). `DpsSim.Tank*` in the conf override them.
+  `TankDummyCrit` (true). `DpsSim.Tank*` in the conf override them; `DpsSim.TankPullAuras` (conf only) casts spells on
+  the dummies at the pull for known-value runs. There is no dummy parry-haste switch: the PvE always-hit rule means a
+  dummy never parries the actor. The tank's own parry haste (a parry by the actor speeding up its next swing) is the
+  core's, untouched.
 - The AI is swapped in on the summoned dummies at run time (`SimTankDummyAI`, `Creature::AIM_Initialize`), only in tank
   mode; a DPS or heal run keeps the passive AI. The dummies do nothing until the pull, so the pre-pull buff phase is
-  untouched. The solver sets their base weapon damage so the undebuffed hit lands in the configured range.
-- Layout: one dummy 3 yd dead ahead of the actor; a pack on a 3 yd arc within +-60 degrees of its facing, all facing it.
-- `DamageTakenRecorder` records every swing (outcome, pre-armor, armor, block, shields by spell, final damage, rage across
-  the swing); the actor's own healing comes from the `HealRecorder` with the actor as its whole group. The batch logs a
-  `tank iteration` summary per iteration; the DPS-kind JSON report is written as usual (the tank JSON section is TS2).
+  untouched. The solver sets their base weapon damage so the undebuffed hit lands in the configured range, with the
+  attack power at 15% of the minimum hit (`SimTankDummy::AP_SHARE_OF_MIN`): an attack-power debuff such as
+  Demoralizing Shout takes at most that much off.
+- The boss dummy (1 target) is a raid boss to the actor: its real level is the actor's + 3 (the level it already rolled
+  hit and crit at, so armor reduction now matches it too) and it is stun immune. Pack dummies keep the actor's level
+  and stay stunnable. Both are logged at install ("boss dummy ... stun immune").
+- Layout: one dummy 3 yd dead ahead of the actor; a pack on a 3 yd arc within +-30 degrees of its facing, all facing it.
+- `DamageTakenRecorder` records every swing (outcome, pre-armor, armor, block, shields by spell, final damage, rage
+  across the swing); the actor's own healing comes from the `HealRecorder` with the actor as its whole group. The batch
+  logs a `tank iteration` summary per iteration; the DPS-kind JSON report is written as usual (the tank JSON section
+  is TS2).
+- The character sheet is `RunResult::TankActor`, read one second into the fight (stance and first buffs up: a Prot
+  Warrior is only crit immune in Defensive Stance); `TankActorAtPull` is the same read at the pull, before the bot
+  acted. A `survive` run the actor lived through has `TankSurvived` set and counts its TTD as the full duration.
+- Between iterations (every mode) the reset removes non-passive auras and passive-flagged auras with a duration (a
+  spell's delay holder, e.g. Thunderstruck's echo), so nothing from one iteration fires in the next one's buff phase.
 - Needs the core hook `UnitScript::OnMeleeOutcomeFinal` (CalcDamageInfo).
 
 ## Healing sim (heal mode)

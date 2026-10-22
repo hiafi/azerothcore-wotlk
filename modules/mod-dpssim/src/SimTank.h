@@ -27,9 +27,9 @@
 // .agents/plans/tank-sim/tank-sim.PLAN.md, sections 3 and 4). Pure data and parsing, no game headers.
 namespace SimTank
 {
-    // What the incoming hits are for. Dps: real damage, the actor's health refilled after every sim step so it never dies
-    // (tank DPS with every avoidance proc live). Survive: real damage, no refill; the run ends at the actor's death and
-    // the time of death is the headline.
+    // What the incoming hits are for. Dps: real damage, the actor's health refilled after every sim step so it never
+    // dies (tank DPS with every avoidance proc live). Survive: real damage, no refill; the run ends at the actor's
+    // death and the time of death is the headline.
     enum class Scenario : uint8
     {
         Dps,
@@ -46,7 +46,7 @@ namespace SimTank
     };
 
     // Plan T3/T4 defaults: a boss swings for 2,250-2,750 before armor, each pack dummy for 500-600, every 2.0 s, with
-    // crits and parry haste on
+    // crits on
     constexpr HitRange DEFAULT_BOSS_HIT = {2250, 2750};
     constexpr HitRange DEFAULT_PACK_HIT = {500, 600};
     constexpr uint32 DEFAULT_SWING_MS = 2000;
@@ -58,7 +58,7 @@ namespace SimTank
     // The longest damage a hit can be asked to do
     constexpr uint32 MAX_HIT_DAMAGE = 1000000;
 
-    // The Paladin's Bulwark: the buff is the resource (spell_paladin_protection.cpp, aura 201360); its stacks are sampled
+    // The Paladin's Bulwark: the buff is the resource (spell_paladin_protection.cpp, aura 201360), sampled as stacks
     constexpr uint32 SPELL_BULWARK = 201360;
 
     // "dps" / "survive" (any case) -> scenario. False (with `error`) for anything else.
@@ -75,6 +75,11 @@ namespace SimTank
 
     // ---- What a tank-mode iteration records (filled by DamageTakenRecorder and SimDaemon, copied into RunResult) ----
     // All timestamps are in the recorders' raw clock; SimDaemon rebases them to ms since the iteration start.
+    //
+    // Time bases (for TS2): one sim step is clock.Tick() (the map update, in which the dummies swing), then the
+    // samples, then the bot's AI. SwingEvent::TimestampMs is stamped by the recorder during the tick, at the tick's
+    // start (the clock's time before the step). Sample, ThreatSample and RunResult::ActorDiedAtMs are read after the
+    // tick, at its end, so they sit one StepMs later: the swing that killed the actor is at ActorDiedAtMs - StepMs.
 
     // How a dummy's swing at the actor ended
     enum class Outcome : uint8
@@ -88,7 +93,11 @@ namespace SimTank
         Crush,
         Hit,
         Glancing,
-        Other        // evade or immune: nothing was rolled
+        // Any other hitOutCome. Unreachable with the actor (a player) as the victim: MELEE_HIT_EVADE is only rolled
+        // against an evading creature (Unit::RollMeleeOutcomeAgainst) and an immune swing returns from
+        // CalculateMeleeDamage before the hook. Kept so an unexpected outcome is counted under its own name instead of
+        // passing for a real one, and as the end of the enum (LogTankSummary sizes its counters by it).
+        Other
     };
 
     // "miss", "dodge", "parry", "block", "full block", "crit", "crush", "hit", "glancing", "other"
@@ -191,7 +200,7 @@ namespace SimTank
         float FieldMax = 0.0f;
     };
 
-    // The actor as the iteration started, from the core's own getters (the character sheet), percent
+    // The actor's character sheet from the core's own getters, percent (RunResult keeps it at the pull and after 1 s)
     struct ActorInfo
     {
         uint32 Level = 0;

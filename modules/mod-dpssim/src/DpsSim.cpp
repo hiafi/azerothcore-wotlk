@@ -29,7 +29,9 @@
 #include "Timer.h"
 #include "Util.h"
 #include <algorithm>
+#include <limits>
 #include <sstream>
+#include <stdexcept>
 
 namespace
 {
@@ -276,12 +278,11 @@ void DpsSimWorldScript::OnDpsSimRun()
                         "Heal profile (Mode = Heal) - aborting DpsSim.RunPlayerbot job.", profilePath);
                     ready = false;
                 }
-                // Tank mode: the profile's Tank* keys, each overridden by the DpsSim.Tank* conf key of the same name when it
-                // is set (run-sim.sh sets them per run, so one profile covers every scenario). A DPS or heal profile refuses
-                // them, as it refuses DpsSim.InfiniteMana without Heal.
+                // Tank mode: the profile's Tank* keys, each overridden by the DpsSim.Tank* conf key of the same name
+                // when it is set (run-sim.sh sets them per run, so one profile covers every scenario). A DPS or heal
+                // profile refuses them, as it refuses DpsSim.InfiniteMana without Heal.
                 static char const* const TANK_CONF_KEYS[] = {"DpsSim.TankScenario", "DpsSim.TankHitDamage",
-                    "DpsSim.TankPackHitDamage", "DpsSim.TankSwingMs", "DpsSim.TankDummyCrit", "DpsSim.TankDummyParryHaste",
-                    "DpsSim.TankPullAuras"};
+                    "DpsSim.TankPackHitDamage", "DpsSim.TankSwingMs", "DpsSim.TankDummyCrit", "DpsSim.TankPullAuras"};
                 if (profile.TankMode)
                 {
                     config.RunMode = SimDaemon::Mode::Tank;
@@ -290,10 +291,23 @@ void DpsSimWorldScript::OnDpsSimRun()
                     config.TankPackHit = profile.TankPackHitDamage;
                     config.TankSwingMs = profile.TankSwingMs;
                     config.TankDummyCrit = profile.TankDummyCrit;
-                    config.TankDummyParryHaste = profile.TankDummyParryHaste;
 
                     std::string error;
                     auto const text = [](char const* key) { return sConfigMgr->GetOption<std::string>(key, ""); };
+                    // A whole number from a conf value already checked to be digits only: false (no throw) when it is
+                    // too long for an unsigned long, as SimProfile.cpp does for the profile's keys
+                    auto const toNumber = [](std::string const& digits, unsigned long& out)
+                    {
+                        try
+                        {
+                            out = std::stoul(digits);
+                            return true;
+                        }
+                        catch (std::exception const&)
+                        {
+                            return false;
+                        }
+                    };
                     if (std::string v = text("DpsSim.TankScenario"); !v.empty() &&
                         !SimTank::ParseScenario(v, config.TankScenario, error))
                         error = "DpsSim.TankScenario: " + error;
@@ -309,14 +323,14 @@ void DpsSimWorldScript::OnDpsSimRun()
                         std::string const swing = text("DpsSim.TankSwingMs");
                         if (!swing.empty())
                         {
-                            uint32 value = 0;
+                            unsigned long value = 0;
                             if (swing.find_first_not_of("0123456789") != std::string::npos ||
-                                (value = uint32(std::stoul(swing))) < SimTank::MIN_SWING_MS ||
+                                !toNumber(swing, value) || value < SimTank::MIN_SWING_MS ||
                                 value > SimTank::MAX_SWING_MS)
-                                error = Acore::StringFormat("DpsSim.TankSwingMs '{}' is not a whole number of {}-{} ms",
-                                    swing, SimTank::MIN_SWING_MS, SimTank::MAX_SWING_MS);
+                                error = Acore::StringFormat("DpsSim.TankSwingMs '{}' is not a whole number of {}-{} "
+                                    "ms", swing, SimTank::MIN_SWING_MS, SimTank::MAX_SWING_MS);
                             else
-                                config.TankSwingMs = value;
+                                config.TankSwingMs = uint32(value);
                         }
                     }
 
@@ -342,14 +356,16 @@ void DpsSimWorldScript::OnDpsSimRun()
                             if (first == std::string::npos)
                                 continue;
                             token = token.substr(first, token.find_last_not_of(" \t") - first + 1);
-                            if (token.find_first_not_of("0123456789") != std::string::npos)
+                            unsigned long spellId = 0;
+                            if (token.find_first_not_of("0123456789") != std::string::npos ||
+                                !toNumber(token, spellId) || spellId == 0 ||
+                                spellId > std::numeric_limits<uint32>::max())
                                 error = Acore::StringFormat("DpsSim.TankPullAuras entry '{}' is not a spell id", token);
                             else
-                                config.TankPullAuras.push_back(uint32(std::stoul(token)));
+                                config.TankPullAuras.push_back(uint32(spellId));
                         }
                     }
                     applyFlag("DpsSim.TankDummyCrit", config.TankDummyCrit);
-                    applyFlag("DpsSim.TankDummyParryHaste", config.TankDummyParryHaste);
 
                     if (!error.empty())
                     {
@@ -358,11 +374,10 @@ void DpsSimWorldScript::OnDpsSimRun()
                         ready = false;
                     }
 
-                    LOG_INFO("server.dpssim", "mod-dpssim: tank mode - scenario {}, boss hit {}, pack hit {}, swing {} ms, "
-                        "dummy crit {}, dummy parry haste {}.", SimTank::ScenarioName(config.TankScenario),
+                    LOG_INFO("server.dpssim", "mod-dpssim: tank mode - scenario {}, boss hit {}, pack hit {}, swing {} "
+                        "ms, dummy crit {}.", SimTank::ScenarioName(config.TankScenario),
                         SimTank::HitRangeText(config.TankHit), SimTank::HitRangeText(config.TankPackHit),
-                        config.TankSwingMs, config.TankDummyCrit ? "on" : "off",
-                        config.TankDummyParryHaste ? "on" : "off");
+                        config.TankSwingMs, config.TankDummyCrit ? "on" : "off");
                 }
                 else
                     for (char const* key : TANK_CONF_KEYS)

@@ -192,16 +192,15 @@ namespace SimDaemon
         std::function<void(uint32, Player*, std::vector<Player*> const&)> HealStepHook;
 
         // ---- Tank mode (RunMode == Mode::Tank) ----
-        // The DPS sim with the dummies swinging at the actor (plan .agents/plans/tank-sim/tank-sim.PLAN.md). The profile's
-        // Tank* keys, with DpsSim.Tank* in the conf overriding them (DpsSim.cpp). TargetCount and TargetRank work as in
-        // DPS mode: 1 target is the boss dummy, 2+ the elite pack; every dummy swings. TankHit applies to the boss, and
-        // TankPackHit to each dummy of a pack.
+        // The DPS sim with the dummies swinging at the actor (plan .agents/plans/tank-sim/tank-sim.PLAN.md). The
+        // profile's Tank* keys, with DpsSim.Tank* in the conf overriding them (DpsSim.cpp). TargetCount and TargetRank
+        // work as in DPS mode: 1 target is the boss dummy, 2+ the elite pack; every dummy swings. TankHit applies to
+        // the boss, and TankPackHit to each dummy of a pack.
         SimTank::Scenario TankScenario = SimTank::Scenario::Dps;
         SimTank::HitRange TankHit = SimTank::DEFAULT_BOSS_HIT;
         SimTank::HitRange TankPackHit = SimTank::DEFAULT_PACK_HIT;
         uint32 TankSwingMs = SimTank::DEFAULT_SWING_MS;
         bool TankDummyCrit = true;
-        bool TankDummyParryHaste = true;
         // Spell ids the actor casts (triggered) on every dummy at the pull, for known-value runs: Thunder Clap 6343 and
         // Demoralizing Shout 1160 show how a slow and an attack-power debuff change the swings. DpsSim.TankPullAuras in
         // the conf only (no profile key); empty = none.
@@ -319,13 +318,20 @@ namespace SimDaemon
         uint32 WallClockMs = 0;
 
         // ---- Tank mode (RunConfig::RunMode == Mode::Tank; empty otherwise) ----
-        // The DPS fields above are the actor's own output against the dummies, as in a DPS run; ActorDied/ActorDiedAtMs
-        // are the death (the time of death is the survive scenario's TTD, and ElapsedMs stays the full duration, so DPS
-        // keeps dividing by it). HealEvents/AbsorbEvents (heal-mode structs, target index 0) are the actor's own healing
-        // and shields. Timestamps are ms since the iteration start.
+        // The DPS fields above are the actor's own output against the dummies, as in a DPS run;
+        // ActorDied/ActorDiedAtMs are the death (the time of death is the survive scenario's TTD, and ElapsedMs stays
+        // the full duration, so DPS keeps dividing by it). HealEvents/AbsorbEvents (heal-mode structs, target index 0)
+        // are the actor's own healing and shields. Timestamps are ms since the iteration start (time bases: SimTank.h).
         bool TankMode = false;
         SimTank::Scenario TankScenario = SimTank::Scenario::Dps;
+        // The actor's character sheet: TankActor is the one to show, taken after the first second of the fight (stance
+        // and the first buffs up; a Prot Warrior is only crit immune once in Defensive Stance). TankActorAtPull is the
+        // same read at the pull, before the bot acted, kept for comparison.
         SimTank::ActorInfo TankActor;
+        SimTank::ActorInfo TankActorAtPull;
+        // Survive scenario only: the actor was alive at the end of the full duration (plan T11). Its TTD then counts as
+        // the duration (ActorDied is false and ActorDiedAtMs 0).
+        bool TankSurvived = false;
         // One per dummy, in target index order
         std::vector<SimTank::DummyInfo> TankDummies;
         std::vector<SimTank::SwingEvent> Swings;

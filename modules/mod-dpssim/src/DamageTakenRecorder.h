@@ -24,21 +24,21 @@
 #include "SimTankDummyAI.h"
 #include <vector>
 
-// The tank sim's counterpart of EventRecorder and HealRecorder (plan .agents/plans/tank-sim/tank-sim.PLAN.md, section 4):
-// records every swing a dummy makes at the actor. A swing passes four hooks, in this order inside one
+// The tank sim's counterpart of EventRecorder and HealRecorder (plan .agents/plans/tank-sim/tank-sim.PLAN.md, section
+// 4): records every swing a dummy makes at the actor. A swing passes four hooks, in this order inside one
 // Unit::CalculateMeleeDamage call, and the recorder joins them into one SwingEvent:
 //
 //  1. ModifyMeleeDamage: the damage after the dummy's damage fields and the actor's damage-taken modifiers (Defensive
 //     Stance, talents), before armor. Read only: `damage` is never changed.
 //  2. OnBeforeRollMeleeOutcomeAgainst: the chances the core is about to roll, kept as the swing's "expected" side. Read
 //     only, nothing in the reference parameters is touched.
-//  3. OnAbsorbFinal: a shield that took damage off the actor. Melee absorbs fire BEFORE the outcome hook (the reverse of
-//     the spell path HealRecorder follows), so they wait in a pending list until the swing closes.
+//  3. OnAbsorbFinal: a shield that took damage off the actor. Melee absorbs fire BEFORE the outcome hook (the reverse
+//     of the spell path HealRecorder follows), so they wait in a pending list until the swing closes.
 //  4. OnMeleeOutcomeFinal (the TS0 core hook): the outcome, the block, the absorb and resist and the final damage. This
 //     closes the swing.
 //
-// SimTankDummyAI also brackets the whole swing (SimTankSwingObserver), which is how the actor's rage across the swing is
-// measured: rage is rewarded after the outcome hook, in DealMeleeDamage, so only the span of the whole swing sees it.
+// SimTankDummyAI also brackets the whole swing (SimTankSwingObserver), which is how the actor's rage across the swing
+// is measured: rage is rewarded after the outcome hook, in DealMeleeDamage, so only the whole swing's span sees it.
 //
 // Anything that is not a dummy hitting the actor is ignored. Same heap-allocation / never-deleted /
 // constructed-at-runtime rules as EventRecorder: see its class comment.
@@ -98,8 +98,8 @@ private:
     };
     std::vector<PendingAbsorb> _pendingAbsorbs;
 
-    // BeginSwing()..EndSwing(): the actor's rage before the swing (tenths), -1 when the actor has none, and the index of
-    // the first swing event the bracket may add
+    // BeginSwing()..EndSwing(): the actor's rage before the swing (tenths), -1 when the actor has none, and the index
+    // of the first swing event the bracket may add
     bool _swingBracketOpen = false;
     int32 _ragePre = -1;
     size_t _swingsAtBegin = 0;
