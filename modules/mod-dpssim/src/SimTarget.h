@@ -155,9 +155,27 @@ private:
 class SimTargetGroup
 {
 public:
+    // Where the dummies stand. Stack is the DPS layout described above. Tank is the tank sim's (plan R3): every dummy
+    // swings at the actor, so every one must be within melee reach of the actor's standing point and inside its front
+    // arc (dodge, parry and block need the attacker in front, and a hit from behind can daze). One target stands
+    // TANK_BOSS_YARDS dead ahead; a pack stands on an arc of TANK_PACK_YARDS radius around the actor, within
+    // +-TANK_PACK_HALF_ARC_DEGREES of its facing, the primary dead ahead and the rest alternating left and right of it. The
+    // arc is narrow on purpose: a bot that turns to face one dummy must still have every other one inside its 180 degree
+    // front arc, and two dummies at the arc's ends are 2 x 30 = 60 degrees apart (at +-60 the far end was behind it).
+    // Every dummy faces the actor, so it can parry and block the actor's swings. `spreadYards` plays no part.
+    enum class Layout : uint8
+    {
+        Stack,
+        Tank
+    };
+    static constexpr float TANK_BOSS_YARDS = 3.0f;
+    static constexpr float TANK_PACK_YARDS = 3.0f;
+    static constexpr float TANK_PACK_HALF_ARC_DEGREES = 30.0f;
+
     // Spawns `count` dummies (clamped to at least 1) around `actor` on its map, each with `config`. Returns false
     // (logging why) if any spawn fails.
-    bool Create(Player* actor, uint32 count, float spreadYards, SimTarget::Config const& config);
+    bool Create(Player* actor, uint32 count, float spreadYards, SimTarget::Config const& config,
+        Layout layout = Layout::Stack);
 
     // In index order; the primary is first
     [[nodiscard]] std::vector<Creature*> GetCreatures() const;

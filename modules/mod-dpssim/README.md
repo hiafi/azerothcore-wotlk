@@ -33,6 +33,24 @@ A dead pet is revived and a missing one tamed again. The pet's swings and spells
 read "(pet)" in the report). A hunter actor also gets the "Requires No Ammo" aura, so its ranged weapon needs no
 arrows. The run log shows what ran: "tamed pet ...", and "strategies resolved: combat [...], non-combat [...]".
 
+## Tank sim (tank mode)
+
+A profile with `Mode = Tank` (`conf/profiles/ProtWarriorTankSim.conf`, a draft until TS3) runs the DPS sim with one
+change: the dummies swing at the actor. Plan: `.agents/plans/tank-sim/tank-sim.PLAN.md`.
+
+- Profile keys: `TankScenario` (`dps` refills the actor's health after every step so it never dies; `survive` does not,
+  the run ends at its death and `ActorDiedAtMs` is the time to death), `TankHitDamage` (the boss, 1 target, default
+  `2250-2750` before armor) and `TankPackHitDamage` (each dummy of a 2+ target run, `500-600`), `TankSwingMs` (2000),
+  `TankDummyCrit` and `TankDummyParryHaste` (both true). `DpsSim.Tank*` in the conf override them.
+- The AI is swapped in on the summoned dummies at run time (`SimTankDummyAI`, `Creature::AIM_Initialize`), only in tank
+  mode; a DPS or heal run keeps the passive AI. The dummies do nothing until the pull, so the pre-pull buff phase is
+  untouched. The solver sets their base weapon damage so the undebuffed hit lands in the configured range.
+- Layout: one dummy 3 yd dead ahead of the actor; a pack on a 3 yd arc within +-60 degrees of its facing, all facing it.
+- `DamageTakenRecorder` records every swing (outcome, pre-armor, armor, block, shields by spell, final damage, rage across
+  the swing); the actor's own healing comes from the `HealRecorder` with the actor as its whole group. The batch logs a
+  `tank iteration` summary per iteration; the DPS-kind JSON report is written as usual (the tank JSON section is TS2).
+- Needs the core hook `UnitScript::OnMeleeOutcomeFinal` (CalcDamageInfo).
+
 ## Healing sim (heal mode)
 
 A profile with `Mode = Heal` (`conf/profiles/HolyPriestHealSim.conf`) runs the healing sim: the profile's class is the

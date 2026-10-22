@@ -361,6 +361,32 @@ DpsSim.HealTargets =
 DpsSim.InfiniteMana =
 
 #
+#    DpsSim.TankScenario
+#    DpsSim.TankHitDamage
+#    DpsSim.TankPackHitDamage
+#    DpsSim.TankSwingMs
+#    DpsSim.TankDummyCrit
+#    DpsSim.TankDummyParryHaste
+#        Description: Tank mode only (a profile with "Mode = Tank", see SimProfile.h and SimTank.h): override the
+#                      profile's key of the same name (without the DpsSim. prefix) for this run, so one tank profile
+#                      covers every scenario. TankScenario is dps (the actor's health is refilled after every step, it
+#                      never dies) or survive (no refill, the run ends at the actor's death). TankHitDamage is a boss's
+#                      swing damage before armor and before the victim's damage-taken modifiers, "<min>-<max>" or one
+#                      value, used for a 1-target run; TankPackHitDamage is the same for each dummy of a 2+ target run.
+#                      TankSwingMs is the swing interval (500-10000). TankDummyCrit / TankDummyParryHaste are true/false.
+#                      Setting any of them for a DPS or heal profile aborts the job. DpsSim.TargetCount works as in DPS
+#                      mode (1 = the boss dummy, 2+ = the elite pack); every dummy swings.
+#        Default:     "" - (Use the profile's own values: dps, 2250-2750, 500-600, 2000, true, true)
+#
+
+DpsSim.TankScenario =
+DpsSim.TankHitDamage =
+DpsSim.TankPackHitDamage =
+DpsSim.TankSwingMs =
+DpsSim.TankDummyCrit =
+DpsSim.TankDummyParryHaste =
+
+#
 # Console.Enable is force-disabled by the core in sim mode (no attached TTY to read from in a
 # typical headless/scripted run) and MapUpdate.Threads is force-set to 0 (synchronous, deterministic
 # map updates - the sim daemon's own loop calls map->Update(diff) directly rather than going through

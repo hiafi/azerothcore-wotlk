@@ -29,6 +29,7 @@
 #include "Timer.h"
 #include "Util.h"
 #include <algorithm>
+#include <sstream>
 
 namespace
 {
@@ -275,6 +276,103 @@ void DpsSimWorldScript::OnDpsSimRun()
                         "Heal profile (Mode = Heal) - aborting DpsSim.RunPlayerbot job.", profilePath);
                     ready = false;
                 }
+                // Tank mode: the profile's Tank* keys, each overridden by the DpsSim.Tank* conf key of the same name when it
+                // is set (run-sim.sh sets them per run, so one profile covers every scenario). A DPS or heal profile refuses
+                // them, as it refuses DpsSim.InfiniteMana without Heal.
+                static char const* const TANK_CONF_KEYS[] = {"DpsSim.TankScenario", "DpsSim.TankHitDamage",
+                    "DpsSim.TankPackHitDamage", "DpsSim.TankSwingMs", "DpsSim.TankDummyCrit", "DpsSim.TankDummyParryHaste",
+                    "DpsSim.TankPullAuras"};
+                if (profile.TankMode)
+                {
+                    config.RunMode = SimDaemon::Mode::Tank;
+                    config.TankScenario = profile.TankScenario;
+                    config.TankHit = profile.TankHitDamage;
+                    config.TankPackHit = profile.TankPackHitDamage;
+                    config.TankSwingMs = profile.TankSwingMs;
+                    config.TankDummyCrit = profile.TankDummyCrit;
+                    config.TankDummyParryHaste = profile.TankDummyParryHaste;
+
+                    std::string error;
+                    auto const text = [](char const* key) { return sConfigMgr->GetOption<std::string>(key, ""); };
+                    if (std::string v = text("DpsSim.TankScenario"); !v.empty() &&
+                        !SimTank::ParseScenario(v, config.TankScenario, error))
+                        error = "DpsSim.TankScenario: " + error;
+                    else if (std::string v2 = text("DpsSim.TankHitDamage"); error.empty() && !v2.empty() &&
+                        !SimTank::ParseHitRange(v2, config.TankHit, error))
+                        error = "DpsSim.TankHitDamage: " + error;
+                    else if (std::string v3 = text("DpsSim.TankPackHitDamage"); error.empty() && !v3.empty() &&
+                        !SimTank::ParseHitRange(v3, config.TankPackHit, error))
+                        error = "DpsSim.TankPackHitDamage: " + error;
+
+                    if (error.empty())
+                    {
+                        std::string const swing = text("DpsSim.TankSwingMs");
+                        if (!swing.empty())
+                        {
+                            uint32 value = 0;
+                            if (swing.find_first_not_of("0123456789") != std::string::npos ||
+                                (value = uint32(std::stoul(swing))) < SimTank::MIN_SWING_MS ||
+                                value > SimTank::MAX_SWING_MS)
+                                error = Acore::StringFormat("DpsSim.TankSwingMs '{}' is not a whole number of {}-{} ms",
+                                    swing, SimTank::MIN_SWING_MS, SimTank::MAX_SWING_MS);
+                            else
+                                config.TankSwingMs = value;
+                        }
+                    }
+
+                    auto const applyFlag = [&](char const* key, bool& target)
+                    {
+                        std::string const flag = text(key);
+                        if (!error.empty() || flag.empty())
+                            return;
+                        if (StringEqualI(flag, "1") || StringEqualI(flag, "true"))
+                            target = true;
+                        else if (StringEqualI(flag, "0") || StringEqualI(flag, "false"))
+                            target = false;
+                        else
+                            error = Acore::StringFormat("{} '{}' is not true or false", key, flag);
+                    };
+                    // DpsSim.TankPullAuras = "6343, 1160": spells the actor casts on every dummy at the pull
+                    {
+                        std::istringstream ids(text("DpsSim.TankPullAuras"));
+                        std::string token;
+                        while (std::getline(ids, token, ','))
+                        {
+                            size_t const first = token.find_first_not_of(" \t");
+                            if (first == std::string::npos)
+                                continue;
+                            token = token.substr(first, token.find_last_not_of(" \t") - first + 1);
+                            if (token.find_first_not_of("0123456789") != std::string::npos)
+                                error = Acore::StringFormat("DpsSim.TankPullAuras entry '{}' is not a spell id", token);
+                            else
+                                config.TankPullAuras.push_back(uint32(std::stoul(token)));
+                        }
+                    }
+                    applyFlag("DpsSim.TankDummyCrit", config.TankDummyCrit);
+                    applyFlag("DpsSim.TankDummyParryHaste", config.TankDummyParryHaste);
+
+                    if (!error.empty())
+                    {
+                        LOG_ERROR("server.dpssim", "mod-dpssim: DpsSim.Profile '{}': {} - aborting DpsSim.RunPlayerbot "
+                            "job.", profilePath, error);
+                        ready = false;
+                    }
+
+                    LOG_INFO("server.dpssim", "mod-dpssim: tank mode - scenario {}, boss hit {}, pack hit {}, swing {} ms, "
+                        "dummy crit {}, dummy parry haste {}.", SimTank::ScenarioName(config.TankScenario),
+                        SimTank::HitRangeText(config.TankHit), SimTank::HitRangeText(config.TankPackHit),
+                        config.TankSwingMs, config.TankDummyCrit ? "on" : "off",
+                        config.TankDummyParryHaste ? "on" : "off");
+                }
+                else
+                    for (char const* key : TANK_CONF_KEYS)
+                        if (!sConfigMgr->GetOption<std::string>(key, "").empty())
+                        {
+                            LOG_ERROR("server.dpssim", "mod-dpssim: {} is set but profile '{}' is not a Tank profile "
+                                "(Mode = Tank) - aborting DpsSim.RunPlayerbot job.", key, profilePath);
+                            ready = false;
+                        }
+
                 LOG_INFO("server.dpssim",
                     "mod-dpssim: loaded DpsSim.Profile '{}' (class {}, {} gear item(s), spellPower {}, attackPower {}, "
                     "{} synthetic rating(s), {} synthetic stat(s)).",
@@ -297,7 +395,9 @@ void DpsSimWorldScript::OnDpsSimRun()
 
         // A heal-mode job always runs as a batch (the group persists across iterations); it logs its own summary lines
         bool const heal = config.RunMode == SimDaemon::Mode::Heal;
-        if (ready && iterations <= 1 && !heal)
+        // A tank-mode job is a batch too (it logs its own summaries); its results are DPS-kind reports, written below
+        bool const tank = config.RunMode == SimDaemon::Mode::Tank;
+        if (ready && iterations <= 1 && !heal && !tank)
             SimDaemon::RunPlayerbot(config);
         else if (ready)
         {
@@ -343,7 +443,8 @@ void DpsSimWorldScript::OnDpsSimRun()
                     result.TargetSwitches);
 
                 if (!reportPath.empty())
-                    SimReport::WriteJson(IterationReportPath(reportPath, uint32(i + 1)), config, result);
+                    SimReport::WriteJson(tank && results.size() == 1 ? reportPath :
+                        IterationReportPath(reportPath, uint32(i + 1)), config, result);
             }
         }
     }
