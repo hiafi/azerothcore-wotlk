@@ -300,15 +300,67 @@ bool SimProfile::Load(std::string const& path, Profile& out)
         }
         else if (key == "Mode")
         {
+            parsed.HealMode = false;
+            parsed.TankMode = false;
             if (StringEqualI(value, "Heal"))
                 parsed.HealMode = true;
-            else if (StringEqualI(value, "Dps"))
-                parsed.HealMode = false;
-            else
+            else if (StringEqualI(value, "Tank"))
+                parsed.TankMode = true;
+            else if (!StringEqualI(value, "Dps"))
             {
                 LOG_ERROR("server.dpssim",
-                    "mod-dpssim: SimProfile::Load() - '{}' line {}: 'Mode' value '{}' is not Heal or Dps.",
+                    "mod-dpssim: SimProfile::Load() - '{}' line {}: 'Mode' value '{}' is not Heal, Tank or Dps.",
                     path, lineNo, value);
+                return false;
+            }
+        }
+        else if (key == "TankScenario" || key == "TankHitDamage" || key == "TankPackHitDamage" ||
+            key == "TankSwingMs" || key == "TankDummyCrit")
+        {
+            parsed.TankKeySet = true;
+            std::string error;
+            bool ok = true;
+            if (key == "TankScenario")
+                ok = SimTank::ParseScenario(value, parsed.TankScenario, error);
+            else if (key == "TankHitDamage")
+                ok = SimTank::ParseHitRange(value, parsed.TankHitDamage, error);
+            else if (key == "TankPackHitDamage")
+                ok = SimTank::ParseHitRange(value, parsed.TankPackHitDamage, error);
+            else if (key == "TankSwingMs")
+            {
+                try
+                {
+                    if (value.find_first_not_of("0123456789") != std::string::npos)
+                        throw std::invalid_argument("not a whole number");
+                    uint32 const swing = uint32(std::stoul(value));
+                    if (swing < SimTank::MIN_SWING_MS || swing > SimTank::MAX_SWING_MS)
+                        throw std::out_of_range("range");
+                    parsed.TankSwingMs = swing;
+                }
+                catch (std::exception const&)
+                {
+                    error = Acore::StringFormat("'{}' is not a whole number of {}-{} ms", value, SimTank::MIN_SWING_MS,
+                        SimTank::MAX_SWING_MS);
+                    ok = false;
+                }
+            }
+            else
+            {
+                bool flagOk = false;
+                bool const flag = ParseBool(value, flagOk);
+                if (!flagOk)
+                {
+                    error = Acore::StringFormat("'{}' is not true/false", value);
+                    ok = false;
+                }
+                else
+                    parsed.TankDummyCrit = flag;
+            }
+
+            if (!ok)
+            {
+                LOG_ERROR("server.dpssim", "mod-dpssim: SimProfile::Load() - '{}' line {}: '{}': {}.", path, lineNo,
+                    key, error);
                 return false;
             }
         }
@@ -445,6 +497,13 @@ bool SimProfile::Load(std::string const& path, Profile& out)
     {
         LOG_ERROR("server.dpssim", "mod-dpssim: SimProfile::Load() - '{}': 'InfiniteMana' is for Heal profiles "
             "(add 'Mode = Heal'); a DPS run has no mana to refill.", path);
+        return false;
+    }
+
+    if (!parsed.TankMode && parsed.TankKeySet)
+    {
+        LOG_ERROR("server.dpssim", "mod-dpssim: SimProfile::Load() - '{}': the Tank* keys are for Tank profiles (add "
+            "'Mode = Tank').", path);
         return false;
     }
 

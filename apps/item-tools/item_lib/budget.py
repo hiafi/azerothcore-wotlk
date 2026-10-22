@@ -167,6 +167,9 @@ def compute_breakdown(item_row: dict, itemization_row: dict, tables: dict[str, d
         baseline_armor = _round(armor_curve_row["armor"] * armor_slot_row["mult"] * armor_qual_row["mult"])
         b["baseline_armor"] = baseline_armor
         b["final_armor"] = max(0, baseline_armor + armor_delta)
+        # `armor` holds base + bonus armor (the server subtracts ArmorDamageModifier back out), so the
+        # materialized column adds the item's bonus armor on top of the curve's base armor.
+        b["bonus_armor"] = max(0, int(item_row.get("ArmorDamageModifier") or 0))
 
     block_value_delta = itemization_row["block_value_delta"]
     block_value_row = tables["item_block_value_curve"].get((ilvl, quality))
@@ -301,7 +304,7 @@ def materialized_item_fields(breakdown: dict) -> dict:
         fields[f"stat_value{clear}"] = 0
 
     if breakdown["has_armor_curve"]:
-        fields["armor"] = breakdown["final_armor"]
+        fields["armor"] = breakdown["final_armor"] + breakdown.get("bonus_armor", 0)
 
     if breakdown["has_block_value_curve"]:
         fields["block"] = breakdown["final_block_value"]

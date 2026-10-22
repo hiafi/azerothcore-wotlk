@@ -354,6 +354,11 @@ bool SimBot::EngageTargets(std::vector<Creature*> const& targets)
     return allEngaged;
 }
 
+uint8 SimBot::GetMyAttackerCount() const
+{
+    return _ai ? _ai->GetAiObjectContext()->GetValue<uint8>("my attacker count")->Get() : 0;
+}
+
 ObjectGuid SimBot::GetCurrentTarget() const
 {
     if (!_ai)

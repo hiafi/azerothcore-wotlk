@@ -217,13 +217,14 @@ bool SimActor::Create(Config const& config)
         _player->ApplySpellPowerBonus(config.SpellPower, true);
     }
 
-    if (config.SpellPower != 0 || config.AttackPower != 0 || !config.GearItemIds.empty()
-        || !config.CombatRatings.empty() || !config.Stats.empty())
-    {
-        _player->UpdateAllStats();
-        _player->SetFullHealth();
-        _player->SetPower(POWER_MANA, _player->GetMaxPower(POWER_MANA));
-    }
+    // A real login turns stat recalculation on once the character is loaded (PlayerStorage.cpp, LoadFromDB). The sim
+    // builds its character with Player::Create() and never goes through that, so without this every later stat
+    // change (%-stat and attack power talents, buffs, forms, stances, stat procs) would be silently dropped:
+    // Unit::UpdateUnitMod() only recalculates while CanModifyStats() is true.
+    _player->SetCanModifyStats(true);
+    _player->UpdateAllStats();
+    _player->SetFullHealth();
+    _player->SetPower(POWER_MANA, _player->GetMaxPower(POWER_MANA));
 
     if (config.HasPosition)
         _player->Relocate(config.PositionX, config.PositionY, config.PositionZ, config.PositionO);

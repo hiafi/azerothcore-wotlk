@@ -33,6 +33,117 @@ A dead pet is revived and a missing one tamed again. The pet's swings and spells
 read "(pet)" in the report). A hunter actor also gets the "Requires No Ammo" aura, so its ranged weapon needs no
 arrows. The run log shows what ran: "tamed pet ...", and "strategies resolved: combat [...], non-combat [...]".
 
+## Tank sim (tank mode)
+
+A profile with `Mode = Tank` runs the DPS sim with one change: the dummies swing at the actor. Plan:
+`.agents/plans/tank-sim/tank-sim.PLAN.md`. Profiles (level 60, real dungeon tank gear, the bots' premade talents):
+`ProtWarriorTankSim` (Human, race 1), `ProtPaladinTankSim` (Human, race 1; the same plate set) and `BearTankSim`
+(Tauren, race 6; the bear tank build, not Bestial Fury). Each header lists the talent decode, the gear and the sheet
+to expect.
+
+- Profile keys: `TankScenario` (`dps` refills the actor's health after every step so it never dies; `survive` does not,
+  the run ends at its death and `ActorDiedAtMs` is the time to death), `TankHitDamage` (the boss, 1 target, default
+  `2250-2750` before armor) and `TankPackHitDamage` (each dummy of a 2+ target run, `500-600`), `TankSwingMs` (2000),
+  `TankDummyCrit` (true). `DpsSim.Tank*` in the conf override them; `DpsSim.TankPullAuras` (conf only) casts spells on
+  the dummies at the pull for known-value runs. There is no dummy parry-haste switch: the PvE always-hit rule means a
+  dummy never parries the actor. The tank's own parry haste (a parry by the actor speeding up its next swing) is the
+  core's, untouched.
+- The AI is swapped in on the summoned dummies at run time (`SimTankDummyAI`, `Creature::AIM_Initialize`), only in tank
+  mode; a DPS or heal run keeps the passive AI. The dummies do nothing until the pull, so the pre-pull buff phase is
+  untouched. The solver sets their base weapon damage so the undebuffed hit lands in the configured range, with the
+  attack power at 15% of the minimum hit (`SimTankDummy::AP_SHARE_OF_MIN`): an attack-power debuff such as
+  Demoralizing Shout takes at most that much off.
+- The boss dummy (1 target) is a raid boss to the actor: its real level is the actor's + 3 (the level it already rolled
+  hit and crit at, so armor reduction now matches it too) and it is stun immune. Pack dummies keep the actor's level
+  and stay stunnable. Both are logged at install ("boss dummy ... stun immune").
+- Layout: one dummy 3 yd dead ahead of the actor; a pack on a 3 yd arc within +-30 degrees of its facing, all facing it.
+- `DamageTakenRecorder` records every swing (outcome, pre-armor, armor, block, shields by spell, final damage, rage
+  across the swing); the actor's own healing comes from the `HealRecorder` with the actor as its whole group. The batch
+  logs a `tank iteration` summary per iteration and writes one report per iteration (see "Tank reports" below).
+- The character sheet is `RunResult::TankActor`, read one second into the fight (stance and first buffs up: a Prot
+  Warrior is only crit immune in Defensive Stance); `TankActorAtPull` is the same read at the pull, before the bot
+  acted. A `survive` run the actor lived through has `TankSurvived` set and counts its TTD as the full duration.
+- Between iterations (every mode) the reset removes non-passive auras and passive-flagged auras with a duration (a
+  spell's delay holder, e.g. Thunderstruck's echo), so nothing from one iteration fires in the next one's buff phase.
+- Needs the core hook `UnitScript::OnMeleeOutcomeFinal` (CalcDamageInfo).
+- Known-value tests: `DpsSim.RunTests=1` with `DpsSim.TestFilter=tank.` runs the eight tank tests (`tank.outcomes`,
+  `tank.crit_immune`, `tank.hit_formula`, `tank.revenge`, `tank.ttd`, `tank.survived`, `tank.thunderclap_slow`,
+  `tank.stun_immune`; `src/SimTests.cpp` documents what each asserts). They load `ProtWarriorTankSim.conf` from the
+  directory of `DpsSim.Profile` and script the actor through `RunConfig::TankStepHook` / `TankSilenceBot`:
+  `DPSSIM_KEEP_LOG=1 DPSSIM_EXTRA_CONF='DpsSim.RunTests = 1\nDpsSim.TestFilter = tank.' tools/run-sim.sh
+  ProtWarriorTankSim 10 60 1 1`. A test run writes no report, so run-sim.sh ends with "produced no report"; the
+  `[PASS]` / `[FAIL]` lines are in the kept run log.
+
+### Running it
+
+```
+tools/run-sim.sh ProtWarriorTankSim 120 60 1 10                        # dps scenario, one boss dummy, avg of 10
+TANKSIM_SCENARIO=survive tools/run-sim.sh ProtWarriorTankSim 120 60 1 10   # time to death
+tools/run-sim.sh ProtWarriorTankSim 120 60 1 10 100 5                  # 5-dummy pack (the 7th argument, [targets])
+TANKSIM_HIT=3000 TANKSIM_SWING_MS=2500 tools/run-sim.sh ProtWarriorTankSim 120 60 1 10
+```
+
+Environment overrides (each maps onto the `DpsSim.Tank*` key of the profile key it names; without one the profile's own
+value applies; a bad value or a non-tank profile is refused before anything starts):
+
+| Variable | Conf key | Values |
+|---|---|---|
+| `TANKSIM_SCENARIO` | `DpsSim.TankScenario` | `dps` or `survive` |
+| `TANKSIM_HIT` | `DpsSim.TankHitDamage` | the boss's hit before armor, `2250-2750` or one value |
+| `TANKSIM_PACK_HIT` | `DpsSim.TankPackHitDamage` | each pack dummy's hit before armor, `500-600` |
+| `TANKSIM_SWING_MS` | `DpsSim.TankSwingMs` | 500-10000 |
+
+Presets (the profile defaults, plan T3/T4): a boss hit of 2,250-2,750 before armor every 2.0 s with crits on, or each
+pack dummy for 500-600; the boss is a level actor+3, the pack elites the actor's level. Files:
+`reports/<Profile>.tank-<scenario>.<targets>t[.x<hash>].<ts>.report.json` (and `.iterN.` files), so aggregation never
+mixes scenarios or pack sizes (`x<hash>` is added when `TANKSIM_HIT`, `TANKSIM_PACK_HIT` or `TANKSIM_SWING_MS`
+override the profile, like the heal sim's scenario tag; `DPSSIM_EXTRA_CONF` may not set the `DpsSim.Tank*` keys,
+run-sim.sh refuses it); the baked page is `reports/TankProfileReport.html`.
+
+### Tank reports (`"kind": "tank"`)
+
+A tank report is the DPS report exactly as before (`config`, `summary`, `spells`, `hits`, `auraEvents`, `manaSamples`,
+`casts`, `targets`) with `"kind": "tank"` as its first key and a `"tank"` section as its last; DPS and heal reports are
+unchanged. The `tank` object (schema in `src/SimReport.h`): `config` (scenario, hit ranges, swing ms, crit switch,
+dummy count and kind, solver values per dummy), `actor` (the character sheet after the first second and at the pull),
+`summary`, `perDummy` (full outcome split, damage taken, threat), `absorbsBySpell`, `selfHeals`, `swings`, `samples`
+(health, power, Bulwark stacks every 500 ms), `threat` (per dummy, every second). Time bases: swing times are the start
+of the step, samples and the time of death are read after it, so the swing that killed the actor is stamped one step
+before `actorDiedAtMs`.
+
+`tank.summary` highlights: the outcome counts and percent (miss, dodge, parry, block, full block, crit, crush, hit),
+`avoidancePct`, `mitigation` by source (avoided, armor, block, absorb), `damageTaken` (already after the shields),
+`dtps`, `selfHealEffective` / `selfHps`, `netDtps` = (damage taken - effective self-healing) / seconds (absorbs are
+never subtracted again), `ttdMs` and `survived`, `minHealthPct`, `msUnder35Pct`, `rageGained` / `rageGainedPerSec`
+(rage from the swings, rage tanks only; 0 and hidden on the page for any other resource), `tps` (= `tpsAlive`),
+`lowestThreat`, expected against observed crit % and `critBugCount` (crits on a swing whose rolled chance was 0, with
+`critBugAtMs`; the run log's warning also fires on any crit when the crit chance was 0 at the pull). Rates divide
+by `rateBaseMs`: the time of death in `survive` when the tank died, the
+full duration otherwise. `dpsAlive` / `tpsAlive` are the damage and threat over that same time; the top-level
+`summary.dps` stays total damage over the full duration (a dead tank is charged the whole fight, as every DPS report
+does), so read `dpsAlive` in a `survive` run.
+
+### Reading dps against survive
+
+- **dps** (health refilled every step, the tank never dies): the headline is **DPS** with **TPS** beside it; the hits
+  are real, so damage-taken rage, shields used up and the Revenge / Bulwark / avoid procs all happen. DTPS and the
+  mitigation split describe the incoming hits and are not a survival figure. Trimmed on DPS like any DPS batch.
+- **survive** (no outside healing, the run ends at death): the headline is **time to death (TTD)** with **net DTPS**
+  beside it. A run that lives the whole duration counts the duration as its TTD and is marked *survived* (the batch
+  shows the survived count). The aggregate trims on TTD, dead runs included (the DPS rule that keeps dead runs does
+  not apply: every run here is expected to die), and the representative run is the median-TTD kept one.
+- `tools/aggregate_reports.py` merges tank reports (kind `tank`) with their own path: every numeric field of
+  `tank.summary` is averaged over the kept runs, per-dummy / absorb / self-heal rows are averaged, the timelines come
+  from the representative run, and `aggregate.tank` has the survived / died counts and every run's value
+  (`perIteration`). It refuses to mix kinds, scenarios, target setups, hit ranges, swing speeds, crit switches, pull
+  auras (and, in `survive`, durations).
+- `tools/build_report_html.py` bakes a tank report into the DPS template plus the "Damage taken" section
+  (`tools/tank-section.html`, injected at the template's `__TANK_*__` markers): headline tiles, a crit-bug banner, the
+  outcome breakdown (observed against expected), the mitigation bar with the shields by spell, health over time with
+  the swings and the defensive aura windows (Shield Block, Last Stand, Shield Wall, Ironfur, ... matched by spell name),
+  self-healing by spell, the class resource over time (and Bulwark stacks), threat per dummy and a per-dummy table.
+  A DPS page is byte-for-byte what the template alone gives.
+
 ## Healing sim (heal mode)
 
 A profile with `Mode = Heal` (`conf/profiles/HolyPriestHealSim.conf`) runs the healing sim: the profile's class is the
