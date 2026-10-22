@@ -111,25 +111,49 @@ Creature* SimTarget::GetCreature() const
     return _summon;
 }
 
-bool SimTargetGroup::Create(Player* actor, uint32 count, float spreadYards, SimTarget::Config const& config)
+bool SimTargetGroup::Create(Player* actor, uint32 count, float spreadYards, SimTarget::Config const& config,
+    Layout layout)
 {
     count = std::max(count, 1u);
     Map* map = actor->GetMap();
 
-    // The primary, exactly where the single dummy has always gone
-    Position const primaryPos = actor->GetNearPosition(8.0f, 0.0f);
-    // Direction from the actor to the primary: ring slot 0 sits directly behind the primary
-    float const away = actor->GetAbsoluteAngle(primaryPos);
-
-    std::vector<Position> positions = {primaryPos};
-    for (uint32 k = 0; k + 1 < count; ++k)
+    std::vector<Position> positions;
+    if (layout == Layout::Tank)
     {
-        float const angle = away + float(k) * 2.0f * float(M_PI) / float(count - 1);
-        float const x = primaryPos.GetPositionX() + spreadYards * std::cos(angle);
-        float const y = primaryPos.GetPositionY() + spreadYards * std::sin(angle);
-        float z = primaryPos.GetPositionZ();
-        actor->UpdateGroundPositionZ(x, y, z);
-        positions.emplace_back(x, y, z, primaryPos.GetOrientation());
+        // Index 0 dead ahead; the others alternate +1, -1, +2, -2 ... steps off the facing, spread over the half arc
+        float const maxAngle = TANK_PACK_HALF_ARC_DEGREES * float(M_PI) / 180.0f;
+        uint32 const perSide = (count - 1 + 1) / 2;
+        float const step = perSide > 0 ? maxAngle / float(perSide) : 0.0f;
+        for (uint32 k = 0; k < count; ++k)
+        {
+            float const offset = k == 0 ? 0.0f : float((k + 1) / 2) * step * (k % 2 == 1 ? 1.0f : -1.0f);
+            float const distance = count == 1 ? TANK_BOSS_YARDS : TANK_PACK_YARDS;
+            Position const ahead = actor->GetNearPosition(distance, offset);
+            float z = ahead.GetPositionZ();
+            actor->UpdateGroundPositionZ(ahead.GetPositionX(), ahead.GetPositionY(), z);
+            // Facing the actor
+            float const facing = std::atan2(actor->GetPositionY() - ahead.GetPositionY(),
+                actor->GetPositionX() - ahead.GetPositionX());
+            positions.emplace_back(ahead.GetPositionX(), ahead.GetPositionY(), z, facing);
+        }
+    }
+    else
+    {
+        // The primary, exactly where the single dummy has always gone
+        Position const primaryPos = actor->GetNearPosition(8.0f, 0.0f);
+        // Direction from the actor to the primary: ring slot 0 sits directly behind the primary
+        float const away = actor->GetAbsoluteAngle(primaryPos);
+
+        positions.push_back(primaryPos);
+        for (uint32 k = 0; k + 1 < count; ++k)
+        {
+            float const angle = away + float(k) * 2.0f * float(M_PI) / float(count - 1);
+            float const x = primaryPos.GetPositionX() + spreadYards * std::cos(angle);
+            float const y = primaryPos.GetPositionY() + spreadYards * std::sin(angle);
+            float z = primaryPos.GetPositionZ();
+            actor->UpdateGroundPositionZ(x, y, z);
+            positions.emplace_back(x, y, z, primaryPos.GetOrientation());
+        }
     }
 
     _targets.clear();
@@ -149,8 +173,9 @@ bool SimTargetGroup::Create(Player* actor, uint32 count, float spreadYards, SimT
         list += Acore::StringFormat("{}#{} {} at {:.1f} yd", list.empty() ? "" : ", ", i,
             creature->GetGUID().ToString(), actor->GetExactDist(creature));
     }
-    LOG_INFO("server.dpssim", "mod-dpssim: {} target dummies (entry {}, {}, spread {:.1f} yd): {}.", _targets.size(),
-        _targets.front()->GetCreature()->GetEntry(), SimTarget::RankName(config.TargetRank), spreadYards,
+    LOG_INFO("server.dpssim", "mod-dpssim: {} target dummies (entry {}, {}, {}): {}.", _targets.size(),
+        _targets.front()->GetCreature()->GetEntry(), SimTarget::RankName(config.TargetRank),
+        layout == Layout::Tank ? std::string("tank layout") : Acore::StringFormat("spread {:.1f} yd", spreadYards),
         list);
     return true;
 }

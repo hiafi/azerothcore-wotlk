@@ -2050,6 +2050,8 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
             damageInfo->damages[i].damage + damageInfo->damages[i].absorb + damageInfo->damages[i].resist;
     sScriptMgr->OnMeleeDamageFinal(damageInfo->target, damageInfo->attacker, meleeFinalDamage,
                                    damageInfo->hitOutCome == MELEE_HIT_CRIT);
+    // Custom: observational hook for mod-dpssim's tank mode (see OnMeleeOutcomeFinal in UnitScript.h).
+    sScriptMgr->OnMeleeOutcomeFinal(damageInfo);
 
     // set proper HitInfo flags
     if ((tmpHitInfo[0] & HITINFO_FULL_ABSORB) != 0)

@@ -34,7 +34,9 @@ namespace SimTests
     // repeatedly) and logs a PASS/FAIL verdict for each plus a final summary line. Besides the four
     // damage-sim tests there are six healing-sim known-value tests (stage HS3, SimTests.cpp): they run
     // real heal-mode batches with the healer's bot AI replaced by a scripted
-    // SimDaemon::RunConfig::HealStepHook. DpsSim.TestFilter picks a subset by key.
+    // SimDaemon::RunConfig::HealStepHook. Eight tank-sim tests (stage TS3a, keys "tank.*") run real tank-mode
+    // iterations, scripted where needed by RunConfig::TankStepHook / TankSilenceBot. DpsSim.TestFilter picks a subset
+    // by key.
     void RunAll();
 }
 

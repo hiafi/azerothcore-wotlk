@@ -121,6 +121,9 @@ public:
     // combat between iterations - not anything PlayerbotAI caches on its own side).
     void ReestablishCombatState(std::vector<Creature*> const& targets);
 
+    // Tank mode: the bot's own "my attacker count" value (what the tanking triggers read), 0 without an AI
+    [[nodiscard]] uint8 GetMyAttackerCount() const;
+
     // The GUID of the AI's "current target" value (empty when it has none), sampled every tick to count target
     // switches (SimDaemon::RunResult::TargetSwitches)
     [[nodiscard]] ObjectGuid GetCurrentTarget() const;

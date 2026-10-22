@@ -20,6 +20,7 @@
 
 #include "Define.h"
 #include "SimHeal.h"
+#include "SimTank.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -213,6 +214,32 @@ namespace SimProfile
         bool InfiniteMana = false;
         // Whether the profile set the key at all, for that refusal
         bool InfiniteManaSet = false;
+
+        // ---- Tank mode (plan .agents/plans/tank-sim/tank-sim.PLAN.md, section 3) ----
+        // `Mode = Tank` switches SimDaemon::RunPlayerbotBatch() to the tank sim: the DPS sim with the dummies swinging
+        // at the actor. The keys below are read only by a Tank profile (the loader refuses them in any other).
+        bool TankMode = false;
+
+        // `TankScenario = dps | survive`: dps refills the actor's health after every step (it never dies), survive does
+        // not (the run ends at its death). DpsSim.TankScenario in the conf overrides it.
+        SimTank::Scenario TankScenario = SimTank::Scenario::Dps;
+
+        // `TankHitDamage` (the boss, a 1-target run) and `TankPackHitDamage` (each dummy of a 2+ target run): the
+        // swing's damage before armor and before the victim's damage-taken modifiers, "<min>-<max>" or a single value.
+        // DpsSim.TankHitDamage / DpsSim.TankPackHitDamage override them.
+        SimTank::HitRange TankHitDamage = SimTank::DEFAULT_BOSS_HIT;
+        SimTank::HitRange TankPackHitDamage = SimTank::DEFAULT_PACK_HIT;
+
+        // `TankSwingMs`: the dummies' swing interval, in sim ms (500-10000). DpsSim.TankSwingMs overrides it.
+        uint32 TankSwingMs = SimTank::DEFAULT_SWING_MS;
+
+        // `TankDummyCrit` (true/false): whether the dummies can crit (CREATURE_FLAG_EXTRA_NO_CRIT off / on). Default
+        // on. There is no dummy parry-haste switch (plan T7): the PvE always-hit rule (custom_pve_always_hit.cpp) means
+        // a dummy never parries the actor; the actor's own parry haste is the core's.
+        bool TankDummyCrit = true;
+
+        // Whether the profile set any Tank* key, for the refusal in a non-Tank profile
+        bool TankKeySet = false;
     };
 
     // Loads `path` (a full file path - see dpssim.conf.dist's DpsSim.Profile doc comment for why

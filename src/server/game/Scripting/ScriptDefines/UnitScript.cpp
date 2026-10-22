@@ -73,6 +73,11 @@ void ScriptMgr::OnAbsorbFinal(Unit* victim, Unit* attacker, AuraEffect const* ab
         script->OnAbsorbFinal(victim, attacker, absorbAurEff, absorbed));
 }
 
+void ScriptMgr::OnMeleeOutcomeFinal(CalcDamageInfo const* damageInfo)
+{
+    CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_MELEE_OUTCOME_FINAL, script->OnMeleeOutcomeFinal(damageInfo));
+}
+
 void ScriptMgr::ModifyHealReceived(Unit* target, Unit* healer, uint32& heal, SpellInfo const* spellInfo)
 {
     CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_MODIFY_HEAL_RECEIVED, script->ModifyHealReceived(target, healer, heal, spellInfo));
