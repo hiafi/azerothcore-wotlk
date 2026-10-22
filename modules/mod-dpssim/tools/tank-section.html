@@ -1,0 +1,634 @@
+@@@ CSS
+/* ---- tank report additions (injected by build_report_html.py into the DPS template for "kind": "tank" reports).
+   Series colours are the dataviz skill's categorical palette in its documented order, validated with
+   validate_palette.js against this page's surface (--surface #1a1f2b dark / #ffffff light): --o1..--o8 as an 8-slot set
+   (adjacent pairs pass in both modes, the light surface's three sub-3:1 slots are covered by the legends, the tables and
+   the tooltips), and --o8,--o1..--o5 as the 6-slot set of the mitigation bar. --tk-s1..5 are the 5-slot set of the
+   threat lines. ---- */
+:root {
+  --o1: #3987e5; --o2: #d95926; --o3: #199e70; --o4: #c98500; --o5: #d55181; --o6: #008300; --o7: #9085e9; --o8: #e66767;
+  --tk-eff: #1fa0b8; --tk-over: #c98300;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --o1: #2a78d6; --o2: #eb6834; --o3: #1baf7a; --o4: #eda100; --o5: #e87ba4; --o6: #008300; --o7: #6250d6; --o8: #e34948;
+    --tk-eff: #0891a8; --tk-over: #b45309;
+  }
+}
+:root[data-theme="dark"] {
+  --o1: #3987e5; --o2: #d95926; --o3: #199e70; --o4: #c98500; --o5: #d55181; --o6: #008300; --o7: #9085e9; --o8: #e66767;
+  --tk-eff: #1fa0b8; --tk-over: #c98300;
+}
+
+.tk-h3 { font-family: "Chakra Petch", ui-sans-serif, system-ui, sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); margin: 26px 0 10px; }
+.tk-howto { color: var(--text-dim); font-size: 12.5px; line-height: 1.6; background: var(--surface-2); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 6px; padding: 10px 14px; margin: 0 0 16px; }
+.tk-howto b { color: var(--text); font-weight: 600; }
+.tk-bug { color: var(--text); font-size: 13px; line-height: 1.6; background: color-mix(in srgb, var(--bad) 14%, var(--surface)); border: 1px solid var(--bad); border-radius: 8px; padding: 10px 14px; margin: 0 0 16px; }
+.tk-bug b { color: var(--bad); }
+.stat-row + .stat-row { margin-top: 14px; }
+.stat .value.tk-head { color: var(--accent); }
+.tk-legend { display: flex; gap: 6px 18px; flex-wrap: wrap; margin: 8px 0 0; }
+.tk-legend .item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); }
+.tk-legend .sw { width: 12px; height: 12px; border-radius: 2px; flex: none; }
+.tk-legend .ln { width: 14px; height: 2px; border-radius: 1px; flex: none; }
+.tk-bar { display: flex; gap: 2px; height: 28px; margin-bottom: 14px; }
+.tk-bar > span { display: block; min-width: 2px; }
+.tk-bar > span:first-child { border-radius: 6px 0 0 6px; }
+.tk-bar > span:last-child { border-radius: 0 6px 6px 0; }
+.tk-mini { display: flex; gap: 2px; height: 12px; min-width: 120px; }
+.tk-mini > span { display: block; min-width: 2px; }
+table.spells td.dim, table.spells .dim { color: var(--text-faint); }
+.tk-tbl-scroll { overflow-x: auto; }
+.tk-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; }
+.tk-tip { position: fixed; z-index: 20; pointer-events: none; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: var(--shadow); max-width: 300px; }
+.tk-tip[hidden] { display: none; }
+.tk-tip .tt { color: var(--text-dim); margin-bottom: 4px; font-size: 11px; }
+.tk-tip .row { display: flex; align-items: center; gap: 8px; line-height: 1.5; }
+.tk-tip .row .k { width: 12px; height: 8px; flex: none; border-radius: 2px; }
+.tk-tip .row .l { color: var(--text-dim); }
+.tk-tip .row .v { margin-left: auto; padding-left: 12px; font-weight: 600; color: var(--text); font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
+@@@ HTML
+  <section id="tank-section" hidden>
+    <h2>Damage taken</h2>
+    <div class="tk-howto" id="tk-howto"></div>
+    <div id="tk-bug"></div>
+    <div id="tk-summary"></div>
+
+    <div class="tk-h3">Swing outcomes</div>
+    <div class="spell-block" id="tk-outcomes"></div>
+
+    <div class="tk-h3">Where the damage went</div>
+    <div class="spell-block" id="tk-mitigation"></div>
+
+    <div class="tk-h3">Health, incoming hits and defensive cooldowns</div>
+    <div class="chart-card">
+      <div id="tk-time-chart"></div>
+      <div class="tk-legend" id="tk-time-legend"></div>
+    </div>
+    <footer class="note" id="tk-time-note"></footer>
+
+    <div class="tk-h3">Self-healing</div>
+    <div class="spell-block" id="tk-heals"></div>
+
+    <div class="tk-h3" id="tk-power-title">Resource over time</div>
+    <div class="chart-card">
+      <div id="tk-power-chart"></div>
+      <div id="tk-stacks-chart"></div>
+      <div class="tk-legend" id="tk-power-legend"></div>
+    </div>
+
+    <div class="tk-h3">Threat</div>
+    <div class="chart-card">
+      <div id="tk-threat-chart"></div>
+      <div class="tk-legend" id="tk-threat-legend"></div>
+    </div>
+    <div class="spell-block" id="tk-dummies" style="margin-top:14px"></div>
+  </section>
+  <div class="tk-tip" id="tk-tip" hidden></div>
+@@@ JS
+  // ============================ tank section ("kind": "tank" reports) ============================
+  var TK_OUT = [
+    ["miss", "Miss", "var(--o1)"], ["dodge", "Dodge", "var(--o2)"], ["parry", "Parry", "var(--o3)"],
+    ["block", "Block", "var(--o4)"], ["fullBlock", "Full block", "var(--o5)"], ["hit", "Hit", "var(--o6)"],
+    ["crush", "Crush", "var(--o7)"], ["crit", "Crit", "var(--o8)"], ["glancing", "Glancing", "var(--text-faint)"],
+    ["other", "Other", "var(--text-faint)"]
+  ];
+  var TK_MIT = [
+    ["taken", "Taken (after shields)", "var(--o8)"], ["avoided", "Avoided (miss, dodge, parry)", "var(--o1)"],
+    ["armor", "Armor", "var(--o2)"], ["block", "Block", "var(--o3)"], ["absorb", "Absorbed by shields", "var(--o4)"],
+    ["resist", "Resisted", "var(--o5)"]
+  ];
+  var TK_SERIES = ["var(--o1)", "var(--o2)", "var(--o3)", "var(--o4)", "var(--o5)"];
+  var TK_POWER_NAMES = { 0: "Mana", 1: "Rage", 2: "Focus", 3: "Energy", 6: "Runic power" };
+  // Defensive auras for the cooldown lanes: matched by their (resolved) spell name, plus a few stock ids
+  var TK_DEF_RE = /shield block|shield wall|last stand|spell reflection|ironfur|barkskin|survival instincts|frenzied regeneration|savage defense|holy shield|divine protection|divine shield|guardian of (the )?ancient kings|ardent defender|shield of the righteous|hand of (sacrifice|protection)|sanctuary|bone shield|vampiric blood|icebound|anti-magic|rune tap|enraged regeneration|stoneform|might of ursoc|rallying cry/i;
+  var TK_DEF_IDS = { 2565: 1, 871: 1, 12975: 1 };
+  var TK_MAX_LANES = 8;
+
+  function tkEsc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function tkEl(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+  function tkById(id) { return document.getElementById(id); }
+  function tkByTime(a, b) { return a.timestampMs - b.timestampMs; }
+  function tkNum(n, digits) { return fmtNum(n, digits); }
+  function tkCount(n) { return n === undefined || n === null ? "–" : fmtNum(n, Math.round(n) === n ? 0 : 1); }
+  function tkPct(n, digits) { return n === undefined || n === null ? "–" : fmtNum(n, digits === undefined ? 1 : digits) + "%"; }
+  function tkSec(ms) { return ms === undefined || ms === null ? "–" : (ms / 1000).toFixed(1) + " s"; }
+  function tkSum(arr) { return arr.reduce(function (x, y) { return x + y; }, 0); }
+  function tkPowerName(type) { return TK_POWER_NAMES[type] || "Power"; }
+  var TK_POWER_RAGE = 1;
+  // The class resource of the report: the power type most samples were in (a druid shifts into bear form after the
+  // first sample), else the one the summary names
+  function tkPowerType(d) {
+    var samples = (d.tank && d.tank.samples) || [], counts = {}, best = null, bestN = 0;
+    samples.forEach(function (p) {
+      counts[p.powerType] = (counts[p.powerType] || 0) + 1;
+      if (counts[p.powerType] > bestN) { bestN = counts[p.powerType]; best = p.powerType; }
+    });
+    return best === null ? d.tank.summary.powerType : best;
+  }
+
+  // ---- the one shared tooltip (every label goes in through textContent) ----
+  function tkShowTip(ev, title, rows) {
+    var tip = tkById("tk-tip");
+    tip.textContent = "";
+    if (title) tip.appendChild(tkEl("div", "tt", title));
+    rows.forEach(function (r) {
+      var row = tkEl("div", "row");
+      if (r.key) {
+        var k = tkEl("span", "k");
+        k.style.background = r.key;
+        row.appendChild(k);
+      }
+      row.appendChild(tkEl("span", "l", r.label));
+      row.appendChild(tkEl("span", "v", r.value));
+      tip.appendChild(row);
+    });
+    tip.hidden = false;
+    var w = tip.offsetWidth, h = tip.offsetHeight;
+    var x = ev.clientX + 14, y = ev.clientY + 14;
+    if (x + w > window.innerWidth - 8) x = ev.clientX - w - 14;
+    if (y + h > window.innerHeight - 8) y = ev.clientY - h - 14;
+    tip.style.left = Math.max(4, x) + "px";
+    tip.style.top = Math.max(4, y) + "px";
+  }
+  function tkHideTip() { tkById("tk-tip").hidden = true; }
+
+  // ---- data helpers ----
+  function tkData() {
+    var d = report.data;
+    return d && d.tank && d.tank.summary ? d : null;
+  }
+  function tkAgg(d) { return d.aggregate && d.aggregate.tank ? d.aggregate : null; }
+  function tkSurvive(d) { return d.tank.summary.scenario === "survive"; }
+  function tkMaxHealth(d) {
+    var s = d.tank.samples || [];
+    if (s.length && s[0].maxHealth) return s[0].maxHealth;
+    var a = (d.tank.actor || {}).afterFirstSecond;
+    return a && a.health ? a.health : 1;
+  }
+  // The span the timelines cover: the whole duration, or up to the death when the run ended there
+  function tkXmax(d) {
+    var dur = (d.config && d.config.durationMs) || 1;
+    var last = 0;
+    (d.tank.samples || []).forEach(function (s) { last = Math.max(last, s.timestampMs); });
+    (d.tank.swings || []).forEach(function (s) { last = Math.max(last, s.timestampMs); });
+    return last >= dur - 600 || last <= 0 ? dur : Math.min(dur, last + 500);
+  }
+  function tkSpread(agg, path, scale, digits, unit) {
+    if (!agg) return "";
+    var v = ((agg.tank.perIteration || {})[path] || []).filter(function (x) { return x !== null && x !== undefined; });
+    if (!v.length) return "";
+    return fmtNum(Math.min.apply(null, v) / scale, digits) + "&ndash;" + fmtNum(Math.max.apply(null, v) / scale, digits) +
+      unit + " across " + v.length + " runs";
+  }
+  function tkTile(label, value, sub, cls, small) {
+    return '<div class="stat"><div class="label">' + label + '</div><div class="value ' + (cls || "") + '"' +
+      (small ? ' style="font-size:17px"' : '') + '>' + value + '</div>' + (sub ? '<div class="card-sub">' + sub + '</div>' : '') + '</div>';
+  }
+
+  // ---- render ----
+  function renderTank() {
+    var sec = tkById("tank-section");
+    var d = tkData();
+    if (!d) { sec.hidden = true; return; }
+    sec.hidden = false;
+    tkHideTip();
+    renderTkHowto(d);
+    renderTkBug(d);
+    renderTkSummary(d);
+    renderTkOutcomes(d);
+    renderTkMitigation(d);
+    renderTkTimeChart(d);
+    renderTkHeals(d);
+    renderTkPower(d);
+    renderTkThreat(d);
+    tkFixDpsNote(d);
+  }
+
+  // A survive batch is trimmed on TTD, not DPS: the DPS card's own note would say otherwise
+  function tkFixDpsNote(d) {
+    var agg = tkAgg(d);
+    if (!agg || agg.trimMetric !== "ttd") return;
+    var note = document.querySelector("#summary-card .aggregate-note");
+    if (note) note.textContent = "DPS, total damage, hits and crit rate are averaged over the same " + agg.trim.keptCount +
+      " of " + agg.iterations + " runs as the damage-taken numbers (trimmed on time to death, see Damage taken above). " +
+      "In this scenario the tank dies, and a dead tank is charged the full duration for DPS.";
+  }
+
+  function renderTkHowto(d) {
+    var c = d.tank.config || {}, s = d.tank.summary, agg = tkAgg(d);
+    var hit = c.dummyKind === "pack" ? c.packHitDamage : c.hitDamage;
+    var setup = (c.dummyCount || 1) + (c.dummyKind === "pack" ? " pack dummies" : " boss dummy") + ", each swinging every " +
+      fmtNum((c.swingMs || 0) / 1000, 1) + " s for " + fmtNum(hit.min) + (hit.max !== hit.min ? "&ndash;" + fmtNum(hit.max) : "") +
+      " before armor, crits " + (c.dummyCrit ? "on" : "off") + ".";
+    var how = tkSurvive(d) ?
+      "<b>survive</b>: the tank gets no outside healing and the run ends at its death. Read <b>time to death (TTD)</b>; a run that " +
+      "lives the whole duration counts the full duration as its TTD and is marked <i>survived</i>. <b>Net DTPS</b> = (damage taken " +
+      "&minus; effective self-healing) per second; damage taken is already after the shields, so they are never subtracted again." :
+      "<b>dps</b>: the hits are real (rage from damage taken, shields used up, Revenge and the other avoid procs) but the tank's " +
+      "health is refilled every step, so it never dies. Read <b>DPS</b> and <b>TPS</b>; the damage-taken numbers describe the " +
+      "incoming hits, not survival.";
+    tkById("tk-howto").innerHTML = how + "<br>" + setup +
+      (agg ? " Numbers are means over the " + agg.trim.keptCount + " kept runs; the charts and the swing list are the representative run." : "");
+  }
+
+  function renderTkBug(d) {
+    var s = d.tank.summary, agg = tkAgg(d), box = tkById("tk-bug");
+    var bugRuns = agg ? agg.tank.critBugRuns : (s.critBugCount > 0 ? 1 : 0);
+    if (!(s.critBugCount > 0 || bugRuns > 0)) { box.innerHTML = ""; return; }
+    var times = (s.critBugAtMs || []).slice(0, 10).map(function (t) { return tkSec(t); }).join(", ");
+    box.innerHTML = '<div class="tk-bug"><b>BUG: the tank was crit.</b> ' +
+      (agg ? bugRuns + " of " + agg.iterations + " runs took crits (mean " + fmtNum(s.critBugCount, 1) + " per run)" :
+        fmtNum(s.critBugCount) + " crit(s) taken") +
+      " on swings whose crit chance was 0 (a crit-immune tank must never be crit)." +
+      (times ? " Representative run, at " + tkEsc(times) + ((s.critBugAtMs || []).length > 10 ? ", &hellip;" : "") + "." : "") +
+      "</div>";
+  }
+
+  function renderTkSummary(d) {
+    var s = d.tank.summary, ds = d.summary, agg = tkAgg(d), survive = tkSurvive(d), isRage = tkPowerType(d) === TK_POWER_RAGE;
+    var survivedSub = "";
+    if (agg) survivedSub = "survived " + agg.tank.survivedCount + " of " + agg.iterations + " runs" +
+      (agg.tank.survivedCount < agg.iterations ? " (" + agg.tank.diedCount + " died)" : "");
+    else if (s.survived) survivedSub = "survived the whole run";
+    else if (s.died) survivedSub = "died";
+
+    var head;
+    if (survive) {
+      head = tkTile("Time to death", s.ttdMs === null || s.ttdMs === undefined ? "–" : fmtNum(s.ttdMs / 1000, 1) + "<small>s</small>",
+        survivedSub + (agg ? "<br>" + tkSpread(agg, "ttdMs", 1000, 1, " s") : ""), "tk-head") +
+        tkTile("Net DTPS", fmtNum(s.netDtps, 1), tkSpread(agg, "netDtps", 1, 1, "")) +
+        tkTile("DTPS", fmtNum(s.dtps, 1), tkSpread(agg, "dtps", 1, 1, "")) +
+        tkTile("Self-healing", fmtNum(s.selfHps, 1) + "<small>HPS</small>", tkPct(s.selfHealOverhealPct) + " overheal");
+    } else {
+      var dpsSpread = agg ? fmtNum(Math.min.apply(null, agg.perIteration.dps), 1) + "&ndash;" + fmtNum(Math.max.apply(null, agg.perIteration.dps), 1) +
+        " across " + agg.iterations + " runs" : "";
+      head = tkTile("DPS", fmtNum(ds.dps, 1), dpsSpread, "tk-head") +
+        tkTile("TPS", fmtNum(s.tps, 1), tkSpread(agg, "tps", 1, 1, "")) +
+        tkTile("DTPS", fmtNum(s.dtps, 1), tkSpread(agg, "dtps", 1, 1, "")) +
+        tkTile("Net DTPS", fmtNum(s.netDtps, 1), tkPct(s.selfHealOverhealPct) + " of self-healing is overheal");
+    }
+    var second = survive ?
+      tkTile("DPS while alive", fmtNum(s.dpsAlive, 1), tkSpread(agg, "dpsAlive", 1, 1, "") || ("whole-fight DPS " + fmtNum(ds.dps, 1)), "", true) +
+        tkTile("TPS while alive", fmtNum(s.tpsAlive, 1), tkSpread(agg, "tpsAlive", 1, 1, ""), "", true) +
+        tkTile("Min health", tkPct(s.minHealthPct), "", "", true) + tkTile("Under 35% health", fmtNum(s.msUnder35Pct / 1000, 1) + " s", "", "", true) :
+      tkTile("Avoidance", tkPct(s.avoidancePct), "miss + dodge + parry", "", true) +
+        tkTile("Armor took", tkPct(s.mitigationPct.armor), "of the incoming damage", "", true) +
+        (isRage ? tkTile("Rage gained", fmtNum(s.rageGainedPerSec, 1) + "<small>/s</small>", fmtNum(s.rageGained, 0) + " in total", "", true) : "") +
+        tkTile("Self-healing", fmtNum(s.selfHps, 1) + "<small>HPS</small>", "", "", true);
+    var third = tkTile("Swings", tkCount(s.swings), tkCount(s.swingsLanded) + " landed", "", true) +
+      tkTile("Block", tkPct(s.blockAnyPct), "expected " + tkPct(s.expectedPct.block), "", true) +
+      tkTile("Crits taken", tkPct(s.observedCritPct), "expected " + tkPct(s.expectedCritPct), "", true) +
+      tkTile("Lowest threat", fmtNum(s.lowestThreat, 0), s.lowestThreatDummy === null || s.lowestThreatDummy === undefined ? "" : "dummy #" + s.lowestThreatDummy, "", true);
+    var c = d.tank.config || {};
+    tkById("tk-summary").innerHTML = '<div class="summary-card"><div class="card-head"><div><div class="card-title">' + tkEsc(report.label) +
+      '</div><div class="card-sub">' + (survive ? "Survive" : "DPS") + " scenario &middot; " + (c.dummyCount || 1) + " " +
+      (c.dummyKind === "pack" ? "pack dummies" : "boss dummy") + ' &middot; level ' + ((d.tank.actor.afterFirstSecond || {}).level || "?") +
+      ' tank</div></div><span class="badge">' + fmtNum(d.config.durationMs / 1000, 0) + "s" + (agg ? " &middot; avg of " + agg.trim.keptCount + "/" + agg.iterations + " runs" : "") +
+      '</span></div><div class="stat-row">' + head + '</div><div class="stat-row">' + second + '</div><div class="stat-row">' + third + '</div></div>';
+  }
+
+  // ---- outcomes ----
+  function renderTkOutcomes(d) {
+    var s = d.tank.summary, box = tkById("tk-outcomes");
+    if (!s.swings) { box.innerHTML = '<div class="empty-note">No swings were recorded in this run.</div>'; return; }
+    var exp = s.expectedPct || {};
+    var segs = "", rows = "";
+    TK_OUT.forEach(function (o) {
+      var key = o[0], count = s.outcomes[key] || 0, pct = s.outcomePct[key] || 0;
+      if (count <= 0 && key !== "hit") { if (key === "glancing" || key === "other") return; }
+      if (pct > 0) segs += '<span style="width:' + pct + '%;background:' + o[2] + '" data-seg="' + tkEsc(o[1]) + '" data-val="' + tkEsc(fmtNum(pct, 1) + "% (" + tkCount(count) + ")") + '" data-col="' + o[2] + '"></span>';
+      var expected = exp[key];
+      rows += '<tr><td><span class="swatch" style="background:' + o[2] + '"></span>' + tkEsc(o[1]) + '</td>' +
+        '<td class="num">' + tkCount(count) + '</td><td class="num">' + tkPct(pct, 2) + '</td>' +
+        '<td class="num">' + (expected === undefined || key === "block" ? '<span class="dim">–</span>' : tkPct(expected, 2)) + '</td></tr>';
+    });
+    box.innerHTML = '<div class="tk-bar" id="tk-outcome-bar">' + segs + '</div>' +
+      '<div class="tk-tbl-scroll"><table class="spells"><thead><tr><th>Outcome</th><th class="num">Swings</th><th class="num">Observed</th><th class="num">Expected</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      '<footer class="note">Expected is what the core rolled for each swing (the tank’s dodge, parry, block and crit chance at that moment, after the level gap and with Shield Block and the front-arc rules applied), averaged over the swings. ' +
+      'Block, any (partial + full): <span class="mono">' + tkPct(s.blockAnyPct, 2) + '</span> observed against <span class="mono">' + tkPct(exp.block, 2) + '</span> expected. ' +
+      'Avoided (miss + dodge + parry): <span class="mono">' + tkPct(s.avoidancePct, 2) + '</span> observed against <span class="mono">' +
+      tkPct((exp.miss || 0) + (exp.dodge || 0) + (exp.parry || 0), 2) + '</span> expected. ' +
+      (s.swingsOutsideFrontArc > 0 ? 'Swings from outside the front arc: <b>' + tkCount(s.swingsOutsideFrontArc) + '</b>. ' : '') + '</footer>';
+    tkWireBar(tkById("tk-outcome-bar"));
+  }
+  function tkWireBar(bar) {
+    if (!bar) return;
+    bar.addEventListener("pointermove", function (ev) {
+      var seg = ev.target.closest ? ev.target.closest("[data-seg]") : null;
+      if (!seg) { tkHideTip(); return; }
+      tkShowTip(ev, seg.getAttribute("data-seg"), [{ key: seg.getAttribute("data-col"), label: "share", value: seg.getAttribute("data-val") }]);
+    });
+    bar.addEventListener("pointerleave", tkHideTip);
+  }
+
+  // ---- mitigation ----
+  function renderTkMitigation(d) {
+    var s = d.tank.summary, box = tkById("tk-mitigation"), m = s.mitigation || {}, p = s.mitigationPct || {};
+    if (!m.gross) { box.innerHTML = '<div class="empty-note">No damage was dealt to the tank in this run.</div>'; return; }
+    var segs = "", rows = "";
+    TK_MIT.forEach(function (o) {
+      var pct = p[o[0]] || 0;
+      if (pct > 0) segs += '<span style="width:' + pct + '%;background:' + o[2] + '" data-seg="' + tkEsc(o[1]) + '" data-val="' + tkEsc(fmtNum(pct, 1) + "% (" + fmtNum(m[o[0]]) + ")") + '" data-col="' + o[2] + '"></span>';
+      rows += '<tr><td><span class="swatch" style="background:' + o[2] + '"></span>' + tkEsc(o[1]) + '</td><td class="num">' + fmtNum(m[o[0]]) +
+        '</td><td class="num">' + tkPct(pct, 1) + '</td></tr>';
+    });
+    rows += '<tr><td><b>Incoming, before any mitigation</b></td><td class="num"><b>' + fmtNum(m.gross) + '</b></td><td class="num">100%</td></tr>';
+    var absorbs = (d.tank.absorbsBySpell || []);
+    var absorbRows = absorbs.map(function (a) {
+      return '<tr><td>' + tkEsc(spellName(a.spellId)) + '</td><td class="num">' + fmtNum(a.amount) + '</td><td class="num">' + tkCount(a.events) +
+        '</td><td class="num">' + tkPct(a.pctOfAbsorbed, 1) + '</td></tr>';
+    }).join("");
+    box.innerHTML = '<div class="tk-bar" id="tk-mit-bar">' + segs + '</div><div class="tk-split"><div class="tk-tbl-scroll">' +
+      '<table class="spells"><thead><tr><th>Source</th><th class="num">Damage</th><th class="num">Share</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      '<div class="tk-tbl-scroll"><table class="spells"><thead><tr><th>Shield that absorbed</th><th class="num">Absorbed</th><th class="num">Hits</th><th class="num">Share</th></tr></thead><tbody>' +
+      (absorbRows || '<tr><td colspan="4" class="dim">No shield took damage in this run.</td></tr>') + '</tbody></table></div></div>' +
+      '<footer class="note">Avoided is the pre-armor damage of the swings that missed, dodged or parried. Armor and block are what they took off the swings that landed. ' +
+      'Taken is what reached the tank’s health, <b>after</b> the shields: damage taken, DTPS and net DTPS use it, so absorbs are never subtracted a second time. ' +
+      'The share column adds up the parts, which for a crit or crush swing includes the extra damage the multiplier added.</footer>';
+    tkWireBar(tkById("tk-mit-bar"));
+  }
+
+  // ---- axis helper (same look as the DPS charts) ----
+  function tkAxes(W, pad, xmax, yTop, plotH, yTicks, yFmt, xLabelY) {
+    var plotW = W - pad.l - pad.r, parts = [];
+    yTicks.forEach(function (v) {
+      var y = yTop + plotH - v.pos * plotH;
+      parts.push('<line x1="' + pad.l + '" y1="' + y + '" x2="' + (W - pad.r) + '" y2="' + y + '" stroke="var(--border)" stroke-width="1"/>');
+      parts.push('<text x="' + (pad.l - 6) + '" y="' + (y + 3.5) + '" text-anchor="end" font-size="10.5" fill="var(--text-faint)" font-family="IBM Plex Mono, monospace">' + yFmt(v.val) + '</text>');
+    });
+    parts.push('<line x1="' + pad.l + '" y1="' + (yTop + plotH) + '" x2="' + (W - pad.r) + '" y2="' + (yTop + plotH) + '" stroke="var(--text-faint)" stroke-width="1"/>');
+    if (xLabelY !== undefined) {
+      for (var j = 0; j <= 6; j++) {
+        var t = xmax / 6 * j;
+        parts.push('<text x="' + (pad.l + t / xmax * plotW) + '" y="' + xLabelY + '" text-anchor="middle" font-size="10.5" fill="var(--text-faint)" font-family="IBM Plex Mono, monospace">' + Math.round(t / 1000) + 's</text>');
+      }
+    }
+    return parts.join("");
+  }
+
+  // ---- defensive cooldown windows from the actor's aura events ----
+  function tkDefLanes(d, xmax) {
+    var events = (d.auraEvents || []).filter(function (e) { return e.unit === "actor" && e.positive; }).slice().sort(tkByTime);
+    var byId = {}, order = [];
+    events.forEach(function (e) {
+      if (!TK_DEF_IDS[e.spellId] && !TK_DEF_RE.test(spellName(e.spellId))) return;
+      var lane = byId[e.spellId];
+      if (!lane) { lane = byId[e.spellId] = { id: e.spellId, name: spellName(e.spellId), wins: [], open: null, procs: 0 }; order.push(lane); }
+      if (e.applied) {
+        lane.procs++;
+        if (lane.open === null) lane.open = e.timestampMs;
+      } else if (lane.open !== null) {
+        lane.wins.push([lane.open, e.timestampMs]);
+        lane.open = null;
+      }
+    });
+    order.forEach(function (lane) { if (lane.open !== null) lane.wins.push([lane.open, xmax]); });
+    return order.filter(function (l) { return l.wins.length; }).slice(0, TK_MAX_LANES);
+  }
+
+  // ---- health + incoming hits + defensive windows, one shared time axis ----
+  function renderTkTimeChart(d) {
+    var host = tkById("tk-time-chart"), legend = tkById("tk-time-legend"), note = tkById("tk-time-note");
+    var t = d.tank, samples = (t.samples || []).slice().sort(tkByTime), swings = (t.swings || []).slice().sort(tkByTime);
+    var xmax = tkXmax(d), maxHp = tkMaxHealth(d), lanes = tkDefLanes(d, xmax);
+    var W = 900, pad = { l: 128, r: 20 }, plotW = W - pad.l - pad.r;
+    var laneH = 13, laneGap = 3, lanesH = lanes.length * (laneH + laneGap);
+    var yLanes = 8, yHealth = yLanes + lanesH + (lanes.length ? 12 : 0), healthH = 130;
+    var ySwing = yHealth + healthH + 22, swingH = 96, H = ySwing + swingH + 30;
+    function xp(ms) { return pad.l + ms / xmax * plotW; }
+    function yHp(pct) { return yHealth + healthH - pct / 100 * healthH; }
+
+    var maxShare = 0;
+    swings.forEach(function (s) { maxShare = Math.max(maxShare, s.final / maxHp * 100); });
+    var swMax = Math.max(5, Math.ceil(maxShare / 5) * 5);
+    function ySw(pct) { return ySwing + swingH - Math.min(pct, swMax) / swMax * swingH; }
+
+    var svg = "";
+    // defensive windows
+    lanes.forEach(function (lane, i) {
+      var y = yLanes + i * (laneH + laneGap);
+      svg += '<rect x="' + pad.l + '" y="' + y + '" width="' + plotW + '" height="' + laneH + '" rx="3" fill="var(--surface-2)"/>';
+      svg += '<text x="' + (pad.l - 6) + '" y="' + (y + 10) + '" text-anchor="end" font-size="10" fill="var(--text-dim)">' + tkEsc(lane.name.length > 20 ? lane.name.slice(0, 19) + "…" : lane.name) + '</text>';
+      lane.wins.forEach(function (w) {
+        var x0 = xp(Math.max(0, w[0])), x1 = xp(Math.min(xmax, w[1]));
+        svg += '<rect x="' + x0.toFixed(1) + '" y="' + y + '" width="' + Math.max(2, x1 - x0).toFixed(1) + '" height="' + laneH + '" rx="3" fill="var(--accent)" fill-opacity="0.8" data-lane="' + tkEsc(lane.name) + '" data-a="' + w[0] + '" data-b="' + w[1] + '"/>';
+      });
+    });
+    // health
+    svg += tkAxes(W, pad, xmax, yHealth, healthH, [0, 25, 50, 75, 100].map(function (v) { return { pos: v / 100, val: v }; }), function (v) { return v + "%"; });
+    svg += '<line x1="' + pad.l + '" y1="' + yHp(35) + '" x2="' + (W - pad.r) + '" y2="' + yHp(35) + '" stroke="var(--bad)" stroke-width="1" stroke-dasharray="4 4" opacity="0.7"/>';
+    svg += '<text x="' + (W - pad.r - 2) + '" y="' + (yHp(35) - 3) + '" text-anchor="end" font-size="10" fill="var(--text-dim)">35%</text>';
+    svg += '<text x="' + pad.l + '" y="' + (yHealth - 2) + '" font-size="10.5" fill="var(--text-dim)">Health</text>';
+    if (samples.length) {
+      var dAttr = samples.map(function (p, i) {
+        return (i ? "L" : "M") + xp(p.timestampMs).toFixed(1) + "," + yHp(p.maxHealth > 0 ? p.health / p.maxHealth * 100 : 0).toFixed(1);
+      }).join(" ");
+      svg += '<path d="' + dAttr + '" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>';
+    }
+    var died = xmax < ((d.config && d.config.durationMs) || 0);
+    if (died && samples.length) {
+      var dx = xp(xmax - 500), dy = yHp(0), r = 4;
+      svg += '<path d="M' + (dx - r) + ',' + (dy - r) + 'L' + (dx + r) + ',' + (dy + r) + 'M' + (dx + r) + ',' + (dy - r) + 'L' + (dx - r) + ',' + (dy + r) + '" stroke="var(--bad)" stroke-width="2.5" stroke-linecap="round" fill="none"/>';
+    }
+    svg += '<line class="xh" x1="0" x2="0" y1="' + yHealth + '" y2="' + (yHealth + healthH) + '" stroke="var(--text-faint)" stroke-width="1" visibility="hidden"/>';
+    svg += '<rect class="hhit" x="' + pad.l + '" y="' + yHealth + '" width="' + plotW + '" height="' + healthH + '" fill="transparent"/>';
+    // incoming hits
+    svg += tkAxes(W, pad, xmax, ySwing, swingH, [0, 0.5, 1].map(function (v) { return { pos: v, val: Math.round(v * swMax) }; }), function (v) { return v + "%"; }, ySwing + swingH + 20);
+    svg += '<text x="' + pad.l + '" y="' + (ySwing - 6) + '" font-size="10.5" fill="var(--text-dim)">Damage taken per swing, % of max health (hollow marker: no damage got through)</text>';
+    var colorOf = {};
+    TK_OUT.forEach(function (o) { colorOf[o[0]] = o[2]; });
+    swings.forEach(function (s, i) {
+      var x = xp(s.timestampMs), col = colorOf[s.outcome] || "var(--text-faint)";
+      if (s.final > 0) {
+        var y = ySw(s.final / maxHp * 100);
+        svg += '<rect x="' + (x - 2.5).toFixed(1) + '" y="' + y.toFixed(1) + '" width="5" height="' + Math.max(1.5, ySwing + swingH - y).toFixed(1) + '" rx="1.5" fill="' + col + '"/>';
+      } else {
+        svg += '<circle cx="' + x.toFixed(1) + '" cy="' + (ySwing + swingH - 4) + '" r="3.2" fill="var(--surface)" stroke="' + col + '" stroke-width="1.6"/>';
+      }
+      svg += '<rect x="' + (x - 4).toFixed(1) + '" y="' + ySwing + '" width="8" height="' + swingH + '" fill="transparent" data-sw="' + i + '"/>';
+    });
+    host.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Health, damage taken per swing and defensive cooldown windows over time">' + svg + '</svg>';
+
+    var root = host.querySelector("svg"), xh = root.querySelector(".xh"), hhit = root.querySelector(".hhit");
+    root.addEventListener("pointermove", function (ev) {
+      var sw = ev.target.getAttribute ? ev.target.getAttribute("data-sw") : null;
+      if (sw !== null) {
+        var s = swings[+sw];
+        tkShowTip(ev, tkSec(s.timestampMs) + " · dummy #" + s.dummy, [
+          { key: colorOf[s.outcome], label: "Outcome", value: s.outcome },
+          { label: "Pre-armor", value: tkNum(s.preArmor) }, { label: "Armor took", value: tkNum(s.armor) },
+          { label: "Block took", value: tkNum(s.blocked) }, { label: "Shields took", value: tkNum(s.absorbed) },
+          { label: "Taken", value: tkNum(s.final) },
+          { label: "Rage gained", value: s.rageTenths === null || s.rageTenths === undefined ? "–" : fmtNum(s.rageTenths / 10, 1) }]);
+        return;
+      }
+      var lane = ev.target.getAttribute ? ev.target.getAttribute("data-lane") : null;
+      if (lane) {
+        tkShowTip(ev, lane, [{ label: "Up", value: tkSec(+ev.target.getAttribute("data-a")) + " – " + tkSec(+ev.target.getAttribute("data-b")) }]);
+        return;
+      }
+      if (ev.target === hhit && samples.length) {
+        var r = root.getBoundingClientRect();
+        var ms = ((ev.clientX - r.left) / r.width * W - pad.l) / plotW * xmax;
+        var best = 0;
+        for (var i = 1; i < samples.length; i++) if (Math.abs(samples[i].timestampMs - ms) < Math.abs(samples[best].timestampMs - ms)) best = i;
+        var p = samples[best];
+        xh.setAttribute("x1", xp(p.timestampMs)); xh.setAttribute("x2", xp(p.timestampMs)); xh.setAttribute("visibility", "visible");
+        tkShowTip(ev, tkSec(p.timestampMs), [
+          { key: "var(--accent)", label: "Health", value: tkNum(p.health) + " (" + fmtNum(p.maxHealth > 0 ? p.health / p.maxHealth * 100 : 0, 0) + "%)" },
+          { label: tkPowerName(p.powerType), value: fmtNum(p.power, 0) + " / " + fmtNum(p.maxPower, 0) }]);
+        return;
+      }
+      xh.setAttribute("visibility", "hidden");
+      tkHideTip();
+    });
+    root.addEventListener("pointerleave", function () { xh.setAttribute("visibility", "hidden"); tkHideTip(); });
+
+    var present = {};
+    swings.forEach(function (s) { present[s.outcome] = true; });
+    legend.innerHTML = TK_OUT.filter(function (o) { return present[o[0]]; }).map(function (o) {
+      return '<span class="item"><span class="sw" style="background:' + o[2] + '"></span>' + tkEsc(o[1]) + '</span>';
+    }).join("") + (lanes.length ? '<span class="item"><span class="sw" style="background:var(--accent);opacity:0.8"></span>Defensive aura up</span>' : "");
+    note.innerHTML = (tkSurvive(d) ? "" : "In the dps scenario the tank’s health is refilled after every step, so the health line stays near full; the bars show each hit’s damage as a share of max health. ") +
+      (lanes.length ? "" : "No defensive aura was recognised (they are matched by spell name, so a report built without the world DB shows none). ") +
+      (d.aggregate ? "Timelines are the representative run. " : "") + "Swing times are the start of the 100 ms step they landed in; health, power and threat samples are read at its end.";
+  }
+
+  // ---- self-healing ----
+  function renderTkHeals(d) {
+    var box = tkById("tk-heals"), s = d.tank.summary, heals = d.tank.selfHeals || [];
+    if (!heals.length) { box.innerHTML = '<div class="empty-note">The tank healed itself for nothing in this run.</div>'; return; }
+    var max = Math.max.apply(null, heals.map(function (h) { return h.effective + h.overheal; })) || 1;
+    var rows = heals.map(function (h) {
+      var name = spellName(h.spellId, h.isPet), events = h.hits + h.ticks;
+      var bar = '<div class="tk-mini">' + (h.effective > 0 ? '<span style="width:' + (h.effective / max * 100) + '%;background:var(--tk-eff)"></span>' : '') +
+        (h.overheal > 0 ? '<span style="width:' + (h.overheal / max * 100) + '%;background:var(--tk-over)"></span>' : '') + '</div>';
+      return '<tr><td>' + tkEsc(name) + '</td><td style="width:26%">' + bar + '</td><td class="num">' + tkCount(h.casts) + '</td>' +
+        '<td class="num">' + (events > 0 ? tkPct(h.crits / events * 100, 1) : '<span class="dim">–</span>') + '</td>' +
+        '<td class="num">' + fmtNum(h.effective) + '</td><td class="num">' + fmtNum(h.overheal) + '</td><td class="num">' + tkPct(h.overhealPct, 1) + '</td></tr>';
+    }).join("");
+    box.innerHTML = '<div class="tk-legend" style="margin:0 0 10px"><span class="item"><span class="sw" style="background:var(--tk-eff)"></span>Effective</span>' +
+      '<span class="item"><span class="sw" style="background:var(--tk-over)"></span>Overheal</span></div>' +
+      '<div class="tk-tbl-scroll"><table class="spells"><thead><tr><th>Spell</th><th></th><th class="num">Casts</th><th class="num">Crit</th><th class="num">Effective</th><th class="num">Overheal</th><th class="num">Overheal %</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      '<footer class="note">Effective self-healing: <b>' + fmtNum(s.selfHealEffective) + '</b> (' + fmtNum(s.selfHps, 1) + ' HPS), overheal ' + fmtNum(s.selfHealOverheal) +
+      '. Shields the tank puts on itself are not counted here: what they absorbed is already out of damage taken.' +
+      (tkSurvive(d) ? '' : ' In the dps scenario the health is refilled, so most healing shows as overheal.') + '</footer>';
+  }
+
+  // ---- a line chart with a crosshair: o = {host, W, H, pad, xmax, ymax, yTicks, yFmt, series:[{name,color,pts:[[t,v]],width,step}], fmt} ----
+  function tkLineChart(o) {
+    var plotW = o.W - o.pad.l - o.pad.r, plotH = o.H - o.pad.t - o.pad.b;
+    function xp(ms) { return o.pad.l + ms / o.xmax * plotW; }
+    function yp(v) { return o.pad.t + plotH - v / o.ymax * plotH; }
+    var svg = tkAxes(o.W, o.pad, o.xmax, o.pad.t, plotH, o.yTicks, o.yFmt, o.noX ? undefined : o.H - o.pad.b + 20);
+    o.series.forEach(function (s) {
+      if (!s.pts.length) return;
+      var dAttr = "";
+      s.pts.forEach(function (p, i) {
+        var x = xp(p[0]).toFixed(1), y = yp(p[1]).toFixed(1);
+        if (!i) dAttr += "M" + x + "," + y;
+        else if (s.step) dAttr += "L" + x + "," + yp(s.pts[i - 1][1]).toFixed(1) + "L" + x + "," + y;
+        else dAttr += "L" + x + "," + y;
+      });
+      svg += '<path d="' + dAttr + '" fill="none" stroke="' + s.color + '" stroke-width="' + (s.width || 2) + '" stroke-linejoin="round" stroke-linecap="round"/>';
+    });
+    svg += '<line class="xh" x1="0" x2="0" y1="' + o.pad.t + '" y2="' + (o.pad.t + plotH) + '" stroke="var(--text-faint)" stroke-width="1" visibility="hidden"/>';
+    svg += '<rect class="hit" x="' + o.pad.l + '" y="' + o.pad.t + '" width="' + plotW + '" height="' + plotH + '" fill="transparent"/>';
+    o.host.innerHTML = '<svg viewBox="0 0 ' + o.W + ' ' + o.H + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="' + tkEsc(o.aria) + '">' + svg + '</svg>';
+    var root = o.host.querySelector("svg"), xh = root.querySelector(".xh"), hit = root.querySelector(".hit");
+    function nearest(pts, ms) {
+      var best = 0;
+      for (var i = 1; i < pts.length; i++) if (Math.abs(pts[i][0] - ms) < Math.abs(pts[best][0] - ms)) best = i;
+      return pts[best];
+    }
+    hit.addEventListener("pointermove", function (ev) {
+      var r = root.getBoundingClientRect();
+      var ms = ((ev.clientX - r.left) / r.width * o.W - o.pad.l) / plotW * o.xmax;
+      var first = o.series.filter(function (s) { return s.pts.length; })[0];
+      if (!first) return;
+      var at = nearest(first.pts, ms)[0];
+      xh.setAttribute("x1", xp(at)); xh.setAttribute("x2", xp(at)); xh.setAttribute("visibility", "visible");
+      tkShowTip(ev, tkSec(at), o.series.filter(function (s) { return s.pts.length; }).map(function (s) {
+        return { key: s.color, label: s.name, value: o.fmt(nearest(s.pts, at)[1]) };
+      }));
+    });
+    hit.addEventListener("pointerleave", function () { xh.setAttribute("visibility", "hidden"); tkHideTip(); });
+  }
+
+  // ---- the class resource over time (rage, runic power, mana...) and the Paladin's Bulwark stacks ----
+  function renderTkPower(d) {
+    var samples = (d.tank.samples || []).slice().sort(tkByTime), s = d.tank.summary;
+    var host = tkById("tk-power-chart"), stacksHost = tkById("tk-stacks-chart"), legend = tkById("tk-power-legend");
+    var powerType = tkPowerType(d), name = tkPowerName(powerType);
+    tkById("tk-power-title").textContent = name + " over time";
+    stacksHost.innerHTML = "";
+    if (!samples.length) { host.innerHTML = '<div class="empty-note">No resource samples in this report.</div>'; legend.innerHTML = ""; return; }
+    var xmax = tkXmax(d);
+    var maxP = Math.max.apply(null, samples.map(function (p) { return p.maxPower; })) || 1;
+    var avg = tkSum(samples.map(function (p) { return p.power; })) / samples.length;
+    tkLineChart({ host: host, W: 900, H: 220, pad: { l: 56, r: 20, t: 14, b: 34 }, xmax: xmax, ymax: maxP, aria: name + " over time",
+      yTicks: [0, 0.25, 0.5, 0.75, 1].map(function (v) { return { pos: v, val: Math.round(v * maxP) }; }), yFmt: function (v) { return v; },
+      series: [{ name: name, color: "var(--accent)", pts: samples.map(function (p) { return [p.timestampMs, p.power]; }) }],
+      fmt: function (v) { return fmtNum(v, 0) + " / " + fmtNum(maxP, 0); } });
+    var maxStacks = Math.max.apply(null, samples.map(function (p) { return p.bulwarkStacks || 0; }));
+    var legendHtml = '<span class="item"><span class="ln" style="background:var(--accent)"></span>' + tkEsc(name) + ' &mdash; mean ' + fmtNum(avg, 0) +
+      (powerType === TK_POWER_RAGE ? ', ' + fmtNum(s.rageGained, 0) + ' gained from the incoming swings (' + fmtNum(s.rageGainedPerSec, 1) + '/s)' : '') + '</span>';
+    if (powerType === TK_POWER_RAGE && s.avoidedSwingsMeasured > 0) legendHtml += '<span class="item">' + fmtNum(s.avoidedSwingsWithRage, 0) + ' of ' +
+      fmtNum(s.avoidedSwingsMeasured, 0) + ' swings that did no damage still gave rage (procs such as Shield Specialization)</span>';
+    if (maxStacks > 0) {
+      var top = Math.max(5, maxStacks);
+      tkLineChart({ host: stacksHost, W: 900, H: 130, pad: { l: 56, r: 20, t: 10, b: 34 }, xmax: xmax, ymax: top, aria: "Bulwark stacks over time",
+        yTicks: [0, 0.5, 1].map(function (v) { return { pos: v, val: Math.round(v * top) }; }), yFmt: function (v) { return v; },
+        series: [{ name: "Bulwark stacks", color: "var(--o2)", step: true, pts: samples.map(function (p) { return [p.timestampMs, p.bulwarkStacks || 0]; }) }],
+        fmt: function (v) { return fmtNum(v, 0); } });
+      legendHtml += '<span class="item"><span class="ln" style="background:var(--o2)"></span>Bulwark stacks</span>';
+    }
+    legend.innerHTML = legendHtml;
+  }
+
+  // ---- threat per dummy ----
+  function renderTkThreat(d) {
+    var host = tkById("tk-threat-chart"), legend = tkById("tk-threat-legend"), box = tkById("tk-dummies");
+    var t = d.tank, s = t.summary, threat = (t.threat || []).filter(function (x) { return x.samples && x.samples.length; });
+    var per = t.perDummy || [];
+    if (!threat.length) { host.innerHTML = '<div class="empty-note">No threat samples in this report.</div>'; legend.innerHTML = ""; box.innerHTML = ""; return; }
+    var many = threat.length > TK_SERIES.length;
+    var last = threat.map(function (x) { return x.samples[x.samples.length - 1][1]; });
+    var lo = last.indexOf(Math.min.apply(null, last)), hi = last.indexOf(Math.max.apply(null, last));
+    var maxT = Math.max.apply(null, last) || 1;
+    var series = threat.map(function (x, i) {
+      var color = many ? (i === lo ? "var(--bad)" : (i === hi ? "var(--accent)" : "var(--text-faint)")) : TK_SERIES[i % TK_SERIES.length];
+      return { name: "Dummy #" + x.dummy, color: color, width: many && i !== lo && i !== hi ? 1.2 : 2, pts: x.samples };
+    });
+    tkLineChart({ host: host, W: 900, H: 240, pad: { l: 64, r: 20, t: 14, b: 34 }, xmax: tkXmax(d), ymax: maxT, aria: "Threat on each dummy over time",
+      yTicks: [0, 0.25, 0.5, 0.75, 1].map(function (v) { return { pos: v, val: Math.round(v * maxT) }; }), yFmt: function (v) { return fmtNum(v, 0); },
+      series: series, fmt: function (v) { return fmtNum(v, 0); } });
+    legend.innerHTML = many ?
+      '<span class="item"><span class="ln" style="background:var(--accent)"></span>Highest (dummy #' + threat[hi].dummy + ')</span>' +
+      '<span class="item"><span class="ln" style="background:var(--bad)"></span>Lowest (dummy #' + threat[lo].dummy + ') &mdash; the one that pulls off a pack</span>' +
+      '<span class="item"><span class="ln" style="background:var(--text-faint)"></span>The others</span>' :
+      series.map(function (x) { return '<span class="item"><span class="ln" style="background:' + x.color + '"></span>' + tkEsc(x.name) + '</span>'; }).join("") +
+        (threat.length > 1 ? '<span class="item">lowest: dummy #' + threat[lo].dummy + '</span>' : "");
+
+    var cols = [["miss", "Miss"], ["dodge", "Dodge"], ["parry", "Parry"], ["block", "Block"], ["fullBlock", "Full block"], ["hit", "Hit"], ["crit", "Crit"], ["crush", "Crush"]];
+    var rows = per.map(function (p) {
+      var o = p.outcomes || {};
+      return '<tr><td>#' + p.index + '</td><td class="num">' + tkCount(p.swings) + '</td>' +
+        cols.map(function (c) { return '<td class="num">' + tkCount(o[c[0]] || 0) + '</td>'; }).join("") +
+        '<td class="num">' + fmtNum(p.damageTaken) + '</td><td class="num">' + tkCount(p.swingsOutsideFrontArc) +
+        '</td><td class="num">' + fmtNum(p.threat, 0) + '</td></tr>';
+    }).join("");
+    box.innerHTML = '<div class="tk-tbl-scroll"><table class="spells"><thead><tr><th>Dummy</th><th class="num">Swings</th>' +
+      cols.map(function (c) { return '<th class="num">' + c[1] + '</th>'; }).join("") +
+      '<th class="num">Damage taken</th><th class="num">Outside front arc</th><th class="num">Threat</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      '<footer class="note">TPS <b>' + fmtNum(s.tps, 1) + '</b>: the sum of the threat on every dummy over the time of the last sample. The threat on a pack\u2019s lowest dummy (<b>' + fmtNum(s.lowestThreat, 0) +
+      '</b>) is what decides whether the tank keeps the whole pack. A dummy with no dodges or parries over a long run is probably outside the tank\u2019s front arc.</footer>';
+  }

@@ -42,6 +42,16 @@ trimmed by hps instead of dps, an iteration with a death (healer or ally) is nev
 the median-hps kept one, and reports of a different group, HealTargets or infiniteMana are refused. The DPS path above
 is untouched.
 
+Tank reports ("kind": "tank", SimReport::WriteTankJson()) are a DPS report plus a "tank" section and are merged by
+main_tank() below: the DPS part with the DPS helpers above, the tank section with its own (every numeric field of
+tank.summary averaged over the kept runs, per-dummy, absorb and self-heal rows averaged, timelines from the
+representative run). The scenario decides the trim: "dps" trims on DPS exactly as a DPS batch does (a run where the
+actor died is never trimmed), "survive" trims on time to death (TTD; a run that lived counts the full duration as its
+TTD, plan T11) and trims dead runs like any other, since in that scenario every run is expected to end in death. The
+representative run is the median-DPS (dps) or median-TTD (survive) kept one. Reports of a different kind, scenario,
+target setup, hit settings, swing speed, crit switch or pull auras are refused (and of a different duration in
+"survive", where the duration is what a survived run's TTD means).
+
 Usage:
     aggregate_reports.py <output.json> <report1.json> [<report2.json> ...]
 """
@@ -357,6 +367,289 @@ def main_heal(out_path: Path, report_paths: list[Path], reports: list[dict]) -> 
     return 0
 
 
+# ---------------------------------------------------------------------------------------------------------------------
+# Tank reports (SimReport::WriteTankJson()'s schema, "kind": "tank")
+# ---------------------------------------------------------------------------------------------------------------------
+
+# Per-run timelines of the tank section, taken verbatim from the representative run
+TANK_TIMELINE_KEYS = ["swings", "samples", "threat"]
+# tank.summary leaves that are labels or picks, not quantities: taken from the representative run instead of averaged
+# (the survived / died flags are left out of the merge: the survived and died counts are in aggregate.tank)
+TANK_SUMMARY_PICK_KEYS = {"scenario", "powerType", "lowestThreatDummy", "critBugAtMs"}
+
+
+def tank_section(r: dict) -> dict:
+    return r.get("tank") or {}
+
+
+def tank_summary_of(r: dict) -> dict:
+    return tank_section(r).get("summary") or {}
+
+
+def tank_setup(r: dict) -> dict:
+    """The settings two tank reports must share to be merged (field name -> value)."""
+    t = tank_section(r).get("config") or {}
+    scenario = t.get("scenario")
+    pack = t.get("dummyKind") == "pack"
+    return {
+        "scenario": scenario,
+        "targetCount": target_count(r),
+        "targetRank": target_rank(r),
+        # Only the hit range the run used: the other one is a profile default that no dummy swung with
+        "hitDamage": t.get("packHitDamage") if pack else t.get("hitDamage"),
+        "swingMs": t.get("swingMs"),
+        "dummyCrit": t.get("dummyCrit"),
+        "pullAuras": t.get("pullAuras", []),
+        # A survived run's TTD is the duration, so runs of different lengths don't mix in "survive"
+        "durationMs": r.get("config", {}).get("durationMs") if scenario == "survive" else None,
+    }
+
+
+def tank_ttd(r: dict) -> float:
+    return tank_summary_of(r)["ttdMs"]
+
+
+# Like trim_by_dps(), on the time to death (a survived run counts the duration). Dead runs are trimmed like any other:
+# in the survive scenario every run is expected to die, so the DPS rule that keeps them does not apply.
+def trim_by_ttd(reports: list[dict]) -> tuple[set[int], list[int], list[int]]:
+    n = len(reports)
+    k = int(n * TRIM_FRACTION)
+    order = sorted(range(n), key=lambda i: tank_ttd(reports[i]))
+    dropped_low_idx = order[:k]
+    dropped_high_idx = order[n - k:] if k > 0 else []
+    kept_idx = set(range(n)) - set(dropped_low_idx) - set(dropped_high_idx)
+    return kept_idx, dropped_low_idx, dropped_high_idx
+
+
+def median_tank_report(reports: list[dict], kept_idx: set[int], survive: bool) -> dict:
+    kept = [reports[i] for i in sorted(kept_idx)]
+    key = tank_ttd if survive else (lambda r: r["summary"]["dps"])
+    by_key = sorted(kept, key=key)
+    median = statistics.median_low(key(r) for r in kept)
+    return next(r for r in by_key if key(r) == median)
+
+
+def is_number(v) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def numeric_paths(d: dict, prefix: str = "") -> list[str]:
+    """Dotted paths of every numeric leaf of a nested dict, in first-seen order."""
+    out: list[str] = []
+    for k, v in d.items():
+        path = prefix + k
+        if isinstance(v, dict):
+            out.extend(numeric_paths(v, path + "."))
+        elif is_number(v) and k not in TANK_SUMMARY_PICK_KEYS:
+            out.append(path)
+    return out
+
+
+def get_path(d: dict, path: str):
+    for part in path.split("."):
+        if not isinstance(d, dict) or part not in d:
+            return None
+        d = d[part]
+    return d
+
+
+def set_path(d: dict, path: str, value) -> None:
+    parts = path.split(".")
+    for part in parts[:-1]:
+        d = d.setdefault(part, {})
+    d[parts[-1]] = value
+
+
+# Returns (trimmed, raw, perIteration): trimmed / raw are nested like tank.summary (means over the kept runs and over
+# all runs), perIteration is flat, dotted path -> the value of every run. A leaf that is null in some runs (ttdMs in
+# the dps scenario) is averaged over the runs that have it and stays null when none does. Labels come from the
+# representative.
+def aggregate_tank_summary(reports: list[dict], kept_idx: set[int], representative: dict) -> tuple[dict, dict, dict]:
+    summaries = [tank_summary_of(r) for r in reports]
+    paths: list[str] = []
+    for s in summaries:
+        for path in numeric_paths(s):
+            if path not in paths:
+                paths.append(path)
+    # Keys that are numeric in some runs and null in others still need a path
+    for s in summaries:
+        for k, v in s.items():
+            if v is None and k not in paths and k not in TANK_SUMMARY_PICK_KEYS:
+                paths.append(k)
+
+    trimmed: dict = {}
+    raw: dict = {}
+    per_iteration: dict = {}
+    for path in paths:
+        values = [get_path(s, path) for s in summaries]
+        per_iteration[path] = values
+        for target, picked in ((raw, [v for v in values if is_number(v)]),
+                               (trimmed, [v for i, v in enumerate(values) if i in kept_idx and is_number(v)])):
+            set_path(target, path, mean(picked) if picked else None)
+    rep = tank_summary_of(representative)
+    for key in TANK_SUMMARY_PICK_KEYS:
+        if key in rep:
+            trimmed[key] = rep[key]
+            raw[key] = rep[key]
+    return trimmed, raw, per_iteration
+
+
+def aggregate_tank_per_dummy(reports: list[dict], kept_idx: set[int], representative: dict) -> list[dict]:
+    kept = [tank_section(r).get("perDummy", []) for i, r in enumerate(reports) if i in kept_idx]
+    merged = []
+    for idx, base in enumerate(tank_section(representative).get("perDummy", [])):
+        rows = [t[idx] for t in kept if idx < len(t)]
+        row: dict = {"index": base["index"]}
+        for key in ("swings", "preArmorDamage", "damageTaken", "swingsOutsideFrontArc", "threat"):
+            row[key] = mean([x[key] for x in rows])
+        row["outcomes"] = {k: mean([x["outcomes"][k] for x in rows]) for k in base["outcomes"]}
+        row["outcomePct"] = {k: mean([x["outcomePct"][k] for x in rows]) for k in base.get("outcomePct", {})}
+        merged.append(row)
+    return merged
+
+
+def aggregate_tank_absorbs(reports: list[dict], kept_idx: set[int]) -> list[dict]:
+    per_report = [{a["spellId"]: a for a in tank_section(r).get("absorbsBySpell", [])}
+                  for i, r in enumerate(reports) if i in kept_idx]
+    ids = set().union(*[set(d) for d in per_report]) if per_report else set()
+    merged = [{"spellId": spell_id,
+               "amount": mean([d[spell_id]["amount"] if spell_id in d else 0 for d in per_report]),
+               "events": mean([d[spell_id]["events"] if spell_id in d else 0 for d in per_report])}
+              for spell_id in ids]
+    total = sum(row["amount"] for row in merged)
+    for row in merged:
+        row["pctOfAbsorbed"] = 100.0 * row["amount"] / total if total > 0 else 0.0
+    merged.sort(key=lambda row: row["amount"], reverse=True)
+    return merged
+
+
+TANK_HEAL_SUM_KEYS = ["casts", "hits", "ticks", "crits", "effective", "overheal", "healAbsorbed"]
+
+
+def aggregate_tank_heals(reports: list[dict], kept_idx: set[int]) -> list[dict]:
+    per_report = [{(h["spellId"], h.get("isPet", False)): h for h in tank_section(r).get("selfHeals", [])}
+                  for i, r in enumerate(reports) if i in kept_idx]
+    keys = set().union(*[set(d) for d in per_report]) if per_report else set()
+    merged = []
+    for key in keys:
+        row = {"spellId": key[0], "isPet": key[1]}
+        for name in TANK_HEAL_SUM_KEYS:
+            row[name] = mean([d[key][name] if key in d else 0 for d in per_report])
+        raw_heal = row["effective"] + row["overheal"] + row["healAbsorbed"]
+        row["overhealPct"] = 100.0 * row["overheal"] / raw_heal if raw_heal > 0 else 0.0
+        merged.append(row)
+    merged.sort(key=lambda row: row["effective"], reverse=True)
+    return merged
+
+
+def main_tank(out_path: Path, report_paths: list[Path], reports: list[dict]) -> int:
+    for path, r in zip(report_paths, reports):
+        if not tank_section(r).get("summary"):
+            print(f"error: {path.name} is a tank report without a tank section", file=sys.stderr)
+            return 1
+    first = tank_setup(reports[0])
+    for path, r in zip(report_paths, reports):
+        setup = tank_setup(r)
+        if setup != first:
+            diff = ", ".join(f"{k} {first[k]!r} vs {setup[k]!r}" for k in first if first[k] != setup[k])
+            print(f"error: refusing to aggregate tank reports of different setups: {report_paths[0].name} vs "
+                  f"{path.name}: {diff}", file=sys.stderr)
+            return 1
+
+    survive = first["scenario"] == "survive"
+    if survive:
+        kept_idx, dropped_low_idx, dropped_high_idx = trim_by_ttd(reports)
+        dropped_low = [tank_ttd(reports[i]) for i in dropped_low_idx]
+        dropped_high = [tank_ttd(reports[i]) for i in dropped_high_idx]
+        dropped_low_dps = sorted(reports[i]["summary"]["dps"] for i in dropped_low_idx)
+        dropped_high_dps = sorted(reports[i]["summary"]["dps"] for i in dropped_high_idx)
+    else:
+        kept_idx, dropped_low_dps, dropped_high_dps = trim_by_dps(reports)
+        dropped_low = dropped_high = []
+
+    summary, raw_mean, per_iteration = aggregate_summary(reports, kept_idx)
+    death_times = [r["summary"]["actorDiedAtMs"] for r in reports if r["summary"].get("actorDiedAtMs") is not None]
+    representative = median_tank_report(reports, kept_idx, survive)
+    rep_tank = tank_section(representative)
+    tank_trimmed, tank_raw, tank_per_iteration = aggregate_tank_summary(reports, kept_idx, representative)
+    survived_flags = [bool(tank_summary_of(r).get("survived")) for r in reports]
+    crit_bug_runs = sum(1 for r in reports if tank_summary_of(r).get("critBugCount", 0) > 0)
+
+    merged = {
+        "kind": "tank",
+        "config": representative["config"],
+        "summary": summary,
+        "spells": aggregate_spells(reports, kept_idx),
+        "hits": representative.get("hits", []),
+        "auraEvents": representative.get("auraEvents", []),
+        "manaSamples": representative.get("manaSamples", []),
+        "casts": representative.get("casts", []),
+        "targets": aggregate_targets(reports, kept_idx),
+        "tank": {
+            "config": rep_tank.get("config", {}),
+            "actor": rep_tank.get("actor", {}),
+            "summary": tank_trimmed,
+            "perDummy": aggregate_tank_per_dummy(reports, kept_idx, representative),
+            "absorbsBySpell": aggregate_tank_absorbs(reports, kept_idx),
+            "selfHeals": aggregate_tank_heals(reports, kept_idx),
+        },
+        "aggregate": {
+            "iterations": len(reports),
+            "actorDeathCount": len(death_times),
+            "actorDiedAtMs": death_times,
+            "sourceReports": [p.name for p in report_paths],
+            "representativeDps": representative["summary"]["dps"],
+            "trimMetric": "ttd" if survive else "dps",
+            "trim": {
+                "fraction": TRIM_FRACTION,
+                "droppedLowCount": len(dropped_low_dps),
+                "droppedHighCount": len(dropped_high_dps),
+                "keptCount": len(kept_idx),
+                # The DPS of the runs that were dropped (whatever the trim metric was), for the DPS summary's note
+                "droppedLowDps": dropped_low_dps,
+                "droppedHighDps": dropped_high_dps,
+                "rawMean": raw_mean,
+            },
+            "perIteration": per_iteration,
+            "tank": {
+                "scenario": first["scenario"],
+                "survivedCount": sum(survived_flags),
+                "survivedKept": sum(1 for i, f in enumerate(survived_flags) if f and i in kept_idx),
+                "diedCount": sum(1 for r in reports if tank_summary_of(r).get("died")),
+                "critBugRuns": crit_bug_runs,
+                "rawMean": tank_raw,
+                "perIteration": tank_per_iteration,
+            },
+        },
+    }
+    for key in TANK_TIMELINE_KEYS:
+        merged["tank"][key] = rep_tank.get(key, [])
+    if survive:
+        merged["aggregate"]["representativeTtd"] = tank_ttd(representative)
+        merged["aggregate"]["trim"]["droppedLowTtd"] = dropped_low
+        merged["aggregate"]["trim"]["droppedHighTtd"] = dropped_high
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(merged))
+    metric = "TTD" if survive else "DPS"
+    print(f"wrote {out_path} (tank {first['scenario']}: trimmed mean by {metric} over {len(kept_idx)}/{len(reports)} "
+          f"iterations, dropped {len(dropped_low_dps)} low + {len(dropped_high_dps)} high)")
+    ts = tank_trimmed
+    if survive:
+        ttd = ts.get("ttdMs")
+        print(f"mean TTD {ttd / 1000:.1f} s" if ttd is not None else "mean TTD n/a",
+              f"| survived {sum(survived_flags)}/{len(reports)} runs | mean net DTPS {ts.get('netDtps', 0):.1f} "
+              f"| mean DTPS {ts.get('dtps', 0):.1f} | mean DPS while alive {ts.get('dpsAlive', 0):.1f} "
+              f"(whole-fight DPS {summary['dps']:.1f})")
+    if crit_bug_runs:
+        print(f"WARNING: {crit_bug_runs}/{len(reports)} iterations took a crit on a swing whose crit chance was 0 "
+              f"(the tank should be crit immune)")
+    if death_times and not survive:
+        print(f"WARNING: the actor DIED in {len(death_times)}/{len(reports)} iterations (at sim ms {death_times}); "
+              f"those iterations are scored on the full duration and are never trimmed from the means.")
+    return 0
+
+
 def main() -> int:
     if len(sys.argv) < 3:
         print(__doc__, file=sys.stderr)
@@ -366,13 +659,15 @@ def main() -> int:
     report_paths = [Path(p) for p in sys.argv[2:]]
     reports = [json.loads(p.read_text()) for p in report_paths]
 
-    # A heal report carries "kind": "heal"; a DPS report has no kind. The two are never merged.
+    # A heal report carries "kind": "heal", a tank report "kind": "tank"; a DPS report has no kind. They never merge.
     kinds = {r.get("kind", "dps") for r in reports}
     if len(kinds) > 1:
         print(f"error: refusing to aggregate reports of different kinds: {sorted(kinds)}", file=sys.stderr)
         return 1
     if kinds == {"heal"}:
         return main_heal(out_path, report_paths, reports)
+    if kinds == {"tank"}:
+        return main_tank(out_path, report_paths, reports)
 
     for path, r in zip(report_paths, reports):
         if target_count(r) != target_count(reports[0]) or target_rank(r) != target_rank(reports[0]):

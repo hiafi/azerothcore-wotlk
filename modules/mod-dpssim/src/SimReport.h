@@ -108,6 +108,60 @@ namespace SimReport
     //   (with powerCost), "manaSamples": the event arrays of the iteration, field names as in SimHeal.h and
     //   SimDaemon::RunResult.
     bool WriteHealJson(std::string const& path, SimDaemon::RunConfig const& config, SimDaemon::RunResult const& result);
+
+    // The tank-mode counterpart (plan .agents/plans/tank-sim/tank-sim.PLAN.md, sections 4 and 5; tank runs are DPS runs
+    // that also get hit): the DPS report exactly as WriteJson() writes it, plus "kind": "tank" as the first key and a
+    // "tank" section as the last one. A DPS report has no "kind"; a heal report has "kind": "heal".
+    //
+    // Time bases: swing timestamps are the tick start, samples (health, power, threat) and the time of death are read
+    // after the tick, so the swing that killed the actor is stamped one step before "actorDiedAtMs". All times are ms
+    // since the pull. Rates (DTPS, net DTPS, self-HPS, power per second) divide by "rateBaseMs": the time of death in
+    // the survive scenario when the actor died, the full duration otherwise.
+    //
+    // The "tank" object:
+    //   "config":  {scenario ("dps"|"survive"), hitDamage {min,max} (the boss), packHitDamage {min,max}, dummyKind
+    //               ("boss" = a single target, whatever its rank; "pack" = 2 or more targets), dummyCount, swingMs,
+    //               dummyCrit, stepMs, pullAuras [spell ids], dummies [{index, hitMin, hitMax, swingMs, level,
+    //               levelForTarget, armor, expectedCritPct (after the first second), weaponMin, weaponMax, attackPower,
+    //               damageModifier, basePct, fieldMin, fieldMax}]}
+    //   "actor":   {afterFirstSecond, atPull}, each {level, health, armor, defenseSkill, maxSkillForLevel, dodgePct,
+    //               parryPct, blockPct, blockValue, critImmune}. afterFirstSecond is the character sheet (stance and
+    //               the first buffs up), atPull the read before the bot acted.
+    //   "summary": {scenario, rateBaseMs, swings, swingsLanded, swingsOutsideFrontArc, outcomes {miss, dodge, parry,
+    //               block, fullBlock, crit, crush, hit, glancing, other} (counts), outcomePct (same keys, percent of
+    //               all swings), blockAnyPct (block + fullBlock), avoidancePct (miss + dodge + parry), expectedPct
+    //               {miss, dodge, parry, block, crit} (what the core rolled, mean over the swings), expectedCritPct,
+    //               observedCritPct, critBugCount (crits on a swing whose rolled crit chance was 0), critBugAtMs [ms],
+    //               mitigation {avoided, armor, block, absorb, resist, taken, gross} (damage, gross = their sum),
+    //               mitigationPct (percent of gross), preArmorDamage, damageTaken (post-absorb), damageAbsorbed, dtps,
+    //               dtpsBeforeShields, selfHealEffective, selfHealOverheal, selfHealOverhealPct, selfHps, netDtps,
+    //               ttdMs (survive: the time of death, or the duration when the actor lived; null in dps), survived,
+    //               died, minHealthPct, msUnder35Pct (the health samples under 35%, each up to the next sample but not
+    //               past rateBaseMs), powerType (POWER_*, the type most samples were in), rageGained / rageGainedPerSec
+    //               (the actor's rage across the swings, damage-taken rage and procs; display units; rage only, so 0
+    //               for a tank on another resource), rageSwingsMeasured, avoidedSwingsMeasured, avoidedSwingsWithRage,
+    //               tps, dpsAlive, tpsAlive, totalThreat, lowestThreat, lowestThreatDummy}
+    //               netDtps = (damageTaken - selfHealEffective) / seconds. damageTaken is already after the shields, so
+    //               the absorbs are never subtracted again. mitigation.avoided is the pre-armor damage of the swings
+    //               that missed, dodged or parried. dpsAlive / tpsAlive = the actor's damage / the threat on the
+    //               dummies over rateBaseMs (the time alive: the time of death, else the duration), and tps is the same
+    //               number as tpsAlive; the top-level summary.dps stays total damage over the full duration, as in
+    //               every DPS report.
+    //               critBugCount counts a crit on a swing whose own rolled crit chance was 0 (SwingEvent::ExpectedCrit,
+    //               read in the roll hook). The run log's warning is wider: it also fires on any crit when the first
+    //               dummy's expected crit was 0 at the pull, so the log can flag a run the JSON count calls clean.
+    //   "perDummy": [{index, swings, outcomes, outcomePct, preArmorDamage, damageTaken, swingsOutsideFrontArc, threat}]
+    //               - outcomes / outcomePct hold the full outcome split of that dummy's swings, as in summary
+    //   "absorbsBySpell": [{spellId, amount, events, pctOfAbsorbed}] - the shields that took damage off the swings,
+    //               from SwingAbsorbs only (RunResult::AbsorbEvents describe the same shields: never add them).
+    //   "selfHeals": [{spellId, isPet, casts, hits, ticks, crits, effective, overheal, overhealPct, healAbsorbed}]
+    //   "swings":  [{timestampMs, dummy, outcome, preArmor, armor, blocked, absorbed, resisted, final, rageTenths
+    //               (null without rage), expected {miss, dodge, parry, block, crit} (percent), inFrontArc, takenMult}]
+    //   "samples": [{timestampMs, health, maxHealth, powerType, power, maxPower, bulwarkStacks}] every 500 ms; rage
+    //               and runic power are in display units (the core stores them x10). The dps scenario's samples are
+    //               read before the step's health refill.
+    //   "threat":  [{dummy, samples: [[timestampMs, threat], ...]}] every second
+    bool WriteTankJson(std::string const& path, SimDaemon::RunConfig const& config, SimDaemon::RunResult const& result);
 }
 
 #endif

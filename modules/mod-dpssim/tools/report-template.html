@@ -154,7 +154,7 @@ table.spells th.num { text-align: right; }
 table.uptime td.pt { text-align: right; font-family: "IBM Plex Mono", monospace; white-space: nowrap; }
 .type-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; padding: 2px 7px; border-radius: 999px; }
 .type-badge.buff { color: var(--good); background: color-mix(in srgb, var(--good) 18%, transparent); }
-.type-badge.debuff { color: var(--bad); background: color-mix(in srgb, var(--bad) 18%, transparent); }
+.type-badge.debuff { color: var(--bad); background: color-mix(in srgb, var(--bad) 18%, transparent); }__TANK_CSS__
 </style>
 
 <div class="wrap">
@@ -166,7 +166,7 @@ table.uptime td.pt { text-align: right; font-family: "IBM Plex Mono", monospace;
     </div>
     <button class="loader-btn" id="btn-load"><span id="label-load">Load a different report</span></button>
     <input type="file" id="file-load" accept="application/json">
-  </header>
+  </header>__TANK_SECTION__
 
   <section>
     <h2>Summary</h2>
@@ -299,7 +299,7 @@ table.uptime td.pt { text-align: right; font-family: "IBM Plex Mono", monospace;
   }
 
   var PALETTE = ["#4fd3ea", "#b98af0", "#ffb454", "#5fd98a", "#ef6a6a", "#7aa2f7"];
-  function colorFor(idx) { return PALETTE[idx % PALETTE.length]; }
+  function colorFor(idx) { return PALETTE[idx % PALETTE.length]; }__TANK_JS__
 
   var report = { label: "__LABEL__", data: null };
 
@@ -330,7 +330,7 @@ table.uptime td.pt { text-align: right; font-family: "IBM Plex Mono", monospace;
     renderTargetUptime();
     renderCastLog();
     renderHitLog();
-    renderAuraLog();
+    renderAuraLog();__TANK_RENDER__
   }
 
   function renderMeta() {

@@ -82,6 +82,20 @@
 # File tag: the preset name (pin50, drain150, ...) or, for a full HEALSIM_TARGETS list (or none at all, the profile's
 # own), "x" and a short hash of the list; "-inf" is appended for infinite mana.
 #
+# Tank runs: a profile with "Mode = Tank" (see SimProfile.h, plan .agents/plans/tank-sim/tank-sim.PLAN.md) runs the DPS
+# sim with the dummies swinging at the actor. Everything above applies, including [targets] (1 = a boss dummy, 2-10 = an
+# elite pack, every dummy swings). The reports are named "<Profile>.tank-<scenario>.<targets>t.<ts>..." (so aggregation
+# never mixes scenarios or pack sizes) and the baked page is modules/mod-dpssim/reports/TankProfileReport.html. They are
+# DPS reports with a tank section ("kind": "tank"). Environment, all optional (without them the profile's own
+# TankScenario / TankHitDamage / TankPackHitDamage / TankSwingMs apply; DPSSIM_EXTRA_CONF may not set these keys, the run
+# refuses it). A run that overrides the hit or swing numbers adds a tag "x<hash>" after the target count in its names:
+#   TANKSIM_SCENARIO   dps | survive (DpsSim.TankScenario). dps: the tank's health is refilled every step, it never
+#                      dies (read DPS and TPS). survive: no outside healing, the run ends at its death (read the time to
+#                      death and the net damage taken per second).
+#   TANKSIM_HIT        the boss's hit before armor (DpsSim.TankHitDamage): "2250-2750" or one value. 1 target only.
+#   TANKSIM_PACK_HIT   each pack dummy's hit before armor (DpsSim.TankPackHitDamage), same syntax. 2+ targets only.
+#   TANKSIM_SWING_MS   the dummies' swing time, 500-10000 (DpsSim.TankSwingMs).
+#
 # Examples:
 #   modules/mod-dpssim/tools/run-sim.sh ArcaneMageSim              # 180s @ level 60, avg of 10 @ 100ms (the defaults)
 #   modules/mod-dpssim/tools/run-sim.sh FrostMageSim 300
@@ -89,6 +103,8 @@
 #   modules/mod-dpssim/tools/run-sim.sh ArcaneMageSim 180 60 1 1   # single run, no averaging
 #   modules/mod-dpssim/tools/run-sim.sh ArcaneMageSim 120 60 1 100 100   # 100 runs at a 100ms step
 #   modules/mod-dpssim/tools/run-sim.sh DestructionWarlockSim 300 60 2 10 100 5   # 5 stacked dummies
+#   TANKSIM_SCENARIO=survive modules/mod-dpssim/tools/run-sim.sh ProtWarriorTankSim 120 60 1 10   # time to death
+#   modules/mod-dpssim/tools/run-sim.sh ProtWarriorTankSim 120 60 1 10 100 5     # tank dps vs 5 dummies
 #
 # Database isolation: the sim never connects to the live acore_characters. Before booting, this script clones the
 # live characters schema (structure plus the small static/bookkeeping tables the worldserver reads at startup, see
@@ -230,6 +246,70 @@ if [[ "$IS_HEAL" -eq 1 ]]; then
     BATCH_SCENARIO="${HEAL_GROUP}.${HEAL_TAG}"
 fi
 
+# --- tank sim: detect a tank profile and resolve the scenario (file names, conf overrides) ---------------------------
+IS_TANK=0
+TANK_CONF=""
+TANK_SCENARIO=""
+TANK_TAG=""
+if [[ "$(profile_key Mode | tr 'A-Z' 'a-z')" == "tank" ]]; then IS_TANK=1; fi
+if [[ "$IS_TANK" -eq 0 ]]; then
+    for v in TANKSIM_SCENARIO TANKSIM_HIT TANKSIM_PACK_HIT TANKSIM_SWING_MS; do
+        if [[ -n "${!v:-}" ]]; then
+            die "$v is set but '$PROFILE_NAME' is not a tank profile (Mode = Tank)"
+        fi
+    done
+else
+    # The file name carries the scenario and a tag for the overridden numbers, so the tank settings must come from the
+    # profile or the TANKSIM_* variables, never from raw config lines that the name cannot see
+    TANK_RAW_RE='^[[:space:]]*DpsSim\.Tank(Scenario|HitDamage|PackHitDamage|SwingMs)[[:space:]]*='
+    if printf '%b' "${DPSSIM_EXTRA_CONF:-}" | grep -qiE "$TANK_RAW_RE"; then
+        die "DPSSIM_EXTRA_CONF sets a DpsSim.Tank* value (Scenario, HitDamage, PackHitDamage or SwingMs): use" \
+            "TANKSIM_SCENARIO, TANKSIM_HIT, TANKSIM_PACK_HIT or TANKSIM_SWING_MS instead, so the report file names" \
+            "carry the setting"
+    fi
+    PROFILE_SCENARIO="$(profile_key TankScenario | tr 'A-Z' 'a-z')"
+    TANK_SCENARIO="$(printf '%s' "${TANKSIM_SCENARIO:-${PROFILE_SCENARIO:-dps}}" | tr 'A-Z' 'a-z')"
+    if ! [[ "$TANK_SCENARIO" =~ ^(dps|survive)$ ]]; then
+        if [[ -n "${TANKSIM_SCENARIO:-}" ]]; then
+            die "TANKSIM_SCENARIO must be dps or survive, got '$TANK_SCENARIO'"
+        fi
+        die "TankScenario in the profile '$PROFILE_NAME' must be dps or survive, got '$TANK_SCENARIO'"
+    fi
+    if [[ -n "${TANKSIM_SCENARIO:-}" ]]; then TANK_CONF+="DpsSim.TankScenario = ${TANK_SCENARIO}"$'\n'; fi
+
+    # "2250-2750" or one value, both above 0 and in order
+    check_hit_range() {
+        local name="$1" value="$2"
+        if ! [[ "$value" =~ ^([0-9]+)(-([0-9]+))?$ ]]; then
+            die "$name must be a range like 2250-2750 or one value, got '$value'"
+        fi
+        local lo="${BASH_REMATCH[1]}" hi="${BASH_REMATCH[3]:-${BASH_REMATCH[1]}}"
+        if (( 10#$lo < 1 || 10#$hi < 10#$lo )); then
+            die "$name must be above 0 with the minimum first, got '$value'"
+        fi
+    }
+    if [[ -n "${TANKSIM_HIT:-}" ]]; then
+        check_hit_range TANKSIM_HIT "$TANKSIM_HIT"
+        TANK_CONF+="DpsSim.TankHitDamage = ${TANKSIM_HIT}"$'\n'
+    fi
+    if [[ -n "${TANKSIM_PACK_HIT:-}" ]]; then
+        check_hit_range TANKSIM_PACK_HIT "$TANKSIM_PACK_HIT"
+        TANK_CONF+="DpsSim.TankPackHitDamage = ${TANKSIM_PACK_HIT}"$'\n'
+    fi
+    if [[ -n "${TANKSIM_SWING_MS:-}" ]]; then
+        if ! [[ "$TANKSIM_SWING_MS" =~ ^[0-9]+$ ]] ||
+                (( 10#$TANKSIM_SWING_MS < 500 || 10#$TANKSIM_SWING_MS > 10000 )); then
+            die "TANKSIM_SWING_MS must be a whole number of 500-10000 ms, got '$TANKSIM_SWING_MS'"
+        fi
+        TANK_CONF+="DpsSim.TankSwingMs = $((10#$TANKSIM_SWING_MS))"$'\n'
+    fi
+    # A run that overrides the profile's hit / swing numbers gets a short tag in its file name, like the heal sim's
+    # scenario tag ("<Profile>.tank-survive.1t.x1a2b3c.<ts>"); the scenario and the target count are in the name already
+    if [[ -n "${TANKSIM_HIT:-}${TANKSIM_PACK_HIT:-}${TANKSIM_SWING_MS:-}" ]]; then
+        TANK_TAG="x$(short_hash "hit=${TANKSIM_HIT:-};pack=${TANKSIM_PACK_HIT:-};swing=${TANKSIM_SWING_MS:-}")"
+    fi
+fi
+
 # --- discover the live stack's real network / image / volume / DB creds ------------------
 if ! docker inspect ac-worldserver >/dev/null 2>&1; then
     echo "error: no 'ac-worldserver' container found - is the normal stack up" \
@@ -363,6 +443,7 @@ DpsSim.Iterations = ${ITERATIONS}
 DpsSim.ReportPath = ${REPORT_CONTAINER_PATH}
 EOF
 if [[ -n "$HEAL_CONF" ]]; then printf '%s' "$HEAL_CONF" >> "$SCRATCH/etc/modules/dpssim.conf"; fi
+if [[ -n "$TANK_CONF" ]]; then printf '%s' "$TANK_CONF" >> "$SCRATCH/etc/modules/dpssim.conf"; fi
 if [[ -n "${DPSSIM_EXTRA_CONF:-}" ]]; then printf '%b\n' "$DPSSIM_EXTRA_CONF" >> "$SCRATCH/etc/modules/dpssim.conf"; fi
 
 REPORTS_DIR="$REPO_ROOT/modules/mod-dpssim/reports"
@@ -373,12 +454,19 @@ BATCH_NAME="${PROFILE_NAME}"
 if [[ "$TARGETS" -gt 1 ]]; then BATCH_NAME="${PROFILE_NAME}.T${TARGETS}"; fi
 # Heal batches carry the group and the scenario tag ("<Profile>.party.pin50.<ts>...")
 if [[ "$IS_HEAL" -eq 1 ]]; then BATCH_NAME="${PROFILE_NAME}.${BATCH_SCENARIO}"; fi
+# Tank batches carry the scenario and the dummy count ("<Profile>.tank-survive.5t.<ts>..."), plus "x<hash>" when
+# TANKSIM_HIT / TANKSIM_PACK_HIT / TANKSIM_SWING_MS override the profile ("<Profile>.tank-survive.5t.x1a2b3c.<ts>...")
+if [[ "$IS_TANK" -eq 1 ]]; then BATCH_NAME="${PROFILE_NAME}.tank-${TANK_SCENARIO}.${TARGETS}t${TANK_TAG:+.$TANK_TAG}"; fi
 
 if [[ "$IS_HEAL" -eq 1 ]]; then
     echo "Running heal profile '${PROFILE_NAME}' (${ITERATIONS} iteration(s), in one container)" \
         "for ${DURATION_SECONDS}s (sim time) each at level ${LEVEL}, race ${RACE}, ${STEP_MS}ms step," \
         "group ${HEAL_GROUP}, scenario ${HEAL_TAG}," \
         "infinite mana $([[ "$HEAL_INF" -eq 1 ]] && echo on || echo off)..." >&2
+elif [[ "$IS_TANK" -eq 1 ]]; then
+    echo "Running tank profile '${PROFILE_NAME}' (${ITERATIONS} iteration(s), in one container)" \
+        "for ${DURATION_SECONDS}s (sim time) each at level ${LEVEL}, race ${RACE}, ${STEP_MS}ms step," \
+        "scenario ${TANK_SCENARIO}, ${TARGETS} dummy(ies), rank ${TARGET_RANK}..." >&2
 else
     echo "Running '${PROFILE_NAME}' (${ITERATIONS} iteration(s), in one container) for ${DURATION_SECONDS}s" \
         "(sim time) each at level ${LEVEL}, race ${RACE}, ${STEP_MS}ms step," \
@@ -450,6 +538,12 @@ if [[ "$IS_HEAL" -eq 1 ]]; then
         | sed -E 's/^.*mod-dpssim: *//' >&2
 fi
 
+# A tank run's per-iteration summary lines (the JSON reports carry the same numbers)
+if [[ "$IS_TANK" -eq 1 ]]; then
+    { grep -E "tank mode - scenario|tank iteration [0-9]+/[0-9]+ \(|tank batch complete|actor DIED" "$RUN_LOG" \
+        || true; } | sed -E 's/^.*mod-dpssim: *//' >&2
+fi
+
 # Collect every iteration's report out of the scratch dir before the EXIT trap removes it, renaming
 # into $REPORTS_DIR under the same external naming convention (aggregate_reports.py, apps/
 # sim-reports) already expects - nothing downstream of this needs to know the container ran N
@@ -495,6 +589,8 @@ fi
 HTML_PATH="$REPORTS_DIR/SimProfileReport.html"
 # Heal pages are baked to their own file, so a heal run never overwrites the last DPS page
 if [[ "$IS_HEAL" -eq 1 ]]; then HTML_PATH="$REPORTS_DIR/HealProfileReport.html"; fi
+# ... and so are tank pages
+if [[ "$IS_TANK" -eq 1 ]]; then HTML_PATH="$REPORTS_DIR/TankProfileReport.html"; fi
 python3 "$REPO_ROOT/modules/mod-dpssim/tools/build_report_html.py" "$HTML_PATH" \
     "$PROFILE_NAME" "$FINAL_PATH" >&2
 

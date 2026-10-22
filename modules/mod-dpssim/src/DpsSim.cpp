@@ -410,7 +410,8 @@ void DpsSimWorldScript::OnDpsSimRun()
 
         // A heal-mode job always runs as a batch (the group persists across iterations); it logs its own summary lines
         bool const heal = config.RunMode == SimDaemon::Mode::Heal;
-        // A tank-mode job is a batch too (it logs its own summaries); its results are DPS-kind reports, written below
+        // A tank-mode job is a batch too (it logs its own summaries); its reports are the DPS report plus a tank
+        // section
         bool const tank = config.RunMode == SimDaemon::Mode::Tank;
         if (ready && iterations <= 1 && !heal && !tank)
             SimDaemon::RunPlayerbot(config);
@@ -457,9 +458,16 @@ void DpsSimWorldScript::OnDpsSimRun()
                     config.TargetSpreadYards, result.CastCount, result.CritCount, critRate, result.TotalDamage, dps,
                     result.TargetSwitches);
 
+                // A tank run writes the DPS report plus its tank section ("kind": "tank")
                 if (!reportPath.empty())
-                    SimReport::WriteJson(tank && results.size() == 1 ? reportPath :
-                        IterationReportPath(reportPath, uint32(i + 1)), config, result);
+                {
+                    std::string const path = tank && results.size() == 1 ? reportPath :
+                        IterationReportPath(reportPath, uint32(i + 1));
+                    if (tank)
+                        SimReport::WriteTankJson(path, config, result);
+                    else
+                        SimReport::WriteJson(path, config, result);
+                }
             }
         }
     }

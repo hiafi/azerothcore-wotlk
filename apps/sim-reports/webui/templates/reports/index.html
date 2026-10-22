@@ -29,7 +29,7 @@
   </header>
   <main>
     <h1>Sim reports</h1>
-    <p>Every JSON report <span style="font-family: var(--mono)">modules/mod-dpssim/tools/run-sim.sh</span> has written under <span style="font-family: var(--mono)">modules/mod-dpssim/reports/</span>, newest first: DPS runs and healing runs (<em>heal</em>, with the group and scenario tag). Nothing here re-runs a sim &mdash; use run-sim.sh for that.</p>
+    <p>Every JSON report <span style="font-family: var(--mono)">modules/mod-dpssim/tools/run-sim.sh</span> has written under <span style="font-family: var(--mono)">modules/mod-dpssim/reports/</span>, newest first: DPS runs, healing runs (<em>heal</em>, with the group and scenario tag) and tank runs (<em>tank</em>, with the scenario and the headline: DPS and TPS, or time to death and net DTPS). Nothing here re-runs a sim &mdash; use run-sim.sh for that.</p>
 
     {% if has_latest %}
     <a class="latest-link" href="{{ url_for('.latest') }}">&#9654; Latest baked DPS report (SimProfileReport.html)</a>
@@ -37,13 +37,16 @@
     {% if has_latest_heal %}
     <a class="latest-link" href="{{ url_for('.latest_heal') }}">&#9654; Latest baked heal report (HealProfileReport.html)</a>
     {% endif %}
+    {% if has_latest_tank %}
+    <a class="latest-link" href="{{ url_for('.latest_tank') }}">&#9654; Latest baked tank report (TankProfileReport.html)</a>
+    {% endif %}
 
     {% if runs %}
     <table>
       <thead>
         <tr>
           <th>Profile</th><th>Kind</th><th>Targets / scenario</th><th>Run at</th>
-          <th class="num">DPS / HPS</th><th class="num">Total dmg / healing</th><th class="num">Casts</th><th class="num">Crit %</th><th class="num">Deaths</th><th class="num">Duration</th>
+          <th class="num">DPS / HPS / tank</th><th class="num">Total dmg / healing</th><th class="num">Casts</th><th class="num">Crit %</th><th class="num">Deaths</th><th class="num">Duration</th>
           <th></th>
         </tr>
       </thead>
@@ -54,6 +57,8 @@
           <td>{{ r.kind }}</td>
           {% if r.kind == 'heal' %}
           <td>{{ r.group }} &middot; {{ r.tag }}{% if r.infinite_mana and not r.tag.endswith('-inf') %} &middot; inf{% endif %}</td>
+          {% elif r.kind == 'tank' %}
+          <td>{{ r.scenario }} &middot; T{{ r.targets }} {{ r.target_rank }}{% if r.tag %} &middot; {{ r.tag }}{% endif %}</td>
           {% else %}
           <td>T{{ r.targets }} {{ r.target_rank }}</td>
           {% endif %}
@@ -62,7 +67,11 @@
           <td colspan="5" class="err">failed to read: {{ r.error }}</td>
           <td></td>
           {% else %}
+          {% if r.kind == 'tank' %}
+          <td class="num">{{ r.headline }}</td>
+          {% else %}
           <td class="num">{{ "%.1f"|format(r.rate) if r.rate is not none else "—" }}{{ " HPS" if r.kind == 'heal' else "" }}</td>
+          {% endif %}
           <td class="num">{% if r.total is none %}—{% elif r.kind == 'heal' %}{{ r.total|round|int }}{% else %}{{ r.total }}{% endif %}</td>
           <td class="num">{% if r.cast_count is none %}—{% elif r.kind == 'heal' and r.cast_count != r.cast_count|int %}{{ "%.1f"|format(r.cast_count) }}{% else %}{{ r.cast_count }}{% endif %}</td>
           <td class="num">{{ "%.1f"|format(r.crit_rate_pct) if r.crit_rate_pct is not none else "—" }}</td>

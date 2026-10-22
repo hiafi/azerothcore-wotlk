@@ -9,7 +9,8 @@ database itself - it exists so a past run is a click away in a browser instead o
 ## Why this isn't its own templating engine
 
 The actual report page (charts, tables, spell-name resolution) is one thing:
-`modules/mod-dpssim/tools/report-template.html` (`heal-report-template.html` for a `"kind": "heal"` report),
+`modules/mod-dpssim/tools/report-template.html` (`heal-report-template.html` for a `"kind": "heal"` report; a
+`"kind": "tank"` report uses the DPS template plus the "Damage taken" section from `tank-section.html`),
 filled in by
 `modules/mod-dpssim/tools/build_report_html.py`'s `render_report_html()`. This app imports
 that function directly (loaded by file path - `mod-dpssim` has a hyphen, so it can't be a
@@ -24,7 +25,10 @@ live world DB.
   report `<Profile>.<group>.<tag>.<timestamp>.report.json` (group party|raid10|raid20, tag = the scenario: `pin50`,
   `pin20`, `drain150`, `x<hash>` for a custom target list, `-inf` appended for infinite mana; the page shows kind, group
   and tag, HPS, healing, casts, crit % and deaths for these) under
-  `modules/mod-dpssim/reports/`, newest first, with each run's DPS/total damage/cast
+  `modules/mod-dpssim/reports/`, newest first, or tank report
+  `<Profile>.tank-<scenario>.<N>t[.x<hash>].<timestamp>.report.json` (scenario dps|survive, N dummies, `x<hash>` when
+  the hit or swing time was overridden; the page shows kind, scenario and a headline: DPS and TPS for `dps`, time to death
+  and net DTPS for `survive`, with the survived count of an aggregated report), with each run's DPS/total damage/cast
   count/crit rate read straight from its `summary` block, plus its target count and rank (`T5 elite`; a report without
   those fields is `T1 boss`).
 - `/view/<filename>` - renders one report through the shared template, on demand (no file
@@ -32,6 +36,7 @@ live world DB.
 - `/raw/<filename>` - the underlying report JSON, unmodified.
 - `/latest` - the most recently baked `SimProfileReport.html`, served as-is, if one exists.
 - `/latest-heal` - the same for the most recently baked heal page, `HealProfileReport.html`.
+- `/latest-tank` - the same for the most recently baked tank page, `TankProfileReport.html`.
 
 ## Running it
 

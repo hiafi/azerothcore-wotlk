@@ -5,6 +5,11 @@ report-template.html - no file picker, no "load report" click needed, the page j
 data the moment it's opened. A heal report ("kind": "heal", SimReport::WriteHealJson()'s schema) is baked into
 heal-report-template.html instead. Used by run-sim.sh; not usually invoked by hand.
 
+A tank report ("kind": "tank", SimReport::WriteTankJson()'s schema) is a DPS report plus a "tank" section: it is baked
+into the same report-template.html, with the "Damage taken" section from tank-section.html injected at the template's
+__TANK_*__ markers. For any other report those markers are replaced by nothing, so a DPS page is exactly the page
+the template alone gives.
+
 Usage:
     build_report_html.py <output.html> <label> <report.json>
 """
@@ -21,10 +26,52 @@ TOOLS_DIR = Path(__file__).resolve().parent
 TEMPLATE_PATH = TOOLS_DIR / "report-template.html"
 # Heal reports ("kind": "heal", SimReport::WriteHealJson()) render through their own template
 HEAL_TEMPLATE_PATH = TOOLS_DIR / "heal-report-template.html"
+# Tank reports ("kind": "tank") use the DPS template plus this file's CSS / HTML / JS blocks (delimited by "@@@ CSS",
+# "@@@ HTML" and "@@@ JS" lines), injected at the template's __TANK_CSS__, __TANK_SECTION__, __TANK_JS__ and
+# __TANK_RENDER__ markers
+TANK_SECTION_PATH = TOOLS_DIR / "tank-section.html"
 
 
 def is_heal(data: dict) -> bool:
     return data.get("kind") == "heal"
+
+
+def is_tank(data: dict) -> bool:
+    return data.get("kind") == "tank"
+
+
+def load_tank_section() -> dict[str, str]:
+    """The tank-section.html blocks by name ("CSS", "HTML", "JS")."""
+    blocks: dict[str, list[str]] = {}
+    current = None
+    for line in TANK_SECTION_PATH.read_text().splitlines():
+        if line.startswith("@@@ "):
+            current = line[4:].strip()
+            blocks[current] = []
+        elif current is not None:
+            blocks[current].append(line)
+    missing = {"CSS", "HTML", "JS"} - set(blocks)
+    if missing:
+        raise SystemExit(f"{TANK_SECTION_PATH} has no {sorted(missing)} block")
+    return {name: "\n".join(lines).rstrip("\n") for name, lines in blocks.items()}
+
+
+def inject_tank(html: str, tank: bool) -> str:
+    """Fills the template's tank markers: with the tank section for a tank report, with nothing for any other."""
+    values = {"__TANK_CSS__": "", "__TANK_SECTION__": "", "__TANK_JS__": "", "__TANK_RENDER__": ""}
+    if tank:
+        blocks = load_tank_section()
+        values = {
+            "__TANK_CSS__": "\n" + blocks["CSS"],
+            "__TANK_SECTION__": "\n" + blocks["HTML"],
+            "__TANK_JS__": "\n" + blocks["JS"],
+            "__TANK_RENDER__": "\n    renderTank();",
+        }
+    for marker, value in values.items():
+        if html.count(marker) != 1:
+            raise SystemExit(f"report-template.html must hold {marker} exactly once, found {html.count(marker)}")
+        html = html.replace(marker, value)
+    return html
 
 
 def safe_json(obj) -> str:
@@ -47,6 +94,10 @@ def collect_spell_ids(data: dict) -> list[int]:
     # Heal reports: the healer's heals, shields and the auras it put on the group (their spell rows are in "spells")
     for key in ("heals", "absorbs", "groupAuraEvents"):
         for e in data.get(key, []):
+            ids.add(e["spellId"])
+    # Tank reports: the shields that took damage off the swings and the tank's own healing spells
+    for key in ("absorbsBySpell", "selfHeals"):
+        for e in (data.get("tank") or {}).get(key, []):
             ids.add(e["spellId"])
     return sorted(ids)
 
@@ -117,6 +168,8 @@ def render_report_html(data: dict, label: str) -> str:
     # EventRecorder::PET_MELEE_SPELL_ID: a pet/guardian/totem's white swings
     spell_names.setdefault(4294967294, "Pet Melee")
     html = (HEAL_TEMPLATE_PATH if is_heal(data) else TEMPLATE_PATH).read_text()
+    if not is_heal(data):
+        html = inject_tank(html, is_tank(data))
     return (
         html.replace("__PAGE_TITLE__", label)
         .replace("__LABEL__", label)
