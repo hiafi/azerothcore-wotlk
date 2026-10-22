@@ -2924,8 +2924,11 @@ shield_specialization_200031 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=23602),
     ],
     spell_icon_id=280,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Shield Specialization rank (new override, was unmodified 5-rank base data)',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Increases your chance to block attacks with a shield by 4%. You have a 33% chance to generate 5 rage when a block, dodge, or parry occurs.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to block attacks with a shield by 4%. You have a 33% chance to generate 5 rage when a block, dodge, or parry occurs.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Shield Specialization', 'ProcChance': 33, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Shield Specialization rank (new override, was unmodified 5-rank base data). Fixed 2026-10-21 (tank-sim SHIELDSPEC): ProcTypeMask 87376 (DONE bits, procced off the warrior\'s own casts) -> 680 (TAKEN melee/ranged, as stock 12298) plus an explicit spell_proc row, HitMask 112 (dodge|parry|block)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Increases your chance to block attacks with a shield by 4%. You have a 33% chance to generate 5 rage when a block, dodge, or parry occurs.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to block attacks with a shield by 4%. You have a 33% chance to generate 5 rage when a block, dodge, or parry occurs.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Shield Specialization', 'ProcChance': 33, 'ProcTypeMask': 680, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+)
+procs_on(
+    shield_specialization_200031, proc_flags=0x2A8, hit_mask=0x70, chance=0,
 )
 
 
@@ -2945,8 +2948,11 @@ shield_specialization_200032 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=23602),
     ],
     spell_icon_id=280,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Shield Specialization rank (new override, was unmodified 5-rank base data)',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Increases your chance to block attacks with a shield by 7%. You have a 66% chance to generate 5 rage when a block, dodge, or parry occurs.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to block attacks with a shield by 7%. You have a 66% chance to generate 5 rage when a block, dodge, or parry occurs.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Shield Specialization', 'ProcChance': 66, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Shield Specialization rank (new override, was unmodified 5-rank base data). Fixed 2026-10-21 (tank-sim SHIELDSPEC): ProcTypeMask 87376 (DONE bits, procced off the warrior\'s own casts) -> 680 (TAKEN melee/ranged, as stock 12298) plus an explicit spell_proc row, HitMask 112 (dodge|parry|block)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Increases your chance to block attacks with a shield by 7%. You have a 66% chance to generate 5 rage when a block, dodge, or parry occurs.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to block attacks with a shield by 7%. You have a 66% chance to generate 5 rage when a block, dodge, or parry occurs.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Shield Specialization', 'ProcChance': 66, 'ProcTypeMask': 680, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+)
+procs_on(
+    shield_specialization_200032, proc_flags=0x2A8, hit_mask=0x70, chance=0,
 )
 
 
@@ -2966,8 +2972,11 @@ shield_specialization_200033 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=23602),
     ],
     spell_icon_id=280,
-    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Shield Specialization rank (new override, was unmodified 5-rank base data)',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Increases your chance to block attacks with a shield by 10%. You have a 100% chance to generate 5 rage when a block, dodge, or parry occurs.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to block attacks with a shield by 10%. You have a 100% chance to generate 5 rage when a block, dodge, or parry occurs.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Shield Specialization', 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='Protection Warrior rework phase 2 (docs/prot_warrior_rework.md): Shield Specialization rank (new override, was unmodified 5-rank base data). Fixed 2026-10-21 (tank-sim SHIELDSPEC): ProcTypeMask 87376 (DONE bits, procced off the warrior\'s own casts) -> 680 (TAKEN melee/ranged, as stock 12298) plus an explicit spell_proc row, HitMask 112 (dodge|parry|block)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'AuraDescription_Lang_enUS': 'Increases your chance to block attacks with a shield by 10%. You have a 100% chance to generate 5 rage when a block, dodge, or parry occurs.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to block attacks with a shield by 10%. You have a 100% chance to generate 5 rage when a block, dodge, or parry occurs.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'Name_Lang_enUS': 'Shield Specialization', 'ProcChance': 100, 'ProcTypeMask': 680, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+)
+procs_on(
+    shield_specialization_200033, proc_flags=0x2A8, hit_mask=0x70, chance=0,
 )
 
 
