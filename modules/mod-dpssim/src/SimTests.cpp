@@ -17,6 +17,7 @@
 
 #include "SimTests.h"
 #include "Config.h"
+#include "Creature.h"
 #include "DatabaseEnv.h"
 #include "Log.h"
 #include "Player.h"
@@ -25,6 +26,7 @@
 #include "SimDaemon.h"
 #include "SimHeal.h"
 #include "SimProfile.h"
+#include "SimTank.h"
 #include "SpellAuraEffects.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
@@ -32,7 +34,9 @@
 #include "Util.h"
 #include <algorithm>
 #include <cmath>
+#include <fstream>
 #include <functional>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -958,12 +962,836 @@ namespace
             "{}).", state.CastMs, uint32(state.Result), maxHealth, events, wrong, percent, expected));
         return passed;
     }
+    // ---- Tank-sim known-value tests (stage TS3a; plan .agents/plans/tank-sim/tank-sim.PLAN.md) ----
+    //
+    // Each test runs one real tank-mode iteration (SimDaemon::RunPlayerbotBatch() with RunMode Tank: the tank dummy AI,
+    // the damage solver, the DamageTakenRecorder) with short, fixed settings and no pre-pull buff phase. Two actors:
+    //  - the Prot Warrior of conf/profiles/ProtWarriorTankSim.conf (talents, gear, stats, the dummy armor), loaded from
+    //    the directory of DpsSim.Profile (falling back to the container's profile directory), Human, level 60;
+    //  - a bare level-60 Human Warrior: no talents, only a one-hand sword (17015, which replaces the starter outfit),
+    //    no shield, so it cannot block.
+    // RunConfig::TankSilenceBot keeps the actor's bot AI quiet where the test must control everything the actor does
+    // (RunConfig::TankStepHook casts what the test needs); the crit and Revenge tests run the real bot. Expected values
+    // come from the core's formulas and the run's own recorded inputs, never from a previous run.
+
+    constexpr uint32 TANK_TEST_STEP_MS = 100;
+    constexpr uint32 SPELL_DEFENSIVE_STANCE = 71;
+    constexpr uint32 SPELL_SUNDER_ARMOR = 7386;
+    constexpr uint32 SPELL_THUNDER_CLAP = 6343;
+    constexpr uint32 SPELL_REVENGE = 6572;
+    constexpr uint32 SPELL_CONCUSSION_BLOW = 12809;
+    constexpr uint32 SPELL_DEVASTATE = 20243;
+    // The bare warrior's only item: Dark Iron Reaver, a level-60 one-hand sword (no shield, so no block)
+    constexpr uint32 TANK_TEST_BARE_WEAPON = 17015;
+    constexpr char const* TANK_TEST_PROFILE = "ProtWarriorTankSim.conf";
+    constexpr char const* TANK_TEST_PROFILE_DIR = "/azerothcore/modules/mod-dpssim/conf/profiles";
+
+    using TankStepHook = std::function<void(uint32, Player*, std::vector<Creature*> const&)>;
+
+    struct TankSetup
+    {
+        // true: the ProtWarriorTankSim character; false: the bare warrior
+        bool UseProfile = false;
+        bool SilenceBot = true;
+        uint32 DurationMs = 30000;
+        uint32 SwingMs = 2000;
+        uint32 Targets = 1;
+        SimTank::HitRange Hit = SimTank::DEFAULT_BOSS_HIT;
+        SimTank::HitRange PackHit = SimTank::DEFAULT_PACK_HIT;
+        SimTank::Scenario Scenario = SimTank::Scenario::Dps;
+        bool Crit = true;
+        std::vector<uint32> PullAuras;
+        TankStepHook Hook;
+    };
+
+    // ProtWarriorTankSim.conf next to the profile this test run was started with, else in the container's profile
+    // directory (run-sim.sh mounts modules/ at /azerothcore/modules)
+    std::string TankTestProfilePath()
+    {
+        std::string const current = sConfigMgr->GetOption<std::string>("DpsSim.Profile", "");
+        size_t const slash = current.find_last_of('/');
+        if (slash != std::string::npos)
+        {
+            std::string const sibling = current.substr(0, slash + 1) + TANK_TEST_PROFILE;
+            if (std::ifstream(sibling).good())
+                return sibling;
+        }
+
+        return std::string(TANK_TEST_PROFILE_DIR) + "/" + TANK_TEST_PROFILE;
+    }
+
+    // Runs one tank-mode iteration per `setup`. False (logged) when the profile or the batch failed.
+    bool RunTankScenario(char const* testName, TankSetup const& setup, SimDaemon::RunResult& result)
+    {
+        SimDaemon::RunConfig config;
+        config.RunMode = SimDaemon::Mode::Tank;
+        config.StepMs = TANK_TEST_STEP_MS;
+        config.DurationMs = setup.DurationMs;
+        config.ActorLevel = 60;
+        config.TargetLevel = 60;
+        config.ActorRace = 1 /* RACE_HUMAN */;
+        config.ActorClass = CLASS_WARRIOR;
+        config.PlayerbotGlyphs = false;
+        config.PrePullBuffMs = 0;
+        config.TargetCount = std::max(setup.Targets, 1u);
+        config.TargetRank = config.TargetCount > 1 ? SimTarget::Rank::Elite : SimTarget::Rank::Boss;
+
+        if (setup.UseProfile)
+        {
+            std::string const path = TankTestProfilePath();
+            SimProfile::Profile profile;
+            if (!SimProfile::Load(path, profile) || profile.Class != CLASS_WARRIOR)
+            {
+                LogVerdict(testName, false, Acore::StringFormat("the Prot Warrior profile '{}' did not load (or is not "
+                    "a warrior) - see the SimProfile::Load() error above.", path));
+                return false;
+            }
+
+            config.PlayerbotTalents = profile.PlayerbotTalents;
+            config.GearItemIds = profile.GearItemIds;
+            config.SpellPower = profile.SpellPower;
+            config.CombatRatings = profile.CombatRatings;
+            config.Stats = profile.Stats;
+            config.AttackPower = profile.AttackPower;
+            config.TargetArmor = profile.TargetArmor;
+        }
+        else
+            config.GearItemIds = {TANK_TEST_BARE_WEAPON};
+
+        config.TankScenario = setup.Scenario;
+        config.TankHit = setup.Hit;
+        config.TankPackHit = setup.PackHit;
+        config.TankSwingMs = setup.SwingMs;
+        config.TankDummyCrit = setup.Crit;
+        config.TankPullAuras = setup.PullAuras;
+        config.TankStepHook = setup.Hook;
+        config.TankSilenceBot = setup.SilenceBot;
+
+        std::vector<SimDaemon::RunResult> results;
+        if (!SimDaemon::RunPlayerbotBatch(config, 1, results) || results.size() != 1 || !results[0].Success)
+        {
+            LogVerdict(testName, false, "the tank iteration did not run - see preceding LOG_ERROR output.");
+            return false;
+        }
+
+        result = std::move(results[0]);
+        return true;
+    }
+
+    bool IsLanded(SimTank::Outcome outcome)
+    {
+        return outcome != SimTank::Outcome::Miss && outcome != SimTank::Outcome::Dodge &&
+            outcome != SimTank::Outcome::Parry && outcome != SimTank::Outcome::Other;
+    }
+
+    // The swing timestamps of one dummy, in order
+    std::vector<uint32> SwingTimes(SimDaemon::RunResult const& result, uint8 dummyIndex)
+    {
+        std::vector<uint32> times;
+        for (SimTank::SwingEvent const& e : result.Swings)
+            if (e.DummyIndex == dummyIndex)
+                times.push_back(e.TimestampMs);
+        return times;
+    }
+
+    // "2200:12 2400:1" - the gaps between consecutive swings and how often each occurred
+    std::string GapHistogram(std::vector<uint32> const& times)
+    {
+        std::map<uint32, uint32> gaps;
+        for (size_t i = 1; i < times.size(); ++i)
+            ++gaps[times[i] - times[i - 1]];
+        std::string text;
+        for (auto const& [gap, count] : gaps)
+            text += Acore::StringFormat("{}{}:{}", text.empty() ? "" : " ", gap, count);
+        return text.empty() ? "none" : text;
+    }
+
+    // Unit::CalcArmorReducedDamage() for a creature attacker of level `attackerLevel` (no armor penetration, no target
+    // resistance aura): the share of the damage armor takes off
+    float ArmorReduction(uint32 armor, uint32 attackerLevel)
+    {
+        float levelModifier = float(attackerLevel);
+        if (levelModifier > 59)
+            levelModifier = levelModifier + (4.5f * (levelModifier - 59));
+        float reduction = 0.1f * float(armor) / (8.5f * levelModifier + 40);
+        reduction = reduction / (1.0f + reduction);
+        return std::clamp(reduction, 0.0f, 0.75f);
+    }
+
+    // Tank test 1/8 (tank.outcomes): ~1,000 boss swings at the silenced Prot Warrior (shield on, so it can block).
+    // Each of miss, dodge, parry and block (partial and full) must land within max(1 point, 3 sigma) of the mean
+    // per-swing chance the recorder replayed from the core's roll inputs; sigma = sqrt(p (1 - p) / n), the binomial
+    // standard deviation of a rate over n swings at that mean chance (the chances do not move: no stance, no Shield
+    // Block, nothing cast). Crit is logged with the same tolerance but is not part of the verdict.
+    bool RunTankOutcomesTest()
+    {
+        char const* const name = "tank.outcomes test";
+        TankSetup setup;
+        setup.UseProfile = true;
+        setup.SwingMs = 500;
+        setup.Hit = {300, 400};
+        setup.DurationMs = 500 * 1000 + 1000;
+
+        SimDaemon::RunResult result;
+        if (!RunTankScenario(name, setup, result))
+            return false;
+
+        using SimTank::Outcome;
+        uint32 const n = uint32(result.Swings.size());
+        double observed[5] = {};
+        double expected[5] = {};
+        for (SimTank::SwingEvent const& e : result.Swings)
+        {
+            observed[0] += e.Result == Outcome::Miss;
+            observed[1] += e.Result == Outcome::Dodge;
+            observed[2] += e.Result == Outcome::Parry;
+            observed[3] += e.Result == Outcome::Block || e.Result == Outcome::FullBlock;
+            observed[4] += e.Result == Outcome::Crit;
+            expected[0] += e.ExpectedMiss;
+            expected[1] += e.ExpectedDodge;
+            expected[2] += e.ExpectedParry;
+            expected[3] += e.ExpectedBlock;
+            expected[4] += e.ExpectedCrit;
+        }
+
+        char const* const names[5] = {"miss", "dodge", "parry", "block", "crit"};
+        bool ratesOk = true;
+        std::string detail;
+        for (size_t i = 0; i < 5; ++i)
+        {
+            double const obsPct = n ? 100.0 * observed[i] / n : 0.0;
+            // Hundredths of a percent summed over the swings -> mean chance in percent
+            double const expPct = n ? expected[i] / 100.0 / n : 0.0;
+            double const p = expPct / 100.0;
+            double const sigmaPct = n ? 100.0 * std::sqrt(p * (1.0 - p) / n) : 0.0;
+            double const tolerance = std::max(1.0, 3.0 * sigmaPct);
+            bool const ok = std::abs(obsPct - expPct) <= tolerance;
+            if (i < 4)
+                ratesOk = ratesOk && ok;
+            detail += Acore::StringFormat("{}{} {:.2f}% vs {:.2f}% (sigma {:.2f}, tolerance {:.2f}{}{})",
+                detail.empty() ? "" : "; ", names[i], obsPct, expPct, sigmaPct, tolerance, ok ? "" : ", OUTSIDE",
+                i == 4 ? ", not in the verdict" : "");
+        }
+
+        bool const passed = n >= 950 && ratesOk;
+        LogVerdict(name, passed, Acore::StringFormat("{} swings (expected about {}; at least 950 needed). Observed vs "
+            "mean expected per swing: {}.", n, setup.DurationMs / setup.SwingMs, detail));
+        return passed;
+    }
+
+    // Tank test 2/8 (tank.crit_immune): the Prot Warrior with its real bot, in Defensive Stance (the hook casts it at
+    // the first step if the bot has not), at the defense its gear and AlwaysMaxSkillForLevel give it, swung at by the
+    // boss with crits on. Deterministic: 0 crits, 0 crit-bug swings (a crit rolled at chance 0, the report's
+    // critBugCount), the dummy's expected crit chance after the first second <= 0, no swing after the first second
+    // rolled with a crit chance above 0, the actor in Defensive Stance at 1 s and its defense at least the level's cap.
+    bool RunTankCritImmuneTest()
+    {
+        char const* const name = "tank.crit_immune test";
+        struct State
+        {
+            bool StanceCast = false;
+            bool InStanceAt1s = false;
+            bool Checked = false;
+        } state;
+
+        TankSetup setup;
+        setup.UseProfile = true;
+        setup.SilenceBot = false;
+        setup.SwingMs = 1000;
+        setup.DurationMs = 60000;
+        setup.Hook = [&state](uint32 elapsedMs, Player* actor, std::vector<Creature*> const&)
+        {
+            if (!state.StanceCast)
+            {
+                state.StanceCast = true;
+                if (actor->GetShapeshiftForm() != FORM_DEFENSIVESTANCE)
+                    actor->CastSpell(actor, SPELL_DEFENSIVE_STANCE, true);
+            }
+            if (!state.Checked && elapsedMs >= 1000)
+            {
+                state.Checked = true;
+                state.InStanceAt1s = actor->GetShapeshiftForm() == FORM_DEFENSIVESTANCE;
+            }
+        };
+
+        SimDaemon::RunResult result;
+        if (!RunTankScenario(name, setup, result))
+            return false;
+
+        uint32 crits = 0;
+        uint32 critBugs = 0;
+        uint32 rolledWithCrit = 0;
+        for (SimTank::SwingEvent const& e : result.Swings)
+        {
+            bool const crit = e.Result == SimTank::Outcome::Crit;
+            crits += crit;
+            critBugs += crit && e.ExpectedCrit == 0;
+            rolledWithCrit += e.TimestampMs >= 1000 && e.ExpectedCrit > 0;
+        }
+
+        float const expectedCrit = result.TankDummies.empty() ? 1.0f : result.TankDummies.front().ExpectedCritPct;
+        SimTank::ActorInfo const& sheet = result.TankActor;
+        bool const defenseCapped = sheet.DefenseSkill >= sheet.MaxSkillForLevel;
+        bool const passed = result.Swings.size() >= 50 && crits == 0 && critBugs == 0 && expectedCrit <= 0.0f &&
+            rolledWithCrit == 0 && state.InStanceAt1s && defenseCapped;
+        LogVerdict(name, passed, Acore::StringFormat("{} swings, {} crit(s), {} crit-bug swing(s), dummy's expected "
+            "crit chance after 1 s {:.2f}% (pull {:.2f}%), {} swing(s) after 1 s rolled with a crit chance above 0; "
+            "Defensive Stance at 1 s: {}; defense {} vs the level's cap {}.", result.Swings.size(), crits, critBugs,
+            expectedCrit, result.TankDummies.empty() ? 0.0f : result.TankDummies.front().ExpectedCritPct,
+            rolledWithCrit, state.InStanceAt1s ? "yes" : "NO", sheet.DefenseSkill, sheet.MaxSkillForLevel));
+        return passed;
+    }
+
+    // Tank test 3/8 (tank.hit_formula): the silenced Prot Warrior in Defensive Stance (cast by the hook at the first
+    // step), the boss at a fixed hit (min = max), crits off. For every landed, unblocked, unabsorbed swing:
+    //   PreArmor = uint32(roll x TakenMult) (+-1: the core multiplies the float roll, the recorder measured the
+    //              multiplier on a 1,000,000 hit), roll = the dummy's damage field (min = max, so known);
+    //   Final    = ceil(PreArmor x (1 - armor reduction)), the reduction from Unit::CalcArmorReducedDamage()'s formula
+    //              with the boss's real level (63, plan T9) and the actor's armor read every step (+-1: float order).
+    // Also: TakenMult < 1 on every checked swing (the stance; its range is logged), the armor the same at every step
+    // after the stance.
+    bool RunTankHitFormulaTest()
+    {
+        char const* const name = "tank.hit_formula test";
+        struct State
+        {
+            bool StanceCast = false;
+            uint32 ArmorMin = 0xFFFFFFFF;
+            uint32 ArmorMax = 0;
+        } state;
+
+        TankSetup setup;
+        setup.UseProfile = true;
+        setup.SwingMs = 500;
+        setup.Hit = {1000, 1000};
+        setup.Crit = false;
+        setup.DurationMs = 20000;
+        setup.Hook = [&state](uint32 elapsedMs, Player* actor, std::vector<Creature*> const&)
+        {
+            if (!state.StanceCast)
+            {
+                state.StanceCast = true;
+                actor->CastSpell(actor, SPELL_DEFENSIVE_STANCE, true);
+                return;
+            }
+            if (elapsedMs >= 2 * TANK_TEST_STEP_MS)
+            {
+                state.ArmorMin = std::min(state.ArmorMin, actor->GetArmor());
+                state.ArmorMax = std::max(state.ArmorMax, actor->GetArmor());
+            }
+        };
+
+        SimDaemon::RunResult result;
+        if (!RunTankScenario(name, setup, result))
+            return false;
+
+        if (result.TankDummies.empty())
+        {
+            LogVerdict(name, false, "no dummy info in the result.");
+            return false;
+        }
+
+        SimTank::DummyInfo const& dummy = result.TankDummies.front();
+        uint32 const rollMin = uint32(dummy.FieldMin);
+        uint32 const rollMax = uint32(dummy.FieldMax);
+        uint32 const armor = state.ArmorMax;
+        float const reduction = ArmorReduction(armor, dummy.Level);
+
+        uint32 checked = 0;
+        uint32 preViolations = 0;
+        uint32 finalViolations = 0;
+        uint32 skippedAbsorbed = 0;
+        float multMin = 10.0f;
+        float multMax = 0.0f;
+        std::string firstDetail;
+        for (SimTank::SwingEvent const& e : result.Swings)
+        {
+            if (e.Result != SimTank::Outcome::Hit || e.TimestampMs < 2 * TANK_TEST_STEP_MS)
+                continue;
+            if (e.Absorbed > 0 || e.Resisted > 0)
+            {
+                ++skippedAbsorbed;
+                continue;
+            }
+
+            ++checked;
+            multMin = std::min(multMin, e.TakenMult);
+            multMax = std::max(multMax, e.TakenMult);
+
+            uint32 const preLow = uint32(float(rollMin) * e.TakenMult);
+            uint32 const preHigh = uint32(float(rollMax) * e.TakenMult);
+            bool const preOk = e.PreArmor + 1 >= preLow && e.PreArmor <= preHigh + 1;
+            uint32 const expectedFinal = uint32(std::ceil(std::max(float(e.PreArmor) * (1.0f - reduction), 0.0f)));
+            bool const finalOk = e.Final + 1 >= expectedFinal && e.Final <= expectedFinal + 1 &&
+                e.ArmorMitigated == e.PreArmor - e.Final;
+            preViolations += !preOk;
+            finalViolations += !finalOk;
+
+            if (firstDetail.empty() || !preOk || !finalOk)
+            {
+                std::string const line = Acore::StringFormat("swing at {} ms: pre-armor {} (expected {}-{}), final {} "
+                    "(expected {}), armor took {}", e.TimestampMs, e.PreArmor, preLow, preHigh, e.Final, expectedFinal,
+                    e.ArmorMitigated);
+                if (firstDetail.empty())
+                    firstDetail = line;
+                if (!preOk || !finalOk)
+                    LOG_ERROR("server.dpssim", "mod-dpssim: tank.hit_formula test - {}.", line);
+            }
+        }
+
+        bool const multOk = checked > 0 && multMax < 1.0f;
+        bool const passed = dummy.Level == 63 && rollMin == rollMax && armor == state.ArmorMin && checked >= 10 &&
+            preViolations == 0 && finalViolations == 0 && multOk;
+        LogVerdict(name, passed, Acore::StringFormat("boss level {} (expected 63), roll {}-{} (one value expected), "
+            "actor armor {}-{} over the fight -> reduction {:.4f} at level {}; damage-taken multiplier {:.4f}-{:.4f} "
+            "(below 1 expected); {} landed unblocked swing(s) checked ({} skipped: absorbed), {} with a "
+            "wrong pre-armor value, {} with a wrong final value. First: {}.", dummy.Level, rollMin, rollMax,
+            state.ArmorMin, state.ArmorMax, reduction, dummy.Level, multMin, multMax, checked, skippedAbsorbed,
+            preViolations, finalViolations, firstDetail.empty() ? "none" : firstDetail));
+        return passed;
+    }
+
+    // Tank test 4/8 (tank.revenge): the Prot Warrior with its real bot, the boss swinging every second for 180 s. The
+    // hook marks every step at which Revenge is usable (known, off cooldown, the dodge/parry/block aura state that
+    // allows it, Defensive Stance, rage for its cost); an opportunity is a step where it becomes usable. Checked:
+    //  - fast: a Revenge cast within 1.5 s (one GCD) of the opportunity, in at least 40% of the opportunities. Why 40%:
+    //    the first GCD the bot gets after an avoid always starts within 1.5 s, and Revenge (relevance normal + 8.5 in
+    //    data/strategies/warrior/prot.yaml) loses it only to Shield Slam (8.8) or Thunder Clap (8.7) when one of them
+    //    is ready at that moment. Those two take about half of the bot's GCDs (TS1: ~22 + ~20 casts in ~80 GCDs per
+    //    120 s), so about half the opportunities should be fast; 40% leaves room for the sample. The double AI tick
+    //    (healing sim A.3.1) only makes the bot react sooner, so it cannot push this down.
+    //  - no wrong priority: the bot never casts a lower row (Devastate 8.0/8.45, Concussion Blow 8.2, Sunder Armor)
+    //    at a step where Revenge was usable, before it casts Revenge or the 1.5 s pass; at most max(1, 5%) of the
+    //    opportunities, for the step race of a cast decided in the same tick as the avoid.
+    bool RunTankRevengeTest()
+    {
+        char const* const name = "tank.revenge test";
+        SpellInfo const* revenge = sSpellMgr->GetSpellInfo(SPELL_REVENGE);
+        if (!revenge)
+        {
+            LogVerdict(name, false, "Revenge (6572) is not in spell_dbc.");
+            return false;
+        }
+
+        struct State
+        {
+            std::vector<bool> UsableAtStep;
+            std::vector<uint32> Opportunities;
+            bool UsableLast = false;
+        } state;
+
+        TankSetup setup;
+        setup.UseProfile = true;
+        setup.SilenceBot = false;
+        setup.SwingMs = 1000;
+        setup.DurationMs = 180000;
+        setup.Hook = [&state, revenge](uint32 elapsedMs, Player* actor, std::vector<Creature*> const&)
+        {
+            bool const usable = actor->HasSpell(SPELL_REVENGE) && !actor->HasSpellCooldown(SPELL_REVENGE) &&
+                actor->HasAuraState(AURA_STATE_DEFENSE) && actor->GetShapeshiftForm() == FORM_DEFENSIVESTANCE &&
+                int32(actor->GetPower(POWER_RAGE)) >= revenge->CalcPowerCost(actor, revenge->GetSchoolMask());
+            size_t const step = elapsedMs / TANK_TEST_STEP_MS;
+            if (state.UsableAtStep.size() <= step)
+                state.UsableAtStep.resize(step + 1, false);
+            state.UsableAtStep[step] = usable;
+            if (usable && !state.UsableLast)
+                state.Opportunities.push_back(elapsedMs);
+            state.UsableLast = usable;
+        };
+
+        SimDaemon::RunResult result;
+        if (!RunTankScenario(name, setup, result))
+            return false;
+
+        auto const usableAt = [&state](uint32 ms)
+        {
+            size_t const step = ms / TANK_TEST_STEP_MS;
+            return step < state.UsableAtStep.size() && state.UsableAtStep[step];
+        };
+
+        constexpr uint32 WINDOW_MS = 1500;
+        uint32 fast = 0;
+        uint32 wrongPriority = 0;
+        std::map<uint32, uint32> delays;
+        for (uint32 opportunityMs : state.Opportunities)
+        {
+            uint32 revengeAt = 0;
+            bool found = false;
+            for (SimDaemon::RunResult::CastEvent const& e : result.CastEvents)
+                if (!e.Triggered && e.SpellId == SPELL_REVENGE && e.TimestampMs + TANK_TEST_STEP_MS >= opportunityMs &&
+                    e.TimestampMs <= opportunityMs + WINDOW_MS)
+                {
+                    revengeAt = e.TimestampMs;
+                    found = true;
+                    break;
+                }
+
+            if (found)
+            {
+                ++fast;
+                ++delays[(revengeAt > opportunityMs ? revengeAt - opportunityMs : 0) / 500 * 500];
+            }
+
+            uint32 const endMs = found ? revengeAt : opportunityMs + WINDOW_MS;
+            for (SimDaemon::RunResult::CastEvent const& e : result.CastEvents)
+                if (!e.Triggered && e.TimestampMs > opportunityMs && e.TimestampMs < endMs && usableAt(e.TimestampMs) &&
+                    (e.SpellId == SPELL_DEVASTATE || e.SpellId == SPELL_CONCUSSION_BLOW ||
+                     e.SpellId == SPELL_SUNDER_ARMOR))
+                {
+                    ++wrongPriority;
+                    LOG_ERROR("server.dpssim", "mod-dpssim: tank.revenge test - spell {} cast at {} ms while Revenge "
+                        "was usable (since {} ms).", e.SpellId, e.TimestampMs, opportunityMs);
+                    break;
+                }
+        }
+
+        uint32 revengeCasts = 0;
+        for (SimDaemon::RunResult::CastEvent const& e : result.CastEvents)
+            revengeCasts += !e.Triggered && e.SpellId == SPELL_REVENGE;
+
+        uint32 const opportunities = uint32(state.Opportunities.size());
+        double const fastPct = opportunities ? 100.0 * fast / opportunities : 0.0;
+        uint32 const wrongAllowed = std::max(1u, opportunities / 20);
+        std::string delayText;
+        for (auto const& [bucket, count] : delays)
+            delayText += Acore::StringFormat("{}{}-{} ms:{}", delayText.empty() ? "" : " ", bucket, bucket + 499,
+                count);
+
+        bool const passed = opportunities >= 15 && fastPct >= 40.0 && wrongPriority <= wrongAllowed;
+        LogVerdict(name, passed, Acore::StringFormat("{} swings, {} Revenge opportunities (at least 15 needed), {} "
+            "Revenge casts in all; {} cast within {} ms of the opportunity ({:.1f}%, at least 40% expected; delays "
+            "{}); "
+            "{} opportunity(ies) where a lower row was cast first (at most {}).", result.Swings.size(), opportunities,
+            revengeCasts, fast, WINDOW_MS, fastPct, delayText.empty() ? "none" : delayText, wrongPriority,
+            wrongAllowed));
+        return passed;
+    }
+
+    // Tank test 5/8 (tank.ttd): the bare, silenced warrior (no stance, no defensives, no shield, nothing healing it)
+    // in the survive scenario, the boss at a fixed 100 every second, crits off. Health only moves with the landed
+    // swings, so the death is exact:
+    //   D = the final damage of a landed swing (every landed swing must be the same D), k = ceil(health / D);
+    //   the actor dies on its k-th landed swing: ActorDiedAtMs = that swing's tick + one step (SimTank.h time bases),
+    //   and health never rises during the fight.
+    // The handoff's formula, TTD = health / (average landed damage per swing / swing interval), is logged against the
+    // death time twice: with the mean per-swing chances the recorder stored (the expected TTD; the death lands within
+    // 3 sigma of it in swings, sigma = sqrt(k p) / (1 - p) for p the avoid chance, the spread of the swing count a
+    // negative binomial gives; part of the verdict), and with the run's own average (informational).
+    bool RunTankTtdTest()
+    {
+        char const* const name = "tank.ttd test";
+        struct State
+        {
+            uint32 LastHealth = 0;
+            uint32 Rises = 0;
+        } state;
+
+        TankSetup setup;
+        setup.Scenario = SimTank::Scenario::Survive;
+        setup.Hit = {100, 100};
+        setup.Crit = false;
+        setup.SwingMs = 1000;
+        setup.DurationMs = 120000;
+        setup.Hook = [&state](uint32, Player* actor, std::vector<Creature*> const&)
+        {
+            uint32 const health = actor->GetHealth();
+            if (state.LastHealth > 0 && health > state.LastHealth)
+                ++state.Rises;
+            state.LastHealth = health;
+        };
+
+        SimDaemon::RunResult result;
+        if (!RunTankScenario(name, setup, result))
+            return false;
+
+        uint32 const health = result.TankActorAtPull.Health;
+        uint32 damage = 0;
+        bool sameDamage = true;
+        uint32 landed = 0;
+        uint32 cumulative = 0;
+        uint32 deathSwingMs = 0;
+        uint32 deathSwingIndex = 0;
+        bool reached = false;
+        double avoidChance = 0.0;
+        for (size_t i = 0; i < result.Swings.size(); ++i)
+        {
+            SimTank::SwingEvent const& e = result.Swings[i];
+            avoidChance += double(e.ExpectedMiss + e.ExpectedDodge + e.ExpectedParry + e.ExpectedBlock) / 10000.0;
+            if (!IsLanded(e.Result))
+                continue;
+
+            ++landed;
+            if (damage == 0)
+                damage = e.Final;
+            sameDamage = sameDamage && e.Final == damage && e.Absorbed == 0;
+            cumulative += e.Final;
+            if (!reached && cumulative >= health)
+            {
+                reached = true;
+                deathSwingMs = e.TimestampMs;
+                deathSwingIndex = uint32(i);
+            }
+        }
+
+        uint32 const swings = uint32(result.Swings.size());
+        avoidChance = swings ? avoidChance / swings : 0.0;
+        uint32 const k = damage ? (health + damage - 1) / damage : 0;
+        bool const deathOnKth = reached && landed == k && deathSwingIndex + 1 == swings;
+        bool const deathTimeOk = result.ActorDied && result.ActorDiedAtMs + TANK_TEST_STEP_MS >= deathSwingMs &&
+            result.ActorDiedAtMs <= deathSwingMs + 2 * TANK_TEST_STEP_MS;
+
+        // The handoff's formula, with the expected avoid chance: k / (1 - p) swings, the first one interval in
+        double const interval = double(setup.SwingMs);
+        double const expectedSwings = (1.0 - avoidChance) > 0.0 ? double(k) / (1.0 - avoidChance) : 0.0;
+        double const expectedTtd = expectedSwings * interval;
+        double const sigmaSwings = (1.0 - avoidChance) > 0.0 ?
+            std::sqrt(double(k) * avoidChance) / (1.0 - avoidChance) : 0.0;
+        double const offSwings = (double(result.ActorDiedAtMs) - expectedTtd) / interval;
+        bool const expectedOk = std::abs(offSwings) <= std::max(1.0, 3.0 * sigmaSwings);
+        // ... and with the run's own average landed damage per swing (informational)
+        double const observedPerSwing = swings ? double(cumulative) / swings : 0.0;
+        double const observedTtd = observedPerSwing > 0.0 ? double(health) / (observedPerSwing / interval) : 0.0;
+
+        bool const passed = health > 0 && damage > 0 && sameDamage && deathOnKth && deathTimeOk && state.Rises == 0 &&
+            expectedOk;
+        LogVerdict(name, passed, Acore::StringFormat("health {}, every landed swing {} ({}), k = ceil({} / {}) = {}; "
+            "{} swings, {} landed, the death after landed swing {} at {} ms ({}), TTD {} ms ({}); health rose {} "
+            "time(s). Handoff formula: with the expected avoid chance {:.2f}% TTD {:.0f} ms, off by {:.2f} swings "
+            "(limit {:.2f}); with the run's own {:.1f} damage per swing {:.0f} ms (informational).", health, damage,
+            sameDamage ? "all equal, no shields" : "NOT all equal", health, damage, k, swings, landed, landed,
+            deathSwingMs, deathOnKth ? "the k-th, the last swing" : "NOT the k-th or not the last",
+            result.ActorDiedAtMs, deathTimeOk ? "one step after it" : "NOT one step after it", state.Rises,
+            100.0 * avoidChance, expectedTtd, offSwings, std::max(1.0, 3.0 * sigmaSwings), observedPerSwing,
+            observedTtd));
+        return passed;
+    }
+
+    // Tank test 6/8 (tank.survived): the bare, silenced warrior in the survive scenario, a fixed 10 every second for
+    // 30 s, crits off: it lives. TankSurvived true, not dead, ElapsedMs = the duration (the report's TTD then counts
+    // as the duration, plan T11), and the health it lost equals the recorded final damage exactly (nothing heals it).
+    bool RunTankSurvivedTest()
+    {
+        char const* const name = "tank.survived test";
+        struct State
+        {
+            uint32 Health = 0;
+            uint32 MaxHealth = 0;
+        } state;
+
+        TankSetup setup;
+        setup.Scenario = SimTank::Scenario::Survive;
+        setup.Hit = {10, 10};
+        setup.Crit = false;
+        setup.SwingMs = 1000;
+        setup.DurationMs = 30000;
+        setup.Hook = [&state](uint32, Player* actor, std::vector<Creature*> const&)
+        {
+            state.Health = actor->GetHealth();
+            state.MaxHealth = actor->GetMaxHealth();
+        };
+
+        SimDaemon::RunResult result;
+        if (!RunTankScenario(name, setup, result))
+            return false;
+
+        uint64 taken = 0;
+        for (SimTank::SwingEvent const& e : result.Swings)
+            taken += e.Final;
+
+        bool const healthOk = state.MaxHealth > 0 && uint64(state.MaxHealth - state.Health) == taken;
+        bool const passed = result.TankSurvived && !result.ActorDied && result.ElapsedMs == setup.DurationMs &&
+            result.Swings.size() >= 25 && taken > 0 && healthOk;
+        LogVerdict(name, passed, Acore::StringFormat("survived {}, died {}, elapsed {} ms of {} ms, {} swings, {} "
+            "damage recorded, health {} of {} at the end (lost {}, expected to equal the recorded damage).",
+            result.TankSurvived ? "yes" : "NO", result.ActorDied ? "YES" : "no", result.ElapsedMs, setup.DurationMs,
+            result.Swings.size(), taken, state.Health, state.MaxHealth, state.MaxHealth - state.Health));
+        return passed;
+    }
+
+    // Tank test 7/8 (tank.thunderclap_slow): Thunder Clap cast on the boss at the pull (TankPullAuras) slows its
+    // swing by its haste aura's amount: a -10 melee haste makes the attack time 2000 x (100 + 10) / 100 = 2200 ms
+    // (Unit::ApplyAttackTimePercentMod), read from the aura on the dummy. The run lasts the debuff's duration (10 s in
+    // the live spell_dbc), so every gap between two swings must be exactly that (2200 sits on the 100 ms step grid);
+    // a control run without the debuff swings every 2000 ms exactly.
+    bool RunTankThunderClapSlowTest()
+    {
+        char const* const name = "tank.thunderclap_slow test";
+        SpellInfo const* info = sSpellMgr->GetSpellInfo(SPELL_THUNDER_CLAP);
+        if (!info || info->GetMaxDuration() <= 0)
+        {
+            LogVerdict(name, false, "Thunder Clap (6343) is missing or has no duration.");
+            return false;
+        }
+
+        struct State
+        {
+            bool Read = false;
+            uint32 AttackTime = 0;
+            int32 HasteAmount = 0;
+        } state;
+
+        TankSetup slowed;
+        slowed.Hit = {100, 100};
+        slowed.Crit = false;
+        slowed.SwingMs = 2000;
+        // Only while the debuff is up (applied at the pull): the swings of the run all fall inside it
+        slowed.DurationMs = std::min(uint32(info->GetMaxDuration()), 25000u);
+        slowed.PullAuras = {SPELL_THUNDER_CLAP};
+        slowed.Hook = [&state](uint32 elapsedMs, Player*, std::vector<Creature*> const& dummies)
+        {
+            if (state.Read || elapsedMs < 500 || dummies.empty())
+                return;
+            state.Read = true;
+            Creature* boss = dummies.front();
+            // GetAttackTime() divides the haste out (the unhasted base); the swing timer resets to base x haste
+            state.AttackTime = uint32(std::lround(boss->GetAttackTime(BASE_ATTACK) *
+                boss->m_modAttackSpeedPct[BASE_ATTACK]));
+            for (AuraType type : {SPELL_AURA_MOD_MELEE_HASTE, SPELL_AURA_MOD_MELEE_RANGED_HASTE})
+                for (AuraEffect const* aurEff : boss->GetAuraEffectsByType(type))
+                    if (aurEff->GetId() == SPELL_THUNDER_CLAP)
+                        state.HasteAmount += aurEff->GetAmount();
+        };
+
+        SimDaemon::RunResult slowedResult;
+        if (!RunTankScenario(name, slowed, slowedResult))
+            return false;
+
+        TankSetup control = slowed;
+        control.PullAuras.clear();
+        control.Hook = nullptr;
+        control.DurationMs = 12000;
+        SimDaemon::RunResult controlResult;
+        if (!RunTankScenario(name, control, controlResult))
+            return false;
+
+        // A negative haste amount slows: the attack time is multiplied by (100 - amount) / 100
+        uint32 const expected = state.HasteAmount < 0 ?
+            uint32(std::lround(2000.0 * (100.0 - double(state.HasteAmount)) / 100.0)) : 0;
+
+        auto const allGaps = [](std::vector<uint32> const& times, uint32 gap)
+        {
+            for (size_t i = 1; i < times.size(); ++i)
+                if (times[i] - times[i - 1] != gap)
+                    return false;
+            return times.size() >= 3;
+        };
+
+        std::vector<uint32> const slowedTimes = SwingTimes(slowedResult, 0);
+        std::vector<uint32> const controlTimes = SwingTimes(controlResult, 0);
+        bool const passed = expected == 2200 && state.AttackTime == expected && allGaps(slowedTimes, expected) &&
+            allGaps(controlTimes, 2000);
+        LogVerdict(name, passed, Acore::StringFormat("Thunder Clap haste amount {} on the boss -> expected attack time "
+            "{} ms (2200 expected), read {} ms; slowed gaps {} (first swing at {} ms); control gaps {} (all 2000 "
+            "expected).", state.HasteAmount, expected, state.AttackTime, GapHistogram(slowedTimes),
+            slowedTimes.empty() ? 0 : slowedTimes.front(), GapHistogram(controlTimes)));
+        return passed;
+    }
+
+    // Tank test 8/8 (tank.stun_immune): Concussion Blow (triggered, from the bare silenced warrior) at 3 s.
+    //  - On the boss dummy (stun immune, plan T8): it is never stunned (no stun aura, no stunned state at any step),
+    //    every swing gap stays one interval (2000 ms, +-one step) and it swings during the stun's duration.
+    //  - On pack dummy #0 of two (elites stay stunnable): it is stunned right after the cast, lands no swing until the
+    //    stun's duration (the spell's max duration) has run, swings again afterwards; dummy #1 keeps its 2000 ms gaps.
+    bool RunTankStunImmuneTest()
+    {
+        char const* const name = "tank.stun_immune test";
+        SpellInfo const* info = sSpellMgr->GetSpellInfo(SPELL_CONCUSSION_BLOW);
+        if (!info || info->GetMaxDuration() <= 0)
+        {
+            LogVerdict(name, false, "Concussion Blow (12809) is missing or has no duration.");
+            return false;
+        }
+        uint32 const stunMs = uint32(info->GetMaxDuration());
+
+        struct State
+        {
+            uint32 CastMs = 0;
+            uint32 StunnedSteps = 0;
+        };
+
+        auto const makeHook = [](State& state)
+        {
+            return [&state](uint32 elapsedMs, Player* actor, std::vector<Creature*> const& dummies)
+            {
+                if (dummies.empty())
+                    return;
+                Creature* target = dummies.front();
+                if (state.CastMs == 0 && elapsedMs >= 3000)
+                {
+                    state.CastMs = elapsedMs;
+                    actor->CastSpell(target, SPELL_CONCUSSION_BLOW, true);
+                }
+                if (state.CastMs > 0 &&
+                    (target->HasUnitState(UNIT_STATE_STUNNED) || target->HasAuraType(SPELL_AURA_MOD_STUN)))
+                    ++state.StunnedSteps;
+            };
+        };
+
+        TankSetup setup;
+        setup.Hit = {100, 100};
+        setup.PackHit = {100, 100};
+        setup.Crit = false;
+        setup.SwingMs = 2000;
+        setup.DurationMs = 3000 + stunMs + 8000;
+
+        State bossState;
+        setup.Hook = makeHook(bossState);
+        SimDaemon::RunResult boss;
+        if (!RunTankScenario(name, setup, boss))
+            return false;
+
+        State packState;
+        setup.Targets = 2;
+        setup.Hook = makeHook(packState);
+        SimDaemon::RunResult pack;
+        if (!RunTankScenario(name, setup, pack))
+            return false;
+
+        auto const maxGap = [](std::vector<uint32> const& times)
+        {
+            uint32 gap = 0;
+            for (size_t i = 1; i < times.size(); ++i)
+                gap = std::max(gap, times[i] - times[i - 1]);
+            return gap;
+        };
+        auto const countIn = [](std::vector<uint32> const& times, uint32 fromMs, uint32 toMs)
+        {
+            uint32 count = 0;
+            for (uint32 t : times)
+                count += t > fromMs && t < toMs;
+            return count;
+        };
+
+        std::vector<uint32> const bossTimes = SwingTimes(boss, 0);
+        std::vector<uint32> const packStunned = SwingTimes(pack, 0);
+        std::vector<uint32> const packOther = SwingTimes(pack, 1);
+        uint32 const stunEnd = packState.CastMs + stunMs;
+
+        bool const bossOk = bossState.CastMs > 0 && bossState.StunnedSteps == 0 &&
+            maxGap(bossTimes) <= 2000 + TANK_TEST_STEP_MS && countIn(bossTimes, bossState.CastMs,
+            bossState.CastMs + stunMs) >= 1;
+        bool const packOk = packState.CastMs > 0 && packState.StunnedSteps > 0 &&
+            countIn(packStunned, packState.CastMs, stunEnd - TANK_TEST_STEP_MS) == 0 &&
+            countIn(packStunned, stunEnd - TANK_TEST_STEP_MS, 0xFFFFFFFF) >= 1 &&
+            maxGap(packOther) <= 2000 + TANK_TEST_STEP_MS && packOther.size() >= 3;
+
+        bool const passed = bossOk && packOk;
+        LogVerdict(name, passed, Acore::StringFormat("Concussion Blow stun {} ms. Boss (cast at {} ms): stunned at {} "
+            "step(s) (0 expected), gaps {}, {} swing(s) during the stun window. Pack dummy #0 (cast at {} ms): stunned "
+            "at {} step(s), {} swing(s) before {} ms (0 expected), gaps {}; dummy #1 gaps {}.", stunMs,
+            bossState.CastMs, bossState.StunnedSteps, GapHistogram(bossTimes),
+            countIn(bossTimes, bossState.CastMs, bossState.CastMs + stunMs), packState.CastMs, packState.StunnedSteps,
+            countIn(packStunned, packState.CastMs, stunEnd - TANK_TEST_STEP_MS), stunEnd, GapHistogram(packStunned),
+            GapHistogram(packOther)));
+        return passed;
+    }
+
 }
 
 void SimTests::RunAll()
 {
     // DpsSim.TestFilter: run only the tests whose key contains this text (case-insensitive), e.g. "heal" for the
-    // healing-sim tests or "heal-shield" for one of them. Empty runs everything.
+    // healing-sim tests, "heal-shield" for one of them or "tank." for the tank-sim tests. Empty runs everything.
     std::string const filter = sConfigMgr->GetOption<std::string>("DpsSim.TestFilter", "");
 
     struct Test
@@ -983,10 +1811,18 @@ void SimTests::RunAll()
         {"heal-hot", RunHealHotTest},
         {"heal-pushback", RunHealPushbackTest},
         {"heal-guardian", RunHealGuardianSpiritTest},
+        {"tank.outcomes", RunTankOutcomesTest},
+        {"tank.crit_immune", RunTankCritImmuneTest},
+        {"tank.hit_formula", RunTankHitFormulaTest},
+        {"tank.revenge", RunTankRevengeTest},
+        {"tank.ttd", RunTankTtdTest},
+        {"tank.survived", RunTankSurvivedTest},
+        {"tank.thunderclap_slow", RunTankThunderClapSlowTest},
+        {"tank.stun_immune", RunTankStunImmuneTest},
     };
 
     LOG_INFO("server.dpssim", "mod-dpssim: SimTests::RunAll() - running Phase 1's three required tests, the "
-        "no-persist guard and the six healing-sim known-value tests{}.",
+        "no-persist guard, the six healing-sim and the eight tank-sim known-value tests{}.",
         filter.empty() ? std::string() : Acore::StringFormat(" (filter '{}')", filter));
 
     uint32 ran = 0;

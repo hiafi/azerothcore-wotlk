@@ -35,8 +35,11 @@ arrows. The run log shows what ran: "tamed pet ...", and "strategies resolved: c
 
 ## Tank sim (tank mode)
 
-A profile with `Mode = Tank` (`conf/profiles/ProtWarriorTankSim.conf`, a draft until TS3) runs the DPS sim with one
-change: the dummies swing at the actor. Plan: `.agents/plans/tank-sim/tank-sim.PLAN.md`.
+A profile with `Mode = Tank` runs the DPS sim with one change: the dummies swing at the actor. Plan:
+`.agents/plans/tank-sim/tank-sim.PLAN.md`. Profiles (level 60, real dungeon tank gear, the bots' premade talents):
+`ProtWarriorTankSim` (Human, race 1), `ProtPaladinTankSim` (Human, race 1; the same plate set) and `BearTankSim`
+(Tauren, race 6; the bear tank build, not Bestial Fury). Each header lists the talent decode, the gear and the sheet
+to expect.
 
 - Profile keys: `TankScenario` (`dps` refills the actor's health after every step so it never dies; `survive` does not,
   the run ends at its death and `ActorDiedAtMs` is the time to death), `TankHitDamage` (the boss, 1 target, default
@@ -63,6 +66,13 @@ change: the dummies swing at the actor. Plan: `.agents/plans/tank-sim/tank-sim.P
 - Between iterations (every mode) the reset removes non-passive auras and passive-flagged auras with a duration (a
   spell's delay holder, e.g. Thunderstruck's echo), so nothing from one iteration fires in the next one's buff phase.
 - Needs the core hook `UnitScript::OnMeleeOutcomeFinal` (CalcDamageInfo).
+- Known-value tests: `DpsSim.RunTests=1` with `DpsSim.TestFilter=tank.` runs the eight tank tests (`tank.outcomes`,
+  `tank.crit_immune`, `tank.hit_formula`, `tank.revenge`, `tank.ttd`, `tank.survived`, `tank.thunderclap_slow`,
+  `tank.stun_immune`; `src/SimTests.cpp` documents what each asserts). They load `ProtWarriorTankSim.conf` from the
+  directory of `DpsSim.Profile` and script the actor through `RunConfig::TankStepHook` / `TankSilenceBot`:
+  `DPSSIM_KEEP_LOG=1 DPSSIM_EXTRA_CONF='DpsSim.RunTests = 1\nDpsSim.TestFilter = tank.' tools/run-sim.sh
+  ProtWarriorTankSim 10 60 1 1`. A test run writes no report, so run-sim.sh ends with "produced no report"; the
+  `[PASS]` / `[FAIL]` lines are in the kept run log.
 
 ### Running it
 

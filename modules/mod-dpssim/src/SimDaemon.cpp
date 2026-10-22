@@ -48,6 +48,7 @@
 #include "Timer.h"
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <iterator>
 #include <list>
 #include <map>
@@ -1116,8 +1117,10 @@ namespace
         if (!config.TankPullAuras.empty())
         {
             Creature* first = dummies.front();
+            // The attack time with the haste aura in it (what the swing timer resets to), not the unhasted base
             LOG_INFO("server.dpssim", "mod-dpssim:   pull auras cast on the dummies; dummy #0 now: attack time {} ms, "
-                "attack power {:.0f}, damage fields {:.1f}-{:.1f}.", first->GetAttackTime(BASE_ATTACK),
+                "attack power {:.0f}, damage fields {:.1f}-{:.1f}.",
+                uint32(std::lround(first->GetAttackTime(BASE_ATTACK) * first->m_modAttackSpeedPct[BASE_ATTACK])),
                 first->GetTotalAttackPowerValue(BASE_ATTACK), first->GetFloatValue(UNIT_FIELD_MINDAMAGE),
                 first->GetFloatValue(UNIT_FIELD_MAXDAMAGE));
         }
@@ -1156,6 +1159,10 @@ namespace
                 d.SwingMs, d.WeaponMin, d.WeaponMax, d.AttackPower, d.DamageModifier, d.BasePct, d.FieldMin,
                 d.FieldMax, d.Level, d.LevelForTarget);
         }
+
+        // A silenced bot (tests): its AI must not act in the first Tick(), before the loop silences it every step
+        if (config.TankSilenceBot)
+            bot.SilenceAI();
 
         SimClock clock(config.StepMs, measuredStartMs);
         uint32 lastManaSampleMs = 0;
@@ -1213,7 +1220,13 @@ namespace
                 sampledThreatOnce = true;
             }
 
-            bot.UpdateAI(config.StepMs);
+            // Tests (SimTests.cpp): the scripted part of the step, then the bot's AI unless the test silenced it
+            if (config.TankStepHook)
+                config.TankStepHook(clock.GetElapsedMs(), player, dummies);
+            if (config.TankSilenceBot)
+                bot.SilenceAI();
+            else
+                bot.UpdateAI(config.StepMs);
             MaybeSampleMana(player, clock.GetElapsedMs(), lastManaSampleMs, sampledManaOnce, manaSamples);
 
             // The crit chance the dummies have once the bot has acted (its stance, its first buffs): the pull value was
@@ -1296,6 +1309,9 @@ namespace
         // The actor's own healing and shields (heal-mode structs, target index 0 = the actor), and the incoming swings
         result.HealEvents = healRecorder->GetHealEvents();
         result.AbsorbEvents = healRecorder->GetAbsorbEvents();
+        if (damageRecorder->GetSavedHits() > 0)
+            LOG_INFO("server.dpssim", "mod-dpssim:   dps scenario: {} lethal hits refilled to full health, {} of them "
+                "clamped to max health - 1.", damageRecorder->GetSavedHits(), damageRecorder->GetClampedHits());
         result.Swings = damageRecorder->GetSwings();
         result.SwingAbsorbs = damageRecorder->GetSwingAbsorbs();
         result.TankMinHealthPct = minHealthPct;
@@ -1691,7 +1707,9 @@ namespace
         CastRecorder* castRecorder = new CastRecorder(player->GetGUID(), targets.GetGuids());
         // The actor's own healing: the heal recorder with the actor as the whole group
         HealRecorder* healRecorder = new HealRecorder(player->GetGUID(), {player->GetGUID()});
-        DamageTakenRecorder* damageRecorder = new DamageTakenRecorder(player->GetGUID(), targets.GetGuids());
+        // The dps scenario never lets the actor die (OnDamage refills it); survive runs leave the core's kill alone
+        DamageTakenRecorder* damageRecorder = new DamageTakenRecorder(player->GetGUID(), targets.GetGuids(),
+            config.TankScenario == SimTank::Scenario::Dps);
         SimTankDummy::SetObserver(damageRecorder);
 
         SimBot bot;

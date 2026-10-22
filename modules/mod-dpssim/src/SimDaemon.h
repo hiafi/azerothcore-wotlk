@@ -28,6 +28,7 @@
 #include <string>
 #include <vector>
 
+class Creature;
 class Player;
 
 // M1 in-process entry point: wires SimActor + SimTarget + SimClock + the hardcoded Frostbolt
@@ -205,6 +206,13 @@ namespace SimDaemon
         // Demoralizing Shout 1160 show how a slow and an attack-power debuff change the swings. DpsSim.TankPullAuras in
         // the conf only (no profile key); empty = none.
         std::vector<uint32> TankPullAuras;
+        // Tests only (SimTests.cpp, the tank.* known-value tests). TankStepHook, when set, is called every step of the
+        // measured fight after the tick and the samples, before the bot's AI: (ms into the iteration, the actor, the
+        // dummies in target index order). TankSilenceBot keeps the actor's bot AI quiet for the whole fight (the actor
+        // then does only what the hook casts: no stance, no defensives, no auto attack), as HealStepHook does for a
+        // healer.
+        std::function<void(uint32, Player*, std::vector<Creature*> const&)> TankStepHook;
+        bool TankSilenceBot = false;
     };
 
     // One sim job's result. HitDamages/HitCrits are parallel vectors, one entry per landed hit, in

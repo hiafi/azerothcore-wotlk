@@ -48,9 +48,13 @@ DpsSim.RunTests = 0
 #    DpsSim.TestFilter
 #        Description: Only meaningful with DpsSim.RunTests = 1. Runs only the tests whose key
 #                      contains this text (case-insensitive): "heal" for the healing-sim tests,
-#                      "heal-shield" for one of them. The keys are known-value, timestep,
-#                      accelerated-clock, no-persist, heal-flash, heal-drain, heal-shield,
-#                      heal-hot, heal-pushback and heal-guardian.
+#                      "heal-shield" for one of them, "tank." for the tank-sim tests. The keys
+#                      are known-value, timestep, accelerated-clock, no-persist, heal-flash,
+#                      heal-drain, heal-shield, heal-hot, heal-pushback, heal-guardian,
+#                      tank.outcomes, tank.crit_immune, tank.hit_formula, tank.revenge,
+#                      tank.ttd, tank.survived, tank.thunderclap_slow and tank.stun_immune.
+#                      The tank tests load ProtWarriorTankSim.conf from the directory of
+#                      DpsSim.Profile.
 #        Default:     "" - (run every test)
 #
 

@@ -40,13 +40,18 @@
 // SimTankDummyAI also brackets the whole swing (SimTankSwingObserver), which is how the actor's rage across the swing
 // is measured: rage is rewarded after the outcome hook, in DealMeleeDamage, so only the whole swing's span sees it.
 //
+// The dps scenario also makes the actor unkillable (`unkillable`, plan T1) in OnDamage: the core calls it inside
+// Unit::DealDamage, after the recorder has closed the swing (OnMeleeOutcomeFinal runs in CalculateMeleeDamage, before
+// DealMeleeDamage) and before the kill check, so recorded damage, procs and the attackers' rage are the real ones and
+// only the kill is avoided. Survive runs, DPS runs and heal runs never construct this recorder with it.
+//
 // Anything that is not a dummy hitting the actor is ignored. Same heap-allocation / never-deleted /
 // constructed-at-runtime rules as EventRecorder: see its class comment.
 class DamageTakenRecorder : public UnitScript, public SimTankSwingObserver
 {
 public:
     // `dummyGuids` are the dummies in target index order
-    DamageTakenRecorder(ObjectGuid actorGuid, std::vector<ObjectGuid> dummyGuids);
+    DamageTakenRecorder(ObjectGuid actorGuid, std::vector<ObjectGuid> dummyGuids, bool unkillable = false);
 
     void ModifyMeleeDamage(Unit* target, Unit* attacker, uint32& damage) override;
     void OnBeforeRollMeleeOutcomeAgainst(Unit const* attacker, Unit const* victim, WeaponAttackType attType,
@@ -55,6 +60,7 @@ public:
         int32& block_chance) override;
     void OnAbsorbFinal(Unit* victim, Unit* attacker, AuraEffect const* absorbAurEff, uint32 absorbed) override;
     void OnMeleeOutcomeFinal(CalcDamageInfo const* damageInfo) override;
+    void OnDamage(Unit* attacker, Unit* victim, uint32& damage) override;
 
     void BeginSwing(Creature* dummy, Unit* victim) override;
     void EndSwing() override;
@@ -65,11 +71,19 @@ public:
     [[nodiscard]] std::vector<SimTank::SwingEvent> const& GetSwings() const { return _swings; }
     [[nodiscard]] std::vector<SimTank::SwingAbsorb> const& GetSwingAbsorbs() const { return _absorbs; }
 
+    // Lethal hits OnDamage turned into a refill, and the ones that also needed the clamp (a single hit of at least the
+    // actor's max health), since the last Reset()
+    [[nodiscard]] uint32 GetSavedHits() const { return _savedHits; }
+    [[nodiscard]] uint32 GetClampedHits() const { return _clampedHits; }
+
 private:
     int8 IndexOfDummy(ObjectGuid guid) const;
 
     ObjectGuid _actorGuid;
     std::vector<ObjectGuid> _dummyGuids;
+    bool _unkillable;
+    uint32 _savedHits = 0;
+    uint32 _clampedHits = 0;
 
     std::vector<SimTank::SwingEvent> _swings;
     std::vector<SimTank::SwingAbsorb> _absorbs;

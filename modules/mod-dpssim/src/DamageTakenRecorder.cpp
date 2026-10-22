@@ -60,11 +60,11 @@ namespace
     }
 }
 
-DamageTakenRecorder::DamageTakenRecorder(ObjectGuid actorGuid, std::vector<ObjectGuid> dummyGuids)
+DamageTakenRecorder::DamageTakenRecorder(ObjectGuid actorGuid, std::vector<ObjectGuid> dummyGuids, bool unkillable)
     : UnitScript("mod_dpssim_damage_taken_recorder", true,
                  {UNITHOOK_MODIFY_MELEE_DAMAGE, UNITHOOK_ON_BEFORE_ROLL_MELEE_OUTCOME_AGAINST,
-                  UNITHOOK_ON_ABSORB_FINAL, UNITHOOK_ON_MELEE_OUTCOME_FINAL}),
-      _actorGuid(actorGuid), _dummyGuids(std::move(dummyGuids))
+                  UNITHOOK_ON_ABSORB_FINAL, UNITHOOK_ON_MELEE_OUTCOME_FINAL, UNITHOOK_ON_DAMAGE}),
+      _actorGuid(actorGuid), _dummyGuids(std::move(dummyGuids)), _unkillable(unkillable)
 {
 }
 
@@ -231,6 +231,33 @@ void DamageTakenRecorder::OnMeleeOutcomeFinal(CalcDamageInfo const* info)
     _pendingAbsorbs.clear();
 }
 
+void DamageTakenRecorder::OnDamage(Unit* attacker, Unit* victim, uint32& damage)
+{
+    // The dps scenario only, and only a hit that would kill the actor (Unit::DealDamage kills at health <= damage)
+    if (!_unkillable || !victim || victim->GetGUID() != _actorGuid || !victim->IsAlive() || damage == 0 ||
+        damage < victim->GetHealth())
+        return;
+
+    // Refill first: this also covers several swings landing inside one clock step, which a per-step refill misses
+    uint32 const maxHealth = victim->GetMaxHealth();
+    victim->SetHealth(maxHealth);
+    ++_savedHits;
+
+    if (damage < maxHealth)
+        return;
+
+    // A single hit that outweighs the whole health bar: the core would still kill from full health, so cut it to
+    // max - 1. The cut part is no damage taken any more, so its rage is credited here the way DealDamage's own
+    // "rage from damage received" would have (Unit::RewardRage(damage, 0, false) is linear in damage), which keeps the
+    // run's total rage from damage taken equal to the unclamped one (to within the 0.1 rage RewardRage truncates per
+    // call). The credit sits here, before the core's own credit for the rest, on the same alive path.
+    uint32 const cut = damage - (maxHealth - 1);
+    damage = maxHealth - 1;
+    ++_clampedHits;
+    if (attacker != victim && victim->HasActivePowerType(POWER_RAGE))
+        victim->RewardRage(cut, 0, false);
+}
+
 void DamageTakenRecorder::BeginSwing(Creature* /*dummy*/, Unit* victim)
 {
     _swingBracketOpen = true;
@@ -257,6 +284,8 @@ void DamageTakenRecorder::EndSwing()
 
 void DamageTakenRecorder::Reset()
 {
+    _savedHits = 0;
+    _clampedHits = 0;
     _swings.clear();
     _absorbs.clear();
     _open = OpenSwing{};
