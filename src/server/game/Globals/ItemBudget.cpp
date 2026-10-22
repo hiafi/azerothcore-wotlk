@@ -879,8 +879,13 @@ namespace
                 tpl.Damage[0].DamageMax = b.DmgMax;
             }
 
+            // The armor curve gives base armor only, but `Armor` holds base + bonus armor: the player's item-mod
+            // code subtracts `ArmorDamageModifier` from it and applies the bonus separately (Player.cpp). Without the
+            // bonus added back here, bonus armor is lost, and an item whose bonus exceeds its curve armor wraps
+            // to a huge value and sets the wearer's armor to 0.
             if (b.HasArmorCurve)
-                tpl.Armor = static_cast<uint32>(b.FinalArmor);
+                tpl.Armor = static_cast<uint32>(b.FinalArmor)
+                    + static_cast<uint32>(std::max(0.0f, tpl.ArmorDamageModifier));
 
             if (b.HasBlockValueCurve)
                 tpl.Block = static_cast<uint32>(b.FinalBlockValue);
