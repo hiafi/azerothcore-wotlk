@@ -1871,66 +1871,6 @@ aggression_18429 = spell(
 )
 
 
-dual_wield_specialization_30816 = spell(
-    id=30816,
-    name='Dual Wield Specialization',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=54),
-    ],
-    spell_icon_id=2023,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 16777216, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to hit while dual wielding by an additional $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 8},
-)
-
-
-dual_wield_specialization_30818 = spell(
-    id=30818,
-    name='Dual Wield Specialization',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=54),
-    ],
-    spell_icon_id=2023,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 16777216, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to hit while dual wielding by an additional $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 8},
-)
-
-
-dual_wield_specialization_30819 = spell(
-    id=30819,
-    name='Dual Wield Specialization',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=54),
-    ],
-    spell_icon_id=2023,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 16777216, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to hit while dual wielding by an additional $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 8},
-)
-
-
 sleight_of_hand_30892 = spell(
     id=30892,
     name='Sleight of Hand',

@@ -27,6 +27,7 @@ from lib.dsl.registry import (
 )
 
 from . import _masks as m
+from .shaman_enh_tooltips import shaman_imbuehits_1218
 
 # ---- Spell.dbc flag values (src/server/shared/SharedDefines.h) ----
 _SPELLFAMILY_SHAMAN = 11
@@ -165,6 +166,7 @@ flametongue_attack_202202 = spell(
         Effect(type=EffectType.DUMMY, base_points=999, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=_ICON_FLAMETONGUE,
+    tooltip_vars=shaman_imbuehits_1218,   # S3a A4: Elemental Weapons (`mult`) on the hit number
     notes='SH0a A3, shared doc "Flametongue": the imbue hit, triggered by spell_sha_flametongue_proc (8024) on every melee hit '
           'of either hand. eff0 potency 8 Fire direct, T 1500, d0 b21. eff1 DUMMY carries the hitting hand\'s weapon speed '
           'in ms (SPELLVALUE_BASE_POINT1; stored 999 = live 1000 ms = 1 s = 8 potency when cast bare). '
@@ -175,7 +177,7 @@ flametongue_attack_202202 = spell(
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'SpellClassMask_1': m.FLAMETONGUE_ATTACK, 'DefenseType': _DMG_MAGIC,
         'EquippedItemClass': -1, 'SpellLevel': 10, 'CastingTimeIndex': 1, 'AttributesEx': 0x88,
         'AttributesEx3': _ATTR3_SUPPRESS_CASTER_PROCS, 'SpellVisualID_1': _SV_FLAMETONGUE_ATTACK,
-        'Description_Lang_enUS': 'Deals {pot1} Fire damage, scaled by the speed of the weapon that hit.',
+        'Description_Lang_enUS': 'Deals {pot1*mult} Fire damage, scaled by the speed of the weapon that hit.',
     },
 )
 
@@ -187,6 +189,7 @@ frostbrand_attack_202203 = spell(
     effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=20.0, potency_kind='direct', time_basis_ms=1500,
                     implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
     spell_icon_id=_ICON_FROSTBRAND,
+    tooltip_vars=shaman_imbuehits_1218,   # S3a A4: Elemental Weapons (`mult`) on the hit number
     notes='SH0a A3, shared doc "Frostbrand": the 15% proc hit, triggered by spell_sha_frostbrand_proc (child 202201). Potency '
           '20 Frost direct, T 1500, d0 b24. Stock 8034\'s slow dropped (not in the rework text). AttributesEx 0x88 as '
           'stock 8034/10444; AttributesEx3 0x10000 (marker only; the real no-proc guard is the cast being triggered with no NOT_A_PROC, '
@@ -195,7 +198,7 @@ frostbrand_attack_202203 = spell(
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'SpellClassMask_1': m.FROSTBRAND_ATTACK, 'DefenseType': _DMG_MAGIC,
         'EquippedItemClass': -1, 'SpellLevel': 20, 'CastingTimeIndex': 1, 'AttributesEx': 0x88,
         'AttributesEx3': _ATTR3_SUPPRESS_CASTER_PROCS, 'SpellVisualID_1': _SV_FROSTBRAND_ATTACK,
-        'Description_Lang_enUS': 'Deals {pot1} Frost damage.',
+        'Description_Lang_enUS': 'Deals {pot1*mult} Frost damage.',
     },
 )
 
@@ -211,6 +214,7 @@ windfury_attack_mh_202204 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
     effects=[Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=100, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
     spell_icon_id=_ICON_WINDFURY,
+    tooltip_vars=shaman_imbuehits_1218,   # S3a A4: `wf` = Elemental Weapons x Improved Windfury x Spirit Weapons on the weapon %
     notes='SH0a A3, shared doc "Windfury": main-hand extra attack, two per proc (spell_sha_windfury_proc). One '
           'WEAPON_PERCENT_DAMAGE effect, weapon_potency 100, d0 b23 (H7 Flurry, Spirit Weapons). BASE_ATTACK weapon. '
           'spell_sha_windfury_attack adds +20% AP. No NOT_A_PROC and no SUPPRESS_CASTER_PROCS (they roll Maelstrom Weapon).',
@@ -218,7 +222,7 @@ windfury_attack_mh_202204 = spell(
         'SpellClassSet': _SPELLFAMILY_SHAMAN, 'SpellClassMask_1': m.WINDFURY_ATTACK, 'DefenseType': _DMG_MELEE,
         'EquippedItemClass': -1, 'SpellLevel': 30, 'CastingTimeIndex': 1, 'SpellVisualID_1': _SV_WINDFURY_ATTACK,
         'AttributesEx4': 0x00800000,  # SUPPRESS_WEAPON_PROCS: no item/enchant procs (SH0a review L4, doc rule)
-        'Description_Lang_enUS': 'An extra attack with your main hand weapon for $s1% weapon damage.',
+        'Description_Lang_enUS': 'An extra attack with your main hand weapon for ${$s1*$<wf>}% weapon damage.',
     },
 )
 
@@ -227,6 +231,7 @@ windfury_attack_oh_202205 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
     effects=[Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=100, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
     spell_icon_id=_ICON_WINDFURY,
+    tooltip_vars=shaman_imbuehits_1218,   # S3a A4: as 202204
     notes='SH0a A3, shared doc "Windfury": off-hand extra attack, cast only for an off-hand hit. Same as 202204 with '
           'AttributesEx3 REQUIRES_OFF_HAND_WEAPON 0x1000000, which makes Spell::m_attackType OFF_ATTACK; the cast-time '
           'weapon check is skipped for EquippedItemClass -1, so spell_sha_windfury_proc is the gate (off-hand hit only).',
@@ -235,7 +240,7 @@ windfury_attack_oh_202205 = spell(
         'EquippedItemClass': -1, 'SpellLevel': 30, 'CastingTimeIndex': 1, 'SpellVisualID_1': _SV_WINDFURY_ATTACK,
         'AttributesEx3': _ATTR3_REQUIRES_OFF_HAND_WEAPON,
         'AttributesEx4': 0x00800000,  # SUPPRESS_WEAPON_PROCS: no item/enchant procs (SH0a review L4, doc rule)
-        'Description_Lang_enUS': 'An extra attack with your off-hand weapon for $s1% weapon damage.',
+        'Description_Lang_enUS': 'An extra attack with your off-hand weapon for ${$s1*$<wf>}% weapon damage.',
     },
 )
 

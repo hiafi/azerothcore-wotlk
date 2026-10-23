@@ -12,7 +12,16 @@ from lib.dsl.registry import (
 
 from . import _masks as m
 # A3's Restoration rows (shaman_restoration.py has no import from this file), for the two capstone tooltips that quote a heal.
+from .shaman_enh_tooltips import shaman_lshield_1217
 from .shaman_restoration import natures_guardian_heal_202675, totemic_focus_heal_202677
+
+# S3a A2: Frozen Power's capstone quotes the Blizzard tick's potency. A3's shaman_enhancement.py declares the tick and must NOT
+# import this file (import cycle); until it exists the tooltip token falls back to the raw spell reference.
+try:
+    from .shaman_enhancement import frozen_blizzard_tick_202405
+    _BLIZZARD_TEXT = pot_text(frozen_blizzard_tick_202405)
+except ImportError:
+    _BLIZZARD_TEXT = '$202405s1'
 
 
 # =====================================================================================================================
@@ -36,6 +45,7 @@ _FIRE_NOVA_COST = 0x8000000   # d0 b27 (Fire Nova 1535)
 _FIRE_NOVA_DAMAGE = 0x40000   # d1 b18 (Fire Nova 8349)
 _RANK_SUBTEXT = 'Rank {}'
 _CR_VERSATILITY = 1 << 21     # 1 << CombatRating.VERSATILITY
+_CR_MASTERY = 1 << 20         # 1 << CombatRating.MASTERY
 _PROC_DONE_SPELL_MAGIC_NEG = 0x10000
 _PROC_DONE_PERIODIC = 0x40000
 _PROC_PHASE_HIT = 0x2
@@ -118,28 +128,6 @@ def _talent(spell_id, name, rank, effects, icon, description, masks=None, level=
         category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0, effects=effects, spell_icon_id=icon,
         notes=notes, raw_overrides=raw,
     )
-
-
-lightning_shield_324 = spell(
-    id=324,
-    name='Lightning Shield',
-    school=School.NATURE,
-    dispel=DispelType.MAGIC,
-    attributes=327680,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    duration_ms=600000,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=12, points_per_level=5.097222222222222, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=26545),
-    ],
-    spell_icon_id=19,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 8); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 11 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 1024, 'AttributesEx3': 196608, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Lightning Shield damages attackers.', 'BaseLevel': 8, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The caster is surrounded by $n balls of lightning.  When a spell, melee or ranged attack hits the caster, the attacker will be struck for $26364s1 Nature damage.  This expends one lightning ball.  Only one ball will fire every few seconds.  Lasts $d.  Only one Elemental Shield can be active on the Shaman at any one time.', 'EffectBonusMultiplier_1': 0.2669999897480011, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcCharges': 3, 'ProcTypeMask': 139944, 'RangeIndex': 1, 'SpellClassMask_1': 1024, 'SpellClassSet': 11, 'SpellLevel': 8, 'SpellVisualID_1': 37, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
-)
 
 
 healing_stream_5672 = spell(
@@ -522,11 +510,11 @@ flurry_16257 = spell(
     range_yards=0.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, points_per_level=0.4067796610169492, implicit_target_a=1, apply_aura=138),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=138),
     ],
     spell_icon_id=108,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60 (anchor rank 5 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Attack speed increased by $s1%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your attack speed by $16257s1% for your next 3 swings after dealing a critical strike.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcCharges': 3, 'ProcTypeMask': 4, 'RangeIndex': 1, 'SpellClassMask_2': 512, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 2759},
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60 (anchor rank 5 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. S3a A2: one buff for all three Flurry ranks: the rank spells (16256 / 16281 / 16282) are aura 231 with bp 3 / 6 / 10 and cast this with the value; the effect is no longer level-scaled (points_per_level 0, BaseLevel / MaxLevel / SpellLevel 0), 3 charges, 15 s, refreshed by recast; aura text number-free; proc flags stay autos only (ProcTypeMask 4) so no Gust / Windfury / Burst / Stormstrike hit ever consumes a swing (Q18). 16277-16280 are no longer referenced',
+    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Melee attack speed increased for your next few swings.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your melee attack speed by $s1% for your next 3 swings after dealing a melee critical strike.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'BaseLevel': 0, 'MaxLevel': 0, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcCharges': 3, 'ProcTypeMask': 4, 'RangeIndex': 1, 'SpellClassMask_2': 512, 'SpellClassSet': 11, 'SpellLevel': 0, 'SpellPriority': 50, 'SpellVisualID_1': 2759},
 )
 
 
@@ -568,7 +556,32 @@ lightning_shield_26364 = spell(
     spell_icon_id=62,
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 8); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 11 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
           'Potency system P7-Shaman: converted to sp_potency=103.9 (shaman-potency-proposals.txt, mismatched row). Cast by the player via lightning_shield_324\'s own PROC_TRIGGER_SPELL aura (triggered off the player\'s own buff, not a totem/pet), so this is an ordinary player-attributed potency conversion, not a D2 script-bp case (lightning_shield_324 casts it with no CastCustomSpell override).',
-    raw_overrides={'AttributesEx2': 805306372, 'AttributesEx3': 512, 'AttributesEx4': 16384, 'AttributesEx5': 393224, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 8, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Casts a bolt of lightning at the target for {pot1} Nature damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 1024, 'SpellClassSet': 11, 'SpellLevel': 8},
+    tooltip_vars=shaman_lshield_1217,
+    raw_overrides={'AttributesEx2': 805306372, 'AttributesEx3': 512, 'AttributesEx4': 16384, 'AttributesEx5': 393224, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 8, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Casts a bolt of lightning at the target for {pot1*mult} Nature damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'SpellClassMask_1': 1024, 'SpellClassSet': 11, 'SpellLevel': 8},
+)
+
+
+lightning_shield_324 = spell(
+    id=324,
+    name='Lightning Shield',
+    school=School.NATURE,
+    dispel=DispelType.MAGIC,
+    attributes=327680,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=600000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=12, points_per_level=5.097222222222222, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=26545),
+    ],
+    spell_icon_id=19,
+    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 8); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 11 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. '
+          'S3a A4: moved below the orb 26364 (the tooltip quotes its potency); tooltip entry 1217 (Improved Lightning Shield, Static Shock) via pot_text(..., var=\'mult\').',
+    tooltip_vars=shaman_lshield_1217,
+    raw_overrides={'AttributesEx': 1024, 'AttributesEx3': 196608, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Lightning Shield damages attackers.', 'BaseLevel': 8, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The caster is surrounded by $n balls of lightning.  When a spell, melee or ranged attack hits the caster, the attacker will be struck for ' + pot_text(lightning_shield_26364, var='mult') + ' Nature damage.  This expends one lightning ball.  Only one ball will fire every few seconds.  Lasts $d.  Only one Elemental Shield can be active on the Shaman at any one time.', 'EffectBonusMultiplier_1': 0.2669999897480011, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcCharges': 3, 'ProcTypeMask': 139944, 'RangeIndex': 1, 'SpellClassMask_1': 1024, 'SpellClassSet': 11, 'SpellLevel': 8, 'SpellVisualID_1': 37, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -939,25 +952,12 @@ call_of_thunder_16041 = _talent(
 )
 
 
-earth_s_grasp_16043 = spell(
-    id=16043,
-    name="Earth's Grasp",
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=108, misc_value=8),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=6),
-        Effect(type=EffectType.APPLY_AURA, base_points=-16, implicit_target_a=1, apply_aura=108, misc_value=11),
-    ],
-    spell_icon_id=689,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the health of your Stoneclaw Totem by $s1% and the radius of your Earthbind Totem by $s2%, and reduces the cooldown of both totems by $s3%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8, 'EffectSpellClassMaskB_2': 1, 'EffectSpellClassMaskB_3': 16384, 'EffectSpellClassMaskC_1': 8, 'EffectSpellClassMaskC_3': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+earth_s_grasp_16043 = _talent(
+    16043, "Earth's Grasp", 'Rank 1',
+    [_dummy(24), _mod(SpellModOp.RADIUS, 9), _mod(SpellModOp.COOLDOWN, -16)], 689,
+    "Increases the absorb of your Earthen Wall Totem's shields by 25%. Increases the radius of your Earthbind Totem by 10% and reduces its cooldown by 15%.",
+    masks={2: (0, 0x1, m.EARTHBIND_ROOT), 3: (0, 0, m.EARTHBIND_ROOT)},
+    notes='S3a A2: eff1 DUMMY 25 (Earthen Wall absorb +25%, read by Shaman::GetEarthenWallAbsorb; talent_mult effect 1), eff2 SPELLMOD_RADIUS pct +10 on d1 b0 (the slow 3600 / 59566 / 62287 / 63532) and d2 b5 (the root 202260), eff3 SPELLMOD_COOLDOWN pct -15 on d2 b5 (Earthbind cast 2484 + its root only). Data only, no C++ (0-verify C6). Stock Stoneclaw health clause and the d2 b14 cooldown twin are gone.',
 )
 
 
@@ -1161,25 +1161,12 @@ reverberation_16116 = spell(
 )
 
 
-earth_s_grasp_16130 = spell(
-    id=16130,
-    name="Earth's Grasp",
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=108, misc_value=8),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=6),
-        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=1, apply_aura=108, misc_value=11),
-    ],
-    spell_icon_id=689,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the health of your Stoneclaw Totem by $s1% and the radius of your Earthbind Totem by $s2%, and reduces the cooldown of both totems by $s3%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8, 'EffectSpellClassMaskB_2': 1, 'EffectSpellClassMaskB_3': 16384, 'EffectSpellClassMaskC_1': 8, 'EffectSpellClassMaskC_3': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+earth_s_grasp_16130 = _talent(
+    16130, "Earth's Grasp", 'Rank 2',
+    [_dummy(49), _mod(SpellModOp.RADIUS, 19), _mod(SpellModOp.COOLDOWN, -31)], 689,
+    "Increases the absorb of your Earthen Wall Totem's shields by 50%. Increases the radius of your Earthbind Totem by 20% and reduces its cooldown by 30%.",
+    masks={2: (0, 0x1, m.EARTHBIND_ROOT), 3: (0, 0, m.EARTHBIND_ROOT)},
+    notes='S3a A2: eff1 DUMMY 50 (Earthen Wall absorb +50%, read by Shaman::GetEarthenWallAbsorb; talent_mult effect 1), eff2 SPELLMOD_RADIUS pct +20 on d1 b0 (the slow 3600 / 59566 / 62287 / 63532) and d2 b5 (the root 202260), eff3 SPELLMOD_COOLDOWN pct -30 on d2 b5 (Earthbind cast 2484 + its root only). Data only, no C++ (0-verify C6). Stock Stoneclaw health clause and the d2 b14 cooldown twin are gone.',
 )
 
 
@@ -1770,192 +1757,89 @@ ancestral_healing_16240 = spell(
 )
 
 
-guardian_totems_16258 = spell(
-    id=16258,
-    name='Guardian Totems',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=8),
-        Effect(type=EffectType.APPLY_AURA, base_points=-1001, implicit_target_a=1, apply_aura=107, misc_value=11),
-    ],
-    spell_icon_id=690,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount of armor increased by your Stoneskin Totem by $s1% and reduces the cooldown of your Grounding Totem by $/1000;s2 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 32768, 'EffectSpellClassMaskB_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+guardian_totems_16258 = _talent(
+    16258, 'Guardian Totems', 'Rank 1',
+    [_mod(SpellModOp.COOLDOWN, -2501, pct=False), _mod(SpellModOp.COOLDOWN, -5001, pct=False), _mod(SpellModOp.EFFECT1, 9)], 690,
+    _cap('Reduces the cooldown of your Earthen Wall Totem by 2.5 sec and of your other Earth totems by 5 sec. While Rockbiter is active, the absorb of your Living Earth is increased by 10%.',
+          'Placing a totem increases your armor by 10% for 10 sec.', last=False),
+    masks={1: (m.EARTHEN_WALL_SUMMON, 0, 0), 2: (m.TREMOR_SUMMON, 0, m.EARTHBIND_ROOT), 3: (0, 0, m.LIVING_EARTH)},
+    notes="S3a A2: eff1 flat cooldown -2500 ms on the Earthen Wall summon (d0 b3), eff2 flat -5000 ms on Tremor (d0 b15) and Earthbind (d2 b5), eff3 Living Earth absorb +10% (SPELLMOD_EFFECT1 pct on d2 b16: the absorb is the castable's effect 1; talent_mult effect 3 for the Living Earth tooltip). NEVER d0 b29 (reaches the Earth Elemental). Talent cuts apply before Cooldown Haste. The capstone (rank 2) is Shaman::OnPlayerTotemAdded, no data.",
 )
 
 
-enhancing_totems_16259 = spell(
-    id=16259,
-    name='Enhancing Totems',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108, misc_value=8),
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108, misc_value=8),
-    ],
-    spell_icon_id=691,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effect of your Strength of Earth and Flametongue Totems by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 65536, 'EffectSpellClassMaskB_1': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+enhancing_totems_16259 = _talent(
+    16259, 'Enhanced Elements', 'Rank 1',
+    [_aura(AuraType.MOD_CUSTOM_STAT_PCT, 0, _CR_MASTERY)], 691,
+    'Increases your Mastery by 1%.',
+    notes='S3a A2: Enhanced Elements (was Enhancing Totems): aura 306 MOD_CUSTOM_STAT_PCT misc 1 << CR_MASTERY +1% (stored 0). Every stock SpellMod effect and the latent EffectBasePoints_2 twin are gone (L-14).',
 )
 
 
-improved_shields_16261 = spell(
-    id=16261,
-    name='Improved Shields',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108, misc_value=3),
-    ],
-    spell_icon_id=19,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Lightning Shield orbs by $s1%, increases the amount of mana gained from your Water Shield orbs by $s2% and increases the amount of healing done by your Earth Shield orbs by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1024, 'EffectSpellClassMaskB_2': 1056, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+improved_shields_16261 = _talent(
+    16261, 'Improved Lightning Shield', 'Rank 1',
+    [_mod(SpellModOp.DAMAGE, 14)], 19,
+    _cap('Increases the damage of your Lightning Shield orbs by 15%. While Rockbiter is active, your Lightning Shield orbs also grant 1 Stoneskin each and generate double threat.',
+          'Your Lightning Shield has a 30% chance not to expend a charge when it would.', last=False),
+    masks={1: (0x400, 0, 0)},
+    notes='S3a A2: Improved Lightning Shield (was Improved Shields): orb damage +15% (SPELLMOD_DAMAGE on d0 b10, the orb 26364; talent_mult effect 1 for tooltip entry 1217). The Water Shield / Earth Shield clauses are gone. The Rockbiter Stoneskin/threat and the rank 3 capstone are scripts (spell_sha_enh_lightning_shield, hidden child 202411).',
 )
 
 
-improved_ghost_wolf_16262 = spell(
-    id=16262,
-    name='Improved Ghost Wolf',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    duration_ms=-1,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1001, implicit_target_a=1, apply_aura=107, misc_value=10),
-    ],
-    spell_icon_id=67,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cast time of your Ghost Wolf spell by $/1000;s1 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectItemType_1': 2048, 'EffectSpellClassMaskA_1': 2048, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+improved_ghost_wolf_16262 = _talent(
+    16262, 'Improved Ghost Wolf', 'Rank 1',
+    [_aura(AuraType.MOD_SPEED_ALWAYS, 4), _aura(AuraType.MOD_DAMAGE_PERCENT_TAKEN, -6, 127)], 67,
+    _cap('Increases your movement speed in Ghost Wolf by 5% and reduces the damage you take in Ghost Wolf by 5%.',
+          'Using Ghost Wolf removes all movement impairing effects and increases your speed by 60% for 2 sec. This effect can only occur once every 20 sec.', last=False),
+    ShapeshiftMask=0x8000,
+    notes="S3a A2: stance-bound passive (raw ShapeshiftMask 0x8000 = Ghost Wolf, applied by HandleShapeshiftBoosts on form change, 0-verify d). eff1 speed +5% as aura 129 MOD_SPEED_ALWAYS (stacks multiplicatively with the form's own aura 31, which takes only the max), eff2 damage taken -5% (aura 87 all schools). The stock cast-time/cost SpellMods are gone.",
 )
 
 
-elemental_weapons_16266 = spell(
-    id=16266,
-    name='Elemental Weapons',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=12),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=12),
-        Effect(type=EffectType.APPLY_AURA, base_points=12, implicit_target_a=1, apply_aura=108),
-    ],
-    spell_icon_id=679,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage caused by your Windfury Weapon effect by $s3%  increases the spell damage on your Flametongue Weapon by $s2% and increases the bonus healing on your Earthliving Weapon by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 1048576, 'EffectSpellClassMaskB_1': 2097152, 'EffectSpellClassMaskC_1': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+elemental_weapons_16266 = _talent(
+    16266, 'Elemental Weapons', 'Rank 1',
+    [_mod(SpellModOp.DAMAGE, 9)], 679,
+    _cap('Increases the damage of your Flametongue, Frostbrand and Windfury effects by 10%.',
+          'While Flametongue is active, your Lava Lash and Lava Burst spread your Flame Shock to up to 4 nearby enemies in combat with you.', last=False),
+    masks={1: (m.FLAMETONGUE_ATTACK | m.FROSTBRAND_ATTACK | m.WINDFURY_ATTACK, 0, 0)},
+    notes='S3a A2: imbue attacks +10% (SPELLMOD_DAMAGE on d0 b21 / b24 / b23; talent_mult effect 1, entry 1218). The stock spell-power / Earthliving clauses are gone.',
 )
 
 
-improved_ghost_wolf_16287 = spell(
-    id=16287,
-    name='Improved Ghost Wolf',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-2001, implicit_target_a=1, apply_aura=107, misc_value=10),
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=108, misc_value=14),
-    ],
-    spell_icon_id=67,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cast time of your Ghost Wolf spell by $/1000;s1 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2048, 'EffectSpellClassMaskB_1': 2048, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_3': 8, 'SpellClassSet': 11},
+improved_ghost_wolf_16287 = _talent(
+    16287, 'Improved Ghost Wolf', 'Rank 2',
+    [_aura(AuraType.MOD_SPEED_ALWAYS, 9), _aura(AuraType.MOD_DAMAGE_PERCENT_TAKEN, -11, 127), _dummy(0)], 67,
+    _cap('Increases your movement speed in Ghost Wolf by 10% and reduces the damage you take in Ghost Wolf by 10%.',
+          'Using Ghost Wolf removes all movement impairing effects and increases your speed by 60% for 2 sec. This effect can only occur once every 20 sec.', last=True),
+    ShapeshiftMask=0x8000,
+    notes="S3a A2: stance-bound passive (raw ShapeshiftMask 0x8000 = Ghost Wolf, applied by HandleShapeshiftBoosts on form change, 0-verify d). eff1 speed +10% as aura 129 MOD_SPEED_ALWAYS (stacks multiplicatively with the form's own aura 31, which takes only the max), eff2 damage taken -10% (aura 87 all schools). eff3 DUMMY on rank 2: spell_sha_enh_improved_ghost_wolf AfterEffectApply casts the sprint 202396 (20 s ICD); the rank is recast on every entry into Ghost Wolf. No spell-level d0 b11, no spell_proc on 2645. The stock cast-time/cost SpellMods are gone.",
 )
 
 
-improved_shields_16290 = spell(
-    id=16290,
-    name='Improved Shields',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=3),
-    ],
-    spell_icon_id=19,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Lightning Shield orbs by $s1%, increases the amount of mana gained from your Water Shield orbs by $s2% and increases the amount of healing done by your Earth Shield orbs by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1024, 'EffectSpellClassMaskB_2': 1056, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+improved_shields_16290 = _talent(
+    16290, 'Improved Lightning Shield', 'Rank 2',
+    [_mod(SpellModOp.DAMAGE, 29)], 19,
+    _cap('Increases the damage of your Lightning Shield orbs by 30%. While Rockbiter is active, your Lightning Shield orbs also grant 1 Stoneskin each and generate double threat.',
+          'Your Lightning Shield has a 30% chance not to expend a charge when it would.', last=False),
+    masks={1: (0x400, 0, 0)},
+    notes='S3a A2: Improved Lightning Shield (was Improved Shields): orb damage +30% (SPELLMOD_DAMAGE on d0 b10, the orb 26364; talent_mult effect 1 for tooltip entry 1217). The Water Shield / Earth Shield clauses are gone. The Rockbiter Stoneskin/threat and the rank 3 capstone are scripts (spell_sha_enh_lightning_shield, hidden child 202411).',
 )
 
 
-guardian_totems_16293 = spell(
-    id=16293,
-    name='Guardian Totems',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=8),
-        Effect(type=EffectType.APPLY_AURA, base_points=-2001, implicit_target_a=1, apply_aura=107, misc_value=11),
-    ],
-    spell_icon_id=690,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the amount of armor increased by your Stoneskin Totem by $s1% and reduces the cooldown of your Grounding Totem by $/1000;s2 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 32768, 'EffectSpellClassMaskB_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+guardian_totems_16293 = _talent(
+    16293, 'Guardian Totems', 'Rank 2',
+    [_mod(SpellModOp.COOLDOWN, -5001, pct=False), _mod(SpellModOp.COOLDOWN, -10001, pct=False), _mod(SpellModOp.EFFECT1, 19)], 690,
+    _cap('Reduces the cooldown of your Earthen Wall Totem by 5 sec and of your other Earth totems by 10 sec. While Rockbiter is active, the absorb of your Living Earth is increased by 20%.',
+          'Placing a totem increases your armor by 10% for 10 sec.', last=True),
+    masks={1: (m.EARTHEN_WALL_SUMMON, 0, 0), 2: (m.TREMOR_SUMMON, 0, m.EARTHBIND_ROOT), 3: (0, 0, m.LIVING_EARTH)},
+    notes="S3a A2: eff1 flat cooldown -5000 ms on the Earthen Wall summon (d0 b3), eff2 flat -10000 ms on Tremor (d0 b15) and Earthbind (d2 b5), eff3 Living Earth absorb +20% (SPELLMOD_EFFECT1 pct on d2 b16: the absorb is the castable's effect 1; talent_mult effect 3 for the Living Earth tooltip). NEVER d0 b29 (reaches the Earth Elemental). Talent cuts apply before Cooldown Haste. The capstone (rank 2) is Shaman::OnPlayerTotemAdded, no data.",
 )
 
 
-enhancing_totems_16295 = spell(
-    id=16295,
-    name='Enhancing Totems',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=8),
-    ],
-    spell_icon_id=691,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effect of your Strength of Earth and Flametongue Totems by $s1%.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 33619968, 'EffectSpellClassMaskB_1': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+enhancing_totems_16295 = _talent(
+    16295, 'Enhanced Elements', 'Rank 2',
+    [_aura(AuraType.MOD_CUSTOM_STAT_PCT, 1, _CR_MASTERY)], 691,
+    'Increases your Mastery by 2%.',
+    notes='S3a A2: Enhanced Elements (was Enhancing Totems): aura 306 MOD_CUSTOM_STAT_PCT misc 1 << CR_MASTERY +2% (stored 1). Every stock SpellMod effect and the latent EffectBasePoints_2 twin are gone (L-14).',
 )
 
 
@@ -2119,47 +2003,23 @@ eye_of_the_storm_29065 = _talent(
 )
 
 
-elemental_weapons_29079 = spell(
-    id=29079,
-    name='Elemental Weapons',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=12),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108, misc_value=12),
-        Effect(type=EffectType.APPLY_AURA, base_points=26, implicit_target_a=1, apply_aura=108),
-    ],
-    spell_icon_id=679,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage caused by your Windfury Weapon effect by $s3%  increases the spell damage on your Flametongue Weapon by $s2% and increases the bonus healing on your Earthliving Weapon by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 1048576, 'EffectSpellClassMaskB_1': 2097152, 'EffectSpellClassMaskC_1': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+elemental_weapons_29079 = _talent(
+    29079, 'Elemental Weapons', 'Rank 2',
+    [_mod(SpellModOp.DAMAGE, 19)], 679,
+    _cap('Increases the damage of your Flametongue, Frostbrand and Windfury effects by 20%.',
+          'While Flametongue is active, your Lava Lash and Lava Burst spread your Flame Shock to up to 4 nearby enemies in combat with you.', last=False),
+    masks={1: (m.FLAMETONGUE_ATTACK | m.FROSTBRAND_ATTACK | m.WINDFURY_ATTACK, 0, 0)},
+    notes='S3a A2: imbue attacks +20% (SPELLMOD_DAMAGE on d0 b21 / b24 / b23; talent_mult effect 1, entry 1218). The stock spell-power / Earthliving clauses are gone.',
 )
 
 
-elemental_weapons_29080 = spell(
-    id=29080,
-    name='Elemental Weapons',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108, misc_value=12),
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108, misc_value=12),
-        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=108),
-    ],
-    spell_icon_id=679,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage caused by your Windfury Weapon effect by $s3%  increases the spell damage on your Flametongue Weapon by $s2% and increases the bonus healing on your Earthliving Weapon by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 1048576, 'EffectSpellClassMaskB_1': 2097152, 'EffectSpellClassMaskC_1': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+elemental_weapons_29080 = _talent(
+    29080, 'Elemental Weapons', 'Rank 3',
+    [_mod(SpellModOp.DAMAGE, 29), _dummy(0)], 679,
+    _cap('Increases the damage of your Flametongue, Frostbrand and Windfury effects by 30%.',
+          'While Flametongue is active, your Lava Lash and Lava Burst spread your Flame Shock to up to 4 nearby enemies in combat with you.', last=True),
+    masks={1: (m.FLAMETONGUE_ATTACK | m.FROSTBRAND_ATTACK | m.WINDFURY_ATTACK, 0, 0)},
+    notes='S3a A2: imbue attacks +30% (SPELLMOD_DAMAGE on d0 b21 / b24 / b23; talent_mult effect 1, entry 1218). The stock spell-power / Earthliving clauses are gone. Rank 3 eff2 is the DUMMY carrier of the spread capstone (spell_sha_enh_elemental_weapons, spell_proc 29080: Lava Lash / Lava Burst hits).',
 )
 
 
@@ -2211,43 +2071,21 @@ healing_grace_29191 = _talent(
 )
 
 
-improved_windfury_totem_29192 = spell(
-    id=29192,
-    name='Improved Windfury Totem',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=3),
-    ],
-    spell_icon_id=1397,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the melee haste granted by your Windfury totem by $s1%.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_2': 2097152, 'EffectSpellClassMaskB_2': 4, 'EffectSpellClassMaskC_1': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+improved_windfury_totem_29192 = _talent(
+    29192, 'Improved Windfury', 'Rank 1',
+    [_mod(SpellModOp.DAMAGE, 9)], 1397,
+    'Increases the damage of your Windfury Attacks and Gusts by 10%.',
+    masks={1: (m.WINDFURY_ATTACK, 0, m.GUST)},
+    notes='S3a A2: Improved Windfury (was Improved Windfury Totem): +10% on Windfury Attacks (d0 b23) and Gust 202391 / splash 202392 (d2 b18). talent_mult effect 1 (entry 1218). The stale EffectBasePoints_2 twin and the stock totem masks are gone.',
 )
 
 
-improved_windfury_totem_29193 = spell(
-    id=29193,
-    name='Improved Windfury Totem',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=107, misc_value=3),
-    ],
-    spell_icon_id=1397,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the melee haste granted by your Windfury totem by $s1%.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_2': 2097152, 'EffectSpellClassMaskB_2': 4, 'EffectSpellClassMaskC_1': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+improved_windfury_totem_29193 = _talent(
+    29193, 'Improved Windfury', 'Rank 2',
+    [_mod(SpellModOp.DAMAGE, 19)], 1397,
+    'Increases the damage of your Windfury Attacks and Gusts by 20%.',
+    masks={1: (m.WINDFURY_ATTACK, 0, m.GUST)},
+    notes='S3a A2: Improved Windfury (was Improved Windfury Totem): +20% on Windfury Attacks (d0 b23) and Gust 202391 / splash 202392 (d2 b18). talent_mult effect 1 (entry 1218). The stale EffectBasePoints_2 twin and the stock totem masks are gone.',
 )
 
 
@@ -2375,69 +2213,33 @@ lightning_overload_30679 = _talent(
 )
 
 
-mental_quickness_30812 = spell(
-    id=30812,
-    name='Mental Quickness',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=108, misc_value=14),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=237, misc_value=126),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=238, misc_value=127),
-    ],
-    spell_icon_id=2022,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your instant cast Shaman spells by $s1% and increases your spell power by an amount equal to $s2% of your attack power.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_2': 1, 'EffectSpellClassMaskA_1': 3092780056, 'EffectSpellClassMaskA_2': 68728, 'EffectSpellClassMaskA_3': 28, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+mental_quickness_30812 = _talent(
+    30812, 'Mental Quickness', 'Rank 1',
+    [_aura(AuraType.MOD_SPELL_DAMAGE_OF_ATTACK_POWER, 24, 126), _aura(AuraType.MOD_SPELL_HEALING_OF_ATTACK_POWER, 24, 127)], 2022,
+    _cap('Increases your spell power by 25% of your attack power.',
+          'Your direct melee abilities increase the damage of your spells by 10% for 6 sec. Your damaging spells increase the damage of your melee abilities by 5% for 6 sec. These effects cannot be active at the same time.', last=False),
+    EffectMiscValueB_1=1,
+    notes='S3a A2: spell power 25% of attack power (aura 237 non-physical, aura 238 healing). The stock mana-cost clause is gone.',
 )
 
 
-mental_quickness_30813 = spell(
-    id=30813,
-    name='Mental Quickness',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-5, implicit_target_a=1, apply_aura=108, misc_value=14),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=237, misc_value=126),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=238, misc_value=127),
-    ],
-    spell_icon_id=2022,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your instant cast Shaman spells by $s1% and increases your spell power by an amount equal to $s2% of your attack power.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_2': 1, 'EffectSpellClassMaskA_1': 3092780056, 'EffectSpellClassMaskA_2': 68728, 'EffectSpellClassMaskA_3': 28, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+mental_quickness_30813 = _talent(
+    30813, 'Mental Quickness', 'Rank 2',
+    [_aura(AuraType.MOD_SPELL_DAMAGE_OF_ATTACK_POWER, 49, 126), _aura(AuraType.MOD_SPELL_HEALING_OF_ATTACK_POWER, 49, 127)], 2022,
+    _cap('Increases your spell power by 50% of your attack power.',
+          'Your direct melee abilities increase the damage of your spells by 10% for 6 sec. Your damaging spells increase the damage of your melee abilities by 5% for 6 sec. These effects cannot be active at the same time.', last=False),
+    EffectMiscValueB_1=1,
+    notes='S3a A2: spell power 50% of attack power (aura 237 non-physical, aura 238 healing). The stock mana-cost clause is gone.',
 )
 
 
-mental_quickness_30814 = spell(
-    id=30814,
-    name='Mental Quickness',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=1, apply_aura=108, misc_value=14),
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=237, misc_value=126),
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=238, misc_value=127),
-    ],
-    spell_icon_id=2022,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your instant cast Shaman spells by $s1% and increases your spell power by an amount equal to $s2% of your attack power.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_2': 1, 'EffectSpellClassMaskA_1': 3092780056, 'EffectSpellClassMaskA_2': 68728, 'EffectSpellClassMaskA_3': 28, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+mental_quickness_30814 = _talent(
+    30814, 'Mental Quickness', 'Rank 3',
+    [_aura(AuraType.MOD_SPELL_DAMAGE_OF_ATTACK_POWER, 74, 126), _aura(AuraType.MOD_SPELL_HEALING_OF_ATTACK_POWER, 74, 127), _dummy(0)], 2022,
+    _cap('Increases your spell power by 75% of your attack power.',
+          'Your direct melee abilities increase the damage of your spells by 10% for 6 sec. Your damaging spells increase the damage of your melee abilities by 5% for 6 sec. These effects cannot be active at the same time.', last=True),
+    EffectMiscValueB_1=1, ProcChance=100, ProcTypeMask=0x10010,
+    notes="S3a A2: spell power 75% of attack power (aura 237 non-physical, aura 238 healing). The stock mana-cost clause is gone. Rank 3 eff3 DUMMY carrier for spell_sha_enh_mental_quickness (spell_proc 30814: melee spell / magic damage hits, PROC_ATTR_TRIGGERED_CAN_PROC because Stormstrike's hits are the triggered 32175 / 32176; the script dedupes once per cast).",
 )
 
 
@@ -2609,23 +2411,13 @@ nature_s_guardian_30886 = spell(
 )
 
 
-shamanistic_focus_43338 = spell(
-    id=43338,
-    name='Shamanistic Focus',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-46, implicit_target_a=1, apply_aura=108, misc_value=14),
-    ],
-    spell_icon_id=2016,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the mana cost of your Shock spells by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2416967680, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 20, 'RangeIndex': 1, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellPriority': 50},
+shamanistic_focus_43338 = _talent(
+    43338, 'Shamanistic Focus', 'Rank 1',
+    [_mod(SpellModOp.CRITICAL_CHANCE, 1, pct=False), _mod(SpellModOp.DAMAGE, 3), _mod(SpellModOp.DOT, 3)], 2016,
+    _cap('Increases the critical strike chance of your Shock spells by 2% and their damage by 4%.',
+          'Reduces the cooldown of your Shock spells by 1 sec.', last=False),
+    masks={1: (_SHOCKS, 0, 0), 2: (_SHOCKS, 0, 0), 3: (_FLAME_SHOCK, 0, 0)},
+    notes='S3a A2: eff1 shock crit +2 (flat), eff2 shock damage +4% (talent_mult effect 2, matching the A4 entry), eff3 the Flame Shock periodic +4% (SPELLMOD_DOT, L-9). The stock mana clause and its proc flags are gone. Ranks 2 / 3 (202371 / 202372, A3) must use the same effect order; rank 3 needs a 4th effect for the -1 s cooldown, which a spell cannot hold (3 effect slots): A3 decides.',
 )
 
 
@@ -2733,208 +2525,101 @@ storm_earth_and_fire_51486 = _talent(
 )
 
 
-improved_stormstrike_51521 = spell(
-    id=51521,
-    name='Improved Stormstrike',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=11, trigger_spell=63375),
-    ],
-    spell_icon_id=3159,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you Stormstrike, you have a $h% chance to immediately grant you $63375s1% of your base mana.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_2': 16, 'EffectSpellClassMaskB_2': 16, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 50, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellPriority': 50},
+improved_stormstrike_51521 = _talent(
+    51521, 'Improved Stormstrike', 'Rank 1',
+    [_dummy(4), _dummy(9), _mod(SpellModOp.CRITICAL_CHANCE, 4, pct=False)], 3159,
+    'Your Stormstrike restores 10% of your base mana and increases the Nature, Fire and Frost damage the target takes from you by 5% for 6 sec. Increases the critical strike chance of Stormstrike by 5%.',
+    masks={3: (0, 0, 0x1400)},
+    notes="S3a A2: pulled stock rank, rewritten (ranks only; 202402 / 202403 are A3's). eff1 DUMMY 5 = the debuff % and eff2 DUMMY 10 = the base-mana % (both read by the Stormstrike script), eff3 Stormstrike crit +5% (flat, the strikes 32175 / 32176 on d2 b10 / b12). The stock mana proc and spell_proc -51521 are gone; no stale proc flags.",
 )
 
 
-improved_stormstrike_51522 = spell(
-    id=51522,
-    name='Improved Stormstrike',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, misc_value=11, trigger_spell=63375),
-    ],
-    spell_icon_id=3159,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you Stormstrike, you have a $h% chance to immediately grant you $63375s1% of your base mana.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_2': 16, 'EffectSpellClassMaskB_2': 16, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellPriority': 50},
+improved_stormstrike_51522 = _talent(
+    51522, 'Improved Stormstrike', 'Rank 2',
+    [_dummy(9), _dummy(19), _mod(SpellModOp.CRITICAL_CHANCE, 9, pct=False)], 3159,
+    'Your Stormstrike restores 20% of your base mana and increases the Nature, Fire and Frost damage the target takes from you by 10% for 6 sec. Increases the critical strike chance of Stormstrike by 10%.',
+    masks={3: (0, 0, 0x1400)},
+    notes="S3a A2: pulled stock rank, rewritten (ranks only; 202402 / 202403 are A3's). eff1 DUMMY 10 = the debuff % and eff2 DUMMY 20 = the base-mana % (both read by the Stormstrike script), eff3 Stormstrike crit +10% (flat, the strikes 32175 / 32176 on d2 b10 / b12). The stock mana proc and spell_proc -51521 are gone; no stale proc flags.",
 )
 
 
-earthen_power_51523 = spell(
-    id=51523,
-    name='Earthen Power',
-    school=School.NORMAL,
-    attributes=448,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=108, misc_value=3),
-    ],
-    spell_icon_id=2289,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 50, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Earthbind Totem's pulses have a $s1% chance to also remove all snare effects from you and nearby friendly targets, and your Earth Shock reduces enemy attack speed by an additional $/10;s2%.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 1048576, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11, 'SpellLevel': 50, 'StartRecoveryCategory': 133},
+earthen_power_51523 = _talent(
+    51523, 'Earthen Power', 'Rank 1',
+    [Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=59566), _mod(SpellModOp.EFFECT1, -6, pct=False)], 2289,
+    'Placing your Earthbind Totem has a 50% chance to remove all slowing effects from you and nearby friendly targets. Your Earth Shock reduces enemy attack speed by an additional 5%.',
+    masks={2: (0x100000, 0, 0)},
+    ProcChance=50, ProcTypeMask=0x14000,
+    notes='S3a A2: pulled stock rank, rewritten. eff1 PROC_TRIGGER_SPELL -> 59566 (dispel snares; stock script spell_sha_earthen_power filters to snared allies), 50% from the rank ProcChance on the CAST of Earthbind 2484 (spell_proc -51523: d2 b5, CAST phase, the root is triggered by the totem so it never procs the player). eff2 Earth Shock attack-speed slow 5% more (SPELLMOD_EFFECT1 flat on d0 b20; total 15 / 20%).',
 )
 
 
-earthen_power_51524 = spell(
-    id=51524,
-    name='Earthen Power',
-    school=School.NORMAL,
-    attributes=448,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=108, misc_value=3),
-    ],
-    spell_icon_id=2289,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 1, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Your Earthbind Totem's pulses have a $s1% chance to also remove all snare effects from you and nearby friendly targets, and your Earth Shock reduces enemy attack speed by an additional $/10;s2%.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 1048576, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11, 'SpellLevel': 1, 'StartRecoveryCategory': 133},
+earthen_power_51524 = _talent(
+    51524, 'Earthen Power', 'Rank 2',
+    [Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=59566), _mod(SpellModOp.EFFECT1, -11, pct=False)], 2289,
+    'Placing your Earthbind Totem has a 100% chance to remove all slowing effects from you and nearby friendly targets. Your Earth Shock reduces enemy attack speed by an additional 10%.',
+    masks={2: (0x100000, 0, 0)},
+    ProcChance=100, ProcTypeMask=0x14000,
+    notes='S3a A2: pulled stock rank, rewritten. eff1 PROC_TRIGGER_SPELL -> 59566 (dispel snares; stock script spell_sha_earthen_power filters to snared allies), 100% from the rank ProcChance on the CAST of Earthbind 2484 (spell_proc -51523: d2 b5, CAST phase, the root is triggered by the totem so it never procs the player). eff2 Earth Shock attack-speed slow 10% more (SPELLMOD_EFFECT1 flat on d0 b20; total 15 / 20%).',
 )
 
 
-static_shock_51525 = spell(
-    id=51525,
-    name='Static Shock',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=4),
-    ],
-    spell_icon_id=3059,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have a $s1% chance to hit your target with a Lightning Shield orb charge when you deal damage with melee attacks and abilities, and your Lightning Shield gains $s2 additional charges.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EffectSpellClassMaskB_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 2, 'ProcTypeMask': 12652564, 'RangeIndex': 1, 'SpellClassMask_3': 8192, 'SpellClassSet': 11},
+static_shock_51525 = _talent(
+    51525, 'Static Shock', 'Rank 1',
+    [_mod(SpellModOp.DAMAGE, 4), _mod(SpellModOp.CHARGES, 5, pct=False), _dummy(0)], 3059,
+    _cap('Your Lightning Shield deals 5% more damage and gains 6 additional charges, and your melee attacks and abilities have a 5% chance to hit your target with a Lightning Shield orb. This effect can only occur once every 1.5 sec.',
+          'Your Stormstrike adds 3 charges to your Lightning Shield.', last=False),
+    masks={1: (0x400, 0, 0), 2: (0x400, 0, 0)},
+    ProcChance=5, ProcTypeMask=12582932,
+    notes='S3a A2: orb damage +5% (eff1, talent_mult effect 1, entry 1217), +6 Lightning Shield charges (eff2 SPELLMOD_CHARGES on d0 b10: the shield 324, the orb ignores it), eff3 DUMMY carrier for spell_sha_enh_static_shock. Proc 5% x Proc Chance from the rank ProcChance (spell_proc -51525 has Chance 0), ICD 1500 ms.',
 )
 
 
-static_shock_51526 = spell(
-    id=51526,
-    name='Static Shock',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=107, misc_value=4),
-    ],
-    spell_icon_id=3059,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have a $s1% chance to hit your target with a Lightning Shield orb charge when you deal damage with melee attacks and abilities, and your Lightning Shield gains $s2 additional charges.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EffectSpellClassMaskB_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 4, 'ProcTypeMask': 12652564, 'RangeIndex': 1, 'SpellClassMask_3': 8192, 'SpellClassSet': 11},
+static_shock_51526 = _talent(
+    51526, 'Static Shock', 'Rank 2',
+    [_mod(SpellModOp.DAMAGE, 9), _mod(SpellModOp.CHARGES, 5, pct=False), _dummy(0)], 3059,
+    _cap('Your Lightning Shield deals 10% more damage and gains 6 additional charges, and your melee attacks and abilities have a 10% chance to hit your target with a Lightning Shield orb. This effect can only occur once every 1.5 sec.',
+          'Your Stormstrike adds 3 charges to your Lightning Shield.', last=False),
+    masks={1: (0x400, 0, 0), 2: (0x400, 0, 0)},
+    ProcChance=10, ProcTypeMask=12582932,
+    notes='S3a A2: orb damage +10% (eff1, talent_mult effect 1, entry 1217), +6 Lightning Shield charges (eff2 SPELLMOD_CHARGES on d0 b10: the shield 324, the orb ignores it), eff3 DUMMY carrier for spell_sha_enh_static_shock. Proc 10% x Proc Chance from the rank ProcChance (spell_proc -51525 has Chance 0), ICD 1500 ms.',
 )
 
 
-static_shock_51527 = spell(
-    id=51527,
-    name='Static Shock',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=107, misc_value=4),
-    ],
-    spell_icon_id=3059,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have a $s1% chance to hit your target with a Lightning Shield orb charge when you deal damage with melee attacks and abilities, and your Lightning Shield gains $s2 additional charges.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EffectSpellClassMaskB_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 6, 'ProcTypeMask': 12652884, 'RangeIndex': 1, 'SpellClassMask_3': 8192, 'SpellClassSet': 11},
+static_shock_51527 = _talent(
+    51527, 'Static Shock', 'Rank 3',
+    [_mod(SpellModOp.DAMAGE, 14), _mod(SpellModOp.CHARGES, 5, pct=False), _dummy(0)], 3059,
+    _cap('Your Lightning Shield deals 15% more damage and gains 6 additional charges, and your melee attacks and abilities have a 15% chance to hit your target with a Lightning Shield orb. This effect can only occur once every 1.5 sec.',
+          'Your Stormstrike adds 3 charges to your Lightning Shield.', last=True),
+    masks={1: (0x400, 0, 0), 2: (0x400, 0, 0)},
+    ProcChance=15, ProcTypeMask=12582932,
+    notes='S3a A2: orb damage +15% (eff1, talent_mult effect 1, entry 1217), +6 Lightning Shield charges (eff2 SPELLMOD_CHARGES on d0 b10: the shield 324, the orb ignores it), eff3 DUMMY carrier for spell_sha_enh_static_shock. Proc 15% x Proc Chance from the rank ProcChance (spell_proc -51525 has Chance 0), ICD 1500 ms.',
 )
 
 
-maelstrom_weapon_51528 = spell(
-    id=51528,
-    name='Maelstrom Weapon',
-    school=School.NORMAL,
-    attributes=262608,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=53817),
-    ],
-    spell_icon_id=3156,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you deal damage with a melee weapon, you have a chance to reduce the cast time of your next Lightning Bolt, Chain Lightning, Lesser Healing Wave, Healing Wave, Chain Heal, or Hex spell by $53817s1%. Stacks up to 5 times. Lasts $53817d.', 'EffectBasePoints_2': -1, 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 61243, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 12582932, 'RangeIndex': 1, 'SpellClassMask_2': 2, 'SpellClassMask_3': 512, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellPriority': 50},
+maelstrom_weapon_51528 = _talent(
+    51528, 'Maelstrom Weapon', 'Rank 1',
+    [Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=53817)], 3156,
+    'When you deal damage with a melee weapon, you have a 7% chance to reduce the cast time of your next Lightning Bolt, Chain Lightning, Lava Burst or Lesser Healing Wave by 20%. Stacks up to 5 times.',
+    ProcChance=7, ProcTypeMask=0x14, SpellPriority=50,
+    notes='S3a A2: pulled stock rank, rewritten (chance 10% -> 7% 2026-10-22 [tune], S3-ENH-TRIM). eff1 PROC_TRIGGER_SPELL -> 53817 (the stack buff), 7% x Proc Chance from the rank ProcChance (spell_proc -51528 Chance 0), HIT phase, PROC_ATTR_TRIGGERED_CAN_PROC; spell_sha_enh_maelstrom_weapon (-51528) whitelists the triggered hits. The stock PPM rows (51528-51532, positive keys), the stock spell masks and the latent E2/E3 twins are gone; ranks 4 and 5 leave the talent.',
 )
 
 
-maelstrom_weapon_51529 = spell(
-    id=51529,
-    name='Maelstrom Weapon',
-    school=School.NORMAL,
-    attributes=262608,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=53817),
-    ],
-    spell_icon_id=3156,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you deal damage with a melee weapon, you have a chance (higher than rank 1) to reduce the cast time of your next Lightning Bolt, Chain Lightning, Lesser Healing Wave, Healing Wave, Chain Heal, or Hex spell by $53817s1%. Stacks up to 5 times. Lasts $53817d.', 'EffectBasePoints_2': -1, 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 64563, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 12582932, 'RangeIndex': 1, 'SpellClassMask_3': 512, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellPriority': 50},
+maelstrom_weapon_51529 = _talent(
+    51529, 'Maelstrom Weapon', 'Rank 2',
+    [Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=53817)], 3156,
+    'When you deal damage with a melee weapon, you have a 14% chance to reduce the cast time of your next Lightning Bolt, Chain Lightning, Lava Burst or Lesser Healing Wave by 20%. Stacks up to 5 times.',
+    ProcChance=14, ProcTypeMask=0x14, SpellPriority=50,
+    notes='S3a A2: pulled stock rank, rewritten (chance 20% -> 14% 2026-10-22 [tune], S3-ENH-TRIM). eff1 PROC_TRIGGER_SPELL -> 53817 (the stack buff), 14% x Proc Chance from the rank ProcChance (spell_proc -51528 Chance 0), HIT phase, PROC_ATTR_TRIGGERED_CAN_PROC; spell_sha_enh_maelstrom_weapon (-51528) whitelists the triggered hits. The stock PPM rows (51528-51532, positive keys), the stock spell masks and the latent E2/E3 twins are gone; ranks 4 and 5 leave the talent.',
 )
 
 
-maelstrom_weapon_51530 = spell(
-    id=51530,
-    name='Maelstrom Weapon',
-    school=School.NORMAL,
-    attributes=262608,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=53817),
-    ],
-    spell_icon_id=3156,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you deal damage with a melee weapon, you have a chance (higher than rank 2) to reduce the cast time of your next Lightning Bolt, Chain Lightning, Lesser Healing Wave, Healing Wave, Chain Heal, or Hex spell by $53817s1%. Stacks up to 5 times. Lasts $53817d.', 'EffectBasePoints_2': -1, 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 59187, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 12582932, 'RangeIndex': 1, 'SpellClassMask_3': 512, 'SpellClassSet': 11, 'SpellLevel': 1, 'SpellPriority': 50},
+maelstrom_weapon_51530 = _talent(
+    51530, 'Maelstrom Weapon', 'Rank 3',
+    [Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=53817)], 3156,
+    'When you deal damage with a melee weapon, you have a 21% chance to reduce the cast time of your next Lightning Bolt, Chain Lightning, Lava Burst or Lesser Healing Wave by 20%. Stacks up to 5 times.',
+    ProcChance=21, ProcTypeMask=0x14, SpellPriority=50,
+    notes='S3a A2: pulled stock rank, rewritten (chance 30% -> 21% 2026-10-22 [tune], S3-ENH-TRIM). eff1 PROC_TRIGGER_SPELL -> 53817 (the stack buff), 21% x Proc Chance from the rank ProcChance (spell_proc -51528 Chance 0), HIT phase, PROC_ATTR_TRIGGERED_CAN_PROC; spell_sha_enh_maelstrom_weapon (-51528) whitelists the triggered hits. The stock PPM rows (51528-51532, positive keys), the stock spell masks and the latent E2/E3 twins are gone; ranks 4 and 5 leave the talent.',
 )
 
 
@@ -3177,105 +2862,51 @@ tidal_waves_51566 = spell(
 )
 
 
-improved_shields_51881 = spell(
-    id=51881,
-    name='Improved Shields',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108, misc_value=3),
-    ],
-    spell_icon_id=19,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Lightning Shield orbs by $s1%, increases the amount of mana gained from your Water Shield orbs by $s2% and increases the amount of healing done by your Earth Shield orbs by $s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1024, 'EffectSpellClassMaskB_2': 1056, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+improved_shields_51881 = _talent(
+    51881, 'Improved Lightning Shield', 'Rank 3',
+    [_mod(SpellModOp.DAMAGE, 44)], 19,
+    _cap('Increases the damage of your Lightning Shield orbs by 45%. While Rockbiter is active, your Lightning Shield orbs also grant 1 Stoneskin each and generate double threat.',
+          'Your Lightning Shield has a 30% chance not to expend a charge when it would.', last=True),
+    masks={1: (0x400, 0, 0)},
+    notes='S3a A2: Improved Lightning Shield (was Improved Shields): orb damage +45% (SPELLMOD_DAMAGE on d0 b10, the orb 26364; talent_mult effect 1 for tooltip entry 1217). The Water Shield / Earth Shield clauses are gone. The Rockbiter Stoneskin/threat and the rank 3 capstone are scripts (spell_sha_enh_lightning_shield, hidden child 202411).',
 )
 
 
-mental_dexterity_51883 = spell(
-    id=51883,
-    name='Mental Dexterity',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=1, apply_aura=268, misc_value=3),
-    ],
-    spell_icon_id=38,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Attack Power by $s1% of your Intellect.', 'EffectBasePoints_2': -1, 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EffectMiscValueB_1': 3, 'EffectSpellClassMaskA_1': 3093042200, 'EffectSpellClassMaskA_2': 3192, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+mental_dexterity_51883 = _talent(
+    51883, 'Mental Dexterity', 'Rank 1',
+    [_aura(AuraType.MOD_ATTACK_POWER_OF_STAT_PERCENT, 32, 3)], 38,
+    _cap('Increases your attack power by 33% of your Intellect.',
+          'You gain 10% of your Intellect as melee critical strike rating and 10% of your Agility as spell critical strike rating.', last=False),
+    EffectMiscValueB_1=3,
+    notes='S3a A2: pulled stock rank, rewritten (the stock spell-mask twin and the latent E2/E3 raw keys are gone). Attack power 33% of Intellect (aura 268, stat 3).',
 )
 
 
-mental_dexterity_51884 = spell(
-    id=51884,
-    name='Mental Dexterity',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=65, implicit_target_a=1, apply_aura=268, misc_value=3),
-    ],
-    spell_icon_id=38,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Attack Power by $s1% of your Intellect.', 'EffectBasePoints_2': -1, 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EffectMiscValueB_1': 3, 'EffectSpellClassMaskA_1': 3093042200, 'EffectSpellClassMaskA_2': 3192, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+mental_dexterity_51884 = _talent(
+    51884, 'Mental Dexterity', 'Rank 2',
+    [_aura(AuraType.MOD_ATTACK_POWER_OF_STAT_PERCENT, 65, 3)], 38,
+    _cap('Increases your attack power by 66% of your Intellect.',
+          'You gain 10% of your Intellect as melee critical strike rating and 10% of your Agility as spell critical strike rating.', last=False),
+    EffectMiscValueB_1=3,
+    notes='S3a A2: pulled stock rank, rewritten (the stock spell-mask twin and the latent E2/E3 raw keys are gone). Attack power 66% of Intellect (aura 268, stat 3).',
 )
 
 
-mental_dexterity_51885 = spell(
-    id=51885,
-    name='Mental Dexterity',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=268, misc_value=3),
-    ],
-    spell_icon_id=38,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Attack Power by $s1% of your Intellect.', 'EffectBasePoints_2': -1, 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EffectMiscValueB_1': 3, 'EffectSpellClassMaskA_1': 3093042200, 'EffectSpellClassMaskA_2': 3192, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+mental_dexterity_51885 = _talent(
+    51885, 'Mental Dexterity', 'Rank 3',
+    [_aura(AuraType.MOD_ATTACK_POWER_OF_STAT_PERCENT, 99, 3), _aura(AuraType.MOD_RATING_FROM_STAT, 9, 1 << 8), _aura(AuraType.MOD_RATING_FROM_STAT, 9, 1 << 10)], 38,
+    _cap('Increases your attack power by 100% of your Intellect.',
+          'You gain 10% of your Intellect as melee critical strike rating and 10% of your Agility as spell critical strike rating.', last=True),
+    EffectMiscValueB_1=3, EffectMiscValueB_2=3, EffectMiscValueB_3=1,
+    notes='S3a A2: pulled stock rank, rewritten (the stock spell-mask twin and the latent E2/E3 raw keys are gone). Attack power 100% of Intellect (aura 268, stat 3). Rank 3 capstone: aura 220 MOD_RATING_FROM_STAT, 10% of Intellect (stat 3) as melee crit rating (CR_CRIT_MELEE bit 8), 10% of Agility (stat 1) as spell crit rating (CR_CRIT_SPELL bit 10); live as the stats change.',
 )
 
 
-enhancing_totems_52456 = spell(
-    id=52456,
-    name='Enhancing Totems',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108, misc_value=8),
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108, misc_value=8),
-    ],
-    spell_icon_id=691,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the effect of your Strength of Earth and Flametongue Totems by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 33619968, 'EffectSpellClassMaskB_1': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+enhancing_totems_52456 = _talent(
+    52456, 'Enhanced Elements', 'Rank 3',
+    [_aura(AuraType.MOD_CUSTOM_STAT_PCT, 2, _CR_MASTERY)], 691,
+    'Increases your Mastery by 3%.',
+    notes='S3a A2: Enhanced Elements (was Enhancing Totems): aura 306 MOD_CUSTOM_STAT_PCT misc 1 << CR_MASTERY +3% (stored 2). Every stock SpellMod effect and the latent EffectBasePoints_2 twin are gone (L-14).',
 )
 
 
@@ -3456,45 +3087,21 @@ booming_echoes_63372 = _talent(
 )
 
 
-frozen_power_63373 = spell(
-    id=63373,
-    name='Frozen Power',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=107, misc_value=23),
-        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-    ],
-    spell_icon_id=3780,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Lightning Bolt, Chain Lightning, Lava Lash and Shock spells by $s1% on targets afflicted by your Frostbrand Attack effect, and your Frost Shock has a $s2% chance to root the target in ice for $63685d. when used on targets at or further than $63685s1 yards from you.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16777216, 'EffectSpellClassMaskB_2': 4, 'EffectSpellClassMaskC_1': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+frozen_power_63373 = _talent(
+    63373, 'Frozen Power', 'Rank 1',
+    [_dummy(32)], 3780,
+    _cap('Your Frost Shock has a 33% chance to freeze the target in place for 3 sec.',
+          "While Frostbrand is active, your Elemental Blast also creates a Blizzard at the target's location for 8 sec, dealing " + _BLIZZARD_TEXT + " Frost damage every 1 sec to all enemies inside it.", last=False),
+    notes='S3a A2: rank 1: the stock damage-vs-slowed clause is gone; eff1 DUMMY 33 = the freeze chance (read by spell_sha_enh_frozen_power from the rank, L-8). spell_proc -63373: Frost Shock (d0 b31) and Elemental Blast (d2 b20) hits, the script rolls. Rank 3 is 202375 (A3, same effect 1).',
 )
 
 
-frozen_power_63374 = spell(
-    id=63374,
-    name='Frozen Power',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
-    effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=107, misc_value=23),
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-    ],
-    spell_icon_id=3780,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Lightning Bolt, Chain Lightning, Lava Lash and Shock spells by $s1% on targets afflicted by your Frostbrand Attack effect, and your Frost Shock has a $s2% chance to root the target in ice for $63685d. when used on targets at or further than $63685s1 yards from you.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16777216, 'EffectSpellClassMaskB_2': 4, 'EffectSpellClassMaskC_1': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 11},
+frozen_power_63374 = _talent(
+    63374, 'Frozen Power', 'Rank 2',
+    [_dummy(65)], 3780,
+    _cap('Your Frost Shock has a 66% chance to freeze the target in place for 3 sec.',
+          "While Frostbrand is active, your Elemental Blast also creates a Blizzard at the target's location for 8 sec, dealing " + _BLIZZARD_TEXT + " Frost damage every 1 sec to all enemies inside it.", last=False),
+    notes='S3a A2: rank 2: the stock damage-vs-slowed clause is gone; eff1 DUMMY 66 = the freeze chance (read by spell_sha_enh_frozen_power from the rank, L-8). spell_proc -63373: Frost Shock (d0 b31) and Elemental Blast (d2 b20) hits, the script rolls. Rank 3 is 202375 (A3, same effect 1).',
 )
 
 
@@ -4016,3 +3623,417 @@ scripted_by(331, 'spell_sha_resto_healing_wave')
 scripted_by(8004, 'spell_sha_resto_healing_wave')
 scripted_by(5394, 'spell_sha_resto_healing_stream_totem')
 scripted_by(8170, 'spell_sha_resto_cleansing_totem')
+
+# =====================================================================================================================
+# S3a A2 (shaman-rework S3a WP brief, docs/reworks/shaman-enhancement-rework.md section 5): the stock Enhancement rank spells that
+# were bare ints in shaman_talents.py are declared here (rewritten in place, `_talent()` builds from an empty row so no stale raw twin
+# survives), plus Maelstrom Weapon's buff 53817 and Frozen Power's root 63685 (pulled from npc.csv, rows deleted there).
+# Stored base_points = live - 1. Ranks 4 / 5 of Ancestral Knowledge, Thundering Strikes, Toughness, Flurry and Maelstrom Weapon leave
+# the talents (A1's rank lists); their stock rows are untouched and unreferenced.
+# =====================================================================================================================
+
+
+toughness_16252 = _talent(
+    16252, 'Toughness', 'Rank 1',
+    [_aura(AuraType.MOD_BASE_RESISTANCE_PCT, 3, 1), _aura(232, -11, 11)], 52,
+    _cap('Increases your armor value from items by 4% and reduces the duration of movement slowing effects on you by 10%.',
+          'While you are below 35% health, your Stoneskin erodes 50% slower.', last=False),
+    notes='S3a A2: pulled stock rank, rewritten. Item armor +4% (aura 142 physical; the stock Stamina clause is gone), snare duration -10% (aura 232 misc 11). The capstone (rank 3) is Shaman::ErodeStoneskin. Ranks 4 and 5 (16308 / 16309) leave the talent.',
+)
+
+
+anticipation_16254 = _talent(
+    16254, 'Anticipation', 'Rank 1',
+    [_aura(AuraType.MOD_DODGE_PERCENT, 0), _aura(234, -21, 3)], 229,
+    'Increases your chance to dodge by 1% and reduces the duration of Disarm effects used against you by 20%. Does not stack with other Disarm duration reducing effects.',
+    notes='S3a A2: pulled stock rank, rewritten. Dodge +1% (aura 49), disarm duration -20% (aura 234 MECHANIC_DURATION_MOD_NOT_STACK, misc 3 = disarm: the "does not stack" rule is the aura type).',
+)
+
+
+thundering_strikes_16255 = _talent(
+    16255, 'Thundering Strikes', 'Rank 1',
+    [_aura(AuraType.MOD_CRIT_PCT, 0)], 25,
+    _cap('Increases your chance to get a critical strike with all spells and attacks by 1%.',
+          'Your spell casts have a 10% chance to increase your Agility by an amount equal to your level for 12 sec. This effect can only occur once every 6 sec.', last=False),
+    notes='S3a A2: pulled stock rank, rewritten. All crit +1% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair).',
+)
+
+
+flurry_16256 = _talent(
+    16256, 'Flurry', 'Rank 1',
+    [Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, trigger_spell=16257)], 108,
+    'Increases your melee attack speed by 3% for your next 3 swings after dealing a melee critical strike.',
+    AttributesEx3=0x4000000, ProcChance=100, ProcTypeMask=20,
+    notes='S3a A2: pulled stock rank, rewritten. aura 231 PROC_TRIGGER_SPELL_WITH_VALUE bp 2 (= 3%) -> the single buff 16257 (its effect 0 takes the value; no level scaling). The proc row -16256 (melee crit, HIT) and the ProcTypeMask / AttributesEx3 of the stock rank are kept. 16277-16280 and ranks 4 / 5 (16283 / 16284) are no longer referenced.',
+)
+
+
+spirit_weapons_16268 = _talent(
+    16268, 'Spirit Weapons', 'Rank 1',
+    [_mod(SpellModOp.DAMAGE, 4)], 558,
+    "Increases the damage of your Stormstrike and Windfury Attacks by 5%.",
+    masks={1: (m.WINDFURY_ATTACK, 0, 0x1400)},
+    notes="S3a A2: pulled stock rank, rewritten. +5% on the Stormstrike strikes 32175 / 32176 (d2 b10 / b12) and Windfury Attacks (d0 b23). The stock LEARN_SPELL effects (Parry 18848, threat 36591) are gone: Parry is Spirit Guard's now. Ranks 2 / 3 (202373 / 202374) are A3's and must keep effect 1 = the damage mod.",
+)
+
+
+anticipation_16271 = _talent(
+    16271, 'Anticipation', 'Rank 2',
+    [_aura(AuraType.MOD_DODGE_PERCENT, 1), _aura(234, -36, 3)], 229,
+    'Increases your chance to dodge by 2% and reduces the duration of Disarm effects used against you by 35%. Does not stack with other Disarm duration reducing effects.',
+    notes='S3a A2: pulled stock rank, rewritten. Dodge +2% (aura 49), disarm duration -35% (aura 234 MECHANIC_DURATION_MOD_NOT_STACK, misc 3 = disarm: the "does not stack" rule is the aura type).',
+)
+
+
+anticipation_16272 = _talent(
+    16272, 'Anticipation', 'Rank 3',
+    [_aura(AuraType.MOD_DODGE_PERCENT, 2), _aura(234, -51, 3)], 229,
+    'Increases your chance to dodge by 3% and reduces the duration of Disarm effects used against you by 50%. Does not stack with other Disarm duration reducing effects.',
+    notes='S3a A2: pulled stock rank, rewritten. Dodge +3% (aura 49), disarm duration -50% (aura 234 MECHANIC_DURATION_MOD_NOT_STACK, misc 3 = disarm: the "does not stack" rule is the aura type).',
+)
+
+
+flurry_16281 = _talent(
+    16281, 'Flurry', 'Rank 2',
+    [Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, trigger_spell=16257)], 108,
+    'Increases your melee attack speed by 6% for your next 3 swings after dealing a melee critical strike.',
+    AttributesEx3=0x4000000, ProcChance=100, ProcTypeMask=20,
+    notes='S3a A2: pulled stock rank, rewritten. aura 231 PROC_TRIGGER_SPELL_WITH_VALUE bp 5 (= 6%) -> the single buff 16257 (its effect 0 takes the value; no level scaling). The proc row -16256 (melee crit, HIT) and the ProcTypeMask / AttributesEx3 of the stock rank are kept. 16277-16280 and ranks 4 / 5 (16283 / 16284) are no longer referenced.',
+)
+
+
+flurry_16282 = _talent(
+    16282, 'Flurry', 'Rank 3',
+    [Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, trigger_spell=16257)], 108,
+    'Increases your melee attack speed by 10% for your next 3 swings after dealing a melee critical strike.',
+    AttributesEx3=0x4000000, ProcChance=100, ProcTypeMask=20,
+    notes='S3a A2: pulled stock rank, rewritten. aura 231 PROC_TRIGGER_SPELL_WITH_VALUE bp 9 (= 10%) -> the single buff 16257 (its effect 0 takes the value; no level scaling). The proc row -16256 (melee crit, HIT) and the ProcTypeMask / AttributesEx3 of the stock rank are kept. 16277-16280 and ranks 4 / 5 (16283 / 16284) are no longer referenced.',
+)
+
+
+thundering_strikes_16302 = _talent(
+    16302, 'Thundering Strikes', 'Rank 2',
+    [_aura(AuraType.MOD_CRIT_PCT, 1)], 25,
+    _cap('Increases your chance to get a critical strike with all spells and attacks by 2%.',
+          'Your spell casts have a 10% chance to increase your Agility by an amount equal to your level for 12 sec. This effect can only occur once every 6 sec.', last=False),
+    notes='S3a A2: pulled stock rank, rewritten. All crit +2% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair).',
+)
+
+
+thundering_strikes_16303 = _talent(
+    16303, 'Thundering Strikes', 'Rank 3',
+    [_aura(AuraType.MOD_CRIT_PCT, 2), Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=202397)], 25,
+    _cap('Increases your chance to get a critical strike with all spells and attacks by 3%.',
+          'Your spell casts have a 10% chance to increase your Agility by an amount equal to your level for 12 sec. This effect can only occur once every 6 sec.', last=True),
+    ProcChance=10, ProcTypeMask=0x14000,
+    notes='S3a A2: pulled stock rank, rewritten. All crit +3% as aura 290 MOD_CRIT_PCT (replaces the stock aura 52 + 57 pair). Rank 3 eff2 PROC_TRIGGER_SPELL -> 202397 (Agility = level, A3); spell_proc 16303: HIT phase, SpellTypeMask damage|heal, 10%, ICD 6000, once per cast (spell_sha_enh_thundering_strikes). Ranks 4 and 5 (16304/16305) leave the talent.',
+)
+
+
+toughness_16306 = _talent(
+    16306, 'Toughness', 'Rank 2',
+    [_aura(AuraType.MOD_BASE_RESISTANCE_PCT, 6, 1), _aura(232, -21, 11)], 52,
+    _cap('Increases your armor value from items by 7% and reduces the duration of movement slowing effects on you by 20%.',
+          'While you are below 35% health, your Stoneskin erodes 50% slower.', last=False),
+    notes='S3a A2: pulled stock rank, rewritten. Item armor +7% (aura 142 physical; the stock Stamina clause is gone), snare duration -20% (aura 232 misc 11). The capstone (rank 3) is Shaman::ErodeStoneskin. Ranks 4 and 5 (16308 / 16309) leave the talent.',
+)
+
+
+toughness_16307 = _talent(
+    16307, 'Toughness', 'Rank 3',
+    [_aura(AuraType.MOD_BASE_RESISTANCE_PCT, 9, 1), _aura(232, -31, 11)], 52,
+    _cap('Increases your armor value from items by 10% and reduces the duration of movement slowing effects on you by 30%.',
+          'While you are below 35% health, your Stoneskin erodes 50% slower.', last=True),
+    notes='S3a A2: pulled stock rank, rewritten. Item armor +10% (aura 142 physical; the stock Stamina clause is gone), snare duration -30% (aura 232 misc 11). The capstone (rank 3) is Shaman::ErodeStoneskin. Ranks 4 and 5 (16308 / 16309) leave the talent.',
+)
+
+
+ancestral_knowledge_17485 = _talent(
+    17485, 'Ancestral Knowledge', 'Rank 1',
+    [_aura(AuraType.MOD_TOTAL_STAT_PERCENTAGE, 1, 3), _mod(SpellModOp.COST, -4)], 228,
+    'Increases your Intellect by 2%. Reduces the mana cost of your Shaman spells by 3%.',
+    masks={2: (0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF)},
+    notes='S3a A2: pulled stock rank, rewritten. eff1 Intellect +2% (aura 137 misc 3), eff2 mana cost -3% on every Shaman spell and totem (all-bit family-11 mask on purpose: the doc says "every Shaman spell and totem", imbue swaps included). Ranks 4 and 5 (17488/17489) leave the talent.',
+)
+
+
+ancestral_knowledge_17486 = _talent(
+    17486, 'Ancestral Knowledge', 'Rank 2',
+    [_aura(AuraType.MOD_TOTAL_STAT_PERCENTAGE, 3, 3), _mod(SpellModOp.COST, -7)], 228,
+    'Increases your Intellect by 4%. Reduces the mana cost of your Shaman spells by 6%.',
+    masks={2: (0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF)},
+    notes='S3a A2: pulled stock rank, rewritten. eff1 Intellect +4% (aura 137 misc 3), eff2 mana cost -6% on every Shaman spell and totem (all-bit family-11 mask on purpose: the doc says "every Shaman spell and totem", imbue swaps included). Ranks 4 and 5 (17488/17489) leave the talent.',
+)
+
+
+ancestral_knowledge_17487 = _talent(
+    17487, 'Ancestral Knowledge', 'Rank 3',
+    [_aura(AuraType.MOD_TOTAL_STAT_PERCENTAGE, 5, 3), _mod(SpellModOp.COST, -11)], 228,
+    'Increases your Intellect by 6%. Reduces the mana cost of your Shaman spells by 10%.',
+    masks={2: (0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF)},
+    notes='S3a A2: pulled stock rank, rewritten. eff1 Intellect +6% (aura 137 misc 3), eff2 mana cost -10% on every Shaman spell and totem (all-bit family-11 mask on purpose: the doc says "every Shaman spell and totem", imbue swaps included). Ranks 4 and 5 (17488/17489) leave the talent.',
+)
+
+
+weapon_mastery_29082 = _talent(
+    29082, 'Weapon Mastery', 'Rank 1',
+    [_aura(AuraType.MOD_DAMAGE_PERCENT_DONE, 2, 1)], 257,
+    'Increases the damage you deal with all weapons by 3%.',
+    notes='S3a A2: pulled stock rank, rewritten to the doc values: physical damage +3% (aura 79 misc 1).',
+)
+
+
+weapon_mastery_29084 = _talent(
+    29084, 'Weapon Mastery', 'Rank 2',
+    [_aura(AuraType.MOD_DAMAGE_PERCENT_DONE, 5, 1)], 257,
+    'Increases the damage you deal with all weapons by 6%.',
+    notes='S3a A2: pulled stock rank, rewritten to the doc values: physical damage +6% (aura 79 misc 1).',
+)
+
+
+weapon_mastery_29086 = _talent(
+    29086, 'Weapon Mastery', 'Rank 3',
+    [_aura(AuraType.MOD_DAMAGE_PERCENT_DONE, 9, 1)], 257,
+    'Increases the damage you deal with all weapons by 10%.',
+    notes='S3a A2: pulled stock rank, rewritten to the doc values: physical damage +10% (aura 79 misc 1).',
+)
+
+
+unleashed_rage_30802 = spell(
+    id=30802,
+    name='Unleashed Rage',
+    school=School.NORMAL,
+    attributes=80,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=65, base_points=2, implicit_target_a=1, apply_aura=AuraType.MOD_ATTACK_POWER_PCT),
+        Effect(type=65, base_points=2, implicit_target_a=1, apply_aura=167),
+    ],
+    spell_icon_id=2021,
+    notes='S3a A2: pulled stock rank, rewritten. The expertise effect (aura 240) is gone; the two area auras (raid, radius index 12) are attack power +3% (melee aura 166, ranged aura 167), group 1028 / 1029 behaviour unchanged. The damage clause (+3% while Shamanistic Rage / Elemental Ascendance) is the hidden aura 202406, applied by script; values are the UR_R1/R2/R3 consts.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Attack power increased.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Fire, Frost and Nature damage by 3% while Shamanistic Rage or Elemental Ascendance is active. Increases the attack power of all party and raid members by 3%. Does not stack with other similar effects.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectRadiusIndex_1': 12, 'EffectRadiusIndex_2': 12, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1},
+)
+
+
+unleashed_rage_30808 = spell(
+    id=30808,
+    name='Unleashed Rage',
+    school=School.NORMAL,
+    attributes=80,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=65, base_points=3, implicit_target_a=1, apply_aura=AuraType.MOD_ATTACK_POWER_PCT),
+        Effect(type=65, base_points=3, implicit_target_a=1, apply_aura=167),
+    ],
+    spell_icon_id=2021,
+    notes='S3a A2: pulled stock rank, rewritten. The expertise effect (aura 240) is gone; the two area auras (raid, radius index 12) are attack power +4% (melee aura 166, ranged aura 167), group 1028 / 1029 behaviour unchanged. The damage clause (+6% while Shamanistic Rage / Elemental Ascendance) is the hidden aura 202406, applied by script; values are the UR_R1/R2/R3 consts.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Attack power increased.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Fire, Frost and Nature damage by 6% while Shamanistic Rage or Elemental Ascendance is active. Increases the attack power of all party and raid members by 4%. Does not stack with other similar effects.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectRadiusIndex_1': 12, 'EffectRadiusIndex_2': 12, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1},
+)
+
+
+unleashed_rage_30809 = spell(
+    id=30809,
+    name='Unleashed Rage',
+    school=School.NORMAL,
+    attributes=80,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=65, base_points=4, implicit_target_a=1, apply_aura=AuraType.MOD_ATTACK_POWER_PCT),
+        Effect(type=65, base_points=4, implicit_target_a=1, apply_aura=167),
+    ],
+    spell_icon_id=2021,
+    notes='S3a A2: pulled stock rank, rewritten. The expertise effect (aura 240) is gone; the two area auras (raid, radius index 12) are attack power +5% (melee aura 166, ranged aura 167), group 1028 / 1029 behaviour unchanged. The damage clause (+9% while Shamanistic Rage / Elemental Ascendance) is the hidden aura 202406, applied by script; values are the UR_R1/R2/R3 consts.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Attack power increased.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Fire, Frost and Nature damage by 9% while Shamanistic Rage or Elemental Ascendance is active. Increases the attack power of all party and raid members by 5%. Does not stack with other similar effects.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectRadiusIndex_1': 12, 'EffectRadiusIndex_2': 12, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1},
+)
+
+
+dual_wield_specialization_30816 = spell(
+    id=30816,
+    name='Dual Wield Specialization',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, trigger_spell=202401),
+    ],
+    spell_icon_id=2023,
+    notes='S3a A2: moved here from rogue_trigger_spells.py (rogue file rows deleted; no rogue talent used them). aura 231 bp 1 (= 2%) -> the DWS buff 202401 (A3; aura 79 misc 28). spell_proc -30816: ProcFlags 0x800000 (off-hand auto attacks only, 0-verify h), Chance 20 x Proc Chance, no family, phase / type masks 0, no script.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your off-hand auto attacks have a 20% chance to increase your Fire, Frost and Nature damage by 2% for 8 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 8388608, 'RangeIndex': 1, 'SpellClassSet': 11},
+)
+
+
+dual_wield_specialization_30818 = spell(
+    id=30818,
+    name='Dual Wield Specialization',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, trigger_spell=202401),
+    ],
+    spell_icon_id=2023,
+    notes='S3a A2: moved here from rogue_trigger_spells.py (rogue file rows deleted; no rogue talent used them). aura 231 bp 3 (= 4%) -> the DWS buff 202401 (A3; aura 79 misc 28). spell_proc -30816: ProcFlags 0x800000 (off-hand auto attacks only, 0-verify h), Chance 20 x Proc Chance, no family, phase / type masks 0, no script.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your off-hand auto attacks have a 20% chance to increase your Fire, Frost and Nature damage by 4% for 8 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 8388608, 'RangeIndex': 1, 'SpellClassSet': 11},
+)
+
+
+dual_wield_specialization_30819 = spell(
+    id=30819,
+    name='Dual Wield Specialization',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, trigger_spell=202401),
+    ],
+    spell_icon_id=2023,
+    notes='S3a A2: moved here from rogue_trigger_spells.py (rogue file rows deleted; no rogue talent used them). aura 231 bp 5 (= 6%) -> the DWS buff 202401 (A3; aura 79 misc 28). spell_proc -30816: ProcFlags 0x800000 (off-hand auto attacks only, 0-verify h), Chance 20 x Proc Chance, no family, phase / type masks 0, no script.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your off-hand auto attacks have a 20% chance to increase your Fire, Frost and Nature damage by 6% for 8 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 8388608, 'RangeIndex': 1, 'SpellClassSet': 11},
+)
+
+
+maelstrom_weapon_53817 = spell(
+    id=53817,
+    name='Maelstrom Weapon',
+    school=School.NORMAL,
+    dispel=DispelType.MAGIC,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    duration_ms=30000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CASTING_TIME),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=272),
+    ],
+    spell_icon_id=3156,
+    notes='S3a A2: pulled from npc.csv (row deleted). Consume mask (both effects) = Lightning Bolt d0 b0, Chain Lightning d0 b1, Lesser Healing Wave d0 b7, Lava Burst d1 b12 (Healing Wave, Chain Heal and Hex dropped); text rewritten, aura text number-free. 5 stacks, 30 s, 1 charge per consumed cast, unchanged. The spell_proc row (CAST phase, REQ_SPELLMOD) carries the same mask. spell_sha_maelstrom_weapon (T10 4p) stays bound.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your next Lightning Bolt, Chain Lightning, Lava Burst or Lesser Healing Wave casts faster.', 'CastingTimeIndex': 1, 'CumulativeAura': 5, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cast time of your next Lightning Bolt, Chain Lightning, Lava Burst or Lesser Healing Wave by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 131, 'EffectSpellClassMaskA_2': 4096, 'EffectSpellClassMaskB_1': 131, 'EffectSpellClassMaskB_2': 4096, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcCharges': 1, 'ProcTypeMask': 81920, 'RangeIndex': 1, 'SpellClassMask_3': 512, 'SpellClassSet': 11},
+)
+
+
+freeze_63685 = spell(
+    id=63685,
+    name='Freeze',
+    school=School.FROST,
+    dispel=DispelType.MAGIC,
+    attributes=65536,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=50000.0,
+    duration_ms=3000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, mechanic=Mechanic.ROOT, implicit_target_a=6, apply_aura=AuraType.MOD_ROOT),
+    ],
+    spell_icon_id=193,
+    notes='S3a A2: pulled from npc.csv (row deleted). Frozen Power\'s root: 5 s -> 3 s, the latent EffectBasePoints_2/_3 and DieSides_2/_3 twins deleted, description and aura text rewritten (the stock damage-vs-slowed and range clauses are gone). Cast at the Frost Shock target by spell_sha_enh_frozen_power.',
+    raw_overrides={'AttributesEx3': 1073741824, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Frozen in place.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Freezes the target in place for $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 544, 'SpellClassSet': 11, 'SpellPriority': 50, 'SpellVisualID_1': 13466, 'StartRecoveryCategory': 133, 'BaseLevel': 1, 'SpellLevel': 1},
+)
+
+
+# ---- S3a A2: spell_proc rows and script swaps (every CAST / HIT row carries SpellPhaseMask, L9) --------------------------------------
+
+# Maelstrom Weapon: one negative row for the three-rank chain; Chance 0 = each rank's DBC ProcChance (7 / 14 / 21, x Proc Chance).
+# Autos (0x4) + melee spells (0x10), HIT phase, SpellTypeMask 0 so Stormstrike's own no-damage hit rolls, triggered hits may proc
+# (the script whitelists Windfury Attacks and the shaman's own Gusts).
+# The stock PPM rows (positive keys, base dump) go: they would duplicate the chain row.
+for _mw_rank in (51528, 51529, 51530, 51531, 51532):
+    remove_spell_proc(_mw_rank)
+procs_on(
+    -51528, proc_flags=0x14, spell_type_mask=0, spell_phase_mask=_PROC_PHASE_HIT, attributes_mask=2, chance=0,
+)
+# The buff 53817's consume row: same mask as the effects (Lightning Bolt, Chain Lightning, Lesser Healing Wave, Lava Burst).
+procs_on(
+    53817, proc_flags=0, family_name=11, family_mask=(0x83, _LAVA_BURST, 0), spell_phase_mask=1, attributes_mask=8,
+)
+
+# Static Shock: autos + melee spells either hand (the stock flags), HIT, SpellTypeMask 0 (the live row's 1 blocked Stormstrike's
+# no-damage hit), chance 5 / 10 / 15 from the rank ProcChance, ICD 1.5 s.
+procs_on(
+    -51525, proc_flags=12582932, spell_type_mask=0, spell_phase_mask=_PROC_PHASE_HIT, chance=0, cooldown_ms=1500,
+)
+unbind_script(-51525, 'spell_sha_static_shock')
+scripted_by(-51525, 'spell_sha_enh_static_shock')
+
+# Frozen Power: Frost Shock hits (d0 b31) and, for the rank 3 capstone, Elemental Blast hits (d2 b20); the script rolls from the rank.
+procs_on(
+    -63373, proc_flags=_PROC_DONE_SPELL_MAGIC_NEG, family_name=11, family_mask=(0x80000000, 0, m.ELEMENTAL_BLAST),
+    spell_type_mask=_PROC_TYPE_DAMAGE, spell_phase_mask=_PROC_PHASE_HIT, chance=100,
+)
+unbind_script(-63373, 'spell_sha_frozen_power')
+scripted_by(-63373, 'spell_sha_enh_frozen_power')
+
+# Earthen Power: the placement of Earthbind (the CAST of 2484, d2 b5; the root is triggered by the totem and never procs the
+# player). Replaces the inert HIT row of the same key. Chance 0 = the rank ProcChance 50 / 100 (x Proc Chance, capped at 100).
+procs_on(
+    -51523, proc_flags=0x14000, family_name=11, family_mask=(0, 0, m.EARTHBIND_ROOT), spell_phase_mask=1, chance=0,
+)
+
+# Improved Stormstrike: the stock mana proc is gone (the ranks are SpellMods and DUMMY values now).
+remove_spell_proc(-51521)
+
+# Dual Wield Specialization: off-hand auto attacks only (0-verify h), 20% x Proc Chance, no family, no phase / type masks.
+procs_on(-30816, proc_flags=0x00800000, chance=20)
+
+# Thundering Strikes capstone (rank 3 only), D5: damaging or healing spells only, 10% x Proc Chance, ICD 6 s. HIT phase with
+# SpellTypeMask DAMAGE | HEAL: SpellMgr requires a SpellPhaseMask for done-spell flags (0x4000 / 0x10000), and a CAST-phase event
+# carries MASK_ALL (no damage / heal is known yet), so the type filter only works at HIT, where Unit::ProcSkillsAndAuras derives
+# DAMAGE or HEAL from the real result (imbue swaps, totems, shields, Ghost Wolf, Purge and item spells are NO_DMG_HEAL and never
+# roll). HIT fires per target (and not for misses / immunes), and the 6 s cooldown only stops the rolls after a success, so the
+# row alone would roll once per target hit (S3a code review m1: Chain Lightning ~27%, a 5-target Fire Nova ~41%). The doc says
+# once per cast: spell_sha_enh_thundering_strikes (bound on 16303) claims the cast in CheckProc, before the chance roll, so only
+# the first target hit of each cast rolls.
+procs_on(
+    16303, proc_flags=0x14000, spell_type_mask=_PROC_TYPE_DAMAGE | 0x2, spell_phase_mask=_PROC_PHASE_HIT, chance=10, cooldown_ms=6000,
+)
+
+# Elemental Weapons capstone (rank 3 only): a Lava Lash (d2 b2, melee) or Lava Burst (d1 b12, magic) damage hit.
+procs_on(
+    29080, proc_flags=0x10010, family_name=11, family_mask=(0, _LAVA_BURST, _LAVA_LASH), spell_type_mask=_PROC_TYPE_DAMAGE,
+    spell_phase_mask=_PROC_PHASE_HIT, chance=100,
+)
+
+# Mental Quickness capstone (rank 3 only): direct melee-ability hits (the Stormstrike strikes 32175 / 32176 are TRIGGERED, hence
+# PROC_ATTR_TRIGGERED_CAN_PROC; Lava Lash) and direct damaging spell hits (shocks, Lightning Bolt, Chain Lightning, Lava Burst,
+# Elemental Blast). SpellTypeMask 0: Stormstrike's own hit carries no damage (NO_DMG_HEAL), so a DAMAGE filter would never see it; the
+# family mask already limits it to the listed spells and the script dedupes to once per cast.
+procs_on(
+    30814, proc_flags=0x10010, family_name=11,
+    family_mask=(_SHOCKS | _LB | _CL, 0x10 | _LAVA_BURST, 0x1400 | _LAVA_LASH | m.ELEMENTAL_BLAST),
+    spell_type_mask=0, spell_phase_mask=_PROC_PHASE_HIT, attributes_mask=2, chance=100,
+)

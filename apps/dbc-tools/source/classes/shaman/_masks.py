@@ -40,7 +40,7 @@ ROOT_DR = 0x4000                         # d2 b14: controlled-root DR, roots onl
 EARTHEN_WALL_SHIELD = 0x8000             # d2 b15 (SH0b)
 LIVING_EARTH_RESERVED = 0x10000          # d2 b16, reserved for the Enhancement stage
 IMBUE_AURA = 0x20000                     # d2 b17: Flametongue / Frostbrand / Windfury auras (8024 / 8033 / 8232)
-GUST_RESERVED = 0x40000                  # d2 b18, reserved for the Elemental stage
+GUST_RESERVED = 0x40000                  # d2 b18, reserved for the Enhancement stage
 EARTHQUAKE = 0x80000                     # d2 b19 (SH0b)
 ELEMENTAL_BLAST = 0x100000               # d2 b20 (SH0b)
 HEALING_RAIN = 0x200000                  # d2 b21 (SH0b)
@@ -81,3 +81,8 @@ UNDULATING_HEAL = CHAIN_HEAL_TOTEM_RESERVED      # d2 b23, Undulating Currents T
 MANA_TIDE_SUMMON = MANA_TIDE_RESERVED            # d0 b25, Mana Tide Totem summon
 MINOR_HEAL = 0x8000000                           # d2 b27, Purification reach: Totemic Focus placement heal + Nature's Guardian heal
 TIDAL_FORCE_CAST = 0x10000000                    # d2 b28, the Tidal Force castable 202654 (Tidal Mastery's cooldown cut)
+
+# --- S3a (Enhancement) aliases for the reserved bits ---
+LIVING_EARTH = LIVING_EARTH_RESERVED             # d2 b16, Living Earth castable 202361 (Guardian Totems absorb mod)
+GUST = GUST_RESERVED                             # d2 b18, Gust 202391 / splash 202392 (Improved Windfury)
+ENH_SPELL_HIT = 0x20000000                       # d2 b29, Flame Burst / Storm Burst / Blizzard tick (Improved Stormstrike aura 271 mask)

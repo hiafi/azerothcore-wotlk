@@ -65,7 +65,8 @@ HOT_BITS = (0, D1_EARTH_SHIELD | D1_EARTHLIVING | getattr(m, "EARTHLIVING_AURA",
 # stock shields legitimately carry d1 b10 in their own mask
 STOCK_SHIELD_ALLOW = (974, 379)
 
-# docs/reworks/shaman-restoration-rework.md section 4 + brief "Rank-id lists": (tier, col) -> (name, rank ids).
+# docs/reworks/shaman-restoration-rework.md section 4 + brief "Rank-id lists": (tier, col) -> (name, rank ids). Playtest fix pass
+# 2026-10-22 (P3): Mana Tide Totem (6,1) -> (5,1), Tidal Force (2,2) -> (3,1), Spirit Link Totem (6,2) -> (6,1).
 GRID = {
     (0, 0): ("Flowing Tides", (202640, 202641, 202642)),
     (0, 1): ("Improved Healing Wave", (16182, 16226, 16227)),
@@ -75,17 +76,17 @@ GRID = {
     (1, 2): ("Tidal Focus", (16179, 16214, 16215)),
     (2, 0): ("Improved Water Shield", (16180, 16196, 16198)),
     (2, 1): ("Earthen Bulwark", (16181,)),
-    (2, 2): ("Tidal Force", (202654,)),
     (2, 3): ("Ancestral Healing", (16176, 16235, 16240)),
+    (3, 1): ("Tidal Force", (202654,)),
     (3, 2): ("Tidal Mastery", (16194, 16218, 16219)),
     (4, 0): ("Healing Way", (29206, 29205, 29202)),
     (4, 1): ("Riptide", (61295,)),
     (4, 3): ("Torrent", (30864, 30865)),
     (5, 0): ("Rainfall", (202643, 202644)),
+    (5, 1): ("Mana Tide Totem", (16190,)),
     (5, 2): ("Purification", (16178, 16210, 16211)),
     (6, 0): ("Nature's Guardian", (30881, 30883)),
-    (6, 1): ("Mana Tide Totem", (16190,)),
-    (6, 2): ("Spirit Link Totem", (202645,)),
+    (6, 1): ("Spirit Link Totem", (202645,)),
     (6, 3): ("Restorative Totems", (16187, 16205, 16206)),
     (7, 0): ("Blessing of the Eternals", (51554, 51555)),
     (7, 1): ("Totemic Resonance", (202646,)),
@@ -99,7 +100,7 @@ GRID = {
     (9, 2): ("Kindling", (202650, 202651)),
     (10, 1): ("Cloudburst Totem", (202652,)),
 }
-EMPTY_CELLS = ((0, 3), (1, 3), (3, 0), (3, 1), (3, 3), (4, 2), (5, 1), (5, 3), (9, 0), (9, 3), (10, 0), (10, 2), (10, 3))
+EMPTY_CELLS = ((0, 3), (1, 3), (2, 2), (3, 0), (3, 3), (4, 2), (5, 3), (6, 2), (9, 0), (9, 3), (10, 0), (10, 2), (10, 3))
 RETIRED_TALENT = 591
 OLD_TIDAL_FORCE_SPELL = 55198
 

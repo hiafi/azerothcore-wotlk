@@ -296,7 +296,7 @@ def check_lightning_mastery_duration(entries: dict[int, dict]) -> list[str]:
 # and the rough damage cut (S1-FIX-REPORT table). (spell id, effect index in `entries_by_id`'s effectN, total potency)
 FIX_PASS_SUMMONS = (2062, 2894, 202272, 202273)
 FIX_PASS_POTENCY = (
-    (51505, 1, 80.7), (403, 1, 126.0), (421, 1, 79.6), (8042, 2, 60.0), (8050, 1, 32.3), (8050, 2, 10.8),
+    (51505, 1, 57.6), (403, 1, 126.0), (421, 1, 79.6), (8042, 2, 60.0), (8050, 1, 32.3), (8050, 2, 10.8),
     (8056, 2, 32.3), (202281, 1, 21.5), (202282, 1, 43.0), (202276, 1, 43.0), (202278, 1, 51.6),
     (202270, 1, 10.8), (8349, 1, 104.1),
 )

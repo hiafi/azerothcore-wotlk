@@ -44,7 +44,7 @@ Costs (new totems; the nearest stock analog's %, every one [tune]): Earthen Wall
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, RANGE_SELF, School
 from lib.dsl.registry import (
-    const, creature_model, creature_spell, creature_template, pot_text, scripted_by, skill_line_ability, spell,
+    const, creature_model, creature_spell, creature_template, pot_text, product, scripted_by, skill_line_ability, spell,
     talent_mult, tooltip_vars, trained_by, unbind_script,
 )
 
@@ -122,9 +122,15 @@ NOTE = 'shaman-rework SH0b A3: '
 # tooltip_vars 1216 (S1a A4; S1-NOTES section 5): Call of Flame's damage effect (eff1: Fire totems, Fire Nova) on the
 # Searing Totem 3599, Magma Totem 202268 and Fire Nova 1535 tooltips, `{pot1*cof}` through pot_text(..., var='cof'). The
 # rank ids are bare ints (the talent file imports the spell files). Lava Burst's own effect is in entry 1211.
+# S3a A4 (S3-NOTES section 14 Q2, user 2026-10-21): Molten Fury (Enhancement 60299, rank spells 202365-202367, eff1 = the
+# +10/20/30% SPELLMOD_DAMAGE) joins it as `mf`; `mfc` = Call of Flame x Molten Fury is read by the Magma Totem and Fire Nova
+# tooltips only (`var='mfc'`), never by the Searing Totem (Molten Fury's mask is d0 b2, never Searing's b30), which keeps `cof`.
+# The capstone ramp (+10% per pulse) is conditional and stays off every tooltip.
 shaman_firetotems_1216 = tooltip_vars(
-    1216, "Fire totems and Fire Nova: Call of Flame damage (eff A)",
+    1216, "Fire totems and Fire Nova: Call of Flame damage (eff A); Molten Fury (Magma Totem, Fire Nova only: mfc)",
     cof=talent_mult([16038, 16160, 16161], effect=1),
+    mf=talent_mult([202365, 202366, 202367], effect=1),
+    mfc=product('cof', 'mf'),
 )
 
 # =====================================================================================================================
@@ -227,6 +233,14 @@ unbind_script(6474, 'spell_sha_earthbind_totem')
 # =====================================================================================================================
 # Earthen Wall Totem (202261) and its shield (202262)
 # =====================================================================================================================
+# tooltip_vars 1225 (S3a A4, S3-NOTES section 14 Q2): Earth's Grasp (Enhancement 2101; 16043 / 16130), rank eff1 = the
+# +25/50% Earthen Wall absorb (read by GetEarthenWallAbsorb), on the shield and totem tooltips as `{pot1*egr}`. The radius and
+# cooldown effects are not absorb and stay off.
+shaman_ewall_1225 = tooltip_vars(
+    1225, "Earthen Wall absorb: Earth's Grasp (eff A)",
+    egr=talent_mult([16043, 16130], effect=1),
+)
+
 earthen_wall_shield_202262 = spell(
     id=202262, name='Earthen Wall', school=School.NATURE, dispel=DispelType.MAGIC, attributes=0, category=0,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0,
@@ -244,8 +258,9 @@ earthen_wall_shield_202262 = spell(
           'the engine) from the generated EffectBonusMultiplier_1. Family d2 b15; never d1 b5 / b10 or d0 b10 (the '
           'elemental-shield and NO_THREAT readers). Visual: Earth Shield state kit 7362 as a placeholder (V stage). '
           'Aura text number-free.',
+    tooltip_vars=shaman_ewall_1225,
     raw_overrides=_raw(
-        20, 'Absorbs {pot1} damage for $d.', 'A stone barrier absorbs damage.', base_level=False,
+        20, 'Absorbs {pot1*egr} damage for $d.', 'A stone barrier absorbs damage.', base_level=False,
         AttributesEx2=SPELL_ATTR2_IGNORE_LINE_OF_SIGHT, AttributesEx3=0x80,  # 0x80 = stack per caster (two shamans' shields coexist)
         SpellClassMask_3=m.EARTHEN_WALL_SHIELD,
         SpellVisualID_1=SV_EARTH_SHIELD_STATE,
@@ -257,7 +272,7 @@ earthen_wall_totem_202261 = _summon(
     202261, 'Earthen Wall Totem', 300274, SUMMON_PROPS_EARTH, TARGET_DEST_TARGET_ANY, 15000, 60000, 6, 40.0,
     ICON_EARTHEN_WALL, 20,
     "Summons an Earthen Wall Totem at a friendly target's feet for $d. When placed and every 2 sec, it shields the "
-    'target, absorbing ' + pot_text(earthen_wall_shield_202262) + ' damage for 6 sec. If the target\'s shield is still '
+    'target, absorbing ' + pot_text(earthen_wall_shield_202262, var='egr') + ' damage for 6 sec. If the target\'s shield is still '
     'full, the pulse shields the most injured ally within 40 yards instead. 1 min cooldown.',
     'Earthen Wall Totem, learned at 20 (trainer 210), replaces Stoneclaw. 15 s, 1 min cooldown, 6% base mana [tune] '
     '(Stoneclaw\'s), GCD 1000 / 133. P0 spike 6b / A9 shape: eff0 SUMMON creature 300274 (props 81) at the explicit '
@@ -265,6 +280,7 @@ earthen_wall_totem_202261 = _summon(
     'ally, CheckTarget enforces it and spell_sha_earthen_wall hands the totem its GUID. 40 yd. Family d0 b3 + b29. '
     'Visual: Stoneclaw\'s summon kit 362.',
     effects_extra=[Effect(type=EffectType.DUMMY, implicit_target_a=TARGET_UNIT_TARGET_ALLY)],
+    tooltip_vars=shaman_ewall_1225,
     SpellClassMask_1=m.EARTHEN_WALL_SUMMON | m.SUMMON_D0_B29,
     SpellVisualID_1=SV_EARTHEN_WALL_SUMMON,
 )
@@ -391,7 +407,7 @@ magma_totem_passive_202269 = spell(
 
 magma_totem_ground_202268 = _summon(
     202268, 'Magma Totem', 300277, SUMMON_PROPS_FIRE, TARGET_DEST_DEST, 15000, 30000, 27, 30.0, ICON_MAGMA, 26,
-    'Summons a Magma Totem at the target location for $d that deals ' + pot_text(magma_totem_8187, var='cof')
+    'Summons a Magma Totem at the target location for $d that deals ' + pot_text(magma_totem_8187, var='mfc')
     + ' Fire damage to all enemies within 8 yards every 1.5 sec. 30 sec cooldown.',
     'Magma Totem, learned at 26 (trainer 210); the player id (ground targeting would break the NPC casters of 8190, '
     'SAI 2555 / 17235, which keep the stock spell, creature 5929 and passive 8188). Ground-targeted (A=87 + Targets '

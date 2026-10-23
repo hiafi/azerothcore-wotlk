@@ -124,6 +124,7 @@ ICON_RIPTIDE = 3786                   # Riptide
 SV_AIR_SUMMON = 319
 SV_FIRE_SUMMON = 221
 SV_TIDAL_FORCE = 12092                # the stock Tidal Force 55198's visual
+SV_CHAIN_HEAL = 3659                  # the stock Chain Heal 1064's visual: its cast kit 3169 carries the beam (SpellChainEffects 736)
 
 # Stock totem displays (CreatureDisplayInfo): earth 4588, fire 4589, water 4587, air 4590.
 DISPLAY_WATER_TOTEM = 4587
@@ -410,11 +411,14 @@ undulating_currents_heal_202663 = spell(
           '(npc_sha_undulating_currents_totem, no owner GUID: no shaman proc rolls) at the most injured player within '
           '40 yd; spell_sha_resto_undulating_heal (OnObjectAreaTargetSelect on target type 45) clears and rebuilds the '
           'jump list from Heal::SelectMostInjured (players only, by percent). range 50000 + AttributesEx2 0x4 as the '
-          'other totem heals. Family d2 b23 (Kindling, Purification; never Healing Way, which covers CH d0 b8 only).',
+          'other totem heals. Family d2 b23 (Kindling, Purification; never Healing Way, which covers CH d0 b8 only). '
+          '2026-10-22 playtest fix pass (P4): SpellVisualID_1 3659 = Chain Heal 1064\'s, so the cast kit 3169 (SpellChainEffects 736) '
+          'draws the beam from the casting totem to the primary and on to each jump (the client chains the beam through the SMSG_SPELL_GO '
+          'target list, which follows the rebuilt jump order); the impact kit 3170 plays on every target.',
     raw_overrides=_raw(
         'Heals the target for {pot1} and jumps to 2 additional allies.', '', 50,
         DefenseType=1, PreventionType=1, AttributesEx2=ATTR2_IGNORE_LOS,
-        SpellClassMask_3=m.UNDULATING_HEAL, EffectChainAmplitude_1=0.6,
+        SpellClassMask_3=m.UNDULATING_HEAL, EffectChainAmplitude_1=0.6, SpellVisualID_1=SV_CHAIN_HEAL,
     ),
 )
 scripted_by(undulating_currents_heal_202663, 'spell_sha_resto_undulating_heal')

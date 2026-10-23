@@ -6,8 +6,8 @@ Split from a single source/classes/shaman.py via split_class_file.py (.agents/pl
 
 from lib.dsl.registry import granted_by_talent, retire_talent, tab
 from .shaman_restoration import cloudburst_totem_202652, spirit_link_totem_202645, tidal_force_castable_202654, undulating_currents_totem_202647
-from .shaman_spells import cleanse_spirit_51886, earth_shield_974, elemental_mastery_16166, feral_spirit_51533, lava_lash_60103, mana_tide_totem_16190, riptide_61295, shamanistic_rage_30823, stormstrike_17364, thunderstorm_51490, totem_of_wrath_30706
-from .shaman_trigger_spells import ancestral_awakening_51556, ancestral_awakening_51557, ancestral_awakening_51558, ancestral_healing_16176, ancestral_healing_16235, ancestral_healing_16240, astral_shift_51474, astral_shift_51478, blessing_of_the_eternals_51554, blessing_of_the_eternals_51555, booming_echoes_63370, booming_echoes_63372, call_of_flame_16038, call_of_flame_16160, call_of_flame_16161, call_of_thunder_16041, concussion_16035, concussion_16105, concussion_16106, convection_16039, convection_16109, convection_16110, earth_s_grasp_16043, earth_s_grasp_16130, earthen_power_51523, earthen_power_51524, elemental_devastation_29179, elemental_devastation_29180, elemental_devastation_30160, elemental_focus_16164, elemental_fury_16089, elemental_fury_60184, elemental_fury_60185, elemental_oath_51466, elemental_oath_51470, elemental_precision_30672, elemental_precision_30673, elemental_precision_30674, elemental_reach_28999, elemental_reach_29000, elemental_warding_28996, elemental_warding_28997, elemental_warding_28998, elemental_weapons_16266, elemental_weapons_29079, elemental_weapons_29080, enhancing_totems_16259, enhancing_totems_16295, enhancing_totems_52456, eye_of_the_storm_29062, eye_of_the_storm_29064, eye_of_the_storm_29065, focused_mind_30864, focused_mind_30865, focused_mind_30866, frozen_power_63373, frozen_power_63374, guardian_totems_16258, guardian_totems_16293, earthen_bulwark_16181, healing_focus_16230, healing_focus_16232, healing_grace_29187, healing_grace_29189, healing_grace_29191, healing_way_29202, healing_way_29205, healing_way_29206, improved_chain_heal_30872, improved_chain_heal_30873, improved_earth_shield_51560, improved_earth_shield_51561, improved_fire_nova_16086, improved_fire_nova_16544, improved_ghost_wolf_16262, improved_ghost_wolf_16287, improved_healing_wave_16182, improved_healing_wave_16226, improved_healing_wave_16227, improved_healing_wave_16228, improved_healing_wave_16229, improved_reincarnation_16184, improved_reincarnation_16209, improved_shields_16261, improved_shields_16290, improved_shields_51881, improved_stormstrike_51521, improved_stormstrike_51522, improved_water_shield_16180, improved_water_shield_16196, improved_water_shield_16198, improved_windfury_totem_29192, improved_windfury_totem_29193, lava_flows_51480, lava_flows_51481, lava_flows_51482, lightning_mastery_16578, lightning_mastery_16579, lightning_mastery_16580, lightning_overload_30675, lightning_overload_30678, lightning_overload_30679, maelstrom_weapon_51528, maelstrom_weapon_51529, maelstrom_weapon_51530, maelstrom_weapon_51531, maelstrom_weapon_51532, mental_dexterity_51883, mental_dexterity_51884, mental_dexterity_51885, mental_quickness_30812, mental_quickness_30813, mental_quickness_30814, nature_s_blessing_30867, nature_s_blessing_30868, nature_s_blessing_30869, nature_s_guardian_30881, nature_s_guardian_30883, nature_s_guardian_30884, nature_s_guardian_30885, nature_s_guardian_30886, purification_16178, purification_16210, purification_16211, purification_16212, purification_16213, restorative_totems_16187, restorative_totems_16205, restorative_totems_16206, reverberation_16040, reverberation_16113, reverberation_16114, shamanism_62097, shamanism_62098, shamanism_62099, shamanistic_focus_43338, static_shock_51525, static_shock_51526, static_shock_51527, storm_earth_and_fire_51483, storm_earth_and_fire_51485, storm_earth_and_fire_51486, tidal_focus_16179, tidal_focus_16214, tidal_focus_16215, tidal_focus_16216, tidal_focus_16217, tidal_mastery_16194, tidal_mastery_16218, tidal_mastery_16219, tidal_mastery_16220, tidal_mastery_16221, tidal_waves_51562, tidal_waves_51563, tidal_waves_51564, tidal_waves_51565, tidal_waves_51566, totemic_focus_16173, totemic_focus_16222, totemic_focus_16223, totemic_focus_16224, totemic_focus_16225, unrelenting_storm_30664, unrelenting_storm_30665, unrelenting_storm_30666
+from .shaman_spells import elemental_mastery_16166, mana_tide_totem_16190, riptide_61295, thunderstorm_51490
+from .shaman_trigger_spells import ancestral_awakening_51556, ancestral_awakening_51557, ancestral_awakening_51558, ancestral_healing_16176, ancestral_healing_16235, ancestral_healing_16240, astral_shift_51474, astral_shift_51478, blessing_of_the_eternals_51554, blessing_of_the_eternals_51555, booming_echoes_63370, booming_echoes_63372, call_of_flame_16038, call_of_flame_16160, call_of_flame_16161, call_of_thunder_16041, concussion_16035, concussion_16105, concussion_16106, convection_16039, convection_16109, convection_16110, elemental_devastation_29179, elemental_devastation_29180, elemental_devastation_30160, elemental_focus_16164, elemental_fury_16089, elemental_fury_60184, elemental_fury_60185, elemental_oath_51466, elemental_oath_51470, elemental_precision_30672, elemental_precision_30673, elemental_precision_30674, elemental_reach_28999, elemental_reach_29000, elemental_warding_28996, elemental_warding_28997, elemental_warding_28998, eye_of_the_storm_29062, eye_of_the_storm_29064, eye_of_the_storm_29065, focused_mind_30864, focused_mind_30865, earthen_bulwark_16181, healing_grace_29187, healing_grace_29189, healing_grace_29191, healing_way_29202, healing_way_29205, healing_way_29206, improved_chain_heal_30872, improved_chain_heal_30873, improved_earth_shield_51560, improved_earth_shield_51561, improved_fire_nova_16086, improved_fire_nova_16544, improved_healing_wave_16182, improved_healing_wave_16226, improved_healing_wave_16227, improved_reincarnation_16184, improved_reincarnation_16209, improved_water_shield_16180, improved_water_shield_16196, improved_water_shield_16198, lava_flows_51480, lava_flows_51481, lava_flows_51482, lightning_mastery_16578, lightning_mastery_16579, lightning_mastery_16580, lightning_overload_30675, lightning_overload_30678, lightning_overload_30679, nature_s_blessing_30867, nature_s_blessing_30868, nature_s_blessing_30869, nature_s_guardian_30881, nature_s_guardian_30883, purification_16178, purification_16210, purification_16211, restorative_totems_16187, restorative_totems_16205, restorative_totems_16206, reverberation_16040, reverberation_16113, reverberation_16114, shamanism_62097, shamanism_62098, shamanism_62099, storm_earth_and_fire_51483, storm_earth_and_fire_51485, storm_earth_and_fire_51486, tidal_focus_16179, tidal_focus_16214, tidal_focus_16215, tidal_mastery_16194, tidal_mastery_16218, tidal_mastery_16219, tidal_waves_51562, tidal_waves_51563, tidal_waves_51564, totemic_focus_16173, totemic_focus_16222, totemic_focus_16223, unrelenting_storm_30664, unrelenting_storm_30665, unrelenting_storm_30666
 
 
 elemental_261_tab = tab(
@@ -144,8 +144,8 @@ granted_by_talent(
 granted_by_talent(
     id=582,
     tab=restoration_262_tab,
-    tier=2,
-    column=2,
+    tier=3,
+    column=1,
     ranks=[tidal_force_castable_202654],
     player_castable=False,
     flags=1,
@@ -205,7 +205,7 @@ granted_by_talent(
 granted_by_talent(
     id=590,
     tab=restoration_262_tab,
-    tier=6,
+    tier=5,
     column=1,
     ranks=[mana_tide_totem_16190],
     player_castable=False,
@@ -268,9 +268,8 @@ granted_by_talent(
     tab=enhancement_263_tab,
     tier=3,
     column=1,
-    ranks=[16256, 16281, 16282, 16283, 16284],
+    ranks=[16256, 16281, 16282],
     player_castable=False,
-    depends_on={'talent_id': 613, 'rank': 4},
 )
 
 
@@ -279,7 +278,7 @@ granted_by_talent(
     tab=enhancement_263_tab,
     tier=1,
     column=2,
-    ranks=[improved_ghost_wolf_16262, improved_ghost_wolf_16287],
+    ranks=[16262, 16287],
     player_castable=False,
 )
 
@@ -289,7 +288,7 @@ granted_by_talent(
     tab=enhancement_263_tab,
     tier=1,
     column=3,
-    ranks=[improved_shields_16261, improved_shields_16290, improved_shields_51881],
+    ranks=[16261, 16290, 51881],
     player_castable=False,
 )
 
@@ -299,7 +298,7 @@ granted_by_talent(
     tab=enhancement_263_tab,
     tier=1,
     column=0,
-    ranks=[guardian_totems_16258, guardian_totems_16293],
+    ranks=[16258, 16293],
     player_castable=False,
 )
 
@@ -309,7 +308,7 @@ granted_by_talent(
     tab=enhancement_263_tab,
     tier=0,
     column=0,
-    ranks=[enhancing_totems_16259, enhancing_totems_16295, enhancing_totems_52456],
+    ranks=[16259, 16295, 52456],
     player_castable=False,
 )
 
@@ -319,7 +318,7 @@ granted_by_talent(
     tab=enhancement_263_tab,
     tier=2,
     column=0,
-    ranks=[elemental_weapons_16266, elemental_weapons_29079, elemental_weapons_29080],
+    ranks=[16266, 29079, 29080],
     player_castable=False,
 )
 
@@ -327,9 +326,9 @@ granted_by_talent(
 granted_by_talent(
     id=613,
     tab=enhancement_263_tab,
-    tier=1,
+    tier=2,
     column=1,
-    ranks=[16255, 16302, 16303, 16304, 16305],
+    ranks=[16255, 16302, 16303],
     player_castable=False,
 )
 
@@ -339,7 +338,7 @@ granted_by_talent(
     tab=enhancement_263_tab,
     tier=0,
     column=2,
-    ranks=[17485, 17486, 17487, 17488, 17489],
+    ranks=[17485, 17486, 17487],
     player_castable=False,
 )
 
@@ -349,7 +348,7 @@ granted_by_talent(
     tab=enhancement_263_tab,
     tier=3,
     column=2,
-    ranks=[16252, 16306, 16307, 16308, 16309],
+    ranks=[16252, 16306, 16307],
     player_castable=False,
 )
 
@@ -357,9 +356,9 @@ granted_by_talent(
 granted_by_talent(
     id=616,
     tab=enhancement_263_tab,
-    tier=4,
+    tier=5,
     column=1,
-    ranks=[16268],
+    ranks=[16268, 202373, 202374],
     player_castable=False,
 )
 
@@ -369,7 +368,7 @@ granted_by_talent(
     tab=enhancement_263_tab,
     tier=2,
     column=2,
-    ranks=[shamanistic_focus_43338],
+    ranks=[43338, 202371, 202372],
     player_castable=False,
     flags=1,
 )
@@ -390,7 +389,7 @@ granted_by_talent(
     tab=enhancement_263_tab,
     tier=6,
     column=2,
-    ranks=[stormstrike_17364],
+    ranks=[17364],
     player_castable=False,
     flags=1,
 )
@@ -429,8 +428,8 @@ granted_by_talent(
 granted_by_talent(
     id=1643,
     tab=enhancement_263_tab,
-    tier=5,
-    column=2,
+    tier=3,
+    column=0,
     ranks=[29082, 29084, 29086],
     player_castable=False,
 )
@@ -461,7 +460,7 @@ granted_by_talent(
     tab=enhancement_263_tab,
     tier=4,
     column=0,
-    ranks=[improved_windfury_totem_29192, improved_windfury_totem_29193],
+    ranks=[29192, 29193],
     player_castable=False,
 )
 
@@ -521,7 +520,7 @@ granted_by_talent(
     tab=enhancement_263_tab,
     tier=8,
     column=0,
-    ranks=[mental_quickness_30812, mental_quickness_30813, mental_quickness_30814],
+    ranks=[30812, 30813, 30814],
     player_castable=False,
 )
 
@@ -541,7 +540,7 @@ granted_by_talent(
     tab=enhancement_263_tab,
     tier=8,
     column=1,
-    ranks=[shamanistic_rage_30823],
+    ranks=[30823],
     player_castable=False,
     flags=1,
 )
@@ -643,9 +642,8 @@ granted_by_talent(
     tab=enhancement_263_tab,
     tier=7,
     column=2,
-    ranks=[improved_stormstrike_51521, improved_stormstrike_51522],
+    ranks=[51521, 51522],
     player_castable=False,
-    depends_on={'talent_id': 901, 'rank': 0},
 )
 
 
@@ -654,7 +652,7 @@ granted_by_talent(
     tab=enhancement_263_tab,
     tier=7,
     column=0,
-    ranks=[static_shock_51525, static_shock_51526, static_shock_51527],
+    ranks=[51525, 51526, 51527],
     player_castable=False,
 )
 
@@ -664,7 +662,7 @@ granted_by_talent(
     tab=enhancement_263_tab,
     tier=8,
     column=2,
-    ranks=[earthen_power_51523, earthen_power_51524],
+    ranks=[51523, 51524],
     player_castable=False,
 )
 
@@ -674,7 +672,7 @@ granted_by_talent(
     tab=enhancement_263_tab,
     tier=9,
     column=1,
-    ranks=[maelstrom_weapon_51528, maelstrom_weapon_51529, maelstrom_weapon_51530, maelstrom_weapon_51531, maelstrom_weapon_51532],
+    ranks=[51528, 51529, 51530],
     player_castable=False,
 )
 
@@ -684,7 +682,7 @@ granted_by_talent(
     tab=enhancement_263_tab,
     tier=10,
     column=1,
-    ranks=[feral_spirit_51533],
+    ranks=[51533],
     player_castable=False,
     flags=1,
 )
@@ -746,7 +744,7 @@ granted_by_talent(
     tab=enhancement_263_tab,
     tier=4,
     column=2,
-    ranks=[mental_dexterity_51883, mental_dexterity_51884, mental_dexterity_51885],
+    ranks=[51883, 51884, 51885],
     player_castable=False,
 )
 
@@ -756,7 +754,7 @@ granted_by_talent(
     tab=enhancement_263_tab,
     tier=0,
     column=1,
-    ranks=[earth_s_grasp_16043, earth_s_grasp_16130],
+    ranks=[16043, 16130],
     player_castable=False,
 )
 
@@ -764,9 +762,9 @@ granted_by_talent(
 granted_by_talent(
     id=2249,
     tab=enhancement_263_tab,
-    tier=7,
+    tier=4,
     column=1,
-    ranks=[lava_lash_60103],
+    ranks=[60103],
     player_castable=False,
     flags=1,
 )
@@ -797,7 +795,7 @@ granted_by_talent(
     tab=enhancement_263_tab,
     tier=5,
     column=3,
-    ranks=[frozen_power_63373, frozen_power_63374],
+    ranks=[63373, 63374, 202375],
     player_castable=False,
 )
 
@@ -907,7 +905,7 @@ granted_by_talent(
     id=60312,
     tab=restoration_262_tab,
     tier=6,
-    column=2,
+    column=1,
     ranks=[spirit_link_totem_202645],
     player_castable=False,
     flags=1,
@@ -964,6 +962,75 @@ granted_by_talent(
     ranks=[cloudburst_totem_202652],
     player_castable=False,
     flags=1,
+)
+
+
+# S3a: the six new Enhancement talents (Enh talent block 60295-60309; rank spells 202360-202370 are declared in
+# shaman_enhancement.py and referenced by bare id, as in S1a). Living Earth's single rank IS the castable (202361):
+# player_castable=False because its SkillLineAbility (30680) is a standalone skill_line_ability() row in
+# shaman_enhancement.py (CotE precedent). Elemental Charge, Volcanic Eruption, Ascendance, Molten Fury and Spirit
+# Guard ranks are passive markers/carriers. No talent on tab 263 carries depends_on (doc Q19).
+
+granted_by_talent(
+    id=60295,
+    tab=enhancement_263_tab,
+    tier=1,
+    column=1,
+    ranks=[202360],
+    player_castable=False,
+    flags=1,
+)
+
+
+granted_by_talent(
+    id=60296,
+    tab=enhancement_263_tab,
+    tier=4,
+    column=3,
+    ranks=[202361],
+    player_castable=False,
+    flags=1,
+)
+
+
+granted_by_talent(
+    id=60297,
+    tab=enhancement_263_tab,
+    tier=5,
+    column=2,
+    ranks=[202362, 202363],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=60298,
+    tab=enhancement_263_tab,
+    tier=6,
+    column=1,
+    ranks=[202364],
+    player_castable=False,
+    flags=1,
+)
+
+
+granted_by_talent(
+    id=60299,
+    tab=enhancement_263_tab,
+    tier=6,
+    column=3,
+    ranks=[202365, 202366, 202367],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=60300,
+    tab=enhancement_263_tab,
+    tier=7,
+    column=1,
+    ranks=[202368, 202369, 202370],
+    player_castable=False,
 )
 
 

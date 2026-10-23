@@ -161,13 +161,13 @@ scripted_by(earthquake_202280, 'spell_sha_earthquake')
 # =====================================================================================================================
 elemental_blast_202282 = spell(
     id=202282, name='Elemental Blast', school=School.FIRE | School.FROST | School.NATURE, attributes=0,
-    cast_time_ms=0, cooldown_ms=12000, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=8, range_yards=40.0,
+    cast_time_ms=0, cooldown_ms=12000, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=6, range_yards=40.0,
     effects=[Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=43.0, potency_kind='direct', time_basis_ms=1500,
                     implicit_target_a=_TARGET_UNIT_TARGET_ENEMY)],
     spell_icon_id=_ICON_ELEMENTAL_BLAST,
     notes='SH0b A5, shared doc "Elemental Blast": instant, SchoolMask 0x1C (Fire 4 + Frost 16 + Nature 8: counts as '
           'all three for every school bonus), sp_potency 43 direct (was 100; x0.43 smoke-test fix pass 2026-10-20), T 1500, RecoveryTime 12000 (not Cooldown Haste: '
-          '< 30 s), 40 yd, 8% base mana, GCD 1500 / 133 (an explicit spell-GCD like Lava Burst, brief decision 4), '
+          '< 30 s), 40 yd, 6% base mana (was 8%; user playtest fix pass 2026-10-22, P1), GCD 1500 / 133 (an explicit spell-GCD like Lava Burst, brief decision 4), '
           'd2 b20 (no d0 b0 / b1, d1 b12). Speed 24 and SpellVisualID 11565 = Lava Burst\'s missile and impact (a '
           'lightning-impact clone of 11565 in the 90131+ block is the V stage). SpellLevel 50. Icon 1930 is a '
           'placeholder (the 3.3.5 client has no Elemental Blast icon).',
