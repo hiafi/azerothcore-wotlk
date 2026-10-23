@@ -383,7 +383,7 @@ struct AccountInfo
         Expansion = fields[5].Get<uint8>();
         Flags = fields[6].Get<uint32>();
         MuteTime = fields[7].Get<int64>();
-        Locale = LocaleConstant(fields[8].Get<uint8>());
+        Locale = GetLocaleByName(fields[8].Get<std::string>());
         Recruiter = fields[9].Get<uint32>();
         OS = fields[10].Get<std::string>();
         TotalTime = fields[11].Get<uint32>();
@@ -399,9 +399,6 @@ struct AccountInfo
         // live phase. World content gating (zones, instances, mechanics) is untouched -- those all
         // read CONFIG_EXPANSION directly, not this per-session value. See docs/bugs-and-fixes.md's
         // Death Knight trainer entry.
-
-        if (Locale >= TOTAL_LOCALES)
-            Locale = LOCALE_enUS;
     }
 };
 
