@@ -8,7 +8,7 @@
 # included) via apps/sim-reports (apps/wow-tools-webui's /reports/ page).
 #
 # This is the exact procedure that used to be run by hand each time (scratch etc/ dir, throwaway
-# `docker run`, flip AiPlayerbot.Enabled for the duration of the run) - see
+# `docker run`, flip Playerbots.Enabled for the duration of the run) - see
 # .agents/plans/dps-sim-module/dps-sim-module.PLAN.md's "Operational recipe" section for the
 # original manual version this replaces.
 #
@@ -396,14 +396,14 @@ printf '\nDpsSim.Enabled = 1\n' >> "$SCRATCH/etc/worldserver.conf"
 
 # SimBot::Create() needs a real, working PlayerbotAI - flip this on for the sim run regardless
 # of the live deployment's own playerbots.conf (confirmed 2026-09-12: the live server currently
-# runs with AiPlayerbot.Enabled = 0, which makes SimBot::Create() fail outright). Only affects
+# runs with Playerbots.Enabled = 0, which makes SimBot::Create() fail outright). Only affects
 # this throwaway scratch copy, never the real env/dist/etc/modules/playerbots.conf.
 set_playerbots_key() {
     local key="$1" value="$2" conf="$SCRATCH/etc/modules/playerbots.conf"
-    if grep -q "^AiPlayerbot\.${key}\b" "$conf"; then
-        sed -i "s/^AiPlayerbot\.${key}\b.*/AiPlayerbot.${key} = ${value}/" "$conf"
+    if grep -q "^Playerbots\.${key}\b" "$conf"; then
+        sed -i "s/^Playerbots\.${key}\b.*/Playerbots.${key} = ${value}/" "$conf"
     else
-        printf '\nAiPlayerbot.%s = %s\n' "$key" "$value" >> "$conf"
+        printf '\nPlayerbots.%s = %s\n' "$key" "$value" >> "$conf"
     fi
 }
 set_playerbots_key Enabled 1

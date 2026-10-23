@@ -219,7 +219,7 @@ namespace
         if (!bot.BeginBuffPhase())
             LOG_WARN("server.dpssim", "mod-dpssim: pre-pull buff phase - PlayerbotAI reports the bot inactive out of "
                 "combat (AllowActivity() false), so only relevance >= 100 triggers will run; set "
-                "AiPlayerbot.BotActiveAlone = 100 and AiPlayerbot.botActiveAloneSmartScale = 0 for the sim (run-sim.sh "
+                "Playerbots.BotActiveAlone = 100 and Playerbots.botActiveAloneSmartScale = 0 for the sim (run-sim.sh "
                 "does).");
 
         SimClock buffClock(config.StepMs, endMs - buffMs);

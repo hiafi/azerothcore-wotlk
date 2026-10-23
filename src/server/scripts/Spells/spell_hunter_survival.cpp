@@ -1078,7 +1078,8 @@ class spell_hun_point_of_no_escape : public AuraScript
 
 // 13810 Frost Trap aura (S3b B3, bare-id binding). Built: eff0 PERSISTENT_AREA_AURA with aura 33
 // (MOD_DECREASE_SPEED), the slow; eff1 aura 23, eff2 aura 308. The dynobj aura's caster is the hunter (the trap GO
-// casts through a world trigger with the owner as original caster). Each trap is a new aura, so REAL covers it.
+// casts itself with the owner as original caster, and the area aura goes to the original caster). Each trap is a new
+// aura, so REAL covers it.
 class spell_hun_frost_trap_aura_sv : public AuraScript
 {
     PrepareAuraScript(spell_hun_frost_trap_aura_sv);
@@ -1185,6 +1186,31 @@ class spell_hun_lock_and_load_rework : public AuraScript
     }
 };
 
+// 13812 Explosive Trap - the blast (eff0 SCHOOL_DAMAGE). The trap GO casts the spell itself with the hunter as original
+// caster (upstream #26152), and a GameObject caster rolls the base without a caster level: no RealPointsPerLevel
+// scaling past BaseLevel 34, no potency correction or variance, no spell mods. The old world trigger was the owner's
+// level and resolved spell mods through its owner, so the base is rolled again from the hunter. Coefficient, crit and
+// done/taken mods already come from the original caster.
+class spell_hun_explosive_trap_fire : public SpellScript
+{
+    PrepareSpellScript(spell_hun_explosive_trap_fire);
+
+    void HandleLaunchTarget(SpellEffIndex effIndex)
+    {
+        if (!GetGObjCaster())
+            return;
+
+        if (Unit* hunter = GetOriginalCaster())
+            SetEffectValue(hunter->CalculateSpellDamage(GetHitUnit(), GetSpellInfo(), effIndex));
+    }
+
+    void Register() override
+    {
+        OnEffectLaunchTarget += SpellEffectFn(spell_hun_explosive_trap_fire::HandleLaunchTarget, EFFECT_0,
+            SPELL_EFFECT_SCHOOL_DAMAGE);
+    }
+};
+
 // 13812 Explosive Trap - the ground fire (SURVIVAL §5.9, Q30 C5, S3b B5; the S2b half-Volley shape). Built after
 // S3b: eff0 SCHOOL_DAMAGE (the blast, untouched), eff1 PERSISTENT_AREA_AURA + PERIODIC_DUMMY (226, 2000 ms, unhasted).
 // DoEffectCalcAmount runs once, when the area aura is created; the same AuraScript instance then gets every
@@ -1193,9 +1219,9 @@ class spell_hun_lock_and_load_rework : public AuraScript
 // applies it per target. Victim-side terms are not in it (taken mods apply to 202057's own hit). Each application's
 // tick casts 202057 with the exact amount, the final tick weighted by GetFinalTickBonusMultiplier (a 20 s / 2 s trap
 // has no leftover, so 1.0). The cast passes aurEff: a dead hunter's ground fire stops (CheckCast: triggered-by-aura).
-class spell_hun_explosive_trap_fire : public AuraScript
+class spell_hun_explosive_trap_fire_aura : public AuraScript
 {
-    PrepareAuraScript(spell_hun_explosive_trap_fire);
+    PrepareAuraScript(spell_hun_explosive_trap_fire_aura);
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
@@ -1241,9 +1267,9 @@ class spell_hun_explosive_trap_fire : public AuraScript
 
     void Register() override
     {
-        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_hun_explosive_trap_fire::CalculateAmount, EFFECT_1,
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_hun_explosive_trap_fire_aura::CalculateAmount, EFFECT_1,
             SPELL_AURA_PERIODIC_DUMMY);
-        OnEffectPeriodic += AuraEffectPeriodicFn(spell_hun_explosive_trap_fire::HandlePeriodic, EFFECT_1,
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_hun_explosive_trap_fire_aura::HandlePeriodic, EFFECT_1,
             SPELL_AURA_PERIODIC_DUMMY);
     }
 
@@ -1489,7 +1515,7 @@ void AddSC_hunter_survival_spell_scripts()
     RegisterSpellScript(spell_hun_point_of_no_escape);
     RegisterSpellScript(spell_hun_frost_trap_aura_sv);
     RegisterSpellScript(spell_hun_lock_and_load_rework);
-    RegisterSpellScript(spell_hun_explosive_trap_fire);
+    RegisterSpellAndAuraScriptPair(spell_hun_explosive_trap_fire, spell_hun_explosive_trap_fire_aura);
     RegisterSpellScript(spell_hun_explosive_trap_fire_tick);
     RegisterSpellScript(spell_hun_freezing_trap_sv);
     RegisterSpellScript(spell_hun_wyvern_sting_rework);

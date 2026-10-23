@@ -621,7 +621,7 @@ scripted_by(13810, 'spell_hun_frost_trap_aura_sv')                          # Fr
 unbind_script(-56342, 'spell_hun_lock_and_load')                            # exact live key (stock script)
 for _rank in (56342, 56343, 56344):                                         # Lock and Load r1-r3
     scripted_by(_rank, 'spell_hun_lock_and_load_rework')
-scripted_by(13812, 'spell_hun_explosive_trap_fire')                         # Explosive Trap effect, eff1 PERIODIC_DUMMY
+scripted_by(13812, 'spell_hun_explosive_trap_fire')                         # Explosive Trap effect: eff0 blast, eff1 ground fire
 scripted_by(explosive_trap_fire_202057, 'spell_hun_explosive_trap_fire_tick')
 scripted_by(3355, 'spell_hun_freezing_trap_sv')                             # Freezing Trap Effect, eff0 MOD_STUN
 unbind_script(-19386, 'spell_hun_wyvern_sting')                             # exact live key (stock script)
