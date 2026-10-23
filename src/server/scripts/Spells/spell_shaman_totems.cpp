@@ -60,6 +60,9 @@ namespace
     // The Earthbind slow is a periodic trigger; its first tick is the placement pulse (EXTRA_INITIAL_PERIOD)
     constexpr uint32 EARTHBIND_PLACEMENT_TICK = 1;
 
+    // Molten Fury's ramping capstone is its third rank
+    constexpr uint8 MOLTEN_FURY_CAPSTONE_RANK = 3;
+
     // The id handed to the Earthen Wall totem AI through SetGUID (the shield target)
     constexpr int32 EARTHEN_WALL_TARGET_GUID_ID = 0;
 
@@ -708,6 +711,46 @@ class spell_sha_fire_nova_rework_damage : public SpellScript
     }
 };
 
+// 8187 Magma Totem pulse - Molten Fury's capstone (rank 3): the pulse deals MOLTEN_FURY_RAMP_PCT% more for each pulse
+// this totem already fired. The caster is the totem; its 202269 passive ticks once per pulse (the placement pulse is
+// tick 1, so the pulses already fired are tick - 1) and a new totem is a new aura, so the ramp restarts for free.
+// The stock Magma Totem (an NPC's 8188) shares 8187: only the player-side totem entry with a player owner ramps. The
+// flat 10/20/30% of the talent is data (a spell modifier on the pulse's own bit) and is not touched here.
+class spell_sha_enh_molten_fury : public SpellScript
+{
+    PrepareSpellScript(spell_sha_enh_molten_fury);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ ShamanData::SPELL_MAGMA_TOTEM_PASSIVE });
+    }
+
+    void HandleHit()
+    {
+        Unit* totem = GetCaster();
+        if (!totem || totem->GetEntry() != ShamanData::NPC_MAGMA_TOTEM)
+            return;
+
+        Player const* owner = Shaman::GetOwningPlayer(totem);
+        if (!owner || Shaman::GetTalentRank(owner, { ShamanData::SPELL_MOLTEN_FURY_RANK1,
+            ShamanData::SPELL_MOLTEN_FURY_RANK2, ShamanData::SPELL_MOLTEN_FURY_RANK3 }) < MOLTEN_FURY_CAPSTONE_RANK)
+            return;
+
+        AuraEffect const* pulse = totem->GetAuraEffect(ShamanData::SPELL_MAGMA_TOTEM_PASSIVE, EFFECT_0);
+        if (!pulse || pulse->GetTickNumber() <= 1)
+            return;
+
+        uint32 const fired = pulse->GetTickNumber() - 1;
+        float const factor = 1.0f + float(fired * uint32(ShamanData::MOLTEN_FURY_RAMP_PCT)) / 100.0f;
+        SetHitDamage(int32(float(GetHitDamage()) * factor));
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_sha_enh_molten_fury::HandleHit);
+    }
+};
+
 // 202531 Call of the Elements: summons every known elemental that is not already out for COTE_SUMMON_MS and extends
 // the active ones by COTE_EXTEND_MS. The summons are triggered full-mask casts, so they start neither their own 2 min
 // cooldown nor the shared lockout (Spell::SendSpellCooldown returns on TRIGGERED_IGNORE_SPELL_AND_CATEGORY_CD, and
@@ -819,4 +862,5 @@ void AddSC_shaman_totem_spell_scripts()
     RegisterSpellScript(spell_sha_fire_nova_rework);
     RegisterSpellScript(spell_sha_fire_nova_rework_damage);
     RegisterSpellScript(spell_sha_ele_call_of_the_elements);
+    RegisterSpellScript(spell_sha_enh_molten_fury);
 }

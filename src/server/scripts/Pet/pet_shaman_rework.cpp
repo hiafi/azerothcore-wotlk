@@ -39,19 +39,36 @@
  *  - npc_sha_water_elemental (300260), npc_sha_storm_elemental (300261): ranged casters, Doomguard shape
  *    (pet_warlock_rework.cpp): back-to-back 2 sec bolts, chase to ELEMENTAL_CHASE_RANGE_YD.
  *
+ * Elemental Spirit wolves (Enhancement, S3a; docs/reworks/shaman-enhancement-rework.md "Elemental Spirit wolves"):
+ *  - ShamanSpiritWolfPetScript: the stock Feral Spirit wolf setup (Pet.cpp:1310-1328) for entries 300262-300265 under
+ *    a player owner of any class (Classless), through PetScript::OnInitStatsForLevel (no core edit).
+ *  - npc_sha_fire_spirit (300262), npc_sha_frost_spirit (300263), npc_sha_wind_spirit (300264),
+ *    npc_sha_rock_spirit (300265): one melee base (targets from Engagement::SelectEngagedTarget, never an idle pull);
+ *    melee hits are queued from DamageDealt and acted on from UpdateAI (never a cast inside DealDamage). Fire casts
+ *    Spirit Flame Shock on every bite; Frost has no AI of its own (Shaman::OnStormstrikeLanded makes it cast the
+ *    Stormstrike copy); Wind rolls a Gust cast by the shaman; Rock taunts on summon and grants the shaman 1
+ *    Stoneskin per bite. Wolves build no Elemental Charge and roll none of the shaman's procs: every wolf spell is a
+ *    plain triggered cast by the wolf, and the Gust is a triggered cast by the shaman.
+ *
  * Every damage/heal here is cast by the totem or guardian itself with no original-caster GUID, so none of the
  * shaman's procs roll (A11). A missing or non-player owner never crashes: the AI just stays idle.
  */
 
+#include "Cell.h"
+#include "CellImpl.h"
+#include "Creature.h"
 #include "CreatureAI.h"
 #include "CreatureScript.h"
 #include "EngagementMechanics.h"
 #include "EventMap.h"
+#include "GridNotifiers.h"
+#include "GridNotifiersImpl.h"
 #include "HealMechanics.h"
 #include "Log.h"
 #include "MotionMaster.h"
 #include "ObjectAccessor.h"
 #include "PetDefines.h"
+#include "PetScript.h"
 #include "Player.h"
 #include "ScriptMgr.h"
 #include "ScriptedCreature.h"
@@ -61,10 +78,12 @@
 #include "SpellInfo.h"
 #include "SpellMgr.h"
 #include "TaskScheduler.h"
+#include "TemporarySummon.h"
 #include "Totem.h"
 #include "TotemAI.h"
 #include "Unit.h"
 #include <algorithm>
+#include <list>
 #include <vector>
 
 namespace
@@ -135,10 +154,36 @@ namespace
         EVENT_CASTER_ELEMENTAL_CAST = 2
     };
 
+    // Elemental Spirit wolves. Stock Feral Spirit weapon damage is (4L - L)..(4L + L) at attack time 1500
+    // (Pet.cpp:1310-1328, template BaseAttackTime); the wolf hook uses half of it (1.5L..2.5L, S3 trim 2026-10-22).
+    constexpr float WOLF_DAMAGE_MIN_PER_LEVEL = 1.5f;
+    constexpr float WOLF_DAMAGE_MAX_PER_LEVEL = 2.5f;
+    constexpr uint32 WOLF_ATTACK_TIME_MS = 1500;
+
+    // Queue cap (a wolf bites once per 1.5 s and the queue drains every update; the cap only bounds a stalled AI).
+    constexpr size_t WOLF_HIT_QUEUE_CAP = 8;
+
     Player* GetOwnerPlayer(Creature const* creature)
     {
         Unit* owner = creature->GetOwner();
         return owner ? owner->ToPlayer() : nullptr;
+    }
+
+    bool IsSpiritWolfEntry(uint32 entry)
+    {
+        return entry == uint32(ShamanData::NPC_FIRE_SPIRIT) || entry == uint32(ShamanData::NPC_FROST_SPIRIT) ||
+            entry == uint32(ShamanData::NPC_WIND_SPIRIT) || entry == uint32(ShamanData::NPC_ROCK_SPIRIT);
+    }
+
+    // True when any effect of `spellInfo` is immune on `target` (taunt: IMMUNITY_EFFECT ATTACK_ME or IMMUNITY_STATE
+    // MOD_TAUNT, set by flags_extra or creature_immunities rows; S3a-0VERIFY C10). Never a flags_extra test.
+    bool IsImmuneToAnyEffect(Unit const* target, SpellInfo const* spellInfo, WorldObject const* caster)
+    {
+        for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+            if (spellInfo->Effects[i].Effect && target->IsImmunedToSpellEffect(spellInfo, i, caster))
+                return true;
+
+        return false;
     }
 
     bool HasPowerOfTheElements(Player const* owner)
@@ -792,6 +837,263 @@ struct npc_sha_storm_elemental : public ShamanCasterElementalAI
         : ShamanCasterElementalAI(creature, ShamanData::SPELL_STORM_BOLT) { }
 };
 
+/*
+ * 300262-300265 - Elemental Spirit wolf stats. The new entries get none of the stock Feral Spirit setup that
+ * Guardian::InitStatsForLevel hardcodes on NPC_FERAL_SPIRIT (Pet.cpp:1310-1328), so it is replicated here: weapon
+ * damage 1.5L..2.5L at attack time 1500, the avoidance and hit/expertise auras, the three Feral Spirit scaling auras
+ * (spell_sha_feral_spirit_scaling reads the owner, never the entry) and the Orc racial. Not given: Spirit Hunt, Bash,
+ * Spirit Walk, Twin Howl (S3-NOTES D2). The hook runs after the entry switch and before UpdateAllStats(), so no stat
+ * update call is needed. Filtered on the four entries and a player owner.
+ */
+class ShamanSpiritWolfPetScript : public PetScript
+{
+public:
+    ShamanSpiritWolfPetScript() : PetScript("ShamanSpiritWolfPetScript", { PETHOOK_ON_INIT_STATS_FOR_LEVEL }) { }
+
+    void OnInitStatsForLevel(Guardian* guardian, uint8 petlevel) override
+    {
+        if (!guardian || !IsSpiritWolfEntry(guardian->GetEntry()))
+            return;
+
+        // Minion::GetOwner uses the owner GUID stored at construction, valid before SetMinion.
+        Unit* ownerUnit = guardian->GetOwner();
+        Player* owner = ownerUnit ? ownerUnit->ToPlayer() : nullptr;
+        if (!owner)
+            return;
+
+        guardian->SetAttackTime(BASE_ATTACK, WOLF_ATTACK_TIME_MS);
+        guardian->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, float(petlevel) * WOLF_DAMAGE_MIN_PER_LEVEL);
+        guardian->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, float(petlevel) * WOLF_DAMAGE_MAX_PER_LEVEL);
+
+        guardian->AddAura(SPELL_PET_AVOIDANCE, guardian);
+        guardian->AddAura(SPELL_HUNTER_PET_SCALING_04, guardian);
+        guardian->AddAura(SPELL_FERAL_SPIRIT_SCALING_01, guardian);
+        guardian->AddAura(SPELL_FERAL_SPIRIT_SCALING_02, guardian);
+        guardian->AddAura(SPELL_FERAL_SPIRIT_SCALING_03, guardian);
+
+        if (owner->getRace() == RACE_ORC)
+            guardian->CastSpell(guardian, SPELL_ORC_RACIAL_COMMAND_SHAMAN, true, nullptr, nullptr, owner->GetGUID());
+    }
+};
+
+/*
+ * Shared part of the four wolves: the Fire/Earth elemental shape (ShamanMeleeElementalAI: engaged-only targets, no
+ * proximity aggro, stock UpdateVictim once fighting) without the totem slot, plus a bite queue.
+ *
+ * The bite hook: DamageDealt runs inside Unit::DealDamage, before the victim's health changes, so nothing is cast
+ * there. A melee auto attack is the only DIRECT_DAMAGE the wolf deals (its spells are SPELL_DIRECT_DAMAGE/DOT), so
+ * DIRECT_DAMAGE marks a bite. Each bite queues the victim's GUID and the next UpdateAI hands it to OnBite().
+ *
+ * Every hook checks the creature entry (the ScriptName could be set on another entry) and a player owner
+ * (L-12); a wolf without one stays idle.
+ */
+class ShamanSpiritWolfAI : public ScriptedAI
+{
+public:
+    ShamanSpiritWolfAI(Creature* creature, uint32 entry) : ScriptedAI(creature), _entry(entry) { }
+
+    // Stock: no Reset() on AI creation.
+    void InitializeAI() override { }
+
+    // No proximity aggro: engaged-only targets.
+    void MoveInLineOfSight(Unit* /*who*/) override { }
+
+    void IsSummonedBy(WorldObject* /*summoner*/) override
+    {
+        _hits.clear();
+        scheduler.CancelAll();
+        scheduler.Schedule(0ms, [this](TaskContext context)
+        {
+            AcquireEngagedTarget();
+            context.Repeat(Milliseconds(ELEMENTAL_ACQUIRE_INTERVAL_MS));
+        });
+
+        OnWolfSummoned();
+    }
+
+    void DamageDealt(Unit* victim, uint32& /*damage*/, DamageEffectType damageType,
+        SpellSchoolMask /*damageSchoolMask*/) override
+    {
+        if (damageType != DIRECT_DAMAGE || !victim || _hits.size() >= WOLF_HIT_QUEUE_CAP)
+            return;
+
+        _hits.push_back(victim->GetGUID());
+    }
+
+    void UpdateAI(uint32 diff) override
+    {
+        scheduler.Update(diff);
+        DrainHits();
+
+        if (!UpdateVictim())
+            return;
+
+        DoMeleeAttackIfReady();
+    }
+
+protected:
+    // The player owner while this is the right entry and the wolf is alive; nullptr otherwise. Any class owns a wolf
+    // (Classless: another class can take Elemental Spirits); a wolf with no player owner stays idle.
+    Player* GetActiveOwner() const
+    {
+        if (!me->IsAlive() || me->GetEntry() != _entry)
+            return nullptr;
+
+        return GetOwnerPlayer(me);
+    }
+
+    // Once, from the first update after the summon (the owner's summon spell has finished by then).
+    virtual void OnWolfSummoned() { }
+
+    // One landed bite. `victim` is null when it died or left the map since the bite.
+    virtual void OnBite(Player* /*owner*/, Unit* /*victim*/) { }
+
+    void AcquireEngagedTarget()
+    {
+        if (!me->IsAlive() || me->GetVictim())
+            return;
+
+        Player* owner = GetActiveOwner();
+        if (!owner)
+            return;
+
+        if (Unit* target = Engagement::SelectEngagedTarget(me, owner, ObjectGuid::Empty,
+            ShamanData::ELEMENTAL_TARGET_RANGE_YD))
+            if (me->CanCreatureAttack(target))
+                AttackStart(target);
+    }
+
+private:
+    void DrainHits()
+    {
+        if (_hits.empty())
+            return;
+
+        std::vector<ObjectGuid> hits;
+        hits.swap(_hits);
+
+        Player* owner = GetActiveOwner();
+        if (!owner)
+            return;
+
+        for (ObjectGuid const& guid : hits)
+        {
+            Unit* victim = ObjectAccessor::GetUnit(*me, guid);
+            if (victim && (!victim->IsAlive() || !victim->IsInMap(me)))
+                victim = nullptr;
+
+            OnBite(owner, victim);
+        }
+    }
+
+    uint32 _entry;
+    std::vector<ObjectGuid> _hits;
+};
+
+/*
+ * 300262 - Fire Spirit. Every bite casts Spirit Flame Shock (a separate spell from the shaman's Flame Shock, never
+ * d0 b28: it stacks with it and refreshes only its own copy). Cast by the wolf, so it rolls none of the shaman's
+ * procs; the owner's Fire/Elemental Ascendance bonus is fixed at apply by spell_sha_enh_spirit_flame_shock.
+ */
+struct npc_sha_fire_spirit : public ShamanSpiritWolfAI
+{
+    explicit npc_sha_fire_spirit(Creature* creature)
+        : ShamanSpiritWolfAI(creature, uint32(ShamanData::NPC_FIRE_SPIRIT)) { }
+
+protected:
+    void OnBite(Player* /*owner*/, Unit* victim) override
+    {
+        if (victim)
+            me->CastSpell(victim, ShamanData::SPELL_SPIRIT_FLAME_SHOCK, true);
+    }
+};
+
+/*
+ * 300263 - Frost Spirit. Copies each Stormstrike the shaman lands at FROST_COPY_PCT of the landed damage, but the
+ * copy is cast by Shaman::OnStormstrikeLanded (ShamanMechanics.cpp: it finds the shaman's Frost Spirits in m_Controlled
+ * and casts Frost Spirit Copy from each, script-sized, no Nature bonus, no Improved Stormstrike), so the wolf itself
+ * is the shared melee base only. Its own bites do nothing extra.
+ */
+struct npc_sha_frost_spirit : public ShamanSpiritWolfAI
+{
+    explicit npc_sha_frost_spirit(Creature* creature)
+        : ShamanSpiritWolfAI(creature, uint32(ShamanData::NPC_FROST_SPIRIT)) { }
+};
+
+/*
+ * 300264 - Wind Spirit. Each bite rolls GUST_CHANCE x the owner's Proc Chance; a success makes the SHAMAN cast Gust at
+ * the wolf's target (owner attack power and talents, S3-NOTES D8). The cast is triggered, so the Gust rolls nothing
+ * of the shaman's procs. The victim is the wolf's own (engaged) target.
+ */
+struct npc_sha_wind_spirit : public ShamanSpiritWolfAI
+{
+    explicit npc_sha_wind_spirit(Creature* creature)
+        : ShamanSpiritWolfAI(creature, uint32(ShamanData::NPC_WIND_SPIRIT)) { }
+
+protected:
+    void OnBite(Player* owner, Unit* victim) override
+    {
+        if (!victim || !owner->IsAlive() || !Shaman::RollProcChance(owner, float(ShamanData::GUST_CHANCE)))
+            return;
+
+        owner->CastSpell(victim, ShamanData::SPELL_GUST, true);
+    }
+};
+
+/*
+ * 300265 - Rock Spirit (replaces the Wind Spirit while Rockbiter is active, chosen at the cast by
+ * spell_sha_enh_elemental_spirits). On summon: Rock Spirit Taunt on every enemy within ROCK_TAUNT_RADIUS_YD of the
+ * wolf in line of sight (all enemies in the area, not engaged-only: S3-NOTES section 4), skipping targets with no
+ * threat list and targets immune to the taunt's effects (the Sim Raid Boss and level-63 raid bosses). Each bite
+ * grants the shaman ROCK_SPIRIT_STONESKIN_PER_HIT Stoneskin (Shaman::AddStoneskin needs Rockbiter itself) - the one
+ * named exception to guardian damage granting nothing. Gains no Ascendance.
+ */
+struct npc_sha_rock_spirit : public ShamanSpiritWolfAI
+{
+    explicit npc_sha_rock_spirit(Creature* creature)
+        : ShamanSpiritWolfAI(creature, uint32(ShamanData::NPC_ROCK_SPIRIT)) { }
+
+protected:
+    void OnWolfSummoned() override
+    {
+        scheduler.Schedule(0ms, [this](TaskContext /*context*/)
+        {
+            TauntNearbyEnemies();
+        });
+    }
+
+    void OnBite(Player* owner, Unit* /*victim*/) override
+    {
+        Shaman::AddStoneskin(owner, uint32(ShamanData::ROCK_SPIRIT_STONESKIN_PER_HIT));
+    }
+
+private:
+    void TauntNearbyEnemies()
+    {
+        if (!GetActiveOwner())
+            return;
+
+        SpellInfo const* tauntInfo = sSpellMgr->GetSpellInfo(ShamanData::SPELL_ROCK_SPIRIT_TAUNT);
+        if (!tauntInfo)
+            return;
+
+        float const radius = ShamanData::ROCK_TAUNT_RADIUS_YD;
+        std::list<Unit*> nearby;
+        Acore::AnyUnfriendlyUnitInObjectRangeCheck check(me, me, radius);
+        Acore::UnitListSearcher<Acore::AnyUnfriendlyUnitInObjectRangeCheck> searcher(me, nearby, check);
+        Cell::VisitObjects(me, searcher, radius);
+
+        for (Unit* enemy : nearby)
+        {
+            if (!enemy->IsAlive() || !enemy->CanHaveThreatList() || !me->IsValidAttackTarget(enemy) ||
+                !me->IsWithinLOSInMap(enemy) || IsImmuneToAnyEffect(enemy, tauntInfo, me))
+                continue;
+
+            me->CastSpell(enemy, ShamanData::SPELL_ROCK_SPIRIT_TAUNT, true);
+        }
+    }
+};
+
 void AddSC_shaman_rework_pet_scripts()
 {
     RegisterCreatureAI(npc_sha_elemental_totem);
@@ -803,4 +1105,9 @@ void AddSC_shaman_rework_pet_scripts()
     RegisterCreatureAI(npc_sha_earth_elemental_rework);
     RegisterCreatureAI(npc_sha_water_elemental);
     RegisterCreatureAI(npc_sha_storm_elemental);
+    RegisterCreatureAI(npc_sha_fire_spirit);
+    RegisterCreatureAI(npc_sha_frost_spirit);
+    RegisterCreatureAI(npc_sha_wind_spirit);
+    RegisterCreatureAI(npc_sha_rock_spirit);
+    new ShamanSpiritWolfPetScript();
 }

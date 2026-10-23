@@ -26,6 +26,7 @@
 #include "ObjectAccessor.h"
 #include "Player.h"
 #include "Random.h"
+#include "Spell.h"
 #include "SpellAuraEffects.h"
 #include "SpellAuras.h"
 #include "SpellInfo.h"
@@ -72,15 +73,22 @@ namespace
         ShamanData::SPELL_EARTHLIVING_WEAPON
     };
 
-    // Stock Maelstrom Weapon talent ranks (the Enhancement stage replaces them).
-    constexpr std::array<uint32, 5> MAELSTROM_WEAPON_RANKS =
+    // Maelstrom Weapon talent ranks (S3: three ranks, 51531/51532 dropped from the talent).
+    constexpr std::array<uint32, 3> MAELSTROM_WEAPON_RANKS =
     {
         ShamanData::SPELL_MAELSTROM_WEAPON,
         ShamanData::SPELL_MAELSTROM_WEAPON_51529,
-        ShamanData::SPELL_MAELSTROM_WEAPON_51530,
-        ShamanData::SPELL_MAELSTROM_WEAPON_51531,
-        ShamanData::SPELL_MAELSTROM_WEAPON_51532
+        ShamanData::SPELL_MAELSTROM_WEAPON_51530
     };
+
+    // S3 Toughness talent ranks and the rank whose capstone slows Stoneskin erosion.
+    constexpr std::array<uint32, 3> TOUGHNESS_RANKS =
+    {
+        ShamanData::SPELL_TOUGHNESS,
+        ShamanData::SPELL_TOUGHNESS_16306,
+        ShamanData::SPELL_TOUGHNESS_16307
+    };
+    constexpr uint8 TOUGHNESS_CAPSTONE_RANK = 3;
 
     constexpr std::array<uint32, 4> ATTUNEMENT_PARENTS =
     {
@@ -167,6 +175,14 @@ namespace
 
     // S2: drops the Restoration state (defined in the S2 block); called by Shaman::ClearState.
     void ClearRestorationState(Player* player);
+
+    // S3 (defined in the S3 block): writes the Mastery-scaled Stoneskin amount after a stack change; drops the
+    // Enhancement state (ClearState); Earth's Grasp absorb percent; drops the Enhancement auras before the logout save.
+    void RefreshStoneskinAmount(Player* player);
+    void ClearEnhancementState(Player* player);
+    float GetEarthsGraspAbsorbPct(Player const* player);
+    void DropEnhancementAuras(Player* player);
+    void ApplyGuardianTotemsCapstone(Player* player, Creature* totem);
 }
 
 namespace Shaman
@@ -214,8 +230,8 @@ namespace Shaman
         if (!player)
             return false;
 
-        return std::any_of(MAELSTROM_WEAPON_RANKS.begin(), MAELSTROM_WEAPON_RANKS.end(),
-            [player](uint32 spellId) { return player->HasSpell(spellId); });
+        // L-8 / NOTES 8.2 item 14: the talent in the active spec (or its passive aura), never HasSpell.
+        return GetTalentRank(player, MAELSTROM_WEAPON_RANKS) > 0;
     }
 
     uint16 GetImbueGlowEnchant(Player const* player)
@@ -302,6 +318,9 @@ namespace Shaman
                 created->ModStackAmount(grant - 1);
         }
 
+        // S3: every stack change recalculates the amount as per-stack x stacks; put the Mastery scaling back.
+        RefreshStoneskinAmount(shaman);
+
         // Out-of-combat grants start the 2 min timer themselves; in combat it starts on leaving combat.
         if (!shaman->IsInCombat())
             ArmStoneskinTimer(shaman);
@@ -316,6 +335,10 @@ namespace Shaman
         if (!aura || aura->IsRemoved())
             return;
 
+        // S3 Earthen Ascendance: "your Stoneskin does not erode".
+        if (Shaman::IsEarthenAscendant(victim))
+            return;
+
         uint32 const maxHealth = victim->GetMaxHealth();
         uint8 const stacks = aura->GetStackAmount();
         if (!maxHealth || !stacks)
@@ -324,7 +347,13 @@ namespace Shaman
         // The hit before Stoneskin's own reduction (after armor, absorbs and every other reduction), as a share
         // of max health, strips the same share of current stacks.
         double const base = double(landedDamage) / (1.0 - GetStoneskinReduction(aura));
-        double const lost = double(stacks) * base / double(maxHealth);
+        double lost = double(stacks) * base / double(maxHealth);
+
+        // S3 Toughness capstone: below TOUGHNESS_THRESHOLD_PCT health each hit strips TOUGHNESS_ERODE_PCT fewer stacks.
+        // The hook runs before the hit leaves health, so this is the health the hit lands on.
+        if (Shaman::GetTalentRank(victim, TOUGHNESS_RANKS) >= TOUGHNESS_CAPSTONE_RANK &&
+            victim->GetHealthPct() < float(ShamanData::TOUGHNESS_THRESHOLD_PCT))
+            lost *= 1.0 - double(ShamanData::TOUGHNESS_ERODE_PCT) / 100.0;
 
         uint32 removed;
         {
@@ -346,8 +375,8 @@ namespace Shaman
         }
 
         // A negative ModStackAmount neither refreshes the duration nor the timers, and removes the aura at 0.
-        if (removed)
-            aura->ModStackAmount(-int32(removed));
+        if (removed && !aura->ModStackAmount(-int32(removed)))
+            RefreshStoneskinAmount(victim);
     }
 
     void OnCombatChange(Player* player, bool inCombat)
@@ -450,6 +479,9 @@ namespace Shaman
 
         // S2: the Cloudburst store and the Improved Chain Heal count (player CustomData, no lock needed).
         ClearRestorationState(player);
+
+        // S3: the swap stash, the banked charges and the out-of-combat timer generations (player CustomData).
+        ClearEnhancementState(player);
 
         std::lock_guard<std::mutex> lock(stateLock);
         auto itr = stoneskinStates.find(player->GetGUID());
@@ -1461,6 +1493,9 @@ namespace Shaman
 
         // Totemic Resonance raises absorbs too; the aura's healing-done percent never reaches an absorb.
         amount *= 1.0f + GetTotemicResonancePct(owner) / 100.0f;
+
+        // S3 Earth's Grasp: the main shield (and so Earthen Bulwark's share of it) x (1 + rank %).
+        amount *= 1.0f + GetEarthsGraspAbsorbPct(owner) / 100.0f;
         return uint32(std::max(0.0f, amount));
     }
 
@@ -1574,6 +1609,9 @@ namespace Shaman
         if (!player)
             return;
 
+        // S3 (D9): charges, singles, both Ascendances, the bank and the Unleashed Rage clause never reach the save.
+        DropEnhancementAuras(player);
+
         // The totem's removal is deferred past the Player's deletion (Totem::UnSummon -> AddObjectToRemoveList), so its
         // remove hook finds no owner, and WorldSession::LogoutPlayer saves right after this hook: add the remaining
         // cooldown now. The record stays; OnPlayerLogout's ClearState drops it.
@@ -1611,6 +1649,9 @@ namespace Shaman
 
         if (totem->GetEntry() == ShamanData::NPC_CLOUDBURST_TOTEM)
             RecordCloudburstPlacement(player, totem);
+
+        // S3: Guardian Totems capstone.
+        ApplyGuardianTotemsCapstone(player, totem);
     }
 
     void OnPlayerTotemRemoved(Player* player, Creature* totem)
@@ -1640,5 +1681,1012 @@ namespace Shaman
         }
 
         RecountTotemicResonance(player);
+    }
+}
+
+/*
+ * S3 block: Enhancement (docs/reworks/shaman-enhancement-rework.md). Elemental Charge and Earth Charge (grants, the
+ * imbue-swap transform, the out-of-combat timers, Shamanistic Rage's bank), the Bursts, the single and Elemental
+ * Ascendances with their live Mastery amounts, Stoneskin's Mastery amount, Earth Charge spending, the Unleashed Rage
+ * clause, the Frost Spirit's Stormstrike copy, the Rockbiter children (Spirit Guard parry, Improved Lightning Shield
+ * threat), Earth's Grasp and the Guardian Totems capstone. Per-player state lives in CustomData (the player's map
+ * thread only, no lock).
+ *
+ * Lifecycles (L-11):
+ * - Charges, singles, Elemental and Earthen Ascendance are auras. Death: the engine removes them (not death-persistent,
+ *   D9); OnEnhPlayerDied drops the bank and the swap stash. Logout: OnPlayerBeforeLogout drops them before the save,
+ *   ClearState erases the state. Map change: auras, state and the m_Events timers travel with the player, nothing to
+ *   do. Talent reset, spec swap, talent learn: OnEnhTalentsChanged one tick later. Imbue right-click or expiry: the
+ *   stash is never consumed, so no transform; the charges stay under the 2 min rule.
+ * - Out-of-combat timers: a generation per kind in the state; combat entry bumps both, leaving combat or a grant out of
+ *   combat arms one; a stale event finds its generation moved (or no state after ClearState) and returns.
+ * - Bank: filled only by Shamanistic Rage while an Ascendance blocks charges; added to the active imbue's element once
+ *   free (UpdateUnleashedRage, RefreshAscendance, SpendEarthCharge, AddCharge and a check scheduled at the end of the
+ *   Ascendance); dropped on death and logout.
+ * - The Rockbiter children (passive, hidden) follow Rockbiter and the talents: OnRockbiterChanged and
+ *   OnEnhTalentsChanged (login included); Parry itself stays until relog (engine, 0-verify item e).
+ */
+namespace
+{
+    struct EnhancementState : DataMap::Base
+    {
+        uint32 stashedImbue = 0;    // imbue removed in tick `stashTick` (group 1251 eviction or a cancel), 0 when none
+        uint32 stashTick = 0;       // GameTime ms of that removal
+        uint8 bankedCharges = 0;    // Shamanistic Rage's charges granted while an Ascendance blocked them
+        uint32 chargeTimerGen = 0;  // out-of-combat timer generations: charges (EC_OOC_MS) and singles (ASC_OOC_MS)
+        uint32 singleTimerGen = 0;
+        uint32 refreshGen = 0;      // live-Mastery refresh loop generation (a newer start retires an older loop)
+        bool refreshRunning = false;
+    };
+
+    constexpr char const* ENHANCEMENT_STATE_KEY = "shaman_enhancement_state";
+
+    constexpr std::array<uint32, 4> CHARGE_SPELLS =
+    {
+        ShamanData::SPELL_FIRE_CHARGE,
+        ShamanData::SPELL_FROST_CHARGE,
+        ShamanData::SPELL_WIND_CHARGE,
+        ShamanData::SPELL_EARTH_CHARGE
+    };
+
+    constexpr std::array<uint32, 3> SINGLE_ASCENDANCES =
+    {
+        ShamanData::SPELL_FIRE_ASCENDANCE,
+        ShamanData::SPELL_FROST_ASCENDANCE,
+        ShamanData::SPELL_WIND_ASCENDANCE
+    };
+
+    constexpr std::array<Shaman::EnhElement, 3> TRANSFORM_ELEMENTS =
+    {
+        Shaman::EnhElement::Fire,
+        Shaman::EnhElement::Frost,
+        Shaman::EnhElement::Wind
+    };
+
+    constexpr std::array<uint32, 1> ELEMENTAL_CHARGE_RANKS = { ShamanData::SPELL_ELEMENTAL_CHARGE };
+    constexpr std::array<uint32, 1> ASCENDANCE_RANKS = { ShamanData::SPELL_ASCENDANCE };
+
+    constexpr std::array<uint32, 3> SPIRIT_GUARD_RANKS =
+    {
+        ShamanData::SPELL_SPIRIT_GUARD_RANK1,
+        ShamanData::SPELL_SPIRIT_GUARD_RANK2,
+        ShamanData::SPELL_SPIRIT_GUARD_RANK3
+    };
+
+    // Improved Lightning Shield (the stock Improved Shields ranks, rewritten in place).
+    constexpr std::array<uint32, 3> IMPROVED_LIGHTNING_SHIELD_RANKS =
+    {
+        ShamanData::SPELL_IMPROVED_SHIELDS,
+        ShamanData::SPELL_IMPROVED_SHIELDS_16290,
+        ShamanData::SPELL_IMPROVED_SHIELDS_51881
+    };
+
+    // Unleashed Rage. Its ranks are raid area auras, so every party member carries the rank id: read with
+    // GetOwnTalentRank (the talent map), never GetTalentRank (which also accepts the aura), WP-R m2.
+    constexpr std::array<uint32, 3> UNLEASHED_RAGE_RANKS =
+    {
+        ShamanData::SPELL_UNLEASHED_RAGE,
+        ShamanData::SPELL_UNLEASHED_RAGE_30808,
+        ShamanData::SPELL_UNLEASHED_RAGE_30809
+    };
+
+    // Interval of the live-Mastery refresh while an Ascendance or Stoneskin is up (WP-R m1; RefreshEmpowerment's
+    // periodic dummy ticks the same way).
+    constexpr int32 ASCENDANCE_REFRESH_MS = 1000;
+
+    constexpr std::array<int32, 3> UNLEASHED_RAGE_CLAUSE_PCT =
+    {
+        int32(ShamanData::UR_R1),
+        int32(ShamanData::UR_R2),
+        int32(ShamanData::UR_R3)
+    };
+
+    constexpr std::array<uint32, 2> EARTHS_GRASP_RANKS =
+    {
+        ShamanData::SPELL_EARTH_S_GRASP,
+        ShamanData::SPELL_EARTH_S_GRASP_16130
+    };
+
+    constexpr std::array<uint32, 2> GUARDIAN_TOTEMS_RANKS =
+    {
+        ShamanData::SPELL_GUARDIAN_TOTEMS,
+        ShamanData::SPELL_GUARDIAN_TOTEMS_16293
+    };
+
+    constexpr uint8 GUARDIAN_TOTEMS_CAPSTONE_RANK = 2;
+
+    // Spirit Guard's parry bonus under Rockbiter is 1/2/3% (doc [fixed]): the rank itself. The brief names no const
+    // for it (local fallback).
+    constexpr int32 SPIRIT_GUARD_PARRY_PCT_PER_RANK = 1;
+
+    // Re-check interval of a bank waiting on an Ascendance without a finite duration.
+    constexpr int32 BANK_FLUSH_POLL_MS = 1000;
+
+    EnhancementState* GetEnhancementState(Player* player)
+    {
+        return player->CustomData.GetDefault<EnhancementState>(ENHANCEMENT_STATE_KEY);
+    }
+
+    EnhancementState* FindEnhancementState(Player const* player)
+    {
+        return player->CustomData.Get<EnhancementState>(ENHANCEMENT_STATE_KEY);
+    }
+
+    uint32 GetChargeSpell(Shaman::EnhElement element)
+    {
+        switch (element)
+        {
+            case Shaman::EnhElement::Fire:
+                return ShamanData::SPELL_FIRE_CHARGE;
+            case Shaman::EnhElement::Frost:
+                return ShamanData::SPELL_FROST_CHARGE;
+            case Shaman::EnhElement::Wind:
+                return ShamanData::SPELL_WIND_CHARGE;
+            case Shaman::EnhElement::Earth:
+                return ShamanData::SPELL_EARTH_CHARGE;
+            default:
+                return 0;
+        }
+    }
+
+    uint32 GetSingleAscendance(Shaman::EnhElement element)
+    {
+        switch (element)
+        {
+            case Shaman::EnhElement::Fire:
+                return ShamanData::SPELL_FIRE_ASCENDANCE;
+            case Shaman::EnhElement::Frost:
+                return ShamanData::SPELL_FROST_ASCENDANCE;
+            case Shaman::EnhElement::Wind:
+                return ShamanData::SPELL_WIND_ASCENDANCE;
+            default:
+                return 0;
+        }
+    }
+
+    uint32 GetBurstSpell(Shaman::EnhElement element)
+    {
+        switch (element)
+        {
+            case Shaman::EnhElement::Fire:
+                return ShamanData::SPELL_FLAME_BURST;
+            case Shaman::EnhElement::Frost:
+                return ShamanData::SPELL_STORM_BURST;
+            case Shaman::EnhElement::Wind:
+                return ShamanData::SPELL_WIND_BURST;
+            default:
+                return 0;
+        }
+    }
+
+    uint32 GetAscendanceVisualSpell(Shaman::EnhElement element)
+    {
+        switch (element)
+        {
+            case Shaman::EnhElement::Fire:
+                return ShamanData::SPELL_ASCENDANCE_FIRE_NOVA;
+            case Shaman::EnhElement::Frost:
+                return ShamanData::SPELL_ASCENDANCE_FROST_NOVA;
+            case Shaman::EnhElement::Wind:
+                return ShamanData::SPELL_ASCENDANCE_WIND_BURST;
+            case Shaman::EnhElement::Earth:
+                return ShamanData::SPELL_ASCENDANCE_EARTH_STOMP;
+            default:
+                return 0;
+        }
+    }
+
+    int32 GetChargeCap(Shaman::EnhElement element)
+    {
+        return element == Shaman::EnhElement::Earth ? int32(ShamanData::CHARGE_CAP_EARTH) :
+            int32(ShamanData::CHARGE_CAP_ELEMENT);
+    }
+
+    bool IsTransformElement(Shaman::EnhElement element)
+    {
+        return element == Shaman::EnhElement::Fire || element == Shaman::EnhElement::Frost ||
+            element == Shaman::EnhElement::Wind;
+    }
+
+    bool IsElementalAscendant(Player const* player)
+    {
+        return player->HasAura(ShamanData::SPELL_ELEMENTAL_ASCENDANCE);
+    }
+
+    bool IsChargeBlocked(Player const* player)
+    {
+        return IsElementalAscendant(player) || Shaman::IsEarthenAscendant(player);
+    }
+
+    void RemoveOwnAura(Player* player, uint32 spellId)
+    {
+        player->RemoveAurasDueToSpell(spellId, player->GetGUID());
+    }
+
+    bool HasAnyOwnAura(Player const* player, std::span<uint32 const> spellIds)
+    {
+        ObjectGuid const guid = player->GetGUID();
+        return std::any_of(spellIds.begin(), spellIds.end(),
+            [player, guid](uint32 spellId) { return player->HasAura(spellId, guid); });
+    }
+
+    void LogEnhCastFailure(char const* what, uint32 spellId, Unit const* caster, Unit const* target,
+        SpellCastResult result)
+    {
+        switch (result)
+        {
+            case SPELL_CAST_OK:
+            case SPELL_FAILED_LINE_OF_SIGHT:
+            case SPELL_FAILED_OUT_OF_RANGE:
+            case SPELL_FAILED_BAD_TARGETS:
+            case SPELL_FAILED_BAD_IMPLICIT_TARGETS:
+                return;
+            default:
+                break;
+        }
+
+        LOG_ERROR("scripts.spells", "Shaman S3 {}: cast of {} by {} at {} failed (result {})", what, spellId,
+            caster ? caster->GetGUID().ToString() : "none", target ? target->GetGUID().ToString() : "none",
+            uint32(result));
+    }
+
+    // Live Mastery percent the Ascendance capstone adds (the talent has one rank, so the capstone is on with it); 0
+    // without the talent. Negative Mastery never lowers a bonus.
+    float GetAscendanceMasteryPct(Player const* player)
+    {
+        if (!Shaman::GetTalentRank(player, ASCENDANCE_RANKS))
+            return 0.0f;
+
+        return std::max(0.0f, player->GetMasteryPercentage());
+    }
+
+    // Integer percent, rounded to MASTERY_ROUND_PCT steps.
+    int32 RoundMasteryPct(float pct)
+    {
+        double const step = std::max(1.0, double(ShamanData::MASTERY_ROUND_PCT));
+        return int32(std::lround(double(pct) / step) * step);
+    }
+
+    // The highest known rank's first DUMMY effect value (per-rank percents live there, L-8); 0 without the talent.
+    int32 GetRankDummyValue(Player const* player, std::span<uint32 const> rankIds)
+    {
+        uint8 const rank = Shaman::GetTalentRank(player, rankIds);
+        if (!rank)
+            return 0;
+
+        SpellInfo const* info = sSpellMgr->GetSpellInfo(rankIds[rank - 1]);
+        if (!info)
+            return 0;
+
+        for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+            if (info->Effects[i].IsAura(SPELL_AURA_DUMMY))
+                return info->Effects[i].CalcValue(player);
+
+        return 0;
+    }
+
+    // Sets every effect of `aura` with `auraType` (and, for spell modifiers, a SPELLMOD_DAMAGE / SPELLMOD_DOT op) to
+    // its row value plus `bonus`; only a moved value is written (a spell modifier change is re-sent to the client).
+    void SetLiveAmounts(Player* player, Aura* aura, AuraType auraType, int32 bonus)
+    {
+        if (!aura || aura->IsRemoved())
+            return;
+
+        for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+        {
+            AuraEffect* effect = aura->GetEffect(i);
+            if (!effect || effect->GetAuraType() != auraType)
+                continue;
+
+            if (auraType == SPELL_AURA_ADD_PCT_MODIFIER && effect->GetMiscValue() != int32(SPELLMOD_DAMAGE) &&
+                effect->GetMiscValue() != int32(SPELLMOD_DOT))
+                continue;
+
+            int32 const amount = aura->GetSpellInfo()->Effects[i].CalcValue(player) + bonus;
+            if (effect->GetAmount() != amount)
+                effect->ChangeAmount(amount, false);
+        }
+    }
+
+    // A buff the player owns, refreshed to `durationMs` (the const is the source of truth for the window), or added.
+    Aura* RefreshOwnBuff(Player* player, uint32 spellId, int32 durationMs)
+    {
+        Aura* aura = player->GetAura(spellId, player->GetGUID());
+        if (!aura)
+            aura = player->AddAura(spellId, player);
+
+        if (!aura || aura->IsRemoved())
+        {
+            LOG_ERROR("scripts.spells", "Shaman S3: could not apply aura {} to {}", spellId,
+                player->GetGUID().ToString());
+            return nullptr;
+        }
+
+        if (aura->GetMaxDuration() != durationMs)
+            aura->SetMaxDuration(durationMs);
+
+        aura->SetDuration(durationMs);
+        return aura;
+    }
+
+    // Starts (or restarts) one out-of-combat timer: the charges (EC_OOC_MS) or the singles (ASC_OOC_MS). A newer arm,
+    // a combat entry or ClearState makes the pending event stale.
+    void ArmEnhTimer(Player* player, bool singles)
+    {
+        EnhancementState* state = GetEnhancementState(player);
+        uint32 const generation = singles ? ++state->singleTimerGen : ++state->chargeTimerGen;
+        uint32 const delayMs = uint32(singles ? ShamanData::ASC_OOC_MS : ShamanData::EC_OOC_MS);
+
+        ObjectGuid const guid = player->GetGUID();
+        player->m_Events.AddEventAtOffset([guid, generation, singles]()
+        {
+            Player* self = ObjectAccessor::FindPlayer(guid);
+            if (!self || self->IsInCombat())
+                return;
+
+            EnhancementState const* current = FindEnhancementState(self);
+            if (!current || (singles ? current->singleTimerGen : current->chargeTimerGen) != generation)
+                return;
+
+            if (singles)
+            {
+                for (uint32 const spellId : SINGLE_ASCENDANCES)
+                    RemoveOwnAura(self, spellId);
+            }
+            else
+            {
+                for (uint32 const spellId : CHARGE_SPELLS)
+                    RemoveOwnAura(self, spellId);
+            }
+        }, Milliseconds(delayMs));
+    }
+
+    // Adds `amount` stacks to the element's charge buff (cap per element; a delta of 0 at the cap still refreshes) and
+    // arms the out-of-combat timer for a grant out of combat.
+    void AddChargeStacks(Player* player, Shaman::EnhElement element, uint8 amount)
+    {
+        uint32 const spellId = GetChargeSpell(element);
+        if (!spellId || !amount)
+            return;
+
+        int32 const cap = GetChargeCap(element);
+        int32 const grant = std::min<int32>(amount, cap);
+
+        if (Aura* aura = player->GetAura(spellId, player->GetGUID()))
+        {
+            int32 const delta = std::max(0, std::min(grant, cap - int32(aura->GetStackAmount())));
+            aura->ModStackAmount(delta);
+        }
+        else
+        {
+            Aura* created = player->AddAura(spellId, player);
+            if (!created)
+            {
+                LOG_ERROR("scripts.spells", "Shaman::AddCharge: could not apply aura {} to {}", spellId,
+                    player->GetGUID().ToString());
+                return;
+            }
+
+            // A new aura starts at one stack.
+            if (grant > 1)
+                created->ModStackAmount(grant - 1);
+        }
+
+        if (!player->IsInCombat())
+            ArmEnhTimer(player, false);
+    }
+
+    // Adds the banked Shamanistic Rage charges to the active imbue's element once no Ascendance blocks them (alive,
+    // with Elemental Charge; Earthliving or no imbue: the bank is lost).
+    void FlushBank(Player* player)
+    {
+        if (!IsUsablePlayer(player) || !player->IsAlive() || IsChargeBlocked(player))
+            return;
+
+        EnhancementState* state = FindEnhancementState(player);
+        if (!state || !state->bankedCharges)
+            return;
+
+        uint8 const banked = state->bankedCharges;
+        state->bankedCharges = 0;
+
+        Shaman::EnhElement const element = Shaman::GetImbueElement(Shaman::GetActiveImbue(player));
+        if (element == Shaman::EnhElement::None || !Shaman::GetTalentRank(player, ELEMENTAL_CHARGE_RANKS))
+            return;
+
+        AddChargeStacks(player, element, banked);
+    }
+
+    // Checks again when the blocking Ascendance should have ended (its remaining duration, or a poll for one without a
+    // finite duration); still blocked: once more, else the bank is added.
+    void ScheduleBankFlush(Player* player)
+    {
+        int32 delayMs = 0;
+        for (uint32 const spellId : { uint32(ShamanData::SPELL_ELEMENTAL_ASCENDANCE),
+            uint32(ShamanData::SPELL_EARTHEN_ASCENDANCE) })
+            if (Aura const* aura = player->GetAura(spellId))
+                delayMs = std::max(delayMs, aura->GetDuration() > 0 ? aura->GetDuration() : BANK_FLUSH_POLL_MS);
+
+        if (!delayMs)
+            delayMs = BANK_FLUSH_POLL_MS;
+
+        ObjectGuid const guid = player->GetGUID();
+        player->m_Events.AddEventAtOffset([guid]()
+        {
+            Player* self = ObjectAccessor::FindPlayer(guid);
+            if (!IsUsablePlayer(self))
+                return;
+
+            EnhancementState const* state = FindEnhancementState(self);
+            if (!state || !state->bankedCharges)
+                return;
+
+            if (IsChargeBlocked(self))
+                ScheduleBankFlush(self);
+            else
+                FlushBank(self);
+        }, Milliseconds(delayMs + 50));
+    }
+
+    // Spirit Guard's parry child (rank %) and the Improved Lightning Shield threat child, on while Rockbiter is up and
+    // the talent is known. Both are passive and hidden; the parry amount is set live (it is not a row value).
+    void SyncRockbiterChildren(Player* player, bool rockbiter)
+    {
+        uint8 const spiritGuardRank = Shaman::GetTalentRank(player, SPIRIT_GUARD_RANKS);
+        bool const parryWanted = rockbiter && spiritGuardRank > 0;
+        SetOwnerAura(player, player, ShamanData::SPELL_SPIRIT_GUARD_PARRY, parryWanted);
+
+        if (parryWanted)
+        {
+            int32 const parryPct = int32(spiritGuardRank) * SPIRIT_GUARD_PARRY_PCT_PER_RANK;
+            if (Aura* aura = player->GetAura(ShamanData::SPELL_SPIRIT_GUARD_PARRY, player->GetGUID()))
+                for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+                    if (AuraEffect* effect = aura->GetEffect(i))
+                        if (effect->GetAuraType() == SPELL_AURA_MOD_PARRY_PERCENT && effect->GetAmount() != parryPct)
+                            effect->ChangeAmount(parryPct);     // marked: a recalculation keeps the live value
+        }
+
+        SetOwnerAura(player, player, ShamanData::SPELL_ROCKBITER_ILS_THREAT,
+            rockbiter && Shaman::GetTalentRank(player, IMPROVED_LIGHTNING_SHIELD_RANKS) > 0);
+    }
+
+    // 1-based rank of the highest rank in the player's talent map for the active spec (no aura fallback); 0 if none.
+    uint8 GetOwnTalentRank(Player const* player, std::span<uint32 const> rankIds)
+    {
+        uint8 const spec = player->GetActiveSpec();
+        for (size_t i = rankIds.size(); i > 0; --i)
+            if (rankIds[i - 1] && player->HasTalent(rankIds[i - 1], spec))
+                return uint8(i);
+
+        return 0;
+    }
+
+    // Whether the live-Mastery refresh has something to keep live: the Ascendance talent and a single, Elemental
+    // Ascendance or Stoneskin.
+    bool NeedsAscendanceRefresh(Player const* player)
+    {
+        if (!Shaman::GetTalentRank(player, ASCENDANCE_RANKS))
+            return false;
+
+        ObjectGuid const guid = player->GetGUID();
+        return HasAnyOwnAura(player, SINGLE_ASCENDANCES) ||
+            player->HasAura(ShamanData::SPELL_ELEMENTAL_ASCENDANCE, guid) ||
+            player->HasAura(ShamanData::SPELL_STONESKIN_202206, guid);
+    }
+
+    // WP-R m1: Mastery moves with gear, buffs and Enhanced Elements without an event, so while NeedsAscendanceRefresh
+    // holds, RefreshAscendance runs every ASCENDANCE_REFRESH_MS (it writes only moved values). One loop per player: a
+    // running loop is kept unless `restart` (map change, login, talent sync: a teleport may have killed the player's
+    // events, CleanupBeforeRemoveFromMap), which retires the old loop through the generation.
+    void StartAscendanceRefresh(Player* player, bool restart)
+    {
+        EnhancementState* state = GetEnhancementState(player);
+        if (state->refreshRunning && !restart)
+            return;
+
+        if (!NeedsAscendanceRefresh(player))
+        {
+            state->refreshRunning = false;
+            ++state->refreshGen;
+            return;
+        }
+
+        state->refreshRunning = true;
+        uint32 const generation = ++state->refreshGen;
+        ObjectGuid const guid = player->GetGUID();
+
+        // A named recursive lambda: each tick re-queues itself while it is the current generation and still needed.
+        struct Tick
+        {
+            static void Queue(Player* owner, ObjectGuid ownerGuid, uint32 gen)
+            {
+                owner->m_Events.AddEventAtOffset([ownerGuid, gen]()
+                {
+                    Player* self = ObjectAccessor::FindPlayer(ownerGuid);
+                    if (!self)
+                        return;
+
+                    EnhancementState* current = FindEnhancementState(self);
+                    if (!current || current->refreshGen != gen)
+                        return;
+
+                    if (!IsUsablePlayer(self) || !NeedsAscendanceRefresh(self))
+                    {
+                        current->refreshRunning = false;
+                        return;
+                    }
+
+                    Shaman::RefreshAscendance(self);
+                    Queue(self, ownerGuid, gen);
+                }, Milliseconds(ASCENDANCE_REFRESH_MS));
+            }
+        };
+
+        Tick::Queue(player, guid, generation);
+    }
+
+    // Declared in the SH0a block.
+    void RefreshStoneskinAmount(Player* player)
+    {
+        Aura* aura = player->GetAura(ShamanData::SPELL_STONESKIN_202206, player->GetGUID());
+        if (!aura || aura->IsRemoved())
+            return;
+
+        int32 const amount = Shaman::GetStoneskinAmount(player, aura->GetStackAmount());
+        for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+        {
+            AuraEffect* effect = aura->GetEffect(i);
+            if (effect && effect->GetAuraType() == SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN && effect->GetAmount() != amount)
+                effect->ChangeAmount(amount, false);
+        }
+
+        // Keeps the Mastery part live from here on (no-op while a loop runs).
+        StartAscendanceRefresh(player, false);
+    }
+
+    void ClearEnhancementState(Player* player)
+    {
+        player->CustomData.Erase(ENHANCEMENT_STATE_KEY);
+    }
+
+    float GetEarthsGraspAbsorbPct(Player const* player)
+    {
+        return float(std::max(0, GetRankDummyValue(player, EARTHS_GRASP_RANKS)));
+    }
+
+    void DropEnhancementAuras(Player* player)
+    {
+        // The bank first: removing an Ascendance runs its scripts, which would add the bank back.
+        if (EnhancementState* state = FindEnhancementState(player))
+        {
+            state->bankedCharges = 0;
+            state->stashedImbue = 0;
+        }
+
+        for (uint32 const spellId : CHARGE_SPELLS)
+            RemoveOwnAura(player, spellId);
+
+        for (uint32 const spellId : SINGLE_ASCENDANCES)
+            RemoveOwnAura(player, spellId);
+
+        RemoveOwnAura(player, ShamanData::SPELL_ELEMENTAL_ASCENDANCE);
+        RemoveOwnAura(player, ShamanData::SPELL_EARTHEN_ASCENDANCE);
+        RemoveOwnAura(player, ShamanData::SPELL_UNLEASHED_RAGE_CLAUSE);
+
+        // The Elemental Spirits timer (S3a code review n1): a saved copy would outlive the wolves it counts down for.
+        RemoveOwnAura(player, ShamanData::SPELL_ELEMENTAL_SPIRITS_TIMER);
+    }
+
+    void ApplyGuardianTotemsCapstone(Player* player, Creature* totem)
+    {
+        if (!player->IsAlive() ||
+            Shaman::GetTalentRank(player, GUARDIAN_TOTEMS_RANKS) < GUARDIAN_TOTEMS_CAPSTONE_RANK)
+            return;
+
+        // L-12 / D15: totems a shaman spell created (the elemental totems included); a Freepick Lightwell is a Totem
+        // too and does not count.
+        SpellInfo const* creator = sSpellMgr->GetSpellInfo(totem->GetUInt32Value(UNIT_CREATED_BY_SPELL));
+        if (!creator || creator->SpellFamilyName != SPELLFAMILY_SHAMAN)
+            return;
+
+        RefreshOwnBuff(player, ShamanData::SPELL_GUARDIAN_TOTEMS_ARMOR,
+            int32(ShamanData::GUARDIAN_TOTEMS_ARMOR_DURATION_MS));
+    }
+}
+
+namespace Shaman
+{
+    EnhElement GetImbueElement(uint32 imbueId)
+    {
+        switch (imbueId)
+        {
+            case ShamanData::SPELL_FLAMETONGUE_WEAPON:
+                return EnhElement::Fire;
+            case ShamanData::SPELL_FROSTBRAND_WEAPON:
+                return EnhElement::Frost;
+            case ShamanData::SPELL_WINDFURY_WEAPON:
+                return EnhElement::Wind;
+            case ShamanData::SPELL_ROCKBITER_WEAPON:
+                return EnhElement::Earth;
+            default:
+                return EnhElement::None;
+        }
+    }
+
+    uint8 GetCharge(Player const* player, EnhElement element)
+    {
+        uint32 const spellId = GetChargeSpell(element);
+        if (!player || !spellId)
+            return 0;
+
+        Aura const* aura = player->GetAura(spellId, player->GetGUID());
+        return (aura && !aura->IsRemoved()) ? aura->GetStackAmount() : 0;
+    }
+
+    void AddCharge(Player* player, uint8 amount, bool fromShamanisticRage)
+    {
+        if (!IsUsablePlayer(player) || !amount || !player->IsAlive())
+            return;
+
+        if (!GetTalentRank(player, ELEMENTAL_CHARGE_RANKS))
+            return;
+
+        EnhElement const element = GetImbueElement(GetActiveImbue(player));
+        if (element == EnhElement::None)
+            return;
+
+        // Nothing builds during Elemental or Earthen Ascendance; Shamanistic Rage's grant waits in the bank.
+        if (IsChargeBlocked(player))
+        {
+            if (!fromShamanisticRage)
+                return;
+
+            EnhancementState* state = GetEnhancementState(player);
+            state->bankedCharges = uint8(std::min<int32>(int32(state->bankedCharges) + amount,
+                int32(ShamanData::CHARGE_CAP_EARTH)));
+            ScheduleBankFlush(player);
+            return;
+        }
+
+        FlushBank(player);
+        AddChargeStacks(player, element, amount);
+    }
+
+    void OnImbueChanged(Player* player, uint32 oldImbue, uint32 newImbue)
+    {
+        if (!player)
+            return;
+
+        EnhancementState* state = GetEnhancementState(player);
+        uint32 const now = NowMs();
+
+        // HandleRemove: stash. The eviction's apply follows in the same call stack (same tick); a cancel or expiry has
+        // none, so its stash goes stale and transforms nothing.
+        if (!newImbue)
+        {
+            if (oldImbue)
+            {
+                state->stashedImbue = oldImbue;
+                state->stashTick = now;
+            }
+
+            return;
+        }
+
+        uint32 from = oldImbue;
+        if (!from && state->stashedImbue && state->stashTick == now)
+            from = state->stashedImbue;
+
+        state->stashedImbue = 0;
+
+        // Same imbue (a recast refreshes without remove/apply; this is a defensive check): nothing. Login aura load
+        // (not in world): nothing to resolve, the charges were dropped at logout.
+        if (from == newImbue || !player->IsInWorld())
+            return;
+
+        EnhElement const left = GetImbueElement(from);
+        EnhElement const entered = GetImbueElement(newImbue);
+
+        if (IsTransformElement(left))
+        {
+            bool const full = GetCharge(player, left) >= ShamanData::CHARGE_CAP_ELEMENT;
+            RemoveOwnAura(player, GetChargeSpell(left));
+
+            // Q15: only Flametongue, Frostbrand and Windfury transform; Rockbiter / Earthliving and a swap below the
+            // cap reset. Out of combat the Burst finds nobody (engaged-only filter) and the single is still granted.
+            if (full && IsTransformElement(entered))
+            {
+                CastElementalBurst(player, left);
+                GrantAscendance(player, left);
+            }
+        }
+
+        // Only the entered element may hold Elemental Charge now (a cancelled imbue's leftovers reset without a
+        // transform). Earth Charge is a separate bank and survives imbue swaps.
+        for (EnhElement const element : TRANSFORM_ELEMENTS)
+            if (element != entered)
+                RemoveOwnAura(player, GetChargeSpell(element));
+    }
+
+    void CastElementalBurst(Player* player, EnhElement element)
+    {
+        uint32 const spellId = GetBurstSpell(element);
+        if (!spellId || !IsUsablePlayer(player) || !player->IsAlive())
+            return;
+
+        SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
+        if (!spellInfo)
+        {
+            LOG_ERROR("scripts.spells", "Shaman::CastElementalBurst: spell {} does not exist", spellId);
+            return;
+        }
+
+        // The shaman's current target (selection, else victim) when it is an attackable enemy; else the shaman.
+        Unit* centre = nullptr;
+        if (Unit* selected = player->GetSelectedUnit())
+            if (selected != player && selected->IsAlive() && player->IsValidAttackTarget(selected))
+                centre = selected;
+
+        if (!centre)
+            if (Unit* victim = player->GetVictim())
+                if (victim->IsAlive() && player->IsValidAttackTarget(victim))
+                    centre = victim;
+
+        SpellCastTargets targets;
+        if (centre)
+        {
+            targets.SetUnitTarget(centre);
+            targets.SetDst(*centre);
+        }
+        else
+            targets.SetDst(*player);
+
+        LogEnhCastFailure("Elemental Burst", spellId, player, centre,
+            player->CastSpell(targets, spellInfo, nullptr, TRIGGERED_FULL_MASK));
+    }
+
+    void CastAscendanceVisual(Player* player, EnhElement element)
+    {
+        uint32 const spellId = GetAscendanceVisualSpell(element);
+        if (!spellId || !IsUsablePlayer(player) || !player->IsAlive())
+            return;
+
+        // Cosmetic only: a self-cast DUMMY with a stock visual, no aura, no damage, no threat, no procs.
+        if (player->CastSpell(player, spellId, TRIGGERED_FULL_MASK) != SPELL_CAST_OK)
+            LOG_ERROR("scripts.spells", "Shaman::CastAscendanceVisual: cast of {} by {} failed", spellId,
+                player->GetGUID().ToString());
+    }
+
+    void GrantAscendance(Player* player, EnhElement element)
+    {
+        uint32 const single = GetSingleAscendance(element);
+        if (!single || !IsUsablePlayer(player) || !player->IsAlive())
+            return;
+
+        if (!GetTalentRank(player, ASCENDANCE_RANKS))
+            return;
+
+        // One of each per cycle: a held single (or Elemental Ascendance) means Burst only.
+        ObjectGuid const guid = player->GetGUID();
+        if (IsElementalAscendant(player) || player->HasAura(single, guid))
+            return;
+
+        if (!player->AddAura(single, player))
+        {
+            LOG_ERROR("scripts.spells", "Shaman::GrantAscendance: could not apply aura {} to {}", single,
+                guid.ToString());
+            return;
+        }
+
+        bool const allThree = std::all_of(SINGLE_ASCENDANCES.begin(), SINGLE_ASCENDANCES.end(),
+            [player, guid](uint32 spellId) { return player->HasAura(spellId, guid); });
+
+        // The ascend burst at the shaman's feet: the element's own, the Earth stomp for Elemental Ascendance.
+        CastAscendanceVisual(player, allThree ? EnhElement::Earth : element);
+
+        if (allThree)
+        {
+            for (uint32 const spellId : SINGLE_ASCENDANCES)
+                RemoveOwnAura(player, spellId);
+
+            RefreshOwnBuff(player, ShamanData::SPELL_ELEMENTAL_ASCENDANCE, int32(ShamanData::ASC_DURATION_EA_MS));
+            UpdateUnleashedRage(player);
+        }
+        else if (!player->IsInCombat())
+            ArmEnhTimer(player, true);
+
+        RefreshAscendance(player);
+        StartAscendanceRefresh(player, false);
+    }
+
+    void RefreshAscendance(Player* player)
+    {
+        if (!IsUsablePlayer(player))
+            return;
+
+        // Singles x(1.3 + M): +M; Elemental Ascendance x(1 + 2(0.3 + M)) and Gust x2(1 + M): +2M on top of the row.
+        float const mastery = GetAscendanceMasteryPct(player);
+        int32 const singleBonus = RoundMasteryPct(mastery);
+        int32 const elementalBonus = RoundMasteryPct(2.0f * mastery);
+        ObjectGuid const guid = player->GetGUID();
+
+        for (uint32 const spellId : SINGLE_ASCENDANCES)
+            SetLiveAmounts(player, player->GetAura(spellId, guid), SPELL_AURA_ADD_PCT_MODIFIER, singleBonus);
+
+        SetLiveAmounts(player, player->GetAura(ShamanData::SPELL_ELEMENTAL_ASCENDANCE, guid),
+            SPELL_AURA_ADD_PCT_MODIFIER, elementalBonus);
+
+        RefreshStoneskinAmount(player);
+        FlushBank(player);
+    }
+
+    bool SpendEarthCharge(Player* player, uint8 amount)
+    {
+        if (!player || !amount)
+            return false;
+
+        FlushBank(player);
+
+        Aura* aura = player->GetAura(ShamanData::SPELL_EARTH_CHARGE, player->GetGUID());
+        if (!aura || aura->IsRemoved() || aura->GetStackAmount() < amount)
+            return false;
+
+        // A negative ModStackAmount neither refreshes the duration nor the timers, and removes the aura at 0.
+        aura->ModStackAmount(-int32(amount));
+        return true;
+    }
+
+    bool IsEarthenAscendant(Player const* player)
+    {
+        return player && player->HasAura(ShamanData::SPELL_EARTHEN_ASCENDANCE);
+    }
+
+    void UpdateUnleashedRage(Player* player)
+    {
+        if (!IsUsablePlayer(player))
+            return;
+
+        uint8 const rank = GetOwnTalentRank(player, UNLEASHED_RAGE_RANKS);
+        bool const wanted = rank > 0 && player->IsAlive() &&
+            (player->HasAura(ShamanData::SPELL_SHAMANISTIC_RAGE) || IsElementalAscendant(player));
+
+        SetOwnerAura(player, player, ShamanData::SPELL_UNLEASHED_RAGE_CLAUSE, wanted);
+        if (wanted)
+        {
+            // The rank's amount (UR_R1..UR_R3) replaces the row value; marked, so a recalculation keeps it.
+            Aura* aura = player->GetAura(ShamanData::SPELL_UNLEASHED_RAGE_CLAUSE, player->GetGUID());
+            int32 const pct = UNLEASHED_RAGE_CLAUSE_PCT[rank - 1];
+            if (aura && !aura->IsRemoved())
+                for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+                    if (AuraEffect* effect = aura->GetEffect(i))
+                        if (effect->GetAuraType() == SPELL_AURA_MOD_DAMAGE_PERCENT_DONE && effect->GetAmount() != pct)
+                            effect->ChangeAmount(pct);
+        }
+
+        FlushBank(player);
+    }
+
+    void OnEnhCombatChange(Player* player, bool inCombat)
+    {
+        if (!player)
+            return;
+
+        if (inCombat)
+        {
+            // Re-entry cancels both pending timers: their generations no longer match.
+            if (EnhancementState* state = FindEnhancementState(player))
+            {
+                ++state->chargeTimerGen;
+                ++state->singleTimerGen;
+            }
+
+            return;
+        }
+
+        if (HasAnyOwnAura(player, CHARGE_SPELLS))
+            ArmEnhTimer(player, false);
+
+        if (HasAnyOwnAura(player, SINGLE_ASCENDANCES))
+            ArmEnhTimer(player, true);
+    }
+
+    void OnStormstrikeLanded(Player* player, Unit* target, uint32 landedDamage)
+    {
+        if (!IsUsablePlayer(player) || !target || !target->IsAlive() || !landedDamage)
+            return;
+
+        int32 const amount = int32(uint64(landedDamage) * uint64(ShamanData::FROST_COPY_PCT) / 100);
+        if (amount <= 0)
+            return;
+
+        // The player's own controlled minions of the Frost Spirit entry (owner and entry checked, L-12). The wolf casts
+        // the copy, so it rolls none of the shaman's procs and carries no Stormstrike debuff.
+        std::list<Creature*> wolves;
+        player->GetAllMinionsByEntry(wolves, ShamanData::NPC_FROST_SPIRIT);
+        for (Creature* wolf : wolves)
+        {
+            if (!wolf || !wolf->IsInWorld() || !wolf->IsAlive() || !wolf->IsValidAttackTarget(target))
+                continue;
+
+            LogEnhCastFailure("Frost Spirit copy", ShamanData::SPELL_FROST_SPIRIT_COPY, wolf, target,
+                wolf->CastCustomSpell(ShamanData::SPELL_FROST_SPIRIT_COPY, SPELLVALUE_BASE_POINT0, amount, target,
+                    TRIGGERED_FULL_MASK));
+        }
+    }
+
+    int32 GetStoneskinAmount(Player const* player, uint8 stacks)
+    {
+        if (!stacks)
+            return 0;
+
+        // The row's per-stack value (-1 = 1% less damage taken per stack).
+        int32 perStack = -1;
+        if (SpellInfo const* info = sSpellMgr->GetSpellInfo(ShamanData::SPELL_STONESKIN_202206))
+            for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+                if (info->Effects[i].IsAura(SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN))
+                {
+                    perStack = info->Effects[i].CalcValue(player);
+                    break;
+                }
+
+        // Ascendance capstone: 1% x (1 + Mastery) per stack, rounded once on the total (the cap stays 50 stacks, so
+        // the total can pass 50% at high Mastery, by design).
+        double const mastery = player ? double(GetAscendanceMasteryPct(player)) : 0.0;
+        return int32(std::lround(double(perStack) * double(stacks) * (1.0 + mastery / 100.0)));
+    }
+
+    void OnRockbiterChanged(Player* player, bool applied)
+    {
+        // Login aura load (not in world): OnPlayerLogin reconciles through OnEnhTalentsChanged.
+        if (!IsUsablePlayer(player))
+            return;
+
+        SyncRockbiterChildren(player, applied);
+        UpdateUnleashedRage(player);
+    }
+
+    void OnEnhTalentsChanged(Player* player)
+    {
+        if (!IsUsablePlayer(player))
+            return;
+
+        if (!GetTalentRank(player, ELEMENTAL_CHARGE_RANKS))
+        {
+            for (uint32 const spellId : CHARGE_SPELLS)
+                RemoveOwnAura(player, spellId);
+
+            if (EnhancementState* state = FindEnhancementState(player))
+                state->bankedCharges = 0;
+        }
+
+        if (!GetTalentRank(player, ASCENDANCE_RANKS))
+        {
+            for (uint32 const spellId : SINGLE_ASCENDANCES)
+                RemoveOwnAura(player, spellId);
+
+            RemoveOwnAura(player, ShamanData::SPELL_ELEMENTAL_ASCENDANCE);
+            RemoveOwnAura(player, ShamanData::SPELL_EARTHEN_ASCENDANCE);
+        }
+
+        SyncRockbiterChildren(player, player->HasAura(ShamanData::SPELL_ROCKBITER_WEAPON, player->GetGUID()));
+        UpdateUnleashedRage(player);
+        RefreshAscendance(player);
+
+        // WP-R m1: (re)start the live-Mastery loop; a teleport may have killed the old one with the player's events.
+        StartAscendanceRefresh(player, true);
+    }
+
+    void OnEnhPlayerDied(Player* player)
+    {
+        if (!player)
+            return;
+
+        if (EnhancementState* state = FindEnhancementState(player))
+        {
+            state->bankedCharges = 0;
+            state->stashedImbue = 0;
+        }
+
+        UpdateUnleashedRage(player);
     }
 }

@@ -84,10 +84,42 @@ namespace
         return spellId == ShamanData::SPELL_TOTEMIC_RESONANCE;
     }
 
+    // S3: spells whose learn/unlearn changes the Enhancement state: Elemental Charge (charges), Ascendance (singles,
+    // both Ascendances, the Mastery amounts), Spirit Guard and Improved Lightning Shield (the Rockbiter children) and
+    // Unleashed Rage (the clause amount), Enhanced Elements (Mastery, so the live Ascendance and Stoneskin amounts).
+    bool IsEnhancementSyncSpell(uint32 spellId)
+    {
+        switch (spellId)
+        {
+            case ShamanData::SPELL_ELEMENTAL_CHARGE:
+            case ShamanData::SPELL_ASCENDANCE:
+            case ShamanData::SPELL_SPIRIT_GUARD_RANK1:
+            case ShamanData::SPELL_SPIRIT_GUARD_RANK2:
+            case ShamanData::SPELL_SPIRIT_GUARD_RANK3:
+            case ShamanData::SPELL_IMPROVED_SHIELDS:
+            case ShamanData::SPELL_IMPROVED_SHIELDS_16290:
+            case ShamanData::SPELL_IMPROVED_SHIELDS_51881:
+            case ShamanData::SPELL_UNLEASHED_RAGE:
+            case ShamanData::SPELL_UNLEASHED_RAGE_30808:
+            case ShamanData::SPELL_UNLEASHED_RAGE_30809:
+            case ShamanData::SPELL_ENHANCING_TOTEMS:            // Enhanced Elements ranks (stock ids reused)
+            case ShamanData::SPELL_ENHANCING_TOTEMS_16295:
+            case ShamanData::SPELL_ENHANCING_TOTEMS_52456:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    bool IsTalentSyncSpell(uint32 spellId)
+    {
+        return IsElementalSyncSpell(spellId) || IsRestorationSyncSpell(spellId) || IsEnhancementSyncSpell(spellId);
+    }
+
     // The Thunderstorm stun rank and the Elemental auras follow the talents (no class gate: Classless reads the
     // player's own state). One tick later, so a talent reset or unlearn has finished removing every rank (the
     // reset hook fires before it, the forget hook between a spell's and its talent's removal). S2: the Totemic
-    // Resonance aura too.
+    // Resonance aura too. S3: the Enhancement state (Rockbiter children, charges, Ascendances, Unleashed Rage).
     void QueueElementalTalentSync(Player* player)
     {
         if (!player)
@@ -103,6 +135,7 @@ namespace
             Shaman::SyncThunderstormRank(self);
             Shaman::OnElementalAdded(self, nullptr);
             Shaman::RecountTotemicResonance(self);
+            Shaman::OnEnhTalentsChanged(self);
         }, 1ms);
     }
 
@@ -129,7 +162,8 @@ public:
         { PLAYERHOOK_ON_AFTER_SET_VISIBLE_ITEM_SLOT, PLAYERHOOK_ON_LEVEL_CHANGED, PLAYERHOOK_ON_LOGIN,
           PLAYERHOOK_ON_LEARN_SPELL, PLAYERHOOK_ON_PLAYER_ENTER_COMBAT, PLAYERHOOK_ON_PLAYER_LEAVE_COMBAT,
           PLAYERHOOK_ON_BEFORE_LOGOUT, PLAYERHOOK_ON_LOGOUT, PLAYERHOOK_ON_AFTER_SPEC_SLOT_CHANGED, PLAYERHOOK_ON_FORGOT_SPELL,
-          PLAYERHOOK_ON_TALENTS_RESET, PLAYERHOOK_ON_PLAYER_LEARN_TALENTS, PLAYERHOOK_ON_MAP_CHANGED }) { }
+          PLAYERHOOK_ON_TALENTS_RESET, PLAYERHOOK_ON_PLAYER_LEARN_TALENTS, PLAYERHOOK_ON_MAP_CHANGED,
+          PLAYERHOOK_ON_PLAYER_JUST_DIED }) { }
 
     // Imbue glow (P0 section 5): SetVisibleItemSlot (equip, swap, enchant, login inventory load) just rewrote the
     // slot's real enchant visuals; write the active imbue's glow back over the temp half. Auras load before the
@@ -194,6 +228,15 @@ public:
         Shaman::RecountTotemicResonance(player);
         Shaman::ReleaseCloudburst(player, true);
         player->RemoveAurasDueToSpell(ShamanData::SPELL_CLOUDBURST_STORE, player->GetGUID());
+
+        // S3: the Rockbiter children (passive, never saved), the Unleashed Rage clause and the live Mastery amounts
+        // follow the loaded talents and auras; the charges and Ascendances were dropped before the logout save (D9).
+        Shaman::OnEnhTalentsChanged(player);
+
+        // WP-R m9: an autosave before a crash can bring charges or singles back with no logout drop: out of combat they
+        // get their 2 min timers now.
+        if (!player->IsInCombat())
+            Shaman::OnEnhCombatChange(player, false);
     }
 
     // S1: every map entry (login included, before OnPlayerLogin): the totems never follow the player (the old map
@@ -220,6 +263,16 @@ public:
             player->HasAuraType(SPELL_AURA_MOD_SILENCE);
         if (!controlled)
             player->RemoveAurasDueToSpell(ShamanData::SPELL_ASTRAL_SHIFT_BUFF);
+
+        // S3: the charges, singles, Ascendances and the bank travel with the player; the Elemental Spirits are
+        // guardians the old map removes. Leaving a map can kill the player's pending events
+        // (Unit::CleanupBeforeRemoveFromMap), so the live-Mastery loop restarts (with the rest of the reconcile) and
+        // the out-of-combat timers re-arm. The Elemental Spirits timer buff goes with the wolves (S3a code review n1;
+        // this hook also runs at login, where a saved copy has no wolves behind it).
+        player->RemoveAurasDueToSpell(ShamanData::SPELL_ELEMENTAL_SPIRITS_TIMER, player->GetGUID());
+        Shaman::OnEnhTalentsChanged(player);
+        if (!player->IsInCombat())
+            Shaman::OnEnhCombatChange(player, false);
     }
 
     // Trainer, .learn and skill-rewarded learns of Reincarnation (Player::learnSpell, after addSpell succeeded).
@@ -229,7 +282,7 @@ public:
         if (!player)
             return;
 
-        if (IsElementalSyncSpell(spellID) || IsRestorationSyncSpell(spellID))
+        if (IsTalentSyncSpell(spellID))
             QueueElementalTalentSync(player);
 
         if (spellID != ShamanData::SPELL_REINCARNATION || !IsShaman(player))
@@ -241,14 +294,14 @@ public:
     // S1: .unlearn and talent-rank removal (resetTalents, spec data) of the same spells.
     void OnPlayerForgotSpell(Player* player, uint32 spellID) override
     {
-        if (IsElementalSyncSpell(spellID) || IsRestorationSyncSpell(spellID))
+        if (IsTalentSyncSpell(spellID))
             QueueElementalTalentSync(player);
     }
 
     // S1: a talent point spent (passive ranks never reach the learn-spell hook).
     void OnPlayerLearnTalents(Player* player, uint32 /*talentId*/, uint32 /*talentRank*/, uint32 spellid) override
     {
-        if (IsElementalSyncSpell(spellid) || IsRestorationSyncSpell(spellid))
+        if (IsTalentSyncSpell(spellid))
             QueueElementalTalentSync(player);
     }
 
@@ -260,16 +313,35 @@ public:
 
     // Stoneskin's 2 min out-of-combat timer: cancelled on entry, armed on leave. OnPlayerLeaveCombat can fire twice
     // for one exit (CombatManager::UpdateOwnerCombatState and Unit::ClearInCombat); OnCombatChange re-arms.
+    // S3: the same for the charges' and the singles' timers (both functions check what the player holds).
     void OnPlayerEnterCombat(Player* player, Unit* /*enemy*/) override
     {
-        if (player && player->HasAura(ShamanData::SPELL_STONESKIN_202206))
+        if (!player)
+            return;
+
+        if (player->HasAura(ShamanData::SPELL_STONESKIN_202206))
             Shaman::OnCombatChange(player, true);
+
+        Shaman::OnEnhCombatChange(player, true);
     }
 
     void OnPlayerLeaveCombat(Player* player) override
     {
-        if (player && player->HasAura(ShamanData::SPELL_STONESKIN_202206))
+        if (!player)
+            return;
+
+        if (player->HasAura(ShamanData::SPELL_STONESKIN_202206))
             Shaman::OnCombatChange(player, false);
+
+        Shaman::OnEnhCombatChange(player, false);
+    }
+
+    // S3 (D9): the engine already removed the charges, singles and Ascendances (not death-persistent); the bank and
+    // the swap stash go too, and the Unleashed Rage clause follows. Imbues and the Rockbiter children persist.
+    void OnPlayerJustDied(Player* player) override
+    {
+        if (player)
+            Shaman::OnEnhPlayerDied(player);
     }
 
     // A spec-slot change can strip and re-grant auras; Reincarnation (a class gate) is re-checked (SH0a review m3).

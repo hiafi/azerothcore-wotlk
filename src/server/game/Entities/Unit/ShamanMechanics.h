@@ -55,7 +55,7 @@ namespace Shaman
     // 0 if none.
     uint32 GetActiveImbue(Unit const* unit);
 
-    // True while the player knows a Maelstrom Weapon talent rank (stock ranks until the Enhancement stage).
+    // True while the player knows a Maelstrom Weapon talent rank (S3: GetTalentRank over the three ranks).
     bool HasMaelstromWeaponTalent(Player const* player);
 
     // Imbue weapon glow (P0 section 5): writes the temp half of PLAYER_VISIBLE_ITEM_n_ENCHANTMENT.
@@ -68,6 +68,8 @@ namespace Shaman
     void AddStoneskin(Player* shaman, uint32 stacks);
     // B15: a landed hit of `landedDamage` on `victim` (after armor and every reduction, Stoneskin's included)
     // removes the same percent of current stacks as the hit is of max health before Stoneskin's reduction.
+    // S3: nothing erodes during Earthen Ascendance; Toughness rank 3 halves the loss (TOUGHNESS_ERODE_PCT) while the
+    // victim is below TOUGHNESS_THRESHOLD_PCT health before the hit.
     void ErodeStoneskin(Player* victim, uint32 landedDamage);
     // Out-of-combat 2 min timer: started on leave, cancelled on re-enter.
     void OnCombatChange(Player* player, bool inCombat);
@@ -175,6 +177,8 @@ namespace Shaman
     // placement heal (cast by the totem 1 ms later), and the Cloudburst placement record plus its store buff.
     // Removed: Totemic Resonance recount and, for the recorded Cloudburst totem, the release (discarded when the
     // shaman is dead). Both run with the slot already holding the new totem or cleared.
+    // S3 (added): Guardian Totems rank 2 capstone, any totem created by a shaman-family spell (elementals included):
+    // GUARDIAN_TOTEMS_ARMOR for GUARDIAN_TOTEMS_ARMOR_DURATION_MS, refreshed.
     void OnPlayerTotemAdded(Player* player, Creature* totem);
     void OnPlayerTotemRemoved(Player* player, Creature* totem);
 
@@ -189,6 +193,7 @@ namespace Shaman
 
     // Earthen Wall absorb for `owner`'s totem: the effect's base plus the owner's healing power times the generated
     // coefficient (and level penalty), times (1 + Totemic Resonance). Earthen Bulwark takes its share of this.
+    // S3: times (1 + Earth's Grasp %), the percent read from the owner's rank's first DUMMY effect.
     uint32 GetEarthenWallAbsorb(Player const* owner, SpellInfo const* shield, uint8 effIndex);
 
     // Tidal Waves charges: a grant raises the charges to `amount` (cap TIDAL_WAVES_MAX), never lowers them, and
@@ -208,6 +213,8 @@ namespace Shaman
     void ReleaseCloudburst(Player* player, bool discard);
     // Logout, before the save: adds the remaining Cloudburst cooldown of a placement still recorded (the totem's removal
     // runs after the Player is gone), so the saved cooldown survives a relog. No-op without an active Cloudburst.
+    // S3 (D9): first drops the bank and the Enhancement auras (charges, singles, Elemental and Earthen Ascendance, the
+    // Unleashed Rage clause), so the save carries none of them.
     void OnPlayerBeforeLogout(Player* player);
 
     // Lengthens the active Tidal Force caster aura by `ms` (no cap).
@@ -215,6 +222,101 @@ namespace Shaman
 
     // Counted healing totems (Totemic Resonance's count source), capped at TR_MAX_COUNT; 0 for nullptr.
     uint8 GetRestorationTotemCount(Player const* player);
+
+    // ---- S3 ----
+    // Enhancement spec (docs/reworks/shaman-enhancement-rework.md). Per-player state (the imbue-swap stash, the
+    // charges banked during an Ascendance, the out-of-combat timer generations) lives in the player's CustomData and
+    // is dropped by ClearState; charges, singles and the Ascendances are auras on the shaman (D9: dropped on death and
+    // logout). Rank reads go through GetTalentRank, so a non-shaman with a talent gets do-nothing.
+
+    // The element an imbue builds: Flametongue Fire, Frostbrand Frost, Windfury Wind, Rockbiter Earth; None otherwise
+    // (Earthliving, 0, any other id).
+    enum class EnhElement : uint8 { Fire, Frost, Wind, Earth, None };
+    EnhElement GetImbueElement(uint32 imbueId);
+
+    // Stacks of the element's charge buff (Fire/Frost/Wind Charge, Earth Charge); 0 for None or nullptr.
+    uint8 GetCharge(Player const* player, EnhElement element);
+
+    // Elemental Charge grant of `amount` to the element of the active imbue (Earth Charge under Rockbiter; Earthliving
+    // or no imbue: nothing), capped at CHARGE_CAP_ELEMENT / CHARGE_CAP_EARTH. Needs the Elemental Charge talent. While
+    // Elemental Ascendance or Earthen Ascendance is up nothing builds, except Shamanistic Rage's grant
+    // (`fromShamanisticRage`), which is banked and added to the active imbue's element when the Ascendance ends. A
+    // grant out of combat arms the 2 min out-of-combat timer (in combat it starts on leaving combat). Callers apply the
+    // once-per-cast / per-hit / triggered rules; this function does not filter sources.
+    void AddCharge(Player* player, uint8 amount, bool fromShamanisticRage);
+
+    // spell_sha_imbue's two calls (0-verify item l: group 1251 evicts the old imbue in AfterEffectRemove, the new
+    // one is applied after it in the same call stack):
+    //   HandleRemove(old): OnImbueChanged(player, old, 0)  - stashes `old` with the current server tick;
+    //   HandleApply(new):  OnImbueChanged(player, 0, new)  - consumes a stash from this tick as the swap old -> new.
+    // A direct OnImbueChanged(player, old, new) is the swap itself. A remove with no apply in the same tick
+    // (right-click, expiry) transforms nothing and keeps the charges (2 min rule); a later apply of another imbue then
+    // resets the other elements' charges without a transform. Swap from Flametongue/Frostbrand/Windfury at
+    // CHARGE_CAP_ELEMENT to another of the three: that element's Burst, then its single Ascendance (GrantAscendance);
+    // to Rockbiter or Earthliving, or below the cap: the charges reset. Earth Charge is never touched by a swap. Same
+    // imbue: nothing.
+    void OnImbueChanged(Player* player, uint32 oldImbue, uint32 newImbue);
+
+    // The element's Burst (Flame/Storm/Wind), cast by the player (triggered): unit target = the selected attackable
+    // enemy, else the victim; destination = that unit, else the shaman. spell_sha_enh_burst filters the targets.
+    void CastElementalBurst(Player* player, EnhElement element);
+
+    // With the Ascendance talent: grants the element's single Ascendance unless it is already held or Elemental
+    // Ascendance is up; holding all three then consumes them and grants Elemental Ascendance for ASC_DURATION_EA_MS
+    // (and refreshes the Unleashed Rage clause). Fire/Frost/Wind only.
+    void GrantAscendance(Player* player, EnhElement element);
+
+    // The one-shot cosmetic burst at the shaman's feet when an Ascendance is gained (playtest P2): Fire Nova, Frost Nova,
+    // Thunderstorm's lightning burst or War Stomp's ring by element (Earth: Elemental Ascendance and Earthen Ascendance).
+    // A triggered self-cast of a DUMMY helper with a stock visual: no damage, threat, aura or procs. GrantAscendance
+    // calls it; Living Earth calls it for Earthen Ascendance.
+    void CastAscendanceVisual(Player* player, EnhElement element);
+
+    // Live Mastery amounts (Ascendance talent's capstone; integer percent, rounded to MASTERY_ROUND_PCT): every
+    // SPELLMOD_DAMAGE / SPELLMOD_DOT percent effect of the singles takes base + Mastery, of Elemental Ascendance base +
+    // 2 x Mastery (speed effects are left alone); Stoneskin's MOD_DAMAGE_PERCENT_TAKEN takes GetStoneskinAmount.
+    // Changes an effect only when it moved. Also adds banked charges once no Ascendance holds them. Call on apply, from
+    // a periodic refresh and after a stat change (RefreshEmpowerment precedent).
+    void RefreshAscendance(Player* player);
+
+    // Spends `amount` Earth Charge when at least that many are held (banked charges are added first when free); false
+    // and nothing spent otherwise.
+    bool SpendEarthCharge(Player* player, uint8 amount);
+    bool IsEarthenAscendant(Player const* player);
+
+    // The Unleashed Rage damage clause (UNLEASHED_RAGE_CLAUSE, amount UR_R1..UR_R3 by rank) on while Shamanistic Rage
+    // or Elemental Ascendance is up, off otherwise. The rank is read from the talent map only (the ranks are raid
+    // area auras, so party members carry the rank ids). Call from both auras' apply and remove (also adds banked
+    // charges once no Ascendance holds them).
+    void UpdateUnleashedRage(Player* player);
+
+    // Out-of-combat timers of the charges (EC_OOC_MS) and the singles (ASC_OOC_MS): armed on leave, cancelled on entry.
+    void OnEnhCombatChange(Player* player, bool inCombat);
+
+    // Frost Spirit: every Frost Spirit of the player casts FROST_SPIRIT_COPY at `target` for FROST_COPY_PCT% of
+    // `landedDamage` (the Stormstrike's landed main- and off-hand damage, summed by the caller; cleave hits excluded).
+    void OnStormstrikeLanded(Player* player, Unit* target, uint32 landedDamage);
+
+    // Total MOD_DAMAGE_PERCENT_TAKEN amount (negative) of `stacks` Stoneskin stacks: the 202206 row's per-stack value
+    // x stacks, x (1 + Mastery) with the Ascendance talent, rounded once (integer percent). AddStoneskin and
+    // ErodeStoneskin write it after every stack change (the engine's stack recalculation multiplies the per-stack
+    // amount after the calc hooks, so a per-stack hook cannot carry the Mastery fraction).
+    int32 GetStoneskinAmount(Player const* player, uint8 stacks);
+
+    // Rockbiter applied/removed (spell_sha_imbue, Rockbiter only, after OnImbueChanged): Spirit Guard's parry child
+    // (rank 1/2/3 %) and the Improved Lightning Shield threat child follow Rockbiter and the talents. Skipped while the
+    // player is not in world (login aura load: OnPlayerLogin reconciles through OnEnhTalentsChanged).
+    void OnRockbiterChanged(Player* player, bool applied);
+
+    // Talent learn/reset, spec swap, login and map change: the two Rockbiter children, the Unleashed Rage clause and
+    // the live amounts; without Elemental Charge the charges (and the bank) go, without Ascendance the singles,
+    // Elemental Ascendance and Earthen Ascendance go. (Re)starts the 1 s live-Mastery refresh, which runs while the
+    // Ascendance talent is known and a single, Elemental Ascendance or Stoneskin is up.
+    void OnEnhTalentsChanged(Player* player);
+
+    // Death (hooks only): drops the banked charges and the swap stash (the auras are already gone, D9) and re-checks
+    // the Unleashed Rage clause.
+    void OnEnhPlayerDied(Player* player);
 }
 
 #endif
