@@ -142,3 +142,81 @@ spelldescriptionvariables:
 spellcategory:
   start: 1300
   end: 1309
+
+# --- Client-patch id blocks (shaman-rework T1, .agents/plans/shaman-rework/shaman-rework.T0a-REPORT.md s1) ---
+#
+# The blocks below name the id ranges of DBC tables that generate.py does NOT build: SpellIcon (patch-I),
+# SoundEntries, SpellVisual/SpellVisualKit/SpellVisualEffectName, CreatureDisplayInfo/CreatureModelData and
+# GameObjectDisplayInfo (patch-M, the patch_*_vfx_models.py / build_patch_*.py scripts) and SummonProperties
+# (server-side). Until now those ids lived only as constants in the per-class patch scripts, so the PLAN's id
+# table was the only guard against two classes minting the same number. Nothing mints from these blocks
+# (no reader outside lib/test_id_blocks.py looks at them); they exist so a test can check every class's
+# reservation (the `reservations:` key at the bottom) sits inside the tool-wide range and overlaps no other
+# class. Each range contains every id already used, checked against the constants in build_patch_*.py and
+# patch_*_vfx_models.py and the maxima in the shaman T0a report (2026-10-18):
+#   - spellicon:  used 90100-90239 (build_patch_i.py ICON_ID_*). 90100 is the first id: the Ascension icon
+#                 mining started above CreatureDisplayInfo's 90001+ rows (a different table, same numbers).
+#   - soundentries: used 90001-90033 (druid 1-4, priest 5-10, warlock 11, paladin 31-33).
+#   - spellvisual: SpellVisual, SpellVisualKit and SpellVisualEffectName share these numbers. Used 90001-90091
+#                 (mage from 90001, hunter glaive toss 90090/90091 are the highest).
+#   - creaturedisplayinfo / creaturemodeldata: used 90001-90321 / 90001-90310 (mage 90001-90003, the shapeshift
+#                 appearances 90100-90399 of build_patch_f.py).
+#   - gameobjectdisplayinfo: used 90001 (client patch-M).
+#   - summonproperties: stock DBC tops out at 2935 (SummonProperties.dbc, 200 rows); the overlay table is empty.
+spellicon:
+  start: 90100
+  end: 90399
+
+soundentries:
+  start: 90001
+  end: 90100
+
+spellvisual:
+  start: 90001
+  end: 90199
+
+creaturedisplayinfo:
+  start: 90001
+  end: 90499
+
+creaturemodeldata:
+  start: 90001
+  end: 90499
+
+gameobjectdisplayinfo:
+  start: 90001
+  end: 90099
+
+summonproperties:
+  start: 3000
+  end: 3099
+
+# Per-class reservations, one entry per table the class draws ids from, each inside the tool-wide block of the
+# same name above (or the spell/talent/... blocks earlier in this file). Kept under ONE key because every
+# reader of this file indexes it by table name (source.load_ids, ids.next_free_id, reuse.ReuseContext,
+# webui/app.py, registry.py's ids_cfg.get(...), apps/item-tools' item_range()) and none iterates it, so a
+# new top-level mapping is invisible to them. lib/test_id_blocks.py checks that reservations stay inside their
+# block, overlap no other class, and contain every id a class's source/classes/<class>/ declares.
+# Shaman: .agents/plans/shaman-rework/shaman-rework.PLAN.md s4 (TalentTab: none, the rework reuses 261/262/263).
+reservations:
+  shaman:
+    # Spell: shared 202200-202359, Enh 202360-202519, Ele 202520-202639, Resto 202640-202759, spare 202760-202799
+    # (202760-202779 held the removed P0 spike: don't reuse, players' clients may have cached them).
+    spell: {start: 202200, end: 202799}
+    # Talent: Ele 60280-60294, Enh 60295-60309, Resto 60310-60324, spare 60325-60329.
+    talent: {start: 60280, end: 60329}
+    # SkillLineAbility: shared 30640-30679, Enh 30680-30689, Ele 30690-30699, Resto 30700-30709.
+    skilllineability: {start: 30640, end: 30719}
+    # spell_group: 1251 imbues, 1252 attunements, 1253-1256 per attunement, 1257 Healing Rain.
+    spell_group: {start: 1251, end: 1270}
+    spelldescriptionvariables: {start: 1190, end: 1229}  # by tens
+    # creature: Water 300260, Storm 300261, Spirits 300262-300265, new totems 300270-300279
+    # (300298/300299 held the removed P0 spike: don't reuse).
+    creature: {start: 300260, end: 300299}
+    spellicon: {start: 90270, end: 90309}  # by tens
+    soundentries: {start: 90081, end: 90100}
+    spellvisual: {start: 90130, end: 90179}  # SpellVisual, Kit and EffectName
+    creaturedisplayinfo: {start: 90440, end: 90469}
+    creaturemodeldata: {start: 90440, end: 90469}
+    gameobjectdisplayinfo: {start: 90010, end: 90014}
+    summonproperties: {start: 3000, end: 3009}  # only if needed

@@ -541,8 +541,9 @@ class 1/subclass 0/`BagFamily` 0) and `source/world/ranged_weapons.py` (every li
 folder once at rollout**. `WARNING: item N ... the client still demands ammo` (`lint.check_ranged_ammo_type`) fires on a
 declared ranged weapon, or a custom `items.csv` bow/gun/crossbow (id >= 56806), whose `ammo_type` is not 0.
 
-The item lints, the hunter family-bit lint and `check_talent_tab_refs` run on a **full** `generate.py` run only:
-`--check` returns before them, so a session limited to `--check` gets no feedback from them.
+The item lints and `check_talent_tab_refs` run on a **full** `generate.py` run only: `--check` returns before
+them, so a session limited to `--check` gets no feedback from them. The family-bit lint also runs under `--check`
+since shaman T1 (see "Shaman T1" below).
 
 **Talent rows are ordered by their final tab.** Talent.dbc's physical order is load-bearing (see
 `dbcfile.order_talent_rows`): a row goes into the block of the `TabID` it is built with, so a talent moved from
@@ -551,12 +552,12 @@ order, and a tab missing from the stock file (60800) is a block after all of the
 name TabID N, which is not in the built TalentTab.dbc` (`lint.check_talent_tab_refs`) stops the run when a
 talent names a tab nobody declared.
 
-**Family-bit lint.** `WARNING: spell N ...: hunter family-bit rule (a|b|c|d)` (`lint.check_hunter_family_rules`,
-custom ids >= 200000 with `SpellClassSet` 9): (a) a non-aspect (its name does not start with "Aspect of")
-carrying an aspect bit; (b) any carrier of d1 b0; (c) any reader mask (an effect's `EffectSpellClassMask`, or a
-`spell_proc` family mask) containing the pet bit d1 b28 - read a pet group through its d2 bit alone; (d) a
-pet-cast spell (carries d2 b22/b23/b24, or is taught on skill line 270 or a CreatureFamily.dbc line) that
-lacks d1 b28. A spell with d1 b28 and DmgClass RANGED never warns. The literals live in
+**Family-bit lint.** `WARNING: spell N ...: hunter family-bit rule (a|b|c|d)` (`lint.check_family_bit_rules`, also
+exported as `check_hunter_family_rules`; custom ids >= 200000 with `SpellClassSet` 9): (a) a non-aspect (its name
+does not start with "Aspect of") carrying an aspect bit; (b) any carrier of d1 b0; (c) any reader mask (an effect's
+`EffectSpellClassMask`, or a `spell_proc` family mask) containing the pet bit d1 b28 - read a pet group through its
+d2 bit alone; (d) a pet-cast spell (carries d2 b22/b23/b24, or is taught on skill line 270 or a CreatureFamily.dbc
+line) that lacks d1 b28. A spell with d1 b28 and DmgClass RANGED never warns. The literals live in
 `lint.HUNTER_FAMILY_RULES`; another class joins by adding a `FamilyBitRules` row to `FAMILY_BIT_RULES`.
 
 **Pet reference data.** `source/classes/hunter/hunter_pet_talents.py` holds the three stock pet talent tabs
@@ -566,6 +567,109 @@ delta); the hunter pet pass owns every edit. `pull_talents.py --tab 409,410,411 
 already declared under `source/classes/`). `retire_pet_spell()` needs the stock
 `var/extractors/dbc/CreatureFamily.dbc` (from the worldserver's `env/dist/data/dbc/`; generate.py stops with the
 path if a retirement is declared without it).
+
+### Shaman T1: creature spell slots, spell lints and id blocks
+
+Added for the shaman rework (`.agents/plans/shaman-rework/`, T1). No shaman content: these are the helpers, lints and
+id blocks SH0 and the spec stages call.
+
+**`creature_spell(entry, index, spell, verified_build=0)` / `remove_creature_spell(entry, index)`** declare one
+`creature_template_spell` row (`ObjectMgr::LoadCreatureTemplateSpells`: the creature's `m_spells[0..7]`) and its
+key-exact removal. `spell` is a stock id or a declared `Spell`; `entry` is a creature this run declares (inside
+`ids.yaml`'s `creature` / `npc_tools` block) or one that already exists. A bad index or an unknown entry raises.
+
+```python
+# SH0: a totem that summons its guardian. The summon must sit on Index 0 - when the totem is removed
+# Unit::SetMinion despawns the guardians it summoned by reading only Totem::GetSpell(), which is m_spells[0]
+# (Totem.h:59, Unit.cpp:7745-7759), so a summon on any other slot leaves the guardian standing.
+creature_template(300270, "Fire Elemental Totem", ...)
+creature_spell(300270, 0, fire_elemental_summon_202xxx)
+creature_spell(15439, 0, 202xxx)       # overriding a stock row is ordinary: the declared row replaces it
+
+# SH0 removes the P0 spike's hand-written rows (rev_1792393868936008368.sql): this tool never emitted them, so
+# the prune pass cannot reach them and a removal is the only way. One key-exact DELETE, emitted once.
+remove_creature_spell(300298, 0)
+remove_creature_spell(300299, 0)
+```
+
+It rides the `SPELL_TABLES` / `REMOVAL_TABLES` path like `procs_on()` / `untrain()`: a DELETE on the
+(CreatureID, Index) keys followed by the INSERT, diffed against the live table (base dump, every migration, pending
+files), so an unchanged rerun emits nothing. Dropping a declaration prunes only a row **this tool emitted before**; a
+hand-written row is neither pruned nor re-emitted, and a dropped declaration that overrode a stock row is reported
+(`prune: NOT removing creature_template_spell (...) - the stock dump owns this key too`) and left as the declaration
+wrote it, exactly as `procs_on()` behaves. Declaring and removing one slot in the same run raises. A declared spell
+that is neither declared in source nor a stock spell prints `WARNING: creature_spell(...): spell N is neither
+declared ...` (`lint.check_creature_spell_rows`). The note line `contributed ...` now omits tables with a zero count.
+
+**New lints** (all in `lib/lint.py`, all `WARNING:`, all run under `--check` *and* the full run through
+`generate._t1_content_warnings`; `--check` has no promoted-aware spell or SkillLineAbility state, so it judges the
+stock client rows plus the declared SkillLineAbility rows, and the full run adds the live ones):
+
+- `check_totem_tools` fires on a custom (id >= 200000) `SpellClassSet` 11 spell whose built row has non-zero
+  `Totem_1/2` or `RequiredTotemCategoryID_1/2` (ruling 3A.8: the rework drops the Earth/Fire/Water/Air Totem item
+  requirement). Fix: zero the four columns in `raw_overrides`.
+- `check_hidden_learned_spells` fires on a custom spell with `Attributes & 0x80` (DO_NOT_DISPLAY) and not `0x40`
+  (passive) that a player learns: a SkillLineAbility row on a non-pet line, a `trained_by()` row, a talent
+  rank, or a LEARN_SPELL (effect 36) target of any learned spell (followed transitively). The client hides it from the
+  spellbook (P0's Healing Rain; that incident itself used `.learn`, which no data lint sees). Hidden passives, hidden
+  helpers nobody learns, pet-line rows and pure LEARN_SPELL carriers (every effect is effect 36, the stock 59672
+  talent-rank shape) are silent. Allow: `lint.HIDDEN_LEARNED_ALLOW` (empty).
+- `check_ground_effect_haste` fires on a custom spell with a PERSISTENT_AREA_AURA effect that ticks hasted:
+  `AttributesEx5 & 0x2000` (the Blizzard 10 / Rain of Fire 5740 clone trap) or a periodic damage/heal aura (3, 8, 20,
+  53, 89 = `SpellInfo::HasPeriodicDamageOrHealEffect`). Fixed-tick ground effects use the trigger shape: persistent
+  area aura (dummy) + PERIODIC_DUMMY on the caster + a script casting one single-target spell per target. The core's
+  own fixed-cadence ids (`IsFixedCadencePeriodic`, Echo of Light today) are exempt via
+  `lint.FIXED_CADENCE_PERIODIC_SPELLS`: extend it when `FIXED_CADENCE_PERIODIC_SPELLS` in SpellAuraEffects.cpp grows.
+  Allow: `lint.GROUND_HASTE_ALLOW`.
+- `check_spell_proc_rows` fires on a declared `spell_proc` row that `SpellMgr::LoadSpellProcs` logs
+  (SpellMgr.cpp:2112-2117). The effective ProcFlags is the row's, or the spell's DBC `ProcTypeMask` when the row has
+  0. It warns when that is 0; when there is no `SpellPhaseMask` and the flags intersect
+  `REQ_SPELL_PHASE_PROC_FLAG_MASK` (a done-spell or periodic proc never matches: the 202766 Flametongue slip); and
+  when a phase is set on flags outside the mask. A rank-chain row is judged on its base rank's flags only. Allow:
+  `lint.SPELL_PROC_ALLOW` (id -> reason).
+- `check_shadowed_spell_procs` fires on a declared per-rank `spell_proc` row that a negative rank-chain row in the
+  final set shadows. `LoadSpellProcs` has no ORDER BY, so negative rows load first, claim every rank of the chain, and
+  the declared per-rank row is dropped at boot ("listed in `spell_proc` has duplicate entry"). The final set is the
+  replayed live table minus `remove_spell_proc()` and prune deletions, with the declared rows over it; chains are
+  `spell_ranks` plus the talent rank chains. Fix: `remove_spell_proc(-first_rank)` or declare the proc on the chain
+  key. Allow: `lint.SHADOWED_PROC_ALLOW`.
+- `check_trainer_spell_level` fires on a `trained_by()` row on a class trainer (`PRICED_TRAINER_IDS` plus every
+  `trainer` of Type 0) whose `ReqLevel` is below the spell's `SpellLevel`: `SpellInfo::GetAuraRankForLevel` returns
+  no rank for a target below SpellLevel - 10, so a single-rank buff learned early (Bloodlust, SpellLevel 70, learned
+  at 60) fails on lower-level group members. Only spells that go through rank selection are judged (a friendly
+  APPLY_AURA or party / raid area-aura effect, none of COOLDOWN_ON_EVENT / ALLOW_LOW_LEVEL_BUFF /
+  ONLY_PROC_ON_CASTER); an attack or a stun is not. Allow: `lint.TRAINER_SPELL_LEVEL_ALLOW` (empty).
+
+Each allow set holds the hits that existed when the lint was written, one comment per entry. `SPELL_PROC_ALLOW`
+holds boot errors that are harmless (`... won't be used`: a phase on taken-only flags) and the 6 priest rows with
+done-spell flags and no phase. Those priest rows, and 6 more, are a **known live bug owned by the priest rework**
+(`SHADOWED_PROC_ALLOW`): stock rank-chain rows (-27811, -33150, -34753, -63730, -64127, -47516) load first and the
+declared per-rank rows are dropped as duplicates, and the priest rework zeroed the chain rows' DBC `ProcTypeMask`, so
+Blessed Recovery, Surge of Light, Holy Concentration, Serendipity and Body and Soul never proc live (Grace rank 3
+runs on the stock values). Adding a phase to those rows changes nothing; the fix is in the priest data.
+
+**`lint.TOOL_FREE_CLASS_SETS`** (empty frozenset) widens `check_totem_tools` to every spell of the listed
+`SpellClassSet`s: the declared ones, stock ids included, and the undeclared stock spells in the base Spell rows (stock
+client file under `--check`, the live rows in the full run). 117 stock family-11 spells hold a tool column, 42 of them
+declared today, so a learnable stock rank SH0 forgot to declare and strip is flagged. SH0 adds `11` once it has
+stripped `RequiredTotemCategoryID_1`; until then stock rows stay quiet.
+
+**Shaman family-bit rules.** `lint.SHAMAN_FAMILY_RULES` (`SpellClassSet` 11) joins `FAMILY_BIT_RULES`: (a) no custom
+spell may carry d1 b5 or d1 b10 (`0x420`, `SPELL_SPECIFIC_ELEMENTAL_SHIELD`, SpellInfo.cpp:2241-2248: two such
+spells are mutually exclusive) unless its id is in the rule's `exempt_ids` (empty; SH0 adds a custom real shield);
+(c) no reader mask (effect mask or `spell_proc` family mask) may contain d2 b11 or d2 b31 (`0x80000800`, the Orc and
+Draenei racials). Rules (b) and (d) are no-ops (zero masks), and `exempt_name_prefix=""` means no name exemption.
+The other shaman "never take" bits (d0 b10 on a shield with NO_THREAT, d2 b14 root DR) and "imbue auras leave d1
+b11" depend on attributes or on the spell's role, which the table cannot express: they are SH0's targeted tests.
+
+**ID blocks.** `source/ids.yaml` now names the client-patch tables' ranges (`spellicon` 90100-90399, `soundentries`
+90001-90100, `spellvisual` 90001-90199 shared by SpellVisual/Kit/EffectName, `creaturedisplayinfo` and
+`creaturemodeldata` 90001-90499, `gameobjectdisplayinfo` 90001-90099, `summonproperties` 3000-3099; stock tops out
+at 2935) and a `reservations:` key holding each class's slice of every table (shaman only so far). Nothing mints
+from the new blocks; `lib/test_id_blocks.py` checks that blocks of one table do not overlap, that a reservation sits
+inside its block and overlaps no other class, and that every custom id `source/classes/<class>/` declares inside a
+tool-wide block is inside that class's reservation. A new class reserves its slice in `ids.yaml` first (keep to
+`.agents/plans/shaman-rework/shaman-rework.PLAN.md` s4's table of who owns what).
 
 ### Declaring tooltip variables (P9)
 

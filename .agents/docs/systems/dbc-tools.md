@@ -446,8 +446,9 @@ talents, pet spells and items" section has the call syntax; this is what to know
   broader than the SpellMod-only scoping lint, and every declared `spell_proc` row whatever its spell id
   (SpellFamilyName 9 or 0; 0 matches any family). Rule (a) exempts an "Aspect of ..." name only for a spell
   with a SkillLineAbility row, so a same-named triggered aura still warns; the rule set's `exempt_ids` is the
-  explicit escape hatch. Full run only, like the item lints and `check_talent_tab_refs`; `--check` returns
-  before them. Without `CreatureFamily.dbc` the run prints a WARNING when custom class-set-9 spells exist.
+  explicit escape hatch. Since shaman T1 the function is `check_family_bit_rules` (the old name is an alias) and
+  runs under `--check` too, on the declared population; the full run still judges only the new or edited spells.
+  Without `CreatureFamily.dbc` the full run prints a WARNING when custom class-set-9 spells exist.
 - **TalentTab.dbc in patch-Z.** The retired tab 60800 (`order_index` 3, ClassMask 0, PetTalentMask 0) makes
   `TalentTab.dbc` ship for the first time. The first full run prints two WARNINGs (`TalentTab.dbc ships in the
   client patch ...  60800 (new)` and `TalentTab.dbc is new in the client patch ...`): accept them once and check
@@ -456,6 +457,44 @@ talents, pet spells and items" section has the call syntax; this is what to know
   `notes`); any edited stock row or a tab with a class or pet mask still warns. `CharacterDatabaseCleaner` keeps
   `character_talent` rows on a valid tab, so the characters SQL that retires a talent deletes them itself.
 - **Cost.** Loading the item overlay and the Talent rows adds about 30 s to `generate.py` and to `--check`.
+
+## Shaman T1: creature spell slots, spell lints and id blocks
+
+Added for the shaman rework (`.agents/plans/shaman-rework/`, T1). The README's "Shaman T1" section has the syntax and
+the lint table; this is what to know when something misbehaves.
+
+- **`creature_spell()` / `remove_creature_spell()`** are `SPELL_TABLES` / `REMOVAL_TABLES` entries for
+  `creature_template_spell` (key `(CreatureID, Index)`), so the whole prune / removal / provenance machinery applies
+  unchanged. A totem's guardian summon must be on Index 0 (`Totem::GetSpell()` reads `m_spells[0]` when the totem is
+  removed). The `TableSpec` defaults (`Index` 0, `Spell` and `VerifiedBuild` NULL) matter only for a hand-written
+  INSERT that omitted a column; such a row reads back with NULL and re-emits once. `lib/test_creature_spell.py`
+  renders, reads the output back through the readers the diff uses (`sql_dump.read_table_rows`,
+  `load_generated_table_rows`, `load_removed_keys`) and checks that the rerun is empty (hunter T1-1).
+- **Lint wiring.** `generate._t1_content_warnings` is the one function both the `--check` block and the full run
+  call, so a `--check` session sees what the full run prints (hunter T1-10). It takes the built rows of every declared
+  entry (`--check` builds them already for the family-zero lint) and a base spell dict: stock rows under `--check`,
+  the promoted-aware live rows in the full run. `--check` only knows the declared SkillLineAbility rows. A new lint
+  goes into that function and into `test_shaman_t1_lints.RealPopulationTest`, which fails when a lint fires on the
+  declared population and no allow set covers it.
+- **Allow sets** (`HIDDEN_LEARNED_ALLOW`, `GROUND_HASTE_ALLOW`, `SPELL_PROC_ALLOW`, `SHADOWED_PROC_ALLOW`,
+  `TRAINER_SPELL_LEVEL_ALLOW`) hold the existing hits with a reason each; a new hit is fixed in the source, not added.
+  `SHADOWED_PROC_ALLOW` is the priest rework's known live bug (12 per-rank rows dropped as `duplicate entry` by stock
+  chain rows); its input is the *replayed* `spell_proc` table (`_proc_shadow_inputs`), because the union reader would
+  keep a chain row a later migration deleted (-47580) and report false shadows.
+- **`check_totem_tools` widening** also walks the base Spell rows (stock under `--check`, live in the full run), so the
+  opt-in covers the 117 stock family-11 tool spells, not only the 42 the source declares.
+- **LEARN carriers.** `check_hidden_learned_spells` follows LEARN_SPELL (effect 36) targets of learned spells and
+  treats a spell whose every effect is effect 36 as a deliberate hidden carrier, so the warlock 59672-pattern talent
+  ranks need no allow entry.
+- **`lint.TOOL_FREE_CLASS_SETS`** is the SH0 hook for `check_totem_tools`. The 42 stock family-11 spells with a
+  non-zero tool column all carry only `RequiredTotemCategoryID_1` (TotemCategory 2 Earth, 3 Air, 4 Fire, 5 Water).
+- **Family-bit rules** are data (`FamilyBitRules`); a zero mask turns its rule into a no-op, and the message wording
+  (`protected_label`, `reader_label`, ...) comes from the rule row.
+- **`ids.yaml` reservations.** The `reservations:` key is a mapping of class -> table -> `{start, end}`. Every reader
+  of `ids.yaml` indexes it by table name and none iterates it, so it is invisible to them; do not add a reader that
+  iterates the file's top level without skipping `reservations`.
+- **`--check` count line.** `note: ... (DSL) contributed ...` leaves out tables with nothing declared, so adding a
+  table to `SPELL_TABLES` does not change the line until something declares into it.
 
 ## Watch out: one client DBC, one patch archive
 

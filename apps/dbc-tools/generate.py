@@ -50,7 +50,7 @@ KNOWN_FLAGS = {"--no-prune", "--check"}
 # PLAN P2b step 4: adopted class by class, inside each class's own pass - not a side effect of
 # every generate.py run. Extend this tuple when a pass is ready to start generating/relying on its
 # own Generated/<Class>Data.h (warlock first, in P4).
-CLASSES_WITH_GENERATED_HEADERS = ("warlock", "paladin", "hunter")
+CLASSES_WITH_GENERATED_HEADERS = ("warlock", "paladin", "hunter", "shaman")
 GENERATED_HEADER_DIR = REPO_ROOT / "src" / "server" / "game" / "Entities" / "Unit" / "Generated"
 from lib.reuse import ReuseContext  # noqa: E402
 
@@ -199,6 +199,95 @@ def _gcd_haste_entries(
     if result.errors:
         return [], result
     return gcd_haste.aura_entries(result, policy), result
+
+
+def _pet_skill_lines() -> set[int]:
+    """Every skill line a hunter pet family teaches on (CreatureFamily.dbc), or an empty set without the stock
+    file (callers add the shared line 270 themselves)."""
+    lines: set[int] = set()
+    if (BASE_DBC_DIR / dbcfmt.CREATUREFAMILY.dbc_filename).is_file():
+        for family_lines in superseded_ranks.family_skill_lines(state.load_stock_rows(dbcfmt.CREATUREFAMILY)).values():
+            lines.update(family_lines)
+    return lines
+
+
+def _creature_family_missing_warning(rows: list[dict]) -> str | None:
+    """The hunter family lint's rule (d) needs the stock CreatureFamily.dbc to know the pet skill lines; without it
+    only line 270 is known. A WARNING line when custom class-set-9 spells exist and the file is missing, else None."""
+    if (BASE_DBC_DIR / dbcfmt.CREATUREFAMILY.dbc_filename).is_file():
+        return None
+    if not any(
+        int(row["ID"]) >= lint._CUSTOM_SPELL_ID_START and int(row.get("SpellClassSet") or 0) == 9 for row in rows
+    ):
+        return None
+    return (
+        f"WARNING: hunter family lint: no stock {dbcfmt.CREATUREFAMILY.dbc_filename} in "
+        f"{BASE_DBC_DIR.relative_to(REPO_ROOT)}, so rule (d) only knows skill line 270 and misses a spell "
+        f"taught on a family's own line - copy it from the worldserver's DBC directory "
+        f"(ac-worldserver:/azerothcore/env/dist/data/dbc/)"
+    )
+
+
+def _class_trainer_ids() -> set[int]:
+    """TrainerIds that teach a class: the priced allow-list (source/trainer_pricing.py) plus every `trainer` row
+    of Type 0 (class) in the base dump."""
+    ids = set(trainer_pricing.load_policy().priced_ids)
+    ids.update(int(r["Id"]) for r in spell_tables.load_base_table_rows("trainer") if int(r["Type"]) == 0)
+    return ids
+
+
+def _proc_shadow_inputs(
+    spell_table_index, dsl_classes: dict, talents: dict, existing_talents: dict,
+) -> tuple[list[dict], set[int], dict[int, list[int]]]:
+    """`(live spell_proc rows, SpellIds deleted this run, rank chains)` for `lint.check_shadowed_spell_procs`. The
+    chains are `spell_ranks` (base dump, minus the `unrank_spells()` removals, whose spells are their own first rank)
+    overlaid by the talent rank chains (Talent.dbc and the declared talents)."""
+    removed_ranks = {int(r["spell_id"]) for r in dsl_classes["spell_rank_removals"]}
+    chains: dict[int, list[int]] = {}
+    for first, members in load_spell_ranks_chains().items():
+        ordered = [spell for spell, _rank in sorted(members, key=lambda m: m[1]) if spell not in removed_ranks]
+        for spell in ordered:
+            chains[spell] = ordered
+    chains.update(lint.build_talent_rank_chains(existing_talents, talents["talents"]))
+    removed = {int(r["SpellId"]) for r in dsl_classes["proc_removals"]}
+    removed |= {int(key[0]) for key in spell_tables.pruned_keys(spell_table_index, dsl_classes, "spell_proc")}
+    # A replay (DELETEs applied), not live_rows(): a union of INSERTs keeps a chain row a later migration deleted
+    # (-47580) and would report its per-rank rows as shadowed.
+    live = trainer_state.load_replayed_table_rows("spell_proc", spell_tables.SPELL_PROC_COLUMNS, ("SpellId",))
+    return live, removed, chains
+
+
+def _t1_content_warnings(
+    dsl_classes: dict, talents: dict, spell_entries: list[dict], built_rows: list[dict], base_spells: dict[int, dict],
+    live_skilllineabilities: list[dict], proc_shadow_inputs: tuple | None = None,
+) -> list[str]:
+    """The shaman-T1 spell-content lints (lib/lint.py), over the full declared population. One function for the
+    `--check` block and the full run, so a `--check` session sees what the full run would print (hunter T1-10).
+    `built_rows` is every declared entry built (aligned with `spell_entries`); `base_spells` the rows behind them
+    (the promoted-aware live Spell.dbc in the full run, the stock client file in `--check`);
+    `live_skilllineabilities` the live SkillLineAbility rows (empty in `--check`, which only sees the declared
+    ones). `proc_shadow_inputs` is `_proc_shadow_inputs(...)`; without it the shadowed-proc check is skipped."""
+    spell_lookup = {**base_spells, **{int(r["ID"]): r for r in built_rows}}
+    sla_rows = [
+        {"Spell": int(e["spell_id"]), "SkillLine": int(e["skill_line"])} for e in talents["skill_line_abilities"]
+    ] + [{"Spell": int(r["Spell"]), "SkillLine": int(r["SkillLine"])} for r in live_skilllineabilities]
+    talent_rank_ids = {
+        int(rank) for entry in talents["talents"] for rank in (entry.get("rank_spell_ids") or []) if rank
+    }
+    trainer_spells = dsl_classes["trainer_spells"]
+    warnings: list[str] = []
+    warnings += lint.check_creature_spell_rows(dsl_classes["creature_template_spells"], set(spell_lookup))
+    warnings += lint.check_totem_tools(spell_entries, built_rows, base_spells=base_spells)
+    warnings += lint.check_hidden_learned_spells(
+        spell_entries, built_rows, sla_rows, {int(r["SpellId"]) for r in trainer_spells}, talent_rank_ids,
+        _pet_skill_lines(),
+    )
+    warnings += lint.check_ground_effect_haste(spell_entries, built_rows)
+    warnings += lint.check_spell_proc_rows(dsl_classes["spell_procs"], spell_lookup)
+    if proc_shadow_inputs is not None:
+        warnings += lint.check_shadowed_spell_procs(dsl_classes["spell_procs"], *proc_shadow_inputs)
+    warnings += lint.check_trainer_spell_level(trainer_spells, spell_lookup, _class_trainer_ids())
+    return warnings
 
 
 def _merge_npc_declarations(dsl_classes: dict, dsl_npcs: dict, source_dir: str = "source/npcs/") -> None:
@@ -360,7 +449,7 @@ def main() -> int:
             f"spell(s), {len(dsl_classes['talents'])} talent(s), {len(dsl_classes['tabs'])} "
             f"talent tab(s), {len(dsl_classes['skill_line_abilities'])} skill line "
             f"abilitie(s), {len(dsl_classes['trainer_spells'])} trainer spell grant(s), "
-            + ", ".join(f"{n} {name}" for name, n in creature_counts.items())
+            + ", ".join(f"{n} {name}" for name, n in creature_counts.items() if n)
         )
     # Potency system (docs/potency-system.md "Potency sheet", PLAN P2 step 6): one docs/potency/
     # <class>.md per class with at least one potency effect - local and not committed, like the
@@ -387,9 +476,24 @@ def main() -> int:
         check_reuse = ReuseContext(
             {name: list(state.load_stock_rows(table).values()) for name, table in SECONDARY_TABLES.items()}, ids_cfg,
         )
-        for warning in lint.check_family_zero_spellmods(
-            spell_entries, [build.build_spell_row(e, check_reuse) for e in spell_entries],
-            state.load_stock_rows(dbcfmt.SPELL),
+        check_rows = [build.build_spell_row(e, check_reuse) for e in spell_entries]
+        check_stock_spells = state.load_stock_rows(dbcfmt.SPELL)
+        for warning in lint.check_family_zero_spellmods(spell_entries, check_rows, check_stock_spells):
+            print(f"WARNING: {warning}")
+        # Shaman T1 lints and the family-bit rules, over the declared population. --check has no promoted-aware
+        # spell/SLA state: the base rows are the stock client file and only declared SkillLineAbility rows count.
+        for warning in _t1_content_warnings(
+            dsl_classes, talents, spell_entries, check_rows, check_stock_spells, [],
+            _proc_shadow_inputs(spell_table_index, dsl_classes, talents, existing_talents),
+        ):
+            print(f"WARNING: {warning}")
+        missing_family_file = _creature_family_missing_warning(check_rows)
+        if missing_family_file:
+            print(missing_family_file)
+        for warning in lint.check_family_bit_rules(
+            spell_entries, check_rows, dsl_classes["spell_procs"],
+            [{"Spell": int(e["spell_id"]), "SkillLine": int(e["skill_line"])} for e in talents["skill_line_abilities"]],
+            _pet_skill_lines(),
         ):
             print(f"WARNING: {warning}")
         header_problems = header_gen.check_headers(
@@ -722,8 +826,14 @@ def main() -> int:
         print(f"WARNING: {warning}")
     # Full declared population (like the scans above): a family-0 SpellMod already live is not "edited",
     # so a resolved-only scan would hide it.
-    for warning in lint.check_family_zero_spellmods(
-        spell_entries, [build.build_spell_row(e, scratch_reuse) for e in spell_entries], stock_spells,
+    all_spell_rows = [build.build_spell_row(e, scratch_reuse) for e in spell_entries]
+    for warning in lint.check_family_zero_spellmods(spell_entries, all_spell_rows, stock_spells):
+        print(f"WARNING: {warning}")
+    # Shaman T1 lints (same population and function as --check, with the promoted-aware spell and SLA state).
+    for warning in _t1_content_warnings(
+        dsl_classes, talents, spell_entries, all_spell_rows, existing_spells,
+        list(existing_skilllineabilities.values()),
+        _proc_shadow_inputs(spell_table_index, dsl_classes, talents, existing_talents),
     ):
         print(f"WARNING: {warning}")
     talent_rows = [build.build_talent_row(e) for e in talent_resolved.entries]
@@ -738,18 +848,14 @@ def main() -> int:
     if (BASE_DBC_DIR / dbcfmt.CREATUREFAMILY.dbc_filename).is_file():
         for lines in superseded_ranks.family_skill_lines(state.load_stock_rows(dbcfmt.CREATUREFAMILY)).values():
             pet_skill_lines.update(lines)
-    elif any(
-        int(row["ID"]) >= lint._CUSTOM_SPELL_ID_START and int(row.get("SpellClassSet") or 0) == 9
-        for row in spell_rows
-    ):
-        print(
-            f"WARNING: hunter family lint: no stock {dbcfmt.CREATUREFAMILY.dbc_filename} in "
-            f"{BASE_DBC_DIR.relative_to(REPO_ROOT)}, so rule (d) only knows skill line 270 and misses a spell "
-            f"taught on a family's own line - copy it from the worldserver's DBC directory "
-            f"(ac-worldserver:/azerothcore/env/dist/data/dbc/)"
-        )
-    for warning in lint.check_hunter_family_rules(
-        spell_resolved.entries, spell_rows, dsl_classes["spell_procs"],
+    else:
+        missing = _creature_family_missing_warning(all_spell_rows)
+        if missing:
+            print(missing)
+    # The whole declared population, like --check and the other full-population scans: a live, unedited spell is
+    # not "resolved", so a resolved-only scan would hide a rule break that --check shows.
+    for warning in lint.check_family_bit_rules(
+        spell_entries, all_spell_rows, dsl_classes["spell_procs"],
         list({**existing_skilllineabilities, **{int(r["ID"]): r for r in skilllineability_rows}}.values()),
         pet_skill_lines,
     ):

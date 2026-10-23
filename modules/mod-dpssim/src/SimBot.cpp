@@ -23,6 +23,7 @@
 #include "Player.h"
 #include "PlayerbotFactory.h"
 #include "Playerbots.h"
+#include "SimActor.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
 #include <set>
@@ -159,6 +160,10 @@ bool SimBot::Create(Player* bot, std::vector<Creature*> const& targets, std::str
     // bot (InitAvailableSpells() -> InitTalentsTree() -> InitAvailableSpells() again) - some
     // talent-unlocked spells only show up as "available" on this second pass.
     factory.InitAvailableSpells();
+
+    // Gear the actor could not wear before its spells were taught (an off-hand weapon needs Dual Wield, which a
+    // shaman, hunter or warrior learns from the trainer): equip it now
+    SimActor::EquipDeferredGear(bot);
 
     // The premade glyphs a live random bot gets (PlayerbotFactory::InitGlyphs(), after its talents, since the set is
     // picked by spec tab). Before AddPlayerbotData() below, so the factory has no PlayerbotAI yet and InitGlyphs()

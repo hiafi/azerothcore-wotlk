@@ -176,8 +176,10 @@ static constexpr std::array<uint32, 2> CUSTOM_COOLDOWN_HASTE_ALLOW_LIST = { 2003
 // Custom: paladin-rework A7 (PLAN §1A, SHARED B5.12) - never Cooldown Haste eligible, whatever the base
 // cooldown or the allow list says: every player seal (30/60 s base would pass the >= 30 s rule). Talent
 // cooldown mods still apply (they act on rec/catrec before the Cooldown Haste block).
-static constexpr std::array<uint32, 7> CUSTOM_COOLDOWN_HASTE_DENY_LIST =
-    { 20154, 20164, 20165, 20166, 20375, 21084, 31801 };
+// Custom: shaman-rework SH0a (SH0-HANDOFF "Consolidated lists") - Reincarnation 21169 (30 min) is never
+// hasted either.
+static constexpr std::array<uint32, 8> CUSTOM_COOLDOWN_HASTE_DENY_LIST =
+    { 20154, 20164, 20165, 20166, 20375, 21084, 31801, 21169 };
 
 // we can disable this warning for this since it only
 // causes undefined behavior when passed to the base class constructor
