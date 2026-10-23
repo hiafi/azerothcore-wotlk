@@ -10,7 +10,8 @@ Known exceptions that are NOT asserted (deliberate):
   - The three Overload copies 202591-93 carry the parent family bits (LB d0 b0, CL d0 b1, Lava Burst d1 b12) on purpose.
   - Only the OWN SpellClassMask is held to the FORBIDDEN_* bits. The EFFECT masks of a SpellMod / proc row are selectors
     (they name which spells the mod reaches), so rows such as Storm Empowerment legitimately select Lightning Bolt.
-  - Thunderstorm rank 2 (202594) is stock-shaped on purpose: it is the same row as 51490 plus AttributesEx5 0x8.
+  - (Thunderstorm rank 2 202594, the stun-castable clone of 51490, was removed in playtest fix pass 2 / P6: Call of Thunder's
+    capstone is now "Thunderstorm restores 100% more mana"; test_shaman_playtest_fix2.py pins that.)
   - The haste-group member rows of other classes (Rapid Fire, Dark Soul: Misery, Icy Veins) come from their own class
     packages, loaded here only to read the aura type they build to.
 
@@ -214,14 +215,15 @@ def check_em_haste(rows: dict[int, dict]) -> list[str]:
 
 
 def check_thunderstorm(rows: dict[int, dict]) -> list[str]:
+    """One Thunderstorm only (P6, 2026-10-22): rank 1 is not usable while stunned and the stun-castable clone is gone."""
     bad = []
     r1, r2 = rows.get(THUNDERSTORM), rows.get(THUNDERSTORM_RANK2)
-    if r1 is not None and _u32(r1.get("AttributesEx5")) & ATTR5_USABLE_WHILE_STUNNED:
-        bad.append(f"{THUNDERSTORM}: carries AttributesEx5 0x8 (usable while stunned belongs to rank 2 only)")
-    if r2 is None:
-        bad.append(f"{THUNDERSTORM_RANK2}: not built")
-    elif not _u32(r2.get("AttributesEx5")) & ATTR5_USABLE_WHILE_STUNNED:
-        bad.append(f"{THUNDERSTORM_RANK2}: lacks AttributesEx5 0x8")
+    if r1 is None:
+        bad.append(f"{THUNDERSTORM}: not built")
+    elif _u32(r1.get("AttributesEx5")) & ATTR5_USABLE_WHILE_STUNNED:
+        bad.append(f"{THUNDERSTORM}: carries AttributesEx5 0x8 (nothing grants usable-while-stunned any more)")
+    if r2 is not None:
+        bad.append(f"{THUNDERSTORM_RANK2}: still built (the second Thunderstorm was removed)")
     return bad
 
 
@@ -547,7 +549,8 @@ class ShamanS1aDataTest(unittest.TestCase):
     def test_s1a_block_is_declared(self):
         # Id map of the WP brief: 202520-202536 (rank spells, castables, markers), 202560-202595 (buffs, copies, ranks);
         # 202537-202559 and 202596+ are unused spares.
-        want = set(range(202520, 202537)) | set(range(202560, 202596))
+        # 202594 (the stun-castable Thunderstorm) was removed 2026-10-22 (P6) and stays retired.
+        want = (set(range(202520, 202537)) | set(range(202560, 202596))) - {202594}
         have = {i for i in _data()["rows_by_id"] if 202520 <= i <= 202639}
         self.assertEqual(sorted(want - have), [], "S1a ids not declared")
         self.assertEqual(sorted(have - want), [], "ids declared outside the S1a id map")
@@ -725,11 +728,11 @@ class ShamanS1aNegativeTest(unittest.TestCase):
         self.assertEqual(len(check_em_haste({})), 1)
 
     def test_thunderstorm(self):
-        good = {51490: _row(51490, AttributesEx5=0), 202594: _row(202594, AttributesEx5=8)}
+        good = {51490: _row(51490, AttributesEx5=0)}
         self.assertEqual(check_thunderstorm(good), [])
-        self.assertEqual(len(check_thunderstorm({**good, 51490: _row(51490, AttributesEx5=8)})), 1)
-        self.assertEqual(len(check_thunderstorm({**good, 202594: _row(202594, AttributesEx5=0)})), 1)
-        self.assertEqual(len(check_thunderstorm({51490: good[51490]})), 1)
+        self.assertEqual(len(check_thunderstorm({51490: _row(51490, AttributesEx5=8)})), 1)
+        self.assertEqual(len(check_thunderstorm({**good, 202594: _row(202594, AttributesEx5=8)})), 1)
+        self.assertEqual(len(check_thunderstorm({})), 1)
 
     def test_call_of_flame_masks(self):
         good = _row(16038, EffectSpellClassMaskA_1=0x40000000, EffectSpellClassMaskA_2=0x40000)

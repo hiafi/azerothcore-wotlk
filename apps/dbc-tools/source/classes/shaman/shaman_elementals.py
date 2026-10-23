@@ -70,9 +70,9 @@ CLASS_MASK_SHAMAN = 64
 SCHOOL_MASK_ALL_MAGIC = 126        # MOD_DAMAGE_DONE misc: Holy through Arcane
 SCHOOL_MASK_ALL = 127              # MOD_HEALING_DONE misc
 
-# Stock icons: Summon Water Elemental 31687 (mage), Thunderstorm 51490, Earth Elemental Totem 2062 (hidden aura).
+# Stock icons: Summon Water Elemental 31687 (mage), Earth Elemental Totem 2062 (hidden aura). Storm Elemental: the custom SpellIcon 90270.
 ICON_WATER_ELEMENTAL = 2134
-ICON_STORM_ELEMENTAL = 3080
+ICON_STORM_ELEMENTAL = 90270           # custom SpellIcon (build_patch_i.py ICON_ID_STORM_ELEMENTAL): inv_stormelemental.blp, patch-I
 ICON_WATERBOLT = 176               # stock Waterbolt 31707
 ICON_LIGHTNING_BOLT = 62           # stock Lightning Bolt 403
 ICON_EARTH_ELEMENTAL = 2289
@@ -152,7 +152,7 @@ storm_elemental_totem_202273 = spell(
     notes=NOTE + 'Storm Elemental, learned at 56 (trainer 210). Summons the invisible Air slot totem 300273 (props 83), '
           'whose Index-0 passive 202275 summons the guardian 300261. Same cooldown / category / GCD / cost [tune] / '
           'HP as 202272, Air\'s back-right spawn point (3738 / 8512). Family d0 b29 + d1 b8. Bound to '
-          'spell_sha_elemental_lockout. Icon 3080 = Thunderstorm (placeholder, art is the V stage).',
+          'spell_sha_elemental_lockout. Icon 90270 = inv_stormelemental.blp (custom SpellIcon, patch-I; P5, 2026-10-22).',
     raw_overrides=_summon_raw(
         56, SUMMON_PROPS_AIR,
         'Calls forth a greater storm elemental for $d that strikes your enemies with lightning. 2 min cooldown.',

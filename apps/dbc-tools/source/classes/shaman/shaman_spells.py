@@ -1257,10 +1257,10 @@ thunderstorm_51490 = spell(
     spell_icon_id=3080,
     notes='S1a A4 (shaman-rework Elemental, Thunderstorm): potency 100 per target (T 1500; was 220.6), energize 10% (eff2 stored 9; stock '
           '8%), knockback stock, no target cap (stock split above 10 targets accepted, Q18). 45 s cooldown stays Category 1223 / '
-          'CategoryRecoveryTime 45000, RecoveryTime 0 (Cooldown Haste reads either; the stun-castable rank 2 202594 shares category '
-          '1223, so the cooldown is shared). SpellLevel AND BaseLevel 60 -> 20 (both are raw-only keys), AttributesEx5 0x8 (usable '
-          'while stunned) dropped: baseline Thunderstorm is not castable while stunned (Q8), Call of Thunder r3 grants the stun-castable '
-          'rank 202594. Cost stays 0. Description rewritten (potency x Concussion / Convection via tooltip_vars 1215, no stock '
+          'CategoryRecoveryTime 45000, RecoveryTime 0 (Cooldown Haste reads either). SpellLevel AND BaseLevel 60 -> 20 (both are raw-only keys), AttributesEx5 0x8 (usable '
+          'while stunned) dropped: baseline Thunderstorm is not castable while stunned (Q8), and nothing grants it back (P6 ruling 2026-10-22: '
+          'Call of Thunder r3 is now "Thunderstorm restores 100% more mana", a pct SPELLMOD_EFFECT2 on this energize, 10% -> 20%; the '
+          'stun-castable rank 202594 is gone). Cost stays 0. Description rewritten (potency x Concussion / Convection via tooltip_vars 1215, no stock '
           '"usable while stunned" sentence). Was: pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
           'from rank 1 (learn level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80. Potency system '
           'P7-Shaman: eff1 converted to sp_potency=220.6; eff2 (mana restore %) and eff3 (knockback) are not damage/heal/absorb effects.',

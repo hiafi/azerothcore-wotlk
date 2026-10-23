@@ -8,10 +8,10 @@ Ids 202520-202595 (Ele block 202520-202639):
                    Elemental Oath r3)
     202560-202590  buffs, debuffs, charges and guardian auras (read by the C++ by id)
     202591-202593  Lightning Overload copies (LB, CL, Lava Burst)
-    202594         Thunderstorm rank 2 (usable while stunned, Call of Thunder r3)
     202595         Astral Shift, empowered
-SkillLineAbility 30690 (Call of the Elements), 30691 (Thunderstorm rank 2) and the superseded_by edit of the stock
-row 17659 (Thunderstorm rank 1).
+SkillLineAbility 30690 (Call of the Elements). (202594, the stun-castable Thunderstorm rank 2, its SkillLineAbility 30691
+and the superseded_by edit of the stock row 17659 were removed in playtest fix pass 2 / P6: Call of Thunder's capstone is
+now "Thunderstorm restores 100% more mana". Ids 202594 and 30691 stay retired; clients may have cached them.)
 
 Conventions
 - SpellClassSet 11 on every row (a family-0 SpellMod would match every spell); `EquippedItemClass -1` (L1).
@@ -28,18 +28,14 @@ Conventions
   keep applying to the spell that already applied them after the last charge is gone (Player.cpp:10049).
 
 Bindings declared here: spell_sha_ele_overload_copy (the three copies), spell_sha_ele_call_of_the_elements (202531),
-spell_sha_ele_empowerment (202560-202563), spell_sha_thunderstorm on 202594 (rank 1's stock `-51490` key does not
-reach it). Every other class-table binding is on a stock id owned by A2 / A4.
+spell_sha_ele_empowerment (202560-202563). Every other class-table binding is on a stock id owned by A2 / A4.
 """
-
-import copy
-import dataclasses
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, RANGE_SELF, School, SpellModOp
 from lib.dsl.registry import const, procs_on, scripted_by, skill_line_ability, spell, unbind_script
 
 from . import _masks as m
-from .shaman_spells import chain_lightning_421, lava_burst_51505, lightning_bolt_403, thunderstorm_51490
+from .shaman_spells import chain_lightning_421, lava_burst_51505, lightning_bolt_403
 
 SPELLFAMILY_SHAMAN = 11
 NOTE = 'shaman-rework S1a A3: '
@@ -52,7 +48,6 @@ ATTR1_NO_THREAT = 0x400
 ATTR2_ALLOW_DEAD_TARGET = 0x1
 ATTR2_IGNORE_LOS = 0x4
 ATTR3_ALLOW_AURA_WHILE_DEAD = 0x100000
-ATTR5_USABLE_WHILE_STUNNED = 0x8
 
 # ---- Aura types not in the DSL enum / handy aliases ----------------------------------------------------------------------
 AURA_MOD_INCREASE_HEALTH_PERCENT = 133
@@ -404,18 +399,27 @@ elemental_focus_rank2_202532 = spell(
 )
 
 # ---- Call of Thunder ranks 2 / 3 (talent 562, row 4): crit +4 / +6% on LB, CL, Thunderstorm -------------------------------
-_COT_CAPSTONE = 'Thunderstorm can be cast while stunned.'
+_COT_CAPSTONE = 'Thunderstorm restores 100% more mana.'
+COT_CAPSTONE_MANA_BP = 99              # SPELLMOD_EFFECT2 percent on Thunderstorm's energize (effect 2): stored live - 1
 
 
 def _call_of_thunder(spell_id: int, pct: int, last: bool):
+    effects = [_mod(SpellModOp.CRITICAL_CHANCE, False, pct - 1)]
+    masks = _emask(1, (LB | CL, THUNDERSTORM, 0))
+    if last:
+        # Capstone: +100% on Thunderstorm's second effect (the 10% mana energize, ENERGIZE_PCT); Unit::ApplyEffectModifiers
+        # runs SPELLMOD_EFFECT2 over effect index 1 of every cast, so the 10% becomes 20%.
+        effects.append(_mod(SpellModOp.EFFECT2, True, COT_CAPSTONE_MANA_BP))
+        masks.update(_emask(2, (0, THUNDERSTORM, 0)))
     return _rank(
-        spell_id, 'Call of Thunder', [_mod(SpellModOp.CRITICAL_CHANCE, False, pct - 1)], ICON_THUNDER, 30,
+        spell_id, 'Call of Thunder', effects, ICON_THUNDER, 30,
         _desc(f'Increases the critical strike chance of your Lightning Bolt, Chain Lightning and Thunderstorm by '
               f'{pct}%.', _COT_CAPSTONE, last),
         f'Call of Thunder +{pct}% crit, flat SPELLMOD_CRITICAL_CHANCE on LB d0 b0 / CL d0 b1 / Thunderstorm d1 b13 '
-        f'(copies by parent bit). Rank 3 is the capstone: Shaman::SyncThunderstormRank learns Thunderstorm rank 2 '
-        f'202594 while this rank and Thunderstorm are both known.',
-        **_emask(1, (LB | CL, THUNDERSTORM, 0)),
+        f'(copies by parent bit). Rank 3 is the capstone (playtest fix pass 2 / P6): a second effect, pct '
+        f'SPELLMOD_EFFECT2 +100% scoped to Thunderstorm d1 b13 only (effect-B mask), doubles Thunderstorm\'s energize '
+        f'(its effect 2, ENERGIZE_PCT 10% -> 20%). Data only, no script. Replaces the stun-castable Thunderstorm rank 2.',
+        **masks,
     )
 
 
@@ -808,39 +812,8 @@ for _copy in (lightning_bolt_overload_202591, chain_lightning_overload_202592, l
     scripted_by(_copy, 'spell_sha_ele_overload_copy')
 
 
-# =====================================================================================================================
-# Thunderstorm rank 2 (Decision 3): the stun-usable castable, cloned from the reworked 51490
-# =====================================================================================================================
-def _clone_spell(src, **overrides):
-    """A new spell with every declared field of `src` (effects deep-copied), then `overrides`."""
-    kw = {f.name: getattr(src, f.name) for f in dataclasses.fields(src)}
-    kw['effects'] = [copy.deepcopy(e) for e in src.effects]
-    kw['raw_overrides'] = dict(src.raw_overrides or {})
-    raw_extra = overrides.pop('raw_extra', {})
-    kw.update(overrides)
-    kw['raw_overrides'].update(raw_extra)
-    return spell(**kw)
-
-
-_ts_src_raw = thunderstorm_51490.raw_overrides or {}
-thunderstorm_rank2_202594 = _clone_spell(
-    thunderstorm_51490, id=202594,
-    notes=NOTE + 'Thunderstorm rank 2: clone of the reworked 51490 (same effects, potency, cooldown category 1223 so the '
-          'cooldown is shared with rank 1, GCD, SpellLevel) plus AttributesEx5 0x8 (usable while stunned). Learned / '
-          'unlearned by Shaman::SyncThunderstormRank (Thunderstorm + Call of Thunder r3 known), SLA 30691; the client '
-          'hides rank 1 through the SupercededBySpell edit of SLA 17659.',
-    raw_extra={
-        'AttributesEx5': int(_ts_src_raw.get('AttributesEx5', 0)) | ATTR5_USABLE_WHILE_STUNNED,
-        'Description_Lang_enUS': str(_ts_src_raw.get('Description_Lang_enUS', '')).rstrip() + ' Usable while stunned.',
-    },
-)
-scripted_by(thunderstorm_rank2_202594, 'spell_sha_thunderstorm')   # glyph knock-back script; stock `-51490` key reaches rank 1 only
-
-# SkillLineAbility: CotE (talent-granted, so the spell is learned with the talent), Thunderstorm rank 2, and rank 1's
-# row gains the superseding id so the client hides it while rank 2 is known (first use of superseded_by in the DSL).
+# SkillLineAbility: CotE (talent-granted, so the spell is learned with the talent).
 skill_line_ability(id=30690, skill_line=375, spell_id=call_of_the_elements_202531.id, class_mask=64, acquire_method=0)
-skill_line_ability(id=30691, skill_line=375, spell_id=thunderstorm_rank2_202594.id, class_mask=64, acquire_method=0)
-skill_line_ability(id=17659, skill_line=375, spell_id=51490, class_mask=0, superseded_by=thunderstorm_rank2_202594.id)
 
 # ---- Script bindings on ids this file owns ------------------------------------------------------------------------------------------------
 scripted_by(call_of_the_elements_202531, 'spell_sha_ele_call_of_the_elements')

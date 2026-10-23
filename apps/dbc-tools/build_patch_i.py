@@ -148,6 +148,11 @@ ICON_ID_HUNTER_MASTER_MARKSMAN = 90237
 ICON_ID_HUNTER_TRIANGULATION = 90238
 ICON_ID_HUNTER_PRECISION = 90239
 
+# Shaman rework (ids.yaml reservation 90270-90309, by tens: Elemental 90270-90279). Playtest fix pass 2 / P5: Summon Storm Elemental
+# 202273 and its totem passive 202275 had Thunderstorm's icon as a placeholder; the Ascension patch-I has the real
+# art, inv_stormelemental.blp.
+ICON_ID_STORM_ELEMENTAL = 90270
+
 ICONS = (
     (ICON_ID_ANGELIC_FEATHER, "Interface/icons/ability_priest_angelicfeather.blp"),
     (ICON_ID_DIVINE_STAR, "Interface/icons/spell_priest_divinestar.blp"),
@@ -193,6 +198,7 @@ ICONS = (
     (ICON_ID_HUNTER_MASTER_MARKSMAN, "Interface/icons/ability_rogue_combatexpertise.blp"),
     (ICON_ID_HUNTER_TRIANGULATION, "Interface/icons/Essence_of_Convergence.blp"),
     (ICON_ID_HUNTER_PRECISION, "Interface/icons/sha_ability_rogue_bloodyeye_nightborne.blp"),
+    (ICON_ID_STORM_ELEMENTAL, "Interface/icons/inv_stormelemental.blp"),
 )
 
 # "Stock path, no blp" entries (warlock-rework DESTRUCTION §2.6/§11 Q19): a SpellIcon.dbc row that

@@ -946,9 +946,9 @@ call_of_thunder_16041 = _talent(
     16041, 'Call of Thunder', 'Rank 1',
     [_mod(SpellModOp.CRITICAL_CHANCE, 1, pct=False)], 141,
     _desc('Increases the critical strike chance of your Lightning Bolt, Chain Lightning and Thunderstorm by 2%.',
-          'Thunderstorm can be cast while stunned.'),
+          'Thunderstorm restores 100% more mana.'),
     masks={1: (_LB | _CL, _THUNDERSTORM, 0)},
-    notes='S1a A2: flat crit +2% on Lightning Bolt / Chain Lightning / Thunderstorm. The capstone (rank 3) is the second Thunderstorm rank 202594, granted by Shaman::SyncThunderstormRank.',
+    notes='S1a A2: flat crit +2% on Lightning Bolt / Chain Lightning / Thunderstorm. The capstone (rank 3, 202534) doubles Thunderstorm\'s mana restore with a SPELLMOD_EFFECT2 percent mod (playtest fix pass 2 / P6; was the stun-castable Thunderstorm rank 202594).',
 )
 
 
