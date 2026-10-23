@@ -141,6 +141,22 @@ class Registry:
     # on the (CreatureID, Index) key, pruned when a declaration is dropped) and remove_creature_spell()'s removals.
     creature_template_spells: list[dict] = field(default_factory=list)
     creature_spell_removals: list[dict] = field(default_factory=list)
+    # Death Knight T1 (.agents/plans/death-knight-rework/death-knight-rework.T1-HANDOFF.md): spell_rune_cost()'s
+    # spellrunecost_dbc rows (server overlay + client SpellRuneCost.dbc), spell_threat() / remove_spell_threat(),
+    # creation_action() / creation_cast() / creation_skill() and their removals (the playercreateinfo_* tables a new
+    # character starts from), and chr_class()'s chrclasses_dbc full-row override. All plain SPELL_TABLES entries
+    # (DELETE-then-INSERT, diffed against live, pruned when a declaration is dropped); the removals are
+    # REMOVAL_TABLES entries.
+    spell_rune_costs: list[dict] = field(default_factory=list)
+    spell_threats: list[dict] = field(default_factory=list)
+    spell_threat_removals: list[dict] = field(default_factory=list)
+    creation_actions: list[dict] = field(default_factory=list)
+    creation_action_removals: list[dict] = field(default_factory=list)
+    creation_casts: list[dict] = field(default_factory=list)
+    creation_cast_removals: list[dict] = field(default_factory=list)
+    creation_skills: list[dict] = field(default_factory=list)
+    creation_skill_removals: list[dict] = field(default_factory=list)
+    chr_classes: list[dict] = field(default_factory=list)
     # Hunter T1 (.agents/plans/hunter-rework/hunter-rework.T1-HANDOFF.md): retire_talent()'s bookkeeping
     # (one {"id": talent_id} per retirement, so retiring a talent twice is a DuplicateIdError and
     # check_retired_talent_tab() knows whether the holding tab is needed) and item_template()'s rows -
@@ -187,6 +203,8 @@ MERGE_KEYS = (
     "consts",
     "tooltip_vars",
     "lfg_disables",
+    "spell_rune_costs", "spell_threats", "spell_threat_removals", "creation_actions", "creation_action_removals",
+    "creation_casts", "creation_cast_removals", "creation_skills", "creation_skill_removals", "chr_classes",
 )
 
 # The registry a class file's spell()/talent()/tab()/skill_line_ability()
@@ -1238,6 +1256,427 @@ def remove_creature_spell(entry: int, index: int) -> dict:
     return row
 
 
+# --- Death Knight T1: rune costs, threat rows, creation data, class row, SkillLineAbility overrides -----------
+# (.agents/plans/death-knight-rework/death-knight-rework.T1-HANDOFF.md)
+
+# ObjectMgr::LoadPlayerInfo's own limits, mirrored so a typo fails at declaration time instead of being "ignored"
+# by a boot-time LOG_ERROR. The playable race mask is the stock RaceMgr one (races 1-8, 10, 11).
+PLAYABLE_RACES = frozenset({1, 2, 3, 4, 5, 6, 7, 8, 10, 11})
+PLAYABLE_RACE_MASK = sum(1 << (race - 1) for race in PLAYABLE_RACES)  # 1791
+PLAYABLE_CLASSES = frozenset({1, 2, 3, 4, 5, 6, 7, 8, 9, 11})
+CLASSMASK_ALL_PLAYABLE = sum(1 << (cls - 1) for cls in PLAYABLE_CLASSES)  # 1535 (SharedDefines.h)
+MAX_ACTION_BUTTONS = 144  # Player.h
+MAX_SKILL_STEP = 16  # DBCStructure.h; ObjectMgr::LoadPlayerInfo skips a playercreateinfo_skills rank >= this
+ACTION_BUTTON_TYPES = {0x00: "spell", 0x40: "macro", 0x80: "item"}  # Player.h ActionButtonType
+
+# SpellRuneCost: how many runes of one type a plain (non-Death-Rune) cost can take, and Runic Power as the player
+# reads it. More than two of one type can be paid only with Death Runes: widen deliberately.
+RUNE_COUNT_MAX = 2
+RUNIC_POWER_MAX = 100  # whole RP; the player's maximum is 100 (1000 stored)
+
+
+def _plain_int(value) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def spell_rune_cost(
+    cost_id: int, *, blood: int = 0, unholy: int = 0, frost: int = 0, runic_power: int = 0, comment: str = "",
+) -> dict:
+    """Declares a `spellrunecost_dbc` row (`SpellRuneCost.dbc`): the runes a rune ability costs and the Runic
+    Power it generates. Reference it from a spell with `raw_overrides={'RuneCostID': cost_id}` (and
+    `power_type=5`). Reuse a stock row when one already has the cost you want (Icy Touch's 241 is one Frost rune
+    and 10 RP; `generate.py` warns when a declared row equals a stock one): this helper is for the combinations
+    stock does not have (Marrowrend `spell_rune_cost(2600, frost=1, unholy=1, runic_power=20)`).
+
+    **Column order.** The table is `ID, Blood, Unholy, Frost, RunicPower`, and `SpellRuneCostEntry::RuneCost[3]`
+    is indexed by `RuneType` (`RUNE_BLOOD` 0, `RUNE_UNHOLY` 1, `RUNE_FROST` 2, Player.h; Spell.cpp CheckRuneCost
+    / TakeRunePower), so the order is Blood, Unholy, Frost. The comment `0=blood, 1=frost, 2=unholy` at
+    DBCStructure.h:1843 is wrong (stock: 241 Icy Touch = 0/0/1, 797 = 0/1/1). The keyword-only arguments keep the
+    order from being transposed.
+
+    **Units.** `runic_power` is whole Runic Power as the player reads it (10, 15, 20, 25) and is stored x10: the
+    DBC value 100 is 10 RP (`TakeRunePower` adds `runePowerGain * Rate.RunicPower.Income`, Spell.cpp:5716-5718;
+    the player's maximum is 1000).
+
+    **When it applies.** The rune cost and the Runic Power gain only apply to a spell whose `PowerType` is 5 (RUNE):
+    `CheckRuneCost` returns OK for any other (Spell.cpp:5605) and `TakePower` calls `TakeRunePower` only for
+    `POWER_RUNE` (:5531). A `RuneCostID` that has no row is a free cast (:5621-5624, 5666-5668).
+
+    `cost_id` must be inside `source/ids.yaml`'s `spellrunecost` block (stock ids top out at 2513). Raises on a rune
+    count outside 0..2, a non-int or bool, `runic_power` outside 0..100, and an all-zero row (use `RuneCostID` 0 for
+    a free cast). Both halves go out: the server overlay row and, merged over the stock file, the client
+    `SpellRuneCost.dbc` in patch-Z. `comment` is for the reader only and is not emitted."""
+    registry = _require_active()
+    ids_cfg = _active_ids_cfg
+    block = (ids_cfg or {}).get("spellrunecost")
+    if not block:
+        raise ValueError(
+            f"spell_rune_cost({cost_id}, ...): needs source/ids.yaml's `spellrunecost` block - "
+            f"pass ids_cfg through registry.load_class_file(path, ids_cfg=...) (generate.py already does)"
+        )
+    if not _plain_int(cost_id) or not block["start"] <= cost_id <= block["end"]:
+        raise ValueError(
+            f"spell_rune_cost({cost_id!r}, ...): id is outside source/ids.yaml's spellrunecost "
+            f"reserved block ({block['start']}-{block['end']}) - stock SpellRuneCost ids must not be "
+            f"overridden by accident; widen the block deliberately if you need more"
+        )
+    for name, value in (("blood", blood), ("unholy", unholy), ("frost", frost)):
+        if not _plain_int(value) or not 0 <= value <= RUNE_COUNT_MAX:
+            raise ValueError(
+                f"spell_rune_cost({cost_id}, ...): {name} must be an int in 0..{RUNE_COUNT_MAX}, got {value!r} "
+                f"(more than two runes of one type is payable only with Death Runes - widen "
+                f"registry.RUNE_COUNT_MAX deliberately)"
+            )
+    if not _plain_int(runic_power) or not 0 <= runic_power <= RUNIC_POWER_MAX:
+        raise ValueError(
+            f"spell_rune_cost({cost_id}, ...): runic_power must be a whole int in 0..{RUNIC_POWER_MAX} "
+            f"(Runic Power as the player reads it; stored x10), got {runic_power!r}"
+        )
+    if not (blood or unholy or frost or runic_power):
+        raise ValueError(
+            f"spell_rune_cost({cost_id}, ...): an all-zero row is a free cast - leave the spell's RuneCostID at 0 "
+            f"instead of declaring a row"
+        )
+    row = {
+        "id": cost_id, "ID": cost_id, "Blood": blood, "Unholy": unholy, "Frost": frost,
+        "RunicPower": runic_power * 10, "comment": comment,
+    }
+    registry.spell_rune_costs.append(row)
+    return row
+
+
+def _strict_spell_id(caller: str, spell: model.Spell | int) -> int:
+    """`spell`'s id, for the helpers that take either a declared `Spell` or a bare id: unlike `_spell_id_of` it does not
+    coerce (`int('52212')` and `int(True)` would both slip through as ids), and it requires a positive id."""
+    spell_id = spell.id if isinstance(spell, model.Spell) else spell
+    if not _plain_int(spell_id) or spell_id <= 0:
+        raise ValueError(f"{caller}({spell_id!r}, ...): the spell must be a declared Spell or a positive int id")
+    return spell_id
+
+
+def _validate_threat_number(spell_id: int, name: str, value) -> None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"spell_threat({spell_id}, ...): {name} must be a number, got {value!r}")
+
+
+def spell_threat(
+    spell: model.Spell | int, flat_mod: int | None = None, pct_mod: float = 1.0, ap_pct_mod: float = 0.0,
+) -> dict:
+    """Declares a `spell_threat` row (`SpellMgr::LoadSpellThreats`, SpellMgr.cpp): the threat a spell generates,
+    keyed by spell id. `flat_mod` is added to the threat (`NULL` keeps the engine's own: damage or healing done),
+    `pct_mod` multiplies it (default 1) and `ap_pct_mod` adds a share of attack power.
+
+    Why this exists: stock Death Knight threat lives in rows keyed by spell id (Chains of Ice 45524 flat 240,
+    Death Grip 49576 110, Strangulate 49916 138, Lichborne 49039 110, Hungering Cold 51209 112, Death and Decay
+    52212 pctMod 1.9, Scourge Strike 55090/55265/55270/55271 flat 51/63/98/120, Rune Strike 56815 pctMod 1.75).
+    A rework that mints a new spell id for one of them silently loses its threat unless the row is declared for
+    the new id. A declared stock key overrides that row. Blood Presence's own threat is a `MOD_THREAT` aura, not
+    this table.
+
+    `spell` is an id or a declared `Spell`; the loader logs "does not exist" and drops the row for an id that is
+    neither (SpellMgr.cpp:2358-2362), so `generate.py` warns at build time (`lint.check_spell_threat_rows`).
+    Remove a stock or hand-written row with `remove_spell_threat()`. Declaring and removing one key raises."""
+    spell_id = _strict_spell_id("spell_threat", spell)
+    if flat_mod is not None and not _plain_int(flat_mod):
+        raise ValueError(f"spell_threat({spell_id}, ...): flat_mod must be an int or None, got {flat_mod!r}")
+    _validate_threat_number(spell_id, "pct_mod", pct_mod)
+    _validate_threat_number(spell_id, "ap_pct_mod", ap_pct_mod)
+    if pct_mod < 0:
+        raise ValueError(f"spell_threat({spell_id}, ...): pct_mod must be >= 0, got {pct_mod!r}")
+    row = {
+        "id": spell_id, "entry": spell_id, "flatMod": flat_mod, "pctMod": float(pct_mod),
+        "apPctMod": float(ap_pct_mod),
+    }
+    _require_active().spell_threats.append(row)
+    return row
+
+
+def remove_spell_threat(spell: model.Spell | int) -> dict:
+    """Declares a removal of the `spell_threat` row for `spell` - the counterpart to `spell_threat()`, for a stock
+    or hand-written row this tool never emitted (the shaman precedent deleted 8056's row by hand,
+    `2026_10_23_32.sql`). A key-exact DELETE on `entry`, emitted once, with the mechanics of `untrain()`; a key
+    that exists nowhere prints a WARNING."""
+    spell_id = _strict_spell_id("remove_spell_threat", spell)
+    row = {"id": spell_id, "entry": spell_id}
+    _require_active().spell_threat_removals.append(row)
+    return row
+
+
+def _validate_creation_masks(caller: str, ident: str, class_mask: int, race_mask: int) -> None:
+    """The checks `ObjectMgr::LoadPlayerInfo` makes on playercreateinfo_cast_spell (ObjectMgr.cpp:4680-4690),
+    applied to the skills table as well: the race mask is 0 (every race) or within the playable mask, the class mask
+    is non-zero and within `CLASSMASK_ALL_PLAYABLE` (a helper that means "every class" should say so explicitly)."""
+    if not _plain_int(race_mask) or race_mask < 0 or race_mask & ~PLAYABLE_RACE_MASK:
+        raise ValueError(
+            f"{caller}({ident}): race_mask {race_mask!r} must be 0 (every race) or a mask within the playable "
+            f"races ({PLAYABLE_RACE_MASK}) - the loader ignores a row with a wrong race mask"
+        )
+    if not _plain_int(class_mask) or class_mask <= 0 or class_mask & ~CLASSMASK_ALL_PLAYABLE:
+        raise ValueError(
+            f"{caller}({ident}): class_mask {class_mask!r} must be a non-zero mask within the playable classes "
+            f"({CLASSMASK_ALL_PLAYABLE}; class 10 is unused) - the loader ignores a row with a wrong class mask"
+        )
+
+
+def _validate_creation_action_key(caller: str, race: int, class_id: int, button: int) -> None:
+    ident = f"{race!r}, {class_id!r}, {button!r}"
+    if not _plain_int(race) or race not in PLAYABLE_RACES:
+        raise ValueError(f"{caller}({ident}): race must be one of the playable races {sorted(PLAYABLE_RACES)}")
+    if not _plain_int(class_id) or class_id not in PLAYABLE_CLASSES:
+        raise ValueError(f"{caller}({ident}): class_id must be one of {sorted(PLAYABLE_CLASSES)} (class 10 is unused)")
+    if not _plain_int(button) or not 0 <= button < MAX_ACTION_BUTTONS:
+        raise ValueError(
+            f"{caller}({ident}): button must be an int in 0..{MAX_ACTION_BUTTONS - 1} (MAX_ACTION_BUTTONS)"
+        )
+
+
+def creation_action(race: int, class_id: int, button: int, action: int, action_type: int = 0) -> dict:
+    """Declares a `playercreateinfo_action` row: the action bar button `button` of a newly created `class_id`
+    character of `race` holds `action` (a spell id when `action_type` is 0). Key `(race, class, button)`, the
+    table's primary key. `race` is one playable race (1-8, 10, 11: a row per race, there is no mask here),
+    `class_id` 1-11 except 10, `button` 0..143 (`MAX_ACTION_BUTTONS`), `action_type` one of 0 spell, 0x40 macro,
+    0x80 item (`ActionButtonType`, Player.h). A spell action that is neither declared nor a stock spell prints a
+    WARNING (`lint.check_creation_rows`).
+
+    All three creation tables (`creation_action`, `creation_cast`, `creation_skill`) load once at boot
+    (`ObjectMgr::LoadPlayerInfo`, not reloadable) and only affect characters created afterwards. They are
+    ordinary declared tables: DELETE-then-INSERT on the key, diffed against the live rows (base dump, every
+    migration and pending file), pruned when a declaration this tool emitted is dropped. A hand-written row
+    (the P0 spike's) is neither pruned nor re-emitted; removing one needs `remove_creation_action()`.
+
+    Reader note: the live-state reader is a union of INSERTs (`trainer_state.load_table_rows`) and does not replay
+    an `UPDATE`, so a row a hand-written `UPDATE` changed (`2026_09_06_01.sql` re-points a priest button) reads as
+    its original INSERT. A declaration that differs from that stale value is emitted and converges on the next run.
+    The same blindness hides a hand-written DELETE: a declaration equal to the deleted row's INSERT reads as
+    unchanged and renders nothing (change a value or re-add the row by hand)."""
+    _validate_creation_action_key("creation_action", race, class_id, button)
+    ident = f"{race}, {class_id}, {button}, {action!r}"
+    if not _plain_int(action) or action < 0:
+        raise ValueError(f"creation_action({ident}): action must be a non-negative int")
+    if not _plain_int(action_type) or action_type not in ACTION_BUTTON_TYPES:
+        raise ValueError(
+            f"creation_action({ident}): action_type {action_type!r} must be one of "
+            f"{', '.join(f'{hex(t)} {n}' for t, n in ACTION_BUTTON_TYPES.items())}"
+        )
+    row = {
+        "id": f"{race}:{class_id}:{button}", "race": race, "class": class_id, "button": button, "action": action,
+        "type": action_type,
+    }
+    _require_active().creation_actions.append(row)
+    return row
+
+
+def remove_creation_action(race: int, class_id: int, button: int) -> dict:
+    """Declares a removal of the `playercreateinfo_action` row `(race, class_id, button)` - the counterpart to
+    `creation_action()`, for a stock row (a Death Knight's Blood Presence button, say) this tool never emitted.
+    A key-exact DELETE, emitted once; declaring and removing one key raises. New characters only; boot-only load."""
+    _validate_creation_action_key("remove_creation_action", race, class_id, button)
+    row = {"id": f"{race}:{class_id}:{button}", "race": race, "class": class_id, "button": button}
+    _require_active().creation_action_removals.append(row)
+    return row
+
+
+def creation_cast(spell: model.Spell | int, class_mask: int, race_mask: int = 0, note: str = "") -> dict:
+    """Declares a `playercreateinfo_cast_spell` row: a newly created character matching `race_mask` (0 = every
+    race) and `class_mask` (a non-zero class mask) casts `spell` once at creation. `spell` is an id or a declared
+    `Spell`; one that is neither declared nor stock prints a WARNING. `note` is the table's `note` column.
+
+    **The table has no primary key.** The renderer's key-exact `DELETE ... (raceMask, classMask, spell)` removes
+    every duplicate of that triple before the INSERT, which is what a declaration means. Masks are checked
+    against the loader (ObjectMgr.cpp:4680-4690): the race mask is 0 or within the playable mask, the class mask
+    is non-zero and within `CLASSMASK_ALL_PLAYABLE`. Loads once at boot; new characters only.
+    See `creation_action()` for the shared mechanics and the reader note."""
+    spell_id = _strict_spell_id("creation_cast", spell)
+    ident = f"{spell_id!r}, {class_mask!r}, {race_mask!r}"
+    _validate_creation_masks("creation_cast", ident, class_mask, race_mask)
+    row = {
+        "id": f"{race_mask}:{class_mask}:{spell_id}", "raceMask": race_mask, "classMask": class_mask,
+        "spell": spell_id, "note": note or None,
+    }
+    _require_active().creation_casts.append(row)
+    return row
+
+
+def remove_creation_cast(spell: model.Spell | int, class_mask: int, race_mask: int = 0) -> dict:
+    """Declares a removal of the `playercreateinfo_cast_spell` row `(race_mask, class_mask, spell)` - the
+    counterpart to `creation_cast()`. A key-exact DELETE on a PK-less table, so every duplicate of the triple
+    goes. Emitted once even when a hand-written file already deleted the row (the P0 spike's file deletes the
+    Blood Presence cast `(0, 32, 48266)`): the extra DELETE matches nothing and is harmless. Declaring and
+    removing one key raises."""
+    spell_id = _strict_spell_id("remove_creation_cast", spell)
+    ident = f"{spell_id!r}, {class_mask!r}, {race_mask!r}"
+    _validate_creation_masks("remove_creation_cast", ident, class_mask, race_mask)
+    row = {
+        "id": f"{race_mask}:{class_mask}:{spell_id}", "raceMask": race_mask, "classMask": class_mask,
+        "spell": spell_id,
+    }
+    _require_active().creation_cast_removals.append(row)
+    return row
+
+
+def creation_skill(skill: int, class_mask: int, race_mask: int = 0, rank: int = 0, comment: str = "") -> dict:
+    """Declares a `playercreateinfo_skills` row: a newly created character matching `race_mask` (0 = every race)
+    and `class_mask` starts with skill `skill` at `rank`. Key `(raceMask, classMask, skill)`, the table's primary
+    key. Same mask checks, boot-only load and new-characters-only scope as `creation_cast()`. `rank` is 0..15
+    (`MAX_SKILL_STEP`: the server skips a row at 16 or more). `comment` is the table's `comment` column; restate it
+    when only changing `rank` on an existing key, or the rewritten row loses it."""
+    ident = f"{skill!r}, {class_mask!r}, {race_mask!r}"
+    if not _plain_int(skill) or not 0 < skill <= 0xFFFF:
+        raise ValueError(f"creation_skill({ident}): skill must be a SkillLine.dbc id (1..65535)")
+    if not _plain_int(rank) or not 0 <= rank < MAX_SKILL_STEP:
+        raise ValueError(
+            f"creation_skill({ident}): rank must be an int in 0..{MAX_SKILL_STEP - 1} (MAX_SKILL_STEP, "
+            f"DBCStructure.h; the server skips a higher-rank row at boot), got {rank!r}"
+        )
+    _validate_creation_masks("creation_skill", ident, class_mask, race_mask)
+    row = {
+        "id": f"{race_mask}:{class_mask}:{skill}", "raceMask": race_mask, "classMask": class_mask, "skill": skill,
+        "rank": rank, "comment": comment or None,
+    }
+    _require_active().creation_skills.append(row)
+    return row
+
+
+def remove_creation_skill(skill: int, class_mask: int, race_mask: int = 0) -> dict:
+    """Declares a removal of the `playercreateinfo_skills` row `(race_mask, class_mask, skill)` - the counterpart
+    to `creation_skill()`. The DK use: `remove_creation_skill(129, 32)` for the live row `(0, 32, 129, 4, 'Death
+    Knight - First Aid')`, the only First Aid grant a new Death Knight gets. The key is exact, so the shared-mask
+    rows (e.g. `(0, 35, 55)` Two-Handed Swords) are never touched. New characters only; boot-only load."""
+    ident = f"{skill!r}, {class_mask!r}, {race_mask!r}"
+    if not _plain_int(skill) or not 0 < skill <= 0xFFFF:
+        raise ValueError(f"remove_creation_skill({ident}): skill must be a SkillLine.dbc id (1..65535)")
+    _validate_creation_masks("remove_creation_skill", ident, class_mask, race_mask)
+    row = {"id": f"{race_mask}:{class_mask}:{skill}", "raceMask": race_mask, "classMask": class_mask, "skill": skill}
+    _require_active().creation_skill_removals.append(row)
+    return row
+
+
+class MissingStockFileError(RuntimeError):
+    """A helper needs a stock client DBC that is not extracted on this checkout; `generate.py` prints an ERROR."""
+
+
+# DBCStructure.h's ChrClassesEntry field names for the columns that differ from the SQL column name.
+_CHRCLASS_FRIENDLY_COLUMNS = {
+    "CinematicSequence": "CinematicSequenceID",
+    "powerType": "DisplayPower",
+    "spellfamily": "SpellClassSet",
+    "expansion": "Required_Expansion",
+}
+
+
+def chr_class(class_id: int, **changed_columns) -> dict:
+    """Declares a full-row override of `chrclasses_dbc`'s stock `class_id` row (`ChrClasses.dbc`): every column
+    starts at the real stock value (`var/extractors/dbc/ChrClasses.dbc`) and `changed_columns` overwrites just the
+    named ones. Accepts the SQL column name or `DBCStructure.h`'s field name for the four it exposes
+    (`CinematicSequence` / `CinematicSequenceID`, `powerType` / `DisplayPower`, `spellfamily` / `SpellClassSet`,
+    `expansion` / `Required_Expansion`). An overlay row replaces the WHOLE row (power type, `SpellClassSet`,
+    `Required_Expansion`, names), which is why this starts from the stock row: hand SQL here is a trap, one
+    wrong column breaks the class.
+
+    The use: the race intro cinematic for Death Knights. `WorldSession::HandlePlayerLogin`
+    (CharacterHandler.cpp:887-898) plays `ChrClasses.CinematicSequence` of the class if it is non-zero, else
+    `ChrRaces.CinematicSequence` of the race. Only the DK class row has a class cinematic in 3.3.5, so
+    `chr_class(6, CinematicSequenceID=0)` gives every new DK its race's intro, with no C++ and no client patch
+    (the client plays what the server triggers - confirm in the DK0a playtest).
+
+    Server-side only: no client patch is produced. `class_id` must be a stock row; an unknown column raises
+    `KeyError`. Without the stock file `generate.py` stops with an ERROR naming it."""
+    stock_rows = _require_live("chrclasses_rows", "chr_class")
+    if not stock_rows:
+        raise MissingStockFileError(
+            "chr_class(): the stock ChrClasses index is empty - var/extractors/dbc/ChrClasses.dbc is missing on "
+            "this checkout. Copy it from the worldserver's DBC directory "
+            "(ac-worldserver:/azerothcore/env/dist/data/dbc/ChrClasses.dbc) into var/extractors/dbc/."
+        )
+    stock = stock_rows.get(class_id)
+    if stock is None:
+        raise ValueError(
+            f"chr_class({class_id}, ...): no stock ChrClasses row for id {class_id} ({len(stock_rows)} stock rows "
+            f"are loaded, so this isn't a missing-extraction problem)"
+        )
+    row = dict(stock)
+    unknown = [key for key in changed_columns if key not in _CHRCLASS_FRIENDLY_COLUMNS and key not in row]
+    if unknown:
+        raise KeyError(
+            f"chr_class({class_id}): no such column(s): {', '.join(sorted(unknown))} - see "
+            f"lib.dbcfmt.CHRCLASSES.columns for the real names, or _CHRCLASS_FRIENDLY_COLUMNS for the "
+            f"DBCStructure.h aliases this accepts"
+        )
+    for key, value in changed_columns.items():
+        column = _CHRCLASS_FRIENDLY_COLUMNS.get(key, key)
+        if column == "ID":
+            raise ValueError(f"chr_class({class_id}): the ID column is the key and cannot be changed")
+        if isinstance(stock[column], str) != isinstance(value, str) or (
+            not isinstance(value, str) and not _plain_int(value)
+        ):
+            raise ValueError(
+                f"chr_class({class_id}): {column} must be {'a str' if isinstance(stock[column], str) else 'an int'}, "
+                f"got {value!r}"
+            )
+        row[column] = value
+    row["id"] = class_id
+    _require_active().chr_classes.append(row)
+    return row
+
+
+# SkillLineAbility's typed names (model.SkillLineAbility / skill_line_ability()) -> the SQL column they build.
+_SLA_TYPED_COLUMNS = {
+    "skill_line": "SkillLine",
+    "spell_id": "Spell",
+    "class_mask": "ClassMask",
+    "race_mask": "RaceMask",
+    "min_skill_line_rank": "MinSkillLineRank",
+    "acquire_method": "AcquireMethod",
+    "superseded_by": "SupercededBySpell",
+}
+
+
+def override_skill_line_ability(sla_id: int, **changed_columns) -> model.SkillLineAbility:
+    """Re-declares the STOCK `SkillLineAbility.dbc` row `sla_id` with only the named columns changed. The base is
+    the stock client row, not a promoted one, so deleting a keyword later restores that column's stock value (a row
+    only a migration added has no stock row and uses its live row) - e.g. `override_skill_line_ability(16231, acquire_method=0)` takes Icy Touch
+    off the level-1 auto-learn list, and `override_skill_line_ability(19182, acquire_method=2, class_mask=32)`
+    makes Heart Strike learn at level 1. Without it every column of the stock row has to be copied by hand
+    (the P0 spike's `_stock_sla_unlearned`), which is error-prone.
+
+    Accepts the typed names `skill_line_ability()` uses (`skill_line`, `spell_id`, `class_mask`, `race_mask`,
+    `min_skill_line_rank`, `acquire_method`, `superseded_by`) and the raw SQL column names (`ExcludeRace`,
+    `TrivialSkillLineRankHigh`, ...). An unknown name raises `KeyError`; an id that is not a live row raises
+    `ValueError` (`retire_talent` wording); calling it without the live bundle raises `RuntimeError`. The entry it
+    appends is exactly what `skill_line_ability()` builds for the final column values, with the untyped columns
+    carried in `raw_overrides`, so the superseded-ranks "a declared row wins" path treats it like any declaration."""
+    stock_rows = (_active_live_data or {}).get("skilllineability_stock_rows")
+    live = None
+    if stock_rows is not None:  # the stock row is the base, so dropping a keyword restores the stock value
+        live = _require_live("skilllineability_stock_rows", "override_skill_line_ability").get(sla_id)
+    if live is None:  # no stock row (a row only a migration added) or no stock bundle: the live row is the base
+        live = _require_live("skilllineability_rows", "override_skill_line_ability").get(sla_id)
+    if live is None:
+        raise ValueError(
+            f"override_skill_line_ability({sla_id}): no live SkillLineAbility.dbc row with that ID (base client "
+            f"file plus promoted migrations) - only a stock or already-promoted row can be overridden"
+        )
+    row = dict(live)
+    unknown = [key for key in changed_columns if key not in _SLA_TYPED_COLUMNS and key not in row]
+    if unknown:
+        raise KeyError(
+            f"override_skill_line_ability({sla_id}): no such column(s): {', '.join(sorted(unknown))} - the typed "
+            f"names are {', '.join(_SLA_TYPED_COLUMNS)}; the raw ones are lib.dbcfmt.SKILLLINEABILITY.columns"
+        )
+    for key, value in changed_columns.items():
+        column = _SLA_TYPED_COLUMNS.get(key, key)
+        if column == "ID":
+            raise ValueError(f"override_skill_line_ability({sla_id}): the ID column is the key and cannot be changed")
+        row[column] = value
+    typed_sql = set(_SLA_TYPED_COLUMNS.values()) | {"ID"}
+    return skill_line_ability(
+        id=sla_id, skill_line=row["SkillLine"], spell_id=row["Spell"], class_mask=row["ClassMask"],
+        race_mask=row["RaceMask"], min_skill_line_rank=row["MinSkillLineRank"], acquire_method=row["AcquireMethod"],
+        superseded_by=row["SupercededBySpell"],
+        raw_overrides={column: value for column, value in row.items() if column not in typed_sql},
+    )
+
+
 # --- Hunter T1: existing-row edits that need live data (retire_talent, item_template) -------------------
 
 
@@ -1248,7 +1687,10 @@ def _require_live(key: str, helper: str):
             f"registry.load_class_file(path, live_data={{...}}) / load_classes_dir(dir_path, live_data={{...}}) "
             f"(generate.py already does)."
         )
-    return _active_live_data[key]
+    value = _active_live_data[key]
+    if callable(value):  # a lazily loaded bundle entry (spell_tables.dsl_live_data): load once, on first use
+        value = _active_live_data[key] = value()
+    return value
 
 
 # The Talent.dbc tab every retired talent moves to (source/ids.yaml's `talenttab` block starts here).

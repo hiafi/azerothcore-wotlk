@@ -490,11 +490,70 @@ the lint table; this is what to know when something misbehaves.
   non-zero tool column all carry only `RequiredTotemCategoryID_1` (TotemCategory 2 Earth, 3 Air, 4 Fire, 5 Water).
 - **Family-bit rules** are data (`FamilyBitRules`); a zero mask turns its rule into a no-op, and the message wording
   (`protected_label`, `reader_label`, ...) comes from the rule row.
-- **`ids.yaml` reservations.** The `reservations:` key is a mapping of class -> table -> `{start, end}`. Every reader
+- **`ids.yaml` reservations.** The `reservations:` key is a mapping of owner -> table -> `{start, end}` (an owner is a
+  class, or a non-class project such as `healsim`; see "Death Knight T1"). Every reader
   of `ids.yaml` indexes it by table name and none iterates it, so it is invisible to them; do not add a reader that
   iterates the file's top level without skipping `reservations`.
 - **`--check` count line.** `note: ... (DSL) contributed ...` leaves out tables with nothing declared, so adding a
   table to `SPELL_TABLES` does not change the line until something declares into it.
+
+## Death Knight T1: rune costs, creation data, the class row and `--check` additions
+
+Added for the Death Knight rework (`.agents/plans/death-knight-rework/`, T1). The README's "Death Knight T1" section
+has the syntax; this is what to know when something misbehaves.
+
+- **`DBCStructure.h:1843` is wrong.** The comment `0=blood, 1=frost, 2=unholy` on `SpellRuneCostEntry::RuneCost[3]`
+  describes the wrong order: the array is indexed by `RuneType` (`RUNE_BLOOD` 0, `RUNE_UNHOLY` 1, `RUNE_FROST` 2,
+  Player.h), so the DBC columns are `ID, Blood, Unholy, Frost, RunicPower`. Core files stay stock (merge-guard), so
+  the trap is documented in `lib/dbcfmt.py`'s `SPELLRUNECOST` comment and in `spell_rune_cost()`'s docstring, not
+  fixed. `RunicPower` is stored x10, and rune cost and RP gain only apply to a `PowerType` 5 spell.
+- **`SpellRuneCost.dbc` is a client table too.** `SPELLRUNECOST` is deliberately not in `ALL_TABLES` /
+  `SECONDARY_TABLES` (the SQL would go out twice, as for `SPELLCATEGORY`): the server half is the
+  `spellrunecost_dbc` entry of `SPELL_TABLES`, the client half is `generate._spell_rune_cost_rows`, merged over
+  `var/extractors/dbc/SpellRuneCost.dbc` into patch-Z. Both stock files (`SpellRuneCost.dbc`, `ChrClasses.dbc`) are
+  copied from the worldserver's DBC directory (read-only `docker cp`); `var/` is gitignored.
+- **The creation tables use the union reader.** `playercreateinfo_action` / `_cast_spell` / `_skills` are ordinary
+  `SPELL_TABLES` entries read with `trainer_state.load_table_rows` (union of INSERTs). The three cases that looked
+  like traps converge with it, so no `load_replayed_table_rows` switch was needed: a DK override of a stock key
+  (later file wins in `SpellTableIndex`), a removal of a row a hand file already deleted (`load_removed_keys` only
+  counts generated files, so the extra DELETE is emitted once and then recorded), and an undeclared key a hand
+  `UPDATE` changed (never in `rows_to_emit` or the prune orphans). **Gotcha:** the reader does not replay a
+  hand-written DELETE or UPDATE, so a declaration equal to a hand-deleted row's original INSERT reads as unchanged
+  and is not re-emitted (`creation_cast(48266, 32, ...)`, `spell_threat(8056, ...)` render nothing while the DB has
+  no row); change a value or re-add it by hand (`ReaderTrapTest.test_iv`). Not fixed: switching these tables to
+  `load_replayed_table_rows` would also have to change `render_removal_blocks`' live keys, or removing a
+  hand-deleted row (DK0a's 48266) prints a spurious "doesn't exist anywhere" WARNING.
+  `playercreateinfo_cast_spell` has no primary key,
+  so its key-exact DELETE removes every duplicate of (raceMask, classMask, spell). All three load once at boot and
+  only affect new characters. `creation_skill` rejects `rank >= 16` (`MAX_SKILL_STEP`, the loader skips those rows).
+- **`chrclasses_dbc` and `spellrunecost_dbc` have `prune_when_empty=True`**, like `disables`: with the breaker on,
+  retiring the last `chr_class()` / `spell_rune_cost()` would leave the overlay row for good.
+- **`override_skill_line_ability()` edits the stock row** (`dsl_live_data(skilllineability_stock_rows=...)`), so a
+  dropped keyword restores the stock value; a row only a migration added falls back to the live row.
+- **`chr_class()` replaces the whole row.** `chrclasses_dbc` has `ChrClassesEntryfmt` read for only four columns, but
+  the overlay row carries all 60; the female / male / neutral names and `Filename` are `x` in the fmt yet are string
+  offsets in the file, so they are in `read_as_string` (the `SPELLSHAPESHIFTFORM` lesson). The stock file's repacked
+  string table is 10 bytes shorter than the original (shared strings): the server never reads this file back, and
+  `lib/test_chr_class.py` checks the row-level round trip instead of the bytes.
+- **`dsl_live_data` keywords.** `skilllineability_rows` and `chrclasses_rows` are keyword arguments defaulting to
+  `None`, and either may be a zero-argument callable that `registry._require_live` calls on first use and caches in
+  the bundle. Every older caller (`pull_dsl.py`, `potency_report.py`, `pull_talents.py --dsl`, the tests) is
+  untouched; do not turn them into eager loads, the SkillLineAbility replay is about 13 s.
+- **`--check` has an ERROR path for rune costs and a dry run for GCD haste.** `generate._rune_cost_errors` feeds
+  both the full run's error list and `--check`'s `check_errors` (so it exits 1 for them).
+  `_gcd_haste_check_warnings` runs the full run's computation over stock Spell / Talent / TalentTab /
+  SkillLineAbility rows with the declared rows laid over them and prints WARNINGs only (promoted migrations are not
+  replayed, so it cannot flip the exit code). It must pass the superseded-rank map the full run computes: with
+  `superseded={}` the stock rows still list the collapsed ranks as learnable and the tree printed six Paladin /
+  Hunter lines (a promoted-aware variant printed the same six). If it ever prints a line on the committed tree, fix
+  the data or the policy; do not add an allow list.
+- **`reservations:` holds non-class owners.** `healsim` reserves 202900-202909 so the overlap test catches a class
+  slice that swallows the healing sim's spells (the T0 collision: DK's first block was 202900-203599). Reserve a new
+  project's ids under its own name the same way.
+- **`override_skill_line_ability()`** appends the entry `skill_line_ability()` would build (typed columns plus
+  `raw_overrides` for the rest). `lib/superseded_ranks.py` treats it as a declared row (a "declared row wins"
+  collision), and `resolve.resolve_rows` classifies it like any row outside the reserved block: edited when it
+  differs from the live row, unchanged copy when it does not.
 
 ## Watch out: one client DBC, one patch archive
 

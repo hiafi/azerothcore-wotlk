@@ -56,6 +56,13 @@ directory, `ac-worldserver:/azerothcore/env/dist/data/dbc/`, into `var/extractor
 reads it to know which skill lines a family uses: with a retirement declared and the file missing the run stops
 with an `ERROR`, and the hunter family lint (rule d) prints a `WARNING` that it only knows skill line 270.
 
+`SpellRuneCost.dbc` and `ChrClasses.dbc` are the same kind of exception (copy both from
+`ac-worldserver:/azerothcore/env/dist/data/dbc/` into `var/extractors/dbc/`; `SpellRuneCost.dbc` is also in the
+client's `patch-enUS-3.MPQ` and is byte-identical). `spell_rune_cost()` merges its rows over `SpellRuneCost.dbc`
+into patch-Z and stops the run with an `ERROR` naming the file when it is missing; `chr_class()` builds its row
+from `ChrClasses.dbc` and stops with an `ERROR` naming the file too. Neither is needed until a rune cost or a class
+row is declared. See "Death Knight T1" below.
+
 ## Generating
 
 ```
@@ -663,13 +670,156 @@ The other shaman "never take" bits (d0 b10 on a shield with NO_THREAT, d2 b14 ro
 b11" depend on attributes or on the spell's role, which the table cannot express: they are SH0's targeted tests.
 
 **ID blocks.** `source/ids.yaml` now names the client-patch tables' ranges (`spellicon` 90100-90399, `soundentries`
-90001-90100, `spellvisual` 90001-90199 shared by SpellVisual/Kit/EffectName, `creaturedisplayinfo` and
+90001-90199, `spellvisual` 90001-90299 shared by SpellVisual/Kit/EffectName, `creaturedisplayinfo` and
 `creaturemodeldata` 90001-90499, `gameobjectdisplayinfo` 90001-90099, `summonproperties` 3000-3099; stock tops out
-at 2935) and a `reservations:` key holding each class's slice of every table (shaman only so far). Nothing mints
+at 2935; `soundentries` and `spellvisual` were widened by Death Knight T1) and a `reservations:` key holding each
+class's slice of every table (shaman and deathknight; `healsim` reserves the healing sim's spells). Nothing mints
 from the new blocks; `lib/test_id_blocks.py` checks that blocks of one table do not overlap, that a reservation sits
 inside its block and overlaps no other class, and that every custom id `source/classes/<class>/` declares inside a
 tool-wide block is inside that class's reservation. A new class reserves its slice in `ids.yaml` first (keep to
 `.agents/plans/shaman-rework/shaman-rework.PLAN.md` s4's table of who owns what).
+
+### Death Knight T1: rune costs, threat rows, creation data, the class row and SkillLineAbility overrides
+
+Added for the Death Knight rework (`.agents/plans/death-knight-rework/`, T1). No Death Knight content: these are the
+helpers, lints and id blocks DK0a / DK0b and the spec stages call. Nothing here needs C++; every table already has a
+loader.
+
+**`spell_rune_cost(cost_id, *, blood=0, unholy=0, frost=0, runic_power=0, comment="")`** declares a
+`spellrunecost_dbc` row (`SpellRuneCost.dbc`): the runes a rune ability costs and the Runic Power it generates. The
+server overlay row and, merged over the stock file, the client row both go out (the first declaration makes patch-Z
+carry `SpellRuneCost.dbc`; expect `lint.check_client_patch`'s "new to the patch" WARNING once).
+
+```python
+# S1: Marrowrend costs one Frost and one Unholy rune and generates 20 Runic Power.
+spell_rune_cost(2600, frost=1, unholy=1, runic_power=20, comment="Marrowrend")
+spell(id=203xxx, name="Marrowrend", power_type=5, raw_overrides={'RuneCostID': 2600}, ...)
+```
+
+- **Column order is Blood, Unholy, Frost.** `SpellRuneCostEntry::RuneCost[3]` is indexed by `RuneType`
+  (`RUNE_BLOOD` 0, `RUNE_UNHOLY` 1, `RUNE_FROST` 2, Player.h; Spell.cpp:5627-5634, 5682-5686). The comment
+  `0=blood, 1=frost, 2=unholy` at DBCStructure.h:1843 is wrong (core files stay stock: documented, not fixed). Stock
+  proof: 241 Icy Touch = (0, 0, 1, 100), 482 Frost Presence = (0, 0, 1, 0), 797 = (0, 1, 1, 150), 1144 Empower Rune
+  Weapon = (0, 0, 0, 250). The arguments are keyword-only so the order cannot be transposed.
+- **`runic_power` is whole Runic Power as the player reads it** (10, 15, 20, 25) and is stored x10 (100 = 10 RP;
+  `TakeRunePower` adds `runePowerGain * Rate.RunicPower.Income`, Spell.cpp:5716-5718; the maximum is 1000).
+- **It applies only to a `PowerType` 5 (RUNE) spell:** `CheckRuneCost` returns OK otherwise (Spell.cpp:5605) and
+  `TakePower` calls `TakeRunePower` only for `POWER_RUNE` (:5531). A `RuneCostID` with no row is a free cast
+  (:5621-5624, 5666-5668). 168 stock spells carry a `RuneCostID` with another `PowerType` (Death Coil 47541 =
+  power 6 / cost 422): inert, so the lints only judge custom spells (id >= 200000).
+- **Reuse a stock row first.** Marrowrend needs (0, 1, 1, 200) and Scourge Strike (1, 0, 1, 150) (DATA 1.6); 475
+  stock rows already cover most costs.
+- `cost_id` must be inside `ids.yaml`'s `spellrunecost` block (2600-2629; stock tops out at 2513, DK reserves
+  2600-2609). The helper raises on an id outside it, a rune count outside 0..2 (more than two of one type is payable
+  only with Death Runes: widen `registry.RUNE_COUNT_MAX` deliberately), a non-int or bool, `runic_power` outside
+  0..100, and an all-zero row.
+- Lints: **ERROR** (`--check` exits 1 too) for a spell whose `RuneCostID` is inside the block with no declaration
+  or a declaration with no stock file to merge into; **WARNING** for a custom spell with a `RuneCostID` and a
+  `PowerType` other than 5, for a `RuneCostID` that is neither stock nor declared (a free cast), and for a declared
+  row equal to a stock row (it names the stock id). Without the stock file the last two collapse into one WARNING.
+
+**`spell_threat(spell, flat_mod=None, pct_mod=1.0, ap_pct_mod=0.0)` / `remove_spell_threat(spell)`** declare a
+`spell_threat` row (`SpellMgr::LoadSpellThreats`) and its key-exact removal. Stock Death Knight threat lives in
+rows keyed by spell id (Chains of Ice 45524 flat 240, Death Grip 49576 110, Strangulate 49916 138, Lichborne 49039
+110, Hungering Cold 51209 112, Death and Decay 52212 pctMod 1.9, Scourge Strike 55090 / 55265 / 55270 / 55271 flat
+51 / 63 / 98 / 120, Rune Strike 56815 pctMod 1.75, and zero rows on 47568, 48743, 50181, 50422, 63611, 65142): a
+rework that mints a new id for one of them loses its threat unless the new id gets a row. Blood Presence's own
+threat is a `MOD_THREAT` aura, not this table. A spell that is neither declared nor stock prints a WARNING (the
+loader drops the row, SpellMgr.cpp:2358-2362).
+
+**`creation_action(race, class_id, button, action, action_type=0)` / `creation_cast(spell, class_mask, race_mask=0,
+note="")` / `creation_skill(skill, class_mask, race_mask=0, rank=0, comment="")`** and their `remove_creation_*`
+counterparts declare what a newly created character starts with: `playercreateinfo_action`,
+`playercreateinfo_cast_spell` and `playercreateinfo_skills`. All three load once at boot
+(`ObjectMgr::LoadPlayerInfo`, not reloadable) and **only affect characters created afterwards**.
+
+```python
+# DK0a: the class-6 action bar on each race, the creation Blood Presence cast and First Aid.
+for race in (1, 2, 3, 4, 5, 6, 7, 8, 10, 11):
+    creation_action(race, 6, 4, 49000)                # a row per race: the action table has no mask
+remove_creation_cast(48266, 32)                        # the stock creation cast (0, 32, 48266)
+remove_creation_skill(129, 32)                         # (0, 32, 129, 4, 'Death Knight - First Aid') only
+```
+
+- `creation_action` takes one playable race (1-8, 10, 11), a class 1-11 except 10, a button 0..143
+  (`MAX_ACTION_BUTTONS`) and an `action_type` of 0 (spell), 0x40 (macro) or 0x80 (item). Key (race, class, button).
+- `creation_cast` / `creation_skill` take masks, checked like the loader (ObjectMgr.cpp:4680-4690): the race mask is
+  0 (every race) or within the playable mask (1791), the class mask is non-zero and within the playable classes
+  (1535). `creation_skill`'s `rank` is 0..15 (`MAX_SKILL_STEP`): the server skips a higher-rank row at boot.
+  **`playercreateinfo_cast_spell` has no primary key:** the key-exact `DELETE` on (raceMask, classMask,
+  spell) removes every duplicate, which is what a declaration or a removal means. The removals are key-exact, so a
+  shared-mask row such as `(0, 35, 55)` Two-Handed Swords is never touched by `remove_creation_skill(129, 32)`.
+- Ordinary declared tables: DELETE-then-INSERT, diffed against the live rows, pruned when a declaration this tool
+  emitted is dropped (a dropped override of a stock key is reported, never deleted). The live-state reader stays the
+  union of INSERTs. That reader does not replay an `UPDATE` (`2026_09_06_01.sql` re-points a priest button) or a
+  hand-written `DELETE` (the P0 spike's file deletes the `(0, 32, 48266)` cast). A DK override of a stock key
+  renders once and converges on the next run, `remove_creation_cast(48266, 32)` emits one extra idempotent `DELETE`
+  and converges, and a key nobody declared is never touched (`lib/test_creation_data.py`). **The gotcha:** a
+  declaration whose values equal a row a hand-written `DELETE` removed (or that equal the original INSERT of a row a
+  hand `UPDATE` changed) reads as unchanged and is never re-emitted, so `creation_cast(48266, 32, note=...)` renders
+  nothing while the DB has no row, and the same holds for `spell_threat(8056, ...)`. To bring such a row back, change
+  one value or re-add it by hand. It was not fixed here because the replayed reader (`load_replayed_table_rows`)
+  would also have to feed `render_removal_blocks`' live keys, or every removal of a hand-deleted row (DK0a's 48266)
+  would print a spurious "doesn't exist anywhere" WARNING; that is more than a contained change.
+- `chr_class` / `spell_rune_cost` skip the prune circuit breaker (`TableSpec.prune_when_empty`): dropping the last
+  declaration still DELETEs the overlay row, so `chr_class(6, ...)` can be undone through the tool.
+- A spell action or creation cast that names a spell nobody declares prints a WARNING.
+
+**`chr_class(class_id, **columns)`** is a full-row override of a stock `ChrClasses.dbc` row (`chrclasses_dbc`,
+server-side only, no client patch), built like `shapeshift_form()`: every column starts at the stock value and only
+the named ones change. An overlay row replaces the whole row (power type, `SpellClassSet`, `Required_Expansion`,
+names), so hand SQL is a trap. It accepts the SQL column name or `DBCStructure.h`'s field name for the four it
+exposes (`CinematicSequence`, `powerType`, `spellfamily`, `expansion`). The use is the race intro cinematic for new
+Death Knights: `WorldSession::HandlePlayerLogin` (CharacterHandler.cpp:887-898) plays `ChrClasses.CinematicSequence`
+of the class if it is non-zero, else `ChrRaces.CinematicSequence` of the race, and only the DK class row has a class
+cinematic in 3.3.5 (165). `chr_class(6, CinematicSequenceID=0)` therefore gives every new DK its race's intro with
+no C++ and no client patch (confirm in the DK0a playtest). Stock row 6 in `ChrClasses.dbc`: DisplayPower 6,
+SpellClassSet 15, Required_Expansion 2, CinematicSequenceID 165, names "Death Knight". Without the stock file
+`generate.py` stops with an ERROR naming it.
+
+**`override_skill_line_ability(sla_id, **columns)`** re-declares the STOCK `SkillLineAbility.dbc` row (not a
+promoted one, so deleting a keyword later restores that column's stock value; a row only a migration added falls
+back to its live row) with only the named columns changed, instead of copying every column by hand (the P0
+spike's `_stock_sla_unlearned`). It accepts the typed names `skill_line_ability()` uses (`skill_line`, `spell_id`,
+`class_mask`, `race_mask`, `min_skill_line_rank`, `acquire_method`, `superseded_by`) and the raw SQL column names; an
+unknown name or a non-live id raises. The entry is exactly what `skill_line_ability()` builds, so the
+superseded-ranks "a declared row wins" path keeps working.
+
+```python
+# DK0a: Icy Touch, Plague Strike, Death Coil, Blood Strike, Blood Presence, Rune Strike's enabler and Journeyman
+# Riding stop auto-learning at level 1, and Heart Strike starts to (AcquireMethod 2, class mask 32).
+for sla_id in (16231, 16238, 16433, 16616, 17016, 17101, 19641, 19184):
+    override_skill_line_ability(sla_id, acquire_method=0)
+override_skill_line_ability(19182, acquire_method=2, class_mask=32)
+```
+
+The live rows reach the registry through `spell_tables.dsl_live_data(..., skilllineability_rows=None,
+chrclasses_rows=None)`: keyword arguments with a default, so every caller that predates them (`pull_dsl.py`,
+`potency_report.py`, `pull_talents.py --dsl`, `test_id_blocks.declared_ids`) keeps working and the two helpers raise
+a clear error when their rows were not passed. Either value may be a zero-argument callable, loaded on first use
+(the SkillLineAbility replay takes about 13 s, so `--check` and `load_dsl_live_data` pay for it only when a file
+calls the helper; the full run loads it once and shares it with its own later use).
+
+**`--check` GCD-haste dry run.** The first P0 deploy stopped at `ERROR: gcd haste: Death Knight: 203684 ... all-zero
+SpellClassMask`, which `--check` could not show. `--check` now runs the full run's GCD-haste computation
+(`generate._gcd_haste_check_warnings`) over the stock Spell / Talent / TalentTab / SkillLineAbility rows with the
+declared rows laid over them, `trainer_taught` = the declared `trained_by()` spells and the superseded-rank map the
+full run uses (`superseded_ranks.superseded_ranks`, 2148 collapsed ranks), and prints each error or warning as
+`WARNING: gcd haste (--check, stock approximation): ...`. It is a WARNING so the approximation (promoted migrations
+are not replayed) cannot flip the exit code; the full run keeps the authoritative ERRORs. **The superseded map is
+required:** with `superseded={}` (the handoff's first draft) the stock rows still list the collapsed ranks as
+learnable and the committed tree printed six unrelated lines (three Paladin aura bit conflicts, two Hunter melee /
+ranged overlaps, Hunter Black Arrow bit 7); a promoted-aware variant printed the same six, so promoted rows were not
+the cause. With the map, today's tree prints nothing. `lib/test_dk_t1_check.py`: a learnable family-15 GCD melee
+spell with an all-zero class mask produces the warning, the same spell with a mask bit does not.
+
+**ID blocks and reservations.** `soundentries` is widened to 90001-90199 and `spellvisual` to 90001-90299 (the shaman
+slices filled the old ends), and a `spellrunecost` block 2600-2629 is added. `reservations:` gains `deathknight`
+(PLAN s4: spell 203000-203699, talent 60330-60389, SkillLineAbility 30720-30779, spell_group 1271-1285,
+SpellDescriptionVariables 1230-1299, creature 300300-300339, plus the client-patch and `spellrunecost` 2600-2609
+slices; 203680-203699, 1285, 30779 and 300338 / 300339 held the P0 spike: never reuse) and `healsim` (spells
+202900-202909). A non-class owner reserves under its project name, so the overlap test protects it (the T0 collision:
+Death Knight's first spell block swallowed the healing sim's spells).
 
 ### Declaring tooltip variables (P9)
 

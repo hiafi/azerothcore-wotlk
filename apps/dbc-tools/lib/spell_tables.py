@@ -25,6 +25,7 @@ wrong one.
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from pathlib import Path
@@ -61,6 +62,17 @@ SPELLCATEGORY_COLUMNS = ("ID", "Flags")
 # spellshapeshiftform_dbc is DBC-backed (unlike the other four, plain world-DB tables) - reuse
 # lib.dbcfmt's own column list rather than re-transcribing it a second time.
 SPELLSHAPESHIFTFORM_COLUMNS = dbcfmt.SPELLSHAPESHIFTFORM.columns
+# Death Knight T1: spellrunecost_dbc is the empty server overlay of SpellRuneCost.dbc (DBCStores.cpp
+# LOAD_DBC(sSpellRuneCostStore, ...)) and chrclasses_dbc that of ChrClasses.dbc - both reuse lib.dbcfmt's column
+# lists. Order matters for the first: Blood, Unholy, Frost (see dbcfmt.SPELLRUNECOST).
+SPELLRUNECOST_COLUMNS = dbcfmt.SPELLRUNECOST.columns
+CHRCLASSES_COLUMNS = dbcfmt.CHRCLASSES.columns
+# spell_threat (SpellMgr::LoadSpellThreats): flatMod is nullable, pctMod defaults 1, apPctMod 0.
+SPELL_THREAT_COLUMNS = ("entry", "flatMod", "pctMod", "apPctMod")
+# playercreateinfo_* (ObjectMgr::LoadPlayerInfo): what a newly created character starts with. Boot-only load.
+PLAYERCREATEINFO_ACTION_COLUMNS = ("race", "class", "button", "action", "type")
+PLAYERCREATEINFO_CAST_SPELL_COLUMNS = ("raceMask", "classMask", "spell", "note")
+PLAYERCREATEINFO_SKILLS_COLUMNS = ("raceMask", "classMask", "skill", "rank", "comment")
 # lfg_exclude() (source/world/): sourceType 8 rows only. The base dump and mod-progression's phase
 # SQL (which owns sourceType 1-5/9/10) have no sourceType 8 rows, so nothing else writes these keys.
 DISABLES_COLUMNS = ("sourceType", "entry", "flags", "params_0", "params_1", "comment")
@@ -262,6 +274,29 @@ SPELL_TABLES = (
         "creature_template_spell", CREATURE_TEMPLATE_SPELL_COLUMNS, ("CreatureID", "Index"),
         "creature_template_spells", defaults={"Index": 0, "Spell": None, "VerifiedBuild": None},
     ),
+    # Death Knight T1. spellrunecost_dbc and chrclasses_dbc are DBC-backed overlays; every column of both is
+    # NOT NULL DEFAULT 0 (or a nullable string), so the 0/None fallback in _same_row is already right.
+    TableSpec("spellrunecost_dbc", SPELLRUNECOST_COLUMNS, ("ID",), "spell_rune_costs", prune_when_empty=True),
+    TableSpec("chrclasses_dbc", CHRCLASSES_COLUMNS, ("ID",), "chr_classes", prune_when_empty=True),
+    # flatMod is NULL and pctMod 1 / apPctMod 0 when a migration leaves the column out.
+    TableSpec(
+        "spell_threat", SPELL_THREAT_COLUMNS, ("entry",), "spell_threats",
+        defaults={"flatMod": None, "pctMod": 1.0, "apPctMod": 0.0},
+    ),
+    TableSpec(
+        "playercreateinfo_action", PLAYERCREATEINFO_ACTION_COLUMNS, ("race", "class", "button"),
+        "creation_actions",
+    ),
+    # No primary key (the loader pushes every row): the key-exact DELETE the renderer emits removes every duplicate
+    # of (raceMask, classMask, spell) before the INSERT, which is what a declaration means.
+    TableSpec(
+        "playercreateinfo_cast_spell", PLAYERCREATEINFO_CAST_SPELL_COLUMNS, ("raceMask", "classMask", "spell"),
+        "creation_casts", defaults={"note": None},
+    ),
+    TableSpec(
+        "playercreateinfo_skills", PLAYERCREATEINFO_SKILLS_COLUMNS, ("raceMask", "classMask", "skill"),
+        "creation_skills", defaults={"rank": 0, "comment": None},
+    ),
 )
 
 
@@ -416,6 +451,12 @@ _PRUNE_WHY = {
                         "-- engine's own spell coefficient.",
     "disables": "Left in place, the dungeon stays out of the dungeon finder.",
     "creature_template_spell": "Left in place, the creature keeps casting the spell in that slot.",
+    "spell_threat": "Left in place, the spell keeps its overridden threat.",
+    "playercreateinfo_action": "Left in place, new characters keep that action bar button.",
+    "playercreateinfo_cast_spell": "Left in place, new characters keep casting that spell at creation.",
+    "playercreateinfo_skills": "Left in place, new characters keep that skill at creation.",
+    "spellrunecost_dbc": "Left in place, the row keeps overriding the spell's rune cost.",
+    "chrclasses_dbc": "Left in place, the whole class row stays overridden.",
 }
 _PRUNE_WHY_DEFAULT = "Left in place it keeps applying."
 
@@ -670,14 +711,31 @@ def load_generated_item_entries() -> list[dict]:
     return list(entries.values())
 
 
-def dsl_live_data(talent_rows: dict[int, dict], item_rows: dict[int, dict]) -> dict:
-    """The `live_data` bundle `lib.dsl.registry.load_classes_dir` hands `retire_talent()` and
-    `item_template()` (see `registry._active_live_data`)."""
+def dsl_live_data(
+    talent_rows: dict[int, dict], item_rows: dict[int, dict],
+    skilllineability_rows: dict[int, dict] | Callable[[], dict[int, dict]] | None = None,
+    chrclasses_rows: dict[int, dict] | Callable[[], dict[int, dict]] | None = None,
+    skilllineability_stock_rows: dict[int, dict] | Callable[[], dict[int, dict]] | None = None,
+) -> dict:
+    """The `live_data` bundle `lib.dsl.registry.load_classes_dir` hands `retire_talent()`, `item_template()`,
+    `override_skill_line_ability()` and `chr_class()` (see `registry._active_live_data`).
+
+    `skilllineability_rows` (the live SkillLineAbility rows, base file plus promoted migrations),
+    `skilllineability_stock_rows` (the stock SkillLineAbility rows `override_skill_line_ability()` edits, so removing
+    a keyword restores the stock value; when it is None the live rows are the base) and
+    `chrclasses_rows` (the stock ChrClasses rows) are keyword arguments with a `None` default so every caller that
+    predates them (test_id_blocks.declared_ids, pull_dsl.py, potency_report.py, pull_talents.py --dsl) keeps working:
+    the two helpers raise a clear error when their rows were not passed. Either value may be a zero-argument callable
+    instead of a dict: `registry._require_live` calls it on first use, so a tool that never calls the helper does
+    not pay for replaying 1000+ migrations (about 13 s for SkillLineAbility)."""
     return {
         "talent_rows": talent_rows,
         "item_template_rows": item_rows,
         "item_template_columns": ITEM_TEMPLATE_COLUMNS,
         "item_template_defaults": ITEM_TEMPLATE_DEFAULTS,
+        "skilllineability_rows": skilllineability_rows,
+        "chrclasses_rows": chrclasses_rows,
+        "skilllineability_stock_rows": skilllineability_stock_rows,
     }
 
 
@@ -687,7 +745,11 @@ def load_dsl_live_data() -> dict:
     `retire_talent()` fails to load for them, as it would for generate.py with the argument omitted."""
     from . import dbcfmt, state  # noqa: PLC0415
 
-    return dsl_live_data(state.load_existing_rows(dbcfmt.TALENT), load_live_item_template_rows())
+    return dsl_live_data(
+        state.load_existing_rows(dbcfmt.TALENT), load_live_item_template_rows(),
+        lambda: state.load_existing_rows(dbcfmt.SKILLLINEABILITY), lambda: state.load_stock_rows(dbcfmt.CHRCLASSES),
+        lambda: state.load_stock_rows(dbcfmt.SKILLLINEABILITY),
+    )
 
 
 def load_item_table_index(live_rows: dict[int, dict] | None = None) -> SpellTableIndex:
@@ -799,6 +861,23 @@ REMOVAL_TABLES = (
     RemovalSpec(
         "creature_spell_removals", "creature_template_spell", ("CreatureID", "Index"),
         "creature_template_spells", "a rework frees this creature spell slot",
+    ),
+    # Death Knight T1.
+    RemovalSpec(
+        "spell_threat_removals", "spell_threat", ("entry",),
+        "spell_threats", "a rework removes this spell's threat override (the minted spell carries its own threat)",
+    ),
+    RemovalSpec(
+        "creation_action_removals", "playercreateinfo_action", ("race", "class", "button"),
+        "creation_actions", "a rework frees this creation action bar button",
+    ),
+    RemovalSpec(
+        "creation_cast_removals", "playercreateinfo_cast_spell", ("raceMask", "classMask", "spell"),
+        "creation_casts", "a rework stops casting this spell on new characters",
+    ),
+    RemovalSpec(
+        "creation_skill_removals", "playercreateinfo_skills", ("raceMask", "classMask", "skill"),
+        "creation_skills", "a rework stops granting this skill to new characters",
     ),
 )
 
