@@ -712,7 +712,7 @@ namespace Shaman
 /*
  * S1 block: Elemental (docs/reworks/shaman-elemental-rework.md). Talent ranks, the active elementals, Power of the
  * Elements' Empowerment buffs and guardian auras, Gathering Flames clearing, the Elemental Warding capstone, the
- * Conduit of the Elements Mastery amount, Echo, the Call of the Elements extension, the Thunderstorm stun rank and the
+ * Conduit of the Elements Mastery amount, Echo, the Call of the Elements extension and the
  * Lava Flows haste map. No per-player state: everything is reconciled from the shaman's own auras, talents and slots.
  */
 namespace
@@ -745,15 +745,7 @@ namespace
         ShamanData::SPELL_ELEMENTAL_WARDING_28998
     };
 
-    constexpr std::array<uint32, 3> CALL_OF_THUNDER_RANKS =
-    {
-        ShamanData::SPELL_CALL_OF_THUNDER,
-        ShamanData::SPELL_CALL_OF_THUNDER_RANK2,
-        ShamanData::SPELL_CALL_OF_THUNDER_RANK3
-    };
-
     constexpr uint8 ELEMENTAL_WARDING_CAPSTONE_RANK = 3;
-    constexpr uint8 CALL_OF_THUNDER_CAPSTONE_RANK = 3;
 
     uint8 GetElementalBit(ElementalInfo const& info)
     {
@@ -1100,26 +1092,6 @@ namespace Shaman
                     if (summon->GetTimer() < remaining)
                         summon->SetTimer(remaining);
         }
-    }
-
-    void SyncThunderstormRank(Player* player)
-    {
-        if (!player)
-            return;
-
-        // Thunderstorm is a talent rank put in the spellbook: the talent in the active spec, or the spell itself
-        // (learned by a command).
-        bool const knowsThunderstorm = GetTalentRank(player, { ShamanData::SPELL_THUNDERSTORM }) > 0 ||
-            player->HasSpell(ShamanData::SPELL_THUNDERSTORM);
-        bool const wanted = knowsThunderstorm &&
-            GetTalentRank(player, CALL_OF_THUNDER_RANKS) >= CALL_OF_THUNDER_CAPSTONE_RANK;
-        bool const known = player->HasSpell(ShamanData::SPELL_THUNDERSTORM_RANK2);
-
-        // Rank 2 is no talent: learnSpell gives it every spec, and a spec swap re-runs this sync.
-        if (wanted && !known)
-            player->learnSpell(ShamanData::SPELL_THUNDERSTORM_RANK2);
-        else if (!wanted && known)
-            player->removeSpell(ShamanData::SPELL_THUNDERSTORM_RANK2, SPEC_MASK_ALL, false);
     }
 
     uint32 LavaFlowsHasteSpell(uint8 rank)

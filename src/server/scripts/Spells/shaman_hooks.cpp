@@ -56,17 +56,12 @@ namespace
             player->HasAura(ShamanData::SPELL_ROCKBITER_WEAPON);
     }
 
-    // S1: spells whose learn/unlearn can change the Thunderstorm stun rank or the Elemental auras (Thunderstorm, Call
-    // of Thunder, Power of the Elements, Elemental Warding, Conduit of the Elements). Thunderstorm rank 2 itself is
-    // left out: its own learn/remove comes from the sync.
+    // S1: spells whose learn/unlearn can change the Elemental auras (Power of the Elements, Elemental Warding,
+    // Conduit of the Elements).
     bool IsElementalSyncSpell(uint32 spellId)
     {
         switch (spellId)
         {
-            case ShamanData::SPELL_THUNDERSTORM:
-            case ShamanData::SPELL_CALL_OF_THUNDER:
-            case ShamanData::SPELL_CALL_OF_THUNDER_RANK2:
-            case ShamanData::SPELL_CALL_OF_THUNDER_RANK3:
             case ShamanData::SPELL_POWER_OF_THE_ELEMENTS:
             case ShamanData::SPELL_CONDUIT_OF_THE_ELEMENTS:
             case ShamanData::SPELL_ELEMENTAL_WARDING:
@@ -116,7 +111,7 @@ namespace
         return IsElementalSyncSpell(spellId) || IsRestorationSyncSpell(spellId) || IsEnhancementSyncSpell(spellId);
     }
 
-    // The Thunderstorm stun rank and the Elemental auras follow the talents (no class gate: Classless reads the
+    // The Elemental auras follow the talents (no class gate: Classless reads the
     // player's own state). One tick later, so a talent reset or unlearn has finished removing every rank (the
     // reset hook fires before it, the forget hook between a spell's and its talent's removal). S2: the Totemic
     // Resonance aura too. S3: the Enhancement state (Rockbiter children, charges, Ascendances, Unleashed Rage).
@@ -132,7 +127,6 @@ namespace
             if (!self || !self->IsInWorld())
                 return;
 
-            Shaman::SyncThunderstormRank(self);
             Shaman::OnElementalAdded(self, nullptr);
             Shaman::RecountTotemicResonance(self);
             Shaman::OnEnhTalentsChanged(self);
@@ -221,9 +215,6 @@ public:
         if (player->HasAura(ShamanData::SPELL_STONESKIN_202206) && !player->IsInCombat())
             Shaman::OnCombatChange(player, false);
 
-        // S1: the Thunderstorm stun rank follows the talents loaded from the DB.
-        Shaman::SyncThunderstormRank(player);
-
         // S2: a Totemic Resonance aura or a Cloudburst store buff saved at logout has no totem behind it.
         Shaman::RecountTotemicResonance(player);
         Shaman::ReleaseCloudburst(player, true);
@@ -276,7 +267,7 @@ public:
     }
 
     // Trainer, .learn and skill-rewarded learns of Reincarnation (Player::learnSpell, after addSpell succeeded).
-    // S1: Thunderstorm and the Elemental talents put in the spellbook or learned by a command.
+    // S1: the Elemental talents put in the spellbook or learned by a command.
     void OnPlayerLearnSpell(Player* player, uint32 spellID) override
     {
         if (!player)
@@ -350,7 +341,7 @@ public:
         if (IsShaman(player))
             Shaman::EnsureReincarnationAura(player);
 
-        // S1: the new spec's talents decide the Thunderstorm stun rank and the Elemental auras.
+        // S1: the new spec's talents decide the Elemental auras.
         QueueElementalTalentSync(player);
     }
 

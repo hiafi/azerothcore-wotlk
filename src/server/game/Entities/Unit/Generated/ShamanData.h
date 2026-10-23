@@ -547,7 +547,6 @@ namespace ShamanData
     constexpr uint32 SPELL_LIGHTNING_BOLT_OVERLOAD = 202591; // lightning_bolt_overload_202591
     constexpr uint32 SPELL_CHAIN_LIGHTNING_OVERLOAD = 202592; // chain_lightning_overload_202592
     constexpr uint32 SPELL_LAVA_BURST_OVERLOAD = 202593; // lava_burst_overload_202593
-    constexpr uint32 SPELL_THUNDERSTORM_RANK2 = 202594; // thunderstorm_rank2_202594
     constexpr uint32 SPELL_ASTRAL_SHIFT_EMPOWERED = 202595; // astral_shift_empowered_202595
     constexpr uint32 SPELL_FLOWING_TIDES_RANK1 = 202640; // flowing_tides_rank1_202640
     constexpr uint32 SPELL_FLOWING_TIDES_RANK2 = 202641; // flowing_tides_rank2_202641

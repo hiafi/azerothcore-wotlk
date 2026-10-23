@@ -156,10 +156,6 @@ namespace Shaman
     // Call it before summoning the inactive elementals, so the new ones are not extended.
     void ExtendElementals(Player* player, uint32 ms);
 
-    // Thunderstorm rank 2 (usable while stunned) is known exactly while Thunderstorm and Call of Thunder rank 3
-    // are known; learns or removes it to match.
-    void SyncThunderstormRank(Player* player);
-
     // Lava Flows talent rank (1-3) -> its haste buff id; 0 for any other rank.
     uint32 LavaFlowsHasteSpell(uint8 rank);
 

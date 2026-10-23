@@ -245,7 +245,7 @@ namespace
     }
 
     // Shamanism: each Lightning Bolt / Chain Lightning damage event (copies included) has SHAMANISM_CHANCE x Proc
-    // Chance to take SHAMANISM_CDR_MS off Elemental Mastery and both Thunderstorm ranks, in real time (known-hard 9)
+    // Chance to take SHAMANISM_CDR_MS off Elemental Mastery and Thunderstorm, in real time (known-hard 9)
     void TryShamanism(Player* player)
     {
         if (!Shaman::GetTalentRank(player, SHAMANISM_RANKS))
@@ -257,7 +257,6 @@ namespace
         int32 const cut = -int32(ShamanData::SHAMANISM_CDR_MS);
         player->ModifySpellCooldown(ShamanData::SPELL_ELEMENTAL_MASTERY, cut);
         player->ModifySpellCooldown(ShamanData::SPELL_THUNDERSTORM, cut);
-        player->ModifySpellCooldown(ShamanData::SPELL_THUNDERSTORM_RANK2, cut);
     }
 
     // Stunned, feared or silenced: the states Astral Shift covers
@@ -410,8 +409,7 @@ class spell_sha_ele_overload_copy : public SpellScript
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ ShamanData::SPELL_ELEMENTAL_MASTERY, ShamanData::SPELL_THUNDERSTORM,
-            ShamanData::SPELL_THUNDERSTORM_RANK2 });
+        return ValidateSpellInfo({ ShamanData::SPELL_ELEMENTAL_MASTERY, ShamanData::SPELL_THUNDERSTORM });
     }
 
     void HandleAfterHit()
@@ -463,7 +461,7 @@ class spell_sha_ele_spell_hooks : public SpellScript
             ShamanData::SPELL_FUSION_STORM, ShamanData::SPELL_FUSION_MASTERY, ShamanData::SPELL_REVERBERATION_EARTH,
             ShamanData::SPELL_REVERBERATION_FROST, ShamanData::SPELL_REVERBERATION_FLAME,
             ShamanData::SPELL_BOOMING_ECHO, ShamanData::SPELL_PRECISION_BUFF, ShamanData::SPELL_ELEMENTAL_MASTERY,
-            ShamanData::SPELL_THUNDERSTORM, ShamanData::SPELL_THUNDERSTORM_RANK2 });
+            ShamanData::SPELL_THUNDERSTORM });
     }
 
     bool _usReady = false;

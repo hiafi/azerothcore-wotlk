@@ -757,6 +757,11 @@ class spell_sha_enh_molten_fury : public SpellScript
 // spell_sha_elemental_lockout skips triggered casts). A totem in a slot being taken is dismissed first. The summon
 // spells' own duration is 30 s, so each new totem is cut to COTE_SUMMON_MS after it appears (its guardian leaves
 // with it) and its totem bar entry is re-sent with the new time.
+// The client starts its own cooldown swipe for any spell of its own the moment it receives that spell's SMSG_SPELL_GO
+// (Player::AddSpellAndCategoryCooldowns, CDH comment), triggered or not, so each summon cast here greys its button for
+// the spell's full 2 min although the server stored nothing. One tick later (after the SMSG_SPELL_GO packets) the
+// client is told the truth: a real cooldown the elemental already had is re-announced with its remaining time, no
+// cooldown at all is cleared.
 class spell_sha_ele_call_of_the_elements : public SpellScript
 {
     PrepareSpellScript(spell_sha_ele_call_of_the_elements);
@@ -806,6 +811,25 @@ class spell_sha_ele_call_of_the_elements : public SpellScript
         player->SendDirectMessage(data.Write());
     }
 
+    static void RestoreSummonCooldownDisplay(Player* player, std::vector<uint32> spellIds)
+    {
+        ObjectGuid const guid = player->GetGUID();
+        player->m_Events.AddEventAtOffset([guid, spellIds]()
+        {
+            Player* self = ObjectAccessor::FindPlayer(guid);
+            if (!self)
+                return;
+
+            for (uint32 const spellId : spellIds)
+            {
+                if (self->HasSpellCooldown(spellId))
+                    self->ResendSpellCooldown(spellId);         // clear-then-set with the real remaining time
+                else
+                    self->RemoveSpellCooldown(spellId, true);   // nothing stored: SMSG_CLEAR_COOLDOWN only
+            }
+        }, 1ms);
+    }
+
     void HandleAfterCast()
     {
         Unit* caster = GetCaster();
@@ -815,6 +839,8 @@ class spell_sha_ele_call_of_the_elements : public SpellScript
 
         // Extend first, so an elemental summoned below is not extended again
         Shaman::ExtendElementals(player, uint32(ShamanData::COTE_EXTEND_MS));
+
+        std::vector<uint32> summoned;
 
         for (ElementalSummonInfo const& info : ELEMENTAL_SUMMONS)
         {
@@ -836,7 +862,11 @@ class spell_sha_ele_call_of_the_elements : public SpellScript
             LogCastFailure("spell_sha_ele_call_of_the_elements", info.summonSpellId, player, player,
                 player->CastSpell(player, info.summonSpellId, TRIGGERED_FULL_MASK));
             CutSummonDuration(player, info);
+            summoned.push_back(info.summonSpellId);
         }
+
+        if (!summoned.empty())
+            RestoreSummonCooldownDisplay(player, std::move(summoned));
     }
 
     void Register() override
