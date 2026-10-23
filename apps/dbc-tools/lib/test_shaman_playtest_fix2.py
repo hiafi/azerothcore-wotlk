@@ -7,7 +7,7 @@ P6  Call of Thunder's capstone is "Thunderstorm restores 100% more mana": a pct 
     the stun-castable Thunderstorm rank 202594, its SkillLineAbility 30691, the superseded edit of 17659 and the rank-sync C++ are gone.
 P7  Call of the Elements puts none of the elementals on cooldown: the summons are triggered (no server cooldown) and the script tells the
     client to drop the cooldown its own SMSG_SPELL_GO prediction started (source pin on spell_shaman_totems.cpp).
-P8  Elemental Ascendance (202390) carries the storm-cloud state visual (SpellVisual 14143); the singles carry none.
+P8  Elemental Ascendance (202390) carries the body-lightning state visual (SpellVisual 12914); the singles carry none.
 
 Run: apps/dbc-tools/.venv/bin/python3 -m pytest apps/dbc-tools/lib/test_shaman_playtest_fix2.py -q
 """
@@ -50,7 +50,7 @@ SPELLMOD_EFFECT2 = 12
 # P8
 ELEMENTAL_ASCENDANCE = 202390
 SINGLE_ASCENDANCES = (202387, 202388, 202389)
-STORM_CLOUD_VISUAL = 14143                # "Cloud Aura" 66625: StateKit 13089 = one LightningStorm_CloudLow_State BaseEffect, scale 0.5
+STORM_CLOUD_VISUAL = 12914                # "Arcane Surge" 61272: StateKit 11998 = Lightning_PreCast_Low_Hand ChestEffect, scale 3.0
 
 
 def _u32(value) -> int:
@@ -196,7 +196,7 @@ def check_ascendance_visuals(rows: dict) -> list[str]:
     if row is None:
         return [f"{ELEMENTAL_ASCENDANCE}: no row"]
     if int(row.get("SpellVisualID_1") or 0) != STORM_CLOUD_VISUAL:
-        bad.append(f"{ELEMENTAL_ASCENDANCE}: SpellVisualID_1 {row.get('SpellVisualID_1')}, expected the storm cloud {STORM_CLOUD_VISUAL}")
+        bad.append(f"{ELEMENTAL_ASCENDANCE}: SpellVisualID_1 {row.get('SpellVisualID_1')}, expected the body-lightning visual {STORM_CLOUD_VISUAL}")
     if int(row.get("SpellVisualID_2") or 0):
         bad.append(f"{ELEMENTAL_ASCENDANCE}: SpellVisualID_2 {row.get('SpellVisualID_2')}, expected none")
     if int(row.get("Attributes") or 0) & 0x40:

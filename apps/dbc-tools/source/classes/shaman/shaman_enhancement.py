@@ -171,13 +171,15 @@ SV_ASCEND_FIRE = 963
 SV_ASCEND_FROST = 17
 SV_ASCEND_WIND = 11302
 SV_ASCEND_EARTH = 5719
-# Elemental Ascendance's storm cloud (playtest fix pass 2 / P8): stock SpellVisual 14143 = the bare aura "Cloud Aura" 66625 (SpellVisualID_1;
-# the spell is an APPLY_AURA on its caster, attr0 0x100, no chest/hand kit). Its only kit is StateKit 13089 = one BaseEffect,
-# LightningStorm_CloudLow_State.mdx at scale 0.5 (SpellVisualEffectName 4203): a small thundercloud with lightning that hangs over the unit
-# for as long as the aura lasts (the same model as the "Lightning Cloud" ground spells, stock Zephyr/Storm's Fury scale). Nothing else is
-# on the visual (no precast, cast, impact, channel or missile), so it adds no stun swirl and nothing debuff-shaped. Alternative if the
-# cloud reads too small or too low: SV 10090 (spell 45213 "Lightning Stormcloud Visual", the same model at scale 1.0, also a bare state kit).
-SV_ELEMENTAL_STORM_CLOUD = 14143
+# Elemental Ascendance's body lightning (ascend-visual pass, 2026-10-22). Playtest showed the stock "Cloud Aura" cloud (SV 14143) sat at the
+# shaman's feet, so it is replaced with a state kit that crackles on the body: stock SpellVisual 13045 = "Lightning Tendrils" 61883 (Stormcaller
+# Brundir's self-buff, ChestEffect of its only state kit 12129 = Spells\\LightningBolt_Missile.mdx (SpellVisualEffectName 4277) at scale 2.0; the
+# visual carries nothing but that StateKit: no precast, cast, impact, channel or missile, so no stun swirl and nothing debuff-shaped). The aura
+# is added by AddAura (no spell go), which does not matter for a state kit. Alternatives, one-line changes:
+#   SV 12914 = "Arcane Surge" 61272, state kit 11998: ChestEffect Lightning_PreCast_Low_Hand.mdx (SVE 4782) scale 3.0 (also has cast/channel kits,
+#     which never fire through AddAura);
+#   SV 13038 = "Overload" 61877, state kit 12122: BaseEffect Lightning_PreCast_Low_Hand.mdx (SVE 4782) scale 3.0 (state kit only, but at the feet).
+SV_ELEMENTAL_STORM_CLOUD = 12914  # user 2026-10-22: "Arcane Surge" (the larger chest lightning) over 13045
 SV_STONEFORM = 5787
 SV_BLIZZARD_AREA = 9490
 SV_BLIZZARD_TICK = 9487
@@ -587,8 +589,8 @@ elemental_ascendance_202390 = _buff(
     'aura 202414, linked in lockstep (spell_linked_spell type 2; it does not scale with Mastery). The Gust roll is the spell_proc row '
     'below. Shaman::RefreshAscendance adds round(2 x M) to E0 / E1 / E2 (60 + 200 M, 60 + 200 M, 100 + 200 M). Visible, '
     'non-passive, no consolidation flag. The three singles are consumed by Shaman::GrantAscendance. Playtest fix pass 2 / P8: '
-    'SpellVisualID_1 = SV_ELEMENTAL_STORM_CLOUD 14143 (stock "Cloud Aura" 66625: a bare state kit, one LightningStorm_CloudLow_State '
-    'BaseEffect at scale 0.5): a storm cloud and lightning over the shaman for the whole 20 s; the aura is added by AddAura (no spell '
+    'SpellVisualID_1 = SV_ELEMENTAL_STORM_CLOUD 12914 (stock "Arcane Surge" 61272, user pick: state kit 11998, a '
+    'Lightning_PreCast_Low_Hand ChestEffect at scale 3.0; its cast/channel kits never fire through AddAura): lightning crackling on the shaman\'s body for the whole 20 s; the aura is added by AddAura (no spell '
     'go), which does not matter for a state kit - the client plays it when the aura is applied. The singles carry no visual.',
     school=School.NATURE, level=40, SpellVisualID_1=SV_ELEMENTAL_STORM_CLOUD,
     **_emask(1, (FLAME_SHOCK, 0, SS_STRIKES_D2)), **_emask(2, FLAME_SHOCK), **_emask(3, (0, 0, m.GUST)),
