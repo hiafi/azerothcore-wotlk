@@ -33,7 +33,7 @@ namespace
     // Tames `entry` for `bot` and spends the pet's talent points, the way a live bot gets its pet: the body of
     // PlayerbotFactory::InitPet() (Player::CreatePet(), then the pet re-levelled to the owner, happiness and health
     // full, autocast on for every active pet spell) followed by PlayerbotFactory::InitPetTalents() (the
-    // AiPlayerbot.PremadeHunterPetLink.<type>.<points> lines). InitPet() itself picks a random tameable creature of
+    // Playerbots.PremadeHunterPetLink.<type>.<points> lines). InitPet() itself picks a random tameable creature of
     // the preferred families, which a sim cannot have, so the creature is the profile's fixed one. Core code saves
     // the new pet (Player::CreatePet(): SavePetToDB(PET_SAVE_AS_CURRENT)) - to the sim's throwaway characters
     // schema only; this function adds no save of its own.
@@ -117,12 +117,12 @@ bool SimBot::Create(Player* bot, std::vector<Creature*> const& targets, std::str
     // Spends the talent build passed in as `playerbotTalents` - either DpsSim.PlayerbotTalents
     // directly, or a loaded DpsSim.Profile's own PlayerbotTalents value (see DpsSim.cpp and
     // SimProfile.h) - a talent string in mod-playerbots' own dash-separated tab format
-    // (AiPlayerbot.PremadeSpecLink.<cls>.<spec>.<level>'s format: "<arcane><-fire><-frost>", each
+    // (Playerbots.PremadeSpecLink.<cls>.<spec>.<level>'s format: "<arcane><-fire><-frost>", each
     // character a 0-9 point count for that tree's talents in row/col order), parsed via
     // PlayerbotAIConfig::ParseTempTalentsOrder() and applied via
     // PlayerbotFactory::InitTalentsByParsedSpecLink() - both public, reused, unmodified
     // mod-playerbots utilities. Deliberately NOT PlayerbotFactory::InitTalentsBySpecNo(): that
-    // function looks up a level-indexed premade slot (AiPlayerbot.PremadeSpecLink.<cls>.<spec>.<lvl>)
+    // function looks up a level-indexed premade slot (Playerbots.PremadeSpecLink.<cls>.<spec>.<lvl>)
     // and has a real, live bug (confirmed 2026-09-11, reported upstream - not fixed here) where its
     // level loop walks from the bot's own level up to a hardcoded 80 rather than stopping at the
     // bot's level, so a level-60 bot ends up with additional, higher-level entries applied on top -
@@ -167,7 +167,7 @@ bool SimBot::Create(Player* bot, std::vector<Creature*> const& targets, std::str
 
     // The premade glyphs a live random bot gets (PlayerbotFactory::InitGlyphs(), after its talents, since the set is
     // picked by spec tab). Before AddPlayerbotData() below, so the factory has no PlayerbotAI yet and InitGlyphs()
-    // skips its "custom_glyphs" early return, applying the AiPlayerbot.PremadeSpecGlyph set for the bot's level.
+    // skips its "custom_glyphs" early return, applying the Playerbots.PremadeSpecGlyph set for the bot's level.
     if (playerbotGlyphs)
     {
         factory.InitGlyphs();
@@ -412,7 +412,7 @@ void SimBot::LogHealTargetVisibility(std::vector<Player*> const& members) const
         return;
 
     Player* bot = _ai->GetBot();
-    float const range = sPlayerbotAIConfig.healDistance * 2;
+    float const range = sPlayerbotAIConfig.HealDistance * 2;
     size_t visible = 0;
     std::string hidden;
     for (size_t i = 0; i < members.size(); ++i)

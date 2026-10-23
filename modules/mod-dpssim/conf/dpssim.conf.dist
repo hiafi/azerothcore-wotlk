@@ -268,7 +268,7 @@ DpsSim.Profile =
 #                      (a set DpsSim.Profile owns this key's value outright - see its own doc
 #                      comment). Talent build SimBot spends on the sim actor, in mod-playerbots' own
 #                      talent-string format - the same
-#                      format as AiPlayerbot.PremadeSpecLink.<cls>.<spec>.<level> in playerbots.conf:
+#                      format as Playerbots.PremadeSpecLink.<cls>.<spec>.<level> in playerbots.conf:
 #                      up to 3 dash-separated segments ("<arcane>-<fire>-<frost>" for a mage), each
 #                      character a 0-9 point count for that tree's talents in row-then-column order,
 #                      a leading/doubled "-" meaning 0 points spent in that tree at all. Applied via
@@ -286,7 +286,7 @@ DpsSim.Profile =
 #                      deployment's custom, expanded talent trees (confirmed live 2026-09-11: the
 #                      Frost tab alone carries 31 entries against a stock WotLK Frost tree's ~20,
 #                      plus extra columns/tiers) mean a string authored against the stock tree, like
-#                      an unmodified copy of AiPlayerbot.PremadeSpecLink.8.2.60, lands its points on
+#                      an unmodified copy of Playerbots.PremadeSpecLink.8.2.60, lands its points on
 #                      different talents than whoever wrote it intended. Don't hand-author or reuse
 #                      an old string against this deployment's trees - build the intended spec on a
 #                      live bot instead (whisper it "talents apply <link>" iteratively, or let
@@ -297,7 +297,7 @@ DpsSim.Profile =
 #                      Paste that string in here.
 #
 #                      Default value below is the Frost guide build, the same string as
-#                      AiPlayerbot.PremadeSpecLink.8.2.60 and FrostMageSim.conf (Mage bot plan MG8,
+#                      Playerbots.PremadeSpecLink.8.2.60 and FrostMageSim.conf (Mage bot plan MG8,
 #                      decoded against the live talent_dbc on 2026-10-06: 51 points, legal).
 #        Default:     --3203013301202330310030131231331
 #

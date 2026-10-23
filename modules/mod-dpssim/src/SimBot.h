@@ -155,7 +155,7 @@ public:
     [[nodiscard]] Unit* GetPartyMemberToHeal() const;
 
     // Heal mode, logged once at the pull: how many of `members` meet the conditions PartyMemberToHeal::Check() puts on
-    // a heal target (same map, not charmed, alive, within 2 * AiPlayerbot.HealDistance, in line of sight), and what the
+    // a heal target (same map, not charmed, alive, within 2 * Playerbots.HealDistance, in line of sight), and what the
     // value picks
     void LogHealTargetVisibility(std::vector<Player*> const& members) const;
 

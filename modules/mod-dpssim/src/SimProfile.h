@@ -127,7 +127,7 @@ namespace SimProfile
         uint32 PrePullBuffMs = 15000;
 
         // Whether the actor gets its class's premade glyphs, as a live random bot does: PlayerbotFactory::
-        // InitGlyphs() after the talents, picking AiPlayerbot.PremadeSpecGlyph.<class>.<spec tab> by level (true by
+        // InitGlyphs() after the talents, picking Playerbots.PremadeSpecGlyph.<class>.<spec tab> by level (true by
         // default). Glyph effects then show in the sim, e.g. a Frost mage's Glyph of Eternal Water lets the pre-pull
         // phase summon the permanent Water Elemental. "false" leaves the actor unglyphed (the behaviour before
         // 2026-10-06). A run with no profile uses the default.
@@ -136,10 +136,10 @@ namespace SimProfile
         // Hunter pet: the creature_template entry of a beast the actor tames before the first iteration (0 = no pet,
         // the behaviour of every class that has no permanent pet). A fixed entry, not a family, on purpose: the
         // factory's PlayerbotFactory::InitPet() picks a random tameable creature of the preferred families
-        // (AiPlayerbot.PreferredHunterPetFamilies), and a sim needs the same pet in every iteration and every run.
+        // (Playerbots.PreferredHunterPetFamilies), and a sim needs the same pet in every iteration and every run.
         // The pet is made the way InitPet() makes it - Player::CreatePet(entry), the actor's level, autocast on for
         // every active pet spell - and then PlayerbotFactory::InitPetTalents() spends the pet's talent points from the
-        // AiPlayerbot.PremadeHunterPetLink.<type>.<points> lines, exactly as for a live bot. If it is dead or gone at
+        // Playerbots.PremadeHunterPetLink.<type>.<points> lines, exactly as for a live bot. If it is dead or gone at
         // the start of an iteration SimBot::EnsurePet() revives or re-creates it. Hunter profiles only (a profile with
         // a PetCreatureEntry and another Class fails to load). The entry must be a beast with a creature family; the
         // profiles use the stock "Tamable <family>" test entries, which exist in every database (level 1 in the
