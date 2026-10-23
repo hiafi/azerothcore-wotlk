@@ -26,11 +26,38 @@
 #include "World.h"
 #include "WorldSession.h"
 #include <atomic>
+#include <map>
+#include <vector>
 
 namespace
 {
     std::atomic<uint32> s_nextSimGuidOffset{0};
     std::atomic<uint32> s_saveAttempts{0};
+
+    // Gear refused for lack of Dual Wield at Create() time, per actor (low guid), in the order the profile listed it.
+    // SimBot::Create() hands it back through SimActor::EquipDeferredGear() once the class spells are taught. A run
+    // builds one actor at a time on the map thread; the entry is erased when it is retried (or with the actor).
+    std::map<ObjectGuid::LowType, std::vector<uint32>> s_deferredGear;
+
+    // Dual Wield (spell 674, learned from the trainer by a shaman, hunter or warrior) is the spell whose passive effect
+    // sets Unit::CanDualWield()
+    constexpr uint32 SPELL_DUAL_WIELD = 674;
+
+    // True for the refusal a missing Dual Wield produces, which Create() defers instead of reporting. Player::
+    // CanEquipItem() has two forms of it: an off-hand-only weapon (INVTYPE_WEAPONOFFHAND) is refused with
+    // EQUIP_ERR_CANT_DUAL_WIELD, but a one-hand weapon (INVTYPE_WEAPON) gets no off-hand slot offered at all while
+    // !CanDualWield() (Player::FindEquipSlot()), so with the main hand filled there is no slot and the refusal is
+    // EQUIP_ERR_ITEM_CANT_BE_EQUIPPED. Any other refusal (wrong class, level, a slot taken) stays an error.
+    bool IsMissingDualWield(Player const* player, ItemTemplate const* proto, InventoryResult result)
+    {
+        if (player->CanDualWield())
+            return false;
+
+        if (result == EQUIP_ERR_CANT_DUAL_WIELD)
+            return true;
+
+        return result == EQUIP_ERR_ITEM_CANT_BE_EQUIPPED && proto->Class == ITEM_CLASS_WEAPON;
+    }
 }
 
 uint32 SimActor::GetSaveAttempts()
@@ -46,8 +73,61 @@ void SimActor::NoteSaveAttempt(ObjectGuid guid)
         guid.ToString());
 }
 
+void SimActor::EquipDeferredGear(Player* player)
+{
+    if (!player)
+        return;
+
+    auto const found = s_deferredGear.find(player->GetGUID().GetCounter());
+    if (found == s_deferredGear.end())
+        return;
+
+    std::vector<uint32> const itemIds = std::move(found->second);
+    s_deferredGear.erase(found);
+
+    // Learning Dual Wield casts its passive, which turns CanDualWield() on. The same safety net PlayerbotFactory::
+    // InitTalentsTree() has for a shaman, in case the passive did not run for this actor
+    if (player->HasSpell(SPELL_DUAL_WIELD) && !player->CanDualWield())
+        player->SetCanDualWield(true);
+
+    for (uint32 const itemId : itemIds)
+    {
+        uint16 dest = 0;
+        InventoryResult const result = player->CanEquipNewItem(NULL_SLOT, dest, itemId, false);
+        if (result != EQUIP_ERR_OK)
+        {
+            LOG_ERROR("server.dpssim",
+                "mod-dpssim: SimActor::EquipDeferredGear() - could not equip item {} even after the class spells were "
+                "taught (InventoryResult {}; or its slot is already filled by an earlier item in GearItemIds).",
+                itemId, uint32(result));
+            continue;
+        }
+
+        player->EquipNewItem(dest, itemId, true);
+        player->AutoUnequipOffhandIfNeed();
+    }
+
+    // The gear's stats and the off-hand's damage are applied by the equip itself; the sheet is rebuilt once more so
+    // the health and mana the actor starts the run with match the finished gear
+    player->UpdateAllStats();
+    player->SetFullHealth();
+    player->SetPower(POWER_MANA, player->GetMaxPower(POWER_MANA));
+}
+
 SimActor::~SimActor()
 {
+    // A path that never reaches SimBot::Create() never retries: report the items it would have dropped silently, as
+    // the first pass reported every refusal before
+    if (auto const leftover = s_deferredGear.find(_guidLow); leftover != s_deferredGear.end())
+    {
+        for (uint32 const itemId : leftover->second)
+            LOG_ERROR("server.dpssim",
+                "mod-dpssim: SimActor - could not equip item {}: Dual Wield is not learned and SimBot::Create() did "
+                "not run to teach it.", itemId);
+
+        s_deferredGear.erase(leftover);
+    }
+
     // WorldSession::LogoutPlayer() is the one correct teardown path for a live Player - it runs
     // the full script-hook chain (OnPlayerBeforeLogout et al - real modules like mod-dungeon-clear
     // depend on this firing before the Player disappears), CleanupsBeforeDelete(), and
@@ -162,9 +242,16 @@ bool SimActor::Create(Config const& config)
         // Equip explicitly rather than StoreNewItemInBestSlots(): that call drops an unequippable item into
         // the bags and still returns true, which once left a Ret profile swinging unarmed with no error.
         // Dual Wield and Titan's Grip are learned later (SimBot::Create()), so a second weapon only fits
-        // here for a class that starts with Dual Wield (rogue, death knight); otherwise it is logged below.
+        // here for a class that starts with Dual Wield (rogue, death knight); for the others it is deferred
+        // (EquipDeferredGear() tries it again after the spells are taught) and only a second refusal is logged.
         uint16 dest = 0;
         InventoryResult const result = _player->CanEquipNewItem(NULL_SLOT, dest, itemId, false);
+        if (IsMissingDualWield(_player, proto, result))
+        {
+            s_deferredGear[_guidLow].push_back(itemId);
+            continue;
+        }
+
         if (result != EQUIP_ERR_OK)
         {
             LOG_ERROR("server.dpssim",

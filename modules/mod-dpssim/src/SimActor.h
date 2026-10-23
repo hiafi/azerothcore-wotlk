@@ -107,6 +107,14 @@ public:
 
     [[nodiscard]] Player* GetPlayer() const { return _player; }
 
+    // Equips the gear Create() could not: Dual Wield is learned later, by SimBot::Create(), so a second one-hand
+    // weapon is refused at first (EQUIP_ERR_ITEM_CANT_BE_EQUIPPED, or EQUIP_ERR_CANT_DUAL_WIELD for an off-hand-only
+    // weapon) for a class that learns the skill from a trainer (shaman, hunter, warrior); those are the only refusals
+    // deferred. SimBot::Create() calls this once its spells are taught, with the same Player. The items go in the order
+    // the profile listed them; one refused again is logged as an error, as on the first pass. Nothing deferred (every
+    // class whose gear fits at creation): a no-op.
+    static void EquipDeferredGear(Player* player);
+
 private:
     WorldSession* _session = nullptr;
     Player* _player = nullptr;
