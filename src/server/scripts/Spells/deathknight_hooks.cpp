@@ -16,14 +16,19 @@
  */
 
 /*
- * Death Knight rework - ScriptMgr handlers (death-knight-rework DK0a). Bodies live in DeathKnightMechanics.
+ * Death Knight rework - ScriptMgr handlers (death-knight-rework DK0a, DK0b). Bodies live in DeathKnightMechanics.
  */
 
 #include "AreaDefines.h"
+#include "Creature.h"
 #include "DeathKnightMechanics.h"
+#include "Item.h"
+#include "Pet.h"
+#include "PetScript.h"
 #include "Player.h"
 #include "PlayerScript.h"
 #include "ScriptMgr.h"
+#include "TemporarySummon.h"
 #include "Unit.h"
 #include "UnitScript.h"
 
@@ -60,7 +65,9 @@ public:
 class DeathKnightPlayerScript : public PlayerScript
 {
 public:
-    DeathKnightPlayerScript() : PlayerScript("DeathKnightPlayerScript", { PLAYERHOOK_ON_CALCULATE_TALENTS_POINTS }) { }
+    DeathKnightPlayerScript() : PlayerScript("DeathKnightPlayerScript",
+        { PLAYERHOOK_ON_CALCULATE_TALENTS_POINTS, PLAYERHOOK_ON_AFTER_SET_VISIBLE_ITEM_SLOT,
+          PLAYERHOOK_ON_CREATURE_KILL, PLAYERHOOK_ON_PVP_KILL }) { }
 
     // U4: Player::CalculateTalentsPoints gives a DK on Ebon Hold (map 609) level - 55 points plus quest talents. The
     // rework starts DKs at level 1, so on that map they earn the normal curve like anywhere else (insurance: Death
@@ -75,10 +82,81 @@ public:
         uint8 const level = player->GetLevel();
         talentPointsForLevel = level < 10 ? 0 : level - 9;
     }
+
+    // Rune glow (P0 item 3, shaman imbue-glow clone): SetVisibleItemSlot (equip, swap, enchant, login inventory load)
+    // just rewrote the slot's real enchant visuals; write the active rune's glow back over the temp half. Auras load
+    // before the inventory at login, so this hook draws the login glow (L5). No rune glow up: keep the real values.
+    void OnPlayerAfterSetVisibleItemSlot(Player* player, uint8 slot, Item* item) override
+    {
+        if (slot != EQUIPMENT_SLOT_MAINHAND && slot != EQUIPMENT_SLOT_OFFHAND)
+            return;
+
+        if (!item || item->GetTemplate()->Class != ITEM_CLASS_WEAPON || !player)
+            return;
+
+        if (DeathKnight::GetRuneGlowEnchant(DeathKnight::GetActiveRune(player)))
+            DeathKnight::WriteRuneGlow(player, slot);
+    }
+
+    // U14 Unending Thirst: the DK's own killing blows. Unit::Kill fires this only when the killer itself is the
+    // player, so pet and minion kills never reach it (B4). Critters and totems do not count.
+    void OnPlayerCreatureKill(Player* killer, Creature* killed) override
+    {
+        if (!killer || !killed || killed->IsCritter() || killed->IsTotem())
+            return;
+
+        DeathKnight::OnRuneKillingBlow(killer, killed);
+    }
+
+    void OnPlayerPVPKill(Player* killer, Player* killed) override
+    {
+        if (!killer || !killed || killer == killed)
+            return;
+
+        DeathKnight::OnRuneKillingBlow(killer, killed);
+    }
+};
+
+// Minion stat mirror (P0 item 8): the mirror auras go on right after the stock scaling auras installed their immunity
+// block (Pet.cpp InitStatsForLevel); the mirrors are ALWAYS_HIT, so they pass it. Guardians (Army ghouls, the
+// Gargoyle, Bloodworms, the plain Raise Dead ghoul) are handled at InitStatsForLevel; a pet (Master of Ghouls ghoul)
+// once it is in the world (P0 spike shape; hunter_hooks.cpp HunterPetScript does the same).
+class DeathKnightPetScript : public PetScript
+{
+public:
+    DeathKnightPetScript() : PetScript("DeathKnightPetScript",
+        { PETHOOK_ON_INIT_STATS_FOR_LEVEL, PETHOOK_ON_PET_ADD_TO_WORLD }) { }
+
+    // Every Guardian, pets included (Pet.cpp InitStatsForLevel); pets are left to OnPetAddToWorld.
+    void OnInitStatsForLevel(Guardian* guardian, uint8 /*petlevel*/) override
+    {
+        if (guardian && !guardian->IsPet())
+            ApplyMirror(guardian);
+    }
+
+    void OnPetAddToWorld(Pet* pet) override
+    {
+        if (pet)
+            ApplyMirror(pet);
+    }
+
+private:
+    static void ApplyMirror(Guardian* minion)
+    {
+        if (DeathKnight::GetMinionKind(minion) == DeathKnight::MinionKind::None)
+            return;
+
+        // GetOwner() only, never GetOwningPlayer: that one is null until SetMinion (bug 3040).
+        if (!DeathKnight::GetMinionOwner(minion))
+            return;
+
+        DeathKnight::ApplyMinionMirror(minion);
+    }
 };
 
 void AddSC_deathknight_hooks()
 {
     new DeathKnightUnitScript();
     new DeathKnightPlayerScript();
+    new DeathKnightPetScript();
 }

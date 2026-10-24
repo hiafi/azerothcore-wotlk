@@ -22,6 +22,10 @@
 #include "Generated/DeathKnightData.h"
 #include <cstdint>
 
+class Guardian;
+class Aura;
+class ProcEventInfo;
+class SpellInfo;
 class Player;
 class Unit;
 
@@ -54,6 +58,33 @@ namespace DeathKnight
     // Anti-Magic Zone shared pool (U12): kept on zone->CustomData, initialised on first use from the owner, returns the
     // amount absorbed (at most the wanted amount), unsummons the zone when the pool reaches 0.
     uint32 ConsumeZoneAbsorb(Unit* zone, Player* owner, uint32 wanted);
+
+    // ---- DK0b ----
+    // Runes (self auras, group 1271). Glow state lives on player->CustomData (P0 m10), nothing file-static.
+    uint32 GetActiveRune(Player const* player);           // the rune aura id the player carries, or 0
+    uint16 GetRuneGlowEnchant(uint32 runeSpellId);        // DeathKnightData RUNE_GLOW_*, 0 = none
+    void ApplyRuneGlow(Player* player);                   // writes the active rune's glow on both weapon slots
+    void WriteRuneGlow(Player* player, uint8 slot);       // visible-slot hook: re-write one weapon slot's glow
+    void RestoreRuneGlow(Player* player);                 // SetVisibleItemSlot on both weapon slots
+    // Shared CheckProc guard: actor == owner; oncePerCast = only the hit on the cast's own unit target rolls (periodic
+    // events skip this); dualWieldHalf = an extra 50% roll when the owner has an off-hand weapon.
+    bool RuneProcAllowed(Unit const* runeOwner, ProcEventInfo& eventInfo, bool dualWieldHalf, bool oncePerCast);
+
+    // Rune-regen haste (U4): hidden 203052 aura 110 x3 + 203053 sync. Spell haste only; never ResyncRunes.
+    int32 GetRuneHastePct(Player const* player);
+    void SyncRuneHaste(Player* player, Aura* runeHaste);
+
+    // Minions: live stat mirror + no-proc rule. DRW 27893 is None (core-live).
+    enum class MinionKind : uint8 { None, Ghoul, ArmyGhoul, Gargoyle, Bloodworm };
+    MinionKind GetMinionKind(Unit const* unit);
+    Player* GetMinionOwner(Unit const* minion);           // GetOwner() only, never GetOwningPlayer (bug 3040)
+    void ApplyMinionMirror(Guardian* minion);
+    void RefreshMinionMirror(Unit* minion, Player* owner);
+    // 1.0f seam (U10)
+    float GetMinionDamageMultiplier(Player const* owner, Unit const* minion, SpellInfo const* spellInfo);
+
+    // Unending Thirst (U14): the DK's own killing blow; casts the buff triggered if the rune is up.
+    void OnRuneKillingBlow(Player* dk, Unit* killed);
 }
 
 #endif

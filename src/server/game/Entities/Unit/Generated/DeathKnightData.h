@@ -25,6 +25,7 @@ namespace DeathKnightData
     constexpr uint32 SPELL_FROST_PRESENCE = 48263; // frost_presence_48263
     constexpr uint32 SPELL_UNHOLY_PRESENCE = 48265; // unholy_presence_48265
     constexpr uint32 SPELL_BLOOD_PRESENCE = 48266; // blood_presence_48266
+    constexpr uint32 SPELL_RAISE_DEAD_48289 = 48289; // raise_dead_48289
     constexpr uint32 SPELL_ANTI_MAGIC_SHELL = 48707; // anti_magic_shell_48707
     constexpr uint32 SPELL_BLOOD_BOIL = 48721; // blood_boil_48721
     constexpr uint32 SPELL_DEATH_PACT = 48743; // death_pact_48743
@@ -190,6 +191,7 @@ namespace DeathKnightData
     constexpr uint32 SPELL_ANNIHILATION = 51468; // annihilation_51468
     constexpr uint32 SPELL_ANNIHILATION_51472 = 51472; // annihilation_51472
     constexpr uint32 SPELL_ANNIHILATION_51473 = 51473; // annihilation_51473
+    constexpr uint32 SPELL_FROST_VULNERABILITY = 51714; // frost_vulnerability_51714
     constexpr uint32 SPELL_EBON_PLAGUE = 51726; // ebon_plague_51726
     constexpr uint32 SPELL_VICIOUS_STRIKES = 51745; // vicious_strikes_51745
     constexpr uint32 SPELL_VICIOUS_STRIKES_51746 = 51746; // vicious_strikes_51746
@@ -201,13 +203,18 @@ namespace DeathKnightData
     constexpr uint32 SPELL_WILL_OF_THE_NECROPOLIS_52284 = 52284; // will_of_the_necropolis_52284
     constexpr uint32 SPELL_ABOMINATION_S_MIGHT = 53137; // abomination_s_might_53137
     constexpr uint32 SPELL_ABOMINATION_S_MIGHT_53138 = 53138; // abomination_s_might_53138
+    constexpr uint32 SPELL_RUNE_OF_RAZORICE = 53343; // rune_of_razorice_53343
+    constexpr uint32 SPELL_RUNE_OF_THE_FALLEN_CRUSADER = 53344; // rune_of_the_fallen_crusader_53344
+    constexpr uint32 SPELL_UNHOLY_STRENGTH = 53365; // unholy_strength_53365
     constexpr uint32 SPELL_BLOOD_OF_THE_NORTH = 54637; // blood_of_the_north_54637
     constexpr uint32 SPELL_BLOOD_OF_THE_NORTH_54638 = 54638; // blood_of_the_north_54638
     constexpr uint32 SPELL_BLOOD_OF_THE_NORTH_54639 = 54639; // blood_of_the_north_54639
     constexpr uint32 SPELL_HEART_STRIKE = 55050; // heart_strike_55050
     constexpr uint32 SPELL_ICY_REACH = 55061; // icy_reach_55061
     constexpr uint32 SPELL_ICY_REACH_55062 = 55062; // icy_reach_55062
+    constexpr uint32 SPELL_BLOOD_PLAGUE = 55078; // blood_plague_55078
     constexpr uint32 SPELL_SCOURGE_STRIKE = 55090; // scourge_strike_55090
+    constexpr uint32 SPELL_FROST_FEVER = 55095; // frost_fever_55095
     constexpr uint32 SPELL_VENDETTA_55136 = 55136; // vendetta_55136
     constexpr uint32 SPELL_BLADE_BARRIER_55225 = 55225; // blade_barrier_55225
     constexpr uint32 SPELL_BLADE_BARRIER_55226 = 55226; // blade_barrier_55226
@@ -233,6 +240,7 @@ namespace DeathKnightData
     constexpr uint32 SPELL_BLOOD_GORGED_61157 = 61157; // blood_gorged_61157
     constexpr uint32 SPELL_BLOOD_GORGED_61158 = 61158; // blood_gorged_61158
     constexpr uint32 SPELL_BLOOD_GORGED_61274 = 61274; // blood_gorged_61274
+    constexpr uint32 SPELL_RUNIC_FOCUS = 61455; // runic_focus_61455
     constexpr uint32 SPELL_RAISE_ALLY = 61999; // raise_ally_61999
     constexpr uint32 SPELL_DEATH_COIL_62900 = 62900; // death_coil_62900
     constexpr uint32 SPELL_IMPROVED_DEATH_STRIKE = 62905; // improved_death_strike_62905
@@ -252,6 +260,25 @@ namespace DeathKnightData
     constexpr uint32 SPELL_DESOLATION_66817 = 66817; // desolation_66817
     constexpr uint32 SPELL_BLOOD_PRESENCE_CRIT_IMMUNITY = 203000; // blood_presence_crit_immunity_203000
     constexpr uint32 SPELL_DEATHS_CARESS = 203001; // deaths_caress_203001
+    constexpr uint32 SPELL_RUNE_OF_EXSANGUINATION = 203040; // rune_of_exsanguination_203040
+    constexpr uint32 SPELL_EXSANGUINATION = 203041; // exsanguination_203041
+    constexpr uint32 SPELL_RUNE_OF_BOILING_BLIGHT = 203042; // rune_of_boiling_blight_203042
+    constexpr uint32 SPELL_BOILING_BLIGHT = 203043; // boiling_blight_203043
+    constexpr uint32 SPELL_RUNE_OF_THE_APOCALYPSE = 203044; // rune_of_the_apocalypse_203044
+    constexpr uint32 SPELL_CONQUEST = 203045; // conquest_203045
+    constexpr uint32 SPELL_WAR = 203046; // war_203046
+    constexpr uint32 SPELL_FAMINE = 203047; // famine_203047
+    constexpr uint32 SPELL_DEATH = 203048; // death_203048
+    constexpr uint32 SPELL_RUNE_OF_UNENDING_THIRST = 203049; // rune_of_unending_thirst_203049
+    constexpr uint32 SPELL_UNENDING_THIRST = 203050; // unending_thirst_203050
+    constexpr uint32 SPELL_RAZOR_FROST = 203051; // razor_frost_203051
+    constexpr uint32 SPELL_RUNE_HASTE = 203052; // rune_haste_203052
+    constexpr uint32 SPELL_RUNE_HASTE_SYNC = 203053; // rune_haste_sync_203053
+    constexpr uint32 SPELL_OBLITERATE_203054 = 203054; // obliterate_203054
+    constexpr uint32 SPELL_OBLITERATE_DISEASE_GUARD = 203055; // obliterate_disease_guard_203055
+    constexpr uint32 SPELL_MINION_MIRROR = 203056; // minion_mirror_203056
+    constexpr uint32 SPELL_MINION_MIRROR_CRIT_HASTE = 203057; // minion_mirror_crit_haste_203057
+    constexpr uint32 SPELL_MINION_MIRROR_VERSATILITY = 203058; // minion_mirror_versatility_203058
 
     // const() - hidden script numbers (tier 3)
     constexpr int32 AMZ_SPELL_REDUCTION_PCT = 75; // Percent of spell damage the Anti-Magic Zone absorbs while its shared pool lasts (stock 75) [fixed].
@@ -259,4 +286,18 @@ namespace DeathKnightData
     constexpr int32 DEATHS_CARESS_EXTRA_TARGETS = 2; // Additional nearby enemies Death's Caress hits besides its target [fixed].
     constexpr int32 DEATH_STRIKE_MIN_HEAL_PCT = 5; // Death Strike minimum heal, percent of maximum health
     constexpr int32 DEATH_STRIKE_WINDOW_MS = 5000; // Death Strike damage record window (shared doc: the last 5 sec)
+    constexpr int32 MINION_AP_SHARE_PCT = 100; // Minion attack power per owner attack power, percent (DK0b U8).
+    constexpr int32 MINION_CRIT_SHARE_PCT = 100; // Share of owner crit the minion inherits, percent (DK0b U8).
+    constexpr int32 MINION_HASTE_SHARE_PCT = 100; // Share of owner spell haste the minion inherits, percent (DK0b U8).
+    constexpr int32 MINION_SP_SHARE_PCT = 100; // Minion spell power per owner attack power, percent (DK0b U8, Gargoyle).
+    constexpr int32 MINION_STAMINA_SHARE_PCT = 30; // Minion stamina inherited from owner stamina, percent, computed live (DK0b U9).
+    constexpr int32 MINION_VERSATILITY_SHARE_PCT = 100; // Share of owner versatility the minion inherits, percent (DK0b U8).
+    constexpr int32 RAZORICE_DAMAGE_PCT = 2; // Percent of the triggering hit's own damage Razor Frost 203051 deals as Frost damage (stock 2% of weapon damage; per hit, never per weapon) [tune].
+    constexpr uint16 RUNE_GLOW_APOCALYPSE = 0; // Weapon glow while Rune of the Apocalypse is active; 0 = none (DK0b U1) [tune].
+    constexpr uint16 RUNE_GLOW_BOILING_BLIGHT = 0; // Weapon glow while Rune of Boiling Blight is active; 0 = none (DK0b U1) [tune].
+    constexpr uint16 RUNE_GLOW_EXSANGUINATION = 0; // Weapon glow while Rune of Exsanguination is active; 0 = none (DK0b U1) [tune].
+    constexpr uint16 RUNE_GLOW_FALLEN_CRUSADER = 3847; // Weapon glow (SpellItemEnchantment visual id) while Rune of the Fallen Crusader is the active rune; 0 = none [tune].
+    constexpr uint16 RUNE_GLOW_RAZORICE = 3370; // Weapon glow (SpellItemEnchantment visual id) while Rune of Razorice is the active rune; 0 = none [tune].
+    constexpr uint16 RUNE_GLOW_UNENDING_THIRST = 0; // Weapon glow while Rune of Unending Thirst is active; 0 = none (DK0b U1) [tune].
+    constexpr int32 RUNE_HASTE_MAX_PCT = 50; // Highest percent of rune-regeneration haste spell haste can grant (50 = a 10 s rune recharges in 5 s) [fixed].
 }
