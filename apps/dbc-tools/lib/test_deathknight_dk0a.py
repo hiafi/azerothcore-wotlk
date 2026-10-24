@@ -61,7 +61,8 @@ REQUIRED_IDS = (BLOOD_PRESENCE, CRIT_CHILD, DEATHS_CARESS, DEATH_STRIKE, HEART_S
                 FROST_STRIKE, 49039, ERW)
 # Stock-kept forbidden bits (own SpellClassMask), per row: the two disease DoTs are the "real disease DoT" d2 b1.
 # Anti-Magic Shell 48707 keeps its stock d0 b17.
-FORBIDDEN_EXEMPT = {55078: (0, 0, m.FORBIDDEN_D2_B1), 55095: (0, 0, m.FORBIDDEN_D2_B1),
+# DK0b pulled the two diseases into the DSL (they were npc.csv-only), so their stock d1 b11 (0x800) shows up here too.
+FORBIDDEN_EXEMPT = {55078: (0, m.FORBIDDEN_D1_B11, m.FORBIDDEN_D2_B1), 55095: (0, m.FORBIDDEN_D1_B11, m.FORBIDDEN_D2_B1),
                     48707: (m.FORBIDDEN_D0_B17, 0, 0)}
 RETIRED_TALENTS = (1941, 2086, 1942, 1954, 1936, 1957, 2035, 2215, 1990, 2029, 1979, 1975, 2221, 2013, 2085, 2007)
 RETIRED_TAB = 60800

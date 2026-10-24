@@ -100,7 +100,7 @@ raise_dead_46584 = spell(
     ],
     spell_icon_id=221,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 132096, 'AttributesEx2': 1, 'AttributesEx3': 262144, 'AttributesEx5': 2097152, 'AttributesEx6': 32, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'A Risen Ghoul is in your service.', 'BaseLevel': 12, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Raises a Ghoul to fight by your side.  If no humanoid corpse that yields experience or honor is available, you must supply Corpse Dust to complete the spell.  You can have a maximum of one Ghoul at a time.  Lasts $46585d.', 'EffectBasePoints_1': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_1': 1, 'EquippedItemClass': -1, 'ImplicitTargetA_1': 1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RuneCostID': 341, 'SpellClassMask_1': 4096, 'SpellClassSet': 15, 'SpellLevel': 12, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx': 132096, 'AttributesEx2': 1, 'AttributesEx3': 262144, 'AttributesEx5': 2097152, 'AttributesEx6': 32, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'A Risen Ghoul is in your service.', 'BaseLevel': 12, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Raises a Ghoul to fight by your side.  You can have a maximum of one Ghoul at a time.  Lasts $46585d.', 'EffectBasePoints_1': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_1': 1, 'EquippedItemClass': -1, 'ImplicitTargetA_1': 1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RuneCostID': 341, 'SpellClassMask_1': 4096, 'SpellClassSet': 15, 'SpellLevel': 12, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -716,7 +716,7 @@ bone_shield_49222 = spell(
     raw_overrides={'AttributesEx': 1024, 'AttributesEx4': 524352, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Armor increased. Each damaging melee or ranged attack that hits you consumes a charge.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Surrounds you with a barrier of whirling bones, increasing your armor by $s1%. Each damaging melee or ranged attack that hits you consumes a charge, no more than once every 2 sec. Lasts $d or until all charges are consumed.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcCharges': 3, 'ProcTypeMask': 680, 'RangeIndex': 1, 'RuneCostID': 654, 'SpellClassMask_2': m.BONE_SHIELD, 'SpellClassSet': 15, 'SpellVisualID_1': 11539, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 procs_on(
-    bone_shield_49222, proc_flags=0x2A8, spell_type_mask=1, cooldown_ms=2000,
+    bone_shield_49222, proc_flags=0x2A8, spell_type_mask=1, hit_mask=0x403, cooldown_ms=2000,
 )
 
 

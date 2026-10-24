@@ -249,8 +249,8 @@ reservations:
     # spell_group: 1271 runes, 1272 cross-class tank auras (1285 = the P0 spike).
     spell_group: {start: 1271, end: 1285}
     spelldescriptionvariables: {start: 1230, end: 1299}
-    # creature: 300338 / 300339 = the P0 spike.
-    creature: {start: 300300, end: 300339}
+    # creature: 300338 / 300339 = the P0 spike; 300340 = the Horde (orc) Death Knight trainer.
+    creature: {start: 300300, end: 300349}
     spellicon: {start: 90310, end: 90369}
     soundentries: {start: 90101, end: 90120}
     spellvisual: {start: 90180, end: 90249}  # SpellVisual, Kit and EffectName

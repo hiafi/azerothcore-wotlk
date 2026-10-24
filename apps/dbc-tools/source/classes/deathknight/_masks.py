@@ -34,6 +34,16 @@ DEATH_STRIKE_HEAL = 0x4                  # d2 b2 (stock 45470)
 ROT_DAMAGE = 0x800                       # d2 b11 (N4 Rot damage group; DK0b Boiling Blight burst)
 DEATHS_CARESS = 0x1000                   # d2 b12 (N5 Death's Caress, new in DK0a)
 
+# --- DK0b composites ---
+# Runic Focus 61455: reader bits added on top of its stock mask (disease crits, Boiling Blight burst, Death's Caress).
+RUNIC_FOCUS_READ_ADD = (0, BLOOD_PLAGUE_DISEASE | FROST_FEVER_DISEASE, ROT_DAMAGE | DEATHS_CARESS)
+# Boiling Blight's proc mask: the two disease DoTs only.
+DISEASES = (0, BLOOD_PLAGUE_DISEASE | FROST_FEVER_DISEASE, 0)
+# Frost Vulnerability 51714 reader mask (replaces the stock 0x402 / 0x4048007 set): every Frost-school DK spell
+# (DK0b-0VERIFY item 8: a zero mask would match every school, so it is a union instead). Icy Touch, Mind Freeze,
+# Chains of Ice, Frozen Rune Weapon / Frost Strike, Howling Blast, Hungering Cold, Icy Clutch, Deathchill, Frost Fever.
+FROST_VULN_READ = (0x2 | 0x4 | 0x400 | 0x200000, 0x1 | 0x2 | 0x4 | 0x9000 | 0xC000 | 0x40000 | FROST_FEVER_DISEASE, 0)
+
 # --- Reserved for spec stages (do not take) ---
 MARROWREND_RESERVED = 0x100              # d2 b8 (S1)
 GLACIAL_ADVANCE_RESERVED = 0x200         # d2 b9 (S2)
