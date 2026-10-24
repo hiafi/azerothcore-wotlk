@@ -5,7 +5,9 @@ Split from a single source/classes/deathknight.py via split_class_file.py (.agen
 """
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, School
-from lib.dsl.registry import spell, unbind_bonus_coefficients
+from lib.dsl.registry import bonus_coefficients, const, custom_attr, scripted_by, spell, unbind_bonus_coefficients, unbind_script
+
+from . import _masks as m
 
 
 plague_strike_45462 = spell(
@@ -232,6 +234,19 @@ improved_corpse_explosion_49601 = spell(
 )
 
 
+# Death Strike (shared doc "Death Strike", DK0a): costs 40 Runic Power and no runes, 85% weapon damage plus 10 potency, and
+# heals for 25% of the damage taken in the last 5 sec (min 5% of max health) through spell_dk_death_strike_rework
+# (EFFECT_2 DUMMY, CalcValue 25 = the heal %). Percent effect first, flat effect second (U9): the core multiplies a flat
+# effect that sits BEFORE the percent effect by the percent, so the flat lands whole this way. The stock script read
+# Effects[EFFECT_0].DamageMultiplier (EffectChainAmplitude_1 5.0 = 5% max HP per disease); the new script ignores it and it
+# is back at the default 1.0. Off-hand 66188 is untouched (no heal); the heal 45470 is declared below.
+DEATH_STRIKE_WINDOW_SEC = 5
+DEATH_STRIKE_MIN_HEAL_PERCENT = 5
+death_strike_window_ms = const('DEATH_STRIKE_WINDOW_MS', DEATH_STRIKE_WINDOW_SEC * 1000,
+                               doc='Death Strike damage record window (shared doc: the last 5 sec)')
+death_strike_min_heal_pct = const('DEATH_STRIKE_MIN_HEAL_PCT', DEATH_STRIKE_MIN_HEAL_PERCENT,
+                                  doc='Death Strike minimum heal, percent of maximum health')
+
 death_strike_49998 = spell(
     id=49998,
     name='Death Strike',
@@ -241,30 +256,64 @@ death_strike_49998 = spell(
     cast_time_ms=0,
     cooldown_ms=0,
     category_cooldown_ms=0,
-    power_type=PowerType.RUNE,
-    mana_cost=0,
+    power_type=PowerType.RUNIC_POWER,
+    mana_cost=400,
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=121, base_points=111, points_per_level=7.708333333333333, implicit_target_a=6),
-        Effect(type=31, weapon_potency=74, implicit_target_a=6),
-        Effect(type=EffectType.DUMMY, base_points=405, points_per_level=37.666666666666664, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=85, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=10, potency_kind='direct', time_basis_ms=1500,
+               implicit_target_a=6),
+        Effect(type=EffectType.DUMMY, base_points=24, implicit_target_a=6),
     ],
     spell_icon_id=2751,
     notes=(
-        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
-        'from rank 1 (learn level 56); RealPointsPerLevel from rank1->covers-60-overridden '
-        '(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/'
-        'mana_cost_pct from max rank. potency-system (PLAN P7 Death Knight pass, 2026-10-01): '
-        'eff2 (WEAPON_PERCENT_DAMAGE) converted to weapon_potency=74 (same off-by-one fix as '
-        'Mangle/Swipe/Shred - base_points=74 was dealing 75% live). The flat eff1 '
-        '(NORMALIZED_WEAPON_DMG) and the max-health-heal eff3 (DUMMY, read by '
-        'spell_dk_death_strike::HandleDummy via a DamageMultiplier field, not this base_points '
-        'at all) are left hand-set - the heal is a percent-of-max-health effect, out of scope '
-        'by design (docs/potency-system.md).'
+        'DK0a (death-knight-shared-rework.md "Death Strike"): PowerType 6 / ManaCost 400 (40 RP, RP x10) / RuneCostID 0 '
+        '(no runes, generates none), SpellLevel 10, d0 b4 kept. Effects: eff0 WEAPON_PERCENT_DAMAGE weapon_potency 85, '
+        'eff1 NORMALIZED_WEAPON_DMG sp_potency 10 direct T 1500 (percent first, flat second: U9), eff2 DUMMY base 24 -> '
+        'CalcValue 25 = the heal % read by spell_dk_death_strike_rework (the stock -49998 spell_dk_death_strike is '
+        'unbound). EffectChainAmplitude_1 5.0 (the stock per-disease 5% max HP) back to 1.0. AttributesEx 0x08000200 '
+        'kept (0x400 would be NO_THREAT, P0 M1), AttributesEx3 1024 kept. Stock was flat eff0 bp 111 ppl 7.708 + '
+        'weapon_potency 74 + DUMMY 405/37.667.'
     ),
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A deadly attack that deals $s2% weapon damage plus ${$m1*$m2/100} and heals the Death Knight for $F% of $Ghis:her; maximum health for each of $Ghis:her; diseases on the target.', 'EffectChainAmplitude_1': 5.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RangeIndex': 2, 'RuneCostID': 797, 'SpellClassMask_1': 16, 'SpellClassSet': 15, 'SpellLevel': 10, 'SpellPriority': 50, 'SpellVisualID_1': 11831, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': f'Focuses dark power into a strike that deals $s1% weapon damage plus {{pot2.avg}} and heals you for $s3% of all damage you have taken in the last {DEATH_STRIKE_WINDOW_SEC} sec, minimum {DEATH_STRIKE_MIN_HEAL_PERCENT}% of your maximum health.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RangeIndex': 2, 'RuneCostID': 0, 'SpellClassMask_1': m.DEATH_STRIKE, 'SpellClassSet': 15, 'SpellLevel': 10, 'SpellPriority': 50, 'SpellVisualID_1': 11831, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+unbind_script(-49998, 'spell_dk_death_strike')  # stock key is NEGATIVE (0-verify item 4); no spell_ranks rows exist
+scripted_by(death_strike_49998, 'spell_dk_death_strike_rework')
+
+
+# Death Strike heal (45470), pulled from npc.csv in DK0a (WP-R M1). The shared doc says Versatility raises the heal. The stock
+# row is DmgClass NONE with no spell_bonus_data row, so Unit::SpellHealingBonusDone returned the raw amount before
+# DoneTotalMod (where Versatility and MOD_HEALING_DONE_PERCENT live). DefenseType 1 (magic class) plus an explicit all-zero
+# spell_bonus_data row (the bonus-row branch sets the coefficient to 0) lets DoneTotalMod apply while spell power stays out.
+# AttributesEx2 CANT_CRIT (0x20000000) is kept, so it never crits. The amount is set by CastCustomSpell from the damage record
+# (spell_dk_death_strike_rework), so the effect is potency_excluded. No script binding on 45470 (S1's).
+death_strike_heal_45470 = spell(
+    id=45470,
+    name='Death Strike',
+    school=School.NORMAL,
+    attributes=134217728,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.HEAL, base_points=629, implicit_target_a=1,
+               potency_excluded='amount comes from the Death Strike damage record via CastCustomSpell '
+                                '(spell_dk_death_strike_rework), not CalcValue'),
+    ],
+    spell_icon_id=2751,
+    notes=(
+        'pulled from npc.csv (DK0a, WP-R M1): DefenseType 0 -> 1 so Versatility / healing-done % apply to the Death Strike '
+        'heal (shared doc), with an explicit all-zero spell_bonus_data row so spell power stays out. Everything else is the '
+        'stock/live row.'
+    ),
+    raw_overrides={'AttributesEx2': 805306368, 'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712172, 'BaseLevel': 1, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A deadly attack that deals damage plus and heals the Death Knight for a percent of damage done per disease on the target.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_3': m.DEATH_STRIKE_HEAL, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellVisualID_1': 3542},
+)
+bonus_coefficients(death_strike_heal_45470, direct=0.0, dot=0.0, ap=0.0, ap_dot=0.0,
+                   comment='Death Knight - Death Strike heal: no spell power; DefenseType 1 only so Versatility applies')
 
 
 blood_gorged_50096 = spell(
@@ -332,6 +381,8 @@ pestilence_50842 = spell(
     notes='pulled from existing data',
     raw_overrides={'AttributesEx': 134217728, 'AttributesEx5': 4096, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 20, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Spreads existing Blood Plague and Frost Fever infections from your target to all other enemies within $a3 yards.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectRadiusIndex_2': 52, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 844, 'SpellClassMask_2': 65536, 'SpellClassSet': 15, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 11172, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+unbind_script(50842, 'spell_dk_pestilence')
+scripted_by(pestilence_50842, 'spell_dk_pestilence_rework')
 
 
 ebon_plague_51726 = spell(
@@ -658,6 +709,12 @@ blood_strike_66215 = spell(
 )
 
 
+# Heart Strike (shared doc "Heart Strike", DK0a): baseline at level 1, 1 Blood Rune + 10 RP, 60% weapon damage plus 10
+# potency to the target and half as much to the nearest other enemy; NO per-disease bonus. Percent effect first, flat
+# effect second (U9). The stock per-disease bonus is read by the core (SpellEffects.cpp Heart Strike branch,
+# family flag 0x1000000) from Effects[EFFECT_2].CalcValue(), so the third-slot twins (EffectBasePoints_3 9,
+# EffectDieSides_3 1, ImplicitTargetA_3 25, EffectChainAmplitude_3 1.0) are deleted ON PURPOSE (brief ruling 1):
+# EFFECT_2 builds all zero and the bonus is 0. SpellDescriptionVariableID 166 ($<bonus>) dropped for {pot2}.
 heart_strike_55050 = spell(
     id=55050,
     name='Heart Strike',
@@ -672,21 +729,20 @@ heart_strike_55050 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=121, base_points=249, points_per_level=19.44, implicit_target_a=6, chain_targets=2),
-        Effect(type=31, weapon_potency=49, implicit_target_a=6, chain_targets=2),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=60, implicit_target_a=6, chain_targets=2),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=10, potency_kind='direct', time_basis_ms=1500,
+               implicit_target_a=6, chain_targets=2),
     ],
     spell_icon_id=3145,
     notes=(
-        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
-        'from rank 1 (learn level 55); RealPointsPerLevel from rank1->covers-60-overridden '
-        '(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/'
-        'mana_cost_pct from max rank. potency-system (PLAN P7 Death Knight pass, 2026-10-01): '
-        'eff2 (WEAPON_PERCENT_DAMAGE) converted to weapon_potency=49 (same off-by-one fix as '
-        'Mangle/Swipe/Shred - base_points=49 was dealing 50% live). The flat eff1 '
-        '(NORMALIZED_WEAPON_DMG) and the hidden tier-2 eff3 (disease-bonus constant) are left '
-        'hand-set, same reasoning as the Feral pass\'s Mangle/Swipe/Shred.'
+        'DK0a (death-knight-shared-rework.md "Heart Strike"): SpellLevel 1, RuneCostID 1142 (1 Blood Rune + 10 RP) kept. '
+        'eff0 WEAPON_PERCENT_DAMAGE weapon_potency 60, eff1 NORMALIZED_WEAPON_DMG sp_potency 10 direct T 1500 (percent '
+        'first, flat second: U9), both chain_targets 2 with EffectChainAmplitude 0.5 (the second enemy takes half). '
+        'EFFECT_2 builds all zero: the stock third-slot twins (EffectBasePoints_3 9, EffectDieSides_3 1, '
+        'ImplicitTargetA_3 25, EffectChainAmplitude_3 1.0) that fed the core\'s per-disease bonus are removed on '
+        'purpose. Stock was flat eff0 bp 249 ppl 19.44 + weapon_potency 49 and the talent-learned SpellLevel 55.'
     ),
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 4096, 'AttributesEx3': 1024, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly strike the target and his nearest ally, causing $m2% weapon damage plus $<bonus> on the primary target, and ${$m2/2}% weapon damage plus ${$<bonus>/2} on the secondary target.  Each target takes $m3% additional damage for each of your diseases active on that target$?s58616[, and movement speed is reduced by by $58617s1% for $58617d.][.]', 'EffectBasePoints_3': 9, 'EffectChainAmplitude_1': 0.5, 'EffectChainAmplitude_2': 0.5, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'ImplicitTargetA_3': 25, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 1142, 'SpellClassMask_1': 16777216, 'SpellClassSet': 15, 'SpellDescriptionVariableID': 166, 'SpellLevel': 55, 'SpellVisualID_1': 11148, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 4096, 'AttributesEx3': 1024, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly strike the target and the nearest other enemy, dealing $s1% weapon damage plus {pot2.avg} to the target and half as much to the second enemy.', 'EffectChainAmplitude_1': 0.5, 'EffectChainAmplitude_2': 0.5, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 1142, 'SpellClassMask_1': m.HEART_STRIKE, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellVisualID_1': 11148, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -4420,3 +4476,7 @@ gargoyle_strike_51963 = spell(
     raw_overrides={'FacingCasterFlags': 1, 'CastingTimeIndex': 5, 'InterruptFlags': 15, 'ProcChance': 101, 'BaseLevel': 55, 'SpellLevel': 55, 'DurationIndex': 0, 'Speed': 20.0, 'EquippedItemClass': -1, 'SpellVisualID_1': 4379, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Inflicts Nature damage to an enemy.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 unbind_bonus_coefficients(gargoyle_strike_51963)  # stale spell_bonus_data row overrode the potency coefficient (D1)
+
+# Frost Fever's disease damage is exempt from the binary-spell roll (T0 headline 3; SPELL_ATTR0_CU_IGNORE_BINARY). 55095 itself
+# is declared in source/spells/npc.csv (not a DSL spell here), so this row replaces nothing and duplicates nothing.
+custom_attr(55095, 0x200)

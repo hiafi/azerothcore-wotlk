@@ -5,7 +5,10 @@ Split from a single source/classes/deathknight.py via split_class_file.py (.agen
 """
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, School
-from lib.dsl.registry import spell
+from lib.dsl.registry import const, pot_text, procs_on, scripted_by, spell, unbind_script
+
+from . import _masks as m
+from .deathknight_shared import anti_magic_zone_50461
 
 
 army_of_the_dead_42650 = spell(
@@ -176,7 +179,7 @@ empower_rune_weapon_47568 = spell(
     name='Empower Rune Weapon',
     attributes=262144,
     cast_time_ms=0,
-    cooldown_ms=300000,
+    cooldown_ms=180000,
     category_cooldown_ms=0,
     power_type=PowerType.RUNE,
     mana_cost=0,
@@ -189,7 +192,7 @@ empower_rune_weapon_47568 = spell(
     ],
     spell_icon_id=2622,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 1024, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 54, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Empower your rune weapon, immediately activating all your runes and generating 25 runic power.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 1144, 'Speed': 1.0, 'SpellClassMask_1': 16384, 'SpellClassSet': 15, 'SpellLevel': 54, 'SpellVisualID_1': 10590},
+    raw_overrides={'AttributesEx': 1024, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 54, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Empower your rune weapon, immediately activating all your runes and generating 25 Runic Power.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 1144, 'Speed': 1.0, 'SpellClassMask_1': m.ERW, 'SpellClassSet': 15, 'SpellLevel': 54, 'SpellVisualID_1': 10590},
 )
 
 
@@ -268,6 +271,7 @@ anti_magic_shell_48707 = spell(
     ),
     raw_overrides={'AttributesEx4': 64, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Spell damage reduced by $s1%.\r\nImmune to magic debuffs.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Surrounds the Death Knight in an Anti-Magic Shell, absorbing $48707s1% of the damage dealt by harmful spells (up to a maximum of $s2% of the Death Knight's health) and preventing application of harmful magical effects.  Damage absorbed by Anti-Magic Shell energizes the Death Knight with additional runic power.  Lasts $48707d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 522, 'SpellClassMask_1': 131072, 'SpellClassSet': 15, 'SpellLevel': 46, 'SpellVisualID_1': 11869},
 )
+scripted_by(anti_magic_shell_48707, 'spell_dk_ams_damage_record')
 
 
 death_pact_48743 = spell(
@@ -441,21 +445,20 @@ frost_strike_49143 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=121, base_points=86, points_per_level=6.52, implicit_target_a=6),
-        Effect(type=31, weapon_potency=54, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=60, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=5, potency_kind='direct', time_basis_ms=1500,
+               implicit_target_a=6),
     ],
     spell_icon_id=2740,
     notes=(
-        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
-        'from rank 1 (learn level 55); RealPointsPerLevel from rank1->covers-60-overridden '
-        '(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/'
-        'mana_cost_pct from max rank. potency-system (PLAN P7 Death Knight pass, 2026-10-01): '
-        'eff2 (WEAPON_PERCENT_DAMAGE) converted to weapon_potency=54 (same off-by-one fix as '
-        'Mangle/Swipe/Shred - base_points=54 was dealing 55% live). The flat eff1 '
-        '(NORMALIZED_WEAPON_DMG) is left hand-set, same reasoning as the Feral pass\'s Mangle/'
-        'Swipe/Shred: far larger than weapon_potency\'s WEAPON_FLAT_BONUS_MAX=10 budget.'
+        'pulled from existing data; dk-rework DK0a (shared doc "Frost Strike", U8/U9): baseline at level 10, '
+        '60% weapon damage plus 5 potency Frost damage. Percent effect FIRST, flat NORMALIZED_WEAPON_DMG effect '
+        'second (SpellEffects.cpp EffectWeaponDmg multiplies a flat effect that sits before the percent effect '
+        'by the percent, so the flat lands whole here). The old single-rank bootstrap values (86 + 6.52/level '
+        'flat, 54% weapon) are gone; the stale EffectSpellClassMaskC_2 twin (no aura on effect 2) is dropped. '
+        'EFFECT_3 stays empty. 40 RP cost (PowerType 6 / ManaCost 400), RuneCostID 621 (0,0,0,0) kept.'
     ),
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly strike the enemy, causing $s2% weapon damage plus ${$m1*$m2/100} as Frost damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_2': 4, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 621, 'SpellClassMask_2': 4, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellVisualID_1': 11612, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly strike the enemy, dealing $s1% weapon damage plus {pot2.avg} as Frost damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 621, 'SpellClassMask_2': m.FROST_STRIKE, 'SpellClassSet': 15, 'SpellLevel': 10, 'SpellVisualID_1': 11612, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -525,12 +528,18 @@ rune_tap_48982 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=136, base_points=9, implicit_target_a=1),
+        Effect(type=EffectType.ENERGIZE, base_points=499, implicit_target_a=1, misc_value=6),
     ],
     spell_icon_id=2726,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx2': 570425344, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Converts 1 Blood Rune into $s1% of your maximum health.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 581, 'SpellClassMask_1': 134217728, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellVisualID_1': 11512},
+    notes=(
+        'pulled from existing data; dk-rework DK0a (shared doc "Rune Tap"): baseline at level 18. Effect index 0 '
+        'HEAL_PCT -> ENERGIZE Runic Power (misc 6), stored 499 = 500 = 50 RP (RP x10); heals nothing. Effect index '
+        '0 on purpose: Final Roar (S2) targets it with SPELLMOD_EFFECT1. 1 Blood Rune (RuneCostID 581), 60 s, off '
+        'GCD kept. The stock spell_dk_rune_tap_party binding on 59754 is unbound below.'
+    ),
+    raw_overrides={'AttributesEx2': 570425344, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 18, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Converts 1 Blood Rune into ${$s1/10} Runic Power.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 581, 'SpellClassMask_1': m.RUNE_TAP, 'SpellClassSet': 15, 'SpellLevel': 18, 'SpellVisualID_1': 11512},
 )
+unbind_script(59754, 'spell_dk_rune_tap_party')
 
 
 mark_of_blood_49005 = spell(
@@ -623,7 +632,7 @@ lichborne_49039 = spell(
     ],
     spell_icon_id=61,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 163872, 'AttributesEx5': 393224, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Immune to Charm, Fear and Sleep.\r\nUndead.', 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Draw upon unholy energy to become undead for $d.  While undead, you are immune to Charm, Fear and Sleep effects.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 601, 'SpellClassMask_2': 16, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellVisualID_1': 11706},
+    raw_overrides={'AttributesEx': 163872, 'AttributesEx5': 393224, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Immune to Charm, Fear and Sleep. Undead.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Draw upon unholy energy to become undead for $d. While undead, you are immune to Charm, Fear and Sleep effects.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 601, 'SpellClassMask_2': m.LICHBORNE, 'SpellClassSet': 15, 'SpellLevel': 20, 'SpellVisualID_1': 11706},
 )
 
 
@@ -672,6 +681,12 @@ summon_gargoyle_49206 = spell(
 )
 
 
+BONE_SHIELD_MAX_CHARGES = const(
+    'BONE_SHIELD_MAX_CHARGES', 6,
+    'Most charges Bone Shield can hold (Marrowrend adds up to this; the spell itself starts at ProcCharges 3) [tune].',
+    cpp_type='uint32',
+)
+
 bone_shield_49222 = spell(
     id=49222,
     name='Bone Shield',
@@ -684,14 +699,24 @@ bone_shield_49222 = spell(
     mana_cost=0,
     mana_cost_pct=0,
     range_yards=0.0,
-    duration_ms=300000,
+    duration_ms=30000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=79, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.MOD_RESISTANCE_PCT, misc_value=1),
     ],
     spell_icon_id=2739,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 1024, 'AttributesEx4': 524352, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Damage reduced by $s1%.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The Death Knight is surrounded by $n whirling bones.  While at least 1 bone remains, $Ghe:she; takes $s1% less damage from all sources and deals $s2% more damage with all attacks, spells and abilities.  Each damaging attack that lands consumes 1 bone.  Lasts $d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcCharges': 3, 'ProcTypeMask': 172712, 'RangeIndex': 1, 'RuneCostID': 654, 'SpellClassMask_2': 64, 'SpellClassSet': 15, 'SpellVisualID_1': 11539, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes=(
+        'pulled from existing data; dk-rework DK0a (shared doc "Bone Shield", U11): the shared Death Knight tank '
+        'aura, no cast of its own (the Unholy talent is retired; S1 Marrowrend applies it). Effect index 0 is '
+        'MOD_RESISTANCE_PCT misc 1 (armor) +30% (stored 29); the stock -20% damage taken and +2% damage done '
+        'effects are gone. 30 s (was 300 s). ProcCharges 3, S1 raises it up to BONE_SHIELD_MAX_CHARGES. '
+        'spell_proc: taken melee/ranged auto + melee/ranged class spells only (0x2A8, no magic), type DAMAGE, '
+        '2 s cooldown, no phase mask (LoadSpellProcs ignores it for taken-hit flags), default HitMask (a fully absorbed melee swing does not consume a charge). '
+        'Charges show as the stack count natively.'
+    ),
+    raw_overrides={'AttributesEx': 1024, 'AttributesEx4': 524352, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Armor increased. Each damaging melee or ranged attack that hits you consumes a charge.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Surrounds you with a barrier of whirling bones, increasing your armor by $s1%. Each damaging melee or ranged attack that hits you consumes a charge, no more than once every 2 sec. Lasts $d or until all charges are consumed.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcCharges': 3, 'ProcTypeMask': 680, 'RangeIndex': 1, 'RuneCostID': 654, 'SpellClassMask_2': m.BONE_SHIELD, 'SpellClassSet': 15, 'SpellVisualID_1': 11539, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+)
+procs_on(
+    bone_shield_49222, proc_flags=0x2A8, spell_type_mask=1, cooldown_ms=2000,
 )
 
 
@@ -732,8 +757,13 @@ anti_magic_zone_51052 = spell(
         Effect(type=EffectType.SUMMON, base_points=9999, mechanic=26, implicit_target_a=18, misc_value=28306),
     ],
     spell_icon_id=3144,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Places a large, stationary Anti-Magic Zone that reduces spell damage done to party or raid members inside it by $50461s1%.  The Anti-Magic Zone lasts for $51052d or until it absorbs ${$51052m1+2*$AP} spell damage.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectMiscValueB_1': 121, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 854, 'SpellClassMask_2': 524288, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellVisualID_1': 8116},
+    notes=(
+        'pulled from existing data; dk-rework DK0a (shared doc "Anti-Magic Zone"): baseline at level 52, 1 Unholy Rune '
+        '(RuneCostID 854), 0 Runic Power (stock), 2 min, on the GCD (133 / 1500, shared doc). This is the summoner only; the area aura 50461 (deathknight_shared.py) '
+        'owns the 75% reduction and the 500 attack-power-potency absorb pool. Stale EffectBasePoints_2 / EffectDieSides_2 '
+        'twins removed (Effect 2 is empty). EffectMiscValueB_1 121 (SummonProperties) and the summon\'s 9999 are kept.'
+    ),
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 52, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Places a large, stationary Anti-Magic Zone that reduces spell damage taken by party or raid members inside it by 75%. The zone lasts $51052d or until it absorbs ' + pot_text(anti_magic_zone_50461) + ' spell damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 121, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 854, 'SpellClassMask_2': m.AMZ, 'SpellClassSet': 15, 'SpellLevel': 52, 'SpellVisualID_1': 8116, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 

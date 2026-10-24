@@ -1222,7 +1222,20 @@ SHAMAN_FAMILY_RULES = FamilyBitRules(
     reader_reaches="the racial",
     reader_hint="Pick another bit for the reader.",
 )
-FAMILY_BIT_RULES = (HUNTER_FAMILY_RULES, SHAMAN_FAMILY_RULES)
+# Death Knight DK0a (death-knight-rework.DK0-HANDOFF.md "Family bits", FAMILY-BITS s3.3):
+#   carriers: d2 b31 (Draenei racial Gift of the Naaru), d1 b23 (Orc racial pet bit), d0 b6 (server Icy Touch alias).
+#   readers: d2 b31, d1 b10 / b23 / b24 (Orc racial pet bits) - a reader containing them would modify a racial.
+DEATHKNIGHT_FAMILY_RULES = FamilyBitRules(
+    name="deathknight",
+    spell_class_set=15,
+    forbidden_carrier_bits=(0x40, 0x800000, 0x80000000),             # d0 b6, d1 b23, d2 b31
+    forbidden_reader_bits=(0, 0x400 | 0x800000 | 0x1000000, 0x80000000),  # d1 b10 / b23 / b24, d2 b31
+    carrier_note="a bit a racial or a core hardcode keys on: d0 b6 Icy Touch alias, d1 b23 Orc pet bit, d2 b31 Gift",
+    reader_label="a racial's bit (d1 b10 / b23 / b24 Orc pet bits, d2 b31 Draenei Gift of the Naaru)",
+    reader_reaches="the racial",
+    reader_hint="Pick another bit for the reader.",
+)
+FAMILY_BIT_RULES = (HUNTER_FAMILY_RULES, SHAMAN_FAMILY_RULES, DEATHKNIGHT_FAMILY_RULES)
 _CUSTOM_SPELL_ID_START = 200000
 PET_SHARED_SKILL_LINE = 270  # "Pet - Hunter": the skill line every hunter pet family shares
 

@@ -101,6 +101,13 @@ def _render_id_section(
     return lines
 
 
+_CLASS_TITLES = {"deathknight": "DeathKnight"}  # multi-word class names (str.capitalize() would give "Deathknight")
+
+
+def _class_title(class_name: str) -> str:
+    return _CLASS_TITLES.get(class_name, class_name.capitalize())
+
+
 def build_header(class_name: str, dsl_classes: dict, warnings: list[str] | None = None) -> str | None:
     """Returns the header text for one class, or `None` when it has nothing to generate (no
     spells/creatures declared under this class name, and no `const()` calls) - `write_headers`
@@ -131,7 +138,7 @@ def build_header(class_name: str, dsl_classes: dict, warnings: list[str] | None 
     if not spell_lines and not creature_lines and not const_lines:
         return None
 
-    namespace = f"{class_name.capitalize()}Data"
+    namespace = f"{_class_title(class_name)}Data"
     lines = [
         GENERATED_HEADER_MARKER,
         f"// Source: source/classes/{class_name}/ (docs/potency-system.md \"Script numbers\", tier 3; PLAN P2b)",
@@ -173,7 +180,7 @@ def write_headers(dsl_classes: dict, out_dir: Path, class_names: tuple[str, ...]
         if text is None:
             continue
         out_dir.mkdir(parents=True, exist_ok=True)
-        path = out_dir / f"{class_name.capitalize()}Data.h"
+        path = out_dir / f"{_class_title(class_name)}Data.h"
         path.write_text(text, encoding="utf-8", newline="\n")
         written.append(str(path))
     return written
@@ -186,7 +193,7 @@ def check_headers(dsl_classes: dict, out_dir: Path, class_names: tuple[str, ...]
     problems = []
     for class_name in class_names:
         text = build_header(class_name, dsl_classes)
-        path = out_dir / f"{class_name.capitalize()}Data.h"
+        path = out_dir / f"{_class_title(class_name)}Data.h"
         on_disk = path.read_text(encoding="utf-8") if path.exists() else None
         if text == on_disk:
             continue

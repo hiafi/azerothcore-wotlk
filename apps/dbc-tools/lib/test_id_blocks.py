@@ -243,7 +243,12 @@ def declared_ids(class_dir: Path) -> dict[str, list[int]]:
         class_dir, ids_cfg=IDS, trainer_index=_AnyTrainer(), existing_group_ids=_AnySet(), shapeshift_index={},
         existing_creature_rows=_AnyRows(), creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
         creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS,
-        live_data=spell_tables.dsl_live_data(stock_talents, {}),
+        live_data=spell_tables.dsl_live_data(
+            stock_talents, {},
+            lambda: state.load_existing_rows(dbcfmt.SKILLLINEABILITY),
+            lambda: state.load_stock_rows(dbcfmt.CHRCLASSES),
+            lambda: state.load_stock_rows(dbcfmt.SKILLLINEABILITY),
+        ),
     )
     return {
         "spell": [int(e["id"]) for e in reg.spells],
