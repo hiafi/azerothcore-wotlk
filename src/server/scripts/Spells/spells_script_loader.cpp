@@ -57,6 +57,7 @@ void AddSC_shaman_restoration_spell_scripts(); // Custom: shaman-rework
 void AddSC_shaman_enhancement_spell_scripts(); // Custom: shaman-rework
 void AddSC_deathknight_shared_spell_scripts(); // Custom: death-knight-rework
 void AddSC_deathknight_blood_spell_scripts(); // Custom: death-knight-rework
+void AddSC_deathknight_frost_spell_scripts(); // Custom: death-knight-rework
 void AddSC_deathknight_hooks(); // Custom: death-knight-rework
 void AddSC_warrior_spell_scripts();
 void AddSC_quest_spell_scripts();
@@ -107,6 +108,7 @@ void AddSpellsScripts()
     AddSC_shaman_enhancement_spell_scripts(); // Custom: shaman-rework
     AddSC_deathknight_shared_spell_scripts(); // Custom: death-knight-rework
     AddSC_deathknight_blood_spell_scripts(); // Custom: death-knight-rework
+    AddSC_deathknight_frost_spell_scripts(); // Custom: death-knight-rework
     AddSC_deathknight_hooks(); // Custom: death-knight-rework
     AddSC_warrior_spell_scripts();
     AddSC_quest_spell_scripts();

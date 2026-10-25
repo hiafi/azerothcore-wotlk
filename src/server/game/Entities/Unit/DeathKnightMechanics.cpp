@@ -35,6 +35,7 @@
 #include <array>
 #include <cmath>
 #include <deque>
+#include <initializer_list>
 #include <limits>
 #include <list>
 #include <unordered_map>
@@ -1175,6 +1176,15 @@ namespace DeathKnight
             case DeathKnightData::SPELL_CRIMSON_COMMUNION:
             case DeathKnightData::SPELL_PESTILENCE:
             case DeathKnightData::SPELL_DEATH_PACT:
+            // S2 (U27): Frost's area, self and channel-like spells
+            case DeathKnightData::SPELL_GLACIAL_ADVANCE:
+            case DeathKnightData::SPELL_GLACIAL_ERUPTION:
+            case DeathKnightData::SPELL_PILLAR_OF_FROST:
+            case DeathKnightData::SPELL_BREATH_OF_SINDRAGOSA:
+            case DeathKnightData::SPELL_BREATH_OF_SINDRAGOSA_TICK:
+            case DeathKnightData::SPELL_FINAL_ROAR_BURST:
+            case DeathKnightData::SPELL_HUNGERING_COLD_STORM:
+            case DeathKnightData::SPELL_HUNGERING_COLD_TICK:
                 return true;
             default:
                 return false;
@@ -1186,5 +1196,518 @@ namespace DeathKnight
         // U16 (user 2026-10-24: ~4 worms = 5% of Blood damage): Bloodworms keep stock damage plus their own share.
         return kind == MinionKind::Bloodworm ? int32(DeathKnightData::MINION_BLOODWORM_AP_SHARE_PCT) :
             int32(DeathKnightData::MINION_AP_SHARE_PCT);
+    }
+}
+
+// ---- S2 ----
+/*
+ * S2 block (docs/reworks/death-knight-frost-rework.md): the once-per-cast guard (moved from spell_dk_blood.cpp), the
+ * per-cast school switch (U5), the Frost damage multiplier (U14/U17), Killing Machine / Enduring Strength (U6/U20),
+ * Rime, rune refunds (U18), Deathchill (U9), Hungering Cold (U10) and the Breath helpers (U11/U12). Per-player state
+ * (rune snapshot, Pillar extension, Final Roar store) lives on CustomData, nothing file-static.
+ */
+namespace
+{
+    // U5: Spell::m_spellSchoolMask is protected (Spell.h). A pointer to the protected member, formed inside a derived
+    // class, may be applied to any Spell; this is legal C++ and fails to compile if upstream renames the member.
+    struct SpellSchoolAccess : Spell
+    {
+        static SpellSchoolMask Spell::* Member() { return &SpellSchoolAccess::m_spellSchoolMask; }
+    };
+
+    // Deathchill lockout by rank (tooltip "Every 60/45/30 sec" [fixed]); the rank passives carry no duration value.
+    constexpr std::array<uint32, 3> DEATHCHILL_RANKS = {
+        DeathKnightData::SPELL_DEATHCHILL_203308,
+        DeathKnightData::SPELL_DEATHCHILL_203309,
+        DeathKnightData::SPELL_DEATHCHILL_203310,
+    };
+    constexpr std::array<int32, 3> DEATHCHILL_LOCKOUT_MS = { 60000, 45000, 30000 };
+
+    struct RuneCooldownSnapshot : DataMap::Base
+    {
+        std::array<uint32, MAX_RUNES> cooldowns = { };
+    };
+
+    constexpr char const* RUNE_SNAPSHOT_KEY = "deathknight_rune_snapshot";
+
+    // Enduring Strength: how much the Pillar of Frost aura that was applied at applyTime has been extended so far.
+    struct PillarExtension : DataMap::Base
+    {
+        time_t applyTime = 0;
+        int32 extendedMs = 0;
+    };
+
+    constexpr char const* PILLAR_EXTENSION_KEY = "deathknight_pillar_extension";
+
+    struct FinalRoarStore : DataMap::Base
+    {
+        uint64 damage = 0;
+    };
+
+    constexpr char const* FINAL_ROAR_STORE_KEY = "deathknight_final_roar_store";
+
+    // The amount of effIndex on the highest rank aura the unit carries (ranks listed highest first), or 0.
+    int32 RankAmount(Unit const* unit, std::initializer_list<uint32> ranksHighestFirst, uint8 effIndex)
+    {
+        for (uint32 const spellId : ranksHighestFirst)
+            if (AuraEffect const* effect = unit->GetAuraEffect(spellId, effIndex))
+                return effect->GetAmount();
+
+        return 0;
+    }
+
+    // Unit::GetDiseasesByCaster(caster) != 0 without the non-const call: a disease (dispel type) applied by the DK or
+    // their Dancing Rune Weapon, through PERIODIC_DAMAGE (Frost Fever, Blood Plague) or LINKED (Crypt / Ebon Plague).
+    bool HasOwnDisease(Player const* dk, Unit const* target)
+    {
+        ObjectGuid const dkGuid = dk->GetGUID();
+        ObjectGuid const drwGuid = const_cast<Player*>(dk)->getRuneWeaponGUID();
+        for (AuraType const type : { SPELL_AURA_PERIODIC_DAMAGE, SPELL_AURA_LINKED })
+            for (AuraEffect const* effect : target->GetAuraEffectsByType(type))
+                if (effect->GetSpellInfo()->Dispel == DISPEL_DISEASE &&
+                    (effect->GetCasterGUID() == dkGuid || (drwGuid && effect->GetCasterGUID() == drwGuid)))
+                    return true;
+
+        return false;
+    }
+
+    bool IsObliterate(uint32 spellId)
+    {
+        return spellId == DeathKnightData::SPELL_OBLITERATE_203054 ||
+            spellId == DeathKnightData::SPELL_OBLITERATE_66198;
+    }
+
+    bool IsFrostStrike(uint32 spellId)
+    {
+        return spellId == DeathKnightData::SPELL_FROST_STRIKE || spellId == DeathKnightData::SPELL_FROST_STRIKE_66196;
+    }
+
+    float MasteryMultiplier(Player const* dk)
+    {
+        return 1.0f + std::max(0.0f, dk->GetMasteryPercentage()) / 100.0f;
+    }
+}
+
+namespace DeathKnight
+{
+    // Once-per-cast guard, one per aura script instance (DeathKnight::RuneProcAllowed keys its guard by the aura id
+    // for the same reason: one aura's answer must never starve another's on a self-centred cast). First() is true
+    // for the first event of a cast and false for the rest of its hits: a cast with an explicit unit target counts
+    // only the hit on that unit; a cast without one counts the first event of the same spell object in the same
+    // game-time tick; auto attacks and periodic ticks always count.
+    bool OncePerCastGuard::First(ProcEventInfo& eventInfo)
+    {
+        Spell const* spell = eventInfo.GetProcSpell();
+        if (!spell || (eventInfo.GetTypeMask() & PROC_FLAG_DONE_PERIODIC))
+            return true;
+
+        if (Unit const* castTarget = spell->m_targets.GetUnitTarget())
+            return castTarget == eventInfo.GetActionTarget();
+
+        uint32 const spellId = spell->GetSpellInfo() ? spell->GetSpellInfo()->Id : 0;
+        int64 const now = int64(GameTime::GetGameTimeMS().count());
+        if (_spell == spell && _spellId == spellId && _timeMs == now)
+            return false;
+
+        _spell = spell;
+        _spellId = spellId;
+        _timeMs = now;
+        return true;
+    }
+
+    // The aura owner's own event, once per cast
+    bool OncePerCastGuard::OwnerFirst(Unit const* owner, ProcEventInfo& eventInfo)
+    {
+        return owner && eventInfo.GetActor() == owner && First(eventInfo);
+    }
+
+    void SetCastSchool(Spell* spell, SpellSchoolMask mask)
+    {
+        if (!spell || !mask)
+            return;
+
+        // OnCast only (0-verify item 5): after it the crit roll, EffectWeaponDmg, armor and resist read the member.
+        // The power cost was computed earlier with the DBC school, so the switch never changes the cost.
+        spell->*SpellSchoolAccess::Member() = mask;
+    }
+
+    bool IsSchoolSwitchedCast(Spell const* spell)
+    {
+        return spell && spell->GetSpellInfo() && spell->GetSpellSchoolMask() != spell->GetSpellInfo()->GetSchoolMask();
+    }
+
+    float GetOffhandFactor(Player const* dk)
+    {
+        if (!dk)
+            return 1.0f;
+
+        // The engine's off-hand TOTAL_PCT without the physical %-done auras (Unit::UpdateDamagePctDoneMods): the
+        // penalty, then every SPELL_AURA_MOD_OFFHAND_DAMAGE_PCT (Nerves of Cold Steel E1, aura 122) whose weapon
+        // requirement the off-hand meets.
+        float factor = float(100 - std::clamp<int32>(DeathKnightData::OFFHAND_PENALTY_PCT, 0, 100)) / 100.0f;
+        factor *= dk->GetTotalAuraMultiplier(SPELL_AURA_MOD_OFFHAND_DAMAGE_PCT, [dk](AuraEffect const* aurEff)
+        {
+            return dk->CheckAttackFitToAuraRequirement(OFF_ATTACK, aurEff);
+        });
+
+        return factor;
+    }
+
+    int32 GetOffhandFlatAddBack(Unit const* caster, SpellInfo const* spellInfo, Unit const* target)
+    {
+        if (!caster || !spellInfo)
+            return 0;
+
+        // Only a physical-base copy stores half the main-hand flat (D1); 66196 (Frost) stores the full flat.
+        if (!(spellInfo->GetSchoolMask() & SPELL_SCHOOL_MASK_NORMAL))
+            return 0;
+
+        for (uint8 i = EFFECT_0; i < MAX_SPELL_EFFECTS; ++i)
+        {
+            switch (spellInfo->Effects[i].Effect)
+            {
+                case SPELL_EFFECT_WEAPON_DAMAGE:
+                case SPELL_EFFECT_WEAPON_DAMAGE_NOSCHOOL:
+                case SPELL_EFFECT_NORMALIZED_WEAPON_DMG:
+                    // The value EffectWeaponDmg reads for fixed_bonus (Spell::CalculateSpellDamage, potency included).
+                    return std::max<int32>(0, caster->CalculateSpellDamage(target, spellInfo, i));
+                default:
+                    break;
+            }
+        }
+
+        return 0;
+    }
+
+    float GetFrostDamageMultiplier(Player const* dk, SpellInfo const* spellInfo, Unit const* target, uint32 flags)
+    {
+        if (!dk || !spellInfo)
+            return 1.0f;
+
+        uint32 const spellId = spellInfo->Id;
+        bool const obliterate = IsObliterate(spellId);
+        bool const frostStrike = IsFrostStrike(spellId);
+        bool const glacialEruption = spellId == DeathKnightData::SPELL_GLACIAL_ERUPTION;
+        bool const howlingBlast = spellId == DeathKnightData::SPELL_HOWLING_BLAST;
+        bool const breathTick = spellId == DeathKnightData::SPELL_BREATH_OF_SINDRAGOSA_TICK;
+
+        float multiplier = 1.0f;
+
+        if (target)
+        {
+            // Glacier Rot: the target carries one of this DK's diseases. The r3 capstone (49791) adds Mastery 1:1 into
+            // the percent for Frost Strike and Glacial Advance; Howling Blast keeps the base value.
+            if (frostStrike || glacialEruption || howlingBlast)
+            {
+                int32 const glacierRot = RankAmount(dk, { DeathKnightData::SPELL_GLACIER_ROT_49791,
+                    DeathKnightData::SPELL_GLACIER_ROT_49790, DeathKnightData::SPELL_GLACIER_ROT }, EFFECT_0);
+                if (glacierRot > 0 && HasOwnDisease(dk, target))
+                {
+                    float pct = float(glacierRot);
+                    if ((frostStrike || glacialEruption) && dk->HasAura(DeathKnightData::SPELL_GLACIER_ROT_49791))
+                        pct += std::max(0.0f, dk->GetMasteryPercentage());
+
+                    AddPct(multiplier, pct);
+                }
+            }
+
+            // Merciless Combat: target below MERCILESS_COMBAT_HP_PCT (Obliterate, Frost Strike, Breath).
+            if ((obliterate || frostStrike || breathTick) &&
+                target->HealthBelowPct(int32(DeathKnightData::MERCILESS_COMBAT_HP_PCT)))
+            {
+                int32 const merciless = RankAmount(dk, { DeathKnightData::SPELL_MERCILESS_COMBAT_49538,
+                    DeathKnightData::SPELL_MERCILESS_COMBAT }, EFFECT_0);
+                if (merciless > 0)
+                    AddPct(multiplier, merciless);
+            }
+
+            // Tundra Stalker: the target carries THIS DK's Frost Fever (Obliterate, Breath).
+            if ((obliterate || breathTick) && target->HasAura(DeathKnightData::SPELL_FROST_FEVER, dk->GetGUID()))
+            {
+                int32 const tundra = RankAmount(dk, { DeathKnightData::SPELL_TUNDRA_STALKER_50128,
+                    DeathKnightData::SPELL_TUNDRA_STALKER_50127, DeathKnightData::SPELL_TUNDRA_STALKER }, EFFECT_0);
+                if (tundra > 0)
+                    AddPct(multiplier, tundra);
+            }
+
+            // Razorice for a school-switched cast: aura 271 on 51714 is family-mask based and cannot see it.
+            if (flags & FROST_MULT_SCHOOL_SWITCHED)
+                if (Aura const* razorice = target->GetAura(DeathKnightData::SPELL_FROST_VULNERABILITY, dk->GetGUID()))
+                    AddPct(multiplier, float(razorice->GetStackAmount()) *
+                        float(DeathKnightData::RAZORICE_PCT_PER_STACK));
+        }
+
+        // Obliteration capstone (the 1-rank talent's passive 203292): Killing Machine Obliterates x (1 + Mastery%).
+        if ((flags & FROST_MULT_KM_OBLITERATE) && dk->HasAura(DeathKnightData::SPELL_OBLITERATION))
+            multiplier *= MasteryMultiplier(dk);
+
+        // Breath of Sindragosa (a 1-rank talent: its capstone is always on): Mastery, then Frostwyrm's Wrath's ramp
+        // (203305 is only ever applied with the r2 capstone). Every tick target; the caller applies
+        // BREATH_SECONDARY_PCT to the secondaries.
+        if (breathTick)
+        {
+            multiplier *= MasteryMultiplier(dk);
+            if (Aura const* ramp = dk->GetAura(DeathKnightData::SPELL_FROSTWYRMS_WRATH_RAMP, dk->GetGUID()))
+                AddPct(multiplier, float(ramp->GetStackAmount()) * float(DeathKnightData::FROSTWYRM_RAMP_PCT));
+        }
+
+        if (flags & FROST_MULT_DEATHCHILL)
+            AddPct(multiplier, float(DeathKnightData::DEATHCHILL_DAMAGE_PCT));
+
+        if (flags & FROST_MULT_OFFHAND)
+            multiplier *= GetOffhandFactor(dk);
+
+        return multiplier;
+    }
+
+    bool HasKillingMachine(Unit const* dk)
+    {
+        return dk && dk->HasAura(DeathKnightData::SPELL_KILLING_MACHINE_BUFF, dk->GetGUID());
+    }
+
+    void ConsumeKillingMachine(Player* dk)
+    {
+        if (!dk)
+            return;
+
+        Aura* killingMachine = dk->GetAura(DeathKnightData::SPELL_KILLING_MACHINE_BUFF, dk->GetGUID());
+        if (!killingMachine)
+            return;
+
+        killingMachine->ModStackAmount(-1);
+
+        // Enduring Strength: only when a stack was consumed and Pillar of Frost is up.
+        if (!dk->HasAura(DeathKnightData::SPELL_PILLAR_OF_FROST, dk->GetGUID()))
+            return;
+
+        int32 const extension = RankAmount(dk, { DeathKnightData::SPELL_ENDURING_STRENGTH_203298,
+            DeathKnightData::SPELL_ENDURING_STRENGTH }, EFFECT_0);
+        if (extension > 0)
+            ExtendPillar(dk, extension);
+    }
+
+    void GrantKillingMachine(Player* dk)
+    {
+        if (!dk)
+            return;
+
+        int32 const cap = std::max<int32>(1, DeathKnightData::KILLING_MACHINE_MAX_STACKS);
+        if (Aura* killingMachine = dk->GetAura(DeathKnightData::SPELL_KILLING_MACHINE_BUFF, dk->GetGUID()))
+        {
+            // ModStackAmount(+1) refreshes the duration; at the cap only the duration refreshes.
+            if (int32(killingMachine->GetStackAmount()) < cap)
+                killingMachine->ModStackAmount(1);
+            else
+                killingMachine->RefreshDuration();
+            return;
+        }
+
+        dk->CastSpell(dk, DeathKnightData::SPELL_KILLING_MACHINE_BUFF, TRIGGERED_FULL_MASK);
+    }
+
+    void GrantRime(Player* dk)
+    {
+        if (!dk)
+            return;
+
+        dk->CastSpell(dk, DeathKnightData::SPELL_FREEZING_FOG, TRIGGERED_FULL_MASK);
+        dk->RemoveSpellCooldown(DeathKnightData::SPELL_HOWLING_BLAST, true);
+    }
+
+    void ExtendPillar(Player* dk, int32 ms)
+    {
+        if (!dk || ms <= 0)
+            return;
+
+        Aura* pillar = dk->GetAura(DeathKnightData::SPELL_PILLAR_OF_FROST, dk->GetGUID());
+        if (!pillar)
+            return;
+
+        int32 const cap = RankAmount(dk, { DeathKnightData::SPELL_ENDURING_STRENGTH_203298,
+            DeathKnightData::SPELL_ENDURING_STRENGTH }, EFFECT_1);
+        if (cap <= 0)
+            return;
+
+        // The cap is per Pillar: a new Pillar aura (another apply time) starts from 0.
+        PillarExtension* state = dk->CustomData.GetDefault<PillarExtension>(PILLAR_EXTENSION_KEY);
+        if (state->applyTime != pillar->GetApplyTime())
+        {
+            state->applyTime = pillar->GetApplyTime();
+            state->extendedMs = 0;
+        }
+
+        int32 const add = std::min(ms, cap - state->extendedMs);
+        if (add <= 0)
+            return;
+
+        state->extendedMs += add;
+        pillar->SetMaxDuration(pillar->GetMaxDuration() + add);
+        pillar->SetDuration(pillar->GetDuration() + add);
+    }
+
+    void ActivateRune(Player* dk, uint8 slot)
+    {
+        // m_runes is null for anyone but a Death Knight (InitRunes), and the accessors dereference it unguarded.
+        if (!dk || slot >= MAX_RUNES || !dk->IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_ABILITY))
+            return;
+
+        // The stock Empower Rune Weapon tail (SpellEffects.cpp EffectActivateRune); never ResyncRunes.
+        dk->SetRuneCooldown(slot, 0);
+        dk->SetGracePeriod(slot, dk->IsInCombat()); // xinef: reset grace period
+        // is needed to push through to the client that the rune is active
+        dk->CastSpell(dk, 47804, true);
+    }
+
+    void SnapshotRuneCooldowns(Player* dk)
+    {
+        if (!dk || !dk->IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_ABILITY))
+            return;
+
+        RuneCooldownSnapshot* snapshot = dk->CustomData.GetDefault<RuneCooldownSnapshot>(RUNE_SNAPSHOT_KEY);
+        for (uint8 slot = 0; slot < MAX_RUNES; ++slot)
+            snapshot->cooldowns[slot] = dk->GetRuneCooldown(slot);
+    }
+
+    int8 FindJustSpentFrostRune(Player const* dk)
+    {
+        if (!dk || !dk->IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_ABILITY))
+            return -1;
+
+        RuneCooldownSnapshot const* snapshot = dk->CustomData.Get<RuneCooldownSnapshot>(RUNE_SNAPSHOT_KEY);
+        if (!snapshot)
+            return -1;
+
+        // A slot that was ready at the snapshot and is recharging now was just spent. A Frost slot first; else a Death
+        // rune (it paid the Frost cost in a Frost rune's place).
+        int8 deathSlot = -1;
+        for (uint8 slot = 0; slot < MAX_RUNES; ++slot)
+        {
+            if (snapshot->cooldowns[slot] || !dk->GetRuneCooldown(slot))
+                continue;
+
+            if (dk->GetBaseRune(slot) == RUNE_FROST)
+                return int8(slot);
+
+            if (deathSlot < 0 && dk->GetCurrentRune(slot) == RUNE_DEATH)
+                deathSlot = int8(slot);
+        }
+
+        return deathSlot;
+    }
+
+    bool DeathchillReady(Unit const* dk)
+    {
+        return dk && dk->HasAura(DeathKnightData::SPELL_DEATHCHILL_BUFF, dk->GetGUID());
+    }
+
+    void ArmDeathchill(Player* dk, Spell* spell)
+    {
+        if (!dk || !DeathchillReady(dk))
+            return;
+
+        // Never on a Killing Machine Obliterate: two +100% crit mods on one cast are non-deterministic (U9).
+        if (spell && spell->GetSpellInfo() && IsObliterate(spell->GetSpellInfo()->Id) &&
+            (IsSchoolSwitchedCast(spell) || HasKillingMachine(dk)))
+            return;
+
+        if (!dk->HasAura(DeathKnightData::SPELL_DEATHCHILL_MARKER, dk->GetGUID()))
+            dk->CastSpell(dk, DeathKnightData::SPELL_DEATHCHILL_MARKER, TRIGGERED_FULL_MASK);
+    }
+
+    void ConsumeDeathchill(Player* dk)
+    {
+        // Only a cast that was armed spends the charge.
+        if (!dk || !dk->HasAura(DeathKnightData::SPELL_DEATHCHILL_MARKER, dk->GetGUID()))
+            return;
+
+        dk->RemoveAurasDueToSpell(DeathKnightData::SPELL_DEATHCHILL_MARKER, dk->GetGUID());
+        dk->RemoveAurasDueToSpell(DeathKnightData::SPELL_DEATHCHILL_BUFF, dk->GetGUID());
+
+        // The highest rank known sets the lockout; its EXPIRE re-grants the buff (spell_dk_deathchill_lockout).
+        for (std::size_t i = DEATHCHILL_RANKS.size(); i-- > 0;)
+        {
+            if (!dk->HasAura(DEATHCHILL_RANKS[i]))
+                continue;
+
+            dk->CastCustomSpell(DeathKnightData::SPELL_DEATHCHILL_LOCKOUT, SPELLVALUE_AURA_DURATION,
+                DEATHCHILL_LOCKOUT_MS[i], dk, TRIGGERED_FULL_MASK);
+            return;
+        }
+    }
+
+    void StartOrExtendHungeringCold(Player* dk)
+    {
+        if (!dk)
+            return;
+
+        int32 const duration = std::max<int32>(1, DeathKnightData::HUNGERING_COLD_STORM_MS);
+        if (Aura* storm = dk->GetAura(DeathKnightData::SPELL_HUNGERING_COLD_STORM, dk->GetGUID()))
+        {
+            // Never RefreshDuration or a re-cast: both reset the 2 s tick timer. The max duration grows by the time
+            // added, since AuraEffect::Update stops ticking at GetMaxDuration() / amplitude ticks.
+            storm->SetMaxDuration(storm->GetMaxDuration() + std::max<int32>(0, duration - storm->GetDuration()));
+            storm->SetDuration(duration);
+            return;
+        }
+
+        dk->CastSpell(dk, DeathKnightData::SPELL_HUNGERING_COLD_STORM, TRIGGERED_FULL_MASK);
+    }
+
+    void OnHungeringColdHit(Player* dk, Unit* target)
+    {
+        if (!dk || !target || !target->IsAlive())
+            return;
+
+        ObjectGuid const dkGuid = dk->GetGUID();
+
+        // "Each tick slows by a further 20%, and its third tick freezes": a tick that finds the slow already at
+        // HUNGERING_COLD_SLOW_STACKS_TO_FREEZE stacks (from the two ticks before) freezes, then the slow is refreshed.
+        Aura const* slow = target->GetAura(DeathKnightData::SPELL_HUNGERING_COLD_SLOW, dkGuid);
+        int32 const stacksBefore = slow ? int32(slow->GetStackAmount()) : 0;
+        if (stacksBefore >= int32(DeathKnightData::HUNGERING_COLD_SLOW_STACKS_TO_FREEZE) &&
+            !target->HasAura(DeathKnightData::SPELL_HUNGERING_COLD_LOCKOUT, dkGuid))
+        {
+            // Stun-immune: only slowed, and no lockout either.
+            SpellInfo const* freeze = sSpellMgr->GetSpellInfo(DeathKnightData::SPELL_HUNGERING_COLD_FREEZE);
+            if (freeze && !target->IsImmunedToSpell(freeze))
+            {
+                dk->CastSpell(target, DeathKnightData::SPELL_HUNGERING_COLD_FREEZE, TRIGGERED_FULL_MASK);
+                dk->CastSpell(target, DeathKnightData::SPELL_HUNGERING_COLD_LOCKOUT, TRIGGERED_FULL_MASK);
+            }
+        }
+
+        // +1 stack (capped by the slow's StackAmount), duration refreshed.
+        dk->CastSpell(target, DeathKnightData::SPELL_HUNGERING_COLD_SLOW, TRIGGERED_FULL_MASK);
+    }
+
+    uint32 GetBreathDrain(uint32 tickNumber)
+    {
+        // Internal runic power (x10 the displayed value): BREATH_BASE_DRAIN, +1 every BREATH_DRAIN_STEP_TICKS ticks.
+        uint32 const tick = std::max<uint32>(1, tickNumber);
+        uint32 const step = uint32(std::max<int32>(1, DeathKnightData::BREATH_DRAIN_STEP_TICKS));
+        uint32 const base = uint32(std::max<int32>(0, DeathKnightData::BREATH_BASE_DRAIN));
+        return (base + (tick - 1) / step) * 10;
+    }
+
+    void AddFinalRoarDamage(Player* dk, uint32 damage)
+    {
+        if (!dk || !damage)
+            return;
+
+        dk->CustomData.GetDefault<FinalRoarStore>(FINAL_ROAR_STORE_KEY)->damage += damage;
+    }
+
+    uint32 TakeFinalRoarDamage(Player* dk)
+    {
+        if (!dk)
+            return 0;
+
+        FinalRoarStore* store = dk->CustomData.Get<FinalRoarStore>(FINAL_ROAR_STORE_KEY);
+        if (!store)
+            return 0;
+
+        uint32 const damage = ClampToUInt32(store->damage);
+        store->damage = 0;
+        return damage;
     }
 }

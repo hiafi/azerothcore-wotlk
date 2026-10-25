@@ -20,6 +20,7 @@
 
 #include "Define.h"
 #include "Generated/DeathKnightData.h"
+#include "SharedDefines.h"
 #include <cstdint>
 
 class Guardian;
@@ -142,6 +143,89 @@ namespace DeathKnight
     // U16: the minion mirror's attack power share per kind (Bloodworm: MINION_BLOODWORM_AP_SHARE_PCT, else
     // MINION_AP_SHARE_PCT). Read by RefreshMinionMirror and spell_dk_minion_mirror::CalcAttackPower.
     int32 GetMinionApSharePct(MinionKind kind);
+
+    // ---- S2 ----
+    // Once-per-cast guard (moved unchanged from spell_dk_blood.cpp, S2a U13): one per aura script instance. First() is
+    // true for the first event of a cast and false for the rest of its hits (see the definition in
+    // DeathKnightMechanics.cpp for the exact rules).
+    struct OncePerCastGuard
+    {
+        bool First(ProcEventInfo& eventInfo);
+        bool OwnerFirst(Unit const* owner, ProcEventInfo& eventInfo);
+
+    private:
+        Spell const* _spell = nullptr;
+        uint32 _spellId = 0;
+        int64 _timeMs = 0;
+    };
+
+    // Per-cast school switch (U5): the only way a Frost script changes a cast's school. Call from OnCast ONLY (before
+    // TakePower and the launch phase). Implemented with a pointer-to-protected-member accessor, zero core lines.
+    void SetCastSchool(Spell* spell, SpellSchoolMask mask);
+    bool IsSchoolSwitchedCast(Spell const* spell);
+
+    // Target-conditional percents (U14/U17). One multiplier applied with SetHitDamage in OnHit.
+    enum FrostMultFlags : uint32
+    {
+        FROST_MULT_KM_OBLITERATE   = 0x01, // Killing Machine Obliterate (Obliteration capstone term)
+        FROST_MULT_SCHOOL_SWITCHED = 0x02, // Razorice term for a school-switched cast (aura 271 cannot tell)
+        FROST_MULT_OFFHAND         = 0x04, // non-physical off-hand: x0.5 x (1 + Nerves%), see GetOffhandFactor
+        FROST_MULT_BREATH_PRIMARY  = 0x08, // Breath tick on the primary target (capstone, ramp)
+        FROST_MULT_DEATHCHILL      = 0x10, // Deathchill +20% (direct hits only)
+    };
+    float GetFrostDamageMultiplier(Player const* dk, SpellInfo const* spellInfo, Unit const* target, uint32 flags);
+
+    // Killing Machine (buff 203320, 2 stacks, no charges).
+    bool HasKillingMachine(Unit const* dk);
+    void ConsumeKillingMachine(Player* dk);   // one stack, then Enduring Strength extends Pillar if it was up
+    void GrantKillingMachine(Player* dk);     // +1 stack, cap KILLING_MACHINE_MAX_STACKS, refresh
+
+    // Rime: casts Freezing Fog 59052 and resets Howling Blast's cooldown (Rage of the Frozen Champion capstone).
+    void GrantRime(Player* dk);
+
+    // Pillar of Frost / Enduring Strength: extend the live Pillar aura by ms, capped per Pillar (3 s / 6 s by rank).
+    void ExtendPillar(Player* dk, int32 ms);
+
+    // Runes (U18): ActivateRune mirrors the stock ERW tail (SetRuneCooldown 0, SetGracePeriod, client push 47804).
+    void ActivateRune(Player* dk, uint8 slot);
+    void SnapshotRuneCooldowns(Player* dk);          // on dk->CustomData, called from Obliterate OnCast
+    int8 FindJustSpentFrostRune(Player const* dk);   // Frost slot whose cooldown went 0 -> >0 since the snapshot, or -1
+
+    // Deathchill (U9): script-driven, no charged SpellMod.
+    bool DeathchillReady(Unit const* dk);            // buff 203311 up
+    void ArmDeathchill(Player* dk, Spell* spell);    // adds marker 203312; never on a Killing Machine Obliterate
+    void ConsumeDeathchill(Player* dk);              // removes marker + buff, casts the lockout with the rank duration
+
+    // Hungering Cold (U10).
+    void StartOrExtendHungeringCold(Player* dk);     // new storm, or SetDuration(HUNGERING_COLD_STORM_MS) on a live one
+    void OnHungeringColdHit(Player* dk, Unit* target); // +1 slow stack; freeze + lockout at 2 stacks
+
+    // Breath of Sindragosa (U11/U12; normal DBC cooldown, so no cooldown helper).
+    uint32 GetBreathDrain(uint32 tickNumber);        // internal RP (x10): 10 + (tick - 1) / 5 RP
+    void AddFinalRoarDamage(Player* dk, uint32 damage);
+    uint32 TakeFinalRoarDamage(Player* dk);          // returns and clears the stored sum
+
+    // ---- S2 helpers (B1) ----
+    // Off-hand math (brief D1). p = GetOffhandFactor(dk) = (100 - OFFHAND_PENALTY_PCT)% x the product of every
+    // SPELL_AURA_MOD_OFFHAND_DAMAGE_PCT the off-hand fits (Nerves of Cold Steel E1) = 0.5 x (1 + Nerves%), the engine's
+    // off-hand TOTAL_PCT minus the physical %-done auras. FROST_MULT_OFFHAND multiplies the result by p.
+    //  - Physical off-hand copy (66198 / 66188 / 66216 / 203322, not switched): the engine already pays
+    //    p x W x pct + 2 x p x F_stored = p x (W x pct + F_mh) because the copy stores F_stored = F_mh / 2. Do NOT pass
+    //    FROST_MULT_OFFHAND for it.
+    //  - Non-physical off-hand (66196 always; a school-switched physical copy: KM Obliterate 66198, Gravefrost
+    //    203322 / 66216): the engine pays D' = W x pct + F_stored (no x2, no TOTAL_PCT). The caller, in OnHit:
+    //        addBack = GetOffhandFlatAddBack(caster, spellInfo, target)  // F_stored (physical-base copy), 0 on 66196
+    //        SetHitDamage((GetHitDamage() + addBack) x GetFrostDamageMultiplier(..., flags | FROST_MULT_OFFHAND))
+    //    so D = p x (D' + F_stored) = p x (W x pct + F_mh) x (the other terms), matching the physical path.
+    //    addBack is the effect's computed fixed_bonus (CalculateSpellDamage, potency included; it rolls the potency
+    //    variance again, so it may differ from the engine's own roll by that variance).
+    float GetOffhandFactor(Player const* dk);
+    int32 GetOffhandFlatAddBack(Unit const* caster, SpellInfo const* spellInfo, Unit const* target);
+    // GetFrostDamageMultiplier: every term is multiplicative except Glacier Rot's capstone Mastery, which adds into the
+    // Glacier Rot percent. Spell-keyed terms read spellInfo->Id (Obliterate 203054 / 66198, Frost Strike 49143 / 66196,
+    // Howling Blast 49184, Glacial Eruption 203274, Breath tick 203307). The Breath terms (Mastery, Frostwyrm's Wrath
+    // ramp) apply to every tick target; FROST_MULT_BREATH_PRIMARY adds nothing in the helper, and the caller applies
+    // BREATH_SECONDARY_PCT to the secondary targets itself.
 }
 
 #endif

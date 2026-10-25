@@ -56,6 +56,7 @@ namespace DeathKnightData
     constexpr uint32 SPELL_EPIDEMIC = 49036; // epidemic_49036
     constexpr uint32 SPELL_FEROCIOUS_DEAD = 49038; // ferocious_dead_49038
     constexpr uint32 SPELL_LICHBORNE = 49039; // lichborne_49039
+    constexpr uint32 SPELL_TOUGHNESS = 49042; // toughness_49042
     constexpr uint32 SPELL_ENDLESS_WINTER = 49137; // endless_winter_49137
     constexpr uint32 SPELL_BLACK_ICE = 49140; // black_ice_49140
     constexpr uint32 SPELL_FROST_STRIKE = 49143; // frost_strike_49143
@@ -79,6 +80,7 @@ namespace DeathKnightData
     constexpr uint32 SPELL_BONE_SHIELD = 49222; // bone_shield_49222
     constexpr uint32 SPELL_DIRGE = 49223; // dirge_49223
     constexpr uint32 SPELL_MAGIC_SUPPRESSION = 49224; // magic_suppression_49224
+    constexpr uint32 SPELL_NERVES_OF_COLD_STEEL = 49226; // nerves_of_cold_steel_49226
     constexpr uint32 SPELL_BLADED_ARMOR_49390 = 49390; // bladed_armor_49390
     constexpr uint32 SPELL_BLADED_ARMOR_49391 = 49391; // bladed_armor_49391
     constexpr uint32 SPELL_BLADED_ARMOR_49392 = 49392; // bladed_armor_49392
@@ -132,6 +134,8 @@ namespace DeathKnightData
     constexpr uint32 SPELL_BLACK_ICE_49662 = 49662; // black_ice_49662
     constexpr uint32 SPELL_BLACK_ICE_49663 = 49663; // black_ice_49663
     constexpr uint32 SPELL_BLACK_ICE_49664 = 49664; // black_ice_49664
+    constexpr uint32 SPELL_TOUGHNESS_49786 = 49786; // toughness_49786
+    constexpr uint32 SPELL_TOUGHNESS_49787 = 49787; // toughness_49787
     constexpr uint32 SPELL_GLACIER_ROT_49790 = 49790; // glacier_rot_49790
     constexpr uint32 SPELL_GLACIER_ROT_49791 = 49791; // glacier_rot_49791
     constexpr uint32 SPELL_DEATHCHILL = 49796; // deathchill_49796
@@ -156,6 +160,8 @@ namespace DeathKnightData
     constexpr uint32 SPELL_TUNDRA_STALKER_50128 = 50128; // tundra_stalker_50128
     constexpr uint32 SPELL_TUNDRA_STALKER_50129 = 50129; // tundra_stalker_50129
     constexpr uint32 SPELL_TUNDRA_STALKER_50130 = 50130; // tundra_stalker_50130
+    constexpr uint32 SPELL_NERVES_OF_COLD_STEEL_50137 = 50137; // nerves_of_cold_steel_50137
+    constexpr uint32 SPELL_NERVES_OF_COLD_STEEL_50138 = 50138; // nerves_of_cold_steel_50138
     constexpr uint32 SPELL_RUNIC_POWER_MASTERY_50147 = 50147; // runic_power_mastery_50147
     constexpr uint32 SPELL_WILL_OF_THE_NECROPOLIS_50149 = 50149; // will_of_the_necropolis_50149
     constexpr uint32 SPELL_WILL_OF_THE_NECROPOLIS_50150 = 50150; // will_of_the_necropolis_50150
@@ -173,6 +179,9 @@ namespace DeathKnightData
     constexpr uint32 SPELL_IMPROVED_UNHOLY_PRESENCE = 50391; // improved_unholy_presence_50391
     constexpr uint32 SPELL_IMPROVED_UNHOLY_PRESENCE_50392 = 50392; // improved_unholy_presence_50392
     constexpr uint32 SPELL_SCENT_OF_BLOOD_50421 = 50421; // scent_of_blood_50421
+    constexpr uint32 SPELL_ICY_CLUTCH = 50434; // icy_clutch_50434
+    constexpr uint32 SPELL_ICY_CLUTCH_50435 = 50435; // icy_clutch_50435
+    constexpr uint32 SPELL_ICY_CLUTCH_50436 = 50436; // icy_clutch_50436
     constexpr uint32 SPELL_BLOODY_VENGEANCE_50447 = 50447; // bloody_vengeance_50447
     constexpr uint32 SPELL_BLOODY_VENGEANCE_50448 = 50448; // bloody_vengeance_50448
     constexpr uint32 SPELL_BLOODY_VENGEANCE_50449 = 50449; // bloody_vengeance_50449
@@ -183,6 +192,7 @@ namespace DeathKnightData
     constexpr uint32 SPELL_CRYPT_FEVER_50508 = 50508; // crypt_fever_50508
     constexpr uint32 SPELL_PESTILENCE = 50842; // pestilence_50842
     constexpr uint32 SPELL_ICY_TALONS = 50880; // icy_talons_50880
+    constexpr uint32 SPELL_ICY_TALONS_50882 = 50882; // icy_talons_50882
     constexpr uint32 SPELL_ICY_TALONS_50884 = 50884; // icy_talons_50884
     constexpr uint32 SPELL_ICY_TALONS_50885 = 50885; // icy_talons_50885
     constexpr uint32 SPELL_ICY_TALONS_50886 = 50886; // icy_talons_50886
@@ -251,6 +261,9 @@ namespace DeathKnightData
     constexpr uint32 SPELL_REAPING_56834 = 56834; // reaping_56834
     constexpr uint32 SPELL_REAPING_56835 = 56835; // reaping_56835
     constexpr uint32 SPELL_HORN_OF_WINTER = 57330; // horn_of_winter_57330
+    constexpr uint32 SPELL_ICY_TALONS_58575 = 58575; // icy_talons_58575
+    constexpr uint32 SPELL_ICY_TALONS_58576 = 58576; // icy_talons_58576
+    constexpr uint32 SPELL_FREEZING_FOG = 59052; // freezing_fog_59052
     constexpr uint32 SPELL_RIME_59057 = 59057; // rime_59057
     constexpr uint32 SPELL_PLAGUE_STRIKE_59133 = 59133; // plague_strike_59133
     constexpr uint32 SPELL_BLOOD_GORGED_61154 = 61154; // blood_gorged_61154
@@ -276,6 +289,7 @@ namespace DeathKnightData
     constexpr uint32 SPELL_FROST_STRIKE_66196 = 66196; // frost_strike_66196
     constexpr uint32 SPELL_OBLITERATE_66198 = 66198; // obliterate_66198
     constexpr uint32 SPELL_BLOOD_STRIKE_66215 = 66215; // blood_strike_66215
+    constexpr uint32 SPELL_PLAGUE_STRIKE_66216 = 66216; // plague_strike_66216
     constexpr uint32 SPELL_DESOLATION = 66799; // desolation_66799
     constexpr uint32 SPELL_DESOLATION_66814 = 66814; // desolation_66814
     constexpr uint32 SPELL_DESOLATION_66815 = 66815; // desolation_66815
@@ -339,6 +353,62 @@ namespace DeathKnightData
     constexpr uint32 SPELL_VENDETTA_STRIKE_HEAL = 203154; // vendetta_strike_heal_203154
     constexpr uint32 SPELL_BLOOD_GORGED_MASTERY = 203155; // blood_gorged_mastery_203155
     constexpr uint32 SPELL_DANCING_RUNE_WEAPON_PARRY = 203156; // dancing_rune_weapon_parry_203156
+    constexpr uint32 SPELL_RUNIC_ATTENUATION = 203270; // runic_attenuation_203270
+    constexpr uint32 SPELL_RUNIC_ATTENUATION_203271 = 203271; // runic_attenuation_203271
+    constexpr uint32 SPELL_RUNIC_ATTENUATION_ENERGIZE = 203272; // runic_attenuation_energize_203272
+    constexpr uint32 SPELL_GLACIAL_ADVANCE = 203273; // glacial_advance_203273
+    constexpr uint32 SPELL_GLACIAL_ERUPTION = 203274; // glacial_eruption_203274
+    constexpr uint32 SPELL_GRAVEFROST = 203275; // gravefrost_203275
+    constexpr uint32 SPELL_GRAVEFROST_203276 = 203276; // gravefrost_203276
+    constexpr uint32 SPELL_GRAVEFROST_203277 = 203277; // gravefrost_203277
+    constexpr uint32 SPELL_KOLTIRAS_FAVOR = 203278; // koltiras_favor_203278
+    constexpr uint32 SPELL_KOLTIRAS_FAVOR_203279 = 203279; // koltiras_favor_203279
+    constexpr uint32 SPELL_PILLAR_OF_FROST = 203280; // pillar_of_frost_203280
+    constexpr uint32 SPELL_UNLEASHED_FRENZY = 203281; // unleashed_frenzy_203281
+    constexpr uint32 SPELL_UNLEASHED_FRENZY_203282 = 203282; // unleashed_frenzy_203282
+    constexpr uint32 SPELL_UNLEASHED_FRENZY_BUFF = 203283; // unleashed_frenzy_buff_203283
+    constexpr uint32 SPELL_UNLEASHED_FRENZY_BUFF_203284 = 203284; // unleashed_frenzy_buff_203284
+    constexpr uint32 SPELL_TORAVONS_WHITEOUT = 203285; // toravons_whiteout_203285
+    constexpr uint32 SPELL_TORAVONS_WHITEOUT_203286 = 203286; // toravons_whiteout_203286
+    constexpr uint32 SPELL_TORAVONS_WHITEOUT_203287 = 203287; // toravons_whiteout_203287
+    constexpr uint32 SPELL_TORAVONS_WHITEOUT_BUFF = 203288; // toravons_whiteout_buff_203288
+    constexpr uint32 SPELL_FINAL_ROAR = 203289; // final_roar_203289
+    constexpr uint32 SPELL_FINAL_ROAR_203290 = 203290; // final_roar_203290
+    constexpr uint32 SPELL_FINAL_ROAR_BURST = 203291; // final_roar_burst_203291
+    constexpr uint32 SPELL_OBLITERATION = 203292; // obliteration_203292
+    constexpr uint32 SPELL_OBLITERATION_FROST_RUNE = 203293; // obliteration_frost_rune_203293
+    constexpr uint32 SPELL_RAGE_OF_THE_FROZEN_CHAMPION = 203294; // rage_of_the_frozen_champion_203294
+    constexpr uint32 SPELL_RAGE_OF_THE_FROZEN_CHAMPION_203295 = 203295; // rage_of_the_frozen_champion_203295
+    constexpr uint32 SPELL_RAGE_OF_THE_FROZEN_CHAMPION_ENERGIZE = 203296; // rage_of_the_frozen_champion_energize_203296
+    constexpr uint32 SPELL_ENDURING_STRENGTH = 203297; // enduring_strength_203297
+    constexpr uint32 SPELL_ENDURING_STRENGTH_203298 = 203298; // enduring_strength_203298
+    constexpr uint32 SPELL_SEAL_OF_NECROFANTASIA = 203299; // seal_of_necrofantasia_203299
+    constexpr uint32 SPELL_SEAL_OF_NECROFANTASIA_203300 = 203300; // seal_of_necrofantasia_203300
+    constexpr uint32 SPELL_SEAL_OF_NECROFANTASIA_203301 = 203301; // seal_of_necrofantasia_203301
+    constexpr uint32 SPELL_FROSTWYRMS_WRATH = 203302; // frostwyrms_wrath_203302
+    constexpr uint32 SPELL_FROSTWYRMS_WRATH_203303 = 203303; // frostwyrms_wrath_203303
+    constexpr uint32 SPELL_FROSTWYRMS_WRATH_ENERGIZE = 203304; // frostwyrms_wrath_energize_203304
+    constexpr uint32 SPELL_FROSTWYRMS_WRATH_RAMP = 203305; // frostwyrms_wrath_ramp_203305
+    constexpr uint32 SPELL_BREATH_OF_SINDRAGOSA = 203306; // breath_of_sindragosa_203306
+    constexpr uint32 SPELL_BREATH_OF_SINDRAGOSA_TICK = 203307; // breath_of_sindragosa_tick_203307
+    constexpr uint32 SPELL_DEATHCHILL_203308 = 203308; // deathchill_203308
+    constexpr uint32 SPELL_DEATHCHILL_203309 = 203309; // deathchill_203309
+    constexpr uint32 SPELL_DEATHCHILL_203310 = 203310; // deathchill_203310
+    constexpr uint32 SPELL_DEATHCHILL_BUFF = 203311; // deathchill_buff_203311
+    constexpr uint32 SPELL_DEATHCHILL_MARKER = 203312; // deathchill_marker_203312
+    constexpr uint32 SPELL_DEATHCHILL_LOCKOUT = 203313; // deathchill_lockout_203313
+    constexpr uint32 SPELL_HUNGERING_COLD_PASSIVE = 203314; // hungering_cold_passive_203314
+    constexpr uint32 SPELL_HUNGERING_COLD_STORM = 203315; // hungering_cold_storm_203315
+    constexpr uint32 SPELL_HUNGERING_COLD_TICK = 203316; // hungering_cold_tick_203316
+    constexpr uint32 SPELL_HUNGERING_COLD_SLOW = 203317; // hungering_cold_slow_203317
+    constexpr uint32 SPELL_HUNGERING_COLD_FREEZE = 203318; // hungering_cold_freeze_203318
+    constexpr uint32 SPELL_HUNGERING_COLD_LOCKOUT = 203319; // hungering_cold_lockout_203319
+    constexpr uint32 SPELL_KILLING_MACHINE_BUFF = 203320; // killing_machine_buff_203320
+    constexpr uint32 SPELL_AVALANCHE = 203321; // avalanche_203321
+    constexpr uint32 SPELL_HEART_STRIKE_OFFHAND = 203322; // heart_strike_offhand_203322
+    constexpr uint32 SPELL_IMPROVED_ICY_TOUCH_HELPER = 203323; // improved_icy_touch_helper_203323
+    constexpr uint32 SPELL_IMPROVED_ICY_TOUCH_HELPER_203324 = 203324; // improved_icy_touch_helper_203324
+    constexpr uint32 SPELL_IMPROVED_ICY_TOUCH_HELPER_203325 = 203325; // improved_icy_touch_helper_203325
 
     // const() - hidden script numbers (tier 3)
     constexpr int32 AMZ_SPELL_REDUCTION_PCT = 75; // Percent of spell damage the Anti-Magic Zone absorbs while its shared pool lasts (stock 75) [fixed].
@@ -356,13 +426,28 @@ namespace DeathKnightData
     constexpr int32 BONESTORM_MIN_RP = 10; // Minimum Runic Power (display units) Bonestorm needs to be cast [tune].
     constexpr uint32 BONESTORM_MS_PER_10_RP = 1000; // Bonestorm duration in milliseconds per 10 Runic Power spent [tune].
     constexpr uint32 BONE_SHIELD_MAX_CHARGES = 6; // Most charges Bone Shield can hold (Marrowrend adds up to this; the spell itself starts at ProcCharges 3) [tune].
+    constexpr int32 BREATH_BASE_DRAIN = 10; // Breath drain per second (Runic Power).
+    constexpr int32 BREATH_DRAIN_STEP_TICKS = 5; // Breath drain rises by 1 every this many ticks.
+    constexpr int32 BREATH_MIN_RP = 10; // Minimum Runic Power to cast Breath of Sindragosa.
+    constexpr int32 BREATH_SECONDARY_PCT = 50; // Breath damage percent on secondary targets.
     constexpr int32 CRIMSON_COMMUNION_LEECH_PCT = 15; // Percent of the damage each affected player deals that heals them while Crimson Communion lasts [fixed].
+    constexpr int32 DEATHCHILL_DAMAGE_PCT = 20; // Deathchill direct-damage bonus percent.
     constexpr int32 DEATHS_CARESS_EXTRA_TARGETS = 2; // Additional nearby enemies Death's Caress hits besides its target [fixed].
     constexpr int32 DEATH_STRIKE_MIN_HEAL_PCT = 5; // Death Strike minimum heal, percent of maximum health
     constexpr int32 DEATH_STRIKE_WINDOW_MS = 5000; // Death Strike damage record window (shared doc: the last 5 sec)
+    constexpr int32 FINAL_ROAR_SHARE_PCT = 10; // Final Roar: share of Breath damage dealt (stored, split among the cone).
+    constexpr int32 FROSTWYRM_RAMP_PCT = 10; // Frostwyrm's Wrath ramp: Breath damage percent per stack.
+    constexpr int32 FROSTWYRM_RAMP_TICKS = 5; // Frostwyrm's Wrath ramp: ticks per stack.
+    constexpr int32 GLACIAL_ADVANCE_ERUPTIONS = 5; // Glacial Advance eruption count.
+    constexpr int32 GLACIAL_ADVANCE_STEP_MS = 150; // Glacial Advance delay between eruptions.
+    constexpr int32 GLACIAL_ADVANCE_STEP_YARDS = 4; // Glacial Advance spacing between eruptions.
     constexpr int32 GOREFIENDS_GRASP_RADIUS = 15; // Yards around Gorefiend's Grasp's target inside which engaged enemies are pulled; the spell effect's radius_yards is the same number [tune].
+    constexpr int32 HUNGERING_COLD_SLOW_STACKS_TO_FREEZE = 2; // Slow stacks that trigger the Hungering Cold freeze.
+    constexpr int32 HUNGERING_COLD_STORM_MS = 10000; // Hungering Cold storm duration (a new Howling Blast resets it to this).
+    constexpr int32 KILLING_MACHINE_MAX_STACKS = 2; // Killing Machine stack cap (buff 203320).
     constexpr int32 MARROWREND_CAP_BONUS_PCT = 20; // Percent more damage Marrowrend deals while the Death Knight already has the maximum Bone Shield charges [tune].
     constexpr int32 MARROWREND_CHARGES = 3; // Bone Shield charges one Marrowrend cast grants (the shield caps at 6) [tune].
+    constexpr int32 MERCILESS_COMBAT_HP_PCT = 35; // Merciless Combat threshold: target health percent.
     constexpr int32 MINION_AP_SHARE_PCT = 100; // Minion attack power per owner attack power, percent (DK0b U8).
     constexpr int32 MINION_BLOODWORM_AP_SHARE_PCT = 0; // Bloodworm attack power per owner attack power, percent (S1a U16, [tune]); 0 = stock worm damage.
     constexpr int32 MINION_CRIT_SHARE_PCT = 100; // Share of owner crit the minion inherits, percent (DK0b U8).
@@ -370,8 +455,13 @@ namespace DeathKnightData
     constexpr int32 MINION_SP_SHARE_PCT = 100; // Minion spell power per owner attack power, percent (DK0b U8, Gargoyle).
     constexpr int32 MINION_STAMINA_SHARE_PCT = 30; // Minion stamina inherited from owner stamina, percent, computed live (DK0b U9).
     constexpr int32 MINION_VERSATILITY_SHARE_PCT = 100; // Share of owner versatility the minion inherits, percent (DK0b U8).
+    constexpr int32 OBLITERATION_RUNE_PCT = 30; // Obliteration: chance percent for a Frost Rune.
+    constexpr int32 OFFHAND_PENALTY_PCT = 50; // Off-hand damage penalty percent for non-physical off-hand strikes.
+    constexpr int32 RAGE_FROZEN_CHAMPION_RIME_PCT = 8; // Rage of the Frozen Champion capstone: Rime chance percent per Breath tick.
     constexpr int32 RAZORICE_DAMAGE_PCT = 2; // Percent of the triggering hit's own damage Razor Frost 203051 deals as Frost damage (stock 2% of weapon damage; per hit, never per weapon) [tune].
+    constexpr int32 RAZORICE_PCT_PER_STACK = 2; // Razorice: Frost vulnerability percent per stack.
     constexpr int32 RED_THIRST_MS_PER_10_RP = 500; // Milliseconds Red Thirst (Thick Blood capstone) takes off the remaining Vampiric Blood cooldown per 10 Runic Power spent, in real time (Cooldown Haste does not scale it) [fixed].
+    constexpr int32 RIME_AVALANCHE_TARGETS = 5; // Avalanche icicle target cap.
     constexpr uint16 RUNE_GLOW_APOCALYPSE = 0; // Weapon glow while Rune of the Apocalypse is active; 0 = none (DK0b U1) [tune].
     constexpr uint16 RUNE_GLOW_BOILING_BLIGHT = 0; // Weapon glow while Rune of Boiling Blight is active; 0 = none (DK0b U1) [tune].
     constexpr uint16 RUNE_GLOW_EXSANGUINATION = 0; // Weapon glow while Rune of Exsanguination is active; 0 = none (DK0b U1) [tune].

@@ -25,7 +25,6 @@
 #include "DeathKnightMechanics.h"
 #include "DynamicObject.h"
 #include "EngagementMechanics.h"
-#include "GameTime.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
 #include "Random.h"
@@ -65,45 +64,6 @@ namespace
     };
 
     constexpr char const* GRASP_DESTINATION_KEY = "deathknight_gorefiends_grasp_destination";
-
-    // Once-per-cast guard, one per aura script instance (DeathKnight::RuneProcAllowed keys its guard by the aura id
-    // for the same reason: one aura's answer must never starve another's on a self-centred cast). First() is true
-    // for the first event of a cast and false for the rest of its hits: a cast with an explicit unit target counts
-    // only the hit on that unit; a cast without one counts the first event of the same spell object in the same
-    // game-time tick; auto attacks and periodic ticks always count.
-    struct OncePerCastGuard
-    {
-        bool First(ProcEventInfo& eventInfo)
-        {
-            Spell const* spell = eventInfo.GetProcSpell();
-            if (!spell || (eventInfo.GetTypeMask() & PROC_FLAG_DONE_PERIODIC))
-                return true;
-
-            if (Unit const* castTarget = spell->m_targets.GetUnitTarget())
-                return castTarget == eventInfo.GetActionTarget();
-
-            uint32 const spellId = spell->GetSpellInfo() ? spell->GetSpellInfo()->Id : 0;
-            int64 const now = int64(GameTime::GetGameTimeMS().count());
-            if (_spell == spell && _spellId == spellId && _timeMs == now)
-                return false;
-
-            _spell = spell;
-            _spellId = spellId;
-            _timeMs = now;
-            return true;
-        }
-
-        // The aura owner's own event, once per cast
-        bool OwnerFirst(Unit const* owner, ProcEventInfo& eventInfo)
-        {
-            return owner && eventInfo.GetActor() == owner && First(eventInfo);
-        }
-
-    private:
-        Spell const* _spell = nullptr;
-        uint32 _spellId = 0;
-        int64 _timeMs = 0;
-    };
 
     Player* GetPlayerCaster(Unit* caster)
     {
@@ -710,7 +670,7 @@ class spell_dk_subversion_capstone : public AuraScript
         DoCheckProc += AuraCheckProcFn(spell_dk_subversion_capstone::CheckProc);
     }
 
-    OncePerCastGuard _guard;
+    DeathKnight::OncePerCastGuard _guard;
 };
 
 // 203153 - Vendetta Strike (hidden passive granted with every Vendetta rank). The Death Knight's own Heart Strike and
@@ -796,7 +756,7 @@ class spell_dk_bloodworms_talent : public AuraScript
         DoCheckProc += AuraCheckProcFn(spell_dk_bloodworms_talent::CheckProc);
     }
 
-    OncePerCastGuard _guard;
+    DeathKnight::OncePerCastGuard _guard;
 };
 
 // 50452 - Bloodworm (replaces the stock spell_dk_bloodworms, whose irand(2, 4) count is gone: the count is the effect
@@ -867,7 +827,7 @@ class spell_dk_bloodworm_heal_rework : public AuraScript
 // shape with: one copy per cast (Heart Strike's two hits gave two copies, each cleaving), the exclusion list of
 // DeathKnight::IsRuneWeaponExcluded, Blood Boil copied once per cast from the weapon (stock never copies a
 // self-centred area spell), and the threat redirect registered on EFFECT_1 (stock used EFFECT_2, which the core
-// zeroes). The once-per-cast guard is this aura's own (OncePerCastGuard).
+// zeroes). The once-per-cast guard is this aura's own (DeathKnight::OncePerCastGuard).
 class spell_dk_dancing_rune_weapon_rework : public AuraScript
 {
     PrepareAuraScript(spell_dk_dancing_rune_weapon_rework);
@@ -980,7 +940,7 @@ class spell_dk_dancing_rune_weapon_rework : public AuraScript
         OnEffectProc += AuraEffectProcFn(spell_dk_dancing_rune_weapon_rework::HandleProc, EFFECT_1, SPELL_AURA_DUMMY);
     }
 
-    OncePerCastGuard _guard;
+    DeathKnight::OncePerCastGuard _guard;
 };
 
 // 55078 - Blood Plague, 55095 - Frost Fever. A Dancing Rune Weapon copy (Plague Strike, Icy Touch) applies no disease.
@@ -1030,7 +990,7 @@ class spell_dk_scent_of_blood_rework : public AuraScript
             SPELL_AURA_PROC_TRIGGER_SPELL);
     }
 
-    OncePerCastGuard _guard;
+    DeathKnight::OncePerCastGuard _guard;
 };
 
 // -49018 - Sudden Doom (a second script beside the stock spell_dk_sudden_doom, which keeps HandleProc). Heart Strike
@@ -1049,7 +1009,7 @@ class spell_dk_sudden_doom_once : public AuraScript
         DoCheckProc += AuraCheckProcFn(spell_dk_sudden_doom_once::CheckProc);
     }
 
-    OncePerCastGuard _guard;
+    DeathKnight::OncePerCastGuard _guard;
 };
 
 void AddSC_deathknight_blood_spell_scripts()
