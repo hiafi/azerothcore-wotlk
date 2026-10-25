@@ -44,6 +44,20 @@ DISEASES = (0, BLOOD_PLAGUE_DISEASE | FROST_FEVER_DISEASE, 0)
 # Chains of Ice, Frozen Rune Weapon / Frost Strike, Howling Blast, Hungering Cold, Icy Clutch, Deathchill, Frost Fever.
 FROST_VULN_READ = (0x2 | 0x4 | 0x400 | 0x200000, 0x1 | 0x2 | 0x4 | 0x9000 | 0xC000 | 0x40000 | FROST_FEVER_DISEASE, 0)
 
+# --- S1 (Blood) ---
+DEATH_AND_DECAY = 0x20                   # d0 b5 (stock 43265; Crimson Scourge's free-cast SpellMod reads it)
+BLOOD_BOIL = 0x40000                     # d0 b18 (stock 48721)
+DEATH_AND_DECAY_TICK = 0x8               # d2 b3 (stock 52212; Sanguine Ground's SpellMod reads it)
+MARROWREND = 0x100                       # d2 b8 (S1 Marrowrend 203123; was MARROWREND_RESERVED)
+BLOOD_OTHER_MAGIC = 0x2000               # d2 b13 (R1: Blood Nova eruption, Bonestorm tick; Runic Focus reads it)
+DK_SELF_HEAL = 0x8000                    # d2 b15 (R3: own self-heal group, C++ readers only; was SELF_HEAL_GROUP_RESERVED)
+# Subversion crit effect: Heart Strike, Marrowrend, Obliterate, Scourge Strike (+ the stock d2 b7 Scourge Strike component).
+SUBVERSION_READ = (HEART_STRIKE, OBLITERATE | 0x8000000, 0x80 | MARROWREND)
+# Might of Mograine: Death Strike, Blood Boil, Heart Strike, Marrowrend (Blood Strike's d0 b22 dropped).
+MIGHT_OF_MOGRAINE_READ = (DEATH_STRIKE | BLOOD_BOIL | HEART_STRIKE, 0, MARROWREND)
+# Sudden Doom spell_proc family mask: Heart Strike + Blood Boil (was 0x1400000: Heart Strike + Blood Strike's b22 + b20).
+SUDDEN_DOOM_PROC = (HEART_STRIKE | BLOOD_BOIL, 0, 0)
+
 # --- Reserved for spec stages (do not take) ---
 MARROWREND_RESERVED = 0x100              # d2 b8 (S1)
 GLACIAL_ADVANCE_RESERVED = 0x200         # d2 b9 (S2)

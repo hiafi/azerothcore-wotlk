@@ -368,10 +368,11 @@ exsanguination_203041 = spell(
     spell_icon_id=3006,
     notes='dk-rework DK0b (shared doc "Rune of Exsanguination"): the proc buff. PERIODIC_HEAL every 2 s for 6 s '
           '(3 ticks), ap_potency 10 heal_periodic, SpellLevel 20, CumulativeAura 3. DefenseType 1 so the HoT can crit '
-          'and Versatility applies (DmgClass NONE periodic heals never crit); family 15 with no bit yet (S1 adds the '
-          'Voracious self-heal bit d2 b15). Icon 3006 is a placeholder (V stage).',
+          'and Versatility applies (DmgClass NONE periodic heals never crit); family 15; S1a adds the '
+          'self-heal bit d2 b15 (DK_SELF_HEAL, SpellClassMask_3). Icon 3006 is a placeholder (V stage).',
     raw_overrides={
         'CastingTimeIndex': 1, 'DefenseType': 1, 'EquippedItemClass': -1, 'CumulativeAura': 3,
+        'SpellClassMask_3': m.DK_SELF_HEAL,  # S1a: the spell's own family bit d2 b15, the Voracious capstone self-heal group
         'SpellClassSet': _SPELLFAMILY_DEATHKNIGHT, 'SpellLevel': _LEVEL_EXSANGUINATION, 'RuneCostID': 0,
         'Description_Lang_enUS': 'Heals you for {pot1} every 2 sec for $d. Stacks up to 3 times.',
         'AuraDescription_Lang_enUS': 'Healing over time.',

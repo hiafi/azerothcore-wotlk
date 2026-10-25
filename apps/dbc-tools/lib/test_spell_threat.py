@@ -40,9 +40,9 @@ STOCK = [
 CLASS_FILE = '''
 from lib.dsl.registry import remove_spell_threat, spell, spell_threat
 
-fixed_tick = spell(id=203130, name="Test Tick", cast_time_ms=0)
+fixed_tick = spell(id=203118, name="Test Tick", cast_time_ms=0)
 spell_threat(fixed_tick, pct_mod=1.9)                    # a declared Spell, like Death and Decay's 52212 row
-spell_threat(203131, flat_mod=240)                       # a new id carrying Chains of Ice's flat threat
+spell_threat(203119, flat_mod=240)                       # a new id carrying Chains of Ice's flat threat
 spell_threat(52212, pct_mod=2.0)                         # overrides the stock row
 remove_spell_threat(8056)
 '''
@@ -59,10 +59,10 @@ class HelperTest(unittest.TestCase):
 
     def test_rows_carry_every_column(self):
         self.assertEqual(
-            self.rows[203130], {"id": 203130, "entry": 203130, "flatMod": None, "pctMod": 1.9, "apPctMod": 0.0},
+            self.rows[203118], {"id": 203118, "entry": 203118, "flatMod": None, "pctMod": 1.9, "apPctMod": 0.0},
         )
-        self.assertEqual(self.rows[203131]["flatMod"], 240)
-        self.assertEqual(self.rows[203131]["pctMod"], 1.0)
+        self.assertEqual(self.rows[203119]["flatMod"], 240)
+        self.assertEqual(self.rows[203119]["pctMod"], 1.0)
         self.assertEqual(self.rows[52212]["pctMod"], 2.0)
 
     def test_a_removal_holds_only_the_key(self):
@@ -116,8 +116,8 @@ class RenderTest(unittest.TestCase):
     def test_new_rows_and_the_stock_override_render(self):
         self.assertTrue(self.block.startswith("DELETE FROM `spell_threat` WHERE (`entry`) IN ("))
         self.assertIn("INSERT INTO `spell_threat` (`entry`, `flatMod`, `pctMod`, `apPctMod`) VALUES", self.block)
-        self.assertIn("(203130, NULL, 1.9, 0.0)", self.block)
-        self.assertIn("(203131, 240, 1.0, 0.0)", self.block)
+        self.assertIn("(203118, NULL, 1.9, 0.0)", self.block)
+        self.assertIn("(203119, 240, 1.0, 0.0)", self.block)
         self.assertIn("(52212, NULL, 2.0, 0.0)", self.block)
 
     def test_the_block_passes_the_real_sql_codestyle_check(self):
@@ -134,12 +134,12 @@ class RenderTest(unittest.TestCase):
         self.assertEqual(index_for(TABLE, STOCK).rows_to_emit(spec_for(TABLE), declared), [])
 
     def test_a_null_flat_mod_and_a_declared_none_are_unchanged(self):
-        live = [{"entry": 203130, "flatMod": None, "pctMod": 1.9, "apPctMod": 0}]
-        declared = [{"id": 203130, "entry": 203130, "flatMod": None, "pctMod": 1.9, "apPctMod": 0.0}]
+        live = [{"entry": 203118, "flatMod": None, "pctMod": 1.9, "apPctMod": 0}]
+        declared = [{"id": 203118, "entry": 203118, "flatMod": None, "pctMod": 1.9, "apPctMod": 0.0}]
         self.assertEqual(index_for(TABLE, live).rows_to_emit(spec_for(TABLE), declared), [])
         # a migration that left the column out takes the schema default, NULL for flatMod, 1 for pctMod, 0 for ap
-        live = [{"entry": 203130}]
-        declared = [{"id": 203130, "entry": 203130, "flatMod": None, "pctMod": 1.0, "apPctMod": 0.0}]
+        live = [{"entry": 203118}]
+        declared = [{"id": 203118, "entry": 203118, "flatMod": None, "pctMod": 1.0, "apPctMod": 0.0}]
         self.assertEqual(index_for(TABLE, live).rows_to_emit(spec_for(TABLE), declared), [])
 
     def test_a_changed_value_is_re_emitted(self):
@@ -173,11 +173,11 @@ class ConvergenceTest(unittest.TestCase):
         first = render(TABLE, index_for(TABLE, STOCK), dsl["spell_threats"])
         with generated_file(first):
             emitted = spell_tables.load_generated_table_rows(TABLE, KEY)
-        self.assertEqual({int(r["entry"]) for r in emitted}, {203130, 203131, 52212})
+        self.assertEqual({int(r["entry"]) for r in emitted}, {203118, 203119, 52212})
         index = index_for(TABLE, STOCK + emitted, emitted=emitted, base=STOCK)
-        kept = [r for r in dsl["spell_threats"] if r["entry"] == 203131]
+        kept = [r for r in dsl["spell_threats"] if r["entry"] == 203119]
         result = index.rows_to_prune(spec_for(TABLE), kept)
-        self.assertEqual(result.keys, [(203130.0,)])
+        self.assertEqual(result.keys, [(203118.0,)])
         self.assertEqual(result.base_blocked, [(52212.0,)])
 
     def test_a_removal_emits_one_key_exact_delete_and_converges(self):

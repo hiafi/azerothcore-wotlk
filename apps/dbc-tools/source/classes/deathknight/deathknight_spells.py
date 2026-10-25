@@ -8,6 +8,7 @@ from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerTyp
 from lib.dsl.registry import const, pot_text, procs_on, scripted_by, spell, unbind_script
 
 from . import _masks as m
+from .deathknight_blood import sanguine_ground_tooltip_1252
 from .deathknight_shared import anti_magic_zone_50461
 
 
@@ -52,9 +53,12 @@ death_and_decay_43265 = spell(
         Effect(type=EffectType.PERSISTENT_AREA_AURA, base_points=25, points_per_level=1.8, implicit_target_a=28, apply_aura=226, amplitude=1000, radius_yards=10.0),
     ],
     spell_icon_id=118,
+    tooltip_vars=sanguine_ground_tooltip_1252,  # S1a U24: tooltip only (Sanguine Ground +10/20/30%); the row stays stock
     notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 136, 'AttributesEx5': 512, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s1 Shadow damage inflicted every sec.', 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Corrupts the ground targeted by the Death Knight, causing $m1 Shadow damage every sec that targets remain in the area for $d.  This ability produces a high amount of threat.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RuneCostID': 101, 'SpellClassMask_1': 32, 'SpellClassSet': 15, 'SpellLevel': 30, 'SpellVisualID_1': 9735, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Targets': 64},
+    raw_overrides={'AttributesEx': 136, 'AttributesEx5': 512, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s1 Shadow damage inflicted every sec.', 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Corrupts the ground targeted by the Death Knight, causing ${$m1*$<sang>} Shadow damage every sec that targets remain in the area for $d.  This ability produces a high amount of threat.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RuneCostID': 101, 'SpellClassMask_1': 32, 'SpellClassSet': 15, 'SpellLevel': 30, 'SpellVisualID_1': 9735, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Targets': 64},
 )
+scripted_by(43265, 'spell_dk_death_and_decay_blood')
+scripted_by(52212, 'spell_dk_death_and_decay_tick_blood')
 
 
 blood_tap_45529 = spell(
@@ -560,8 +564,9 @@ mark_of_blood_49005 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=6, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2285,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 134218752, 'AttributesEx3': 67305473, 'AttributesEx4': 1572864, 'AttributesEx5': 32, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Hits by this target restore $s2% health.', 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Place a Mark of Blood on an enemy.  Whenever the marked enemy deals damage to a target, that target is healed for $49005s2% of its maximum health.  Lasts for $49005d or up to $49005n hits.', 'EffectBasePoints_2': 3, 'EffectBasePoints_3': 299, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcCharges': 20, 'ProcTypeMask': 332116, 'RuneCostID': 583, 'SpellClassMask_1': 268435456, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50, 'SpellVisualID_1': 11513, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data; dk-rework S1a (Blood doc "Mark of Blood"): ProcCharges 20 -> 10 raw (lasts up to 10 hits, '
+          'was 20); tooltip "Lasts 20 sec or up to 10 hits."; icon 2285, d0 b28 unchanged',
+    raw_overrides={'AttributesEx': 134218752, 'AttributesEx3': 67305473, 'AttributesEx4': 1572864, 'AttributesEx5': 32, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Hits by this target restore $s2% health.', 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Place a Mark of Blood on an enemy.  Whenever the marked enemy deals damage to a target, that target is healed for $49005s2% of its maximum health.  Lasts 20 sec or up to 10 hits.', 'EffectBasePoints_2': 3, 'EffectBasePoints_3': 299, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcCharges': 10, 'ProcTypeMask': 332116, 'RuneCostID': 583, 'SpellClassMask_1': 268435456, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50, 'SpellVisualID_1': 11513, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -598,7 +603,7 @@ dancing_rune_weapon_49028 = spell(
     cooldown_ms=90000,
     category_cooldown_ms=0,
     power_type=PowerType.RUNIC_POWER,
-    mana_cost=600,
+    mana_cost=0,
     mana_cost_pct=0,
     range_yards=30.0,
     duration_ms=12000,
@@ -608,9 +613,13 @@ dancing_rune_weapon_49028 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=6, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=2657,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67109890, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'You have recently summoned a rune weapon.', 'BaseLevel': 55, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a second rune weapon that fights on its own for $d, doing the same attacks as the Death Knight but for $51906s3% reduced damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 208, 'EffectMultipleValue_1': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 86288, 'SpellClassMask_1': 1073741824, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellVisualID_1': 11711, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data; dk-rework S1a (Blood doc "Dancing Rune Weapon"): no Runic Power cost (was 60, mana_cost 600 -> 0), '
+          '90 s cooldown, 12 s duration (both already stock); tooltip adds the +20% parry (buff 203156, linked by blood_b.py). '
+          'Script rebound below to spell_dk_dancing_rune_weapon_rework.',
+    raw_overrides={'AttributesEx3': 67109890, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'You have recently summoned a rune weapon.', 'BaseLevel': 55, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Summons a second rune weapon that fights on its own for $d, mirroring your attacks for $51906s3% reduced damage. While active, your parry chance is increased by $203156s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 208, 'EffectMultipleValue_1': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 86288, 'SpellClassMask_1': 1073741824, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellVisualID_1': 11711, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+unbind_script(49028, 'spell_dk_dancing_rune_weapon')
+scripted_by(49028, 'spell_dk_dancing_rune_weapon_rework')
 
 
 lichborne_49039 = spell(
@@ -710,7 +719,8 @@ bone_shield_49222 = spell(
         'MOD_RESISTANCE_PCT misc 1 (armor) +30% (stored 29); the stock -20% damage taken and +2% damage done '
         'effects are gone. 30 s (was 300 s). ProcCharges 3, S1 raises it up to BONE_SHIELD_MAX_CHARGES. '
         'spell_proc: taken melee/ranged auto + melee/ranged class spells only (0x2A8, no magic), type DAMAGE, '
-        '2 s cooldown, no phase mask (LoadSpellProcs ignores it for taken-hit flags), default HitMask (a fully absorbed melee swing does not consume a charge). '
+        '2 s cooldown, no phase mask (LoadSpellProcs ignores it for taken-hit flags), HitMask 0x403 (NORMAL | CRITICAL | ABSORB: NOT the default; '
+        'an absorbed melee swing still consumes a charge). '
         'Charges show as the stack count natively.'
     ),
     raw_overrides={'AttributesEx': 1024, 'AttributesEx4': 524352, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Armor increased. Each damaging melee or ranged attack that hits you consumes a charge.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Surrounds you with a barrier of whirling bones, increasing your armor by $s1%. Each damaging melee or ranged attack that hits you consumes a charge, no more than once every 2 sec. Lasts $d or until all charges are consumed.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcCharges': 3, 'ProcTypeMask': 680, 'RangeIndex': 1, 'RuneCostID': 654, 'SpellClassMask_2': m.BONE_SHIELD, 'SpellClassSet': 15, 'SpellVisualID_1': 11539, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
@@ -809,7 +819,7 @@ vampiric_blood_55233 = spell(
     ],
     spell_icon_id=153,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Healing improved by $s1%\r\nMaximum health increased by $s2%', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Temporarily grants the Death Knight $s2% of maximum health and increases the amount of health generated through spells and effects by $s1% for $d.  After the effect expires, the health is lost.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 1203, 'SpellClassMask_2': 8, 'SpellClassSet': 15, 'SpellVisualID_1': 11149},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Maximum health and healing received increased.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Temporarily grants you $s2% of your maximum health and increases the healing you receive from spells and effects by $s1% for $d.  When the effect ends, the health is lost.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 1203, 'SpellClassMask_2': 8, 'SpellClassSet': 15, 'SpellVisualID_1': 11149},
 )
 
 

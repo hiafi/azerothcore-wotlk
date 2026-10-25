@@ -11,6 +11,10 @@ MINION_SP_SHARE_PCT = const('MINION_SP_SHARE_PCT', 100, 'Minion spell power per 
 MINION_CRIT_SHARE_PCT = const('MINION_CRIT_SHARE_PCT', 100, 'Share of owner crit the minion inherits, percent (DK0b U8).')
 MINION_HASTE_SHARE_PCT = const('MINION_HASTE_SHARE_PCT', 100, 'Share of owner spell haste the minion inherits, percent (DK0b U8).')
 MINION_VERSATILITY_SHARE_PCT = const('MINION_VERSATILITY_SHARE_PCT', 100, 'Share of owner versatility the minion inherits, percent (DK0b U8).')
+# U16 user ruling: 4 Bloodworms ~ 5% of a Blood DK's single-target damage. Stock worm damage = 13.5 DPS per worm at the
+# 1,000 AP reference (15-45 + 0.6% AP per hit at 2.66 s), so a 0 share (AP term dropped) = stock. Read per kind in
+# RefreshMinionMirror and spell_dk_minion_mirror::CalcAttackPower. [tune]; S1b-2 measures.
+MINION_BLOODWORM_AP_SHARE_PCT = const('MINION_BLOODWORM_AP_SHARE_PCT', 0, 'Bloodworm attack power per owner attack power, percent (S1a U16, [tune]); 0 = stock worm damage.')
 MINION_STAMINA_SHARE_PCT = const('MINION_STAMINA_SHARE_PCT', 30, 'Minion stamina inherited from owner stamina, percent, computed live (DK0b U9).')
 
 _MIRROR_RAW = {'AuraDescription_Lang_Mask': 16712188, 'Description_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712188, 'NameSubtext_Lang_Mask': 16712188, 'ProcChance': 101, 'EquippedItemClass': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'AttributesEx3': 0x40000}  # ALWAYS_HIT

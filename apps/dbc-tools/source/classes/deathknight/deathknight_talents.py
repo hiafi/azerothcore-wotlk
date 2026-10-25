@@ -6,7 +6,16 @@ Split from a single source/classes/deathknight.py via split_class_file.py (.agen
 
 from lib.dsl.registry import granted_by_talent, retire_talent, tab, unbind_script
 from .deathknight_spells import anti_magic_zone_51052, bone_shield_49222, corpse_explosion_49158, dancing_rune_weapon_49028, deathchill_49796, frost_strike_49143, ghoul_frenzy_63560, howling_blast_49184, hungering_cold_49203, hysteria_49016, lichborne_49039, mark_of_blood_49005, rune_tap_48982, summon_gargoyle_49206, unbreakable_armor_51271, vampiric_blood_55233
-from .deathknight_trigger_spells import abomination_s_might_53137, abomination_s_might_53138, acclimation_49200, acclimation_50151, acclimation_50152, annihilation_51468, annihilation_51472, annihilation_51473, black_ice_49140, black_ice_49661, black_ice_49662, black_ice_49663, black_ice_49664, blade_barrier_49182, blade_barrier_49500, blade_barrier_49501, blade_barrier_55225, blade_barrier_55226, bladed_armor_48978, bladed_armor_49390, bladed_armor_49391, bladed_armor_49392, bladed_armor_49393, blood_caked_blade_49219, blood_caked_blade_49627, blood_caked_blade_49628, blood_gorged_61154, blood_gorged_61155, blood_gorged_61156, blood_gorged_61157, blood_gorged_61158, blood_of_the_north_54637, blood_of_the_north_54638, blood_of_the_north_54639, bloodworms_49027, bloodworms_49542, bloodworms_49543, bloody_strikes_48977, bloody_strikes_49394, bloody_strikes_49395, butchery_48979, butchery_49483, chilblains_50040, chilblains_50041, chilblains_50043, chill_of_the_grave_49149, chill_of_the_grave_50115, crypt_fever_49032, crypt_fever_49631, crypt_fever_49632, death_rune_mastery_49467, death_rune_mastery_50033, death_rune_mastery_50034, desecration_55666, desecration_55667, desolation_66799, desolation_66814, desolation_66815, desolation_66816, desolation_66817, dirge_49223, dirge_49599, ebon_plaguebringer_51099, ebon_plaguebringer_51160, ebon_plaguebringer_51161, endless_winter_49137, endless_winter_49657, epidemic_49036, epidemic_49562, frigid_dreadplate_49186, frigid_dreadplate_51108, frigid_dreadplate_51109, glacier_rot_49471, glacier_rot_49790, glacier_rot_49791, guile_of_gorefiend_50187, guile_of_gorefiend_50190, guile_of_gorefiend_50191, heart_strike_55050, icy_reach_55061, icy_reach_55062, icy_talons_50880, icy_talons_50884, icy_talons_50885, icy_talons_50886, icy_talons_50887, improved_blood_presence_50365, improved_blood_presence_50371, improved_death_strike_62905, improved_death_strike_62908, improved_frost_presence_50384, improved_frost_presence_50385, improved_icy_talons_55610, improved_icy_touch_49175, improved_icy_touch_50031, improved_icy_touch_51456, improved_rune_tap_48985, improved_rune_tap_49488, improved_rune_tap_49489, improved_unholy_presence_50391, improved_unholy_presence_50392, killing_machine_51123, killing_machine_51127, killing_machine_51128, killing_machine_51129, killing_machine_51130, magic_suppression_49224, magic_suppression_49610, magic_suppression_49611, master_of_ghouls_52143, merciless_combat_49024, merciless_combat_49538, might_of_mograine_49023, might_of_mograine_49533, might_of_mograine_49534, morbidity_48963, morbidity_49564, morbidity_49565, necrosis_51459, necrosis_51462, necrosis_51463, necrosis_51464, necrosis_51465, night_of_the_dead_55620, night_of_the_dead_55623, on_a_pale_horse_49146, on_a_pale_horse_51267, outbreak_49013, outbreak_55236, outbreak_55237, rage_of_rivendare_50117, rage_of_rivendare_50118, rage_of_rivendare_50119, rage_of_rivendare_50120, rage_of_rivendare_50121, ravenous_dead_48965, ravenous_dead_49571, ravenous_dead_49572, reaping_49208, reaping_56834, reaping_56835, rime_49188, rime_56822, rime_59057, runic_power_mastery_49455, runic_power_mastery_50147, scourge_strike_55090, subversion_48997, subversion_49490, subversion_49491, sudden_doom_49018, sudden_doom_49529, sudden_doom_49530, threat_of_thassarian_65661, threat_of_thassarian_66191, threat_of_thassarian_66192, tundra_stalker_49202, tundra_stalker_50127, tundra_stalker_50128, tundra_stalker_50129, tundra_stalker_50130, unholy_blight_49194, unholy_command_49588, unholy_command_49589, vendetta_49015, vendetta_50154, vendetta_55136, vicious_strikes_51745, vicious_strikes_51746, virulence_48962, virulence_49567, virulence_49568, wandering_plague_49217, wandering_plague_49654, wandering_plague_49655, will_of_the_necropolis_49189, will_of_the_necropolis_50149, will_of_the_necropolis_50150
+from .deathknight_trigger_spells import abomination_s_might_53137, abomination_s_might_53138, acclimation_49200, acclimation_50151, acclimation_50152, annihilation_51468, annihilation_51472, annihilation_51473, black_ice_49140, black_ice_49661, black_ice_49662, black_ice_49663, black_ice_49664, blade_barrier_49182, blade_barrier_49500, blade_barrier_49501, bladed_armor_48978, bladed_armor_49390, bladed_armor_49391, blood_caked_blade_49219, blood_caked_blade_49627, blood_caked_blade_49628, blood_gorged_61154, blood_gorged_61155, blood_gorged_61156, blood_of_the_north_54637, blood_of_the_north_54638, blood_of_the_north_54639, bloodworms_49027, bloodworms_49542, bloodworms_49543, bloody_strikes_48977, bloody_strikes_49394, bloody_strikes_49395, butchery_48979, butchery_49483, chilblains_50040, chilblains_50041, chilblains_50043, chill_of_the_grave_49149, chill_of_the_grave_50115, crypt_fever_49032, crypt_fever_49631, crypt_fever_49632, death_rune_mastery_49467, death_rune_mastery_50033, death_rune_mastery_50034, desecration_55666, desecration_55667, desolation_66799, desolation_66814, desolation_66815, desolation_66816, desolation_66817, dirge_49223, dirge_49599, ebon_plaguebringer_51099, ebon_plaguebringer_51160, ebon_plaguebringer_51161, endless_winter_49137, endless_winter_49657, epidemic_49036, epidemic_49562, frigid_dreadplate_49186, frigid_dreadplate_51108, frigid_dreadplate_51109, glacier_rot_49471, glacier_rot_49790, glacier_rot_49791, guile_of_gorefiend_50187, guile_of_gorefiend_50190, guile_of_gorefiend_50191, heart_strike_55050, icy_reach_55061, icy_reach_55062, icy_talons_50880, icy_talons_50884, icy_talons_50885, icy_talons_50886, icy_talons_50887, improved_blood_presence_50365, improved_blood_presence_50371, improved_death_strike_62905, improved_death_strike_62908, improved_frost_presence_50384, improved_frost_presence_50385, improved_icy_talons_55610, improved_icy_touch_49175, improved_icy_touch_50031, improved_icy_touch_51456, improved_rune_tap_48985, improved_rune_tap_49488, improved_rune_tap_49489, improved_unholy_presence_50391, improved_unholy_presence_50392, killing_machine_51123, killing_machine_51127, killing_machine_51128, killing_machine_51129, killing_machine_51130, magic_suppression_49224, magic_suppression_49610, magic_suppression_49611, master_of_ghouls_52143, merciless_combat_49024, merciless_combat_49538, might_of_mograine_49023, might_of_mograine_49533, might_of_mograine_49534, morbidity_48963, morbidity_49564, morbidity_49565, necrosis_51459, necrosis_51462, necrosis_51463, necrosis_51464, necrosis_51465, night_of_the_dead_55620, night_of_the_dead_55623, on_a_pale_horse_49146, on_a_pale_horse_51267, outbreak_49013, outbreak_55236, outbreak_55237, rage_of_rivendare_50117, rage_of_rivendare_50118, rage_of_rivendare_50119, rage_of_rivendare_50120, rage_of_rivendare_50121, ravenous_dead_48965, ravenous_dead_49571, ravenous_dead_49572, reaping_49208, reaping_56834, reaping_56835, rime_49188, rime_56822, rime_59057, runic_power_mastery_49455, runic_power_mastery_50147, scourge_strike_55090, subversion_48997, subversion_49490, subversion_49491, sudden_doom_49018, sudden_doom_49529, sudden_doom_49530, threat_of_thassarian_65661, threat_of_thassarian_66191, threat_of_thassarian_66192, tundra_stalker_49202, tundra_stalker_50127, tundra_stalker_50128, tundra_stalker_50129, tundra_stalker_50130, unholy_blight_49194, unholy_command_49588, unholy_command_49589, vendetta_49015, vendetta_50154, vendetta_55136, vicious_strikes_51745, vicious_strikes_51746, virulence_48962, virulence_49567, virulence_49568, wandering_plague_49217, wandering_plague_49654, wandering_plague_49655, will_of_the_necropolis_49189, will_of_the_necropolis_50149, will_of_the_necropolis_50150
+
+from .deathknight_blood import (
+    crimson_resolve_203120, crimson_resolve_203121, crimson_resolve_203122, crimson_scourge_203134, crimson_scourge_203135,
+    crimson_scourge_203136, gorefiends_grasp_203127, marrowrend_203123, sanguine_ground_203129, sanguine_ground_203130,
+    sanguine_ground_203131, thick_blood_203124, thick_blood_203125, thick_blood_203126,
+)
+from .deathknight_blood_b import (
+    blood_nova_203143, bonestorm_203148, crimson_communion_203141, purgatory_203145, voracious_203138, voracious_203139,
+)
 
 
 blood_398_tab = tab(
@@ -14,6 +23,7 @@ blood_398_tab = tab(
     name='Blood',
     class_mask=32,
     spell_icon_id=2636,
+    skill_line=770,  # S1a: derives the SkillLineAbility rows of the Blood castables (Marrowrend, ...); not a TalentTab.dbc column
     raw_overrides={'Name_Lang_Mask': 16712190, 'RaceMask': -260097, 'BackgroundFile': 'DeathKnightBlood'},
 )
 
@@ -74,7 +84,7 @@ granted_by_talent(
     tab=blood_398_tab,
     tier=1,
     column=0,
-    ranks=[bladed_armor_48978, bladed_armor_49390, bladed_armor_49391, bladed_armor_49392, bladed_armor_49393],
+    ranks=[bladed_armor_48978, bladed_armor_49390, bladed_armor_49391],
     player_castable=False,
 )
 
@@ -95,8 +105,8 @@ granted_by_talent(
     id=1943,
     tab=blood_398_tab,
     tier=2,
-    column=1,
-    ranks=[48987, 49477, 49478, 49479, 49480],
+    column=2,
+    ranks=[48987, 49477, 49478],
     player_castable=False,
 )
 
@@ -108,7 +118,6 @@ granted_by_talent(
     column=1,
     ranks=[48988, 49503, 49504],
     player_castable=False,
-    depends_on={'talent_id': 1943, 'rank': 4},
 )
 
 
@@ -139,7 +148,6 @@ granted_by_talent(
     column=3,
     ranks=[mark_of_blood_49005],
     player_castable=False,
-    depends_on={'talent_id': 0, 'rank': 1},
     flags=1,
 )
 
@@ -209,7 +217,7 @@ granted_by_talent(
 granted_by_talent(
     id=1961,
     tab=blood_398_tab,
-    tier=10,
+    tier=6,
     column=1,
     ranks=[dancing_rune_weapon_49028],
     player_castable=False,
@@ -485,7 +493,7 @@ granted_by_talent(
     tab=blood_398_tab,
     tier=0,
     column=2,
-    ranks=[blade_barrier_49182, blade_barrier_49500, blade_barrier_49501, blade_barrier_55225, blade_barrier_55226],
+    ranks=[blade_barrier_49182, blade_barrier_49500, blade_barrier_49501],
     player_castable=False,
 )
 
@@ -503,11 +511,10 @@ granted_by_talent(
 granted_by_talent(
     id=2019,
     tab=blood_398_tab,
-    tier=7,
-    column=2,
+    tier=8,
+    column=1,
     ranks=[vampiric_blood_55233],
     player_castable=False,
-    depends_on={'talent_id': 0, 'rank': 4},
     flags=1,
 )
 
@@ -568,7 +575,7 @@ granted_by_talent(
     tab=blood_398_tab,
     tier=9,
     column=1,
-    ranks=[blood_gorged_61154, blood_gorged_61155, blood_gorged_61156, blood_gorged_61157, blood_gorged_61158],
+    ranks=[blood_gorged_61154, blood_gorged_61155, blood_gorged_61156],
     player_castable=False,
 )
 
@@ -803,3 +810,126 @@ unbind_script(-50365, 'spell_dk_improved_blood_presence')
 unbind_script(63611, 'spell_dk_improved_blood_presence_triggered')
 unbind_script(-50384, 'spell_dk_improved_frost_presence')
 unbind_script(-50391, 'spell_dk_improved_unholy_presence')
+
+
+# S1a Blood: 11 new talents (ids 60330-60340, tab 398). Castables take a SkillLineAbility (30740-30744, skill 770 from the tab).
+
+
+granted_by_talent(
+    id=60330,
+    tab=blood_398_tab,
+    tier=0,
+    column=3,
+    ranks=[crimson_resolve_203120, crimson_resolve_203121, crimson_resolve_203122],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=60331,
+    tab=blood_398_tab,
+    tier=2,
+    column=1,
+    ranks=[marrowrend_203123],
+    player_castable=True,
+    skill_line_ability_ids=[30740],
+    flags=1,
+)
+
+
+granted_by_talent(
+    id=60332,
+    tab=blood_398_tab,
+    tier=3,
+    column=0,
+    ranks=[thick_blood_203124, thick_blood_203125, thick_blood_203126],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=60333,
+    tab=blood_398_tab,
+    tier=4,
+    column=1,
+    ranks=[gorefiends_grasp_203127],
+    player_castable=True,
+    skill_line_ability_ids=[30741],
+    flags=1,
+)
+
+
+granted_by_talent(
+    id=60334,
+    tab=blood_398_tab,
+    tier=5,
+    column=0,
+    ranks=[sanguine_ground_203129, sanguine_ground_203130, sanguine_ground_203131],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=60335,
+    tab=blood_398_tab,
+    tier=5,
+    column=3,
+    ranks=[crimson_scourge_203134, crimson_scourge_203135, crimson_scourge_203136],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=60336,
+    tab=blood_398_tab,
+    tier=6,
+    column=2,
+    ranks=[voracious_203138, voracious_203139],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=60337,
+    tab=blood_398_tab,
+    tier=6,
+    column=3,
+    ranks=[crimson_communion_203141],
+    player_castable=True,
+    skill_line_ability_ids=[30742],
+    flags=1,
+)
+
+
+granted_by_talent(
+    id=60338,
+    tab=blood_398_tab,
+    tier=7,
+    column=2,
+    ranks=[blood_nova_203143],
+    player_castable=True,
+    skill_line_ability_ids=[30743],
+    flags=1,
+)
+
+
+granted_by_talent(
+    id=60339,
+    tab=blood_398_tab,
+    tier=9,
+    column=2,
+    ranks=[purgatory_203145],
+    player_castable=False,
+)
+
+
+granted_by_talent(
+    id=60340,
+    tab=blood_398_tab,
+    tier=10,
+    column=1,
+    ranks=[bonestorm_203148],
+    player_castable=True,
+    skill_line_ability_ids=[30744],
+    flags=1,
+)

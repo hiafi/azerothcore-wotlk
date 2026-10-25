@@ -5,9 +5,10 @@ Split from a single source/classes/deathknight.py via split_class_file.py (.agen
 """
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, School
-from lib.dsl.registry import bonus_coefficients, const, custom_attr, scripted_by, spell, unbind_bonus_coefficients, unbind_script
+from lib.dsl.registry import bonus_coefficients, const, custom_attr, procs_on, scripted_by, spell, unbind_bonus_coefficients, unbind_script
 
 from . import _masks as m
+from .deathknight_blood import bloody_strikes_tooltip_1250, improved_death_strike_tooltip_1251
 
 
 plague_strike_45462 = spell(
@@ -146,7 +147,9 @@ blood_boil_48721 = spell(
         Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=92.0, potency_kind='direct', implicit_target_a=18, implicit_target_b=16, radius_yards=10.0),
     ],
     spell_icon_id=2725,
+    tooltip_vars=bloody_strikes_tooltip_1250,
     notes=(
+        'S1a: tooltip reads Bloody Strikes\' Blood Boil multiplier (tooltip_vars 1250, $boil), {pot1*boil} replaces the stale $s1. '
         'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
         'from rank 1 (learn level 58); RealPointsPerLevel from rank1->covers-60-overridden '
         '(undershoot-vs-top-rank) (anchor rank 4 @ level 80); coefficient/cast_time_ms/'
@@ -156,7 +159,7 @@ blood_boil_48721 = spell(
         'was 14.0, the base-damage-implied 92.0 wins per the user-reviewed proposal). DieSides '
         '19 replaced by the system-standard +-5% roll.'
     ),
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Boils the blood of all enemies within $a1 yards, dealing $s1 Shadow damage.  Deals additional damage to targets infected with Blood Plague or Frost Fever.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 22, 'ImplicitTargetA_3': 22, 'ImplicitTargetB_2': 15, 'ImplicitTargetB_3': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 523, 'SpellClassMask_1': 262144, 'SpellClassSet': 15, 'SpellLevel': 24, 'SpellVisualID_1': 11117, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Boils the blood of all enemies within $a1 yards, dealing {pot1*boil} Shadow damage.  Deals additional damage to targets infected with Blood Plague or Frost Fever.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 22, 'ImplicitTargetA_3': 22, 'ImplicitTargetB_2': 15, 'ImplicitTargetB_3': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 523, 'SpellClassMask_1': 262144, 'SpellClassSet': 15, 'SpellLevel': 24, 'SpellVisualID_1': 11117, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -267,7 +270,9 @@ death_strike_49998 = spell(
         Effect(type=EffectType.DUMMY, base_points=24, implicit_target_a=6),
     ],
     spell_icon_id=2751,
+    tooltip_vars=improved_death_strike_tooltip_1251,
     notes=(
+        'S1a: tooltip reads Improved Death Strike (tooltip_vars 1251): $dsdmg on the damage (weapon percent and flat), $dsheal on the heal %. '
         'DK0a (death-knight-shared-rework.md "Death Strike"): PowerType 6 / ManaCost 400 (40 RP, RP x10) / RuneCostID 0 '
         '(no runes, generates none), SpellLevel 10, d0 b4 kept. Effects: eff0 WEAPON_PERCENT_DAMAGE weapon_potency 85, '
         'eff1 NORMALIZED_WEAPON_DMG sp_potency 10 direct T 1500 (percent first, flat second: U9), eff2 DUMMY base 24 -> '
@@ -276,7 +281,7 @@ death_strike_49998 = spell(
         'kept (0x400 would be NO_THREAT, P0 M1), AttributesEx3 1024 kept. Stock was flat eff0 bp 111 ppl 7.708 + '
         'weapon_potency 74 + DUMMY 405/37.667.'
     ),
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': f'Focuses dark power into a strike that deals $s1% weapon damage plus {{pot2.avg}} and heals you for $s3% of all damage you have taken in the last {DEATH_STRIKE_WINDOW_SEC} sec, minimum {DEATH_STRIKE_MIN_HEAL_PERCENT}% of your maximum health.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RangeIndex': 2, 'RuneCostID': 0, 'SpellClassMask_1': m.DEATH_STRIKE, 'SpellClassSet': 15, 'SpellLevel': 10, 'SpellPriority': 50, 'SpellVisualID_1': 11831, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': f'Focuses dark power into a strike that deals ${{$s1*$<dsdmg>}}% weapon damage plus {{pot2.avg*dsdmg}} and heals you for ${{$s3*$<dsheal>}}% of all damage you have taken in the last {DEATH_STRIKE_WINDOW_SEC} sec, minimum {DEATH_STRIKE_MIN_HEAL_PERCENT}% of your maximum health.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RangeIndex': 2, 'RuneCostID': 0, 'SpellClassMask_1': m.DEATH_STRIKE, 'SpellClassSet': 15, 'SpellLevel': 10, 'SpellPriority': 50, 'SpellVisualID_1': 11831, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 unbind_script(-49998, 'spell_dk_death_strike')  # stock key is NEGATIVE (0-verify item 4); no spell_ranks rows exist
 scripted_by(death_strike_49998, 'spell_dk_death_strike_rework')
@@ -308,9 +313,10 @@ death_strike_heal_45470 = spell(
     notes=(
         'pulled from npc.csv (DK0a, WP-R M1): DefenseType 0 -> 1 so Versatility / healing-done % apply to the Death Strike '
         'heal (shared doc), with an explicit all-zero spell_bonus_data row so spell power stays out. Everything else is the '
-        'stock/live row.'
+        'stock/live row. S1a: SpellClassMask_3 is d2 b2 (DEATH_STRIKE_HEAL, Improved Death Strike\'s SpellMod reads it) | d2 b15 '
+        '(DK_SELF_HEAL, the own-healing group the Voracious capstone reads).'
     ),
-    raw_overrides={'AttributesEx2': 805306368, 'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712172, 'BaseLevel': 1, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A deadly attack that deals damage plus and heals the Death Knight for a percent of damage done per disease on the target.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_3': m.DEATH_STRIKE_HEAL, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellVisualID_1': 3542},
+    raw_overrides={'AttributesEx2': 805306368, 'AttributesEx3': 65536, 'AuraDescription_Lang_Mask': 16712172, 'BaseLevel': 1, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A deadly attack that deals damage plus and heals the Death Knight for a percent of damage done per disease on the target.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_3': m.DEATH_STRIKE_HEAL | m.DK_SELF_HEAL, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellVisualID_1': 3542},
 )
 bonus_coefficients(death_strike_heal_45470, direct=0.0, dot=0.0, ap=0.0, ap_dot=0.0,
                    comment='Death Knight - Death Strike heal: no spell power; DefenseType 1 only so Versatility applies')
@@ -328,11 +334,11 @@ blood_gorged_50096 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, points_per_level=0.13333333333333333, implicit_target_a=1, apply_aura=79, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=79, misc_value=127),
     ],
     spell_icon_id=24,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 5 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CasterAuraState': 23, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you are above 75% health, you deal $s1% more damage.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 20971521, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    notes='S1a (Blood doc "Blood Gorged", brief D6): rank 1 damage passive, stored bp 2 = +3% while above 75% health (CasterAuraState 23). The single-rank bootstrap level scaling (points_per_level 0.1333 + raw MaxLevel 80, worth ~9% at level 60) is removed. Ranks 2 / 3 are 50108 / 50109 (deathknight_blood_helpers.py).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CasterAuraState': 23, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you are above 75% health, you deal $s1% more damage.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 20971521, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -422,12 +428,12 @@ blade_barrier_51789 = spell(
     range_yards=0.0,
     duration_ms=10000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-2, points_per_level=-0.1, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
+        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, misc_value=127),
         Effect(type=EffectType.DUMMY, base_points=5, implicit_target_a=1),
     ],
     spell_icon_id=85,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1->covers-60 (anchor rank 5 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s1% less damage taken.', 'BaseLevel': 20, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever your Blood Runes are on cooldown, you gain the Blade Barrier effect, which decreases damage taken by $s1% for the next $51789d.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 20, 'SpellVisualID_1': 342},
+    notes='S1a (Blood doc "Blade Barrier"): rank 1 buff, stored bp -3 = -2% damage taken, 10 s. The single-rank bootstrap level scaling (points_per_level -0.1, raw BaseLevel 20 / MaxLevel 80) is gone: it would have made the buff -7 at level 60. Rank 2 / 3 buffs are 64855 / 64856 (deathknight_blood_helpers.py).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Damage taken reduced.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever your Blood Runes are on cooldown, you gain Blade Barrier, reducing all damage taken by 2% for 10 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 20, 'SpellVisualID_1': 342},
 )
 
 
@@ -548,11 +554,11 @@ blood_gorged_61274 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, points_per_level=0.13333333333333333, implicit_target_a=1, apply_aura=280),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=280, misc_value=1),
     ],
     spell_icon_id=24,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 5 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712188, 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 20971521, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    notes='S1a (Blood doc "Blood Gorged", brief D6): rank 1 armor penetration passive, stored bp 2 = 3%, misc 1 (physical). The bootstrap level scaling (points_per_level 0.1333 + raw MaxLevel 80) is removed. The forced class mask at SpellInfoCorrections.cpp:866 is left alone (harmless). Ranks 2 / 3 are 61275 / 61276 (deathknight_blood_helpers.py).',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712188, 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 20971521, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -734,7 +740,9 @@ heart_strike_55050 = spell(
                implicit_target_a=6, chain_targets=2),
     ],
     spell_icon_id=3145,
+    tooltip_vars=bloody_strikes_tooltip_1250,
     notes=(
+        'S1a: tooltip reads Bloody Strikes\' Heart Strike multiplier (tooltip_vars 1250, $heart) on the weapon percent and the flat. '
         'DK0a (death-knight-shared-rework.md "Heart Strike"): SpellLevel 1, RuneCostID 1142 (1 Blood Rune + 10 RP) kept. '
         'eff0 WEAPON_PERCENT_DAMAGE weapon_potency 60, eff1 NORMALIZED_WEAPON_DMG sp_potency 10 direct T 1500 (percent '
         'first, flat second: U9), both chain_targets 2 with EffectChainAmplitude 0.5 (the second enemy takes half). '
@@ -742,7 +750,7 @@ heart_strike_55050 = spell(
         'ImplicitTargetA_3 25, EffectChainAmplitude_3 1.0) that fed the core\'s per-disease bonus are removed on '
         'purpose. Stock was flat eff0 bp 249 ppl 19.44 + weapon_potency 49 and the talent-learned SpellLevel 55.'
     ),
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 4096, 'AttributesEx3': 1024, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly strike the target and the nearest other enemy, dealing $s1% weapon damage plus {pot2.avg} to the target and half as much to the second enemy.', 'EffectChainAmplitude_1': 0.5, 'EffectChainAmplitude_2': 0.5, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 1142, 'SpellClassMask_1': m.HEART_STRIKE, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellVisualID_1': 11148, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 4096, 'AttributesEx3': 1024, 'AttributesEx5': 32768, 'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly strike the target and the nearest other enemy, dealing ${$s1*$<heart>}% weapon damage plus {pot2.avg*heart} to the target and half as much to the second enemy.', 'EffectChainAmplitude_1': 0.5, 'EffectChainAmplitude_2': 0.5, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 1142, 'SpellClassMask_1': m.HEART_STRIKE, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellVisualID_1': 11148, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -858,8 +866,8 @@ bloody_strikes_48977 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
     ],
     spell_icon_id=2624,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of Blood Strike by $s2% and Heart Strike by $s1%, and increases the damage of Blood Boil by $s3%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16777216, 'EffectSpellClassMaskB_1': 4194304, 'EffectSpellClassMaskC_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='S1a (Blood doc "Bloody Strikes"): E1 Heart Strike (A_1 d0 b24) +15 / 30 / 45%, E2 Marrowrend (B_3 d2 b8, was Blood Strike d0 b22: B_1 cleared) +10 / 20 / 30%, E3 Blood Boil (C_1 d0 b18) +10 / 20 / 30%. Masks live only in raw, keyed by effect index.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Heart Strike by 15%, your Marrowrend by 10%, and your Blood Boil by 10%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.HEART_STRIKE, 'EffectSpellClassMaskB_3': m.MARROWREND, 'EffectSpellClassMaskC_1': m.BLOOD_BOIL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -875,12 +883,12 @@ bladed_armor_48978 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=179, implicit_target_a=1, apply_aura=285, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=285, misc_value=1),
         Effect(type=EffectType.DUMMY),
     ],
     spell_icon_id=2653,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx5': 512, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your attack power by $s2 for every ${$m1*$m2} armor value you have.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='S1a (Blood doc "Bladed Armor"): 3 ranks. E1 aura 285 MOD_ATTACK_POWER_OF_ARMOR: attack power = armor / amount (StatSystem.cpp), stored bp 99 / 49 / 32 = amount 100 / 50 / 33, i.e. 1 / 2 / 3 attack power per 100 armor (rank 3 is really 3.03 per 100). E2 DUMMY is no longer read; the tooltip carries literal numbers.',
+    raw_overrides={'AttributesEx5': 512, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your attack power by 1 for every 100 armor you have.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -901,7 +909,7 @@ butchery_48979 = spell(
     ],
     spell_icon_id=2664,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever you kill an enemy that grants experience or honor, you generate up to 10 runic power.  In addition, you generate 1 runic power per 5 sec while in combat.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 2, 'RangeIndex': 1, 'SpellClassSet': 15},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever you kill an enemy that grants experience or honor, you generate up to 10 Runic Power. In addition, you generate 1 Runic Power every 5 sec while in combat.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 2, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -939,12 +947,11 @@ subversion_48997 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-9, implicit_target_a=1, apply_aura=107, misc_value=23),
         Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=107, misc_value=7),
     ],
     spell_icon_id=3009,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of Blood Strike, Scourge Strike, Heart Strike and Obliterate by $s2%, and reduces threat generated while in Blood or Unholy Presence by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8454144, 'EffectSpellClassMaskB_1': 20971520, 'EffectSpellClassMaskB_2': 134348800, 'EffectSpellClassMaskB_3': 128, 'EffectSpellClassMaskC_1': 4194305, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    notes='S1a (Blood doc "Subversion"): the stock threat effect (E1, aura 107 misc 23 on d0 0x810000) is dropped, so the crit effect (aura 107 misc 7, bp 2/5/8 = 3/6/9%) is now E1 and every stock EffectSpellClassMaskB_* key was re-keyed to A_* (_masks.SUBVERSION_READ: Heart Strike d0 b24, Obliterate d1 b17, Scourge Strike d1 b27 + its d2 b7 component, Marrowrend d2 b8; Blood Strike d0 b22 gone). Stale E3 residue (ImplicitTargetA_3, C_1, EffectBonusMultiplier_3) cleared.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Heart Strike, Marrowrend, Scourge Strike and Obliterate by 3%.\n\n|cFF9D9D9DCapstone: Critical strikes from your Heart Strike, Marrowrend, Scourge Strike and Obliterate generate 5 additional Runic Power.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.SUBVERSION_READ[0], 'EffectSpellClassMaskA_2': m.SUBVERSION_READ[1], 'EffectSpellClassMaskA_3': m.SUBVERSION_READ[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -985,8 +992,8 @@ vendetta_49015 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=3008,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals you for up to $s1% of your maximum health whenever you kill a target that yields experience or honor.', 'EffectBasePoints_2': -11, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 2, 'RangeIndex': 1, 'RuneCostID': 586, 'SpellClassMask_1': 65536, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellVisualID_1': 7578},
+    notes='S1a (Blood doc "Vendetta"): kill heal unchanged (E1 DUMMY bp 1 / 3 / 5 = 2 / 4 / 6%). The strike heal (5 / 10 / 15% of the damage, VENDETTA_STRIKE_HEAL_PCT_RANK1/2/3) is a const, not an effect: E2 is free. The type-2 link to the hidden proc passive 203153 is deathknight_blood_b.py\'s. Stale E2 residue (EffectBasePoints_2 -11, EffectDieSides_2, ImplicitTargetA_2/3) cleared.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals you for up to 2% of your maximum health whenever you kill a target that yields experience or honor. In addition, your Heart Strike and Marrowrend heal you for 5% of the damage they deal.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 2, 'RangeIndex': 1, 'RuneCostID': 586, 'SpellClassMask_1': 65536, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellVisualID_1': 7578},
 )
 
 
@@ -1005,8 +1012,8 @@ sudden_doom_49018 = spell(
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1939,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Blood Strikes and Heart Strikes have a $h% chance to launch a free Death Coil at your target.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 5, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 15},
+    notes='S1a (Blood doc "Sudden Doom"): Heart Strike + Blood Boil (spell_proc -49018 family mask _masks.SUDDEN_DOOM_PROC, end of this file). Blood Boil is a magic-class spell, so ProcTypeMask 16 (DONE_SPELL_MELEE_DMG_CLASS) gains 0x10000 (DONE_SPELL_MAGIC_DMG_CLASS_NEG) = 0x10010; without it Blood Boil never reaches the aura. No internal cooldown.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Heart Strikes and Blood Boils have a 5% chance to launch a free Death Coil at your target.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 5, 'ProcTypeMask': 0x10010, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -1025,8 +1032,8 @@ might_of_mograine_49023 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108, misc_value=15),
     ],
     spell_icon_id=2639,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike damage bonus of your Blood Boil, Blood Strike, Death Strike, and Heart Strike abilities by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 21233680, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    notes='S1a (Blood doc "Might of Mograine"): crit damage bonus mask _masks.MIGHT_OF_MOGRAINE_READ on E1 (Death Strike, Blood Boil, Heart Strike, Marrowrend d2 b8; Blood Strike d0 b22 dropped). Values 15 / 30 / 45% unchanged.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike damage bonus of your Blood Boil, Death Strike, Heart Strike and Marrowrend by 15%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.MIGHT_OF_MOGRAINE_READ[0], 'EffectSpellClassMaskA_2': m.MIGHT_OF_MOGRAINE_READ[1], 'EffectSpellClassMaskA_3': m.MIGHT_OF_MOGRAINE_READ[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -1062,11 +1069,11 @@ bloodworms_49027 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, die_sides=3, implicit_target_a=1, apply_aura=231, misc_value=7252, trigger_spell=50452),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, die_sides=1, implicit_target_a=1, apply_aura=231, misc_value=7252, trigger_spell=50452),
     ],
     spell_icon_id=1987,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your weapon hits have a $h% chance to cause the target to spawn 2-4 Bloodworms.  Bloodworms attack your enemies, healing you as they do damage for 20 sec or until killed.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 2048, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 3, 'ProcTypeMask': 20, 'RangeIndex': 1, 'SpellClassSet': 15},
+    notes='S1a (Blood doc "Bloodworms"): aura 231 value fixed at 2 (stored bp 1, die_sides 1; was 2-4 via die_sides 3), ProcChance 5 / 10 / 15, no internal cooldown (spell_proc -49027 Cooldown 0, end of this file), summon duration 18 s is 50452\'s. The talent script spell_dk_bloodworms_talent is bound on -49027.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your melee hits have a 5% chance to summon 2 Bloodworms for 18 sec. Bloodworms attack your target and heal you as they deal damage. Up to 8 Bloodworms can be active at once.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 2048, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 5, 'ProcTypeMask': 20, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -1228,12 +1235,12 @@ blade_barrier_49182 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-2, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=blade_barrier_51789.id),
+        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=blade_barrier_51789.id),
         Effect(type=EffectType.DUMMY, base_points=5),
     ],
     spell_icon_id=85,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever your Blood Runes are on cooldown, you gain the Blade Barrier effect, which decreases damage taken by $s1% for the next $51789d.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 14684919, 'EffectSpellClassMaskB_1': 12589815, 'EffectSpellClassMaskC_1': 4194437, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'RuneCostID': 646, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50},
+    notes='S1a (Blood doc "Blade Barrier"): 3 ranks of 2/4/6% (stored bp -3/-5/-7 on the talent rank E1 and on the buff row, 51789 / 64855 / 64856; live = stored + 1). Stale E3 residue (EffectBasePoints_3 -1, EffectDieSides_3, ImplicitTargetA_3, EffectSpellClassMaskC_*) cleared. Ranks 4/5 (55225 / 55226) stay declared but leave the talent.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever your Blood Runes are on cooldown, you gain Blade Barrier, reducing all damage taken by 2% for 10 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 14684919, 'EffectSpellClassMaskB_1': 12589815, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'RuneCostID': 646, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50},
 )
 
 
@@ -1295,7 +1302,7 @@ will_of_the_necropolis_49189 = spell(
     ],
     spell_icon_id=1762,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 2147614720, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Damage that would take you below $s1% health or taken while you are at $s1% health is reduced by $52284s1%.', 'EffectBasePoints_3': 4, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 649, 'SpellClassSet': 15},
+    raw_overrides={'AttributesEx': 2147614720, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Damage that would take you below 35% health, or that you take while below 35% health, is reduced by 5%.', 'EffectBasePoints_3': 4, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 649, 'SpellClassSet': 15},
 )
 
 
@@ -1474,12 +1481,12 @@ bladed_armor_49390 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=89, implicit_target_a=1, apply_aura=285, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=285, misc_value=1),
         Effect(type=EffectType.DUMMY, base_points=1),
     ],
     spell_icon_id=2653,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx5': 512, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your attack power by $s2 for every ${$m1*$m2} armor value you have.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='S1a (Blood doc "Bladed Armor"): 3 ranks. E1 aura 285 MOD_ATTACK_POWER_OF_ARMOR: attack power = armor / amount (StatSystem.cpp), stored bp 99 / 49 / 32 = amount 100 / 50 / 33, i.e. 1 / 2 / 3 attack power per 100 armor (rank 3 is really 3.03 per 100). E2 DUMMY is no longer read; the tooltip carries literal numbers.',
+    raw_overrides={'AttributesEx5': 512, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your attack power by 2 for every 100 armor you have.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1495,12 +1502,12 @@ bladed_armor_49391 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=1, apply_aura=285, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=1, apply_aura=285, misc_value=1),
         Effect(type=EffectType.DUMMY, base_points=2),
     ],
     spell_icon_id=2653,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx5': 512, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your attack power by $s2 for every ${$m1*$m2} armor value you have.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='S1a (Blood doc "Bladed Armor"): 3 ranks. E1 aura 285 MOD_ATTACK_POWER_OF_ARMOR: attack power = armor / amount (StatSystem.cpp), stored bp 99 / 49 / 32 = amount 100 / 50 / 33, i.e. 1 / 2 / 3 attack power per 100 armor (rank 3 is really 3.03 per 100). E2 DUMMY is no longer read; the tooltip carries literal numbers.',
+    raw_overrides={'AttributesEx5': 512, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your attack power by 3 for every 100 armor you have.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1563,8 +1570,8 @@ bloody_strikes_49394 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108),
     ],
     spell_icon_id=2624,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of Blood Strike by $s2% and Heart Strike by $s1%, and increases the damage of Blood Boil by $s3%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16777216, 'EffectSpellClassMaskB_1': 4194304, 'EffectSpellClassMaskC_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='S1a (Blood doc "Bloody Strikes"): E1 Heart Strike (A_1 d0 b24) +15 / 30 / 45%, E2 Marrowrend (B_3 d2 b8, was Blood Strike d0 b22: B_1 cleared) +10 / 20 / 30%, E3 Blood Boil (C_1 d0 b18) +10 / 20 / 30%. Masks live only in raw, keyed by effect index.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Heart Strike by 30%, your Marrowrend by 20%, and your Blood Boil by 20%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.HEART_STRIKE, 'EffectSpellClassMaskB_3': m.MARROWREND, 'EffectSpellClassMaskC_1': m.BLOOD_BOIL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1585,8 +1592,8 @@ bloody_strikes_49395 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108),
     ],
     spell_icon_id=2624,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of Blood Strike by $s2% and Heart Strike by $s1%, and increases the damage of Blood Boil by $s3%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16777216, 'EffectSpellClassMaskB_1': 4194304, 'EffectSpellClassMaskC_1': 262144, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='S1a (Blood doc "Bloody Strikes"): E1 Heart Strike (A_1 d0 b24) +15 / 30 / 45%, E2 Marrowrend (B_3 d2 b8, was Blood Strike d0 b22: B_1 cleared) +10 / 20 / 30%, E3 Blood Boil (C_1 d0 b18) +10 / 20 / 30%. Masks live only in raw, keyed by effect index.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Heart Strike by 45%, your Marrowrend by 30%, and your Blood Boil by 30%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.HEART_STRIKE, 'EffectSpellClassMaskB_3': m.MARROWREND, 'EffectSpellClassMaskC_1': m.BLOOD_BOIL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1667,7 +1674,7 @@ butchery_49483 = spell(
     ],
     spell_icon_id=2664,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever you kill an enemy that grants experience or honor, you generate up to 20 runic power.  In addition, you generate 2 runic power per 5 sec while in combat.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 2, 'RangeIndex': 1, 'SpellClassSet': 15},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever you kill an enemy that grants experience or honor, you generate up to 20 Runic Power. In addition, you generate 2 Runic Power every 5 sec while in combat.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 2, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -1727,12 +1734,11 @@ subversion_49490 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-17, implicit_target_a=1, apply_aura=107, misc_value=23),
         Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=107, misc_value=7),
     ],
     spell_icon_id=3009,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of Blood Strike, Scourge Strike, Heart Strike and Obliterate by $s2%, and reduces threat generated while in Blood or Unholy Presence by $s1%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8454144, 'EffectSpellClassMaskB_1': 20971520, 'EffectSpellClassMaskB_2': 134348800, 'EffectSpellClassMaskB_3': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    notes='S1a (Blood doc "Subversion"): the stock threat effect (E1, aura 107 misc 23 on d0 0x810000) is dropped, so the crit effect (aura 107 misc 7, bp 2/5/8 = 3/6/9%) is now E1 and every stock EffectSpellClassMaskB_* key was re-keyed to A_* (_masks.SUBVERSION_READ: Heart Strike d0 b24, Obliterate d1 b17, Scourge Strike d1 b27 + its d2 b7 component, Marrowrend d2 b8; Blood Strike d0 b22 gone). Stale E3 residue (ImplicitTargetA_3, C_1, EffectBonusMultiplier_3) cleared.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Heart Strike, Marrowrend, Scourge Strike and Obliterate by 6%.\n\n|cFF9D9D9DCapstone: Critical strikes from your Heart Strike, Marrowrend, Scourge Strike and Obliterate generate 5 additional Runic Power.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.SUBVERSION_READ[0], 'EffectSpellClassMaskA_2': m.SUBVERSION_READ[1], 'EffectSpellClassMaskA_3': m.SUBVERSION_READ[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -1748,12 +1754,12 @@ subversion_49491 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-26, implicit_target_a=1, apply_aura=107, misc_value=23),
         Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=203152),
     ],
     spell_icon_id=3009,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of Blood Strike, Scourge Strike, Heart Strike and Obliterate by $s2%, and reduces threat generated while in Blood or Unholy Presence by $s1%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8454144, 'EffectSpellClassMaskB_1': 20971520, 'EffectSpellClassMaskB_2': 134348800, 'EffectSpellClassMaskB_3': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    notes='S1a (Blood doc "Subversion"): the stock threat effect (E1, aura 107 misc 23 on d0 0x810000) is dropped, so the crit effect (aura 107 misc 7, bp 2/5/8 = 3/6/9%) is now E1 and every stock EffectSpellClassMaskB_* key was re-keyed to A_* (_masks.SUBVERSION_READ: Heart Strike d0 b24, Obliterate d1 b17, Scourge Strike d1 b27 + its d2 b7 component, Marrowrend d2 b8; Blood Strike d0 b22 gone). Stale E3 residue (ImplicitTargetA_3, C_1, EffectBonusMultiplier_3) cleared. Rank 3 (capstone) adds E2 PROC_TRIGGER_SPELL -> 203152 (+5 Runic Power), spell_proc row below (crit hit of the four strikes, phase HIT, E1 disabled), once per cast via spell_dk_subversion_capstone.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Heart Strike, Marrowrend, Scourge Strike and Obliterate by 9%.\n\nCapstone: Critical strikes from your Heart Strike, Marrowrend, Scourge Strike and Obliterate generate 5 additional Runic Power.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.SUBVERSION_READ[0], 'EffectSpellClassMaskA_2': m.SUBVERSION_READ[1], 'EffectSpellClassMaskA_3': m.SUBVERSION_READ[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -1770,12 +1776,12 @@ blade_barrier_49500 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=64855),
+        Effect(type=EffectType.APPLY_AURA, base_points=-5, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=64855),
         Effect(type=EffectType.DUMMY, base_points=5, implicit_target_a=6),
     ],
     spell_icon_id=85,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever your Blood Runes are on cooldown, you gain the Blade Barrier effect, which decreases damage taken by $64855s1% for the next $64855d.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 14684919, 'EffectSpellClassMaskB_1': 12589815, 'EffectSpellClassMaskC_1': 4194437, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 6, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'RuneCostID': 663, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50},
+    notes='S1a (Blood doc "Blade Barrier"): 3 ranks of 2/4/6% (stored bp -3/-5/-7 on the talent rank E1 and on the buff row, 51789 / 64855 / 64856; live = stored + 1). Stale E3 residue (EffectBasePoints_3 -1, EffectDieSides_3, ImplicitTargetA_3, EffectSpellClassMaskC_*) cleared. Ranks 4/5 (55225 / 55226) stay declared but leave the talent.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever your Blood Runes are on cooldown, you gain Blade Barrier, reducing all damage taken by 4% for 10 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 14684919, 'EffectSpellClassMaskB_1': 12589815, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'RuneCostID': 663, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50},
 )
 
 
@@ -1792,12 +1798,12 @@ blade_barrier_49501 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-4, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=64856),
+        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=64856),
         Effect(type=EffectType.DUMMY, base_points=5, implicit_target_a=6),
     ],
     spell_icon_id=85,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever your Blood Runes are on cooldown, you gain the Blade Barrier effect, which decreases damage taken by $64856s1% for the next $64856d.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 14684919, 'EffectSpellClassMaskB_1': 12589815, 'EffectSpellClassMaskC_1': 4194437, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 6, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'RuneCostID': 664, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50},
+    notes='S1a (Blood doc "Blade Barrier"): 3 ranks of 2/4/6% (stored bp -3/-5/-7 on the talent rank E1 and on the buff row, 51789 / 64855 / 64856; live = stored + 1). Stale E3 residue (EffectBasePoints_3 -1, EffectDieSides_3, ImplicitTargetA_3, EffectSpellClassMaskC_*) cleared. Ranks 4/5 (55225 / 55226) stay declared but leave the talent.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever your Blood Runes are on cooldown, you gain Blade Barrier, reducing all damage taken by 6% for 10 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 14684919, 'EffectSpellClassMaskB_1': 12589815, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'RuneCostID': 664, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50},
 )
 
 
@@ -1816,8 +1822,8 @@ sudden_doom_49529 = spell(
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1939,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Blood Strikes and Heart Strikes have a $h% chance to launch a free Death Coil at your target.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 15},
+    notes='S1a (Blood doc "Sudden Doom"): Heart Strike + Blood Boil (spell_proc -49018 family mask _masks.SUDDEN_DOOM_PROC, end of this file). Blood Boil is a magic-class spell, so ProcTypeMask 16 (DONE_SPELL_MELEE_DMG_CLASS) gains 0x10000 (DONE_SPELL_MAGIC_DMG_CLASS_NEG) = 0x10010; without it Blood Boil never reaches the aura. No internal cooldown.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Heart Strikes and Blood Boils have a 10% chance to launch a free Death Coil at your target.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 0x10010, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -1836,8 +1842,8 @@ sudden_doom_49530 = spell(
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1939,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Blood Strikes and Heart Strikes have a $h% chance to launch a free Death Coil at your target.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 15, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 15},
+    notes='S1a (Blood doc "Sudden Doom"): Heart Strike + Blood Boil (spell_proc -49018 family mask _masks.SUDDEN_DOOM_PROC, end of this file). Blood Boil is a magic-class spell, so ProcTypeMask 16 (DONE_SPELL_MELEE_DMG_CLASS) gains 0x10000 (DONE_SPELL_MAGIC_DMG_CLASS_NEG) = 0x10010; without it Blood Boil never reaches the aura. No internal cooldown.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Heart Strikes and Blood Boils have a 15% chance to launch a free Death Coil at your target.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 15, 'ProcTypeMask': 0x10010, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -1856,8 +1862,8 @@ might_of_mograine_49533 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108, misc_value=15),
     ],
     spell_icon_id=2639,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike damage bonus of your Blood Boil, Blood Strike, Death Strike, and Heart Strike abilities by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 21233680, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    notes='S1a (Blood doc "Might of Mograine"): crit damage bonus mask _masks.MIGHT_OF_MOGRAINE_READ on E1 (Death Strike, Blood Boil, Heart Strike, Marrowrend d2 b8; Blood Strike d0 b22 dropped). Values 15 / 30 / 45% unchanged.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike damage bonus of your Blood Boil, Death Strike, Heart Strike and Marrowrend by 30%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.MIGHT_OF_MOGRAINE_READ[0], 'EffectSpellClassMaskA_2': m.MIGHT_OF_MOGRAINE_READ[1], 'EffectSpellClassMaskA_3': m.MIGHT_OF_MOGRAINE_READ[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -1876,8 +1882,8 @@ might_of_mograine_49534 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=44, implicit_target_a=1, apply_aura=108, misc_value=15),
     ],
     spell_icon_id=2639,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike damage bonus of your Blood Boil, Blood Strike, Death Strike, and Heart Strike abilities by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 21233680, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    notes='S1a (Blood doc "Might of Mograine"): crit damage bonus mask _masks.MIGHT_OF_MOGRAINE_READ on E1 (Death Strike, Blood Boil, Heart Strike, Marrowrend d2 b8; Blood Strike d0 b22 dropped). Values 15 / 30 / 45% unchanged.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike damage bonus of your Blood Boil, Death Strike, Heart Strike and Marrowrend by 45%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.MIGHT_OF_MOGRAINE_READ[0], 'EffectSpellClassMaskA_2': m.MIGHT_OF_MOGRAINE_READ[1], 'EffectSpellClassMaskA_3': m.MIGHT_OF_MOGRAINE_READ[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -1913,11 +1919,11 @@ bloodworms_49542 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, die_sides=3, implicit_target_a=1, apply_aura=231, misc_value=7252, trigger_spell=50452),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, die_sides=1, implicit_target_a=1, apply_aura=231, misc_value=7252, trigger_spell=50452),
     ],
     spell_icon_id=1987,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your weapon hits have a $h% chance to cause the target to spawn 2-4 Bloodworms.  Bloodworms attack your enemies, healing you as they do damage for 20 sec or until killed.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 2048, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 6, 'ProcTypeMask': 20, 'RangeIndex': 1, 'SpellClassSet': 15},
+    notes='S1a (Blood doc "Bloodworms"): aura 231 value fixed at 2 (stored bp 1, die_sides 1; was 2-4 via die_sides 3), ProcChance 5 / 10 / 15, no internal cooldown (spell_proc -49027 Cooldown 0, end of this file), summon duration 18 s is 50452\'s. The talent script spell_dk_bloodworms_talent is bound on -49027.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your melee hits have a 10% chance to summon 2 Bloodworms for 18 sec. Bloodworms attack your target and heal you as they deal damage. Up to 8 Bloodworms can be active at once.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 2048, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 20, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -1933,11 +1939,11 @@ bloodworms_49543 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, die_sides=3, implicit_target_a=1, apply_aura=231, misc_value=7252, trigger_spell=50452),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, die_sides=1, implicit_target_a=1, apply_aura=231, misc_value=7252, trigger_spell=50452),
     ],
     spell_icon_id=1987,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your weapon hits have a $h% chance to cause the target to spawn 2-4 Bloodworms.  Bloodworms attack your enemies, healing you as they do damage for 20 sec or until killed.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 2048, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 9, 'ProcTypeMask': 20, 'RangeIndex': 1, 'SpellClassSet': 15},
+    notes='S1a (Blood doc "Bloodworms"): aura 231 value fixed at 2 (stored bp 1, die_sides 1; was 2-4 via die_sides 3), ProcChance 5 / 10 / 15, no internal cooldown (spell_proc -49027 Cooldown 0, end of this file), summon duration 18 s is 50452\'s. The talent script spell_dk_bloodworms_talent is bound on -49027.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your melee hits have a 15% chance to summon 2 Bloodworms for 18 sec. Bloodworms attack your target and heal you as they deal damage. Up to 8 Bloodworms can be active at once.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 2048, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 15, 'ProcTypeMask': 20, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -2819,7 +2825,7 @@ will_of_the_necropolis_50149 = spell(
     ],
     spell_icon_id=1762,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 2147614720, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Damage that would take you below $s1% health or taken while you are at $s1% health is reduced by $52285s1%.', 'EffectBasePoints_3': 4, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 801, 'SpellClassSet': 15, 'SpellLevel': 55},
+    raw_overrides={'AttributesEx': 2147614720, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Damage that would take you below 35% health, or that you take while below 35% health, is reduced by 10%.', 'EffectBasePoints_3': 4, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 801, 'SpellClassSet': 15, 'SpellLevel': 55},
 )
 
 
@@ -2840,7 +2846,7 @@ will_of_the_necropolis_50150 = spell(
     ],
     spell_icon_id=1762,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 2147614720, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Damage that would take you below $s1% health or taken while you are at $s1% health is reduced by $52286s1%.', 'EffectBasePoints_3': 4, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 802, 'SpellClassSet': 15, 'SpellLevel': 55},
+    raw_overrides={'AttributesEx': 2147614720, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Damage that would take you below 35% health, or that you take while below 35% health, is reduced by 15%.', 'EffectBasePoints_3': 4, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 802, 'SpellClassSet': 15, 'SpellLevel': 55},
 )
 
 
@@ -2899,8 +2905,8 @@ vendetta_50154 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=3008,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals you for up to $s1% of your maximum health whenever you kill a target that yields experience or honor.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 2, 'RangeIndex': 1, 'RuneCostID': 803, 'SpellClassMask_1': 65536, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellVisualID_1': 7578},
+    notes='S1a (Blood doc "Vendetta"): kill heal unchanged (E1 DUMMY bp 1 / 3 / 5 = 2 / 4 / 6%). The strike heal (5 / 10 / 15% of the damage, VENDETTA_STRIKE_HEAL_PCT_RANK1/2/3) is a const, not an effect: E2 is free. The type-2 link to the hidden proc passive 203153 is deathknight_blood_b.py\'s.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals you for up to 4% of your maximum health whenever you kill a target that yields experience or honor. In addition, your Heart Strike and Marrowrend heal you for 10% of the damage they deal.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 2, 'RangeIndex': 1, 'RuneCostID': 803, 'SpellClassMask_1': 65536, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellVisualID_1': 7578},
 )
 
 
@@ -3688,13 +3694,13 @@ abomination_s_might_53137 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=65, base_points=4, implicit_target_a=1, apply_aura=166, radius_yards=100.0),
+        Effect(type=65, base_points=4, implicit_target_a=1, apply_aura=166, radius_yards=40.0),
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=137),
-        Effect(type=65, base_points=4, implicit_target_a=1, apply_aura=167, radius_yards=100.0),
+        Effect(type=65, base_points=4, implicit_target_a=1, apply_aura=167, radius_yards=40.0),
     ],
     spell_icon_id=2729,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases attack power by $s1%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the attack power by $53137s1% of party and raid members within $53137a1 yards.  Also increases your total Strength by $53137s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassSet': 15},
+    notes='S1a (Blood doc "Abomination\'s Might"): area aura radius 100 -> 40 yd on E1 (AP) and E3 (ranged AP). Values unchanged (AP 5 / 10%, Strength 1 / 2%).',
+    raw_overrides={'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Attack power increased.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the attack power of party and raid members within 40 yards by 5%. Also increases your total Strength by 1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -3710,13 +3716,13 @@ abomination_s_might_53138 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=65, base_points=9, implicit_target_a=1, apply_aura=166, radius_yards=100.0),
+        Effect(type=65, base_points=9, implicit_target_a=1, apply_aura=166, radius_yards=40.0),
         Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=137),
-        Effect(type=65, base_points=9, implicit_target_a=1, apply_aura=167, radius_yards=100.0),
+        Effect(type=65, base_points=9, implicit_target_a=1, apply_aura=167, radius_yards=40.0),
     ],
     spell_icon_id=2729,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases attack power by $s1%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the attack power by $53138s1% of party and raid members within $53138a1 yards.  Also increases your total Strength by $53138s2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassSet': 15},
+    notes='S1a (Blood doc "Abomination\'s Might"): area aura radius 100 -> 40 yd on E1 (AP) and E3 (ranged AP). Values unchanged (AP 5 / 10%, Strength 1 / 2%).',
+    raw_overrides={'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Attack power increased.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the attack power of party and raid members within 40 yards by 10%. Also increases your total Strength by 2%.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -3838,8 +3844,8 @@ vendetta_55136 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=3008,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals you for up to $s1% of your maximum health whenever you kill a target that yields experience or honor.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 2, 'RangeIndex': 1, 'RuneCostID': 1147, 'SpellClassMask_1': 65536, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellVisualID_1': 7578},
+    notes='S1a (Blood doc "Vendetta"): kill heal unchanged (E1 DUMMY bp 1 / 3 / 5 = 2 / 4 / 6%). The strike heal (5 / 10 / 15% of the damage, VENDETTA_STRIKE_HEAL_PCT_RANK1/2/3) is a const, not an effect: E2 is free. The type-2 link to the hidden proc passive 203153 is deathknight_blood_b.py\'s.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Heals you for up to 6% of your maximum health whenever you kill a target that yields experience or honor. In addition, your Heart Strike and Marrowrend heal you for 15% of the damage they deal.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 2, 'RangeIndex': 1, 'RuneCostID': 1147, 'SpellClassMask_1': 65536, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellVisualID_1': 7578},
 )
 
 
@@ -3860,8 +3866,8 @@ blade_barrier_55225 = spell(
         Effect(type=EffectType.DUMMY, base_points=5, implicit_target_a=6),
     ],
     spell_icon_id=85,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever your Blood Runes are on cooldown, you gain the Blade Barrier effect, which decreases damage taken by $64858s1% for the next $64858d.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 14684919, 'EffectSpellClassMaskB_1': 12589815, 'EffectSpellClassMaskC_1': 4194437, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 6, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 4', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'RuneCostID': 1164, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50},
+    notes='S1a: leaves the Blade Barrier talent (3 ranks now); the row stays declared, only the stale E3 residue is cleared. Its buff trigger 64858 / 64859 is orphaned.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever your Blood Runes are on cooldown, you gain the Blade Barrier effect, which decreases damage taken by $64858s1% for the next $64858d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 14684919, 'EffectSpellClassMaskB_1': 12589815, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 4', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'RuneCostID': 1164, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50},
 )
 
 
@@ -3882,8 +3888,8 @@ blade_barrier_55226 = spell(
         Effect(type=EffectType.DUMMY, base_points=5, implicit_target_a=6),
     ],
     spell_icon_id=85,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever your Blood Runes are on cooldown, you gain the Blade Barrier effect, which decreases damage taken by $64859s1% for the next $64859d.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 14684919, 'EffectSpellClassMaskB_1': 12589815, 'EffectSpellClassMaskC_1': 4194437, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 6, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 5', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'RuneCostID': 1165, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50},
+    notes='S1a: leaves the Blade Barrier talent (3 ranks now); the row stays declared, only the stale E3 residue is cleared. Its buff trigger 64858 / 64859 is orphaned.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever your Blood Runes are on cooldown, you gain the Blade Barrier effect, which decreases damage taken by $64859s1% for the next $64859d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 14684919, 'EffectSpellClassMaskB_1': 12589815, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 5', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87376, 'RangeIndex': 1, 'RuneCostID': 1165, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50},
 )
 
 
@@ -4134,8 +4140,8 @@ blood_gorged_61154 = spell(
         Effect(type=EffectType.LEARN_SPELL, base_points=1, implicit_target_a=1, trigger_spell=blood_gorged_61274.id),
     ],
     spell_icon_id=24,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 2147614720, 'AttributesEx4': 32768, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "When you are above 75% health, you deal $s1% more damage.  In addition, your attacks ignore up to $s3% of your opponent's armor at all times.", 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 20971521, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassSet': 15},
+    notes='S1a (Blood doc "Blood Gorged", brief D6): learn pair (50096, 61274) kept; damage 3%, armor penetration 3%. Rank 3 (61156) is the capstone, linked to the Mastery poll 203155 in deathknight_blood_b.py.',
+    raw_overrides={'AttributesEx': 2147614720, 'AttributesEx4': 32768, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "While you are above 75% health, you deal 3% more damage. In addition, your attacks ignore 3% of your target's armor.\n\n|cFF9D9D9DCapstone: Your Mastery increases the damage bonus.|r", 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 20971521, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassSet': 15},
 )
 
 
@@ -4156,8 +4162,8 @@ blood_gorged_61155 = spell(
         Effect(type=EffectType.LEARN_SPELL, base_points=3, implicit_target_a=1, trigger_spell=61275),
     ],
     spell_icon_id=24,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 2147614720, 'AttributesEx4': 32768, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "When you are above 75% health, you deal $s1% more damage.  In addition, your attacks ignore up to $s3% of your opponent's armor at all times.", 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 20971521, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    notes='S1a (Blood doc "Blood Gorged", brief D6): learn pair (50108, 61275) kept; damage 6%, armor penetration 6%. Rank 3 (61156) is the capstone, linked to the Mastery poll 203155 in deathknight_blood_b.py.',
+    raw_overrides={'AttributesEx': 2147614720, 'AttributesEx4': 32768, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "While you are above 75% health, you deal 6% more damage. In addition, your attacks ignore 6% of your target's armor.\n\n|cFF9D9D9DCapstone: Your Mastery increases the damage bonus.|r", 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 20971521, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -4178,8 +4184,8 @@ blood_gorged_61156 = spell(
         Effect(type=EffectType.LEARN_SPELL, base_points=5, implicit_target_a=1, trigger_spell=61276),
     ],
     spell_icon_id=24,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 2147614720, 'AttributesEx4': 32768, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "When you are above 75% health, you deal $s1% more damage.  In addition, your attacks ignore up to $s3% of your opponent's armor at all times.", 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 20971521, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    notes='S1a (Blood doc "Blood Gorged", brief D6): learn pair (50109, 61276) kept; damage 9%, armor penetration 10%. Rank 3 (61156) is the capstone, linked to the Mastery poll 203155 in deathknight_blood_b.py.',
+    raw_overrides={'AttributesEx': 2147614720, 'AttributesEx4': 32768, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "While you are above 75% health, you deal 9% more damage. In addition, your attacks ignore 10% of your target's armor.\n\nCapstone: Your Mastery increases the damage bonus.", 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 20971521, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -4241,10 +4247,11 @@ improved_death_strike_62905 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108),
         Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=108),
     ],
     spell_icon_id=2751,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Death Strike by $s1%, increases its critical strike chance by $s2%, and increases the healing granted by $s3%.', 'EffectBasePoints_3': 24, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 16, 'EffectSpellClassMaskB_1': 16, 'EffectSpellClassMaskC_1': 16, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='S1a (Blood doc "Improved Death Strike"): E1 damage +15 / 30% and E2 crit +3 / 6% on Death Strike (d0 b4) as before. E3 is now a typed ADD_PCT_MODIFIER SPELLMOD_DAMAGE +25 / +50% on the Death Strike heal 45470 (EffectSpellClassMaskC_3 = d2 b2 DEATH_STRIKE_HEAL); the stale raw E3 residue (EffectBasePoints_3 24 / 49, DieSides_3, ImplicitTargetA_3, the d0 0x10 mask C_1) is gone. NameSubtext fixed to Rank 2 on 62908.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Death Strike by 15%, its critical strike chance by 3%, and the healing it grants by 25%.\n\n|cFF9D9D9DCapstone: Healing from your Death Strike that exceeds your maximum health becomes a Blood Shield, absorbing damage of any school. Blood Shield stacks up to 30% of your maximum health and lasts 10 sec.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16, 'EffectSpellClassMaskB_1': 16, 'EffectSpellClassMaskC_3': m.DEATH_STRIKE_HEAL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -4262,10 +4269,11 @@ improved_death_strike_62908 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108),
         Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=108),
     ],
     spell_icon_id=2751,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Death Strike by $s1%, increases its critical strike chance by $s2%, and increases the healing granted by $s3%.', 'EffectBasePoints_3': 49, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 16, 'EffectSpellClassMaskB_1': 16, 'EffectSpellClassMaskC_1': 16, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='S1a (Blood doc "Improved Death Strike"): E1 damage +15 / 30% and E2 crit +3 / 6% on Death Strike (d0 b4) as before. E3 is now a typed ADD_PCT_MODIFIER SPELLMOD_DAMAGE +25 / +50% on the Death Strike heal 45470 (EffectSpellClassMaskC_3 = d2 b2 DEATH_STRIKE_HEAL); the stale raw E3 residue (EffectBasePoints_3 24 / 49, DieSides_3, ImplicitTargetA_3, the d0 0x10 mask C_1) is gone. NameSubtext fixed to Rank 2 on 62908.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Death Strike by 30%, its critical strike chance by 6%, and the healing it grants by 50%.\n\nCapstone: Healing from your Death Strike that exceeds your maximum health becomes a Blood Shield, absorbing damage of any school. Blood Shield stacks up to 30% of your maximum health and lasts 10 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16, 'EffectSpellClassMaskB_1': 16, 'EffectSpellClassMaskC_3': m.DEATH_STRIKE_HEAL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -4480,3 +4488,224 @@ unbind_bonus_coefficients(gargoyle_strike_51963)  # stale spell_bonus_data row o
 # Frost Fever's disease damage is exempt from the binary-spell roll (T0 headline 3; SPELL_ATTR0_CU_IGNORE_BINARY). 55095 itself
 # is declared in source/spells/npc.csv (not a DSL spell here), so this row replaces nothing and duplicates nothing.
 custom_attr(55095, 0x200)
+
+# ---- S1a pulls (Scent of Blood, Veteran of the Third War, Bloody Vengeance ranks; pulled from stock, edited by A2) ----
+scent_of_blood_49004 = spell(
+    id=49004,
+    name='Scent of Blood',
+    school=1,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=6, implicit_target_a=1, apply_aura=42, trigger_spell=50421),
+    ],
+    spell_icon_id=2283,
+    notes='S1a (Blood doc "Scent of Blood", brief D4): ONE PROC_TRIGGER_SPELL -> 50421 effect per rank (the stock ranks 2 / 3 carried 2 / 3 effects = 2 / 3 stacks per proc). ProcChance 5 / 10 / 15 on the rank spell, spell_proc -49004 Chance 0 = use the spell\'s, Cooldown 10000, HitMask 0x33 kept (declared at the end of this file). ProcTypeMask 0x222A8 kept (taken hits, no periodic). The buff 50421 (3 charges, 20 s, reset on re-proc) is in deathknight_blood_helpers.py.',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have a 5% chance after dodging, parrying or taking direct damage to gain Scent of Blood, causing your next 3 melee hits to generate 10 Runic Power. This effect cannot occur more than once every 10 sec.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 5, 'ProcTypeMask': 139944, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
+)
+
+
+scent_of_blood_49508 = spell(
+    id=49508,
+    name='Scent of Blood',
+    school=1,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=6, implicit_target_a=1, apply_aura=42, trigger_spell=50421),
+    ],
+    spell_icon_id=2283,
+    notes='S1a (Blood doc "Scent of Blood", brief D4): ONE PROC_TRIGGER_SPELL -> 50421 effect per rank (the stock ranks 2 / 3 carried 2 / 3 effects = 2 / 3 stacks per proc). ProcChance 5 / 10 / 15 on the rank spell, spell_proc -49004 Chance 0 = use the spell\'s, Cooldown 10000, HitMask 0x33 kept (declared at the end of this file). ProcTypeMask 0x222A8 kept (taken hits, no periodic). The buff 50421 (3 charges, 20 s, reset on re-proc) is in deathknight_blood_helpers.py.',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have a 10% chance after dodging, parrying or taking direct damage to gain Scent of Blood, causing your next 3 melee hits to generate 10 Runic Power. This effect cannot occur more than once every 10 sec.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 139944, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
+)
+
+
+scent_of_blood_49509 = spell(
+    id=49509,
+    name='Scent of Blood',
+    school=1,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=6, implicit_target_a=1, apply_aura=42, trigger_spell=50421),
+    ],
+    spell_icon_id=2283,
+    notes='S1a (Blood doc "Scent of Blood", brief D4): ONE PROC_TRIGGER_SPELL -> 50421 effect per rank (the stock ranks 2 / 3 carried 2 / 3 effects = 2 / 3 stacks per proc). ProcChance 5 / 10 / 15 on the rank spell, spell_proc -49004 Chance 0 = use the spell\'s, Cooldown 10000, HitMask 0x33 kept (declared at the end of this file). ProcTypeMask 0x222A8 kept (taken hits, no periodic). The buff 50421 (3 charges, 20 s, reset on re-proc) is in deathknight_blood_helpers.py.',
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You have a 15% chance after dodging, parrying or taking direct damage to gain Scent of Blood, causing your next 3 melee hits to generate 10 Runic Power. This effect cannot occur more than once every 10 sec.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 15, 'ProcTypeMask': 139944, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
+)
+
+
+veteran_of_the_third_war_49006 = spell(
+    id=49006,
+    name='Veteran of the Third War',
+    school=1,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=137),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=137, misc_value=2),
+    ],
+    spell_icon_id=2615,
+    notes='S1a (Blood doc "Veteran of the Third War"): E3 (aura 240, expertise) dropped, Expertise is removed from the server. E1 Strength bp 1 / 3 / 5, E2 Stamina bp 0 / 1 / 2 unchanged.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Strength by 2% and your Stamina by 1%.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
+)
+
+
+veteran_of_the_third_war_49526 = spell(
+    id=49526,
+    name='Veteran of the Third War',
+    school=1,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=137),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=137, misc_value=2),
+    ],
+    spell_icon_id=2615,
+    notes='S1a (Blood doc "Veteran of the Third War"): E3 (aura 240, expertise) dropped, Expertise is removed from the server. E1 Strength bp 1 / 3 / 5, E2 Stamina bp 0 / 1 / 2 unchanged.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Strength by 4% and your Stamina by 2%.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
+)
+
+
+veteran_of_the_third_war_50029 = spell(
+    id=50029,
+    name='Veteran of the Third War',
+    school=1,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=137),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=137, misc_value=2),
+    ],
+    spell_icon_id=2615,
+    notes='S1a (Blood doc "Veteran of the Third War"): E3 (aura 240, expertise) dropped, Expertise is removed from the server. E1 Strength bp 1 / 3 / 5, E2 Stamina bp 0 / 1 / 2 unchanged.',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Strength by 6% and your Stamina by 3%.', 'DurationIndex': 0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellLevel': 1, 'SpellPriority': 50},
+)
+
+
+bloody_vengeance_48988 = spell(
+    id=48988,
+    name='Bloody Vengeance',
+    school=1,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=6, die_sides=0, implicit_target_a=1, apply_aura=42, trigger_spell=50447),
+    ],
+    spell_icon_id=243,
+    notes='S1a (Blood doc "Bloody Vengeance", brief D1): ProcTypeMask 0x11154 + DONE_PERIODIC 0x40000 = 0x51154 (any crit by the DK, including periodic crits). spell_proc -48988 (end of this file): crit hit, phase HIT, PROC_ATTR_TRIGGERED_CAN_PROC. The buffs 50447-50449 (all damage, misc 127, 3 stacks, 30 s) are deathknight_blood_helpers.py\'s.',
+    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all damage you deal by 1% for 30 sec after you deal a critical strike from a weapon swing, spell or ability. Stacks up to 3 times.', 'DurationIndex': 0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 0x51154, 'RangeIndex': 1},
+)
+
+
+bloody_vengeance_49503 = spell(
+    id=49503,
+    name='Bloody Vengeance',
+    school=1,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=6, die_sides=0, implicit_target_a=1, apply_aura=42, trigger_spell=50448),
+    ],
+    spell_icon_id=243,
+    notes='S1a (Blood doc "Bloody Vengeance", brief D1): ProcTypeMask 0x11154 + DONE_PERIODIC 0x40000 = 0x51154 (any crit by the DK, including periodic crits). spell_proc -48988 (end of this file): crit hit, phase HIT, PROC_ATTR_TRIGGERED_CAN_PROC. The buffs 50447-50449 (all damage, misc 127, 3 stacks, 30 s) are deathknight_blood_helpers.py\'s.',
+    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all damage you deal by 2% for 30 sec after you deal a critical strike from a weapon swing, spell or ability. Stacks up to 3 times.', 'DurationIndex': 0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 0x51154, 'RangeIndex': 1},
+)
+
+
+bloody_vengeance_49504 = spell(
+    id=49504,
+    name='Bloody Vengeance',
+    school=1,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=6, die_sides=0, implicit_target_a=1, apply_aura=42, trigger_spell=50449),
+    ],
+    spell_icon_id=243,
+    notes='S1a (Blood doc "Bloody Vengeance", brief D1): ProcTypeMask 0x11154 + DONE_PERIODIC 0x40000 = 0x51154 (any crit by the DK, including periodic crits). spell_proc -48988 (end of this file): crit hit, phase HIT, PROC_ATTR_TRIGGERED_CAN_PROC. The buffs 50447-50449 (all damage, misc 127, 3 stacks, 30 s) are deathknight_blood_helpers.py\'s.',
+    raw_overrides={'AttributesEx3': 67633152, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases all damage you deal by 3% for 30 sec after you deal a critical strike from a weapon swing, spell or ability. Stacks up to 3 times.', 'DurationIndex': 0, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 0x51154, 'RangeIndex': 1},
+)
+
+
+# ---- S1a (Blood): spell_proc rows and script bindings for the Blood talent ranks edited above --------------------------------------
+# Every DONE spell-class / DONE_PERIODIC row carries spell_phase_mask 2 (HIT). A negative key is the stock "this spell and every rank
+# of its talent chain" form (ObjectMgr / SpellMgr expand it); a row declared here replaces the stock spell_proc.sql row of that key.
+_SPELLFAMILY_DEATHKNIGHT = 15
+_PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS = 0x10
+_PROC_FLAGS_BLOODY_VENGEANCE = 0x51154       # DONE melee auto 0x4 | spell melee 0x10 | ranged auto 0x40 | spell ranged 0x100 | none-class neg 0x1000 | magic neg 0x10000 | periodic 0x40000
+_PROC_SPELL_TYPE_DAMAGE = 0x1
+_PROC_SPELL_PHASE_HIT = 0x2
+_PROC_HIT_CRITICAL = 0x2
+_PROC_HIT_SCENT_OF_BLOOD = 0x33              # NORMAL | CRITICAL | DODGE | PARRY (the stock row's value)
+_PROC_ATTR_TRIGGERED_CAN_PROC = 0x2
+
+# Subversion capstone (rank 3, effect 2 -> 203152 +5 Runic Power): a crit of Heart Strike / Marrowrend / Obliterate / Scourge Strike.
+# Effect 1 (the crit SpellMod) never procs (DisableEffectsMask 0x1); once per cast is spell_dk_subversion_capstone (RuneProcAllowed).
+procs_on(subversion_49491, proc_flags=_PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS, family_name=_SPELLFAMILY_DEATHKNIGHT,
+         family_mask=m.SUBVERSION_READ, spell_type_mask=_PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=_PROC_SPELL_PHASE_HIT,
+         hit_mask=_PROC_HIT_CRITICAL, chance=100.0, disable_effects_mask=0x1)
+scripted_by(subversion_49491, 'spell_dk_subversion_capstone')
+
+# Scent of Blood: the stock row (HitMask 0x33, Chance 0 = the rank spell's 5 / 10 / 15) plus the 10 s internal cooldown. The stock
+# bindings on -49004 (spell_dk_scent_of_blood_trigger, spell_gen_proc_from_direct_damage) stay.
+procs_on(-49004, proc_flags=0, hit_mask=_PROC_HIT_SCENT_OF_BLOOD, cooldown_ms=10000)
+
+# Bloody Vengeance: any crit by the DK, periodic crits included; a triggered cast may proc it (D&D ticks, brief D1).
+procs_on(-48988, proc_flags=_PROC_FLAGS_BLOODY_VENGEANCE, spell_type_mask=_PROC_SPELL_TYPE_DAMAGE,
+         spell_phase_mask=_PROC_SPELL_PHASE_HIT, hit_mask=_PROC_HIT_CRITICAL, attributes_mask=_PROC_ATTR_TRIGGERED_CAN_PROC)
+
+# Bloodworms: the stock row without the 20 s internal cooldown (Blood doc Q10). The talent script is new.
+procs_on(-49027, proc_flags=0, spell_type_mask=_PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=_PROC_SPELL_PHASE_HIT, cooldown_ms=0)
+scripted_by(-49027, 'spell_dk_bloodworms_talent')
+
+# Sudden Doom: Heart Strike + Blood Boil (was d0 0x1400000, Heart Strike + Blood Strike). The stock script spell_dk_sudden_doom keeps
+# casting the Death Coil; the second script gates the proc to once per cast.
+procs_on(-49018, proc_flags=0, family_name=_SPELLFAMILY_DEATHKNIGHT, family_mask=m.SUDDEN_DOOM_PROC,
+         spell_type_mask=_PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=_PROC_SPELL_PHASE_HIT)
+scripted_by(-49018, 'spell_dk_sudden_doom_once')

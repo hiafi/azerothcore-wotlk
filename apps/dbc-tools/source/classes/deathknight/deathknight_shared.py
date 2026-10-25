@@ -519,7 +519,9 @@ obliterate_disease_guard_203055 = spell(
 # the diseases crit for 150% + 100% = 200% (DefenseType 1 on both, below). Passive, known at creation (SLA 20646 acquire
 # 2): the type-2 links add the three hidden DK0b passives to every DK (Blood Presence's child precedent).
 _RUNIC_FOCUS_STOCK_MASK = (0x80040202, 0x10022, 0x9)
-_RUNIC_FOCUS_MASK = tuple(a | b for a, b in zip(_RUNIC_FOCUS_STOCK_MASK, m.RUNIC_FOCUS_READ_ADD))
+# S1a (U12): the third dword also reads Blood Nova eruption / Bonestorm tick (d2 b13); built here, _masks.py is untouched.
+_RUNIC_FOCUS_READ = (m.RUNIC_FOCUS_READ_ADD[0], m.RUNIC_FOCUS_READ_ADD[1], m.RUNIC_FOCUS_READ_ADD[2] | m.BLOOD_OTHER_MAGIC)
+_RUNIC_FOCUS_MASK = tuple(a | b for a, b in zip(_RUNIC_FOCUS_STOCK_MASK, _RUNIC_FOCUS_READ))
 
 runic_focus_61455 = spell(
     id=61455,
@@ -541,7 +543,7 @@ runic_focus_61455 = spell(
     notes=(
         'pulled from existing data; dk-rework DK0b (shared doc "Runic Focus", U5 / U6): reader mask = stock (d0 0x80040202, '
         'd1 0x10022, d2 0x9) | _masks.RUNIC_FOCUS_READ_ADD (d1 b25 Blood Plague, d1 b26 Frost Fever, d2 b11 Boiling Blight '
-        'burst, d2 b12 Death\'s Caress); the new tooltip. The type-2 spell_linked_spell rows below add Rune Haste 203052, '
+        'burst, d2 b12 Death\'s Caress, S1a: d2 b13 BLOOD_OTHER_MAGIC = Blood Nova eruption / Bonestorm tick); the new tooltip. The type-2 spell_linked_spell rows below add Rune Haste 203052, '
         'Rune Haste Sync 203053 and the Obliterate guard 203055 to every Death Knight (SLA 20646, acquire 2, is '
         'untouched: every DK has the skill line 771 at creation).'
     ),
@@ -611,6 +613,7 @@ blood_plague_55078 = spell(
         'RuneCostID': 1143,
     },
 )
+scripted_by(blood_plague_55078, 'spell_dk_disease_rune_weapon_guard')  # S1a: DRW copies never reapply/refresh diseases
 
 frost_fever_55095 = spell(
     id=55095,
@@ -657,6 +660,7 @@ frost_fever_55095 = spell(
         'RuneCostID': 2295,
     },
 )
+scripted_by(frost_fever_55095, 'spell_dk_disease_rune_weapon_guard')  # S1a: DRW copies never reapply/refresh diseases
 
 # ---- Raise Dead's reagent row (U7): Corpse Dust is gone ----
 # 48289 is the hidden self spell Raise Dead (46584) casts with the Corpse Dust reagent (item 37201). The stock row's
