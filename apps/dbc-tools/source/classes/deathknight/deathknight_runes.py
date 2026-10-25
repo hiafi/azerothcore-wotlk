@@ -315,8 +315,8 @@ frost_vulnerability_51714 = spell(
           'aura text from the shared doc.',
     raw_overrides={'AttributesEx': 136, 'AttributesEx3': 128, 'CastingTimeIndex': 1, 'ProcChance': 101,
                    'SpellLevel': 1, 'CumulativeAura': 5, 'EquippedItemClass': -1,
-                   'EffectSpellClassMaskA_1': m.FROST_VULN_READ[0], 'EffectSpellClassMaskA_2': m.FROST_VULN_READ[1],
-                   'EffectSpellClassMaskA_3': m.FROST_VULN_READ[2],
+                   'EffectSpellClassMaskA_1': m.FROST_VULN_READ_S2[0], 'EffectSpellClassMaskA_2': m.FROST_VULN_READ_S2[1],
+                   'EffectSpellClassMaskA_3': m.FROST_VULN_READ_S2[2],
                    'SpellVisualID_1': 8721, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188,
                    'Description_Lang_enUS': 'The target takes $s1% more Frost damage from the Death Knight. Stacks up '
                                             'to 5 times.',

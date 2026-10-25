@@ -19,7 +19,8 @@ texts are number-free; family bits come from _masks.py. The two script numbers l
 
 from lib.dsl import AuraType, Effect, EffectType, PowerType, RANGE_SELF, School
 from lib.dsl.registry import (
-    const, custom_attr, linked_spell, scripted_by, skill_line_ability, spell, spell_rune_cost, unbind_script,
+    const, custom_attr, linked_spell, product, scripted_by, skill_line_ability, spell, spell_rune_cost, talent_mult,
+    tooltip_vars, unbind_script,
 )
 
 from . import _masks as m
@@ -432,13 +433,23 @@ rune_haste_sync_203053 = spell(
 scripted_by(rune_haste_sync_203053, 'spell_dk_rune_haste_sync')
 
 # ---- Obliterate (shared doc "Obliterate", U2, U3, U9, known-hard 5) ----
-# 1 Frost Rune + 15 RP (spell_rune_cost 2600; stock 587 is 1 Frost + 1 Unholy), 160% weapon damage + a 10 potency flat.
+# 1 Frost Rune + 15 RP (spell_rune_cost 2600; stock 587 is 1 Frost + 1 Unholy), 72% weapon damage + a 10 potency flat
+# (S2 TUNE 2026-10-25, U33: was 160%; the off-hand copy 66198 mirrors it).
 # Stock 49020's frame (Mograine 30838 keeps casting that one; its DSL row, SLA 17555 and rank chain stay). The percent
 # effect is FIRST and the flat NORMALIZED_WEAPON_DMG second: EffectWeaponDmg multiplies a flat effect that sits before
 # the percent effect by the percent (Frost Strike 49143 does the same). EFFECT_2 stays empty: SpellEffects.cpp reads
 # Effects[EFFECT_2].CalcValue() as the per-disease bonus, which then reads 0. The core still *consumes* the diseases on
 # d1 b17 unless the first icon-2710 DUMMY found rolls, so 203055 (live 100) rides along on every DK (U3, U5).
 spell_rune_cost(2600, frost=1, runic_power=15, comment='Obliterate: 1 Frost Rune, +15 Runic Power')
+
+# S2a (U24, SDV 1253): the tooltip shows the unconditional Obliterate percents, Koltira's Favor (203278/9 eff0) and Blood
+# of the North (54637-9 eff0). `product` is the multiplicative approximation of the additive SpellMod sum, as in Blood.
+obliterate_tooltip_1253 = tooltip_vars(
+    1253, "Obliterate: Koltira's Favor and Blood of the North damage on the Obliterate tooltip",
+    kolt=talent_mult([203278, 203279], effect=1),
+    botn=talent_mult([54637, 54638, 54639], effect=1),
+    mult=product('kolt', 'botn'),
+)
 
 obliterate_203054 = spell(
     id=203054,
@@ -453,16 +464,18 @@ obliterate_203054 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=160, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=72, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=10, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=2639,
+    tooltip_vars=obliterate_tooltip_1253,
     notes=(
         'DK0b (shared doc "Obliterate", U2 / U3 / U9): the baseline Obliterate on a new id, level 20, trained (SLA 30734, '
         'Frost line 771, class 32, acquire 0). Frame of stock 49020 (Attributes 262160, AttributesEx 134218240, '
         'AttributesEx3 1024 main hand, DefenseType 2, FacingCasterFlags 1, PreventionType 2, RangeIndex 2, main-hand '
-        'weapon, icon 2639, visual 11613, GCD 133 / 1500). eff0 WEAPON_PERCENT_DAMAGE weapon_potency 160 FIRST, eff1 '
+        'weapon, icon 2639, visual 11613, GCD 133 / 1500). eff0 WEAPON_PERCENT_DAMAGE weapon_potency 72 (S2 TUNE, U33; '
+        'was 160) FIRST, eff1 '
         'NORMALIZED_WEAPON_DMG sp_potency 10 direct T 1500; no EFFECT_2 (the core\'s per-disease value reads 0). '
         'RuneCostID 2600 = 1 Frost + 15 RP. d1 b17 (m.OBLITERATE) is the only family bit. Disease consumption is '
         'suppressed by the always-100 guard 203055.'
@@ -470,7 +483,7 @@ obliterate_203054 = spell(
     raw_overrides={
         'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1,
         'DefenseType': 2, 'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': 'A brutal instant attack that deals $s1% weapon damage plus {pot2.avg}.',
+        'Description_Lang_enUS': 'A brutal instant attack that deals ${$s1*$<mult>}% weapon damage plus {pot2.avg*mult}.',
         'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0,
         'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190,
         'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2,
@@ -479,6 +492,7 @@ obliterate_203054 = spell(
     },
 )
 skill_line_ability(id=30734, skill_line=771, spell_id=obliterate_203054.id, class_mask=32, acquire_method=0)
+scripted_by(obliterate_203054, 'spell_dk_obliterate_rework')
 
 # The disease-consumption guard (U3): Spell::EffectWeaponDmg's Obliterate branch calls
 # GetDummyAuraEffect(SPELLFAMILY_DEATHKNIGHT, 2710, EFFECT_0) and skips the consumption when roll_chance_i(amount) passes.
@@ -521,7 +535,8 @@ obliterate_disease_guard_203055 = spell(
 _RUNIC_FOCUS_STOCK_MASK = (0x80040202, 0x10022, 0x9)
 # S1a (U12): the third dword also reads Blood Nova eruption / Bonestorm tick (d2 b13); built here, _masks.py is untouched.
 _RUNIC_FOCUS_READ = (m.RUNIC_FOCUS_READ_ADD[0], m.RUNIC_FOCUS_READ_ADD[1], m.RUNIC_FOCUS_READ_ADD[2] | m.BLOOD_OTHER_MAGIC)
-_RUNIC_FOCUS_MASK = tuple(a | b for a, b in zip(_RUNIC_FOCUS_STOCK_MASK, _RUNIC_FOCUS_READ))
+# S2a (A4): also d2 b9 Glacial Advance, b10 Breath, b16 other Frost magic (m.RUNIC_FOCUS_READ_S2 = 0x10600).
+_RUNIC_FOCUS_MASK = tuple(a | b | c for a, b, c in zip(_RUNIC_FOCUS_STOCK_MASK, _RUNIC_FOCUS_READ, m.RUNIC_FOCUS_READ_S2))
 
 runic_focus_61455 = spell(
     id=61455,
@@ -660,7 +675,8 @@ frost_fever_55095 = spell(
         'RuneCostID': 2295,
     },
 )
-scripted_by(frost_fever_55095, 'spell_dk_disease_rune_weapon_guard')  # S1a: DRW copies never reapply/refresh diseases
+# S1a: DRW copies never reapply/refresh diseases; S2a: Chilblains' slow on Frost Fever application
+scripted_by(frost_fever_55095, 'spell_dk_disease_rune_weapon_guard', 'spell_dk_frost_fever_chilblains')
 
 # ---- Raise Dead's reagent row (U7): Corpse Dust is gone ----
 # 48289 is the hidden self spell Raise Dead (46584) casts with the Corpse Dust reagent (item 37201). The stock row's

@@ -82,3 +82,31 @@ FORBIDDEN_D2_B31 = 0x80000000
 FORBIDDEN_D0 = FORBIDDEN_D0_B6 | FORBIDDEN_D0_B17 | FORBIDDEN_D0_B22
 FORBIDDEN_D1 = FORBIDDEN_D1_B10 | FORBIDDEN_D1_B11 | FORBIDDEN_D1_B23 | FORBIDDEN_D1_B24
 FORBIDDEN_D2 = FORBIDDEN_D2_B1 | FORBIDDEN_D2_B31
+
+# --- S2 (Frost; S2-HANDOFF section 5) ---
+GLACIAL_ADVANCE = 0x200                  # d2 b9 (S2 Glacial Advance cast + Glacial Eruption; was GLACIAL_ADVANCE_RESERVED)
+BREATH = 0x400                           # d2 b10 (S2 Breath of Sindragosa tick; was BREATH_RESERVED)
+FROST_OTHER_MAGIC = 0x10000              # d2 b16 (S2 Avalanche + Hungering Cold storm tick; Runic Focus + Razorice read it)
+HOWLING_BLAST = 0x2                      # d1 b1 (stock 49184; Guile HB, Deathchill, Merciless, Rime readers)
+ICY_TOUCH = 0x2                          # d0 b1 (stock 45477)
+CHAINS_OF_ICE = 0x4                      # d0 b2 (stock 45524)
+PLAGUE_STRIKE = 0x1                      # d0 b0 (stock 45462; Threat of Thassarian, Gravefrost)
+MIND_FREEZE = 0x400                      # d0 b10 (stock 47528; Endless Winter r2 cost mod)
+ICEBOUND_FORTITUDE = 0x100000            # d0 b20 (stock; Guile eff1)
+HORN_OF_WINTER = 0x40000000              # d1 b30 (stock 57330; Frostwyrm's Wrath CAST proc)
+
+# Razorice Frost Vulnerability 51714 reader (S2): FROST_VULN_READ + the S2 magic bits (d2 b9 Glacial Advance, b10 Breath, b16 other magic).
+FROST_VULN_READ_S2 = (FROST_VULN_READ[0], FROST_VULN_READ[1], GLACIAL_ADVANCE | BREATH | FROST_OTHER_MAGIC)
+# Runic Focus 61455 d2 additions in S2 (magic-class only; melee-class strikes already crit 200%).
+RUNIC_FOCUS_READ_S2 = (0, 0, GLACIAL_ADVANCE | BREATH | FROST_OTHER_MAGIC)
+KILLING_MACHINE_READ = (0, OBLITERATE, 0)
+DEATHCHILL_READ = (ICY_TOUCH, HOWLING_BLAST | FROST_STRIKE | OBLITERATE, 0)
+GUILE_READ = (0, FROST_STRIKE | OBLITERATE, 0)
+GUILE_HB_READ = (0, HOWLING_BLAST, 0)
+# Threat of Thassarian proc: Heart Strike + Plague Strike + Death Strike (d0), Frost Strike + Obliterate (d1).
+TOT_PROC = (HEART_STRIKE | PLAGUE_STRIKE | DEATH_STRIKE, FROST_STRIKE | OBLITERATE, 0)
+CHILL_OF_THE_GRAVE_PROC = (0, HOWLING_BLAST | OBLITERATE, 0)
+UNLEASHED_FRENZY_PROC = (0, FROST_STRIKE, GLACIAL_ADVANCE)
+OBLITERATION_PROC = (0, HOWLING_BLAST | FROST_STRIKE, GLACIAL_ADVANCE)
+IMPROVED_ICY_TOUCH_RANGE = (ICY_TOUCH | CHAINS_OF_ICE, HOWLING_BLAST, 0)
+GRAVEFROST_READ = (HEART_STRIKE | PLAGUE_STRIKE, 0, 0)

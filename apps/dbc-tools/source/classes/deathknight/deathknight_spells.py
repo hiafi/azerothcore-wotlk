@@ -465,6 +465,8 @@ frost_strike_49143 = spell(
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly strike the enemy, dealing $s1% weapon damage plus {pot2.avg} as Frost damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 621, 'SpellClassMask_2': m.FROST_STRIKE, 'SpellClassSet': 15, 'SpellLevel': 10, 'SpellVisualID_1': 11612, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
+scripted_by(frost_strike_49143, 'spell_dk_frost_strike_rework')  # S2a: Frost multiplier, school/Razorice terms, off-hand copy
+
 
 corpse_explosion_49158 = spell(
     id=49158,
@@ -502,7 +504,9 @@ howling_blast_49184 = spell(
     range_yards=20.0,
     effects=[
         Effect(type=EffectType.DUMMY, base_points=149, implicit_target_a=6),
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=100.9, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=62, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=10.0),
+        Effect(type=EffectType.TRIGGER_SPELL, die_sides=0, implicit_target_a=53, implicit_target_b=16, radius_yards=10.0,
+               trigger_spell=55095),
     ],
     spell_icon_id=2131,
     notes=(
@@ -513,10 +517,17 @@ howling_blast_49184 = spell(
         'eff2 (SCHOOL_DAMAGE) converted to ap_potency=100.9 (deathknight-potency-report.md / '
         'deathknight-potency-proposals.txt - mismatch row, old AP-coefficient-implied potency '
         'was 46.7, the base-damage-implied 100.9 wins per the user-reviewed proposal). DieSides '
-        '17 replaced by the system-standard +-5% roll.'
+        '17 replaced by the system-standard +-5% roll. dk-rework S2a (U8): 62 AP potency (S2 TUNE 2026-10-25, U33; '
+        'was 90) at SpellLevel 20, 10 yd radius, '
+        '20 yd range, RuneCostID 647 (1 Unholy + 1 Frost, +15 RP, stock), 8 s cooldown / category 1248; eff2 = '
+        'TRIGGER_SPELL 55095 on the same area targets (fires per target at launch, before the damage, so Glacier Rot '
+        'always counts); the stale EffectBasePoints_3 / EffectSpellClassMaskC_1 twins are dropped. Rime keeps its '
+        'EFFECT_1 trigger of Freezing Fog 59052 (a SPELLMOD_COST on this spell).'
     ),
-    raw_overrides={'AttributesEx': 134217864, 'AttributesEx6': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blast the target with a frigid wind dealing $s2 Frost damage to all enemies within 10 yards.', 'EffectBasePoints_3': 49, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 14684919, 'EffectSpellClassMaskB_1': 12589815, 'EffectSpellClassMaskC_1': 4194437, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RuneCostID': 647, 'SpellClassMask_2': 2, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50, 'SpellVisualID_1': 11617, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx': 134217864, 'AttributesEx6': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Blast the target with a frigid wind, dealing {pot2} Frost damage to all enemies within 10 yards and infecting them with Frost Fever.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 14684919, 'EffectSpellClassMaskB_1': 12589815, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RuneCostID': 647, 'SpellClassMask_2': 2, 'SpellClassSet': 15, 'SpellLevel': 20, 'SpellPriority': 50, 'SpellVisualID_1': 11617, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+
+scripted_by(howling_blast_49184, 'spell_dk_howling_blast_rework')  # S2a (U8): Rime / Deathchill notes, Frost multiplier, Avalanche, RotFC, Hungering Cold storm
 
 
 rune_tap_48982 = spell(

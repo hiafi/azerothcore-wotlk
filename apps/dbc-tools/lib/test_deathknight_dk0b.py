@@ -18,7 +18,9 @@ An id no agent has declared yet is reported by `test_required_ids_declared` and 
   7. Blood Plague 55078 / Frost Fever 55095 DefenseType 1.
   8. Raise Dead 48289 has no reagent, and 46584/46585/52150 tooltips do not mention Corpse Dust.
   9. Minion mirrors 203056-203058 are ALWAYS_HIT (AttributesEx3 0x40000).
- 10. Frost Vulnerability 51714 reads _masks.FROST_VULN_READ (never zero).
+ 10. Frost Vulnerability 51714 reads _masks.FROST_VULN_READ_S2 (never zero); Final Roar burst 203291 is exempt with
+     Razor Frost; school-switched strikes (Obliterate / Heart Strike / Plague Strike) are covered by the helper term,
+     so they are NOT in the mask.
  11. No DK0b row carries a `_masks.FORBIDDEN_*` bit (stock-kept bits exempt).
  12. Annihilation 51468/51472/51473 effect 1 dummy stored 99 (live 100).
  13. Bone Shield 49222 spell_proc hit mask 0x403.
@@ -71,6 +73,8 @@ ATTR3_ALWAYS_HIT = 0x40000
 ATTR3_BURST = 0x50000  # ALWAYS_HIT | SUPPRESS_CASTER_PROCS
 BOILING_BLIGHT_BURST = 203043
 RAZOR_FROST = 203051
+FINAL_ROAR_BURST = 203291  # S2: percent-of-damage burst, inert under Razorice
+SCHOOL_SWITCHED_STRIKES = (OBLITERATE, 55050, 45462)  # Heart Strike, Plague Strike
 ATTR2_IGNORE_LOS = 0x4
 FAMILY_DEATHKNIGHT = 15
 SCHOOL_FROST = 16
@@ -386,9 +390,28 @@ def check_frost_vulnerability(rows_by_id: dict[int, dict]) -> list[str]:
     bad = []
     if not any(mask):
         bad.append(f"{FROST_VULNERABILITY}: effect 0 class mask is zero (a zero mask matches every family-15 school)")
-    if mask != tuple(m.FROST_VULN_READ):
-        bad.append(f"{FROST_VULNERABILITY}: effect 0 class mask {_hex(mask)}, expected FROST_VULN_READ "
-                   f"{_hex(m.FROST_VULN_READ)}")
+    if mask != tuple(m.FROST_VULN_READ_S2):
+        bad.append(f"{FROST_VULNERABILITY}: effect 0 class mask {_hex(mask)}, expected FROST_VULN_READ_S2 "
+                   f"{_hex(m.FROST_VULN_READ_S2)}")
+    return bad
+
+
+def check_school_switched_not_in_mask(rows_by_id: dict[int, dict]) -> list[str]:
+    """Obliterate / Heart Strike / Plague Strike become Frost only via a cast-time school switch; the helper adds the
+    Razorice term, so a mask bit on them would double it (S2a-WP-BRIEF, DK0b-CODE-REVIEW m4)."""
+    vuln = rows_by_id.get(FROST_VULNERABILITY)
+    if vuln is None:
+        return []
+    read = _effect_mask(vuln)
+    bad = []
+    for sid in SCHOOL_SWITCHED_STRIKES:
+        row = rows_by_id.get(sid)
+        if row is None:
+            continue
+        overlap = tuple(a & b for a, b in zip(spell_mask(row), read))
+        if any(overlap):
+            bad.append(f"{sid}: school-switched strike matched by Frost Vulnerability on {_hex(overlap)} "
+                       f"(the helper term covers it)")
     return bad
 
 
@@ -405,7 +428,7 @@ def check_frost_vulnerability_scope(rows_by_id: dict[int, dict]) -> list[str]:
     read = _effect_mask(vuln)
     bad = []
     for sid, row in sorted(rows_by_id.items()):
-        if sid in (FROST_VULNERABILITY, RAZOR_FROST) or int(row.get("SpellClassSet") or 0) != FAMILY_DEATHKNIGHT:
+        if sid in (FROST_VULNERABILITY, RAZOR_FROST, FINAL_ROAR_BURST) or int(row.get("SpellClassSet") or 0) != FAMILY_DEATHKNIGHT:
             continue
         if not _deals_damage(row):
             continue
@@ -437,15 +460,18 @@ def check_forbidden_bits(rows_by_id: dict[int, dict]) -> list[str]:
 
 
 def check_annihilation(rows_by_id: dict[int, dict]) -> list[str]:
+    # S2 (D13): the icon-2710 DUMMY is gone on purpose (203055 alone guards Obliterate); effect 0 is the +1/2/3 crit aura 290
     bad = []
-    for sid in ANNIHILATION:
+    for sid, bp in zip(ANNIHILATION, (0, 1, 2)):
         row = rows_by_id.get(sid)
         if row is None:
             continue
-        if int(row.get("Effect_1") or 0) != EFFECT_APPLY_AURA or int(row.get("EffectAura_1") or 0) != AURA_DUMMY:
-            bad.append(f"{sid}: effect 0 is not the APPLY_AURA DUMMY")
-        elif int(row.get("EffectBasePoints_1") or 0) != 99:
-            bad.append(f"{sid}: effect 0 stored {row.get('EffectBasePoints_1')!r}, expected 99 (rolls 100)")
+        if any(int(row.get(f"EffectAura_{n}") or 0) == AURA_DUMMY for n in (1, 2, 3)):
+            bad.append(f"{sid}: still carries an APPLY_AURA DUMMY (icon-2710 hardcode)")
+        if int(row.get("Effect_1") or 0) != EFFECT_APPLY_AURA or int(row.get("EffectAura_1") or 0) != 290:
+            bad.append(f"{sid}: effect 0 is not the APPLY_AURA 290 crit effect")
+        elif int(row.get("EffectBasePoints_1") or 0) != bp:
+            bad.append(f"{sid}: effect 0 stored {row.get('EffectBasePoints_1')!r}, expected {bp}")
     return bad
 
 
@@ -526,6 +552,9 @@ class DeathKnightDK0bDataTest(unittest.TestCase):
 
     def test_frost_vulnerability_scope(self):
         self.assertClean(check_frost_vulnerability_scope(self._rows()))
+
+    def test_school_switched_not_in_mask(self):
+        self.assertClean(check_school_switched_not_in_mask(self._rows()))
 
     def test_no_forbidden_bits(self):
         self.assertClean(check_forbidden_bits(self._rows()))
@@ -716,13 +745,15 @@ class DeathKnightDK0bNegativeTest(unittest.TestCase):
         self.assertEqual(len(check_mirrors({203056: _row(203056)})), 1)
 
     def test_frost_vulnerability(self):
-        mask = m.FROST_VULN_READ
+        mask = m.FROST_VULN_READ_S2
         good = _row(FROST_VULNERABILITY, EffectSpellClassMaskA_1=mask[0], EffectSpellClassMaskA_2=mask[1],
                     EffectSpellClassMaskA_3=mask[2])
         self.assertEqual(check_frost_vulnerability({FROST_VULNERABILITY: good}), [])
         self.assertEqual(len(check_frost_vulnerability({FROST_VULNERABILITY: _row(FROST_VULNERABILITY)})), 2)  # zero
         stock = {**good, "EffectSpellClassMaskA_1": 1026, "EffectSpellClassMaskA_2": 67403783}
         self.assertEqual(len(check_frost_vulnerability({FROST_VULNERABILITY: stock})), 1)
+        old = {**good, "EffectSpellClassMaskA_3": 0}  # the pre-S2 FROST_VULN_READ lacks d2 0x10600
+        self.assertEqual(len(check_frost_vulnerability({FROST_VULNERABILITY: old})), 1)
         self.assertEqual(len(check_frost_vulnerability({FROST_VULNERABILITY: {**good, "EffectSpellClassMaskA_3": 4}})), 1)
 
     def test_frost_vulnerability_scope(self):
@@ -751,6 +782,18 @@ class DeathKnightDK0bNegativeTest(unittest.TestCase):
         self.assertEqual(run(_row(105, SchoolMask=16, SpellClassMask_1=0x4, SpellClassSet=3, Effect_1=2)), [])
         self.assertEqual(run(_row(106, SchoolMask=32, SpellClassMask_1=0x2, SpellClassSet=15, Effect_1=6)), [])
         self.assertEqual(check_frost_vulnerability_scope({}), [])
+        # Final Roar burst: Frost damage with no mask bit is exempt (inert under Razorice)
+        self.assertEqual(run(_row(FINAL_ROAR_BURST, SchoolMask=16, SpellClassMask_1=0x4, **dmg)), [])
+
+    def test_school_switched_not_in_mask(self):
+        vuln = _row(FROST_VULNERABILITY, EffectSpellClassMaskA_1=0x2, EffectSpellClassMaskA_2=0x4)
+        ok = {FROST_VULNERABILITY: vuln, OBLITERATE: _row(OBLITERATE, SpellClassMask_2=0x20000),
+              55050: _row(55050, SpellClassMask_1=0x1000000), 45462: _row(45462, SpellClassMask_1=0x1)}
+        self.assertEqual(check_school_switched_not_in_mask(ok), [])
+        for sid, cols in ((OBLITERATE, dict(SpellClassMask_2=0x4)), (55050, dict(SpellClassMask_1=0x2)),
+                          (45462, dict(SpellClassMask_2=0x4))):
+            self.assertEqual(len(check_school_switched_not_in_mask({**ok, sid: _row(sid, **cols)})), 1, sid)
+        self.assertEqual(check_school_switched_not_in_mask({}), [])
 
     def test_forbidden_bits(self):
         for col, bit in (("SpellClassMask_1", m.FORBIDDEN_D0_B6), ("SpellClassMask_1", m.FORBIDDEN_D0_B17),
@@ -766,11 +809,13 @@ class DeathKnightDK0bNegativeTest(unittest.TestCase):
         self.assertEqual(check_forbidden_bits({1: _row(1, SpellClassMask_3=0x80000000)}), [])  # not a DK0b id
 
     def test_annihilation(self):
-        good = {sid: _row(sid, Effect_1=6, EffectAura_1=4, EffectBasePoints_1=99) for sid in ANNIHILATION}
+        good = {sid: _row(sid, Effect_1=6, EffectAura_1=290, EffectBasePoints_1=bp)
+                for sid, bp in zip(ANNIHILATION, (0, 1, 2))}
         self.assertEqual(check_annihilation(good), [])
         self.assertEqual(len(check_annihilation({**good, 51468: _row(51468, Effect_1=6, EffectAura_1=4,
-                                                                     EffectBasePoints_1=32)})), 1)
-        self.assertEqual(len(check_annihilation({**good, 51473: _row(51473, Effect_1=6, EffectAura_1=107)})), 1)
+                                                                     EffectBasePoints_1=99)})), 2)
+        self.assertEqual(len(check_annihilation({**good, 51473: _row(51473, Effect_1=6, EffectAura_1=290,
+                                                                     EffectBasePoints_1=5)})), 1)
 
     def test_bone_shield(self):
         self.assertEqual(check_bone_shield([{"SpellId": BONE_SHIELD, "HitMask": 0x403}]), [])

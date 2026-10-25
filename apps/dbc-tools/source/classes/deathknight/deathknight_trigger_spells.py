@@ -4,11 +4,87 @@ Deathknight - spells that are never directly cast - proc/periodic-tick effects, 
 Split from a single source/classes/deathknight.py via split_class_file.py (.agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md) - see source/classes/README.md for the multi-file layout and lib/dsl/registry.py's load_class_package for how cross-file references (`from .deathknight_...` below) resolve.
 """
 
-from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, School
-from lib.dsl.registry import bonus_coefficients, const, custom_attr, procs_on, scripted_by, spell, unbind_bonus_coefficients, unbind_script
+from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, RANGE_SELF, School, SpellModOp
+from lib.dsl.registry import (
+    bonus_coefficients, const, custom_attr, linked_spell, pot_text, procs_on, product, remove_spell_proc, scripted_by, spell,
+    talent_mult, tooltip_vars, unbind_bonus_coefficients, unbind_script,
+)
 
 from . import _masks as m
 from .deathknight_blood import bloody_strikes_tooltip_1250, improved_death_strike_tooltip_1251
+from .deathknight_frost_b import avalanche_203321
+
+# =====================================================================================================================
+# S2a (Frost): the talent-rank helper, the tooltip_vars entries 1254 / 1255 and Avalanche's potency text
+# =====================================================================================================================
+_SPELLFAMILY_DEATHKNIGHT = 15
+_ATTR0_TALENT_PASSIVE = 464                  # ABILITY 0x10 | PASSIVE 0x40 | DO_NOT_DISPLAY 0x80 | DO_NOT_LOG 0x100
+_ATTR3_CAN_PROC_FROM_PROCS = 0x4000000       # SPELL_ATTR3_CAN_PROC_FROM_PROCS (a triggered cast may proc the aura)
+_TARGET_SELF = 1
+_CR_VERSATILITY = 1 << 21                    # MOD_CUSTOM_STAT_PCT misc: bit of CombatRating VERSATILITY (21)
+
+
+def _frost_level(row, rank):
+    """Talent-rank SpellLevel = 9 + 5 x grid row + rank (S1a D3, S2 brief L6)."""
+    return 9 + 5 * row + rank
+
+
+def _frost_rank(spell_id, name, rank, row, icon, effects, description, notes, school=School.NORMAL,
+                attributes=_ATTR0_TALENT_PASSIVE, proc_chance=101, proc_type_mask=None, attributes_ex3=None,
+                class_mask_1=None, equipped=None, masks=None, extra_raw=None, aura_description=None):
+    """A rebuilt Frost talent rank spell: a hidden passive on the caster, family 15, self range, SpellLevel by grid row
+    and rank. The raw_overrides are built from scratch, so no stale twin of the stock row survives; `masks` maps a
+    1-based effect index to its (d0, d1, d2) EffectSpellClassMask triple, `equipped` is (EquippedItemClass,
+    EquippedItemSubclass) for a rank that keeps the stock weapon requirement."""
+    raw = {
+        'CastingTimeIndex': 1, 'SpellClassSet': _SPELLFAMILY_DEATHKNIGHT, 'SpellLevel': _frost_level(row, rank),
+        'ProcChance': proc_chance, 'EquippedItemClass': -1,
+        'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': f'Rank {rank}',
+        'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': description, 'AuraDescription_Lang_Mask': 16712188,
+    }
+    if aura_description:
+        raw['AuraDescription_Lang_Mask'] = 16712190
+        raw['AuraDescription_Lang_enUS'] = aura_description
+    if equipped:
+        raw['EquippedItemClass'], raw['EquippedItemSubclass'] = equipped
+    if proc_type_mask is not None:
+        raw['ProcTypeMask'] = proc_type_mask
+    if attributes_ex3:
+        raw['AttributesEx3'] = attributes_ex3
+    if class_mask_1:
+        raw['SpellClassMask_1'] = class_mask_1
+    for i in range(1, 4):
+        raw[f'EffectChainAmplitude_{i}'] = 1.0
+    for effect_index, triple in (masks or {}).items():
+        for dword, value in enumerate(triple, start=1):
+            if value:
+                raw[f'EffectSpellClassMask{"ABC"[effect_index - 1]}_{dword}'] = value
+    raw.update(extra_raw or {})
+    return spell(
+        id=spell_id, name=name, school=school, attributes=attributes, cast_time_ms=0, cooldown_ms=0,
+        category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=RANGE_SELF,
+        effects=effects, spell_icon_id=icon, notes=''.join(notes), raw_overrides=raw,
+    )
+
+
+# Rime's capstone line quotes Avalanche's potency through its own declaration (deathknight_frost_b.py; that file must not
+# import this one, or the import cycle breaks the load order).
+_AVALANCHE_POT = pot_text(avalanche_203321)
+
+# U24 (S2-HANDOFF, user 2026-10-24): spell-named unconditional % talents show on the tooltip.
+# 1254 Heart Strike + Plague Strike: Gravefrost (203275-203277 eff0 SPELLMOD_DAMAGE +5/10/15%). Heart Strike keeps the
+#   Bloody Strikes multiplier it read from entry 1250, so `heart` is the product of the two; its text is unchanged.
+heart_plague_strike_tooltip_1254 = tooltip_vars(
+    1254, 'Heart Strike (Bloody Strikes x Gravefrost) and Plague Strike (Gravefrost) damage on their tooltips',
+    bs_heart=talent_mult([48977, 49394, 49395], effect=1),
+    gravefrost=talent_mult([203275, 203276, 203277], effect=1),
+    heart=product('bs_heart', 'gravefrost'),
+)
+# 1255 Icy Touch: Improved Icy Touch (49175 / 50031 / 51456 eff0 DUMMY +5/10/15%).
+icy_touch_tooltip_1255 = tooltip_vars(
+    1255, 'Icy Touch: Improved Icy Touch damage on the Icy Touch tooltip',
+    iit=talent_mult([49175, 50031, 51456], effect=1),
+)
 
 
 plague_strike_45462 = spell(
@@ -29,7 +105,10 @@ plague_strike_45462 = spell(
         Effect(type=EffectType.TRIGGER_SPELL, die_sides=0, implicit_target_a=6, trigger_spell=55078),
     ],
     spell_icon_id=2719,
+    tooltip_vars=heart_plague_strike_tooltip_1254,
     notes=(
+        'S2a (U24): tooltip reads Gravefrost (tooltip_vars 1254, $gravefrost) on the weapon percent and the flat; the stock '
+        'SpellDescriptionVariableID 81 ($weapon, $bonus = $m1 * $m2 / 100) is replaced by the same maths in the text. '
         'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
         'from rank 1 (learn level 55); RealPointsPerLevel from rank1->covers-60-overridden '
         '(undershoot-vs-top-rank) (anchor rank 6 @ level 80); coefficient/cast_time_ms/'
@@ -39,7 +118,7 @@ plague_strike_45462 = spell(
         '(NORMALIZED_WEAPON_DMG) is left hand-set, same reasoning as the Feral pass\'s Mangle/'
         'Swipe/Shred: far larger than weapon_potency\'s WEAPON_FLAT_BONUS_MAX=10 budget.'
     ),
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A vicious strike that deals $<weapon>% weapon damage plus $<bonus> and infects the target with Blood Plague, a disease dealing Shadow damage over time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 221, 'SpellClassMask_1': 1, 'SpellClassSet': 15, 'SpellDescriptionVariableID': 81, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 11624, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A vicious strike that deals ${$m2*$<gravefrost>}% weapon damage plus ${$m1*$m2/100*$<gravefrost>} and infects the target with Blood Plague, a disease dealing Shadow damage over time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 221, 'SpellClassMask_1': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 11624, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -61,7 +140,10 @@ icy_touch_45477 = spell(
         Effect(type=EffectType.TRIGGER_SPELL, points_per_level=4.36, die_sides=0, implicit_target_a=6, trigger_spell=55095),
     ],
     spell_icon_id=2721,
+    tooltip_vars=icy_touch_tooltip_1255,
     notes=(
+        'S2a (U24): tooltip reads Improved Icy Touch (tooltip_vars 1255, $iit) on the damage via {pot1*iit}; the stale '
+        '"Very high threat when in Frost Presence" sentence is dropped (Frost Presence is retired). '
         'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
         'from rank 1 (learn level 55); RealPointsPerLevel from rank1->covers-60-overridden '
         '(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/'
@@ -71,7 +153,7 @@ icy_touch_45477 = spell(
         'was 23.3, the base-damage-implied 136.1 wins per the user-reviewed proposal). DieSides '
         '11 replaced by the system-standard +-5% roll.'
     ),
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx5': 32, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Melee and ranged attack speed reduced by $55095s2%.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Chills the target for $m1 to $M1 Frost damage and  infects them with Frost Fever, a disease that deals periodic damage and reduces melee and ranged attack speed by $55095s2% for $55095d.  Very high threat when in Frost Presence.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 14684919, 'EffectSpellClassMaskB_1': 12589815, 'EffectSpellClassMaskC_1': 4194437, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'ImplicitTargetA_3': 6, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RuneCostID': 241, 'SpellClassMask_1': 2, 'SpellClassSet': 15, 'SpellLevel': 2, 'SpellPriority': 50, 'SpellVisualID_1': 11152, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx5': 32, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Melee and ranged attack speed reduced by $55095s2%.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Chills the target for {pot1*iit} Frost damage and infects them with Frost Fever, a disease that deals periodic damage and reduces melee and ranged attack speed by $55095s2% for $55095d.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 14684919, 'EffectSpellClassMaskB_1': 12589815, 'EffectSpellClassMaskC_1': 4194437, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'ImplicitTargetA_3': 6, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RuneCostID': 241, 'SpellClassMask_1': 2, 'SpellClassSet': 15, 'SpellLevel': 2, 'SpellPriority': 50, 'SpellVisualID_1': 11152, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -584,6 +666,13 @@ death_coil_62900 = spell(
 )
 
 
+# Threat of Thassarian off-hand copies (S2a, S2-HANDOFF U16 / U17, brief D1). Percent effect FIRST, flat effect SECOND, EFFECT_2
+# empty (the stock per-disease DUMMY and its twins are gone). The numbers mirror the main hand, with the flat part split by
+# school: the physical copies (66188 Death Strike, 66198 Obliterate, 66216 Plague Strike, 203322 Heart Strike) store HALF the
+# main-hand flat potency, because the engine path for a physical off-hand strike doubles the flat (SpellEffects.cpp:3911) and then
+# applies TOTAL_PCT 0.5 x (1 + Nerves of Cold Steel); the Frost copy 66196 is non-physical, takes neither, stores the FULL flat and
+# gets its x 0.5 x (1 + Nerves) from DeathKnight::GetFrostDamageMultiplier (spell_dk_frost_offhand). Target for every off-hand
+# strike = p x (weapon x percent + main-hand flat), p = 0.5 x (1 + Nerves%).
 death_strike_66188 = spell(
     id=66188,
     name='Death Strike',
@@ -598,23 +687,18 @@ death_strike_66188 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=121, base_points=55, points_per_level=1.5333333333333334, implicit_target_a=6),
-        Effect(type=31, weapon_potency=74, implicit_target_a=6),
-        Effect(type=EffectType.DUMMY, base_points=1309, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=85, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=5, potency_kind='direct', time_basis_ms=1500,
+               implicit_target_a=6),
     ],
     spell_icon_id=2751,
     notes=(
-        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
-        'from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 5 @ '
-        'level 60); coefficient/cast_time_ms/mana_cost_pct from max rank. potency-system (PLAN '
-        'P7 Death Knight pass, 2026-10-01): Threat of Thassarian off-hand copy of Death Strike '
-        '(49998). eff2 (WEAPON_PERCENT_DAMAGE) converted to weapon_potency=74 (same off-by-one '
-        'fix as Mangle/Swipe/Shred - base_points=74 was dealing 75% live). The flat eff1 and '
-        'the max-health-heal eff3 (DUMMY) are left hand-set, same reasoning as 49998. Added '
-        'explicit SpellLevel=0 to raw_overrides, required by the potency generator '
-        '(previously implicit/absent).'
+        'death-knight-rework S2a (U16 / U17, brief D1): Threat of Thassarian off-hand copy of Death Strike 49998. eff0 '
+        'WEAPON_PERCENT_DAMAGE weapon_potency 85 first, eff1 NORMALIZED_WEAPON_DMG sp_potency 5 (HALF of the main hand\'s 10: '
+        'the physical off-hand path doubles the flat), direct T 1500; EFFECT_2 empty (the stock max-health heal DUMMY 1309 and the '
+        'EffectChainAmplitude_1 5.0 are gone). SpellLevel 10 = the main hand\'s so the low-level correction matches.'
     ),
-    raw_overrides={'AttributesEx': 134217728, 'AttributesEx3': 17039360, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A deadly attack that deals $s2% offhand weapon damage plus a bonus and heals the Death Knight for $F% of $Ghis:her; maximum health for each of $Ghis:her; diseases on the target.', 'EffectChainAmplitude_1': 5.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RuneCostID': 782, 'SpellClassMask_1': 16, 'SpellClassSet': 15, 'SpellLevel': 0, 'SpellPriority': 50, 'SpellVisualID_1': 11831, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx': 134217728, 'AttributesEx3': 17039360, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Strikes with your off-hand weapon for $s1% weapon damage plus {pot2.avg}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RuneCostID': 782, 'SpellClassMask_1': 16, 'SpellClassSet': 15, 'SpellLevel': 10, 'SpellPriority': 50, 'SpellVisualID_1': 11831, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -631,21 +715,20 @@ frost_strike_66196 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=121, base_points=42, points_per_level=1.3666666666666667, implicit_target_a=6),
-        Effect(type=31, weapon_potency=54, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=60, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=5, potency_kind='direct', time_basis_ms=1500,
+               implicit_target_a=6),
     ],
     spell_icon_id=2740,
     notes=(
-        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
-        'from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 6 @ '
-        'level 60); coefficient/cast_time_ms/mana_cost_pct from max rank. potency-system (PLAN '
-        'P7 Death Knight pass, 2026-10-01): Threat of Thassarian off-hand copy of Frost Strike '
-        '(49143). eff2 (WEAPON_PERCENT_DAMAGE) converted to weapon_potency=54 (same off-by-one '
-        'fix as Mangle/Swipe/Shred - base_points=54 was dealing 55% live). The flat eff1 is '
-        'left hand-set, same reasoning as 49143. Added explicit SpellLevel=0 to raw_overrides, '
-        'required by the potency generator (previously implicit/absent).'
+        'death-knight-rework S2a (U16 / U17, brief D1): Threat of Thassarian off-hand copy of Frost Strike 49143. Always Frost, '
+        'so non-physical: no flat doubling and no TOTAL_PCT (SpellEffects.cpp:3897), it stores the FULL main-hand flat (sp_potency 5) '
+        'and gets x 0.5 x (1 + Nerves of Cold Steel) from DeathKnight::GetFrostDamageMultiplier (spell_dk_frost_offhand). eff0 '
+        'WEAPON_PERCENT_DAMAGE weapon_potency 60 first, eff1 NORMALIZED_WEAPON_DMG sp_potency 5 direct T 1500, EFFECT_2 empty (the '
+        'BasePoints[E2] -1, DieSides[E2], ImplicitTargetA_3 6 and E2.d1 0x4 twins of the stock row are deleted). SpellLevel 10 = '
+        'the main hand\'s.'
     ),
-    raw_overrides={'AttributesEx': 134217728, 'AttributesEx3': 17039360, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly strike the enemy, causing $s2% offhand weapon damage plus a bonus as Frost damage.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskC_2': 4, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'ImplicitTargetA_3': 6, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RuneCostID': 1824, 'SpellClassMask_2': 4, 'SpellClassSet': 15, 'SpellLevel': 0, 'SpellVisualID_1': 11612, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx': 134217728, 'AttributesEx3': 17039360, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly strike the enemy with your off-hand weapon for $s1% weapon damage plus {pot2.avg} as Frost damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RuneCostID': 1824, 'SpellClassMask_2': 4, 'SpellClassSet': 15, 'SpellLevel': 10, 'SpellVisualID_1': 11612, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -662,23 +745,22 @@ obliterate_66198 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=121, base_points=123, points_per_level=2.8, implicit_target_a=6),
-        Effect(type=31, weapon_potency=79, implicit_target_a=6),
-        Effect(type=EffectType.DUMMY, base_points=24, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=72, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=5, potency_kind='direct', time_basis_ms=1500,
+               implicit_target_a=6),
     ],
     spell_icon_id=2639,
     notes=(
-        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
-        'from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 4 @ '
-        'level 60); coefficient/cast_time_ms/mana_cost_pct from max rank. potency-system (PLAN '
-        'P7 Death Knight pass, 2026-10-01): Threat of Thassarian off-hand copy of Obliterate '
-        '(49020). eff2 (WEAPON_PERCENT_DAMAGE) converted to weapon_potency=79 (same off-by-one '
-        'fix as Mangle/Swipe/Shred - base_points=79 was dealing 80% live). The flat eff1 and '
-        'the disease-bonus eff3 (DUMMY) are left hand-set, same reasoning as 49020. Added '
-        'explicit SpellLevel=0 to raw_overrides, required by the potency generator '
-        '(previously implicit/absent).'
+        'death-knight-rework S2a (U16 / U17, brief D1): Threat of Thassarian off-hand copy of Obliterate 203054. eff0 '
+        'WEAPON_PERCENT_DAMAGE weapon_potency 72 first (mirrors 203054; S2 TUNE, U33; was 160), eff1 '
+        'NORMALIZED_WEAPON_DMG '
+        'sp_potency 5 (HALF of the main hand\'s 10: the '
+        'physical off-hand path doubles the flat), direct T 1500; EFFECT_2 empty (the stock per-disease DUMMY 24 = +12.5% per '
+        'disease is gone: Obliterate never reads or consumes diseases). A Killing Machine cast switches the copy to Frost through a '
+        'flag the main hand sets (spell_dk_frost_offhand), and the helper adds the missing half flat back. SpellLevel 20 = the '
+        'main hand\'s. d1 b17 is kept: the Killing Machine crit mod (203320) reaches the copy.'
     ),
-    raw_overrides={'AttributesEx': 134217728, 'AttributesEx3': 17039360, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A brutal instant attack that deals $s2% offhand weapon damage plus a bonus, total damage increased ${$m3/2}.1% per each of your diseases on the target, but consumes the diseases.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RuneCostID': 2330, 'SpellClassMask_2': 131072, 'SpellClassSet': 15, 'SpellLevel': 0, 'SpellVisualID_1': 11613, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx': 134217728, 'AttributesEx3': 17039360, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A brutal instant attack with your off-hand weapon that deals $s1% weapon damage plus {pot2.avg}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RuneCostID': 2330, 'SpellClassMask_2': 131072, 'SpellClassSet': 15, 'SpellLevel': 20, 'SpellVisualID_1': 11613, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -740,8 +822,9 @@ heart_strike_55050 = spell(
                implicit_target_a=6, chain_targets=2),
     ],
     spell_icon_id=3145,
-    tooltip_vars=bloody_strikes_tooltip_1250,
+    tooltip_vars=heart_plague_strike_tooltip_1254,
     notes=(
+        'S2a (U24): tooltip_vars 1254 replaces 1250 so Gravefrost joins the multiplier: $heart = Bloody Strikes x Gravefrost, text unchanged. '
         'S1a: tooltip reads Bloody Strikes\' Heart Strike multiplier (tooltip_vars 1250, $heart) on the weapon percent and the flat. '
         'DK0a (death-knight-shared-rework.md "Heart Strike"): SpellLevel 1, RuneCostID 1142 (1 Blood Rune + 10 RP) kept. '
         'eff0 WEAPON_PERCENT_DAMAGE weapon_potency 60, eff1 NORMALIZED_WEAPON_DMG sp_potency 10 direct T 1500 (percent '
@@ -1037,23 +1120,18 @@ might_of_mograine_49023 = spell(
 )
 
 
-merciless_combat_49024 = spell(
-    id=49024,
-    name='Merciless Combat',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+merciless_combat_49024 = _frost_rank(
+    49024, 'Merciless Combat', rank=1, row=5, icon=2656,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=112, misc_value=7277),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=2656,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 524288, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Icy Touch, Howling Blast, Obliterate and Frost Strike do an additional $s1% damage when striking targets with less than 35% health.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2, 'EffectSpellClassMaskA_2': 131078, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50, 'TargetAuraState': 13},
+    description='Your Obliterate, Frost Strike and Breath of Sindragosa deal $s1% more damage to targets below 35% health.',
+    notes=(
+        'death-knight-rework S2a (Frost doc "Merciless Combat", U14): talent row 5, rank 1. eff0 DUMMY stored 5 = '
+        '6% read by GetFrostDamageMultiplier. aura 112 / misc 7277, the d0 0x2 / d1 0x20006 mask and '
+        'TargetAuraState 13 of the stock row are deleted, so the Unit.cpp 7277 hardcode (Icy Touch / Howling Blast '
+        'only) goes inert.'
+    ),
 )
 
 
@@ -1117,44 +1195,33 @@ epidemic_49036 = spell(
 )
 
 
-endless_winter_49137 = spell(
-    id=49137,
-    name='Endless Winter',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+endless_winter_49137 = _frost_rank(
+    49137, 'Endless Winter', rank=1, row=3, icon=164,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=137),
-        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=1, apply_aura=107, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=_TARGET_SELF, apply_aura=137),
     ],
-    spell_icon_id=164,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your strength is increased by $s1% and the cost of your Mind Freeze is reduced to 10 runic power.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4, 'EffectSpellClassMaskB_1': 1024, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    description='Increases your Strength by $s1%.\n\n|cFF9D9D9DCapstone: Your Mind Freeze no longer costs Runic Power.|r',
+    notes=(
+        'death-knight-rework S2a (Frost doc "Endless Winter", D12): talent row 3, rank 1. aura 137 '
+        'MOD_TOTAL_STAT_PERCENTAGE misc 0 (Strength) +2%. The stock eff1 (Mind Freeze cost, SPELLMOD_COST flat '
+        '-100) is dropped entirely: only the capstone rank frees it.'
+    ),
 )
 
 
-black_ice_49140 = spell(
-    id=49140,
-    name='Black Ice',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+black_ice_49140 = _frost_rank(
+    49140, 'Black Ice', rank=1, row=1, icon=154,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=79, misc_value=48),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=48),
     ],
-    spell_icon_id=154,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Frost and Shadow damage by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2182250279, 'EffectSpellClassMaskA_2': 447, 'EffectSpellClassMaskB_1': 41975808, 'EffectSpellClassMaskB_2': 1024, 'EffectSpellClassMaskC_1': 524288, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Increases your Frost and Shadow damage by $s1%.',
+    notes=(
+        'death-knight-rework S2a (Frost doc "Black Ice", U23): talent row 1, 3 ranks (the stock ranks 4 / 5, 49663 '
+        '/ 49664, are no longer granted). aura 79 misc 48 (Frost | Shadow) stored 1 / 3 / 5 = +2 / 4 / 6%. Aura 79 '
+        'ignores class masks (Unit.cpp SpellDamageBonusDone reads misc and EquippedItemClass only), so the stock '
+        'E0 class mask and the E1 / E2 twins are deleted.'
+    ),
 )
 
 
@@ -1179,46 +1246,51 @@ on_a_pale_horse_49146 = spell(
 )
 
 
-chill_of_the_grave_49149 = spell(
-    id=49149,
-    name='Chill of the Grave',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+chill_of_the_grave_49149 = _frost_rank(
+    49149, 'Chill of the Grave', rank=1, row=3, icon=976,
+    proc_chance=100, proc_type_mask=87056,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=231, misc_value=10, trigger_spell=50480),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, misc_value=10, trigger_spell=50480),
     ],
-    spell_icon_id=976,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Chains of Ice, Howling Blast, Icy Touch and Obliterate generate 2.5 additional runic power.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87056, 'RangeIndex': 1, 'SpellClassSet': 15},
+    masks={1: m.CHILL_OF_THE_GRAVE_PROC},
+    description='Your Obliterate and Howling Blast generate 2 additional Runic Power.',
+    notes=(
+        'death-knight-rework S2a (Frost doc "Chill of the Grave", U19): talent row 3, rank 1. aura 231 passes its '
+        'amount (20 = 2.0 Runic Power, x10 internal) to the stock energize 50480 (ENERGIZE misc 6 on the caster). '
+        'The spell_proc row -49149 is declared at the end of the file as a CAST-phase proc on Obliterate + Howling '
+        'Blast (m.CHILL_OF_THE_GRAVE_PROC), so it fires once per non-triggered cast with a null victim. E0 mask '
+        'moved from d0 0x3 (Icy Touch / Chains of Ice) to m.CHILL_OF_THE_GRAVE_PROC; the BonusMultiplier twins are '
+        'deleted. ProcTypeMask 87056 / ProcChance 100 kept.'
+    ),
 )
 
 
-improved_icy_touch_49175 = spell(
-    id=49175,
-    name='Improved Icy Touch',
+improved_icy_touch_49175 = _frost_rank(
+    49175, 'Improved Icy Touch', rank=1, row=0, icon=2721,
     school=School.FROST,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    power_type=PowerType.RUNE,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=20.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=107, misc_value=12),
-        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=1, apply_aura=107, misc_value=23),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=int(SpellModOp.EFFECT2)),
+        Effect(type=EffectType.APPLY_AURA, base_points=-3, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=int(SpellModOp.EFFECT3)),
     ],
-    spell_icon_id=2721,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Icy Touch does an additional $s1% damage and your Frost Fever reduces melee and ranged attack speed by an additional $s3%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2, 'EffectSpellClassMaskB_2': 67108864, 'EffectSpellClassMaskC_2': 67108864, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 50, 'RuneCostID': 642, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50},
+    masks={1: (m.ICY_TOUCH, 0, 0), 2: (0, m.FROST_FEVER_DISEASE, 0), 3: (0, m.FROST_FEVER_DISEASE, 0)},
+    description=(
+        'Your Icy Touch and Frost Fever deal $s1% more damage, and your Frost Fever reduces melee and ranged '
+        'attack speed by an additional $s3%.\n\n|cFF9D9D9DCapstone: Increases the range of your Icy Touch, Chains '
+        'of Ice and Howling Blast by 10 yards.|r'
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Improved Icy Touch", S2-HANDOFF U15 / U23): talent row 0, rank 1. '
+        'eff0 is the icon-2721 DUMMY the core adds to Icy Touch (Unit.cpp SpellPctDamageModsDone, d0 0x2), stored '
+        '4 / 9 / 14 = +5 / 10 / 15%. eff1 / eff2 are the stock SPELLMOD_EFFECT2 / EFFECT3 flats on Frost Fever (d1 '
+        'b26) = the extra 2 / 4 / 6% attack speed slow. The Frost Fever damage part and the rank 3 range part are '
+        'the type-2 linked helper 203323 (spell_linked_spell below, declared in deathknight_frost_b.py). '
+        'SpellLevel 9 + 5 x 0 + rank; the stale RuneCostID / power type of the stock row and its ProcChance 50 are '
+        'gone.'
+    ),
 )
 
 
@@ -1264,24 +1336,30 @@ frigid_dreadplate_49186 = spell(
 )
 
 
-rime_49188 = spell(
-    id=49188,
-    name='Rime',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+rime_49188 = _frost_rank(
+    49188, 'Rime', rank=1, row=3, icon=56,
+    proc_chance=12, proc_type_mask=69904, attributes_ex3=_ATTR3_CAN_PROC_FROM_PROCS,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=107, misc_value=7),
-        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=59052),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=59052),
     ],
-    spell_icon_id=56,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Icy Touch and Obliterate by $s1% and casting Obliterate has a $h% chance to reset the cooldown on Howling Blast and cause your next Howling Blast to consume no runes.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2, 'EffectSpellClassMaskA_2': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 5, 'ProcTypeMask': 69904, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description=(
+        'Your Obliterates have a $h% chance to make your next Howling Blast cost no runes and reset its '
+        'cooldown.\n\n|cFF9D9D9DCapstone: Avalanche. Howling Blasts empowered by Rime also call down icicles on up '
+        'to 5 enemies they hit, each dealing '
+        + _AVALANCHE_POT +
+        ' Frost damage.|r'
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Rime", D7 / U7): talent row 3, rank 1. ProcChance 12 (DBC; the '
+        'spell_proc row -49188 has Chance 0 and inherits it, phase HIT stays). eff0 is a DUMMY: 0 on ranks 1 / 2, '
+        '1 on rank 3 = the Avalanche capstone flag (the C++ gates on HasAura(59057), L4). eff1 stays '
+        'PROC_TRIGGER_SPELL 59052 on EFFECT_1: spell_dk_rime registers on EFFECT_1 and resets Howling Blast\'s '
+        'cooldown, moving it would lose the reset silently. The crit SpellMod (stock eff0) and its class mask are '
+        'gone. ProcTypeMask 69904, AttributesEx3 and the two scripts on -49188 are kept. The capstone text quotes '
+        'Avalanche 203321\'s potency through pot_text().'
+    ),
 )
 
 
@@ -1342,28 +1420,24 @@ acclimation_49200 = spell(
     ],
     spell_icon_id=1930,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you are hit by a spell, you have a $h% chance to boost your resistance to that type of magic for 18 sec.  Stacks up to 3 times.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EffectSpellClassMaskB_2': 536870912, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 131072, 'RangeIndex': 1, 'SpellClassSet': 15},
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you are hit by a spell, you have a $h% chance to boost your resistance to that type of magic for 18 sec. Stacks up to 3 times.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EffectSpellClassMaskB_2': 536870912, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 131072, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
-tundra_stalker_49202 = spell(
-    id=49202,
-    name='Tundra Stalker',
+tundra_stalker_49202 = _frost_rank(
+    49202, 'Tundra Stalker', rank=1, row=9, icon=100,
     school=School.FROST,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=112, misc_value=7277),
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=240),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=100,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spells and abilities deal $s1% more damage to targets infected with Frost Fever.  Also increases your expertise by $s2.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 21242899, 'EffectSpellClassMaskA_2': 773001510, 'EffectSpellClassMaskA_3': 8, 'EffectSpellClassMaskC_2': 131074, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Your Obliterate and Breath of Sindragosa deal $s1% more damage to targets infected with your Frost Fever.',
+    notes=(
+        'death-knight-rework S2a (Frost doc "Tundra Stalker", U14): talent row 9, 3 ranks (50129 / 50130 are no '
+        'longer granted). eff0 DUMMY stored 4 = 5% read by GetFrostDamageMultiplier (the target must carry THIS '
+        'Death Knight\'s Frost Fever). aura 112 / misc 7277 with its big class mask (Unit.cpp:8443 hardcode, any '
+        'Frost Fever), the expertise aura 240 (expertise is gone), the stray 30 yd range and SpellClassMask_1 of '
+        '50127 / 50128 and the E2 twin are deleted.'
+    ),
 )
 
 
@@ -1597,23 +1671,19 @@ bloody_strikes_49395 = spell(
 )
 
 
-runic_power_mastery_49455 = spell(
-    id=49455,
-    name='Runic Power Mastery',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+runic_power_mastery_49455 = _frost_rank(
+    49455, 'Runic Power Mastery', rank=1, row=0, icon=1954,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=149, implicit_target_a=1, apply_aura=35, misc_value=6),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=_TARGET_SELF, apply_aura=35,
+               misc_value=6),
     ],
-    spell_icon_id=1954,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your maximum Runic Power by ${$m1/10}.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 533504, 'EffectSpellClassMaskA_2': 288, 'EffectSpellClassMaskB_1': 1048576, 'EffectSpellClassMaskC_2': 384, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Increases your maximum Runic Power by ${$m1/10}.',
+    notes=(
+        'death-knight-rework S2a (Frost doc "Runic Power Mastery", U23 / Q11): talent row 0, aura 35 '
+        'MOD_INCREASE_POWER misc 6 (Runic Power, x10 internal) stored 99 / 199 = +10 / +20 Runic Power (stock +15 '
+        '/ +30). The stock twins on the empty slots (E1.d0 / E1.d1 / E2.d1, BasePoints[E1] 7) and the E0 class '
+        'mask are deleted.'
+    ),
 )
 
 
@@ -1637,23 +1707,23 @@ death_rune_mastery_49467 = spell(
 )
 
 
-glacier_rot_49471 = spell(
-    id=49471,
-    name='Glacier Rot',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+glacier_rot_49471 = _frost_rank(
+    49471, 'Glacier Rot', rank=1, row=4, icon=2965,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=7244),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=196,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Diseased enemies take $s1% more damage from your Icy Touch, Howling Blast and Frost Strike.', 'EffectBasePoints_2': 5, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 1026, 'EffectSpellClassMaskA_2': 4103, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description=(
+        'Diseased enemies take $s1% more damage from your Frost Strike, Glacial Advance and Howling '
+        'Blast.\n\n|cFF9D9D9DCapstone: Your Mastery further increases the damage of Frost Strike and Glacial '
+        'Advance.|r'
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Glacier Rot", U14 / D6): talent row 4, rank 1. eff0 DUMMY stored 5 = '
+        '6% read by GetFrostDamageMultiplier (GetAmount of the DUMMY). Icon 2965 (Ability_Mage_ChilledToTheBone) '
+        'replaces the stock 196 so the Unit.cpp Glacier Rot hardcode (GetDummyAuraEffect icon 196) goes inert; '
+        'misc 7244, the E0 class mask and the BasePoints[E1] / BonusMultiplier twins are deleted. Rank 3 HasAura = '
+        'the Mastery capstone.'
+    ),
 )
 
 
@@ -1887,23 +1957,18 @@ might_of_mograine_49534 = spell(
 )
 
 
-merciless_combat_49538 = spell(
-    id=49538,
-    name='Merciless Combat',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+merciless_combat_49538 = _frost_rank(
+    49538, 'Merciless Combat', rank=2, row=5, icon=2656,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=112, misc_value=7277),
+        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=2656,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Icy Touch, Howling Blast, Obliterate and Frost Strike do an additional $s1% damage when striking targets with less than 35% health.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2, 'EffectSpellClassMaskA_2': 131078, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50, 'TargetAuraState': 13},
+    description='Your Obliterate, Frost Strike and Breath of Sindragosa deal $s1% more damage to targets below 35% health.',
+    notes=(
+        'death-knight-rework S2a (Frost doc "Merciless Combat", U14): talent row 5, rank 2. eff0 DUMMY stored 11 = '
+        '12% read by GetFrostDamageMultiplier. aura 112 / misc 7277, the d0 0x2 / d1 0x20006 mask and '
+        'TargetAuraState 13 of the stock row are deleted, so the Unit.cpp 7277 hardcode (Icy Touch / Howling Blast '
+        'only) goes inert.'
+    ),
 )
 
 
@@ -2315,64 +2380,52 @@ wandering_plague_49655 = spell(
 )
 
 
-endless_winter_49657 = spell(
-    id=49657,
-    name='Endless Winter',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+endless_winter_49657 = _frost_rank(
+    49657, 'Endless Winter', rank=2, row=3, icon=164,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=137, trigger_spell=55095),
-        Effect(type=EffectType.APPLY_AURA, base_points=-201, implicit_target_a=1, apply_aura=107, misc_value=14),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=_TARGET_SELF, apply_aura=137),
+        Effect(type=EffectType.APPLY_AURA, base_points=-101, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=int(SpellModOp.COST)),
     ],
-    spell_icon_id=164,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your strength is increased by $s1% and your Mind Freeze no longer costs runic power.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4, 'EffectSpellClassMaskB_1': 1024, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    masks={2: (m.MIND_FREEZE, 0, 0)},
+    description='Increases your Strength by $s1%.\n\nCapstone: Your Mind Freeze no longer costs Runic Power.',
+    notes=(
+        'death-knight-rework S2a (Frost doc "Endless Winter", D12): talent row 3, rank 2. aura 137 Strength +4%; '
+        'eff1 aura 108 SPELLMOD_COST -100% on Mind Freeze (d0 b10, m.MIND_FREEZE), stored -101. The stale '
+        'trigger_spell 55095 of the stock row, the E0 class mask and the old flat cost mod are gone.'
+    ),
 )
 
 
-black_ice_49661 = spell(
-    id=49661,
-    name='Black Ice',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+black_ice_49661 = _frost_rank(
+    49661, 'Black Ice', rank=2, row=1, icon=154,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=79, misc_value=48),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=48),
     ],
-    spell_icon_id=154,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Frost and Shadow damage by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2182250279, 'EffectSpellClassMaskA_2': 447, 'EffectSpellClassMaskB_1': 41975808, 'EffectSpellClassMaskB_2': 1024, 'EffectSpellClassMaskC_1': 524288, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Increases your Frost and Shadow damage by $s1%.',
+    notes=(
+        'death-knight-rework S2a (Frost doc "Black Ice", U23): talent row 1, 3 ranks (the stock ranks 4 / 5, 49663 '
+        '/ 49664, are no longer granted). aura 79 misc 48 (Frost | Shadow) stored 1 / 3 / 5 = +2 / 4 / 6%. Aura 79 '
+        'ignores class masks (Unit.cpp SpellDamageBonusDone reads misc and EquippedItemClass only), so the stock '
+        'E0 class mask and the E1 / E2 twins are deleted.'
+    ),
 )
 
 
-black_ice_49662 = spell(
-    id=49662,
-    name='Black Ice',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+black_ice_49662 = _frost_rank(
+    49662, 'Black Ice', rank=3, row=1, icon=154,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=79, misc_value=48),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=48),
     ],
-    spell_icon_id=154,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your Frost and Shadow damage by $s1%.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 2182250279, 'EffectSpellClassMaskA_2': 447, 'EffectSpellClassMaskB_1': 41975808, 'EffectSpellClassMaskB_2': 1024, 'EffectSpellClassMaskC_1': 524288, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Increases your Frost and Shadow damage by $s1%.',
+    notes=(
+        'death-knight-rework S2a (Frost doc "Black Ice", U23): talent row 1, 3 ranks (the stock ranks 4 / 5, 49663 '
+        '/ 49664, are no longer granted). aura 79 misc 48 (Frost | Shadow) stored 1 / 3 / 5 = +2 / 4 / 6%. Aura 79 '
+        'ignores class masks (Unit.cpp SpellDamageBonusDone reads misc and EquippedItemClass only), so the stock '
+        'E0 class mask and the E1 / E2 twins are deleted.'
+    ),
 )
 
 
@@ -2416,66 +2469,70 @@ black_ice_49664 = spell(
 )
 
 
-glacier_rot_49790 = spell(
-    id=49790,
-    name='Glacier Rot',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+glacier_rot_49790 = _frost_rank(
+    49790, 'Glacier Rot', rank=2, row=4, icon=2965,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=12, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=7244),
+        Effect(type=EffectType.APPLY_AURA, base_points=12, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=196,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Diseased enemies take $s1% more damage from your Icy Touch, Howling Blast and Frost Strike.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1026, 'EffectSpellClassMaskA_2': 7, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description=(
+        'Diseased enemies take $s1% more damage from your Frost Strike, Glacial Advance and Howling '
+        'Blast.\n\n|cFF9D9D9DCapstone: Your Mastery further increases the damage of Frost Strike and Glacial '
+        'Advance.|r'
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Glacier Rot", U14 / D6): talent row 4, rank 2. eff0 DUMMY stored 12 = '
+        '13% read by GetFrostDamageMultiplier (GetAmount of the DUMMY). Icon 2965 (Ability_Mage_ChilledToTheBone) '
+        'replaces the stock 196 so the Unit.cpp Glacier Rot hardcode (GetDummyAuraEffect icon 196) goes inert; '
+        'misc 7244, the E0 class mask and the BasePoints[E1] / BonusMultiplier twins are deleted. Rank 3 HasAura = '
+        'the Mastery capstone.'
+    ),
 )
 
 
-glacier_rot_49791 = spell(
-    id=49791,
-    name='Glacier Rot',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+glacier_rot_49791 = _frost_rank(
+    49791, 'Glacier Rot', rank=3, row=4, icon=2965,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=7244),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=196,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Diseased enemies take $s1% more damage from your Icy Touch, Howling Blast and Frost Strike.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1026, 'EffectSpellClassMaskA_2': 7, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description=(
+        'Diseased enemies take $s1% more damage from your Frost Strike, Glacial Advance and Howling '
+        'Blast.\n\nCapstone: Your Mastery further increases the damage of Frost Strike and Glacial Advance.'
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Glacier Rot", U14 / D6): talent row 4, rank 3. eff0 DUMMY stored 19 = '
+        '20% read by GetFrostDamageMultiplier (GetAmount of the DUMMY). Icon 2965 (Ability_Mage_ChilledToTheBone) '
+        'replaces the stock 196 so the Unit.cpp Glacier Rot hardcode (GetDummyAuraEffect icon 196) goes inert; '
+        'misc 7244, the E0 class mask and the BasePoints[E1] / BonusMultiplier twins are deleted. Rank 3 HasAura = '
+        'the Mastery capstone.'
+    ),
 )
 
 
-improved_icy_touch_50031 = spell(
-    id=50031,
-    name='Improved Icy Touch',
+improved_icy_touch_50031 = _frost_rank(
+    50031, 'Improved Icy Touch', rank=2, row=0, icon=2721,
     school=School.FROST,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    power_type=PowerType.RUNE,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=20.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, base_points=-5, implicit_target_a=1, apply_aura=107, misc_value=12),
-        Effect(type=EffectType.APPLY_AURA, base_points=-5, implicit_target_a=1, apply_aura=107, misc_value=23),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=-5, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=int(SpellModOp.EFFECT2)),
+        Effect(type=EffectType.APPLY_AURA, base_points=-5, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=int(SpellModOp.EFFECT3)),
     ],
-    spell_icon_id=2721,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Icy Touch does an additional $s1% damage and your Frost Fever reduces melee and ranged attack speed by an additional $s3%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2, 'EffectSpellClassMaskB_2': 67108864, 'EffectSpellClassMaskC_2': 67108864, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RuneCostID': 799, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50},
+    masks={1: (m.ICY_TOUCH, 0, 0), 2: (0, m.FROST_FEVER_DISEASE, 0), 3: (0, m.FROST_FEVER_DISEASE, 0)},
+    description=(
+        'Your Icy Touch and Frost Fever deal $s1% more damage, and your Frost Fever reduces melee and ranged '
+        'attack speed by an additional $s3%.\n\n|cFF9D9D9DCapstone: Increases the range of your Icy Touch, Chains '
+        'of Ice and Howling Blast by 10 yards.|r'
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Improved Icy Touch", S2-HANDOFF U15 / U23): talent row 0, rank 2. '
+        'eff0 is the icon-2721 DUMMY the core adds to Icy Touch (Unit.cpp SpellPctDamageModsDone, d0 0x2), stored '
+        '4 / 9 / 14 = +5 / 10 / 15%. eff1 / eff2 are the stock SPELLMOD_EFFECT2 / EFFECT3 flats on Frost Fever (d1 '
+        'b26) = the extra 2 / 4 / 6% attack speed slow. The Frost Fever damage part and the rank 3 range part are '
+        'the type-2 linked helper 203324 (spell_linked_spell below, declared in deathknight_frost_b.py). '
+        'SpellLevel 9 + 5 x 0 + rank; the stale RuneCostID / power type of the stock row and its ProcChance 50 are '
+        'gone.'
+    ),
 )
 
 
@@ -2519,83 +2576,98 @@ death_rune_mastery_50034 = spell(
 )
 
 
-chilblains_50040 = spell(
-    id=50040,
-    name='Chilblains',
-    school=School.NORMAL,
+chilblains_50040 = _frost_rank(
+    50040, 'Chilblains', rank=1, row=1, icon=143,
     attributes=262352,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=109, misc_value=1, trigger_spell=50434),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.ADD_TARGET_TRIGGER, misc_value=1, trigger_spell=50434),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=16),
     ],
-    spell_icon_id=143,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Victims of your Frost Fever disease are Chilled, reducing movement speed by $50434s1% for $50434d.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_2': 67108864, 'EffectSpellClassMaskB_1': 1048576, 'EffectSpellClassMaskC_1': 1048576, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    masks={1: (0, m.FROST_FEVER_DISEASE, 0)},
+    description=(
+        'Increases your Frost damage by $s2%, and victims of your Frost Fever are Chilled, reducing their movement '
+        'speed by $50434s1% for $50434d.'
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Chilblains", U23): talent row 1, rank 1. eff0 aura 109 '
+        'ADD_TARGET_TRIGGER keeps applying Icy Clutch 50434 to the victim of Frost Fever (d1 b26; the slow value '
+        '20 / 35 / 50% and the 10 s duration live on the Icy Clutch rows, the refresh while Frost Fever ticks is '
+        'spell_dk_frost_fever_chilblains). eff1 aura 79 MOD_DAMAGE_PERCENT_DONE misc 16 (Frost) +1 / 2 / 3%. The '
+        'stale E1 / E2 twins (BasePoints[E1] -1, E1.d0, E2.d0 on ALL THREE ranks) are deleted: the new E1 would '
+        'have inherited them (S2a-0VERIFY item 2).'
+    ),
 )
 
 
-chilblains_50041 = spell(
-    id=50041,
-    name='Chilblains',
-    school=School.NORMAL,
+chilblains_50041 = _frost_rank(
+    50041, 'Chilblains', rank=2, row=1, icon=143,
     attributes=262352,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=109, misc_value=1, trigger_spell=50435),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.ADD_TARGET_TRIGGER, misc_value=1, trigger_spell=50435),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=16),
     ],
-    spell_icon_id=143,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Victims of your Frost Fever disease are Chilled, reducing movement speed by $50435s1% for $50435d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 67108864, 'EffectSpellClassMaskB_1': 1048576, 'EffectSpellClassMaskC_1': 1048576, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    masks={1: (0, m.FROST_FEVER_DISEASE, 0)},
+    description=(
+        'Increases your Frost damage by $s2%, and victims of your Frost Fever are Chilled, reducing their movement '
+        'speed by $50435s1% for $50435d.'
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Chilblains", U23): talent row 1, rank 2. eff0 aura 109 '
+        'ADD_TARGET_TRIGGER keeps applying Icy Clutch 50435 to the victim of Frost Fever (d1 b26; the slow value '
+        '20 / 35 / 50% and the 10 s duration live on the Icy Clutch rows, the refresh while Frost Fever ticks is '
+        'spell_dk_frost_fever_chilblains). eff1 aura 79 MOD_DAMAGE_PERCENT_DONE misc 16 (Frost) +1 / 2 / 3%. The '
+        'stale E1 / E2 twins (BasePoints[E1] -1, E1.d0, E2.d0 on ALL THREE ranks) are deleted: the new E1 would '
+        'have inherited them (S2a-0VERIFY item 2).'
+    ),
 )
 
 
-chilblains_50043 = spell(
-    id=50043,
-    name='Chilblains',
-    school=School.NORMAL,
+chilblains_50043 = _frost_rank(
+    50043, 'Chilblains', rank=3, row=1, icon=143,
     attributes=262352,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=109, misc_value=1, trigger_spell=50436),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.ADD_TARGET_TRIGGER, misc_value=1, trigger_spell=50436),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.MOD_DAMAGE_PERCENT_DONE, misc_value=16),
     ],
-    spell_icon_id=143,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Victims of your Frost Fever disease are Chilled, reducing movement speed by $50436s1% for $50436d.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_2': 67108864, 'EffectSpellClassMaskB_1': 1048576, 'EffectSpellClassMaskC_1': 1048576, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    masks={1: (0, m.FROST_FEVER_DISEASE, 0)},
+    description=(
+        'Increases your Frost damage by $s2%, and victims of your Frost Fever are Chilled, reducing their movement '
+        'speed by $50436s1% for $50436d.'
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Chilblains", U23): talent row 1, rank 3. eff0 aura 109 '
+        'ADD_TARGET_TRIGGER keeps applying Icy Clutch 50436 to the victim of Frost Fever (d1 b26; the slow value '
+        '20 / 35 / 50% and the 10 s duration live on the Icy Clutch rows, the refresh while Frost Fever ticks is '
+        'spell_dk_frost_fever_chilblains). eff1 aura 79 MOD_DAMAGE_PERCENT_DONE misc 16 (Frost) +1 / 2 / 3%. The '
+        'stale E1 / E2 twins (BasePoints[E1] -1, E1.d0, E2.d0 on ALL THREE ranks) are deleted: the new E1 would '
+        'have inherited them (S2a-0VERIFY item 2).'
+    ),
 )
 
 
-chill_of_the_grave_50115 = spell(
-    id=50115,
-    name='Chill of the Grave',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+chill_of_the_grave_50115 = _frost_rank(
+    50115, 'Chill of the Grave', rank=2, row=3, icon=976,
+    proc_chance=100, proc_type_mask=87056,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=231, misc_value=10, trigger_spell=50480),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, misc_value=10, trigger_spell=50480),
     ],
-    spell_icon_id=976,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Chains of Ice, Howling Blast, Icy Touch and Obliterate generate 5 additional runic power.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 3, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87056, 'RangeIndex': 1, 'SpellClassSet': 15},
+    masks={1: m.CHILL_OF_THE_GRAVE_PROC},
+    description='Your Obliterate and Howling Blast generate 5 additional Runic Power.',
+    notes=(
+        'death-knight-rework S2a (Frost doc "Chill of the Grave", U19): talent row 3, rank 2. aura 231 passes its '
+        'amount (50 = 5.0 Runic Power, x10 internal) to the stock energize 50480 (ENERGIZE misc 6 on the caster). '
+        'The spell_proc row -49149 is declared at the end of the file as a CAST-phase proc on Obliterate + Howling '
+        'Blast (m.CHILL_OF_THE_GRAVE_PROC), so it fires once per non-triggered cast with a null victim. E0 mask '
+        'moved from d0 0x3 (Icy Touch / Chains of Ice) to m.CHILL_OF_THE_GRAVE_PROC; the BonusMultiplier twins are '
+        'deleted. ProcTypeMask 87056 / ProcChance 100 kept.'
+    ),
 )
 
 
@@ -2704,45 +2776,37 @@ rage_of_rivendare_50121 = spell(
 )
 
 
-tundra_stalker_50127 = spell(
-    id=50127,
-    name='Tundra Stalker',
+tundra_stalker_50127 = _frost_rank(
+    50127, 'Tundra Stalker', rank=2, row=9, icon=100,
     school=School.FROST,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=30.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=112, misc_value=7277),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=240),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=100,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spells and abilities deal $s1% more damage to targets infected with Frost Fever.  Also increases your expertise by $s2.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 21242899, 'EffectSpellClassMaskA_2': 738394406, 'EffectSpellClassMaskA_3': 9, 'EffectSpellClassMaskC_2': 131074, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_1': 131072, 'SpellClassSet': 15},
+    description='Your Obliterate and Breath of Sindragosa deal $s1% more damage to targets infected with your Frost Fever.',
+    notes=(
+        'death-knight-rework S2a (Frost doc "Tundra Stalker", U14): talent row 9, 3 ranks (50129 / 50130 are no '
+        'longer granted). eff0 DUMMY stored 9 = 10% read by GetFrostDamageMultiplier (the target must carry THIS '
+        'Death Knight\'s Frost Fever). aura 112 / misc 7277 with its big class mask (Unit.cpp:8443 hardcode, any '
+        'Frost Fever), the expertise aura 240 (expertise is gone), the stray 30 yd range and SpellClassMask_1 of '
+        '50127 / 50128 and the E2 twin are deleted.'
+    ),
 )
 
 
-tundra_stalker_50128 = spell(
-    id=50128,
-    name='Tundra Stalker',
+tundra_stalker_50128 = _frost_rank(
+    50128, 'Tundra Stalker', rank=3, row=9, icon=100,
     school=School.FROST,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=1, apply_aura=112, misc_value=7277),
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=240),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=100,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spells and abilities deal $s1% more damage to targets infected with Frost Fever.  Also increases your expertise by $s2.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 21242899, 'EffectSpellClassMaskA_2': 739442982, 'EffectSpellClassMaskA_3': 8, 'EffectSpellClassMaskC_2': 131074, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_1': 131072, 'SpellClassSet': 15},
+    description='Your Obliterate and Breath of Sindragosa deal $s1% more damage to targets infected with your Frost Fever.',
+    notes=(
+        'death-knight-rework S2a (Frost doc "Tundra Stalker", U14): talent row 9, 3 ranks (50129 / 50130 are no '
+        'longer granted). eff0 DUMMY stored 14 = 15% read by GetFrostDamageMultiplier (the target must carry THIS '
+        'Death Knight\'s Frost Fever). aura 112 / misc 7277 with its big class mask (Unit.cpp:8443 hardcode, any '
+        'Frost Fever), the expertise aura 240 (expertise is gone), the stray 30 yd range and SpellClassMask_1 of '
+        '50127 / 50128 and the E2 twin are deleted.'
+    ),
 )
 
 
@@ -2788,23 +2852,19 @@ tundra_stalker_50130 = spell(
 )
 
 
-runic_power_mastery_50147 = spell(
-    id=50147,
-    name='Runic Power Mastery',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+runic_power_mastery_50147 = _frost_rank(
+    50147, 'Runic Power Mastery', rank=2, row=0, icon=1954,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=299, implicit_target_a=1, apply_aura=35, misc_value=6),
+        Effect(type=EffectType.APPLY_AURA, base_points=199, implicit_target_a=_TARGET_SELF, apply_aura=35,
+               misc_value=6),
     ],
-    spell_icon_id=1954,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your maximum Runic Power by ${$m1/10}.', 'EffectBasePoints_2': 7, 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 1048576, 'EffectSpellClassMaskB_1': 1582080, 'EffectSpellClassMaskB_2': 32, 'EffectSpellClassMaskC_2': 384, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Increases your maximum Runic Power by ${$m1/10}.',
+    notes=(
+        'death-knight-rework S2a (Frost doc "Runic Power Mastery", U23 / Q11): talent row 0, aura 35 '
+        'MOD_INCREASE_POWER misc 6 (Runic Power, x10 internal) stored 99 / 199 = +10 / +20 Runic Power (stock +15 '
+        '/ +30). The stock twins on the empty slots (E1.d0 / E1.d1 / E2.d1, BasePoints[E1] 7) and the E0 class '
+        'mask are deleted.'
+    ),
 )
 
 
@@ -2866,7 +2926,7 @@ acclimation_50151 = spell(
     ],
     spell_icon_id=1930,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you are hit by a spell, you have a $h% chance to boost your resistance to that type of magic for 18 sec.  Stacks up to 3 times.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 3, 'EffectSpellClassMaskB_2': 536870912, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 131072, 'RangeIndex': 1, 'SpellClassSet': 15},
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you are hit by a spell, you have a $h% chance to boost your resistance to that type of magic for 18 sec. Stacks up to 3 times.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 3, 'EffectSpellClassMaskB_2': 536870912, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 131072, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -2886,7 +2946,7 @@ acclimation_50152 = spell(
     ],
     spell_icon_id=1930,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you are hit by a spell, you have a $h% chance to boost your resistance to that type of magic for 18 sec.  Stacks up to 3 times.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 3, 'EffectSpellClassMaskB_2': 536870912, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 30, 'ProcTypeMask': 131072, 'RangeIndex': 1, 'SpellClassSet': 15},
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When you are hit by a spell, you have a $h% chance to boost your resistance to that type of magic for 18 sec. Stacks up to 3 times.', 'EffectBasePoints_2': -1, 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 3, 'EffectSpellClassMaskB_2': 536870912, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 30, 'ProcTypeMask': 131072, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -2910,66 +2970,84 @@ vendetta_50154 = spell(
 )
 
 
-guile_of_gorefiend_50187 = spell(
-    id=50187,
-    name='Guile of Gorefiend',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+guile_of_gorefiend_50187 = _frost_rank(
+    50187, 'Guile of Gorefiend', rank=1, row=8, icon=1740,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108, misc_value=15),
-        Effect(type=EffectType.APPLY_AURA, base_points=1999, implicit_target_a=1, apply_aura=107, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=int(SpellModOp.CRIT_DAMAGE_BONUS)),
+        Effect(type=EffectType.APPLY_AURA, base_points=1999, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=int(SpellModOp.DURATION)),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=int(SpellModOp.CRIT_DAMAGE_BONUS)),
     ],
-    spell_icon_id=1740,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike damage bonus of your Blood Strike, Frost Strike, Howling Blast and Obliterate abilities by $s1%, and increases the duration of your Icebound Fortitude by $/1000;s2 secs.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194304, 'EffectSpellClassMaskA_2': 131078, 'EffectSpellClassMaskB_1': 1048576, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    masks={1: m.GUILE_READ, 2: (m.ICEBOUND_FORTITUDE, 0, 0), 3: m.GUILE_HB_READ},
+    description=(
+        'Increases the critical strike damage bonus of your Frost Strike, Howling Blast and Obliterate by $s1%, '
+        'and increases the duration of your Icebound Fortitude by $/1000;s2 sec.'
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Guile of Gorefiend", D10 / U21): talent row 8, rank 1. eff0 aura 108 '
+        'SPELLMOD_CRIT_DAMAGE_BONUS +15% on Frost Strike + Obliterate (m.GUILE_READ, d1 0x20004); eff1 Icebound '
+        'Fortitude duration (d0 b20) unchanged; eff2 the same op +30% on Howling Blast alone (m.GUILE_HB_READ, d1 '
+        '0x2): Howling Blast is magic class, its crit excess is halved (Unit.cpp SpellCriticalDamageBonus) and '
+        'Runic Focus adds +100, so +30 reaches the documented 245% total. The stale active-slot raw masks (E0.d0 '
+        '0x400000 Blood Strike, E0.d1 0x20006 with Howling Blast) and the BonusMultiplier twin are deleted, '
+        'otherwise Howling Blast would stack both effects (267.5%).'
+    ),
 )
 
 
-guile_of_gorefiend_50190 = spell(
-    id=50190,
-    name='Guile of Gorefiend',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+guile_of_gorefiend_50190 = _frost_rank(
+    50190, 'Guile of Gorefiend', rank=2, row=8, icon=1740,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108, misc_value=15),
-        Effect(type=EffectType.APPLY_AURA, base_points=3999, implicit_target_a=1, apply_aura=107, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=int(SpellModOp.CRIT_DAMAGE_BONUS)),
+        Effect(type=EffectType.APPLY_AURA, base_points=3999, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=int(SpellModOp.DURATION)),
+        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=int(SpellModOp.CRIT_DAMAGE_BONUS)),
     ],
-    spell_icon_id=1740,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike damage bonus of your Blood Strike, Frost Strike, Howling Blast and Obliterate abilities by $s1%, and increases the duration of your Icebound Fortitude by $/1000;s2 secs.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194304, 'EffectSpellClassMaskA_2': 131078, 'EffectSpellClassMaskB_1': 1048576, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    masks={1: m.GUILE_READ, 2: (m.ICEBOUND_FORTITUDE, 0, 0), 3: m.GUILE_HB_READ},
+    description=(
+        'Increases the critical strike damage bonus of your Frost Strike, Howling Blast and Obliterate by $s1%, '
+        'and increases the duration of your Icebound Fortitude by $/1000;s2 sec.'
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Guile of Gorefiend", D10 / U21): talent row 8, rank 2. eff0 aura 108 '
+        'SPELLMOD_CRIT_DAMAGE_BONUS +30% on Frost Strike + Obliterate (m.GUILE_READ, d1 0x20004); eff1 Icebound '
+        'Fortitude duration (d0 b20) unchanged; eff2 the same op +60% on Howling Blast alone (m.GUILE_HB_READ, d1 '
+        '0x2): Howling Blast is magic class, its crit excess is halved (Unit.cpp SpellCriticalDamageBonus) and '
+        'Runic Focus adds +100, so +60 reaches the documented 245% total. The stale active-slot raw masks (E0.d0 '
+        '0x400000 Blood Strike, E0.d1 0x20006 with Howling Blast) and the BonusMultiplier twin are deleted, '
+        'otherwise Howling Blast would stack both effects (267.5%).'
+    ),
 )
 
 
-guile_of_gorefiend_50191 = spell(
-    id=50191,
-    name='Guile of Gorefiend',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+guile_of_gorefiend_50191 = _frost_rank(
+    50191, 'Guile of Gorefiend', rank=3, row=8, icon=1740,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=44, implicit_target_a=1, apply_aura=108, misc_value=15),
-        Effect(type=EffectType.APPLY_AURA, base_points=5999, implicit_target_a=1, apply_aura=107, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=44, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=int(SpellModOp.CRIT_DAMAGE_BONUS)),
+        Effect(type=EffectType.APPLY_AURA, base_points=5999, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=int(SpellModOp.DURATION)),
+        Effect(type=EffectType.APPLY_AURA, base_points=89, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=int(SpellModOp.CRIT_DAMAGE_BONUS)),
     ],
-    spell_icon_id=1740,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike damage bonus of your Blood Strike, Frost Strike, Howling Blast and Obliterate abilities by $s1%, and increases the duration of your Icebound Fortitude by $/1000;s2 secs.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4194304, 'EffectSpellClassMaskA_2': 131078, 'EffectSpellClassMaskB_1': 1048576, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    masks={1: m.GUILE_READ, 2: (m.ICEBOUND_FORTITUDE, 0, 0), 3: m.GUILE_HB_READ},
+    description=(
+        'Increases the critical strike damage bonus of your Frost Strike, Howling Blast and Obliterate by $s1%, '
+        'and increases the duration of your Icebound Fortitude by $/1000;s2 sec.'
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Guile of Gorefiend", D10 / U21): talent row 8, rank 3. eff0 aura 108 '
+        'SPELLMOD_CRIT_DAMAGE_BONUS +45% on Frost Strike + Obliterate (m.GUILE_READ, d1 0x20004); eff1 Icebound '
+        'Fortitude duration (d0 b20) unchanged; eff2 the same op +90% on Howling Blast alone (m.GUILE_HB_READ, d1 '
+        '0x2): Howling Blast is magic class, its crit excess is halved (Unit.cpp SpellCriticalDamageBonus) and '
+        'Runic Focus adds +100, so +90 reaches the documented 245% total. The stale active-slot raw masks (E0.d0 '
+        '0x400000 Blood Strike, E0.d1 0x20006 with Howling Blast) and the BonusMultiplier twin are deleted, '
+        'otherwise Howling Blast would stack both effects (267.5%).'
+    ),
 )
 
 
@@ -3097,69 +3175,89 @@ improved_unholy_presence_50392 = spell(
 )
 
 
-icy_talons_50880 = spell(
-    id=50880,
-    name='Icy Talons',
-    school=School.FROST,
-    attributes=448,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    power_type=PowerType.RUNE,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=20.0,
+# Icy Talons capstone (user ruling 2026-10-25): the former Improved Icy Talons party/raid melee haste (hidden passive 55610,
+# linked to rank 3 below). Same two-style line as every other capstone in the tree (deathknight_frost.py _capstone_text).
+_ICY_TALONS_CAPSTONE = (
+    'Increases the melee attack speed of all party and raid members within $55610a1 yards by $55610s1%.'
+)
+_ICY_TALONS_CAPSTONE_LAST = f'\n\nCapstone: {_ICY_TALONS_CAPSTONE}'
+_ICY_TALONS_CAPSTONE_GREY = f'\n\n|cFF9D9D9DCapstone: {_ICY_TALONS_CAPSTONE}|r'
+
+
+icy_talons_50880 = _frost_rank(
+    50880, 'Icy Talons', rank=1, row=2, icon=3785,
+    school=School.FROST, attributes=448, proc_chance=100, proc_type_mask=69648,
+    attributes_ex3=_ATTR3_CAN_PROC_FROM_PROCS, class_mask_1=2,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=231, trigger_spell=50882),
-        Effect(type=EffectType.DUMMY, base_points=3),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, trigger_spell=50882),
+        Effect(type=EffectType.DUMMY, base_points=2),
     ],
-    spell_icon_id=3785,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You leech heat from victims of your Frost Fever, so that when their melee attack speed is reduced, yours increases by $s2% for the next 20 sec.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 2, 'EffectSpellClassMaskB_1': 12589815, 'EffectSpellClassMaskC_1': 4194437, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 4112, 'RuneCostID': 846, 'SpellClassMask_1': 2, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50},
+    masks={1: (m.ICY_TOUCH, 0, 0), 2: (0xC01AF7, 0, 0)},
+    description=(
+        'You leech heat from victims of your Frost Fever, so that when their melee attack speed is reduced, yours '
+        'increases by $s2% for the next 20 sec.' + _ICY_TALONS_CAPSTONE_GREY
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Icy Talons", U23): talent row 2, 3 ranks (50886 / 50887 are no longer '
+        'granted). eff0 aura 231 passes its amount to the buff 50882 (SPELLVALUE_BASE_POINT0), so stored 2 = 3% '
+        'here and on the buff (buff rows are deleted from npc.csv and owned by deathknight_frost_helpers.py). eff1 '
+        'DUMMY is the tooltip value. The stock -50880 spell_proc row (Frost Fever, TRIGGERED_CAN_PROC) is kept. '
+        'The E2 twins (BasePoints[E2] -1, E2.d0) are deleted; the stock own class mask 0x2 stays (a d0 b1 '
+        'collision accepted by S2-HANDOFF section 5).'
+    ),
 )
 
 
-icy_talons_50884 = spell(
-    id=50884,
-    name='Icy Talons',
-    school=School.FROST,
-    attributes=448,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    power_type=PowerType.RUNE,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=20.0,
+icy_talons_50884 = _frost_rank(
+    50884, 'Icy Talons', rank=2, row=2, icon=3785,
+    school=School.FROST, attributes=448, proc_chance=100, proc_type_mask=69648,
+    attributes_ex3=_ATTR3_CAN_PROC_FROM_PROCS, class_mask_1=2,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=231, trigger_spell=58575),
-        Effect(type=EffectType.DUMMY, base_points=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, trigger_spell=58575),
+        Effect(type=EffectType.DUMMY, base_points=5),
     ],
-    spell_icon_id=3785,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You leech heat from victims of your Frost Fever, so that when their melee attack speed is reduced, yours increases by $s2% for the next 20 sec.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 2, 'EffectSpellClassMaskB_1': 12589815, 'EffectSpellClassMaskC_1': 4194437, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 4112, 'RuneCostID': 847, 'SpellClassMask_1': 2, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50},
+    masks={1: (m.ICY_TOUCH, 0, 0), 2: (0xC01AF7, 0, 0)},
+    description=(
+        'You leech heat from victims of your Frost Fever, so that when their melee attack speed is reduced, yours '
+        'increases by $s2% for the next 20 sec.' + _ICY_TALONS_CAPSTONE_GREY
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Icy Talons", U23): talent row 2, 3 ranks (50886 / 50887 are no longer '
+        'granted). eff0 aura 231 passes its amount to the buff 58575 (SPELLVALUE_BASE_POINT0), so stored 5 = 6% '
+        'here and on the buff (buff rows are deleted from npc.csv and owned by deathknight_frost_helpers.py). eff1 '
+        'DUMMY is the tooltip value. The stock -50880 spell_proc row (Frost Fever, TRIGGERED_CAN_PROC) is kept. '
+        'The E2 twins (BasePoints[E2] -1, E2.d0) are deleted; the stock own class mask 0x2 stays (a d0 b1 '
+        'collision accepted by S2-HANDOFF section 5).'
+    ),
 )
 
 
-icy_talons_50885 = spell(
-    id=50885,
-    name='Icy Talons',
-    school=School.FROST,
-    attributes=448,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    power_type=PowerType.RUNE,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=20.0,
+icy_talons_50885 = _frost_rank(
+    50885, 'Icy Talons', rank=3, row=2, icon=3785,
+    school=School.FROST, attributes=448, proc_chance=100, proc_type_mask=69648,
+    attributes_ex3=_ATTR3_CAN_PROC_FROM_PROCS, class_mask_1=2,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=231, trigger_spell=58576),
-        Effect(type=EffectType.DUMMY, base_points=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, trigger_spell=58576),
+        Effect(type=EffectType.DUMMY, base_points=9),
     ],
-    spell_icon_id=3785,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You leech heat from victims of your Frost Fever, so that when their melee attack speed is reduced, yours increases by $s2% for the next 20 sec.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 2, 'EffectSpellClassMaskB_1': 12589815, 'EffectSpellClassMaskC_1': 4194437, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 4112, 'RuneCostID': 848, 'SpellClassMask_1': 2, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50},
+    masks={1: (m.ICY_TOUCH, 0, 0), 2: (0xC01AF7, 0, 0)},
+    description=(
+        'You leech heat from victims of your Frost Fever, so that when their melee attack speed is reduced, yours '
+        'increases by $s2% for the next 20 sec.' + _ICY_TALONS_CAPSTONE_LAST
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Icy Talons", U23): talent row 2, 3 ranks (50886 / 50887 are no longer '
+        'granted). eff0 aura 231 passes its amount to the buff 58576 (SPELLVALUE_BASE_POINT0), so stored 9 = 10% '
+        'here and on the buff (buff rows are deleted from npc.csv and owned by deathknight_frost_helpers.py). eff1 '
+        'DUMMY is the tooltip value. The stock -50880 spell_proc row (Frost Fever, TRIGGERED_CAN_PROC) is kept. '
+        'The E2 twins (BasePoints[E2] -1, E2.d0) are deleted; the stock own class mask 0x2 stays (a d0 b1 '
+        'collision accepted by S2-HANDOFF section 5). Rank 3 is the capstone: the type-2 spell_linked_spell row '
+        'below adds and removes the hidden party aura 55610 with it (ex Improved Icy Talons, user ruling '
+        '2026-10-25).'
+    ),
 )
 
 
@@ -3269,63 +3367,69 @@ frigid_dreadplate_51109 = spell(
 )
 
 
-killing_machine_51123 = spell(
-    id=51123,
-    name='Killing Machine',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+killing_machine_51123 = _frost_rank(
+    51123, 'Killing Machine', rank=1, row=3, icon=2702,
+    proc_chance=100, proc_type_mask=4, attributes_ex3=_ATTR3_CAN_PROC_FROM_PROCS,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=51124),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.PROC_TRIGGER_SPELL,
+               trigger_spell=203320),
     ],
-    spell_icon_id=2702,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your melee attacks have a chance to make your next Icy Touch, Howling Blast or Frost Strike a critical strike.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 4, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    description=(
+        'Your auto attacks have a 3% chance to make your next Obliterate a critical strike that deals Frost '
+        'damage. The chance is doubled while you wield a two-handed weapon. Stacks up to 2 times.'
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Killing Machine", D8 / U6): talent row 3, 3 ranks (51129 / 51130 are '
+        'no longer granted and lose their spell_proc rows). eff0 triggers the new buff 203320 (Killing Machine, 2 '
+        'stacks, 30 s) instead of the stock 51124. The spell_proc rows are declared per rank at the end of the '
+        'file (Chance 6 = the two-hander value, the script spell_dk_killing_machine_talent halves it for a '
+        'one-hander; the displayed 3% is the one-hander value). ProcChance / ProcTypeMask 4 (auto attack) and '
+        'AttributesEx3 CAN_PROC_FROM_PROCS kept.'
+    ),
 )
 
 
-killing_machine_51127 = spell(
-    id=51127,
-    name='Killing Machine',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+killing_machine_51127 = _frost_rank(
+    51127, 'Killing Machine', rank=2, row=3, icon=2702,
+    proc_chance=100, proc_type_mask=4, attributes_ex3=_ATTR3_CAN_PROC_FROM_PROCS,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=51124),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.PROC_TRIGGER_SPELL,
+               trigger_spell=203320),
     ],
-    spell_icon_id=2702,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your melee attacks have a chance to make your next Icy Touch, Howling Blast or Frost Strike a critical strike.  Effect occurs more often than Killing Machine (Rank 1).', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 4, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    description=(
+        'Your auto attacks have a 6% chance to make your next Obliterate a critical strike that deals Frost '
+        'damage. The chance is doubled while you wield a two-handed weapon. Stacks up to 2 times.'
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Killing Machine", D8 / U6): talent row 3, 3 ranks (51129 / 51130 are '
+        'no longer granted and lose their spell_proc rows). eff0 triggers the new buff 203320 (Killing Machine, 2 '
+        'stacks, 30 s) instead of the stock 51124. The spell_proc rows are declared per rank at the end of the '
+        'file (Chance 12 = the two-hander value, the script spell_dk_killing_machine_talent halves it for a '
+        'one-hander; the displayed 6% is the one-hander value). ProcChance / ProcTypeMask 4 (auto attack) and '
+        'AttributesEx3 CAN_PROC_FROM_PROCS kept.'
+    ),
 )
 
 
-killing_machine_51128 = spell(
-    id=51128,
-    name='Killing Machine',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+killing_machine_51128 = _frost_rank(
+    51128, 'Killing Machine', rank=3, row=3, icon=2702,
+    proc_chance=100, proc_type_mask=4, attributes_ex3=_ATTR3_CAN_PROC_FROM_PROCS,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=51124),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.PROC_TRIGGER_SPELL,
+               trigger_spell=203320),
     ],
-    spell_icon_id=2702,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your melee attacks have a chance to make your next Icy Touch, Howling Blast or Frost Strike a critical strike.  Effect occurs more often than Killing Machine (Rank 2).', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 4, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    description=(
+        'Your auto attacks have a 10% chance to make your next Obliterate a critical strike that deals Frost '
+        'damage. The chance is doubled while you wield a two-handed weapon. Stacks up to 2 times.'
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Killing Machine", D8 / U6): talent row 3, 3 ranks (51129 / 51130 are '
+        'no longer granted and lose their spell_proc rows). eff0 triggers the new buff 203320 (Killing Machine, 2 '
+        'stacks, 30 s) instead of the stock 51124. The spell_proc rows are declared per rank at the end of the '
+        'file (Chance 20 = the two-hander value, the script spell_dk_killing_machine_talent halves it for a '
+        'one-hander; the displayed 10% is the one-hander value). ProcChance / ProcTypeMask 4 (auto attack) and '
+        'AttributesEx3 CAN_PROC_FROM_PROCS kept.'
+    ),
 )
 
 
@@ -3345,7 +3449,7 @@ killing_machine_51129 = spell(
     ],
     spell_icon_id=2702,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your melee attacks have a chance to make your next Icy Touch, Howling Blast or Frost Strike a critical strike.  Effect occurs more often than Killing Machine (Rank 3).', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 4', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 4, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your melee attacks have a chance to make your next Icy Touch, Howling Blast or Frost Strike a critical strike.  Effect occurs more often than Killing Machine (Rank 3).', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 4', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3365,7 +3469,7 @@ killing_machine_51130 = spell(
     ],
     spell_icon_id=2702,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your melee attacks have a chance to make your next Icy Touch, Howling Blast or Frost Strike a critical strike.  Effect occurs more often than Killing Machine (Rank 4).', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 5', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 4, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your melee attacks have a chance to make your next Icy Touch, Howling Blast or Frost Strike a critical strike.  Effect occurs more often than Killing Machine (Rank 4).', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 5', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 0, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -3434,26 +3538,31 @@ on_a_pale_horse_51267 = spell(
 )
 
 
-improved_icy_touch_51456 = spell(
-    id=51456,
-    name='Improved Icy Touch',
+improved_icy_touch_51456 = _frost_rank(
+    51456, 'Improved Icy Touch', rank=3, row=0, icon=2721,
     school=School.FROST,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    power_type=PowerType.RUNE,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=20.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=AuraType.DUMMY),
-        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=1, apply_aura=107, misc_value=12),
-        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=1, apply_aura=107, misc_value=23),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=int(SpellModOp.EFFECT2)),
+        Effect(type=EffectType.APPLY_AURA, base_points=-7, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=int(SpellModOp.EFFECT3)),
     ],
-    spell_icon_id=2721,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Icy Touch does an additional $s1% damage and your Frost Fever reduces melee and ranged attack speed by an additional $s3%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2, 'EffectSpellClassMaskB_2': 67108864, 'EffectSpellClassMaskC_2': 67108864, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RuneCostID': 881, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50},
+    masks={1: (m.ICY_TOUCH, 0, 0), 2: (0, m.FROST_FEVER_DISEASE, 0), 3: (0, m.FROST_FEVER_DISEASE, 0)},
+    description=(
+        'Your Icy Touch and Frost Fever deal $s1% more damage, and your Frost Fever reduces melee and ranged '
+        'attack speed by an additional $s3%.\n\nCapstone: Increases the range of your Icy Touch, Chains of Ice and '
+        'Howling Blast by 10 yards.'
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Improved Icy Touch", S2-HANDOFF U15 / U23): talent row 0, rank 3. '
+        'eff0 is the icon-2721 DUMMY the core adds to Icy Touch (Unit.cpp SpellPctDamageModsDone, d0 0x2), stored '
+        '4 / 9 / 14 = +5 / 10 / 15%. eff1 / eff2 are the stock SPELLMOD_EFFECT2 / EFFECT3 flats on Frost Fever (d1 '
+        'b26) = the extra 2 / 4 / 6% attack speed slow. The Frost Fever damage part and the rank 3 range part are '
+        'the type-2 linked helper 203325 (spell_linked_spell below, declared in deathknight_frost_b.py). '
+        'SpellLevel 9 + 5 x 0 + rank; the stale RuneCostID / power type of the stock row and its ProcChance 50 are '
+        'gone.'
+    ),
 )
 
 
@@ -3556,66 +3665,50 @@ necrosis_51465 = spell(
 )
 
 
-annihilation_51468 = spell(
-    id=51468,
-    name='Annihilation',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+annihilation_51468 = _frost_rank(
+    51468, 'Annihilation', rank=1, row=2, icon=2710,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=23),
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.MOD_CRIT_PCT),
     ],
-    spell_icon_id=2710,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your melee special abilities by $s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8454144, 'EffectSpellClassMaskB_1': 20971793, 'EffectSpellClassMaskB_2': 671219716, 'EffectSpellClassMaskC_1': 4194305, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Increases your critical strike chance by $s1%.',
+    notes=(
+        'death-knight-rework S2a (Frost doc "Annihilation", D13): talent row 2. eff0 is aura 290 MOD_CRIT_PCT +1 / '
+        '2 / 3% (all crit), so GetDummyAuraEffect(DK, 2710, EFFECT_0) no longer finds a DUMMY here and Obliterate '
+        '203054 is guarded by 203055 alone (first match, Unit.cpp). The stock DUMMY, the crit SpellMod on its '
+        'class mask and every raw mask / twin are deleted. Icon 2710 kept (talent icon).'
+    ),
 )
 
 
-annihilation_51472 = spell(
-    id=51472,
-    name='Annihilation',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+annihilation_51472 = _frost_rank(
+    51472, 'Annihilation', rank=2, row=2, icon=2710,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=23),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.MOD_CRIT_PCT),
     ],
-    spell_icon_id=2710,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your melee special abilities by $s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8454144, 'EffectSpellClassMaskB_1': 20971793, 'EffectSpellClassMaskB_2': 671219716, 'EffectSpellClassMaskC_1': 4194305, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Increases your critical strike chance by $s1%.',
+    notes=(
+        'death-knight-rework S2a (Frost doc "Annihilation", D13): talent row 2. eff0 is aura 290 MOD_CRIT_PCT +1 / '
+        '2 / 3% (all crit), so GetDummyAuraEffect(DK, 2710, EFFECT_0) no longer finds a DUMMY here and Obliterate '
+        '203054 is guarded by 203055 alone (first match, Unit.cpp). The stock DUMMY, the crit SpellMod on its '
+        'class mask and every raw mask / twin are deleted. Icon 2710 kept (talent icon).'
+    ),
 )
 
 
-annihilation_51473 = spell(
-    id=51473,
-    name='Annihilation',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+annihilation_51473 = _frost_rank(
+    51473, 'Annihilation', rank=3, row=2, icon=2710,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=23),
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.MOD_CRIT_PCT),
     ],
-    spell_icon_id=2710,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your melee special abilities by $s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8454144, 'EffectSpellClassMaskB_1': 20971793, 'EffectSpellClassMaskB_2': 671219716, 'EffectSpellClassMaskC_1': 4194305, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Increases your critical strike chance by $s1%.',
+    notes=(
+        'death-knight-rework S2a (Frost doc "Annihilation", D13): talent row 2. eff0 is aura 290 MOD_CRIT_PCT +1 / '
+        '2 / 3% (all crit), so GetDummyAuraEffect(DK, 2710, EFFECT_0) no longer finds a DUMMY here and Obliterate '
+        '203054 is guarded by 203055 alone (first match, Unit.cpp). The stock DUMMY, the crit SpellMod on its '
+        'class mask and every raw mask / twin are deleted. Icon 2710 kept (talent icon).'
+    ),
 )
 
 
@@ -3726,66 +3819,60 @@ abomination_s_might_53138 = spell(
 )
 
 
-blood_of_the_north_54637 = spell(
-    id=54637,
-    name='Blood of the North',
-    school=School.SHADOW,
-    attributes=448,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+blood_of_the_north_54637 = _frost_rank(
+    54637, 'Blood of the North', rank=3, row=7, icon=3041,
+    school=School.SHADOW, attributes=448, proc_chance=101, proc_type_mask=0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=226, amplitude=30000),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=int(SpellModOp.DAMAGE)),
     ],
-    spell_icon_id=3041,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases Blood Strike and Frost Strike damage by $s2%.  In addition, whenever you hit with Blood Strike or Pestilence there is a $h% chance that the Blood Rune will become a Death Rune when it activates.  Death Runes count as a Blood, Frost or Unholy Rune.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskB_1': 4194304, 'EffectSpellClassMaskB_2': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87312, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellVisualID_1': 10590},
+    masks={1: (0, m.OBLITERATE, 0)},
+    description='Increases the damage of your Obliterate by $s1%.',
+    notes=(
+        'death-knight-rework S2a (Frost doc "Blood of the North", D9 / U15): talent row 7, rank 3. eff0 aura 108 '
+        'SPELLMOD_DAMAGE +15% on Obliterate (d1 b17). The stock PERIODIC_DUMMY (icon 3041 traps, Death Rune '
+        'conversion) and the Blood Strike / Frost Strike mask are gone. ProcTypeMask 0 so no default spell_proc '
+        'row is rebuilt from the DBC flags; remove_spell_proc(-54639) and unbind_script(-54639, '
+        '\'spell_dk_death_rune\') are declared at the end of the file (the name stays bound to -49208 / -49467).'
+    ),
 )
 
 
-blood_of_the_north_54638 = spell(
-    id=54638,
-    name='Blood of the North',
-    school=School.SHADOW,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+blood_of_the_north_54638 = _frost_rank(
+    54638, 'Blood of the North', rank=2, row=7, icon=3041,
+    school=School.SHADOW, attributes=464, proc_chance=101, proc_type_mask=0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=226, amplitude=30000),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=int(SpellModOp.DAMAGE)),
     ],
-    spell_icon_id=3041,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases Blood Strike and Frost Strike damage by $s2%.  In addition, whenever you hit with Blood Strike or Pestilence there is a $h% chance that the Blood Rune will become a Death Rune when it activates.  Death Runes count as a Blood, Frost or Unholy Rune.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskB_1': 4194304, 'EffectSpellClassMaskB_2': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 60, 'ProcTypeMask': 87312, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellVisualID_1': 10590},
+    masks={1: (0, m.OBLITERATE, 0)},
+    description='Increases the damage of your Obliterate by $s1%.',
+    notes=(
+        'death-knight-rework S2a (Frost doc "Blood of the North", D9 / U15): talent row 7, rank 2. eff0 aura 108 '
+        'SPELLMOD_DAMAGE +10% on Obliterate (d1 b17). The stock PERIODIC_DUMMY (icon 3041 traps, Death Rune '
+        'conversion) and the Blood Strike / Frost Strike mask are gone. ProcTypeMask 0 so no default spell_proc '
+        'row is rebuilt from the DBC flags; remove_spell_proc(-54639) and unbind_script(-54639, '
+        '\'spell_dk_death_rune\') are declared at the end of the file (the name stays bound to -49208 / -49467).'
+    ),
 )
 
 
-blood_of_the_north_54639 = spell(
-    id=54639,
-    name='Blood of the North',
-    school=School.SHADOW,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+blood_of_the_north_54639 = _frost_rank(
+    54639, 'Blood of the North', rank=1, row=7, icon=3041,
+    school=School.SHADOW, attributes=464, proc_chance=101, proc_type_mask=0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=226, amplitude=30000),
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=int(SpellModOp.DAMAGE)),
     ],
-    spell_icon_id=3041,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases Blood Strike and Frost Strike damage by $s2%.  In addition, whenever you hit with Blood Strike or Pestilence there is a $h% chance that the Blood Rune will become a Death Rune when it activates.  Death Runes count as a Blood, Frost or Unholy Rune.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskB_1': 4194304, 'EffectSpellClassMaskB_2': 4, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 30, 'ProcTypeMask': 87312, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellVisualID_1': 10590},
+    masks={1: (0, m.OBLITERATE, 0)},
+    description='Increases the damage of your Obliterate by $s1%.',
+    notes=(
+        'death-knight-rework S2a (Frost doc "Blood of the North", D9 / U15): talent row 7, rank 1. eff0 aura 108 '
+        'SPELLMOD_DAMAGE +5% on Obliterate (d1 b17). The stock PERIODIC_DUMMY (icon 3041 traps, Death Rune '
+        'conversion) and the Blood Strike / Frost Strike mask are gone. ProcTypeMask 0 so no default spell_proc '
+        'row is rebuilt from the DBC flags; remove_spell_proc(-54639) and unbind_script(-54639, '
+        '\'spell_dk_death_rune\') are declared at the end of the file (the name stays bound to -49208 / -49467).'
+    ),
 )
 
 
@@ -3937,25 +4024,29 @@ outbreak_55237 = spell(
 )
 
 
-improved_icy_talons_55610 = spell(
-    id=55610,
-    name='Improved Icy Talons',
-    school=School.FROST,
-    attributes=80,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    power_type=PowerType.RUNE,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+improved_icy_talons_55610 = _frost_rank(
+    55610, 'Improved Icy Talons', rank=3, row=2, icon=101,
+    school=School.FROST, attributes=80,
     effects=[
-        Effect(type=65, base_points=19, implicit_target_a=1, apply_aura=138, radius_yards=100.0),
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=192),
+        Effect(type=65, base_points=9, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.MOD_MELEE_HASTE,
+               radius_yards=40.0),
     ],
-    spell_icon_id=3785,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases melee haste by $s1%.', 'BaseLevel': 1, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the melee haste of all party and raid members within $55610a1 yds by $55610s1% and your haste by an additional $55610s2%.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 2, 'EffectSpellClassMaskB_1': 12589815, 'EffectSpellClassMaskC_1': 4194437, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'RuneCostID': 1205, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    extra_raw={'AttributesEx7': 268435456, 'NameSubtext_Lang_enUS': ''},
+    aura_description='Melee attack speed increased.',
+    description=(
+        'Increases the melee attack speed of all party and raid members within $a1 yards by $s1%.'
+    ),
+    notes=(
+        'death-knight-rework S2 (user ruling 2026-10-25): no longer a talent (2223 is retired). The hidden party aura '
+        'that is now the capstone of Icy Talons rank 3 (50885): a type-2 spell_linked_spell row on 50885 adds it with '
+        'the rank and removes it with the rank (the Improved Icy Touch ranks / Vendetta ranks precedent). The one '
+        'effect is the party area aura 138 MOD_MELEE_HASTE +10% (stored 9), radius 40 yd, always on; it also reaches '
+        'the Death Knight (area auras include the owner, SpellAuras.cpp:2866). The former self effect (eff1, aura 193 '
+        'HASTE_ALL +5%) is deleted: nothing reads it. Icon 101; the id, the name and the spell_group 1022 membership '
+        'stay (group 1022 through the live nesting (1022, -1020) + (1020, 55610), rule 3 EXCLUSIVE_SAME_EFFECT, so '
+        'the party aura does not stack with Air Attunement). Rank-3 SpellLevel (22), blank rank subtext. The stock '
+        'RuneCostID / power type, the E0 / E1 class masks and the E2 twins are deleted.'
+    ),
 )
 
 
@@ -4041,24 +4132,30 @@ desecration_55667 = spell(
 )
 
 
-rime_56822 = spell(
-    id=56822,
-    name='Rime',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+rime_56822 = _frost_rank(
+    56822, 'Rime', rank=2, row=3, icon=56,
+    proc_chance=24, proc_type_mask=69904, attributes_ex3=_ATTR3_CAN_PROC_FROM_PROCS,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=107, misc_value=7),
-        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=59052),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=59052),
     ],
-    spell_icon_id=56,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Icy Touch and Obliterate by $s1% and casting Obliterate has a $h% chance to reset the cooldown on Howling Blast and cause your next Howling Blast to consume no runes.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2, 'EffectSpellClassMaskA_2': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 69904, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description=(
+        'Your Obliterates have a $h% chance to make your next Howling Blast cost no runes and reset its '
+        'cooldown.\n\n|cFF9D9D9DCapstone: Avalanche. Howling Blasts empowered by Rime also call down icicles on up '
+        'to 5 enemies they hit, each dealing '
+        + _AVALANCHE_POT +
+        ' Frost damage.|r'
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Rime", D7 / U7): talent row 3, rank 2. ProcChance 24 (DBC; the '
+        'spell_proc row -49188 has Chance 0 and inherits it, phase HIT stays). eff0 is a DUMMY: 0 on ranks 1 / 2, '
+        '1 on rank 3 = the Avalanche capstone flag (the C++ gates on HasAura(59057), L4). eff1 stays '
+        'PROC_TRIGGER_SPELL 59052 on EFFECT_1: spell_dk_rime registers on EFFECT_1 and resets Howling Blast\'s '
+        'cooldown, moving it would lose the reset silently. The crit SpellMod (stock eff0) and its class mask are '
+        'gone. ProcTypeMask 69904, AttributesEx3 and the two scripts on -49188 are kept. The capstone text quotes '
+        'Avalanche 203321\'s potency through pot_text().'
+    ),
 )
 
 
@@ -4102,24 +4199,30 @@ reaping_56835 = spell(
 )
 
 
-rime_59057 = spell(
-    id=59057,
-    name='Rime',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+rime_59057 = _frost_rank(
+    59057, 'Rime', rank=3, row=3, icon=56,
+    proc_chance=35, proc_type_mask=69904, attributes_ex3=_ATTR3_CAN_PROC_FROM_PROCS,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=107, misc_value=7),
-        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=59052),
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=59052),
     ],
-    spell_icon_id=56,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Icy Touch and Obliterate by $s1% and casting Obliterate has a $h% chance to reset the cooldown on Howling Blast and cause your next Howling Blast to consume no runes.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 2, 'EffectSpellClassMaskA_2': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 15, 'ProcTypeMask': 69904, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description=(
+        'Your Obliterates have a $h% chance to make your next Howling Blast cost no runes and reset its '
+        'cooldown.\n\nCapstone: Avalanche. Howling Blasts empowered by Rime also call down icicles on up to 5 '
+        'enemies they hit, each dealing '
+        + _AVALANCHE_POT +
+        ' Frost damage.'
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Rime", D7 / U7): talent row 3, rank 3. ProcChance 35 (DBC; the '
+        'spell_proc row -49188 has Chance 0 and inherits it, phase HIT stays). eff0 is a DUMMY: 0 on ranks 1 / 2, '
+        '1 on rank 3 = the Avalanche capstone flag (the C++ gates on HasAura(59057), L4). eff1 stays '
+        'PROC_TRIGGER_SPELL 59052 on EFFECT_1: spell_dk_rime registers on EFFECT_1 and resets Howling Blast\'s '
+        'cooldown, moving it would lose the reset silently. The crit SpellMod (stock eff0) and its class mask are '
+        'gone. ProcTypeMask 69904, AttributesEx3 and the two scripts on -49188 are kept. The capstone text quotes '
+        'Avalanche 203321\'s potency through pot_text().'
+    ),
 )
 
 
@@ -4277,64 +4380,61 @@ improved_death_strike_62908 = spell(
 )
 
 
-threat_of_thassarian_65661 = spell(
-    id=65661,
-    name='Threat of Thassarian',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+threat_of_thassarian_65661 = _frost_rank(
+    65661, 'Threat of Thassarian', rank=1, row=7, icon=2023,
+    equipped=(2, 41105),
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=2023,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When dual-wielding, your Death Strikes, Obliterates, Plague Strikes, Rune Strikes, Blood Strikes and Frost Strikes have a $s1% chance to also deal damage with your offhand weapon.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 41105, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description=(
+        'When dual-wielding, your Obliterate, Frost Strike, Heart Strike, Plague Strike and Death Strike have a '
+        '$s1% chance to also deal damage with your off-hand weapon.'
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Threat of Thassarian", U16 / Q16): talent row 7, rank 1. eff0 DUMMY '
+        'stored 32 = 33% (stock 30 / 60 / 100), read by spell_dk_threat_of_thassarian_rework. The spell_proc mask '
+        '(m.TOT_PROC, HIT phase) and the rebind of -65661 are declared at the end of the file. EquippedItemClass 2 '
+        '/ 41105 (stock weapon requirement) kept; the rank 3 filler DUMMY effect is kept as is.'
+    ),
 )
 
 
-threat_of_thassarian_66191 = spell(
-    id=66191,
-    name='Threat of Thassarian',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+threat_of_thassarian_66191 = _frost_rank(
+    66191, 'Threat of Thassarian', rank=2, row=7, icon=2023,
+    equipped=(2, 41105),
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=65, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=2023,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When dual-wielding, your Death Strikes, Obliterates, Plague Strikes, Rune Strikes, Blood Strikes and Frost Strikes have a $s1% chance to also deal damage with your offhand weapon.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 41105, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description=(
+        'When dual-wielding, your Obliterate, Frost Strike, Heart Strike, Plague Strike and Death Strike have a '
+        '$s1% chance to also deal damage with your off-hand weapon.'
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Threat of Thassarian", U16 / Q16): talent row 7, rank 2. eff0 DUMMY '
+        'stored 65 = 66% (stock 30 / 60 / 100), read by spell_dk_threat_of_thassarian_rework. The spell_proc mask '
+        '(m.TOT_PROC, HIT phase) and the rebind of -65661 are declared at the end of the file. EquippedItemClass 2 '
+        '/ 41105 (stock weapon requirement) kept; the rank 3 filler DUMMY effect is kept as is.'
+    ),
 )
 
 
-threat_of_thassarian_66192 = spell(
-    id=66192,
-    name='Threat of Thassarian',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+threat_of_thassarian_66192 = _frost_rank(
+    66192, 'Threat of Thassarian', rank=3, row=7, icon=2023,
+    equipped=(2, 41105),
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
         Effect(type=EffectType.DUMMY, die_sides=0),
     ],
-    spell_icon_id=2023,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When dual-wielding, your Death Strikes, Obliterates, Plague Strikes, Rune Strikes, Blood Strikes and Frost Strikes have a $s1% chance to also deal damage with your offhand weapon.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 41105, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description=(
+        'When dual-wielding, your Obliterate, Frost Strike, Heart Strike, Plague Strike and Death Strike have a '
+        '$s1% chance to also deal damage with your off-hand weapon.'
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Threat of Thassarian", U16 / Q16): talent row 7, rank 3. eff0 DUMMY '
+        'stored 99 = 100% (stock 30 / 60 / 100), read by spell_dk_threat_of_thassarian_rework. The spell_proc mask '
+        '(m.TOT_PROC, HIT phase) and the rebind of -65661 are declared at the end of the file. EquippedItemClass 2 '
+        '/ 41105 (stock weapon requirement) kept; the rank 3 filler DUMMY effect is kept as is.'
+    ),
 )
 
 
@@ -4676,7 +4776,6 @@ bloody_vengeance_49504 = spell(
 # ---- S1a (Blood): spell_proc rows and script bindings for the Blood talent ranks edited above --------------------------------------
 # Every DONE spell-class / DONE_PERIODIC row carries spell_phase_mask 2 (HIT). A negative key is the stock "this spell and every rank
 # of its talent chain" form (ObjectMgr / SpellMgr expand it); a row declared here replaces the stock spell_proc.sql row of that key.
-_SPELLFAMILY_DEATHKNIGHT = 15
 _PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS = 0x10
 _PROC_FLAGS_BLOODY_VENGEANCE = 0x51154       # DONE melee auto 0x4 | spell melee 0x10 | ranged auto 0x40 | spell ranged 0x100 | none-class neg 0x1000 | magic neg 0x10000 | periodic 0x40000
 _PROC_SPELL_TYPE_DAMAGE = 0x1
@@ -4709,3 +4808,176 @@ scripted_by(-49027, 'spell_dk_bloodworms_talent')
 procs_on(-49018, proc_flags=0, family_name=_SPELLFAMILY_DEATHKNIGHT, family_mask=m.SUDDEN_DOOM_PROC,
          spell_type_mask=_PROC_SPELL_TYPE_DAMAGE, spell_phase_mask=_PROC_SPELL_PHASE_HIT)
 scripted_by(-49018, 'spell_dk_sudden_doom_once')
+
+
+# ---- S2a: pulled stock rank spells (Toughness r1-r3, Nerves of Cold Steel r1-r3), edited in place by the Frost tree ----
+toughness_49042 = _frost_rank(
+    49042, 'Toughness', rank=1, row=0, icon=52,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.MOD_CUSTOM_STAT_PCT,
+               misc_value=_CR_VERSATILITY),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.MOD_BASE_RESISTANCE_PCT, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=_TARGET_SELF, apply_aura=232,
+               misc_value=11),
+    ],
+    description=(
+        'Increases your Versatility by $s1% and your armor value from items by $s2%, and reduces the duration of '
+        'all movement slowing effects on you by $s3%.'
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Toughness", S2-HANDOFF U23): talent row 0, 3 ranks (the stock ranks 4 '
+        '/ 5, 49788 / 49789, are not declared). eff0 aura 306 MOD_CUSTOM_STAT_PCT misc 1 << 21 (Versatility) +1 / '
+        '2 / 3%, eff1 aura 142 item armor +3 / 6 / 10%, eff2 aura 232 MECHANIC_DURATION_MOD misc 11 (slow) -10 / '
+        '20 / 30%. Stored = value - 1. Pulled from the stock row in WP-0.2.'
+    ),
+)
+
+
+toughness_49786 = _frost_rank(
+    49786, 'Toughness', rank=2, row=0, icon=52,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.MOD_CUSTOM_STAT_PCT, misc_value=_CR_VERSATILITY),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.MOD_BASE_RESISTANCE_PCT, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=-21, implicit_target_a=_TARGET_SELF, apply_aura=232,
+               misc_value=11),
+    ],
+    description=(
+        'Increases your Versatility by $s1% and your armor value from items by $s2%, and reduces the duration of '
+        'all movement slowing effects on you by $s3%.'
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Toughness", S2-HANDOFF U23): talent row 0, 3 ranks (the stock ranks 4 '
+        '/ 5, 49788 / 49789, are not declared). eff0 aura 306 MOD_CUSTOM_STAT_PCT misc 1 << 21 (Versatility) +1 / '
+        '2 / 3%, eff1 aura 142 item armor +3 / 6 / 10%, eff2 aura 232 MECHANIC_DURATION_MOD misc 11 (slow) -10 / '
+        '20 / 30%. Stored = value - 1. Pulled from the stock row in WP-0.2.'
+    ),
+)
+
+
+toughness_49787 = _frost_rank(
+    49787, 'Toughness', rank=3, row=0, icon=52,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.MOD_CUSTOM_STAT_PCT, misc_value=_CR_VERSATILITY),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.MOD_BASE_RESISTANCE_PCT, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=-31, implicit_target_a=_TARGET_SELF, apply_aura=232,
+               misc_value=11),
+    ],
+    description=(
+        'Increases your Versatility by $s1% and your armor value from items by $s2%, and reduces the duration of '
+        'all movement slowing effects on you by $s3%.'
+    ),
+    notes=(
+        'death-knight-rework S2a (Frost doc "Toughness", S2-HANDOFF U23): talent row 0, 3 ranks (the stock ranks 4 '
+        '/ 5, 49788 / 49789, are not declared). eff0 aura 306 MOD_CUSTOM_STAT_PCT misc 1 << 21 (Versatility) +1 / '
+        '2 / 3%, eff1 aura 142 item armor +3 / 6 / 10%, eff2 aura 232 MECHANIC_DURATION_MOD misc 11 (slow) -10 / '
+        '20 / 30%. Stored = value - 1. Pulled from the stock row in WP-0.2.'
+    ),
+)
+
+
+nerves_of_cold_steel_49226 = _frost_rank(
+    49226, 'Nerves of Cold Steel', rank=1, row=6, icon=533,
+    equipped=(2, 41105),
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=_TARGET_SELF, apply_aura=122),
+    ],
+    description='Increases the damage done by your off-hand weapon by $s1%.',
+    notes=(
+        'death-knight-rework S2a (Frost doc "Nerves of Cold Steel", U23): talent row 6, rank 1. aura 122 '
+        'MOD_OFFHAND_DAMAGE_PCT 8% (stock value) in eff0; the stock eff0 aura 54 (hit chance, hit no longer '
+        'exists) is dropped. EquippedItemClass 2 / 41105 (the stock weapon requirement) kept. Pulled from the '
+        'stock row in WP-0.2.'
+    ),
+)
+
+
+nerves_of_cold_steel_50137 = _frost_rank(
+    50137, 'Nerves of Cold Steel', rank=2, row=6, icon=533,
+    equipped=(2, 41105),
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=15, implicit_target_a=_TARGET_SELF, apply_aura=122),
+    ],
+    description='Increases the damage done by your off-hand weapon by $s1%.',
+    notes=(
+        'death-knight-rework S2a (Frost doc "Nerves of Cold Steel", U23): talent row 6, rank 2. aura 122 '
+        'MOD_OFFHAND_DAMAGE_PCT 16% (stock value) in eff0; the stock eff0 aura 54 (hit chance, hit no longer '
+        'exists) is dropped. EquippedItemClass 2 / 41105 (the stock weapon requirement) kept. Pulled from the '
+        'stock row in WP-0.2.'
+    ),
+)
+
+
+nerves_of_cold_steel_50138 = _frost_rank(
+    50138, 'Nerves of Cold Steel', rank=3, row=6, icon=533,
+    equipped=(2, 41105),
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=_TARGET_SELF, apply_aura=122),
+    ],
+    description='Increases the damage done by your off-hand weapon by $s1%.',
+    notes=(
+        'death-knight-rework S2a (Frost doc "Nerves of Cold Steel", U23): talent row 6, rank 3. aura 122 '
+        'MOD_OFFHAND_DAMAGE_PCT 25% (stock value) in eff0; the stock eff0 aura 54 (hit chance, hit no longer '
+        'exists) is dropped. EquippedItemClass 2 / 41105 (the stock weapon requirement) kept. Pulled from the '
+        'stock row in WP-0.2.'
+    ),
+)
+
+
+# ---- S2a (Frost): spell_proc rows, script bindings and link rows for the Frost talent ranks edited above ---------------------------
+# A negative key is the stock "this spell and every rank of its chain" form; a row declared under a key replaces the live row of that key.
+_PROC_FLAG_DONE_MELEE_AUTO_ATTACK = 0x4
+_PROC_SPELL_PHASE_CAST = 0x1
+_PROC_HIT_THREAT_OF_THASSARIAN = 0x477       # NORMAL | CRITICAL | MISS | DODGE | PARRY | BLOCK | ABSORB (the stock row's value)
+
+# Killing Machine (D8 / U6): per-rank POSITIVE rows (the live ones were PPM 1 / 2 / 3 per rank; declaring -51123 while the positive
+# rows are live would shadow them, lint check_shadowed_spell_procs). DONE_MELEE_AUTO_ATTACK covers both hands; the Chance is the
+# two-hander value, spell_dk_killing_machine_talent (CheckProc: owner, not triggered, one-hander) halves it. The auto attack flag
+# carries no spell phase, so SpellPhaseMask stays 0 (a phase on a non-spell flag logs "won't be used" at boot and fails the lint).
+# Ranks 4 / 5 (51129 / 51130) are no longer granted: their stock PPM rows go.
+procs_on(killing_machine_51123, proc_flags=_PROC_FLAG_DONE_MELEE_AUTO_ATTACK, chance=6.0)
+procs_on(killing_machine_51127, proc_flags=_PROC_FLAG_DONE_MELEE_AUTO_ATTACK, chance=12.0)
+procs_on(killing_machine_51128, proc_flags=_PROC_FLAG_DONE_MELEE_AUTO_ATTACK, chance=20.0)
+remove_spell_proc(51129)
+remove_spell_proc(51130)
+unbind_script(-51123, 'spell_gen_no_offhand_proc')       # it blocks off-hand procs (spell_generic.cpp:815-829); off-hand swings roll too
+scripted_by(-51123, 'spell_dk_killing_machine_talent')
+
+# Chill of the Grave (U19): a CAST-phase proc on Obliterate + Howling Blast (fires once per non-triggered cast, null victim; the
+# energize 50480 targets the caster). The live row was Icy Touch + Chains of Ice + Howling Blast + Obliterate on the HIT phase.
+procs_on(-49149, proc_flags=0, family_name=_SPELLFAMILY_DEATHKNIGHT, family_mask=m.CHILL_OF_THE_GRAVE_PROC,
+         spell_phase_mask=_PROC_SPELL_PHASE_CAST)
+
+# Threat of Thassarian (U16): the stock roll_chance_i script lacks Proc Chance and maps Blood Strike / Rune Strike; the rework roll
+# is roll_chance_f(amount x (1 + ProcChance%)), OncePerCastGuard (Heart Strike cleaves). Mask = Heart Strike + Plague Strike + Death
+# Strike (d0) and Frost Strike + Obliterate (d1), HIT phase; every other field is the live row's.
+procs_on(-65661, proc_flags=_PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS, family_name=_SPELLFAMILY_DEATHKNIGHT,
+         family_mask=m.TOT_PROC, spell_phase_mask=_PROC_SPELL_PHASE_HIT, hit_mask=_PROC_HIT_THREAT_OF_THASSARIAN, chance=100.0)
+unbind_script(-65661, 'spell_dk_threat_of_thassarian')
+scripted_by(-65661, 'spell_dk_threat_of_thassarian_rework')
+
+# Blood of the North (D9): eff0 is now a plain SpellMod, so the Death Rune conversion row goes. The ProcTypeMask of the three ranks
+# is 0 (above), otherwise the DBC flags (87312) would rebuild a default row. spell_dk_death_rune stays bound to -49208 / -49467.
+remove_spell_proc(-54639)
+unbind_script(-54639, 'spell_dk_death_rune')
+
+# Improved Icy Touch (U15 / U23): each rank links its helper (203323-203325, deathknight_frost_b.py: SPELLMOD_DOT +5 / 10 / 15 on
+# Frost Fever, rank 3 also SPELLMOD_RANGE +10 yd on Icy Touch / Chains of Ice / Howling Blast), type 2 = applied and removed with the aura.
+linked_spell(49175, 203323, 2, comment='Improved Icy Touch rank 1 - Frost Fever damage helper (S2a)')
+linked_spell(50031, 203324, 2, comment='Improved Icy Touch rank 2 - Frost Fever damage helper (S2a)')
+linked_spell(51456, 203325, 2, comment='Improved Icy Touch rank 3 - Frost Fever damage + range helper (S2a)')
+
+# Icy Talons capstone (user ruling 2026-10-25): rank 3 links the hidden party/raid melee haste aura 55610 (ex Improved Icy Talons),
+# type 2 = applied and removed with the aura (SpellAuras.cpp), the same shape as Improved Icy Touch above.
+linked_spell(50885, improved_icy_talons_55610.id, 2, comment='Icy Talons rank 3 - party/raid melee haste capstone (S2)')
+
+# Strike script bindings (S2a-HANDOFF "Script classes"). 66216 and 203322 are bound in deathknight_frost_helpers.py / _frost_b.py.
+scripted_by(icy_touch_45477, 'spell_dk_icy_touch_rework')
+scripted_by(heart_strike_55050, 'spell_dk_heart_strike_frost')
+scripted_by(plague_strike_45462, 'spell_dk_plague_strike_frost')
+scripted_by(obliterate_66198, 'spell_dk_frost_offhand')
+scripted_by(frost_strike_66196, 'spell_dk_frost_offhand')
