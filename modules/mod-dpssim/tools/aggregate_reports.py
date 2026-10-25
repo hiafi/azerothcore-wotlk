@@ -8,7 +8,7 @@ one noisy sample, not a measurement.
 
 Averages what can be meaningfully averaged across iterations - summary totals (dps, totalDamage,
 castCount, critCount, critRatePct) and the per-spell breakdown - and takes everything else (hits,
-auraEvents, manaSamples, casts) from a single representative iteration, verbatim: those are
+auraEvents, manaSamples, powerSamples, casts) from a single representative iteration, verbatim: those are
 per-run timelines (when did this specific hit land, when did that specific buff go up), and there
 is no sensible way to "average" N different timelines into one without fabricating events that
 never happened in any single run.
@@ -25,7 +25,7 @@ under "aggregate.trim.rawMean" and every raw per-iteration value still rides alo
 "aggregate.perIteration" (unaffected by trimming) - trimming is meant to reduce the influence of
 outliers, not hide that they happened.
 
-The representative iteration (whose hits/auraEvents/manaSamples/casts appear verbatim) is whichever
+The representative iteration (whose hits/auraEvents/manaSamples/powerSamples/casts appear verbatim) is whichever
 *kept* run's own DPS sits at or just below the *kept* set's median - not simply "iteration 1" (an
 unusually quiet or lucky run could land there by pure chance - see
 docs/.master-todo-list.md's cast-count-swing entry) and not a trimmed-away outlier either, since
@@ -583,6 +583,7 @@ def main_tank(out_path: Path, report_paths: list[Path], reports: list[dict]) -> 
         "hits": representative.get("hits", []),
         "auraEvents": representative.get("auraEvents", []),
         "manaSamples": representative.get("manaSamples", []),
+        "powerSamples": representative.get("powerSamples", []),
         "casts": representative.get("casts", []),
         "targets": aggregate_targets(reports, kept_idx),
         "tank": {
@@ -694,6 +695,7 @@ def main() -> int:
         "hits": representative.get("hits", []),
         "auraEvents": representative.get("auraEvents", []),
         "manaSamples": representative.get("manaSamples", []),
+        "powerSamples": representative.get("powerSamples", []),
         "casts": representative.get("casts", []),
         "aggregate": {
             "iterations": len(reports),

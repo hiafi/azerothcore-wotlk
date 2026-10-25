@@ -61,6 +61,8 @@ namespace
     // See SimDaemon.h's RunResult::ManaSamples doc comment for why this is a periodic sample
     // rather than a per-tick or per-event capture.
     constexpr uint32 MANA_SAMPLE_INTERVAL_MS = 500;
+    // The same cadence for the power / rune samples (RunResult::PowerSamples, the tank run's TANK_SAMPLE_INTERVAL_MS)
+    constexpr uint32 POWER_SAMPLE_INTERVAL_MS = 500;
 
     // Sim time skipped before each playerbot iteration (see RunPlayerbotIteration()): long enough for
     // everything time-based the iteration reset doesn't clear to age out - the GCD, queued action baskets
@@ -82,6 +84,54 @@ namespace
             return;
 
         samples.push_back({nowMs, actor->GetPowerPct(POWER_MANA)});
+        lastSampleMs = nowMs;
+        sampledOnce = true;
+    }
+
+    // Appends a power sample (and, for a Death Knight, the ready runes by type) if at least POWER_SAMPLE_INTERVAL_MS
+    // has passed since the last one (or this is the first tick). Called next to MaybeSampleMana() by the two runs that
+    // feed a DPS-shaped report: the playerbot DPS run and the tank run
+    void MaybeSamplePower(Player* actor, uint32 nowMs, uint32& lastSampleMs, bool& sampledOnce,
+        std::vector<SimDaemon::RunResult::PowerSample>& samples)
+    {
+        if (sampledOnce && nowMs - lastSampleMs < POWER_SAMPLE_INTERVAL_MS)
+            return;
+
+        SimDaemon::RunResult::PowerSample sample;
+        sample.TimestampMs = nowMs;
+        Powers const type = actor->getPowerType();
+        sample.PowerType = uint8(type);
+        sample.Power = actor->GetPower(type);
+        sample.MaxPower = actor->GetMaxPower(type);
+        if (actor->getClass() == CLASS_DEATH_KNIGHT)
+        {
+            sample.HasRunes = true;
+            for (uint8 slot = 0; slot < MAX_RUNES; ++slot)
+            {
+                if (actor->GetRuneCooldown(slot) != 0)
+                    continue;
+
+                switch (actor->GetCurrentRune(slot))
+                {
+                    case RUNE_BLOOD:
+                        ++sample.RunesBlood;
+                        break;
+                    case RUNE_FROST:
+                        ++sample.RunesFrost;
+                        break;
+                    case RUNE_UNHOLY:
+                        ++sample.RunesUnholy;
+                        break;
+                    case RUNE_DEATH:
+                        ++sample.RunesDeath;
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+
+        samples.push_back(sample);
         lastSampleMs = nowMs;
         sampledOnce = true;
     }
@@ -331,6 +381,9 @@ namespace
         uint32 lastManaSampleMs = 0;
         bool sampledManaOnce = false;
         std::vector<SimDaemon::RunResult::ManaSample> manaSamples;
+        uint32 lastPowerSampleMs = 0;
+        bool sampledPowerOnce = false;
+        std::vector<SimDaemon::RunResult::PowerSample> powerSamples;
         // The bot's own current target, seeded with the primary at the pull (D5: measured, not inferred from casts)
         ObjectGuid lastTarget = bot.GetCurrentTarget();
         uint32 targetSwitches = 0;
@@ -357,6 +410,7 @@ namespace
 
             bot.UpdateAI(config.StepMs);
             MaybeSampleMana(player, clock.GetElapsedMs(), lastManaSampleMs, sampledManaOnce, manaSamples);
+            MaybeSamplePower(player, clock.GetElapsedMs(), lastPowerSampleMs, sampledPowerOnce, powerSamples);
 
             ObjectGuid const currentTarget = bot.GetCurrentTarget();
             if (!currentTarget.IsEmpty())
@@ -398,6 +452,7 @@ namespace
         result.TargetSwitches = targetSwitches;
         result.AuraEvents = ToRunResultAuraEvents(recorder->GetAuraEvents());
         result.ManaSamples = std::move(manaSamples);
+        result.PowerSamples = std::move(powerSamples);
         result.CastEvents = ToRunResultCastEvents(castRecorder->GetCastEvents());
 
         // Recorders stamp raw getMSTime(); reports count from the iteration start. An event recorded before
@@ -1168,6 +1223,9 @@ namespace
         uint32 lastManaSampleMs = 0;
         bool sampledManaOnce = false;
         std::vector<SimDaemon::RunResult::ManaSample> manaSamples;
+        uint32 lastPowerSampleMs = 0;
+        bool sampledPowerOnce = false;
+        std::vector<SimDaemon::RunResult::PowerSample> powerSamples;
         ObjectGuid lastTarget = bot.GetCurrentTarget();
         uint32 targetSwitches = 0;
         uint32 lastTankSampleMs = 0;
@@ -1228,6 +1286,7 @@ namespace
             else
                 bot.UpdateAI(config.StepMs);
             MaybeSampleMana(player, clock.GetElapsedMs(), lastManaSampleMs, sampledManaOnce, manaSamples);
+            MaybeSamplePower(player, clock.GetElapsedMs(), lastPowerSampleMs, sampledPowerOnce, powerSamples);
 
             // The crit chance the dummies have once the bot has acted (its stance, its first buffs): the pull value was
             // taken before any of that
@@ -1304,6 +1363,7 @@ namespace
         result.TargetSwitches = targetSwitches;
         result.AuraEvents = ToRunResultAuraEvents(recorder->GetAuraEvents());
         result.ManaSamples = std::move(manaSamples);
+        result.PowerSamples = std::move(powerSamples);
         result.CastEvents = ToRunResultCastEvents(castRecorder->GetCastEvents());
 
         // The actor's own healing and shields (heal-mode structs, target index 0 = the actor), and the incoming swings

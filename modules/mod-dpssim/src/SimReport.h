@@ -58,6 +58,11 @@ namespace SimReport
     //                  (targetIndex -1 = on the actor).
     //   "manaSamples": [{timestampMs, manaPct}, ...] - actor's mana, sampled periodically rather
     //                  than every tick, see RunResult::ManaSamples's doc comment.
+    //   "powerSamples": [{timestampMs, powerType, power, maxPower[, runes: {blood, frost, unholy, death}]}, ...] - the
+    //                  actor's class power every 500 ms in the playerbot DPS run and the tank run (empty in others);
+    //                  power and maxPower as the player reads them (rage and runic power are divided by ten), powerType
+    //                  the core's Powers enum (6 = runic power); runes (Death Knight only) the READY runes by current
+    //                  type, see RunResult::PowerSample.
     //   "casts": [{timestampMs, spellId, triggered, target}, ...] - every spell the actor cast, in cast
     //             order, damage or not (Evocation, self-buffs, ...) - see RunResult::CastEvents's
     //             doc comment. Distinct from "hits" above: a cast here is logged the moment it

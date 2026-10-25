@@ -281,6 +281,25 @@ namespace SimDaemon
         };
         std::vector<ManaSample> ManaSamples;
 
+        // The actor's class power and, for a Death Knight, its runes, sampled every POWER_SAMPLE_INTERVAL_MS (see
+        // SimDaemon.cpp) in the DPS bot run and the tank run: what the resource-based rotations are judged by (Runic
+        // Power at the cap, Breath's drain, an idle Frost Rune). Power and MaxPower are in the unit the core stores
+        // (rage and runic power x10; the report divides them). The rune counts are the READY runes by their current
+        // type (a Death Rune counts as death only); HasRunes is false for every class but the Death Knight.
+        struct PowerSample
+        {
+            uint32 TimestampMs = 0;
+            uint8 PowerType = 0;
+            uint32 Power = 0;
+            uint32 MaxPower = 0;
+            bool HasRunes = false;
+            uint8 RunesBlood = 0;
+            uint8 RunesFrost = 0;
+            uint8 RunesUnholy = 0;
+            uint8 RunesDeath = 0;
+        };
+        std::vector<PowerSample> PowerSamples;
+
         // One entry per spell the actor actually cast, in cast order - a "cast log" alongside the
         // hit log above, so non-damage abilities (Evocation, self-buffs, ...) show up too, not just
         // landed direct-damage hits. See CastRecorder's own doc comment for why this comes from a

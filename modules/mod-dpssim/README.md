@@ -33,6 +33,18 @@ A dead pet is revived and a missing one tamed again. The pet's swings and spells
 read "(pet)" in the report). A hunter actor also gets the "Requires No Ammo" aura, so its ranged weapon needs no
 arrows. The run log shows what ran: "tamed pet ...", and "strategies resolved: combat [...], non-combat [...]".
 
+## Power and rune samples (`powerSamples[]`)
+
+The playerbot DPS report (and a tank report, which is the DPS report plus a `tank` section) carries `powerSamples[]`,
+one entry every 500 ms of the measured run: `{timestampMs, powerType, power, maxPower[, runes: {blood, frost, unholy,
+death}]}`. `power` and `maxPower` are what the player reads (rage and runic power are stored x10 and divided here;
+`powerType` is the core's `Powers` enum, 6 = runic power). `runes` exists for a Death Knight only: the runes that are
+READY at the sample, counted by their current type (a Death Rune is `death` alone), so a rune sitting ready while the
+bot casts something else shows as an idle rune, and runic power at the cap or a Breath of Sindragosa drain read straight
+off the series. The hardcoded-rotation run writes the key empty, and the heal report has no `powerSamples` key at all.
+`tools/aggregate_reports.py` (the multi-iteration report `run-sim.sh` prints) carries the representative run's series
+into the aggregate, like `manaSamples`. Source: `RunResult::PowerSample`, `MaybeSamplePower()` in `SimDaemon.cpp`.
+
 ## Tank sim (tank mode)
 
 A profile with `Mode = Tank` runs the DPS sim with one change: the dummies swing at the actor. Plan:
@@ -103,13 +115,13 @@ run-sim.sh refuses it); the baked page is `reports/TankProfileReport.html`.
 ### Tank reports (`"kind": "tank"`)
 
 A tank report is the DPS report exactly as before (`config`, `summary`, `spells`, `hits`, `auraEvents`, `manaSamples`,
-`casts`, `targets`) with `"kind": "tank"` as its first key and a `"tank"` section as its last; DPS and heal reports are
-unchanged. The `tank` object (schema in `src/SimReport.h`): `config` (scenario, hit ranges, swing ms, crit switch,
-dummy count and kind, solver values per dummy), `actor` (the character sheet after the first second and at the pull),
-`summary`, `perDummy` (full outcome split, damage taken, threat), `absorbsBySpell`, `selfHeals`, `swings`, `samples`
-(health, power, Bulwark stacks every 500 ms), `threat` (per dummy, every second). Time bases: swing times are the start
-of the step, samples and the time of death are read after it, so the swing that killed the actor is stamped one step
-before `actorDiedAtMs`.
+`powerSamples`, `casts`, `targets`) with `"kind": "tank"` as its first key and a `"tank"` section as its last; the
+heal report is unchanged. The `tank` object (schema in `src/SimReport.h`): `config` (scenario, hit ranges, swing ms,
+crit switch, dummy count and kind, solver values per dummy), `actor` (the character sheet after the first second and
+at the pull), `summary`, `perDummy` (full outcome split, damage taken, threat), `absorbsBySpell`, `selfHeals`,
+`swings`, `samples` (health, power, Bulwark stacks every 500 ms), `threat` (per dummy, every second). Time bases:
+swing times are the start of the step, samples and the time of death are read after it, so the swing that killed the
+actor is stamped one step before `actorDiedAtMs`.
 
 `tank.summary` highlights: the outcome counts and percent (miss, dodge, parry, block, full block, crit, crush, hit),
 `avoidancePct`, `mitigation` by source (avoided, armor, block, absorb), `damageTaken` (already after the shields),

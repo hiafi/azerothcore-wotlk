@@ -27,6 +27,15 @@
 
 namespace
 {
+    // POWER_RAGE and POWER_RUNIC_POWER are stored x10 by the core; every other power is stored as it reads
+    double TankPowerDisplay(uint8 powerType, uint32 value)
+    {
+        constexpr uint8 POWER_TYPE_RAGE = 1;
+        constexpr uint8 POWER_TYPE_RUNIC_POWER = 6;
+        return (powerType == POWER_TYPE_RAGE || powerType == POWER_TYPE_RUNIC_POWER) ? double(value) / 10.0 :
+            double(value);
+    }
+
     // Per-spell aggregate, built from RunResult's parallel HitSpellIds/HitDamages/HitCrits
     // vectors (castCount from CastEvents) - see SimReport.h's schema doc comment for hitCount vs. castCount.
     struct SpellAggregate
@@ -194,6 +203,23 @@ static bool WriteDpsReport(std::string const& path, SimDaemon::RunConfig const& 
         SimDaemon::RunResult::ManaSample const& m = result.ManaSamples[i];
         file << "    {\"timestampMs\": " << m.TimestampMs << ", \"manaPct\": " << m.ManaPct
              << "}" << (i + 1 < result.ManaSamples.size() ? ",\n" : "\n");
+    }
+    file << "  ],\n";
+
+    // The actor's class power every 500 ms and, for a Death Knight, its ready runes by type (RunResult::PowerSamples);
+    // power and maxPower are as the player reads them (rage and runic power divided by ten)
+    file << "  \"powerSamples\": [\n";
+    for (size_t i = 0; i < result.PowerSamples.size(); ++i)
+    {
+        SimDaemon::RunResult::PowerSample const& sample = result.PowerSamples[i];
+        file << "    {\"timestampMs\": " << sample.TimestampMs << ", \"powerType\": " << uint32(sample.PowerType)
+             << ", \"power\": " << TankPowerDisplay(sample.PowerType, sample.Power) << ", \"maxPower\": "
+             << TankPowerDisplay(sample.PowerType, sample.MaxPower);
+        if (sample.HasRunes)
+            file << ", \"runes\": {\"blood\": " << uint32(sample.RunesBlood) << ", \"frost\": "
+                 << uint32(sample.RunesFrost) << ", \"unholy\": " << uint32(sample.RunesUnholy) << ", \"death\": "
+                 << uint32(sample.RunesDeath) << "}";
+        file << "}" << (i + 1 < result.PowerSamples.size() ? ",\n" : "\n");
     }
     file << "  ],\n";
 
@@ -686,15 +712,6 @@ namespace
     // JSON keys of SimTank::Outcome, in enum order
     constexpr char const* TANK_OUTCOME_KEYS[TANK_OUTCOMES] = {"miss", "dodge", "parry", "block", "fullBlock", "crit",
         "crush", "hit", "glancing", "other"};
-
-    // POWER_RAGE and POWER_RUNIC_POWER are stored x10 by the core; every other power is stored as it reads
-    double TankPowerDisplay(uint8 powerType, uint32 value)
-    {
-        constexpr uint8 POWER_TYPE_RAGE = 1;
-        constexpr uint8 POWER_TYPE_RUNIC_POWER = 6;
-        return (powerType == POWER_TYPE_RAGE || powerType == POWER_TYPE_RUNIC_POWER) ? double(value) / 10.0 :
-            double(value);
-    }
 
     double SafeDivide(double numerator, double denominator)
     {
