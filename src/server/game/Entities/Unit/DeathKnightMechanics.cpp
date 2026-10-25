@@ -21,6 +21,7 @@
 #include "GameTime.h"
 #include "Item.h"
 #include "ItemTemplate.h"
+#include "ObjectAccessor.h"
 #include "Player.h"
 #include "Random.h"
 #include "Spell.h"
@@ -35,6 +36,9 @@
 #include <cmath>
 #include <deque>
 #include <limits>
+#include <list>
+#include <unordered_map>
+#include <vector>
 
 /*
  * DK0a block (docs/reworks/death-knight-shared-rework.md): the Death Strike damage-taken record and heal, the
@@ -239,14 +243,24 @@ namespace
         return uint16(std::clamp<int32>(value, 0, std::numeric_limits<uint16>::max()));
     }
 
-    // Once-per-cast fallback for a cast with no unit target (self-centred AoE such as Blood Boil, Death and Decay's
-    // ticks): the first hit of that Spell object rolls, the rest skip. Hits of one cast land in the same server tick
-    // (Spell::DoAllEffectOnTarget), so the time stamp keeps a later cast that reuses the address from matching.
-    struct RuneCastGuard : DataMap::Base
+    // Once-per-cast fallback for a cast with no unit target (self-centred AoE such as Blood Boil): the first target
+    // the calling aura's CheckProc is asked about is that aura's rolling target, every other target skips. The guard
+    // is keyed by the calling aura id, so one aura's answer never claims the cast from another (an unfiltered aura
+    // asking on target 1 cannot starve a crit-only aura that first asks on target 2; review S1a M2/m2). The guard
+    // stores the target, not "a roll happened", so a repeated query for the same hit gets the same answer. Hits of one
+    // cast land in the same server tick (Spell::DoAllEffectOnTarget), so the time stamp keeps a later cast that
+    // reuses the address from matching.
+    struct RuneCastEntry
     {
         Spell const* spell = nullptr;
         uint32 spellId = 0;
         int64 timeMs = -1;
+        ObjectGuid firstTarget;
+    };
+
+    struct RuneCastGuard : DataMap::Base
+    {
+        std::unordered_map<uint32, RuneCastEntry> byAura;
     };
 
     constexpr char const* RUNE_CAST_GUARD_KEY = "deathknight_rune_cast_guard";
@@ -368,7 +382,8 @@ namespace DeathKnight
                 player->SetVisibleItemSlot(slot, item);
     }
 
-    bool RuneProcAllowed(Unit const* runeOwner, ProcEventInfo& eventInfo, bool dualWieldHalf, bool oncePerCast)
+    bool RuneProcAllowed(Unit const* runeOwner, ProcEventInfo& eventInfo, uint32 auraId, bool dualWieldHalf,
+        bool oncePerCast)
     {
         Unit* actor = eventInfo.GetActor();
         if (!runeOwner || actor != runeOwner)
@@ -389,12 +404,16 @@ namespace DeathKnight
                 RuneCastGuard* guard = actor->CustomData.GetDefault<RuneCastGuard>(RUNE_CAST_GUARD_KEY);
                 uint32 const spellId = spell->GetSpellInfo() ? spell->GetSpellInfo()->Id : 0;
                 int64 const now = NowMs();
-                if (guard->spell == spell && guard->spellId == spellId && guard->timeMs == now)
-                    return false;
+                Unit const* actionTarget = eventInfo.GetActionTarget();
+                ObjectGuid const targetGuid = actionTarget ? actionTarget->GetGUID() : ObjectGuid::Empty;
+                RuneCastEntry& entry = guard->byAura[auraId];
+                if (entry.spell == spell && entry.spellId == spellId && entry.timeMs == now)
+                    return entry.firstTarget == targetGuid;   // same cast: only this aura's first target rolls
 
-                guard->spell = spell;
-                guard->spellId = spellId;
-                guard->timeMs = now;
+                entry.spell = spell;
+                entry.spellId = spellId;
+                entry.timeMs = now;
+                entry.firstTarget = targetGuid;
             }
         }
 
@@ -556,8 +575,7 @@ namespace DeathKnight
             GetSharedAttackPowerBonus(owner, minion));
         if (Aura* mirror = minion->GetAura(DeathKnightData::SPELL_MINION_MIRROR, ownerGuid))
         {
-            SetEffectAmount(mirror, EFFECT_0,
-                std::max<int32>(0, SharePct(ownerAp, DeathKnightData::MINION_AP_SHARE_PCT)));
+            SetEffectAmount(mirror, EFFECT_0, std::max<int32>(0, SharePct(ownerAp, GetMinionApSharePct(kind))));
             int32 const spellPower = kind == MinionKind::Gargoyle ?
                 std::max<int32>(0, SharePct(ownerAp, DeathKnightData::MINION_SP_SHARE_PCT)) : 0;
             SetEffectAmount(mirror, EFFECT_1, spellPower);
@@ -590,10 +608,22 @@ namespace DeathKnight
         }
     }
 
-    float GetMinionDamageMultiplier(Player const* /*owner*/, Unit const* /*minion*/, SpellInfo const* /*spellInfo*/)
+    float GetMinionDamageMultiplier(Player const* owner, Unit const* minion, SpellInfo const* /*spellInfo*/)
     {
-        // U10 seam: no term in DK0b. S1/S3 add theirs (Mastery, percent mods) together with the per-hit hooks.
-        return 1.0f;
+        // U10 seam. S1 (U17): a Bloodworm's swing takes the owner's physical percent damage bonuses (Blood Gorged,
+        // Bloody Vengeance, Blood Presence...) read live, skipping weapon-restricted auras such as Two-Handed Weapon
+        // Specialization (Unit::SpellPctDamageModsDone's item-class filter). Versatility is mirrored separately
+        // (203058). Other kinds stay 1.0 until S3.
+        if (!owner || GetMinionKind(minion) != MinionKind::Bloodworm)
+            return 1.0f;
+
+        return owner->GetTotalAuraMultiplier(SPELL_AURA_MOD_DAMAGE_PERCENT_DONE, [](AuraEffect const* aurEff)
+        {
+            if (aurEff->GetSpellInfo()->EquippedItemClass != -1)
+                return false;
+
+            return (aurEff->GetMiscValue() & SPELL_SCHOOL_MASK_NORMAL) != 0;
+        });
     }
 
     void OnRuneKillingBlow(Player* dk, Unit* killed)
@@ -610,5 +640,551 @@ namespace DeathKnight
 
         // "Your killing blows always" grant the buff: the rune's 30 s proc cooldown gates only the crit proc.
         dk->CastSpell(dk, DeathKnightData::SPELL_UNENDING_THIRST, true);
+    }
+}
+
+// ---- S1 ----
+/*
+ * S1 block (docs/reworks/death-knight-blood-rework.md): Bone Shield charges, Blood Shield (U7), Purgatory (U9), the
+ * Voracious capstone and the two leeches (U5, U6, U21), Red Thirst (U22), Blood Gorged (U13, U18), the Bloodworm cap
+ * and damage term (U16, U17) and the Dancing Rune Weapon copy list (U15). Per-player state (Purgatory's attacker, the
+ * Blood Gorged snapshots) lives on CustomData, nothing file-static.
+ */
+namespace
+{
+    // _masks.py DK_SELF_HEAL (d2 b15): the own Death Knight self-heal group the Voracious capstone reads. The generated
+    // header exports no masks, so it is mirrored here.
+    constexpr uint32 DK_SELF_HEAL_MASK_D2 = 0x8000;
+
+    // Stock ids C++ reads that the DSL does not declare (brief "Other stock ids").
+    constexpr uint32 SPELL_DEATH_AND_DECAY_TICK = 52212;
+    constexpr uint32 SPELL_MARK_OF_BLOOD_HEAL = 61607;
+    constexpr uint32 NPC_DANCING_RUNE_WEAPON = 27893;
+
+    // The three Blood Gorged damage passives (rank 1..3), learned by the talent ranks 61154/61155/61156.
+    constexpr std::array<uint32, 3> BLOOD_GORGED_PASSIVES = {
+        DeathKnightData::SPELL_BLOOD_GORGED,
+        DeathKnightData::SPELL_BLOOD_GORGED_50108,
+        DeathKnightData::SPELL_BLOOD_GORGED_50109,
+    };
+
+    struct PurgatoryState : DataMap::Base
+    {
+        ObjectGuid attacker;   // the unit whose hit Purgatory stopped; the killer when the Shroud expires unhealed
+    };
+
+    constexpr char const* PURGATORY_STATE_KEY = "deathknight_purgatory";
+
+    // U13: Blood Gorged's multiplier at the cast of Death and Decay (43265) or Bonestorm (203148), keyed by that id.
+    struct BloodGorgedSnapshots : DataMap::Base
+    {
+        std::unordered_map<uint32, float> multiplierBySpell;
+    };
+
+    constexpr char const* BLOOD_GORGED_SNAPSHOT_KEY = "deathknight_blood_gorged_snapshots";
+
+    int32 ClampToInt32(uint64 value)
+    {
+        return int32(std::min<uint64>(value, uint64(std::numeric_limits<int32>::max())));
+    }
+
+    bool KnowsVoraciousCapstone(Unit const* unit)
+    {
+        // Talent ranks are auras, not HasSpell (custom-spells.md); the top rank is the capstone.
+        return unit && unit->IsPlayer() && unit->HasAura(DeathKnightData::SPELL_VORACIOUS_203139);
+    }
+
+    // The Blood Gorged damage multiplier the engine applies right now: the passive's MOD_DAMAGE_PERCENT_DONE counts
+    // only while AURA_STATE_HEALTH_ABOVE_75_PERCENT is on (CasterAuraState 23 handles the effect in and out,
+    // Unit::ModifyAuraState).
+    float LiveBloodGorgedMultiplier(Unit const* dk)
+    {
+        if (!dk->HasAuraState(AURA_STATE_HEALTH_ABOVE_75_PERCENT))
+            return 1.0f;
+
+        float multiplier = 1.0f;
+        for (uint32 const spellId : BLOOD_GORGED_PASSIVES)
+            if (AuraEffect const* effect = dk->GetAuraEffect(spellId, EFFECT_0))
+                AddPct(multiplier, effect->GetAmount());
+
+        return multiplier;
+    }
+
+    // Base percent of one damage passive: its DBC value (CalcValue), never the live amount the capstone overwrites.
+    int32 PassiveBasePct(Player const* dk, uint32 spellId)
+    {
+        SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
+        return spellInfo ? spellInfo->Effects[EFFECT_0].CalcValue(dk) : 0;
+    }
+}
+
+namespace DeathKnight
+{
+    uint8 GetBoneShieldCharges(Unit const* unit)
+    {
+        if (!unit)
+            return 0;
+
+        Aura const* aura = unit->GetAura(DeathKnightData::SPELL_BONE_SHIELD);
+        return aura ? aura->GetCharges() : 0;
+    }
+
+    bool AddBoneShieldCharges(Unit* dk, uint8 add)
+    {
+        if (!dk || !add)
+            return false;
+
+        int32 const maxCharges = std::clamp<int32>(int32(DeathKnightData::BONE_SHIELD_MAX_CHARGES), 1,
+            std::numeric_limits<uint8>::max());
+
+        // 0-verify item 10: a re-cast resets the charges to ProcCharges (3) and ModCharges caps there too, so the count
+        // is written with SetCharges. A missing shield is added as an aura (no cast: no cooldown, no rune cost) and
+        // starts from 0 charges here, whatever it was created with.
+        Aura* aura = dk->GetAura(DeathKnightData::SPELL_BONE_SHIELD, dk->GetGUID());
+        int32 const before = aura ? aura->GetCharges() : 0;
+        if (aura && before >= maxCharges)
+        {
+            aura->RefreshDuration();
+            return true;
+        }
+
+        if (!aura)
+            aura = dk->AddAura(DeathKnightData::SPELL_BONE_SHIELD, dk);
+
+        if (!aura)
+            return false;
+
+        aura->SetCharges(uint8(std::min<int32>(before + add, maxCharges)));
+        aura->RefreshDuration();
+        return false;
+    }
+
+    void GrantBloodShield(Player* dk, uint32 amount)
+    {
+        if (!dk || !amount || !dk->IsAlive())
+            return;
+
+        // U7: the cap follows the current max health (Vampiric Blood raises it), GrantStormsBulwark shape.
+        int32 const capPct = std::max<int32>(0, int32(DeathKnightData::BLOOD_SHIELD_CAP_PCT));
+        int32 const cap = int32(std::min<uint32>(dk->CountPctFromMaxHealth(capPct),
+            uint32(std::numeric_limits<int32>::max())));
+        if (cap <= 0)
+            return;
+
+        int32 const add = ClampToInt32(amount);
+        if (Aura* aura = dk->GetAura(DeathKnightData::SPELL_BLOOD_SHIELD, dk->GetGUID()))
+        {
+            if (AuraEffect* effect = aura->GetEffect(EFFECT_0))
+            {
+                // Never shrink a shield that already sits above a cap lowered since (max health fell).
+                int32 const current = effect->GetAmount();
+                int32 const raised = int32(std::min<int64>(int64(current) + add, cap));
+                effect->SetAmount(std::max(current, raised));
+            }
+
+            aura->RefreshDuration();
+            return;
+        }
+
+        // BASE_POINT0 is a live value; 203151 has DmgClass NONE and no bonus row, so nothing is added on top.
+        dk->CastCustomSpell(DeathKnightData::SPELL_BLOOD_SHIELD, SPELLVALUE_BASE_POINT0, std::min(add, cap), dk,
+            TRIGGERED_FULL_MASK);
+    }
+
+    void OnDeathStrikeHealFinal(Player* dk, uint32 heal, uint32 effective, uint32 healAbsorbed)
+    {
+        if (!dk || !heal)
+            return;
+
+        // Improved Death Strike rank 2 (62908) is the capstone; talent ranks are auras.
+        if (!dk->HasAura(DeathKnightData::SPELL_IMPROVED_DEATH_STRIKE_62908))
+            return;
+
+        // A heal absorb (Purgatory's Shroud) ate part of the heal: it fills first and converts nothing.
+        if (healAbsorbed > 0)
+            return;
+
+        if (heal <= effective)
+            return;
+
+        GrantBloodShield(dk, heal - effective);
+    }
+
+    bool TryPurgatory(Player* dk, Unit* attacker, uint32& damage)
+    {
+        if (!dk || !damage || !dk->IsAlive())
+            return false;
+
+        uint32 const health = dk->GetHealth();
+        if (damage < health)
+            return false;
+
+        if (!dk->HasAura(DeathKnightData::SPELL_PURGATORY) || dk->HasAura(DeathKnightData::SPELL_PURGATORY_LOCKOUT))
+            return false;
+
+        // Unit::DealDamage ends a duel instead of killing when the opponent (or its minion) lands the hit, and
+        // .cheat god never dies: both are decided later, leave them alone (P0 m3).
+        if (dk->GetCommandStatus(CHEAT_GOD))
+            return false;
+
+        if (dk->duel && attacker && dk->duel->Opponent &&
+            (dk->duel->Opponent == attacker || dk->duel->Opponent->GetGUID() == attacker->GetOwnerGUID()))
+            return false;
+
+        // The lockout must land, or Purgatory would save again on the next hit (NO_IMMUNITIES, P0 m3).
+        dk->CastSpell(dk, DeathKnightData::SPELL_PURGATORY_LOCKOUT, TRIGGERED_FULL_MASK);
+        if (!dk->HasAura(DeathKnightData::SPELL_PURGATORY_LOCKOUT))
+            return false;
+
+        uint32 const kept = health > 0 ? health - 1 : 0;
+        uint64 const prevented = std::min<uint64>(uint64(damage) - kept, dk->GetMaxHealth());
+
+        // The GM .damage path is DealDamage(player, player, ...): attacker == victim is kept as the stored killer.
+        PurgatoryState* state = dk->CustomData.GetDefault<PurgatoryState>(PURGATORY_STATE_KEY);
+        state->attacker = attacker ? attacker->GetGUID() : ObjectGuid::Empty;
+
+        dk->CastCustomSpell(DeathKnightData::SPELL_SHROUD_OF_PURGATORY, SPELLVALUE_BASE_POINT0, ClampToInt32(prevented),
+            dk, TRIGGERED_FULL_MASK);
+
+        // No Shroud (an immunity): no save either, or the DK would live at 1 HP with nothing to kill them at expiry
+        // (review S1a m2). The lockout stays spent.
+        if (!dk->HasAura(DeathKnightData::SPELL_SHROUD_OF_PURGATORY))
+        {
+            dk->CustomData.Erase(PURGATORY_STATE_KEY);
+            return false;
+        }
+
+        damage = kept;
+        return true;
+    }
+
+    void OnShroudExpired(Unit* target, int32 unhealed)
+    {
+        if (!target)
+            return;
+
+        // Read and clear the stored attacker in every case, so a filled Shroud leaves nothing behind.
+        ObjectGuid attackerGuid;
+        if (PurgatoryState* state = target->CustomData.Get<PurgatoryState>(PURGATORY_STATE_KEY))
+        {
+            attackerGuid = state->attacker;
+            target->CustomData.Erase(PURGATORY_STATE_KEY);
+        }
+
+        if (unhealed <= 0 || !target->IsAlive())
+            return;
+
+        Unit* killer = attackerGuid ? ObjectAccessor::GetUnit(*target, attackerGuid) : nullptr;
+        Unit::Kill(killer ? killer : target, target);
+    }
+
+    bool IsOwnDeathKnightHeal(SpellInfo const* spellInfo)
+    {
+        if (!spellInfo)
+            return false;
+
+        // Mark of Blood's heal (family 4, cast by the marked enemy) and Death Pact by id; the rest by the d2 b15 group.
+        if (spellInfo->Id == SPELL_MARK_OF_BLOOD_HEAL || spellInfo->Id == DeathKnightData::SPELL_DEATH_PACT)
+            return true;
+
+        return spellInfo->SpellFamilyName == SPELLFAMILY_DEATHKNIGHT &&
+            (spellInfo->SpellFamilyFlags[2] & DK_SELF_HEAL_MASK_D2);
+    }
+
+    void ApplyVoraciousCapstone(Unit* first, Unit* second, uint32& heal, SpellInfo const* spellInfo, bool periodic)
+    {
+        if (!heal || !first || !second || !IsOwnDeathKnightHeal(spellInfo))
+            return;
+
+        // Who is the receiver? UnitScript::ModifyHealReceived(target, healer, ...) arrives swapped on the direct path
+        // (Unit::HealBySpell passes `this` = the healer first) and in order on the periodic path. The caller passes
+        // (first, second) exactly as the hook delivered them. Rule:
+        //  0. Mark of Blood's heal 61607 (cast by the marked enemy on whoever it hit) is always a direct heal: the
+        //     receiver is the second argument, whatever the first one knows (a marked capstone DK is the healer here,
+        //     never the receiver); return unless the receiver knows the capstone;
+        //  1. otherwise the receiver is the one of the two that knows the capstone (a player with the 203139 aura);
+        //  2. when both know it (a self heal, or two capstone DKs), the periodic flag decides: periodic -> in order
+        //     (first = receiver), direct -> swapped (second = receiver);
+        //  3. the heal must be the receiver's own: healer == receiver (every DK self heal, Death Pact, Crimson
+        //     Communion's own share) or the receiver's minion (Bloodworm 50454 is cast by the worm). Another player's
+        //     DK-family heal is never raised (Classless rule).
+        Unit* receiver = nullptr;
+        if (spellInfo->Id == SPELL_MARK_OF_BLOOD_HEAL)
+        {
+            if (!KnowsVoraciousCapstone(second))
+                return;
+
+            receiver = second;
+        }
+        else
+        {
+            bool const firstKnows = KnowsVoraciousCapstone(first);
+            bool const secondKnows = KnowsVoraciousCapstone(second);
+            if (!firstKnows && !secondKnows)
+                return;
+
+            Unit* healer = nullptr;
+            if (firstKnows && secondKnows)
+            {
+                receiver = periodic ? first : second;
+                healer = periodic ? second : first;
+            }
+            else if (firstKnows)
+            {
+                receiver = first;
+                healer = second;
+            }
+            else
+            {
+                receiver = second;
+                healer = first;
+            }
+
+            if (healer != receiver && healer->GetOwnerGUID() != receiver->GetGUID())
+                return;
+        }
+
+        // "Mastery raises your own healing by its full value": applied last, after every other modifier the engine
+        // already folded into heal.
+        float const mastery = receiver->ToPlayer()->GetMasteryPercentage();
+        if (mastery <= 0.0f)
+            return;
+
+        double const raised = double(heal) * (1.0 + double(mastery) / 100.0);
+        heal = uint32(std::min<double>(raised, double(std::numeric_limits<uint32>::max())));
+    }
+
+    void OnDamageDealt(Unit* attacker, Unit* victim, uint32 damage)
+    {
+        // Runs for every hit in the world (Unit::DealDamage -> OnDamage, post-absorb): cheapest checks first. Only a
+        // player's own hits leech, so minions (Bloodworms, Dancing Rune Weapon, ghouls) never do.
+        if (!damage || !attacker || !victim || attacker == victim || !attacker->IsPlayer())
+            return;
+
+        // Voracious: the rank's DUMMY value is the leech percent (203139 the capstone rank, else 203138).
+        AuraEffect const* voracious = attacker->GetAuraEffect(DeathKnightData::SPELL_VORACIOUS_203139, EFFECT_0);
+        if (!voracious)
+            voracious = attacker->GetAuraEffect(DeathKnightData::SPELL_VORACIOUS, EFFECT_0);
+
+        // Crimson Communion: a party buff a Death Knight (a player) applied; the leech is the wearer's own heal.
+        bool communion = false;
+        if (Aura const* aura = attacker->GetAura(DeathKnightData::SPELL_CRIMSON_COMMUNION))
+            communion = aura->GetCasterGUID().IsPlayer();
+
+        // Almost no attacker has either: leave before the liveness and faction checks (IsFriendlyTo resolves faction
+        // templates and duel/owner reactions).
+        if (!voracious && !communion)
+            return;
+
+        if (!attacker->IsAlive() || victim->IsTotem() || attacker->IsFriendlyTo(victim))
+            return;
+
+        // The leech heals are TRIGGERED_FULL_MASK and SUPPRESS_CASTER_PROCS and deal no damage, so they never come back
+        // here.
+        if (voracious && voracious->GetAmount() > 0)
+        {
+            int32 const amount = ClampToInt32(uint64(damage) * uint64(voracious->GetAmount()) / 100);
+            if (amount > 0)
+                attacker->CastCustomSpell(DeathKnightData::SPELL_VORACIOUS_HEAL, SPELLVALUE_BASE_POINT0, amount,
+                    attacker, TRIGGERED_FULL_MASK);
+        }
+
+        if (communion)
+        {
+            int32 const pct = std::max<int32>(0, int32(DeathKnightData::CRIMSON_COMMUNION_LEECH_PCT));
+            int32 const amount = ClampToInt32(uint64(damage) * uint64(pct) / 100);
+            if (amount > 0)
+                attacker->CastCustomSpell(DeathKnightData::SPELL_CRIMSON_COMMUNION_HEAL, SPELLVALUE_BASE_POINT0,
+                    amount, attacker, TRIGGERED_FULL_MASK);
+        }
+    }
+
+    void OnRunicPowerSpent(Player* dk, Spell const* spell)
+    {
+        if (!dk || !spell || spell->IsTriggered())
+            return;
+
+        SpellInfo const* spellInfo = spell->GetSpellInfo();
+        if (!spellInfo || spellInfo->PowerType != POWER_RUNIC_POWER)
+            return;
+
+        // GetPowerCost is in the internal unit (x10 the displayed runic power); a free cast (Sudden Doom) costs 0.
+        int32 const cost = spell->GetPowerCost();
+        if (cost <= 0)
+            return;
+
+        // Thick Blood rank 3 (203126) is Red Thirst; talent ranks are auras.
+        if (!dk->HasAura(DeathKnightData::SPELL_THICK_BLOOD_203126))
+            return;
+
+        if (!dk->HasSpellCooldown(DeathKnightData::SPELL_VAMPIRIC_BLOOD))
+            return;
+
+        // RED_THIRST_MS_PER_10_RP per 10 displayed runic power = per 100 internal units; real ms (U22).
+        int32 const msPer10 = std::max<int32>(0, int32(DeathKnightData::RED_THIRST_MS_PER_10_RP));
+        uint64 const ms = uint64(cost) * uint64(msPer10) / 100;
+        if (ms)
+            dk->ModifySpellCooldown(DeathKnightData::SPELL_VAMPIRIC_BLOOD, -ClampToInt32(ms));
+    }
+
+    int32 GetBloodGorgedPct(Player const* dk)
+    {
+        if (!dk)
+            return 0;
+
+        // The rank's damage percent whatever the health state (BloodGorgedActiveAtCast says whether it counts). Rank 3
+        // is the capstone: + Mastery x BLOOD_GORGED_MASTERY_SHARE_PCT %. The talent ranks 61154-61156 are LEARN_SPELL
+        // rows that are never auras (review S1a M1), so the applied damage passive (50096 / 50108 / 50109) names the
+        // rank; it stays applied below 75% health (ModifyAuraState only re-handles its effect).
+        if (dk->HasAura(DeathKnightData::SPELL_BLOOD_GORGED_50109))
+        {
+            int32 const pct = PassiveBasePct(dk, DeathKnightData::SPELL_BLOOD_GORGED_50109) + int32(std::lround(
+                dk->GetMasteryPercentage() * float(DeathKnightData::BLOOD_GORGED_MASTERY_SHARE_PCT) / 100.0f));
+            return std::max<int32>(0, pct);
+        }
+
+        if (dk->HasAura(DeathKnightData::SPELL_BLOOD_GORGED_50108))
+            return std::max<int32>(0, PassiveBasePct(dk, DeathKnightData::SPELL_BLOOD_GORGED_50108));
+
+        if (dk->HasAura(DeathKnightData::SPELL_BLOOD_GORGED))
+            return std::max<int32>(0, PassiveBasePct(dk, DeathKnightData::SPELL_BLOOD_GORGED));
+
+        return 0;
+    }
+
+    void RefreshBloodGorged(Player* dk)
+    {
+        // Rank 3's damage passive is the capstone gate (not 61156, a LEARN_SPELL rank that is never an aura).
+        if (!dk || !dk->HasAura(DeathKnightData::SPELL_BLOOD_GORGED_50109))
+            return;
+
+        AuraEffect* effect = dk->GetAuraEffect(DeathKnightData::SPELL_BLOOD_GORGED_50109, EFFECT_0);
+        if (!effect)
+            return;
+
+        int32 const pct = GetBloodGorgedPct(dk);
+        if (effect->GetAmount() == pct)
+            return;
+
+        // U18 trap: while the health state is off the effect is handled out (Unit::ModifyAuraState), and ChangeAmount
+        // would unapply/apply it as if it were in; there only the stored amount moves, picked up when the state
+        // returns.
+        if (dk->HasAuraState(AURA_STATE_HEALTH_ABOVE_75_PERCENT))
+            effect->ChangeAmount(pct, false);
+        else
+            effect->SetAmount(pct);
+    }
+
+    bool BloodGorgedActiveAtCast(Unit const* dk)
+    {
+        if (!dk || !dk->IsAlive())
+            return false;
+
+        // The value a D&D / Bonestorm cast snapshots (SnapshotBloodGorged): a damage passive is known and health is
+        // above the threshold at this instant. The engine's live state (AURA_STATE_HEALTH_ABOVE_75_PERCENT) updates
+        // once per Unit::Update, so the cast reads health directly.
+        bool hasPassive = false;
+        for (uint32 const spellId : BLOOD_GORGED_PASSIVES)
+            if (dk->HasAura(spellId))
+                hasPassive = true;
+
+        return hasPassive && dk->HealthAbovePct(int32(DeathKnightData::BLOOD_GORGED_THRESHOLD_PCT));
+    }
+
+    void SnapshotBloodGorged(Player* dk, uint32 castSpellId)
+    {
+        if (!dk)
+            return;
+
+        float multiplier = 1.0f;
+        if (BloodGorgedActiveAtCast(dk))
+            AddPct(multiplier, GetBloodGorgedPct(dk));
+
+        BloodGorgedSnapshots* snapshots = dk->CustomData.GetDefault<BloodGorgedSnapshots>(BLOOD_GORGED_SNAPSHOT_KEY);
+        snapshots->multiplierBySpell[castSpellId] = multiplier;
+    }
+
+    float GetBloodGorgedTickMultiplier(Unit const* dk, uint32 castSpellId)
+    {
+        if (!dk)
+            return 1.0f;
+
+        BloodGorgedSnapshots const* snapshots = dk->CustomData.Get<BloodGorgedSnapshots>(BLOOD_GORGED_SNAPSHOT_KEY);
+        if (!snapshots)
+            return 1.0f;
+
+        auto const itr = snapshots->multiplierBySpell.find(castSpellId);
+        if (itr == snapshots->multiplierBySpell.end())
+            return 1.0f;
+
+        float const live = LiveBloodGorgedMultiplier(dk);
+        return live > 0.0f ? itr->second / live : 1.0f;
+    }
+
+    void CapBloodworms(Player* dk)
+    {
+        if (!dk)
+            return;
+
+        int32 const cap = std::max<int32>(0, int32(DeathKnightData::BLOODWORM_CAP));
+
+        // GetAllMinionsByEntry copies out of m_Controlled, and UnSummon only queues the removal
+        // (AddObjectToRemoveList), so unsummoning below never touches the set being read. Worms already queued for
+        // removal are skipped.
+        std::list<Creature*> minions;
+        dk->GetAllMinionsByEntry(minions, NPC_BLOODWORM);
+
+        std::vector<TempSummon*> worms;
+        for (Creature* creature : minions)
+        {
+            TempSummon* summon = creature ? creature->ToTempSummon() : nullptr;
+            if (summon && summon->IsAlive() && summon->GetSummonType() != TEMPSUMMON_DESPAWNED)
+                worms.push_back(summon);
+        }
+
+        if (int32(worms.size()) <= cap)
+            return;
+
+        // Oldest first: the least time left (all worms share one duration).
+        std::sort(worms.begin(), worms.end(), [](TempSummon* a, TempSummon* b)
+        {
+            return a->GetTimer() < b->GetTimer();
+        });
+
+        std::size_t const excess = worms.size() - std::size_t(cap);
+        for (std::size_t i = 0; i < excess; ++i)
+            worms[i]->UnSummon();
+    }
+
+    bool IsRuneWeapon(Unit const* unit)
+    {
+        return unit && unit->IsCreature() && unit->GetEntry() == NPC_DANCING_RUNE_WEAPON;
+    }
+
+    bool IsRuneWeaponExcluded(uint32 spellId)
+    {
+        switch (spellId)
+        {
+            case DeathKnightData::SPELL_BLOOD_NOVA:
+            case DeathKnightData::SPELL_BLOOD_NOVA_ERUPTION:
+            case DeathKnightData::SPELL_BONESTORM:
+            case DeathKnightData::SPELL_BONESTORM_TICK:
+            case DeathKnightData::SPELL_DEATH_AND_DECAY:
+            case SPELL_DEATH_AND_DECAY_TICK:
+            case DeathKnightData::SPELL_GOREFIENDS_GRASP:
+            case DeathKnightData::SPELL_CRIMSON_COMMUNION:
+            case DeathKnightData::SPELL_PESTILENCE:
+            case DeathKnightData::SPELL_DEATH_PACT:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    int32 GetMinionApSharePct(MinionKind kind)
+    {
+        // U16 (user 2026-10-24: ~4 worms = 5% of Blood damage): Bloodworms keep stock damage plus their own share.
+        return kind == MinionKind::Bloodworm ? int32(DeathKnightData::MINION_BLOODWORM_AP_SHARE_PCT) :
+            int32(DeathKnightData::MINION_AP_SHARE_PCT);
     }
 }

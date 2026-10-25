@@ -38,8 +38,11 @@ namespace DeathKnightData
     constexpr uint32 SPELL_BUTCHERY = 48979; // butchery_48979
     constexpr uint32 SPELL_RUNE_TAP = 48982; // rune_tap_48982
     constexpr uint32 SPELL_IMPROVED_RUNE_TAP = 48985; // improved_rune_tap_48985
+    constexpr uint32 SPELL_BLOODY_VENGEANCE = 48988; // bloody_vengeance_48988
     constexpr uint32 SPELL_SUBVERSION = 48997; // subversion_48997
+    constexpr uint32 SPELL_SCENT_OF_BLOOD = 49004; // scent_of_blood_49004
     constexpr uint32 SPELL_MARK_OF_BLOOD = 49005; // mark_of_blood_49005
+    constexpr uint32 SPELL_VETERAN_OF_THE_THIRD_WAR = 49006; // veteran_of_the_third_war_49006
     constexpr uint32 SPELL_OUTBREAK = 49013; // outbreak_49013
     constexpr uint32 SPELL_VENDETTA = 49015; // vendetta_49015
     constexpr uint32 SPELL_HYSTERIA = 49016; // hysteria_49016
@@ -92,6 +95,11 @@ namespace DeathKnightData
     constexpr uint32 SPELL_SUBVERSION_49491 = 49491; // subversion_49491
     constexpr uint32 SPELL_BLADE_BARRIER_49500 = 49500; // blade_barrier_49500
     constexpr uint32 SPELL_BLADE_BARRIER_49501 = 49501; // blade_barrier_49501
+    constexpr uint32 SPELL_BLOODY_VENGEANCE_49503 = 49503; // bloody_vengeance_49503
+    constexpr uint32 SPELL_BLOODY_VENGEANCE_49504 = 49504; // bloody_vengeance_49504
+    constexpr uint32 SPELL_SCENT_OF_BLOOD_49508 = 49508; // scent_of_blood_49508
+    constexpr uint32 SPELL_SCENT_OF_BLOOD_49509 = 49509; // scent_of_blood_49509
+    constexpr uint32 SPELL_VETERAN_OF_THE_THIRD_WAR_49526 = 49526; // veteran_of_the_third_war_49526
     constexpr uint32 SPELL_SUDDEN_DOOM_49529 = 49529; // sudden_doom_49529
     constexpr uint32 SPELL_SUDDEN_DOOM_49530 = 49530; // sudden_doom_49530
     constexpr uint32 SPELL_MIGHT_OF_MOGRAINE_49533 = 49533; // might_of_mograine_49533
@@ -128,6 +136,7 @@ namespace DeathKnightData
     constexpr uint32 SPELL_GLACIER_ROT_49791 = 49791; // glacier_rot_49791
     constexpr uint32 SPELL_DEATHCHILL = 49796; // deathchill_49796
     constexpr uint32 SPELL_DEATH_STRIKE = 49998; // death_strike_49998
+    constexpr uint32 SPELL_VETERAN_OF_THE_THIRD_WAR_50029 = 50029; // veteran_of_the_third_war_50029
     constexpr uint32 SPELL_IMPROVED_ICY_TOUCH_50031 = 50031; // improved_icy_touch_50031
     constexpr uint32 SPELL_DEATH_RUNE_MASTERY_50033 = 50033; // death_rune_mastery_50033
     constexpr uint32 SPELL_DEATH_RUNE_MASTERY_50034 = 50034; // death_rune_mastery_50034
@@ -135,6 +144,8 @@ namespace DeathKnightData
     constexpr uint32 SPELL_CHILBLAINS_50041 = 50041; // chilblains_50041
     constexpr uint32 SPELL_CHILBLAINS_50043 = 50043; // chilblains_50043
     constexpr uint32 SPELL_BLOOD_GORGED = 50096; // blood_gorged_50096
+    constexpr uint32 SPELL_BLOOD_GORGED_50108 = 50108; // blood_gorged_50108
+    constexpr uint32 SPELL_BLOOD_GORGED_50109 = 50109; // blood_gorged_50109
     constexpr uint32 SPELL_CHILL_OF_THE_GRAVE_50115 = 50115; // chill_of_the_grave_50115
     constexpr uint32 SPELL_RAGE_OF_RIVENDARE = 50117; // rage_of_rivendare_50117
     constexpr uint32 SPELL_RAGE_OF_RIVENDARE_50118 = 50118; // rage_of_rivendare_50118
@@ -151,6 +162,7 @@ namespace DeathKnightData
     constexpr uint32 SPELL_ACCLIMATION_50151 = 50151; // acclimation_50151
     constexpr uint32 SPELL_ACCLIMATION_50152 = 50152; // acclimation_50152
     constexpr uint32 SPELL_VENDETTA_50154 = 50154; // vendetta_50154
+    constexpr uint32 SPELL_VENDETTA_50181 = 50181; // vendetta_50181
     constexpr uint32 SPELL_GUILE_OF_GOREFIEND = 50187; // guile_of_gorefiend_50187
     constexpr uint32 SPELL_GUILE_OF_GOREFIEND_50190 = 50190; // guile_of_gorefiend_50190
     constexpr uint32 SPELL_GUILE_OF_GOREFIEND_50191 = 50191; // guile_of_gorefiend_50191
@@ -160,6 +172,13 @@ namespace DeathKnightData
     constexpr uint32 SPELL_IMPROVED_FROST_PRESENCE_50385 = 50385; // improved_frost_presence_50385
     constexpr uint32 SPELL_IMPROVED_UNHOLY_PRESENCE = 50391; // improved_unholy_presence_50391
     constexpr uint32 SPELL_IMPROVED_UNHOLY_PRESENCE_50392 = 50392; // improved_unholy_presence_50392
+    constexpr uint32 SPELL_SCENT_OF_BLOOD_50421 = 50421; // scent_of_blood_50421
+    constexpr uint32 SPELL_BLOODY_VENGEANCE_50447 = 50447; // bloody_vengeance_50447
+    constexpr uint32 SPELL_BLOODY_VENGEANCE_50448 = 50448; // bloody_vengeance_50448
+    constexpr uint32 SPELL_BLOODY_VENGEANCE_50449 = 50449; // bloody_vengeance_50449
+    constexpr uint32 SPELL_BLOODWORM = 50452; // bloodworm_50452
+    constexpr uint32 SPELL_HEALTH_LEECH = 50453; // health_leech_50453
+    constexpr uint32 SPELL_HEALTH_LEECH_50454 = 50454; // health_leech_50454
     constexpr uint32 SPELL_ANTI_MAGIC_ZONE = 50461; // anti_magic_zone_50461
     constexpr uint32 SPELL_CRYPT_FEVER_50508 = 50508; // crypt_fever_50508
     constexpr uint32 SPELL_PESTILENCE = 50842; // pestilence_50842
@@ -240,12 +259,16 @@ namespace DeathKnightData
     constexpr uint32 SPELL_BLOOD_GORGED_61157 = 61157; // blood_gorged_61157
     constexpr uint32 SPELL_BLOOD_GORGED_61158 = 61158; // blood_gorged_61158
     constexpr uint32 SPELL_BLOOD_GORGED_61274 = 61274; // blood_gorged_61274
+    constexpr uint32 SPELL_BLOOD_GORGED_61275 = 61275; // blood_gorged_61275
+    constexpr uint32 SPELL_BLOOD_GORGED_61276 = 61276; // blood_gorged_61276
     constexpr uint32 SPELL_RUNIC_FOCUS = 61455; // runic_focus_61455
     constexpr uint32 SPELL_RAISE_ALLY = 61999; // raise_ally_61999
     constexpr uint32 SPELL_DEATH_COIL_62900 = 62900; // death_coil_62900
     constexpr uint32 SPELL_IMPROVED_DEATH_STRIKE = 62905; // improved_death_strike_62905
     constexpr uint32 SPELL_IMPROVED_DEATH_STRIKE_62908 = 62908; // improved_death_strike_62908
     constexpr uint32 SPELL_GHOUL_FRENZY = 63560; // ghoul_frenzy_63560
+    constexpr uint32 SPELL_BLADE_BARRIER_64855 = 64855; // blade_barrier_64855
+    constexpr uint32 SPELL_BLADE_BARRIER_64856 = 64856; // blade_barrier_64856
     constexpr uint32 SPELL_THREAT_OF_THASSARIAN = 65661; // threat_of_thassarian_65661
     constexpr uint32 SPELL_DEATH_STRIKE_66188 = 66188; // death_strike_66188
     constexpr uint32 SPELL_THREAT_OF_THASSARIAN_66191 = 66191; // threat_of_thassarian_66191
@@ -279,20 +302,76 @@ namespace DeathKnightData
     constexpr uint32 SPELL_MINION_MIRROR = 203056; // minion_mirror_203056
     constexpr uint32 SPELL_MINION_MIRROR_CRIT_HASTE = 203057; // minion_mirror_crit_haste_203057
     constexpr uint32 SPELL_MINION_MIRROR_VERSATILITY = 203058; // minion_mirror_versatility_203058
+    constexpr uint32 SPELL_CRIMSON_RESOLVE = 203120; // crimson_resolve_203120
+    constexpr uint32 SPELL_CRIMSON_RESOLVE_203121 = 203121; // crimson_resolve_203121
+    constexpr uint32 SPELL_CRIMSON_RESOLVE_203122 = 203122; // crimson_resolve_203122
+    constexpr uint32 SPELL_MARROWREND = 203123; // marrowrend_203123
+    constexpr uint32 SPELL_THICK_BLOOD = 203124; // thick_blood_203124
+    constexpr uint32 SPELL_THICK_BLOOD_203125 = 203125; // thick_blood_203125
+    constexpr uint32 SPELL_THICK_BLOOD_203126 = 203126; // thick_blood_203126
+    constexpr uint32 SPELL_GOREFIENDS_GRASP = 203127; // gorefiends_grasp_203127
+    constexpr uint32 SPELL_GOREFIENDS_GRASP_PULL = 203128; // gorefiends_grasp_pull_203128
+    constexpr uint32 SPELL_SANGUINE_GROUND = 203129; // sanguine_ground_203129
+    constexpr uint32 SPELL_SANGUINE_GROUND_203130 = 203130; // sanguine_ground_203130
+    constexpr uint32 SPELL_SANGUINE_GROUND_203131 = 203131; // sanguine_ground_203131
+    constexpr uint32 SPELL_SANGUINE_GROUND_TICK = 203132; // sanguine_ground_tick_203132
+    constexpr uint32 SPELL_SANGUINE_GROUND_HEAL = 203133; // sanguine_ground_heal_203133
+    constexpr uint32 SPELL_CRIMSON_SCOURGE = 203134; // crimson_scourge_203134
+    constexpr uint32 SPELL_CRIMSON_SCOURGE_203135 = 203135; // crimson_scourge_203135
+    constexpr uint32 SPELL_CRIMSON_SCOURGE_203136 = 203136; // crimson_scourge_203136
+    constexpr uint32 SPELL_CRIMSON_SCOURGE_BUFF = 203137; // crimson_scourge_buff_203137
+    constexpr uint32 SPELL_VORACIOUS = 203138; // voracious_203138
+    constexpr uint32 SPELL_VORACIOUS_203139 = 203139; // voracious_203139
+    constexpr uint32 SPELL_VORACIOUS_HEAL = 203140; // voracious_heal_203140
+    constexpr uint32 SPELL_CRIMSON_COMMUNION = 203141; // crimson_communion_203141
+    constexpr uint32 SPELL_CRIMSON_COMMUNION_HEAL = 203142; // crimson_communion_heal_203142
+    constexpr uint32 SPELL_BLOOD_NOVA = 203143; // blood_nova_203143
+    constexpr uint32 SPELL_BLOOD_NOVA_ERUPTION = 203144; // blood_nova_eruption_203144
+    constexpr uint32 SPELL_PURGATORY = 203145; // purgatory_203145
+    constexpr uint32 SPELL_SHROUD_OF_PURGATORY = 203146; // shroud_of_purgatory_203146
+    constexpr uint32 SPELL_PURGATORY_LOCKOUT = 203147; // purgatory_lockout_203147
+    constexpr uint32 SPELL_BONESTORM = 203148; // bonestorm_203148
+    constexpr uint32 SPELL_BONESTORM_TICK = 203149; // bonestorm_tick_203149
+    constexpr uint32 SPELL_BONESTORM_HEAL = 203150; // bonestorm_heal_203150
+    constexpr uint32 SPELL_BLOOD_SHIELD = 203151; // blood_shield_203151
+    constexpr uint32 SPELL_SUBVERSION_RUNIC_POWER = 203152; // subversion_runic_power_203152
+    constexpr uint32 SPELL_VENDETTA_STRIKE = 203153; // vendetta_strike_203153
+    constexpr uint32 SPELL_VENDETTA_STRIKE_HEAL = 203154; // vendetta_strike_heal_203154
+    constexpr uint32 SPELL_BLOOD_GORGED_MASTERY = 203155; // blood_gorged_mastery_203155
+    constexpr uint32 SPELL_DANCING_RUNE_WEAPON_PARRY = 203156; // dancing_rune_weapon_parry_203156
 
     // const() - hidden script numbers (tier 3)
     constexpr int32 AMZ_SPELL_REDUCTION_PCT = 75; // Percent of spell damage the Anti-Magic Zone absorbs while its shared pool lasts (stock 75) [fixed].
+    constexpr uint8 BLOODWORM_CAP = 8; // Bloodworms alive per Death Knight; the oldest are replaced past it [fixed].
+    constexpr int32 BLOODWORM_HEAL_PCT = 100; // Percent of a Bloodworm's damage that heals its owner (stock 150) [tune].
+    constexpr int32 BLOOD_GORGED_MASTERY_SHARE_PCT = 50; // Percent of Mastery the Blood Gorged capstone adds to the damage bonus [tune].
+    constexpr int32 BLOOD_GORGED_THRESHOLD_PCT = 75; // Blood Gorged applies above this percent of maximum health (the core aura state 23 threshold, kept in step by hand) [fixed].
+    constexpr int32 BLOOD_NOVA_COST_PCT = 10; // Blood Nova health cost, percent of maximum health; the cast is refused at or below it [fixed].
+    constexpr int32 BLOOD_NOVA_DAMAGE_PCT = 20; // Blood Nova eruption damage, percent of maximum health at cast time, per enemy [fixed].
+    constexpr uint32 BLOOD_NOVA_DELAY_MS = 1000; // Delay between the Blood Nova cast and its eruption [fixed].
+    constexpr int32 BLOOD_SHIELD_CAP_PCT = 30; // Blood Shield stacks up to this percent of the Death Knight's CURRENT maximum health (Vampiric Blood counts) [fixed].
+    constexpr int32 BONESTORM_HEAL_PCT = 1; // Percent of current maximum health Bonestorm heals per enemy hit per tick [tune].
+    constexpr uint8 BONESTORM_HEAL_TARGET_CAP = 5; // Enemies per Bonestorm tick that count toward its heal [tune].
+    constexpr uint32 BONESTORM_MAX_MS = 10000; // Bonestorm maximum duration in milliseconds [tune].
+    constexpr int32 BONESTORM_MIN_RP = 10; // Minimum Runic Power (display units) Bonestorm needs to be cast [tune].
+    constexpr uint32 BONESTORM_MS_PER_10_RP = 1000; // Bonestorm duration in milliseconds per 10 Runic Power spent [tune].
     constexpr uint32 BONE_SHIELD_MAX_CHARGES = 6; // Most charges Bone Shield can hold (Marrowrend adds up to this; the spell itself starts at ProcCharges 3) [tune].
+    constexpr int32 CRIMSON_COMMUNION_LEECH_PCT = 15; // Percent of the damage each affected player deals that heals them while Crimson Communion lasts [fixed].
     constexpr int32 DEATHS_CARESS_EXTRA_TARGETS = 2; // Additional nearby enemies Death's Caress hits besides its target [fixed].
     constexpr int32 DEATH_STRIKE_MIN_HEAL_PCT = 5; // Death Strike minimum heal, percent of maximum health
     constexpr int32 DEATH_STRIKE_WINDOW_MS = 5000; // Death Strike damage record window (shared doc: the last 5 sec)
+    constexpr int32 GOREFIENDS_GRASP_RADIUS = 15; // Yards around Gorefiend's Grasp's target inside which engaged enemies are pulled; the spell effect's radius_yards is the same number [tune].
+    constexpr int32 MARROWREND_CAP_BONUS_PCT = 20; // Percent more damage Marrowrend deals while the Death Knight already has the maximum Bone Shield charges [tune].
+    constexpr int32 MARROWREND_CHARGES = 3; // Bone Shield charges one Marrowrend cast grants (the shield caps at 6) [tune].
     constexpr int32 MINION_AP_SHARE_PCT = 100; // Minion attack power per owner attack power, percent (DK0b U8).
+    constexpr int32 MINION_BLOODWORM_AP_SHARE_PCT = 0; // Bloodworm attack power per owner attack power, percent (S1a U16, [tune]); 0 = stock worm damage.
     constexpr int32 MINION_CRIT_SHARE_PCT = 100; // Share of owner crit the minion inherits, percent (DK0b U8).
     constexpr int32 MINION_HASTE_SHARE_PCT = 100; // Share of owner spell haste the minion inherits, percent (DK0b U8).
     constexpr int32 MINION_SP_SHARE_PCT = 100; // Minion spell power per owner attack power, percent (DK0b U8, Gargoyle).
     constexpr int32 MINION_STAMINA_SHARE_PCT = 30; // Minion stamina inherited from owner stamina, percent, computed live (DK0b U9).
     constexpr int32 MINION_VERSATILITY_SHARE_PCT = 100; // Share of owner versatility the minion inherits, percent (DK0b U8).
     constexpr int32 RAZORICE_DAMAGE_PCT = 2; // Percent of the triggering hit's own damage Razor Frost 203051 deals as Frost damage (stock 2% of weapon damage; per hit, never per weapon) [tune].
+    constexpr int32 RED_THIRST_MS_PER_10_RP = 500; // Milliseconds Red Thirst (Thick Blood capstone) takes off the remaining Vampiric Blood cooldown per 10 Runic Power spent, in real time (Cooldown Haste does not scale it) [fixed].
     constexpr uint16 RUNE_GLOW_APOCALYPSE = 0; // Weapon glow while Rune of the Apocalypse is active; 0 = none (DK0b U1) [tune].
     constexpr uint16 RUNE_GLOW_BOILING_BLIGHT = 0; // Weapon glow while Rune of Boiling Blight is active; 0 = none (DK0b U1) [tune].
     constexpr uint16 RUNE_GLOW_EXSANGUINATION = 0; // Weapon glow while Rune of Exsanguination is active; 0 = none (DK0b U1) [tune].
@@ -300,4 +379,8 @@ namespace DeathKnightData
     constexpr uint16 RUNE_GLOW_RAZORICE = 3370; // Weapon glow (SpellItemEnchantment visual id) while Rune of Razorice is the active rune; 0 = none [tune].
     constexpr uint16 RUNE_GLOW_UNENDING_THIRST = 0; // Weapon glow while Rune of Unending Thirst is active; 0 = none (DK0b U1) [tune].
     constexpr int32 RUNE_HASTE_MAX_PCT = 50; // Highest percent of rune-regeneration haste spell haste can grant (50 = a 10 s rune recharges in 5 s) [fixed].
+    constexpr int32 SANGUINE_HEAL_PCT = 1; // Percent of maximum health each Sanguine Ground tick heals while standing in the Death Knight's own Death and Decay [fixed].
+    constexpr int32 VENDETTA_STRIKE_HEAL_PCT_RANK1 = 5; // Vendetta rank 1: percent of the Heart Strike / Marrowrend damage healed [tune].
+    constexpr int32 VENDETTA_STRIKE_HEAL_PCT_RANK2 = 10; // Vendetta rank 2: percent of the Heart Strike / Marrowrend damage healed [tune].
+    constexpr int32 VENDETTA_STRIKE_HEAL_PCT_RANK3 = 15; // Vendetta rank 3: percent of the Heart Strike / Marrowrend damage healed [tune].
 }

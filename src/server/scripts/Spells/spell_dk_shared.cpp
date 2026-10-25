@@ -320,7 +320,7 @@ class spell_dk_rune_rework : public AuraScript
                 break;
         }
 
-        return DeathKnight::RuneProcAllowed(GetTarget(), eventInfo, dualWieldHalf, oncePerCast);
+        return DeathKnight::RuneProcAllowed(GetTarget(), eventInfo, GetId(), dualWieldHalf, oncePerCast);
     }
 
     void Register() override
@@ -455,7 +455,7 @@ class spell_dk_minion_mirror : public AuraScript
             return;
 
         amount = int32(CalculatePct(std::max<int32>(0, int32(owner->GetTotalAttackPowerValue(BASE_ATTACK))),
-            DeathKnightData::MINION_AP_SHARE_PCT));
+            DeathKnight::GetMinionApSharePct(DeathKnight::GetMinionKind(GetUnitOwner()))));
     }
 
     void CalcSpellPower(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)

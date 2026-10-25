@@ -27,6 +27,7 @@ class Aura;
 class ProcEventInfo;
 class SpellInfo;
 class Player;
+class Spell;
 class Unit;
 
 /*
@@ -66,9 +67,11 @@ namespace DeathKnight
     void ApplyRuneGlow(Player* player);                   // writes the active rune's glow on both weapon slots
     void WriteRuneGlow(Player* player, uint8 slot);       // visible-slot hook: re-write one weapon slot's glow
     void RestoreRuneGlow(Player* player);                 // SetVisibleItemSlot on both weapon slots
-    // Shared CheckProc guard: actor == owner; oncePerCast = only the hit on the cast's own unit target rolls (periodic
+    // Shared CheckProc guard: actor == owner; auraId = the calling aura (keys the once-per-cast guard, so one aura's
+    // answer never starves another's); oncePerCast = only the hit on the cast's own unit target rolls (periodic
     // events skip this); dualWieldHalf = an extra 50% roll when the owner has an off-hand weapon.
-    bool RuneProcAllowed(Unit const* runeOwner, ProcEventInfo& eventInfo, bool dualWieldHalf, bool oncePerCast);
+    bool RuneProcAllowed(Unit const* runeOwner, ProcEventInfo& eventInfo, uint32 auraId, bool dualWieldHalf,
+        bool oncePerCast);
 
     // Rune-regen haste (U4): hidden 203052 aura 110 x3 + 203053 sync. Spell haste only; never ResyncRunes.
     int32 GetRuneHastePct(Player const* player);
@@ -85,6 +88,60 @@ namespace DeathKnight
 
     // Unending Thirst (U14): the DK's own killing blow; casts the buff triggered if the rune is up.
     void OnRuneKillingBlow(Player* dk, Unit* killed);
+
+    // ---- S1 ----
+    // Bone Shield (49222): charges are the stack count the client shows. A re-cast resets to ProcCharges (3), so
+    // Marrowrend raises them with SetCharges after the cast. AddBoneShieldCharges returns true when it was already at
+    // BONE_SHIELD_MAX_CHARGES (Marrowrend's capped bonus); it applies 49222 when missing.
+    uint8 GetBoneShieldCharges(Unit const* unit);
+    bool AddBoneShieldCharges(Unit* dk, uint8 add);
+
+    // Blood Shield (203151, Improved Death Strike capstone): Death Strike's overheal adds to the existing shield up to
+    // BLOOD_SHIELD_CAP_PCT of current max health and refreshes the duration. OnDeathStrikeHealFinal is called from
+    // UnitScript::OnHealFinal for spell 45470 (healer == target) and gates itself on 62908.
+    void GrantBloodShield(Player* dk, uint32 amount);
+    void OnDeathStrikeHealFinal(Player* dk, uint32 heal, uint32 effective, uint32 healAbsorbed);
+
+    // Purgatory (203145): called from UnitScript::DealDamage after the damage record. Returns true and lowers damage to
+    // health - 1 when the hit would kill; OnShroudExpired kills the target when the Shroud ran out unhealed.
+    bool TryPurgatory(Player* dk, Unit* attacker, uint32& damage);
+    void OnShroudExpired(Unit* target, int32 unhealed);
+
+    // Voracious capstone (203139): own Death Knight heals (family 15 + d2 b15, plus Mark of Blood 61607 and Death Pact
+    // 48743) are raised by Mastery. ModifyHealReceived arrives swapped on the direct path; this resolves it.
+    bool IsOwnDeathKnightHeal(SpellInfo const* spellInfo);
+    void ApplyVoraciousCapstone(Unit* first, Unit* second, uint32& heal, SpellInfo const* spellInfo, bool periodic);
+
+    // Voracious leech and Crimson Communion leech, from UnitScript::OnDamage.
+    void OnDamageDealt(Unit* attacker, Unit* victim, uint32 damage);
+
+    // Red Thirst (Thick Blood capstone), from PLAYERHOOK_ON_SPELL_CAST.
+    void OnRunicPowerSpent(Player* dk, Spell const* spell);
+
+    // Blood Gorged: rank percent plus half of Mastery with the capstone. BloodGorgedActiveAtCast reads the state the
+    // D&D / Bonestorm helper aura snapshotted when the effect was cast (U13).
+    int32 GetBloodGorgedPct(Player const* dk);
+    void RefreshBloodGorged(Player* dk);
+    bool BloodGorgedActiveAtCast(Unit const* dk);
+
+    // Bloodworms: cap BLOODWORM_CAP, the oldest replaced.
+    void CapBloodworms(Player* dk);
+
+    // Dancing Rune Weapon (entry 27893) copy rules.
+    bool IsRuneWeapon(Unit const* unit);
+    bool IsRuneWeaponExcluded(uint32 spellId);
+
+    // ---- S1 helpers (B1) ----
+    // U13 snapshot: SnapshotBloodGorged stores, for the cast spell (43265 Death and Decay, 203148 Bonestorm), Blood
+    // Gorged's damage multiplier at the cast (BloodGorgedActiveAtCast ? 1 + GetBloodGorgedPct% : 1) on dk->CustomData;
+    // GetBloodGorgedTickMultiplier returns snapshot / live (the multiplier the engine applies to this tick now), so a
+    // tick's damage times it carries the cast-time state. 1.0 when no snapshot was taken.
+    void SnapshotBloodGorged(Player* dk, uint32 castSpellId);
+    float GetBloodGorgedTickMultiplier(Unit const* dk, uint32 castSpellId);
+
+    // U16: the minion mirror's attack power share per kind (Bloodworm: MINION_BLOODWORM_AP_SHARE_PCT, else
+    // MINION_AP_SHARE_PCT). Read by RefreshMinionMirror and spell_dk_minion_mirror::CalcAttackPower.
+    int32 GetMinionApSharePct(MinionKind kind);
 }
 
 #endif

@@ -28,21 +28,26 @@
 #include "Player.h"
 #include "PlayerScript.h"
 #include "ScriptMgr.h"
+#include "Spell.h"
+#include "SpellInfo.h"
 #include "TemporarySummon.h"
 #include "Unit.h"
 #include "UnitScript.h"
 
 // ScriptMgr::DealDamage calls every UnitScript's DealDamage with no hook-enable check (there is no DealDamage
-// UnitHook); an empty enable list would enable every UnitHook entry, so the list names one cheap, rare hook instead
-// (shaman_hooks.cpp ShamanUnitScript precedent; the P0 Purgatory spike used the same entry, and S1 may override it).
+// UnitHook); an empty enable list would enable every UnitHook entry, so the list names the hooks S1 overrides plus
+// one cheap, rare hook (shaman_hooks.cpp ShamanUnitScript precedent). Every hook here runs for every unit in the world:
+// cheapest checks first, no lookups before the early-outs.
 class DeathKnightUnitScript : public UnitScript
 {
 public:
-    DeathKnightUnitScript() : UnitScript("DeathKnightUnitScript", true, { UNITHOOK_ON_UNIT_DEATH }) { }
+    DeathKnightUnitScript() : UnitScript("DeathKnightUnitScript", true,
+        { UNITHOOK_ON_UNIT_DEATH, UNITHOOK_ON_DAMAGE, UNITHOOK_MODIFY_HEAL_RECEIVED, UNITHOOK_ON_HEAL_FINAL,
+          UNITHOOK_MODIFY_MELEE_DAMAGE }) { }
 
-    // Death Strike damage-taken record. Unit::DealDamage calls this for every hit in the world after armor, reductions
-    // and all absorbs, so the checks run cheapest first. The amount is never changed in DK0a.
-    uint32 DealDamage(Unit* /*attacker*/, Unit* victim, uint32 damage, DamageEffectType damagetype) override
+    // Death Strike damage-taken record, then Purgatory (U9). Unit::DealDamage calls this for every hit in the world
+    // after armor, reductions and all absorbs, so the checks run cheapest first.
+    uint32 DealDamage(Unit* attacker, Unit* victim, uint32 damage, DamageEffectType damagetype) override
     {
         if (!damage || !victim || !victim->IsPlayer())
             return damage;
@@ -56,9 +61,59 @@ public:
 
         DeathKnight::RecordDamageTaken(player, damage);
 
-        // S1 Purgatory goes here, after the record line, so the damage it prevents is already counted
-        // (p0-spike-ref/custom_dk_p0_spike.cpp p0_dk_purgatory shape; needs the attacker parameter back).
+        // Purgatory after the record, so the damage it prevents is already counted. It lowers damage in place to
+        // health - 1 on a lethal hit and checks the talent, lockout, duel and CHEAT_GOD itself.
+        DeathKnight::TryPurgatory(player, attacker, damage);
         return damage;
+    }
+
+    // U5 Voracious and Crimson Communion leech (Unit::DealDamage, post-absorb damage). Only a player's own damage
+    // leeches: minion, pet and Rune Weapon damage never does; self-damage is skipped.
+    void OnDamage(Unit* attacker, Unit* victim, uint32& damage) override
+    {
+        if (!damage || !attacker || !victim || attacker == victim || !attacker->IsPlayer())
+            return;
+
+        DeathKnight::OnDamageDealt(attacker, victim, damage);
+    }
+
+    // U6 Voracious capstone. The direct path (Unit::HealBySpell) passes (healer, target) and the periodic path
+    // (AuraEffect::HandlePeriodicHealAurasTick) passes (target, caster): the hook cannot tell them apart, so both units
+    // go through in the order given and ApplyVoraciousCapstone resolves the receiver.
+    void ModifyHealReceived(Unit* target, Unit* healer, uint32& heal, SpellInfo const* spellInfo) override
+    {
+        if (!heal || !spellInfo || !target || !healer)
+            return;
+
+        if (!target->IsPlayer() && !healer->IsPlayer())
+            return;
+
+        DeathKnight::ApplyVoraciousCapstone(target, healer, heal, spellInfo, false);
+    }
+
+    // U7 Blood Shield: Death Strike's self-heal overheal (OnDeathStrikeHealFinal gates itself on 62908).
+    void OnHealFinal(Unit* healer, Unit* target, SpellInfo const* spellInfo, uint32 heal, uint32 effective,
+        uint32 healAbsorbed, bool /*isCrit*/, bool /*isPeriodic*/) override
+    {
+        if (!spellInfo || spellInfo->Id != DeathKnightData::SPELL_DEATH_STRIKE_HEAL || !healer || healer != target)
+            return;
+
+        if (Player* player = healer->ToPlayer())
+            DeathKnight::OnDeathStrikeHealFinal(player, heal, effective, healAbsorbed);
+    }
+
+    // U17 Bloodworm white swings take the owner's damage multiplier (Unit::CalculateMeleeDamage passes the target
+    // first). Worms only melee, so this covers all their damage.
+    void ModifyMeleeDamage(Unit* /*target*/, Unit* attacker, uint32& damage) override
+    {
+        if (!damage || !attacker || DeathKnight::GetMinionKind(attacker) != DeathKnight::MinionKind::Bloodworm)
+            return;
+
+        Player* owner = DeathKnight::GetMinionOwner(attacker);
+        if (!owner)
+            return;
+
+        damage = uint32(float(damage) * DeathKnight::GetMinionDamageMultiplier(owner, attacker, nullptr));
     }
 };
 
@@ -67,7 +122,7 @@ class DeathKnightPlayerScript : public PlayerScript
 public:
     DeathKnightPlayerScript() : PlayerScript("DeathKnightPlayerScript",
         { PLAYERHOOK_ON_CALCULATE_TALENTS_POINTS, PLAYERHOOK_ON_AFTER_SET_VISIBLE_ITEM_SLOT,
-          PLAYERHOOK_ON_CREATURE_KILL, PLAYERHOOK_ON_PVP_KILL }) { }
+          PLAYERHOOK_ON_CREATURE_KILL, PLAYERHOOK_ON_PVP_KILL, PLAYERHOOK_ON_SPELL_CAST }) { }
 
     // U4: Player::CalculateTalentsPoints gives a DK on Ebon Hold (map 609) level - 55 points plus quest talents. The
     // rework starts DKs at level 1, so on that map they earn the normal curve like anywhere else (insurance: Death
@@ -114,6 +169,16 @@ public:
             return;
 
         DeathKnight::OnRuneKillingBlow(killer, killed);
+    }
+
+    // U22 Red Thirst: Spell::_cast fires this for every player cast, before TakePower (m_powerCost is already set).
+    // Only Runic Power costs pass here; OnRunicPowerSpent checks triggered casts and the 203126 marker.
+    void OnPlayerSpellCast(Player* player, Spell* spell, bool /*skipCheck*/) override
+    {
+        if (!player || !spell || spell->GetSpellInfo()->PowerType != POWER_RUNIC_POWER || spell->GetPowerCost() <= 0)
+            return;
+
+        DeathKnight::OnRunicPowerSpent(player, spell);
     }
 };
 
