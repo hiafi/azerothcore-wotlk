@@ -290,8 +290,9 @@ int main(int argc, char** argv)
     // Declared right after dbHandle so it runs after every other shutdown step; a crash before this leaves EndTime NULL
     std::shared_ptr<void> sessionEndHandle(nullptr, [](void*) { sWorld->SaveSessionEnd(true); });
 
-    // set server offline (not connectable)
-    LoginDatabase.DirectExecute("UPDATE realmlist SET flag = (flag & ~{}) | {} WHERE id = '{}'", REALM_FLAG_OFFLINE, REALM_FLAG_VERSION_MISMATCH, realm.Id.Realm);
+    // set server offline (not connectable); a DPS sim daemon shares the live realm's row, so it never writes it
+    if (!sConfigMgr->GetOption<bool>("DpsSim.Enabled", false))
+        LoginDatabase.DirectExecute("UPDATE realmlist SET flag = (flag & ~{}) | {} WHERE id = '{}'", REALM_FLAG_OFFLINE, REALM_FLAG_VERSION_MISMATCH, realm.Id.Realm);
 
     LoadRealmInfo(*ioContext);
 
@@ -455,8 +456,9 @@ int main(int argc, char** argv)
 
     sScriptMgr->OnShutdown();
 
-    // set server offline
-    if (!sConfigMgr->GetOption<bool>("Network.UseSocketActivation", false))
+    // set server offline (never from a DPS sim daemon: it would mark the live realm offline)
+    if (!sConfigMgr->GetOption<bool>("Network.UseSocketActivation", false) &&
+        !sConfigMgr->GetOption<bool>("DpsSim.Enabled", false))
         LoginDatabase.DirectExecute("UPDATE realmlist SET flag = flag | {} WHERE id = '{}'", REALM_FLAG_OFFLINE, realm.Id.Realm);
 
     LOG_INFO("server.worldserver", "Halting process...");
