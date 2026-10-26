@@ -427,6 +427,17 @@ if [[ -f "$SCRATCH/etc/modules/mod_ollama_chat.conf" ]]; then
     fi
 fi
 
+# mod-dungeon-clear off for the sim: it registers its bot values on the first world tick, which a sim (run from
+# OnDpsSimRun, before the world loop) never reaches, so its OnPlayerEnterCombat hook dereferences a missing value and
+# segfaults on the actor's first engage. Only the scratch copy changes.
+if [[ -f "$SCRATCH/etc/modules/mod_dungeon_clear.conf" ]]; then
+    if grep -q '^DungeonClear\.Enable\b' "$SCRATCH/etc/modules/mod_dungeon_clear.conf"; then
+        sed -i 's/^DungeonClear\.Enable\b.*/DungeonClear.Enable = 0/' "$SCRATCH/etc/modules/mod_dungeon_clear.conf"
+    else
+        printf '\nDungeonClear.Enable = 0\n' >> "$SCRATCH/etc/modules/mod_dungeon_clear.conf"
+    fi
+fi
+
 REPORT_CONTAINER_PATH="/azerothcore/env/dist/logs/${PROFILE_NAME}.report.json"
 cat > "$SCRATCH/etc/modules/dpssim.conf" <<EOF
 DpsSim.Enabled = 1

@@ -2,7 +2,9 @@
 """
 One-off DBC content patch: mints a SpellVisualEffectName row and a SpellVisual row for the Hunter
 rework's Glaive Toss (201600), mined from the Ascension client backup - same source and shape as
-patch_warlock_vfx_models.py. Every other hunter visual waits for the visuals stage (PLAN V1-V3).
+patch_warlock_vfx_models.py - plus a stock-derived SpellVisual for Cluster Bombs (see SV_CLUSTER_BOMB_BLAST).
+Every other hunter visual waits for the visuals stage (PLAN V1-V3). Editing a row here changes nothing until
+the script runs (working-copy DBCs + --sql-out) and build_patch_m.py re-packs patch-M.
 
 Glaive Toss used stock SpellVisual 9044 (spell 39635 "Throw Glaive"): HasMissile, MissileModel 3538
 (SpellVisualEffectName "Missile: Illidan's Glaive", Scale 1.35), MissileMotion 221, MissileAttachment 3,
@@ -47,8 +49,9 @@ EFFECT_GLAIVE_TOSS_MISSILE = 90090
 SV_GLAIVE_TOSS = 90090  # spell 201600
 
 # Cluster Bombs (202051 first blast + 202052 follow-ups): stock SV 148 ("Rough Dynamite", a ground-thrown bomb) with the
-# missile and the precast/cast kits stripped, leaving its ImpactKit 213 and ImpactAreaKit 9318 (the dynamite explosion on the units and on the ground). Each of the five
-# blasts is its own cast at its own destination, so each plays one explosion at its point.
+# missile and the precast/cast kits stripped, leaving its ImpactKit 213 and ImpactAreaKit 9318 (the dynamite explosion
+# on the units and on the ground). Each of the five blasts is its own cast at its own destination, so each plays one
+# explosion at its point.
 STOCK_DYNAMITE_SV = 148
 SV_CLUSTER_BOMB_BLAST = 90091  # spells 202051, 202052
 
