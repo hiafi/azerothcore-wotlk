@@ -230,7 +230,7 @@ runic_attenuation_energize_203272 = _helper(
 # =====================================================================================================================
 
 # The eruption: one spike, cast triggered by spell_dk_glacial_advance's scheduled events at a snapped ground point.
-# 52 AP potency (S2 TUNE 2026-10-25, U33; was 75) direct (time basis 1500, L2), Frost, magic class, 3 yd around the point, one hit per enemy per cast
+# 75 AP potency (RETUNE 2026-10-25: the doc's 75; S2 TUNE had 52) direct (time basis 1500, L2), Frost, magic class, 3 yd around the point, one hit per enemy per cast
 # (spell_dk_glacial_eruption), visual 14011. d2 b9 (GLACIAL_ADVANCE) so Runic Focus, Razorice and the Frost readers
 # see it.
 # SUPPRESS_CASTER_PROCS: the eruptions roll no procs (the cast does, once). SpellLevel 30 = 9 + 5 x 4 + 1 (L6).
@@ -238,13 +238,13 @@ glacial_eruption_203274 = spell(
     id=203274, name='Glacial Eruption', school=School.FROST, attributes=0, cast_time_ms=0, cooldown_ms=0,
     category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0, radius_yards=3.0, duration_ms=0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=52.0, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=75.0, potency_kind='direct',
                implicit_target_a=_TARGET_DEST_DEST, implicit_target_b=_TARGET_UNIT_DEST_AREA_ENEMY, radius_yards=3.0),
     ],
     spell_icon_id=_ICON_GLACIAL_ADVANCE,
     notes=(
         'death-knight-rework S2a (U25): one Glacial Advance spike, cast triggered at a point by the scripted events. '
-        'SCHOOL_DAMAGE ap_potency 52 (S2 TUNE, U33; was 75) direct (T 1500), TARGET_DEST_DEST + TARGET_UNIT_DEST_AREA_ENEMY radius 3 yd, '
+        'SCHOOL_DAMAGE ap_potency 75 (RETUNE 2026-10-25; S2 TUNE 52, doc 75) direct (T 1500), TARGET_DEST_DEST + TARGET_UNIT_DEST_AREA_ENEMY radius 3 yd, '
         'range '
         '50000 (script cast at a point, bug 554), Frost, magic class, visual 14011 (Impale; 14013 is earth, 14060 the '
         'fallback). d2 b9 (m.GLACIAL_ADVANCE). AttributesEx3 SUPPRESS_CASTER_PROCS. SpellLevel 30 = 9 + 5 x 4 + 1.'
@@ -717,8 +717,8 @@ custom_attr(frostwyrms_wrath_ramp_203305, attributes=_CU_AURA_CANNOT_BE_SAVED)
 # Breath of Sindragosa (203306, talent 60358, row 10) and its tick (203307)
 # =====================================================================================================================
 
-# The tick: cast triggered each second by spell_dk_breath_of_sindragosa. 42 AP potency direct (S2 TUNE
-# 2026-10-25, U33; was 60), time_basis_ms 1000
+# The tick: cast triggered each second by spell_dk_breath_of_sindragosa. 70 AP potency direct (RETUNE
+# 2026-10-25; S2 TUNE 42, doc 60), time_basis_ms 1000
 # (L2: the
 # real cadence), Frost, magic class, 12 yd cone (D2: target 104, a 104 degree total arc; the bot reads
 # enemies_in_cone(12, 104)), visual 14711 (Sindragosa's Frost Breath). The primary takes the full tick, every other
@@ -727,13 +727,13 @@ breath_of_sindragosa_tick_203307 = spell(
     id=203307, name='Breath of Sindragosa', school=School.FROST, attributes=0, cast_time_ms=0, cooldown_ms=0,
     category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=RANGE_SELF, radius_yards=12.0, duration_ms=0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=42.0, potency_kind='direct', time_basis_ms=1000,
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=92.0, potency_kind='direct', time_basis_ms=1000,
                implicit_target_a=_TARGET_UNIT_CONE_ENEMY_104, radius_yards=12.0),
     ],
     spell_icon_id=_ICON_BREATH_OF_SINDRAGOSA,
     notes=(
         'death-knight-rework S2a (U11 / D2), Frost doc "Breath of Sindragosa" (10,1): the per-second tick. '
-        'SCHOOL_DAMAGE ap_potency 42 (S2 TUNE, U33; was 60) direct, time_basis_ms 1000 (L2), TARGET_UNIT_CONE_ENEMY_104 (104 degree total '
+        'SCHOOL_DAMAGE ap_potency 92 (RETUNE-RESIM 2026-10-25; RETUNE 70, S2 TUNE 42, doc 60) direct, time_basis_ms 1000 (L2), TARGET_UNIT_CONE_ENEMY_104 (104 degree total '
         'arc) '
         'radius 12 yd, self range, Frost, magic class, visual 14711. d2 b10 (m.BREATH) the only family bit. '
         'AttributesEx3 SUPPRESS_CASTER_PROCS. spell_dk_breath_of_sindragosa_tick: primary full, secondary '

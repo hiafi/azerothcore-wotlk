@@ -121,7 +121,7 @@ SDV_NAME = re.compile(r"^\$(\w+)=", re.MULTILINE)
 MAX_SDV_NAME = 12
 D_AND_D_PINNED = {"Attributes": 67108864, "AttributesEx": 136, "AttributesEx3": 0, "AttributesEx5": 512,
                   "RuneCostID": 101, "PowerType": POWER_RUNE, "CategoryRecoveryTime": 30000, "Effect_1": 27,
-                  "EffectAura_1": 226, "EffectBasePoints_1": 25}
+                  "EffectAura_1": 226, "EffectBasePoints_1": 8}  # RETUNE 2026-10-25 re-anchor: was 25
 D_AND_D_MASK = (m.DEATH_AND_DECAY, 0, 0)
 STOCK_COMPARE_COLUMNS = ("Attributes", "AttributesEx", "AttributesEx2", "AttributesEx3", "AttributesEx4",
                          "AttributesEx5", "AttributesEx6", "AttributesEx7", "Effect_1", "Effect_2", "Effect_3",

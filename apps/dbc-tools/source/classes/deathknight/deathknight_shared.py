@@ -433,8 +433,8 @@ rune_haste_sync_203053 = spell(
 scripted_by(rune_haste_sync_203053, 'spell_dk_rune_haste_sync')
 
 # ---- Obliterate (shared doc "Obliterate", U2, U3, U9, known-hard 5) ----
-# 1 Frost Rune + 15 RP (spell_rune_cost 2600; stock 587 is 1 Frost + 1 Unholy), 72% weapon damage + a 10 potency flat
-# (S2 TUNE 2026-10-25, U33: was 160%; the off-hand copy 66198 mirrors it).
+# 1 Frost Rune + 15 RP (spell_rune_cost 2600; stock 587 is 1 Frost + 1 Unholy), 118% weapon damage + a 10 potency flat
+# (RETUNE 2026-10-25: S2 TUNE 72%, doc 160%; the off-hand copy 66198 mirrors it).
 # Stock 49020's frame (Mograine 30838 keeps casting that one; its DSL row, SLA 17555 and rank chain stay). The percent
 # effect is FIRST and the flat NORMALIZED_WEAPON_DMG second: EffectWeaponDmg multiplies a flat effect that sits before
 # the percent effect by the percent (Frost Strike 49143 does the same). EFFECT_2 stays empty: SpellEffects.cpp reads
@@ -464,7 +464,7 @@ obliterate_203054 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=72, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=118, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=10, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
@@ -474,8 +474,8 @@ obliterate_203054 = spell(
         'DK0b (shared doc "Obliterate", U2 / U3 / U9): the baseline Obliterate on a new id, level 20, trained (SLA 30734, '
         'Frost line 771, class 32, acquire 0). Frame of stock 49020 (Attributes 262160, AttributesEx 134218240, '
         'AttributesEx3 1024 main hand, DefenseType 2, FacingCasterFlags 1, PreventionType 2, RangeIndex 2, main-hand '
-        'weapon, icon 2639, visual 11613, GCD 133 / 1500). eff0 WEAPON_PERCENT_DAMAGE weapon_potency 72 (S2 TUNE, U33; '
-        'was 160) FIRST, eff1 '
+        'weapon, icon 2639, visual 11613, GCD 133 / 1500). eff0 WEAPON_PERCENT_DAMAGE weapon_potency 118 (RETUNE-RESIM 2026-10-25, was 145; RETUNE '
+        '2026-10-25; S2 TUNE 72, doc 160) FIRST, eff1 '
         'NORMALIZED_WEAPON_DMG sp_potency 10 direct T 1500; no EFFECT_2 (the core\'s per-disease value reads 0). '
         'RuneCostID 2600 = 1 Frost + 15 RP. d1 b17 (m.OBLITERATE) is the only family bit. Disease consumption is '
         'suppressed by the always-100 guard 203055.'

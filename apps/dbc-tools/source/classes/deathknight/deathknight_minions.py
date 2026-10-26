@@ -10,9 +10,9 @@ MINION_AP_SHARE_PCT = const('MINION_AP_SHARE_PCT', 100, 'Minion attack power per
 # S3a (U15): per-kind attack power shares for the Unholy minions, all [tune] (docs "[tune]"). Read per MinionKind in
 # RefreshMinionMirror and spell_dk_minion_mirror::CalcAttackPower; MINION_AP_SHARE_PCT stays the DK0b default.
 MINION_ARMY_AP_SHARE_PCT = const('MINION_ARMY_AP_SHARE_PCT', 15, 'Army of the Dead ghoul attack power per owner attack power, percent (S3a U15, [tune]).')
-MINION_GHOUL_AP_SHARE_PCT = const('MINION_GHOUL_AP_SHARE_PCT', 90, 'Permanent ghoul (Raise Dead) attack power per owner attack power, percent (S3a U15, [tune]).')
-MINION_LESSER_GHOUL_AP_SHARE_PCT = const('MINION_LESSER_GHOUL_AP_SHARE_PCT', 50, 'Lesser Ghoul attack power per owner attack power, percent (S3a U15, [tune]).')
-MINION_ABOMINATION_AP_SHARE_PCT = const('MINION_ABOMINATION_AP_SHARE_PCT', 100, 'Abomination attack power per owner attack power, percent (S3a U15, [tune]).')
+MINION_GHOUL_AP_SHARE_PCT = const('MINION_GHOUL_AP_SHARE_PCT', 60, 'Permanent ghoul (Raise Dead) attack power per owner attack power, percent (S3a U15, [tune]; RETUNE 2026-10-25: was 90).')
+MINION_LESSER_GHOUL_AP_SHARE_PCT = const('MINION_LESSER_GHOUL_AP_SHARE_PCT', 25, 'Lesser Ghoul attack power per owner attack power, percent (S3a U15, [tune]; RETUNE 2026-10-25: was 50).')
+MINION_ABOMINATION_AP_SHARE_PCT = const('MINION_ABOMINATION_AP_SHARE_PCT', 70, 'Abomination attack power per owner attack power, percent (S3a U15, [tune]; RETUNE 2026-10-25: was 100).')
 MINION_SP_SHARE_PCT = const('MINION_SP_SHARE_PCT', 100, 'Minion spell power per owner attack power, percent (DK0b U8, Gargoyle).')
 MINION_CRIT_SHARE_PCT = const('MINION_CRIT_SHARE_PCT', 100, 'Share of owner crit the minion inherits, percent (DK0b U8).')
 MINION_HASTE_SHARE_PCT = const('MINION_HASTE_SHARE_PCT', 100, 'Share of owner spell haste the minion inherits, percent (DK0b U8).')

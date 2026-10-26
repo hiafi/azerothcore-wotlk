@@ -171,10 +171,12 @@ plague_strike_66216 = spell(
     duration_ms=-1,
     effects=[
         Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=49, implicit_target_a=6),
-        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=30, points_per_level=2.48, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=1, points_per_level=0.5933, implicit_target_a=6),
     ],
     spell_icon_id=2719,
     notes=(
+        'RETUNE 2026-10-25 (re-anchor): the flat follows 45462\'s re-anchored eff0 at 0.245 x: 2 at level 1, 37 at 60 '
+        '(bp 1, 0.5933 per level; was bp 30 / 2.48 = 177 at 60). '
         'pulled from existing data; S2a D1: off-hand copy of 45462 (Threat of Thassarian), percent effect first (weapon_potency 49 = '
         '45462 E1), then 0.245 x the main-hand flat (45462 is flat-first so its flat is scaled by 49%; half of that for the off-hand doubling: bp 124 / 10.12 per level), '
         'EFFECT_2 empty (stale E2 twins deleted), cast-triggered.'

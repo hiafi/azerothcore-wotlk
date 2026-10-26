@@ -140,10 +140,10 @@ def _buff(spell_id, name, effects, icon, duration_ms, description, aura_descript
 
 
 def _wound_burst(spell_id, name_note, role):
-    """203457 / 203458 (same data, own ids: sim and log visibility). eff0 Shadow damage with ap_potency 30 per wound,
+    """203457 / 203458 (same data, own ids: sim and log visibility). eff0 Shadow damage with ap_potency 25 per wound,
     eff1 the DUMMY carrier of the wound count n (SPELLVALUE_BASE_POINT1; the script's OnHit multiplies by n)."""
     effects = [
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=30.0, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=25.0, potency_kind='direct',
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
         Effect(type=EffectType.DUMMY, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ]
@@ -154,7 +154,8 @@ def _wound_burst(spell_id, name_note, role):
         notes=(
             f'S3a Unholy (U8): the {role}. Shadow, DmgClass MAGIC (DefenseType 1: spell crit, Runic Focus doubles it), '
             'one cast per burst event with an n multiplier (the AP term is added once per cast, Unit.cpp:8726-8733): eff0 '
-            'SCHOOL_DAMAGE ap_potency 30 direct per wound, SpellLevel 20 (L6); eff1 DUMMY carrying n through '
+            'SCHOOL_DAMAGE ap_potency 25 direct per wound [tune] (RETUNE 2026-10-25: was 30), SpellLevel 20 (L6); '
+            'eff1 DUMMY carrying n through '
             'SPELLVALUE_BASE_POINT1 (both effects target the explicit enemy so the two target lists are identical). The '
             'script (spell_dk_festering_wound_damage) OnHit multiplies by n and by Dread Host. Spell-level Mechanic 22 '
             '(INFECTED): Crypt Fever / Ebon Plague raise it (caster-scoped, max not sum); known effect (D4): the 18 '
@@ -188,7 +189,7 @@ scripted_by(festering_wound_overflow_203458, 'spell_dk_festering_wound_damage')
 # it, at most 5 enemies (the script's OnObjectAreaTargetSelect: Engagement filter -> by distance -> resize(5); it must be
 # registered on EFFECT_0 and EFFECT_1 because the two effects select the same area independently).
 _explosion_effects = [
-    Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=9.0, potency_kind='direct', implicit_target_a=_TARGET_DEST_DEST,
+    Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=7.5, potency_kind='direct', implicit_target_a=_TARGET_DEST_DEST,
            implicit_target_b=_TARGET_UNIT_DEST_AREA_ENEMY, radius_yards=8.0),
     Effect(type=EffectType.DUMMY, implicit_target_a=_TARGET_DEST_DEST, implicit_target_b=_TARGET_UNIT_DEST_AREA_ENEMY,
            radius_yards=8.0),
@@ -198,8 +199,9 @@ festering_wound_explosion_203459 = spell(
     cooldown_ms=0, category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=50000.0, duration_ms=0,
     effects=_explosion_effects, spell_icon_id=_ICON_FESTERING_WOUND,
     notes=(
-        'S3a Unholy (U10): the death explosion of a wounded enemy. Shadow, magic class, eff0 SCHOOL_DAMAGE ap_potency 9 '
-        'direct PER WOUND (= 30% of the 30-potency burst), multiplied by n (eff1 DUMMY, SPELLVALUE_BASE_POINT1) by the '
+        'S3a Unholy (U10): the death explosion of a wounded enemy. Shadow, magic class, eff0 SCHOOL_DAMAGE '
+        'ap_potency 7.5 direct PER WOUND (= 30% of the 25-potency burst; RETUNE 2026-10-25: was 9 of 30),'
+        ' multiplied by n (eff1 DUMMY, SPELLVALUE_BASE_POINT1) by the '
         'same damage script as the burst. SpellLevel 20 (L6). Targets: A TARGET_DEST_DEST (87, the explicit x,y,z the '
         'event casts at, captured with the map id at death) + B TARGET_UNIT_DEST_AREA_ENEMY (16), 8 yd on both effects '
         '(the script keeps the 5 nearest engaged enemies). d2 b11 ROT_DAMAGE, spell-level Mechanic 22 (D4), ALWAYS_HIT. '
@@ -400,20 +402,22 @@ infected_claws_display_203468 = spell(
 # =====================================================================================================================
 
 # D3: a dest-only SUMMON has no unit TargetInfo, so the script runs in AfterCast. Props 61 (ALLY guardian, no slot, no pet
-# bar), implicit A 87 (an explicit dest at the target's position, D17), finite 15 s (a SPELLMOD_DURATION skips
+# bar), implicit A 87 (an explicit dest at the target's position, D17), finite 11 s (RETUNE 2026-10-25, user ruling: was
+# 15 s; a SPELLMOD_DURATION skips
 # infinite durations, Player.cpp:10066), d2 b14 so Night of the Dead's flat +2 / 4 s duration mod reaches it.
 _lesser_ghoul_summon_effects = [
     Effect(type=EffectType.SUMMON, implicit_target_a=_TARGET_DEST_DEST, misc_value=300320),
 ]
 lesser_ghoul_summon_203469 = spell(
     id=203469, name='Raise Lesser Ghoul', school=School.NORMAL, attributes=0, cast_time_ms=0, cooldown_ms=0,
-    category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=100.0, duration_ms=15000,
+    category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=100.0, duration_ms=11000,
     effects=_lesser_ghoul_summon_effects, spell_icon_id=_ICON_LESSER_GHOUL,
     notes=(
         'S3a Unholy (U19): summons the Lesser Ghoul guardian (creature 300320). eff0 SUMMON, implicit A 87 '
         '(TARGET_DEST_DEST, D17: the caster passes an explicit dest at the target\'s position, so a Coil at the friendly ghoul '
         'or a dead target still summons), EffectMiscValueB 61 '
-        '(SummonProperties 61: Category ALLY, Type GUARDIAN, Slot 0: no pet bar, SummonGuardian path), finite 15 s '
+        '(SummonProperties 61: Category ALLY, Type GUARDIAN, Slot 0: no pet bar, SummonGuardian path), finite 11 s '
+        '(RETUNE 2026-10-25, user ruling: was 15 s; 15 s with Night of the Dead 2/2) '
         '(the duration SPELLMOD_DURATION reaches, applied at SpellEffects.cpp:6465 for guardians), d2 b14 LESSER_GHOUL '
         '(Night of the Dead\'s +2 / 4 s). Cast TRIGGERED_FULL_MASK. Dest-only: no TargetInfo, so '
         'spell_dk_lesser_ghoul_summon runs in AfterCast (D3: start timer on CustomData, CapMinions(300320, 8), counter '
@@ -470,7 +474,7 @@ scripted_by(corpse_explosion_detonation_203471, 'spell_dk_corpse_explosion_deton
 # The tick: cast by the Abomination (family 0) at each engaged enemy within 8 yd of it (the cloud aura's periodic script
 # collects them). time_basis_ms 1000: the cloud ticks on a fixed 1 s timer (L2).
 _cloud_tick_effects = [
-    Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=12.0, potency_kind='direct', time_basis_ms=1000,
+    Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=9.0, potency_kind='direct', time_basis_ms=1000,
            implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
 ]
 putrid_cloud_tick_203473 = spell(
@@ -479,7 +483,8 @@ putrid_cloud_tick_203473 = spell(
     effects=_cloud_tick_effects, spell_icon_id=_ICON_RAISE_ABOMINATION,
     notes=(
         'S3a Unholy (U21): one cloud tick on one enemy, cast by the Abomination. Shadow, magic class, eff0 SCHOOL_DAMAGE '
-        'ap_potency 12 direct [tune] with time_basis_ms 1000 (L2: the fixed 1 s cadence), SpellLevel 50 (L6). Explicit enemy '
+        'ap_potency 9 direct [tune] (RETUNE 2026-10-25: was 12) '
+        'with time_basis_ms 1000 (L2: the fixed 1 s cadence), SpellLevel 50 (L6). Explicit enemy '
         'target. Family 0 / no bits (minion damage: Mastery once and All Will Serve through the seam; not Impurity). '
         'AttributesEx3 SUPPRESS_CASTER_PROCS (rolls no procs) | ALWAYS_HIT (a minion\'s tick must not miss).'
     ),

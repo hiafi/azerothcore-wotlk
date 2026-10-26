@@ -110,13 +110,17 @@ plague_strike_45462 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=121, base_points=124, points_per_level=10.12, implicit_target_a=6),
+        Effect(type=121, base_points=9, points_per_level=2.3899, implicit_target_a=6),
         Effect(type=31, weapon_potency=49, implicit_target_a=6),
         Effect(type=EffectType.TRIGGER_SPELL, die_sides=0, implicit_target_a=6, trigger_spell=55078),
     ],
     spell_icon_id=2719,
     tooltip_vars=heart_plague_strike_tooltip_1254,
     notes=(
+        'RETUNE 2026-10-25 (re-anchor): eff0 151 at 60 (stock rank 2, learned at 60), 10 at the learn level 1 (151 x '
+        'C(1) / C(60), the potency level curve), linear between (bp 9, 2.3899 per level), so the flat bonus (eff0 x '
+        '50%) is 75.5 at 60; the bootstrap slope 10.12 from level 1 made eff0 722 at 60 (bonus 361). The off-hand '
+        'copy 66216 follows (0.245 x). '
         'S3a (U28): the tooltip now reads $plague = Gravefrost x Outbreak (tooltip_vars 1254, edited in place, one owner; the '
         'same entry carries $heart); no Plague Strike number changed, so the off-hand copy 66216 is untouched; second '
         'script spell_dk_plague_strike_unholy beside Frost\'s (end of this file). '
@@ -149,12 +153,16 @@ icy_touch_45477 = spell(
     mana_cost_pct=0,
     range_yards=20.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=136.1, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=55.0, potency_kind='direct', implicit_target_a=6),
         Effect(type=EffectType.TRIGGER_SPELL, points_per_level=4.36, die_sides=0, implicit_target_a=6, trigger_spell=55095),
     ],
     spell_icon_id=2721,
     tooltip_vars=icy_touch_tooltip_1255,
     notes=(
+        'RETUNE 2026-10-25 (re-anchor): ap_potency 136.1 -> 55.0 = 147 average at 60 (stock rank 1 127-137 at 55 and '
+        'rank 2 144-156 at 61, interpolated at 60: 147 / C(60) 2.675). 136.1 was the base-implied potency of the '
+        'bootstrap value 364 at 60 (slope kept from the new learn level 2); the AP coefficient follows potency (0.583'
+        ' -> 0.236). '
         'S2a (U24): tooltip reads Improved Icy Touch (tooltip_vars 1255, $iit) on the damage via {pot1*iit}; the stale '
         '"Very high threat when in Frost Presence" sentence is dropped (Frost Presence is retired). '
         'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
@@ -239,11 +247,15 @@ blood_boil_48721 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=92.0, potency_kind='direct', implicit_target_a=18, implicit_target_b=16, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=39.4, potency_kind='direct', implicit_target_a=18, implicit_target_b=16, radius_yards=10.0),
     ],
     spell_icon_id=2725,
     tooltip_vars=bloody_strikes_tooltip_1250,
     notes=(
+        'RETUNE 2026-10-25 (re-anchor): ap_potency 92.0 -> 39.4 = 105.5 average at 60 (stock rank 1 89-107 at 58 and '
+        'rank 2 116-140 at 66, interpolated at 60: 105.5 / C(60) 2.675). 92.0 was the base-implied potency of the '
+        'bootstrap value 246 at 60 (slope kept from the new learn level 24); the AP coefficient follows potency '
+        '(0.394 -> 0.169). '
         'S1a: tooltip reads Bloody Strikes\' Blood Boil multiplier (tooltip_vars 1250, $boil), {pot1*boil} replaces the stale $s1. '
         'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
         'from rank 1 (learn level 58); RealPointsPerLevel from rank1->covers-60-overridden '
@@ -770,14 +782,14 @@ obliterate_66198 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=72, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=118, implicit_target_a=6),
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=5, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
     ],
     spell_icon_id=2639,
     notes=(
         'death-knight-rework S2a (U16 / U17, brief D1): Threat of Thassarian off-hand copy of Obliterate 203054. eff0 '
-        'WEAPON_PERCENT_DAMAGE weapon_potency 72 first (mirrors 203054; S2 TUNE, U33; was 160), eff1 '
+        'WEAPON_PERCENT_DAMAGE weapon_potency 118 first (mirrors 203054; RETUNE-RESIM 118, RETUNE 145, S2 TUNE 72), eff1 '
         'NORMALIZED_WEAPON_DMG '
         'sp_potency 5 (HALF of the main hand\'s 10: the '
         'physical off-hand path doubles the flat), direct T 1500; EFFECT_2 empty (the stock per-disease DUMMY 24 = +12.5% per '
@@ -4301,10 +4313,11 @@ gargoyle_strike_51963 = spell(
     mana_cost_pct=0,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=100.0, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=60.0, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=213,
-    notes="pulled from existing data. Potency system P8: Ebon Gargoyle's own attack (DoCastVictim, "
+    notes="RETUNE 2026-10-25: sp_potency 100 -> 60 [tune] (Unholy U36 TUNE on the re-anchored footing). "
+          "pulled from existing data. Potency system P8: Ebon Gargoyle's own attack (DoCastVictim, "
           "no custom bp). Base-implied sp_potency=16.8 from the flat (no RealPointsPerLevel) V60 "
           "average of 60 (50 base + die_sides=19 mean 10); the live EffectBonusMultiplier_1 (0.453) "
           "implies a far higher 79.3 - base wins by default (docs/potency-system.md). The '0.453' "

@@ -189,19 +189,19 @@ scripted_by(deathchill_lockout_203313, 'spell_dk_deathchill_lockout')
 # =====================================================================================================================
 
 # The tick, cast by spell_dk_hungering_cold_storm each 2 s: Frost, magic class, 8 yd around the caster, no target cap,
-# 10 attack-power potency (S2 TUNE 2026-10-25, U33; was 15) on the 2 s cadence (L2), crits through Runic Focus (d2 b16), rolls no procs and grants no
+# 15 attack-power potency (RETUNE 2026-10-25: back to the doc's 15; S2 TUNE had 10) on the 2 s cadence (L2), crits through Runic Focus (d2 b16), rolls no procs and grants no
 # Killing Machine (SUPPRESS_CASTER_PROCS).
 hungering_cold_tick_203316 = spell(
     id=203316, name='Hungering Cold Tick', school=School.FROST, attributes=0, cast_time_ms=0, cooldown_ms=0,
     category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=RANGE_SELF, duration_ms=0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=10.0, potency_kind='direct', time_basis_ms=2000,
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=15.0, potency_kind='direct', time_basis_ms=2000,
                implicit_target_a=_TARGET_UNIT_SRC_AREA_ENEMY, radius_yards=8.0),
     ],
     spell_icon_id=_ICON_ICICLE,
     notes=(
         'S2a Frost (6,2) U10: the Hungering Cold storm tick. Frost, DmgClass MAGIC (DefenseType 1), SCHOOL_DAMAGE ap_potency '
-        '10 (S2 TUNE, U33; was 15) direct with time_basis_ms 2000 (L2: the storm ticks every 2 s, not the 1500 default), '
+        '15 (RETUNE 2026-10-25; S2 TUNE 10, doc 15) direct with time_basis_ms 2000 (L2: the storm ticks every 2 s, not the 1500 default), '
         'SpellLevel 40 = 9 + 5 x 6 '
         '+ 1 (L6), 8 yd TARGET_UNIT_SRC_AREA_ENEMY around the caster (RANGE_SELF), no target cap. d2 b16 '
         'FROST_OTHER_MAGIC (Runic Focus 200% crit and Razorice read it). AttributesEx3 SUPPRESS_CASTER_PROCS: rolls no '
@@ -369,14 +369,14 @@ avalanche_203321 = spell(
     id=203321, name='Avalanche', school=School.FROST, attributes=0, cast_time_ms=0, cooldown_ms=0,
     category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=100.0, duration_ms=0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=17.0, potency_kind='direct', time_basis_ms=1500,
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=25.0, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=_ICON_ICICLE,
     notes=(
         'S2a Frost (3,1) Rime rank 3 capstone: one icicle, cast triggered by the Howling Blast script at each enemy that '
         'Rime Howling Blast hit (at most one per enemy, at most RIME_AVALANCHE_TARGETS = 5). Frost, DmgClass MAGIC '
-        '(DefenseType 1), SCHOOL_DAMAGE ap_potency 17 (S2 TUNE, U33; was 25) direct (default 1500 time basis, L2), '
+        '(DefenseType 1), SCHOOL_DAMAGE ap_potency 25 (RETUNE 2026-10-25; S2 TUNE 17, doc 25) direct (default 1500 time basis, L2), '
         'SpellLevel 27 = 9 + 5 x 3 + 3 '
         '(L6). d2 b16 FROST_OTHER_MAGIC (Runic Focus 200% crit and Razorice read it). AttributesEx3 SUPPRESS_CASTER_PROCS: '
         'rolls no procs and grants no Killing Machine. SpellVisual 14570 (Ice Burst).'

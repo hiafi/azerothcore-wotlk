@@ -51,11 +51,11 @@ death_and_decay_43265 = spell(
     range_yards=30.0,
     duration_ms=10000,
     effects=[
-        Effect(type=EffectType.PERSISTENT_AREA_AURA, base_points=25, points_per_level=1.8, implicit_target_a=28, apply_aura=226, amplitude=1000, radius_yards=10.0),
+        Effect(type=EffectType.PERSISTENT_AREA_AURA, base_points=8, points_per_level=0.5667, implicit_target_a=28, apply_aura=226, amplitude=1000, radius_yards=10.0),
     ],
     spell_icon_id=118,
     tooltip_vars=sanguine_ground_tooltip_1252,  # S1a U24: tooltip only (Sanguine Ground +10/20/30%); the row stays stock
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 4 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    notes='RETUNE 2026-10-25 (re-anchor): 26 per tick at 60 (stock rank 1, learned at 60), 9 at the learn level 30 (26 x C(30) / C(60), the potency level curve), linear between (bp 8, 0.5667 per level); the bootstrap slope 1.8 from level 30 made it 80 at 60. pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
     raw_overrides={'AttributesEx': 136, 'AttributesEx5': 512, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': '$s1 Shadow damage inflicted every sec.', 'BaseLevel': 30, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Corrupts the ground targeted by the Death Knight, causing ${$m1*$<sang>} Shadow damage every sec that targets remain in the area for $d.  This ability produces a high amount of threat.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RuneCostID': 101, 'SpellClassMask_1': 32, 'SpellClassSet': 15, 'SpellLevel': 30, 'SpellVisualID_1': 9735, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'Targets': 64},
 )
 scripted_by(43265, 'spell_dk_death_and_decay_blood')
@@ -182,11 +182,11 @@ death_coil_47541 = spell(
     mana_cost_pct=0,
     range_yards=30.0,
     effects=[
-        Effect(type=EffectType.DUMMY, base_points=166, points_per_level=11.04, implicit_target_a=25),
+        Effect(type=EffectType.DUMMY, base_points=16, points_per_level=3.1965, implicit_target_a=25),
     ],
     spell_icon_id=88,
     tooltip_vars=death_coil_tooltip_1281,
-    notes='S3a (U28): SpellDescriptionVariableID 84 -> declared tooltip_vars 1281 ($damage / $healing x Morbidity, stock glyph terms kept). pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 55); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    notes='RETUNE 2026-10-25 (re-anchor): 196 at 60 (stock rank 1 167 at 55 and rank 2 208 at 62, interpolated at 60), 17 at the learn level 4 (196 x C(4) / C(60), the potency level curve), linear between (bp 16, 3.1965 per level); the bootstrap slope 11.04 from level 4 made it 785 at 60. S3a (U28): SpellDescriptionVariableID 84 -> declared tooltip_vars 1281 ($damage / $healing x Morbidity, stock glyph terms kept). pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 55); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
     raw_overrides={'AttributesEx': 1024, 'AuraDescription_Lang_Mask': 16712174, 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Fire a blast of unholy energy, causing $<damage> Shadow damage to an enemy target or healing $<healing> damage from a friendly Undead target$?s58677[.  Refunds $58677s1 runic power when used to heal.][.]', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 160, 'RuneCostID': 422, 'SpellClassMask_1': 8192, 'SpellClassSet': 15, 'SpellLevel': 4, 'SpellPriority': 50, 'SpellVisualID_1': 10755, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -420,11 +420,11 @@ horn_of_winter_57330 = spell(
     range_yards=0.0,
     duration_ms=120000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=85, points_per_level=4.6, implicit_target_a=56, apply_aura=AuraType.MOD_STAT, radius_yards=30.0),
-        Effect(type=EffectType.APPLY_AURA, base_points=85, points_per_level=4.6, implicit_target_a=1, implicit_target_b=56, apply_aura=AuraType.MOD_STAT, misc_value=1, radius_yards=30.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=85, implicit_target_a=56, apply_aura=AuraType.MOD_STAT, radius_yards=30.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=85, implicit_target_a=1, implicit_target_b=56, apply_aura=AuraType.MOD_STAT, misc_value=1, radius_yards=30.0),
     ],
     spell_icon_id=2494,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 65); RealPointsPerLevel from rank1->top-rank-fallback (anchor rank 2 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    notes='RETUNE 2026-10-25 (user ruling): stock-like +86 Strength and Agility at every level, no per-level scaling (stock rank 1 is +86 at 65); the single-rank bootstrap slope 4.6 per level from the new learn level 8 made it +325 at 60. pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 65); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
     raw_overrides={'AttributesEx6': 67108864, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases your total Strength and Agility by $s1.', 'BaseLevel': 8, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The Death Knight blows the Horn of Winter, which generates 10 runic power and increases total Strength and Agility of all party or raid members within $a1 yards by $s1.  Lasts $d.', 'EffectBasePoints_3': 44, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 1704, 'SpellClassMask_2': 1073741824, 'SpellClassSet': 15, 'SpellLevel': 8, 'SpellPriority': 50, 'SpellVisualID_1': 12396, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
@@ -528,7 +528,7 @@ howling_blast_49184 = spell(
     range_yards=20.0,
     effects=[
         Effect(type=EffectType.DUMMY, base_points=149, implicit_target_a=6),
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=62, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=10.0),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=90, potency_kind='direct', implicit_target_a=53, implicit_target_b=16, radius_yards=10.0),
         Effect(type=EffectType.TRIGGER_SPELL, die_sides=0, implicit_target_a=53, implicit_target_b=16, radius_yards=10.0,
                trigger_spell=55095),
     ],
@@ -541,8 +541,8 @@ howling_blast_49184 = spell(
         'eff2 (SCHOOL_DAMAGE) converted to ap_potency=100.9 (deathknight-potency-report.md / '
         'deathknight-potency-proposals.txt - mismatch row, old AP-coefficient-implied potency '
         'was 46.7, the base-damage-implied 100.9 wins per the user-reviewed proposal). DieSides '
-        '17 replaced by the system-standard +-5% roll. dk-rework S2a (U8): 62 AP potency (S2 TUNE 2026-10-25, U33; '
-        'was 90) at SpellLevel 20, 10 yd radius, '
+        '17 replaced by the system-standard +-5% roll. dk-rework S2a (U8): 90 AP potency (RETUNE 2026-10-25: '
+        'doc value 90; S2 TUNE had 62) at SpellLevel 20, 10 yd radius, '
         '20 yd range, RuneCostID 647 (1 Unholy + 1 Frost, +15 RP, stock), 8 s cooldown / category 1248; eff2 = '
         'TRIGGER_SPELL 55095 on the same area targets (fires per target at launch, before the damage, so Glacier Rot '
         'always counts); the stale EffectBasePoints_3 / EffectSpellClassMaskC_1 twins are dropped. Rime keeps its '

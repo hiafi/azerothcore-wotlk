@@ -142,7 +142,7 @@ festering_plague_203440 = _passive_rank(
 _NECROMANCY_CAPSTONE = (
     'Necromancy. Your Plague Strike no longer applies Festering Wounds and instead grants you 3 Necromantic Energy, up '
     'to 6, and its Unholy Rune returns as a Death Rune. Your Scourge Strike consumes 1 Necromantic Energy to raise a '
-    'Lesser Ghoul and generate 10 additional Runic Power, and no longer creates Death Runes.'
+    'Lesser Ghoul, and no longer creates Death Runes.'
 )
 _ALL_WILL_SERVE_NOTE = (
     'death-knight-rework S3a, Unholy doc "All Will Serve" (2,3), U14 / U16: hidden passive, eff0 DUMMY stored 4 / 9 '
@@ -241,7 +241,8 @@ dark_transformation_203448 = spell(
         'eff1 MOD_DAMAGE_PERCENT_DONE (79) misc 127 stored 79 = +80%, eff2 DUMMY: all TARGET_UNIT_PET. '
         'CasterAuraSpell = 203465 (the marker); linked_spell(203448, -203465, 0) removes it on cast. spell_proc row '
         '(procs_on on this id, actor = the pet): ProcFlags 0x14 (melee auto attack + melee-class spell), no family, '
-        'HIT phase, Chance 100; the aura script filters to the swing / Claw. NO IS_ABILITY, no family bits. '
+        'HIT phase, Chance 100, DisableEffectsMask 0x3 (RETUNE: eff0 TRANSFORM is a breakable CC on a proc row); '
+        'the aura script filters to the swing / Claw. NO IS_ABILITY, no family bits. '
         'Non-passive visible aura, number-free aura text. SpellLevel 40 = 9 + 5 x 6 + 1.'
     ),
     raw_overrides=_raw(
@@ -255,9 +256,14 @@ dark_transformation_203448 = spell(
 )
 linked_spell(dark_transformation_203448.id, -dark_transformation_ready_203465.id, type=0,
              comment='Dark Transformation consumes its ready marker (S3a U22)')
+# RETUNE 2026-10-25 (S3b-2-DIAG Q1): DisableEffectsMask 0x3. With a spell_proc row the engine checks every effect of
+# the aura, and eff0 TRANSFORM is a breakable CC there (SpellAuraEffects.cpp CheckEffectProc /
+# HandleBreakableCCAuraProc, amount 0): the ghoul's first swing or Claw removed the whole aura. Only eff2 (the DUMMY
+# the cleave script reads) procs.
 procs_on(
     dark_transformation_203448, proc_flags=_PROC_FLAG_DONE_MELEE_AUTO_ATTACK | _PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS,
     spell_type_mask=_PROC_SPELL_TYPE_ALL, spell_phase_mask=_PROC_SPELL_PHASE_HIT, chance=100.0,
+    disable_effects_mask=0x3,
 )
 scripted_by(dark_transformation_203448, 'spell_dk_dark_transformation')
 
@@ -303,7 +309,7 @@ procs_on(
 # Knight, front left, no radius), 20 s. 40 Runic Power (PowerType 6, ManaCost 400), 60 s DBC cooldown (Cooldown Haste
 # qualifies, >= 30 s), GCD 133 / 1500, magic class (the core hastes the GCD), NO IS_ABILITY, self range, no family
 # bits. A summon-only cast: the AI (npc_dk_abomination) applies the cloud 203472 and the ward 203474 on spawn. The
-# tooltip is the doc text minus its cost and cooldown sentences; the cloud number is the tick's potency (12, A6's
+# tooltip is the doc text minus its cost and cooldown sentences; the cloud number is the tick's potency (9, A6's
 # 203473). SLA 30761 / talent 60371 are deathknight_talents.py's. SpellLevel 9 + 5 x 8 + 1.
 raise_abomination_203452 = spell(
     id=203452, name='Raise Abomination', school=School.SHADOW, attributes=0, cast_time_ms=0, cooldown_ms=60000,
@@ -374,7 +380,7 @@ _C = [
     ('SCOURGE_STRIKE_DISEASE_PCT', 12, 'Scourge Strike Shadow part: percent of the hit per own disease.'),
     ('NECROMANTIC_ENERGY_PER_STRIKE', 3, 'Necromancy: Necromantic Energy per Plague Strike.'),
     ('NECROMANTIC_ENERGY_MAX', 6, 'Necromancy: Necromantic Energy stack cap.'),
-    ('NECROMANCY_RP', 10, 'Necromancy: Runic Power per energy-spending Scourge Strike.'),
+    ('NECROMANCY_RP', 0, 'Necromancy: Runic Power per energy-spending Scourge Strike (RETUNE 2026-10-25: was 10).'),
     ('LESSER_GHOUL_CAP', 8, 'Lesser Ghoul cap; the oldest is replaced.'),
     ('LESSER_GHOUL_RANGE_YARDS', 40, 'Corpse Explosion: Lesser Ghoul search range.'),
     ('CORPSE_EXPLOSION_CORPSE_RANGE_YARDS', 30, 'Corpse Explosion: corpse fallback search range.'),

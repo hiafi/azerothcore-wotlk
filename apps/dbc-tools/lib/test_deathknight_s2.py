@@ -12,7 +12,7 @@ skipped by the other checks.
      prerequisite (Improved Icy Talons 2223 is retired, user ruling 2026-10-25; cell (5,0) stays empty; its party haste
      55610 is the Icy Talons rank 3 capstone, check 18). 2. The three new castables' SkillLineAbility rows (30750-30752,
      skill 771, class 32, acquire 0).
-  3. Howling Blast 49184: potency 62 (S2 TUNE; was 90) / SL 20, RuneCostID 647, effect 2 TRIGGER_SPELL 55095 with no stale twin.
+  3. Howling Blast 49184: potency 90 (RETUNE 2026-10-25; S2 TUNE 62) / SL 20, RuneCostID 647, effect 2 TRIGGER_SPELL 55095 with no stale twin.
   4. Potency rows (Glacial Eruption, Breath tick, Hungering Cold tick, Avalanche, Howling Blast): total potency,
      time_basis (1.5 / 1 / 2 / 1.5 s) and SpellLevel (9 + 5 * tier + rank).
   5. Glacial Advance / Breath: magic-class (no IS_ABILITY), Breath 2 min cooldown, Glacial Advance costs RP.
@@ -109,9 +109,10 @@ AVALANCHE_ID = 203321
 
 # damaging row -> (potency, time basis seconds, SpellLevel); SpellLevel = 9 + 5 * tier + rank (L6)
 POTENCY = {
-    # S2 TUNE 2026-10-25 (U33): HB 90 -> 62, GA eruption 75 -> 52, Breath tick 60 -> 42, HC tick 15 -> 10, Avalanche 25 -> 17
-    HOWLING_BLAST: (62.0, 1.5, 20), 203274: (52.0, 1.5, 30), 203307: (42.0, 1.0, 60), 203316: (10.0, 2.0, 40),
-    AVALANCHE_ID: (17.0, 1.5, 27),
+    # RETUNE 2026-10-25 (on the re-anchored footing): HB 62 -> 90, GA eruption 52 -> 75, Breath tick 42 -> 70,
+    # HC tick 10 -> 15, Avalanche 17 -> 25 (S2 TUNE 2026-10-25 had cut them from the doc's 90 / 75 / 60 / 15 / 25)
+    HOWLING_BLAST: (90.0, 1.5, 20), 203274: (75.0, 1.5, 30), 203307: (92.0, 1.0, 60), 203316: (15.0, 2.0, 40),
+    AVALANCHE_ID: (25.0, 1.5, 27),
 }
 GLACIAL_ADVANCE, BREATH, BREATH_TICK, HC_TICK, GLACIAL_ERUPTION = 203273, 203306, 203307, 203316, 203274
 BREATH_COOLDOWN_MS = 120000
@@ -857,8 +858,8 @@ class DeathKnightS2NegativeTest(unittest.TestCase):
         rows = {sid: _row(sid, SpellLevel=lvl) for sid, (_, _, lvl) in POTENCY.items()}
         self.assertEqual(check_potency(rows, entries), [])
         # wrong potency / time basis (the 1500 default on a 1 s or 2 s tick) / missing SpellLevel
-        self.assertEqual(len(check_potency(rows, {**entries, 203307: _entry(203307, [(42.0, 1.5, 60)])})), 1)
-        self.assertEqual(len(check_potency(rows, {**entries, 203316: _entry(203316, [(10.0, 1.5, 40)])})), 1)
+        self.assertEqual(len(check_potency(rows, {**entries, 203307: _entry(203307, [(92.0, 1.5, 60)])})), 1)
+        self.assertEqual(len(check_potency(rows, {**entries, 203316: _entry(203316, [(15.0, 1.5, 40)])})), 1)
         self.assertEqual(len(check_potency(rows, {**entries, 49184: _entry(49184, [(100.9, 1.5, 20)])})), 1)
         self.assertEqual(len(check_potency({**rows, 203274: _row(203274, SpellLevel=0)}, entries)), 1)
         self.assertEqual(len(check_potency(rows, {**entries, 203321: {"id": 203321}})), 1)  # no potency at all

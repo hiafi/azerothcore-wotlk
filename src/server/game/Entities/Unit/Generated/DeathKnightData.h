@@ -518,18 +518,18 @@ namespace DeathKnightData
     constexpr int32 MARROWREND_CAP_BONUS_PCT = 20; // Percent more damage Marrowrend deals while the Death Knight already has the maximum Bone Shield charges [tune].
     constexpr int32 MARROWREND_CHARGES = 3; // Bone Shield charges one Marrowrend cast grants (the shield caps at 6) [tune].
     constexpr int32 MERCILESS_COMBAT_HP_PCT = 35; // Merciless Combat threshold: target health percent.
-    constexpr int32 MINION_ABOMINATION_AP_SHARE_PCT = 100; // Abomination attack power per owner attack power, percent (S3a U15, [tune]).
+    constexpr int32 MINION_ABOMINATION_AP_SHARE_PCT = 70; // Abomination attack power per owner attack power, percent (S3a U15, [tune]; RETUNE 2026-10-25: was 100).
     constexpr int32 MINION_AP_SHARE_PCT = 100; // Minion attack power per owner attack power, percent (DK0b U8).
     constexpr int32 MINION_ARMY_AP_SHARE_PCT = 15; // Army of the Dead ghoul attack power per owner attack power, percent (S3a U15, [tune]).
     constexpr int32 MINION_BLOODWORM_AP_SHARE_PCT = 0; // Bloodworm attack power per owner attack power, percent (S1a U16, [tune]); 0 = stock worm damage.
     constexpr int32 MINION_CRIT_SHARE_PCT = 100; // Share of owner crit the minion inherits, percent (DK0b U8).
-    constexpr int32 MINION_GHOUL_AP_SHARE_PCT = 90; // Permanent ghoul (Raise Dead) attack power per owner attack power, percent (S3a U15, [tune]).
+    constexpr int32 MINION_GHOUL_AP_SHARE_PCT = 60; // Permanent ghoul (Raise Dead) attack power per owner attack power, percent (S3a U15, [tune]; RETUNE 2026-10-25: was 90).
     constexpr int32 MINION_HASTE_SHARE_PCT = 100; // Share of owner spell haste the minion inherits, percent (DK0b U8).
-    constexpr int32 MINION_LESSER_GHOUL_AP_SHARE_PCT = 50; // Lesser Ghoul attack power per owner attack power, percent (S3a U15, [tune]).
+    constexpr int32 MINION_LESSER_GHOUL_AP_SHARE_PCT = 25; // Lesser Ghoul attack power per owner attack power, percent (S3a U15, [tune]; RETUNE 2026-10-25: was 50).
     constexpr int32 MINION_SP_SHARE_PCT = 100; // Minion spell power per owner attack power, percent (DK0b U8, Gargoyle).
     constexpr int32 MINION_STAMINA_SHARE_PCT = 30; // Minion stamina inherited from owner stamina, percent, computed live (DK0b U9).
     constexpr int32 MINION_VERSATILITY_SHARE_PCT = 100; // Share of owner versatility the minion inherits, percent (DK0b U8).
-    constexpr int32 NECROMANCY_RP = 10; // Necromancy: Runic Power per energy-spending Scourge Strike.
+    constexpr int32 NECROMANCY_RP = 0; // Necromancy: Runic Power per energy-spending Scourge Strike (RETUNE 2026-10-25: was 10).
     constexpr int32 NECROMANTIC_ENERGY_MAX = 6; // Necromancy: Necromantic Energy stack cap.
     constexpr int32 NECROMANTIC_ENERGY_PER_STRIKE = 3; // Necromancy: Necromantic Energy per Plague Strike.
     constexpr int32 OBLITERATION_RUNE_PCT = 30; // Obliteration: chance percent for a Frost Rune.
