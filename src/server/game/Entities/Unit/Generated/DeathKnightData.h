@@ -77,6 +77,7 @@ namespace DeathKnightData
     constexpr uint32 SPELL_REAPING = 49208; // reaping_49208
     constexpr uint32 SPELL_WANDERING_PLAGUE = 49217; // wandering_plague_49217
     constexpr uint32 SPELL_BLOOD_CAKED_BLADE = 49219; // blood_caked_blade_49219
+    constexpr uint32 SPELL_IMPURITY = 49220; // impurity_49220
     constexpr uint32 SPELL_BONE_SHIELD = 49222; // bone_shield_49222
     constexpr uint32 SPELL_DIRGE = 49223; // dirge_49223
     constexpr uint32 SPELL_MAGIC_SUPPRESSION = 49224; // magic_suppression_49224
@@ -127,6 +128,10 @@ namespace DeathKnightData
     constexpr uint32 SPELL_BLOOD_CAKED_BLADE_49628 = 49628; // blood_caked_blade_49628
     constexpr uint32 SPELL_CRYPT_FEVER_49631 = 49631; // crypt_fever_49631
     constexpr uint32 SPELL_CRYPT_FEVER_49632 = 49632; // crypt_fever_49632
+    constexpr uint32 SPELL_IMPURITY_49633 = 49633; // impurity_49633
+    constexpr uint32 SPELL_IMPURITY_49635 = 49635; // impurity_49635
+    constexpr uint32 SPELL_IMPURITY_49636 = 49636; // impurity_49636
+    constexpr uint32 SPELL_IMPURITY_49638 = 49638; // impurity_49638
     constexpr uint32 SPELL_WANDERING_PLAGUE_49654 = 49654; // wandering_plague_49654
     constexpr uint32 SPELL_WANDERING_PLAGUE_49655 = 49655; // wandering_plague_49655
     constexpr uint32 SPELL_ENDLESS_WINTER_49657 = 49657; // endless_winter_49657
@@ -213,6 +218,7 @@ namespace DeathKnightData
     constexpr uint32 SPELL_UNBREAKABLE_ARMOR = 51271; // unbreakable_armor_51271
     constexpr uint32 SPELL_IMPROVED_ICY_TOUCH_51456 = 51456; // improved_icy_touch_51456
     constexpr uint32 SPELL_NECROSIS = 51459; // necrosis_51459
+    constexpr uint32 SPELL_NECROSIS_51460 = 51460; // necrosis_51460
     constexpr uint32 SPELL_NECROSIS_51462 = 51462; // necrosis_51462
     constexpr uint32 SPELL_NECROSIS_51463 = 51463; // necrosis_51463
     constexpr uint32 SPELL_NECROSIS_51464 = 51464; // necrosis_51464
@@ -227,6 +233,7 @@ namespace DeathKnightData
     constexpr uint32 SPELL_BLADE_BARRIER_51789 = 51789; // blade_barrier_51789
     constexpr uint32 SPELL_GARGOYLE_STRIKE = 51963; // gargoyle_strike_51963
     constexpr uint32 SPELL_ON_A_PALE_HORSE_51969 = 51969; // on_a_pale_horse_51969
+    constexpr uint32 SPELL_ON_A_PALE_HORSE_51970 = 51970; // on_a_pale_horse_51970
     constexpr uint32 SPELL_ON_A_PALE_HORSE_51983 = 51983; // on_a_pale_horse_51983
     constexpr uint32 SPELL_MASTER_OF_GHOULS = 52143; // master_of_ghouls_52143
     constexpr uint32 SPELL_WILL_OF_THE_NECROPOLIS_52284 = 52284; // will_of_the_necropolis_52284
@@ -244,6 +251,9 @@ namespace DeathKnightData
     constexpr uint32 SPELL_BLOOD_PLAGUE = 55078; // blood_plague_55078
     constexpr uint32 SPELL_SCOURGE_STRIKE = 55090; // scourge_strike_55090
     constexpr uint32 SPELL_FROST_FEVER = 55095; // frost_fever_55095
+    constexpr uint32 SPELL_ANTICIPATION = 55129; // anticipation_55129
+    constexpr uint32 SPELL_ANTICIPATION_55130 = 55130; // anticipation_55130
+    constexpr uint32 SPELL_ANTICIPATION_55131 = 55131; // anticipation_55131
     constexpr uint32 SPELL_VENDETTA_55136 = 55136; // vendetta_55136
     constexpr uint32 SPELL_BLADE_BARRIER_55225 = 55225; // blade_barrier_55225
     constexpr uint32 SPELL_BLADE_BARRIER_55226 = 55226; // blade_barrier_55226
@@ -280,6 +290,7 @@ namespace DeathKnightData
     constexpr uint32 SPELL_IMPROVED_DEATH_STRIKE = 62905; // improved_death_strike_62905
     constexpr uint32 SPELL_IMPROVED_DEATH_STRIKE_62908 = 62908; // improved_death_strike_62908
     constexpr uint32 SPELL_GHOUL_FRENZY = 63560; // ghoul_frenzy_63560
+    constexpr uint32 SPELL_DESOLATION_BUFF = 63583; // desolation_buff_63583
     constexpr uint32 SPELL_BLADE_BARRIER_64855 = 64855; // blade_barrier_64855
     constexpr uint32 SPELL_BLADE_BARRIER_64856 = 64856; // blade_barrier_64856
     constexpr uint32 SPELL_THREAT_OF_THASSARIAN = 65661; // threat_of_thassarian_65661
@@ -291,6 +302,8 @@ namespace DeathKnightData
     constexpr uint32 SPELL_BLOOD_STRIKE_66215 = 66215; // blood_strike_66215
     constexpr uint32 SPELL_PLAGUE_STRIKE_66216 = 66216; // plague_strike_66216
     constexpr uint32 SPELL_DESOLATION = 66799; // desolation_66799
+    constexpr uint32 SPELL_DESOLATION_BUFF_66800 = 66800; // desolation_buff_66800
+    constexpr uint32 SPELL_DESOLATION_BUFF_66801 = 66801; // desolation_buff_66801
     constexpr uint32 SPELL_DESOLATION_66814 = 66814; // desolation_66814
     constexpr uint32 SPELL_DESOLATION_66815 = 66815; // desolation_66815
     constexpr uint32 SPELL_DESOLATION_66816 = 66816; // desolation_66816
@@ -409,8 +422,53 @@ namespace DeathKnightData
     constexpr uint32 SPELL_IMPROVED_ICY_TOUCH_HELPER = 203323; // improved_icy_touch_helper_203323
     constexpr uint32 SPELL_IMPROVED_ICY_TOUCH_HELPER_203324 = 203324; // improved_icy_touch_helper_203324
     constexpr uint32 SPELL_IMPROVED_ICY_TOUCH_HELPER_203325 = 203325; // improved_icy_touch_helper_203325
+    constexpr uint32 SPELL_FESTERING_PLAGUE = 203440; // festering_plague_203440
+    constexpr uint32 SPELL_ALL_WILL_SERVE = 203441; // all_will_serve_203441
+    constexpr uint32 SPELL_ALL_WILL_SERVE_203442 = 203442; // all_will_serve_203442
+    constexpr uint32 SPELL_INFECTED_CLAWS = 203443; // infected_claws_203443
+    constexpr uint32 SPELL_INFECTED_CLAWS_203444 = 203444; // infected_claws_203444
+    constexpr uint32 SPELL_DOOMED_BIDDING = 203445; // doomed_bidding_203445
+    constexpr uint32 SPELL_DOOMED_BIDDING_203446 = 203446; // doomed_bidding_203446
+    constexpr uint32 SPELL_DOOMED_BIDDING_203447 = 203447; // doomed_bidding_203447
+    constexpr uint32 SPELL_DARK_TRANSFORMATION = 203448; // dark_transformation_203448
+    constexpr uint32 SPELL_ROTTEN_TOUCH = 203449; // rotten_touch_203449
+    constexpr uint32 SPELL_ROTTEN_TOUCH_203450 = 203450; // rotten_touch_203450
+    constexpr uint32 SPELL_ROTTEN_TOUCH_203451 = 203451; // rotten_touch_203451
+    constexpr uint32 SPELL_RAISE_ABOMINATION = 203452; // raise_abomination_203452
+    constexpr uint32 SPELL_HARBINGER_OF_DOOM = 203453; // harbinger_of_doom_203453
+    constexpr uint32 SPELL_HARBINGER_OF_DOOM_203454 = 203454; // harbinger_of_doom_203454
+    constexpr uint32 SPELL_HARBINGER_OF_DOOM_203455 = 203455; // harbinger_of_doom_203455
+    constexpr uint32 SPELL_FESTERING_WOUND = 203456; // festering_wound_203456
+    constexpr uint32 SPELL_FESTERING_WOUND_BURST = 203457; // festering_wound_burst_203457
+    constexpr uint32 SPELL_FESTERING_WOUND_OVERFLOW = 203458; // festering_wound_overflow_203458
+    constexpr uint32 SPELL_FESTERING_WOUND_EXPLOSION = 203459; // festering_wound_explosion_203459
+    constexpr uint32 SPELL_UNHOLY_RP_ENERGIZE = 203460; // unholy_rp_energize_203460
+    constexpr uint32 SPELL_NECROMANTIC_ENERGY = 203461; // necromantic_energy_203461
+    constexpr uint32 SPELL_ROTTEN_TOUCH_BUFF = 203462; // rotten_touch_buff_203462
+    constexpr uint32 SPELL_HARBINGER_OF_DOOM_BUFF = 203463; // harbinger_of_doom_buff_203463
+    constexpr uint32 SPELL_SHADOW_INFUSION = 203464; // shadow_infusion_203464
+    constexpr uint32 SPELL_DARK_TRANSFORMATION_READY = 203465; // dark_transformation_ready_203465
+    constexpr uint32 SPELL_DARK_TRANSFORMATION_CLEAVE = 203466; // dark_transformation_cleave_203466
+    constexpr uint32 SPELL_INFECTED_CLAWS_AURA = 203467; // infected_claws_aura_203467
+    constexpr uint32 SPELL_INFECTED_CLAWS_DISPLAY = 203468; // infected_claws_display_203468
+    constexpr uint32 SPELL_LESSER_GHOUL_SUMMON = 203469; // lesser_ghoul_summon_203469
+    constexpr uint32 SPELL_LESSER_GHOUL_COUNTER = 203470; // lesser_ghoul_counter_203470
+    constexpr uint32 SPELL_CORPSE_EXPLOSION_DETONATION = 203471; // corpse_explosion_detonation_203471
+    constexpr uint32 SPELL_PUTRID_CLOUD = 203472; // putrid_cloud_203472
+    constexpr uint32 SPELL_PUTRID_CLOUD_TICK = 203473; // putrid_cloud_tick_203473
+    constexpr uint32 SPELL_MINION_AREA_WARD = 203474; // minion_area_ward_203474
+    constexpr uint32 SPELL_GARGOYLE_NECROMANCY = 203475; // gargoyle_necromancy_203475
+    constexpr uint32 SPELL_GARGOYLE_RAMP = 203476; // gargoyle_ramp_203476
+    constexpr uint32 SPELL_ON_A_PALE_HORSE_DAMAGE = 203477; // on_a_pale_horse_damage_203477
+    constexpr uint32 SPELL_UNHOLY_BLIGHT_DOT = 203478; // unholy_blight_dot_203478
+
+    // Creature (NPC) ids
+    constexpr uint32 NPC_EBON_GARGOYLE = 27829; // ebon_gargoyle_27829
+    constexpr uint32 NPC_LESSER_GHOUL = 300320; // lesser_ghoul_300320
+    constexpr uint32 NPC_ABOMINATION = 300321; // abomination_300321
 
     // const() - hidden script numbers (tier 3)
+    constexpr int32 ABOMINATION_WOUND_EVERY_TICKS = 3; // Putrid Cloud: a wound every this many ticks per target.
     constexpr int32 AMZ_SPELL_REDUCTION_PCT = 75; // Percent of spell damage the Anti-Magic Zone absorbs while its shared pool lasts (stock 75) [fixed].
     constexpr uint8 BLOODWORM_CAP = 8; // Bloodworms alive per Death Knight; the oldest are replaced past it [fixed].
     constexpr int32 BLOODWORM_HEAL_PCT = 100; // Percent of a Bloodworm's damage that heals its owner (stock 150) [tune].
@@ -430,14 +488,24 @@ namespace DeathKnightData
     constexpr int32 BREATH_DRAIN_STEP_TICKS = 5; // Breath drain rises by 1 every this many ticks.
     constexpr int32 BREATH_MIN_RP = 10; // Minimum Runic Power to cast Breath of Sindragosa.
     constexpr int32 BREATH_SECONDARY_PCT = 50; // Breath damage percent on secondary targets.
+    constexpr int32 CORPSE_EXPLOSION_CORPSE_RANGE_YARDS = 30; // Corpse Explosion: corpse fallback search range.
     constexpr int32 CRIMSON_COMMUNION_LEECH_PCT = 15; // Percent of the damage each affected player deals that heals them while Crimson Communion lasts [fixed].
+    constexpr int32 DARK_TRANSFORMATION_CLEAVE_PCT = 50; // Dark Transformation cleave: percent of the unmitigated hit.
     constexpr int32 DEATHCHILL_DAMAGE_PCT = 20; // Deathchill direct-damage bonus percent.
     constexpr int32 DEATHS_CARESS_EXTRA_TARGETS = 2; // Additional nearby enemies Death's Caress hits besides its target [fixed].
     constexpr int32 DEATH_STRIKE_MIN_HEAL_PCT = 5; // Death Strike minimum heal, percent of maximum health
     constexpr int32 DEATH_STRIKE_WINDOW_MS = 5000; // Death Strike damage record window (shared doc: the last 5 sec)
+    constexpr int32 FESTERING_PLAGUE_PLUS1_PCT = 25; // Festering Plague: chance percent of +1 wound on Plague Strike (x Proc Chance).
+    constexpr int32 FESTERING_PLAGUE_PLUS2_PCT = 5; // Festering Plague: chance percent of +2 wounds on Plague Strike (x Proc Chance).
+    constexpr int32 FESTERING_WOUND_MAX_STACKS = 10; // Festering Wound stack cap; a wound past it bursts at once (overflow).
+    constexpr int32 FESTERING_WOUND_RP_PER_WOUND = 3; // Runic Power per burst wound (own-cast sources only).
     constexpr int32 FINAL_ROAR_SHARE_PCT = 10; // Final Roar: share of Breath damage dealt (stored, split among the cone).
     constexpr int32 FROSTWYRM_RAMP_PCT = 10; // Frostwyrm's Wrath ramp: Breath damage percent per stack.
     constexpr int32 FROSTWYRM_RAMP_TICKS = 5; // Frostwyrm's Wrath ramp: ticks per stack.
+    constexpr int32 GARGOYLE_NECROMANCY_MAX_STACKS = 10; // Gargoyle Necromancy stack cap.
+    constexpr int32 GARGOYLE_NECROMANCY_PCT = 3; // Gargoyle Necromancy: minion damage percent per stack.
+    constexpr int32 GARGOYLE_RP_PER_RAMP_STACK = 10; // Gargoyle ramp: Runic Power spent per +1% stack.
+    constexpr int32 GARGOYLE_WINDOW_MS = 20000; // Gargoyle strike window before it flies away.
     constexpr int32 GLACIAL_ADVANCE_ERUPTIONS = 5; // Glacial Advance eruption count.
     constexpr int32 GLACIAL_ADVANCE_STEP_MS = 150; // Glacial Advance delay between eruptions.
     constexpr int32 GLACIAL_ADVANCE_STEP_YARDS = 4; // Glacial Advance spacing between eruptions.
@@ -445,16 +513,25 @@ namespace DeathKnightData
     constexpr int32 HUNGERING_COLD_SLOW_STACKS_TO_FREEZE = 2; // Slow stacks that trigger the Hungering Cold freeze.
     constexpr int32 HUNGERING_COLD_STORM_MS = 10000; // Hungering Cold storm duration (a new Howling Blast resets it to this).
     constexpr int32 KILLING_MACHINE_MAX_STACKS = 2; // Killing Machine stack cap (buff 203320).
+    constexpr int32 LESSER_GHOUL_CAP = 8; // Lesser Ghoul cap; the oldest is replaced.
+    constexpr int32 LESSER_GHOUL_RANGE_YARDS = 40; // Corpse Explosion: Lesser Ghoul search range.
     constexpr int32 MARROWREND_CAP_BONUS_PCT = 20; // Percent more damage Marrowrend deals while the Death Knight already has the maximum Bone Shield charges [tune].
     constexpr int32 MARROWREND_CHARGES = 3; // Bone Shield charges one Marrowrend cast grants (the shield caps at 6) [tune].
     constexpr int32 MERCILESS_COMBAT_HP_PCT = 35; // Merciless Combat threshold: target health percent.
+    constexpr int32 MINION_ABOMINATION_AP_SHARE_PCT = 100; // Abomination attack power per owner attack power, percent (S3a U15, [tune]).
     constexpr int32 MINION_AP_SHARE_PCT = 100; // Minion attack power per owner attack power, percent (DK0b U8).
+    constexpr int32 MINION_ARMY_AP_SHARE_PCT = 15; // Army of the Dead ghoul attack power per owner attack power, percent (S3a U15, [tune]).
     constexpr int32 MINION_BLOODWORM_AP_SHARE_PCT = 0; // Bloodworm attack power per owner attack power, percent (S1a U16, [tune]); 0 = stock worm damage.
     constexpr int32 MINION_CRIT_SHARE_PCT = 100; // Share of owner crit the minion inherits, percent (DK0b U8).
+    constexpr int32 MINION_GHOUL_AP_SHARE_PCT = 90; // Permanent ghoul (Raise Dead) attack power per owner attack power, percent (S3a U15, [tune]).
     constexpr int32 MINION_HASTE_SHARE_PCT = 100; // Share of owner spell haste the minion inherits, percent (DK0b U8).
+    constexpr int32 MINION_LESSER_GHOUL_AP_SHARE_PCT = 50; // Lesser Ghoul attack power per owner attack power, percent (S3a U15, [tune]).
     constexpr int32 MINION_SP_SHARE_PCT = 100; // Minion spell power per owner attack power, percent (DK0b U8, Gargoyle).
     constexpr int32 MINION_STAMINA_SHARE_PCT = 30; // Minion stamina inherited from owner stamina, percent, computed live (DK0b U9).
     constexpr int32 MINION_VERSATILITY_SHARE_PCT = 100; // Share of owner versatility the minion inherits, percent (DK0b U8).
+    constexpr int32 NECROMANCY_RP = 10; // Necromancy: Runic Power per energy-spending Scourge Strike.
+    constexpr int32 NECROMANTIC_ENERGY_MAX = 6; // Necromancy: Necromantic Energy stack cap.
+    constexpr int32 NECROMANTIC_ENERGY_PER_STRIKE = 3; // Necromancy: Necromantic Energy per Plague Strike.
     constexpr int32 OBLITERATION_RUNE_PCT = 30; // Obliteration: chance percent for a Frost Rune.
     constexpr int32 OFFHAND_PENALTY_PCT = 50; // Off-hand damage penalty percent for non-physical off-hand strikes.
     constexpr int32 RAGE_FROZEN_CHAMPION_RIME_PCT = 8; // Rage of the Frozen Champion capstone: Rime chance percent per Breath tick.
@@ -470,7 +547,14 @@ namespace DeathKnightData
     constexpr uint16 RUNE_GLOW_UNENDING_THIRST = 0; // Weapon glow while Rune of Unending Thirst is active; 0 = none (DK0b U1) [tune].
     constexpr int32 RUNE_HASTE_MAX_PCT = 50; // Highest percent of rune-regeneration haste spell haste can grant (50 = a 10 s rune recharges in 5 s) [fixed].
     constexpr int32 SANGUINE_HEAL_PCT = 1; // Percent of maximum health each Sanguine Ground tick heals while standing in the Death Knight's own Death and Decay [fixed].
+    constexpr int32 SCOURGE_STRIKE_DEATH_RUNE_PCT = 33; // Scourge Strike: base chance percent per plain rune spent to return a ready Death Rune.
+    constexpr int32 SCOURGE_STRIKE_DISEASE_PCT = 12; // Scourge Strike Shadow part: percent of the hit per own disease.
+    constexpr int32 SHADOW_INFUSION_STACKS = 5; // Shadow Infusion stacks needed for Dark Transformation.
+    constexpr int32 UNHOLY_BLIGHT_SHARE_PCT = 10; // Unholy Blight: percent of the Death Coil damage dealt over the DoT.
     constexpr int32 VENDETTA_STRIKE_HEAL_PCT_RANK1 = 5; // Vendetta rank 1: percent of the Heart Strike / Marrowrend damage healed [tune].
     constexpr int32 VENDETTA_STRIKE_HEAL_PCT_RANK2 = 10; // Vendetta rank 2: percent of the Heart Strike / Marrowrend damage healed [tune].
     constexpr int32 VENDETTA_STRIKE_HEAL_PCT_RANK3 = 15; // Vendetta rank 3: percent of the Heart Strike / Marrowrend damage healed [tune].
+    constexpr int32 WOUND_BURST_MIN = 2; // Scourge Strike bursts max(this, stacks / 2) wounds, capped at the stack.
+    constexpr int32 WOUND_EXPLOSION_PCT = 30; // Death explosion: percent of a wound burst per wound.
+    constexpr int32 WOUND_EXPLOSION_TARGETS = 5; // Death explosion target cap.
 }

@@ -20,10 +20,13 @@
 
 #include "Define.h"
 #include "Generated/DeathKnightData.h"
+#include "ObjectGuid.h"
 #include "SharedDefines.h"
 #include <cstdint>
 
+class Creature;
 class Guardian;
+class Pet;
 class Aura;
 class ProcEventInfo;
 class SpellInfo;
@@ -79,7 +82,7 @@ namespace DeathKnight
     void SyncRuneHaste(Player* player, Aura* runeHaste);
 
     // Minions: live stat mirror + no-proc rule. DRW 27893 is None (core-live).
-    enum class MinionKind : uint8 { None, Ghoul, ArmyGhoul, Gargoyle, Bloodworm };
+    enum class MinionKind : uint8 { None, Ghoul, ArmyGhoul, Gargoyle, Bloodworm, LesserGhoul, Abomination };
     MinionKind GetMinionKind(Unit const* unit);
     Player* GetMinionOwner(Unit const* minion);           // GetOwner() only, never GetOwningPlayer (bug 3040)
     void ApplyMinionMirror(Guardian* minion);
@@ -226,6 +229,100 @@ namespace DeathKnight
     // Howling Blast 49184, Glacial Eruption 203274, Breath tick 203307). The Breath terms (Mastery, Frostwyrm's Wrath
     // ramp) apply to every tick target; FROST_MULT_BREATH_PRIMARY adds nothing in the helper, and the caller applies
     // BREATH_SECONDARY_PCT to the secondary targets itself.
+    // ---- S3 ----
+    // Runes (U7, L26). SnapshotRunes stores, keyed by the cast, every slot's cooldown and CURRENT type on
+    // dk->CustomData (call from OnCast: before TakePower). GetSpentPlainRuneSlots returns the slots whose cooldown
+    // went 0 -> > 0 since that snapshot AND whose snapshot type was not RUNE_DEATH (a returned Death Rune spent again
+    // gets nothing back).
+    // ConvertToDeathRune: SetRuneConvertAura(slot, nullptr) + ConvertRune(slot, RUNE_DEATH) (+ ActivateRune when
+    // ready).
+    // S2's SnapshotRuneCooldowns / FindJustSpentFrostRune keep their signatures and now share the type snapshot.
+    void SnapshotRunes(Player* dk, uint32 castSpellId);
+    // outSlots holds MAX_RUNES (6, Player.h) entries; returns how many were written.
+    uint8 GetSpentPlainRuneSlots(Player const* dk, uint32 castSpellId, uint8 outSlots[6]);
+    void ConvertToDeathRune(Player* dk, uint8 slot, bool ready);
+
+    // Festering Wounds (U8-U10). Every adder goes through AddFesteringWounds; the debuff's caster is always the DK.
+    enum class WoundSource : uint8
+    {
+        PlagueStrikeOverflow,
+        ScourgeStrike,
+        RottenTouch,
+        Abomination,
+        Gargoyle,
+        InfectedClaws,
+        Pestilence
+    };
+    // RP + Wandering Plague: ScourgeStrike, RottenTouch, PlagueStrikeOverflow.
+    bool WoundSourceGrantsResources(WoundSource src);
+    uint8 GetFesteringWounds(Unit const* target, ObjectGuid dkGuid);
+    // Wounds past the cap burst at once (overflow).
+    void AddFesteringWounds(Player* dk, Unit* target, uint8 n, WoundSource src);
+    void BurstFesteringWounds(Player* dk, Unit* target, uint8 n, WoundSource src);  // one burst cast with n
+    void OnWoundBurstHit(Player* dk, Unit* target, uint32 damage, WoundSource src, uint8 n);
+    void ScheduleWoundExplosion(Player* dk, Unit* corpse, uint8 stacks);
+
+    // Mastery and multipliers.
+    int32 GetDreadHostPct(Player const* dk);             // Rage of Rivendare rank 3/6/9 + Mastery with the capstone
+    int32 GetAllWillServePct(Player const* dk);          // 5/10
+    bool HasNecromancy(Unit const* dk);                  // All Will Serve rank 2 aura
+    int32 GetCryptFeverPct(Unit const* dk);              // 10/20/30 by Crypt Fever rank
+    int32 GetEbonPlagueMagicPct(Unit const* dk);         // 4/8/12 by Ebon Plaguebringer rank
+
+    // Necromancy (U14).
+    void GrantNecromanticEnergy(Player* dk);             // +NECROMANTIC_ENERGY_PER_STRIKE, cap, refresh
+    bool ConsumeNecromanticEnergy(Player* dk);           // -1; false when none
+
+    // Minions (U15/U16/U19).
+    bool IsUnholyMinion(MinionKind kind);                // Ghoul, LesserGhoul, Abomination, Gargoyle, ArmyGhoul
+    int32 GetMinionApSharePct(MinionKind kind);
+    bool SubtractsMinionBaseAp(MinionKind kind);         // the ghoul kind only
+    Creature* SummonLesserGhoul(Player* dk, Unit* target);
+    void CapMinions(Player* dk, uint32 entry, uint32 cap);
+    void RefreshLesserGhoulCounter(Player* dk);
+    Creature* FindCorpseExplosionGhoul(Player* dk);
+    float GetLesserGhoulRemainingFraction(Creature const* ghoul);
+
+    // Gargoyle (U17/U18).
+    Creature* GetActiveGargoyle(Player const* dk);
+    void OnGargoyleStrikeHit(Player* dk, Unit* target);
+    void OnGargoyleLeave(Player* dk);
+
+    // Ghoul (U22/U23).
+    void AddShadowInfusion(Player* dk);
+    void ApplyInfectedClaws(Player* dk, Pet* ghoul);
+
+    // Pestilence (U26): On a Pale Horse on the primary (OnPestilenceCopy covers the copies).
+    void OnPestilencePrimary(Player* dk, Unit* primary);
+
+    // ---- S3 additions (B1; the brief's pre-agreed ones first) ----
+    // Shadow Infusion 203464 changed on the ghoul (stacks 0 = removed): sets the owner's marker 203465 at
+    // SHADOW_INFUSION_STACKS (only when the owner knows Dark Transformation 203448), removes it below.
+    void OnShadowInfusionChanged(Unit* ghoul, uint8 stacks);
+    // Rotten Touch: the armed Coil's target (Death Coil AfterCast) and the 47632 hit's check (true once, then cleared).
+    void RecordRottenTouchTarget(Player* dk, ObjectGuid target);
+    bool ConsumeRottenTouchTarget(Player* dk, ObjectGuid target);
+    // D9: start ms + total ms on the ghoul's CustomData (idempotent: the first call wins).
+    void StartLesserGhoulTimer(Creature* ghoul, uint32 durationMs);
+
+    // The mirror's eff0 amount (D12): per-kind share of the owner's AP minus shared party AP; the ghoul kind also
+    // minus its own base AP (may be negative), every other kind clamped at 0. RefreshMinionMirror and
+    // spell_dk_minion_mirror::CalcAttackPower both use it.
+    int32 GetMinionMirrorAttackPower(Player const* owner, Unit const* minion);
+    // U16's Unholy terms for a hit of spellInfo's school (null = physical): (1 + Dread Host%) x (1 + All Will Serve%)
+    // x (1 + 3% x Gargoyle Necromancy stacks) x the owner's own Death Knight MOD_DAMAGE_PERCENT_DONE auras for that
+    // school (never party/raid buffs). For a "counts as minion damage" hit the DK casts itself (Corpse Explosion's
+    // corpse branch).
+    float GetUnholyMinionTerms(Player const* owner, SpellInfo const* spellInfo);
+    // On a Pale Horse known (passive 51983 or 51986).
+    bool HasOnAPaleHorse(Unit const* dk);
+    // AllCreatureScript add/remove-world bodies (Lesser Ghoul counter + timer, Gargoyle start / leave fallback,
+    // creature CustomData cleared on removal) and the owner's map-change resync (counter, Necromancy stacks).
+    void OnMinionAddWorld(Creature* creature);
+    void OnMinionRemoveWorld(Creature* creature);
+    void OnDeathKnightMapChanged(Player* dk);
+    // The unit SummonLesserGhoul raised the ghoul at (its AI attacks it first), or Empty.
+    ObjectGuid GetLesserGhoulSummonTarget(Creature const* ghoul);
 }
 
 #endif

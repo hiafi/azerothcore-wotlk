@@ -16,23 +16,27 @@
  */
 
 /*
- * Death Knight rework - ScriptMgr handlers (death-knight-rework DK0a, DK0b). Bodies live in DeathKnightMechanics.
+ * Death Knight rework - ScriptMgr handlers (death-knight-rework DK0a, DK0b, S1-S3). Bodies: DeathKnightMechanics.
  */
 
+#include "AllCreatureScript.h"
 #include "AreaDefines.h"
 #include "Creature.h"
 #include "DeathKnightMechanics.h"
 #include "Item.h"
+#include "ObjectAccessor.h"
 #include "Pet.h"
 #include "PetScript.h"
 #include "Player.h"
 #include "PlayerScript.h"
 #include "ScriptMgr.h"
 #include "Spell.h"
+#include "SpellAuras.h"
 #include "SpellInfo.h"
 #include "TemporarySummon.h"
 #include "Unit.h"
 #include "UnitScript.h"
+#include <algorithm>
 
 // ScriptMgr::DealDamage calls every UnitScript's DealDamage with no hook-enable check (there is no DealDamage
 // UnitHook); an empty enable list would enable every UnitHook entry, so the list names the hooks S1 overrides plus
@@ -43,7 +47,7 @@ class DeathKnightUnitScript : public UnitScript
 public:
     DeathKnightUnitScript() : UnitScript("DeathKnightUnitScript", true,
         { UNITHOOK_ON_UNIT_DEATH, UNITHOOK_ON_DAMAGE, UNITHOOK_MODIFY_HEAL_RECEIVED, UNITHOOK_ON_HEAL_FINAL,
-          UNITHOOK_MODIFY_MELEE_DAMAGE }) { }
+          UNITHOOK_MODIFY_MELEE_DAMAGE, UNITHOOK_MODIFY_SPELL_DAMAGE_TAKEN }) { }
 
     // Death Strike damage-taken record, then Purgatory (U9). Unit::DealDamage calls this for every hit in the world
     // after armor, reductions and all absorbs, so the checks run cheapest first.
@@ -102,18 +106,46 @@ public:
             DeathKnight::OnDeathStrikeHealFinal(player, heal, effective, healAbsorbed);
     }
 
-    // U17 Bloodworm white swings take the owner's damage multiplier (Unit::CalculateMeleeDamage passes the target
-    // first). Worms only melee, so this covers all their damage.
+    // The minion damage seam on white swings (Unit::CalculateMeleeDamage passes the target first): S1 U17
+    // Bloodworms, S3 U16 every Unholy minion kind. GetMinionDamageMultiplier is 1.0 for anything else.
     void ModifyMeleeDamage(Unit* /*target*/, Unit* attacker, uint32& damage) override
     {
-        if (!damage || !attacker || DeathKnight::GetMinionKind(attacker) != DeathKnight::MinionKind::Bloodworm)
+        if (!damage || !attacker || !attacker->IsCreature() ||
+            DeathKnight::GetMinionKind(attacker) == DeathKnight::MinionKind::None)
             return;
 
         Player* owner = DeathKnight::GetMinionOwner(attacker);
         if (!owner)
             return;
 
-        damage = uint32(float(damage) * DeathKnight::GetMinionDamageMultiplier(owner, attacker, nullptr));
+        float const multiplier = DeathKnight::GetMinionDamageMultiplier(owner, attacker, nullptr);
+        if (multiplier != 1.0f)
+            damage = uint32(std::max(0.0f, float(damage) * multiplier));
+    }
+
+    // S3 U16 (D11): the same seam on a minion's direct spell hits (Claw, Gargoyle Strike, the cloud tick, the
+    // detonation). Unit::CalculateSpellDamageTaken calls this for every direct spell hit in the world, before armor
+    // and crit (periodic ticks never reach it), so the cheapest checks come first. The Dancing Rune Weapon passes its
+    // owner as the attacker and is MinionKind::None anyway.
+    void ModifySpellDamageTaken(Unit* /*target*/, Unit* attacker, int32& damage, SpellInfo const* spellInfo) override
+    {
+        if (damage <= 0 || !attacker || !spellInfo || !attacker->IsCreature())
+            return;
+
+        if (DeathKnight::GetMinionKind(attacker) == DeathKnight::MinionKind::None)
+            return;
+
+        // The hook honours IGNORE_CASTER_MODIFIERS itself (HunterMechanics.cpp / druid_hooks.cpp precedent).
+        if (spellInfo->HasAttribute(SPELL_ATTR3_IGNORE_CASTER_MODIFIERS))
+            return;
+
+        Player* owner = DeathKnight::GetMinionOwner(attacker);
+        if (!owner)
+            return;
+
+        float const multiplier = DeathKnight::GetMinionDamageMultiplier(owner, attacker, spellInfo);
+        if (multiplier != 1.0f)
+            damage = int32(std::max(0.0f, float(damage) * multiplier));
     }
 };
 
@@ -122,7 +154,9 @@ class DeathKnightPlayerScript : public PlayerScript
 public:
     DeathKnightPlayerScript() : PlayerScript("DeathKnightPlayerScript",
         { PLAYERHOOK_ON_CALCULATE_TALENTS_POINTS, PLAYERHOOK_ON_AFTER_SET_VISIBLE_ITEM_SLOT,
-          PLAYERHOOK_ON_CREATURE_KILL, PLAYERHOOK_ON_PVP_KILL, PLAYERHOOK_ON_SPELL_CAST }) { }
+          PLAYERHOOK_ON_CREATURE_KILL, PLAYERHOOK_ON_PVP_KILL, PLAYERHOOK_ON_SPELL_CAST,
+          PLAYERHOOK_ON_PLAYER_LEARN_TALENTS, PLAYERHOOK_ON_TALENTS_RESET, PLAYERHOOK_ON_AFTER_SPEC_SLOT_CHANGED,
+          PLAYERHOOK_ON_MAP_CHANGED }) { }
 
     // U4: Player::CalculateTalentsPoints gives a DK on Ebon Hold (map 609) level - 55 points plus quest talents. The
     // rework starts DKs at level 1, so on that map they earn the normal curve like anywhere else (insurance: Death
@@ -171,14 +205,61 @@ public:
         DeathKnight::OnRuneKillingBlow(killer, killed);
     }
 
-    // U22 Red Thirst: Spell::_cast fires this for every player cast, before TakePower (m_powerCost is already set).
-    // Only Runic Power costs pass here; OnRunicPowerSpent checks triggered casts and the 203126 marker.
+    // U22 Red Thirst and S3 U18 the Gargoyle's ramp: Spell::_cast fires this for every player cast, before TakePower
+    // (m_powerCost is already set). Only Runic Power costs pass here; OnRunicPowerSpent checks triggered casts, then
+    // ramps the Gargoyle, then checks the 203126 marker. A free (Harbinger) Coil reports 0 and never ramps (D10).
     void OnPlayerSpellCast(Player* player, Spell* spell, bool /*skipCheck*/) override
     {
         if (!player || !spell || spell->GetSpellInfo()->PowerType != POWER_RUNIC_POWER || spell->GetPowerCost() <= 0)
             return;
 
         DeathKnight::OnRunicPowerSpent(player, spell);
+    }
+
+    // S3 U23 Infected Claws on the Master of Ghouls pet follows the talent. The rank's passive is applied before this
+    // hook (Player::LearnTalent adds the talent first).
+    void OnPlayerLearnTalents(Player* player, uint32 /*talentId*/, uint32 /*talentRank*/, uint32 /*spellid*/) override
+    {
+        RefreshInfectedClaws(player);
+    }
+
+    // Fires BEFORE the talents are removed (Player::resetTalents), so the refresh waits for the next update; only the
+    // GUID is captured and the player re-resolved (hunter_hooks.cpp shape).
+    void OnPlayerTalentsReset(Player* player, bool /*noCost*/) override
+    {
+        if (!player || !player->GetPet())
+            return;
+
+        ObjectGuid const guid = player->GetGUID();
+        player->m_Events.AddEventAtOffset([guid]()
+        {
+            if (Player* dk = ObjectAccessor::FindPlayer(guid))
+                RefreshInfectedClaws(dk);
+        }, Milliseconds(0));
+    }
+
+    void OnPlayerAfterSpecSlotChanged(Player* player, uint8 /*newSlot*/) override
+    {
+        RefreshInfectedClaws(player);
+    }
+
+    // S3: minions removed on the old map could not reach their owner; resync the Lesser Ghoul counter, the
+    // Gargoyle's Necromancy stacks and the Dark Transformation marker.
+    void OnPlayerMapChanged(Player* player) override
+    {
+        if (player)
+            DeathKnight::OnDeathKnightMapChanged(player);
+    }
+
+private:
+    static void RefreshInfectedClaws(Player* player)
+    {
+        if (!player)
+            return;
+
+        // ApplyInfectedClaws checks the kind (Master of Ghouls ghoul) and the owner itself.
+        if (Pet* pet = player->GetPet())
+            DeathKnight::ApplyInfectedClaws(player, pet);
     }
 };
 
@@ -193,19 +274,55 @@ public:
         { PETHOOK_ON_INIT_STATS_FOR_LEVEL, PETHOOK_ON_PET_ADD_TO_WORLD }) { }
 
     // Every Guardian, pets included (Pet.cpp InitStatsForLevel); pets are left to OnPetAddToWorld.
-    void OnInitStatsForLevel(Guardian* guardian, uint8 /*petlevel*/) override
+    void OnInitStatsForLevel(Guardian* guardian, uint8 petlevel) override
     {
-        if (guardian && !guardian->IsPet())
-            ApplyMirror(guardian);
+        if (!guardian || guardian->IsPet())
+            return;
+
+        InitUnholyMinionWeapon(guardian, petlevel);
+        ApplyMirror(guardian);
     }
 
     void OnPetAddToWorld(Pet* pet) override
     {
-        if (pet)
-            ApplyMirror(pet);
+        if (!pet)
+            return;
+
+        ApplyMirror(pet);
+
+        // S3 U23: the owner-cast Infected Claws aura (and the D6 display passive) on the Master of Ghouls pet; U22:
+        // the Dark Transformation marker follows the new pet's Shadow Infusion (none survives a dismiss or relog).
+        if (DeathKnight::GetMinionKind(pet) != DeathKnight::MinionKind::Ghoul)
+            return;
+
+        Player* owner = DeathKnight::GetMinionOwner(pet);
+        if (!owner)
+            return;
+
+        DeathKnight::ApplyInfectedClaws(owner, pet);
+        Aura const* infusion = pet->GetAura(DeathKnightData::SPELL_SHADOW_INFUSION);
+        DeathKnight::OnShadowInfusionChanged(pet, infusion ? infusion->GetStackAmount() : 0);
     }
 
 private:
+    // S3: the Lesser Ghoul (300320) and Abomination (300321) templates are level 1, and Guardian::InitStatsForLevel
+    // sets no weapon damage for them, so they would keep a level-1 weapon. 26125 has no level formula of its own on
+    // this branch (pet_levelstats min/max 0, level-1 template), so they take the generic guardian weapon
+    // (Pet.cpp SUMMON_PET fallback): petlevel -/+ petlevel / 4. Runs before InitStatsForLevel's UpdateAllStats, which
+    // recomputes the damage fields.
+    static void InitUnholyMinionWeapon(Guardian* minion, uint8 petlevel)
+    {
+        DeathKnight::MinionKind const kind = DeathKnight::GetMinionKind(minion);
+        if (kind != DeathKnight::MinionKind::LesserGhoul && kind != DeathKnight::MinionKind::Abomination)
+            return;
+
+        if (!DeathKnight::GetMinionOwner(minion))
+            return;
+
+        minion->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, float(petlevel - (petlevel / 4)));
+        minion->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, float(petlevel + (petlevel / 4)));
+    }
+
     static void ApplyMirror(Guardian* minion)
     {
         if (DeathKnight::GetMinionKind(minion) == DeathKnight::MinionKind::None)
@@ -219,9 +336,38 @@ private:
     }
 };
 
+// S3: Lesser Ghoul (300320) counter recount and timer, the Gargoyle's (27829) start time and leave fallback, creature
+// CustomData cleared on removal. AllCreatureScript has no enable list (every creature in the world reaches it), so
+// the bodies start with a cheap entry check. Pets never reach these hooks (Pet::AddToWorld / RemoveFromWorld bypass
+// Creature's).
+class DeathKnightMinionWorldScript : public AllCreatureScript
+{
+public:
+    DeathKnightMinionWorldScript() : AllCreatureScript("DeathKnightMinionWorldScript") { }
+
+    void OnCreatureAddWorld(Creature* creature) override
+    {
+        if (creature && IsTracked(creature->GetEntry()))
+            DeathKnight::OnMinionAddWorld(creature);
+    }
+
+    void OnCreatureRemoveWorld(Creature* creature) override
+    {
+        if (creature && IsTracked(creature->GetEntry()))
+            DeathKnight::OnMinionRemoveWorld(creature);
+    }
+
+private:
+    static bool IsTracked(uint32 entry)
+    {
+        return entry == DeathKnightData::NPC_LESSER_GHOUL || entry == DeathKnightData::NPC_EBON_GARGOYLE;
+    }
+};
+
 void AddSC_deathknight_hooks()
 {
     new DeathKnightUnitScript();
     new DeathKnightPlayerScript();
     new DeathKnightPetScript();
+    new DeathKnightMinionWorldScript();
 }

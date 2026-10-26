@@ -222,12 +222,26 @@ class spell_dk_pestilence_rework : public SpellScript
         DeathKnight::OnPestilenceCopy(player, primary, hitUnit);
     }
 
+    // S3 U26 (WP-R M1): On a Pale Horse also hits the primary ("each enemy it hits"), once per cast and after every
+    // copy, so a killing hit on the primary can no longer wipe its diseases and wounds before they are copied.
+    void HandleAfterCast()
+    {
+        Unit* caster = GetCaster();
+        Player* player = caster ? caster->ToPlayer() : nullptr;
+        Unit* primary = GetExplTargetUnit();
+        if (!player || !primary || !primary->IsAlive())
+            return;
+
+        DeathKnight::OnPestilencePrimary(player, primary);
+    }
+
     void Register() override
     {
         OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_dk_pestilence_rework::FilterTargets, EFFECT_2,
             TARGET_UNIT_DEST_AREA_ENEMY);
         OnEffectHitTarget += SpellEffectFn(spell_dk_pestilence_rework::HandleScriptEffect, EFFECT_2,
             SPELL_EFFECT_SCRIPT_EFFECT);
+        AfterCast += SpellCastFn(spell_dk_pestilence_rework::HandleAfterCast);
     }
 };
 
@@ -450,12 +464,14 @@ class spell_dk_minion_mirror : public AuraScript
     void CalcAttackPower(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
     {
         canBeRecalculated = true;
-        Unit* owner = GetCaster();
+        Unit* caster = GetCaster();
+        Player* owner = caster ? caster->ToPlayer() : nullptr;
         if (!owner)
             return;
 
-        amount = int32(CalculatePct(std::max<int32>(0, int32(owner->GetTotalAttackPowerValue(BASE_ATTACK))),
-            DeathKnight::GetMinionApSharePct(DeathKnight::GetMinionKind(GetUnitOwner()))));
+        // S3 D12: the same per-kind share as RefreshMinionMirror (shared party AP out, the ghoul kind minus its base
+        // AP and unclamped, every other kind clamped at 0).
+        amount = DeathKnight::GetMinionMirrorAttackPower(owner, GetUnitOwner());
     }
 
     void CalcSpellPower(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)

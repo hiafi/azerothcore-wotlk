@@ -22,6 +22,7 @@
 #include "Item.h"
 #include "ItemTemplate.h"
 #include "ObjectAccessor.h"
+#include "Pet.h"
 #include "Player.h"
 #include "Random.h"
 #include "Spell.h"
@@ -75,6 +76,10 @@ namespace
     };
 
     constexpr char const* ZONE_ABSORB_POOL_KEY = "deathknight_amz_pool";
+
+    // S3 helpers defined in the S3 block below (one anonymous namespace per translation unit).
+    void CastOnAPaleHorse(Player* dk, Unit* target);
+    void RampGargoyle(Player* dk, int32 internalRp);
 
     int64 NowMs()
     {
@@ -163,11 +168,20 @@ namespace DeathKnight
         return ClampToUInt32(std::max(fromRecord, floor));
     }
 
-    void OnPestilenceCopy(Player* /*dk*/, Unit* /*source*/, Unit* /*target*/)
+    void OnPestilenceCopy(Player* dk, Unit* source, Unit* target)
     {
-        // Intentionally empty in DK0a: Pestilence's copy rules (skip a target that already has the caster's disease,
-        // no Glyph of Disease refresh) live in spell_dk_pestilence_rework. S3 adds the Unholy wound copies and On a
-        // Pale Horse here; the script already calls this once per enemy a copy reached.
+        // Pestilence's copy rules (skip a target that already has the caster's disease, no Glyph of Disease refresh)
+        // live in spell_dk_pestilence_rework, which calls this once per engaged non-primary enemy. S3 (U26): half the
+        // primary's wounds (rounded down) through the helper (an overflow there deals damage only), then On a Pale
+        // Horse's damage on this enemy.
+        if (!dk || !source || !target || !target->IsAlive())
+            return;
+
+        uint8 const wounds = GetFesteringWounds(source, dk->GetGUID()) / 2;
+        if (wounds)
+            AddFesteringWounds(dk, target, wounds, WoundSource::Pestilence);
+
+        CastOnAPaleHorse(dk, target);
     }
 
     uint32 ConsumeZoneAbsorb(Unit* zone, Player* owner, uint32 wanted)
@@ -306,6 +320,19 @@ namespace
         };
 
         return float(minion->GetTotalAuraModifier(SPELL_AURA_MOD_ATTACK_POWER, shared));
+    }
+
+    // The owner's SPELL_AURA_MOD_DAMAGE_PERCENT_DONE product for one school, without weapon-restricted auras
+    // (Unit::SpellPctDamageModsDone's item-class filter): what a minion hit of that school takes from the owner.
+    float OwnerPctDamageDone(Player const* owner, uint32 schoolMask)
+    {
+        return owner->GetTotalAuraMultiplier(SPELL_AURA_MOD_DAMAGE_PERCENT_DONE, [schoolMask](AuraEffect const* aurEff)
+        {
+            if (aurEff->GetSpellInfo()->EquippedItemClass != -1)
+                return false;
+
+            return (uint32(aurEff->GetMiscValue()) & schoolMask) != 0;
+        });
     }
 }
 
@@ -519,6 +546,10 @@ namespace DeathKnight
                 return MinionKind::Gargoyle;
             case 28017:     // Bloodworm
                 return MinionKind::Bloodworm;
+            case DeathKnightData::NPC_LESSER_GHOUL:
+                return MinionKind::LesserGhoul;
+            case DeathKnightData::NPC_ABOMINATION:
+                return MinionKind::Abomination;
             default:        // Dancing Rune Weapon 27893 included: its damage is core-live (B6)
                 return MinionKind::None;
         }
@@ -568,15 +599,15 @@ namespace DeathKnight
 
         ObjectGuid const ownerGuid = owner->GetGUID();
 
-        // 203056: eff0 attack power, eff1 spell power (Gargoyle only), both from the owner's total melee attack power
-        // (U8: no subtraction of the minion's own base AP).
+        // 203056: eff0 attack power (per-kind share, S3 D12: the ghoul kind minus its own base AP), eff1 spell power
+        // (Gargoyle only), both from the owner's total melee attack power.
         // The pet ghoul is a real Pet with no stat immunities, so party AP buffs the owner also has already count once
         // on it: leave them out of the copy (same shape as GetSharedCritBonus).
         float const ownerAp = std::max(0.0f, owner->GetTotalAttackPowerValue(BASE_ATTACK) -
             GetSharedAttackPowerBonus(owner, minion));
         if (Aura* mirror = minion->GetAura(DeathKnightData::SPELL_MINION_MIRROR, ownerGuid))
         {
-            SetEffectAmount(mirror, EFFECT_0, std::max<int32>(0, SharePct(ownerAp, GetMinionApSharePct(kind))));
+            SetEffectAmount(mirror, EFFECT_0, GetMinionMirrorAttackPower(owner, minion));
             int32 const spellPower = kind == MinionKind::Gargoyle ?
                 std::max<int32>(0, SharePct(ownerAp, DeathKnightData::MINION_SP_SHARE_PCT)) : 0;
             SetEffectAmount(mirror, EFFECT_1, spellPower);
@@ -589,8 +620,10 @@ namespace DeathKnight
         {
             float const ownerCrit = owner->GetFloatValue(PLAYER_CRIT_PERCENTAGE);
             float const critShare = ownerCrit - CREATURE_BASE_CRIT_PCT - GetSharedCritBonus(owner, minion);
-            SetEffectAmount(critHaste, EFFECT_0,
-                std::max<int32>(0, SharePct(critShare, DeathKnightData::MINION_CRIT_SHARE_PCT)));
+            int32 const crit = std::max<int32>(0, SharePct(critShare, DeathKnightData::MINION_CRIT_SHARE_PCT));
+            SetEffectAmount(critHaste, EFFECT_0, crit);
+            // D2 reversed: eff2 aura 71 (misc 126) gives the creature's magic-class spell crit the same share.
+            SetEffectAmount(critHaste, EFFECT_2, crit);
 
             float const castSpeed = owner->GetFloatValue(UNIT_MOD_CAST_SPEED);
             float const hastePct = castSpeed > 0.0f ? (1.0f / castSpeed - 1.0f) * 100.0f : 0.0f;
@@ -609,22 +642,28 @@ namespace DeathKnight
         }
     }
 
-    float GetMinionDamageMultiplier(Player const* owner, Unit const* minion, SpellInfo const* /*spellInfo*/)
+    float GetMinionDamageMultiplier(Player const* owner, Unit const* minion, SpellInfo const* spellInfo)
     {
         // U10 seam. S1 (U17): a Bloodworm's swing takes the owner's physical percent damage bonuses (Blood Gorged,
         // Bloody Vengeance, Blood Presence...) read live, skipping weapon-restricted auras such as Two-Handed Weapon
         // Specialization (Unit::SpellPctDamageModsDone's item-class filter). Versatility is mirrored separately
-        // (203058). Other kinds stay 1.0 until S3.
-        if (!owner || GetMinionKind(minion) != MinionKind::Bloodworm)
+        // (203058). S3 (U16): the Unholy kinds take the Unholy terms (GetUnholyMinionTerms); Bloodworms and the
+        // Dancing Rune Weapon (None) never do.
+        if (!owner)
             return 1.0f;
 
-        return owner->GetTotalAuraMultiplier(SPELL_AURA_MOD_DAMAGE_PERCENT_DONE, [](AuraEffect const* aurEff)
-        {
-            if (aurEff->GetSpellInfo()->EquippedItemClass != -1)
-                return false;
+        MinionKind const kind = GetMinionKind(minion);
+        if (kind == MinionKind::Bloodworm)
+            return OwnerPctDamageDone(owner, SPELL_SCHOOL_MASK_NORMAL);
 
-            return (aurEff->GetMiscValue() & SPELL_SCHOOL_MASK_NORMAL) != 0;
-        });
+        if (!IsUnholyMinion(kind))
+            return 1.0f;
+
+        // The Dark Transformation cleave is built from an already-boosted hit.
+        if (spellInfo && spellInfo->Id == DeathKnightData::SPELL_DARK_TRANSFORMATION_CLEAVE)
+            return 1.0f;
+
+        return GetUnholyMinionTerms(owner, spellInfo);
     }
 
     void OnRuneKillingBlow(Player* dk, Unit* killed)
@@ -1014,6 +1053,9 @@ namespace DeathKnight
         if (cost <= 0)
             return;
 
+        // S3 (U18, D10): the Gargoyle's ramp comes first, before the Red Thirst gates below.
+        RampGargoyle(dk, cost);
+
         // Thick Blood rank 3 (203126) is Red Thirst; talent ranks are auras.
         if (!dk->HasAura(DeathKnightData::SPELL_THICK_BLOOD_203126))
             return;
@@ -1124,37 +1166,8 @@ namespace DeathKnight
 
     void CapBloodworms(Player* dk)
     {
-        if (!dk)
-            return;
-
-        int32 const cap = std::max<int32>(0, int32(DeathKnightData::BLOODWORM_CAP));
-
-        // GetAllMinionsByEntry copies out of m_Controlled, and UnSummon only queues the removal
-        // (AddObjectToRemoveList), so unsummoning below never touches the set being read. Worms already queued for
-        // removal are skipped.
-        std::list<Creature*> minions;
-        dk->GetAllMinionsByEntry(minions, NPC_BLOODWORM);
-
-        std::vector<TempSummon*> worms;
-        for (Creature* creature : minions)
-        {
-            TempSummon* summon = creature ? creature->ToTempSummon() : nullptr;
-            if (summon && summon->IsAlive() && summon->GetSummonType() != TEMPSUMMON_DESPAWNED)
-                worms.push_back(summon);
-        }
-
-        if (int32(worms.size()) <= cap)
-            return;
-
-        // Oldest first: the least time left (all worms share one duration).
-        std::sort(worms.begin(), worms.end(), [](TempSummon* a, TempSummon* b)
-        {
-            return a->GetTimer() < b->GetTimer();
-        });
-
-        std::size_t const excess = worms.size() - std::size_t(cap);
-        for (std::size_t i = 0; i < excess; ++i)
-            worms[i]->UnSummon();
+        // S3: the generic cap (CapMinions) with the Bloodworm entry and cap.
+        CapMinions(dk, NPC_BLOODWORM, uint32(DeathKnightData::BLOODWORM_CAP));
     }
 
     bool IsRuneWeapon(Unit const* unit)
@@ -1185,6 +1198,13 @@ namespace DeathKnight
             case DeathKnightData::SPELL_FINAL_ROAR_BURST:
             case DeathKnightData::SPELL_HUNGERING_COLD_STORM:
             case DeathKnightData::SPELL_HUNGERING_COLD_TICK:
+            // S3 (U30): Unholy summons, minion-cast and area spells
+            case DeathKnightData::SPELL_DARK_TRANSFORMATION:
+            case DeathKnightData::SPELL_RAISE_ABOMINATION:
+            case DeathKnightData::SPELL_CORPSE_EXPLOSION:
+            case DeathKnightData::SPELL_LESSER_GHOUL_SUMMON:
+            case DeathKnightData::SPELL_CORPSE_EXPLOSION_DETONATION:
+            case DeathKnightData::SPELL_ON_A_PALE_HORSE_DAMAGE:
                 return true;
             default:
                 return false;
@@ -1193,9 +1213,24 @@ namespace DeathKnight
 
     int32 GetMinionApSharePct(MinionKind kind)
     {
-        // U16 (user 2026-10-24: ~4 worms = 5% of Blood damage): Bloodworms keep stock damage plus their own share.
-        return kind == MinionKind::Bloodworm ? int32(DeathKnightData::MINION_BLOODWORM_AP_SHARE_PCT) :
-            int32(DeathKnightData::MINION_AP_SHARE_PCT);
+        // S1 U16 (user 2026-10-24: ~4 worms = 5% of Blood damage): Bloodworms keep stock damage plus their own share.
+        // S3 U15 (user 2026-10-25: Army ghouls take only part of the owner's AP): one share per kind [tune]. The
+        // Gargoyle keeps the full share (its spell power is MINION_SP_SHARE_PCT).
+        switch (kind)
+        {
+            case MinionKind::Bloodworm:
+                return int32(DeathKnightData::MINION_BLOODWORM_AP_SHARE_PCT);
+            case MinionKind::ArmyGhoul:
+                return int32(DeathKnightData::MINION_ARMY_AP_SHARE_PCT);
+            case MinionKind::Ghoul:
+                return int32(DeathKnightData::MINION_GHOUL_AP_SHARE_PCT);
+            case MinionKind::LesserGhoul:
+                return int32(DeathKnightData::MINION_LESSER_GHOUL_AP_SHARE_PCT);
+            case MinionKind::Abomination:
+                return int32(DeathKnightData::MINION_ABOMINATION_AP_SHARE_PCT);
+            default:
+                return int32(DeathKnightData::MINION_AP_SHARE_PCT);
+        }
     }
 }
 
@@ -1223,9 +1258,13 @@ namespace
     };
     constexpr std::array<int32, 3> DEATHCHILL_LOCKOUT_MS = { 60000, 45000, 30000 };
 
+    // S3 D1: one per-DK rune snapshot (cooldown and CURRENT type per slot, keyed by the cast that took it). S2's
+    // SnapshotRuneCooldowns (Obliterate OnCast) and S3's SnapshotRunes (Scourge / Plague Strike OnCast) both write it.
     struct RuneCooldownSnapshot : DataMap::Base
     {
         std::array<uint32, MAX_RUNES> cooldowns = { };
+        std::array<uint8, MAX_RUNES> types = { };
+        uint32 castSpellId = 0;
     };
 
     constexpr char const* RUNE_SNAPSHOT_KEY = "deathknight_rune_snapshot";
@@ -1560,12 +1599,8 @@ namespace DeathKnight
 
     void SnapshotRuneCooldowns(Player* dk)
     {
-        if (!dk || !dk->IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_ABILITY))
-            return;
-
-        RuneCooldownSnapshot* snapshot = dk->CustomData.GetDefault<RuneCooldownSnapshot>(RUNE_SNAPSHOT_KEY);
-        for (uint8 slot = 0; slot < MAX_RUNES; ++slot)
-            snapshot->cooldowns[slot] = dk->GetRuneCooldown(slot);
+        // S3 D1: the shared writer (cast id 0 = untagged; FindJustSpentFrostRune reads the latest snapshot).
+        SnapshotRunes(dk, 0);
     }
 
     int8 FindJustSpentFrostRune(Player const* dk)
@@ -1578,7 +1613,8 @@ namespace DeathKnight
             return -1;
 
         // A slot that was ready at the snapshot and is recharging now was just spent. A Frost slot first; else a Death
-        // rune (it paid the Frost cost in a Frost rune's place).
+        // rune (it paid the Frost cost in a Frost rune's place). S3 D1: the Death test reads the snapshot type, since a
+        // Death Rune that pays on a hit reverts to its base type inside TakeRunePower (the live type never matched).
         int8 deathSlot = -1;
         for (uint8 slot = 0; slot < MAX_RUNES; ++slot)
         {
@@ -1588,7 +1624,7 @@ namespace DeathKnight
             if (dk->GetBaseRune(slot) == RUNE_FROST)
                 return int8(slot);
 
-            if (deathSlot < 0 && dk->GetCurrentRune(slot) == RUNE_DEATH)
+            if (deathSlot < 0 && snapshot->types[slot] == RUNE_DEATH)
                 deathSlot = int8(slot);
         }
 
@@ -1709,5 +1745,935 @@ namespace DeathKnight
         uint32 const damage = ClampToUInt32(store->damage);
         store->damage = 0;
         return damage;
+    }
+}
+
+// ---- S3 ----
+/*
+ * S3 block (docs/reworks/death-knight-unholy-rework.md): the shared rune snapshot and Death Runes (U7, D1), Festering
+ * Wounds (U8-U10), Dread Host / All Will Serve / Necromancy / Crypt Fever / Ebon Plague readers (U12-U14), the Unholy
+ * minions (U15-U23: shares, the damage seam terms, Lesser Ghouls, the Gargoyle, Shadow Infusion, Infected Claws) and
+ * Pestilence (U26). Per-player and per-creature state lives on CustomData, nothing file-static; creature state is
+ * erased on remove-world (OnMinionRemoveWorld) and dies with the creature anyway.
+ */
+namespace
+{
+    // Stock ids without a header name (D14).
+    constexpr uint32 SPELL_WANDERING_PLAGUE_DAMAGE = 50526;
+    constexpr uint32 SPELL_ON_A_PALE_HORSE_51986 = 51986;
+
+    // Rotten Touch: the armed Coil's missile (Speed 24) lands well inside this; a stale record never bursts later.
+    constexpr int64 ROTTEN_TOUCH_RECORD_MS = 5000;
+
+    constexpr char const* WOUND_BURST_CONTEXT_KEY = "deathknight_wound_burst_context";
+    constexpr char const* ROTTEN_TOUCH_KEY = "deathknight_rotten_touch";
+    constexpr char const* GARGOYLE_RAMP_KEY = "deathknight_gargoyle_ramp";
+    constexpr char const* LESSER_GHOUL_TIMER_KEY = "deathknight_lesser_ghoul_timer";
+    constexpr char const* GARGOYLE_STATE_KEY = "deathknight_gargoyle_state";
+    constexpr char const* LESSER_GHOUL_TARGET_KEY = "deathknight_lesser_ghoul_target";
+
+    // On the Lesser Ghoul: the unit it was raised at (its AI attacks it first).
+    struct LesserGhoulSummonTarget : DataMap::Base
+    {
+        ObjectGuid target;
+    };
+
+    // The burst a helper is casting right now (BurstFesteringWounds / overflow): the burst spell's AfterHit calls
+    // OnWoundBurstHit synchronously inside that cast (instant, no missile), so the source travels here.
+    struct WoundBurstContext : DataMap::Base
+    {
+        bool active = false;
+        DeathKnight::WoundSource source = DeathKnight::WoundSource::ScourgeStrike;
+    };
+
+    struct RottenTouchRecord : DataMap::Base
+    {
+        ObjectGuid target;
+        int64 timeMs = 0;
+    };
+
+    // Runic Power spent while this Gargoyle is out, below one ramp stack (internal units, x10).
+    struct GargoyleRampState : DataMap::Base
+    {
+        ObjectGuid gargoyle;
+        uint32 remainder = 0;
+    };
+
+    // D9: on the Lesser Ghoul.
+    struct LesserGhoulTimer : DataMap::Base
+    {
+        int64 startMs = 0;
+        uint32 totalMs = 0;
+    };
+
+    // On the Gargoyle: its spawn time (the strike window) and whether it has left (flown away).
+    struct GargoyleState : DataMap::Base
+    {
+        int64 startMs = 0;
+        bool left = false;
+    };
+
+    // Living, not queued for removal, on the owner's map.
+    bool IsLiveSummon(Player const* owner, Creature const* creature)
+    {
+        if (!creature || !creature->IsInWorld() || !creature->IsAlive() || creature->FindMap() != owner->FindMap())
+            return false;
+
+        TempSummon const* summon = creature->ToTempSummon();
+        return !summon || summon->GetSummonType() != TEMPSUMMON_DESPAWNED;
+    }
+
+    std::vector<Creature*> GetLiveMinions(Player const* owner, uint32 entry)
+    {
+        // GetAllMinionsByEntry copies out of m_Controlled (it only reads it; the const_cast is for its signature).
+        std::list<Creature*> minions;
+        const_cast<Player*>(owner)->GetAllMinionsByEntry(minions, entry);
+
+        std::vector<Creature*> live;
+        for (Creature* creature : minions)
+            if (IsLiveSummon(owner, creature))
+                live.push_back(creature);
+
+        return live;
+    }
+
+    // Time left in ms: the D9 record when there is one, else the summon timer (the full duration until it updates).
+    int64 RemainingMs(Creature* creature)
+    {
+        if (LesserGhoulTimer const* timer = creature->CustomData.Get<LesserGhoulTimer>(LESSER_GHOUL_TIMER_KEY))
+            return timer->startMs + int64(timer->totalMs) - NowMs();
+
+        TempSummon* summon = creature->ToTempSummon();
+        return summon ? int64(summon->GetTimer()) : 0;
+    }
+
+    // n stacks of spellId from caster on target: +n on the caster's existing aura (refreshes, capped by the
+    // spell's StackAmount), else a new aura plus n - 1. selfCast casts the first stack (a visible self buff), else
+    // AddAura (no range, LOS or hit roll: wounds placed by a far minion, buffs on a minion). Returns the aura or null.
+    Aura* AddAuraStacks(Unit* caster, Unit* target, uint32 spellId, int32 n, bool selfCast)
+    {
+        if (!caster || !target || n <= 0)
+            return nullptr;
+
+        if (Aura* aura = target->GetAura(spellId, caster->GetGUID()))
+        {
+            aura->ModStackAmount(n);
+            return aura;
+        }
+
+        if (selfCast)
+            caster->CastSpell(target, spellId, TRIGGERED_FULL_MASK);
+        else
+            caster->AddAura(spellId, target);
+
+        Aura* aura = target->GetAura(spellId, caster->GetGUID());
+        if (aura && n > 1)
+            aura->ModStackAmount(n - 1);
+
+        return aura;
+    }
+
+    // One burst cast (203457 / 203458) with n on BASE_POINT1, under the source context for OnWoundBurstHit.
+    void CastWoundBurst(Player* dk, Unit* target, uint32 spellId, uint8 n, DeathKnight::WoundSource src)
+    {
+        WoundBurstContext* context = dk->CustomData.GetDefault<WoundBurstContext>(WOUND_BURST_CONTEXT_KEY);
+        WoundBurstContext const saved = *context;
+        context->active = true;
+        context->source = src;
+
+        int32 const count = int32(n);
+        dk->CastCustomSpell(target, spellId, nullptr, &count, nullptr, true);
+
+        context->active = saved.active;
+        context->source = saved.source;
+    }
+
+    Creature* GetPetGhoul(Player const* dk)
+    {
+        Pet* pet = dk->GetPet();
+        if (!pet || !pet->IsAlive() || DeathKnight::GetMinionKind(pet) != DeathKnight::MinionKind::Ghoul)
+            return nullptr;
+
+        return pet;
+    }
+
+    // The strike window left on this Gargoyle (ms), from its spawn time.
+    int32 GargoyleWindowLeftMs(Creature const* gargoyle)
+    {
+        GargoyleState const* state = gargoyle->CustomData.Get<GargoyleState>(GARGOYLE_STATE_KEY);
+        if (!state)
+            return int32(DeathKnightData::GARGOYLE_WINDOW_MS);
+
+        int64 const left = int64(DeathKnightData::GARGOYLE_WINDOW_MS) - (NowMs() - state->startMs);
+        return int32(std::clamp<int64>(left, 0, DeathKnightData::GARGOYLE_WINDOW_MS));
+    }
+
+    void CastOnAPaleHorse(Player* dk, Unit* target)
+    {
+        if (!dk || !target || !target->IsAlive() || !DeathKnight::HasOnAPaleHorse(dk))
+            return;
+
+        dk->CastSpell(target, DeathKnightData::SPELL_ON_A_PALE_HORSE_DAMAGE, TRIGGERED_FULL_MASK);
+    }
+
+    // U18: every GARGOYLE_RP_PER_RAMP_STACK Runic Power spent while the Gargoyle is out = +1 ramp stack on it. The
+    // fraction carries on the DK's CustomData and restarts with a new Gargoyle.
+    void RampGargoyle(Player* dk, int32 internalRp)
+    {
+        if (!dk || internalRp <= 0)
+            return;
+
+        Creature* gargoyle = DeathKnight::GetActiveGargoyle(dk);
+        if (!gargoyle)
+            return;
+
+        uint32 const perStack = uint32(std::max<int32>(1, DeathKnightData::GARGOYLE_RP_PER_RAMP_STACK)) * 10;
+        GargoyleRampState* state = dk->CustomData.GetDefault<GargoyleRampState>(GARGOYLE_RAMP_KEY);
+        if (state->gargoyle != gargoyle->GetGUID())
+        {
+            state->gargoyle = gargoyle->GetGUID();
+            state->remainder = 0;
+        }
+
+        state->remainder += uint32(internalRp);
+        uint32 const stacks = state->remainder / perStack;
+        state->remainder %= perStack;
+        if (stacks)
+            AddAuraStacks(dk, gargoyle, DeathKnightData::SPELL_GARGOYLE_RAMP, int32(stacks), false);
+    }
+}
+
+namespace DeathKnight
+{
+    // ---- Runes (U7, D1) ----
+    void SnapshotRunes(Player* dk, uint32 castSpellId)
+    {
+        if (!dk || !dk->IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_ABILITY))
+            return;
+
+        RuneCooldownSnapshot* snapshot = dk->CustomData.GetDefault<RuneCooldownSnapshot>(RUNE_SNAPSHOT_KEY);
+        snapshot->castSpellId = castSpellId;
+        for (uint8 slot = 0; slot < MAX_RUNES; ++slot)
+        {
+            snapshot->cooldowns[slot] = dk->GetRuneCooldown(slot);
+            snapshot->types[slot] = uint8(dk->GetCurrentRune(slot));
+        }
+    }
+
+    uint8 GetSpentPlainRuneSlots(Player const* dk, uint32 castSpellId, uint8 outSlots[6])
+    {
+        if (!dk || !outSlots || !dk->IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_ABILITY))
+            return 0;
+
+        RuneCooldownSnapshot const* snapshot = dk->CustomData.Get<RuneCooldownSnapshot>(RUNE_SNAPSHOT_KEY);
+        if (!snapshot || snapshot->castSpellId != castSpellId)
+            return 0;
+
+        // Ready at the snapshot, recharging now, and a plain rune then: a Death Rune that paid (returned or not)
+        // gets nothing back, so a returned rune can never feed the next cast (L26 guard).
+        uint8 count = 0;
+        for (uint8 slot = 0; slot < MAX_RUNES; ++slot)
+            if (!snapshot->cooldowns[slot] && dk->GetRuneCooldown(slot) && snapshot->types[slot] != RUNE_DEATH)
+                outSlots[count++] = slot;
+
+        return count;
+    }
+
+    void ConvertToDeathRune(Player* dk, uint8 slot, bool ready)
+    {
+        if (!dk || slot >= MAX_RUNES || !dk->IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_ABILITY))
+            return;
+
+        // No convert aura: RestoreBaseRune reverts it on its next spend (on a hit), and no RemoveRunesByAuraEffect
+        // ever touches it. ConvertRune sends SMSG_CONVERT_RUNE; ActivateRune then pushes the ready state (47804).
+        dk->SetRuneConvertAura(slot, nullptr);
+        dk->ConvertRune(slot, RUNE_DEATH);
+        if (ready)
+            ActivateRune(dk, slot);
+    }
+
+    // ---- Festering Wounds (U8-U10) ----
+    bool WoundSourceGrantsResources(WoundSource src)
+    {
+        switch (src)
+        {
+            case WoundSource::PlagueStrikeOverflow:
+            case WoundSource::ScourgeStrike:
+            case WoundSource::RottenTouch:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    uint8 GetFesteringWounds(Unit const* target, ObjectGuid dkGuid)
+    {
+        if (!target || !dkGuid)
+            return 0;
+
+        Aura const* aura = target->GetAura(DeathKnightData::SPELL_FESTERING_WOUND, dkGuid);
+        return aura ? aura->GetStackAmount() : 0;
+    }
+
+    void AddFesteringWounds(Player* dk, Unit* target, uint8 n, WoundSource src)
+    {
+        if (!dk || !target || !n || !target->IsAlive())
+            return;
+
+        // The debuff's caster is always the DK (bots read stacks(target, 203456, own)), whoever placed the wound.
+        uint8 const cap = uint8(std::clamp<int32>(DeathKnightData::FESTERING_WOUND_MAX_STACKS, 1, 255));
+        uint8 const current = GetFesteringWounds(target, dk->GetGUID());
+        uint8 const room = current < cap ? uint8(cap - current) : 0;
+        uint8 const added = std::min(n, room);
+        uint8 const overflow = uint8(n - added);
+
+        if (added)
+        {
+            if (!AddAuraStacks(dk, target, DeathKnightData::SPELL_FESTERING_WOUND, added, false))
+                return;   // immune: no wound, so no overflow either
+        }
+        else if (Aura* aura = target->GetAura(DeathKnightData::SPELL_FESTERING_WOUND, dk->GetGUID()))
+            aura->RefreshDuration();   // a gain at the cap still refreshes
+
+        // Wounds past the cap burst at once in one overflow cast with n.
+        if (overflow)
+            CastWoundBurst(dk, target, DeathKnightData::SPELL_FESTERING_WOUND_OVERFLOW, overflow, src);
+    }
+
+    void BurstFesteringWounds(Player* dk, Unit* target, uint8 n, WoundSource src)
+    {
+        if (!dk || !target || !n || !target->IsAlive())
+            return;
+
+        Aura* aura = target->GetAura(DeathKnightData::SPELL_FESTERING_WOUND, dk->GetGUID());
+        if (!aura)
+            return;
+
+        uint8 const burst = std::min<uint8>(n, aura->GetStackAmount());
+        if (!burst)
+            return;
+
+        // Consume first: a burst that kills explodes only the wounds left. A drop to 0 removes by DEFAULT, which the
+        // wound's AuraScript never explodes.
+        aura->ModStackAmount(-int32(burst));
+        CastWoundBurst(dk, target, DeathKnightData::SPELL_FESTERING_WOUND_BURST, burst, src);
+    }
+
+    void OnWoundBurstHit(Player* dk, Unit* target, uint32 damage, WoundSource src, uint8 n)
+    {
+        if (!dk || !target || !n)
+            return;
+
+        // The helper casting this burst knows its source (the caller's argument is the fallback).
+        if (WoundBurstContext const* context = dk->CustomData.Get<WoundBurstContext>(WOUND_BURST_CONTEXT_KEY))
+            if (context->active)
+                src = context->source;
+
+        if (!WoundSourceGrantsResources(src))
+            return;
+
+        // 3 Runic Power per wound (internal x10).
+        int32 const rp = int32(std::max<int32>(0, DeathKnightData::FESTERING_WOUND_RP_PER_WOUND)) * 10 * int32(n);
+        if (rp > 0)
+            dk->CastCustomSpell(DeathKnightData::SPELL_UNHOLY_RP_ENERGIZE, SPELLVALUE_BASE_POINT0, rp, dk,
+                TRIGGERED_FULL_MASK);
+
+        // Wandering Plague: one roll per burst event at the DK's melee crit chance against the target.
+        int32 const pct = RankAmount(dk, { DeathKnightData::SPELL_WANDERING_PLAGUE_49655,
+            DeathKnightData::SPELL_WANDERING_PLAGUE_49654, DeathKnightData::SPELL_WANDERING_PLAGUE }, EFFECT_0);
+        if (pct <= 0 || !damage || !target->IsAlive())
+            return;
+
+        if (!roll_chance_f(dk->GetUnitCriticalChance(BASE_ATTACK, target)))
+            return;
+
+        int32 const bp = ClampToInt32(uint64(damage) * uint64(pct) / 100);
+        if (bp > 0)
+            dk->CastCustomSpell(target, SPELL_WANDERING_PLAGUE_DAMAGE, &bp, nullptr, nullptr, true);
+    }
+
+    void ScheduleWoundExplosion(Player* dk, Unit* corpse, uint8 stacks)
+    {
+        if (!dk || !corpse || !stacks || !dk->IsInWorld() || dk->GetMap() != corpse->GetMap())
+            return;
+
+        // Bug log :431: a spell dest carries no map id. Capture the map, instance and position now, re-resolve the DK
+        // in the event and cast at an explicit dest.
+        ObjectGuid const dkGuid = dk->GetGUID();
+        uint32 const mapId = corpse->GetMapId();
+        uint32 const instanceId = corpse->GetInstanceId();
+        Position const position = corpse->GetPosition();
+        dk->m_Events.AddEventAtOffset([dkGuid, mapId, instanceId, position, stacks]()
+        {
+            Player* owner = ObjectAccessor::FindPlayer(dkGuid);
+            if (!owner || !owner->IsInWorld() || owner->GetMapId() != mapId || owner->GetInstanceId() != instanceId)
+                return;
+
+            SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(DeathKnightData::SPELL_FESTERING_WOUND_EXPLOSION);
+            if (!spellInfo)
+                return;
+
+            SpellCastTargets targets;
+            targets.SetDst(position);
+            CustomSpellValues values;
+            values.AddSpellMod(SPELLVALUE_BASE_POINT1, int32(stacks));
+            owner->CastSpell(targets, spellInfo, &values, TRIGGERED_FULL_MASK);
+        }, Milliseconds(1));
+    }
+
+    // ---- Mastery and multipliers ----
+    int32 GetDreadHostPct(Player const* dk)
+    {
+        if (!dk)
+            return 0;
+
+        // Rage of Rivendare eff0 DUMMY 3/6/9; rank 3 (50119) is the capstone: + Mastery.
+        int32 pct = RankAmount(dk, { DeathKnightData::SPELL_RAGE_OF_RIVENDARE_50119,
+            DeathKnightData::SPELL_RAGE_OF_RIVENDARE_50118, DeathKnightData::SPELL_RAGE_OF_RIVENDARE }, EFFECT_0);
+        if (dk->HasAura(DeathKnightData::SPELL_RAGE_OF_RIVENDARE_50119))
+            pct += int32(std::lround(std::max(0.0f, dk->GetMasteryPercentage())));
+
+        return std::max<int32>(0, pct);
+    }
+
+    int32 GetAllWillServePct(Player const* dk)
+    {
+        if (!dk)
+            return 0;
+
+        return std::max<int32>(0, RankAmount(dk, { DeathKnightData::SPELL_ALL_WILL_SERVE_203442,
+            DeathKnightData::SPELL_ALL_WILL_SERVE }, EFFECT_0));
+    }
+
+    bool HasNecromancy(Unit const* dk)
+    {
+        return dk && dk->IsPlayer() && dk->HasAura(DeathKnightData::SPELL_ALL_WILL_SERVE_203442);
+    }
+
+    int32 GetCryptFeverPct(Unit const* dk)
+    {
+        if (!dk || !dk->IsPlayer())
+            return 0;
+
+        return std::max<int32>(0, RankAmount(dk, { DeathKnightData::SPELL_CRYPT_FEVER_49632,
+            DeathKnightData::SPELL_CRYPT_FEVER_49631, DeathKnightData::SPELL_CRYPT_FEVER }, EFFECT_0));
+    }
+
+    int32 GetEbonPlagueMagicPct(Unit const* dk)
+    {
+        if (!dk || !dk->IsPlayer())
+            return 0;
+
+        return std::max<int32>(0, RankAmount(dk, { DeathKnightData::SPELL_EBON_PLAGUEBRINGER_51161,
+            DeathKnightData::SPELL_EBON_PLAGUEBRINGER_51160, DeathKnightData::SPELL_EBON_PLAGUEBRINGER }, EFFECT_0));
+    }
+
+    // ---- Necromancy (U14) ----
+    void GrantNecromanticEnergy(Player* dk)
+    {
+        if (!dk)
+            return;
+
+        int32 const cap = std::max<int32>(1, DeathKnightData::NECROMANTIC_ENERGY_MAX);
+        int32 const add = std::max<int32>(0, DeathKnightData::NECROMANTIC_ENERGY_PER_STRIKE);
+        Aura* aura = dk->GetAura(DeathKnightData::SPELL_NECROMANTIC_ENERGY, dk->GetGUID());
+        int32 const current = aura ? int32(aura->GetStackAmount()) : 0;
+
+        // ModStackAmount refreshes the duration; at the cap only the duration refreshes.
+        int32 const n = std::min(add, cap - current);
+        if (aura && n <= 0)
+        {
+            aura->RefreshDuration();
+            return;
+        }
+
+        AddAuraStacks(dk, dk, DeathKnightData::SPELL_NECROMANTIC_ENERGY, n, true);
+    }
+
+    bool ConsumeNecromanticEnergy(Player* dk)
+    {
+        if (!dk)
+            return false;
+
+        Aura* aura = dk->GetAura(DeathKnightData::SPELL_NECROMANTIC_ENERGY, dk->GetGUID());
+        if (!aura || !aura->GetStackAmount())
+            return false;
+
+        aura->ModStackAmount(-1);
+        return true;
+    }
+
+    // ---- Minions (U15/U16/U19) ----
+    bool IsUnholyMinion(MinionKind kind)
+    {
+        switch (kind)
+        {
+            case MinionKind::Ghoul:
+            case MinionKind::LesserGhoul:
+            case MinionKind::Abomination:
+            case MinionKind::Gargoyle:
+            case MinionKind::ArmyGhoul:
+                return true;
+            default:
+                return false;   // None (Dancing Rune Weapon included) and Bloodworm
+        }
+    }
+
+    bool SubtractsMinionBaseAp(MinionKind kind)
+    {
+        // U15: 26125's IsPetGhoul base (589 + Str + Agi) is about half its AP at the sim footing.
+        return kind == MinionKind::Ghoul;
+    }
+
+    int32 GetMinionMirrorAttackPower(Player const* owner, Unit const* minion)
+    {
+        if (!owner || !minion)
+            return 0;
+
+        MinionKind const kind = GetMinionKind(minion);
+        float const ownerAp = std::max(0.0f, owner->GetTotalAttackPowerValue(BASE_ATTACK) -
+            GetSharedAttackPowerBonus(owner, minion));
+        int32 const share = SharePct(ownerAp, GetMinionApSharePct(kind));
+        if (!SubtractsMinionBaseAp(kind))
+            return std::max<int32>(0, share);
+
+        // D12: the ghoul's own base AP (Guardian::UpdateAttackPowerAndDamage BASE_VALUE x BASE_PCT; it moves with
+        // Str / Agi, so it is re-read every refresh). Negative is a normal flat: the total clamps at 0.
+        float const baseAp = minion->GetFlatModifierValue(UNIT_MOD_ATTACK_POWER, BASE_VALUE) *
+            minion->GetPctModifierValue(UNIT_MOD_ATTACK_POWER, BASE_PCT);
+        return share - int32(std::lround(baseAp));
+    }
+
+    float GetUnholyMinionTerms(Player const* owner, SpellInfo const* spellInfo)
+    {
+        if (!owner)
+            return 1.0f;
+
+        float multiplier = 1.0f;
+        AddPct(multiplier, GetDreadHostPct(owner));
+        multiplier *= 1.0f + float(GetAllWillServePct(owner)) / 100.0f;
+
+        if (Aura const* necromancy = owner->GetAura(DeathKnightData::SPELL_GARGOYLE_NECROMANCY, owner->GetGUID()))
+            multiplier *= 1.0f + float(necromancy->GetStackAmount()) *
+                float(DeathKnightData::GARGOYLE_NECROMANCY_PCT) / 100.0f;
+
+        // WP-R m9 / D17: only the owner's own Death Knight auras (Desolation...), never party or raid %-done buffs the
+        // pet may already hold itself.
+        uint32 const schoolMask = spellInfo ? uint32(spellInfo->GetSchoolMask()) : uint32(SPELL_SCHOOL_MASK_NORMAL);
+        ObjectGuid const ownerGuid = owner->GetGUID();
+        multiplier *= owner->GetTotalAuraMultiplier(SPELL_AURA_MOD_DAMAGE_PERCENT_DONE,
+            [schoolMask, ownerGuid](AuraEffect const* aurEff)
+        {
+            SpellInfo const* auraInfo = aurEff->GetSpellInfo();
+            if (auraInfo->SpellFamilyName != SPELLFAMILY_DEATHKNIGHT || auraInfo->EquippedItemClass != -1)
+                return false;
+
+            return aurEff->GetCasterGUID() == ownerGuid && (uint32(aurEff->GetMiscValue()) & schoolMask) != 0;
+        });
+        return multiplier;
+    }
+
+    void CapMinions(Player* dk, uint32 entry, uint32 cap)
+    {
+        if (!dk)
+            return;
+
+        // UnSummon only queues the removal (AddObjectToRemoveList) and GetLiveMinions works on a copy, so nothing
+        // here touches m_Controlled while it is read. Minions already queued for removal are skipped.
+        std::vector<Creature*> minions = GetLiveMinions(dk, entry);
+        if (minions.size() <= cap)
+            return;
+
+        // Oldest first: the least time left.
+        std::vector<std::pair<int64, TempSummon*>> byRemaining;
+        for (Creature* creature : minions)
+            if (TempSummon* summon = creature->ToTempSummon())
+                byRemaining.emplace_back(RemainingMs(creature), summon);
+
+        if (byRemaining.size() <= cap)
+            return;
+
+        std::sort(byRemaining.begin(), byRemaining.end(), [](auto const& a, auto const& b)
+        {
+            return a.first < b.first;
+        });
+
+        std::size_t const excess = byRemaining.size() - std::size_t(cap);
+        for (std::size_t i = 0; i < excess; ++i)
+            byRemaining[i].second->UnSummon();
+    }
+
+    void StartLesserGhoulTimer(Creature* ghoul, uint32 durationMs)
+    {
+        if (!ghoul || !durationMs || ghoul->CustomData.Get<LesserGhoulTimer>(LESSER_GHOUL_TIMER_KEY))
+            return;
+
+        LesserGhoulTimer* timer = ghoul->CustomData.GetDefault<LesserGhoulTimer>(LESSER_GHOUL_TIMER_KEY);
+        timer->startMs = NowMs();
+        timer->totalMs = durationMs;
+    }
+
+    Creature* SummonLesserGhoul(Player* dk, Unit* target)
+    {
+        if (!dk || !target || !dk->IsInWorld() || target->GetMap() != dk->GetMap())
+            return nullptr;
+
+        SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(DeathKnightData::SPELL_LESSER_GHOUL_SUMMON);
+        if (!spellInfo)
+            return nullptr;
+
+        GuidSet before;
+        for (Creature* ghoul : GetLiveMinions(dk, DeathKnightData::NPC_LESSER_GHOUL))
+            before.insert(ghoul->GetGUID());
+
+        // The unit the ghoul attacks first, only if the DK may attack it (not a Coil at the friendly ghoul). Kept on
+        // the DK across the cast so OnMinionAddWorld can copy it before the AI's IsSummonedBy runs (WP-R m3).
+        ObjectGuid const attackTarget = target->IsAlive() && dk->IsValidAttackTarget(target) ? target->GetGUID() :
+            ObjectGuid::Empty;
+        dk->CustomData.GetDefault<LesserGhoulSummonTarget>(LESSER_GHOUL_TARGET_KEY)->target = attackTarget;
+
+        // D17: 203469 is SUMMON props 61 at TARGET_DEST_DEST, cast at the target's position, so a friendly or a
+        // just-killed target works too. Instant and triggered: the ghoul exists (and is in m_Controlled) when the
+        // cast returns. Its AfterCast script caps and recounts too (harmless repeat).
+        SpellCastTargets targets;
+        targets.SetDst(target->GetPosition());
+        dk->CastSpell(targets, spellInfo, nullptr, TRIGGERED_FULL_MASK);
+        dk->CustomData.Erase(LESSER_GHOUL_TARGET_KEY);
+
+        Creature* summoned = nullptr;
+        for (Creature* ghoul : GetLiveMinions(dk, DeathKnightData::NPC_LESSER_GHOUL))
+            if (!before.count(ghoul->GetGUID()))
+                summoned = ghoul;
+
+        if (summoned)
+        {
+            if (TempSummon* summon = summoned->ToTempSummon())
+                StartLesserGhoulTimer(summoned, summon->GetTimer());   // the actual duration (Night of the Dead in)
+
+            summoned->CustomData.GetDefault<LesserGhoulSummonTarget>(LESSER_GHOUL_TARGET_KEY)->target = attackTarget;
+        }
+
+        uint32 const cap = uint32(std::max<int32>(1, DeathKnightData::LESSER_GHOUL_CAP));
+        CapMinions(dk, DeathKnightData::NPC_LESSER_GHOUL, cap);
+        RefreshLesserGhoulCounter(dk);
+
+        // The new ghoul has the most time left, so the cap never takes it.
+        return summoned;
+    }
+
+    void RefreshLesserGhoulCounter(Player* dk)
+    {
+        if (!dk || !dk->IsInWorld())
+            return;
+
+        int32 const count = int32(GetLiveMinions(dk, DeathKnightData::NPC_LESSER_GHOUL).size());
+        Aura* counter = dk->GetAura(DeathKnightData::SPELL_LESSER_GHOUL_COUNTER, dk->GetGUID());
+        if (!count)
+        {
+            if (counter)
+                dk->RemoveAurasDueToSpell(DeathKnightData::SPELL_LESSER_GHOUL_COUNTER, dk->GetGUID());
+            return;
+        }
+
+        if (!counter)
+        {
+            AddAuraStacks(dk, dk, DeathKnightData::SPELL_LESSER_GHOUL_COUNTER, count, true);
+            return;
+        }
+
+        // A new ghoul refreshes the buff (ModStackAmount); a loss only lowers the count.
+        int32 const current = int32(counter->GetStackAmount());
+        if (count > current)
+            counter->ModStackAmount(count - current);
+        else if (count < current)
+            counter->SetStackAmount(uint8(count));
+    }
+
+    Creature* FindCorpseExplosionGhoul(Player* dk)
+    {
+        if (!dk)
+            return nullptr;
+
+        // The DK's Lesser Ghoul within LESSER_GHOUL_RANGE_YARDS with the most time left.
+        float const range = float(std::max<int32>(0, DeathKnightData::LESSER_GHOUL_RANGE_YARDS));
+        Creature* best = nullptr;
+        int64 bestRemaining = 0;
+        for (Creature* ghoul : GetLiveMinions(dk, DeathKnightData::NPC_LESSER_GHOUL))
+        {
+            if (!dk->IsWithinDistInMap(ghoul, range))
+                continue;
+
+            int64 const remaining = RemainingMs(ghoul);
+            if (!best || remaining > bestRemaining)
+            {
+                best = ghoul;
+                bestRemaining = remaining;
+            }
+        }
+
+        return best;
+    }
+
+    ObjectGuid GetLesserGhoulSummonTarget(Creature const* ghoul)
+    {
+        LesserGhoulSummonTarget const* record = ghoul ?
+            ghoul->CustomData.Get<LesserGhoulSummonTarget>(LESSER_GHOUL_TARGET_KEY) : nullptr;
+        return record ? record->target : ObjectGuid::Empty;
+    }
+
+    float GetLesserGhoulRemainingFraction(Creature const* ghoul)
+    {
+        // D9: from the CustomData record only (TempSummon::GetTimer is non-const); no record = full.
+        LesserGhoulTimer const* timer = ghoul ? ghoul->CustomData.Get<LesserGhoulTimer>(LESSER_GHOUL_TIMER_KEY) :
+            nullptr;
+        if (!timer || !timer->totalMs)
+            return 1.0f;
+
+        int64 const left = timer->startMs + int64(timer->totalMs) - NowMs();
+        return std::clamp(float(left) / float(timer->totalMs), 0.0f, 1.0f);
+    }
+
+    // ---- Gargoyle (U17/U18) ----
+    Creature* GetActiveGargoyle(Player const* dk)
+    {
+        if (!dk)
+            return nullptr;
+
+        // Out and not yet flown away (OnGargoyleLeave marks it).
+        for (Creature* gargoyle : GetLiveMinions(dk, DeathKnightData::NPC_EBON_GARGOYLE))
+        {
+            GargoyleState const* state = gargoyle->CustomData.Get<GargoyleState>(GARGOYLE_STATE_KEY);
+            if (!state || !state->left)
+                return gargoyle;
+        }
+
+        return nullptr;
+    }
+
+    void OnGargoyleStrikeHit(Player* dk, Unit* target)
+    {
+        if (!dk || !target)
+            return;
+
+        // A strike missile landing after the fly-away (OnGargoyleLeave) does nothing.
+        Creature const* gargoyle = GetActiveGargoyle(dk);
+        if (!gargoyle)
+            return;
+
+        if (!HasNecromancy(dk))
+        {
+            AddFesteringWounds(dk, target, 1, WoundSource::Gargoyle);
+            return;
+        }
+
+        // Necromancy: +1 stack of the DK buff (cap GARGOYLE_NECROMANCY_MAX_STACKS), never outlasting the window.
+        int32 const windowLeft = GargoyleWindowLeftMs(gargoyle);
+        if (windowLeft <= 0)
+            return;
+
+        int32 const cap = std::max<int32>(1, DeathKnightData::GARGOYLE_NECROMANCY_MAX_STACKS);
+        Aura* aura = dk->GetAura(DeathKnightData::SPELL_GARGOYLE_NECROMANCY, dk->GetGUID());
+        if (aura && int32(aura->GetStackAmount()) >= cap)
+            aura->RefreshDuration();
+        else
+            aura = AddAuraStacks(dk, dk, DeathKnightData::SPELL_GARGOYLE_NECROMANCY, 1, true);
+
+        if (aura && (aura->GetDuration() < 0 || aura->GetDuration() > windowLeft))
+        {
+            aura->SetMaxDuration(windowLeft);
+            aura->SetDuration(windowLeft);
+        }
+    }
+
+    void OnGargoyleLeave(Player* dk)
+    {
+        if (!dk)
+            return;
+
+        // Fly-away (the AI) or the remove-world fallback: the minions' Necromancy bonus leaves with it.
+        for (Creature* gargoyle : GetLiveMinions(dk, DeathKnightData::NPC_EBON_GARGOYLE))
+            gargoyle->CustomData.GetDefault<GargoyleState>(GARGOYLE_STATE_KEY)->left = true;
+
+        dk->RemoveAurasDueToSpell(DeathKnightData::SPELL_GARGOYLE_NECROMANCY, dk->GetGUID());
+        dk->CustomData.Erase(GARGOYLE_RAMP_KEY);
+    }
+
+    // ---- Ghoul (U22/U23) ----
+    void AddShadowInfusion(Player* dk)
+    {
+        if (!dk)
+            return;
+
+        // WP-R m7: only a DK who knows Dark Transformation; the Master of Ghouls pet, alive and not transformed.
+        if (!dk->HasSpell(DeathKnightData::SPELL_DARK_TRANSFORMATION))
+            return;
+
+        Creature* ghoul = GetPetGhoul(dk);
+        if (!ghoul || ghoul->HasAura(DeathKnightData::SPELL_DARK_TRANSFORMATION))
+            return;
+
+        Aura* aura = AddAuraStacks(dk, ghoul, DeathKnightData::SPELL_SHADOW_INFUSION, 1, false);
+        if (aura)
+            OnShadowInfusionChanged(ghoul, aura->GetStackAmount());
+    }
+
+    void OnShadowInfusionChanged(Unit* ghoul, uint8 stacks)
+    {
+        Player* owner = GetMinionOwner(ghoul);
+        if (!owner)
+            return;
+
+        bool const ready = stacks >= uint8(std::clamp<int32>(DeathKnightData::SHADOW_INFUSION_STACKS, 1, 255)) &&
+            owner->HasSpell(DeathKnightData::SPELL_DARK_TRANSFORMATION);
+        bool const marked = owner->HasAura(DeathKnightData::SPELL_DARK_TRANSFORMATION_READY, owner->GetGUID());
+        if (ready && !marked)
+            owner->CastSpell(owner, DeathKnightData::SPELL_DARK_TRANSFORMATION_READY, TRIGGERED_FULL_MASK);
+        else if (!ready && marked)
+            owner->RemoveAurasDueToSpell(DeathKnightData::SPELL_DARK_TRANSFORMATION_READY, owner->GetGUID());
+    }
+
+    void ApplyInfectedClaws(Player* dk, Pet* ghoul)
+    {
+        if (!dk || !ghoul || GetMinionKind(ghoul) != MinionKind::Ghoul || GetMinionOwner(ghoul) != dk)
+            return;
+
+        bool const known = dk->HasAura(DeathKnightData::SPELL_INFECTED_CLAWS_203444) ||
+            dk->HasAura(DeathKnightData::SPELL_INFECTED_CLAWS);
+        if (known)
+        {
+            // Owner-cast so the DK's Proc Chance applies (CalcProcChance reads a player caster).
+            if (!ghoul->GetAura(DeathKnightData::SPELL_INFECTED_CLAWS_AURA, dk->GetGUID()))
+                dk->AddAura(DeathKnightData::SPELL_INFECTED_CLAWS_AURA, ghoul);
+
+            // D6: the pet-spellbook display passive.
+            if (!ghoul->HasSpell(DeathKnightData::SPELL_INFECTED_CLAWS_DISPLAY))
+                ghoul->learnSpell(DeathKnightData::SPELL_INFECTED_CLAWS_DISPLAY);
+            return;
+        }
+
+        ghoul->RemoveAurasDueToSpell(DeathKnightData::SPELL_INFECTED_CLAWS_AURA);
+        if (ghoul->HasSpell(DeathKnightData::SPELL_INFECTED_CLAWS_DISPLAY))
+            ghoul->removeSpell(DeathKnightData::SPELL_INFECTED_CLAWS_DISPLAY, false);
+    }
+
+    // ---- Pestilence (U26) ----
+    bool HasOnAPaleHorse(Unit const* dk)
+    {
+        return dk && dk->IsPlayer() && (dk->HasAura(DeathKnightData::SPELL_ON_A_PALE_HORSE_51983) ||
+            dk->HasAura(SPELL_ON_A_PALE_HORSE_51986));
+    }
+
+    void OnPestilencePrimary(Player* dk, Unit* primary)
+    {
+        CastOnAPaleHorse(dk, primary);
+    }
+
+    // ---- Pre-agreed additions ----
+    void RecordRottenTouchTarget(Player* dk, ObjectGuid target)
+    {
+        if (!dk || !target)
+            return;
+
+        RottenTouchRecord* record = dk->CustomData.GetDefault<RottenTouchRecord>(ROTTEN_TOUCH_KEY);
+        record->target = target;
+        record->timeMs = NowMs();
+    }
+
+    bool ConsumeRottenTouchTarget(Player* dk, ObjectGuid target)
+    {
+        if (!dk || !target)
+            return false;
+
+        RottenTouchRecord* record = dk->CustomData.Get<RottenTouchRecord>(ROTTEN_TOUCH_KEY);
+        if (!record || record->target != target)
+            return false;
+
+        bool const fresh = NowMs() - record->timeMs <= ROTTEN_TOUCH_RECORD_MS;
+        dk->CustomData.Erase(ROTTEN_TOUCH_KEY);
+        return fresh;
+    }
+
+    // ---- Hook bodies ----
+    void OnMinionAddWorld(Creature* creature)
+    {
+        if (!creature)
+            return;
+
+        uint32 const entry = creature->GetEntry();
+        if (entry != DeathKnightData::NPC_LESSER_GHOUL && entry != DeathKnightData::NPC_EBON_GARGOYLE)
+            return;
+
+        Player* owner = GetMinionOwner(creature);
+        if (!owner)
+            return;
+
+        if (entry == DeathKnightData::NPC_LESSER_GHOUL)
+        {
+            // InitStats set the timer to the full duration before AddToMap (Night of the Dead included).
+            if (TempSummon* summon = creature->ToTempSummon())
+                StartLesserGhoulTimer(creature, summon->GetTimer());
+
+            // A SummonLesserGhoul cast in progress: hand its attack target to the ghoul before IsSummonedBy.
+            if (LesserGhoulSummonTarget const* pending =
+                owner->CustomData.Get<LesserGhoulSummonTarget>(LESSER_GHOUL_TARGET_KEY))
+                creature->CustomData.GetDefault<LesserGhoulSummonTarget>(LESSER_GHOUL_TARGET_KEY)->target =
+                    pending->target;
+
+            RefreshLesserGhoulCounter(owner);
+            return;
+        }
+
+        GargoyleState* state = creature->CustomData.GetDefault<GargoyleState>(GARGOYLE_STATE_KEY);
+        state->startMs = NowMs();
+        state->left = false;
+    }
+
+    void OnMinionRemoveWorld(Creature* creature)
+    {
+        if (!creature)
+            return;
+
+        uint32 const entry = creature->GetEntry();
+        if (entry != DeathKnightData::NPC_LESSER_GHOUL && entry != DeathKnightData::NPC_EBON_GARGOYLE)
+            return;
+
+        // Already out of m_Controlled here; the owner GUID still resolves on the same map.
+        Player* owner = GetMinionOwner(creature);
+        if (entry == DeathKnightData::NPC_LESSER_GHOUL)
+        {
+            creature->CustomData.Erase(LESSER_GHOUL_TIMER_KEY);
+            creature->CustomData.Erase(LESSER_GHOUL_TARGET_KEY);
+            if (owner)
+                RefreshLesserGhoulCounter(owner);
+            return;
+        }
+
+        GargoyleState const* state = creature->CustomData.Get<GargoyleState>(GARGOYLE_STATE_KEY);
+        bool const alreadyLeft = state && state->left;
+        creature->CustomData.Erase(GARGOYLE_STATE_KEY);
+
+        // Fallback for every leave path that skipped the fly-away (owner death, logout, despawn). Never strip a
+        // newer Gargoyle's stacks.
+        if (owner && !alreadyLeft && !GetActiveGargoyle(owner))
+            OnGargoyleLeave(owner);
+    }
+
+    void OnDeathKnightMapChanged(Player* dk)
+    {
+        if (!dk)
+            return;
+
+        // Minions left behind on the old map were removed where the owner no longer resolves: resync.
+        RefreshLesserGhoulCounter(dk);
+        if (!GetActiveGargoyle(dk))
+        {
+            dk->RemoveAurasDueToSpell(DeathKnightData::SPELL_GARGOYLE_NECROMANCY, dk->GetGUID());
+            dk->CustomData.Erase(GARGOYLE_RAMP_KEY);
+        }
+
+        Creature* ghoul = GetPetGhoul(dk);
+        Aura const* infusion = ghoul ? ghoul->GetAura(DeathKnightData::SPELL_SHADOW_INFUSION) : nullptr;
+        if (!infusion && dk->HasAura(DeathKnightData::SPELL_DARK_TRANSFORMATION_READY, dk->GetGUID()))
+            dk->RemoveAurasDueToSpell(DeathKnightData::SPELL_DARK_TRANSFORMATION_READY, dk->GetGUID());
     }
 }
