@@ -4,12 +4,13 @@ Deathknight - player-castable spells (real cast_time_ms/cooldown_ms, not marked 
 Split from a single source/classes/deathknight.py via split_class_file.py (.agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md) - see source/classes/README.md for the multi-file layout and lib/dsl/registry.py's load_class_package for how cross-file references (`from .deathknight_...` below) resolve.
 """
 
-from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, School
-from lib.dsl.registry import const, pot_text, procs_on, scripted_by, spell, unbind_script
+from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, RANGE_SELF, School
+from lib.dsl.registry import const, pot_text, procs_on, scripted_by, spell, talent_mult, tooltip_vars, unbind_script
 
 from . import _masks as m
 from .deathknight_blood import sanguine_ground_tooltip_1252
 from .deathknight_shared import anti_magic_zone_50461
+from .deathknight_unholy_b import corpse_explosion_detonation_203471
 
 
 army_of_the_dead_42650 = spell(
@@ -156,6 +157,17 @@ mind_freeze_47528 = spell(
 )
 
 
+# U28 (S3-HANDOFF, S3a A4): Death Coil's tooltip shows Morbidity (48963 / 49564 / 49565 eff0 DUMMY +5/10/15%). Replaces
+# the stock grab-bag entry 84 for this spell; only $damage and $healing are read, with the stock Glyph of Death Coil
+# (63333) terms kept.
+death_coil_tooltip_1281 = tooltip_vars(
+    1281, 'Morbidity: Death Coil damage and healing on the Death Coil tooltip',
+    morb=talent_mult([48963, 49564, 49565], effect=1),
+    damage='$?s63333[${$m1*1.15*$<morb>}][${$m1*$<morb>}]',
+    healing='$?s63333[${$m1*1.15*1.5*$<morb>}][${$m1*1.5*$<morb>}]',
+)
+
+
 death_coil_47541 = spell(
     id=47541,
     name='Death Coil',
@@ -173,9 +185,12 @@ death_coil_47541 = spell(
         Effect(type=EffectType.DUMMY, base_points=166, points_per_level=11.04, implicit_target_a=25),
     ],
     spell_icon_id=88,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 55); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 1024, 'AuraDescription_Lang_Mask': 16712174, 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Fire a blast of unholy energy, causing $<damage> Shadow damage to an enemy target or healing $<healing> damage from a friendly Undead target$?s58677[.  Refunds $58677s1 runic power when used to heal.][.]', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 160, 'RuneCostID': 422, 'SpellClassMask_1': 8192, 'SpellClassSet': 15, 'SpellDescriptionVariableID': 84, 'SpellLevel': 4, 'SpellPriority': 50, 'SpellVisualID_1': 10755, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    tooltip_vars=death_coil_tooltip_1281,
+    notes='S3a (U28): SpellDescriptionVariableID 84 -> declared tooltip_vars 1281 ($damage / $healing x Morbidity, stock glyph terms kept). pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 55); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    raw_overrides={'AttributesEx': 1024, 'AuraDescription_Lang_Mask': 16712174, 'BaseLevel': 4, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Fire a blast of unholy energy, causing $<damage> Shadow damage to an enemy target or healing $<healing> damage from a friendly Undead target$?s58677[.  Refunds $58677s1 runic power when used to heal.][.]', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 160, 'RuneCostID': 422, 'SpellClassMask_1': 8192, 'SpellClassSet': 15, 'SpellLevel': 4, 'SpellPriority': 50, 'SpellVisualID_1': 10755, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+
+scripted_by(death_coil_47541, 'spell_dk_death_coil_unholy')  # S3a: Morbidity, Doomed Bidding, Shadow Infusion, Harbinger (stock -47541 stays)
 
 
 empower_rune_weapon_47568 = spell(
@@ -472,22 +487,31 @@ corpse_explosion_49158 = spell(
     id=49158,
     name='Corpse Explosion',
     school=School.SHADOW,
-    category=1240,
     cast_time_ms=0,
     cooldown_ms=0,
-    category_cooldown_ms=5000,
+    category_cooldown_ms=0,
     power_type=PowerType.RUNIC_POWER,
-    mana_cost=400,
+    mana_cost=300,
     mana_cost_pct=0,
-    range_yards=30.0,
+    range_yards=RANGE_SELF,
     effects=[
-        Effect(type=EffectType.DUMMY, base_points=165, points_per_level=11.08, implicit_target_a=25),
-        Effect(type=EffectType.DUMMY, base_points=50443, implicit_target_a=63, implicit_target_b=8, radius_yards=10.0),
+        Effect(type=EffectType.DUMMY, implicit_target_a=1),
     ],
     spell_icon_id=1737,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 55); RealPointsPerLevel from rank1->covers-60-overridden(undershoot-vs-top-rank) (anchor rank 5 @ level 80); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 131072, 'AttributesEx2': 1, 'AttributesEx5': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Cause a corpse to explode for $s1 Shadow damage to all enemies within $50444A1 yards.  Will use a nearby corpse if the target is not a corpse.  Does not affect mechanical or elemental corpses.', 'EffectBonusMultiplier_3': 0.0, 'EffectChainAmplitude_1': 3.5999999046325684, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 33554432, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RuneCostID': 1182, 'SpellClassSet': 15, 'SpellLevel': 55, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500, 'TargetCreatureType': 895},
+    notes=(
+        'pulled from existing data; single-rank bootstrap survivor (the superseded-rank tag); '
+        'dk-rework S3a (U20, in place): no-target self-cast (RANGE_SELF, one caster-targeted '
+        'DUMMY that spell_dk_corpse_explosion_rework drives), 30 RP (ManaCost 300), no cooldown (the 5 s category 1240 '
+        'cooldown is dropped), no reagent / Corpse Dust, no rune cost (RuneCostID 1182 was inert on PowerType 6), '
+        'DefenseType 1 magic class, no IS_ABILITY. The stale E0 class mask, the 3.6 chain amplitude, the mechanical / '
+        'elemental TargetCreatureType test and the stock bp165 / bp50443 effects are gone: the ghoul casts the new '
+        'detonation 203471, the corpse branch casts it from the DK. Tooltip is the doc text minus the cost sentence.'
+    ),
+    raw_overrides={'AttributesEx': 131072, 'AttributesEx2': 1, 'AttributesEx5': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Detonate the Lesser Ghoul with the most duration remaining, dealing " + pot_text(corpse_explosion_detonation_203471) + " Shadow damage to all enemies within 8 yards of it. Damage is reduced by how much of the ghoul's duration has passed. If you have no Lesser Ghoul, explodes a nearby corpse instead.", 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RuneCostID': 0, 'SpellClassSet': 15, 'SpellLevel': 55, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
+
+unbind_script(-49158, 'spell_dk_corpse_explosion')
+scripted_by(-49158, 'spell_dk_corpse_explosion_rework')
 
 
 howling_blast_49184 = spell(
@@ -683,21 +707,21 @@ summon_gargoyle_49206 = spell(
     name='Summon Gargoyle',
     school=School.SHADOW,
     cast_time_ms=0,
-    cooldown_ms=180000,
+    cooldown_ms=120000,
     category_cooldown_ms=0,
     power_type=PowerType.RUNIC_POWER,
-    mana_cost=600,
+    mana_cost=0,
     mana_cost_pct=0,
     range_yards=30.0,
-    duration_ms=40000,
+    duration_ms=26000,
     effects=[
         Effect(type=EffectType.SUMMON, implicit_target_a=44, misc_value=27829, radius_yards=3.0),
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=6, apply_aura=226, amplitude=1000),
         Effect(type=EffectType.TRIGGER_SPELL, base_points=2, implicit_target_a=1, trigger_spell=61777),
     ],
     spell_icon_id=1577,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 131072, 'AttributesEx5': 1024, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Under attack from a Gargoyle.', 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "A Gargoyle flies into the area and bombards the target with Nature damage modified by the Death Knight's attack power.  Persists for $61777d.", 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 209, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RuneCostID': 652, 'SpellClassMask_2': 128, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellVisualID_1': 11833, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    notes='pulled from existing data; dk-rework S3a (D13): 26 s duration (index 30122), 0 RP (RuneCostID 652 was inert on PowerType 6), 120 s cooldown. The AI despawns the Gargoyle by 24 s. 61777 (stock 30 s dummy, no reader) is left alone.',
+    raw_overrides={'AttributesEx': 131072, 'AttributesEx5': 1024, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Under attack from a Gargoyle.', 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A Gargoyle flies into the area and bombards your target with Nature damage for 20 sec. Each Gargoyle Strike infects the target with a Festering Wound. If you know Necromancy, each Gargoyle Strike instead increases the damage of your minions by 3% until the Gargoyle leaves, stacking up to 10 times. Each 10 Runic Power you spend while it is active increases its damage by 1%.', 'DefenseType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectMiscValueB_1': 209, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RuneCostID': 0, 'SpellClassMask_2': 128, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellVisualID_1': 11833, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 

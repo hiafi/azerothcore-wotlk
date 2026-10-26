@@ -536,7 +536,8 @@ _RUNIC_FOCUS_STOCK_MASK = (0x80040202, 0x10022, 0x9)
 # S1a (U12): the third dword also reads Blood Nova eruption / Bonestorm tick (d2 b13); built here, _masks.py is untouched.
 _RUNIC_FOCUS_READ = (m.RUNIC_FOCUS_READ_ADD[0], m.RUNIC_FOCUS_READ_ADD[1], m.RUNIC_FOCUS_READ_ADD[2] | m.BLOOD_OTHER_MAGIC)
 # S2a (A4): also d2 b9 Glacial Advance, b10 Breath, b16 other Frost magic (m.RUNIC_FOCUS_READ_S2 = 0x10600).
-_RUNIC_FOCUS_MASK = tuple(a | b | c for a, b, c in zip(_RUNIC_FOCUS_STOCK_MASK, _RUNIC_FOCUS_READ, m.RUNIC_FOCUS_READ_S2))
+# S3a (A4): also d2 b17 Unholy other magic (On a Pale Horse damage 203477; m.RUNIC_FOCUS_READ_S3): d2 0x00013E09 -> 0x00033E09.
+_RUNIC_FOCUS_MASK = tuple(a | b | c | d for a, b, c, d in zip(_RUNIC_FOCUS_STOCK_MASK, _RUNIC_FOCUS_READ, m.RUNIC_FOCUS_READ_S2, m.RUNIC_FOCUS_READ_S3))
 
 runic_focus_61455 = spell(
     id=61455,
@@ -628,7 +629,7 @@ blood_plague_55078 = spell(
         'RuneCostID': 1143,
     },
 )
-scripted_by(blood_plague_55078, 'spell_dk_disease_rune_weapon_guard')  # S1a: DRW copies never reapply/refresh diseases
+scripted_by(blood_plague_55078, 'spell_dk_disease_rune_weapon_guard', 'spell_dk_dread_host_disease')  # S1a: DRW copies never reapply/refresh diseases; S3a: Dread Host
 
 frost_fever_55095 = spell(
     id=55095,
@@ -676,7 +677,7 @@ frost_fever_55095 = spell(
     },
 )
 # S1a: DRW copies never reapply/refresh diseases; S2a: Chilblains' slow on Frost Fever application
-scripted_by(frost_fever_55095, 'spell_dk_disease_rune_weapon_guard', 'spell_dk_frost_fever_chilblains')
+scripted_by(frost_fever_55095, 'spell_dk_disease_rune_weapon_guard', 'spell_dk_frost_fever_chilblains', 'spell_dk_dread_host_disease')  # S3a: Dread Host
 
 # ---- Raise Dead's reagent row (U7): Corpse Dust is gone ----
 # 48289 is the hidden self spell Raise Dead (46584) casts with the Corpse Dust reagent (item 37201). The stock row's

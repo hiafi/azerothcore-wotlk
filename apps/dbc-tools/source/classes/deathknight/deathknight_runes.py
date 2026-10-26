@@ -434,6 +434,7 @@ boiling_blight_203043 = spell(
         'Description_Lang_enUS': 'Bursts for {pot1} Shadow damage.',
     },
 )
+scripted_by(boiling_blight_203043, 'spell_dk_festering_wound_damage')  # S3a: Dread Host, Mastery, wound multiplier terms
 
 # =====================================================================================================================
 # Rune of the Apocalypse (203044, trained @30) and the four Horsemen blessings (203045-203048)

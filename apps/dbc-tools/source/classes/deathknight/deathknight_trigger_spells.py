@@ -7,12 +7,13 @@ Split from a single source/classes/deathknight.py via split_class_file.py (.agen
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, RANGE_SELF, School, SpellModOp
 from lib.dsl.registry import (
     bonus_coefficients, const, custom_attr, linked_spell, pot_text, procs_on, product, remove_spell_proc, scripted_by, spell,
-    talent_mult, tooltip_vars, unbind_bonus_coefficients, unbind_script,
+    spell_rune_cost, talent_mult, tooltip_vars, unbind_bonus_coefficients, unbind_script,
 )
 
 from . import _masks as m
 from .deathknight_blood import bloody_strikes_tooltip_1250, improved_death_strike_tooltip_1251
 from .deathknight_frost_b import avalanche_203321
+from .deathknight_unholy_b import on_a_pale_horse_damage_203477
 
 # =====================================================================================================================
 # S2a (Frost): the talent-rank helper, the tooltip_vars entries 1254 / 1255 and Avalanche's potency text
@@ -22,6 +23,9 @@ _ATTR0_TALENT_PASSIVE = 464                  # ABILITY 0x10 | PASSIVE 0x40 | DO_
 _ATTR3_CAN_PROC_FROM_PROCS = 0x4000000       # SPELL_ATTR3_CAN_PROC_FROM_PROCS (a triggered cast may proc the aura)
 _TARGET_SELF = 1
 _CR_VERSATILITY = 1 << 21                    # MOD_CUSTOM_STAT_PCT misc: bit of CombatRating VERSATILITY (21)
+_ATTR3_DOT_STACKING_RULE = 0x80              # SPELL_ATTR3_DOT_STACKING_RULE (a second caster's DUMMY / LINKED aura coexists)
+_DEATH_GRIP = 0x2000000                      # d0 b25 (stock Death Grip 49576; Unholy Command's cooldown mod)
+_CRYPT_FEVER_BIT = 0x10                      # d2 b4 (Crypt Fever 50508; SpellInfoCorrections.cpp:354-359 forces Ebon Plague 51726 to it)
 
 
 def _frost_level(row, rank):
@@ -70,15 +74,21 @@ def _frost_rank(spell_id, name, rank, row, icon, effects, description, notes, sc
 # Rime's capstone line quotes Avalanche's potency through its own declaration (deathknight_frost_b.py; that file must not
 # import this one, or the import cycle breaks the load order).
 _AVALANCHE_POT = pot_text(avalanche_203321)
+# On a Pale Horse's tooltip quotes its Pestilence damage (203477, deathknight_unholy_b.py; that file must not import this one).
+_OPH_POT = pot_text(on_a_pale_horse_damage_203477)
 
-# U24 (S2-HANDOFF, user 2026-10-24): spell-named unconditional % talents show on the tooltip.
-# 1254 Heart Strike + Plague Strike: Gravefrost (203275-203277 eff0 SPELLMOD_DAMAGE +5/10/15%). Heart Strike keeps the
-#   Bloody Strikes multiplier it read from entry 1250, so `heart` is the product of the two; its text is unchanged.
+# U24 (S2-HANDOFF, user 2026-10-24) + S3-HANDOFF U28: spell-named unconditional % talents show on the tooltip.
+# 1254 Heart Strike + Plague Strike, ONE entry and ONE owner (this file): S3a edited S2's Gravefrost entry in place.
+#   Heart Strike: Gravefrost (203275-203277 eff0 SPELLMOD_DAMAGE +5/10/15%). Heart Strike keeps the Bloody Strikes multiplier it
+#   read from entry 1250, so `heart` is the product of the two; its text is unchanged.
+#   Plague Strike: `plague` = Gravefrost x Outbreak (49013 / 55236 / 55237 eff0 SPELLMOD_DAMAGE +10/20/30% on d0 b0).
 heart_plague_strike_tooltip_1254 = tooltip_vars(
-    1254, 'Heart Strike (Bloody Strikes x Gravefrost) and Plague Strike (Gravefrost) damage on their tooltips',
+    1254, 'Heart Strike (Bloody Strikes x Gravefrost) and Plague Strike (Gravefrost x Outbreak) damage on their tooltips',
     bs_heart=talent_mult([48977, 49394, 49395], effect=1),
     gravefrost=talent_mult([203275, 203276, 203277], effect=1),
     heart=product('bs_heart', 'gravefrost'),
+    outbreak=talent_mult([49013, 55236, 55237], effect=1),
+    plague=product('gravefrost', 'outbreak'),
 )
 # 1255 Icy Touch: Improved Icy Touch (49175 / 50031 / 51456 eff0 DUMMY +5/10/15%).
 icy_touch_tooltip_1255 = tooltip_vars(
@@ -107,6 +117,9 @@ plague_strike_45462 = spell(
     spell_icon_id=2719,
     tooltip_vars=heart_plague_strike_tooltip_1254,
     notes=(
+        'S3a (U28): the tooltip now reads $plague = Gravefrost x Outbreak (tooltip_vars 1254, edited in place, one owner; the '
+        'same entry carries $heart); no Plague Strike number changed, so the off-hand copy 66216 is untouched; second '
+        'script spell_dk_plague_strike_unholy beside Frost\'s (end of this file). '
         'S2a (U24): tooltip reads Gravefrost (tooltip_vars 1254, $gravefrost) on the weapon percent and the flat; the stock '
         'SpellDescriptionVariableID 81 ($weapon, $bonus = $m1 * $m2 / 100) is replaced by the same maths in the text. '
         'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
@@ -118,7 +131,7 @@ plague_strike_45462 = spell(
         '(NORMALIZED_WEAPON_DMG) is left hand-set, same reasoning as the Feral pass\'s Mangle/'
         'Swipe/Shred: far larger than weapon_potency\'s WEAPON_FLAT_BONUS_MAX=10 budget.'
     ),
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A vicious strike that deals ${$m2*$<gravefrost>}% weapon damage plus ${$m1*$m2/100*$<gravefrost>} and infects the target with Blood Plague, a disease dealing Shadow damage over time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 221, 'SpellClassMask_1': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 11624, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712190, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'A vicious strike that deals ${$m2*$<plague>}% weapon damage plus ${$m1*$m2/100*$<plague>} and infects the target with Blood Plague, a disease dealing Shadow damage over time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 221, 'SpellClassMask_1': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50, 'SpellVisualID_1': 11624, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -439,11 +452,14 @@ crypt_fever_50508 = spell(
     range_yards=50000.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, points_per_level=0.3333333333333333, implicit_target_a=6, apply_aura=284, misc_value=22, trigger_spell=65142),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=6, apply_aura=284, misc_value=22, trigger_spell=65142),
     ],
     spell_icon_id=264,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx3': 1073741824, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases disease damage taken by $s1%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your diseases also cause Crypt Fever, which increases disease damage taken by the target by $s1%.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_3': 16, 'SpellClassSet': 15},
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80'
+        ". S3a (U12 / D7): the level scaling (bp 9 + 0.333 / level = 30% at 60) is gone: eff0 is stored 29 = 30% as the fallback and spell_dk_crypt_fever_amount sets 10 / 20 / 30 from the caster's Crypt Fever rank (DoEffectCalcAmount, player casters only; the LINKED 65142 copies it, SpellAuraEffects.cpp:5820-5826). AttributesEx3 gains SPELL_ATTR3_DOT_STACKING_RULE 0x80 so a second DK's Crypt Fever coexists instead of replacing the first (and the LINKED removal does not strip the other's 65142), the same bit SpellInfoCorrections.cpp:358 gives Ebon Plague. Mechanic 22 stays: it is what raises the Festering Wound bursts. The texts are number-free (the rank spells quote their own amount)."
+    ),
+    raw_overrides={'AttributesEx3': 1073741824 | _ATTR3_DOT_STACKING_RULE, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Disease and Festering Wound damage taken increased.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your diseases also cause Crypt Fever, which increases disease and Festering Wound damage taken by the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_3': 16, 'SpellClassSet': 15},
 )
 
 
@@ -489,11 +505,14 @@ ebon_plague_51726 = spell(
     duration_ms=15000,
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=6, apply_aura=284, misc_value=22, trigger_spell=65142),
-        Effect(type=EffectType.APPLY_AURA, base_points=3, points_per_level=0.15254237288135594, implicit_target_a=6, apply_aura=AuraType.DUMMY, misc_value=126),
+        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=6, apply_aura=AuraType.DUMMY, misc_value=126),
     ],
     spell_icon_id=1933,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases disease damage taken by $s1%.\r\nIncreases magic damage taken by $s2%.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Crypt Fever morphs into Ebon Plague, which increases magic damage taken by $s2% in addition to increasing disease damage taken by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712188, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_2': 2048, 'SpellClassMask_3': 64, 'SpellClassSet': 15, 'SpellLevel': 1},
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 1); RealPointsPerLevel from rank1->covers-60 (anchor rank 3 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80'
+        ". S3a (U12 / D7): eff1 (SpellInfoCorrections.cpp:357 forces aura 87 MOD_DAMAGE_PERCENT_TAKEN; the data says DUMMY) loses its level scaling (bp 3 + 0.1525 / level = 13% at 60): stored 11 = 12% is the fallback and spell_dk_crypt_fever_amount sets 4 / 8 / 12 from the caster's Ebon Plaguebringer rank (player casters only). eff0 LINKED 65142 stays at 30% (= Crypt Fever 3, the prerequisite). SpellFamilyFlags[2] is forced to 0x10 by the core (the DSL SpellClassMask_3 64 is dead), DOT_STACKING_RULE too. The texts are number-free."
+    ),
+    raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Disease, Festering Wound and magic damage taken increased.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Crypt Fever morphs into Ebon Plague, which increases magic damage taken in addition to increasing disease and Festering Wound damage taken.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712188, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_2': 2048, 'SpellClassMask_3': 64, 'SpellClassSet': 15, 'SpellLevel': 1},
 )
 
 
@@ -531,13 +550,16 @@ on_a_pale_horse_51969 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, points_per_level=0.16666666666666666, implicit_target_a=1, apply_aura=211),
-        None,
-        Effect(type=EffectType.APPLY_AURA, base_points=-11, misc_value=5),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=211),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.RADIUS),
     ],
     spell_icon_id=1241,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 2 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You become as hard to stop as death itself.  The duration of all Stun and Fear effects used against you is reduced by 10%, and your mounted speed is increased by 10%.  This does not stack with other movement speed increasing effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 67108864, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 2 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80'
+        '. S3a (D5, 0-verify C3): rank 1 flying-mount passive. points_per_level 0 (fixed 10%). eff1 is now a SpellMod: ADD_FLAT_MODIFIER radius +5 yd on Pestilence (d1 b16), read by the rank-1 Pestilence; the stale B_1 twin (0x4000000) and the stray third effect are gone. The radius mods of the two ranks do not stack (the second rank spell replaces the first).'
+    ),
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You become as hard to stop as death itself.  The duration of all Stun and Fear effects used against you is reduced by 10%, and your mounted speed is increased by 10%.  This does not stack with other movement speed increasing effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_2': m.PESTILENCE, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -553,13 +575,16 @@ on_a_pale_horse_51983 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, points_per_level=0.16666666666666666, implicit_target_a=1, apply_aura=172),
-        Effect(type=EffectType.APPLY_AURA, base_points=-11, points_per_level=-0.16666666666666666, implicit_target_a=1, apply_aura=232, misc_value=12),
-        Effect(type=EffectType.APPLY_AURA, base_points=-11, points_per_level=-0.16666666666666666, implicit_target_a=1, apply_aura=232, misc_value=5),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=172),
+        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=232, misc_value=12),
+        Effect(type=EffectType.APPLY_AURA, base_points=-11, implicit_target_a=1, apply_aura=232, misc_value=5),
     ],
     spell_icon_id=1241,
-    notes='pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 2 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You become as hard to stop as death itself.  The duration of all Stun and Fear effects used against you is reduced by 10%, and your mounted speed is increased by 10%.  This does not stack with other movement speed increasing effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 67108864, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    notes=(
+        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 0); RealPointsPerLevel from rank1->covers-60 (anchor rank 2 @ level 60); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80'
+        ". S3a (D5, 0-verify C2): points_per_level is 0 so rank 1 is the doc's fixed 10% (stock rank 1 is fixed bp 9; the single-rank bootstrap made it 14% at level 25 and 20% at 60). All three slots stay used (mounted speed, stun and fear duration), so the Pestilence radius mod lives in 51969 eff1. The stale mask on eff1 is gone."
+    ),
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You become as hard to stop as death itself.  The duration of all Stun and Fear effects used against you is reduced by 10%, and your mounted speed is increased by 10%.  This does not stack with other movement speed increasing effects.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -837,6 +862,15 @@ heart_strike_55050 = spell(
 )
 
 
+# U28 (S3-HANDOFF): Outbreak shows on the Scourge Strike tooltip (1280); Death Coil's Morbidity entry (1281) is deathknight_spells.py's.
+scourge_strike_tooltip_1280 = tooltip_vars(
+    1280, 'Scourge Strike: Outbreak damage on the Scourge Strike tooltip',
+    outbreak=talent_mult([49013, 55236, 55237], effect=2),
+)
+
+# Scourge Strike's cost (U6): 1 Blood Rune + 1 Frost Rune, +15 Runic Power. No stock row has this cost (1145 is Unholy + Frost).
+spell_rune_cost(2602, blood=1, frost=1, runic_power=15, comment='Scourge Strike: 1 Blood + 1 Frost Rune, +15 Runic Power')
+
 scourge_strike_55090 = spell(
     id=55090,
     name='Scourge Strike',
@@ -850,85 +884,65 @@ scourge_strike_55090 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=121, base_points=339, points_per_level=18.4, implicit_target_a=6),
-        Effect(type=31, weapon_potency=69, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=70, implicit_target_a=6),
+        Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
         Effect(type=EffectType.DUMMY, base_points=11, implicit_target_a=6),
     ],
     spell_icon_id=3143,
+    tooltip_vars=scourge_strike_tooltip_1280,
     notes=(
-        'pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept '
-        'from rank 1 (learn level 55); RealPointsPerLevel from rank1->covers-60-overridden '
-        '(undershoot-vs-top-rank) (anchor rank 4 @ level 80); coefficient/cast_time_ms/'
-        'mana_cost_pct from max rank. potency-system (PLAN P7 Death Knight pass, 2026-10-01): '
-        'eff2 (WEAPON_PERCENT_DAMAGE) converted to weapon_potency=69 (same off-by-one fix as '
-        'Mangle/Swipe/Shred - base_points=69 was dealing 70% live). The flat eff1 '
-        '(NORMALIZED_WEAPON_DMG) and the disease-to-shadow-damage eff3 (DUMMY) are left '
-        'hand-set, same reasoning as the Feral pass\'s Mangle/Swipe/Shred.'
+        'single-rank bootstrap survivor (the superseded-rank tag; S3a rewrite follows). '
+        'death-knight-rework S3a (Unholy doc "Scourge Strike", U6): talent row 1 (moved from 8,2), SpellLevel 15. Percent '
+        'first (DK0b rule, U9): eff0 WEAPON_PERCENT_DAMAGE weapon_potency 70 (stock 69%); eff1 NORMALIZED_WEAPON_DMG '
+        'hand-set to 0 (stored -1 + die 1) and kept on purpose: it keeps the cast normalized (a two-hander counts as 3.3, '
+        'SpellEffects.cpp:3880-3888; deleting it would use the real 3.6 speed); no potency fields, so the potency pass leaves '
+        'it. The stock flat (bp 339 + 18.4 / level) is gone. eff2 DUMMY stored 11 = 12% of the Physical damage as Shadow per '
+        'disease, read by spell_dk_scourge_strike_rework (which counts the DK\'s own 55078 / 55095 only, U11). '
+        'RuneCostID 2602 (1 Blood + 1 Frost, +15 RP) replaces 1145 (Unholy + Frost, +15 RP). Own family flag d1 b27 kept '
+        '(Subversion, the GCD-haste candidate 201565, Outbreak, Vicious Strikes, Dirge, Desecration, Desolation read it); '
+        'AttributesEx3 0x400, CumulativeAura 1, the 1.5 s GCD and spell_threat 55090 kept; the stock SkillLineAbility 19202 '
+        '(superseded by 55265) is harmless. The tooltip reads Outbreak through tooltip_vars 1280 ($outbreak). Rebinds '
+        '-55090 to spell_dk_scourge_strike_rework (end of this file).'
     ),
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'CumulativeAura': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An unholy strike that deals $s2% of weapon damage as Physical damage plus ${$m1*$m2/100}.  In addition, for each of your diseases on your target, you deal an additional $s3% of the Physical damage done as Shadow damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 1145, 'SpellClassMask_2': 134217728, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50, 'SpellVisualID_1': 11832, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'CumulativeAura': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An unholy strike that deals ${$s1*$<outbreak>}% weapon damage as Physical damage, plus $s3% of that damage as Shadow damage for each of your diseases on the target. Bursts half the Festering Wounds on the target, rounded down, minimum 2. Each rune it spends has a 33% chance to return as a Death Rune.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'RuneCostID': 2602, 'SpellClassMask_2': m.SCOURGE_STRIKE, 'SpellClassSet': 15, 'SpellLevel': 15, 'SpellPriority': 50, 'SpellVisualID_1': 11832, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
-virulence_48962 = spell(
-    id=48962,
-    name='Virulence',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+virulence_48962 = _frost_rank(
+    48962, 'Virulence', rank=1, row=0, icon=208,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=55, misc_value=16),
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=107, misc_value=28),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.HASTE_ALL),
     ],
-    spell_icon_id=208,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to hit with your spells by $s1% and reduces the chance that your damage over time diseases can be cured by $s2%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 736225, 'EffectSpellClassMaskA_2': 1098, 'EffectSpellClassMaskB_3': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Increases your Haste by $s1%.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Virulence", U27): talent row 0, rank 1. eff0 aura 193 HASTE_ALL +1% (spell haste: GCD, runes, DoT ticks; the S2 U22 precedent), no class mask. The stock spell hit (aura 55) and dispel resistance (SPELLMOD 28) effects and the wide masks (incl. the lint-forbidden d1 b10 0x400 of 0x44a) are gone.'
+    ),
 )
 
 
-morbidity_48963 = spell(
-    id=48963,
-    name='Morbidity',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+morbidity_48963 = _frost_rank(
+    48963, 'Morbidity', rank=1, row=1, icon=118,
+    masks={1: (m.DEATH_COIL, 0, 0), 2: (m.DEATH_AND_DECAY, 0, 0)},
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=-5001, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_PCT_MODIFIER),
+        Effect(type=EffectType.APPLY_AURA, base_points=-5001, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COOLDOWN),
     ],
-    spell_icon_id=118,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage and healing of Death Coil by $s1% and reduces the cooldown on Death and Decay by $/1000;s2 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8192, 'EffectSpellClassMaskB_1': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Increases the damage and healing of Death Coil by $s1% and reduces the cooldown on Death and Decay by $/1000;s2 sec.\n\n|cFF9D9D9DCapstone: Your Death Coil reapplies your Frost Fever and Blood Plague on the target, at full duration.|r',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Morbidity", U24 / U27): talent row 1, rank 1. Values unchanged: eff0 SPELLMOD damage +5% on Death Coil d0 b13 (47541 / 47632 / 47633), eff1 SPELLMOD cooldown -5 s on Death and Decay d0 b5. Rank 3 is the capstone (an APPLY_AURA rank: the C++ gates on HasAura(49565), L4): the paragraph is greyed on ranks 1 / 2. Rebuilt from scratch.'
+    ),
 )
 
 
-ravenous_dead_48965 = spell(
-    id=48965,
-    name='Ravenous Dead',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+ravenous_dead_48965 = _frost_rank(
+    48965, 'Ravenous Dead', rank=1, row=1, icon=3010,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=137),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE),
     ],
-    spell_icon_id=3010,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Strength by $s1% and the contribution your Ghouls get from your Strength and Stamina by $s2%.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 67108864, 'EffectSpellClassMaskB_2': 16, 'EffectSpellClassMaskC_1': 4096, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Increases your total Strength by $s1%.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Ravenous Dead", U27): talent row 1, rank 1. eff0 aura 137 total Strength +1% (misc 0 = Strength; icon 3010 is read at spell_dk.cpp:248 / 814 through effect 0). The ghoul share effect (eff1: DUMMY 20 / 40 / 60) is dropped, with its masks and the eff2 twins.'
+    ),
 )
 
 
@@ -1038,25 +1052,17 @@ subversion_48997 = spell(
 )
 
 
-outbreak_49013 = spell(
-    id=49013,
-    name='Outbreak',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    power_type=PowerType.RUNE,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+outbreak_49013 = _frost_rank(
+    49013, 'Outbreak', rank=1, row=2, icon=97,
+    masks={1: (m.PLAGUE_STRIKE, 0, 0), 2: (0, m.SCOURGE_STRIKE, 0)},
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=6, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_PCT_MODIFIER),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_PCT_MODIFIER),
     ],
-    spell_icon_id=97,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of Plague Strike by $s1% and Scourge Strike by $s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1, 'EffectSpellClassMaskB_2': 134217728, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 584, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50},
+    description='Increases the damage of Plague Strike by $s1% and Scourge Strike by $s2%.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Outbreak", U27): talent row 2, rank 1. eff0 SPELLMOD damage +10% on Plague Strike d0 b0, eff1 SPELLMOD damage +6% on Scourge Strike d1 b27 (stock +7 / 13 / 20%: rank 1 changed to 6%). The tooltips read these through tooltip_vars 1254 (Plague Strike, $outbreak) and 1280 (Scourge Strike, $outbreak).'
+    ),
 )
 
 
@@ -1155,43 +1161,29 @@ bloodworms_49027 = spell(
 )
 
 
-crypt_fever_49032 = spell(
-    id=49032,
-    name='Crypt Fever',
+crypt_fever_49032 = _frost_rank(
+    49032, 'Crypt Fever', rank=1, row=7, icon=264,
     school=School.NATURE,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=112, misc_value=7282),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.OVERRIDE_CLASS_SCRIPTS, misc_value=7282),
     ],
-    spell_icon_id=264,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your diseases also cause Crypt Fever, which increases disease damage taken by the target by $50508s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 2048, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Your diseases also cause Crypt Fever, which increases disease and Festering Wound damage taken by the target by $s1%.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Crypt Fever", U12 / D7): talent row 7, rank 1. The id and the aura 112 / misc 7282 are kept (SpellAuras.cpp:1549 switch). eff0 now carries the rank amount, stored 9 = 10%, read by spell_dk_crypt_fever_amount (DoEffectCalcAmount on 50508 eff0); it was bp -1 (0). The inert (0, 0x800, 0) mask and the eff2 residue are gone.'
+    ),
 )
 
 
-epidemic_49036 = spell(
-    id=49036,
-    name='Epidemic',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+epidemic_49036 = _frost_rank(
+    49036, 'Epidemic', rank=1, row=1, icon=234,
+    masks={1: (0, m.BLOOD_PLAGUE_DISEASE | m.FROST_FEVER_DISEASE, _CRYPT_FEVER_BIT)},
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=2999, implicit_target_a=1, apply_aura=107, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=2999, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.DURATION),
     ],
-    spell_icon_id=234,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the duration of Blood Plague and Frost Fever by $/1000;s1 sec.', 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 100663296, 'EffectSpellClassMaskA_3': 16, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Increases the duration of Blood Plague and Frost Fever by $/1000;s1 sec.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Epidemic", U27): talent row 1, rank 1. Values unchanged: SPELLMOD duration +3 s on (0, Blood Plague d1 b25 | Frost Fever d1 b26, d2 b4) - d2 b4 is also Crypt Fever 50508 and Ebon Plague 51726 (the core forces 51726 to 0x10), so it reaches both debuffs. Rebuilt from scratch: the empty eff2 twins are gone.'
+    ),
 )
 
 
@@ -1241,8 +1233,11 @@ on_a_pale_horse_49146 = spell(
         Effect(type=EffectType.LEARN_SPELL, base_points=-1, implicit_target_a=1, trigger_spell=on_a_pale_horse_51969.id),
     ],
     spell_icon_id=3005,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 2147614720, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You become as hard to stop as death itself.  The duration of all Stun and Fear effects used against you is reduced by 10%, and your mounted speed is increased by 10%.  This does not stack with other movement speed increasing effects.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskB_1': 67108864, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    notes=(
+        'pulled from existing data'
+        '. S3a (D5): rank 1 stays a LEARN_SPELL rank (L4: the C++ gates on the learned passive, HasAura(51983) || HasAura(51986)). The tooltip adds the Pestilence damage (quoted from 203477 through pot_text) and the +5 yd radius, which is a SpellMod in the second passive (51969 eff1). The stale inert mask on the LEARN effect and the empty third-slot twins are gone.'
+    ),
+    raw_overrides={'AttributesEx': 2147614720, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': ('Your Pestilence deals ' + _OPH_POT + ' Shadow damage to each enemy it hits, and its radius is increased by 5 yards. The duration of all Stun and Fear effects used against you is reduced by 10%, and your mounted speed is increased by 10%. This does not stack with other movement speed increasing effects.'), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -1399,8 +1394,11 @@ unholy_blight_49194 = spell(
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=1494,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Taking damage from a vile swarm of unholy insects.  Diseases cannot be dispelled.', 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes the victims of your Death Coil to be surrounded by a vile swarm of unholy insects, taking $49194s1% of the damage done by the Death Coil over $50536d, and preventing any diseases on the victim from being dispelled.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 55},
+    notes=(
+        'pulled from existing data'
+        '. S3a (U25): the dispel clause is gone from the tooltip. Rebound to spell_dk_unholy_blight_rework (end of this file); the stock spell_proc row 49194 (family d2 b0 = Death Coil damage 47632, HIT phase) stays and the DoT is the new 203478.'
+    ),
+    raw_overrides={'AttributesEx3': 67108864, 'AttributesEx4': 524288, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Surrounded by a swarm of unholy insects.', 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Causes the victims of your Death Coil to be surrounded by a vile swarm of unholy insects, taking $49194s1% of the damage done by the Death Coil over 10 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 65536, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 55},
 )
 
 
@@ -1441,83 +1439,55 @@ tundra_stalker_49202 = _frost_rank(
 )
 
 
-reaping_49208 = spell(
-    id=49208,
-    name='Reaping',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+reaping_49208 = _frost_rank(
+    49208, 'Reaping', rank=1, row=5, icon=22,
+    proc_type_mask=0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=226, amplitude=30000),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=22,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever you hit with Blood Strike or Pestilence there is a $h% chance that the Blood Rune becomes a Death Rune when it activates.  Death Runes count as a Blood, Frost or Unholy Rune.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 33, 'ProcTypeMask': 69648, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Increases the chance for each rune your Scourge Strike spends to return as a Death Rune by $s1%.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Reaping", U7 / U27): talent row 5, rank 1. eff0 is a plain DUMMY 5% read by the Scourge Strike script (added to the 33% Death Rune chance). The stock PERIODIC_DUMMY (aura 226, 30 s), ProcTypeMask 0x11010, AttributesEx3 0x4000000 and ProcChance (33 / 66 / 100) are gone, so the SpellAuras.cpp:1791 / SpellAuraEffects.cpp:5989 Death Rune hardcodes go inert. spell_dk_death_rune is unbound from -49208 and its spell_proc row removed (end of this file); -49467 keeps the script.'
+    ),
 )
 
 
-wandering_plague_49217 = spell(
-    id=49217,
-    name='Wandering Plague',
-    school=School.NATURE,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+wandering_plague_49217 = _frost_rank(
+    49217, 'Wandering Plague', rank=1, row=8, icon=1614,
+    school=School.NATURE, proc_type_mask=0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=7288),
+        Effect(type=EffectType.APPLY_AURA, base_points=32, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY, misc_value=7288),
     ],
-    spell_icon_id=1614,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your diseases damage an enemy, there is a chance equal to your melee critical strike chance that they will cause $s1% additional damage to the target and all enemies within 8 yards.  Ignores any target under the effect of a spell that is cancelled by taking damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 2048, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 262144, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1},
+    description='When your Festering Wounds burst, there is a chance equal to your melee critical strike chance that they deal $s1% additional damage to the target and all enemies within 8 yards. Ignores any target under the effect of a spell that is cancelled by taking damage.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Wandering Plague", U9): talent row 8, rank 1. eff0 DUMMY 33% of the burst, read by the wound burst script. Value unchanged. ProcTypeMask is 0 (the proc moved from disease ticks to wound bursts): the spell_proc row -49217 and spell_dk_wandering_plague_aura are removed at the end of this file, and a zero ProcTypeMask stops SpellMgr rebuilding a default row. The inert mask is gone.'
+    ),
 )
 
 
-blood_caked_blade_49219 = spell(
-    id=49219,
-    name='Blood-Caked Blade',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+blood_caked_blade_49219 = _frost_rank(
+    49219, 'Blood-Caked Blade', rank=1, row=3, icon=138,
+    proc_chance=10, proc_type_mask=20, equipped=(2, 173555),
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.DUMMY, trigger_spell=50463),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY, trigger_spell=50463),
     ],
-    spell_icon_id=138,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your auto attacks have a $h% chance to cause a Blood-Caked Strike, which hits for $50463s1% weapon damage plus ${$50463m1/2}.1% for each of your diseases on the target.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskB_1': 1024, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 10, 'ProcTypeMask': 20, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    description='Your auto attacks have a $h% chance to cause a Blood-Caked Strike, which hits for $50463s1% weapon damage plus ${$50463m1/2}.1% for each of your diseases on the target.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Blood-Caked Blade", U27): talent row 3, rank 1. No value change: ProcChance 10 (the stock spell_proc -49219, flags 0x4 phase 0, inherits it), ProcTypeMask 20, eff0 DUMMY -> 50463, the stock weapon requirement (EquippedItemClass 2 / 173555), script spell_dk_blood_caked_blade on -49219. Rebuilt from scratch: the eff1 mask twin (0x400) and the eff2 residue are gone.'
+    ),
 )
 
 
-dirge_49223 = spell(
-    id=49223,
-    name='Dirge',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+dirge_49223 = _frost_rank(
+    49223, 'Dirge', rank=1, row=4, icon=2206,
+    masks={1: m.PS_SS_READ}, proc_chance=100, proc_type_mask=0x10,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=24, implicit_target_a=1, apply_aura=231, misc_value=10, trigger_spell=51206),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, misc_value=10, trigger_spell=51206),
     ],
-    spell_icon_id=2206,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Death Strike, Plague Strike and Scourge Strike generate 2.5 additional runic power.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4353, 'EffectSpellClassMaskA_2': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 87056, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Your Plague Strike and Scourge Strike generate 2 additional Runic Power.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Dirge", L24 / U27): talent row 4, rank 1. eff0 aura 231 PROC_TRIGGER_SPELL_WITH_VALUE -> 51206, stored 19 = 20 internal = 2 Runic Power (aura 231 amounts are Runic Power x 10; stock 24 / 49 = 2.5 / 5). The proc row -49223 (end of this file) is a CAST-phase row on Plague Strike d0 b0 + Scourge Strike d1 b27 only, melee spell class flags 0x10 (the Death Strike and Obliterate bits are gone). Mask on the effect = the same pair for clarity. ProcTypeMask 0x10, ProcChance 100.'
+    ),
 )
 
 
@@ -1539,7 +1509,7 @@ magic_suppression_49224 = spell(
     ],
     spell_icon_id=99,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You take $s2% less damage from all magic.  In addition, your Anti-Magic Shell absorbs an additional $s1% of spell damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcCharges': 1, 'RangeIndex': 1, 'RuneCostID': 655, 'SpellClassSet': 15, 'SpellLevel': 55},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You take $s2% less damage from all magic. In addition, your Anti-Magic Shell absorbs an additional $s1% of spell damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcCharges': 1, 'RangeIndex': 1, 'RuneCostID': 655, 'SpellClassSet': 15, 'SpellLevel': 55},
 )
 
 
@@ -2012,209 +1982,131 @@ bloodworms_49543 = spell(
 )
 
 
-epidemic_49562 = spell(
-    id=49562,
-    name='Epidemic',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+epidemic_49562 = _frost_rank(
+    49562, 'Epidemic', rank=2, row=1, icon=234,
+    masks={1: (0, m.BLOOD_PLAGUE_DISEASE | m.FROST_FEVER_DISEASE, _CRYPT_FEVER_BIT)},
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=5999, implicit_target_a=1, apply_aura=107, misc_value=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=5999, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.DURATION),
     ],
-    spell_icon_id=234,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the duration of Blood Plague and Frost Fever by $/1000;s1 sec.', 'EffectBasePoints_3': -1, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_2': 100663296, 'EffectSpellClassMaskA_3': 16, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Increases the duration of Blood Plague and Frost Fever by $/1000;s1 sec.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Epidemic", U27): talent row 1, rank 2. Values unchanged: SPELLMOD duration +6 s on (0, Blood Plague d1 b25 | Frost Fever d1 b26, d2 b4) - d2 b4 is also Crypt Fever 50508 and Ebon Plague 51726 (the core forces 51726 to 0x10), so it reaches both debuffs. Rebuilt from scratch: the empty eff2 twins are gone.'
+    ),
 )
 
 
-morbidity_49564 = spell(
-    id=49564,
-    name='Morbidity',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+morbidity_49564 = _frost_rank(
+    49564, 'Morbidity', rank=2, row=1, icon=118,
+    masks={1: (m.DEATH_COIL, 0, 0), 2: (m.DEATH_AND_DECAY, 0, 0)},
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=-10001, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_PCT_MODIFIER),
+        Effect(type=EffectType.APPLY_AURA, base_points=-10001, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COOLDOWN),
     ],
-    spell_icon_id=118,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage and healing of Death Coil by $s1% and reduces the cooldown on Death and Decay by $/1000;s2 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8192, 'EffectSpellClassMaskB_1': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Increases the damage and healing of Death Coil by $s1% and reduces the cooldown on Death and Decay by $/1000;s2 sec.\n\n|cFF9D9D9DCapstone: Your Death Coil reapplies your Frost Fever and Blood Plague on the target, at full duration.|r',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Morbidity", U24 / U27): talent row 1, rank 2. Values unchanged: eff0 SPELLMOD damage +10% on Death Coil d0 b13 (47541 / 47632 / 47633), eff1 SPELLMOD cooldown -10 s on Death and Decay d0 b5. Rank 3 is the capstone (an APPLY_AURA rank: the C++ gates on HasAura(49565), L4): the paragraph is greyed on ranks 1 / 2. Rebuilt from scratch.'
+    ),
 )
 
 
-morbidity_49565 = spell(
-    id=49565,
-    name='Morbidity',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+morbidity_49565 = _frost_rank(
+    49565, 'Morbidity', rank=3, row=1, icon=118,
+    masks={1: (m.DEATH_COIL, 0, 0), 2: (m.DEATH_AND_DECAY, 0, 0)},
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=-15001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_PCT_MODIFIER),
+        Effect(type=EffectType.APPLY_AURA, base_points=-15001, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COOLDOWN),
     ],
-    spell_icon_id=118,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage and healing of Death Coil by $s1% and reduces the cooldown on Death and Decay by $/1000;s2 sec.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8192, 'EffectSpellClassMaskB_1': 32, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Increases the damage and healing of Death Coil by $s1% and reduces the cooldown on Death and Decay by $/1000;s2 sec.\n\nCapstone: Your Death Coil reapplies your Frost Fever and Blood Plague on the target, at full duration.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Morbidity", U24 / U27): talent row 1, rank 3. Values unchanged: eff0 SPELLMOD damage +15% on Death Coil d0 b13 (47541 / 47632 / 47633), eff1 SPELLMOD cooldown -15 s on Death and Decay d0 b5. Rank 3 is the capstone (an APPLY_AURA rank: the C++ gates on HasAura(49565), L4): the paragraph is greyed on ranks 1 / 2. Rebuilt from scratch.'
+    ),
 )
 
 
-virulence_49567 = spell(
-    id=49567,
-    name='Virulence',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+virulence_49567 = _frost_rank(
+    49567, 'Virulence', rank=2, row=0, icon=208,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=55, misc_value=16),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, apply_aura=107, misc_value=28),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.HASTE_ALL),
     ],
-    spell_icon_id=208,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to hit with your spells by $s1% and reduces the chance that your damage over time diseases can be cured by $s2%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 736225, 'EffectSpellClassMaskA_2': 1098, 'EffectSpellClassMaskB_3': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Increases your Haste by $s1%.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Virulence", U27): talent row 0, rank 2. eff0 aura 193 HASTE_ALL +2% (spell haste: GCD, runes, DoT ticks; the S2 U22 precedent), no class mask. The stock spell hit (aura 55) and dispel resistance (SPELLMOD 28) effects and the wide masks (incl. the lint-forbidden d1 b10 0x400 of 0x44a) are gone.'
+    ),
 )
 
 
-virulence_49568 = spell(
-    id=49568,
-    name='Virulence',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+virulence_49568 = _frost_rank(
+    49568, 'Virulence', rank=3, row=0, icon=208,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=55, misc_value=16),
-        Effect(type=EffectType.APPLY_AURA, base_points=29, apply_aura=107, misc_value=28),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.HASTE_ALL),
     ],
-    spell_icon_id=208,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your chance to hit with your spells by $s1% and reduces the chance that your damage over time diseases can be cured by $s2%.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 736225, 'EffectSpellClassMaskA_2': 1098, 'EffectSpellClassMaskB_3': 2, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Increases your Haste by $s1%.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Virulence", U27): talent row 0, rank 3. eff0 aura 193 HASTE_ALL +3% (spell haste: GCD, runes, DoT ticks; the S2 U22 precedent), no class mask. The stock spell hit (aura 55) and dispel resistance (SPELLMOD 28) effects and the wide masks (incl. the lint-forbidden d1 b10 0x400 of 0x44a) are gone.'
+    ),
 )
 
 
-ravenous_dead_49571 = spell(
-    id=49571,
-    name='Ravenous Dead',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+ravenous_dead_49571 = _frost_rank(
+    49571, 'Ravenous Dead', rank=2, row=1, icon=3010,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=137),
-        Effect(type=EffectType.DUMMY, base_points=39, implicit_target_a=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE),
     ],
-    spell_icon_id=3010,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Strength by $s1% and the contribution your Ghouls get from your Strength and Stamina by $s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 67108864, 'EffectSpellClassMaskB_2': 16, 'EffectSpellClassMaskC_1': 4096, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Increases your total Strength by $s1%.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Ravenous Dead", U27): talent row 1, rank 2. eff0 aura 137 total Strength +2% (misc 0 = Strength; icon 3010 is read at spell_dk.cpp:248 / 814 through effect 0). The ghoul share effect (eff1: DUMMY 20 / 40 / 60) is dropped, with its masks and the eff2 twins.'
+    ),
 )
 
 
-ravenous_dead_49572 = spell(
-    id=49572,
-    name='Ravenous Dead',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+ravenous_dead_49572 = _frost_rank(
+    49572, 'Ravenous Dead', rank=3, row=1, icon=3010,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=137),
-        Effect(type=EffectType.DUMMY, base_points=59, implicit_target_a=1),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.MOD_TOTAL_STAT_PERCENTAGE),
     ],
-    spell_icon_id=3010,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases your total Strength by $s1% and the contribution your Ghouls get from your Strength and Stamina by $s2%', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 67108864, 'EffectSpellClassMaskB_2': 16, 'EffectSpellClassMaskC_1': 4096, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Increases your total Strength by $s1%.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Ravenous Dead", U27): talent row 1, rank 3. eff0 aura 137 total Strength +3% (misc 0 = Strength; icon 3010 is read at spell_dk.cpp:248 / 814 through effect 0). The ghoul share effect (eff1: DUMMY 20 / 40 / 60) is dropped, with its masks and the eff2 twins.'
+    ),
 )
 
 
-unholy_command_49588 = spell(
-    id=49588,
-    name='Unholy Command',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+unholy_command_49588 = _frost_rank(
+    49588, 'Unholy Command', rank=1, row=3, icon=2723,
+    masks={1: (_DEATH_GRIP, 0, 0)},
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-5001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-5001, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COOLDOWN),
     ],
-    spell_icon_id=2723,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Death Grip ability by $/1000;s1 sec.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 33554432, 'EffectSpellClassMaskB_2': 268435456, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    description='Reduces the cooldown of your Death Grip ability by $/1000;s1 sec.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Unholy Command", U27): talent row 3, rank 1. No value change: SPELLMOD cooldown -5 s on Death Grip (d0 b25). Rebuilt from scratch: the eff1 mask twin (EffectSpellClassMaskB_2 0x10000000) and the eff2 residue are gone.'
+    ),
 )
 
 
-unholy_command_49589 = spell(
-    id=49589,
-    name='Unholy Command',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+unholy_command_49589 = _frost_rank(
+    49589, 'Unholy Command', rank=2, row=3, icon=2723,
+    masks={1: (_DEATH_GRIP, 0, 0)},
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-10001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=-10001, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COOLDOWN),
     ],
-    spell_icon_id=2723,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown of your Death Grip ability by $/1000;s1 sec.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 33554432, 'EffectSpellClassMaskB_2': 268435456, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    description='Reduces the cooldown of your Death Grip ability by $/1000;s1 sec.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Unholy Command", U27): talent row 3, rank 2. No value change: SPELLMOD cooldown -10 s on Death Grip (d0 b25). Rebuilt from scratch: the eff1 mask twin (EffectSpellClassMaskB_2 0x10000000) and the eff2 residue are gone.'
+    ),
 )
 
 
-dirge_49599 = spell(
-    id=49599,
-    name='Dirge',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+dirge_49599 = _frost_rank(
+    49599, 'Dirge', rank=2, row=4, icon=2206,
+    masks={1: m.PS_SS_READ}, proc_chance=100, proc_type_mask=0x10,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=1, apply_aura=231, misc_value=10, trigger_spell=51206),
+        Effect(type=EffectType.APPLY_AURA, base_points=49, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.PROC_TRIGGER_SPELL_WITH_VALUE, misc_value=10, trigger_spell=51206),
     ],
-    spell_icon_id=2206,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Death Strike, Plague Strike and Scourge Strike generate 5 additional runic power.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4353, 'EffectSpellClassMaskA_2': 128, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 349200, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Your Plague Strike and Scourge Strike generate 5 additional Runic Power.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Dirge", L24 / U27): talent row 4, rank 2. eff0 aura 231 PROC_TRIGGER_SPELL_WITH_VALUE -> 51206, stored 49 = 50 internal = 5 Runic Power (aura 231 amounts are Runic Power x 10; stock 24 / 49 = 2.5 / 5). The proc row -49223 (end of this file) is a CAST-phase row on Plague Strike d0 b0 + Scourge Strike d1 b27 only, melee spell class flags 0x10 (the Death Strike and Obliterate bits are gone). Mask on the effect = the same pair for clarity. ProcTypeMask 0x10, ProcChance 100.'
+    ),
 )
 
 
@@ -2235,7 +2127,7 @@ magic_suppression_49610 = spell(
     ],
     spell_icon_id=99,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You take $s2% less damage from all magic.  In addition, your Anti-Magic Shell absorbs an additional $s1% of spell damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 690, 'SpellClassSet': 15, 'SpellLevel': 55},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You take $s2% less damage from all magic. In addition, your Anti-Magic Shell absorbs an additional $s1% of spell damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 690, 'SpellClassSet': 15, 'SpellLevel': 55},
 )
 
 
@@ -2256,127 +2148,85 @@ magic_suppression_49611 = spell(
     ],
     spell_icon_id=99,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You take $s2% less damage from all magic.  In addition, your Anti-Magic Shell absorbs an additional $s1% of spell damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcCharges': 1, 'RangeIndex': 1, 'RuneCostID': 691, 'SpellClassSet': 15, 'SpellLevel': 55},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You take $s2% less damage from all magic. In addition, your Anti-Magic Shell absorbs an additional $s1% of spell damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 131072, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcCharges': 1, 'RangeIndex': 1, 'RuneCostID': 691, 'SpellClassSet': 15, 'SpellLevel': 55},
 )
 
 
-blood_caked_blade_49627 = spell(
-    id=49627,
-    name='Blood-Caked Blade',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+blood_caked_blade_49627 = _frost_rank(
+    49627, 'Blood-Caked Blade', rank=2, row=3, icon=138,
+    proc_chance=20, proc_type_mask=20, equipped=(2, 173555),
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.DUMMY, trigger_spell=50463),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY, trigger_spell=50463),
     ],
-    spell_icon_id=138,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your auto attacks have a $h% chance to cause a Blood-Caked Strike, which hits for $50463s1% weapon damage plus ${$50463m1/2}.1% for each of your diseases on the target.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskB_1': 1024, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 20, 'ProcTypeMask': 20, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    description='Your auto attacks have a $h% chance to cause a Blood-Caked Strike, which hits for $50463s1% weapon damage plus ${$50463m1/2}.1% for each of your diseases on the target.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Blood-Caked Blade", U27): talent row 3, rank 2. No value change: ProcChance 20 (the stock spell_proc -49219, flags 0x4 phase 0, inherits it), ProcTypeMask 20, eff0 DUMMY -> 50463, the stock weapon requirement (EquippedItemClass 2 / 173555), script spell_dk_blood_caked_blade on -49219. Rebuilt from scratch: the eff1 mask twin (0x400) and the eff2 residue are gone.'
+    ),
 )
 
 
-blood_caked_blade_49628 = spell(
-    id=49628,
-    name='Blood-Caked Blade',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+blood_caked_blade_49628 = _frost_rank(
+    49628, 'Blood-Caked Blade', rank=3, row=3, icon=138,
+    proc_chance=30, proc_type_mask=20, equipped=(2, 173555),
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.DUMMY, trigger_spell=50463),
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY, trigger_spell=50463),
     ],
-    spell_icon_id=138,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your auto attacks have a $h% chance to cause a Blood-Caked Strike, which hits for $50463s1% weapon damage plus ${$50463m1/2}.1% for each of your diseases on the target.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskB_1': 1024, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 30, 'ProcTypeMask': 20, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    description='Your auto attacks have a $h% chance to cause a Blood-Caked Strike, which hits for $50463s1% weapon damage plus ${$50463m1/2}.1% for each of your diseases on the target.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Blood-Caked Blade", U27): talent row 3, rank 3. No value change: ProcChance 30 (the stock spell_proc -49219, flags 0x4 phase 0, inherits it), ProcTypeMask 20, eff0 DUMMY -> 50463, the stock weapon requirement (EquippedItemClass 2 / 173555), script spell_dk_blood_caked_blade on -49219. Rebuilt from scratch: the eff1 mask twin (0x400) and the eff2 residue are gone.'
+    ),
 )
 
 
-crypt_fever_49631 = spell(
-    id=49631,
-    name='Crypt Fever',
+crypt_fever_49631 = _frost_rank(
+    49631, 'Crypt Fever', rank=2, row=7, icon=264,
     school=School.NATURE,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=112, misc_value=7282),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.OVERRIDE_CLASS_SCRIPTS, misc_value=7282),
     ],
-    spell_icon_id=264,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your diseases also cause Crypt Fever, which increases disease damage taken by the target by $50509s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 2048, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Your diseases also cause Crypt Fever, which increases disease and Festering Wound damage taken by the target by $s1%.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Crypt Fever", U12 / D7): talent row 7, rank 2. The id and the aura 112 / misc 7282 are kept (SpellAuras.cpp:1549 switch). eff0 now carries the rank amount, stored 19 = 20%, read by spell_dk_crypt_fever_amount (DoEffectCalcAmount on 50508 eff0); it was bp -1 (0). The inert (0, 0x800, 0) mask and the eff2 residue are gone.'
+    ),
 )
 
 
-crypt_fever_49632 = spell(
-    id=49632,
-    name='Crypt Fever',
+crypt_fever_49632 = _frost_rank(
+    49632, 'Crypt Fever', rank=3, row=7, icon=264,
     school=School.NATURE,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=112, misc_value=7282),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.OVERRIDE_CLASS_SCRIPTS, misc_value=7282),
     ],
-    spell_icon_id=264,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your diseases also cause Crypt Fever, which increases disease damage taken by the target by $50510s1%.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_2': 2048, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Your diseases also cause Crypt Fever, which increases disease and Festering Wound damage taken by the target by $s1%.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Crypt Fever", U12 / D7): talent row 7, rank 3. The id and the aura 112 / misc 7282 are kept (SpellAuras.cpp:1549 switch). eff0 now carries the rank amount, stored 29 = 30%, read by spell_dk_crypt_fever_amount (DoEffectCalcAmount on 50508 eff0); it was bp -1 (0). The inert (0, 0x800, 0) mask and the eff2 residue are gone.'
+    ),
 )
 
 
-wandering_plague_49654 = spell(
-    id=49654,
-    name='Wandering Plague',
-    school=School.SHADOW,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+wandering_plague_49654 = _frost_rank(
+    49654, 'Wandering Plague', rank=2, row=8, icon=1614,
+    school=School.NATURE, proc_type_mask=0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=65, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=7288),
+        Effect(type=EffectType.APPLY_AURA, base_points=65, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY, misc_value=7288),
     ],
-    spell_icon_id=1614,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your diseases damage an enemy, there is a chance equal to your melee critical strike chance that they will cause $s1% additional damage to the target and all enemies within 8 yards.  Ignores any target under the effect of a spell that is cancelled by taking damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 2048, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 262144, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1},
+    description='When your Festering Wounds burst, there is a chance equal to your melee critical strike chance that they deal $s1% additional damage to the target and all enemies within 8 yards. Ignores any target under the effect of a spell that is cancelled by taking damage.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Wandering Plague", U9): talent row 8, rank 2. eff0 DUMMY 66% of the burst, read by the wound burst script. Value unchanged. ProcTypeMask is 0 (the proc moved from disease ticks to wound bursts): the spell_proc row -49217 and spell_dk_wandering_plague_aura are removed at the end of this file, and a zero ProcTypeMask stops SpellMgr rebuilding a default row. The inert mask is gone.'
+    ),
 )
 
 
-wandering_plague_49655 = spell(
-    id=49655,
-    name='Wandering Plague',
-    school=School.SHADOW,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+wandering_plague_49655 = _frost_rank(
+    49655, 'Wandering Plague', rank=3, row=8, icon=1614,
+    school=School.NATURE, proc_type_mask=0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=AuraType.DUMMY, misc_value=7288),
+        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY, misc_value=7288),
     ],
-    spell_icon_id=1614,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'When your diseases damage an enemy, there is a chance equal to your melee critical strike chance that they will cause $s1% additional damage to the target and all enemies within 8 yards.  Ignores any target under the effect of a spell that is cancelled by taking damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 2048, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 262144, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1},
+    description='When your Festering Wounds burst, there is a chance equal to your melee critical strike chance that they deal $s1% additional damage to the target and all enemies within 8 yards. Ignores any target under the effect of a spell that is cancelled by taking damage.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Wandering Plague", U9): talent row 8, rank 3. eff0 DUMMY 100% of the burst, read by the wound burst script. Value unchanged. ProcTypeMask is 0 (the proc moved from disease ticks to wound bursts): the spell_proc row -49217 and spell_dk_wandering_plague_aura are removed at the end of this file, and a zero ProcTypeMask stops SpellMgr rebuilding a default row. The inert mask is gone.'
+    ),
 )
 
 
@@ -2671,66 +2521,39 @@ chill_of_the_grave_50115 = _frost_rank(
 )
 
 
-rage_of_rivendare_50117 = spell(
-    id=50117,
-    name='Rage of Rivendare',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+rage_of_rivendare_50117 = _frost_rank(
+    50117, 'Rage of Rivendare', rank=1, row=6, icon=2675,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=112, misc_value=7293),
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=240),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=2675,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spells and abilities deal 2% more damage to targets infected with Blood Plague.  Also increases your expertise by $s2.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 291774739, 'EffectSpellClassMaskA_2': 771948838, 'EffectSpellClassMaskA_3': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Your diseases and undead minions deal $s1% more damage.\n\n|cFF9D9D9DCapstone: This bonus is increased by your Mastery.|r',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Rage of Rivendare", U13): talent row 6, rank 1 of 3 (50120 / 50121 are not granted). eff0 is a DUMMY 3% (Dread Host: diseases, wound bursts and Unholy minions, read by GetDreadHostPct); rank 3 is the capstone (+ Mastery, gate HasAura(50119)). The stock aura 112 / misc 7293 (rank x 2% vs Blood Plague, Unit.cpp:8464 / 10177), aura 240 (expertise) and the wide masks are gone.'
+    ),
 )
 
 
-rage_of_rivendare_50118 = spell(
-    id=50118,
-    name='Rage of Rivendare',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+rage_of_rivendare_50118 = _frost_rank(
+    50118, 'Rage of Rivendare', rank=2, row=6, icon=2675,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=112, misc_value=7293),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=240),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=2675,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spells and abilities deal 4% more damage to targets infected with Blood Plague.  Also increases your expertise by $s2.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 23339283, 'EffectSpellClassMaskA_2': 771948838, 'EffectSpellClassMaskA_3': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Your diseases and undead minions deal $s1% more damage.\n\n|cFF9D9D9DCapstone: This bonus is increased by your Mastery.|r',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Rage of Rivendare", U13): talent row 6, rank 2 of 3 (50120 / 50121 are not granted). eff0 is a DUMMY 6% (Dread Host: diseases, wound bursts and Unholy minions, read by GetDreadHostPct); rank 3 is the capstone (+ Mastery, gate HasAura(50119)). The stock aura 112 / misc 7293 (rank x 2% vs Blood Plague, Unit.cpp:8464 / 10177), aura 240 (expertise) and the wide masks are gone.'
+    ),
 )
 
 
-rage_of_rivendare_50119 = spell(
-    id=50119,
-    name='Rage of Rivendare',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+rage_of_rivendare_50119 = _frost_rank(
+    50119, 'Rage of Rivendare', rank=3, row=6, icon=2675,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=112, misc_value=7293),
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=240),
+        Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=2675,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spells and abilities deal 6% more damage to targets infected with Blood Plague.  Also increases your expertise by $s2.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 23339283, 'EffectSpellClassMaskA_2': 771948838, 'EffectSpellClassMaskA_3': 8, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Your diseases and undead minions deal $s1% more damage.\n\nCapstone: This bonus is increased by your Mastery.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Rage of Rivendare", U13): talent row 6, rank 3 of 3 (50120 / 50121 are not granted). eff0 is a DUMMY 9% (Dread Host: diseases, wound bursts and Unholy minions, read by GetDreadHostPct); rank 3 is the capstone (+ Mastery, gate HasAura(50119)). The stock aura 112 / misc 7293 (rank x 2% vs Blood Plague, Unit.cpp:8464 / 10177), aura 240 (expertise) and the wide masks are gone.'
+    ),
 )
 
 
@@ -3305,25 +3128,17 @@ icy_talons_50887 = spell(
 )
 
 
-ebon_plaguebringer_51099 = spell(
-    id=51099,
-    name='Ebon Plaguebringer',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+ebon_plaguebringer_51099 = _frost_rank(
+    51099, 'Ebon Plaguebringer', rank=1, row=9, icon=1766,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=99, implicit_target_a=1, apply_aura=112, misc_value=7282),
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=52, misc_value=127),
-        Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=57),
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.OVERRIDE_CLASS_SCRIPTS, misc_value=7282),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.MOD_WEAPON_CRIT_PERCENT),
+        Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.MOD_SPELL_CRIT_CHANCE),
     ],
-    spell_icon_id=1766,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Crypt Fever morphs into Ebon Plague, which increases magic damage taken by 4% in addition to increasing disease damage taken.  Improves your critical strike chance with weapons and spells by $51099s2% at all times.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 2048, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Your Crypt Fever morphs into Ebon Plague, which increases magic damage taken by $s1% in addition to increasing disease and Festering Wound damage taken. Improves your critical strike chance with weapons and spells by $s2% at all times.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Ebon Plaguebringer", U12 / D7): talent row 9, rank 1. The id, aura 112 / misc 7282 and icon 1766 are kept (SpellAuras.cpp:1549 searches icon 1766 first). eff0 carries the rank amount, stored 3 = 4% magic damage taken, read by spell_dk_crypt_fever_amount (51726 eff1); stock rank 1 had a stray bp 99. eff1 / eff2 crit +1% (weapons / spells). Rebuilt from scratch: the inert (0, 0x800, 0) mask and the rank-1 misc 127 are gone.'
+    ),
 )
 
 
@@ -3473,47 +3288,31 @@ killing_machine_51130 = spell(
 )
 
 
-ebon_plaguebringer_51160 = spell(
-    id=51160,
-    name='Ebon Plaguebringer',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+ebon_plaguebringer_51160 = _frost_rank(
+    51160, 'Ebon Plaguebringer', rank=2, row=9, icon=1766,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=112, misc_value=7282),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=52),
-        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=57),
+        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.OVERRIDE_CLASS_SCRIPTS, misc_value=7282),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.MOD_WEAPON_CRIT_PERCENT),
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.MOD_SPELL_CRIT_CHANCE),
     ],
-    spell_icon_id=1766,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Crypt Fever morphs into Ebon Plague, which increases magic damage taken by 9% in addition to increasing disease damage taken.  Improves your critical strike chance with weapons and spells by $51160s2% at all times.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 2048, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Your Crypt Fever morphs into Ebon Plague, which increases magic damage taken by $s1% in addition to increasing disease and Festering Wound damage taken. Improves your critical strike chance with weapons and spells by $s2% at all times.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Ebon Plaguebringer", U12 / D7): talent row 9, rank 2. The id, aura 112 / misc 7282 and icon 1766 are kept (SpellAuras.cpp:1549 searches icon 1766 first). eff0 carries the rank amount, stored 7 = 8% magic damage taken, read by spell_dk_crypt_fever_amount (51726 eff1); stock rank 1 had a stray bp 99. eff1 / eff2 crit +2% (weapons / spells). Rebuilt from scratch: the inert (0, 0x800, 0) mask and the rank-1 misc 127 are gone.'
+    ),
 )
 
 
-ebon_plaguebringer_51161 = spell(
-    id=51161,
-    name='Ebon Plaguebringer',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+ebon_plaguebringer_51161 = _frost_rank(
+    51161, 'Ebon Plaguebringer', rank=3, row=9, icon=1766,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=112, misc_value=7282),
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=52),
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=57),
+        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.OVERRIDE_CLASS_SCRIPTS, misc_value=7282),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.MOD_WEAPON_CRIT_PERCENT),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.MOD_SPELL_CRIT_CHANCE),
     ],
-    spell_icon_id=1766,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Crypt Fever morphs into Ebon Plague, which increases magic damage taken by 13% in addition to increasing disease damage taken.  Improves your critical strike chance with weapons and spells by $51161s2% at all times.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_2': 2048, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Your Crypt Fever morphs into Ebon Plague, which increases magic damage taken by $s1% in addition to increasing disease and Festering Wound damage taken. Improves your critical strike chance with weapons and spells by $s2% at all times.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Ebon Plaguebringer", U12 / D7): talent row 9, rank 3. The id, aura 112 / misc 7282 and icon 1766 are kept (SpellAuras.cpp:1549 searches icon 1766 first). eff0 carries the rank amount, stored 11 = 12% magic damage taken, read by spell_dk_crypt_fever_amount (51726 eff1); stock rank 1 had a stray bp 99. eff1 / eff2 crit +3% (weapons / spells). Rebuilt from scratch: the inert (0, 0x800, 0) mask and the rank-1 misc 127 are gone.'
+    ),
 )
 
 
@@ -3533,8 +3332,11 @@ on_a_pale_horse_51267 = spell(
         Effect(type=EffectType.LEARN_SPELL, base_points=-1, implicit_target_a=1, trigger_spell=51970),
     ],
     spell_icon_id=3005,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 2147614720, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You become as hard to stop as death itself.  The duration of all Stun and Fear effects used against you is reduced by 20%, and your mounted speed is increased by 20%.  This does not stack with other movement speed increasing effects.', 'EffectBasePoints_3': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskB_1': 67108864, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    notes=(
+        'pulled from existing data'
+        '. S3a (D5): rank 2 stays a LEARN_SPELL rank (L4: the C++ gates on the learned passive, HasAura(51983) || HasAura(51986)). The tooltip adds the Pestilence damage (quoted from 203477 through pot_text) and the +10 yd radius, which is a SpellMod in the second passive (51970 eff1). The stale inert mask on the LEARN effect and the empty third-slot twins are gone.'
+    ),
+    raw_overrides={'AttributesEx': 2147614720, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': ('Your Pestilence deals ' + _OPH_POT + ' Shadow damage to each enemy it hits, and its radius is increased by 10 yards. The duration of all Stun and Fear effects used against you is reduced by 20%, and your mounted speed is increased by 20%. This does not stack with other movement speed increasing effects.'), 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -3566,62 +3368,42 @@ improved_icy_touch_51456 = _frost_rank(
 )
 
 
-necrosis_51459 = spell(
-    id=51459,
-    name='Necrosis',
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+necrosis_51459 = _frost_rank(
+    51459, 'Necrosis', rank=1, row=2, icon=2709,
+    proc_chance=100, proc_type_mask=20,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=2709,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your auto attacks deal an additional $s1% Shadow damage.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskB_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 20, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    description='Your auto attacks deal an additional $s1% Shadow damage.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Necrosis", U27): talent row 2, rank 1 of 3 (51464 / 51465 are not granted). eff0 DUMMY 6% (stock 4 / 8 / 12 / 16 / 20%) read by the stock spell_dk_necrosis on -51459. ProcTypeMask 20 and ProcChance 100 kept; the stock spell_proc row -51459 (flags 0x4, phase 0) is unchanged. The eff1 mask twin (0x400) and the eff2 residue are gone.'
+    ),
 )
 
 
-necrosis_51462 = spell(
-    id=51462,
-    name='Necrosis',
-    school=School.SHADOW,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+necrosis_51462 = _frost_rank(
+    51462, 'Necrosis', rank=2, row=2, icon=2709,
+    proc_chance=100, proc_type_mask=20,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=7, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=12, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=2709,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your auto attacks deal an additional $s1% Shadow damage.', 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskB_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 20, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    description='Your auto attacks deal an additional $s1% Shadow damage.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Necrosis", U27): talent row 2, rank 2 of 3 (51464 / 51465 are not granted). eff0 DUMMY 13% (stock 4 / 8 / 12 / 16 / 20%) read by the stock spell_dk_necrosis on -51459. ProcTypeMask 20 and ProcChance 100 kept; the stock spell_proc row -51459 (flags 0x4, phase 0) is unchanged. The eff1 mask twin (0x400) and the eff2 residue are gone.'
+    ),
 )
 
 
-necrosis_51463 = spell(
-    id=51463,
-    name='Necrosis',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+necrosis_51463 = _frost_rank(
+    51463, 'Necrosis', rank=3, row=2, icon=2709,
+    proc_chance=100, proc_type_mask=20,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=11, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=2709,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your auto attacks deal an additional $s1% Shadow damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 1024, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 20, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    description='Your auto attacks deal an additional $s1% Shadow damage.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Necrosis", U27): talent row 2, rank 3 of 3 (51464 / 51465 are not granted). eff0 DUMMY 20% (stock 4 / 8 / 12 / 16 / 20%) read by the stock spell_dk_necrosis on -51459. ProcTypeMask 20 and ProcChance 100 kept; the stock spell_proc row -51459 (flags 0x4, phase 0) is unchanged. The eff1 mask twin (0x400) and the eff2 residue are gone.'
+    ),
 )
 
 
@@ -3712,45 +3494,31 @@ annihilation_51473 = _frost_rank(
 )
 
 
-vicious_strikes_51745 = spell(
-    id=51745,
-    name='Vicious Strikes',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+vicious_strikes_51745 = _frost_rank(
+    51745, 'Vicious Strikes', rank=1, row=0, icon=2623,
+    masks={1: m.VICIOUS_READ, 2: m.VICIOUS_READ},
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108, misc_value=15),
-        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CRIT_DAMAGE_BONUS),
+        Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
     ],
-    spell_icon_id=2623,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance by $s2% and critical strike damage bonus by $s1% of your Plague Strike and Scourge Strike.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1, 'EffectSpellClassMaskA_2': 134217728, 'EffectSpellClassMaskA_3': 128, 'EffectSpellClassMaskB_1': 17, 'EffectSpellClassMaskB_2': 134217728, 'EffectSpellClassMaskB_3': 128, 'EffectSpellClassMaskC_1': 4194305, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Increases the critical strike chance by $s2% and critical strike damage bonus by $s1% of your Plague Strike and Scourge Strike.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Vicious Strikes", S3-HANDOFF U27): talent row 0, rank 1. eff0 SPELLMOD crit damage bonus +15%, eff1 SPELLMOD crit chance +3%, both on m.VICIOUS_READ (Plague Strike d0 b0, Scourge Strike d1 b27, the Shadow part 70890 d2 b7). The Death Strike bit (d0 0x10) of the stock eff1 mask and the stale eff2 twin (EffectSpellClassMaskC_1 0x400001, ImplicitTargetA_3) are gone.'
+    ),
 )
 
 
-vicious_strikes_51746 = spell(
-    id=51746,
-    name='Vicious Strikes',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+vicious_strikes_51746 = _frost_rank(
+    51746, 'Vicious Strikes', rank=2, row=0, icon=2623,
+    masks={1: m.VICIOUS_READ, 2: m.VICIOUS_READ},
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108, misc_value=15),
-        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=1, apply_aura=107, misc_value=7),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=SpellModOp.CRIT_DAMAGE_BONUS),
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.CRITICAL_CHANCE),
     ],
-    spell_icon_id=2623,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance by $s2% and critical strike damage bonus by $s1% of your Plague Strike and Scourge Strike.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1, 'EffectSpellClassMaskA_2': 134217728, 'EffectSpellClassMaskA_3': 128, 'EffectSpellClassMaskB_1': 17, 'EffectSpellClassMaskB_2': 134217728, 'EffectSpellClassMaskB_3': 128, 'EffectSpellClassMaskC_1': 4194305, 'EquippedItemClass': -1, 'ImplicitTargetA_3': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Increases the critical strike chance by $s2% and critical strike damage bonus by $s1% of your Plague Strike and Scourge Strike.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Vicious Strikes", S3-HANDOFF U27): talent row 0, rank 2. eff0 SPELLMOD crit damage bonus +30%, eff1 SPELLMOD crit chance +6%, both on m.VICIOUS_READ (Plague Strike d0 b0, Scourge Strike d1 b27, the Shadow part 70890 d2 b7). The Death Strike bit (d0 0x10) of the stock eff1 mask and the stale eff2 twin (EffectSpellClassMaskC_1 0x400001, ImplicitTargetA_3) are gone.'
+    ),
 )
 
 
@@ -3771,7 +3539,7 @@ master_of_ghouls_52143 = spell(
     ],
     spell_icon_id=221,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown on Raise Dead by ${$m1/-1000} sec, and the Ghoul summoned by your Raise Dead spell is considered a pet under your control.  Unlike normal Death Knight Ghouls, your pet does not have a limited duration.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4096, 'EffectSpellClassMaskB_2': 32, 'EquippedItemClass': -1, 'ImplicitTargetA_2': 1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown on Raise Dead by ${$m1/-1000} sec, and the Ghoul summoned by your Raise Dead spell is considered a pet under your control. Unlike normal Death Knight Ghouls, your pet does not have a limited duration.', 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 4096, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -3980,47 +3748,31 @@ blade_barrier_55226 = spell(
 )
 
 
-outbreak_55236 = spell(
-    id=55236,
-    name='Outbreak',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    power_type=PowerType.RUNE,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+outbreak_55236 = _frost_rank(
+    55236, 'Outbreak', rank=2, row=2, icon=97,
+    masks={1: (m.PLAGUE_STRIKE, 0, 0), 2: (0, m.SCOURGE_STRIKE, 0)},
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=12, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_PCT_MODIFIER),
+        Effect(type=EffectType.APPLY_AURA, base_points=12, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_PCT_MODIFIER),
     ],
-    spell_icon_id=97,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of Plague Strike by $s1% and Scourge Strike by $s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1, 'EffectSpellClassMaskB_2': 134217728, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 1166, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50},
+    description='Increases the damage of Plague Strike by $s1% and Scourge Strike by $s2%.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Outbreak", U27): talent row 2, rank 2. eff0 SPELLMOD damage +20% on Plague Strike d0 b0, eff1 SPELLMOD damage +13% on Scourge Strike d1 b27 (stock +7 / 13 / 20%: rank 1 changed to 6%). The tooltips read these through tooltip_vars 1254 (Plague Strike, $outbreak) and 1280 (Scourge Strike, $outbreak).'
+    ),
 )
 
 
-outbreak_55237 = spell(
-    id=55237,
-    name='Outbreak',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    power_type=PowerType.RUNE,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+outbreak_55237 = _frost_rank(
+    55237, 'Outbreak', rank=3, row=2, icon=97,
+    masks={1: (m.PLAGUE_STRIKE, 0, 0), 2: (0, m.SCOURGE_STRIKE, 0)},
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=108),
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=108),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_PCT_MODIFIER),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_PCT_MODIFIER),
     ],
-    spell_icon_id=97,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 55, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of Plague Strike by $s1% and Scourge Strike by $s2%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 1, 'EffectSpellClassMaskB_2': 134217728, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 1167, 'SpellClassSet': 15, 'SpellLevel': 55, 'SpellPriority': 50},
+    description='Increases the damage of Plague Strike by $s1% and Scourge Strike by $s2%.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Outbreak", U27): talent row 2, rank 3. eff0 SPELLMOD damage +30% on Plague Strike d0 b0, eff1 SPELLMOD damage +20% on Scourge Strike d1 b27 (stock +7 / 13 / 20%: rank 1 changed to 6%). The tooltips read these through tooltip_vars 1254 (Plague Strike, $outbreak) and 1280 (Scourge Strike, $outbreak).'
+    ),
 )
 
 
@@ -4050,45 +3802,33 @@ improved_icy_talons_55610 = _frost_rank(
 )
 
 
-night_of_the_dead_55620 = spell(
-    id=55620,
-    name='Night of the Dead',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+night_of_the_dead_55620 = _frost_rank(
+    55620, 'Night of the Dead', rank=1, row=5, icon=2718,
+    masks={1: (0, 0, m.LESSER_GHOUL), 2: (m.ARMY_OF_THE_DEAD, 0, 0)},
+    extra_raw={'EffectBasePoints_3': 44, 'EffectDieSides_3': 1},
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-45001, implicit_target_a=1, apply_aura=107, misc_value=11),
-        Effect(type=EffectType.APPLY_AURA, base_points=-120001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=1999, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.DURATION),
+        Effect(type=EffectType.APPLY_AURA, base_points=-120001, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COOLDOWN),
     ],
-    spell_icon_id=2718,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown on Raise Dead by ${$m1/-1000} sec and the cooldown on Army of the Dead by ${$m2/-60000} min.  Also reduces the damage your pet takes from creature area of effect attacks by $s3%.', 'EffectBasePoints_3': 44, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 4096, 'EffectSpellClassMaskB_1': 2048, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Increases the duration of your Lesser Ghouls by $/1000;s1 sec and reduces the cooldown on Army of the Dead by ${$m2/-60000} min. Also reduces the damage your pet takes from creature area of effect attacks by $s3%.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Night of the Dead", U27): talent row 5, rank 1. eff0 stays an ADD_FLAT_MODIFIER on effect index 0 with icon 2718 (Pet.cpp:1417 / pet_dk.cpp:99 / spell_dk.cpp:224 look it up by that) but is now SPELLMOD duration +2 s on the Lesser Ghoul summon d2 b14 (m.LESSER_GHOUL); it was the Raise Dead cooldown. eff1 Army of the Dead cooldown -2 min is unchanged (d0 b11). The third slot is a deliberate data holder (stored 44 + die 1 = 45% pet area damage avoided, read as Effects[EFFECT_2].CalcValue()): not a twin.'
+    ),
 )
 
 
-night_of_the_dead_55623 = spell(
-    id=55623,
-    name='Night of the Dead',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+night_of_the_dead_55623 = _frost_rank(
+    55623, 'Night of the Dead', rank=2, row=5, icon=2718,
+    masks={1: (0, 0, m.LESSER_GHOUL), 2: (m.ARMY_OF_THE_DEAD, 0, 0)},
+    extra_raw={'EffectBasePoints_3': 89, 'EffectDieSides_3': 1},
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-90001, implicit_target_a=1, apply_aura=107, misc_value=11),
-        Effect(type=EffectType.APPLY_AURA, base_points=-240001, implicit_target_a=1, apply_aura=107, misc_value=11),
+        Effect(type=EffectType.APPLY_AURA, base_points=3999, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.DURATION),
+        Effect(type=EffectType.APPLY_AURA, base_points=-240001, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COOLDOWN),
     ],
-    spell_icon_id=2718,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Reduces the cooldown on Raise Dead by ${$m1/-1000} sec and the cooldown on Army of the Dead by ${$m2/-60000} min.  Also reduces the damage your pet takes from creature area of effect attacks by $s3%.', 'EffectBasePoints_3': 89, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EffectSpellClassMaskA_1': 4096, 'EffectSpellClassMaskB_1': 2048, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Increases the duration of your Lesser Ghouls by $/1000;s1 sec and reduces the cooldown on Army of the Dead by ${$m2/-60000} min. Also reduces the damage your pet takes from creature area of effect attacks by $s3%.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Night of the Dead", U27): talent row 5, rank 2. eff0 stays an ADD_FLAT_MODIFIER on effect index 0 with icon 2718 (Pet.cpp:1417 / pet_dk.cpp:99 / spell_dk.cpp:224 look it up by that) but is now SPELLMOD duration +4 s on the Lesser Ghoul summon d2 b14 (m.LESSER_GHOUL); it was the Raise Dead cooldown. eff1 Army of the Dead cooldown -4 min is unchanged (d0 b11). The third slot is a deliberate data holder (stored 89 + die 1 = 90% pet area damage avoided, read as Effects[EFFECT_2].CalcValue()): not a twin.'
+    ),
 )
 
 
@@ -4108,7 +3848,7 @@ desecration_55666 = spell(
     ],
     spell_icon_id=2296,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'ChannelInterruptFlags': 31756, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Plague Strikes and Scourge Strikes cause the Desecrated Ground effect.  Targets in the area are slowed by $55741s1% by the grasping arms of the dead while standing on the unholy ground.  Lasts $55741d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassMask_1': 128, 'SpellClassSet': 15, 'SpellPriority': 50, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'ChannelInterruptFlags': 31756, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Plague Strikes and Scourge Strikes cause the Desecrated Ground effect. Targets in the area are slowed by $55741s1% by the grasping arms of the dead while standing on the unholy ground. Lasts $55741d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassMask_1': 128, 'SpellClassSet': 15, 'SpellPriority': 50, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -4128,7 +3868,7 @@ desecration_55667 = spell(
     ],
     spell_icon_id=2296,
     notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'ChannelInterruptFlags': 31756, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Plague Strikes and Scourge Strikes cause the Desecrated Ground effect.  Targets in the area are slowed by $68766s1% by the grasping arms of the dead while standing on the unholy ground.  Lasts $68766d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassMask_1': 128, 'SpellClassSet': 15, 'SpellPriority': 50, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'ChannelInterruptFlags': 31756, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Plague Strikes and Scourge Strikes cause the Desecrated Ground effect. Targets in the area are slowed by $68766s1% by the grasping arms of the dead while standing on the unholy ground. Lasts $68766d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassMask_1': 128, 'SpellClassSet': 15, 'SpellPriority': 50, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -4159,43 +3899,29 @@ rime_56822 = _frost_rank(
 )
 
 
-reaping_56834 = spell(
-    id=56834,
-    name='Reaping',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+reaping_56834 = _frost_rank(
+    56834, 'Reaping', rank=2, row=5, icon=22,
+    proc_type_mask=0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=226, amplitude=30000),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=22,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever you hit with Blood Strike or Pestilence there is a $h% chance that the Blood Rune becomes a Death Rune when it activates.  Death Runes count as a Blood, Frost or Unholy Rune.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 66, 'ProcTypeMask': 69648, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Increases the chance for each rune your Scourge Strike spends to return as a Death Rune by $s1%.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Reaping", U7 / U27): talent row 5, rank 2. eff0 is a plain DUMMY 10% read by the Scourge Strike script (added to the 33% Death Rune chance). The stock PERIODIC_DUMMY (aura 226, 30 s), ProcTypeMask 0x11010, AttributesEx3 0x4000000 and ProcChance (33 / 66 / 100) are gone, so the SpellAuras.cpp:1791 / SpellAuraEffects.cpp:5989 Death Rune hardcodes go inert. spell_dk_death_rune is unbound from -49208 and its spell_proc row removed (end of this file); -49467 keeps the script.'
+    ),
 )
 
 
-reaping_56835 = spell(
-    id=56835,
-    name='Reaping',
-    school=School.NORMAL,
-    attributes=464,
-    cast_time_ms=0,
-    cooldown_ms=0,
-    category_cooldown_ms=0,
-    mana_cost=0,
-    mana_cost_pct=0,
-    range_yards=0.0,
+reaping_56835 = _frost_rank(
+    56835, 'Reaping', rank=3, row=5, icon=22,
+    proc_type_mask=0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=226, amplitude=30000),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
     ],
-    spell_icon_id=22,
-    notes='pulled from existing data',
-    raw_overrides={'AttributesEx3': 67108864, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Whenever you hit with Blood Strike or Pestilence there is a $h% chance that the Blood Rune becomes a Death Rune when it activates.  Death Runes count as a Blood, Frost or Unholy Rune.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 69648, 'RangeIndex': 1, 'SpellClassSet': 15},
+    description='Increases the chance for each rune your Scourge Strike spends to return as a Death Rune by $s1%.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Reaping", U7 / U27): talent row 5, rank 3. eff0 is a plain DUMMY 15% read by the Scourge Strike script (added to the 33% Death Rune chance). The stock PERIODIC_DUMMY (aura 226, 30 s), ProcTypeMask 0x11010, AttributesEx3 0x4000000 and ProcChance (33 / 66 / 100) are gone, so the SpellAuras.cpp:1791 / SpellAuraEffects.cpp:5989 Death Rune hardcodes go inert. spell_dk_death_rune is unbound from -49208 and its spell_proc row removed (end of this file); -49467 keeps the script.'
+    ),
 )
 
 
@@ -4453,8 +4179,11 @@ desolation_66799 = spell(
         Effect(type=EffectType.APPLY_AURA, die_sides=0, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=63583),
     ],
     spell_icon_id=95,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Blood Strikes cause you to deal $63583s1% additional damage with all attacks for the next $63583d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassMask_1': 128, 'SpellClassSet': 15, 'SpellPriority': 50, 'StartRecoveryCategory': 133},
+    notes=(
+        'pulled from existing data'
+        '. S3a (Unholy doc "Desolation"): the proc moved from Blood Strike to Scourge Strike (spell_proc -66799 at the end of this file); the buffs 63583 / 66800 / 66801 live in deathknight_unholy_helpers.py.'
+    ),
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Scourge Strikes cause you to deal $63583s1% additional damage with all attacks for the next $63583d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassMask_1': 128, 'SpellClassSet': 15, 'SpellPriority': 50, 'StartRecoveryCategory': 133},
 )
 
 
@@ -4473,8 +4202,11 @@ desolation_66814 = spell(
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=66800),
     ],
     spell_icon_id=95,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Blood Strikes cause you to deal $66800s1% additional damage with all attacks for the next $66800d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassMask_1': 128, 'SpellClassSet': 15, 'SpellPriority': 50, 'StartRecoveryCategory': 133},
+    notes=(
+        'pulled from existing data'
+        '. S3a (Unholy doc "Desolation"): the proc moved from Blood Strike to Scourge Strike (spell_proc -66799 at the end of this file); the buffs 63583 / 66800 / 66801 live in deathknight_unholy_helpers.py.'
+    ),
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Scourge Strikes cause you to deal $66800s1% additional damage with all attacks for the next $66800d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassMask_1': 128, 'SpellClassSet': 15, 'SpellPriority': 50, 'StartRecoveryCategory': 133},
 )
 
 
@@ -4493,8 +4225,11 @@ desolation_66815 = spell(
         Effect(type=EffectType.APPLY_AURA, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=66801),
     ],
     spell_icon_id=95,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Blood Strikes cause you to deal $66801s1% additional damage with all attacks for the next $66801d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassMask_1': 128, 'SpellClassSet': 15, 'SpellPriority': 50, 'StartRecoveryCategory': 133},
+    notes=(
+        'pulled from existing data'
+        '. S3a (Unholy doc "Desolation"): the proc moved from Blood Strike to Scourge Strike (spell_proc -66799 at the end of this file); the buffs 63583 / 66800 / 66801 live in deathknight_unholy_helpers.py.'
+    ),
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your Scourge Strikes cause you to deal $66801s1% additional damage with all attacks for the next $66801d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 100, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassMask_1': 128, 'SpellClassSet': 15, 'SpellPriority': 50, 'StartRecoveryCategory': 133},
 )
 
 
@@ -4559,14 +4294,14 @@ gargoyle_strike_51963 = spell(
     name='Gargoyle Strike',
     school=School.NATURE,
     attributes=589824,
-    cast_time_ms=2000,
+    cast_time_ms=1600,
     cooldown_ms=0,
     category_cooldown_ms=0,
     mana_cost=0,
     mana_cost_pct=0,
     range_yards=40.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=16.8, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, sp_potency=100.0, potency_kind='direct', implicit_target_a=6),
     ],
     spell_icon_id=213,
     notes="pulled from existing data. Potency system P8: Ebon Gargoyle's own attack (DoCastVictim, "
@@ -4580,8 +4315,12 @@ gargoyle_strike_51963 = spell(
           "what the engine actually reads for this creature; ap_potency/ap_bonus would instead read "
           "the AP path, which this pet's damage formula never uses, silently zeroing its scaling. "
           "Kept as sp_potency to match the live mechanism exactly (docs/potency-system.md's pets "
-          "section: 'the stock inheritance of owner spell power and attack power stays as is').",
-    raw_overrides={'FacingCasterFlags': 1, 'CastingTimeIndex': 5, 'InterruptFlags': 15, 'ProcChance': 101, 'BaseLevel': 55, 'SpellLevel': 55, 'DurationIndex': 0, 'Speed': 20.0, 'EquippedItemClass': -1, 'SpellVisualID_1': 4379, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Inflicts Nature damage to an enemy.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+          "section: 'the stock inheritance of owner spell power and attack power stays as is'). "
+          "S3a (U17 / user ruling 2026-10-25): cast 1.6 s - BOTH cast_time_ms=1600 (the potency time basis) and the raw "
+          "CastingTimeIndex 130 (SpellCastTimes 130 = 1600 ms); was 2000 / index 5. sp_potency 16.8 -> 100 [tune] (the "
+          "pet's AP-to-SP scaling auras feed spell power), SpellLevel 55 -> 60 (L6; the generator owns BaseLevel). "
+          "Rebound to spell_dk_gargoyle_strike_rework (end of this file); only creature 27829 casts it.",
+    raw_overrides={'FacingCasterFlags': 1, 'CastingTimeIndex': 130, 'InterruptFlags': 15, 'ProcChance': 101, 'SpellLevel': 60, 'DurationIndex': 0, 'Speed': 20.0, 'EquippedItemClass': -1, 'SpellVisualID_1': 4379, 'SpellPriority': 50, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712188, 'Description_Lang_enUS': 'Inflicts {pot1} Nature damage to the enemy.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'DefenseType': 1, 'PreventionType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
 )
 unbind_bonus_coefficients(gargoyle_strike_51963)  # stale spell_bonus_data row overrode the potency coefficient (D1)
 
@@ -4981,3 +4720,176 @@ scripted_by(heart_strike_55050, 'spell_dk_heart_strike_frost')
 scripted_by(plague_strike_45462, 'spell_dk_plague_strike_frost')
 scripted_by(obliterate_66198, 'spell_dk_frost_offhand')
 scripted_by(frost_strike_66196, 'spell_dk_frost_offhand')
+
+
+# ---- S3a WP-0.2 pulls (byte-identical when pulled; A2 rewrote Anticipation and edited 51970 / Impurity) ----
+# Anticipation ranks 1-3 and On a Pale Horse rank 2 passive 51970 (stock-only pulls, S3a-0VERIFY-A C3/C5).
+anticipation_55129 = _frost_rank(
+    55129, 'Anticipation', rank=1, row=0, icon=229,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.MOD_DODGE_PERCENT, misc_value=95),
+    ],
+    description='Increases your Dodge chance by $s1%.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Anticipation", U27): talent row 0, rank 1 of 3 (the stock ranks 4 / 5, 55132 / 55133, are not declared). eff0 aura 49 MOD_DODGE_PERCENT +2% (stock +1 / 2 / 3 / 4 / 5). Pulled from the stock row in WP-0.2.'
+    ),
+)
+
+
+anticipation_55130 = _frost_rank(
+    55130, 'Anticipation', rank=2, row=0, icon=229,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=3, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.MOD_DODGE_PERCENT, misc_value=95),
+    ],
+    description='Increases your Dodge chance by $s1%.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Anticipation", U27): talent row 0, rank 2 of 3 (the stock ranks 4 / 5, 55132 / 55133, are not declared). eff0 aura 49 MOD_DODGE_PERCENT +4% (stock +1 / 2 / 3 / 4 / 5). Pulled from the stock row in WP-0.2.'
+    ),
+)
+
+
+anticipation_55131 = _frost_rank(
+    55131, 'Anticipation', rank=3, row=0, icon=229,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.MOD_DODGE_PERCENT, misc_value=95),
+    ],
+    description='Increases your Dodge chance by $s1%.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Anticipation", U27): talent row 0, rank 3 of 3 (the stock ranks 4 / 5, 55132 / 55133, are not declared). eff0 aura 49 MOD_DODGE_PERCENT +6% (stock +1 / 2 / 3 / 4 / 5). Pulled from the stock row in WP-0.2.'
+    ),
+)
+
+
+on_a_pale_horse_51970 = spell(
+    id=51970,
+    name='On a Pale Horse',
+    school=1,
+    attributes=16777680,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=6, base_points=19, implicit_target_a=1, apply_aura=211),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=_TARGET_SELF,
+               apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.RADIUS),
+    ],
+    spell_icon_id=1241,
+    notes=(
+        'pulled from existing data'
+        '. S3a (D5, 0-verify C3): rank 2 flying-mount passive. eff1 is a SpellMod: ADD_FLAT_MODIFIER radius +10 yd on Pestilence (d1 b16). The stock stale B_1 twin and ImplicitTargetA_2 residue are gone.'
+    ),
+    raw_overrides={'CastingTimeIndex': 1, 'ProcChance': 101, 'DurationIndex': 0, 'RangeIndex': 1, 'EquippedItemClass': -1, 'EffectSpellClassMaskB_2': m.PESTILENCE, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You become as hard to stop as death itself.  The duration of all Stun and Fear effects used against you is reduced by 20%, and your mounted speed is increased by 20%.  This does not stack with other movement speed increasing effects.', 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_Mask': 16712188, 'SpellClassSet': 15, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectBonusMultiplier_1': 1.0},
+)
+
+
+# Impurity ranks 1-3 rebuilt (D8); ranks 4-5 (cut) moved byte-identical from druid/druid_trigger_spells.py (one row, one owner; S3a WP-0.2).
+impurity_49220 = _frost_rank(
+    49220, 'Impurity', rank=1, row=4, icon=1986,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
+    ],
+    description='Your spells receive an additional $s1% benefit from your attack power.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Impurity", D8): talent row 4, rank 1 of 3 (49636 / 49638 stay declared below, cut). Moved from druid_trigger_spells.py in WP-0.2 and re-declared as the APPLY_AURA DUMMY, SpellClassSet 15, icon 1986 the readers expect (Unit.cpp:8688 / 9486 look the aura up by icon 1986 on a DK; SpellInfoCorrections.cpp:793 forces the same shape). 6% of the attack power share (stock 4 / 8 / 12). The family-7 class set and the eff1 mask twin (0x2000000) are gone.'
+    ),
+)
+
+
+impurity_49633 = _frost_rank(
+    49633, 'Impurity', rank=2, row=4, icon=1986,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=12, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
+    ],
+    description='Your spells receive an additional $s1% benefit from your attack power.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Impurity", D8): talent row 4, rank 2 of 3 (49636 / 49638 stay declared below, cut). Moved from druid_trigger_spells.py in WP-0.2 and re-declared as the APPLY_AURA DUMMY, SpellClassSet 15, icon 1986 the readers expect (Unit.cpp:8688 / 9486 look the aura up by icon 1986 on a DK; SpellInfoCorrections.cpp:793 forces the same shape). 13% of the attack power share (stock 4 / 8 / 12). The family-7 class set and the eff1 mask twin (0x2000000) are gone.'
+    ),
+)
+
+
+impurity_49635 = _frost_rank(
+    49635, 'Impurity', rank=3, row=4, icon=1986,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
+    ],
+    description='Your spells receive an additional $s1% benefit from your attack power.',
+    notes=(
+        'death-knight-rework S3a (Unholy doc "Impurity", D8): talent row 4, rank 3 of 3 (49636 / 49638 stay declared below, cut). Moved from druid_trigger_spells.py in WP-0.2 and re-declared as the APPLY_AURA DUMMY, SpellClassSet 15, icon 1986 the readers expect (Unit.cpp:8688 / 9486 look the aura up by icon 1986 on a DK; SpellInfoCorrections.cpp:793 forces the same shape). 20% of the attack power share (stock 4 / 8 / 12). The family-7 class set and the eff1 mask twin (0x2000000) are gone.'
+    ),
+)
+
+
+impurity_49636 = spell(
+    id=49636,
+    name='Impurity',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.DUMMY, base_points=15, implicit_target_a=1),
+    ],
+    spell_icon_id=1986,
+    notes='pulled from existing data',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The attack power bonus of your spells is increased by $49636s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 4', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+)
+
+
+impurity_49638 = spell(
+    id=49638,
+    name='Impurity',
+    school=School.NORMAL,
+    attributes=464,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=0.0,
+    effects=[
+        Effect(type=EffectType.DUMMY, base_points=19, implicit_target_a=1),
+    ],
+    spell_icon_id=1986,
+    notes='pulled from existing data',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Your spells receive an additional $49638s1% benefit from your attack power.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 33554432, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 5', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 7},
+)
+
+
+# ---- S3a (Unholy): spell_proc rows, script bindings and unbinds for the Unholy rank spells and strikes edited above --------------
+# Procs: every DONE spell-class row is HIT (2) except the CAST-phase row (1); the two strikes are melee-class (0x10).
+# Dirge (L24): a CAST-phase row on Plague Strike d0 b0 + Scourge Strike d1 b27 only, once per non-triggered cast (the live row was HIT
+# phase on Plague Strike + Death Strike + Scourge Strike + Obliterate). Chance 0 inherits the rank spell's ProcChance 100.
+procs_on(-49223, proc_flags=_PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS, family_name=_SPELLFAMILY_DEATHKNIGHT, family_mask=m.PS_SS_READ,
+         spell_phase_mask=_PROC_SPELL_PHASE_CAST)
+
+# Desolation: the buff proc moved from Blood Strike (d0 b22) to Scourge Strike (d1 b27); HIT phase, the live row's other fields.
+procs_on(-66799, proc_flags=_PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS, family_name=_SPELLFAMILY_DEATHKNIGHT,
+         family_mask=(0, m.SCOURGE_STRIKE, 0), spell_phase_mask=_PROC_SPELL_PHASE_HIT)
+
+# Wandering Plague (U9): the proc moved from disease ticks to wound bursts (rolled in the burst script), so the stock row and script
+# go; the ranks' ProcTypeMask is 0 (above), otherwise SpellMgr rebuilds a default row from the DBC flags.
+remove_spell_proc(-49217)
+unbind_script(-49217, 'spell_dk_wandering_plague_aura')
+
+# Reaping (U7): the Death Rune conversion proc is gone (the ranks are DUMMY 5 / 10 / 15 read by Scourge Strike). spell_dk_death_rune
+# stays bound to -49467 (Death Rune Mastery).
+remove_spell_proc(-49208)
+unbind_script(-49208, 'spell_dk_death_rune')
+
+# Rebinds (the live keys: -55090 and -49158 are negative chain keys, 49194 and 51963 positive) and second names on shared ids.
+unbind_script(-55090, 'spell_dk_scourge_strike')
+scripted_by(-55090, 'spell_dk_scourge_strike_rework')
+scripted_by(plague_strike_45462, 'spell_dk_plague_strike_unholy')        # second name beside Frost's spell_dk_plague_strike_frost
+unbind_script(49194, 'spell_dk_unholy_blight')
+scripted_by(49194, 'spell_dk_unholy_blight_rework')
+scripted_by(crypt_fever_50508, 'spell_dk_crypt_fever_amount')           # DoEffectCalcAmount on eff0: the caster's Crypt Fever rank
+scripted_by(ebon_plague_51726, 'spell_dk_crypt_fever_amount')           # DoEffectCalcAmount on eff1: the caster's Ebon Plaguebringer rank
+unbind_script(51963, 'spell_pet_dk_gargoyle_strike')
+scripted_by(gargoyle_strike_51963, 'spell_dk_gargoyle_strike_rework')

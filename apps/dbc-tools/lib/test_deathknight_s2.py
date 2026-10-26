@@ -151,8 +151,8 @@ SLA_BLOCK = (30750, 30759)
 SDV_BLOCK = (1253, 1270)
 GROUP_BLOCK = (1273, 1284)
 CREATURE_BLOCK = (300300, 300349)
-ALLOWED_RUNE_COSTS = {2600, 2601}
-PRE_S2_CREATURES = {300340}  # the orc Death Knight trainer (deathknight_trainers.py), not an S2 row
+ALLOWED_RUNE_COSTS = {2600, 2601, 2602}
+PRE_S2_CREATURES = {300340, 300320, 300321}  # the orc trainer 300340; the S3 Lesser Ghoul and Abomination
 
 
 def _in(value: int, block: tuple[int, int]) -> bool:
@@ -1146,9 +1146,9 @@ class DeathKnightS2NegativeTest(unittest.TestCase):
         self.assertEqual(len(run(talents=[*ok_talents, {"id": 60359}])), 1)
         self.assertEqual(len(run(slas=[*ok_slas, {"id": 30753}])), 1)
         self.assertEqual(len(run(sdv=[*ok_sdv, {"id": 1256}])), 1)
-        self.assertEqual(len(run(costs=[*ok_costs, {"ID": 2602}])), 1)
+        self.assertEqual(len(run(costs=[*ok_costs, {"ID": 2603}])), 1)
         self.assertEqual(len(run(groups=[{"id": 1273}])), 1)
-        self.assertEqual(len(run(creatures=[{"entry": 300300}])), 1)
+        self.assertEqual(len(run(creatures=[{"entry": 300322}])), 1)
         self.assertEqual(run(groups=[{"id": 1022}], creatures=[{"entry": 99999}, {"entry": 300340}]), [])
 
 

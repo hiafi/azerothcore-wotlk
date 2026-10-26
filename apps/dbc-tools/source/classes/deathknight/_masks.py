@@ -110,3 +110,21 @@ UNLEASHED_FRENZY_PROC = (0, FROST_STRIKE, GLACIAL_ADVANCE)
 OBLITERATION_PROC = (0, HOWLING_BLAST | FROST_STRIKE, GLACIAL_ADVANCE)
 IMPROVED_ICY_TOUCH_RANGE = (ICY_TOUCH | CHAINS_OF_ICE, HOWLING_BLAST, 0)
 GRAVEFROST_READ = (HEART_STRIKE | PLAGUE_STRIKE, 0, 0)
+
+# --- S3 (Unholy; S3-HANDOFF section 5) ---
+LESSER_GHOUL = 0x4000                    # d2 b14 (S3 Lesser Ghoul summon 203469; Night of the Dead's duration mod reads it; was LESSER_GHOUL_RESERVED)
+UNHOLY_OTHER_MAGIC = 0x20000             # d2 b17 (S3 On a Pale Horse damage 203477; Runic Focus reads it)
+SCOURGE_STRIKE = 0x08000000              # d1 b27 (stock 55090; Subversion, GCD-haste 201565, Outbreak, Vicious Strikes, Dirge, Desecration)
+SCOURGE_STRIKE_SHADOW = 0x80             # d2 b7 (stock 70890, Scourge Strike's Shadow part)
+DEATH_COIL = 0x2000                      # d0 b13 (stock 47541 castable; Doomed Bidding CAST proc, Harbinger cost mod)
+DEATH_COIL_DAMAGE = 0x1                  # d2 b0 (stock 47632 damage missile; Unholy Blight's HIT proc)
+RAISE_DEAD = 0x1000                      # d0 b12 (stock 46584; Master of Ghouls)
+ARMY_OF_THE_DEAD = 0x800                 # d0 b11 (stock 42650; Night of the Dead)
+SUMMON_GARGOYLE = 0x80                   # d1 b7 (stock 49206)
+
+# Runic Focus 61455 d2 addition in S3 (magic-class only).
+RUNIC_FOCUS_READ_S3 = (0, 0, UNHOLY_OTHER_MAGIC)
+# Plague Strike + Scourge Strike (Outbreak, Vicious Strikes crit, Dirge, Desecration).
+PS_SS_READ = (PLAGUE_STRIKE, SCOURGE_STRIKE, 0)
+# Vicious Strikes: Plague Strike + Scourge Strike + Scourge Strike's Shadow part 70890.
+VICIOUS_READ = (PLAGUE_STRIKE, SCOURGE_STRIKE, SCOURGE_STRIKE_SHADOW)
