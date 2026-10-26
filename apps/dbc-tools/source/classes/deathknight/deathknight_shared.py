@@ -220,7 +220,7 @@ unbind_script(anti_magic_zone_50461, 'spell_dk_anti_magic_zone')
 # DEATHS_CARESS_EXTRA_TARGETS engaged enemies nearest the target (never the target itself, never a not-engaged unit) and
 # casts Blood Plague 55078 on every unit either effect hits. 1 Unholy Rune + 10 RP: stock SpellRuneCost 221 (0,1,0,+10 RP).
 # d2 b12 (m.DEATHS_CARESS) is the only family bit. Visual: Death Coil's missile / cast / impact (SpellVisual 10755, 0-verify
-# item 19, brief ruling 8); icon 2730 Spell_DeathKnight_Butcher (used by no baseline DK spell).
+# item 19, brief ruling 8); icon 90311, Ascension's green Blood Plague (playtest; was stock 2730).
 deaths_caress_203001 = spell(
     id=203001,
     name="Death's Caress",
@@ -240,7 +240,7 @@ deaths_caress_203001 = spell(
                implicit_target_a=_TARGET_DEST_TARGET_ENEMY, implicit_target_b=_TARGET_UNIT_DEST_AREA_ENEMY,
                radius_yards=10.0),
     ],
-    spell_icon_id=2730,
+    spell_icon_id=90311,  # build_patch_i.py ICON_ID_DEATHS_CARESS (was stock 2730)
     notes=(
         'DK0a (shared doc "Death\'s Caress", brief ruling 8, known-hard 7): level 12, Shadow, magic class '
         '(DefenseType 1), PreventionType 1, 30 yd. eff0 SCHOOL_DAMAGE on the target, eff1 SCHOOL_DAMAGE on '

@@ -156,6 +156,10 @@ ICON_ID_STORM_ELEMENTAL = 90270
 # Death Knight rework (ids.yaml reservation 90310-90369). Blood playtest fix: Gorefiend's Grasp 203127 / helper 203128 /
 # talent 60333 had the stock Winter's Grasp icon; Ascension's AoE Death Grip art is the retail Gorefiend's Grasp icon.
 ICON_ID_GOREFIENDS_GRASP = 90310
+# Playtest fix pass 2: Death's Caress 203001 had the stock Butcher icon 2730, Raise Abomination 203452 and its
+# helpers the stock 313; the user picked Ascension's green Blood Plague and Darkshore warfront Abomination art.
+ICON_ID_DEATHS_CARESS = 90311
+ICON_ID_RAISE_ABOMINATION = 90312
 
 ICONS = (
     (ICON_ID_ANGELIC_FEATHER, "Interface/icons/ability_priest_angelicfeather.blp"),
@@ -204,6 +208,8 @@ ICONS = (
     (ICON_ID_HUNTER_PRECISION, "Interface/icons/sha_ability_rogue_bloodyeye_nightborne.blp"),
     (ICON_ID_STORM_ELEMENTAL, "Interface/icons/inv_stormelemental.blp"),
     (ICON_ID_GOREFIENDS_GRASP, "Interface/icons/ability_deathknight_aoedeathgrip.blp"),
+    (ICON_ID_DEATHS_CARESS, "Interface/icons/_BloodPlague_Green.blp"),
+    (ICON_ID_RAISE_ABOMINATION, "Interface/icons/ui_darkshore_warfront_horde_abomination.blp"),
 )
 
 # "Stock path, no blp" entries (warlock-rework DESTRUCTION §2.6/§11 Q19): a SpellIcon.dbc row that
