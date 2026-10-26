@@ -26,6 +26,7 @@
 #include <functional>
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 class Creature;
@@ -245,6 +246,9 @@ namespace SimDaemon
         // Per-hit index of the dummy hit (SimTargetGroup order), parallel to HitDamages - see
         // EventRecorder::GetHitTargetIndex().
         std::vector<uint8> HitTargetIndex;
+        // Per-hit creature entry of the attacker (0 for the actor), parallel to HitDamages - see
+        // EventRecorder::GetHitSourceEntries().
+        std::vector<uint32> HitSourceEntries;
         // Times the bot AI's "current target" changed to a different unit during the iteration, sampled after every
         // tick; ticks with no current target are ignored. A DoT spread onto another dummy is not a switch.
         uint32 TargetSwitches = 0;
@@ -263,8 +267,11 @@ namespace SimDaemon
             uint8 StackAmount = 0;
             bool Positive = false;
             bool Applied = false;
-            // The dummy's index, or -1 when the aura is on the actor
+            // The dummy's index, or -1 when the aura is on the actor (or on a unit it owns)
             int8 TargetIndex = -1;
+            // The aura is on a unit the actor owns (a pet, guardian or totem), UnitEntry its creature entry
+            bool IsPet = false;
+            uint32 UnitEntry = 0;
         };
         std::vector<AuraEvent> AuraEvents;
 
@@ -299,6 +306,17 @@ namespace SimDaemon
             uint8 RunesDeath = 0;
         };
         std::vector<PowerSample> PowerSamples;
+
+        // The units the actor controls (its pet, guardians, totems, summons) alive at each sample, counted per creature
+        // entry, every POWER_SAMPLE_INTERVAL_MS in the same two runs as PowerSamples: how many Lesser Ghouls stood
+        // beside a Death Knight, whether the Gargoyle or the Abomination was out. Counts are (entry, number) in entry
+        // order; a sample with no controlled unit has an empty list.
+        struct MinionSample
+        {
+            uint32 TimestampMs = 0;
+            std::vector<std::pair<uint32, uint32>> Counts;
+        };
+        std::vector<MinionSample> MinionSamples;
 
         // One entry per spell the actor actually cast, in cast order - a "cast log" alongside the
         // hit log above, so non-damage abilities (Evocation, self-buffs, ...) show up too, not just

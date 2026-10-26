@@ -45,6 +45,25 @@ off the series. The hardcoded-rotation run writes the key empty, and the heal re
 `tools/aggregate_reports.py` (the multi-iteration report `run-sim.sh` prints) carries the representative run's series
 into the aggregate, like `manaSamples`. Source: `RunResult::PowerSample`, `MaybeSamplePower()` in `SimDaemon.cpp`.
 
+## Minion attribution (`sourceEntry`, pet auras, `minionSamples[]`)
+
+The DPS report and the tank report (the DPS report plus a `tank` section) attribute the actor's minions one by one:
+
+- `hits[]` and `spells[]` rows carry `sourceEntry`, the creature entry of the attacker (0 for the actor). `spells[]` is
+  keyed by `(spellId, isPet, sourceEntry)`, and so is the aggregate `tools/aggregate_reports.py` writes, so the white
+  swings of the permanent ghoul (26125), the Lesser Ghouls (300320), the Army of the Dead ghouls (24207) and the
+  Abomination (300321) are separate rows although they share the pseudo spell id `0xFFFFFFFE`, and a Gargoyle Strike
+  (27829) never merges into another minion's row. A report from before the field counts every row as `sourceEntry` 0.
+- `auraEvents[]` also records the auras gained and lost by a unit the actor owns (a pet, guardian or totem; passive
+  auras skipped), as `"unit": "pet"` with `unitEntry`, the unit's creature entry (0 for the actor), so Shadow Infusion
+  and Dark Transformation uptime on the ghoul read straight off the series. Consumers that treat "not actor" as "target"
+  must test `unit == "target"`.
+- `minionSamples[]`: `{timestampMs, counts: {"<entry>": n, ...}}` every 500 ms (the `powerSamples` cadence), the alive
+  units the actor controls per creature entry (its pet, guardians, totems and slotted summons, each counted once). The
+  hardcoded-rotation run writes the key empty and the heal report has no `minionSamples` key. The aggregate carries the
+  representative run's series, like `powerSamples`. Source: `RunResult::MinionSample`, `MaybeSampleMinions()` in
+  `SimDaemon.cpp`, `EventRecorder::GetHitSourceEntries()`.
+
 ## Tank sim (tank mode)
 
 A profile with `Mode = Tank` runs the DPS sim with one change: the dummies swing at the actor. Plan:
@@ -115,13 +134,13 @@ run-sim.sh refuses it); the baked page is `reports/TankProfileReport.html`.
 ### Tank reports (`"kind": "tank"`)
 
 A tank report is the DPS report exactly as before (`config`, `summary`, `spells`, `hits`, `auraEvents`, `manaSamples`,
-`powerSamples`, `casts`, `targets`) with `"kind": "tank"` as its first key and a `"tank"` section as its last; the
-heal report is unchanged. The `tank` object (schema in `src/SimReport.h`): `config` (scenario, hit ranges, swing ms,
-crit switch, dummy count and kind, solver values per dummy), `actor` (the character sheet after the first second and
-at the pull), `summary`, `perDummy` (full outcome split, damage taken, threat), `absorbsBySpell`, `selfHeals`,
-`swings`, `samples` (health, power, Bulwark stacks every 500 ms), `threat` (per dummy, every second). Time bases:
-swing times are the start of the step, samples and the time of death are read after it, so the swing that killed the
-actor is stamped one step before `actorDiedAtMs`.
+`powerSamples`, `minionSamples`, `casts`, `targets`) with `"kind": "tank"` as its first key and a `"tank"` section as
+its last; the heal report is unchanged. The `tank` object (schema in `src/SimReport.h`): `config` (scenario, hit
+ranges, swing ms, crit switch, dummy count and kind, solver values per dummy), `actor` (the character sheet after the
+first second and at the pull), `summary`, `perDummy` (full outcome split, damage taken, threat), `absorbsBySpell`,
+`selfHeals`, `swings`, `samples` (health, power, Bulwark stacks every 500 ms), `threat` (per dummy, every second).
+Time bases: swing times are the start of the step, samples and the time of death are read after it, so the swing that
+killed the actor is stamped one step before `actorDiedAtMs`.
 
 `tank.summary` highlights: the outcome counts and percent (miss, dodge, parry, block, full block, crit, crush, hit),
 `avoidancePct`, `mitigation` by source (avoided, armor, block, absorb), `damageTaken` (already after the shields),

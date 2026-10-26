@@ -23,6 +23,7 @@
 #include <map>
 #include <set>
 #include <sstream>
+#include <tuple>
 #include <utility>
 
 namespace
@@ -42,6 +43,8 @@ namespace
     {
         uint32 SpellId = 0;
         bool IsPet = false;
+        // Creature entry of the attacker, 0 for the actor itself
+        uint32 SourceEntry = 0;
         uint32 HitCount = 0;
         uint32 CritCount = 0;
         uint64 TotalDamage = 0;
@@ -53,14 +56,17 @@ namespace
 
     std::vector<SpellAggregate> AggregateBySpell(SimDaemon::RunResult const& result)
     {
-        // Keyed by (spell id, from a pet) so a pet's hits never merge into the bot's row for the same spell
-        std::map<std::pair<uint32, bool>, SpellAggregate> byId;
+        // Keyed by (spell id, from a pet, attacker entry) so a pet's hits never merge into the bot's row for the same
+        // spell, nor one minion's into another's (every minion's white swings share PET_MELEE_SPELL_ID)
+        std::map<std::tuple<uint32, bool, uint32>, SpellAggregate> byId;
         for (size_t i = 0; i < result.HitSpellIds.size(); ++i)
         {
             bool const isPet = i < result.HitIsPet.size() && result.HitIsPet[i];
-            SpellAggregate& agg = byId[{result.HitSpellIds[i], isPet}];
+            uint32 const sourceEntry = i < result.HitSourceEntries.size() ? result.HitSourceEntries[i] : 0;
+            SpellAggregate& agg = byId[{result.HitSpellIds[i], isPet, sourceEntry}];
             agg.SpellId = result.HitSpellIds[i];
             agg.IsPet = isPet;
+            agg.SourceEntry = sourceEntry;
             ++agg.HitCount;
             agg.TotalDamage += result.HitDamages[i];
             if (i < result.HitCrits.size() && result.HitCrits[i])
@@ -164,7 +170,7 @@ static bool WriteDpsReport(std::string const& path, SimDaemon::RunConfig const& 
             ? 100.0 * double(s.TotalDamage) / double(result.TotalDamage)
             : 0.0;
         file << "    {\"spellId\": " << s.SpellId << ", \"isPet\": " << (s.IsPet ? "true" : "false")
-             << ", \"hitCount\": " << s.HitCount
+             << ", \"sourceEntry\": " << s.SourceEntry << ", \"hitCount\": " << s.HitCount
              << ", \"critCount\": " << s.CritCount << ", \"totalDamage\": " << s.TotalDamage
              << ", \"pctOfTotal\": " << pctOfTotal << ", \"castCount\": " << s.CastCount
              << ", \"targetsHit\": " << s.TargetsHit.size() << "}" << (i + 1 < spells.size() ? ",\n" : "\n");
@@ -178,10 +184,11 @@ static bool WriteDpsReport(std::string const& path, SimDaemon::RunConfig const& 
         bool const crit = i < result.HitCrits.size() && result.HitCrits[i];
         bool const isPet = i < result.HitIsPet.size() && result.HitIsPet[i];
         uint32 const target = i < result.HitTargetIndex.size() ? result.HitTargetIndex[i] : 0;
+        uint32 const sourceEntry = i < result.HitSourceEntries.size() ? result.HitSourceEntries[i] : 0;
         file << "    {\"timestampMs\": " << timestamp << ", \"spellId\": " << result.HitSpellIds[i]
              << ", \"damage\": " << result.HitDamages[i] << ", \"crit\": " << (crit ? "true" : "false")
-             << ", \"isPet\": " << (isPet ? "true" : "false") << ", \"target\": " << target
-             << "}" << (i + 1 < result.HitDamages.size() ? ",\n" : "\n");
+             << ", \"isPet\": " << (isPet ? "true" : "false") << ", \"sourceEntry\": " << sourceEntry
+             << ", \"target\": " << target << "}" << (i + 1 < result.HitDamages.size() ? ",\n" : "\n");
     }
     file << "  ],\n";
 
@@ -189,10 +196,11 @@ static bool WriteDpsReport(std::string const& path, SimDaemon::RunConfig const& 
     for (size_t i = 0; i < result.AuraEvents.size(); ++i)
     {
         SimDaemon::RunResult::AuraEvent const& e = result.AuraEvents[i];
-        file << "    {\"timestampMs\": " << e.TimestampMs << ", \"unit\": \"" << (e.IsActor ? "actor" : "target")
+        file << "    {\"timestampMs\": " << e.TimestampMs << ", \"unit\": \""
+             << (e.IsActor ? "actor" : (e.IsPet ? "pet" : "target"))
              << "\", \"spellId\": " << e.SpellId << ", \"stackAmount\": " << uint32(e.StackAmount)
              << ", \"positive\": " << (e.Positive ? "true" : "false") << ", \"applied\": " << (e.Applied ? "true" : "false")
-             << ", \"targetIndex\": " << int32(e.TargetIndex)
+             << ", \"targetIndex\": " << int32(e.TargetIndex) << ", \"unitEntry\": " << e.UnitEntry
              << "}" << (i + 1 < result.AuraEvents.size() ? ",\n" : "\n");
     }
     file << "  ],\n";
@@ -220,6 +228,19 @@ static bool WriteDpsReport(std::string const& path, SimDaemon::RunConfig const& 
                  << uint32(sample.RunesFrost) << ", \"unholy\": " << uint32(sample.RunesUnholy) << ", \"death\": "
                  << uint32(sample.RunesDeath) << "}";
         file << "}" << (i + 1 < result.PowerSamples.size() ? ",\n" : "\n");
+    }
+    file << "  ],\n";
+
+    // The units the actor controls alive at each sample, per creature entry (RunResult::MinionSamples); an object
+    // keyed by the entry as text
+    file << "  \"minionSamples\": [\n";
+    for (size_t i = 0; i < result.MinionSamples.size(); ++i)
+    {
+        SimDaemon::RunResult::MinionSample const& sample = result.MinionSamples[i];
+        file << "    {\"timestampMs\": " << sample.TimestampMs << ", \"counts\": {";
+        for (size_t j = 0; j < sample.Counts.size(); ++j)
+            file << (j ? ", " : "") << "\"" << sample.Counts[j].first << "\": " << sample.Counts[j].second;
+        file << "}}" << (i + 1 < result.MinionSamples.size() ? ",\n" : "\n");
     }
     file << "  ],\n";
 

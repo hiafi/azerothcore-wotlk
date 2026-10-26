@@ -66,7 +66,9 @@
 // (Crusader Strike etc.) are spells and still come through OnSpellDamageTakenFinal, so nothing is
 // counted twice. All three hooks also accept hits from the actor's pets, guardians and totems (see
 // AttributeToActor()); those are recorded as separate rows - PET_MELEE_SPELL_ID for white swings, the real spell
-// id otherwise - and flagged in GetHitIsPet().
+// id otherwise - and flagged in GetHitIsPet(). Each hit also carries the creature entry of its attacker
+// (GetHitSourceEntries(), 0 for the actor), so several minions' white swings (all PET_MELEE_SPELL_ID) and a spell
+// two of them share stay apart in the report (dpssim attribution, U37).
 //
 // Periodic ticks come through a third hook, OnPeriodicDamageFinal (UNITHOOK_ON_PERIODIC_DAMAGE_FINAL, S0 stage,
 // 2026-10-05): the tick after crit and mitigation, pre-absorb, recorded under the aura's spell id.
@@ -177,7 +179,12 @@ public:
     // Per-hit index of the dummy hit (its position in `targetGuids`), parallel to GetHitDamages().
     [[nodiscard]] std::vector<uint8> const& GetHitTargetIndex() const { return _hitTargetIndex; }
 
-    // One entry per aura gained or lost by the actor or a target while this recorder is alive.
+    // Per-hit creature entry of the attacker, parallel to GetHitDamages(): 0 for the actor, the entry of the pet,
+    // guardian or totem otherwise (the permanent ghoul 26125, a Lesser Ghoul 300320, ...).
+    [[nodiscard]] std::vector<uint32> const& GetHitSourceEntries() const { return _hitSourceEntries; }
+
+    // One entry per aura gained or lost by the actor, a target or a unit the actor owns (a pet, guardian or totem; a
+    // passive aura of those is skipped) while this recorder is alive.
     // `Applied == false` is a removal (SpellId/Positive/StackAmount describe the aura that was
     // removed, not a new one). Not filtered to any particular spell - unlike the rotationSpellId
     // filter on damage hits, there's no equivalent "aura I care about" concept yet; a human (or the
@@ -193,17 +200,25 @@ public:
         uint8 StackAmount;
         bool Positive;
         bool Applied;
-        // The dummy's index in `targetGuids`, or -1 when the aura is on the actor
+        // The dummy's index in `targetGuids`, or -1 when the aura is on the actor (or on a unit it owns)
         int8 TargetIndex;
+        // The aura is on a unit the actor owns (IsActor is false); UnitEntry is that unit's creature entry (0 for the
+        // actor, the dummy's entry for a target)
+        bool IsPet = false;
+        uint32 UnitEntry = 0;
     };
     [[nodiscard]] std::vector<AuraEvent> const& GetAuraEvents() const { return _auraEvents; }
 
 private:
-    void RecordHit(uint32 spellId, uint32 damage, bool isCrit, bool isPet, uint8 targetIndex);
+    void RecordHit(uint32 spellId, uint32 damage, bool isCrit, bool isPet, uint8 targetIndex, uint32 sourceEntry);
 
     // True when `attacker` is the actor itself (isPet = false) or something it owns - a pet, guardian, totem or
-    // other summon, found through its owner, charmer or creator GUID (isPet = true).
-    bool AttributeToActor(Unit* attacker, bool& isPet) const;
+    // other summon, found through its owner, charmer or creator GUID (isPet = true). `sourceEntry` is the creature
+    // entry of an owned attacker, 0 for the actor.
+    bool AttributeToActor(Unit* attacker, bool& isPet, uint32& sourceEntry) const;
+
+    // True when `unit` is something the actor owns (not the actor itself), by the same owner / charmer / creator test
+    bool IsOwnedByActor(Unit* unit) const;
 
     // `guid`'s index in _targetGuids, or -1 when it is not one of the dummies
     int8 TargetIndexOf(ObjectGuid guid) const;
@@ -221,6 +236,7 @@ private:
     std::vector<uint32> _hitTimestamps;
     std::vector<bool> _hitIsPet;
     std::vector<uint8> _hitTargetIndex;
+    std::vector<uint32> _hitSourceEntries;
     std::vector<AuraEvent> _auraEvents;
 };
 

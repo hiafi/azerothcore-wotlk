@@ -136,6 +136,42 @@ namespace
         sampledOnce = true;
     }
 
+    // Appends a sample of the actor's controlled units (alive, per creature entry) on the same cadence as the power
+    // samples, next to MaybeSamplePower(). Reads the controlled set (pet, guardians, totems: every minion is in it) and
+    // the summon slots, each unit once, like the playerbot module's "controlled units by entry" value
+    void MaybeSampleMinions(Player* actor, uint32 nowMs, uint32& lastSampleMs, bool& sampledOnce,
+        std::vector<SimDaemon::RunResult::MinionSample>& samples)
+    {
+        if (sampledOnce && nowMs - lastSampleMs < POWER_SAMPLE_INTERVAL_MS)
+            return;
+
+        std::set<ObjectGuid> counted;
+        std::map<uint32, uint32> byEntry;
+        for (Unit* unit : actor->m_Controlled)
+            if (unit && unit->IsAlive() && counted.insert(unit->GetGUID()).second)
+                ++byEntry[unit->GetEntry()];
+
+        if (Map* map = actor->GetMap())
+        {
+            for (ObjectGuid const guid : actor->m_SummonSlot)
+            {
+                if (!guid || counted.contains(guid))
+                    continue;
+
+                Creature* summon = map->GetCreature(guid);
+                if (summon && summon->IsAlive() && counted.insert(guid).second)
+                    ++byEntry[summon->GetEntry()];
+            }
+        }
+
+        SimDaemon::RunResult::MinionSample sample;
+        sample.TimestampMs = nowMs;
+        sample.Counts.assign(byEntry.begin(), byEntry.end());
+        samples.push_back(std::move(sample));
+        lastSampleMs = nowMs;
+        sampledOnce = true;
+    }
+
     // Hardcoded rotation: cast Frostbolt whenever the actor isn't already casting/channeling and
     // both the GCD and Frostbolt's own cooldown (it doesn't have one, but check anyway - Phase 2's
     // rotation engine will need a real cooldown check and this is the pattern it'll follow) are
@@ -169,7 +205,7 @@ namespace
         result.reserve(events.size());
         for (EventRecorder::AuraEvent const& e : events)
             result.push_back({e.TimestampMs, e.UnitGuid, e.IsActor, e.SpellId, e.StackAmount, e.Positive, e.Applied,
-                e.TargetIndex});
+                e.TargetIndex, e.IsPet, e.UnitEntry});
         return result;
     }
 
@@ -384,6 +420,9 @@ namespace
         uint32 lastPowerSampleMs = 0;
         bool sampledPowerOnce = false;
         std::vector<SimDaemon::RunResult::PowerSample> powerSamples;
+        uint32 lastMinionSampleMs = 0;
+        bool sampledMinionsOnce = false;
+        std::vector<SimDaemon::RunResult::MinionSample> minionSamples;
         // The bot's own current target, seeded with the primary at the pull (D5: measured, not inferred from casts)
         ObjectGuid lastTarget = bot.GetCurrentTarget();
         uint32 targetSwitches = 0;
@@ -411,6 +450,7 @@ namespace
             bot.UpdateAI(config.StepMs);
             MaybeSampleMana(player, clock.GetElapsedMs(), lastManaSampleMs, sampledManaOnce, manaSamples);
             MaybeSamplePower(player, clock.GetElapsedMs(), lastPowerSampleMs, sampledPowerOnce, powerSamples);
+            MaybeSampleMinions(player, clock.GetElapsedMs(), lastMinionSampleMs, sampledMinionsOnce, minionSamples);
 
             ObjectGuid const currentTarget = bot.GetCurrentTarget();
             if (!currentTarget.IsEmpty())
@@ -449,10 +489,12 @@ namespace
         result.HitTimestamps = recorder->GetHitTimestamps();
         result.HitIsPet = recorder->GetHitIsPet();
         result.HitTargetIndex = recorder->GetHitTargetIndex();
+        result.HitSourceEntries = recorder->GetHitSourceEntries();
         result.TargetSwitches = targetSwitches;
         result.AuraEvents = ToRunResultAuraEvents(recorder->GetAuraEvents());
         result.ManaSamples = std::move(manaSamples);
         result.PowerSamples = std::move(powerSamples);
+        result.MinionSamples = std::move(minionSamples);
         result.CastEvents = ToRunResultCastEvents(castRecorder->GetCastEvents());
 
         // Recorders stamp raw getMSTime(); reports count from the iteration start. An event recorded before
@@ -736,6 +778,7 @@ namespace
         result.HitTimestamps = recorder->GetHitTimestamps();
         result.HitIsPet = recorder->GetHitIsPet();
         result.HitTargetIndex = recorder->GetHitTargetIndex();
+        result.HitSourceEntries = recorder->GetHitSourceEntries();
         result.AuraEvents = ToRunResultAuraEvents(recorder->GetAuraEvents());
         result.ManaSamples = std::move(manaSamples);
         result.CastEvents = ToRunResultCastEvents(castRecorder->GetCastEvents());
@@ -1226,6 +1269,9 @@ namespace
         uint32 lastPowerSampleMs = 0;
         bool sampledPowerOnce = false;
         std::vector<SimDaemon::RunResult::PowerSample> powerSamples;
+        uint32 lastMinionSampleMs = 0;
+        bool sampledMinionsOnce = false;
+        std::vector<SimDaemon::RunResult::MinionSample> minionSamples;
         ObjectGuid lastTarget = bot.GetCurrentTarget();
         uint32 targetSwitches = 0;
         uint32 lastTankSampleMs = 0;
@@ -1287,6 +1333,7 @@ namespace
                 bot.UpdateAI(config.StepMs);
             MaybeSampleMana(player, clock.GetElapsedMs(), lastManaSampleMs, sampledManaOnce, manaSamples);
             MaybeSamplePower(player, clock.GetElapsedMs(), lastPowerSampleMs, sampledPowerOnce, powerSamples);
+            MaybeSampleMinions(player, clock.GetElapsedMs(), lastMinionSampleMs, sampledMinionsOnce, minionSamples);
 
             // The crit chance the dummies have once the bot has acted (its stance, its first buffs): the pull value was
             // taken before any of that
@@ -1360,10 +1407,12 @@ namespace
         result.HitTimestamps = recorder->GetHitTimestamps();
         result.HitIsPet = recorder->GetHitIsPet();
         result.HitTargetIndex = recorder->GetHitTargetIndex();
+        result.HitSourceEntries = recorder->GetHitSourceEntries();
         result.TargetSwitches = targetSwitches;
         result.AuraEvents = ToRunResultAuraEvents(recorder->GetAuraEvents());
         result.ManaSamples = std::move(manaSamples);
         result.PowerSamples = std::move(powerSamples);
+        result.MinionSamples = std::move(minionSamples);
         result.CastEvents = ToRunResultCastEvents(castRecorder->GetCastEvents());
 
         // The actor's own healing and shields (heal-mode structs, target index 0 = the actor), and the incoming swings
@@ -1907,6 +1956,7 @@ bool SimDaemon::RunOnce(RunConfig const& config, RunResult& result)
     result.HitTimestamps = recorder->GetHitTimestamps();
     result.HitIsPet = recorder->GetHitIsPet();
     result.HitTargetIndex = recorder->GetHitTargetIndex();
+    result.HitSourceEntries = recorder->GetHitSourceEntries();
     result.AuraEvents = ToRunResultAuraEvents(recorder->GetAuraEvents());
     result.ManaSamples = std::move(manaSamples);
     result.CastEvents = ToRunResultCastEvents(castRecorder->GetCastEvents());
@@ -2125,7 +2175,7 @@ void SimDaemon::RunPlayerbot(RunConfig const& config)
     {
         timeline.push_back({e.TimestampMs, Acore::StringFormat(
             "aura {} - spell {} on {} (stack {}){}", e.Applied ? "gained" : "lost", e.SpellId,
-            e.IsActor ? "actor" : "target", e.StackAmount, e.Positive ? "" : " (debuff)")});
+            e.IsActor ? "actor" : (e.IsPet ? "pet" : "target"), e.StackAmount, e.Positive ? "" : " (debuff)")});
     }
     std::stable_sort(timeline.begin(), timeline.end(),
         [](TimelineEntry const& a, TimelineEntry const& b) { return a.TimestampMs < b.TimestampMs; });
