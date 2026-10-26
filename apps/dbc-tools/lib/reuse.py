@@ -124,7 +124,20 @@ class ReuseContext:
             },
         )
 
-    def duration_index(self, duration_ms: int | None) -> int:
+    def duration_index(self, duration_ms: int | None, max_duration_ms: int | None = None) -> int:
+        """The SpellDuration row for a spell: `Duration == MaxDuration == duration_ms` (the old one-argument call), or,
+        with `max_duration_ms`, a row whose minimum and maximum differ (Rogue T1, PLAN s1D.12): the core scales an aura
+        between the two by the caster's combo points (`WorldObject::CalcSpellDuration`, Object.cpp:3377-3394:
+        `min + (max - min) * comboPoints / 5`, only for a caster with combo points, min != -1 and min != max), so
+        Rupture's 4 s + 4 s per combo point is `Duration 4000, MaxDuration 24000`. Find-or-mint like the flat row:
+        a stock row with the pair (185 is 6000/21000) is reused. The client's `$d` tooltip token shows `Duration`
+        (the minimum) only, and the periodic tick count the DSL derives for `.total` tooltips also uses it
+        (lib/dsl/model.py). The core scales by whatever combo points the caster holds when the aura is created,
+        finisher or not (it never asks `NeedsComboPoints`), and the finisher's points are cleared in the finish phase:
+        a helper triggered after the finisher consumed them always gets the minimum, so the ranged row belongs on the
+        aura the finisher's own cast creates. A falsy `duration_ms` is the permanent row whatever `max_duration_ms`
+        says: the model refuses that combination before it gets here.
+        """
         # Bugfix (2026-08-26, "Icicles never stacks" playtest report): a falsy duration_ms means
         # "this aura shouldn't naturally expire", but index 0 does NOT mean that here - unlike
         # SpellCastTimes/SpellRange/SpellRadius, the real client's SpellDuration.dbc has no row at
@@ -143,11 +156,12 @@ class ReuseContext:
                     "ID": new_id, "Duration": -1, "DurationPerLevel": 0, "MaxDuration": -1,
                 },
             )
+        maximum = duration_ms if max_duration_ms is None else max_duration_ms
         return self._tables["spellduration"].find_or_mint(
-            {"Duration": duration_ms, "DurationPerLevel": 0, "MaxDuration": duration_ms},
+            {"Duration": duration_ms, "DurationPerLevel": 0, "MaxDuration": maximum},
             lambda new_id: {
                 "ID": new_id, "Duration": duration_ms, "DurationPerLevel": 0,
-                "MaxDuration": duration_ms,
+                "MaxDuration": maximum,
             },
         )
 

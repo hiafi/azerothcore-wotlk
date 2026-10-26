@@ -669,11 +669,12 @@ Draenei racials). Rules (b) and (d) are no-ops (zero masks), and `exempt_name_pr
 The other shaman "never take" bits (d0 b10 on a shield with NO_THREAT, d2 b14 root DR) and "imbue auras leave d1
 b11" depend on attributes or on the spell's role, which the table cannot express: they are SH0's targeted tests.
 
-**ID blocks.** `source/ids.yaml` now names the client-patch tables' ranges (`spellicon` 90100-90399, `soundentries`
+**ID blocks.** `source/ids.yaml` now names the client-patch tables' ranges (`spellicon` 90100-90499, `soundentries`
 90001-90199, `spellvisual` 90001-90299 shared by SpellVisual/Kit/EffectName, `creaturedisplayinfo` and
 `creaturemodeldata` 90001-90499, `gameobjectdisplayinfo` 90001-90099, `summonproperties` 3000-3099; stock tops out
-at 2935; `soundentries` and `spellvisual` were widened by Death Knight T1) and a `reservations:` key holding each
-class's slice of every table (shaman and deathknight; `healsim` reserves the healing sim's spells). Nothing mints
+at 2935; `soundentries` and `spellvisual` were widened by Death Knight T1, `spellicon` from 90399 and the `spell_group`
+block from 1299 to 1399 by Rogue T1) and a `reservations:` key holding each class's slice of every table (shaman,
+deathknight and rogue; `healsim` reserves the healing sim's spells). Nothing mints
 from the new blocks; `lib/test_id_blocks.py` checks that blocks of one table do not overlap, that a reservation sits
 inside its block and overlaps no other class, and that every custom id `source/classes/<class>/` declares inside a
 tool-wide block is inside that class's reservation. A new class reserves its slice in `ids.yaml` first (keep to
@@ -820,6 +821,31 @@ SpellDescriptionVariables 1230-1299, creature 300300-300339, plus the client-pat
 slices; 203680-203699, 1285, 30779 and 300338 / 300339 held the P0 spike: never reuse) and `healsim` (spells
 202900-202909). A non-class owner reserves under its project name, so the overlap test protects it (the T0 collision:
 Death Knight's first spell block swallowed the healing sim's spells).
+
+**Rogue T1 (tooling for the rogue rework, no rogue content).**
+
+- *ID blocks.* `reservations:` gains `rogue` (PLAN s4: spell 203700-204399 split shared 203700-203799 / Assassination
+  203800-203949 / Combat 203950-204129 / Subtlety 204130-204279 / spare 204280-204399, talent 60390-60449,
+  SkillLineAbility 30780-30839, spell_group 1286-1295, SpellDescriptionVariables 1300-1369, creature 300350-300369,
+  SpellIcon 90370-90419, SoundEntries 90121-90140, SpellVisual / Kit / EffectName 90250-90299, CreatureDisplayInfo and
+  CreatureModelData 90490-90499; 204370-204399, 1295, 30838-30839 and 300368-300369 held the P0 spike: never reuse).
+  `spellicon` is widened 90399 -> 90499 and `spell_group` 1299 -> 1399. The rogue reserves no `gameobjectdisplayinfo`,
+  `summonproperties` or `spellcategory` (T0: not needed).
+- *A duration with a minimum and a maximum.* `spell(duration_ms=4000, max_duration_ms=24000)` builds
+  `SpellDuration {Duration 4000, MaxDuration 24000}`; the core scales the aura between the two by the caster's combo
+  points (`min + (max - min) * comboPoints / 5`), which is Rupture's "4 s plus 4 s per combo point". Without
+  `max_duration_ms` nothing changes (`duration_ms` alone still means `Duration == MaxDuration`). A max needs a positive
+  `duration_ms` and must be greater than it, and it cannot be combined with a raw `DurationIndex` override (that wins
+  and leaves the ranged row unused). The client's `$d` and the potency `.total` tick count read the minimum. **The core
+  scales by whatever combo points the caster holds when the aura is created, finisher or not** (it never checks
+  `NeedsComboPoints`; the finisher's points are cleared in the finish phase, `Spell.cpp:4414`): a non-finisher with a
+  range scales by the points it finds and spends none, and a helper triggered after the finisher consumed its points
+  (an `AfterHit` script cast, a stored-bleed tick spell) always gets the minimum. Put the range on the aura the
+  finisher's own cast creates.
+- *Rogue family-bit rules.* `lint.ROGUE_FAMILY_RULES` (`SpellClassSet` 8, in `FAMILY_BIT_RULES`, so `--check` and the
+  full run both apply it): a custom spell may not carry d0 b11 (`0x800`), d0 b22 (`0x400000`) or d0 b25 (`0x2000000`).
+  The role-dependent "never take" bits (d0 b16 / b20 / b17 / b26, d1 b1 / b2 / b3 / b18, the DR and Preparation bits)
+  are the rogue stages' targeted tests.
 
 ### Declaring tooltip variables (P9)
 

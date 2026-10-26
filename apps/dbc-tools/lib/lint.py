@@ -1235,7 +1235,33 @@ DEATHKNIGHT_FAMILY_RULES = FamilyBitRules(
     reader_reaches="the racial",
     reader_hint="Pick another bit for the reader.",
 )
-FAMILY_BIT_RULES = (HUNTER_FAMILY_RULES, SHAMAN_FAMILY_RULES, DEATHKNIGHT_FAMILY_RULES)
+# Rogue T1 (.agents/plans/rogue-rework/rogue-rework.FAMILY-BITS.md s3.3 "never take", s6.1 C2; PLAN s1D.11).
+# Carrier bits no custom rogue-family spell may carry, each a core hardcode that keys on the bit:
+#   d0 b11 (0x800): Stealth 1784's removal runs RemoveAurasWithFamily(ROGUE, 0x800), so a new aura on it is stripped
+#     whenever Stealth drops.
+#   d0 b22 (0x400000): the Stealth hardcode (SpellAuras.cpp:1831-1854) drives the Master of Subtlety and Overkill
+#     apply / tail code, so a new aura on it (Shadowed, Shadow Dance's twin) starts the 8 s / 20 s tails at the wrong
+#     time.
+#   d0 b25 (0x2000000): the Hemorrhage +1 combo point and dagger +50% hardcode (SpellEffects.cpp:3693-3705): any
+#     weapon-damage family-8 spell carrying it gets both.
+# The other s3.3 bits depend on the spell's role, which this table cannot express (a carrier list is all-or-nothing and
+# a "never take except on X" rule needs a per-spell exemption this dataclass has no field for), so RG0 and the spec
+# stages pin them with targeted tests: d0 b16 only on Deadly Poison (AURA_STATE_DEADLY_POISON, Envenom's dose
+# consumption, Mutilate's poisoned check), d0 b20 only on Rupture (Glyph of Backstab extends it), d0 b17 only on a
+# spell meant to take the Eviscerate AP term, d0 b26 / d1 b18 on a new weapon strike (dagger bonus, Hemorrhage's combo
+# point), d1 b1 / b2 / b3 (Mutilate +20%, Cold Blood / Remorseless, Envenom's effect code), d0 b3 / b10 / b24 (the DR
+# categories), the Preparation lists (d0 b4 / b5 / b6, d1 b6 / b9 / b11 + d0 b30, d1 b20), d0 b0 while Throw shares it,
+# and d1 b19 as the poison group (a role, not a ban).
+ROGUE_FAMILY_RULES = FamilyBitRules(
+    name="rogue",
+    spell_class_set=8,
+    forbidden_carrier_bits=(0x800 | 0x400000 | 0x2000000, 0, 0),    # d0 b11, d0 b22, d0 b25
+    carrier_note=(
+        "d0 b11 Stealth's removal strips every family-8 aura carrying it, d0 b22 the Stealth hardcode drives the "
+        "Master of Subtlety / Overkill tails, d0 b25 the Hemorrhage combo point / dagger hardcode"
+    ),
+)
+FAMILY_BIT_RULES = (HUNTER_FAMILY_RULES, SHAMAN_FAMILY_RULES, DEATHKNIGHT_FAMILY_RULES, ROGUE_FAMILY_RULES)
 _CUSTOM_SPELL_ID_START = 200000
 PET_SHARED_SKILL_LINE = 270  # "Pet - Hunter": the skill line every hunter pet family shares
 

@@ -68,7 +68,7 @@ def build_spell_row(entry: dict, reuse: ReuseContext) -> dict:
     row["ManaCost"] = entry.get("mana_cost", 0) or 0
     row["ManaCostPct"] = entry.get("mana_cost_pct", 0) or 0
     row["RangeIndex"] = reuse.range_index(entry.get("range_yards"))
-    row["DurationIndex"] = reuse.duration_index(entry.get("duration_ms"))
+    row["DurationIndex"] = reuse.duration_index(entry.get("duration_ms"), entry.get("max_duration_ms"))
     row["SpellIconID"] = entry.get("spell_icon_id", 0) or 0
 
     default_radius = entry.get("radius_yards")
