@@ -23,16 +23,28 @@
 #include <map>
 #include <set>
 #include <sstream>
+#include <tuple>
 #include <utility>
 
 namespace
 {
+    // POWER_RAGE and POWER_RUNIC_POWER are stored x10 by the core; every other power is stored as it reads
+    double TankPowerDisplay(uint8 powerType, uint32 value)
+    {
+        constexpr uint8 POWER_TYPE_RAGE = 1;
+        constexpr uint8 POWER_TYPE_RUNIC_POWER = 6;
+        return (powerType == POWER_TYPE_RAGE || powerType == POWER_TYPE_RUNIC_POWER) ? double(value) / 10.0 :
+            double(value);
+    }
+
     // Per-spell aggregate, built from RunResult's parallel HitSpellIds/HitDamages/HitCrits
     // vectors (castCount from CastEvents) - see SimReport.h's schema doc comment for hitCount vs. castCount.
     struct SpellAggregate
     {
         uint32 SpellId = 0;
         bool IsPet = false;
+        // Creature entry of the attacker, 0 for the actor itself
+        uint32 SourceEntry = 0;
         uint32 HitCount = 0;
         uint32 CritCount = 0;
         uint64 TotalDamage = 0;
@@ -44,14 +56,17 @@ namespace
 
     std::vector<SpellAggregate> AggregateBySpell(SimDaemon::RunResult const& result)
     {
-        // Keyed by (spell id, from a pet) so a pet's hits never merge into the bot's row for the same spell
-        std::map<std::pair<uint32, bool>, SpellAggregate> byId;
+        // Keyed by (spell id, from a pet, attacker entry) so a pet's hits never merge into the bot's row for the same
+        // spell, nor one minion's into another's (every minion's white swings share PET_MELEE_SPELL_ID)
+        std::map<std::tuple<uint32, bool, uint32>, SpellAggregate> byId;
         for (size_t i = 0; i < result.HitSpellIds.size(); ++i)
         {
             bool const isPet = i < result.HitIsPet.size() && result.HitIsPet[i];
-            SpellAggregate& agg = byId[{result.HitSpellIds[i], isPet}];
+            uint32 const sourceEntry = i < result.HitSourceEntries.size() ? result.HitSourceEntries[i] : 0;
+            SpellAggregate& agg = byId[{result.HitSpellIds[i], isPet, sourceEntry}];
             agg.SpellId = result.HitSpellIds[i];
             agg.IsPet = isPet;
+            agg.SourceEntry = sourceEntry;
             ++agg.HitCount;
             agg.TotalDamage += result.HitDamages[i];
             if (i < result.HitCrits.size() && result.HitCrits[i])
@@ -155,7 +170,7 @@ static bool WriteDpsReport(std::string const& path, SimDaemon::RunConfig const& 
             ? 100.0 * double(s.TotalDamage) / double(result.TotalDamage)
             : 0.0;
         file << "    {\"spellId\": " << s.SpellId << ", \"isPet\": " << (s.IsPet ? "true" : "false")
-             << ", \"hitCount\": " << s.HitCount
+             << ", \"sourceEntry\": " << s.SourceEntry << ", \"hitCount\": " << s.HitCount
              << ", \"critCount\": " << s.CritCount << ", \"totalDamage\": " << s.TotalDamage
              << ", \"pctOfTotal\": " << pctOfTotal << ", \"castCount\": " << s.CastCount
              << ", \"targetsHit\": " << s.TargetsHit.size() << "}" << (i + 1 < spells.size() ? ",\n" : "\n");
@@ -169,10 +184,11 @@ static bool WriteDpsReport(std::string const& path, SimDaemon::RunConfig const& 
         bool const crit = i < result.HitCrits.size() && result.HitCrits[i];
         bool const isPet = i < result.HitIsPet.size() && result.HitIsPet[i];
         uint32 const target = i < result.HitTargetIndex.size() ? result.HitTargetIndex[i] : 0;
+        uint32 const sourceEntry = i < result.HitSourceEntries.size() ? result.HitSourceEntries[i] : 0;
         file << "    {\"timestampMs\": " << timestamp << ", \"spellId\": " << result.HitSpellIds[i]
              << ", \"damage\": " << result.HitDamages[i] << ", \"crit\": " << (crit ? "true" : "false")
-             << ", \"isPet\": " << (isPet ? "true" : "false") << ", \"target\": " << target
-             << "}" << (i + 1 < result.HitDamages.size() ? ",\n" : "\n");
+             << ", \"isPet\": " << (isPet ? "true" : "false") << ", \"sourceEntry\": " << sourceEntry
+             << ", \"target\": " << target << "}" << (i + 1 < result.HitDamages.size() ? ",\n" : "\n");
     }
     file << "  ],\n";
 
@@ -180,10 +196,11 @@ static bool WriteDpsReport(std::string const& path, SimDaemon::RunConfig const& 
     for (size_t i = 0; i < result.AuraEvents.size(); ++i)
     {
         SimDaemon::RunResult::AuraEvent const& e = result.AuraEvents[i];
-        file << "    {\"timestampMs\": " << e.TimestampMs << ", \"unit\": \"" << (e.IsActor ? "actor" : "target")
+        file << "    {\"timestampMs\": " << e.TimestampMs << ", \"unit\": \""
+             << (e.IsActor ? "actor" : (e.IsPet ? "pet" : "target"))
              << "\", \"spellId\": " << e.SpellId << ", \"stackAmount\": " << uint32(e.StackAmount)
              << ", \"positive\": " << (e.Positive ? "true" : "false") << ", \"applied\": " << (e.Applied ? "true" : "false")
-             << ", \"targetIndex\": " << int32(e.TargetIndex)
+             << ", \"targetIndex\": " << int32(e.TargetIndex) << ", \"unitEntry\": " << e.UnitEntry
              << "}" << (i + 1 < result.AuraEvents.size() ? ",\n" : "\n");
     }
     file << "  ],\n";
@@ -194,6 +211,36 @@ static bool WriteDpsReport(std::string const& path, SimDaemon::RunConfig const& 
         SimDaemon::RunResult::ManaSample const& m = result.ManaSamples[i];
         file << "    {\"timestampMs\": " << m.TimestampMs << ", \"manaPct\": " << m.ManaPct
              << "}" << (i + 1 < result.ManaSamples.size() ? ",\n" : "\n");
+    }
+    file << "  ],\n";
+
+    // The actor's class power every 500 ms and, for a Death Knight, its ready runes by type (RunResult::PowerSamples);
+    // power and maxPower are as the player reads them (rage and runic power divided by ten)
+    file << "  \"powerSamples\": [\n";
+    for (size_t i = 0; i < result.PowerSamples.size(); ++i)
+    {
+        SimDaemon::RunResult::PowerSample const& sample = result.PowerSamples[i];
+        file << "    {\"timestampMs\": " << sample.TimestampMs << ", \"powerType\": " << uint32(sample.PowerType)
+             << ", \"power\": " << TankPowerDisplay(sample.PowerType, sample.Power) << ", \"maxPower\": "
+             << TankPowerDisplay(sample.PowerType, sample.MaxPower);
+        if (sample.HasRunes)
+            file << ", \"runes\": {\"blood\": " << uint32(sample.RunesBlood) << ", \"frost\": "
+                 << uint32(sample.RunesFrost) << ", \"unholy\": " << uint32(sample.RunesUnholy) << ", \"death\": "
+                 << uint32(sample.RunesDeath) << "}";
+        file << "}" << (i + 1 < result.PowerSamples.size() ? ",\n" : "\n");
+    }
+    file << "  ],\n";
+
+    // The units the actor controls alive at each sample, per creature entry (RunResult::MinionSamples); an object
+    // keyed by the entry as text
+    file << "  \"minionSamples\": [\n";
+    for (size_t i = 0; i < result.MinionSamples.size(); ++i)
+    {
+        SimDaemon::RunResult::MinionSample const& sample = result.MinionSamples[i];
+        file << "    {\"timestampMs\": " << sample.TimestampMs << ", \"counts\": {";
+        for (size_t j = 0; j < sample.Counts.size(); ++j)
+            file << (j ? ", " : "") << "\"" << sample.Counts[j].first << "\": " << sample.Counts[j].second;
+        file << "}}" << (i + 1 < result.MinionSamples.size() ? ",\n" : "\n");
     }
     file << "  ],\n";
 
@@ -686,15 +733,6 @@ namespace
     // JSON keys of SimTank::Outcome, in enum order
     constexpr char const* TANK_OUTCOME_KEYS[TANK_OUTCOMES] = {"miss", "dodge", "parry", "block", "fullBlock", "crit",
         "crush", "hit", "glancing", "other"};
-
-    // POWER_RAGE and POWER_RUNIC_POWER are stored x10 by the core; every other power is stored as it reads
-    double TankPowerDisplay(uint8 powerType, uint32 value)
-    {
-        constexpr uint8 POWER_TYPE_RAGE = 1;
-        constexpr uint8 POWER_TYPE_RUNIC_POWER = 6;
-        return (powerType == POWER_TYPE_RAGE || powerType == POWER_TYPE_RUNIC_POWER) ? double(value) / 10.0 :
-            double(value);
-    }
 
     double SafeDivide(double numerator, double denominator)
     {

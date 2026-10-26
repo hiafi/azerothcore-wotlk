@@ -470,6 +470,50 @@ SPELLCATEGORY = DbcTable(
     columns=("ID", "Flags"),
 )
 
+# SpellRuneCost.dbc - what a rune ability costs and the Runic Power it generates (Death Knight T1).
+# Columns are `ID, Blood, Unholy, Frost, RunicPower` (data/sql/base/db_world/spellrunecost_dbc.sql and
+# SpellRuneCostfmt "niiii", DBCfmt.h). `SpellRuneCostEntry::RuneCost[3]` is indexed by `RuneType`
+# (RUNE_BLOOD 0, RUNE_UNHOLY 1, RUNE_FROST 2, Player.h; the loops in Spell.cpp CheckRuneCost/TakeRunePower), so
+# the order is **Blood, Unholy, Frost**. The comment `0=blood, 1=frost, 2=unholy` at DBCStructure.h:1843 is
+# WRONG (stock proof: 241 Icy Touch = (0, 0, 1, 100), 482 Frost Presence = (0, 0, 1, 0), 797 = (0, 1, 1, 150)).
+# `RunicPower` is stored x10 (100 = 10 RP; the player's maximum is 1000). Both halves only apply to a spell whose
+# `PowerType` is 5 (RUNE). Deliberately NOT in ALL_TABLES / SECONDARY_TABLES (same reason as SPELLCATEGORY: the
+# SQL would go out twice): the server half is spell_tables.py's `spellrunecost_dbc` entry, and generate.py merges
+# the declared rows over var/extractors/dbc/SpellRuneCost.dbc into patch-Z.mpq for the client.
+SPELLRUNECOST = DbcTable(
+    name="SpellRuneCost",
+    dbc_filename="SpellRuneCost.dbc",
+    sql_table="spellrunecost_dbc",
+    fmt="niiii",
+    columns=("ID", "Blood", "Unholy", "Frost", "RunicPower"),
+)
+
+# ChrClasses.dbc - server-side only (Death Knight T1, lib/dsl/registry.py's chr_class()). The server picks the
+# first-login cinematic from `ChrClasses.CinematicSequence` of the class, else `ChrRaces.CinematicSequence`
+# (CharacterHandler.cpp HandlePlayerLogin), so a full-row override of class 6 with CinematicSequenceID 0 gives a
+# new DK its race's intro. fmt from DBCfmt.h's ChrClassesEntryfmt, columns from
+# data/sql/base/db_world/chrclasses_dbc.sql (60 each). An overlay row REPLACES the whole row (power type,
+# SpellClassSet, Required_Expansion, names), which is why the helper starts from the stock row. The fmt reads
+# powerType (2), SpellClassSet (56), CinematicSequenceID (58) and Required_Expansion (59); Flags (57) is 'x'.
+# The Female / Male / neutral-gender name columns and Filename are 'x' in the fmt but are string-table offsets in the
+# file, so they are in `read_as_string` (the SPELLSHAPESHIFTFORM lesson). Stock file: the server's DBC directory
+# (ac-worldserver:/azerothcore/env/dist/data/dbc/), flattened into var/extractors/dbc/. Not in ALL_TABLES.
+CHRCLASSES = DbcTable(
+    name="ChrClasses",
+    dbc_filename="ChrClasses.dbc",
+    sql_table="chrclasses_dbc",
+    fmt="nxixssssssssssssssssxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxixii",
+    columns=_cols(
+        "ID", "Field01", "DisplayPower", "PetNameToken", _locale_cols("Name"), _locale_cols("Name_Female"),
+        _locale_cols("Name_Male"), "Filename", "SpellClassSet", "Flags", "CinematicSequenceID",
+        "Required_Expansion",
+    ),
+    read_as_string=frozenset(
+        {f"{base}_Lang_{loc}" for base in ("Name_Female", "Name_Male") for loc in LOCALE_SUFFIXES}
+        | {"Filename"}
+    ),
+)
+
 # Not part of ALL_TABLES - patched directly by the one-off VFX scripts (patch_druid_vfx_models.py
 # first) when a mined SpellVisualKit.SoundID has no stock row. Server-loaded (DBCStores.cpp:
 # LOAD_DBC(sSoundEntriesStore, "SoundEntries.dbc", "soundentries_dbc")), but nothing server-side

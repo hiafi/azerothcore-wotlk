@@ -664,7 +664,12 @@ class RealPopulationTest(unittest.TestCase):
             shapeshift_index=state.load_stock_rows(dbcfmt.SPELLSHAPESHIFTFORM), existing_creature_rows=_AnyRows(),
             creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
             creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS,
-            live_data=spell_tables.dsl_live_data(state.load_stock_rows(dbcfmt.TALENT), {}),
+            live_data=spell_tables.dsl_live_data(
+                state.load_stock_rows(dbcfmt.TALENT), {},
+                lambda: state.load_existing_rows(dbcfmt.SKILLLINEABILITY),
+                lambda: state.load_stock_rows(dbcfmt.CHRCLASSES),
+                lambda: state.load_stock_rows(dbcfmt.SKILLLINEABILITY),
+            ),
         )
         dsl = registry.load_classes_dir(generate.SOURCE_DIR / "classes", **kwargs)
         generate._merge_npc_declarations(dsl, registry.load_classes_dir(generate.SOURCE_DIR / "npcs", **kwargs))

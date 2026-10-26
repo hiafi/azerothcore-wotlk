@@ -50,7 +50,7 @@ KNOWN_FLAGS = {"--no-prune", "--check"}
 # PLAN P2b step 4: adopted class by class, inside each class's own pass - not a side effect of
 # every generate.py run. Extend this tuple when a pass is ready to start generating/relying on its
 # own Generated/<Class>Data.h (warlock first, in P4).
-CLASSES_WITH_GENERATED_HEADERS = ("warlock", "paladin", "hunter", "shaman")
+CLASSES_WITH_GENERATED_HEADERS = ("warlock", "paladin", "hunter", "shaman", "deathknight")
 GENERATED_HEADER_DIR = REPO_ROOT / "src" / "server" / "game" / "Entities" / "Unit" / "Generated"
 from lib.reuse import ReuseContext  # noqa: E402
 
@@ -100,6 +100,79 @@ def _spell_category_base_error(rows: dict[int, dict], base_dir: Path) -> str | N
             f"holds it into that directory (see .agents/docs/systems/dbc-tools.md)"
         )
     return None
+
+
+def _spell_rune_cost_rows(dsl_rows: list[dict]) -> dict[int, dict]:
+    """Declared spell_rune_cost() entries as SpellRuneCost.dbc rows, keyed by ID. The server half is the SPELL_TABLES
+    `spellrunecost_dbc` delta (spell_tables.py); this is the client half, merged over the stock file into the patch on
+    every build like spell_category (Death Knight T1). Column order is Blood, Unholy, Frost (dbcfmt.SPELLRUNECOST)."""
+    return {
+        int(r["ID"]): {
+            "ID": int(r["ID"]), "Blood": int(r["Blood"]), "Unholy": int(r["Unholy"]), "Frost": int(r["Frost"]),
+            "RunicPower": int(r["RunicPower"]),
+        }
+        for r in dsl_rows
+    }
+
+
+def _spell_rune_cost_base_error(rows: dict[int, dict], base_dir: Path) -> str | None:
+    """Declared rune costs need the stock SpellRuneCost.dbc as the patch's base layer: without it the client would not
+    know the cost and the patch could not carry the row. None when fine."""
+    path = base_dir / dbcfmt.SPELLRUNECOST.dbc_filename
+    if rows and not path.is_file():
+        return (
+            f"spell_rune_cost() declared ({', '.join(str(i) for i in sorted(rows))}) but no stock "
+            f"{dbcfmt.SPELLRUNECOST.dbc_filename} at {path} - copy it from the worldserver's DBC directory "
+            f"(ac-worldserver:/azerothcore/env/dist/data/dbc/{dbcfmt.SPELLRUNECOST.dbc_filename}) into that "
+            f"directory (see .agents/docs/systems/dbc-tools.md)"
+        )
+    return None
+
+
+def _rune_cost_errors(spell_entries: list[dict], dsl_classes: dict, ids_cfg: dict) -> list[str]:
+    """The spell_rune_cost() ERRORs, for `--check` and the full run alike: a spell whose RuneCostID is in the
+    spellrunecost block with no declaration, and a declaration with no stock file to merge into."""
+    errors = lint.check_undeclared_spell_rune_costs(
+        spell_entries, {int(r["ID"]) for r in dsl_classes["spell_rune_costs"]}, ids_cfg.get("spellrunecost"),
+    )
+    base_error = _spell_rune_cost_base_error(_spell_rune_cost_rows(dsl_classes["spell_rune_costs"]), BASE_DBC_DIR)
+    if base_error:
+        errors.append(base_error)
+    return errors
+
+
+def _gcd_haste_check_warnings(
+    spell_entries: list[dict], talents: dict, dsl_classes: dict, stock_spells: dict[int, dict], ids_cfg: dict,
+) -> list[str]:
+    """`--check` dry run of the full run's GCD-haste computation (Death Knight T1, step 6): the first P0 deploy
+    stopped at `ERROR: gcd haste: ... all-zero SpellClassMask`, which `--check` could not show (the hunter T1-10
+    shape). Runs `_gcd_haste_entries` over the *stock* Spell / Talent / TalentTab / SkillLineAbility rows with the
+    declared rows laid over them, the superseded-rank map the full run uses, and `trainer_taught` = the declared
+    `trained_by()` spells. Everything it finds is a WARNING (it is an approximation: promoted migrations are not
+    replayed, so it cannot flip `--check`'s exit code); the full run keeps the authoritative ERRORs. Returns the
+    message texts.
+
+    **The superseded-rank map is required, not optional.** The handoff said `superseded={}`; with it the stock
+    inputs print six lines on the tree of 2026-10-23 (three Paladin aura bit conflicts, two Hunter melee / ranged bit
+    overlaps, Hunter Black Arrow bit 7), because the stock rows still list the ranks the single-rank conversion
+    collapsed (Retribution Aura 10298, Mongoose Bite 14269, ...) as learnable. The map (`superseded_ranks`, 2148
+    ranks from `spell_ranks` plus the DSL survivors) is cheap and is what the full run passes; with it the committed
+    tree prints nothing. Promoted rows were not the cause (a promoted-aware variant printed the same six lines)."""
+    stock_secondary = {name: list(state.load_stock_rows(table).values()) for name, table in SECONDARY_TABLES.items()}
+    superseded = superseded_ranks.superseded_ranks(
+        load_spell_ranks_chains(), superseded_ranks.survivor_ids(dsl_classes["spells"]),
+    )
+    prefix = "gcd haste (--check, stock approximation): "
+    try:
+        _entries, result = _gcd_haste_entries(
+            spell_entries, talents, dsl_classes["spells"], superseded,
+            {int(r["SpellId"]) for r in dsl_classes["trainer_spells"]}, stock_spells,
+            state.load_stock_rows(dbcfmt.TALENT), state.load_stock_rows(dbcfmt.TALENTTAB),
+            state.load_stock_rows(dbcfmt.SKILLLINEABILITY), stock_secondary, ids_cfg,
+        )
+    except gcd_haste.GcdHasteError as error:
+        return [prefix + str(error)]
+    return [prefix + message for message in (*result.errors, *result.warnings)]
 
 
 def _trainer_spells_to_emit(rows: list[dict], live: dict[tuple[int, int], dict]) -> list[dict]:
@@ -287,6 +360,19 @@ def _t1_content_warnings(
     if proc_shadow_inputs is not None:
         warnings += lint.check_shadowed_spell_procs(dsl_classes["spell_procs"], *proc_shadow_inputs)
     warnings += lint.check_trainer_spell_level(trainer_spells, spell_lookup, _class_trainer_ids())
+    # Death Knight T1: spell_threat() / creation_*() reference spells the loader never validates, and the rune-cost
+    # lints (RuneCostID without PowerType 5, a free cast, a duplicate of a stock row).
+    # (.get: callers that hand-build a partial `dsl_classes`, like the shaman wiring test, declare none of these.)
+    warnings += lint.check_spell_threat_rows(dsl_classes.get("spell_threats", []), set(spell_lookup))
+    warnings += lint.check_creation_rows(
+        dsl_classes.get("creation_actions", []), dsl_classes.get("creation_casts", []), set(spell_lookup),
+    )
+    rune_costs = dsl_classes.get("spell_rune_costs", [])
+    rune_cost_file = BASE_DBC_DIR / dbcfmt.SPELLRUNECOST.dbc_filename
+    warnings += lint.check_spell_rune_costs(
+        spell_entries, built_rows, state.load_stock_rows(dbcfmt.SPELLRUNECOST) if rune_cost_file.is_file() else None,
+        rune_costs,
+    )
     return warnings
 
 
@@ -407,29 +493,46 @@ def main() -> int:
     existing_talents = state.load_existing_rows(dbcfmt.TALENT)
     item_live_rows = spell_tables.load_live_item_template_rows()
     item_table_index = spell_tables.load_item_table_index(item_live_rows)
-    live_data = spell_tables.dsl_live_data(existing_talents, item_live_rows)
+    # Death Knight T1: override_skill_line_ability() edits a live SkillLineAbility row and chr_class() a stock
+    # ChrClasses one. The SkillLineAbility replay is ~13 s, so it is loaded on first use and the full run reuses it
+    # below (live_skilllineabilities()); an empty ChrClasses index (file missing) makes chr_class() stop with an ERROR.
+    live_sla_cache: dict[str, dict[int, dict]] = {}
+
+    def live_skilllineabilities() -> dict[int, dict]:
+        if "rows" not in live_sla_cache:
+            live_sla_cache["rows"] = state.load_existing_rows(dbcfmt.SKILLLINEABILITY)
+        return live_sla_cache["rows"]
+
+    live_data = spell_tables.dsl_live_data(
+        existing_talents, item_live_rows, live_skilllineabilities, lambda: state.load_stock_rows(dbcfmt.CHRCLASSES),
+        lambda: state.load_stock_rows(dbcfmt.SKILLLINEABILITY),
+    )
     progress("loaded live Talent.dbc rows and item_template rows")
 
-    dsl_classes = dsl_registry.load_classes_dir(
-        SOURCE_DIR / "classes", ids_cfg=ids_cfg, trainer_index=trainer_index,
-        existing_group_ids=existing_group_ids, shapeshift_index=shapeshift_index,
-        existing_creature_rows=existing_creature_rows,
-        creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
-        creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS, live_data=live_data,
-    )
-    # source/npcs/*.py: class-less test/tool NPCs (training dummies) - same loader, merged in.
-    dsl_npcs = dsl_registry.load_classes_dir(
-        SOURCE_DIR / "npcs", ids_cfg=ids_cfg, trainer_index=trainer_index,
-        existing_group_ids=existing_group_ids, shapeshift_index=shapeshift_index,
-        existing_creature_rows=existing_creature_rows,
-        creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
-        creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS, live_data=live_data,
-    )
-    _merge_npc_declarations(dsl_classes, dsl_npcs)
-    # source/world/*.py: world content tied to no class or NPC (lfg_exclude(), item_template() edits of
-    # stock items) - same loader, merged in.
-    dsl_world = dsl_registry.load_classes_dir(SOURCE_DIR / "world", ids_cfg=ids_cfg, live_data=live_data)
-    _merge_npc_declarations(dsl_classes, dsl_world, "source/world/")
+    try:
+        dsl_classes = dsl_registry.load_classes_dir(
+            SOURCE_DIR / "classes", ids_cfg=ids_cfg, trainer_index=trainer_index,
+            existing_group_ids=existing_group_ids, shapeshift_index=shapeshift_index,
+            existing_creature_rows=existing_creature_rows,
+            creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
+            creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS, live_data=live_data,
+        )
+        # source/npcs/*.py: class-less test/tool NPCs (training dummies) - same loader, merged in.
+        dsl_npcs = dsl_registry.load_classes_dir(
+            SOURCE_DIR / "npcs", ids_cfg=ids_cfg, trainer_index=trainer_index,
+            existing_group_ids=existing_group_ids, shapeshift_index=shapeshift_index,
+            existing_creature_rows=existing_creature_rows,
+            creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
+            creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS, live_data=live_data,
+        )
+        _merge_npc_declarations(dsl_classes, dsl_npcs)
+        # source/world/*.py: world content tied to no class or NPC (lfg_exclude(), item_template() edits of
+        # stock items) - same loader, merged in.
+        dsl_world = dsl_registry.load_classes_dir(SOURCE_DIR / "world", ids_cfg=ids_cfg, live_data=live_data)
+        _merge_npc_declarations(dsl_classes, dsl_world, "source/world/")
+    except dsl_registry.MissingStockFileError as error:
+        print(f"ERROR: {error}")
+        return 1
     try:
         dsl_registry.check_retired_talent_tab(dsl_classes)
     except dsl_registry.MissingRetiredTabError as error:
@@ -496,11 +599,17 @@ def main() -> int:
             _pet_skill_lines(),
         ):
             print(f"WARNING: {warning}")
+        # The full run's GCD-haste computation over stock inputs (Death Knight T1 step 6): its errors are WARNINGs
+        # here (an approximation), printed so a new family-15 spell with an all-zero class mask shows up in --check.
+        for warning in _gcd_haste_check_warnings(spell_entries, talents, dsl_classes, check_stock_spells, ids_cfg):
+            print(f"WARNING: {warning}")
         header_problems = header_gen.check_headers(
             dsl_classes, GENERATED_HEADER_DIR, CLASSES_WITH_GENERATED_HEADERS
         )
-        if header_problems:
-            for problem in header_problems:
+        # Errors the full run stops on, so --check exits 1 for them too (hunter T1-10).
+        check_errors = _rune_cost_errors(spell_entries, dsl_classes, ids_cfg) + header_problems
+        if check_errors:
+            for problem in check_errors:
                 print(f"ERROR: {problem}")
             return 1
         print(f"note: generated header(s) up to date for {', '.join(CLASSES_WITH_GENERATED_HEADERS)}")
@@ -561,7 +670,7 @@ def main() -> int:
 
     existing_spells = state.load_existing_rows(dbcfmt.SPELL)
     existing_talenttabs = state.load_existing_rows(dbcfmt.TALENTTAB)
-    existing_skilllineabilities = state.load_existing_rows(dbcfmt.SKILLLINEABILITY)
+    existing_skilllineabilities = dict(live_skilllineabilities())
     existing_items = state.load_existing_rows(dbcfmt.ITEM)
     existing_secondary_by_id = {
         name: state.load_existing_rows(table) for name, table in SECONDARY_TABLES.items()
@@ -922,6 +1031,9 @@ def main() -> int:
     )
     if category_base_error:
         category_errors.append(category_base_error)
+    # Death Knight T1: the same for a RuneCostID in the spellrunecost block with no spell_rune_cost() declaration, and
+    # for declared rune costs with no stock SpellRuneCost.dbc to merge into (shared with --check).
+    category_errors.extend(_rune_cost_errors(spell_entries, dsl_classes, ids_cfg))
     lfg_dungeons = (
         state.load_stock_rows(dbcfmt.LFGDUNGEONS)
         if (BASE_DBC_DIR / dbcfmt.LFGDUNGEONS.dbc_filename).is_file() else None
@@ -1042,6 +1154,7 @@ def main() -> int:
         dbcfmt.ITEM: {r["ID"]: r for r in client_item_rows},
         dbcfmt.SPELLDESCRIPTIONVARIABLES: _tooltip_var_rows(dsl_classes["tooltip_vars"]),
         dbcfmt.SPELLCATEGORY: _spell_category_rows(dsl_classes["spell_categories"]),
+        dbcfmt.SPELLRUNECOST: _spell_rune_cost_rows(dsl_classes["spell_rune_costs"]),
     }
     for name, table in SECONDARY_TABLES.items():
         # Same reserved_rows switch as the SQL block above - the client patch must carry every

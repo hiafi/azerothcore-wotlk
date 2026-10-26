@@ -5,8 +5,11 @@ Checks, from the file itself and from the class sources:
   - every block is a {start, end} pair, and blocks that feed the same table do not overlap;
   - every per-class reservation sits inside the block of the same name, and no two classes' reservations overlap;
   - every custom id a class declares (spell, talent, SkillLineAbility, spell_group, tooltip variable, creature)
-    that falls inside a tool-wide block is inside that class's reservation. Shaman is the only class with a
-    reservation today; the spike's 202760-202779, 300298/300299 and 1270 are inside it.
+    that falls inside a tool-wide block is inside that class's reservation. Shaman and Death Knight reserve slices
+    (the shaman spike's 202760-202779, 300298/300299 and 1270, and the Death Knight P0 spike's 203680-203699, 1285,
+    30779 and 300349, are inside theirs);
+  - a non-class owner reserves under its project name (`healsim`: spells 202900-202909, declared from source/npcs),
+    so the overlap test keeps every class out of its ids.
 
 Run directly:
 
@@ -104,6 +107,16 @@ class BlockShapeTest(unittest.TestCase):
     def test_summonproperties_clears_the_stock_maximum(self):
         self.assertGreater(BLOCKS["summonproperties"]["start"], 2935)  # SummonProperties.dbc tops out at 2935
 
+    def test_spellrunecost_clears_the_stock_maximum(self):
+        # SpellRuneCost.dbc has 475 rows with a maximum id of 2513; spell_dbc.RuneCostID tops out at 2467 (T0 s1.1)
+        self.assertEqual(BLOCKS["spellrunecost"], {"start": 2600, "end": 2629})
+        self.assertGreater(BLOCKS["spellrunecost"]["start"], 2513)
+
+    def test_death_knight_t1_widened_the_sound_and_visual_blocks(self):
+        # shaman's slices filled the old ends (90100 / 90199); the widened ends hold Death Knight's slices
+        self.assertEqual(BLOCKS["soundentries"], {"start": 90001, "end": 90199})
+        self.assertEqual(BLOCKS["spellvisual"], {"start": 90001, "end": 90299})
+
     def test_every_id_already_used_is_inside_its_block(self):
         for name, (low, high) in USED_DISPLAY_IDS.items():
             with self.subTest(block=name):
@@ -125,8 +138,9 @@ class BlockShapeTest(unittest.TestCase):
 
 
 class ReservationTest(unittest.TestCase):
-    def test_a_reservation_exists_for_shaman(self):
-        self.assertIn("shaman", RESERVATIONS)
+    def test_a_reservation_exists_for_shaman_death_knight_and_the_healing_sim(self):
+        for owner in ("shaman", "deathknight", "healsim"):
+            self.assertIn(owner, RESERVATIONS)
 
     def test_reservations_sit_inside_their_block(self):
         for class_name, tables in RESERVATIONS.items():
@@ -159,6 +173,41 @@ class ReservationTest(unittest.TestCase):
         self.assertEqual(shaman["creaturedisplayinfo"], (90440, 90469))
         self.assertEqual(shaman["gameobjectdisplayinfo"], (90010, 90014))
         self.assertEqual(shaman["summonproperties"], (3000, 3009))
+
+    def test_deathknight_reservations_are_the_plan_section_4_rows(self):
+        dk = {table: (cfg["start"], cfg["end"]) for table, cfg in RESERVATIONS["deathknight"].items()}
+        self.assertEqual(dk["spell"], (203000, 203699))
+        self.assertEqual(dk["talent"], (60330, 60389))
+        self.assertEqual(dk["skilllineability"], (30720, 30779))
+        self.assertEqual(dk["spell_group"], (1271, 1285))
+        self.assertEqual(dk["spelldescriptionvariables"], (1230, 1299))
+        self.assertEqual(dk["creature"], (300300, 300349))
+        self.assertEqual(dk["spellicon"], (90310, 90369))
+        self.assertEqual(dk["soundentries"], (90101, 90120))
+        self.assertEqual(dk["spellvisual"], (90180, 90249))
+        self.assertEqual(dk["creaturedisplayinfo"], (90470, 90489))
+        self.assertEqual(dk["creaturemodeldata"], (90470, 90489))
+        self.assertEqual(dk["gameobjectdisplayinfo"], (90015, 90019))
+        self.assertEqual(dk["summonproperties"], (3010, 3024))
+        self.assertEqual(dk["spellcategory"], (1307, 1309))
+        self.assertEqual(dk["spellrunecost"], (2600, 2609))
+        self.assertEqual(len(dk), 15)
+
+    def test_healsim_reserves_its_spells_and_nothing_else(self):
+        healsim = {table: (cfg["start"], cfg["end"]) for table, cfg in RESERVATIONS["healsim"].items()}
+        self.assertEqual(healsim, {"spell": (202900, 202909)})
+
+    def test_death_knights_spell_slice_does_not_overlap_the_healing_sims(self):
+        # the T0 collision: DK's first spell block was 202900-203599 and swallowed 202900-202909
+        self.assertFalse(_overlap(RESERVATIONS["deathknight"]["spell"], RESERVATIONS["healsim"]["spell"]))
+        self.assertFalse(_overlap(RESERVATIONS["shaman"]["spell"], RESERVATIONS["healsim"]["spell"]))
+
+    def test_the_spellcategory_and_runecost_slices_fit_the_blocks_they_are_cut_from(self):
+        self.assertTrue(
+            BLOCKS["spellcategory"]["start"] <= RESERVATIONS["deathknight"]["spellcategory"]["start"]
+            and RESERVATIONS["deathknight"]["spellcategory"]["end"] <= BLOCKS["spellcategory"]["end"]
+        )
+        self.assertLessEqual(RESERVATIONS["deathknight"]["spellrunecost"]["end"], BLOCKS["spellrunecost"]["end"])
 
     def test_a_deliberately_out_of_block_reservation_would_fail(self):
         # The check above is not vacuous: a reservation poking out of its block is detected by the same comparison.
@@ -194,12 +243,19 @@ def declared_ids(class_dir: Path) -> dict[str, list[int]]:
         class_dir, ids_cfg=IDS, trainer_index=_AnyTrainer(), existing_group_ids=_AnySet(), shapeshift_index={},
         existing_creature_rows=_AnyRows(), creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
         creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS,
-        live_data=spell_tables.dsl_live_data(stock_talents, {}),
+        live_data=spell_tables.dsl_live_data(
+            stock_talents, {},
+            lambda: state.load_existing_rows(dbcfmt.SKILLLINEABILITY),
+            lambda: state.load_stock_rows(dbcfmt.CHRCLASSES),
+            lambda: state.load_stock_rows(dbcfmt.SKILLLINEABILITY),
+        ),
     )
     return {
         "spell": [int(e["id"]) for e in reg.spells],
         "talent": [int(e["id"]) for e in reg.talents],
         "skilllineability": [int(e["id"]) for e in reg.skill_line_abilities],
+        "spellrunecost": [int(r["ID"]) for r in reg.spell_rune_costs],
+        "spellcategory": [int(r["ID"]) for r in reg.spell_categories],
         "spell_group": [int(r["id"]) for r in reg.spell_groups] + [int(r["group_id"]) for r in reg.spell_group_rules],
         "spelldescriptionvariables": [int(r["id"]) for r in reg.tooltip_vars],
         "creature": [int(r["entry"]) for r in reg.creature_templates]
@@ -226,6 +282,8 @@ class ClassDeclarationsTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.shaman = declared_ids(TOOL_ROOT / "source" / "classes" / "shaman")
+        cls.deathknight = declared_ids(TOOL_ROOT / "source" / "classes" / "deathknight")
+        cls.npcs = declared_ids(TOOL_ROOT / "source" / "npcs")
 
     def test_shaman_declares_only_inside_its_reservation(self):
         self.assertEqual(out_of_reservation("shaman", self.shaman), [])
@@ -238,10 +296,45 @@ class ClassDeclarationsTest(unittest.TestCase):
             self.assertIn(1270, self.shaman["spell_group"])
             self.assertTrue({300298, 300299} <= set(self.shaman["creature"]))
 
+    def test_death_knight_declares_only_inside_its_reservation(self):
+        # declared_ids loads the package with the stock Talent.dbc present; if that load failed this would raise
+        self.assertEqual(out_of_reservation("deathknight", self.deathknight), [])
+
+    def test_the_death_knight_spike_ids_are_inside_it(self):
+        spike_spells = {i for i in self.deathknight["spell"] if 203680 <= i <= 203699}
+        if spike_spells:  # the spike file is deleted at DK0a start
+            self.assertEqual(out_of_reservation("deathknight", {"spell": sorted(spike_spells)}), [])
+            self.assertIn(1285, self.deathknight["spell_group"])
+            self.assertIn(30779, self.deathknight["skilllineability"])
+            self.assertIn(300349, self.deathknight["creature"])
+            for kind, probe in (("spell_group", 1285), ("skilllineability", 30779), ("creature", 300349)):
+                self.assertEqual(out_of_reservation("deathknight", {kind: [probe]}), [])
+
+    def test_death_knight_out_of_reservation_probes_fail(self):
+        # one past the end of each slice, plus 202950: inside the spell block, outside every reservation
+        probes = {"spell": [203700, 202950], "talent": [60390], "skilllineability": [30780], "spell_group": [1286],
+                  "creature": [300350], "spelldescriptionvariables": [1300],
+                  "spellrunecost": [2610], "spellcategory": [1306]}
+        self.assertEqual(
+            out_of_reservation("deathknight", probes),
+            ["spell 202950", "spell 203700", "talent 60390", "skilllineability 30780", "spell_group 1286",
+             "creature 300350", "spelldescriptionvariables 1300", "spellrunecost 2610", "spellcategory 1306"],
+        )
+        self.assertEqual(out_of_reservation("deathknight", {"spell": [202900]}), ["spell 202900"])  # the sim's spell
+
+    def test_the_healing_sims_spells_are_inside_the_healsim_reservation(self):
+        sim_spells = [i for i in self.npcs["spell"] if BLOCKS["spell"]["start"] <= i <= BLOCKS["spell"]["end"]]
+        self.assertTrue(sim_spells)  # source/npcs/healsim_spells.py declares 202900 and 202901
+        self.assertEqual(out_of_reservation("healsim", {"spell": sim_spells}), [])
+        self.assertTrue({202900, 202901} <= set(sim_spells))
+        self.assertEqual(out_of_reservation("healsim", {"spell": [202910]}), ["spell 202910"])
+        self.assertEqual(out_of_reservation("healsim", {"spell": [203000]}), ["spell 203000"])
+
     def test_a_deliberately_out_of_block_id_fails(self):
         ids = {"spell": [202800], "talent": [60330], "skilllineability": [30720], "spell_group": [1271],
                "spelldescriptionvariables": [1230], "creature": [300300]}
-        # 300300 is inside the creature block (300000-300999) but past the reservation; the others likewise.
+        # 202800 / 60330 / 30720 / 1271 / 1230 / 300300 are out of *shaman's* slice (past its reservation, inside the
+        # tool-wide block); 60330 / 30720 / 1271 / 1230 / 300300 are now Death Knight ids, which is fine.
         self.assertEqual(
             out_of_reservation("shaman", ids),
             ["spell 202800", "talent 60330", "skilllineability 30720", "spell_group 1271",

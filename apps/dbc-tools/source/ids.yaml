@@ -43,7 +43,10 @@
 spell:
   start: 200000
   end: 209999
-  # 202900-202909: healing sim (source/npcs/healsim_spells.py); 202902-202909 are spare for that project.
+  # 202900-202909: healing sim (source/npcs/healsim_spells.py): 202900 Sim Damage Pulse, 202901 Sim Pin Hit,
+  # 202902-202909 spare. A non-class owner reserves under its project name in `reservations:` at the bottom
+  # (`healsim`), so lib/test_id_blocks.py's overlap test protects it from the class slices (the T0 collision
+  # with Death Knight's first spell block, 2026-10-23).
 
 talent:
   start: 60000
@@ -154,11 +157,13 @@ spellcategory:
 # reservation (the `reservations:` key at the bottom) sits inside the tool-wide range and overlaps no other
 # class. Each range contains every id already used, checked against the constants in build_patch_*.py and
 # patch_*_vfx_models.py and the maxima in the shaman T0a report (2026-10-18):
-#   - spellicon:  used 90100-90239 (build_patch_i.py ICON_ID_*). 90100 is the first id: the Ascension icon
-#                 mining started above CreatureDisplayInfo's 90001+ rows (a different table, same numbers).
-#   - soundentries: used 90001-90033 (druid 1-4, priest 5-10, warlock 11, paladin 31-33).
+#   - spellicon:  used 90100-90239, 90270, 90310-90312 (build_patch_i.py ICON_ID_*). 90100 is the first id: the Ascension
+#                 icon mining started above CreatureDisplayInfo's 90001+ rows (a different table, same numbers).
+#   - soundentries: used 90001-90033 (druid 1-4, priest 5-10, warlock 11, paladin 31-33). Widened from 90100 to
+#                 90199 by Death Knight T1 (shaman's slice filled 90081-90100); Death Knight reserves 90101-90120.
 #   - spellvisual: SpellVisual, SpellVisualKit and SpellVisualEffectName share these numbers. Used 90001-90091
-#                 (mage from 90001, hunter glaive toss 90090/90091 are the highest).
+#                 (mage from 90001, hunter glaive toss 90090/90091 are the highest). Widened from 90199 to 90299
+#                 by Death Knight T1 (shaman's slice filled 90130-90179); Death Knight reserves 90180-90249.
 #   - creaturedisplayinfo / creaturemodeldata: used 90001-90321 / 90001-90310 (mage 90001-90003, the shapeshift
 #                 appearances 90100-90399 of build_patch_f.py).
 #   - gameobjectdisplayinfo: used 90001 (client patch-M).
@@ -169,11 +174,11 @@ spellicon:
 
 soundentries:
   start: 90001
-  end: 90100
+  end: 90199
 
 spellvisual:
   start: 90001
-  end: 90199
+  end: 90299
 
 creaturedisplayinfo:
   start: 90001
@@ -191,12 +196,22 @@ summonproperties:
   start: 3000
   end: 3099
 
-# Per-class reservations, one entry per table the class draws ids from, each inside the tool-wide block of the
-# same name above (or the spell/talent/... blocks earlier in this file). Kept under ONE key because every
+# spellrunecost_dbc ids for spell_rune_cost() (Death Knight T1, .agents/plans/death-knight-rework/
+# death-knight-rework.T1-HANDOFF.md). The stock SpellRuneCost.dbc has 475 rows with a maximum id of 2513, the
+# spellrunecost_dbc overlay is empty, and spell_dbc.RuneCostID tops out at 2467 (T0 report s1.1), so 2600-2629 is
+# clear of all three. Read by registry.spell_rune_cost() (an id outside the block raises) and by generate.py's
+# undeclared-cost ERROR; the client SpellRuneCost.dbc rows ship in patch-Z.
+spellrunecost:
+  start: 2600
+  end: 2629
+
+# Per-class reservations (and non-class owners, see `healsim` below), one entry per table the owner draws ids from,
+# each inside the tool-wide block of the same name above (or the spell/talent/... blocks earlier in this file).
+# Kept under ONE key because every
 # reader of this file indexes it by table name (source.load_ids, ids.next_free_id, reuse.ReuseContext,
 # webui/app.py, registry.py's ids_cfg.get(...), apps/item-tools' item_range()) and none iterates it, so a
 # new top-level mapping is invisible to them. lib/test_id_blocks.py checks that reservations stay inside their
-# block, overlap no other class, and contain every id a class's source/classes/<class>/ declares.
+# block, overlap no other owner, and contain every id a class's source/classes/<class>/ declares.
 # Shaman: .agents/plans/shaman-rework/shaman-rework.PLAN.md s4 (TalentTab: none, the rework reuses 261/262/263).
 reservations:
   shaman:
@@ -220,3 +235,33 @@ reservations:
     creaturemodeldata: {start: 90440, end: 90469}
     gameobjectdisplayinfo: {start: 90010, end: 90014}
     summonproperties: {start: 3000, end: 3009}  # only if needed
+
+  # Death Knight: .agents/plans/death-knight-rework/death-knight-rework.PLAN.md s4 (TalentTab: none, the rework
+  # reuses 398 / 399 / 400).
+  deathknight:
+    # Spell: shared 203000-203119, Blood 203120-203269, Frost 203270-203439, Unholy 203440-203619, spare 203620-203699
+    # (203680-203699 held the P0 spike: never reuse, players' clients may have cached them).
+    spell: {start: 203000, end: 203699}
+    # Talent: Blood 15, Frost 20, Unholy 15, spare 10.
+    talent: {start: 60330, end: 60389}
+    # SkillLineAbility: shared 20, Blood / Frost / Unholy 10 each, spare 10 (30779 = the P0 spike).
+    skilllineability: {start: 30720, end: 30779}
+    # spell_group: 1271 runes, 1272 cross-class tank auras (1285 = the P0 spike).
+    spell_group: {start: 1271, end: 1285}
+    spelldescriptionvariables: {start: 1230, end: 1299}
+    # creature: 300338 / 300339 = the P0 spike; 300340 = the Horde (orc) Death Knight trainer.
+    creature: {start: 300300, end: 300349}
+    spellicon: {start: 90310, end: 90369}
+    soundentries: {start: 90101, end: 90120}
+    spellvisual: {start: 90180, end: 90249}  # SpellVisual, Kit and EffectName
+    creaturedisplayinfo: {start: 90470, end: 90489}
+    creaturemodeldata: {start: 90470, end: 90489}
+    gameobjectdisplayinfo: {start: 90015, end: 90019}
+    summonproperties: {start: 3010, end: 3024}  # an id block only: no new rows (CORE-AUDIT-B B14, props 61 / 209)
+    spellcategory: {start: 1307, end: 1309}  # only if needed
+    spellrunecost: {start: 2600, end: 2609}
+  # The healing sim (source/npcs/healsim_spells.py) is not a class, but its spells sit inside the spell block, so it
+  # reserves under its project name and the overlap test keeps every class out of them.
+  healsim:
+    # 202900 Sim Damage Pulse, 202901 Sim Pin Hit, 202902-202909 spare.
+    spell: {start: 202900, end: 202909}

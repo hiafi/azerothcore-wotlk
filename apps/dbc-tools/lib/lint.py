@@ -1222,7 +1222,20 @@ SHAMAN_FAMILY_RULES = FamilyBitRules(
     reader_reaches="the racial",
     reader_hint="Pick another bit for the reader.",
 )
-FAMILY_BIT_RULES = (HUNTER_FAMILY_RULES, SHAMAN_FAMILY_RULES)
+# Death Knight DK0a (death-knight-rework.DK0-HANDOFF.md "Family bits", FAMILY-BITS s3.3):
+#   carriers: d2 b31 (Draenei racial Gift of the Naaru), d1 b23 (Orc racial pet bit), d0 b6 (server Icy Touch alias).
+#   readers: d2 b31, d1 b10 / b23 / b24 (Orc racial pet bits) - a reader containing them would modify a racial.
+DEATHKNIGHT_FAMILY_RULES = FamilyBitRules(
+    name="deathknight",
+    spell_class_set=15,
+    forbidden_carrier_bits=(0x40, 0x800000, 0x80000000),             # d0 b6, d1 b23, d2 b31
+    forbidden_reader_bits=(0, 0x400 | 0x800000 | 0x1000000, 0x80000000),  # d1 b10 / b23 / b24, d2 b31
+    carrier_note="a bit a racial or a core hardcode keys on: d0 b6 Icy Touch alias, d1 b23 Orc pet bit, d2 b31 Gift",
+    reader_label="a racial's bit (d1 b10 / b23 / b24 Orc pet bits, d2 b31 Draenei Gift of the Naaru)",
+    reader_reaches="the racial",
+    reader_hint="Pick another bit for the reader.",
+)
+FAMILY_BIT_RULES = (HUNTER_FAMILY_RULES, SHAMAN_FAMILY_RULES, DEATHKNIGHT_FAMILY_RULES)
 _CUSTOM_SPELL_ID_START = 200000
 PET_SHARED_SKILL_LINE = 270  # "Pet - Hunter": the skill line every hunter pet family shares
 
@@ -1351,6 +1364,142 @@ def check_creature_spell_rows(rows: list[dict], known_spell_ids: set[int] | froz
             f"in source/ nor a stock spell - ObjectMgr::LoadCreatureTemplateSpells drops the slot at boot. "
             f"Check the id, or declare the spell."
         )
+    return warnings
+
+
+# --- Death Knight T1: rune costs, spell_threat and creation rows ---
+
+POWER_TYPE_RUNE = 5  # Powers (SharedDefines.h) POWER_RUNE
+
+
+def _effective_column(entry: dict, column: str, typed_key: str | None = None) -> int:
+    """The value `lib/build.py` writes for `column`: a `raw_overrides` value wins over the typed field."""
+    raw = entry.get("raw_overrides") or {}
+    if column in raw:
+        return int(raw[column] or 0)
+    return int(entry.get(typed_key, 0) or 0) if typed_key else 0
+
+
+def check_undeclared_spell_rune_costs(
+    entries: list[dict], declared_ids: set[int], block: dict | None,
+) -> list[str]:
+    """Errors for a spell whose `RuneCostID` is inside `source/ids.yaml`'s `spellrunecost` block but has no
+    `spell_rune_cost()` declaration: the id names no row, so `Spell::CheckRuneCost` finds no cost and the cast is
+    free (Spell.cpp:5621-5624). Mirrors `check_undeclared_spell_categories`: pass the *full* declared spell
+    population, stock ids (outside the block) are never checked, `block` None checks nothing."""
+    if not block:
+        return []
+    errors = []
+    for entry in entries:
+        cost_id = _effective_column(entry, "RuneCostID")
+        if block["start"] <= cost_id <= block["end"] and cost_id not in declared_ids:
+            errors.append(
+                f"spell {entry.get('id', '?')} ({entry.get('name', '?')}): RuneCostID {cost_id} is in the "
+                f"spellrunecost reserved block but no spell_rune_cost({cost_id}) is declared - the cast would be free "
+                f"(Spell::CheckRuneCost finds no row)"
+            )
+    return errors
+
+
+def check_spell_rune_costs(
+    entries: list[dict], rows: list[dict], stock_costs: dict[int, dict] | None, declared_costs: list[dict],
+) -> list[str]:
+    """WARNINGs about custom spells' (id >= 200000) rune costs and about declared `spell_rune_cost()` rows.
+    `rows` are the built Spell.dbc rows aligned with `entries`; `stock_costs` the stock `SpellRuneCost.dbc` rows by
+    id (None: the file is not extracted); `declared_costs` the declared registry rows.
+
+      (a) `RuneCostID` set and `PowerType` not 5: the cost and its Runic Power gain are ignored
+          (`CheckRuneCost` returns OK, Spell.cpp:5605; `TakePower` calls `TakeRunePower` only for `POWER_RUNE`,
+          :5531). Stock spells are not checked: 168 carry a `RuneCostID` with another `PowerType` (Death Coil
+          47541 = power 6 / cost 422), inert.
+      (b) a `RuneCostID` that is neither a stock row nor declared: a free cast (:5621-5624, 5666-5668).
+      (c) a declared row whose (Blood, Unholy, Frost, RunicPower) equals a stock row: reference the stock id
+          instead (A3: reuse stock rows).
+
+    Without the stock file (b) and (c) cannot be judged: one WARNING says so (only when there is something to
+    judge) and nothing is printed per spell, the `CreatureFamily.dbc` pattern."""
+    warnings = []
+    custom_costs: list[tuple[dict, dict, int]] = []
+    for entry, row in zip(entries, rows):
+        spell_id = int(row.get("ID", entry.get("id", 0)))
+        if spell_id < _CUSTOM_SPELL_ID_START:
+            continue
+        cost_id = int(row.get("RuneCostID") or 0)
+        if not cost_id:
+            continue
+        custom_costs.append((entry, row, cost_id))
+        if int(row.get("PowerType") or 0) != POWER_TYPE_RUNE:
+            warnings.append(
+                f"spell {spell_id} ({entry.get('name', '?')}): RuneCostID {cost_id} with PowerType "
+                f"{int(row.get('PowerType') or 0)} - the rune cost and the Runic Power gain only apply to a "
+                f"PowerType 5 (RUNE) spell and are ignored here"
+            )
+    if stock_costs is None:
+        if custom_costs or declared_costs:
+            warnings.append(
+                "spell rune costs: no stock SpellRuneCost.dbc in var/extractors/dbc, so a RuneCostID with no row "
+                "(a free cast) and a declared row that duplicates a stock one cannot be checked - copy it from "
+                "the worldserver's DBC directory (ac-worldserver:/azerothcore/env/dist/data/dbc/)"
+            )
+        return warnings
+    known = set(stock_costs) | {int(r["ID"]) for r in declared_costs}
+    for entry, row, cost_id in custom_costs:
+        if cost_id not in known:
+            warnings.append(
+                f"spell {row.get('ID', entry.get('id'))} ({entry.get('name', '?')}): RuneCostID {cost_id} is "
+                f"neither a stock SpellRuneCost row nor declared with spell_rune_cost() - the cast is free"
+            )
+    by_cost: dict[tuple, int] = {}
+    for stock_id, stock in sorted(stock_costs.items()):
+        by_cost.setdefault(
+            (int(stock["Blood"]), int(stock["Unholy"]), int(stock["Frost"]), int(stock["RunicPower"])), stock_id,
+        )
+    for declared in declared_costs:
+        cost = (int(declared["Blood"]), int(declared["Unholy"]), int(declared["Frost"]), int(declared["RunicPower"]))
+        stock_id = by_cost.get(cost)
+        if stock_id is not None and stock_id != int(declared["ID"]):
+            warnings.append(
+                f"spell_rune_cost({declared['ID']}): the same cost as stock SpellRuneCost row {stock_id} "
+                f"(Blood {cost[0]}, Unholy {cost[1]}, Frost {cost[2]}, RunicPower {cost[3]}) - reference "
+                f"RuneCostID {stock_id} instead of minting a duplicate"
+            )
+    return warnings
+
+
+def check_spell_threat_rows(rows: list[dict], known_spell_ids: set[int] | frozenset[int]) -> list[str]:
+    """WARNING for a declared `spell_threat()` row whose spell is in neither the spells this run builds nor the
+    stock/live spells: `SpellMgr::LoadSpellThreats` logs "does not exist" and drops the row (SpellMgr.cpp:2358-2362).
+    Pass the union of the declared spell ids and the existing Spell.dbc rows, as `check_creature_spell_rows` does."""
+    warnings = []
+    for row in rows:
+        spell_id = int(row["entry"])
+        if spell_id not in known_spell_ids:
+            warnings.append(
+                f"spell_threat({spell_id}): spell {spell_id} is neither declared in source/ nor a stock spell - "
+                f"SpellMgr::LoadSpellThreats drops the row at boot. Check the id, or declare the spell."
+            )
+    return warnings
+
+
+def check_creation_rows(
+    actions: list[dict], casts: list[dict], known_spell_ids: set[int] | frozenset[int],
+) -> list[str]:
+    """WARNINGs for declared creation rows that name a spell nobody defines: a `creation_action()` of type 0 (spell)
+    and every `creation_cast()`. The loader (ObjectMgr::LoadPlayerInfo) does not check the spell, so the button stays
+    empty or the creation cast silently fails. Pass the same union as `check_spell_threat_rows`."""
+    warnings = []
+    for row in actions:
+        if int(row["type"]) == 0 and int(row["action"]) not in known_spell_ids:
+            warnings.append(
+                f"creation_action({row['race']}, {row['class']}, {row['button']}, {row['action']}): spell "
+                f"{row['action']} is neither declared in source/ nor a stock spell - the button would hold nothing"
+            )
+    for row in casts:
+        if int(row["spell"]) not in known_spell_ids:
+            warnings.append(
+                f"creation_cast({row['spell']}, {row['classMask']}, {row['raceMask']}): spell {row['spell']} is "
+                f"neither declared in source/ nor a stock spell - the creation cast would fail"
+            )
     return warnings
 
 

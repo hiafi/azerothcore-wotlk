@@ -61,6 +61,8 @@ namespace
     // See SimDaemon.h's RunResult::ManaSamples doc comment for why this is a periodic sample
     // rather than a per-tick or per-event capture.
     constexpr uint32 MANA_SAMPLE_INTERVAL_MS = 500;
+    // The same cadence for the power / rune samples (RunResult::PowerSamples, the tank run's TANK_SAMPLE_INTERVAL_MS)
+    constexpr uint32 POWER_SAMPLE_INTERVAL_MS = 500;
 
     // Sim time skipped before each playerbot iteration (see RunPlayerbotIteration()): long enough for
     // everything time-based the iteration reset doesn't clear to age out - the GCD, queued action baskets
@@ -82,6 +84,90 @@ namespace
             return;
 
         samples.push_back({nowMs, actor->GetPowerPct(POWER_MANA)});
+        lastSampleMs = nowMs;
+        sampledOnce = true;
+    }
+
+    // Appends a power sample (and, for a Death Knight, the ready runes by type) if at least POWER_SAMPLE_INTERVAL_MS
+    // has passed since the last one (or this is the first tick). Called next to MaybeSampleMana() by the two runs that
+    // feed a DPS-shaped report: the playerbot DPS run and the tank run
+    void MaybeSamplePower(Player* actor, uint32 nowMs, uint32& lastSampleMs, bool& sampledOnce,
+        std::vector<SimDaemon::RunResult::PowerSample>& samples)
+    {
+        if (sampledOnce && nowMs - lastSampleMs < POWER_SAMPLE_INTERVAL_MS)
+            return;
+
+        SimDaemon::RunResult::PowerSample sample;
+        sample.TimestampMs = nowMs;
+        Powers const type = actor->getPowerType();
+        sample.PowerType = uint8(type);
+        sample.Power = actor->GetPower(type);
+        sample.MaxPower = actor->GetMaxPower(type);
+        if (actor->getClass() == CLASS_DEATH_KNIGHT)
+        {
+            sample.HasRunes = true;
+            for (uint8 slot = 0; slot < MAX_RUNES; ++slot)
+            {
+                if (actor->GetRuneCooldown(slot) != 0)
+                    continue;
+
+                switch (actor->GetCurrentRune(slot))
+                {
+                    case RUNE_BLOOD:
+                        ++sample.RunesBlood;
+                        break;
+                    case RUNE_FROST:
+                        ++sample.RunesFrost;
+                        break;
+                    case RUNE_UNHOLY:
+                        ++sample.RunesUnholy;
+                        break;
+                    case RUNE_DEATH:
+                        ++sample.RunesDeath;
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+
+        samples.push_back(sample);
+        lastSampleMs = nowMs;
+        sampledOnce = true;
+    }
+
+    // Appends a sample of the actor's controlled units (alive, per creature entry) on the same cadence as the power
+    // samples, next to MaybeSamplePower(). Reads the controlled set (pet, guardians, totems: every minion is in it) and
+    // the summon slots, each unit once, like the playerbot module's "controlled units by entry" value
+    void MaybeSampleMinions(Player* actor, uint32 nowMs, uint32& lastSampleMs, bool& sampledOnce,
+        std::vector<SimDaemon::RunResult::MinionSample>& samples)
+    {
+        if (sampledOnce && nowMs - lastSampleMs < POWER_SAMPLE_INTERVAL_MS)
+            return;
+
+        std::set<ObjectGuid> counted;
+        std::map<uint32, uint32> byEntry;
+        for (Unit* unit : actor->m_Controlled)
+            if (unit && unit->IsAlive() && counted.insert(unit->GetGUID()).second)
+                ++byEntry[unit->GetEntry()];
+
+        if (Map* map = actor->GetMap())
+        {
+            for (ObjectGuid const guid : actor->m_SummonSlot)
+            {
+                if (!guid || counted.contains(guid))
+                    continue;
+
+                Creature* summon = map->GetCreature(guid);
+                if (summon && summon->IsAlive() && counted.insert(guid).second)
+                    ++byEntry[summon->GetEntry()];
+            }
+        }
+
+        SimDaemon::RunResult::MinionSample sample;
+        sample.TimestampMs = nowMs;
+        sample.Counts.assign(byEntry.begin(), byEntry.end());
+        samples.push_back(std::move(sample));
         lastSampleMs = nowMs;
         sampledOnce = true;
     }
@@ -119,7 +205,7 @@ namespace
         result.reserve(events.size());
         for (EventRecorder::AuraEvent const& e : events)
             result.push_back({e.TimestampMs, e.UnitGuid, e.IsActor, e.SpellId, e.StackAmount, e.Positive, e.Applied,
-                e.TargetIndex});
+                e.TargetIndex, e.IsPet, e.UnitEntry});
         return result;
     }
 
@@ -331,6 +417,12 @@ namespace
         uint32 lastManaSampleMs = 0;
         bool sampledManaOnce = false;
         std::vector<SimDaemon::RunResult::ManaSample> manaSamples;
+        uint32 lastPowerSampleMs = 0;
+        bool sampledPowerOnce = false;
+        std::vector<SimDaemon::RunResult::PowerSample> powerSamples;
+        uint32 lastMinionSampleMs = 0;
+        bool sampledMinionsOnce = false;
+        std::vector<SimDaemon::RunResult::MinionSample> minionSamples;
         // The bot's own current target, seeded with the primary at the pull (D5: measured, not inferred from casts)
         ObjectGuid lastTarget = bot.GetCurrentTarget();
         uint32 targetSwitches = 0;
@@ -357,6 +449,8 @@ namespace
 
             bot.UpdateAI(config.StepMs);
             MaybeSampleMana(player, clock.GetElapsedMs(), lastManaSampleMs, sampledManaOnce, manaSamples);
+            MaybeSamplePower(player, clock.GetElapsedMs(), lastPowerSampleMs, sampledPowerOnce, powerSamples);
+            MaybeSampleMinions(player, clock.GetElapsedMs(), lastMinionSampleMs, sampledMinionsOnce, minionSamples);
 
             ObjectGuid const currentTarget = bot.GetCurrentTarget();
             if (!currentTarget.IsEmpty())
@@ -395,9 +489,12 @@ namespace
         result.HitTimestamps = recorder->GetHitTimestamps();
         result.HitIsPet = recorder->GetHitIsPet();
         result.HitTargetIndex = recorder->GetHitTargetIndex();
+        result.HitSourceEntries = recorder->GetHitSourceEntries();
         result.TargetSwitches = targetSwitches;
         result.AuraEvents = ToRunResultAuraEvents(recorder->GetAuraEvents());
         result.ManaSamples = std::move(manaSamples);
+        result.PowerSamples = std::move(powerSamples);
+        result.MinionSamples = std::move(minionSamples);
         result.CastEvents = ToRunResultCastEvents(castRecorder->GetCastEvents());
 
         // Recorders stamp raw getMSTime(); reports count from the iteration start. An event recorded before
@@ -681,6 +778,7 @@ namespace
         result.HitTimestamps = recorder->GetHitTimestamps();
         result.HitIsPet = recorder->GetHitIsPet();
         result.HitTargetIndex = recorder->GetHitTargetIndex();
+        result.HitSourceEntries = recorder->GetHitSourceEntries();
         result.AuraEvents = ToRunResultAuraEvents(recorder->GetAuraEvents());
         result.ManaSamples = std::move(manaSamples);
         result.CastEvents = ToRunResultCastEvents(castRecorder->GetCastEvents());
@@ -1168,6 +1266,12 @@ namespace
         uint32 lastManaSampleMs = 0;
         bool sampledManaOnce = false;
         std::vector<SimDaemon::RunResult::ManaSample> manaSamples;
+        uint32 lastPowerSampleMs = 0;
+        bool sampledPowerOnce = false;
+        std::vector<SimDaemon::RunResult::PowerSample> powerSamples;
+        uint32 lastMinionSampleMs = 0;
+        bool sampledMinionsOnce = false;
+        std::vector<SimDaemon::RunResult::MinionSample> minionSamples;
         ObjectGuid lastTarget = bot.GetCurrentTarget();
         uint32 targetSwitches = 0;
         uint32 lastTankSampleMs = 0;
@@ -1228,6 +1332,8 @@ namespace
             else
                 bot.UpdateAI(config.StepMs);
             MaybeSampleMana(player, clock.GetElapsedMs(), lastManaSampleMs, sampledManaOnce, manaSamples);
+            MaybeSamplePower(player, clock.GetElapsedMs(), lastPowerSampleMs, sampledPowerOnce, powerSamples);
+            MaybeSampleMinions(player, clock.GetElapsedMs(), lastMinionSampleMs, sampledMinionsOnce, minionSamples);
 
             // The crit chance the dummies have once the bot has acted (its stance, its first buffs): the pull value was
             // taken before any of that
@@ -1301,9 +1407,12 @@ namespace
         result.HitTimestamps = recorder->GetHitTimestamps();
         result.HitIsPet = recorder->GetHitIsPet();
         result.HitTargetIndex = recorder->GetHitTargetIndex();
+        result.HitSourceEntries = recorder->GetHitSourceEntries();
         result.TargetSwitches = targetSwitches;
         result.AuraEvents = ToRunResultAuraEvents(recorder->GetAuraEvents());
         result.ManaSamples = std::move(manaSamples);
+        result.PowerSamples = std::move(powerSamples);
+        result.MinionSamples = std::move(minionSamples);
         result.CastEvents = ToRunResultCastEvents(castRecorder->GetCastEvents());
 
         // The actor's own healing and shields (heal-mode structs, target index 0 = the actor), and the incoming swings
@@ -1847,6 +1956,7 @@ bool SimDaemon::RunOnce(RunConfig const& config, RunResult& result)
     result.HitTimestamps = recorder->GetHitTimestamps();
     result.HitIsPet = recorder->GetHitIsPet();
     result.HitTargetIndex = recorder->GetHitTargetIndex();
+    result.HitSourceEntries = recorder->GetHitSourceEntries();
     result.AuraEvents = ToRunResultAuraEvents(recorder->GetAuraEvents());
     result.ManaSamples = std::move(manaSamples);
     result.CastEvents = ToRunResultCastEvents(castRecorder->GetCastEvents());
@@ -2065,7 +2175,7 @@ void SimDaemon::RunPlayerbot(RunConfig const& config)
     {
         timeline.push_back({e.TimestampMs, Acore::StringFormat(
             "aura {} - spell {} on {} (stack {}){}", e.Applied ? "gained" : "lost", e.SpellId,
-            e.IsActor ? "actor" : "target", e.StackAmount, e.Positive ? "" : " (debuff)")});
+            e.IsActor ? "actor" : (e.IsPet ? "pet" : "target"), e.StackAmount, e.Positive ? "" : " (debuff)")});
     }
     std::stable_sort(timeline.begin(), timeline.end(),
         [](TimelineEntry const& a, TimelineEntry const& b) { return a.TimestampMs < b.TimestampMs; });

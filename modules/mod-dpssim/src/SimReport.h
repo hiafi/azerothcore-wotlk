@@ -41,23 +41,35 @@ namespace SimReport
     //   "summary": {elapsedMs, totalDamage, dps, castCount, critCount, critRatePct, actorDiedAtMs, dpsPerTarget,
     //               targetSwitches} - dps is total damage across every dummy / duration, dpsPerTarget that over
     //               targetCount; targetSwitches is RunResult::TargetSwitches.
-    //   "spells":  [{spellId, isPet, hitCount, critCount, totalDamage, pctOfTotal, castCount, targetsHit}, ...] -
+    //   "spells":  [{spellId, isPet, sourceEntry, hitCount, critCount, totalDamage, pctOfTotal, castCount,
+    //               targetsHit}, ...] -
     //              castCount is the cast log's count for that spell id (triggered included, 0 for a pet row), so
     //              hitCount / castCount is hits per cast; targetsHit is the number of distinct dummies hit.
     //              Aggregated from
-    //              HitSpellIds/HitDamages/HitCrits, one entry per distinct (spell id, isPet) pair - isPet marks
+    //              HitSpellIds/HitDamages/HitCrits, one entry per distinct (spell id, isPet, sourceEntry) triple -
+    //              sourceEntry is the creature entry of the attacker (0 for the actor), so the minions' white swings
+    //              (all one pseudo spell id) and a spell two kinds of minion share stay apart; isPet marks
     //              damage dealt by the actor's pet/guardian/totem (S0 stage; periodic ticks are recorded under
     //              the aura's spell id too) - sorted by
     //              totalDamage descending. hitCount counts every landed hit: direct hits, DoT ticks
     //              and pet/guardian hits alike, so for a DoT or a pet spell it is not a cast count
     //              (per-spell casts are castCount above).
-    //   "hits":    [{timestampMs, spellId, damage, crit, isPet, target}, ...] in landing order; target is the dummy
-    //              index.
-    //   "auraEvents": [{timestampMs, unit ("actor"|"target"), spellId, stackAmount, positive,
-    //                  applied, targetIndex}, ...] - see RunResult::AuraEvent's doc comment for field meanings
-    //                  (targetIndex -1 = on the actor).
+    //   "hits":    [{timestampMs, spellId, damage, crit, isPet, sourceEntry, target}, ...] in landing order; target is
+    //              the dummy index, sourceEntry the attacker's creature entry (0 = the actor).
+    //   "auraEvents": [{timestampMs, unit ("actor"|"target"|"pet"), spellId, stackAmount, positive,
+    //                  applied, targetIndex, unitEntry}, ...] - see RunResult::AuraEvent's doc comment for field
+    //                  meanings (targetIndex -1 = on the actor or on a unit it owns: unit "pet" is a pet, guardian or
+    //                  totem of the actor, passive auras skipped, unitEntry its creature entry).
     //   "manaSamples": [{timestampMs, manaPct}, ...] - actor's mana, sampled periodically rather
     //                  than every tick, see RunResult::ManaSamples's doc comment.
+    //   "powerSamples": [{timestampMs, powerType, power, maxPower[, runes: {blood, frost, unholy, death}]}, ...] - the
+    //                  actor's class power every 500 ms in the playerbot DPS run and the tank run (empty in others);
+    //                  power and maxPower as the player reads them (rage and runic power are divided by ten), powerType
+    //                  the core's Powers enum (6 = runic power); runes (Death Knight only) the READY runes by current
+    //                  type, see RunResult::PowerSample.
+    //   "minionSamples": [{timestampMs, counts: {"<entry>": n, ...}}, ...] - the alive units the actor controls (pet,
+    //                  guardians, totems, summons) per creature entry, every 500 ms in the playerbot DPS run and the
+    //                  tank run (empty in others), see RunResult::MinionSample.
     //   "casts": [{timestampMs, spellId, triggered, target}, ...] - every spell the actor cast, in cast
     //             order, damage or not (Evocation, self-buffs, ...) - see RunResult::CastEvents's
     //             doc comment. Distinct from "hits" above: a cast here is logged the moment it
