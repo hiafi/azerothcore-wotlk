@@ -54,7 +54,9 @@ _ICON_FREEZE = 2132                        # Spell_Frost_FrozenCore
 _ICON_HEART_STRIKE = 3145
 _SV_DEATHCHILL = 11515                     # DeathKnight_Deathchill.mdx
 _SV_KILLING_MACHINE = 11801
-_SV_HUNGERING_COLD_STORM = 14540           # Cyclone caster state + Snow Tempest
+_SV_HUNGERING_COLD_STORM = 90180           # custom (patch_deathknight_vfx_models.py): StateKit with the Blizzard Spawn cloud
+#                                            (stock 14540 Cyclone caster state + Snow Tempest was a 145 yd plane, far too big)
+_SV_HUNGERING_COLD_TICK = 9487             # stock Blizzard tick (42208): the "Blizzard Impact Base" ice burst on each target
 _SV_FREEZE = 4499                          # icebarrier_state.mdx
 _SV_AVALANCHE = 14570                      # Ice Burst
 _SV_HEART_STRIKE = 11148
@@ -211,6 +213,7 @@ hungering_cold_tick_203316 = spell(
     raw_overrides=_base_raw(
         40, 'The storm deals {pot1} Frost damage to enemies within 8 yards.', SpellClassMask_3=m.FROST_OTHER_MAGIC,
         DefenseType=1, PreventionType=1, AttributesEx3=_ATTR3_SUPPRESS_CASTER_PROCS,
+        SpellVisualID_1=_SV_HUNGERING_COLD_TICK,
     ),
 )
 scripted_by(hungering_cold_tick_203316, 'spell_dk_hungering_cold_tick')
@@ -250,7 +253,8 @@ hungering_cold_storm_203315 = spell(
     notes=(
         'S2a Frost (6,2) U10: the storm. Visible self aura (not passive, no consolidation flag), 10 s, eff0 PERIODIC_DUMMY '
         'amplitude 2000 with no SPELL_HASTE_AFFECTS_PERIODIC bit (always 5 ticks, haste adds none), icon 2797, SpellVisual '
-        '14540 (Cyclone caster state + Snow Tempest). spell_dk_hungering_cold_storm casts the tick 203316 from '
+        '90180 (playtest fix: the mage Blizzard cloud, Blizzard_Spawn.mdx at 0.8 scale, as the aura StateKit; the stock '
+        '14540 Snow Tempest plane was 145 yd wide). spell_dk_hungering_cold_storm casts the tick 203316 from '
         'OnPeriodic; one storm per Death Knight. Number-free aura text (doc). No family bits.'
     ),
     raw_overrides=_base_raw(

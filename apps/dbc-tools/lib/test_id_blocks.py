@@ -7,7 +7,7 @@ Checks, from the file itself and from the class sources:
   - every custom id a class declares (spell, talent, SkillLineAbility, spell_group, tooltip variable, creature)
     that falls inside a tool-wide block is inside that class's reservation. Shaman and Death Knight reserve slices
     (the shaman spike's 202760-202779, 300298/300299 and 1270, and the Death Knight P0 spike's 203680-203699, 1285,
-    30779 and 300339, are inside theirs);
+    30779 and 300349, are inside theirs);
   - a non-class owner reserves under its project name (`healsim`: spells 202900-202909, declared from source/npcs),
     so the overlap test keeps every class out of its ids.
 
@@ -181,7 +181,7 @@ class ReservationTest(unittest.TestCase):
         self.assertEqual(dk["skilllineability"], (30720, 30779))
         self.assertEqual(dk["spell_group"], (1271, 1285))
         self.assertEqual(dk["spelldescriptionvariables"], (1230, 1299))
-        self.assertEqual(dk["creature"], (300300, 300339))
+        self.assertEqual(dk["creature"], (300300, 300349))
         self.assertEqual(dk["spellicon"], (90310, 90369))
         self.assertEqual(dk["soundentries"], (90101, 90120))
         self.assertEqual(dk["spellvisual"], (90180, 90249))
@@ -306,19 +306,19 @@ class ClassDeclarationsTest(unittest.TestCase):
             self.assertEqual(out_of_reservation("deathknight", {"spell": sorted(spike_spells)}), [])
             self.assertIn(1285, self.deathknight["spell_group"])
             self.assertIn(30779, self.deathknight["skilllineability"])
-            self.assertIn(300339, self.deathknight["creature"])
-            for kind, probe in (("spell_group", 1285), ("skilllineability", 30779), ("creature", 300339)):
+            self.assertIn(300349, self.deathknight["creature"])
+            for kind, probe in (("spell_group", 1285), ("skilllineability", 30779), ("creature", 300349)):
                 self.assertEqual(out_of_reservation("deathknight", {kind: [probe]}), [])
 
     def test_death_knight_out_of_reservation_probes_fail(self):
         # one past the end of each slice, plus 202950: inside the spell block, outside every reservation
         probes = {"spell": [203700, 202950], "talent": [60390], "skilllineability": [30780], "spell_group": [1286],
-                  "creature": [300340], "spelldescriptionvariables": [1300],
+                  "creature": [300350], "spelldescriptionvariables": [1300],
                   "spellrunecost": [2610], "spellcategory": [1306]}
         self.assertEqual(
             out_of_reservation("deathknight", probes),
             ["spell 202950", "spell 203700", "talent 60390", "skilllineability 30780", "spell_group 1286",
-             "creature 300340", "spelldescriptionvariables 1300", "spellrunecost 2610", "spellcategory 1306"],
+             "creature 300350", "spelldescriptionvariables 1300", "spellrunecost 2610", "spellcategory 1306"],
         )
         self.assertEqual(out_of_reservation("deathknight", {"spell": [202900]}), ["spell 202900"])  # the sim's spell
 

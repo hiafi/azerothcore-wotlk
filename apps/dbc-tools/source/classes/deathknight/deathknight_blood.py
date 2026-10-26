@@ -264,7 +264,10 @@ thick_blood_203126 = _passive_rank(
 # Gorefiend's Grasp (203127, talent 60333, row 4) and its per-target pull helper (203128)
 # =====================================================================================================================
 
-_ICON_GOREFIENDS_GRASP = 2947       # Ability_Mage_WintersGrasp (S1a icons; Death Grip keeps 2723)
+# Custom SpellIcon 90310 = Ascension ability_deathknight_aoedeathgrip (the retail Gorefiend's Grasp art), minted by
+# build_patch_i.py (ICON_ID_GOREFIENDS_GRASP) into patch-I. Playtest fix: it had Winter's Grasp (2947), same as a mage icon.
+# The talent 60333 takes its icon from rank spell 203127, so this one constant covers the cast, the talent and the helper.
+_ICON_GOREFIENDS_GRASP = 90310
 
 # Castable: 30 yd, unit target of any kind (eff0 TARGET_UNIT_TARGET_ANY, a no-op DUMMY that makes the explicit target
 # selectable on friends, enemies and self), eff1 DUMMY on TARGET_DEST_TARGET_ANY / TARGET_UNIT_DEST_AREA_ENEMY 15 yd

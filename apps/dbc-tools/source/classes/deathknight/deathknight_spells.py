@@ -420,11 +420,13 @@ horn_of_winter_57330 = spell(
     range_yards=0.0,
     duration_ms=120000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=85, implicit_target_a=56, apply_aura=AuraType.MOD_STAT, radius_yards=30.0),
-        Effect(type=EffectType.APPLY_AURA, base_points=85, implicit_target_a=1, implicit_target_b=56, apply_aura=AuraType.MOD_STAT, misc_value=1, radius_yards=30.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, points_per_level=1.4615, implicit_target_a=56,
+               apply_aura=AuraType.MOD_STAT, radius_yards=30.0),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, points_per_level=1.4615, implicit_target_a=1, implicit_target_b=56,
+               apply_aura=AuraType.MOD_STAT, misc_value=1, radius_yards=30.0),
     ],
     spell_icon_id=2494,
-    notes='RETUNE 2026-10-25 (user ruling): stock-like +86 Strength and Agility at every level, no per-level scaling (stock rank 1 is +86 at 65); the single-rank bootstrap slope 4.6 per level from the new learn level 8 made it +325 at 60. pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 65); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
+    notes='User ruling 2026-10-25 (after RETUNE): +10 Strength and Agility at the learn level 8, growing 1.4615 per level to +86 at 60 (stock rank 1 is +86 at 65); the RETUNE briefly made it a flat +86; the single-rank bootstrap slope 4.6 per level from the new learn level 8 made it +325 at 60. pulled from existing data; single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 65); coefficient/cast_time_ms/mana_cost_pct from max rank; MaxLevel set to 80',
     raw_overrides={'AttributesEx6': 67108864, 'AttributesEx7': 268435456, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases your total Strength and Agility by $s1.', 'BaseLevel': 8, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The Death Knight blows the Horn of Winter, which generates 10 runic power and increases total Strength and Agility of all party or raid members within $a1 yards by $s1.  Lasts $d.', 'EffectBasePoints_3': 44, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_3': 1, 'EquippedItemClass': -1, 'MaxLevel': 80, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 1, 'ProcChance': 101, 'RangeIndex': 1, 'RuneCostID': 1704, 'SpellClassMask_2': 1073741824, 'SpellClassSet': 15, 'SpellLevel': 8, 'SpellPriority': 50, 'SpellVisualID_1': 12396, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 

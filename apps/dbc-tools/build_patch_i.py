@@ -153,6 +153,10 @@ ICON_ID_HUNTER_PRECISION = 90239
 # art, inv_stormelemental.blp.
 ICON_ID_STORM_ELEMENTAL = 90270
 
+# Death Knight rework (ids.yaml reservation 90310-90369). Blood playtest fix: Gorefiend's Grasp 203127 / helper 203128 /
+# talent 60333 had the stock Winter's Grasp icon; Ascension's AoE Death Grip art is the retail Gorefiend's Grasp icon.
+ICON_ID_GOREFIENDS_GRASP = 90310
+
 ICONS = (
     (ICON_ID_ANGELIC_FEATHER, "Interface/icons/ability_priest_angelicfeather.blp"),
     (ICON_ID_DIVINE_STAR, "Interface/icons/spell_priest_divinestar.blp"),
@@ -199,6 +203,7 @@ ICONS = (
     (ICON_ID_HUNTER_TRIANGULATION, "Interface/icons/Essence_of_Convergence.blp"),
     (ICON_ID_HUNTER_PRECISION, "Interface/icons/sha_ability_rogue_bloodyeye_nightborne.blp"),
     (ICON_ID_STORM_ELEMENTAL, "Interface/icons/inv_stormelemental.blp"),
+    (ICON_ID_GOREFIENDS_GRASP, "Interface/icons/ability_deathknight_aoedeathgrip.blp"),
 )
 
 # "Stock path, no blp" entries (warlock-rework DESTRUCTION §2.6/§11 Q19): a SpellIcon.dbc row that
