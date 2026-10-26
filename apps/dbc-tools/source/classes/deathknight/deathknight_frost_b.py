@@ -54,9 +54,10 @@ _ICON_FREEZE = 2132                        # Spell_Frost_FrozenCore
 _ICON_HEART_STRIKE = 3145
 _SV_DEATHCHILL = 11515                     # DeathKnight_Deathchill.mdx
 _SV_KILLING_MACHINE = 11801
-_SV_HUNGERING_COLD_STORM = 90180           # custom (patch_deathknight_vfx_models.py): StateKit with the Blizzard Spawn cloud
-#                                            (stock 14540 Cyclone caster state + Snow Tempest was a 145 yd plane, far too big)
-_SV_HUNGERING_COLD_TICK = 9487             # stock Blizzard tick (42208): the "Blizzard Impact Base" ice burst on each target
+_SV_HUNGERING_COLD_STORM = 90180           # custom (patch_deathknight_vfx_models.py): StateKit with the Remorseless
+#                                            Winter storm model (stock 14540 Snow Tempest was a 145 yd plane, too big)
+_SV_HUNGERING_COLD_TICK = 90181            # custom: stock Blizzard tick 9487 (the ice shard on each target) plus mage
+#                                            Blizzard's falling-shard shower across the 8 yd around the Death Knight
 _SV_FREEZE = 4499                          # icebarrier_state.mdx
 _SV_AVALANCHE = 14570                      # Ice Burst
 _SV_HEART_STRIKE = 11148
@@ -208,7 +209,10 @@ hungering_cold_tick_203316 = spell(
         '+ 1 (L6), 8 yd TARGET_UNIT_SRC_AREA_ENEMY around the caster (RANGE_SELF), no target cap. d2 b16 '
         'FROST_OTHER_MAGIC (Runic Focus 200% crit and Razorice read it). AttributesEx3 SUPPRESS_CASTER_PROCS: rolls no '
         'procs and grants no Killing Machine. The script filters to enemies engaged with the owner or group and applies '
-        'the slow / freeze per target in OnHit.'
+        'the slow / freeze per target in OnHit. SpellVisual 90181 (playtest fix 2, patch_deathknight_vfx_models.py): '
+        'stock Blizzard tick 9487 (TargetImpactKit 413, the shard on each target) plus an InstantAreaKit with the '
+        'area-model proc (CharProc 9, EnumID 0 Blizzard_Impact_Base) that rains shards across the 8 yd around the '
+        'caster, as mage Blizzard does.'
     ),
     raw_overrides=_base_raw(
         40, 'The storm deals {pot1} Frost damage to enemies within 8 yards.', SpellClassMask_3=m.FROST_OTHER_MAGIC,
@@ -253,8 +257,9 @@ hungering_cold_storm_203315 = spell(
     notes=(
         'S2a Frost (6,2) U10: the storm. Visible self aura (not passive, no consolidation flag), 10 s, eff0 PERIODIC_DUMMY '
         'amplitude 2000 with no SPELL_HASTE_AFFECTS_PERIODIC bit (always 5 ticks, haste adds none), icon 2797, SpellVisual '
-        '90180 (playtest fix: the mage Blizzard cloud, Blizzard_Spawn.mdx at 0.8 scale, as the aura StateKit; the stock '
-        '14540 Snow Tempest plane was 145 yd wide). spell_dk_hungering_cold_storm casts the tick 203316 from '
+        '90180 (playtest fix 2: the aura StateKit wears the Remorseless Winter storm model, ~8 yd, which follows the '
+        'Death Knight; the stock 14540 Snow Tempest plane was 145 yd wide, and the Blizzard_Spawn mist of fix 1 barely '
+        'showed). spell_dk_hungering_cold_storm casts the tick 203316 from '
         'OnPeriodic; one storm per Death Knight. Number-free aura text (doc). No family bits.'
     ),
     raw_overrides=_base_raw(

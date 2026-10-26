@@ -642,7 +642,6 @@ granted_by_talent(
     column=1,
     ranks=[ebon_plaguebringer_51099, ebon_plaguebringer_51160, ebon_plaguebringer_51161],
     player_castable=False,
-    depends_on={'talent_id': 1962, 'rank': 2},
 )
 
 
