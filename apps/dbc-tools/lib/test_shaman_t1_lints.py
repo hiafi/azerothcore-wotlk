@@ -665,7 +665,7 @@ class RealPopulationTest(unittest.TestCase):
             creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
             creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS,
             live_data=spell_tables.dsl_live_data(
-                state.load_stock_rows(dbcfmt.TALENT), {},
+                state.load_stock_rows(dbcfmt.TALENT), spell_tables.load_live_item_template_rows,
                 lambda: state.load_existing_rows(dbcfmt.SKILLLINEABILITY),
                 lambda: state.load_stock_rows(dbcfmt.CHRCLASSES),
                 lambda: state.load_stock_rows(dbcfmt.SKILLLINEABILITY),

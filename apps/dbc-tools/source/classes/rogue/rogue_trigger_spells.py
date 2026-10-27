@@ -5,7 +5,9 @@ Split from a single source/classes/rogue.py via split_class_file.py (.agents/pla
 """
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, PowerType, School
-from lib.dsl.registry import spell
+from lib.dsl.registry import leave_spell_group, spell
+
+from . import _masks as m
 
 
 pick_pocket_921 = spell(
@@ -73,7 +75,7 @@ deadly_poison_2818 = spell(
         'rogue-potency-report.md/rogue-potency-proposals.txt) - reproduces the pre-conversion V60 '
         'of 24 exactly (simulate_value).'
     ),
-    raw_overrides={'AttributesEx': 131208, 'AttributesEx2': 16777220, 'AttributesEx3': 128, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Target takes {pot1} Nature damage every $t1 seconds.', 'CastingTimeIndex': 1, 'CumulativeAura': 5, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a $2823h% chance of poisoning the enemy for {pot1.total} Nature damage over $2818d.  Stacks up to 5 times on a single target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_1': 65536, 'SpellClassMask_2': 524288, 'SpellClassSet': 8, 'SpellLevel': 30, 'SpellVisualID_1': 5100},
+    raw_overrides={'AttributesEx': 131208, 'AttributesEx2': 16777220, 'AttributesEx3': 128, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Taking Nature damage over time.', 'CastingTimeIndex': 1, 'CumulativeAura': 5, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Poisons the target for {pot1.total} Nature damage over $2818d. Stacks up to 5 times.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_1': m.DEADLY_POISON, 'SpellClassMask_2': m.POISON_GROUP, 'SpellClassSet': 8, 'SpellLevel': 30, 'SpellVisualID_1': 5100},
 )
 
 
@@ -110,17 +112,17 @@ instant_poison_8680 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=29.2, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=30, potency_kind='direct', time_basis_ms=1500, implicit_target_a=6),
     ],
     spell_icon_id=247,
     notes=(
         'single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 20); RealPointsPerLevel from rank1→level-60 slope (anchor 11337, rank 6); coefficient/cast_time_ms/mana_cost_pct from max rank (57965, rank 9); flat energy cost kept as-is (Rogue is Energy-based, not Mana). '
-        'potency-system (PLAN P7-Rogue): converted to ap_potency=29.2 (direct, the base-implied '
-        'potency from rogue-potency-report.md/rogue-potency-proposals.txt, mismatched against the '
-        'live ap_bonus=0.100 coefficient\'s implied 23.3) - new base 74 (down from the old V60 78, '
-        'the same base-potency/mismatch drift every other converted class accepts).'
+        'potency-system (PLAN P7-Rogue): converted to ap_potency=29.2 (direct). '
+        'rogue-rework RG0a: ap_potency 30 direct, time_basis_ms 1500 ("a payout at 1.5 sec", rogue-shared-rework.md '
+        'Instant Poison); SpellClassMask_2 gains the poison group bit (d1 b19); range 100 and EquippedItemClass -1 '
+        'kept (script-cast payload of the 203701 self aura).'
     ),
-    raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a $8679h% chance of poisoning the enemy which instantly inflicts {pot1} Nature damage.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_1': 8192, 'SpellClassSet': 8, 'SpellLevel': 20, 'SpellVisualID_1': 5100},
+    raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1} Nature damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_1': m.INSTANT_POISON, 'SpellClassMask_2': m.POISON_GROUP, 'SpellClassSet': 8, 'SpellLevel': 20, 'SpellVisualID_1': 5100},
 )
 
 
@@ -159,24 +161,25 @@ wound_poison_13218 = spell(
     category_cooldown_ms=0,
     mana_cost=0,
     mana_cost_pct=0,
-    range_yards=5.0,
+    range_yards=100.0,
     duration_ms=15000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=6, apply_aura=AuraType.MOD_HEALING_PCT, misc_value=127),
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=19.8, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=6, apply_aura=271),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=10, potency_kind='direct', time_basis_ms=1500, implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=197),
     ],
     spell_icon_id=1496,
     notes=(
         'single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 32); RealPointsPerLevel from rank1→level-60 slope (anchor 13224, rank 4); coefficient/cast_time_ms/mana_cost_pct from max rank (57975, rank 7); flat energy cost kept as-is (Rogue is Energy-based, not Mana). '
-        'potency-system (PLAN P7-Rogue): converted effect2 (the damage effect) to ap_potency=19.8 '
-        '(direct, the base-implied potency from rogue-potency-report.md/'
-        'rogue-potency-proposals.txt, mismatched against the live ap_bonus=0.040 coefficient\'s '
-        'implied 9.3) - new base 50 (down from the old V60 53, the same base-potency/mismatch '
-        'drift every other converted class accepts). effect1 (healing-reduction debuff) and '
-        'effect3 are untouched.'
+        'potency-system (PLAN P7-Rogue): effect2 (the damage effect) converted to ap_potency (direct). '
+        'rogue-rework RG0a: effect1 is no longer the healing reduction (aura 118) but aura 271 '
+        'MOD_DAMAGE_FROM_CASTER stored 19 (+20%) on the enemy, read by caster guid + class mask '
+        '(EffectSpellClassMaskA_1 = Rupture d0 b20 | Garrote d0 b8), so only this rogue\'s bleeds take '
+        'the bonus; effect2 ap_potency 10 direct, time_basis_ms 1500 (the potency row stays on effect_index '
+        '1); effect3 aura 197 untouched; range 100 (the RangeIndex 2 / 5 yd raw key is gone: a script-cast '
+        'payload is range-checked even when triggered, handoff C4); SpellClassMask_2 keeps d1 b19.'
     ),
-    raw_overrides={'AttributesEx': 136, 'AttributesEx2': 16777216, 'AttributesEx3': 131072, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'All healing effects reduced by $s1%.', 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.\r\nEach strike has a $13219h% chance of poisoning the enemy, causing {pot2} Nature damage and reducing all healing effects used on them by $13218s1% for $13218d.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 32768, 'RangeIndex': 2, 'SpellClassMask_1': 268435456, 'SpellClassMask_2': 524288, 'SpellClassSet': 8, 'SpellLevel': 32, 'SpellVisualID_1': 5100},
+    raw_overrides={'AttributesEx': 136, 'AttributesEx2': 16777216, 'AttributesEx3': 131200, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': "Taking more damage from the rogue's bleeds.", 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "Deals {pot2} Nature damage and wounds the target for $13218d, causing the rogue's bleeds to deal $13218s1% more damage to it.", 'EffectSpellClassMaskA_1': m.RUPTURE | m.GARROTE, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 32768, 'SpellClassMask_1': m.WOUND_POISON, 'SpellClassMask_2': m.POISON_GROUP, 'SpellClassSet': 8, 'SpellLevel': 32, 'SpellVisualID_1': 5100},
 )
 
 
@@ -213,22 +216,18 @@ anesthetic_poison_26688 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_potency=57.2, potency_kind='direct', implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=10, potency_kind='direct', time_basis_ms=1500, implicit_target_a=6),
         Effect(type=EffectType.DISPEL, implicit_target_a=6, misc_value=9),
     ],
     spell_icon_id=110,
     notes=(
-        "single-rank bootstrap: BasePoints/BaseLevel/SpellLevel kept from rank 1 (learn level 68); RealPointsPerLevel from rank1→top rank's own top level (80, rank1 learn level ≥ 60) slope (anchor 57981, rank 2); coefficient/cast_time_ms/mana_cost_pct from max rank (57981, rank 2); flat energy cost kept as-is (Rogue is Energy-based, not Mana). "
-        "potency-system (PLAN P7-Rogue): converted to base_potency=57.2 (direct, the base-implied "
-        "potency from rogue-potency-report.md - not ap_potency, unlike the other Rogue poisons: "
-        "Anesthetic Poison's own tooltip text never mentions $AP at all, unlike Deadly/Instant/"
-        "Wound Poison's explicit '+0.1x*$AP' terms, and it has no live spell_bonus_data row either "
-        "- this poison genuinely never scaled with attack power, by original design, not by "
-        "oversight) - reproduces the pre-conversion average of 153 at its SpellLevel of 68 "
-        "(die_sides=39's old average roll of 20, matching potency_report.py's own "
-        "native_level60_value averaging)."
+        'rogue-rework RG0a: ap_potency 10 direct, time_basis_ms 1500 (was base_potency 57.2 at SpellLevel 68; '
+        'attack-power potency like every rogue effect); SpellLevel 40 (learn level, was 68); SpellClassMask_2 '
+        'gains the poison group bit (d1 b19) next to the identity bit d1 b4; DISPEL misc 9 (Enrage) kept; range '
+        '100 and EquippedItemClass -1 kept (script-cast payload of the 203706 self aura); spell_threat row '
+        'untouched.'
     ),
-    raw_overrides={'AttributesEx': 1160, 'AttributesEx2': 16777216, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Coats a weapon with poison that lasts for 1 hour.  Each strike has a $26785h% chance of poisoning the enemy which instantly inflicts {pot1} Nature damage and dispels $26688s2 Enrage effect, but causes no additional threat.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_2': 16, 'SpellClassSet': 8, 'SpellLevel': 68, 'SpellVisualID_1': 5100},
+    raw_overrides={'AttributesEx': 1160, 'AttributesEx2': 16777216, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1} Nature damage to the target and removes $26688s2 Enrage effect from it.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_2': m.ANESTHETIC_POISON | m.POISON_GROUP, 'SpellClassSet': 8, 'SpellLevel': 40, 'SpellVisualID_1': 5100},
 )
 
 
@@ -3067,3 +3066,65 @@ aggression_61331 = spell(
     notes='pulled from existing data',
     raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Sinister Strike, Backstab, and Eviscerate abilities by $s1%.', 'EffectBonusMultiplier_1': 1.0, 'EffectBonusMultiplier_2': 1.0, 'EffectBonusMultiplier_3': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 131078, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 5', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 8},
 )
+
+
+crippling_poison_3409 = spell(
+    id=3409,
+    name='Crippling Poison',
+    school=School.NATURE,
+    dispel=DispelType.POISON,
+    mechanic=11,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    duration_ms=12000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=6, apply_aura=AuraType.MOD_DECREASE_SPEED),
+        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=197),
+    ],
+    spell_icon_id=163,
+    notes=(
+        'pulled from source/spells/npc.csv (rogue-rework RG0a). Payload of the 203704 Crippling Poison self aura: '
+        'slow -50% (stored -51; stock -70%), 12 s; icon 163 kept (it is the diminishing-returns key, SpellMgr.cpp '
+        '~199-215); range 100 (script-cast payload, range-checked even when triggered); EquippedItemClass -1; '
+        'identity bit d0 b14 + poison group d1 b19 (no damage SpellMod reads the group on this row).'
+    ),
+    raw_overrides={'AttributesEx': 131208, 'AttributesEx2': 16777220, 'AttributesEx4': 2048, 'CastingTimeIndex': 1, 'ProcTypeMask': 32768, 'ProcChance': 100, 'BaseLevel': 20, 'SpellLevel': 20, 'EquippedItemClass': -1, 'SpellVisualID_1': 5100, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': "Reduces the target's movement speed by $3409s1% for $3409d.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement slowed.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 8, 'SpellClassMask_1': m.CRIPPLING_POISON, 'SpellClassMask_2': m.POISON_GROUP, 'DefenseType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+mind_numbing_poison_5760 = spell(
+    id=5760,
+    name='Mind-numbing Poison',
+    school=School.NATURE,
+    dispel=DispelType.POISON,
+    cast_time_ms=0,
+    cooldown_ms=0,
+    category_cooldown_ms=0,
+    mana_cost=0,
+    mana_cost_pct=0,
+    range_yards=100.0,
+    duration_ms=10000,
+    effects=[
+        Effect(type=EffectType.APPLY_AURA, base_points=-51, implicit_target_a=6, apply_aura=216),
+        None,
+        Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=6, apply_aura=197),
+    ],
+    spell_icon_id=264,
+    notes=(
+        'pulled from source/spells/npc.csv (rogue-rework RG0a). Payload of the 203705 Mind-numbing Poison self aura: '
+        'aura 216 (casting speed) stored -51 = casting time x1.5 (stock -31, +30%), 10 s; the id is kept (Shade of '
+        'Aran\'s immunity list keys it); range 100; EquippedItemClass -1; identity bit d0 b15 + poison group d1 b19.'
+    ),
+    raw_overrides={'AttributesEx': 136, 'AttributesEx2': 16777216, 'AttributesEx3': 131072, 'CastingTimeIndex': 1, 'ProcTypeMask': 32768, 'ProcChance': 100, 'BaseLevel': 24, 'SpellLevel': 24, 'EquippedItemClass': -1, 'SpellVisualID_1': 5100, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'Description_Lang_enUS': "Increases the target's casting time by $5760s1% for $5760d.", 'Description_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Casting time increased.', 'AuraDescription_Lang_Mask': 16712190, 'SpellClassSet': 8, 'SpellClassMask_1': m.MIND_NUMBING_POISON, 'SpellClassMask_2': m.POISON_GROUP, 'DefenseType': 1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0},
+)
+
+
+# rogue-rework RG0a (WP-R M1): Wound Poison no longer cuts healing, so it leaves stock group 1061 "Healing Taken
+# Debuffs" (rule 4, exclusive-highest; Mortal Strike, Aimed Shot, Furious Attacks) via nested subgroup 1057. It stays in
+# 1058 "Poisons". AttributesEx3 0x80 (stack per caster, m2): a second rogue's Wound does not replace this rogue's.
+leave_spell_group(1061, -1057)

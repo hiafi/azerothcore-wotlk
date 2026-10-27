@@ -6,6 +6,7 @@ Split from a single source/classes/rogue.py via split_class_file.py (.agents/pla
 
 from lib.dsl import AuraType, DispelType, Effect, EffectType, Mechanic, PowerType, School
 from lib.dsl.registry import spell, trained_by
+from . import _masks as m
 from .rogue_trigger_spells import mutilate_27576, mutilate_5374, vanish_11327
 
 
@@ -1101,7 +1102,7 @@ cloak_of_shadows_31224 = spell(
     ],
     spell_icon_id=1933,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 131104, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases chance to resist spells by $s1%.', 'BaseLevel': 66, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly removes all existing harmful spell effects and increases your chance to resist all spells by $s1% for $d.  Does not remove effects that prevent you from using Cloak of Shadows.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 65536, 'SpellClassSet': 8, 'SpellLevel': 66, 'SpellVisualID_1': 3619, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    raw_overrides={'AttributesEx': 131104, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Increases chance to resist spells by $s1%.', 'BaseLevel': 46, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly removes all existing harmful spell effects and increases your chance to resist all spells by $s1% for $d.  Does not remove effects that prevent you from using Cloak of Shadows.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassMask_2': 65536, 'SpellClassSet': 8, 'SpellLevel': 46, 'SpellVisualID_1': 3619, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -1121,7 +1122,7 @@ envenom_32645 = spell(
     duration_ms=1000,
     effects=[
         Effect(type=EffectType.SCHOOL_DAMAGE, base_potency=0.0, cp_base_potency=44.112, cp_ap_potency=21.0, potency_kind='direct', implicit_target_a=6),
-        Effect(type=EffectType.APPLY_AURA, base_points=74, implicit_target_a=1, apply_aura=108, misc_value=26),
+        None,
         Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=107, misc_value=18),
     ],
     spell_icon_id=2237,
@@ -1132,7 +1133,7 @@ envenom_32645 = spell(
         "AP*0.09*combo;`, no flat one-shot component), so base_potency=0.0 (explicit, not None - "
         "see lib.potency.resolve's total>0-or-base_potency-not-None check) with ALL scaling in "
         "cp_base_potency/cp_ap_potency. cp_base_potency=44.112 reproduces the old per-dose "
-        "CalcValue native (118, at level 62 - SpellLevel/BaseLevel=62, so the preservation target "
+        "CalcValue native (118, at level 62 - SpellLevel/BaseLevel=62 (potency basis; SpellLevel is now 42 per RG0a), so the preservation target "
         "is computed at level 62 like Druid Maim's own precedent, not the generic level-60 "
         "anchor). cp_ap_potency=21.0 gives an ap_coefficient of exactly 0.09, reproducing the old "
         "hard-coded AP*0.09*combo term exactly. Together: 5*(118+0.09*1000) = 1040, matching the "
@@ -1143,7 +1144,7 @@ envenom_32645 = spell(
         "multiplies the per-combo-point line by comboPoints internally, so leaving the old "
         "`damage *= doses` active on top would double-count the combo scaling)."
     ),
-    raw_overrides={'AttributesEx': 1049088, 'AttributesEx3': 1024, 'AttributesEx4': 9, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Chance to apply Deadly Poison increased by $s3% and frequency of applying Instant Poison increased by $s2%.', 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Finishing move that consumes your Deadly Poison doses on the target and deals instant poison damage.  Following the Envenom attack you have an additional $s3% chance to apply Deadly Poison and a $s2% increased frequency of applying Instant Poison for 1 sec plus an additional 1 sec per combo point.  One dose is consumed for each combo point:\r\n  1 dose:  ${($m1-1)*1+$AP*0.09} damage\r\n  2 doses: ${($m1-1)*2+$AP*0.18} damage\r\n  3 doses: ${($m1-1)*3+$AP*0.27} damage\r\n  4 doses: ${($m1-1)*4+$AP*0.36} damage\r\n  5 doses: ${($m1-1)*5+$AP*0.45} damage', 'DurationIndex': 285, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskB_1': 8192, 'EffectSpellClassMaskC_1': 65536, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 8388608, 'SpellClassMask_2': 8, 'SpellClassSet': 8, 'SpellLevel': 62, 'SpellVisualID_1': 8144, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000, 'TargetAuraState': 16},
+    raw_overrides={'AttributesEx': 1049088, 'AttributesEx3': 1024, 'AttributesEx4': 9, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Your poisons are applied more often.', 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Finishing move that consumes your Deadly Poison doses on the target to deal instant poison damage per dose, and increases the chance to apply your Lethal poisons by $s3% for 1 sec plus 1 sec per combo point.', 'DurationIndex': 285, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskC_3': m.LETHAL_AURA, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 8388608, 'SpellClassMask_2': m.ENVENOM_D1 | m.POISON_GROUP, 'SpellClassSet': 8, 'SpellLevel': 42, 'SpellVisualID_1': 8144, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000, 'TargetAuraState': 16},
 )
 
 
@@ -1214,7 +1215,7 @@ tricks_of_the_trade_57934 = spell(
     ],
     spell_icon_id=3413,
     notes='pulled from existing data',
-    raw_overrides={'AttributesEx': 67634208, 'AttributesEx3': 256, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'The threat caused by your next damaging attack and all actions taken for $57933d afterwards will be transferred to the target.  In addition, all damage caused by the target is increased by $57933s1% during this time.', 'BaseLevel': 75, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The current party or raid member becomes the target of your Tricks of the Trade.  The threat caused by your next damaging attack and all actions taken for $57933d afterwards will be transferred to the target.  In addition, all damage caused by the target is increased by $57933s1% during this time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 340, 'SpellClassMask_2': 131072, 'SpellClassSet': 8, 'SpellLevel': 75, 'SpellVisualID_1': 12786, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    raw_overrides={'AttributesEx': 67634208, 'AttributesEx3': 256, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'The threat caused by your next damaging attack and all actions taken for $57933d afterwards will be transferred to the target.  In addition, all damage caused by the target is increased by $57933s1% during this time.', 'BaseLevel': 56, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'The current party or raid member becomes the target of your Tricks of the Trade.  The threat caused by your next damaging attack and all actions taken for $57933d afterwards will be transferred to the target.  In addition, all damage caused by the target is increased by $57933s1% during this time.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'ProcChance': 100, 'ProcTypeMask': 340, 'SpellClassMask_2': 131072, 'SpellClassSet': 8, 'SpellLevel': 56, 'SpellVisualID_1': 12786, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
