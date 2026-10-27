@@ -618,11 +618,17 @@ void Spell::EffectSchoolDMG(SpellEffIndex effIndex)
                                     // value would double the combo scaling (doses ~= combo in the
                                     // normal case), not just double-count the AP term the way a
                                     // lone AP-line gate does for Eviscerate/Rupture.
-                                    if (!SpellPotency::HasRow(m_spellInfo->Id, effIndex))
+                                    // Keyed by the effect's own index: SpellMgr swaps Envenom's effects 0 and
+                                    // 2, so the damage effect sits in slot 2 with EffectIndex 0, the index the
+                                    // potency row (and SpellPotency::Apply) uses. The potency value scales by
+                                    // combo points; the tooltip pays per dose consumed, so rescale to doses.
+                                    if (!SpellPotency::HasRow(m_spellInfo->Id, m_spellInfo->Effects[effIndex].EffectIndex))
                                     {
                                         damage *= doses;
                                         damage += int32(player->GetTotalAttackPowerValue(BASE_ATTACK) * 0.09f * combo);
                                     }
+                                    else
+                                        damage = int32(int64(damage) * doses / combo);
                                 }
 
                                 // Eviscerate and Envenom Bonus Damage (item set effect)
