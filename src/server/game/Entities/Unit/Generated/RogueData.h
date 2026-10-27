@@ -234,6 +234,13 @@ namespace RogueData
     constexpr uint32 SPELL_CRIPPLING_POISON_203704 = 203704; // crippling_poison_203704
     constexpr uint32 SPELL_MIND_NUMBING_POISON_203705 = 203705; // mind_numbing_poison_203705
     constexpr uint32 SPELL_ANESTHETIC_POISON_203706 = 203706; // anesthetic_poison_203706
+    constexpr uint32 SPELL_ENFORCER_STANCE = 203720; // enforcer_stance_203720
+    constexpr uint32 SPELL_ENFORCER_STANCE_CRIT_IMMUNITY = 203721; // enforcer_stance_crit_immunity_203721
+    constexpr uint32 SPELL_INSULT = 203722; // insult_203722
+    constexpr uint32 SPELL_GHOSTLY_VEIL = 203723; // ghostly_veil_203723
+    constexpr uint32 SPELL_SHROUD_OF_CONCEALMENT = 203724; // shroud_of_concealment_203724
+    constexpr uint32 SPELL_SHIV_203725 = 203725; // shiv_203725
+    constexpr uint32 SPELL_AMBUSH_TELEPORT = 203726; // ambush_teleport_203726
 
     // const() - hidden script numbers (tier 3)
     constexpr int32 ENERGY_HASTE_MAX_PCT = 100; // Energy and haste: the cap on the energy regeneration bonus from haste, % [fixed].

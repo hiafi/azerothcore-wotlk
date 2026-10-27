@@ -4,7 +4,7 @@ Rogue - talent tabs, talents (granted_by_talent bundles a rank's SkillLineAbilit
 Split from a single source/classes/rogue.py via split_class_file.py (.agents/plans/spell-source-dsl/spell-source-dsl.PLAN.md) - see source/classes/README.md for the multi-file layout and lib/dsl/registry.py's load_class_package for how cross-file references (`from .rogue_...` below) resolve.
 """
 
-from lib.dsl.registry import granted_by_talent, tab
+from lib.dsl.registry import granted_by_talent, retire_talent, tab
 from .rogue_spells import adrenaline_rush_13750, blade_flurry_13877, cold_blood_14177, ghostly_strike_14278, hemorrhage_16511, hunger_for_blood_51662, killing_spree_51690, mutilate_1329, premeditation_14183, preparation_14185, riposte_14251, shadow_dance_51713, shadowstep_36554
 from .rogue_trigger_spells import aggression_18427, aggression_18428, aggression_18429, aggression_61330, aggression_61331, blade_twisting_31124, blade_twisting_31126, blood_spatter_51632, blood_spatter_51633, camouflage_13975, camouflage_14062, camouflage_14063, cheat_death_31228, cheat_death_31229, cheat_death_31230, combat_potency_35541, combat_potency_35550, combat_potency_35551, combat_potency_35552, combat_potency_35553, cut_to_the_chase_51664, cut_to_the_chase_51665, cut_to_the_chase_51667, cut_to_the_chase_51668, cut_to_the_chase_51669, deadened_nerves_31380, deadened_nerves_31382, deadened_nerves_31383, deadly_brew_51625, deadly_brew_51626, dirty_deeds_14082, dirty_deeds_14083, dirty_tricks_14076, dirty_tricks_14094, dual_wield_specialization_13715, dual_wield_specialization_13848, dual_wield_specialization_13849, dual_wield_specialization_13851, dual_wield_specialization_13852, elusiveness_13981, elusiveness_14066, endurance_13742, endurance_13872, filthy_tricks_58414, filthy_tricks_58415, find_weakness_31234, find_weakness_31235, find_weakness_31236, improved_ambush_14079, improved_ambush_14080, improved_eviscerate_14162, improved_eviscerate_14163, improved_eviscerate_14164, improved_expose_armor_14168, improved_expose_armor_14169, improved_gouge_13741, improved_gouge_13792, improved_gouge_13793, improved_kick_13754, improved_kick_13867, improved_kidney_shot_14174, improved_kidney_shot_14175, improved_kidney_shot_14176, improved_poisons_14113, improved_poisons_14114, improved_poisons_14115, improved_poisons_14116, improved_poisons_14117, improved_sinister_strike_13732, improved_sinister_strike_13863, improved_slice_and_dice_14165, improved_slice_and_dice_14166, improved_sprint_13743, improved_sprint_13875, initiative_13976, initiative_13979, initiative_13980, lethality_14128, lethality_14132, lethality_14135, lethality_14136, lethality_14137, master_of_subtlety_31223, master_poisoner_31226, master_poisoner_31227, master_poisoner_58410, murder_14158, murder_14159, opportunity_14057, opportunity_14072, puncturing_wounds_13733, puncturing_wounds_13865, puncturing_wounds_13866, quick_recovery_31244, quick_recovery_31245, relentless_strikes_14179, relentless_strikes_58422, relentless_strikes_58423, relentless_strikes_58424, relentless_strikes_58425, ruthlessness_14156, ruthlessness_14160, ruthlessness_14161, savage_combat_51682, savage_combat_58413, seal_fate_14186, seal_fate_14190, seal_fate_14193, seal_fate_14194, seal_fate_14195, serrated_blades_14171, serrated_blades_14172, serrated_blades_14173, sinister_calling_31216, sinister_calling_31217, sinister_calling_31218, sinister_calling_31219, sinister_calling_31220, slaughter_from_the_shadows_51708, slaughter_from_the_shadows_51709, slaughter_from_the_shadows_51710, slaughter_from_the_shadows_51711, slaughter_from_the_shadows_51712, sleight_of_hand_30892, sleight_of_hand_30893, surprise_attacks_32601, throwing_specialization_51679, throwing_specialization_5952, vigor_14983, vile_poisons_16513, vile_poisons_16514, vile_poisons_16515, waylay_51692, waylay_51696
 
@@ -424,17 +424,6 @@ granted_by_talent(
     ranks=[riposte_14251],
     player_castable=False,
     depends_on={'talent_id': 187, 'rank': 2},
-    flags=1,
-)
-
-
-granted_by_talent(
-    id=303,
-    tab=subtlety_183_tab,
-    tier=2,
-    column=1,
-    ranks=[ghostly_strike_14278],
-    player_castable=False,
     flags=1,
 )
 
@@ -891,3 +880,7 @@ granted_by_talent(
     ranks=[relentless_strikes_14179, relentless_strikes_58422, relentless_strikes_58423, relentless_strikes_58424, relentless_strikes_58425],
     player_castable=False,
 )
+
+
+# RG0b: Ghostly Strike (talent 303) is cut; it becomes a level 10 trainer spell (rogue_trainers.py).
+retire_talent(303)

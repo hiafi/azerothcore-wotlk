@@ -45,3 +45,17 @@ FORBIDDEN_D0 = 0x800 | 0x400000 | 0x2000000
 FORBIDDEN_D1 = 0x2 | 0x4 | 0x8
 FORBIDDEN_D0_EXCEPT_DEADLY = DEADLY_POISON     # only payload 2818 may carry it
 FORBIDDEN_D0_EXCEPT_RUPTURE = RUPTURE          # only Rupture may carry it
+
+# --- RG0b (append-only): stock identities the shared stage reads or rewrites ---
+SINISTER_STRIKE = 0x2                    # d0 b1 (stock 1752)
+BACKSTAB = 0x4                           # d0 b2 (stock 53)
+AMBUSH = 0x200                           # d0 b9 (stock 8676)
+CHEAP_SHOT = 0x400                       # d0 b10 (stock 1833)
+FEINT = 0x8000000                        # d0 b27 (stock 1966; Bloodfang 5P reader later)
+SHIV = 0x20000000                        # d0 b29 (stock Shiv's identity, carried by the new Shiv 203725)
+GHOSTLY_STRIKE = 0x40000000              # d0 b30 (stock 14278, minus b26)
+GHOSTLY_STRIKE_DAGGER = 0x4000000        # d0 b26 (the dagger +50% hardcode; DROPPED from Ghostly Strike by RG0b)
+DEADLY_THROW_D1 = 0x1                    # d1 b0 (stock 26679)
+FAN_OF_KNIVES_D1 = 0x40000               # d1 b18 (stock 51723; kept on purpose, the dagger +50% hardcode)
+FORBIDDEN_DAGGER_D0 = 0x6000000          # d0 b25 | b26: the dagger hardcode bits, never on a new RG0b row
+FORBIDDEN_DAGGER_D1 = 0x40000            # d1 b18

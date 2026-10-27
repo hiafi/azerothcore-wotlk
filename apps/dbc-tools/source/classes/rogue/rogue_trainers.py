@@ -7,6 +7,7 @@ The six poison auras are learned from the class trainer; the 29 stock poison ite
 from lib.dsl.registry import item_template, trained_by, untrain
 from .rogue_shared import (anesthetic_poison_203706, crippling_poison_203704, deadly_poison_203702,
                            instant_poison_203701, mind_numbing_poison_203705, wound_poison_203703)
+from .rogue_shared import (enforcer_stance_203720, insult_203722, shiv_203725, shroud_of_concealment_203724)
 
 ROGUE_TRAINER = 206
 
@@ -20,6 +21,16 @@ trained_by(anesthetic_poison_203706, ROGUE_TRAINER, req_level=40)
 trained_by(32645, ROGUE_TRAINER, req_level=42)
 trained_by(31224, ROGUE_TRAINER, req_level=46)
 trained_by(57934, ROGUE_TRAINER, req_level=56)
+
+# RG0b: Enforcer Stance, Insult, Ghostly Strike (stock 14278, talent retired), Fan of Knives (stock 51723), Shroud,
+# stock 26679 (Deadly Throw), Shiv.
+trained_by(enforcer_stance_203720, ROGUE_TRAINER, req_level=10)
+trained_by(insult_203722, ROGUE_TRAINER, req_level=10)
+trained_by(14278, ROGUE_TRAINER, req_level=10)
+trained_by(51723, ROGUE_TRAINER, req_level=24)
+trained_by(shroud_of_concealment_203724, ROGUE_TRAINER, req_level=28)
+trained_by(26679, ROGUE_TRAINER, req_level=36)
+trained_by(shiv_203725, ROGUE_TRAINER, req_level=50)
 
 # Stock Poisons-skill grant is retired.
 untrain(2842, [9, 10, 206, 207])
