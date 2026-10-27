@@ -93,6 +93,11 @@ namespace Rogue
     void ApplyPoisonGlow(Player* player);
     void WritePoisonGlow(Player* player, uint8 slot);
     void RestorePoisonGlow(Player* player);
+
+    // ---- RG0b ----
+    // For every Lethal poison aura the rogue holds (LETHAL_POISON_AURAS), ApplyPoison(rogue, target, the aura's
+    // EFFECT_0 TriggerSpell, its EFFECT_0 AuraEffect, source). No roll, no Proc Chance.
+    void ApplyLethalPoisons(Player* rogue, Unit* target, PoisonSource source);
 }
 
 #endif

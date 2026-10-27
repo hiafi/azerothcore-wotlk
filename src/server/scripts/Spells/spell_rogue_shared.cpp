@@ -19,9 +19,11 @@
  * Rogue rework - shared SpellScripts and AuraScripts (rogue-rework RG0a, RG0b). Bodies: RogueMechanics.
  */
 
+#include "ObjectAccessor.h"
 #include "Player.h"
 #include "RogueMechanics.h"
 #include "ScriptMgr.h"
+#include "Spell.h"
 #include "SpellAuraEffects.h"
 #include "SpellAuras.h"
 #include "SpellInfo.h"
@@ -146,8 +148,141 @@ class spell_rog_poison_aura : public AuraScript
     }
 };
 
+// 8676 - Ambush (RG0b): from Stealth it can be used at range and teleports the rogue behind the target before the
+// strike (P0 variant A). Stealth is removed in Spell::prepare before BeforeCast, so the stealth state is latched in
+// CheckCast, which runs in prepare before the removal (an instant spell's cast(true) skips the second check). Out of
+// Stealth (Shadowed included) the strike needs melee range. The caster may be a creature.
+class spell_rog_ambush : public SpellScript
+{
+    PrepareSpellScript(spell_rog_ambush);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ RogueData::SPELL_AMBUSH_TELEPORT });
+    }
+
+    SpellCastResult CheckCast()
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetExplTargetUnit();
+        if (!caster || !target)
+            return SPELL_FAILED_BAD_TARGETS;
+
+        _wasStealthed |= caster->HasStealthAura();
+        _inMelee = caster->IsWithinMeleeRange(target);
+        if (!_wasStealthed && !_inMelee)
+            return SPELL_FAILED_OUT_OF_RANGE;
+
+        return SPELL_CAST_OK;
+    }
+
+    void HandleBeforeCast()
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetExplTargetUnit();
+        if (!caster || !target || !_wasStealthed || _inMelee)
+            return;
+
+        // The helper's 50000 yd range keeps the script cast from being range-checked.
+        caster->CastSpell(target, RogueData::SPELL_AMBUSH_TELEPORT, TRIGGERED_FULL_MASK);
+    }
+
+    void Register() override
+    {
+        OnCheckCast += SpellCheckCastFn(spell_rog_ambush::CheckCast);
+        BeforeCast += SpellCastFn(spell_rog_ambush::HandleBeforeCast);
+    }
+
+    bool _wasStealthed = false;
+    bool _inMelee = false;
+};
+
+// 203725 - Shiv (RG0b): the strike applies every Lethal poison the rogue holds at 100% (Rogue::ApplyLethalPoisons).
+// The strike's own Lethal roll is blocked by the guard (rule 3a''); the Non-lethal poison rolls as on any ability.
+class spell_rog_shiv_rework : public SpellScript
+{
+    PrepareSpellScript(spell_rog_shiv_rework);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ RogueData::SPELL_INSTANT_POISON_8680, RogueData::SPELL_DEADLY_POISON,
+            RogueData::SPELL_WOUND_POISON });
+    }
+
+    // AfterHit runs only for a unit the strike hit (a miss, dodge or parry applies nothing).
+    void HandleAfterHit()
+    {
+        Player* caster = GetCaster() ? GetCaster()->ToPlayer() : nullptr;
+        Unit* target = GetHitUnit();
+        if (!caster || !target || target == caster)
+            return;
+
+        Rogue::ApplyLethalPoisons(caster, target, Rogue::PoisonSource::Shiv);
+    }
+
+    void Register() override
+    {
+        AfterHit += SpellHitFn(spell_rog_shiv_rework::HandleAfterHit);
+    }
+};
+
+// 203723 - Ghostly Veil (RG0b): the dodge buff counts melee attacks taken from others. Ghostly Strike's own cast makes
+// the rogue a hit target of its self-effect (and so do Eviscerate-style self dummies), which would raise a taken-melee
+// event on the rogue's own aura and burn a charge, so an event the owner caused is not a proc. Friendly melee-type
+// spells (a party pet's Furious Howl) raise it too, so only hostile actors count.
+class spell_rog_ghostly_veil : public AuraScript
+{
+    PrepareAuraScript(spell_rog_ghostly_veil);
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        Unit* actor = eventInfo.GetActor();
+        return actor && actor != GetUnitOwner() && !actor->IsFriendlyTo(GetUnitOwner());
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_rog_ghostly_veil::CheckProc);
+    }
+};
+
+// 51723 - Fan of Knives (RG0b): one combo point per cast, on the rogue's hostile selection. The combo effect hits every
+// unit in the area and AddComboPointGain moves the gain to each new unit, so the point would land on whichever target
+// was processed last, where a finisher on the selected target can't see it.
+class spell_rog_fan_of_knives : public SpellScript
+{
+    PrepareSpellScript(spell_rog_fan_of_knives);
+
+    void HandleComboPoint(SpellEffIndex effIndex)
+    {
+        PreventHitDefaultEffect(effIndex);
+        // AddComboPointGain adds up when handed the same unit again: award once per cast
+        if (_awarded)
+            return;
+        _awarded = true;
+
+        Unit* caster = GetCaster();
+        Unit* target = ObjectAccessor::GetUnit(*caster, caster->GetTarget());
+        if (!target || !caster->IsValidAttackTarget(target))
+            target = GetHitUnit();
+        GetSpell()->AddComboPointGain(target, int8(GetEffectValue()));
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_rog_fan_of_knives::HandleComboPoint, EFFECT_1,
+            SPELL_EFFECT_ADD_COMBO_POINTS);
+    }
+
+    bool _awarded = false;
+};
+
 void AddSC_rogue_shared_spell_scripts()
 {
     RegisterSpellScript(spell_rog_energy_haste);
     RegisterSpellAndAuraScriptPair(spell_rog_poison, spell_rog_poison_aura);
+    RegisterSpellScript(spell_rog_ambush);
+    RegisterSpellScript(spell_rog_shiv_rework);
+    RegisterSpellScript(spell_rog_ghostly_veil);
+    RegisterSpellScript(spell_rog_fan_of_knives);
 }

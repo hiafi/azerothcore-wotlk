@@ -48,7 +48,8 @@ namespace
     constexpr uint32 FAN_OF_KNIVES_SPELL_ID = 51723;
     // Triggered spells allowed to roll: Mutilate's two halves, whose parent cast raises no proc of its own. Every
     // other triggered spell (Killing Spree's strikes, ...) rolls nothing (WP-R W1). Stock Shiv's 5940 never reaches
-    // the guard (5938 suppresses its procs, 5940 is dropped by GetProcEffectMask); RG0b's Shiv calls ApplyPoison.
+    // the guard (5938 suppresses its procs, 5940 is dropped by GetProcEffectMask); RG0b's Shiv applies its Lethal
+    // poisons through ApplyLethalPoisons.
     constexpr uint32 TRIGGERED_ROLLERS[] = { 5374, 27576 };
 
     constexpr std::array<uint32, 3> LETHAL_POISON_AURAS =
@@ -275,6 +276,11 @@ namespace Rogue
                     std::end(TRIGGERED_ROLLERS))
                 return false;
 
+            // 3a''. U3: Shiv's own strike rolls no Lethal poison (its script applies every Lethal at 100% through
+            // ApplyLethalPoisons); the Non-lethal poison rolls as on any ability.
+            if (spellInfo->Id == RogueData::SPELL_SHIV_203725 && GetPoisonSlot(auraId) == PoisonSlot::Lethal)
+                return false;
+
             // 3b. Fan of Knives: one HIT event per target already, every target rolls.
             if (spellInfo->Id == FAN_OF_KNIVES_SPELL_ID)
                 return true;
@@ -341,6 +347,27 @@ namespace Rogue
         // The source is the hook point for later stages (Shiv, Kingsbane, Deadly Brew, Venomous Fan); RG0a casts the
         // payload the same way for all of them. Every payload is 100 yd: a script cast is range-checked (C4).
         rogue->CastSpell(target, payloadId, TRIGGERED_FULL_MASK, nullptr, triggeredBy);
+    }
+
+    void ApplyLethalPoisons(Player* rogue, Unit* target, PoisonSource source)
+    {
+        if (!rogue || !target || !target->IsAlive())
+            return;
+
+        // Every Lethal aura held (a second slot from S1 is covered), 100%: no roll, no Proc Chance. The payload id is
+        // the aura row's effect 0 TriggerSpell, the same one the roll path casts.
+        for (uint32 const auraId : LETHAL_POISON_AURAS)
+        {
+            Aura* aura = rogue->GetAura(auraId, rogue->GetGUID());
+            if (!aura)
+                continue;
+
+            AuraEffect const* triggeredBy = aura->GetEffect(EFFECT_0);
+            if (!triggeredBy)
+                continue;
+
+            ApplyPoison(rogue, target, aura->GetSpellInfo()->Effects[EFFECT_0].TriggerSpell, triggeredBy, source);
+        }
     }
 
     bool HasAnyPoison(Player const* rogue)
