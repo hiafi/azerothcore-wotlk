@@ -1035,7 +1035,7 @@ ascendance_202364 = _rank(
     'enemy. Wind Ascendance: your movement speed is increased by 15%, and your melee attacks have a 15% chance to unleash a Gust, '
     'dealing ' + pot_text(gust_202391) + ' Physical damage to the target and half as much to up to 5 enemies near it. Holding all '
     'three consumes them and grants Elemental Ascendance for 20 sec: Flame Shock and Stormstrike deal 60% more damage, Stormstrike '
-    'strikes 2 additional nearby enemies, Gusts deal double damage and your movement speed is increased by 30%. Capstone: Your '
+    'strikes 2 additional nearby enemies, Gusts deal double damage and your movement speed is increased by 30%.\n\nCapstone Bonus: Your '
     'Mastery increases the damage bonuses of your Ascendances and the damage reduction of each Stoneskin stack.',
     'Ascendance (talent 60298, learned at 40): marker, E0 DUMMY. The transform and the grants are Shaman::OnImbueChanged / '
     'GrantAscendance; the capstone (live Mastery) is always on with this rank. Tooltips show base values only.',

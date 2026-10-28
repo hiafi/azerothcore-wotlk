@@ -140,8 +140,8 @@ def _passive_rank(spell_id, name, effects, icon, level, description, notes, mask
 def _capstone_text(text, capstone, last):
     """Capstone line under the rank text: grey below the last rank, plain on the last (paladin_holy_ranks.py _desc)."""
     if last:
-        return f'{text}\n\nCapstone: {capstone}'
-    return f'{text}\n\n|cFF9D9D9DCapstone: {capstone}|r'
+        return f'{text}\n\nCapstone Bonus: {capstone}'
+    return f'{text}\n\n|cFF9D9D9DCapstone Bonus: {capstone}|r'
 
 
 _ICON_CRIMSON_RESOLVE = 4178        # achievement_dungeon_crimsonhall (S1a-0VERIFY section 4)

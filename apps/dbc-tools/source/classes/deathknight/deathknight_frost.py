@@ -95,8 +95,8 @@ def _rank_level(row, rank):
 def _capstone_text(text, capstone, last):
     """Capstone line under the rank text: grey below the last rank, plain on the last (S1 style)."""
     if last:
-        return f'{text}\n\nCapstone: {capstone}'
-    return f'{text}\n\n|cFF9D9D9DCapstone: {capstone}|r'
+        return f'{text}\n\nCapstone Bonus: {capstone}'
+    return f'{text}\n\n|cFF9D9D9DCapstone Bonus: {capstone}|r'
 
 
 def _raw(description, aura_description=None, level=0, gcd=False, magic=False, **extra):
@@ -778,7 +778,7 @@ breath_of_sindragosa_203306 = spell(
         'Continuously deal ' + pot_text(breath_of_sindragosa_tick_203307, variant='avg')
         + ' Frost damage every 1 sec to enemies in a cone in front of you, with reduced damage to secondary targets. '
           'Drains 10 Runic Power per sec, increasing by 1 every 5 sec. Lasts until you cancel it or cannot pay.\n\n'
-          "Capstone: Breath of Sindragosa's damage is increased by your Mastery.",
+          "Capstone Bonus: Breath of Sindragosa's damage is increased by your Mastery.",
         'Breathing frost at enemies in front of you, draining Runic Power.', level=60, gcd=True, magic=True,
         **_chain_amplitudes([None]),
     ),

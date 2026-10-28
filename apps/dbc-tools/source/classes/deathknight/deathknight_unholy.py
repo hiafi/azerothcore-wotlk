@@ -72,8 +72,8 @@ def _rank_level(row, rank):
 def _capstone_text(text, capstone, last):
     """Capstone line under the rank text: grey below the last rank, plain on the last (S1 / S2 style)."""
     if last:
-        return f'{text}\n\nCapstone: {capstone}'
-    return f'{text}\n\n|cFF9D9D9DCapstone: {capstone}|r'
+        return f'{text}\n\nCapstone Bonus: {capstone}'
+    return f'{text}\n\n|cFF9D9D9DCapstone Bonus: {capstone}|r'
 
 
 def _raw(description, aura_description=None, level=0, gcd=False, magic=False, **extra):
