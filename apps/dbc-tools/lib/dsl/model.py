@@ -244,6 +244,18 @@ class Spell:
     # *melee* attack power. Only for a pet-bit spell (SpellClassMask_2 d1 b28) with no sp_potency; None keeps
     # today's output byte for byte.
     pet_owner_scaling: tuple[float, float] | None = None
+    # Rogue T1 (PLAN s1D.12): the SpellDuration row's MaxDuration when it differs from `duration_ms` (the row's
+    # Duration, the minimum). The core scales an aura's duration by the caster's combo points between the two
+    # (`WorldObject::CalcSpellDuration`: `min + (max - min) * comboPoints / 5`), so Rupture's 4 s + 4 s per combo point
+    # is `duration_ms=4000, max_duration_ms=24000`. The client's `$d` shows the minimum only, and the periodic tick
+    # count behind a `.total` potency tooltip also reads `duration_ms`: a spell with a range owns its per-tick and
+    # total numbers (RG0 / the spec stage). Unset leaves the entry byte for byte what it was.
+    # The core scales by whatever combo points the CASTER HOLDS when the aura is created, finisher or not
+    # (CalcSpellDuration does not check SpellInfo::NeedsComboPoints, and the points are only cleared in the finish
+    # phase, Spell.cpp:4414): so put the range on the spell that creates the aura inside the finisher's own cast. A
+    # non-finisher with a range scales by the points it happens to find (and spends none); a helper triggered after the
+    # finisher consumed its points (an AfterHit script cast, a stored-bleed tick spell) always gets the minimum.
+    max_duration_ms: int | None = None
 
     def __post_init__(self) -> None:
         # Populated by _resolve_potency() during to_entry() - lib.dsl.registry.spell() reads
@@ -269,11 +281,13 @@ class Spell:
             raw_overrides["SpellDescriptionVariableID"] = self.tooltip_vars.id
         if self.pet_owner_scaling is not None:
             self._check_pet_owner_scaling(raw_overrides)
+        if self.max_duration_ms is not None:
+            self._check_max_duration(raw_overrides)
         effect_dicts = [(e.to_dict() if e is not None else None) for e in self.effects]
         effect_dicts += [None, None, None]
         if any(e is not None and e.has_potency for e in self.effects):
             self._resolve_potency(effect_dicts, raw_overrides)
-        return {
+        entry = {
             "id": self.id,
             "name": self.name,
             "school": _int(self.school),
@@ -299,6 +313,34 @@ class Spell:
             "raw_overrides": raw_overrides or None,
             "notes": self.notes,
         }
+        if self.max_duration_ms is not None:
+            entry["max_duration_ms"] = self.max_duration_ms  # only when set: no new key on any other spell
+        return entry
+
+    def _check_max_duration(self, raw_overrides: dict) -> None:
+        """`max_duration_ms` is the maximum of a combo-point scaled duration: it needs a positive `duration_ms` (the
+        minimum; a permanent or unset duration has nothing to scale from) and has to be greater than it (equal is just
+        `duration_ms`, and the core skips the scaling when min == max, so it would be a confusing no-op). -1 is the
+        permanent marker, never a maximum. A raw `DurationIndex` override contradicts a declared max (raw_overrides are
+        applied last, so the minted ranged row would be an orphan and the spell would keep the raw row), so both
+        together raise."""
+        label = f"spell {self.id} ({self.name})"
+        if "DurationIndex" in raw_overrides:
+            raise ValueError(f"{label}: max_duration_ms and raw_overrides' DurationIndex contradict each other "
+                             f"(the raw index is applied last and wins, leaving the declared ranged row unused): "
+                             f"drop one")
+        if self.max_duration_ms < 0:
+            raise ValueError(f"{label}: max_duration_ms must be a positive duration, got {self.max_duration_ms} (-1 is "
+                             f"the permanent marker, not a maximum)")
+        if not self.duration_ms or self.duration_ms <= 0:
+            raise ValueError(f"{label}: max_duration_ms needs a positive duration_ms (the minimum), got "
+                             f"duration_ms={self.duration_ms!r}")
+        if self.max_duration_ms == self.duration_ms:
+            raise ValueError(f"{label}: max_duration_ms={self.max_duration_ms} equals duration_ms, which is just "
+                             f"duration_ms (the core only scales a duration whose minimum and maximum differ): drop it")
+        if self.max_duration_ms < self.duration_ms:
+            raise ValueError(f"{label}: max_duration_ms ({self.max_duration_ms}) must be greater than duration_ms "
+                             f"({self.duration_ms}), the minimum")
 
     def _check_pet_owner_scaling(self, raw_overrides: dict) -> None:
         """`pet_owner_scaling` is only meaningful on a pet-bit spell and only without a spell-power half:

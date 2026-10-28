@@ -161,6 +161,15 @@ ICON_ID_GOREFIENDS_GRASP = 90310
 ICON_ID_DEATHS_CARESS = 90311
 ICON_ID_RAISE_ABOMINATION = 90312
 
+# Rogue rework (ids.yaml reservation 90370-90419). Playtest fix pass M-FIX: five spells whose stock icons did not fit
+# (Shattering Vial's stock 359 showed a grey box). Each id is shared by the talent rank, the castable and every
+# triggered / buff row that shows it.
+ICON_ID_SHATTERING_VIAL = 90370  # talent rank 203808 + splash 203836
+ICON_ID_KINGSBANE = 90371  # 203822 castable (talent rank), hands 203840 / 203841, DoT 203842
+ICON_ID_POISON_BOMB = 90372  # 203807 (castable, talent rank and cloud in one row)
+ICON_ID_ROGUE_PRECISION = 90373  # unused since 2026-10-28 (Precision and Accuracy back on stock icon 126)
+ICON_ID_PISTOL_SHOT = 90374  # Pistol Shot 203958 + the Surprise Attacks extra shot 203988
+
 ICONS = (
     (ICON_ID_ANGELIC_FEATHER, "Interface/icons/ability_priest_angelicfeather.blp"),
     (ICON_ID_DIVINE_STAR, "Interface/icons/spell_priest_divinestar.blp"),
@@ -210,6 +219,11 @@ ICONS = (
     (ICON_ID_GOREFIENDS_GRASP, "Interface/icons/ability_deathknight_aoedeathgrip.blp"),
     (ICON_ID_DEATHS_CARESS, "Interface/icons/_BloodPlague_Green.blp"),
     (ICON_ID_RAISE_ABOMINATION, "Interface/icons/ui_darkshore_warfront_horde_abomination.blp"),
+    (ICON_ID_SHATTERING_VIAL, "Interface/icons/ability_rogue_crimsonvial.blp"),
+    (ICON_ID_KINGSBANE, "Interface/icons/inv_ability_rogue_sepsis.blp"),
+    (ICON_ID_POISON_BOMB, "Interface/icons/inv_ability_poison_nova.blp"),
+    (ICON_ID_ROGUE_PRECISION, "Interface/icons/ability_rogue_combatexpertise.blp"),  # same file as Hunter 90237
+    (ICON_ID_PISTOL_SHOT, "Interface/icons/ability_rogue_pistolshot.blp"),
 )
 
 # "Stock path, no blp" entries (warlock-rework DESTRUCTION §2.6/§11 Q19): a SpellIcon.dbc row that
@@ -238,13 +252,13 @@ def extract_icons(source_mpq: Path) -> dict[str, bytes]:
         raise SystemExit(f"source MPQ not found: {source_mpq}")
 
     smpq = _find_smpq()
-    paths = [p for _, p in ICONS]
+    paths = list(dict.fromkeys(p for _, p in ICONS))  # two ids may share one file (Hunter 90237 / Rogue 90373)
     with tempfile.TemporaryDirectory(prefix="patch-i-extract-") as tmp:
         tmp_path = Path(tmp)
         subprocess.run([smpq, "-x", str(source_mpq), *paths], cwd=tmp_path, check=True,
                         capture_output=True, text=True)
         out = {}
-        for _, rel in ICONS:
+        for rel in paths:
             extracted = tmp_path / rel
             if not extracted.is_file():
                 raise SystemExit(f"expected extracted file missing: {rel} (checked {extracted})")

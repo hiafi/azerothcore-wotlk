@@ -75,8 +75,8 @@ def _desc(text, capstone=None, last=False):
     if capstone is None:
         return text
     if last:
-        return f"{text}\n\nCapstone: {capstone}"
-    return f"{text}\n\n|cFF9D9D9DCapstone: {capstone}|r"
+        return f"{text}\n\nCapstone Bonus: {capstone}"
+    return f"{text}\n\n|cFF9D9D9DCapstone Bonus: {capstone}|r"
 
 
 def _cap(text, capstone, last=False):

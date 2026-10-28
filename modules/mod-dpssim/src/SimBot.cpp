@@ -314,8 +314,20 @@ bool SimBot::EnsurePet()
 
 void SimBot::UpdateAI(uint32 diff)
 {
-    if (_ai)
-        _ai->UpdateAI(diff);
+    if (!_ai)
+        return;
+
+    // A spell that moves the caster by a near teleport (Killing Spree's strikes, Shadowstep...) leaves
+    // IsBeingTeleportedNear() set until the client acknowledges it, and PlayerbotAI::UpdateAI() returns early until
+    // then. Live bots get the ack from PlayerbotHolder::UpdateSessions() every world tick; the sim bot is in no holder,
+    // so it is sent here, through the same PlayerbotAI::HandleTeleportAck() (with its 1-2 s next-check delay, as
+    // live). Only a living actor's near teleport: a far one (map change) or a dead actor's release is the iteration
+    // reset's job.
+    Player* bot = _ai->GetBot();
+    if (bot && bot->IsAlive() && bot->IsBeingTeleportedNear())
+        _ai->HandleTeleportAck();
+
+    _ai->UpdateAI(diff);
 }
 
 void SimBot::SilenceAI()

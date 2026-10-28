@@ -172,7 +172,7 @@ def _self_heal(spell_id, name, level, icon, description, notes, *, magic_class=F
 # =====================================================================================================================
 
 _VORACIOUS_TEXT = 'You are healed for {pct}% of all damage you deal.'
-_VORACIOUS_CAPSTONE = ('Capstone: Your Mastery increases the healing you receive from your own Death Knight abilities '
+_VORACIOUS_CAPSTONE = ('Capstone Bonus: Your Mastery increases the healing you receive from your own Death Knight abilities '
                        'and talents.')
 
 

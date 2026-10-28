@@ -553,7 +553,7 @@ IIT_TALENT, IIT_PASSIVE, ICY_TALONS_R3 = 2223, 55610, 50885
 ICY_TALONS_BUFF_BP = {50880: (50882, 2), 50884: (58575, 5), 50885: (58576, 9)}  # rank -> (buff, stored base points)
 EFFECT_APPLY_AREA_AURA_RAID, AURA_MOD_MELEE_HASTE, AURA_HASTE_ALL = 65, 138, 193
 ATTR0_PASSIVE = 0x40
-CAPSTONE_GREY = "|cFF9D9D9DCapstone: "
+CAPSTONE_GREY = "|cFF9D9D9DCapstone Bonus: "
 
 
 def check_icy_talons_capstone(rows_by_id: dict[int, dict], talents: list[dict], links: list[dict]) -> list[str]:
@@ -599,8 +599,8 @@ def check_icy_talons_capstone(rows_by_id: dict[int, dict], talents: list[dict], 
             bad.append(f"{rank}: eff0 / eff1 base points {rrow.get('EffectBasePoints_1')!r} / "
                        f"{rrow.get('EffectBasePoints_2')!r}, expected {stored} (buff {buff})")
         text = str(rrow.get("Description_Lang_enUS") or "")
-        if text.count("Capstone:") != 1 or f"${IIT_PASSIVE}s1" not in text or f"${IIT_PASSIVE}a1" not in text:
-            bad.append(f"{rank}: tooltip needs one 'Capstone:' paragraph quoting ${IIT_PASSIVE}a1 / s1")
+        if text.count("Capstone Bonus:") != 1 or f"${IIT_PASSIVE}s1" not in text or f"${IIT_PASSIVE}a1" not in text:
+            bad.append(f"{rank}: tooltip needs one 'Capstone Bonus:' paragraph quoting ${IIT_PASSIVE}a1 / s1")
         elif rank == ICY_TALONS_R3 and (CAPSTONE_GREY in text or not text.endswith(".")):
             bad.append(f"{rank}: the last rank's capstone must be plain (not grey) and end the tooltip")
         elif rank != ICY_TALONS_R3 and not (CAPSTONE_GREY in text and text.endswith("|r")):
@@ -1056,8 +1056,8 @@ class DeathKnightS2NegativeTest(unittest.TestCase):
     def test_icy_talons_capstone(self):
         def desc(rank):
             tail = "Increases the melee attack speed of all party and raid members within $55610a1 yards by $55610s1%."
-            return ("You leech heat. $s2%." + (f"\n\nCapstone: {tail}" if rank == 50885
-                                              else f"\n\n|cFF9D9D9DCapstone: {tail}|r"))
+            return ("You leech heat. $s2%." + (f"\n\nCapstone Bonus: {tail}" if rank == 50885
+                                              else f"\n\n|cFF9D9D9DCapstone Bonus: {tail}|r"))
 
         def rows(over=None):
             out = {IIT_PASSIVE: _row(IIT_PASSIVE, Attributes=0x50, Effect_1=65, EffectAura_1=138, EffectBasePoints_1=9,
@@ -1114,7 +1114,7 @@ class DeathKnightS2NegativeTest(unittest.TestCase):
         def tip(text, col="Description_Lang_enUS"):
             return {203273: _row(203273, **{col: text})}
 
-        for ok in ("Deals damage to enemies in a line.", "Capstone: Obliterate has no cooldown.", ""):
+        for ok in ("Deals damage to enemies in a line.", "Capstone Bonus: Obliterate has no cooldown.", ""):
             self.assertEqual(check_no_cost_cooldown_tooltips(tip(ok)), [], ok)
         for bad in ("Deals damage. 2 min cooldown.", "Deals damage. 8 sec cooldown", "Deals damage. Cooldown: 2 min",
                     "Deals damage. Costs 30 Runic Power.", "Deals damage. 1 Frost Rune.", "Deals damage. 15 Runic Power."):

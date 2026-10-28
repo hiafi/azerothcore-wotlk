@@ -555,6 +555,46 @@ has the syntax; this is what to know when something misbehaves.
   collision), and `resolve.resolve_rows` classifies it like any row outside the reserved block: edited when it
   differs from the live row, unchanged copy when it does not.
 
+## Rogue T1: a SpellDuration with a minimum and a maximum, the rogue id slices and family-bit rules
+
+Added for the Rogue rework (`.agents/plans/rogue-rework/`, T1; tooling only, no rogue content). The README's "Rogue T1"
+section has the syntax.
+
+- **`spell(duration_ms=4000, max_duration_ms=24000)`** mints or reuses a `SpellDuration` row whose `Duration` and
+  `MaxDuration` differ (`ReuseContext.duration_index(duration_ms, max_duration_ms=None)`; the one-argument call is
+  unchanged and still only finds `Duration == MaxDuration` rows). The core scales the aura between the two by the
+  caster's combo points (`WorldObject::CalcSpellDuration`, Object.cpp:3377-3394: `min + (max - min) * cp / 5`, only
+  for a caster with combo points, `min != -1` and `min != max`). The model raises for a max with no positive
+  `duration_ms`, a max equal to (a no-op) or below the minimum, and a negative max. A stock row with the pair is
+  reused (185 is 6000/21000), never duplicated.
+- **Who reads `duration_ms` as the minimum.** The client's `$d` tooltip token shows `Duration` only, and the periodic
+  tick count behind a potency `.total` tooltip (`lib/dsl/model.py`, `round(duration_ms / amplitude)`) uses it too. A
+  spell with a range therefore shows its minimum-duration total; the stage that declares one (Rupture) owns the
+  per-tick number and the tooltip wording. `lint.check_raw_override_typed_mismatch` compares `duration_ms` with the raw
+  row's `Duration` column, which is the minimum, so it stays consistent. A declared max together with a raw
+  `DurationIndex` override raises (the raw index is applied last and would win).
+- **Combo points at aura creation.** `CalcSpellDuration` scales by whatever combo points the caster holds when the
+  aura is created, finisher or not (it never checks `NeedsComboPoints`), and the finisher's points are only cleared
+  in the finish phase (`Spell.cpp:4414`). A non-finisher with a ranged row scales by the points it finds and spends
+  none; a helper triggered after the finisher consumed its points (an `AfterHit` script cast, a stored-bleed tick
+  spell) sees 0 points and always gets the minimum. Put the range on the aura the finisher's own cast creates.
+- **Pull stays lossless.** `reverse.py` diffs the rebuilt row against the real one and keeps any difference (a ranged
+  `DurationIndex`) in `raw_overrides`.
+- **`ROGUE_FAMILY_RULES`** (`SpellClassSet` 8) is in `FAMILY_BIT_RULES`, so both `--check` and the full run judge it:
+  no custom (>= 200000) rogue-family spell may carry d0 b11 (Stealth's removal strips every family-8 aura on it), d0 b22
+  (the Stealth hardcode drives the Master of Subtlety / Overkill tails) or d0 b25 (Hemorrhage's combo point and dagger
+  bonus). The bits that depend on a spell's role are not expressible in the table; RG0 and the spec stages pin them with
+  targeted tests: d0 b16 only on Deadly Poison, d0 b20 only on Rupture, d0 b17 only on a spell that should take the
+  Eviscerate AP term, d0 b26 / d1 b18 on a new weapon strike, d1 b1 / b2 / b3, the DR bits d0 b3 / b10 / b24, the
+  Preparation lists, d0 b0 while Throw shares it, and d1 b19 as the poison group.
+- **Ids.** `reservations: rogue` has the PLAN s4 slices (spell 203700-204399 and so on; the P0 spike's 204370-204399,
+  1295, 30838-30839 and 300368-300369 are never reused). `spellicon` is widened to 90499 and `spell_group` to 1399.
+  `gameobjectdisplayinfo`, `summonproperties` and `spellcategory` are not reserved (not needed); the first stage that
+  needs one adds its slice. `lib/test_id_blocks.py::scanned_used_ids` skips the `*_STOCK` constants in
+  `patch_rogue_vfx_models.py` (they are stock ids below 90000) and a test pins every other rogue VFX constant to the
+  rogue slices (spellvisual 90250-90299, soundentries 90121-90140). The spellvisual block is full after the rogue:
+  the next class widens it.
+
 ## Watch out: one client DBC, one patch archive
 
 Five scripts each own a patch letter: `generate.py` → `patch-Z.mpq` (Spell/Talent/Item/…),

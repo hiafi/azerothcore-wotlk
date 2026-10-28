@@ -6,8 +6,8 @@ Checks, from the file itself and from the class sources:
   - every per-class reservation sits inside the block of the same name, and no two classes' reservations overlap;
   - every custom id a class declares (spell, talent, SkillLineAbility, spell_group, tooltip variable, creature)
     that falls inside a tool-wide block is inside that class's reservation. Shaman and Death Knight reserve slices
-    (the shaman spike's 202760-202779, 300298/300299 and 1270, and the Death Knight P0 spike's 203680-203699, 1285,
-    30779 and 300349, are inside theirs);
+    (the shaman spike's 202760-202779, 300298/300299 and 1270, the Death Knight P0 spike's 203680-203699, 1285,
+    30779 and 300349, and the Rogue P0 spike's 204370-204399, 1295, 30838/30839 and 300368/300369 are inside theirs);
   - a non-class owner reserves under its project name (`healsim`: spells 202900-202909, declared from source/npcs),
     so the overlap test keeps every class out of its ids.
 
@@ -19,6 +19,7 @@ Run directly:
 from __future__ import annotations
 
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -52,13 +53,16 @@ CONSTANT_BLOCKS = {"ICON": "spellicon", "SOUND": "soundentries", "EFFECT": "spel
                    "SV": "spellvisual"}
 
 
-def scanned_used_ids() -> dict[str, list[tuple[int, str]]]:
+def scanned_used_ids(scripts: list[Path] | None = None) -> dict[str, list[tuple[int, str]]]:
     """Every custom (90000-90999) id the patch scripts name as a module-level constant, by block: the scan keeps the
-    test from going stale when a script mints a new id (a hard-coded maximum would not notice)."""
+    test from going stale when a script mints a new id (a hard-coded maximum would not notice). A constant that
+    names a stock id (`EFFECT_POISON_BOMB_VIAL_STOCK = 5597` in patch_rogue_vfx_models.py, `SOUND_*` 3087 in the druid
+    script) is below 90000 and is skipped, whatever its prefix. `scripts` replaces the real list (tests plant files)."""
     import ast
 
     found: dict[str, list[tuple[int, str]]] = {}
-    scripts = [TOOL_ROOT / "build_patch_i.py", *sorted(TOOL_ROOT.glob("patch_*_vfx_models.py"))]
+    if scripts is None:
+        scripts = [TOOL_ROOT / "build_patch_i.py", *sorted(TOOL_ROOT.glob("patch_*_vfx_models.py"))]
     for path in scripts:
         for node in ast.parse(path.read_text(encoding="utf-8")).body:
             if not (isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name)):
@@ -69,6 +73,31 @@ def scanned_used_ids() -> dict[str, list[tuple[int, str]]]:
             if block and is_int and 90000 <= value.value < 91000:
                 found.setdefault(block, []).append((value.value, f"{path.name}:{name}"))
     return found
+
+
+ROGUE_VFX_SCRIPT = "patch_rogue_vfx_models.py"
+# The one shared icon script: every class's Ascension SpellIcon rows are minted here (the rogue's 90370-90374 too), so a
+# spellicon constant of this script may sit in the rogue slice.
+ICON_SCRIPT = "build_patch_i.py"
+
+
+def rogue_slice_problems(scanned: dict[str, list[tuple[int, str]]]) -> list[str]:
+    """Scanned constants that break the rogue ownership rule: a constant is inside a rogue slice (spellvisual
+    90250-90299, soundentries 90121-90140, spellicon 90370-90419) if and only if the rogue script names it (a spellicon
+    constant may also come from the shared icon script, build_patch_i.py)."""
+    rogue = RESERVATIONS["rogue"]
+    problems = []
+    for block, found in scanned.items():
+        for value, where in found:
+            in_rogue_slice = block in rogue and rogue[block]["start"] <= value <= rogue[block]["end"]
+            from_rogue_script = where.startswith(ROGUE_VFX_SCRIPT)
+            if in_rogue_slice:
+                allowed = from_rogue_script or (block == "spellicon" and where.startswith(ICON_SCRIPT))
+            else:
+                allowed = not from_rogue_script
+            if not allowed:
+                problems.append(f"{where} = {value} ({block})")
+    return problems
 
 
 def _overlap(a: dict, b: dict) -> bool:
@@ -102,7 +131,8 @@ class BlockShapeTest(unittest.TestCase):
         # The earlier blocks keep their numbers: a reader that hardcodes one must keep working.
         self.assertEqual(BLOCKS["spell"], {"start": 200000, "end": 209999})
         self.assertEqual(BLOCKS["creature"], {"start": 300000, "end": 300999})
-        self.assertEqual(BLOCKS["spell_group"], {"start": 1200, "end": 1299})
+        self.assertEqual(BLOCKS["spell_group"], {"start": 1200, "end": 1399})  # widened by Rogue T1 (was 1299)
+        self.assertEqual(BLOCKS["spellicon"], {"start": 90100, "end": 90499})  # widened by Rogue T1 (was 90399)
 
     def test_summonproperties_clears_the_stock_maximum(self):
         self.assertGreater(BLOCKS["summonproperties"]["start"], 2935)  # SummonProperties.dbc tops out at 2935
@@ -116,6 +146,15 @@ class BlockShapeTest(unittest.TestCase):
         # shaman's slices filled the old ends (90100 / 90199); the widened ends hold Death Knight's slices
         self.assertEqual(BLOCKS["soundentries"], {"start": 90001, "end": 90199})
         self.assertEqual(BLOCKS["spellvisual"], {"start": 90001, "end": 90299})
+
+    def test_rogue_t1_widened_spell_group_and_spellicon_and_left_the_rest(self):
+        # spell_group 1299 -> 1399 (1296-1299 would have been all that was left), spellicon 90399 -> 90499 (the rogue
+        # slice ends at 90419); spellcategory is not widened (the rogue reserves none), nor are the three it skips
+        self.assertEqual(BLOCKS["spell_group"]["end"], 1399)
+        self.assertEqual(BLOCKS["spellicon"]["end"], 90499)
+        self.assertEqual(BLOCKS["spellcategory"], {"start": 1300, "end": 1309})
+        self.assertEqual(BLOCKS["gameobjectdisplayinfo"], {"start": 90001, "end": 90099})
+        self.assertEqual(BLOCKS["summonproperties"], {"start": 3000, "end": 3099})
 
     def test_every_id_already_used_is_inside_its_block(self):
         for name, (low, high) in USED_DISPLAY_IDS.items():
@@ -136,10 +175,53 @@ class BlockShapeTest(unittest.TestCase):
         self.assertIn(90239, [v for v, _ in scanned["spellicon"]])
         self.assertIn(90091, [v for v, _ in scanned["spellvisual"]])
 
+    def test_the_scan_skips_stock_id_constants_and_sees_the_rogue_vfx_ones(self):
+        # patch_rogue_vfx_models.py names stock ids with the same prefixes (EFFECT_*_STOCK = 5597 / 4586 / 73,
+        # KIT_READY_THROWN_STOCK = 171, SOUND_*_STOCK = 10720 ...): they are below 90000, so the scan skips them and
+        # never reports a stock id as out of block.
+        scanned = scanned_used_ids()
+        seen = {where.split(":")[1]: value for found in scanned.values() for value, where in found
+                if where.startswith("patch_rogue_vfx_models.py")}
+        self.assertEqual(seen["EFFECT_KINGSBANE_CHEST"], 90250)
+        self.assertEqual(seen["SV_DEATH_FROM_ABOVE_LANDING"], 90256)
+        self.assertEqual(seen["SOUND_KINGSBANE_CAST"], 90121)
+        self.assertFalse([name for name in seen if name.endswith("_STOCK")])
+        every = [value for found in scanned.values() for value, _ in found]
+        self.assertFalse([v for v in every if v < 90000])
+
+    def test_the_rogue_vfx_constants_sit_inside_the_rogue_slices(self):
+        # the tool-wide check above is satisfied by any id in 90001-90299; this one pins the rogue script to the
+        # rogue reservation and keeps every other script's constants out of those slices
+        scanned = scanned_used_ids()
+        self.assertEqual(rogue_slice_problems(scanned), [])
+        mine = sum(1 for found in scanned.values() for _, where in found if where.startswith(ROGUE_VFX_SCRIPT))
+        self.assertGreaterEqual(mine, 20)  # not vacuous: the script's EFFECT / KIT / SV / SOUND constants were seen
+
+    def test_the_scan_flags_a_rogue_script_constant_outside_the_rogue_slice(self):
+        # plant real scripts and run the real scanner and the real check on them (90249 is the last Death Knight
+        # visual id, one below the rogue slice; 90260 is inside it)
+        with tempfile.TemporaryDirectory() as d:
+            rogue_script = Path(d) / ROGUE_VFX_SCRIPT
+            rogue_script.write_text("SV_X = 90249\nSV_OK = 90250\nSOUND_STOCK_ONE = 3087\nSOUND_Y = 90141\n")
+            other = Path(d) / "patch_other_vfx_models.py"
+            other.write_text("EFFECT_Z = 90260\nICON_FINE = 90369\n")
+            scanned = scanned_used_ids([rogue_script, other])
+        self.assertCountEqual(
+            rogue_slice_problems(scanned),
+            [f"{ROGUE_VFX_SCRIPT}:SV_X = 90249 (spellvisual)", f"{ROGUE_VFX_SCRIPT}:SOUND_Y = 90141 (soundentries)",
+             "patch_other_vfx_models.py:EFFECT_Z = 90260 (spellvisual)"],
+        )
+
+    def test_the_scan_passes_a_clean_planted_rogue_script(self):
+        with tempfile.TemporaryDirectory() as d:
+            script = Path(d) / ROGUE_VFX_SCRIPT
+            script.write_text("SV_A = 90250\nKIT_B = 90299\nSOUND_C = 90140\nICON_D = 90370\n")
+            self.assertEqual(rogue_slice_problems(scanned_used_ids([script])), [])
+
 
 class ReservationTest(unittest.TestCase):
-    def test_a_reservation_exists_for_shaman_death_knight_and_the_healing_sim(self):
-        for owner in ("shaman", "deathknight", "healsim"):
+    def test_a_reservation_exists_for_shaman_death_knight_rogue_and_the_healing_sim(self):
+        for owner in ("shaman", "deathknight", "rogue", "healsim"):
             self.assertIn(owner, RESERVATIONS)
 
     def test_reservations_sit_inside_their_block(self):
@@ -193,6 +275,30 @@ class ReservationTest(unittest.TestCase):
         self.assertEqual(dk["spellrunecost"], (2600, 2609))
         self.assertEqual(len(dk), 15)
 
+    def test_rogue_reservations_are_the_plan_section_4_rows(self):
+        rogue = {table: (cfg["start"], cfg["end"]) for table, cfg in RESERVATIONS["rogue"].items()}
+        self.assertEqual(rogue["spell"], (203700, 204399))
+        self.assertEqual(rogue["talent"], (60390, 60449))
+        self.assertEqual(rogue["skilllineability"], (30780, 30839))
+        self.assertEqual(rogue["spell_group"], (1286, 1295))
+        self.assertEqual(rogue["spelldescriptionvariables"], (1300, 1369))
+        self.assertEqual(rogue["creature"], (300350, 300369))
+        self.assertEqual(rogue["spellicon"], (90370, 90419))
+        self.assertEqual(rogue["soundentries"], (90121, 90140))
+        self.assertEqual(rogue["spellvisual"], (90250, 90299))
+        self.assertEqual(rogue["creaturedisplayinfo"], (90490, 90499))
+        self.assertEqual(rogue["creaturemodeldata"], (90490, 90499))
+        self.assertEqual(len(rogue), 11)  # no gameobjectdisplayinfo, summonproperties or spellcategory (T0: not needed)
+
+    def test_rogue_slices_follow_the_class_slices_they_were_cut_after(self):
+        # each rogue slice starts right after (or clear of) the previous owner's, with no overlap in any table
+        for table, rogue in RESERVATIONS["rogue"].items():
+            for other in ("shaman", "deathknight", "healsim"):
+                if table in RESERVATIONS[other]:
+                    with self.subTest(table=table, other=other):
+                        self.assertFalse(_overlap(rogue, RESERVATIONS[other][table]))
+        self.assertEqual(RESERVATIONS["rogue"]["spell"]["start"], RESERVATIONS["deathknight"]["spell"]["end"] + 1)
+
     def test_healsim_reserves_its_spells_and_nothing_else(self):
         healsim = {table: (cfg["start"], cfg["end"]) for table, cfg in RESERVATIONS["healsim"].items()}
         self.assertEqual(healsim, {"spell": (202900, 202909)})
@@ -244,7 +350,7 @@ def declared_ids(class_dir: Path) -> dict[str, list[int]]:
         existing_creature_rows=_AnyRows(), creature_columns=spell_tables.CREATURE_TEMPLATE_COLUMNS,
         creature_defaults=spell_tables.CREATURE_TEMPLATE_DEFAULTS,
         live_data=spell_tables.dsl_live_data(
-            stock_talents, {},
+            stock_talents, spell_tables.load_live_item_template_rows,
             lambda: state.load_existing_rows(dbcfmt.SKILLLINEABILITY),
             lambda: state.load_stock_rows(dbcfmt.CHRCLASSES),
             lambda: state.load_stock_rows(dbcfmt.SKILLLINEABILITY),
@@ -283,6 +389,7 @@ class ClassDeclarationsTest(unittest.TestCase):
     def setUpClass(cls):
         cls.shaman = declared_ids(TOOL_ROOT / "source" / "classes" / "shaman")
         cls.deathknight = declared_ids(TOOL_ROOT / "source" / "classes" / "deathknight")
+        cls.rogue = declared_ids(TOOL_ROOT / "source" / "classes" / "rogue")
         cls.npcs = declared_ids(TOOL_ROOT / "source" / "npcs")
 
     def test_shaman_declares_only_inside_its_reservation(self):
@@ -310,8 +417,53 @@ class ClassDeclarationsTest(unittest.TestCase):
             for kind, probe in (("spell_group", 1285), ("skilllineability", 30779), ("creature", 300349)):
                 self.assertEqual(out_of_reservation("deathknight", {kind: [probe]}), [])
 
+    def test_rogue_declares_only_inside_its_reservation(self):
+        # declared_ids loads source/classes/rogue (today the P0 spike file); if that load failed this would raise
+        self.assertEqual(out_of_reservation("rogue", self.rogue), [])
+
+    @unittest.skipUnless(
+        (TOOL_ROOT / "source" / "classes" / "rogue" / "rogue_p0_spike.py").is_file(),
+        "the rogue P0 spike file is deleted at RG0 start",
+    )
+    def test_the_rogue_spike_ids_are_inside_it(self):
+        spike_spells = {i for i in self.rogue["spell"] if 204370 <= i <= 204399}
+        self.assertTrue(spike_spells)  # the spike declares 204370-204396
+        self.assertEqual(out_of_reservation("rogue", {"spell": sorted(spike_spells)}), [])
+        self.assertIn(1295, self.rogue["spell_group"])
+        self.assertIn(300369, self.rogue["creature"])
+        # only ids the spike really declares: no SkillLineAbility rows, creature 300369 (300368 is reserved, unused)
+        self.assertEqual(self.rogue["skilllineability"], [])
+        self.assertEqual(out_of_reservation("rogue", {"spell_group": [1295], "creature": [300369]}), [])
+
+    def test_rogue_out_of_reservation_probes_fail(self):
+        # one past the end of each slice, plus 202950 (inside the spell block, outside every reservation) and 90249
+        # (the last Death Knight visual id, one below the rogue slice)
+        probes = {"spell": [204400, 202950], "talent": [60450], "skilllineability": [30840], "spell_group": [1296],
+                  "creature": [300370], "spelldescriptionvariables": [1370], "spellicon": [90420],
+                  "soundentries": [90141], "spellvisual": [90249]}
+        self.assertEqual(
+            out_of_reservation("rogue", probes),
+            ["spell 202950", "spell 204400", "talent 60450", "skilllineability 30840", "spell_group 1296",
+             "creature 300370", "spelldescriptionvariables 1370", "spellicon 90420", "soundentries 90141",
+             "spellvisual 90249"],
+        )
+
+    def test_rogue_slices_that_end_at_their_block_have_no_room_past_the_end(self):
+        # spellvisual 90300 and creaturedisplayinfo / creaturemodeldata 90500 are one past the rogue slice AND past
+        # the tool-wide block, which `out_of_reservation` reads as "an id outside every block" and skips: the guard
+        # for these is the block's own end (pinned in test_death_knight_t1_widened_the_sound_and_visual_blocks and
+        # the display blocks below), so the next class has to widen the block before it can reserve anything.
+        rogue = RESERVATIONS["rogue"]
+        self.assertEqual(rogue["spellvisual"]["end"], BLOCKS["spellvisual"]["end"])
+        for table in ("creaturedisplayinfo", "creaturemodeldata"):
+            self.assertEqual(rogue[table]["end"], BLOCKS[table]["end"])
+        self.assertEqual(out_of_reservation("rogue", {"spellvisual": [90300], "creaturedisplayinfo": [90500]}), [])
+        self.assertEqual(BLOCKS["creaturedisplayinfo"], {"start": 90001, "end": 90499})
+        self.assertEqual(BLOCKS["creaturemodeldata"], {"start": 90001, "end": 90499})
+
     def test_death_knight_out_of_reservation_probes_fail(self):
-        # one past the end of each slice, plus 202950: inside the spell block, outside every reservation
+        # one past the end of each slice, plus 202950: inside the spell block, outside every reservation.
+        # 203700 / 60390 / 30780 / 1286 / 300350 / 1300 are the rogue's first ids now: past the DK slice, so DK-out.
         probes = {"spell": [203700, 202950], "talent": [60390], "skilllineability": [30780], "spell_group": [1286],
                   "creature": [300350], "spelldescriptionvariables": [1300],
                   "spellrunecost": [2610], "spellcategory": [1306]}

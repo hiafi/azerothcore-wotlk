@@ -939,7 +939,7 @@ morbidity_48963 = _frost_rank(
         Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_PCT_MODIFIER),
         Effect(type=EffectType.APPLY_AURA, base_points=-5001, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COOLDOWN),
     ],
-    description='Increases the damage and healing of Death Coil by $s1% and reduces the cooldown on Death and Decay by $/1000;s2 sec.\n\n|cFF9D9D9DCapstone: Your Death Coil reapplies your Frost Fever and Blood Plague on the target, at full duration.|r',
+    description='Increases the damage and healing of Death Coil by $s1% and reduces the cooldown on Death and Decay by $/1000;s2 sec.\n\n|cFF9D9D9DCapstone Bonus: Your Death Coil reapplies your Frost Fever and Blood Plague on the target, at full duration.|r',
     notes=(
         'death-knight-rework S3a (Unholy doc "Morbidity", U24 / U27): talent row 1, rank 1. Values unchanged: eff0 SPELLMOD damage +5% on Death Coil d0 b13 (47541 / 47632 / 47633), eff1 SPELLMOD cooldown -5 s on Death and Decay d0 b5. Rank 3 is the capstone (an APPLY_AURA rank: the C++ gates on HasAura(49565), L4): the paragraph is greyed on ranks 1 / 2. Rebuilt from scratch.'
     ),
@@ -1060,7 +1060,7 @@ subversion_48997 = spell(
     ],
     spell_icon_id=3009,
     notes='S1a (Blood doc "Subversion"): the stock threat effect (E1, aura 107 misc 23 on d0 0x810000) is dropped, so the crit effect (aura 107 misc 7, bp 2/5/8 = 3/6/9%) is now E1 and every stock EffectSpellClassMaskB_* key was re-keyed to A_* (_masks.SUBVERSION_READ: Heart Strike d0 b24, Obliterate d1 b17, Scourge Strike d1 b27 + its d2 b7 component, Marrowrend d2 b8; Blood Strike d0 b22 gone). Stale E3 residue (ImplicitTargetA_3, C_1, EffectBonusMultiplier_3) cleared.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Heart Strike, Marrowrend, Scourge Strike and Obliterate by 3%.\n\n|cFF9D9D9DCapstone: Critical strikes from your Heart Strike, Marrowrend, Scourge Strike and Obliterate generate 5 additional Runic Power.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.SUBVERSION_READ[0], 'EffectSpellClassMaskA_2': m.SUBVERSION_READ[1], 'EffectSpellClassMaskA_3': m.SUBVERSION_READ[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Heart Strike, Marrowrend, Scourge Strike and Obliterate by 3%.\n\n|cFF9D9D9DCapstone Bonus: Critical strikes from your Heart Strike, Marrowrend, Scourge Strike and Obliterate generate 5 additional Runic Power.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.SUBVERSION_READ[0], 'EffectSpellClassMaskA_2': m.SUBVERSION_READ[1], 'EffectSpellClassMaskA_3': m.SUBVERSION_READ[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -1204,7 +1204,7 @@ endless_winter_49137 = _frost_rank(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=_TARGET_SELF, apply_aura=137),
     ],
-    description='Increases your Strength by $s1%.\n\n|cFF9D9D9DCapstone: Your Mind Freeze no longer costs Runic Power.|r',
+    description='Increases your Strength by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Your Mind Freeze no longer costs Runic Power.|r',
     notes=(
         'death-knight-rework S2a (Frost doc "Endless Winter", D12): talent row 3, rank 1. aura 137 '
         'MOD_TOTAL_STAT_PERCENTAGE misc 0 (Strength) +2%. The stock eff1 (Mind Freeze cost, SPELLMOD_COST flat '
@@ -1286,7 +1286,7 @@ improved_icy_touch_49175 = _frost_rank(
     masks={1: (m.ICY_TOUCH, 0, 0), 2: (0, m.FROST_FEVER_DISEASE, 0), 3: (0, m.FROST_FEVER_DISEASE, 0)},
     description=(
         'Your Icy Touch and Frost Fever deal $s1% more damage, and your Frost Fever reduces melee and ranged '
-        'attack speed by an additional $s3%.\n\n|cFF9D9D9DCapstone: Increases the range of your Icy Touch, Chains '
+        'attack speed by an additional $s3%.\n\n|cFF9D9D9DCapstone Bonus: Increases the range of your Icy Touch, Chains '
         'of Ice and Howling Blast by 10 yards.|r'
     ),
     notes=(
@@ -1353,7 +1353,7 @@ rime_49188 = _frost_rank(
     ],
     description=(
         'Your Obliterates have a $h% chance to make your next Howling Blast cost no runes and reset its '
-        'cooldown.\n\n|cFF9D9D9DCapstone: Avalanche. Howling Blasts empowered by Rime also call down icicles on up '
+        'cooldown.\n\n|cFF9D9D9DCapstone Bonus: Avalanche. Howling Blasts empowered by Rime also call down icicles on up '
         'to 5 enemies they hit, each dealing '
         + _AVALANCHE_POT +
         ' Frost damage.|r'
@@ -1696,7 +1696,7 @@ glacier_rot_49471 = _frost_rank(
     ],
     description=(
         'Diseased enemies take $s1% more damage from your Frost Strike, Glacial Advance and Howling '
-        'Blast.\n\n|cFF9D9D9DCapstone: Your Mastery further increases the damage of Frost Strike and Glacial '
+        'Blast.\n\n|cFF9D9D9DCapstone Bonus: Your Mastery further increases the damage of Frost Strike and Glacial '
         'Advance.|r'
     ),
     notes=(
@@ -1790,7 +1790,7 @@ subversion_49490 = spell(
     ],
     spell_icon_id=3009,
     notes='S1a (Blood doc "Subversion"): the stock threat effect (E1, aura 107 misc 23 on d0 0x810000) is dropped, so the crit effect (aura 107 misc 7, bp 2/5/8 = 3/6/9%) is now E1 and every stock EffectSpellClassMaskB_* key was re-keyed to A_* (_masks.SUBVERSION_READ: Heart Strike d0 b24, Obliterate d1 b17, Scourge Strike d1 b27 + its d2 b7 component, Marrowrend d2 b8; Blood Strike d0 b22 gone). Stale E3 residue (ImplicitTargetA_3, C_1, EffectBonusMultiplier_3) cleared.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Heart Strike, Marrowrend, Scourge Strike and Obliterate by 6%.\n\n|cFF9D9D9DCapstone: Critical strikes from your Heart Strike, Marrowrend, Scourge Strike and Obliterate generate 5 additional Runic Power.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.SUBVERSION_READ[0], 'EffectSpellClassMaskA_2': m.SUBVERSION_READ[1], 'EffectSpellClassMaskA_3': m.SUBVERSION_READ[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Heart Strike, Marrowrend, Scourge Strike and Obliterate by 6%.\n\n|cFF9D9D9DCapstone Bonus: Critical strikes from your Heart Strike, Marrowrend, Scourge Strike and Obliterate generate 5 additional Runic Power.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.SUBVERSION_READ[0], 'EffectSpellClassMaskA_2': m.SUBVERSION_READ[1], 'EffectSpellClassMaskA_3': m.SUBVERSION_READ[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -1811,7 +1811,7 @@ subversion_49491 = spell(
     ],
     spell_icon_id=3009,
     notes='S1a (Blood doc "Subversion"): the stock threat effect (E1, aura 107 misc 23 on d0 0x810000) is dropped, so the crit effect (aura 107 misc 7, bp 2/5/8 = 3/6/9%) is now E1 and every stock EffectSpellClassMaskB_* key was re-keyed to A_* (_masks.SUBVERSION_READ: Heart Strike d0 b24, Obliterate d1 b17, Scourge Strike d1 b27 + its d2 b7 component, Marrowrend d2 b8; Blood Strike d0 b22 gone). Stale E3 residue (ImplicitTargetA_3, C_1, EffectBonusMultiplier_3) cleared. Rank 3 (capstone) adds E2 PROC_TRIGGER_SPELL -> 203152 (+5 Runic Power), spell_proc row below (crit hit of the four strikes, phase HIT, E1 disabled), once per cast via spell_dk_subversion_capstone.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Heart Strike, Marrowrend, Scourge Strike and Obliterate by 9%.\n\nCapstone: Critical strikes from your Heart Strike, Marrowrend, Scourge Strike and Obliterate generate 5 additional Runic Power.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.SUBVERSION_READ[0], 'EffectSpellClassMaskA_2': m.SUBVERSION_READ[1], 'EffectSpellClassMaskA_3': m.SUBVERSION_READ[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 15},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the critical strike chance of your Heart Strike, Marrowrend, Scourge Strike and Obliterate by 9%.\n\nCapstone Bonus: Critical strikes from your Heart Strike, Marrowrend, Scourge Strike and Obliterate generate 5 additional Runic Power.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': m.SUBVERSION_READ[0], 'EffectSpellClassMaskA_2': m.SUBVERSION_READ[1], 'EffectSpellClassMaskA_3': m.SUBVERSION_READ[2], 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'ProcTypeMask': 16, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -2014,7 +2014,7 @@ morbidity_49564 = _frost_rank(
         Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_PCT_MODIFIER),
         Effect(type=EffectType.APPLY_AURA, base_points=-10001, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COOLDOWN),
     ],
-    description='Increases the damage and healing of Death Coil by $s1% and reduces the cooldown on Death and Decay by $/1000;s2 sec.\n\n|cFF9D9D9DCapstone: Your Death Coil reapplies your Frost Fever and Blood Plague on the target, at full duration.|r',
+    description='Increases the damage and healing of Death Coil by $s1% and reduces the cooldown on Death and Decay by $/1000;s2 sec.\n\n|cFF9D9D9DCapstone Bonus: Your Death Coil reapplies your Frost Fever and Blood Plague on the target, at full duration.|r',
     notes=(
         'death-knight-rework S3a (Unholy doc "Morbidity", U24 / U27): talent row 1, rank 2. Values unchanged: eff0 SPELLMOD damage +10% on Death Coil d0 b13 (47541 / 47632 / 47633), eff1 SPELLMOD cooldown -10 s on Death and Decay d0 b5. Rank 3 is the capstone (an APPLY_AURA rank: the C++ gates on HasAura(49565), L4): the paragraph is greyed on ranks 1 / 2. Rebuilt from scratch.'
     ),
@@ -2028,7 +2028,7 @@ morbidity_49565 = _frost_rank(
         Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_PCT_MODIFIER),
         Effect(type=EffectType.APPLY_AURA, base_points=-15001, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.ADD_FLAT_MODIFIER, misc_value=SpellModOp.COOLDOWN),
     ],
-    description='Increases the damage and healing of Death Coil by $s1% and reduces the cooldown on Death and Decay by $/1000;s2 sec.\n\nCapstone: Your Death Coil reapplies your Frost Fever and Blood Plague on the target, at full duration.',
+    description='Increases the damage and healing of Death Coil by $s1% and reduces the cooldown on Death and Decay by $/1000;s2 sec.\n\nCapstone Bonus: Your Death Coil reapplies your Frost Fever and Blood Plague on the target, at full duration.',
     notes=(
         'death-knight-rework S3a (Unholy doc "Morbidity", U24 / U27): talent row 1, rank 3. Values unchanged: eff0 SPELLMOD damage +15% on Death Coil d0 b13 (47541 / 47632 / 47633), eff1 SPELLMOD cooldown -15 s on Death and Decay d0 b5. Rank 3 is the capstone (an APPLY_AURA rank: the C++ gates on HasAura(49565), L4): the paragraph is greyed on ranks 1 / 2. Rebuilt from scratch.'
     ),
@@ -2250,7 +2250,7 @@ endless_winter_49657 = _frost_rank(
                apply_aura=AuraType.ADD_PCT_MODIFIER, misc_value=int(SpellModOp.COST)),
     ],
     masks={2: (m.MIND_FREEZE, 0, 0)},
-    description='Increases your Strength by $s1%.\n\nCapstone: Your Mind Freeze no longer costs Runic Power.',
+    description='Increases your Strength by $s1%.\n\nCapstone Bonus: Your Mind Freeze no longer costs Runic Power.',
     notes=(
         'death-knight-rework S2a (Frost doc "Endless Winter", D12): talent row 3, rank 2. aura 137 Strength +4%; '
         'eff1 aura 108 SPELLMOD_COST -100% on Mind Freeze (d0 b10, m.MIND_FREEZE), stored -101. The stale '
@@ -2338,7 +2338,7 @@ glacier_rot_49790 = _frost_rank(
     ],
     description=(
         'Diseased enemies take $s1% more damage from your Frost Strike, Glacial Advance and Howling '
-        'Blast.\n\n|cFF9D9D9DCapstone: Your Mastery further increases the damage of Frost Strike and Glacial '
+        'Blast.\n\n|cFF9D9D9DCapstone Bonus: Your Mastery further increases the damage of Frost Strike and Glacial '
         'Advance.|r'
     ),
     notes=(
@@ -2358,7 +2358,7 @@ glacier_rot_49791 = _frost_rank(
     ],
     description=(
         'Diseased enemies take $s1% more damage from your Frost Strike, Glacial Advance and Howling '
-        'Blast.\n\nCapstone: Your Mastery further increases the damage of Frost Strike and Glacial Advance.'
+        'Blast.\n\nCapstone Bonus: Your Mastery further increases the damage of Frost Strike and Glacial Advance.'
     ),
     notes=(
         'death-knight-rework S2a (Frost doc "Glacier Rot", U14 / D6): talent row 4, rank 3. eff0 DUMMY stored 19 = '
@@ -2383,7 +2383,7 @@ improved_icy_touch_50031 = _frost_rank(
     masks={1: (m.ICY_TOUCH, 0, 0), 2: (0, m.FROST_FEVER_DISEASE, 0), 3: (0, m.FROST_FEVER_DISEASE, 0)},
     description=(
         'Your Icy Touch and Frost Fever deal $s1% more damage, and your Frost Fever reduces melee and ranged '
-        'attack speed by an additional $s3%.\n\n|cFF9D9D9DCapstone: Increases the range of your Icy Touch, Chains '
+        'attack speed by an additional $s3%.\n\n|cFF9D9D9DCapstone Bonus: Increases the range of your Icy Touch, Chains '
         'of Ice and Howling Blast by 10 yards.|r'
     ),
     notes=(
@@ -2538,7 +2538,7 @@ rage_of_rivendare_50117 = _frost_rank(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
     ],
-    description='Your diseases and undead minions deal $s1% more damage.\n\n|cFF9D9D9DCapstone: This bonus is increased by your Mastery.|r',
+    description='Your diseases and undead minions deal $s1% more damage.\n\n|cFF9D9D9DCapstone Bonus: This bonus is increased by your Mastery.|r',
     notes=(
         'death-knight-rework S3a (Unholy doc "Rage of Rivendare", U13): talent row 6, rank 1 of 3 (50120 / 50121 are not granted). eff0 is a DUMMY 3% (Dread Host: diseases, wound bursts and Unholy minions, read by GetDreadHostPct); rank 3 is the capstone (+ Mastery, gate HasAura(50119)). The stock aura 112 / misc 7293 (rank x 2% vs Blood Plague, Unit.cpp:8464 / 10177), aura 240 (expertise) and the wide masks are gone.'
     ),
@@ -2550,7 +2550,7 @@ rage_of_rivendare_50118 = _frost_rank(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=5, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
     ],
-    description='Your diseases and undead minions deal $s1% more damage.\n\n|cFF9D9D9DCapstone: This bonus is increased by your Mastery.|r',
+    description='Your diseases and undead minions deal $s1% more damage.\n\n|cFF9D9D9DCapstone Bonus: This bonus is increased by your Mastery.|r',
     notes=(
         'death-knight-rework S3a (Unholy doc "Rage of Rivendare", U13): talent row 6, rank 2 of 3 (50120 / 50121 are not granted). eff0 is a DUMMY 6% (Dread Host: diseases, wound bursts and Unholy minions, read by GetDreadHostPct); rank 3 is the capstone (+ Mastery, gate HasAura(50119)). The stock aura 112 / misc 7293 (rank x 2% vs Blood Plague, Unit.cpp:8464 / 10177), aura 240 (expertise) and the wide masks are gone.'
     ),
@@ -2562,7 +2562,7 @@ rage_of_rivendare_50119 = _frost_rank(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=8, implicit_target_a=_TARGET_SELF, apply_aura=AuraType.DUMMY),
     ],
-    description='Your diseases and undead minions deal $s1% more damage.\n\nCapstone: This bonus is increased by your Mastery.',
+    description='Your diseases and undead minions deal $s1% more damage.\n\nCapstone Bonus: This bonus is increased by your Mastery.',
     notes=(
         'death-knight-rework S3a (Unholy doc "Rage of Rivendare", U13): talent row 6, rank 3 of 3 (50120 / 50121 are not granted). eff0 is a DUMMY 9% (Dread Host: diseases, wound bursts and Unholy minions, read by GetDreadHostPct); rank 3 is the capstone (+ Mastery, gate HasAura(50119)). The stock aura 112 / misc 7293 (rank x 2% vs Blood Plague, Unit.cpp:8464 / 10177), aura 240 (expertise) and the wide masks are gone.'
     ),
@@ -3015,8 +3015,8 @@ improved_unholy_presence_50392 = spell(
 _ICY_TALONS_CAPSTONE = (
     'Increases the melee attack speed of all party and raid members within $55610a1 yards by $55610s1%.'
 )
-_ICY_TALONS_CAPSTONE_LAST = f'\n\nCapstone: {_ICY_TALONS_CAPSTONE}'
-_ICY_TALONS_CAPSTONE_GREY = f'\n\n|cFF9D9D9DCapstone: {_ICY_TALONS_CAPSTONE}|r'
+_ICY_TALONS_CAPSTONE_LAST = f'\n\nCapstone Bonus: {_ICY_TALONS_CAPSTONE}'
+_ICY_TALONS_CAPSTONE_GREY = f'\n\n|cFF9D9D9DCapstone Bonus: {_ICY_TALONS_CAPSTONE}|r'
 
 
 icy_talons_50880 = _frost_rank(
@@ -3365,7 +3365,7 @@ improved_icy_touch_51456 = _frost_rank(
     masks={1: (m.ICY_TOUCH, 0, 0), 2: (0, m.FROST_FEVER_DISEASE, 0), 3: (0, m.FROST_FEVER_DISEASE, 0)},
     description=(
         'Your Icy Touch and Frost Fever deal $s1% more damage, and your Frost Fever reduces melee and ranged '
-        'attack speed by an additional $s3%.\n\nCapstone: Increases the range of your Icy Touch, Chains of Ice and '
+        'attack speed by an additional $s3%.\n\nCapstone Bonus: Increases the range of your Icy Touch, Chains of Ice and '
         'Howling Blast by 10 yards.'
     ),
     notes=(
@@ -3894,7 +3894,7 @@ rime_56822 = _frost_rank(
     ],
     description=(
         'Your Obliterates have a $h% chance to make your next Howling Blast cost no runes and reset its '
-        'cooldown.\n\n|cFF9D9D9DCapstone: Avalanche. Howling Blasts empowered by Rime also call down icicles on up '
+        'cooldown.\n\n|cFF9D9D9DCapstone Bonus: Avalanche. Howling Blasts empowered by Rime also call down icicles on up '
         'to 5 enemies they hit, each dealing '
         + _AVALANCHE_POT +
         ' Frost damage.|r'
@@ -3947,7 +3947,7 @@ rime_59057 = _frost_rank(
     ],
     description=(
         'Your Obliterates have a $h% chance to make your next Howling Blast cost no runes and reset its '
-        'cooldown.\n\nCapstone: Avalanche. Howling Blasts empowered by Rime also call down icicles on up to 5 '
+        'cooldown.\n\nCapstone Bonus: Avalanche. Howling Blasts empowered by Rime also call down icicles on up to 5 '
         'enemies they hit, each dealing '
         + _AVALANCHE_POT +
         ' Frost damage.'
@@ -3982,7 +3982,7 @@ blood_gorged_61154 = spell(
     ],
     spell_icon_id=24,
     notes='S1a (Blood doc "Blood Gorged", brief D6): learn pair (50096, 61274) kept; damage 3%, armor penetration 3%. Rank 3 (61156) is the capstone, linked to the Mastery poll 203155 in deathknight_blood_b.py.',
-    raw_overrides={'AttributesEx': 2147614720, 'AttributesEx4': 32768, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "While you are above 75% health, you deal 3% more damage. In addition, your attacks ignore 3% of your target's armor.\n\n|cFF9D9D9DCapstone: Your Mastery increases the damage bonus.|r", 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 20971521, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassSet': 15},
+    raw_overrides={'AttributesEx': 2147614720, 'AttributesEx4': 32768, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "While you are above 75% health, you deal 3% more damage. In addition, your attacks ignore 3% of your target's armor.\n\n|cFF9D9D9DCapstone Bonus: Your Mastery increases the damage bonus.|r", 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 20971521, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassSet': 15},
 )
 
 
@@ -4004,7 +4004,7 @@ blood_gorged_61155 = spell(
     ],
     spell_icon_id=24,
     notes='S1a (Blood doc "Blood Gorged", brief D6): learn pair (50108, 61275) kept; damage 6%, armor penetration 6%. Rank 3 (61156) is the capstone, linked to the Mastery poll 203155 in deathknight_blood_b.py.',
-    raw_overrides={'AttributesEx': 2147614720, 'AttributesEx4': 32768, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "While you are above 75% health, you deal 6% more damage. In addition, your attacks ignore 6% of your target's armor.\n\n|cFF9D9D9DCapstone: Your Mastery increases the damage bonus.|r", 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 20971521, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    raw_overrides={'AttributesEx': 2147614720, 'AttributesEx4': 32768, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "While you are above 75% health, you deal 6% more damage. In addition, your attacks ignore 6% of your target's armor.\n\n|cFF9D9D9DCapstone Bonus: Your Mastery increases the damage bonus.|r", 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 20971521, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -4026,7 +4026,7 @@ blood_gorged_61156 = spell(
     ],
     spell_icon_id=24,
     notes='S1a (Blood doc "Blood Gorged", brief D6): learn pair (50109, 61276) kept; damage 9%, armor penetration 10%. Rank 3 (61156) is the capstone, linked to the Mastery poll 203155 in deathknight_blood_b.py.',
-    raw_overrides={'AttributesEx': 2147614720, 'AttributesEx4': 32768, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "While you are above 75% health, you deal 9% more damage. In addition, your attacks ignore 10% of your target's armor.\n\nCapstone: Your Mastery increases the damage bonus.", 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 20971521, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
+    raw_overrides={'AttributesEx': 2147614720, 'AttributesEx4': 32768, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': "While you are above 75% health, you deal 9% more damage. In addition, your attacks ignore 10% of your target's armor.\n\nCapstone Bonus: Your Mastery increases the damage bonus.", 'EffectBasePoints_2': -1, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectDieSides_2': 1, 'EffectSpellClassMaskA_1': 20971521, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15},
 )
 
 
@@ -4092,7 +4092,7 @@ improved_death_strike_62905 = spell(
     ],
     spell_icon_id=2751,
     notes='S1a (Blood doc "Improved Death Strike"): E1 damage +15 / 30% and E2 crit +3 / 6% on Death Strike (d0 b4) as before. E3 is now a typed ADD_PCT_MODIFIER SPELLMOD_DAMAGE +25 / +50% on the Death Strike heal 45470 (EffectSpellClassMaskC_3 = d2 b2 DEATH_STRIKE_HEAL); the stale raw E3 residue (EffectBasePoints_3 24 / 49, DieSides_3, ImplicitTargetA_3, the d0 0x10 mask C_1) is gone. NameSubtext fixed to Rank 2 on 62908.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Death Strike by 15%, its critical strike chance by 3%, and the healing it grants by 25%.\n\n|cFF9D9D9DCapstone: Healing from your Death Strike that exceeds your maximum health becomes a Blood Shield, absorbing damage of any school. Blood Shield stacks up to 30% of your maximum health and lasts 10 sec.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16, 'EffectSpellClassMaskB_1': 16, 'EffectSpellClassMaskC_3': m.DEATH_STRIKE_HEAL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Death Strike by 15%, its critical strike chance by 3%, and the healing it grants by 25%.\n\n|cFF9D9D9DCapstone Bonus: Healing from your Death Strike that exceeds your maximum health becomes a Blood Shield, absorbing damage of any school. Blood Shield stacks up to 30% of your maximum health and lasts 10 sec.|r', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16, 'EffectSpellClassMaskB_1': 16, 'EffectSpellClassMaskC_3': m.DEATH_STRIKE_HEAL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -4114,7 +4114,7 @@ improved_death_strike_62908 = spell(
     ],
     spell_icon_id=2751,
     notes='S1a (Blood doc "Improved Death Strike"): E1 damage +15 / 30% and E2 crit +3 / 6% on Death Strike (d0 b4) as before. E3 is now a typed ADD_PCT_MODIFIER SPELLMOD_DAMAGE +25 / +50% on the Death Strike heal 45470 (EffectSpellClassMaskC_3 = d2 b2 DEATH_STRIKE_HEAL); the stale raw E3 residue (EffectBasePoints_3 24 / 49, DieSides_3, ImplicitTargetA_3, the d0 0x10 mask C_1) is gone. NameSubtext fixed to Rank 2 on 62908.',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Death Strike by 30%, its critical strike chance by 6%, and the healing it grants by 50%.\n\nCapstone: Healing from your Death Strike that exceeds your maximum health becomes a Blood Shield, absorbing damage of any school. Blood Shield stacks up to 30% of your maximum health and lasts 10 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16, 'EffectSpellClassMaskB_1': 16, 'EffectSpellClassMaskC_3': m.DEATH_STRIKE_HEAL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
+    raw_overrides={'AuraDescription_Lang_Mask': 16712172, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage of your Death Strike by 30%, its critical strike chance by 6%, and the healing it grants by 50%.\n\nCapstone Bonus: Healing from your Death Strike that exceeds your maximum health becomes a Blood Shield, absorbing damage of any school. Blood Shield stacks up to 30% of your maximum health and lasts 10 sec.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 16, 'EffectSpellClassMaskB_1': 16, 'EffectSpellClassMaskC_3': m.DEATH_STRIKE_HEAL, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 15, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
