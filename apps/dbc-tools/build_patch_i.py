@@ -167,7 +167,7 @@ ICON_ID_RAISE_ABOMINATION = 90312
 ICON_ID_SHATTERING_VIAL = 90370  # talent rank 203808 + splash 203836
 ICON_ID_KINGSBANE = 90371  # 203822 castable (talent rank), hands 203840 / 203841, DoT 203842
 ICON_ID_POISON_BOMB = 90372  # 203807 (castable, talent rank and cloud in one row)
-ICON_ID_ROGUE_PRECISION = 90373  # Precision 13705 / 13832 / 13843 + Accuracy 203953-203955 (shares its icon by ruling)
+ICON_ID_ROGUE_PRECISION = 90373  # unused since 2026-10-28 (Precision and Accuracy back on stock icon 126)
 ICON_ID_PISTOL_SHOT = 90374  # Pistol Shot 203958 + the Surprise Attacks extra shot 203988
 
 ICONS = (

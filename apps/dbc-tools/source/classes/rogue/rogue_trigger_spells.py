@@ -5929,7 +5929,7 @@ precision_13705 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=290),
     ],
-    spell_icon_id=90373,  # Ascension ability_rogue_combatexpertise (build_patch_i.py)
+    spell_icon_id=126,  # stock Precision icon (user 2026-10-28: back to the old icon)
     notes=(
         'rogue-rework S3a A2, Combat doc "Precision": eff0 aura 290 MOD_CRIT_PCT +1; the stock hit auras (54 / 55) are gone; weapon requirement dropped (R7).'
     ),
@@ -5969,7 +5969,7 @@ precision_13832 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=290),
     ],
-    spell_icon_id=90373,  # Ascension ability_rogue_combatexpertise (build_patch_i.py)
+    spell_icon_id=126,  # stock Precision icon (user 2026-10-28: back to the old icon)
     notes=(
         'rogue-rework S3a A2, Combat doc "Precision": eff0 aura 290 MOD_CRIT_PCT +2; the stock hit auras (54 / 55) are gone; weapon requirement dropped (R7).'
     ),
@@ -6009,7 +6009,7 @@ precision_13843 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=290),
     ],
-    spell_icon_id=90373,  # Ascension ability_rogue_combatexpertise (build_patch_i.py)
+    spell_icon_id=126,  # stock Precision icon (user 2026-10-28: back to the old icon)
     notes=(
         'rogue-rework S3a A2, Combat doc "Precision": eff0 aura 290 MOD_CRIT_PCT +3; the stock hit auras (54 / 55) are gone; weapon requirement dropped (R7).'
     ),

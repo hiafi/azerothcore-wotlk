@@ -444,7 +444,7 @@ namespace RogueData
     constexpr int32 ANTICIPATION_MAX_STACKS = 2; // Anticipation: stored combo points, = the buff 203997's stack count [fixed].
     constexpr int32 ANTICIPATION_MISSILE_WAIT_MS = 1500; // Anticipation: Deadly Throw's release poll limit, ms [fixed].
     constexpr int32 ANTICIPATION_POLL_MS = 100; // Anticipation: Deadly Throw's release poll step, ms [fixed].
-    constexpr int32 BLADE_FLURRY_COPY_PCT = 40; // Blade Flurry: copy share of the damage dealt, % [fixed].
+    constexpr int32 BLADE_FLURRY_COPY_PCT = 20; // Blade Flurry: copy share of the damage dealt, % [tune] (40 -> 20, 2026-10-28).
     constexpr int32 BLADE_FLURRY_EXTRA_TARGETS = 4; // Blade Flurry: copies per hit [fixed].
     constexpr float BLADE_FLURRY_RADIUS_YD = 8.0f; // Blade Flurry: copy radius around the hit target, yards [tune].
     constexpr int32 CELERITY_DURATION_MS = 4000; // Celerity: the granted Adrenaline Rush lasts this long, = 203996's duration, ms [fixed].

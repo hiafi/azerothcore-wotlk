@@ -97,7 +97,7 @@ _DEFENSE_MELEE = 2                          # DmgClass melee: melee AP, armor, m
 
 # ---- stock icons / visuals (WP-BRIEF section 9) ----
 _ICON_QUICK_REFLEXES = 2224
-_ICON_ACCURACY = 90373                      # = Precision, by ruling (Ascension ability_rogue_combatexpertise)
+_ICON_ACCURACY = 126                        # = Precision's stock icon, by ruling (user 2026-10-28)
 _ICON_BETWEEN_THE_EYES = 538
 _ICON_PISTOL_SHOT = 90374                   # Ascension ability_rogue_pistolshot (build_patch_i.py)
 _ICON_REINFORCED_LEATHER = 896
@@ -180,7 +180,7 @@ BLADE_FLURRY_EXTRA_TARGETS = const(
 BLADE_FLURRY_RADIUS_YD = const(
     'BLADE_FLURRY_RADIUS_YD', 8.0, 'Blade Flurry: copy radius around the hit target, yards [tune].')
 BLADE_FLURRY_COPY_PCT = const(
-    'BLADE_FLURRY_COPY_PCT', 40, 'Blade Flurry: copy share of the damage dealt, % [fixed].')
+    'BLADE_FLURRY_COPY_PCT', 20, 'Blade Flurry: copy share of the damage dealt, % [tune] (40 -> 20, 2026-10-28).')
 PREY_DAMAGE_HEALTH_PCT = const(
     'PREY_DAMAGE_HEALTH_PCT', 35, 'Prey on the Weak: damage clause threshold, target health % [fixed].')
 PREY_CRIT_HEALTH_PCT = const(
@@ -1052,7 +1052,7 @@ blade_flurry_copy_203991 = spell(
     ],
     spell_icon_id=_ICON_BLADE_FLURRY,
     notes='rogue-rework S3a A3, combat doc "Blade Flurry" (U59, item 4): the hidden copy Rogue::OnBladeFlurryDamage '
-          'casts at up to 4 enemies near the hit target with bp0 = 40% of the damage dealt. The S2 echo shape '
+          'casts at up to 4 enemies near the hit target with bp0 = BLADE_FLURRY_COPY_PCT (20%) of the damage dealt. The S2 echo shape '
           '(204162): Physical SCHOOL_DAMAGE, SpellClassSet 8 with NO family bits (no reader reaches it), Ex3 '
           'IGNORE_CASTER_MODIFIERS | ALWAYS_HIT | SUPPRESS_CASTER_PROCS, Ex2 CANT_CRIT, DefenseType 0, A 6, '
           'RangeIndex 6 (100 yd), FacingCasterFlags 0, custom attr 0x8000 (a share of post-armor damage), hidden, '
