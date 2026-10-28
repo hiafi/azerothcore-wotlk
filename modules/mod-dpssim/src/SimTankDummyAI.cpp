@@ -21,7 +21,6 @@
 #include "Log.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
-#include "SimDummyAI.h"
 #include "ThreatManager.h"
 #include <algorithm>
 #include <map>
@@ -51,16 +50,12 @@ void SimTankDummyAI::Reset()
 void SimTankDummyAI::DamageTaken(Unit* /*attacker*/, uint32& damage, DamageEffectType /*damageType*/,
     SpellSchoolMask /*schoolMask*/)
 {
-    // The passive dummy's rule (SimDummyAI.cpp): all damage zeroed, or with health drain real damage that never takes
-    // it below 1 health
-    if (SimDummyAI::IsHealthDrainEnabled())
-    {
-        uint32 const health = me->GetHealth();
-        damage = health > 1 ? std::min(damage, health - 1) : 0;
-        return;
-    }
-
-    damage = 0;
+    // Real damage that never takes the dummy below 1 health (the passive dummy's health-drain rule, SimDummyAI.cpp),
+    // with or without health drain. Zeroing it as the passive dummy does would make Unit::DealDamage return before its
+    // AddThreat, so the actor's threat would miss all damage threat. Without health drain the dummy's pool is huge and
+    // the batch refills it every step (SimDaemon.cpp, RunTankIteration), so its health % never visibly moves.
+    uint32 const health = me->GetHealth();
+    damage = health > 1 ? std::min(damage, health - 1) : 0;
 }
 
 void SimTankDummyAI::BeginFight(Unit* victim)

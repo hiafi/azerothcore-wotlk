@@ -84,6 +84,10 @@ to expect.
   untouched. The solver sets their base weapon damage so the undebuffed hit lands in the configured range, with the
   attack power at 15% of the minimum hit (`SimTankDummy::AP_SHARE_OF_MIN`): an attack-power debuff such as
   Demoralizing Shout takes at most that much off.
+- Threat: the dummies take the actor's real damage (clamped to 1 health), so `Unit::DealDamage` adds damage threat
+  with every native modifier (stances, `spell_threat`, SPELLMOD_THREAT). Without `DummyHealthDrain` they keep a 100M
+  pool (`DummyMaxHealth` is ignored) and are refilled to full every step, so no execute or health-threshold effect
+  fires; with it they drain as a DPS run's dummy does. Tank reports before this change counted flat threat only.
 - The boss dummy (1 target) is a raid boss to the actor: its real level is the actor's + 3 (the level it already rolled
   hit and crit at, so armor reduction now matches it too) and it is stun immune. Pack dummies keep the actor's level
   and stay stunnable. Both are logged at install ("boss dummy ... stun immune").
