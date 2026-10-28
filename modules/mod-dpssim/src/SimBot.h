@@ -108,7 +108,8 @@ public:
 
     // Acknowledges a teleport the sim bot's own death started (the engine's auto release repops it at a graveyard).
     // Live bots get this from PlayerbotHolder::UpdateSessions, which the sim bot is not in; without it
-    // IsBeingTeleported() stays true and PlayerbotAI::UpdateAI() returns early forever.
+    // IsBeingTeleported() stays true and PlayerbotAI::UpdateAI() returns early forever. A living bot's near teleport
+    // mid-iteration (Killing Spree) is acknowledged by UpdateAI() itself.
     void HandleTeleportAck();
 
     // Re-establishes combat state between iterations of SimDaemon::RunPlayerbotBatch() - added
