@@ -191,7 +191,7 @@ class spell_rog_sinister_strike_combat : public SpellScript
 };
 
 // 2098 - Eviscerate (Combat half; S2's script is the other binding): Opportunity with the marker, Blade Rush's
-// empowerment spent.
+// empowerment spent. Effect 1 targets the rogue, so AfterHit also runs for the caster: only the enemy hit counts.
 class spell_rog_eviscerate_combat : public SpellScript
 {
     PrepareSpellScript(spell_rog_eviscerate_combat);
@@ -199,7 +199,8 @@ class spell_rog_eviscerate_combat : public SpellScript
     void HandleAfterHit()
     {
         Player* rogue = GetOwnCastRogue(*this);
-        if (!rogue)
+        Unit* target = GetHitUnit();
+        if (!rogue || !target || target == rogue)
             return;
 
         Rogue::OnEviscerateCombatHit(rogue);
