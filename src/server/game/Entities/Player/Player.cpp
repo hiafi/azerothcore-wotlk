@@ -170,8 +170,9 @@ static Milliseconds GetCooldownHasteCorrectionDelay(SpellInfo const* spellInfo)
 // Custom: druid-rework A3 (PLAN §1A, BALANCE.md §9) - spells on this list are always Cooldown
 // Haste eligible regardless of their base cooldown (Starsurge 200333, whose 10 s base cooldown
 // would otherwise fail CUSTOM_COOLDOWN_HASTE_MIN_BASE_COOLDOWN_MS), + Call Dreadstalkers 200829
-// (warlock-rework Demonology, 20 s base cooldown, DEMONOLOGY.md §7.12).
-static constexpr std::array<uint32, 2> CUSTOM_COOLDOWN_HASTE_ALLOW_LIST = { 200333, 200829 };
+// (warlock-rework Demonology, 20 s base cooldown, DEMONOLOGY.md §7.12), + Death from Above 204148
+// (rogue-rework S2 Subtlety capstone, 20 s base cooldown, DOCFIX U31).
+static constexpr std::array<uint32, 3> CUSTOM_COOLDOWN_HASTE_ALLOW_LIST = { 200333, 200829, 204148 };
 
 // Custom: paladin-rework A7 (PLAN §1A, SHARED B5.12) - never Cooldown Haste eligible, whatever the base
 // cooldown or the allow list says: every player seal (30/60 s base would pass the >= 30 s rule). Talent

@@ -62,6 +62,9 @@ void AddSC_deathknight_unholy_spell_scripts(); // Custom: death-knight-rework
 void AddSC_deathknight_hooks(); // Custom: death-knight-rework
 void AddSC_rogue_shared_spell_scripts(); // Custom: rogue-rework
 void AddSC_rogue_hooks(); // Custom: rogue-rework
+void AddSC_rogue_assassination_spell_scripts(); // Custom: rogue-rework
+void AddSC_rogue_subtlety_spell_scripts(); // Custom: rogue-rework
+void AddSC_rogue_combat_spell_scripts(); // Custom: rogue-rework
 void AddSC_warrior_spell_scripts();
 void AddSC_quest_spell_scripts();
 void AddSC_item_spell_scripts();
@@ -116,6 +119,9 @@ void AddSpellsScripts()
     AddSC_deathknight_hooks(); // Custom: death-knight-rework
     AddSC_rogue_shared_spell_scripts(); // Custom: rogue-rework
     AddSC_rogue_hooks(); // Custom: rogue-rework
+    AddSC_rogue_assassination_spell_scripts(); // Custom: rogue-rework
+    AddSC_rogue_subtlety_spell_scripts(); // Custom: rogue-rework
+    AddSC_rogue_combat_spell_scripts(); // Custom: rogue-rework
     AddSC_warrior_spell_scripts();
     AddSC_quest_spell_scripts();
     AddSC_item_spell_scripts();

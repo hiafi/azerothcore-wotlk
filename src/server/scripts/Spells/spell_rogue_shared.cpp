@@ -199,6 +199,8 @@ class spell_rog_ambush : public SpellScript
 
 // 203725 - Shiv (RG0b): the strike applies every Lethal poison the rogue holds at 100% (Rogue::ApplyLethalPoisons).
 // The strike's own Lethal roll is blocked by the guard (rule 3a''); the Non-lethal poison rolls as on any ability.
+// S1 Toxic Blade: the extra combo points are data (SPELLMOD_EFFECT2 on Shiv); the capstone (rank 2) debuffs the hit
+// target before the poisons land, so Shiv's own Instant Poison already takes the bonus.
 class spell_rog_shiv_rework : public SpellScript
 {
     PrepareSpellScript(spell_rog_shiv_rework);
@@ -206,7 +208,7 @@ class spell_rog_shiv_rework : public SpellScript
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ RogueData::SPELL_INSTANT_POISON_8680, RogueData::SPELL_DEADLY_POISON,
-            RogueData::SPELL_WOUND_POISON });
+            RogueData::SPELL_WOUND_POISON, RogueData::SPELL_TOXIC_BLADE_DEBUFF });
     }
 
     // AfterHit runs only for a unit the strike hit (a miss, dodge or parry applies nothing).
@@ -216,6 +218,9 @@ class spell_rog_shiv_rework : public SpellScript
         Unit* target = GetHitUnit();
         if (!caster || !target || target == caster)
             return;
+
+        if (caster->HasAura(RogueData::SPELL_TOXIC_BLADE_203817))
+            caster->CastSpell(target, RogueData::SPELL_TOXIC_BLADE_DEBUFF, true);
 
         Rogue::ApplyLethalPoisons(caster, target, Rogue::PoisonSource::Shiv);
     }
@@ -265,6 +270,13 @@ class spell_rog_fan_of_knives : public SpellScript
         Unit* target = ObjectAccessor::GetUnit(*caster, caster->GetTarget());
         if (!target || !caster->IsValidAttackTarget(target))
             target = GetHitUnit();
+
+        // S3 Anticipation (U54 (c), S3a-REVIEW L1): the native award caps at 5; a builder stamp banks what it loses,
+        // one update later, so a Seal Fate point from this cast's own crit counts in the base first (no-op without
+        // Restless Blades). Combo points follow the rogue to a new target, so the held count is the base.
+        if (Player* player = caster->ToPlayer())
+            Rogue::StampFanOfKnivesGain(player, GetEffectValue());
+
         GetSpell()->AddComboPointGain(target, int8(GetEffectValue()));
     }
 
