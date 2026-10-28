@@ -227,7 +227,11 @@ namespace
         targetConfig.TargetRank = config.TargetRank;
         targetConfig.Armor = config.TargetArmor;
         targetConfig.HealthDrain = config.DummyHealthDrain;
-        if (config.DummyMaxHealth > 0)
+        // A tank dummy without health drain takes real damage (so the damage threat counts) and is refilled every step:
+        // it keeps the default huge pool whatever DummyMaxHealth says, so its health % never visibly moves and no
+        // execute or health-threshold effect fires on it
+        bool const tankRefilled = config.RunMode == SimDaemon::Mode::Tank && !config.DummyHealthDrain;
+        if (config.DummyMaxHealth > 0 && !tankRefilled)
             targetConfig.MaxHealth = config.DummyMaxHealth;
         return targetConfig;
     }
@@ -1199,6 +1203,18 @@ namespace
             damageRecorder->Reset();
         }
 
+        // The tank dummies take real damage (SimTankDummyAI::DamageTaken). Without health drain they start the pull and
+        // every step at full health; with it they drain over the iteration as a DPS run's dummy does (RefillResources()
+        // fills them between iterations).
+        bool const refillDummies = !SimDummyAI::IsHealthDrainEnabled();
+        auto const refillDummyHealth = [&]()
+        {
+            if (refillDummies)
+                for (Creature* dummy : dummies)
+                    dummy->SetFullHealth();
+        };
+        refillDummyHealth();
+
         // The pull: the dummies attack the actor and start their swing timers; the damage is solved first (plan R2)
         SimTankDummy::Settings const settings = MakeTankSettings(config);
         result.TankDummies = SimTankDummy::BeginFight(dummies, player, settings);
@@ -1371,6 +1387,7 @@ namespace
             // decisions see the health the hits left (a cooldown gated on low health can still fire)
             if (refill && player->IsAlive())
                 player->SetFullHealth();
+            refillDummyHealth();
 
             if (config.RealTimePaced)
                 std::this_thread::sleep_for(std::chrono::milliseconds(config.StepMs));

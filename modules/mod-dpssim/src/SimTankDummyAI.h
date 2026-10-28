@@ -43,11 +43,13 @@ public:
 // (Creature::AIM_Initialize), so a DPS or heal run never sees it and no creature data changed. The summons live for the
 // whole process and a tank batch is its own process, so the swap is never undone: the process ends with the batch.
 //
-// It does exactly what the passive dummy did (never evades or leashes, never chases, never dies: DamageTaken is the
-// same rule) plus one thing: after BeginFight() it keeps the actor as its victim and swings at it every swing interval
-// with the core's own melee path. Rooted and passive, so it never moves (a root aura that expires lifts the AI's root
-// too, so UpdateAI puts it back); it only swings while in melee range of the actor. Before BeginFight() (the pre-pull
-// buff phase) and after EndFight() it does nothing at all.
+// It does what the passive dummy did (never evades or leashes, never chases, never dies) plus two things. DamageTaken
+// always lets real damage through, clamped to health - 1 (the passive dummy's health-drain rule), so Unit::DealDamage
+// reaches its AddThreat and the actor's threat includes damage threat; without health drain the batch refills the
+// dummies every step and their pool is huge, so their health % never visibly moves. And after BeginFight() it keeps the
+// actor as its victim and swings at it every swing interval with the core's own melee path. Rooted and passive, so it
+// never moves (a root aura that expires lifts the AI's root too, so UpdateAI puts it back); it only swings while in
+// melee range of the actor. Before BeginFight() (the pre-pull buff phase) and after EndFight() it does nothing at all.
 class SimTankDummyAI : public NullCreatureAI
 {
 public:

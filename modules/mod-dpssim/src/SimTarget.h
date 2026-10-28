@@ -92,8 +92,9 @@ public:
         Rank TargetRank = Rank::Boss;
         uint32 Armor = 0;
         // With health drain off the dummy AI zeroes all damage taken, so health never moves and this is only a
-        // defensive default. With HealthDrain on it is the pool the fight drains (the profile's DummyMaxHealth;
-        // 0 there keeps this default), which "target below N%" rows read.
+        // defensive default; a tank-mode dummy takes real damage and is refilled every step, and keeps this default
+        // so its health % never visibly moves. With HealthDrain on it is the pool the fight drains (the profile's
+        // DummyMaxHealth; 0 there keeps this default), which "target below N%" rows read.
         uint32 MaxHealth = 100000000;
         // Dummy health drain (SimDummyAI::SetHealthDrain) - the dummy takes real damage but never dies. Set by the
         // profile keys DummyHealthDrain / DummyMaxHealth. Off = the dummy zeroes all damage, as before.
