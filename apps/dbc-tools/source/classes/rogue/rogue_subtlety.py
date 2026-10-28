@@ -271,7 +271,7 @@ def _buff(spell_id, name, effects, icon, duration_ms, text, raw=None, notes='', 
 # ---------------------------------------------------------------------------------------------------------------------
 # Death from Above frame and potency: the area hit 204169 first (the castable's tooltip quotes it)
 # ---------------------------------------------------------------------------------------------------------------------
-# 204169: Physical SCHOOL_DAMAGE, cp_ap_potency 8 per combo point (40 potency at 5) [tune], SpellLevel 60, 8 yd around
+# 204169: Physical SCHOOL_DAMAGE, cp_ap_potency 27.6 per combo point (138 potency at 5; M2c +15%, M2a 24, was 8) [tune], SpellLevel 60, 8 yd around
 # Death from Above's target (A 53 TARGET_DEST_TARGET_ENEMY / B 16 TARGET_UNIT_DEST_AREA_ENEMY, cast at the target;
 # S2a-REVIEW L8), RangeIndex 6 / facing 0 (a script cast, R11), d2 b7 | d2 b18, hidden. A cp-only potency effect needs
 # base_potency 0 (potency.resolve rejects an all-zero effect without one). R12: no combo-point attributes, so the finish
@@ -282,14 +282,14 @@ death_from_above_area_204169 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=None, radius_yards=8.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, base_potency=0.0, cp_ap_potency=8.0, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, base_potency=0.0, cp_ap_potency=27.6, potency_kind='direct',
                implicit_target_a=_TARGET_DEST_TARGET_ENEMY, implicit_target_b=_TARGET_UNIT_DEST_AREA_ENEMY,
                radius_yards=8.0),
     ],
     spell_icon_id=_ICON_DEATH_FROM_ABOVE,
     notes='rogue-rework S2a A3, subtlety doc "Death from Above" (Known-hard 3, R12, R15): the area hit cast by '
-          'spell_rog_death_from_above at the DUMMY hit. Physical SCHOOL_DAMAGE, cp_ap_potency 8 per combo point '
-          '(40 at 5) [tune], base_potency 0 (cp-only effect), SpellLevel 60, cast at the DfA target: A 53 '
+          'spell_rog_death_from_above at the DUMMY hit. Physical SCHOOL_DAMAGE, cp_ap_potency 27.6 per combo point '
+          '(138 at 5; M2c +15%, M2a 24 / 120, was 8 / 40) [tune], base_potency 0 (cp-only effect), SpellLevel 60, cast at the DfA target: A 53 '
           'TARGET_DEST_TARGET_ENEMY / B 16 TARGET_UNIT_DEST_AREA_ENEMY radius 8 around it (S2a-REVIEW L8; '
           'spell_rog_death_from_above_area keeps the explicit target + units in combat with the rogue), DefenseType 2 '
           '(melee crit, dodgeable like Eviscerate), RangeIndex 6 (100 yd), FacingCasterFlags 0, no combo attributes '
@@ -303,30 +303,30 @@ death_from_above_area_204169 = spell(
 )
 scripted_by(death_from_above_area_204169, 'spell_rog_death_from_above_area')
 
-# 204170: the landing. Physical SCHOOL_DAMAGE ap_potency 29.25 + cp_ap_potency 46.2 (1.5 x Eviscerate's 19.5 / 30.8)
-# [tune], SpellLevel 60, A 6 on the target, 100 yd (R11, a script cast), Eviscerate's visual 671 (U47), d2 b8 | d2 b18
+# 204170: the landing. Physical SCHOOL_DAMAGE ap_potency 47.0925 + cp_ap_potency 74.382 [tune] (M2c user ruling
+# 2026-10-28: x1.15 of M2a's 40.95 / 64.68, which were 1.5 x Eviscerate; now ~1.33 x Eviscerate's 35.49 / 56.056), SpellLevel 60, A 6 on the target, 100 yd (R11, a script cast), Eviscerate's visual 671 (U47), d2 b8 | d2 b18
 # (counts as an Eviscerate for Finality / Seal-style readers), never d0 b17. R4: the C++ passes the snapshot as bp0
-# (CastCustomSpell skips the potency rescale) and SpellDamageBonusDone adds 29.25 potency of AP read at the landing.
+# (CastCustomSpell skips the potency rescale) and SpellDamageBonusDone adds 47.0925 potency of AP read at the landing.
 death_from_above_landing_204170 = spell(
     id=204170, name='Death from Above', school=School.NORMAL, attributes=_ATTR0_DO_NOT_DISPLAY,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=None,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=29.25, cp_ap_potency=46.2, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=47.0925, cp_ap_potency=74.382, potency_kind='direct',
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=_ICON_DEATH_FROM_ABOVE,
     notes='rogue-rework S2a A3, subtlety doc "Death from Above" (Known-hard 3, R4, R11, R12, R15): the landing hit, cast '
-          'by Rogue::LaunchDeathFromAbove with bp0 = the snapshot. Physical SCHOOL_DAMAGE ap_potency 29.25 + '
-          'cp_ap_potency 46.2 direct [tune] (1.5 x Eviscerate\'s 19.5 / 30.8), SpellLevel 60, A 6, RangeIndex 6 '
+          'by Rogue::LaunchDeathFromAbove with bp0 = the snapshot. Physical SCHOOL_DAMAGE ap_potency 47.0925 + '
+          'cp_ap_potency 74.382 direct [tune] (M2c: x1.15 of M2a\'s 40.95 / 64.68, ~1.33 x Eviscerate; was 29.25 / 46.2), SpellLevel 60, A 6, RangeIndex 6 '
           '(100 yd), FacingCasterFlags 0, DefenseType 2, Eviscerate\'s visual 671, no combo attributes, hidden. d2 b8 | '
-          'd2 b18 (m.DFA_LANDING_CLASS), never d0 b17. R4: the flat 29.25 potency of AP is live at the landing '
+          'd2 b18 (m.DFA_LANDING_CLASS), never d0 b17. R4: the flat 47.0925 potency of AP is live at the landing '
           '(~10% of a 5-point landing); no potency_excluded.',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.DFA_LANDING_CLASS), 'EquippedItemClass': -1,
         'CastingTimeIndex': 1, 'SpellLevel': 60, 'DefenseType': 2, 'PreventionType': 0, 'RangeIndex': _RANGE_100_YD,
         'FacingCasterFlags': 0, 'SpellVisualID_1': _SV_EVISCERATE,
-        'Description_Lang_enUS': 'Comes down on the target with an Eviscerate that is 50% stronger.',
+        'Description_Lang_enUS': 'Comes down on the target with an Eviscerate that is 33% stronger.',
     },
 )
 scripted_by(death_from_above_landing_204170, 'spell_rog_death_from_above_landing')
@@ -358,7 +358,7 @@ _DFA_AREA_5CP = ('${$max(0,' + _potency._fmt(5 * _DFA_CP.level60_value) + '+'
                  + _potency._fmt(5 * _DFA_CP.ap_coefficient) + '*$AP)}')
 _DEATH_FROM_ABOVE_TEXT = (
     f'Finishing move that strikes the target and all enemies within $204169a1 yards for {_DFA_AREA_5CP} Physical damage, '
-    'then leaps into the air and comes down on the target with an Eviscerate that is 50% stronger. Damage per combo '
+    'then leaps into the air and comes down on the target with an Eviscerate that is 33% stronger. Damage per combo '
     'point.')
 
 # Eviscerate's frame (R15): typed Attributes 327696, raw AttributesEx 0x100200, Ex3 0x400, weapon requirement 2 / 173555,
@@ -571,20 +571,20 @@ mark_of_the_master_assassin_buff_204164 = _buff(
 )
 
 # ---- Sinister Calling volley 204165 (Known-hard 12, R11) ----
-# SchoolMask 0x21 (Shadowstrike: Physical + Shadow), ap_potency 30 per target [tune] direct at SpellLevel 47, dest at the
+# SchoolMask 0x21 (Shadowstrike: Physical + Shadow), ap_potency 90 per target (M2a, was 30) [tune] direct at SpellLevel 47, dest at the
 # target (A 53) + enemies within 8 yd (B 16), d2 b17, Ex3 SUPPRESS_CASTER_PROCS, Fan of Knives' visual, 100 yd, no facing.
 sinister_calling_volley_204165 = spell(
     id=204165, name='Sinister Calling', school=School.NORMAL | School.SHADOW, attributes=_ATTR0_DO_NOT_DISPLAY,
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=None, radius_yards=8.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=30.0, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=90.0, potency_kind='direct',
                implicit_target_a=_TARGET_DEST_TARGET_ENEMY, implicit_target_b=_TARGET_UNIT_DEST_AREA_ENEMY,
                radius_yards=8.0),
     ],
     spell_icon_id=_ICON_SINISTER_CALLING,
     notes='rogue-rework S2a A3, subtlety doc "Sinister Calling" (Known-hard 12, R11, R12): the capstone volley cast at '
-          'the finisher\'s target by the dispatcher. SchoolMask 0x21 (Shadowstrike), ap_potency 30 direct per target '
+          'the finisher\'s target by the dispatcher. SchoolMask 0x21 (Shadowstrike), ap_potency 90 direct per target (M2a, was 30) '
           '[tune] at SpellLevel 47, A 53 TARGET_DEST_TARGET_ENEMY / B 16 TARGET_UNIT_DEST_AREA_ENEMY radius 8 '
           '(spell_rog_sinister_calling_volley keeps the explicit target + units in combat with the rogue, at most 3), '
           'RangeIndex 6, FacingCasterFlags 0, DefenseType 2 (melee table, judgement call: the brief leaves it open), '
@@ -600,7 +600,7 @@ sinister_calling_volley_204165 = spell(
 scripted_by(sinister_calling_volley_204165, 'spell_rog_sinister_calling_volley')
 
 # ---- Second Volley copies 204166 / 204167 (U41) ----
-# 204166 = Fan of Knives 51723's eff0 (weapon_potency 70, A 18 / B 16 radius 8) + eff1 ADD_COMBO_POINTS (as 51723), d1 b18
+# 204166 = Fan of Knives 51723's eff0 (weapon_potency 100 since M2a, A 18 / B 16 radius 8) + eff1 ADD_COMBO_POINTS (as 51723), d1 b18
 # (keeps the dagger +50% hardcode on purpose), SpellLevel 24, 51723's visual, Ex3 SUPPRESS_CASTER_PROCS (+ the stock main
 # hand requirement), no combo attributes (R12). 204167 = 52874's frame (off hand), linked from 204166 (type 0, the 51723 ->
 # 52874 shape). 204166 is bound to the shared Fan of Knives script (one combo point on the selection per cast).
@@ -609,7 +609,7 @@ second_volley_main_204166 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=RANGE_SELF, radius_yards=8.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=70, implicit_target_a=_TARGET_DEST_CASTER,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=100, implicit_target_a=_TARGET_DEST_CASTER,
                implicit_target_b=_TARGET_UNIT_DEST_AREA_ENEMY, radius_yards=8.0),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=_TARGET_DEST_CASTER,
                implicit_target_b=_TARGET_UNIT_DEST_AREA_ENEMY, radius_yards=8.0),
@@ -617,7 +617,7 @@ second_volley_main_204166 = spell(
     spell_icon_id=_ICON_FAN_OF_KNIVES,
     notes='rogue-rework S2a A3, subtlety doc "Second Volley" (U41, Known-hard 8, R12): the main-hand copy a Fan of Knives '
           'proc casts 300 ms later (triggered: no poison roll, no Seal Fate, no third fan). 51723\'s eff0 '
-          'WEAPON_PERCENT_DAMAGE weapon_potency 70 + eff1 ADD_COMBO_POINTS on the same A 18 / B 16 radius 8, Speed 18, '
+          'WEAPON_PERCENT_DAMAGE weapon_potency 100 (M2a, was 70) + eff1 ADD_COMBO_POINTS on the same A 18 / B 16 radius 8, Speed 18, '
           'SpellLevel 24, visual 12317, d1 b18 (m.SECOND_VOLLEY_CLASS: the dagger +50% hardcode stays), Ex3 0x10400 '
           '(main hand + SUPPRESS_CASTER_PROCS), no combo attributes, PreventionType 0. Bound to spell_rog_fan_of_knives '
           '(one point on the selection per cast); linked to the off-hand 204167.',
@@ -638,13 +638,13 @@ second_volley_off_204167 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=RANGE_SELF, radius_yards=8.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=70, implicit_target_a=_TARGET_DEST_CASTER,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=100, implicit_target_a=_TARGET_DEST_CASTER,
                implicit_target_b=_TARGET_UNIT_DEST_AREA_ENEMY, radius_yards=8.0),
     ],
     spell_icon_id=_ICON_FAN_OF_KNIVES,
     notes='rogue-rework S2a A3, subtlety doc "Second Volley" (U41, Known-hard 8): the off-hand copy, linked from 204166 '
           '(type 0, the 51723 -> 52874 shape). 52874\'s frame (off hand: Ex3 REQUIRES_OFF_HAND 0x1000000 + '
-          'SUPPRESS_CASTER_PROCS 0x10000, Speed 18, visual 12318), eff0 weapon_potency 70, SpellLevel 24, d1 b18 '
+          'SUPPRESS_CASTER_PROCS 0x10000, Speed 18, visual 12318), eff0 weapon_potency 100 (M2a, was 70), SpellLevel 24, d1 b18 '
           '(m.SECOND_VOLLEY_CLASS), no combo effect, no combo attributes.',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.SECOND_VOLLEY_CLASS),
@@ -660,7 +660,7 @@ linked_spell(second_volley_main_204166.id, second_volley_off_204167.id, 0,
              'Second Volley: the main-hand copy also throws the off hand (the 51723 -> 52874 shape)')
 
 # ---- Throwing Specialization copy 204168 (U40, Known-hard 7) ----
-# Deadly Throw 26679's eff0 (ap_potency 14.625 + cp_ap_potency 23.1, SpellLevel 36) and eff1 slow, thrown requirement and
+# Deadly Throw 26679's eff0 (ap_potency 26.6175 + cp_ap_potency 42.042 since M2c, SpellLevel 36) and eff1 slow, thrown requirement and
 # ranged frame, but no combo-point attributes (R12), 100 yd / no facing (R11), d1 b0 only (R21: no d2 b18, so an
 # Assassination hybrid's Ruthlessness / Find Weakness on finishers do not reach the copies; harmless for Subtlety),
 # Ex3 SUPPRESS_CASTER_PROCS, hidden. The per-combo-point line reads the live points (SpellPotency::Apply).
@@ -669,7 +669,7 @@ throwing_specialization_copy_204168 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=None, duration_ms=6000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=14.625, cp_ap_potency=23.1, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=26.6175, cp_ap_potency=42.042, potency_kind='direct',
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
         Effect(type=EffectType.APPLY_AURA, base_points=-51, mechanic=Mechanic.SNARE,
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY, apply_aura=AuraType.MOD_DECREASE_SPEED),
@@ -677,7 +677,7 @@ throwing_specialization_copy_204168 = spell(
     spell_icon_id=_ICON_DEADLY_THROW,
     notes='rogue-rework S2a A3, subtlety doc "Throwing Specialization" (U40, Known-hard 7, R11, R12, R21): the copy '
           'spell_rog_deadly_throw_subtlety casts at up to 2 other enemies. Deadly Throw 26679\'s eff0 SCHOOL_DAMAGE '
-          'ap_potency 14.625 + cp_ap_potency 23.1 direct at SpellLevel 36 and eff1 slow (aura 33, -50%, 6 s), typed '
+          'ap_potency 26.6175 + cp_ap_potency 42.042 direct (M2c, 75% of Eviscerate; M2a 20.475 / 32.34, was 14.625 / 23.1) at SpellLevel 36 and eff1 slow (aura 33, -50%, 6 s), typed '
           'Attributes 4259858, thrown weapon requirement 2 / 65536 (the flat AP term reads ranged AP through '
           'IsRangedWeaponSpell), DefenseType 3, Speed 50, visual 7929, CastingTimeIndex 18, no combo attributes, '
           'RangeIndex 6, FacingCasterFlags 0, Ex3 SUPPRESS_CASTER_PROCS, hidden. d1 b0 only (m.DEADLY_THROW_COPY_CLASS): '
@@ -787,14 +787,15 @@ lingering_shadow_204138 = _lingering_shadow(204138, 1)
 lingering_shadow_204139 = _lingering_shadow(204139, 2)
 
 
-# ---- (4,2) Finality 60429: DUMMY 10 / 20 (% = the three buffs' bp) ----
+# ---- (4,2) Finality 60429: DUMMY 20 / 40 (% = the three buffs' bp; M2a, was 10 / 20) ----
 def _finality(spell_id, rank):
     return _rank(
-        spell_id, 'Finality', rank, _ROW_FINALITY, [_dummy(10 * rank - 1)], _ICON_FINALITY,
+        spell_id, 'Finality', rank, _ROW_FINALITY, [_dummy(20 * rank - 1)], _ICON_FINALITY,
         'When you use Eviscerate, Rupture or Deadly Throw, your next use of that same finisher deals $s1% more damage. '
         'Each finisher has its own empowerment, lasting $204157d, and you can hold several at once. Using an '
         'empowered finisher does not empower the next one.',
-        notes=f'DUMMY {10 * rank} (% more damage = the bp the C++ gives 204157 / 204158 / 204159).')
+        notes=f'DUMMY {20 * rank} (% more damage = the bp the C++ gives 204157 / 204158 / 204159; M2a [tune], was '
+              f'{10 * rank}).')
 
 
 finality_204140 = _finality(204140, 1)
@@ -819,13 +820,14 @@ executioner_204142 = _executioner(204142, 1)
 executioner_204143 = _executioner(204143, 2)
 
 
-# ---- (8,0) Akaari's Echo 60431: DUMMY 15 / 30 (% chance on an Ambush) ----
+# ---- (8,0) Akaari's Echo 60431: DUMMY 25 / 50 (% chance on an Ambush; M2a, was 15 / 30) ----
 def _akaaris_echo(spell_id, rank):
     return _rank(
-        spell_id, 'Akaari\'s Echo', rank, _ROW_AKAARIS_ECHO, [_dummy(15 * rank - 1)], _ICON_AKAARIS_ECHO,
+        spell_id, 'Akaari\'s Echo', rank, _ROW_AKAARIS_ECHO, [_dummy(25 * rank - 1)], _ICON_AKAARIS_ECHO,
         'Your Ambush has a $s1% chance to strike the target again from the shadows '
         f'{_sec(AKAARI_ECHO_DELAY_MS)} sec later, for {_c(AKAARI_ECHO_SHARE_PCT)}% of the damage it dealt.',
-        notes=f'DUMMY {15 * rank} (% chance per Ambush, x Proc Chance; read by GetRankAmount EFFECT_0).')
+        notes=f'DUMMY {25 * rank} (% chance per Ambush, x Proc Chance; read by GetRankAmount EFFECT_0; M2a [tune], was '
+              f'{15 * rank}).')
 
 
 akaaris_echo_204144 = _akaaris_echo(204144, 1)

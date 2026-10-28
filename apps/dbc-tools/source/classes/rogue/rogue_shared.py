@@ -288,6 +288,8 @@ _CUSTOM_ATTR_POSITIVE_EFF2 = 0x08000000
 # Hidden passive child of 203720 (spell_linked_spell type 2 below: added and removed with the parent). eff0 / eff1
 # attacker
 # melee / ranged crit chance stored -1001 (live -1000) = crit immunity that belongs to the stance, not to the rogue.
+# M2a (M1 tank ruling T-C): eff2 MOD_DAMAGE_PERCENT_TAKEN misc 127 stored -21 (-20% damage taken, all schools) [tune].
+# Enforcer Stance's own three slots are full, so the clause rides this linked child (no new id, no C++).
 enforcer_stance_crit_immunity_203721 = spell(
     id=203721, name='Enforcer Stance Crit Immunity', school=School.NORMAL,
     attributes=_ATTR0_PASSIVE | _ATTR0_DO_NOT_DISPLAY,
@@ -298,6 +300,8 @@ enforcer_stance_crit_immunity_203721 = spell(
                implicit_target_a=_TARGET_UNIT_CASTER),
         Effect(type=EffectType.APPLY_AURA, apply_aura=_AURA_MOD_ATTACKER_RANGED_CRIT_CHANCE, base_points=-1001,
                implicit_target_a=_TARGET_UNIT_CASTER),
+        Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.MOD_DAMAGE_PERCENT_TAKEN, base_points=-21,
+               misc_value=_MISC_ALL_SCHOOLS, implicit_target_a=_TARGET_UNIT_CASTER),
     ],
     spell_icon_id=_ICON_DEFENSIVE_STANCE,
     notes='RG0b A1, shared doc "Enforcer Stance": hidden passive child of 203720 (spell_linked_spell type 2). eff0 / '
@@ -305,7 +309,9 @@ enforcer_stance_crit_immunity_203721 = spell(
           'attacker melee / ranged crit chance -1001 (live -1000) = immune to melee and ranged crits, only while in '
           'the '
           'stance. DK Blood Presence child 203000 clone: AttributesEx2 0x1 + AttributesEx3 0x100000 so it follows the '
-          'parent through death, SpellLevel 1, family 8 with no bits, no SkillLineAbility.',
+          'parent through death, SpellLevel 1, family 8 with no bits, no SkillLineAbility. M2a (M1 T-C ruling): eff2 '
+          'MOD_DAMAGE_PERCENT_TAKEN misc 127 stored -21 (-20% damage taken) [tune]; Enforcer Stance quotes it as '
+          '$203721s3.',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE,
         'EquippedItemClass': -1,
@@ -313,7 +319,8 @@ enforcer_stance_crit_immunity_203721 = spell(
         'CastingTimeIndex': 1,
         'AttributesEx2': 0x1,
         'AttributesEx3': _ATTR3_ALLOW_AURA_WHILE_DEAD,
-        'Description_Lang_enUS': 'You are immune to critical strikes from melee and ranged attacks.',
+        'Description_Lang_enUS': 'You are immune to critical strikes from melee and ranged attacks. Damage taken '
+                                 'reduced by $s3%.',
     },
 )
 
@@ -324,11 +331,15 @@ enforcer_stance_crit_immunity_203721 = spell(
 # AttributesEx3
 # 0x100000 survives death (Blood Presence precedent). Attributes 0x29050010 = Defensive Stance 71's. eff0 aura 142 misc
 # 1
-# stored 79 (+80% armor from items), eff1 aura 10 misc 127 stored 104 (+105% threat), eff2 aura 79 misc 127 stored -11
+# stored 399 (+400% armor from items; M2a, was 79 / +80%), eff1 aura 10 misc 127 stored 104 (+105% threat; M2a
+# tried 149 / +150%, reverted 2026-10-28), eff2 aura 79 misc 127 stored -11
 # (-10% damage done). custom_attr 0x08000000 (POSITIVE_EFF2, brief C6): the negative aura 79 on eff2 would make the buff
 # a debuff. U2: with the hidden 29% reduction (Rogue Passive 21184) +105% nets about x1.46, so Enforcer links "Tank
 # Class
 # Passive Threat" 57340 (+43%) like every tank aura, total x2.08 = Defensive Stance / Bear / Blood Presence parity.
+# M2a (M1 tank rulings): threat stays +105% (+150% tried and reverted: the tank sim counted no damage threat, and the
+# rogue's real threat per damage was the highest of the tanks); -20% damage taken rides the linked child 203721
+# (eff2), every slot here being in use.
 enforcer_stance_203720 = spell(
     id=203720, name='Enforcer Stance', school=School.NORMAL,
     attributes=0x29050010,
@@ -336,7 +347,7 @@ enforcer_stance_203720 = spell(
     power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=RANGE_SELF, duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.MOD_BASE_RESISTANCE_PCT, base_points=79,
+        Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.MOD_BASE_RESISTANCE_PCT, base_points=399,
                misc_value=_MISC_ARMOR, implicit_target_a=_TARGET_UNIT_CASTER),
         Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.MOD_THREAT, base_points=104,
                misc_value=_MISC_ALL_SCHOOLS, implicit_target_a=_TARGET_UNIT_CASTER),
@@ -352,7 +363,9 @@ enforcer_stance_203720 = spell(
           'break '
           'Stealth), AttributesEx3 0x100000 (survives death), EquippedItemClass -1. Crit immunity = the 203721 child '
           '(linked type 2); 57340 Tank Class Passive Threat linked for x2.08 total (U2). custom_attr 0x08000000. Stock '
-          'Defensive Stance icon 276, no visual (V stage). No family bits.',
+          'Defensive Stance icon 276, no visual (V stage). No family bits. M2a (M1 tank rulings T-C + threat): armor '
+          'stored 79 -> 399 (+400%), threat kept at stored 104 (+105%; +150% tried and reverted), and the new -20% '
+          'damage taken clause on the linked child 203721 eff2 (quoted as $203721s3).',
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE,
         'EquippedItemClass': -1,
@@ -362,13 +375,11 @@ enforcer_stance_203720 = spell(
         'AttributesEx': _ATTR1_ALLOW_WHILE_STEALTHED,
         'AttributesEx3': _ATTR3_ALLOW_AURA_WHILE_DEAD,
         'Description_Lang_enUS': 'A tanking stance. You are immune to critical strikes from melee and ranged attacks, '
-                                 'armor '
-                                 'from your items is increased by $s1% and you generate more threat. Your damage dealt '
-                                 'is '
-                                 'reduced by $s3%. Lasts until cancelled.',
+                                 'armor from your items is increased by $s1%, damage taken is reduced by '
+                                 '$203721s3% and you generate more threat. Your damage dealt is reduced by $s3%. '
+                                 'Lasts until cancelled.',
         'AuraDescription_Lang_enUS': 'Immune to critical strikes from melee and ranged attacks. Armor and threat '
-                                     'increased. '
-                                     'Damage dealt reduced.',
+                                     'increased. Damage taken and damage dealt reduced.',
     },
 )
 linked_spell(enforcer_stance_203720.id, enforcer_stance_crit_immunity_203721.id, 2,

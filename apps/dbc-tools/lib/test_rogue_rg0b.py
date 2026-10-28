@@ -62,8 +62,8 @@ def expectations(idx: dict) -> tuple[dict, dict, dict]:
             "Attributes": 0x29050010, "SpellLevel": 10, "BaseLevel": 10, "EquippedItemClass": -1, "DurationIndex": inf,
             "RecoveryTime": 1000, "Category": 0, "CategoryRecoveryTime": 0, "StartRecoveryCategory": 0,
             "StartRecoveryTime": 0, "ManaCost": 0, "RangeIndex": 1, "CastingTimeIndex": 1,
-            "Effect_1": 6, "EffectAura_1": 142, "EffectMiscValue_1": 1, "EffectBasePoints_1": 79,
-            "Effect_2": 6, "EffectAura_2": 10, "EffectMiscValue_2": 127, "EffectBasePoints_2": 104,
+            "Effect_1": 6, "EffectAura_1": 142, "EffectMiscValue_1": 1, "EffectBasePoints_1": 399,   # M2a: +400%
+            "Effect_2": 6, "EffectAura_2": 10, "EffectMiscValue_2": 127, "EffectBasePoints_2": 104,   # +105% (M2a tried +150%, reverted)
             "Effect_3": 6, "EffectAura_3": 79, "EffectMiscValue_3": 127, "EffectBasePoints_3": -11,
             "SpellIconID": 276, "SpellVisualID_1": 0,
             "SpellClassMask_1": 0, "SpellClassMask_2": 0, "SpellClassMask_3": 0,
@@ -72,7 +72,8 @@ def expectations(idx: dict) -> tuple[dict, dict, dict]:
             "Attributes": 0xC0, "AttributesEx2": 0x1, "AttributesEx3": ATTR3_ALLOW_AURA_WHILE_DEAD, "SpellLevel": 1,
             "EquippedItemClass": -1, "DurationIndex": inf,
             "Effect_1": 6, "EffectAura_1": 187, "EffectBasePoints_1": -1001,
-            "Effect_2": 6, "EffectAura_2": 188, "EffectBasePoints_2": -1001, "Effect_3": 0,
+            "Effect_2": 6, "EffectAura_2": 188, "EffectBasePoints_2": -1001,
+            "Effect_3": 6, "EffectAura_3": 87, "EffectMiscValue_3": 127, "EffectBasePoints_3": -21,   # M2a: -20% taken
             "SpellClassMask_1": 0, "SpellClassMask_2": 0, "SpellClassMask_3": 0,
         },
         INSULT: {
@@ -113,17 +114,17 @@ def expectations(idx: dict) -> tuple[dict, dict, dict]:
             "SpellClassMask_1": 0, "SpellClassMask_2": 0, "SpellClassMask_3": 0,
         },
         # ---- reworked stock rows: costs, effect order (percent first), levels
-        SS: {"ManaCost": 40, "SpellLevel": 1, "BaseLevel": 1, "Effect_1": 31, "EffectBasePoints_1": 99,
+        SS: {"ManaCost": 40, "SpellLevel": 1, "BaseLevel": 1, "Effect_1": 31, "EffectBasePoints_1": 249,   # M2a: 250%
              "Effect_2": 121, "Effect_3": 80, "MaxLevel": 0, "StartRecoveryCategory": 133, "StartRecoveryTime": 1000},
-        BS: {"ManaCost": 45, "SpellLevel": 4, "BaseLevel": 4, "Effect_1": 31, "EffectBasePoints_1": 149,
+        BS: {"ManaCost": 45, "SpellLevel": 4, "BaseLevel": 4, "Effect_1": 31, "EffectBasePoints_1": 249,   # M2a: 250%
              "Effect_2": 121, "Effect_3": 80},
-        AMBUSH: {"ManaCost": 45, "SpellLevel": 18, "BaseLevel": 18, "Effect_1": 31, "EffectBasePoints_1": 174,
+        AMBUSH: {"ManaCost": 45, "SpellLevel": 18, "BaseLevel": 18, "Effect_1": 31, "EffectBasePoints_1": 349,   # M2a
                  "Effect_2": 121, "Effect_3": 80, "EffectBasePoints_3": 1, "RangeIndex": idx["r25"],
                  "EquippedItemClass": 2, "EquippedItemSubclass": 0x2A5F3},
         GS: {"RecoveryTime": 0, "Category": 0, "CategoryRecoveryTime": 0, "DurationIndex": inf, "SpellLevel": 10,
              "BaseLevel": 10, "SpellClassMask_1": 0x40000000, "Effect_1": 31, "EffectBasePoints_1": 99,
              "Effect_2": 64, "EffectTriggerSpell_2": VEIL, "ImplicitTargetA_2": 1, "Effect_3": 80},
-        FOK: {"SpellLevel": 24, "BaseLevel": 24, "Effect_1": 31, "EffectBasePoints_1": 69, "Effect_2": 80,
+        FOK: {"SpellLevel": 24, "BaseLevel": 24, "Effect_1": 31, "EffectBasePoints_1": 99, "Effect_2": 80,   # M2a: 100%
               "Effect_3": 0},
         DT: {"Effect_1": 2, "EffectPointsPerCombo_1": 0, "SpellLevel": 36, "BaseLevel": 36, "Effect_2": 6,
              "EffectAura_2": 33},
@@ -390,14 +391,16 @@ def _balanced_single_max(expr: str) -> bool:
     return depth == 0
 
 
+# M2a (M1 R2 / S1): Deadly Throw x1.4 with Eviscerate (14.625 / 23.1 -> 20.475 / 32.34), Rupture's tick x1.5.
+# M2c: Eviscerate +30% and Deadly Throw keeps its 75% ratio (20.475 / 32.34 -> 26.6175 / 42.042).
 _DT_FLAT = potency.resolve(
-    potency.PotencyEffect(ap_potency=14.625, kind=potency.KIND_DIRECT, t_ms=1500.0), spell_level=36)
+    potency.PotencyEffect(ap_potency=26.6175, kind=potency.KIND_DIRECT, t_ms=1500.0), spell_level=36)
 _RUPTURE_TICK = potency.resolve(
-    potency.PotencyEffect(base_potency=19.605, kind=potency.KIND_PERIODIC, t_ms=2000.0), spell_level=20)
-_DT_CP_LINE = 5 * 61.7925          # 0-verify item 7: cp_line 61.7925 per point, 5 points
-_DT_CP_AP = 0.495                  # cp AP 0.099 x 5, token $AP (melee)
-_DT_FLAT_AP = 0.06268              # spell_bonus_data.ap_bonus of ap_potency 14.625, token $RAP
-_RUP_AP_TICK = 0.0375             # ap_potency 6.5625 per 2 s tick (the old 5-point AP part, user 2026-10-27)
+    potency.PotencyEffect(base_potency=29.4075, kind=potency.KIND_PERIODIC, t_ms=2000.0), spell_level=20)
+_DT_CP_LINE = 5 * 112.46235        # cp_line 112.46235 per point (M2a 86.5095, was 61.7925), 5 points
+_DT_CP_AP = 0.9009                 # cp AP 0.18018 x 5, token $AP (melee)
+_DT_FLAT_AP = 0.114075             # spell_bonus_data.ap_bonus of ap_potency 26.6175, token $RAP
+_RUP_AP_TICK = 0.05625            # ap_potency 9.84375 per 2 s tick (1.5 x the old 5-point AP part, M2a)
 
 
 def dt_oracle(level: int, ap: float, rap: float) -> float:
@@ -429,13 +432,13 @@ def check_tooltips(dt_desc: str, rupture_desc: str) -> list[str]:
                 got, want = eval_tooltip(dt, level, 100, 200), dt_oracle(level, 100, 200)
                 if abs(got - want) > 1.5:
                     bad.append(f"{DT}: tooltip at L{level} = {got:.2f}, simulate_value says {want:.2f}")
-            if abs(eval_tooltip(dt, 60) - 347.81) > 0.5:
+            if abs(eval_tooltip(dt, 60) - 633.3) > 0.5:
                 bad.append(f"{DT}: L60 5-cp value {eval_tooltip(dt, 60):.2f}, "
-                           "expected 347.81 (345.96 min + 5% mid-roll)")
+                           "expected 633.3 (x1.3 of M2a's 487.15 since M2c, 5% mid-roll included)")
             ap_term = eval_tooltip(dt, 60, ap=100) - eval_tooltip(dt, 60)
             rap_term = eval_tooltip(dt, 60, rap=100) - eval_tooltip(dt, 60)
-            if abs(ap_term - 49.5) > 0.05 or abs(rap_term - 6.27) > 0.05:
-                bad.append(f"{DT}: AP/RAP terms per 100 are {ap_term:.2f}/{rap_term:.2f}, expected 49.50/6.27")
+            if abs(ap_term - 90.09) > 0.05 or abs(rap_term - 11.41) > 0.05:
+                bad.append(f"{DT}: AP/RAP terms per 100 are {ap_term:.2f}/{rap_term:.2f}, expected 90.09/11.41")
         except Exception as exc:   # a malformed expression is a failure, not a crash
             bad.append(f"{DT}: tooltip does not evaluate: {exc!r}")
     if ru is None:
@@ -450,10 +453,10 @@ def check_tooltips(dt_desc: str, rupture_desc: str) -> list[str]:
                 got, want = eval_tooltip(ru, level, 100), rupture_oracle(level, 100)
                 if abs(got - want) > 1.0:
                     bad.append(f"{RUPTURE}: tooltip at L{level} = {got:.2f}, simulate_value says {want:.2f}")
-            if abs(eval_tooltip(ru, 60) - 70.0) > 0.3:
-                bad.append(f"{RUPTURE}: L60 tick {eval_tooltip(ru, 60):.2f}, expected 70.0 (12 ticks = 840.1)")
-            if abs(eval_tooltip(ru, 60, ap=100) - eval_tooltip(ru, 60) - 3.75) > 0.05:
-                bad.append(f"{RUPTURE}: AP term per 100 is not 3.75 (0.0375 x AP per tick)")
+            if abs(eval_tooltip(ru, 60) - 105.0) > 0.3:
+                bad.append(f"{RUPTURE}: L60 tick {eval_tooltip(ru, 60):.2f}, expected 105.0 (M2a x1.5 of 70.0)")
+            if abs(eval_tooltip(ru, 60, ap=100) - eval_tooltip(ru, 60) - 5.625) > 0.05:
+                bad.append(f"{RUPTURE}: AP term per 100 is not 5.625 (0.05625 x AP per tick)")
         except Exception as exc:
             bad.append(f"{RUPTURE}: tooltip does not evaluate: {exc!r}")
         if "every 2 sec" not in rupture_desc:
@@ -567,9 +570,10 @@ def _good_rows() -> dict:
 
 
 def _good_descs() -> tuple[str, str]:
-    dt = ("causing ${$max($max(0.0627*$RAP+308.9625+0.495*$AP,2.4223+0.2395*$PL+0.0627*$RAP+308.9625+0.495*$AP),"
-          "0.8775*$max(0,$PL-15.7265)+0.0627*$RAP+308.9625+0.495*$AP)} Physical damage.")
-    ru = ("causes ${$max($max(0.0375*$AP,4.3294+0.428*$PL+0.0375*$AP),1.5684*$max(0,$PL-15.3685)+0.0375*$AP)} "
+    # M2a: Deadly Throw x1.4 (with Eviscerate), Rupture's tick x1.5; M2c: Deadly Throw x1.3 more (with Eviscerate).
+    dt = ("causing ${$max($max(0.1141*$RAP+562.3118+0.9009*$AP,4.4085+0.4359*$PL+0.1141*$RAP+562.3118+0.9009*$AP),"
+          "1.597*$max(0,$PL-15.2926)+0.1141*$RAP+562.3118+0.9009*$AP)} Physical damage.")
+    ru = ("causes ${$max($max(0.0562*$AP,6.4942+0.6421*$PL+0.0562*$AP),2.3526*$max(0,$PL-15.3685)+0.0562*$AP)} "
           "Physical damage every 2 sec. Lasts longer per combo point: 1 point: 8 sec, 5 points: 24 sec.")
     return dt, ru
 
@@ -750,11 +754,11 @@ class RogueRG0bNegativeTest(unittest.TestCase):
         dt, ru = _good_descs()
         self.assertEqual(check_tooltips(dt, ru), [])
         self.assertEqual(tooltip_expr("no block"), None)
-        for old, new in (("308.9625", "300"), ("0.495*$AP", "0.5*$AP"), ("0.0627*$RAP", "0.0627*$AP"),
-                         ("0.8775*$max", "1.9*$max")):
+        for old, new in (("562.3118", "540"), ("0.9009*$AP", "0.95*$AP"), ("0.1141*$RAP", "0.1141*$AP"),
+                         ("1.597*$max", "2.4*$max")):
             self.assertGreaterEqual(len(check_tooltips(dt.replace(old, new), ru)), 1, old)
-        for old, new in (("1.5684", "1.2"), ("0.0375*$AP", "0.03*$AP"), ("0.0375*$AP", "0.0375*$RAP"),
-                         ("4.3294+0.428", "24.3294+0.428"), ("every 2 sec", "over time")):
+        for old, new in (("2.3526", "1.8"), ("0.0562*$AP", "0.045*$AP"), ("0.0562*$AP", "0.0562*$RAP"),
+                         ("6.4942+0.6421", "26.4942+0.6421"), ("every 2 sec", "over time")):
             self.assertGreaterEqual(len(check_tooltips(dt, ru.replace(old, new))), 1, old)
         self.assertGreaterEqual(len(check_tooltips("no block", ru)), 1)
         self.assertGreaterEqual(len(check_tooltips(dt, "no block")), 1)

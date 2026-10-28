@@ -145,7 +145,7 @@ instant_poison_8680 = spell(
     mana_cost_pct=0,
     range_yards=100.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=30, potency_kind='direct', time_basis_ms=1500, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=40, potency_kind='direct', time_basis_ms=1500, implicit_target_a=6),
     ],
     spell_icon_id=247,
     notes=(
@@ -153,7 +153,8 @@ instant_poison_8680 = spell(
         'potency-system (PLAN P7-Rogue): converted to ap_potency=29.2 (direct). '
         'rogue-rework RG0a: ap_potency 30 direct, time_basis_ms 1500 ("a payout at 1.5 sec", rogue-shared-rework.md '
         'Instant Poison); SpellClassMask_2 gains the poison group bit (d1 b19); range 100 and EquippedItemClass -1 '
-        'kept (script-cast payload of the 203701 self aura).'
+        'kept (script-cast payload of the 203701 self aura). '
+        'rogue-rework M2a (M1 S3, [tune]): ap_potency 30 -> 40.'
     ),
     raw_overrides={'AttributesEx': 136, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Deals {pot1} Nature damage to the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'SpellClassMask_1': m.INSTANT_POISON, 'SpellClassMask_2': m.POISON_GROUP, 'SpellClassSet': 8, 'SpellLevel': 20, 'SpellVisualID_1': 5100},
 )
@@ -322,11 +323,11 @@ throwing_specialization_5952 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER),
+        Effect(type=EffectType.APPLY_AURA, base_points=29, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER),
     ],
     spell_icon_id=2910,
     notes=(
-        'rogue-rework S2a A2, Subtlety doc "Throwing Specialization": eff0 pct DAMAGE +10 on THROWING_SPEC_READ '
+        'rogue-rework S2a A2, Subtlety doc "Throwing Specialization": eff0 pct DAMAGE +30 (M2a; was +10) on THROWING_SPEC_READ '
         '(Deadly Throw d1 b0, Fan of Knives d1 b18: 51723, 52874, the Second Volley copies and the Deadly Throw copy '
         '204168); the stock RANGE modifier and the interrupt proc (51680) are gone, raw ProcTypeMask 0 / ProcChance '
         '101 with the -5952 / 32748 spell_proc rows removed below. The capstone (51679 held) is read by '
@@ -4213,11 +4214,11 @@ throwing_specialization_51679 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER),
+        Effect(type=EffectType.APPLY_AURA, base_points=59, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER),
     ],
     spell_icon_id=2910,
     notes=(
-        'rogue-rework S2a A2, Subtlety doc "Throwing Specialization": eff0 pct DAMAGE +20 on THROWING_SPEC_READ '
+        'rogue-rework S2a A2, Subtlety doc "Throwing Specialization": eff0 pct DAMAGE +60 (M2a; was +20) on THROWING_SPEC_READ '
         '(Deadly Throw d1 b0, Fan of Knives d1 b18: 51723, 52874, the Second Volley copies and the Deadly Throw copy '
         '204168); the stock RANGE modifier and the interrupt proc (51680) are gone, raw ProcTypeMask 0 / ProcChance '
         '101 with the -5952 / 32748 spell_proc rows removed below. The capstone (51679 held) is read by '
@@ -4301,11 +4302,11 @@ waylay_51692 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER),
+        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER),
     ],
     spell_icon_id=2958,
     notes=(
-        'rogue-rework S2a A2, Subtlety doc "Waylay": eff0 pct DAMAGE +10 on Ambush (WAYLAY_READ); the stock slow proc'
+        'rogue-rework S2a A2, Subtlety doc "Waylay": eff0 pct DAMAGE +20 (M2a; was +10) on Ambush (WAYLAY_READ); the stock slow proc'
         ' is gone (raw ProcTypeMask 0 / ProcChance 101, spell_proc -51692 removed below); the junk eff1 (bp -1, B_1 '
         '0x2000004) zeroed.'
     ),
@@ -4345,12 +4346,12 @@ waylay_51696 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=19, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER),
+        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=AuraType.ADD_PCT_MODIFIER),
         Effect(type=EffectType.APPLY_AURA, base_points=-1, implicit_target_a=1, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=51693),
     ],
     spell_icon_id=2958,
     notes=(
-        'rogue-rework S2a A2, Subtlety doc "Waylay": eff0 pct DAMAGE +20 on Ambush (WAYLAY_READ); eff1 aura 42 -> '
+        'rogue-rework S2a A2, Subtlety doc "Waylay": eff0 pct DAMAGE +40 (M2a; was +20) on Ambush (WAYLAY_READ); eff1 aura 42 -> '
         '51693 (the stock slow, the capstone). Raw ProcTypeMask 16 / ProcChance 100 kept for the spell_proc 51696 row'
         ' below (family mask WAYLAY_READ, phase HIT, chance 100, C1).'
     ),
@@ -6720,12 +6721,17 @@ killing_spree_main_57841 = spell(
     range_yards=5.0,
     duration_ms=-1,
     effects=[
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=200, implicit_target_a=6),
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
         Effect(type=EffectType.TRIGGER_SPELL, die_sides=0, implicit_target_a=6, trigger_spell=57842),
     ],
     spell_icon_id=2008,
     notes=(
-        'rogue-rework S3a A2, Combat doc "Killing Spree" main-hand strike (moved from npc.csv): KILLING_SPREE_STRIKE_CLASS (d1 b23, so Coup de Grace reads it), Ex3 |= SUPPRESS_CASTER_PROCS 0x10000, Ex4 |= SUPPRESS_WEAPON_PROCS 0x800000 (R6 / U62); damage unchanged (normalized 100% per hand).'
+        'rogue-rework S3a A2, Combat doc "Killing Spree" main-hand strike (moved from npc.csv): KILLING_SPREE_STRIKE_CLASS (d1 b23, so Coup de Grace reads it), Ex3 |= SUPPRESS_CASTER_PROCS 0x10000, Ex4 |= SUPPRESS_WEAPON_PROCS 0x800000 (R6 / U62); damage unchanged (normalized 100% per hand). '
+        'rogue-rework M2a (M1 C2, [tune]): 100% -> 200% weapon damage per hand. Mutilate-hand layout (potency.md '
+        '"Weapon attacks"): eff0 WEAPON_PERCENT_DAMAGE weapon_potency 200 FIRST, eff1 the stock NORMALIZED_WEAPON_DMG '
+        '(bp -1 = no flat part, keeps the strike normalized), eff2 TRIGGER_SPELL 57842 (was eff1; no C++ reads its '
+        'index: spell_rog_killing_spree_rework_aura casts 57841 plainly).'
     ),
     raw_overrides={
         'AttributesEx': 512,
@@ -6771,11 +6777,14 @@ killing_spree_off_57842 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=200, implicit_target_a=6),
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, base_points=-1, implicit_target_a=6),
     ],
     spell_icon_id=83,
     notes=(
-        'rogue-rework S3a A2, Combat doc "Killing Spree" off-hand strike (moved from npc.csv): KILLING_SPREE_STRIKE_CLASS (d1 b23), Ex3 |= SUPPRESS_CASTER_PROCS 0x10000, Ex4 |= SUPPRESS_WEAPON_PROCS 0x800000 (R6 / U62); damage unchanged.'
+        'rogue-rework S3a A2, Combat doc "Killing Spree" off-hand strike (moved from npc.csv): KILLING_SPREE_STRIKE_CLASS (d1 b23), Ex3 |= SUPPRESS_CASTER_PROCS 0x10000, Ex4 |= SUPPRESS_WEAPON_PROCS 0x800000 (R6 / U62); damage unchanged. '
+        'rogue-rework M2a (M1 C2, [tune]): 100% -> 200% weapon damage, eff0 WEAPON_PERCENT_DAMAGE weapon_potency 200 '
+        'FIRST, eff1 the stock NORMALIZED_WEAPON_DMG bp -1 (the 57841 shape).'
     ),
     raw_overrides={
         'AttributesEx': 16,

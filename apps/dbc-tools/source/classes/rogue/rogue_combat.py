@@ -399,7 +399,7 @@ linked_spell(opportunity_buff_203983.id, opportunity_companion_203984.id, 2,
              'Opportunity: the hidden companion that carries the cost and damage SpellMods lives with the buff')
 
 # ---- Pistol Shot 203958 (U55, R25) ----
-# Physical SCHOOL_DAMAGE ap_potency 50 direct (SpellLevel 20) + ADD_COMBO_POINTS 1. Builder frame (typed 327696,
+# Physical SCHOOL_DAMAGE ap_potency 90 direct (M2c; 120 in M2a) (SpellLevel 20) + ADD_COMBO_POINTS 1. Builder frame (typed 327696,
 # Sinister Strike's raw AttributesEx 0x8000000 minus INITIATE_COMBAT: no auto-attack toward a 20 yd target), 30 energy,
 # 20 yd (idx 3), Speed 0 (the hit resolves in the cast), DefenseType 2 (melee AP / armor / melee crit), no weapon at all
 # (R25: EquippedItemClass -1, no Ex3 0x400), no USES_RANGED_SLOT, FacingCasterFlags 1, GCD 133 / 1000, SV 90252.
@@ -409,19 +409,21 @@ pistol_shot_203958 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=30, mana_cost_pct=0,
     range_yards=None,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=50.0, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=90.0, potency_kind='direct',
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=_ICON_PISTOL_SHOT,
     notes='rogue-rework S3a A3, combat doc "Pistol Shot" (U55, R25, Known-hard 3): learned from the Between the Eyes '
           'rank 203956 (SkillLineAbility 30810). eff0 Physical SCHOOL_DAMAGE ap_potency 50 direct [tune] at SpellLevel '
-          '20, eff1 ADD_COMBO_POINTS 1. Builder frame: typed 327696, AttributesEx 0x8000000 (energy back on a miss), '
+          '20 (120 since M2a), eff1 ADD_COMBO_POINTS 1. Builder frame: typed 327696, AttributesEx 0x8000000 (energy back on a miss), '
           'PreventionType 2, 30 energy, 20 yd (idx 3), Speed 0 (the combo point, Opportunity, Primed Powder, Quick '
           'Draw and Anticipation all resolve in the cast), DefenseType 2 (the melee AP Eviscerate uses), '
           'EquippedItemClass -1 and no Ex3 0x400: needs no weapon at all (R25), FacingCasterFlags 1, GCD 133 / 1000, '
           'SV 90252. d2 b4 | d2 b19 (m.PISTOL_SHOT_CLASS). Tooltip quotes the damage times the Surprise Attacks factor '
-          '(SDV 1351). spell_rog_pistol_shot: latches Opportunity, OnPistolShotHit, spends one stack in AfterCast.',
+          '(SDV 1351). spell_rog_pistol_shot: latches Opportunity, OnPistolShotHit, spends one stack in AfterCast. '
+          'M2a (M1 C1, [tune]): ap_potency 50 -> 120; M2c (user 2026-10-28, -25%): 120 -> 90 (the extra shot 203988 '
+          'matches).',
     tooltip_vars=tooltip_pistol_shot_1351,
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE, **m.class_mask_keys(m.PISTOL_SHOT_CLASS), 'EquippedItemClass': -1,
@@ -436,13 +438,13 @@ scripted_by(pistol_shot_203958, 'spell_rog_pistol_shot')
 
 # ---- Between the Eyes 203959 (U55, R25) ----
 # Eviscerate's finisher frame (typed 327696, raw AttributesEx 0x100200, PreventionType 2) with no weapon requirement
-# (R25), Physical SCHOOL_DAMAGE ap_potency 14.625 + cp_ap_potency 23.1 (75% of Eviscerate's 19.5 / 30.8, about 130 at
-# 5 points) [tune], SpellLevel 20, 35 energy, 20 yd, Speed 0, no stun, GCD 133 / 1000, SV 90252. d2 b5 | d2 b18, never
+# (R25), Physical SCHOOL_DAMAGE ap_potency 36.855 + cp_ap_potency 58.212 [tune] (M2c user ruling 2026-10-28: x1.8 of M2a's
+# 20.475 / 32.34, which were 75% of Eviscerate; now ~104% of Eviscerate's 35.49 / 56.056, the ratio is no longer fixed), SpellLevel 20, 35 energy, 20 yd, Speed 0, no stun, GCD 133 / 1000, SV 90252. d2 b5 | d2 b18, never
 # d0 b17 (m.BETWEEN_THE_EYES_CLASS).
 _BTE_FLAT = _potency.resolve(
-    _potency.PotencyEffect(ap_potency=14.625, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=20)
+    _potency.PotencyEffect(ap_potency=36.855, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=20)
 _BTE_CP = _potency.resolve(
-    _potency.PotencyEffect(ap_potency=23.1, kind=_potency.KIND_PERIODIC, t_ms=1500.0), spell_level=20)
+    _potency.PotencyEffect(ap_potency=58.212, kind=_potency.KIND_PERIODIC, t_ms=1500.0), spell_level=20)
 
 
 def _expr_plus(resolved, extra, *, ticks=1.0, scale=1.0):
@@ -472,15 +474,15 @@ between_the_eyes_203959 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=35, mana_cost_pct=0,
     range_yards=None,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=14.625, cp_ap_potency=23.1, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=36.855, cp_ap_potency=58.212, potency_kind='direct',
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=_ICON_BETWEEN_THE_EYES,
     notes='rogue-rework S3a A3, combat doc "Between the Eyes (spell)" (U55, R25, Known-hard 3): learned from the rank '
           '203956 (SkillLineAbility 30811). Eviscerate 2098\'s finisher frame (typed 327696, AttributesEx 0x100200, '
           'PreventionType 2) without the weapon requirement and Ex3 0x400 (R25: EquippedItemClass -1). eff0 Physical '
-          'SCHOOL_DAMAGE ap_potency 14.625 + cp_ap_potency 23.1 direct [tune] (75% of Eviscerate\'s 19.5 / 30.8, about '
-          '130 potency at 5 points) at SpellLevel 20, 35 energy, 20 yd (idx 3), Speed 0, DefenseType 2, no stun, GCD '
+          'SCHOOL_DAMAGE ap_potency 36.855 + cp_ap_potency 58.212 direct [tune] (M2c: x1.8 of M2a\'s 20.475 / 32.34, ~104% '
+          'of Eviscerate; M2a R2 was 75% of Eviscerate, before that 14.625 / 23.1) at SpellLevel 20, 35 energy, 20 yd (idx 3), Speed 0, DefenseType 2, no stun, GCD '
           '133 '
           '/ 1000, SV 90252. d2 b5 | d2 b18 (m.BETWEEN_THE_EYES_CLASS), never d0 b17. The tooltip hand-builds the '
           '5-point value like Deadly Throw\'s and multiplies it by Coup de Grace x Surprise Attacks (SDV 1352). '
@@ -534,7 +536,7 @@ skill_line_ability(id=30811, skill_line=38, spell_id=between_the_eyes_203959.id,
                    acquire_method=0)
 
 # ---- the second strike 203986 (U61, C9) ----
-# Sinister Strike's weapon frame (eff0 WEAPON_PERCENT_DAMAGE weapon_potency 100, eff1 NORMALIZED_WEAPON_DMG
+# Sinister Strike's weapon frame (eff0 WEAPON_PERCENT_DAMAGE weapon_potency 250, eff1 NORMALIZED_WEAPON_DMG
 # sp_potency 10
 # direct T 1500, SpellLevel 1), no ADD_COMBO_POINTS (the point goes through GainComboPoints). Own bit d2 b23 only,
 # Ex3 SUPPRESS_CASTER_PROCS | main hand, Ex4 SUPPRESS_WEAPON_PROCS, 100 yd, no facing, SS's visual, hidden.
@@ -543,13 +545,13 @@ sinister_strike_second_strike_203986 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=None,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=100, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=250, implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=10, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=_ICON_SINISTER_STRIKE,
     notes='rogue-rework S3a A3, combat doc "Between the Eyes (talent)" (U61, C9, R21): the second strike cast by '
-          'Rogue::OnSinisterStrikeHit. Sinister Strike 1752\'s weapon lines (eff0 weapon_potency 100, eff1 '
+          'Rogue::OnSinisterStrikeHit. Sinister Strike 1752\'s weapon lines (eff0 weapon_potency 250 since M2a, eff1 '
           'NORMALIZED_WEAPON_DMG sp_potency 10 direct T 1500, SpellLevel 1) without ADD_COMBO_POINTS (R: no combo '
           'attributes; the point is granted through GainComboPoints). Own bit d2 b23 only (m.SS_SECOND_STRIKE_CLASS: '
           'Improved Sinister Strike, Aggression and Surprise Attacks read it; Blindside\'s charged mods, Cold Blood '
@@ -588,12 +590,12 @@ pistol_shot_extra_203988 = spell(
     cast_time_ms=0, cooldown_ms=0, category_cooldown_ms=0, power_type=PowerType.ENERGY, mana_cost=0, mana_cost_pct=0,
     range_yards=None,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=50.0, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=90.0, potency_kind='direct',
                implicit_target_a=_TARGET_UNIT_TARGET_ENEMY),
     ],
     spell_icon_id=_ICON_PISTOL_SHOT,
     notes='rogue-rework S3a A3, combat doc "Surprise Attacks" (C9): the capstone\'s extra shots. Pistol Shot 203958\'s '
-          'damage line (Physical ap_potency 50 direct, SpellLevel 20) on its own bit d2 b24 only '
+          'damage line (Physical ap_potency 90 direct since M2c, SpellLevel 20) on its own bit d2 b24 only '
           '(m.PISTOL_SHOT_EXTRA_CLASS: Improved SS / Aggression / Surprise Attacks / Blade Twisting read it; Hair '
           'Trigger, Opportunity and Primed Powder never do), no combo point, 100 yd (idx 6), FacingCasterFlags 0, '
           'DefenseType 2, Ex3 SUPPRESS_CASTER_PROCS, SV 90252, hidden. spell_rog_pistol_shot_extra multiplies the '

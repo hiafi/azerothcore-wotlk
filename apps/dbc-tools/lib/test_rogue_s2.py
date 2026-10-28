@@ -183,13 +183,13 @@ AMOUNTS = (
     + [(i, 1, AURA_PCT, v) for i, v in zip((51708, 51709, 51710), (5, 10, 15))]
     + [(i, 1, AURA_DUMMY, v) for i, v in zip(SV, (20, 40))]                                   # Second Volley
     + [(i, 1, AURA_DUMMY, v) for i, v in zip(LS, (1, 2))]                                     # Lingering Shadow
-    + [(i, 1, AURA_DUMMY, v) for i, v in zip(FIN, (10, 20))]                                  # Finality
+    + [(i, 1, AURA_DUMMY, v) for i, v in zip(FIN, (20, 40))]                                  # Finality (M2a)
     + [(HEM_R, 1, AURA_DUMMY, 30)]                                                             # Hemorrhage
     + [(i, 1, AURA_DUMMY, v) for i, v in zip(EXE, (10, 20))]                                  # Executioner
     + [(PRE_R, 1, AURA_DUMMY, 2)]                                                              # Premeditation
     + [(i, 1, AURA_DUMMY, v) for i, v in zip(MOS_R, (4, 8, 12))]                              # Master of Subtlety
     + [(i, 1, AURA_DUMMY, v) for i, v in zip((31211, 31212, 31213), (2, 4, 6))]               # Enveloping Shadows
-    + [(i, 1, AURA_DUMMY, v) for i, v in zip(AE, (15, 30))]                                   # Akaari's Echo
+    + [(i, 1, AURA_DUMMY, v) for i, v in zip(AE, (25, 50))]                                   # Akaari's Echo (M2a)
     + [(i, 1, AURA_DUMMY, v) for i, v in zip(MOMA_R, (50, 100))]                              # Mark of the Master Assassin
     + [(i, 1, 306, v) for i, v in zip(DS, (1, 2, 3))] + [(i, 1, 306, v) for i, v in zip(SR, (1, 2, 3))]
     + [(i, 1, 69, v) for i, v in zip((31228, 31229, 31230), (33, 66, 100))]                   # Cheat Death (R22)
@@ -199,8 +199,8 @@ AMOUNTS = (
     + [(i, 1, AURA_PCT, v) for i, v in zip((14057, 14072), (10, 20))]                         # From the Shadows
     + [(i, 2, AURA_PCT, v) for i, v in zip((14057, 14072), (10, 20))]
     + [(i, 1, AURA_FLAT, v) for i, v in zip((14079, 14080), (15, 30))]                        # Improved Ambush
-    + [(51692, 1, AURA_PCT, 10), (51696, 1, AURA_PCT, 20), (51696, 2, 42, 0)]                 # Waylay
-    + [(i, 1, AURA_PCT, v) for i, v in zip((5952, 51679), (10, 20))]                          # Throwing Specialization
+    + [(51692, 1, AURA_PCT, 20), (51696, 1, AURA_PCT, 40), (51696, 2, 42, 0)]                 # Waylay (M2a)
+    + [(i, 1, AURA_PCT, v) for i, v in zip((5952, 51679), (30, 60))]                          # Throwing Spec (M2a)
     + [(i, 1, 166, v) for i, v in zip((30902, 30903, 30904), (2, 4, 6))]                      # Deadliness
     + [(i, 2, AURA_PCT, v) for i, v in zip((30902, 30903, 30904), (2, 4, 6))]
     + [(i, 1, 137, v) for i, v in zip((31216, 31217, 31218), (1, 2, 3))]                      # Sinister Calling

@@ -42,16 +42,39 @@ def _expr_plus(resolved, extra, *, ticks=1.0, scale=1.0):
     )
 
 
-# Deadly Throw 26679 effect 1 (direct, instant -> T 1.5 s, SpellLevel 36): flat ap_potency 14.625, plus per combo point
-# cp_ap_potency 23.1 (= 0.75 x Eviscerate's 19.5 / 30.8). The flat AP term reads RANGED attack power ($RAP: thrown
-# requirement, SpellInfo::IsRangedWeaponSpell); the per-combo-point AP term always reads MELEE attack power ($AP,
-# SpellPotency::Apply). 5-point average value, level 60: 345.96 + ~0.0627 x RAP + 0.495 x AP (+5% mid-roll on the flat).
+# Deadly Throw 26679 effect 1 (direct, instant -> T 1.5 s, SpellLevel 36): flat ap_potency 26.6175, plus per combo point
+# cp_ap_potency 42.042 (= 0.75 x Eviscerate's 35.49 / 56.056 since M2c; M2a 20.475 / 32.34, was 14.625 / 23.1). The flat AP term reads RANGED
+# attack power ($RAP: thrown requirement, SpellInfo::IsRangedWeaponSpell); the per-combo-point AP term always reads MELEE
+# attack power ($AP, SpellPotency::Apply). 5-point average value at level 60: see the M2c values above (M2a read 54.8 + 432.5 + ~0.0878 x RAP + 0.693 x AP)
+# (+5% mid-roll on the flat).
 _DT_LEVEL = 36
 _dt_flat = _potency.resolve(
-    _potency.PotencyEffect(ap_potency=14.625, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=_DT_LEVEL)
+    _potency.PotencyEffect(ap_potency=26.6175, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=_DT_LEVEL)
 _dt_flat = _replace(_dt_flat, ap_token=_potency.RANGED_AP_TOKEN)
 _dt_cp = _potency.resolve(
-    _potency.PotencyEffect(ap_potency=23.1, kind=_potency.KIND_PERIODIC, t_ms=1500.0), spell_level=_DT_LEVEL)
+    _potency.PotencyEffect(ap_potency=42.042, kind=_potency.KIND_PERIODIC, t_ms=1500.0), spell_level=_DT_LEVEL)
+# Eviscerate 2098 effect 1 (direct, T 1.5 s, SpellLevel 1): flat ap_potency 35.49 + per combo point cp_ap_potency
+# 56.056 (M2c user ruling 2026-10-28 +30% of M2a's 27.3 / 43.12, themselves x1.4 of 19.5 / 30.8), both AP terms melee $AP. The tooltip ladder quotes the average per combo point
+# (flat line +5% mid-roll, plus N x the per-point line) times Seal Fate x Coup de Grace x Surprise Attacks ($<evmult>,
+# SDV 1323), each line one `$max()` (potency.md "Tooltips").
+_EVISCERATE_LEVEL = 1
+_ev_flat = _potency.resolve(
+    _potency.PotencyEffect(ap_potency=35.49, kind=_potency.KIND_DIRECT, t_ms=1500.0), spell_level=_EVISCERATE_LEVEL)
+_ev_cp = _potency.resolve(
+    _potency.PotencyEffect(ap_potency=56.056, kind=_potency.KIND_PERIODIC, t_ms=1500.0),
+    spell_level=_EVISCERATE_LEVEL)
+
+
+def _eviscerate_points(points):
+    return '${' + _expr_plus(
+        _ev_flat,
+        f'{_potency._fmt(points * _ev_cp.level60_value)}+{_potency._fmt(points * _ev_cp.ap_coefficient)}*$AP',
+        scale=1.0 + _ev_flat.variance_pct / 200.0) + '*$<evmult>}'
+
+
+_EVISCERATE_LADDER = 'Finishing move that causes damage per combo point:' + ''.join(
+    f'\r\n   {n} {"point  " if n == 1 else "points"}: {_eviscerate_points(n)} damage' for n in range(1, 6))
+
 _DT_5CP_DAMAGE = '${' + _expr_plus(
     _dt_flat,
     f'{_potency._fmt(5 * _dt_cp.level60_value)}+{_potency._fmt(5 * _dt_cp.ap_coefficient)}*$AP',
@@ -71,7 +94,7 @@ backstab_53 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=150, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=250, implicit_target_a=6),
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=10, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=6),
@@ -84,7 +107,8 @@ backstab_53 = spell(
         'NORMALIZED_WEAPON_DMG sp_potency 10 direct T 1500 SECOND (= 150% x weapon + flat; the stock flat-first layout '
         'was (weapon + flat) x 150%), eff2 ADD_COMBO 1. SpellLevel 4; BaseLevel / MaxLevel / per-level keys come from '
         'the generator. Stock family bits (0x800004), dagger requirement 0x8000, behind-the-target custom attr 0x20000 '
-        'and every other column kept. Cost not talent-reducible (shared doc).'
+        'and every other column kept. Cost not talent-reducible (shared doc). '
+        'rogue-rework M2a (M1 U4, [tune]): weapon_potency 150 -> 250.'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 1048576, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Backstab the target, causing ${$s1*$<bsall>}% weapon damage plus {pot2.avg*bsall}. Awards 1 combo point. Requires a dagger in the main hand. Must be behind the target.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 32768, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 8388612, 'SpellClassMask_3': m.DIRECT_BUILDER_GROUP, 'SpellClassSet': 8, 'SpellLevel': 4, 'SpellPriority': 50, 'SpellVisualID_1': 155, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
@@ -189,7 +213,7 @@ sinister_strike_1752 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=100, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=250, implicit_target_a=6),
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=10, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=6),
@@ -204,7 +228,8 @@ sinister_strike_1752 = spell(
         'column '
         'kept. The flat part is the doc\'s [tune] starting value (balanced in M). '
         'S3a A4 (U58): tooltip_vars = SDV 1350 and the multiplier token ssmult (Improved Sinister Strike x Surprise '
-        'Attacks) on the weapon percent and the flat part; second binding spell_rog_sinister_strike_combat.'
+        'Attacks) on the weapon percent and the flat part; second binding spell_rog_sinister_strike_combat. '
+        'rogue-rework M2a (M1 S2, [tune]): weapon_potency 100 -> 250 (the second strike 203986 mirrors it).'
     ),
     tooltip_vars=tooltip_sinister_strike_1350,
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'An instant strike that causes ${$s1*$<ssmult>}% weapon damage plus {pot2.avg*ssmult}. Awards 1 combo point.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 8388610, 'SpellClassMask_3': m.DIRECT_BUILDER_GROUP, 'SpellClassSet': 8, 'SpellLevel': 1, 'SpellVisualID_1': 253, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
@@ -406,7 +431,7 @@ rupture_1943 = spell(
     duration_ms=4000,
     max_duration_ms=24000,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000, base_potency=19.605, ap_potency=6.5625, potency_kind='periodic'),
+        Effect(type=EffectType.APPLY_AURA, mechanic=15, implicit_target_a=6, apply_aura=AuraType.PERIODIC_DAMAGE, amplitude=2000, base_potency=29.4075, ap_potency=9.84375, potency_kind='periodic'),
         Effect(type=EffectType.DUMMY, die_sides=0, implicit_target_a=1),
     ],
     tooltip_vars=tooltip_blood_spatter_1322,
@@ -441,7 +466,8 @@ rupture_1943 = spell(
         'tick pays the old 5-point tick (base 16.8 + 5 x 0.561 = 19.605, AP 5 x 1.3125 = 6.5625 potency; level 60 = '
         '70.0 + 0.0375 x AP), so the 5-point total is unchanged (840.1 + 0.45 x AP over 12 ticks) and fewer points '
         'only shorten it. The tooltip shows the tick ({pot1}). Stock SpellDescriptionVariableID 63 (the ladder '
-        'variables) dropped.'
+        'variables) dropped. '
+        'rogue-rework M2a (M1 S1, [tune]): tick x1.5, base_potency 19.605 -> 29.4075, ap_potency 6.5625 -> 9.84375.'
     ),
     raw_overrides={'AttributesEx': 1049088, 'AttributesEx3': 1024, 'AttributesEx4': 8, 'AttributesEx6': 8388608, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Bleeding.', 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _RUPTURE_DESCRIPTION, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 1048576, 'SpellClassMask_3': m.FINISHER_GROUP, 'SpellClassSet': 8, 'SpellLevel': 20, 'SpellVisualID_1': 250, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
@@ -519,7 +545,7 @@ eviscerate_2098 = spell(
     mana_cost_pct=0,
     range_yards=5.0,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=19.5, cp_ap_potency=30.8, implicit_target_a=6),
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=35.49, cp_ap_potency=56.056, implicit_target_a=6),
         Effect(type=EffectType.DUMMY, die_sides=0, implicit_target_a=1),
     ],
     tooltip_vars=tooltip_seal_fate_1323,
@@ -531,9 +557,14 @@ eviscerate_2098 = spell(
         'split - docs/potency-system.md\'s "Combo points don\'t scale with level"), cp_ap_potency='
         '30.8 is per combo point; together they reproduce the pre-conversion total at level 60, 5 '
         'combo points, 1000 attack power (1208) to within 0.2%. EffectPointsPerCombo_1 is generated '
-        'as 0 - SpellPotency::Apply() adds the per-combo-point term instead.'
+        'as 0 - SpellPotency::Apply() adds the per-combo-point term instead. '
+        'rogue-rework M2a (M1 R2, user ruling: Eviscerate becomes [tune]): x1.4, ap_potency 19.5 -> 27.3, '
+        'cp_ap_potency 30.8 -> 43.12; M2c (user 2026-10-28): +30% to 35.49 / 56.056. Deadly Throw keeps its 75% ratio; '
+        'Between the Eyes (x1.8 of M2a) and the Death from Above landing (x1.15 of M2a) were set on their own in M2c. '
+        'The stock-shaped ladder ($m1 / $b1 / $AP x 0.03-0.35) is replaced by the potency '
+        'ladder _EVISCERATE_LADDER (average per combo point, both AP terms melee $AP, times $<evmult>).'
     ),
-    raw_overrides={'AttributesEx': 1049088, 'AttributesEx3': 1024, 'AttributesEx4': 8, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Finishing move that causes damage per combo point:\r\n   1 point  : ${($m1+(($b1*1)+$AP*0.03))*$<evmult>}-${($M1+(($b1*1)+$AP*0.07))*$<evmult>} damage\r\n   2 points: ${($m1+(($b1*2)+$AP*0.06))*$<evmult>}-${($M1+(($b1*2)+$AP*0.14))*$<evmult>} damage\r\n   3 points: ${($m1+(($b1*3)+$AP*0.09))*$<evmult>}-${($M1+(($b1*3)+$AP*0.21))*$<evmult>} damage\r\n   4 points: ${($m1+(($b1*4)+$AP*0.12))*$<evmult>}-${($M1+(($b1*4)+$AP*0.28))*$<evmult>} damage\r\n   5 points: ${($m1+(($b1*5)+$AP*0.15))*$<evmult>}-${($M1+(($b1*5)+$AP*0.35))*$<evmult>} damage', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 8519680, 'SpellClassMask_3': m.FINISHER_GROUP, 'SpellClassSet': 8, 'SpellLevel': 1, 'SpellVisualID_1': 671, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    raw_overrides={'AttributesEx': 1049088, 'AttributesEx3': 1024, 'AttributesEx4': 8, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': _EVISCERATE_LADDER, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'SpellClassMask_1': 8519680, 'SpellClassMask_3': m.FINISHER_GROUP, 'SpellClassSet': 8, 'SpellLevel': 1, 'SpellVisualID_1': 671, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 
@@ -730,7 +761,7 @@ ambush_8676 = spell(
     mana_cost_pct=0,
     range_yards=25.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=175, implicit_target_a=6),
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=350, implicit_target_a=6),
         Effect(type=EffectType.NORMALIZED_WEAPON_DMG, sp_potency=10, potency_kind='direct', time_basis_ms=1500,
                implicit_target_a=6),
         Effect(type=EffectType.ADD_COMBO_POINTS, base_points=1, implicit_target_a=6),
@@ -747,7 +778,8 @@ ambush_8676 = spell(
         'spell_rog_ambush (spell_rogue_shared.cpp) casts the Ambush Teleport helper 203726 BeforeCast when the caster '
         'was stealthed and is out of melee range. Attributes 0x270010 (ONLY_STEALTHED), Stances 0x20000000 and family '
         'bits 0x800200 kept, so a Shadowed (aura 275) rogue passes CheckCast. NPC users 7052 / 7056 (SAI spellhit -> '
-        'Kill Self on 8676) keep landing a spell hit.'
+        'Kill Self on 8676) keep landing a spell hit. '
+        'rogue-rework M2a (M1 U1, [tune]): weapon_potency 175 -> 350.'
     ),
     raw_overrides={'AttributesEx': 134218240, 'AttributesEx2': 1048576, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Ambush the target, causing ${$s1*$<amall>}% weapon damage plus {pot2.avg*amall}. If you are stealthed and more than melee range away, you first teleport behind the target. Awards 2 combo points. Must be Hidden.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'ShapeshiftMask': 536870912, 'SpellClassMask_1': 8389120, 'SpellClassMask_3': m.DIRECT_BUILDER_GROUP, 'SpellClassSet': 8, 'SpellLevel': 18, 'SpellPriority': 50, 'SpellVisualID_1': 155, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
@@ -1077,7 +1109,7 @@ deadly_throw_26679 = spell(
     range_yards=30.0,
     duration_ms=6000,
     effects=[
-        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=14.625, cp_ap_potency=23.1, potency_kind='direct',
+        Effect(type=EffectType.SCHOOL_DAMAGE, ap_potency=26.6175, cp_ap_potency=42.042, potency_kind='direct',
                implicit_target_a=6),
         Effect(type=EffectType.APPLY_AURA, base_points=-51, mechanic=Mechanic.SNARE, implicit_target_a=6, apply_aura=AuraType.MOD_DECREASE_SPEED),
         Effect(type=EffectType.DUMMY, die_sides=0, implicit_target_a=1),
@@ -1095,7 +1127,10 @@ deadly_throw_26679 = spell(
         'reads RANGED attack power (thrown requirement, $RAP) and the per-combo-point term MELEE attack power ($AP): '
         '_DT_5CP_DAMAGE hand-builds the 5-point average with 308.9625 + 0.495 x $AP inside every $max() branch. eff1 '
         'slow 50% for 6 s and eff2 DUMMY kept (stock); no interrupt of its own (stock Throwing Specialization\'s '
-        'interrupt is gone, S2 owns the replacement). Stock family bits d0 0x800000 + d1 0x1 kept.'
+        'interrupt is gone, S2 owns the replacement). Stock family bits d0 0x800000 + d1 0x1 kept. '
+        'rogue-rework M2a (M1 R2): Eviscerate x1.4 and Deadly Throw keeps its 75% ratio: ap_potency 14.625 -> 20.475, '
+        'cp_ap_potency 23.1 -> 32.34; M2c: Eviscerate +30% and Deadly Throw follows, 26.6175 / 42.042 (the Subtlety '
+        'copy 204168 matches).'
     ),
     raw_overrides={'AttributesEx': 1049088, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Movement slowed.', 'CastingTimeIndex': 18, 'DefenseType': 3, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Finishing move that throws your thrown weapon at the target, causing ' + _DT_5CP_DAMAGE + ' Physical damage at 5 combo points and reducing its movement speed by 50% for 6 sec. Requires a thrown weapon.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 65536, 'FacingCasterFlags': 1, 'InterruptFlags': 15, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'RangeIndex': 74, 'Speed': 50.0, 'SpellClassMask_1': 8388608, 'SpellClassMask_2': 1, 'SpellClassMask_3': m.FINISHER_GROUP, 'SpellClassSet': 8, 'SpellLevel': 36, 'SpellVisualID_1': 7929, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
@@ -1343,7 +1378,7 @@ fan_of_knives_51723 = spell(
     mana_cost_pct=0,
     range_yards=0.0,
     effects=[
-        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=70, implicit_target_a=18, implicit_target_b=16,
+        Effect(type=EffectType.WEAPON_PERCENT_DAMAGE, weapon_potency=100, implicit_target_a=18, implicit_target_b=16,
                radius_yards=8.0),
         Effect(type=EffectType.ADD_COMBO_POINTS, implicit_target_a=18, implicit_target_b=16, radius_yards=8.0),
     ],
@@ -1355,7 +1390,9 @@ fan_of_knives_51723 = spell(
         'ADD_COMBO 1 on the same A 18 / B 16 radius 8 (AddComboPointGain resets per target: N targets award 1, A29). '
         'The '
         'dagger +50% hardcode (family d1 b18, 0x40000) stays on purpose: 105% with daggers, 70% otherwise. Off-hand '
-        'copy 52874 (spell_linked_spell 51723 -> 52874) untouched.'
+        'copy 52874 (spell_linked_spell 51723 -> 52874) untouched. '
+        'rogue-rework M2a (M1 AoE option B, [tune]): weapon_potency 70 -> 100 (150% with daggers through the same '
+        'hardcode); the off hand 52874 (npc.csv bp 69 -> 99) and the Second Volley copies 204166 / 204167 match.'
     ),
     raw_overrides={'AttributesEx': 16, 'AttributesEx3': 1024, 'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly throw both weapons at all enemies within 8 yards, causing ${$s1*1.5*$<fanmult>}% weapon damage with daggers and ${$s1*$<fanmult>}% with other weapons. Awards 1 combo point.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712188, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 1, 'Speed': 18.0, 'SpellClassMask_2': 262144, 'SpellClassSet': 8, 'SpellLevel': 24, 'SpellVisualID_1': 12317, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
@@ -1884,7 +1921,7 @@ killing_spree_51690 = spell(
         'keeps the stock first line without the removed +damage sentence. Script rebound to '
         'spell_rog_killing_spree_rework.'
     ),
-    raw_overrides={'AttributesEx': 4195328, 'AttributesEx2': 268435456, 'AttributesEx3': 197633, 'AttributesEx5': 512, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Attacking an enemy every $t1 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': f'Finishing move that steps through the shadows from enemy to enemy within {_c(KILLING_SPREE_HOP_RANGE_YD)} yards, attacking with both weapons. Strikes once, plus once per combo point. Can hit the same target multiple times. Cannot hit invisible or stealthed targets. If you have Titan\'s Grip learned, this ability deals 25% less damage.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, **m.class_mask_keys(m.KILLING_SPREE_CLASS_S3), 'SpellClassSet': 8, 'SpellVisualID_1': 12981, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
+    raw_overrides={'AttributesEx': 4195328, 'AttributesEx2': 268435456, 'AttributesEx3': 197633, 'AttributesEx5': 512, 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Attacking an enemy every $t1 sec.', 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': f'Finishing move that steps through the shadows from enemy to enemy within {_c(KILLING_SPREE_HOP_RANGE_YD)} yards, attacking with both weapons for $57841s1% weapon damage. Strikes once, plus once per combo point. Can hit the same target multiple times. Cannot hit invisible or stealthed targets. If you have Titan\'s Grip learned, this ability deals 25% less damage.', 'EffectBonusMultiplier_1': 1.0, 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': 2, 'EquippedItemSubclass': 173555, 'NameSubtext_Lang_Mask': 16712172, 'Name_Lang_Mask': 16712190, 'ProcChance': 101, **m.class_mask_keys(m.KILLING_SPREE_CLASS_S3), 'SpellClassSet': 8, 'SpellVisualID_1': 12981, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1000},
 )
 
 unbind_script(51690, 'spell_rog_killing_spree')
