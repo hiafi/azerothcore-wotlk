@@ -6742,8 +6742,9 @@ cheated_death_200193 = spell(
           'Ardent Defender (Paladin) - HasAura(200193) on any of the three blocks the others. '
           'Hidden, no visible aura icon needed but not attribute-hidden either (PLAN gives no '
           "explicit hide instruction and Discipline's own shared markers stay visible - kept "
-          'consistent).',
-    raw_overrides={'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You cannot be saved from death by Spirit of Redemption, Cheat Death or Ardent Defender.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Cannot be saved from death again.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
+          'consistent). Attributes 0x80000000 (SPELL_ATTR0_NO_AURA_CANCEL, rogue-rework S2a L7): '
+          'right-clicking the marker off would reset the shared lockout.',
+    raw_overrides={'Attributes': 0x80000000, 'Name_Lang_Mask': 16712190, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': '', 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You cannot be saved from death by Spirit of Redemption, Cheat Death or Ardent Defender.', 'AuraDescription_Lang_Mask': 16712190, 'AuraDescription_Lang_enUS': 'Cannot be saved from death again.', 'EquippedItemClass': -1, 'ProcChance': 101, 'SpellPriority': 50, 'EffectChainAmplitude_1': 1.0},
 )
 
 

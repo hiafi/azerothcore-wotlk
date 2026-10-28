@@ -28,6 +28,7 @@ from lib.dsl.registry import (
 )
 
 from . import _masks as m
+from .rogue_assassination import tooltip_vile_poisons_1320
 from .rogue_trigger_spells import (
     anesthetic_poison_26688, crippling_poison_3409, deadly_poison_2818, instant_poison_8680, mind_numbing_poison_5760,
     wound_poison_13218,
@@ -130,7 +131,8 @@ scripted_by(energy_haste_203700, 'spell_rog_energy_haste')
 # =====================================================================================================================
 # The six poison self auras 203701-203706 (shared doc "Poisons" + the six poison entries)
 # =====================================================================================================================
-def _poison_aura(spell_id, name, payload, icon, chance, level, mask_d2, description, aura_description, notes):
+def _poison_aura(spell_id, name, payload, icon, chance, level, mask_d2, description, aura_description, notes,
+                 tooltip=None):
     """One poison self aura: infinite, instant, 133 / 1000 GCD, non-passive buff, procs its payload on melee auto
     attacks and melee / ranged ability hits (spell_proc below); spell_rog_poison rolls the chance and casts the payload."""
     aura = spell(
@@ -139,7 +141,7 @@ def _poison_aura(spell_id, name, payload, icon, chance, level, mask_d2, descript
         mana_cost_pct=0, range_yards=RANGE_SELF, duration_ms=0,
         effects=[Effect(type=EffectType.APPLY_AURA, apply_aura=AuraType.PROC_TRIGGER_SPELL, trigger_spell=payload.id,
                         implicit_target_a=_TARGET_UNIT_CASTER)],
-        spell_icon_id=icon,
+        spell_icon_id=icon, tooltip_vars=tooltip,
         notes='RG0a A1, shared doc "Poisons": ' + notes + f' Trains at {level} (SpellLevel = learn level). Base chance '
               f'{chance}% (RogueData, read by the roll script). Family bit d2 {mask_d2:#x} (handoff C1: the aura '
               'carries the bit the chance mods read, never the payload\'s identity bits). Attributes 0 (not passive: a '
@@ -174,26 +176,26 @@ _COATS = 'Coats your weapons with poison. Each of your hits and attacks has a ch
 # Instant: "[30 potency] Nature damage"; eff0 of 8680 is the damage.
 instant_poison_203701 = _poison_aura(
     203701, 'Instant Poison', instant_poison_8680, _ICON_INSTANT_POISON, 20, 20, m.LETHAL_AURA,
-    _COATS + 'deal ' + pot_text(instant_poison_8680, effect=1) + ' Nature damage to the target. Lasts until cancelled.',
+    _COATS + 'deal ' + pot_text(instant_poison_8680, effect=1, var='vile') + ' Nature damage to the target. Lasts until cancelled.',
     'Your weapons are coated with poison.',
-    'Instant Poison, Lethal slot, procs payload 8680.')
+    'Instant Poison, Lethal slot, procs payload 8680.', tooltip=tooltip_vile_poisons_1320)
 
 # Deadly: "[damage] Nature damage over 12 sec" = the periodic effect's total at the 12 sec duration; eff0 of 2818.
 deadly_poison_203702 = _poison_aura(
     203702, 'Deadly Poison', deadly_poison_2818, _ICON_DEADLY_POISON, 20, 30, m.LETHAL_AURA,
-    _COATS + 'poison the target for ' + pot_text(deadly_poison_2818, effect=1, variant='total')
+    _COATS + 'poison the target for ' + pot_text(deadly_poison_2818, effect=1, variant='total', var='vile')
     + ' Nature damage over $2818d. Stacks up to 5 times.',
     'Your weapons are coated with poison.',
-    'Deadly Poison, Lethal slot, procs payload 2818.')
+    'Deadly Poison, Lethal slot, procs payload 2818.', tooltip=tooltip_vile_poisons_1320)
 
 # Wound: "[10 potency] Nature damage and wound the target for 15 sec, causing your bleeds to deal 20% more damage"; the
 # damage is eff1 of 13218 (DSL effect 2), the 20% is eff0 (aura 271 after A2's rewrite, stored 19).
 wound_poison_203703 = _poison_aura(
     203703, 'Wound Poison', wound_poison_13218, _ICON_WOUND_POISON, 20, 32, m.LETHAL_AURA,
-    _COATS + 'deal ' + pot_text(wound_poison_13218, effect=2) + ' Nature damage and wound the target for $13218d, '
+    _COATS + 'deal ' + pot_text(wound_poison_13218, effect=2, var='vile') + ' Nature damage and wound the target for $13218d, '
     'causing your bleeds to deal $13218s1% more damage to it.',
     'Your weapons are coated with poison.',
-    'Wound Poison, Lethal slot, procs payload 13218.')
+    'Wound Poison, Lethal slot, procs payload 13218.', tooltip=tooltip_vile_poisons_1320)
 
 crippling_poison_203704 = _poison_aura(
     203704, 'Crippling Poison', crippling_poison_3409, _ICON_CRIPPLING_POISON, 30, 20, m.CRIPPLING_AURA,
@@ -543,6 +545,7 @@ shiv_203725 = spell(
     raw_overrides={
         'SpellClassSet': _SPELLFAMILY_ROGUE,
         'SpellClassMask_1': m.SHIV,
+        'SpellClassMask_3': m.DIRECT_BUILDER_GROUP,   # S1 d2 b19
         'EquippedItemClass': _ITEM_CLASS_WEAPON,
         'EquippedItemSubclass': _ANY_MELEE_WEAPON,
         'SpellLevel': _SHIV_LEVEL,

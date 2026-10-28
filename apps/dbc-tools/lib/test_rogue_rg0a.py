@@ -228,8 +228,9 @@ def check_payload_effects(rows: dict[int, dict]) -> list[str]:
     if w is not None:
         if _i(w, "EffectAura_1") != 271 or _i(w, "EffectBasePoints_1") != 19:
             bad.append(f"13218: effect 1 aura/base {w.get('EffectAura_1')}/{w.get('EffectBasePoints_1')}, expected 271/19")
-        if effect_mask(w, 1) != (0x100100, 0, 0):
-            bad.append(f"13218: EffectSpellClassMaskA {_hex(effect_mask(w, 1))}, expected (0x100100, 0x0, 0x0)")
+        # S1 widens the reader by Doomblade's d2 b11 (WOUND_BLEED_READ_S1); the RG0a part (Rupture | Garrote) must stay.
+        if effect_mask(w, 1) not in ((0x100100, 0, 0), (0x100100, 0, 0x800), (0x100100, 0, 0x1800)):   # + S2 d2 b12 (Hemorrhage)
+            bad.append(f"13218: EffectSpellClassMaskA {_hex(effect_mask(w, 1))}, expected (0x100100, 0x0, 0x0 / 0x800 / 0x1800)")
         for i in (1, 2, 3):
             if _i(w, f"EffectAura_{i}") == 118:
                 bad.append(f"13218: effect {i} still carries aura 118")
@@ -251,8 +252,11 @@ def check_envenom_and_levels(rows: dict[int, dict]) -> list[str]:
     if e is not None:
         if _i(e, "SpellLevel") != 42:
             bad.append(f"{ENVENOM}: SpellLevel {e.get('SpellLevel')!r}, expected 42")
-        if _i(e, "Effect_2") != 0 or _i(e, "EffectAura_2") != 0:
-            bad.append(f"{ENVENOM}: effect 2 not empty (Effect {e.get('Effect_2')}, aura {e.get('EffectAura_2')})")
+        # RG0a left effect 2 empty; S1a fills it with the Dashing Scoundrel hook (self aura 107, SpellMod op 7 =
+        # CRITICAL_CHANCE; its mask and base value are asserted in test_rogue_s1.py).
+        if (_i(e, "Effect_2"), _i(e, "EffectAura_2"), _i(e, "EffectMiscValue_2")) != (APPLY_AURA, 107, 7):
+            bad.append(f"{ENVENOM}: effect 2 is not the S1 Dashing Scoundrel hook (APPLY_AURA 107 misc 7): Effect "
+                       f"{e.get('Effect_2')}, aura {e.get('EffectAura_2')}, misc {e.get('EffectMiscValue_2')}")
         if _i(e, "EffectAura_3") != 107 or _i(e, "EffectMiscValue_3") != 18:
             bad.append(f"{ENVENOM}: effect 3 aura/misc {e.get('EffectAura_3')}/{e.get('EffectMiscValue_3')}, expected 107/18")
         mc = effect_mask(e, 3)
@@ -424,7 +428,8 @@ def _good_haste() -> dict:
 
 
 def _good_envenom() -> dict:
-    return {"ID": ENVENOM, "SpellLevel": 42, "Effect_2": 0, "EffectAura_2": 0, "EffectAura_3": 107,
+    return {"ID": ENVENOM, "SpellLevel": 42, "Effect_2": 6, "EffectAura_2": 107, "EffectMiscValue_2": 7,
+            "EffectAura_3": 107,
             "EffectMiscValue_3": 18, "EffectSpellClassMaskC_3": 0x2, "SpellClassMask_2": 0x80008,
             "TargetAuraState": 16}
 
@@ -506,7 +511,8 @@ class RogueRG0aNegativeTest(unittest.TestCase):
         rows = {ENVENOM: _good_envenom(), CLOAK: {"ID": CLOAK, "SpellLevel": 46, "BaseLevel": 46},
                 TRICKS: {"ID": TRICKS, "SpellLevel": 56, "BaseLevel": 56}}
         self.assertEqual(check_envenom_and_levels(rows), [])
-        for col, val in (("SpellLevel", 62), ("Effect_2", 6), ("EffectAura_2", 108), ("EffectAura_3", 108),
+        for col, val in (("SpellLevel", 62), ("Effect_2", 0), ("EffectAura_2", 108), ("EffectMiscValue_2", 12),
+                         ("EffectAura_3", 108),
                          ("EffectMiscValue_3", 26), ("EffectSpellClassMaskC_3", 0x4), ("EffectSpellClassMaskC_1", 0x10000),
                          ("SpellClassMask_2", 0x8), ("TargetAuraState", 0)):
             self.assertGreaterEqual(len(check_envenom_and_levels({**rows, ENVENOM: {**rows[ENVENOM], col: val}})), 1, col)

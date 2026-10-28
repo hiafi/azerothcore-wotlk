@@ -21,6 +21,7 @@ Run: apps/dbc-tools/.venv/bin/python3 -m pytest apps/dbc-tools/lib/test_rogue_rg
 
 from __future__ import annotations
 
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -103,7 +104,7 @@ def expectations(idx: dict) -> tuple[dict, dict, dict]:
             "StartRecoveryTime": 1000, "SpellLevel": 50, "BaseLevel": 50, "RangeIndex": idx["melee"],
             "SpellIconID": 1834, "SpellVisualID_1": 8056, "DurationIndex": inf,
             "Effect_1": 31, "EffectBasePoints_1": 99, "Effect_2": 80, "Effect_3": 0,
-            "SpellClassMask_1": 0x20000000, "SpellClassMask_2": 0, "SpellClassMask_3": 0,
+            "SpellClassMask_1": 0x20000000, "SpellClassMask_2": 0, "SpellClassMask_3": 0x80000,   # S1: d2 b19
         },
         TELEPORT: {
             "Attributes": 0x80, "AttributesEx": 0x420, "StartRecoveryCategory": 0, "StartRecoveryTime": 0,
@@ -367,6 +368,15 @@ def eval_tooltip(expr: str, level: float, ap: float = 0.0, rap: float = 0.0) -> 
     return float(eval(py, {"__builtins__": {}, "max": max}, {"L": level, "AP": ap, "RAP": rap}))  # noqa: S307
 
 
+_SDV_TAIL = re.compile(r"\*\$<\w+>$")
+
+
+def _strip_sdv(expr: str) -> str:
+    """S1a attaches tooltip_vars (SDV 1322 / 1323: Blood Spatter / Seal Fate multipliers) to Rupture and Deadly Throw:
+    `${$max(...)*$<name>}`. The variable is 1 with no talent, so the oracle evaluates the bare `$max(...)`."""
+    return _SDV_TAIL.sub("", expr)
+
+
 def _balanced_single_max(expr: str) -> bool:
     """The client drops a top-level `+` outside every `$max()`: the whole expression is one `$max( ... )` call."""
     if not expr.startswith("$max(") or not expr.endswith(")"):
@@ -405,6 +415,8 @@ def rupture_oracle(level: int, ap: float) -> float:
 def check_tooltips(dt_desc: str, rupture_desc: str) -> list[str]:
     bad = []
     dt, ru = tooltip_expr(dt_desc), tooltip_expr(rupture_desc)
+    dt = _strip_sdv(dt) if dt is not None else None
+    ru = _strip_sdv(ru) if ru is not None else None
     if dt is None:
         bad.append(f"{DT}: no ${{...}} block in the description")
     else:
@@ -750,6 +762,12 @@ class RogueRG0bNegativeTest(unittest.TestCase):
         self.assertGreaterEqual(len(check_tooltips(dt.replace("${$max(", "${5+$max(", 1), ru)), 1)
         self.assertGreaterEqual(len(check_tooltips(dt, ru.replace("1 point: 8 sec, ", ""))), 1)
         self.assertGreaterEqual(len(check_tooltips(dt.replace("$max($max(", "$max($max(garbage", 1), ru)), 1)
+        # S1a: a trailing `*$<var>` talent multiplier is allowed (and only that), on both tooltips
+        mult_dt, mult_ru = dt.replace("}", "*$<seal>}"), ru.replace("} Physical", "*$<mult>} Physical")
+        self.assertEqual(check_tooltips(mult_dt, mult_ru), [])
+        self.assertGreaterEqual(len(check_tooltips(dt.replace("}", "*$<seal>+1}"), ru)), 1)
+        self.assertGreaterEqual(len(check_tooltips(dt.replace("}", "*2}"), ru)), 1)
+        self.assertGreaterEqual(len(check_tooltips(dt, ru.replace("} Physical", "*$<mult>*$<x>} Physical"))), 1)
 
 
 if __name__ == "__main__":
