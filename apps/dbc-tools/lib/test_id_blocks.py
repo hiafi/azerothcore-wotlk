@@ -76,17 +76,26 @@ def scanned_used_ids(scripts: list[Path] | None = None) -> dict[str, list[tuple[
 
 
 ROGUE_VFX_SCRIPT = "patch_rogue_vfx_models.py"
+# The one shared icon script: every class's Ascension SpellIcon rows are minted here (the rogue's 90370-90374 too), so a
+# spellicon constant of this script may sit in the rogue slice.
+ICON_SCRIPT = "build_patch_i.py"
 
 
 def rogue_slice_problems(scanned: dict[str, list[tuple[int, str]]]) -> list[str]:
     """Scanned constants that break the rogue ownership rule: a constant is inside a rogue slice (spellvisual
-    90250-90299, soundentries 90121-90140, spellicon 90370-90419) if and only if the rogue script names it."""
+    90250-90299, soundentries 90121-90140, spellicon 90370-90419) if and only if the rogue script names it (a spellicon
+    constant may also come from the shared icon script, build_patch_i.py)."""
     rogue = RESERVATIONS["rogue"]
     problems = []
     for block, found in scanned.items():
         for value, where in found:
             in_rogue_slice = block in rogue and rogue[block]["start"] <= value <= rogue[block]["end"]
-            if in_rogue_slice != where.startswith(ROGUE_VFX_SCRIPT):
+            from_rogue_script = where.startswith(ROGUE_VFX_SCRIPT)
+            if in_rogue_slice:
+                allowed = from_rogue_script or (block == "spellicon" and where.startswith(ICON_SCRIPT))
+            else:
+                allowed = not from_rogue_script
+            if not allowed:
                 problems.append(f"{where} = {value} ({block})")
     return problems
 

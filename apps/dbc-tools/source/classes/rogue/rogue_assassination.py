@@ -64,15 +64,15 @@ _SV_POISON_BOMB = 90251                     # Ascension 284169 / SV 42787: vial 
 _ICON_QUICK_PACE = 115
 _ICON_DOOMBLADE = 1501
 _ICON_BLINDSIDE = 2126
-_ICON_POISON_BOMB = 355
-_ICON_SHATTERING_VIAL = 359
+_ICON_POISON_BOMB = 90372                 # Ascension inv_ability_poison_nova (build_patch_i.py)
+_ICON_SHATTERING_VIAL = 90370             # Ascension ability_rogue_crimsonvial (build_patch_i.py)
 _ICON_VENOMOUS_FAN = 1528
 _ICON_ZOLDYCK = 1644
 _ICON_CUT_THROAT = 2318
 _ICON_TOXIC_BLADE = 2269
 _ICON_CARNAGE = 2006
 _ICON_DASHING_SCOUNDREL = 2428
-_ICON_KINGSBANE = 1637
+_ICON_KINGSBANE = 90371                   # Ascension inv_ability_rogue_sepsis (build_patch_i.py)
 _ICON_REMORSELESS = 695
 _ICON_OVERKILL = 2285
 _ICON_COLD_BLOOD = 32
@@ -157,8 +157,9 @@ def _grey(text):
 
 
 def _with_cap(text, capstone, last):
-    """`text` plus the capstone sentence: plain on the last rank, grey below it."""
-    return f'{text} {capstone if last else _grey(capstone)}'
+    """`text` plus a blank line and the capstone sentence (house format, `Capstone Bonus: ...`): plain on the last
+    rank, grey below it."""
+    return f'{text}\n\n{capstone if last else _grey(capstone)}'
 
 
 # ---- effect and mask helpers ----
@@ -748,7 +749,7 @@ quick_pace_203802 = _quick_pace(203802, 3)
 # ---- (2,2) Doomblade 60391: DUMMY 15 / 30 (% share); the capstone is r2's presence (Envenom reads 203804) ----
 _DOOMBLADE_TEXT = ('Your Mutilate critical strikes make the target bleed for $s1% of the damage dealt over $203829d. '
                    'A new Doomblade adds its damage to what remains of the old one.')
-_DOOMBLADE_CAP = (f'Capstone: Your Envenom deals {_c(DOOMBLADE_CAPSTONE_PCT_PER_BLEED)}% more damage for each of your '
+_DOOMBLADE_CAP = (f'Capstone Bonus: Your Envenom deals {_c(DOOMBLADE_CAPSTONE_PCT_PER_BLEED)}% more damage for each of your '
                   'bleeds on the target.')
 
 
@@ -784,7 +785,7 @@ shattering_vial_203808 = _rank(
     notes='DUMMY 5 (% per combo point, x Proc Chance); the splash is 203836.')
 
 # ---- (5,2) Venomous Fan 60395: pct DAMAGE +15 / +30 on Fan of Knives; capstone: x2 poison chance (203810) ----
-_VENOMOUS_FAN_CAP = 'Capstone: Your Fan of Knives has double the chance to apply your poisons.'
+_VENOMOUS_FAN_CAP = 'Capstone Bonus: Your Fan of Knives has double the chance to apply your poisons.'
 
 
 def _venomous_fan(spell_id, rank):
@@ -823,7 +824,7 @@ cut_throat_203814 = _cut_throat(203814, 1)
 cut_throat_203815 = _cut_throat(203815, 2)
 
 # ---- (8,0) Toxic Blade 60398: flat EFFECT2 +1 / +2 on Shiv (its index-1 ADD_COMBO_POINTS); capstone casts 203837 ----
-_TOXIC_BLADE_CAP = ('Capstone: For $203837d after your Shiv hits, the target takes $203837s1% more damage from '
+_TOXIC_BLADE_CAP = ('Capstone Bonus: For $203837d after your Shiv hits, the target takes $203837s1% more damage from '
                     'your poisons.')
 
 

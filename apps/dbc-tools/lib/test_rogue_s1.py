@@ -290,7 +290,7 @@ def expectations(idx: dict) -> tuple[dict, dict, dict]:
                 "SpellClassMask_1": 0, "SpellClassMask_2": 0x80000, "SpellClassMask_3": 0x400},
         KB_DOT: {"Effect_1": APPLY_AURA, "EffectAura_1": AURA_PERIODIC_DAMAGE, "EffectAuraPeriod_1": 2000,
                  "DispelType": 4, "CumulativeAura": 0, "ProcTypeMask": 0, "ProcCharges": 0, "SpellLevel": 60,
-                 "BaseLevel": 60, "DurationIndex": idx["d14000"], "EquippedItemClass": -1, "SpellIconID": 1637,
+                 "BaseLevel": 60, "DurationIndex": idx["d14000"], "EquippedItemClass": -1, "SpellIconID": 90371,
                  "SpellClassMask_1": 0, "SpellClassMask_2": 0x80000, "SpellClassMask_3": 0x200},
         # ---- Poison Bomb (R4)
         PB: {"ManaCost": 30, "RecoveryTime": 30000, "StartRecoveryCategory": 133, "StartRecoveryTime": 1000, "Speed": 18,

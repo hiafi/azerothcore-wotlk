@@ -455,15 +455,15 @@ namespace RogueData
     constexpr int32 DEFT_MANEUVERS_MIN_ENEMIES = 3; // Deft Maneuvers: engaged enemies needed [fixed].
     constexpr float DEFT_MANEUVERS_RADIUS_YD = 8.0f; // Deft Maneuvers: count and strike radius (= 203992's), yards [tune].
     constexpr float DFA_APEX_HEIGHT_YD = 8.0f; // Death from Above: apex above the higher end, yards [tune].
-    constexpr int32 DFA_DIVE_MS = 600; // Death from Above: dive leg air time, ms (rise + slow fall + dive about 1.75 s) [tune].
+    constexpr int32 DFA_DIVE_MS = 400; // Death from Above: dive leg air time, ms (rise + slow fall + dive about 1.3 s) [tune].
     constexpr float DFA_DRIFT_DROP_YD = 2.0f; // Death from Above: slow-fall leg drop below the apex, yards [tune].
     constexpr float DFA_DRIFT_FORWARD_YD = 1.0f; // Death from Above: slow-fall leg drift toward the landing point, yards [tune].
-    constexpr int32 DFA_DRIFT_MS = 500; // Death from Above: slow-fall leg air time between the rise and the dive, ms [tune].
+    constexpr int32 DFA_DRIFT_MS = 400; // Death from Above: slow-fall leg air time between the rise and the dive, ms [tune].
     constexpr float DFA_LANDING_PAST_YD = 1.5f; // Death from Above: landing point past the target along rogue -> target, yards [fixed].
     constexpr float DFA_LANDING_RANGE_YD = 8.0f; // Death from Above: the landing hits only a target within this of the landing, yards [fixed].
     constexpr float DFA_MIN_JUMP_YD = 1.5f; // Death from Above: minimum horizontal leg length, yards [fixed].
-    constexpr float DFA_RISE_FRACTION = 0.4f; // Death from Above: apex position along the line to the landing point [tune].
-    constexpr int32 DFA_RISE_MS = 650; // Death from Above: rise leg air time, ms [tune].
+    constexpr float DFA_RISE_FRACTION = 0.5f; // Death from Above: apex position along the line to the landing point [tune].
+    constexpr int32 DFA_RISE_MS = 500; // Death from Above: rise leg air time, ms [tune].
     constexpr float DFA_UNREACHABLE_Z_YD = 5.0f; // Death from Above: landing z vs target z beyond this = unreachable, yards [tune].
     constexpr int32 DOOMBLADE_CAPSTONE_PCT_PER_BLEED = 5; // Doomblade capstone: Envenom +% per own bleed on the target [fixed].
     constexpr int32 DOOMBLADE_TICKS = 4; // Doomblade: stored-bleed tick count (the 2 sec period comes from 203829's data) [fixed].

@@ -97,9 +97,9 @@ _DEFENSE_MELEE = 2                          # DmgClass melee: melee AP, armor, m
 
 # ---- stock icons / visuals (WP-BRIEF section 9) ----
 _ICON_QUICK_REFLEXES = 2224
-_ICON_ACCURACY = 126                        # = Precision, by ruling
+_ICON_ACCURACY = 90373                      # = Precision, by ruling (Ascension ability_rogue_combatexpertise)
 _ICON_BETWEEN_THE_EYES = 538
-_ICON_PISTOL_SHOT = 393
+_ICON_PISTOL_SHOT = 90374                   # Ascension ability_rogue_pistolshot (build_patch_i.py)
 _ICON_REINFORCED_LEATHER = 896
 _ICON_GRAPPLING_HOOK = 3149
 _ICON_QUICK_DRAW = 536
@@ -221,8 +221,9 @@ def _grey(text):
 
 
 def _with_cap(text, capstone, last):
-    """`text` plus the capstone sentence: plain on the last rank, grey below it."""
-    return f'{text} {capstone if last else _grey(capstone)}'
+    """`text` plus a blank line and the capstone sentence (house format, `Capstone Bonus: ...`): plain on the last
+    rank, grey below it."""
+    return f'{text}\n\n{capstone if last else _grey(capstone)}'
 
 
 # ---- effect helpers ----
@@ -686,7 +687,7 @@ restless_blades_203965 = _rank(
 # Strike d2 b21), the capstone is rank 3's presence (the cleave 203993) ----
 _IMPROVED_RIPOSTE_TEXT = ('Increases your Parry chance by $s1% and the threat of your Riposte and Ghostly Strike by '
                           '$s2%.')
-_IMPROVED_RIPOSTE_CAP = (f'Capstone: Your Riposte strikes {_c(IMPROVED_RIPOSTE_EXTRA_TARGETS)} additional nearby '
+_IMPROVED_RIPOSTE_CAP = (f'Capstone Bonus: Your Riposte strikes {_c(IMPROVED_RIPOSTE_EXTRA_TARGETS)} additional nearby '
                          'enemies.')
 
 
@@ -713,7 +714,7 @@ improved_riposte_203968 = _improved_riposte(203968, 3)
 # rank 3's eff1 is the Mastery poll (PERIODIC_DUMMY 1 s: spell_rog_coup_de_grace_mastery rewrites eff0 = 30 +
 # Mastery) ----
 _COUP_DE_GRACE_TEXT = 'Increases the damage of your Eviscerate, Between the Eyes and Killing Spree by $s1%.'
-_COUP_DE_GRACE_CAP = ('Capstone: The damage bonus is increased by your Mastery, and the damage reduction of your En '
+_COUP_DE_GRACE_CAP = ('Capstone Bonus: The damage bonus is increased by your Mastery, and the damage reduction of your En '
                       'Garde is increased by your Mastery.')
 
 
@@ -791,7 +792,7 @@ improved_feint_203979 = _rank(
 # the capstone chance (DUMMY 40 %) ----
 _SURPRISE_TEXT = ('Increases the damage dealt by your Sinister Strike, Pistol Shot, Eviscerate, Between the Eyes, '
                   'Backstab, Ambush and Shiv by $s1%.')
-_SURPRISE_CAP = ('Capstone: When your Sinister Strike strikes an additional time, you have a $203982s2% chance that '
+_SURPRISE_CAP = ('Capstone Bonus: When your Sinister Strike strikes an additional time, you have a $203982s2% chance that '
                  f'your next Pistol Shot fires {_c(SURPRISE_ATTACKS_EXTRA_SHOTS)} additional times.')
 
 

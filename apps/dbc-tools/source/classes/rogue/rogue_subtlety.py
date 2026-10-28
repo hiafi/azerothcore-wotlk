@@ -163,19 +163,20 @@ DFA_MIN_JUMP_YD = const(
 DFA_APEX_HEIGHT_YD = const(
     'DFA_APEX_HEIGHT_YD', 8.0, 'Death from Above: apex above the higher end, yards [tune].')
 DFA_RISE_FRACTION = const(
-    'DFA_RISE_FRACTION', 0.4, 'Death from Above: apex position along the line to the landing point [tune].')
+    'DFA_RISE_FRACTION', 0.5, 'Death from Above: apex position along the line to the landing point [tune].')
 DFA_RISE_MS = const(
-    'DFA_RISE_MS', 650, 'Death from Above: rise leg air time, ms [tune].')
+    'DFA_RISE_MS', 500, 'Death from Above: rise leg air time, ms [tune].')
 DFA_DRIFT_MS = const(
-    'DFA_DRIFT_MS', 500, 'Death from Above: slow-fall leg air time between the rise and the dive, ms [tune].')
+    'DFA_DRIFT_MS', 400, 'Death from Above: slow-fall leg air time between the rise and the dive, ms [tune].')
 DFA_DRIFT_DROP_YD = const(
     'DFA_DRIFT_DROP_YD', 2.0, 'Death from Above: slow-fall leg drop below the apex, yards [tune].')
 DFA_DRIFT_FORWARD_YD = const(
     'DFA_DRIFT_FORWARD_YD', 1.0, 'Death from Above: slow-fall leg drift toward the landing point, yards [tune].')
 DFA_DIVE_MS = const(
-    'DFA_DIVE_MS', 600, 'Death from Above: dive leg air time, ms (rise + slow fall + dive about 1.75 s) [tune].')
-# The flight aura 204171 covers the whole leap with margin: 2 s plus the slow fall.
-DFA_FLIGHT_MS = 2000 + DFA_DRIFT_MS['value']
+    'DFA_DIVE_MS', 400, 'Death from Above: dive leg air time, ms (rise + slow fall + dive about 1.3 s) [tune].')
+# The flight aura 204171 covers the whole leap (about 1.3 s) with wide margin. Held at 2.5 s (the value from when the
+# slow fall was 0.5 s) so the sharper dive changes no spell data.
+DFA_FLIGHT_MS = 2500
 DFA_UNREACHABLE_Z_YD = const(
     'DFA_UNREACHABLE_Z_YD', 5.0, 'Death from Above: landing z vs target z beyond this = unreachable, yards [tune].')
 
@@ -198,8 +199,9 @@ def _grey(text):
 
 
 def _with_cap(text, capstone, last):
-    """`text` plus the capstone sentence: plain on the last rank, grey below it."""
-    return f'{text} {capstone if last else _grey(capstone)}'
+    """`text` plus a blank line and the capstone sentence (house format, `Capstone Bonus: ...`): plain on the last
+    rank, grey below it."""
+    return f'{text}\n\n{capstone if last else _grey(capstone)}'
 
 
 # ---- effect helpers ----
@@ -332,8 +334,8 @@ death_from_above_landing_204170 = spell(
 scripted_by(death_from_above_landing_204170, 'spell_rog_death_from_above_landing')
 
 # 204171: the flight aura. Root immunity + safe fall + pacify (aura 25: no swings, no PreventionType 2 spells; Shadow
-# Dance and Preparation are PreventionType 0 and stay usable in the air), 2 s + DFA_DRIFT_MS (2.5 s: rise 0.65 s +
-# slow fall 0.5 s + dive 0.6 s, with margin), visible "Leaping.". Ex1 0x8000:
+# Dance and Preparation are PreventionType 0 and stay usable in the air), 2.5 s (the leap
+# is rise 0.5 s + slow fall 0.4 s + dive 0.4 s, about 1.3 s, so the margin is wide), visible "Leaping.". Ex1 0x8000:
 # the root immunity purges a root already on the rogue (a rooted rogue may cast Death from Above; S2-CODE-REVIEW L2).
 death_from_above_flight_204171 = _buff(
     204171, 'Death from Above',
@@ -343,7 +345,7 @@ death_from_above_flight_204171 = _buff(
     notes='rogue-rework S2a A3, subtlety doc "Death from Above" (Known-hard 3, R8): the flight aura Rogue::'
           'LaunchDeathFromAbove adds and removes. eff0 aura 77 MECHANIC_IMMUNITY misc 7 (root), eff1 aura 144 SAFE_FALL, '
           'eff2 aura 25 MOD_PACIFY (not 60 PACIFY_SILENCE: casting Shadow Dance is a PreventionType 0 spell), 2.5 s '
-          '(2 s + the slow fall DFA_DRIFT_MS), visible, number-free text, Ex1 0x20 (R19) | 0x8000 IMMUNITY_PURGES_EFFECT (a root already on '
+          '(DFA_FLIGHT_MS; the leap itself is about 1.3 s), visible, number-free text, Ex1 0x20 (R19) | 0x8000 IMMUNITY_PURGES_EFFECT (a root already on '
           'the rogue is purged when the leap starts; S2-CODE-REVIEW L2).',
 )
 
@@ -803,7 +805,7 @@ finality_204141 = _finality(204141, 2)
 
 # ---- (5,1) Executioner 60430: DUMMY 10 / 20 (% below the health threshold); the capstone is r2's presence ----
 _EXECUTIONER_TEXT = f'Your abilities deal $s1% more damage to targets below {_c(EXECUTIONER_HEALTH_PCT)}% health.'
-_EXECUTIONER_CAP = (f'Capstone: Your finishing moves against targets below {_c(EXECUTIONER_HEALTH_PCT)}% health also '
+_EXECUTIONER_CAP = (f'Capstone Bonus: Your finishing moves against targets below {_c(EXECUTIONER_HEALTH_PCT)}% health also '
                     f'reduce the remaining cooldown of Shadow Dance by {_sec(EXECUTIONER_CDR_PER_CP_MS)} sec per combo '
                     'point spent.')
 
@@ -849,7 +851,7 @@ mark_of_the_master_assassin_204147 = _moma(204147, 2)
 # ---- (6,1) Master of Subtlety (fresh ids, 1C.27): DUMMY 4 / 8 / 12 (%); the capstone adds Mastery ----
 _MOS_TEXT = (f'Physical attacks made while Hidden, and for {_sec(MASTER_OF_SUBTLETY_TAIL_MS)} sec after leaving '
              'Stealth, deal $s1% more damage.')
-_MOS_CAP = 'Capstone: This damage bonus is increased by your Mastery.'
+_MOS_CAP = 'Capstone Bonus: This damage bonus is increased by your Mastery.'
 
 
 def _master_of_subtlety(spell_id, rank):

@@ -259,9 +259,9 @@ CONSTS = {   # name -> (value, cpp type), brief section 6
     "MASTER_OF_SUBTLETY_TAIL_MS": (8000, "int32"), "MOMA_TAIL_MS": (3000, "int32"),
     "HONOR_AMONG_THIEVES_ALLY_RANGE_YD": (40.0, "float"), "CHEAT_DEATH_CAP_MAX_HEALTH_PCT": (15, "int32"),
     "DFA_LANDING_RANGE_YD": (8.0, "float"), "DFA_LANDING_PAST_YD": (1.5, "float"), "DFA_MIN_JUMP_YD": (1.5, "float"),
-    "DFA_APEX_HEIGHT_YD": (8.0, "float"), "DFA_RISE_FRACTION": (0.4, "float"), "DFA_RISE_MS": (650, "int32"),
-    "DFA_DIVE_MS": (600, "int32"), "DFA_UNREACHABLE_Z_YD": (5.0, "float"),
-    "DFA_DRIFT_MS": (500, "int32"), "DFA_DRIFT_DROP_YD": (2.0, "float"), "DFA_DRIFT_FORWARD_YD": (1.0, "float"),
+    "DFA_APEX_HEIGHT_YD": (8.0, "float"), "DFA_RISE_FRACTION": (0.5, "float"), "DFA_RISE_MS": (500, "int32"),
+    "DFA_DIVE_MS": (400, "int32"), "DFA_UNREACHABLE_Z_YD": (5.0, "float"),
+    "DFA_DRIFT_MS": (400, "int32"), "DFA_DRIFT_DROP_YD": (2.0, "float"), "DFA_DRIFT_FORWARD_YD": (1.0, "float"),
 }
 
 VISIBLE = (MOS_BUFF, RS_BUFF, LS_BUFF, FIN_EV, FIN_RUP, FIN_DT, HEM_BLEED, MOMA_BUFF, DFA_FLIGHT, HAT_BUFF,

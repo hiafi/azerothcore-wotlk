@@ -28,8 +28,9 @@ def _grey(text):
 
 
 def _with_cap(text, capstone, last):
-    """`text` plus the capstone sentence: plain on the last rank, grey below it."""
-    return f'{text} {capstone if last else _grey(capstone)}'
+    """`text` plus a blank line and the capstone sentence (house format, `Capstone Bonus: ...`): plain on the last
+    rank, grey below it."""
+    return f'{text}\n\n{capstone if last else _grey(capstone)}'
 
 
 def _sinister_calling_text(last):
@@ -37,7 +38,7 @@ def _sinister_calling_text(last):
     potency updates this text too."""
     return _with_cap(
         'Increases your total Agility by $s1%.',
-        'Capstone: Your finishing moves have a ' + _c(SINISTER_CALLING_PCT_PER_CP) + '% chance per combo point spent '
+        'Capstone Bonus: Your finishing moves have a ' + _c(SINISTER_CALLING_PCT_PER_CP) + '% chance per combo point spent '
         'to fling a volley of knives at the target and up to ' + str(int(SINISTER_CALLING_MAX_TARGETS['value']) - 1)
         + ' other nearby enemies, dealing ' + pot_text(sinister_calling_volley_204165)
         + ' Shadowstrike damage to each.', last)
@@ -338,7 +339,7 @@ throwing_specialization_5952 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': _with_cap('Increases the damage of your Deadly Throw and Fan of Knives by $s1%.', f'Capstone: Your Deadly Throw also strikes up to {_c(THROWING_SPEC_EXTRA_TARGETS)} additional enemies near the target.', False),
+        'Description_Lang_enUS': _with_cap('Increases the damage of your Deadly Throw and Fan of Knives by $s1%.', f'Capstone Bonus: Your Deadly Throw also strikes up to {_c(THROWING_SPEC_EXTRA_TARGETS)} additional enemies near the target.', False),
         'EffectChainAmplitude_1': 1.0,
         'EffectChainAmplitude_2': 1.0,
         'EffectChainAmplitude_3': 1.0,
@@ -564,7 +565,7 @@ improved_sprint_13743 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': _with_cap('Increases the duration of Sprint by $/1000;s1 sec.', 'Capstone: Using Sprint removes all slow effects, and while Sprint is active the duration of root effects on you is reduced by $204000s1% and your movement speed can\'t be reduced below $204000s2% of normal.', False),
+        'Description_Lang_enUS': _with_cap('Increases the duration of Sprint by $/1000;s1 sec.', 'Capstone Bonus: Using Sprint removes all slow effects, and while Sprint is active the duration of root effects on you is reduced by $204000s1% and your movement speed can\'t be reduced below $204000s2% of normal.', False),
         'EffectBonusMultiplier_1': 1.0,
         'EffectChainAmplitude_1': 1.0,
         'EquippedItemClass': -1,
@@ -605,7 +606,7 @@ improved_kick_13754 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': _with_cap('Gives your Kick a $h% chance to silence the target for $18425d.', 'Capstone: Your successful interrupts with Kick grant you $203999s1 energy and $203999s2% attack speed for $203999d.', False),
+        'Description_Lang_enUS': _with_cap('Gives your Kick a $h% chance to silence the target for $18425d.', 'Capstone Bonus: Your successful interrupts with Kick grant you $203999s1 energy and $203999s2% attack speed for $203999d.', False),
         'EffectBonusMultiplier_1': 1.0,
         'EffectChainAmplitude_1': 1.0,
         'EquippedItemClass': -1,
@@ -933,7 +934,7 @@ improved_kick_13867 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': _with_cap('Gives your Kick a $h% chance to silence the target for $18425d.', 'Capstone: Your successful interrupts with Kick grant you $203999s1 energy and $203999s2% attack speed for $203999d.', True),
+        'Description_Lang_enUS': _with_cap('Gives your Kick a $h% chance to silence the target for $18425d.', 'Capstone Bonus: Your successful interrupts with Kick grant you $203999s1 energy and $203999s2% attack speed for $203999d.', True),
         'EffectBonusMultiplier_1': 1.0,
         'EffectChainAmplitude_1': 1.0,
         'EquippedItemClass': -1,
@@ -1017,7 +1018,7 @@ improved_sprint_13875 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': _with_cap('Increases the duration of Sprint by $/1000;s1 sec.', 'Capstone: Using Sprint removes all slow effects, and while Sprint is active the duration of root effects on you is reduced by $204000s1% and your movement speed can\'t be reduced below $204000s2% of normal.', True),
+        'Description_Lang_enUS': _with_cap('Increases the duration of Sprint by $/1000;s1 sec.', 'Capstone Bonus: Using Sprint removes all slow effects, and while Sprint is active the duration of root effects on you is reduced by $204000s1% and your movement speed can\'t be reduced below $204000s2% of normal.', True),
         'EffectBonusMultiplier_1': 1.0,
         'EffectChainAmplitude_1': 1.0,
         'EquippedItemClass': -1,
@@ -1659,7 +1660,7 @@ improved_poisons_14113 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': "Increases the chance to apply your Instant, Deadly and Wound Poison by $s1%.\n\n|cFF9D9D9DCapstone: Wound Poison's bleed damage bonus is increased by half of your Mastery.|r",
+        'Description_Lang_enUS': "Increases the chance to apply your Instant, Deadly and Wound Poison by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Wound Poison's bleed damage bonus is increased by half of your Mastery.|r",
         'EffectChainAmplitude_1': 1.0,
         'EffectChainAmplitude_2': 1.0,
         'EffectChainAmplitude_3': 1.0,
@@ -1697,7 +1698,7 @@ improved_poisons_14114 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': "Increases the chance to apply your Instant, Deadly and Wound Poison by $s1%.\n\n|cFF9D9D9DCapstone: Wound Poison's bleed damage bonus is increased by half of your Mastery.|r",
+        'Description_Lang_enUS': "Increases the chance to apply your Instant, Deadly and Wound Poison by $s1%.\n\n|cFF9D9D9DCapstone Bonus: Wound Poison's bleed damage bonus is increased by half of your Mastery.|r",
         'EffectChainAmplitude_1': 1.0,
         'EffectChainAmplitude_2': 1.0,
         'EffectChainAmplitude_3': 1.0,
@@ -1735,7 +1736,7 @@ improved_poisons_14115 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': "Increases the chance to apply your Instant, Deadly and Wound Poison by $s1%.\n\nCapstone: Wound Poison's bleed damage bonus is increased by half of your Mastery.",
+        'Description_Lang_enUS': "Increases the chance to apply your Instant, Deadly and Wound Poison by $s1%.\n\nCapstone Bonus: Wound Poison's bleed damage bonus is increased by half of your Mastery.",
         'EffectChainAmplitude_1': 1.0,
         'EffectChainAmplitude_2': 1.0,
         'EffectChainAmplitude_3': 1.0,
@@ -2596,7 +2597,7 @@ seal_fate_14186 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': 'Your critical strikes from Rogue abilities that add combo points have a $h% chance to add an additional combo point. Increases the damage done by Eviscerate, Rupture and Deadly Throw by $s2%.\n\n|cFF9D9D9DCapstone: Consuming Cold Blood with a finishing move has a 20% chance per combo point to increase your movement speed by $203834s1% for $203834d.|r',
+        'Description_Lang_enUS': 'Your critical strikes from Rogue abilities that add combo points have a $h% chance to add an additional combo point. Increases the damage done by Eviscerate, Rupture and Deadly Throw by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Consuming Cold Blood with a finishing move has a 20% chance per combo point to increase your movement speed by $203834s1% for $203834d.|r',
         'EffectChainAmplitude_1': 1.0,
         'EffectChainAmplitude_2': 1.0,
         'EffectChainAmplitude_3': 1.0,
@@ -2641,7 +2642,7 @@ seal_fate_14190 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': 'Your critical strikes from Rogue abilities that add combo points have a $h% chance to add an additional combo point. Increases the damage done by Eviscerate, Rupture and Deadly Throw by $s2%.\n\n|cFF9D9D9DCapstone: Consuming Cold Blood with a finishing move has a 20% chance per combo point to increase your movement speed by $203834s1% for $203834d.|r',
+        'Description_Lang_enUS': 'Your critical strikes from Rogue abilities that add combo points have a $h% chance to add an additional combo point. Increases the damage done by Eviscerate, Rupture and Deadly Throw by $s2%.\n\n|cFF9D9D9DCapstone Bonus: Consuming Cold Blood with a finishing move has a 20% chance per combo point to increase your movement speed by $203834s1% for $203834d.|r',
         'EffectChainAmplitude_1': 1.0,
         'EffectChainAmplitude_2': 1.0,
         'EffectChainAmplitude_3': 1.0,
@@ -2686,7 +2687,7 @@ seal_fate_14193 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': 'Your critical strikes from Rogue abilities that add combo points have a $h% chance to add an additional combo point. Increases the damage done by Eviscerate, Rupture and Deadly Throw by $s2%.\n\nCapstone: Consuming Cold Blood with a finishing move has a 20% chance per combo point to increase your movement speed by $203834s1% for $203834d.',
+        'Description_Lang_enUS': 'Your critical strikes from Rogue abilities that add combo points have a $h% chance to add an additional combo point. Increases the damage done by Eviscerate, Rupture and Deadly Throw by $s2%.\n\nCapstone Bonus: Consuming Cold Blood with a finishing move has a 20% chance per combo point to increase your movement speed by $203834s1% for $203834d.',
         'EffectChainAmplitude_1': 1.0,
         'EffectChainAmplitude_2': 1.0,
         'EffectChainAmplitude_3': 1.0,
@@ -2810,7 +2811,7 @@ vile_poisons_16513 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': 'Increases the damage dealt by your Rogue poisons and Envenom ability by $s1%. Increases the effectiveness of your Mind-Numbing Poison by $s3%. Increases the duration of your Wound Poison by $/1000;203844s1 sec.\n\n|cFF9D9D9DCapstone: The poison and Envenom damage bonus is increased by your Mastery.|r',
+        'Description_Lang_enUS': 'Increases the damage dealt by your Rogue poisons and Envenom ability by $s1%. Increases the effectiveness of your Mind-Numbing Poison by $s3%. Increases the duration of your Wound Poison by $/1000;203844s1 sec.\n\n|cFF9D9D9DCapstone Bonus: The poison and Envenom damage bonus is increased by your Mastery.|r',
         'EffectChainAmplitude_1': 1.0,
         'EffectChainAmplitude_2': 1.0,
         'EffectChainAmplitude_3': 1.0,
@@ -2852,7 +2853,7 @@ vile_poisons_16514 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': 'Increases the damage dealt by your Rogue poisons and Envenom ability by $s1%. Increases the effectiveness of your Mind-Numbing Poison by $s3%. Increases the duration of your Wound Poison by $/1000;203845s1 sec.\n\n|cFF9D9D9DCapstone: The poison and Envenom damage bonus is increased by your Mastery.|r',
+        'Description_Lang_enUS': 'Increases the damage dealt by your Rogue poisons and Envenom ability by $s1%. Increases the effectiveness of your Mind-Numbing Poison by $s3%. Increases the duration of your Wound Poison by $/1000;203845s1 sec.\n\n|cFF9D9D9DCapstone Bonus: The poison and Envenom damage bonus is increased by your Mastery.|r',
         'EffectChainAmplitude_1': 1.0,
         'EffectChainAmplitude_2': 1.0,
         'EffectChainAmplitude_3': 1.0,
@@ -2894,7 +2895,7 @@ vile_poisons_16515 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': 'Increases the damage dealt by your Rogue poisons and Envenom ability by $s1%. Increases the effectiveness of your Mind-Numbing Poison by $s3%. Increases the duration of your Wound Poison by $/1000;203846s1 sec.\n\nCapstone: The poison and Envenom damage bonus is increased by your Mastery.',
+        'Description_Lang_enUS': 'Increases the damage dealt by your Rogue poisons and Envenom ability by $s1%. Increases the effectiveness of your Mind-Numbing Poison by $s3%. Increases the duration of your Wound Poison by $/1000;203846s1 sec.\n\nCapstone Bonus: The poison and Envenom damage bonus is increased by your Mastery.',
         'EffectChainAmplitude_1': 1.0,
         'EffectChainAmplitude_2': 1.0,
         'EffectChainAmplitude_3': 1.0,
@@ -3374,7 +3375,7 @@ master_poisoner_31226 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': 'Increases the critical strike chance of all spells and attacks made against any target you have poisoned by $s1%, reduces the duration of all Poison effects applied to you by $s2%, and gives Envenom a $s3% chance not to consume Deadly Poison. Does not stack with other similar effects.\n\n|cFF9D9D9DCapstone: You may have two Lethal poisons active at once.|r',
+        'Description_Lang_enUS': 'Increases the critical strike chance of all spells and attacks made against any target you have poisoned by $s1%, reduces the duration of all Poison effects applied to you by $s2%, and gives Envenom a $s3% chance not to consume Deadly Poison. Does not stack with other similar effects.\n\n|cFF9D9D9DCapstone Bonus: You may have two Lethal poisons active at once.|r',
         'EffectBasePoints_3': 32,
         'EffectChainAmplitude_1': 1.0,
         'EffectChainAmplitude_2': 1.0,
@@ -3419,7 +3420,7 @@ master_poisoner_31227 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': 'Increases the critical strike chance of all spells and attacks made against any target you have poisoned by $s1%, reduces the duration of all Poison effects applied to you by $s2%, and gives Envenom a $s3% chance not to consume Deadly Poison. Does not stack with other similar effects.\n\n|cFF9D9D9DCapstone: You may have two Lethal poisons active at once.|r',
+        'Description_Lang_enUS': 'Increases the critical strike chance of all spells and attacks made against any target you have poisoned by $s1%, reduces the duration of all Poison effects applied to you by $s2%, and gives Envenom a $s3% chance not to consume Deadly Poison. Does not stack with other similar effects.\n\n|cFF9D9D9DCapstone Bonus: You may have two Lethal poisons active at once.|r',
         'EffectBasePoints_3': 65,
         'EffectChainAmplitude_1': 1.0,
         'EffectChainAmplitude_2': 1.0,
@@ -3474,7 +3475,7 @@ cheat_death_31228 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': _with_cap('You have a $s1% chance to absorb an attack that would otherwise kill you, as long as it is no larger than your current health plus ' + _c(CHEAT_DEATH_CAP_MAX_HEALTH_PCT) + '% of your maximum health, and all damage you take is reduced by $45182s1% for $45182d. Shares a 2 min cooldown with Ardent Defender and Spirit of Redemption.', 'Capstone: Cheating death also resets your Vanish.', False),
+        'Description_Lang_enUS': _with_cap('You have a $s1% chance to absorb an attack that would otherwise kill you, as long as it is no larger than your current health plus ' + _c(CHEAT_DEATH_CAP_MAX_HEALTH_PCT) + '% of your maximum health, and all damage you take is reduced by $45182s1% for $45182d. Shares a 2 min cooldown with Ardent Defender and Spirit of Redemption.', 'Capstone Bonus: Cheating death also resets your Vanish.', False),
         'EffectChainAmplitude_1': 1.0,
         'EffectChainAmplitude_2': 1.0,
         'EffectChainAmplitude_3': 1.0,
@@ -3521,7 +3522,7 @@ cheat_death_31229 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': _with_cap('You have a $s1% chance to absorb an attack that would otherwise kill you, as long as it is no larger than your current health plus ' + _c(CHEAT_DEATH_CAP_MAX_HEALTH_PCT) + '% of your maximum health, and all damage you take is reduced by $45182s1% for $45182d. Shares a 2 min cooldown with Ardent Defender and Spirit of Redemption.', 'Capstone: Cheating death also resets your Vanish.', False),
+        'Description_Lang_enUS': _with_cap('You have a $s1% chance to absorb an attack that would otherwise kill you, as long as it is no larger than your current health plus ' + _c(CHEAT_DEATH_CAP_MAX_HEALTH_PCT) + '% of your maximum health, and all damage you take is reduced by $45182s1% for $45182d. Shares a 2 min cooldown with Ardent Defender and Spirit of Redemption.', 'Capstone Bonus: Cheating death also resets your Vanish.', False),
         'EffectChainAmplitude_1': 1.0,
         'EffectChainAmplitude_2': 1.0,
         'EffectChainAmplitude_3': 1.0,
@@ -3568,7 +3569,7 @@ cheat_death_31230 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': _with_cap('You have a $s1% chance to absorb an attack that would otherwise kill you, as long as it is no larger than your current health plus ' + _c(CHEAT_DEATH_CAP_MAX_HEALTH_PCT) + '% of your maximum health, and all damage you take is reduced by $45182s1% for $45182d. Shares a 2 min cooldown with Ardent Defender and Spirit of Redemption.', 'Capstone: Cheating death also resets your Vanish.', True),
+        'Description_Lang_enUS': _with_cap('You have a $s1% chance to absorb an attack that would otherwise kill you, as long as it is no larger than your current health plus ' + _c(CHEAT_DEATH_CAP_MAX_HEALTH_PCT) + '% of your maximum health, and all damage you take is reduced by $45182s1% for $45182d. Shares a 2 min cooldown with Ardent Defender and Spirit of Redemption.', 'Capstone Bonus: Cheating death also resets your Vanish.', True),
         'EffectChainAmplitude_1': 1.0,
         'EffectChainAmplitude_2': 1.0,
         'EffectChainAmplitude_3': 1.0,
@@ -3865,7 +3866,7 @@ surprise_attacks_32601 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': _with_cap('Increases the damage dealt by your Sinister Strike, Pistol Shot, Eviscerate, Between the Eyes, Backstab, Ambush and Shiv by $s1%.', 'Capstone: When your Sinister Strike strikes an additional time, you have a $203982s2% chance that your next Pistol Shot fires ' + _c(SURPRISE_ATTACKS_EXTRA_SHOTS) + ' additional times.', False),
+        'Description_Lang_enUS': _with_cap('Increases the damage dealt by your Sinister Strike, Pistol Shot, Eviscerate, Between the Eyes, Backstab, Ambush and Shiv by $s1%.', 'Capstone Bonus: When your Sinister Strike strikes an additional time, you have a $203982s2% chance that your next Pistol Shot fires ' + _c(SURPRISE_ATTACKS_EXTRA_SHOTS) + ' additional times.', False),
         'EffectBonusMultiplier_1': 1.0,
         'EffectChainAmplitude_1': 1.0,
         'EffectChainAmplitude_2': 1.0,
@@ -4230,7 +4231,7 @@ throwing_specialization_51679 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': _with_cap('Increases the damage of your Deadly Throw and Fan of Knives by $s1%.', f'Capstone: Your Deadly Throw also strikes up to {_c(THROWING_SPEC_EXTRA_TARGETS)} additional enemies near the target.', True),
+        'Description_Lang_enUS': _with_cap('Increases the damage of your Deadly Throw and Fan of Knives by $s1%.', f'Capstone Bonus: Your Deadly Throw also strikes up to {_c(THROWING_SPEC_EXTRA_TARGETS)} additional enemies near the target.', True),
         'EffectChainAmplitude_1': 1.0,
         'EffectChainAmplitude_2': 1.0,
         'EffectChainAmplitude_3': 1.0,
@@ -4314,7 +4315,7 @@ waylay_51692 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': _with_cap('Increases the damage of your Ambush by $s1%.', 'Capstone: Your Ambush unbalances the target, increasing the time between its melee and ranged attacks by $51693s1% and reducing its movement speed by $51693s2% for $51693d.', False),
+        'Description_Lang_enUS': _with_cap('Increases the damage of your Ambush by $s1%.', 'Capstone Bonus: Your Ambush unbalances the target, increasing the time between its melee and ranged attacks by $51693s1% and reducing its movement speed by $51693s2% for $51693d.', False),
         'EffectBasePoints_2': 0,
         'EffectChainAmplitude_1': 1.0,
         'EffectChainAmplitude_2': 1.0,
@@ -4359,7 +4360,7 @@ waylay_51696 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': _with_cap('Increases the damage of your Ambush by $s1%.', 'Capstone: Your Ambush unbalances the target, increasing the time between its melee and ranged attacks by $51693s1% and reducing its movement speed by $51693s2% for $51693d.', True),
+        'Description_Lang_enUS': _with_cap('Increases the damage of your Ambush by $s1%.', 'Capstone Bonus: Your Ambush unbalances the target, increasing the time between its melee and ranged attacks by $51693s1% and reducing its movement speed by $51693s2% for $51693d.', True),
         'EffectChainAmplitude_1': 1.0,
         'EffectChainAmplitude_2': 1.0,
         'EffectChainAmplitude_3': 1.0,
@@ -4574,7 +4575,7 @@ master_poisoner_58410 = spell(
         'AuraDescription_Lang_Mask': 16712188,
         'CastingTimeIndex': 1,
         'Description_Lang_Mask': 16712190,
-        'Description_Lang_enUS': 'Increases the critical strike chance of all spells and attacks made against any target you have poisoned by $s1%, reduces the duration of all Poison effects applied to you by $s2%, and gives Envenom a $s3% chance not to consume Deadly Poison. Does not stack with other similar effects.\n\nCapstone: You may have two Lethal poisons active at once.',
+        'Description_Lang_enUS': 'Increases the critical strike chance of all spells and attacks made against any target you have poisoned by $s1%, reduces the duration of all Poison effects applied to you by $s2%, and gives Envenom a $s3% chance not to consume Deadly Poison. Does not stack with other similar effects.\n\nCapstone Bonus: You may have two Lethal poisons active at once.',
         'EffectBasePoints_3': 99,
         'EffectChainAmplitude_1': 1.0,
         'EffectChainAmplitude_2': 1.0,
@@ -5052,7 +5053,7 @@ remorseless_attacks_14144 = spell(
         'Name_Lang_Mask': 16712190,
         'NameSubtext_Lang_enUS': 'Rank 1',
         'NameSubtext_Lang_Mask': 16712190,
-        'Description_Lang_enUS': 'When an enemy afflicted by one of your bleeds dies, your next Sinister Strike, Backstab, Mutilate, Ambush, or Ghostly Strike has a $s1% increased critical strike chance. Lasts $203838d.\n\n|cFF9D9D9DCapstone: Triggering Remorseless Attacks also increases your poison damage by $203839s1% for $203839d.|r',
+        'Description_Lang_enUS': 'When an enemy afflicted by one of your bleeds dies, your next Sinister Strike, Backstab, Mutilate, Ambush, or Ghostly Strike has a $s1% increased critical strike chance. Lasts $203838d.\n\n|cFF9D9D9DCapstone Bonus: Triggering Remorseless Attacks also increases your poison damage by $203839s1% for $203839d.|r',
         'Description_Lang_Mask': 16712190,
         'AuraDescription_Lang_Mask': 16712188,
         'EffectChainAmplitude_1': 1.0,
@@ -5088,7 +5089,7 @@ remorseless_attacks_14148 = spell(
         'Name_Lang_Mask': 16712190,
         'NameSubtext_Lang_enUS': 'Rank 2',
         'NameSubtext_Lang_Mask': 16712190,
-        'Description_Lang_enUS': 'When an enemy afflicted by one of your bleeds dies, your next Sinister Strike, Backstab, Mutilate, Ambush, or Ghostly Strike has a $s1% increased critical strike chance. Lasts $203838d.\n\nCapstone: Triggering Remorseless Attacks also increases your poison damage by $203839s1% for $203839d.',
+        'Description_Lang_enUS': 'When an enemy afflicted by one of your bleeds dies, your next Sinister Strike, Backstab, Mutilate, Ambush, or Ghostly Strike has a $s1% increased critical strike chance. Lasts $203838d.\n\nCapstone Bonus: Triggering Remorseless Attacks also increases your poison damage by $203839s1% for $203839d.',
         'Description_Lang_Mask': 16712190,
         'AuraDescription_Lang_Mask': 16712188,
         'EffectChainAmplitude_1': 1.0,
@@ -5397,7 +5398,7 @@ heightened_senses_30894 = spell(
         'Name_Lang_Mask': 16712190,
         'NameSubtext_Lang_enUS': 'Rank 1',
         'NameSubtext_Lang_Mask': 16712190,
-        'Description_Lang_enUS': _with_cap('Increases your critical strike chance by $s1%.', 'Capstone: Your Stealth detection is increased.', False),
+        'Description_Lang_enUS': _with_cap('Increases your critical strike chance by $s1%.', 'Capstone Bonus: Your Stealth detection is increased.', False),
         'Description_Lang_Mask': 16712190,
         'AuraDescription_Lang_Mask': 16712188,
         'EffectChainAmplitude_1': 1.0,
@@ -5437,7 +5438,7 @@ heightened_senses_30895 = spell(
         'Name_Lang_Mask': 16712190,
         'NameSubtext_Lang_enUS': 'Rank 2',
         'NameSubtext_Lang_Mask': 16712190,
-        'Description_Lang_enUS': _with_cap('Increases your critical strike chance by $s1%.', 'Capstone: Your Stealth detection is increased.', True),
+        'Description_Lang_enUS': _with_cap('Increases your critical strike chance by $s1%.', 'Capstone Bonus: Your Stealth detection is increased.', True),
         'Description_Lang_Mask': 16712190,
         'AuraDescription_Lang_Mask': 16712188,
         'EffectChainAmplitude_1': 1.0,
@@ -5720,7 +5721,7 @@ honor_among_thieves_51698 = spell(
         'Name_Lang_Mask': 16712190,
         'NameSubtext_Lang_enUS': 'Rank 1',
         'NameSubtext_Lang_Mask': 16712190,
-        'Description_Lang_enUS': _with_cap('Increases your critical strike chance by $s1%.', 'Capstone: When one of your finishing moves critically strikes, you and one nearby ally deal $204172s1% more damage for $204172d.', False),
+        'Description_Lang_enUS': _with_cap('Increases your critical strike chance by $s1%.', 'Capstone Bonus: When one of your finishing moves critically strikes, you and one nearby ally deal $204172s1% more damage for $204172d.', False),
         'Description_Lang_Mask': 16712190,
         'AuraDescription_Lang_Mask': 16712188,
         'EffectChainAmplitude_1': 1.0,
@@ -5768,7 +5769,7 @@ honor_among_thieves_51700 = spell(
         'Name_Lang_Mask': 16712190,
         'NameSubtext_Lang_enUS': 'Rank 2',
         'NameSubtext_Lang_Mask': 16712190,
-        'Description_Lang_enUS': _with_cap('Increases your critical strike chance by $s1%.', 'Capstone: When one of your finishing moves critically strikes, you and one nearby ally deal $204172s1% more damage for $204172d.', False),
+        'Description_Lang_enUS': _with_cap('Increases your critical strike chance by $s1%.', 'Capstone Bonus: When one of your finishing moves critically strikes, you and one nearby ally deal $204172s1% more damage for $204172d.', False),
         'Description_Lang_Mask': 16712190,
         'AuraDescription_Lang_Mask': 16712188,
         'EffectChainAmplitude_1': 1.0,
@@ -5816,7 +5817,7 @@ honor_among_thieves_51701 = spell(
         'Name_Lang_Mask': 16712190,
         'NameSubtext_Lang_enUS': 'Rank 3',
         'NameSubtext_Lang_Mask': 16712190,
-        'Description_Lang_enUS': _with_cap('Increases your critical strike chance by $s1%.', 'Capstone: When one of your finishing moves critically strikes, you and one nearby ally deal $204172s1% more damage for $204172d.', True),
+        'Description_Lang_enUS': _with_cap('Increases your critical strike chance by $s1%.', 'Capstone Bonus: When one of your finishing moves critically strikes, you and one nearby ally deal $204172s1% more damage for $204172d.', True),
         'Description_Lang_Mask': 16712190,
         'AuraDescription_Lang_Mask': 16712188,
         'EffectChainAmplitude_1': 1.0,
@@ -5928,7 +5929,7 @@ precision_13705 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=0, implicit_target_a=1, apply_aura=290),
     ],
-    spell_icon_id=126,
+    spell_icon_id=90373,  # Ascension ability_rogue_combatexpertise (build_patch_i.py)
     notes=(
         'rogue-rework S3a A2, Combat doc "Precision": eff0 aura 290 MOD_CRIT_PCT +1; the stock hit auras (54 / 55) are gone; weapon requirement dropped (R7).'
     ),
@@ -5968,7 +5969,7 @@ precision_13832 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=1, implicit_target_a=1, apply_aura=290),
     ],
-    spell_icon_id=126,
+    spell_icon_id=90373,  # Ascension ability_rogue_combatexpertise (build_patch_i.py)
     notes=(
         'rogue-rework S3a A2, Combat doc "Precision": eff0 aura 290 MOD_CRIT_PCT +2; the stock hit auras (54 / 55) are gone; weapon requirement dropped (R7).'
     ),
@@ -6008,7 +6009,7 @@ precision_13843 = spell(
     effects=[
         Effect(type=EffectType.APPLY_AURA, base_points=2, implicit_target_a=1, apply_aura=290),
     ],
-    spell_icon_id=126,
+    spell_icon_id=90373,  # Ascension ability_rogue_combatexpertise (build_patch_i.py)
     notes=(
         'rogue-rework S3a A2, Combat doc "Precision": eff0 aura 290 MOD_CRIT_PCT +3; the stock hit auras (54 / 55) are gone; weapon requirement dropped (R7).'
     ),

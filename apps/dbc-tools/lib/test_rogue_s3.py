@@ -386,7 +386,7 @@ def expectations(idx: dict) -> tuple[dict, dict, dict]:
         PS: {"Effect_1": SCHOOL_DAMAGE, "Effect_2": ADD_COMBO, "SchoolMask": 1, "ManaCost": 30, "RangeIndex": RANGE_20,
              "Speed": 0, "DefenseType": 2, "EquippedItemClass": -1, "FacingCasterFlags": 1,
              "StartRecoveryCategory": 133, "StartRecoveryTime": 1000, "SpellLevel": 20, "SpellVisualID_1": 90252,
-             "SpellIconID": 393, "ImplicitTargetA_1": 6},
+             "SpellIconID": 90374, "ImplicitTargetA_1": 6},
         BTE: {"Effect_1": SCHOOL_DAMAGE, "Attributes": 327696, "AttributesEx": 0x100200, "PreventionType": 2,
               "SchoolMask": 1, "ManaCost": 35, "RangeIndex": RANGE_20, "Speed": 0, "DefenseType": 2,
               "EquippedItemClass": -1, "StartRecoveryCategory": 133, "StartRecoveryTime": 1000, "SpellLevel": 20,
