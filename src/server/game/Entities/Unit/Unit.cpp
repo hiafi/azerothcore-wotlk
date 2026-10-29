@@ -1130,7 +1130,8 @@ uint32 Unit::DealDamage(Unit* attacker, Unit* victim, uint32 damage, CleanDamage
             case BASE_ATTACK:
             case OFF_ATTACK:
                 {
-                    weaponSpeedHitFactor = attacker->GetRageWeaponSpeedHitFactor(cleanDamage->attackType);
+                    // Custom: warrior-rework W0a - player rage speed factor (no hook sees rage; see WarriorMechanics.h)
+                    weaponSpeedHitFactor = Warrior::RageSpeedFactor(attacker, cleanDamage->attackType);
                     if (cleanDamage->hitOutCome == MELEE_HIT_CRIT)
                         weaponSpeedHitFactor *= 2;
 
@@ -2158,7 +2159,8 @@ void Unit::DealMeleeDamage(CalcDamageInfo* damageInfo, bool durabilityLoss)
             case BASE_ATTACK:
             case OFF_ATTACK:
             {
-                uint32 weaponSpeedHitFactor = GetRageWeaponSpeedHitFactor(damageInfo->attackType);
+                // Custom: warrior-rework W0a - player rage speed factor (no hook sees rage; see WarriorMechanics.h)
+                uint32 weaponSpeedHitFactor = Warrior::RageSpeedFactor(this, damageInfo->attackType);
                 RewardRage(damageInfo->cleanDamage, weaponSpeedHitFactor, true);
                 break;
             }
@@ -15808,6 +15810,10 @@ void Unit::UpdateHeight(float newZ)
 
 void Unit::RewardRage(uint32 damage, uint32 weaponSpeedHitFactor, bool attacker)
 {
+    // Custom: warrior-rework W0a - dampened player rage dealt (no hook sees rage; see WarriorMechanics.h)
+    if (Warrior::RewardRage(this, damage, weaponSpeedHitFactor, attacker))
+        return;
+
     // Rage formulae https://wowwiki-archive.fandom.com/wiki/Rage#Formulae
     float addRage;
 
