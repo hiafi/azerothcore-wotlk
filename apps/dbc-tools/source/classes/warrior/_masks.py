@@ -29,8 +29,7 @@ DAMAGING_ABILITY_GROUP = 0x8             # d2 b3 (R1: the warrior damaging-abili
 #   d2 b5 (0x20)  Avatar
 #   d2 b6 (0x40)  Skull Banner
 #   d2 b7 (0x80)  the rage-cost group
-# d2 b8-b27 are spare. d2 b28-b30 look spare too but the P0 spike carries them (warrior_p0_spike.py) until W0a deletes
-# it: the spike's bits are not free before that, so nothing here names them.
+# d2 b8-b30 are spare (W0a deleted the P0 spike that held b28-b30); nothing here names them yet. Never d2 b31.
 
 # --- "never take" bits (FAMILY-BITS section 3.3; lib/lint.py WARRIOR_FAMILY_RULES bans them on custom carriers) ---
 # d0 b0, b1, b17, b24: Charge's bit (and its readers: Improved Charge, Glyph of Charge, Juggernaut's proc row), the DR

@@ -58,6 +58,7 @@ def warrior_package():
             WARRIOR_DIR, ids_cfg=ids_cfg, trainer_index=trainer_state.load_trainer_index(),
             existing_group_ids={key[0] for key in spell_table_index.live_keys("spell_group")},
             shapeshift_index=state.load_stock_rows(dbcfmt.SPELLSHAPESHIFTFORM),
+            live_data=spell_tables.load_dsl_live_data(),  # W0a: warrior_shared.py overrides a live SLA row
         )
     return _CACHE["reg"]
 

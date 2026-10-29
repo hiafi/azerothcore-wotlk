@@ -7,6 +7,8 @@ Split from a single source/classes/warrior.py via split_class_file.py (.agents/p
 from lib.dsl import AuraType, Effect, EffectType, PowerType, School
 from lib.dsl.registry import procs_on, spell
 
+from .warrior_shared import RAGE_STANCE_MASTERY_POINTS
+
 
 defiance_12303 = spell(
     id=12303,
@@ -84,11 +86,15 @@ stance_mastery_12678 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=AuraType.DUMMY),
+        # W0a A2 (D10): the stance-swap clamp (SpellAuraEffects.cpp, icon 139) keeps (base points + 1) * 10 rage, so
+        # 149 keeps 1,500, above any max rage (Endless Rage's 120). Value from warrior_shared's const (A4's test pins it).
+        Effect(type=EffectType.APPLY_AURA, base_points=RAGE_STANCE_MASTERY_POINTS['value'], implicit_target_a=1,
+               apply_aura=AuraType.DUMMY),
     ],
     spell_icon_id=139,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You retain up to $s1 of your rage points when you change stances.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Passive', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 20, 'SpellPriority': 50},
+    notes='pulled from existing data; W0a A2 (D10): base points 9 -> 149, tooltip from the shared doc, visible passive '
+          '(Attributes 0x50, no hidden bit), auto-learned by the SkillLineAbility override in warrior_shared.py',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'You keep all of your rage when you change stances.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectSpellClassMaskA_1': 8388608, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Passive', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 20, 'SpellPriority': 50},
 )
 
 
@@ -206,7 +212,7 @@ victory_rush_34428 = spell(
         'ap_potency formula instead of a hard-coded percent multiply; the ApplyPct(damage, AP) line '
         'is now gated behind SpellPotency::HasRow() (SpellEffects.cpp).'
     ),
-    raw_overrides={'AttributesEx': 134218240, 'AttributesEx4': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 6, 'CasterAuraState': 10, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly attack the target causing {pot1} damage.  Can only be used within $32216d after you kill an enemy that yields experience or honor.  Damage is based on your attack power.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 327680, 'SpellClassMask_2': 256, 'SpellClassSet': 4, 'SpellLevel': 6, 'SpellPriority': 50, 'SpellVisualID_1': 372, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
+    raw_overrides={'AttributesEx': 134218240, 'AttributesEx4': 512, 'AuraDescription_Lang_Mask': 16712188, 'BaseLevel': 6, 'CasterAuraState': 10, 'CastingTimeIndex': 1, 'DefenseType': 2, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Instantly attack the target causing {pot1} damage.  Can only be used within $32216d after you kill an enemy that yields experience or honor.  Damage is based on your attack power.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EquippedItemClass': -1, 'FacingCasterFlags': 1, 'NameSubtext_Lang_Mask': 16712190, 'Name_Lang_Mask': 16712190, 'PreventionType': 2, 'ProcChance': 101, 'RangeIndex': 2, 'ShapeshiftMask': 0, 'SpellClassMask_2': 256, 'SpellClassSet': 4, 'SpellLevel': 6, 'SpellPriority': 50, 'SpellVisualID_1': 372, 'StartRecoveryCategory': 133, 'StartRecoveryTime': 1500},
 )
 
 
@@ -608,11 +614,11 @@ improved_cleave_12329 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=39, implicit_target_a=1, apply_aura=108, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=4, implicit_target_a=1, apply_aura=108, misc_value=0),
     ],
     spell_icon_id=277,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the bonus damage done by your Cleave ability by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 4194304, 'EffectSpellClassMaskA_1': 4194304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='pulled from existing data; W0a: SPELLMOD_DAMAGE 5/10/15% total Cleave damage (Fury Q17, PLAN 1E)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Cleave ability by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 4194304, 'EffectSpellClassMaskA_1': 4194304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 1', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1262,11 +1268,11 @@ improved_cleave_12950 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=79, implicit_target_a=1, apply_aura=108, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=9, implicit_target_a=1, apply_aura=108, misc_value=0),
     ],
     spell_icon_id=277,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the bonus damage done by your Cleave ability by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 4194304, 'EffectSpellClassMaskA_1': 4194304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='pulled from existing data; W0a: SPELLMOD_DAMAGE 5/10/15% total Cleave damage (Fury Q17, PLAN 1E)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Cleave ability by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 4194304, 'EffectSpellClassMaskA_1': 4194304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 2', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
@@ -1365,11 +1371,11 @@ improved_cleave_20496 = spell(
     range_yards=0.0,
     duration_ms=-1,
     effects=[
-        Effect(type=EffectType.APPLY_AURA, base_points=119, implicit_target_a=1, apply_aura=108, misc_value=8),
+        Effect(type=EffectType.APPLY_AURA, base_points=14, implicit_target_a=1, apply_aura=108, misc_value=0),
     ],
     spell_icon_id=277,
-    notes='pulled from existing data',
-    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the bonus damage done by your Cleave ability by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 4194304, 'EffectSpellClassMaskA_1': 4194304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
+    notes='pulled from existing data; W0a: SPELLMOD_DAMAGE 5/10/15% total Cleave damage (Fury Q17, PLAN 1E)',
+    raw_overrides={'AuraDescription_Lang_Mask': 16712188, 'CastingTimeIndex': 1, 'Description_Lang_Mask': 16712190, 'Description_Lang_enUS': 'Increases the damage done by your Cleave ability by $s1%.', 'EffectChainAmplitude_1': 1.0, 'EffectChainAmplitude_2': 1.0, 'EffectChainAmplitude_3': 1.0, 'EffectItemType_1': 4194304, 'EffectSpellClassMaskA_1': 4194304, 'EquippedItemClass': -1, 'NameSubtext_Lang_Mask': 16712190, 'NameSubtext_Lang_enUS': 'Rank 3', 'Name_Lang_Mask': 16712190, 'ProcChance': 101, 'RangeIndex': 1, 'SpellClassSet': 4, 'SpellLevel': 1, 'SpellPriority': 50},
 )
 
 
