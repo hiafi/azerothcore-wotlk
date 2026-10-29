@@ -307,7 +307,8 @@ accounted for:
 ## Paladin T1: `spell_category()` and `remove_spell_proc()`
 
 `spell_category(id, flags)` declares a `spellcategory_dbc` row (a `SPELL_TABLES` entry, so diff/prune
-like `custom_attr`); ids come from `ids.yaml`'s `spellcategory` block (1300-1309, stock max 1253).
+like `custom_attr`); ids come from `ids.yaml`'s `spellcategory` block (1300-1319, widened by Warrior T1; stock max
+1253).
 The same declared rows also go into the client patch: `generate.py` merges them over the stock
 `var/extractors/dbc/SpellCategory.dbc` (`dbcfmt.SPELLCATEGORY`, fmt `ni`, not in `ALL_TABLES`/
 `SECONDARY_TABLES` so the SQL is not emitted twice) into patch-Z.mpq, and stops with an error if
@@ -592,8 +593,31 @@ section has the syntax.
   `gameobjectdisplayinfo`, `summonproperties` and `spellcategory` are not reserved (not needed); the first stage that
   needs one adds its slice. `lib/test_id_blocks.py::scanned_used_ids` skips the `*_STOCK` constants in
   `patch_rogue_vfx_models.py` (they are stock ids below 90000) and a test pins every other rogue VFX constant to the
-  rogue slices (spellvisual 90250-90299, soundentries 90121-90140). The spellvisual block is full after the rogue:
-  the next class widens it.
+  rogue slices (spellvisual 90250-90299, soundentries 90121-90140). The spellvisual block filled up with the rogue;
+  Warrior T1 widened it to 90399 (see "Warrior T1" below).
+
+## Warrior T1: id blocks, family bits and the capstone test
+
+Tooling for the warrior rework (`.agents/plans/warrior-rework/warrior-rework.T1-HANDOFF.md`), data-neutral: no declared
+row changed, so there is nothing to generate or deploy.
+
+- **Ids.** `reservations: warrior` has the PLAN s4 slices (spell 204400-204899 and so on). The P0 spike's 204869-204899
+  (31 ids, not the 30 the PLAN first said), spell_group 1305 and creatures 300388-300389 are never reused; talents
+  60488-60489 and SkillLineAbility 30868-30869 were reserved for it but never declared (also never reuse).
+  `spellvisual` is widened to 90399 and `spellcategory` to 1319 (the warrior takes 90300-90339 and 1313-1319). The
+  September Protection ids (spells 200028-200066 minus the mage's two, talents 60003-60006) are outside the reservation
+  on purpose: `lib/test_id_blocks.py::WARRIOR_LEGACY` pins them exactly, so a new id outside the slices fails and a
+  retired legacy id tells the stage to shrink the set. The spellcategory lint (`check_undeclared_spell_categories`) runs
+  only in the full run, not `--check`: after touching the block call it directly on the declared population.
+- **Family bits.** `source/classes/warrior/_masks.py` (append-only) and `lint.WARRIOR_FAMILY_RULES` (carriers banned on
+  a custom family-4 spell: d0 b0 / b1 / b17 / b24, d1 b5 / b6, d2 b31; readers banned: d2 b31). The d0 b23 stance bit is
+  not banned (the rage-keep block keys on icon 139 and A112 831, not the bit). Role bits are targeted tests of the
+  warrior stages; the comment block above the rule row lists them with their causes.
+- **Capstone tooltips.** `lib/test_capstone_format.py` (`rank_problems`, `load_class_talents`, `capstone_problems`,
+  `EXPECTED_CAPSTONES`) and `source/classes/warrior/_tooltips.py::_desc`. Every spec stage lists its capstone talents by
+  name (derived from the doc's Tooltip lines when it has no "Capstones" line) and adds them to `EXPECTED_CAPSTONES`. The
+  checker is reusable: `capstone_problems("rogue", names)` works for any class whose package loads (druid and warlock
+  need `SpellShapeshiftForm.dbc`). Adding a class key is enough: `ExpectedCapstonesTest` runs every key.
 
 ## Watch out: one client DBC, one patch archive
 
