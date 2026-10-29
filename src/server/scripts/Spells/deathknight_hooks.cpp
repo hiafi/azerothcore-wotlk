@@ -188,7 +188,9 @@ public:
     }
 
     // U14 Unending Thirst: the DK's own killing blows. Unit::Kill fires this only when the killer itself is the
-    // player, so pet and minion kills never reach it (B4). Critters and totems do not count.
+    // player, so pet and minion kills never reach it (B4). Critters and totems do not count. Assists (the DK's own
+    // direct spell hit the creature in the last 2 s, someone or something else killed it) reach OnRuneKillingBlow
+    // through KillCredit::OnKill instead; a pet's or minion's hit alone still never does.
     void OnPlayerCreatureKill(Player* killer, Creature* killed) override
     {
         if (!killer || !killed || killed->IsCritter() || killed->IsTotem())

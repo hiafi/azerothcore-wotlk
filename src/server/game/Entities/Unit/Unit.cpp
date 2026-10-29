@@ -42,6 +42,7 @@
 #include "GameTime.h"
 #include "GridNotifiersImpl.h"
 #include "Group.h"
+#include "KillCredit.h" // Custom: kill credit window (warrior-rework KC)
 #include "Log.h"
 #include "MageMechanics.h"
 #include "MapMgr.h"
@@ -1010,6 +1011,7 @@ uint32 Unit::DealDamage(Unit* attacker, Unit* victim, uint32 damage, CleanDamage
 
     // Hook for OnDamage Event
     sScriptMgr->OnDamage(attacker, victim, damage);
+    KillCredit::RecordHit(attacker, victim, damagetype, spellProto, damageSpell); // Custom: kill credit window, direct ability hits
 
     // Signal to pets that their owner was attacked - except when DOT.
     if (attacker != victim && damagetype != DOT)
@@ -13858,6 +13860,7 @@ void Unit::Kill(Unit* killer, Unit* victim, bool durabilityLoss, WeaponAttackTyp
     {
         Unit::ProcSkillsAndAuras(killer, victim, killer ? PROC_FLAG_KILL : 0, PROC_FLAG_KILLED, PROC_EX_NONE, 0, attackType, nullptr, nullptr, -1, nullptr);
     }
+    KillCredit::OnKill(killer, victim, spellProto); // Custom: kill credit window, assisters' kill procs and hooks
 
     // Proc auras on death - must be before aura/combat remove
     Unit::ProcSkillsAndAuras(victim, nullptr, PROC_FLAG_DEATH, PROC_FLAG_NONE, PROC_EX_NONE, 0, attackType, nullptr, nullptr, -1, nullptr);
