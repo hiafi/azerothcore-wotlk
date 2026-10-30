@@ -1,7 +1,7 @@
 """
 Warrior W0a - trainer rows (trainers 200 = class trainer, 201 = starter), learn-level moves and removed spells.
 
-Only rows W0a fully owns; Victory Rush, Intervene, Heroic Leap, Enraged Regeneration and Skull Banner land in W0b.
+W0a rows plus the W0b rows (Victory Rush, Intervene, Heroic Leap, Enraged Regeneration, Skull Banner; trainer 200 only).
 Shattering Throw's linked 64380 gets no row.
 """
 
@@ -17,6 +17,14 @@ trained_by(commanding_shout_469, WARRIOR_TRAINER, req_level=22)
 trained_by(spell_reflection_23920, WARRIOR_TRAINER, req_level=44)
 trained_by(shattering_throw_64382, WARRIOR_TRAINER, req_level=52)
 trained_by(heroic_throw_57755, WARRIOR_TRAINER, req_level=60)
+
+# W0b rows (D17), trainer 200 only; the starter trainer 201 stays a 1-30 subset. Victory Rush and Intervene are stock /
+# DSL-owned by bare id, Heroic Leap (204400) and Skull Banner (204405) are declared in warrior_shared.py.
+trained_by(34428, WARRIOR_TRAINER, req_level=8)
+trained_by(3411, WARRIOR_TRAINER, req_level=30)
+trained_by(204400, WARRIOR_TRAINER, req_level=38)
+trained_by(55694, WARRIOR_TRAINER, req_level=56)
+trained_by(204405, WARRIOR_TRAINER, req_level=60)
 
 # Learn-level moves (the declaration replaces the stock row). Dual Wield and Berserker Stance are referenced by bare
 # id (stock / CSV-owned spells).

@@ -10,14 +10,15 @@ tests prove each one can fail.
      flat part = sp_potency 10 direct T 1500 (25 at level 60), Cleave chain 2 on both effects; the D4 percents.
   2. Slam: instant, RecoveryTime 6000, no DUMMY effect, no -1464 binding (unbind declared).
   3. Mortal Strike effect order, Category 0 / 6000 / SpellLevel 20; Bloodthirst 0 / 4000; Overpower 0 / no cooldown and
-     FINISHING_MOVE (AttributesEx 0x100000) still set; Revenge 0 / 3000.
+     FINISHING_MOVE (AttributesEx 0x100000) CLEAR (W0b D3: the charge aura replaces the combo-point need);
+     Revenge 0 / 3000.
   4. D9 stance zero list (22 ids) and the untouched ids (28880, the removed three, talent passives, ranks).
   5. Battle Stance aura 213 (+10), no aura 280; Stance Mastery 12678 (149 / icon 139 / family 4 / SLA skill 26
      acquire 2); 8616 teaches 2458 only.
   6. Rend (9 potency / 3 s tick, -772 unbound), Thunder Clap 30 s, Commanding Shout (113 at 22, 297 at 60, MaxLevel 60).
   7. Moved learn levels and level-60 values; trainer rows (D3); the consts; no FORBIDDEN_* bit; no "Capstone"; the spike
      ids declared nowhere.
-  8. The rage worked example (D12) as a pure-Python reference.
+  8. The rage worked example (D12, D22) as a pure-Python reference at the live m 1.35, with the spell-haste factor.
 
 Run: cd apps/dbc-tools && PYTHONDONTWRITEBYTECODE=1 .venv/bin/python3 -m pytest lib/test_warrior_w0a.py -q
 """
@@ -74,9 +75,11 @@ ZERO_LIST = (72, 100, 355, 676, 772, 871, 1680, 1715, 1719, 2565, 3411, 5308, 63
 UNTOUCHED = {28880: 2164260864, 694: 196608, 20230: 65536, 20252: 262144, 12295: 131072, 7887: 65536, 11584: 65536,
              11585: 65536, 12301: 131072, 29759: 262144}
 
-# D3 trainer rows: (trainer, spell) -> ReqLevel
+# D3 trainer rows: (trainer, spell) -> ReqLevel; the last five are W0b's (D17: Victory Rush, Intervene, Heroic Leap,
+# Enraged Regeneration, Skull Banner, trainer 200 only; test_warrior_w0b.py pins them too)
 TRAINER_ROWS = {(200, 469): 22, (200, 23920): 44, (200, 64382): 52, (200, 57755): 60, (200, 674): 10, (200, 845): 14,
-                (200, 6552): 16, (200, 2458): 16, (201, 2458): 16}
+                (200, 6552): 16, (200, 2458): 16, (201, 2458): 16,
+                (200, 34428): 8, (200, 3411): 30, (200, 204400): 38, (200, 55694): 56, (200, 204405): 60}
 UNTRAINED = {(200, 694), (200, 20230), (200, 20252), (201, 20252)}
 # moved SpellLevel (== BaseLevel for the potency / modified rows)
 MOVED_LEVELS = {845: 14, 6552: 16, 23920: 44, 64382: 52, 57755: 60, 469: 22, 2458: 16, 12294: 20}
@@ -235,8 +238,9 @@ def check_categories(rows: dict[int, dict]) -> list[str]:
         if got != (cat, rec, crec):
             bad.append(f"{sid}: Category/RecoveryTime/CategoryRecoveryTime {got}, expected {(cat, rec, crec)}")
     op = rows.get(OVERPOWER)
-    if op is not None and not _u32(op.get("AttributesEx")) & ATTR1_FINISHING_MOVE:
-        bad.append(f"{OVERPOWER}: AttributesEx {_u32(op.get('AttributesEx')):#x} lost FINISHING_MOVE 0x100000 (D7)")
+    if op is not None and _u32(op.get("AttributesEx")) & ATTR1_FINISHING_MOVE:
+        bad.append(f"{OVERPOWER}: AttributesEx {_u32(op.get('AttributesEx')):#x} still has FINISHING_MOVE 0x100000 "
+                   "(W0b D3: Overpower needs a charge, not combo points)")
     ms = rows.get(MS)
     if ms is not None:
         if _i(ms, "ManaCost") != 250:
@@ -460,22 +464,25 @@ def check_spike_ids(texts: dict[str, str], spell_ids, group_ids, sla_ids, creatu
     return bad
 
 
-# ---- the D12 rage reference (pure Python; the C++ rounds the speed factor to hundredths) -------------------------
+# ---- the D12 / D22 rage reference (pure Python; the C++ rounds the speed factor to hundredths) -------------------
 
 def rage_conversion(level: int) -> float:
     """The stock `c` (Unit::RewardRage / Warrior::RageConversion), level <= 70 branch."""
     return 0.0091107836 * level * level + 3.225598133 * level + 4.2652911
 
 
-def rage_speed_factor(swing_s: float, main_hand: bool, m_: float = 1.8) -> int:
-    """Hundredths, lround (half away from zero)."""
-    factor = swing_s * (3.5 * m_ if main_hand else 0.875) * 100
+def rage_speed_factor(swing_s: float, main_hand: bool, m_: float = 1.35, spell_haste: float = 0.0) -> int:
+    """Hundredths, lround (half away from zero). `swing_s` is the HASTED swing time; D21/D22 multiply it by the
+    spell-haste factor max(1, 1 + spell_haste) (the C++ reads 1 / UNIT_MOD_CAST_SPEED), so rage per second scales 1:1
+    with spell haste (Bloodlust, haste rating) while an attack-speed-only haste does not. A slow never lowers it."""
+    factor = swing_s * max(1.0, 1.0 + spell_haste) * (3.5 * m_ if main_hand else 0.875) * 100
     return math.floor(factor + 0.5)
 
 
 def rage_dealt(level: int, damage: float, swing_s: float, *, main_hand: bool = True, crit: bool = False,
-               stance_pct: float = 10.0, k: float = 0.43, m_: float = 1.8, fixed_point: int = 100) -> float:
-    factor = rage_speed_factor(swing_s, main_hand, m_) * (2 if crit else 1)
+               stance_pct: float = 10.0, k: float = 0.43, m_: float = 1.35, fixed_point: int = 100,
+               spell_haste: float = 0.0) -> float:
+    factor = rage_speed_factor(swing_s, main_hand, m_, spell_haste) * (2 if crit else 1)
     c = rage_conversion(level)
     dealt = (k * 7.5 * damage / c + factor / fixed_point) / 2
     dealt = min(dealt, 15 * damage / c)
@@ -604,30 +611,56 @@ class WarriorW0aDataTest(unittest.TestCase):
 
 
 class WarriorW0aRageReferenceTest(unittest.TestCase):
+    """D22: the worked example at the live k 0.43 / m 1.35 (level 60, 3.6 s two-hander, Battle Stance +10%)."""
+
     def test_worked_example(self):
-        # level 60, 3.6 s two-hander, Battle Stance (+10%)
-        self.assertAlmostEqual(rage_dealt(60, 450, 3.6), 15.94, delta=0.01)
-        self.assertAlmostEqual(rage_dealt(60, 900, 3.6, crit=True), 31.87, delta=0.01)
-        self.assertAlmostEqual(rage_dealt(60, 450, 3.6 / 1.3), 13.06, delta=0.01)   # 30% haste, swing 2.77 s
+        self.assertAlmostEqual(rage_dealt(60, 450, 3.6), 12.82, delta=0.01)             # 6.29 + 17.01 -> 12.82
+        self.assertAlmostEqual(rage_dealt(60, 900, 3.6, crit=True), 25.63, delta=0.01)   # speed part doubles on a crit
         self.assertAlmostEqual(rage_dealt(60, 200, 2.6, main_hand=False, stance_pct=0), 2.54, delta=0.01)
         self.assertAlmostEqual(rage_dealt_stock(60, 450, 3.6), 13.32, delta=0.01)
+
+    def test_worked_example_rederived_from_the_formula(self):
+        c = 0.0091107836 * 60 * 60 + 3.225598133 * 60 + 4.2652911
+        self.assertAlmostEqual(c, 230.60, delta=0.01)
+        damage_part, speed_part = 0.43 * 7.5 * 450 / c, 3.6 * 3.5 * 1.35
+        self.assertAlmostEqual(damage_part, 6.29, delta=0.01)
+        self.assertAlmostEqual(speed_part, 17.01, delta=0.01)
+        self.assertAlmostEqual((damage_part + speed_part) / 2 * 1.10, 12.82, delta=0.01)
+        self.assertAlmostEqual((0.43 * 7.5 * 900 / c + 2 * speed_part) / 2 * 1.10, 25.63, delta=0.01)
 
     def test_conversion_and_cap(self):
         self.assertAlmostEqual(rage_conversion(60), 230.60, delta=0.01)
         # a tiny hit with a long swing is capped at the stock 15 x d / c, before the stance bonus
         self.assertAlmostEqual(rage_dealt(60, 10, 3.6, stance_pct=0), 15 * 10 / rage_conversion(60), places=6)
 
-    def test_haste_neutral_speed_part(self):
-        # the speed part per second of real time does not change with haste (swing x haste is constant)
-        slow = rage_speed_factor(3.6, True) / 100 / 3.6
-        fast = rage_speed_factor(3.6 / 1.3, True) / 100 / (3.6 / 1.3)
-        self.assertAlmostEqual(slow, fast, delta=0.05)
+    def test_bloodlust_spell_haste_scales_rage_per_second(self):
+        # Bloodlust: 30% melee AND spell haste -> swing 3.6 / 1.3 = 2.77 s; the spell-haste factor restores the speed
+        # part of the 3.6 s swing, so every swing pays the unhasted 12.82 and rage per second grows 1.30x
+        swing = 3.6 / 1.3
+        per_swing = rage_dealt(60, 450, swing, spell_haste=0.30)
+        self.assertAlmostEqual(per_swing, 12.82, delta=0.01)
+        self.assertAlmostEqual((per_swing / swing) / (rage_dealt(60, 450, 3.6) / 3.6), 1.30, delta=0.01)
+
+    def test_attack_speed_only_haste_is_not_rage_neutral_or_one_to_one(self):
+        # an attack-speed-only 30% (no spell haste): per swing 10.66 (the speed part shrinks), per second only x1.08
+        swing = 3.6 / 1.3
+        per_swing = rage_dealt(60, 450, swing)
+        self.assertAlmostEqual(per_swing, 10.66, delta=0.01)
+        self.assertAlmostEqual((per_swing / swing) / (rage_dealt(60, 450, 3.6) / 3.6), 1.08, delta=0.01)
+
+    def test_slow_never_lowers_rage(self):
+        base = rage_dealt(60, 450, 3.6)
+        self.assertEqual(rage_dealt(60, 450, 3.6, spell_haste=-0.30), base)             # max(1, 1 + haste)
+        self.assertEqual(rage_dealt(60, 450, 3.6, spell_haste=-0.99), base)
+        self.assertGreater(rage_dealt(60, 450, 3.6, spell_haste=0.01), base)
+
+    def test_off_hand_takes_the_spell_haste_factor_too(self):
+        self.assertAlmostEqual(rage_dealt(60, 200, 2.6 / 1.3, main_hand=False, stance_pct=0, spell_haste=0.30),
+                               rage_dealt(60, 200, 2.6, main_hand=False, stance_pct=0), delta=0.01)
 
     def test_built_constants(self):
-        # the worked example above is the D12 doc example at the placeholder m 1.8; the built pair is the user's pick
-        # from the W0a sweep (k 0.43, m 1.35): 3.6 s two-hander, 450 damage, Battle Stance
+        # the built pair is the user's pick from the W0a sweep (k 0.43, m 1.35)
         self.assertEqual((CONSTS["RAGE_K_60"][0], CONSTS["RAGE_M_60"][0]), (0.43, 1.35))
-        self.assertAlmostEqual(rage_dealt(60, 450, 3.6, m_=1.35), 12.82, delta=0.01)
 
 
 # ---- negative fixtures: every check must fire on a minimal bad mutation of a built-row shape -----------------------
@@ -732,7 +765,7 @@ class WarriorW0aNegativeTest(unittest.TestCase):
                      "Effect_1": APPLY_AURA, "EffectAura_1": 118, "Effect_2": WEAPON_PERCENT,
                      "Effect_3": NORMALIZED_WEAPON},
                 BT: {"ID": BT, "Category": 0, "RecoveryTime": 4000},
-                OVERPOWER: {"ID": OVERPOWER, "Category": 0, "AttributesEx": 0x58100200},
+                OVERPOWER: {"ID": OVERPOWER, "Category": 0, "AttributesEx": 0x58000200},
                 REVENGE: {"ID": REVENGE, "Category": 0, "RecoveryTime": 3000}}
         self.assertEqual(check_categories(rows), [])
         mutations = (
@@ -740,7 +773,7 @@ class WarriorW0aNegativeTest(unittest.TestCase):
             (MS, "BaseLevel", 40), (MS, "EffectAura_1", 0), (MS, "Effect_2", NORMALIZED_WEAPON),
             (MS, "Effect_3", WEAPON_PERCENT), (BT, "Category", 971), (BT, "RecoveryTime", 0),
             (BT, "CategoryRecoveryTime", 4000), (OVERPOWER, "Category", 65), (OVERPOWER, "CategoryRecoveryTime", 5000),
-            (OVERPOWER, "RecoveryTime", 6000), (OVERPOWER, "AttributesEx", 0x58000200), (REVENGE, "Category", 65),
+            (OVERPOWER, "RecoveryTime", 6000), (OVERPOWER, "AttributesEx", 0x58100200), (REVENGE, "Category", 65),
             (REVENGE, "RecoveryTime", 0), (REVENGE, "CategoryRecoveryTime", 3000), (MS, "ManaCost", 300))
         for sid, col, val in mutations:
             self.assertGreaterEqual(len(check_categories({**rows, sid: {**rows[sid], col: val}})), 1, (sid, col))
@@ -902,12 +935,26 @@ class WarriorW0aNegativeTest(unittest.TestCase):
         self.assertEqual(len(check_spike_ids({}, [], [], [], [], [60489])), 1)
 
     def test_rage_reference_rejects_wrong_constants(self):
-        self.assertGreater(abs(rage_dealt(60, 450, 3.6, k=0.5) - 15.94), 0.01)
-        self.assertGreater(abs(rage_dealt(60, 450, 3.6, m_=1.0) - 15.94), 0.01)
-        self.assertGreater(abs(rage_dealt(60, 450, 3.6, stance_pct=0) - 15.94), 0.01)
-        self.assertGreater(abs(rage_dealt(60, 450, 3.6, fixed_point=1000) - 15.94), 0.01)
-        self.assertGreater(abs(rage_dealt(60, 450, 3.6, crit=True) - 15.94), 0.01)
+        self.assertGreater(abs(rage_dealt(60, 450, 3.6, k=0.5) - 12.82), 0.01)
+        self.assertGreater(abs(rage_dealt(60, 450, 3.6, m_=1.8) - 12.82), 0.01)          # the retired placeholder m
+        self.assertGreater(abs(rage_dealt(60, 450, 3.6, m_=1.0) - 12.82), 0.01)
+        self.assertGreater(abs(rage_dealt(60, 450, 3.6, stance_pct=0) - 12.82), 0.01)
+        self.assertGreater(abs(rage_dealt(60, 450, 3.6, fixed_point=1000) - 12.82), 0.01)
+        self.assertGreater(abs(rage_dealt(60, 450, 3.6, crit=True) - 12.82), 0.01)
         self.assertGreater(abs(rage_dealt(60, 200, 2.6, main_hand=True, stance_pct=0) - 2.54), 0.01)
+
+    def test_rage_reference_rejects_haste_neutral_and_wrong_haste(self):
+        swing = 3.6 / 1.3
+        # a haste-neutral reference (spell haste ignored) cannot reproduce the Bloodlust per-swing number ...
+        self.assertGreater(abs(rage_dealt(60, 450, swing, spell_haste=0.0) - 12.82), 0.01)
+        # ... nor does a half-strength or an inverted factor
+        self.assertGreater(abs(rage_dealt(60, 450, swing, spell_haste=0.15) - 12.82), 0.01)
+        self.assertGreater(abs(rage_dealt(60, 450, swing, spell_haste=-0.30) - 12.82), 0.01)
+        # the attack-speed-only number is not the spell-haste number
+        self.assertGreater(abs(rage_dealt(60, 450, swing) - rage_dealt(60, 450, swing, spell_haste=0.30)), 1.0)
+        # per second: the attack-speed-only gain (x1.08) is nowhere near x1.30
+        ratio = (rage_dealt(60, 450, swing) / swing) / (rage_dealt(60, 450, 3.6) / 3.6)
+        self.assertLess(ratio, 1.1)
 
     def test_calc_value_matches_known_rows(self):
         # 0VERIFY item 3: Battle Shout 14 / 6.77215 / SL 1 -> 157 at 22, 414 at 60 (the curve Commanding Shout follows)

@@ -112,6 +112,7 @@ namespace WarriorData
     constexpr uint32 SPELL_IMPROVED_EXECUTE = 20502; // improved_execute_20502
     constexpr uint32 SPELL_IMPROVED_EXECUTE_20503 = 20503; // improved_execute_20503
     constexpr uint32 SPELL_WEAPON_MASTERY = 20504; // weapon_mastery_20504
+    constexpr uint32 SPELL_EXECUTE_20647 = 20647; // execute_20647
     constexpr uint32 SPELL_DUAL_WIELD_SPECIALIZATION = 23584; // dual_wield_specialization_23584
     constexpr uint32 SPELL_DUAL_WIELD_SPECIALIZATION_23585 = 23585; // dual_wield_specialization_23585
     constexpr uint32 SPELL_DUAL_WIELD_SPECIALIZATION_23586 = 23586; // dual_wield_specialization_23586
@@ -149,10 +150,12 @@ namespace WarriorData
     constexpr uint32 SPELL_IMPROVED_INTERCEPT = 29888; // improved_intercept_29888
     constexpr uint32 SPELL_IMPROVED_INTERCEPT_29889 = 29889; // improved_intercept_29889
     constexpr uint32 SPELL_CLEAVE_30213 = 30213; // cleave_30213
+    constexpr uint32 SPELL_VICTORIOUS = 32216; // victorious_32216
     constexpr uint32 SPELL_VICTORY_RUSH = 34428; // victory_rush_34428
     constexpr uint32 SPELL_IMPROVED_MORTAL_STRIKE = 35446; // improved_mortal_strike_35446
     constexpr uint32 SPELL_IMPROVED_MORTAL_STRIKE_35448 = 35448; // improved_mortal_strike_35448
     constexpr uint32 SPELL_IMPROVED_MORTAL_STRIKE_35449 = 35449; // improved_mortal_strike_35449
+    constexpr uint32 SPELL_WHIRLWIND_44949 = 44949; // whirlwind_44949
     constexpr uint32 SPELL_UNRELENTING_ASSAULT = 46859; // unrelenting_assault_46859
     constexpr uint32 SPELL_UNRELENTING_ASSAULT_46860 = 46860; // unrelenting_assault_46860
     constexpr uint32 SPELL_INTENSIFY_RAGE = 46908; // intensify_rage_46908
@@ -171,6 +174,7 @@ namespace WarriorData
     constexpr uint32 SPELL_CRITICAL_BLOCK = 47294; // critical_block_47294
     constexpr uint32 SPELL_CRITICAL_BLOCK_47295 = 47295; // critical_block_47295
     constexpr uint32 SPELL_CRITICAL_BLOCK_47296 = 47296; // critical_block_47296
+    constexpr uint32 SPELL_WHIRLWIND_50622 = 50622; // whirlwind_50622
     constexpr uint32 SPELL_INCITE = 50685; // incite_50685
     constexpr uint32 SPELL_INCITE_50686 = 50686; // incite_50686
     constexpr uint32 SPELL_INCITE_50687 = 50687; // incite_50687
@@ -233,8 +237,22 @@ namespace WarriorData
     constexpr uint32 SPELL_SHIELD_DISCIPLINE_200064 = 200064; // shield_discipline_200064
     constexpr uint32 SPELL_THUNDER_CLAP_ECHO = 200065; // thunder_clap_echo_200065
     constexpr uint32 SPELL_THUNDERSTRUCK_200066 = 200066; // thunderstruck_200066
+    constexpr uint32 SPELL_HEROIC_LEAP = 204400; // heroic_leap_204400
+    constexpr uint32 SPELL_HEROIC_LEAP_204401 = 204401; // heroic_leap_204401
+    constexpr uint32 SPELL_LEAPING = 204402; // leaping_204402
+    constexpr uint32 SPELL_OVERPOWER_204403 = 204403; // overpower_204403
+    constexpr uint32 SPELL_OVERPOWER_TRAINING = 204404; // overpower_training_204404
+    constexpr uint32 SPELL_SKULL_BANNER = 204405; // skull_banner_204405
+    constexpr uint32 SPELL_SKULL_BANNER_204406 = 204406; // skull_banner_204406
+    constexpr uint32 SPELL_RALLIED = 204407; // rallied_204407
+    constexpr uint32 SPELL_SKULL_BANNER_204408 = 204408; // skull_banner_204408
+    constexpr uint32 SPELL_VICTORY_RUSH_204409 = 204409; // victory_rush_204409
 
     // const() - hidden script numbers (tier 3)
+    constexpr float CHARGE_COMBAT_MAX_YD = 25.0f; // Charge in combat: the distance at which the in-combat rage is highest (10 rage), the spell maximum range [fixed].
+    constexpr float CHARGE_COMBAT_MIN_YD = 8.0f; // Charge in combat: the distance at which the in-combat rage is lowest (5 rage), the spell minimum range [fixed].
+    constexpr uint32 HEROIC_LEAP_AIR_MS = 1000; // Heroic Leap: air time of the leap in milliseconds, whatever the distance (P0 proven shape) [tune].
+    constexpr float HEROIC_LEAP_APEX_YD = 5.0f; // Heroic Leap: apex height of the jump arc in yards (MoveJump speedZ = sqrt(2 g apex)) [tune].
     constexpr float RAGE_K_60 = 0.43f; // Rage: level-60 bracket, multiplier on the damage term of rage dealt (stock 1.0) [tune].
     constexpr float RAGE_MH_SPEED_FACTOR = 3.5f; // Rage: main-hand weapon-speed factor, rage per second of hasted swing time before m (stock 3.5) [fixed].
     constexpr float RAGE_M_60 = 1.35f; // Rage: level-60 bracket, multiplier on the weapon-speed term of rage dealt (stock 1.0); user pick 2026-10-29 from the W0a rage sweep (two-hander = stock at bracket start, dual-wield advantage halved) [tune].
