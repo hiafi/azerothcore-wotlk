@@ -54,6 +54,18 @@ RUNS_DIR = FROZEN_REPO / "var" / "dbc-tools-equiv" / "runs"
 DEFAULT_PYTHON = "/home/plex/wow_server/azerothcore-wotlk/apps/dbc-tools/.venv/bin/python"
 
 DEFAULT_SCENARIOS = ("check", "full", "full2", "mutate-full")
+# A warrior spell the lints dislike (custom id with EquippedItemClass 0, a unit-target helper with range 0), written
+# into the sandbox's copy of the code by the `check-injected` scenario to give the scoped check something to say.
+INJECTED_DSL = """from lib.dsl import Effect, EffectType, School
+from lib.dsl.registry import spell
+
+inject_bad_209990 = spell(
+    id=209990, name='Inject Bad', school=School.NORMAL, attributes=0, cast_time_ms=0, cooldown_ms=0,
+    category_cooldown_ms=0, mana_cost=0, mana_cost_pct=0, range_yards=0.0,
+    effects=[Effect(type=EffectType.SCHOOL_DAMAGE, base_points=1, implicit_target_a=6)],
+    spell_icon_id=1, raw_overrides={'SpellClassSet': 4},
+)
+"""
 MUTATION_SQL = (
     "\n-- equivalence harness mutation\n"
     "UPDATE `spell_dbc` SET `Attributes` = 0 WHERE `ID` = 133;\n"
@@ -125,7 +137,9 @@ def build_sandbox(sandbox: Path, code_ref: str) -> None:
     sql = sandbox / "data" / "sql" / "updates"
     sql.mkdir(parents=True)
     (sandbox / "data" / "sql" / "base").symlink_to(FROZEN_REPO / "data" / "sql" / "base")
-    (sql / "db_world").symlink_to(FROZEN_REPO / "data" / "sql" / "updates" / "db_world")
+    # Hardlinks, not a symlink: a scenario may *add* a promoted file (never edits one), and an added file must land in
+    # the sandbox, not in the frozen tree.
+    shutil.copytree(FROZEN_REPO / "data" / "sql" / "updates" / "db_world", sql / "db_world", copy_function=os.link)
     shutil.copytree(FROZEN_REPO / "data" / "sql" / "updates" / "pending_db_world", sql / "pending_db_world")
 
     (sandbox / "var" / "extractors").mkdir(parents=True)
@@ -173,17 +187,33 @@ def input_fingerprint() -> dict:
 # scenarios
 # --------------------------------------------------------------------------------------------------------------
 
-def scenario_args(name: str) -> tuple[list[str], bool]:
-    """(generate.py args, mutate pending first?)"""
+def scenario_args(name: str) -> tuple[list[str], str | None]:
+    """(generate.py args, what to do to the sandbox first: None, "mutate" a pending file, or "promote" the newest
+    generated rev into db_world the way the CI promotion does)"""
     if name in ("check", "check2"):
-        return ["--check"], False
-    if name in ("full", "full2"):
-        return [], False
+        return ["--check"], None
+    if name in ("full", "full2", "full3"):
+        return [], None
     if name == "mutate-full":
-        return [], True
+        return [], "mutate"
+    if name == "promote-full":
+        return [], "promote"
+    if name == "check-injected":
+        return ["--check"], "inject"
     if name.startswith("check-class-"):
-        return ["--check", "--class", name.removeprefix("check-class-")], False
+        return ["--check", "--class", name.removeprefix("check-class-")], None
     raise SystemExit(f"unknown scenario {name!r}")
+
+
+def promote_newest(sandbox: Path, generated: dict[str, str]) -> str:
+    """Moves the newest generated pending rev into db_world as a new file sorting after every existing one, with the
+    `-- DB update` header line CI prepends (apps/ci/ci-pending-sql.sh)."""
+    pending = sandbox / "data" / "sql" / "updates" / "pending_db_world"
+    newest = sorted(p for p in pending.glob("rev_*.sql") if p.name in generated)[-1]
+    target = sandbox / "data" / "sql" / "updates" / "db_world" / "2026_10_30_00.sql"
+    target.write_text("-- DB update 2026_10_29_00 -> 2026_10_30_00\n" + newest.read_text(encoding="utf-8"), encoding="utf-8")
+    newest.unlink()
+    return newest.name
 
 
 def mutate_pending(sandbox: Path) -> str:
@@ -231,11 +261,15 @@ def run_scenario(
     sandbox: Path, run_dir: Path, name: str, python: str, generated: dict[str, str],
     extra_args: list[str] | None = None,
 ) -> dict:
-    args, mutate = scenario_args(name)
+    args, action = scenario_args(name)
     args = [*args, *(extra_args or [])]
     record: dict = {"scenario": name, "args": args}
-    if mutate:
+    if action == "mutate":
         record["mutated"] = mutate_pending(sandbox)
+    elif action == "promote":
+        record["promoted"] = promote_newest(sandbox, generated)
+    elif action == "inject":
+        (sandbox / "apps/dbc-tools/source/classes/warrior/zz_inject.py").write_text(INJECTED_DSL, encoding="utf-8")
     pending_before = {p.name for p in (sandbox / "data/sql/updates/pending_db_world").glob("*.sql")}
     env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1", "PYTHONHASHSEED": "0"}
     start = time.monotonic()
@@ -300,10 +334,12 @@ def normalized_stdout(label: str, scenario: str) -> str:
 
 def canonical_pending(digests: dict[str, str]) -> dict[str, str]:
     """Pending files a run wrote are named after the clock; call them `<generated #k>` in name (= time) order, so two
-    runs compare by what each scenario wrote, not by when. Files that were already in the frozen tree keep their name."""
-    frozen = {p.name for p in (FROZEN_REPO / "data" / "sql" / "updates" / "pending_db_world").glob("*.sql")}
+    runs compare by what each scenario wrote, not by when. Files that were already in the frozen tree keep their name.
+    (`<new-rev>.sql` is how a manifest from before numbering called the scenario's own file: the newest.)"""
+    frozen = {p.name for p in (FROZEN_REPO / "data" / "sql" / "updates" / "pending_db_world").iterdir()}
     written = sorted(name for name in digests if name not in frozen and not name.startswith("<"))
-    renames = {name: f"<generated #{i}>.sql" for i, name in enumerate(written)}  # a manifest from before numbering
+    renames = {name: f"<generated #{i}>.sql" for i, name in enumerate(written)}
+    renames["<new-rev>.sql"] = f"<generated #{len(written)}>.sql"
     return {renames.get(name, name): digest for name, digest in digests.items()}
 
 
@@ -345,6 +381,39 @@ def cmd_compare(args: argparse.Namespace) -> int:
     return 1 if bad else 0
 
 
+def cmd_scoped(args: argparse.Namespace) -> int:
+    """For every `check-class-X` scenario of a run: its WARNING/ERROR lines are a subset of the whole-tree `check`
+    scenario's (a scoped check may say less than the full one, never something the full one does not say), and report
+    what each cost."""
+    manifest = json.loads((RUNS_DIR / args.run / "manifest.json").read_text())
+    scenarios = {s["scenario"]: s for s in manifest["scenarios"]}
+    if "check" not in scenarios:
+        raise SystemExit("the run has no whole-tree `check` scenario to compare against")
+
+    def verdicts(scenario: str) -> set[str]:
+        text = normalized_stdout(args.run, scenario)
+        return {line for line in text.splitlines() if line.startswith(("WARNING:", "ERROR:"))}
+
+    reference = "check-injected" if "check-injected" in scenarios else "check"
+    full = verdicts(reference)
+    print(f"reference: {reference} ({len(full)} WARNING/ERROR line(s))")
+    bad = 0
+    for name, record in scenarios.items():
+        if not name.startswith("check-class-"):
+            continue
+        got = verdicts(name)
+        extra = got - full
+        status = "OK" if not extra and record["returncode"] == scenarios[reference]["returncode"] else "NOT A SUBSET"
+        injected = {line for line in full if "209990" in line}  # the check-injected defect belongs to warrior alone
+        if status == "OK" and injected and (injected <= got) != (name == "check-class-warrior"):
+            status = "MISSES ITS OWN DEFECT" if name == "check-class-warrior" else "SEES ANOTHER CLASS'S DEFECT"
+        print(f"{name:26s} {status}  rc={record['returncode']}  {record['seconds']}s")
+        for line in sorted(extra)[:10]:
+            print(f"    only in the scoped run: {line[:200]}")
+        bad += status != "OK"
+    return 1 if bad else 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -357,12 +426,16 @@ def main() -> int:
     cmp_ = sub.add_parser("compare")
     cmp_.add_argument("a")
     cmp_.add_argument("b")
+    scoped = sub.add_parser("scoped")
+    scoped.add_argument("run")
     sub.add_parser("list")
     args = parser.parse_args()
     if args.cmd == "run":
         return cmd_run(args)
     if args.cmd == "compare":
         return cmd_compare(args)
+    if args.cmd == "scoped":
+        return cmd_scoped(args)
     print("\n".join([*DEFAULT_SCENARIOS, "check-class-<name>"]))
     return 0
 

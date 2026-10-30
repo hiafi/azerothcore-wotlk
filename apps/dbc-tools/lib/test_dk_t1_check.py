@@ -101,7 +101,7 @@ class GcdHasteDryRunTest(unittest.TestCase):
     def test_main_wires_the_dry_run_into_check_as_a_warning(self):
         import inspect  # noqa: PLC0415
 
-        text = inspect.getsource(generate._run)  # main() only parses flags and hands over to _run
+        text = inspect.getsource(generate._check_report)  # main() parses flags; _check_report holds the --check lints
         tail = text.split("_gcd_haste_check_warnings(")[1][:300]
         self.assertIn('print(f"WARNING: {warning}")', tail)
 
