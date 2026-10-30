@@ -23,6 +23,7 @@
 
 #include "AreaDefines.h"
 #include "Containers.h"
+#include "LeapMechanics.h" // Custom: warrior-rework W0b
 #include "MotionMaster.h"
 #include "MovementTypedefs.h"
 #include "ObjectAccessor.h"
@@ -346,6 +347,12 @@ class spell_rog_grappling_hook : public SpellScript
         Unit* caster = GetCaster();
         if (caster && caster->IsPlayer() && caster->HasUnitState(UNIT_STATE_ROOT))
             return SPELL_FAILED_ROOTED;
+
+        // Custom: warrior-rework W0b (D10) - the Heroic Leap rule: a point with no ground to stand on (a wall face,
+        // open air, a too-steep slope) refuses. No destination keeps the old behaviour.
+        WorldLocation const* dest = GetExplTargetDest();
+        if (dest && !Leap::IsLandablePoint(caster, dest->GetPositionX(), dest->GetPositionY(), dest->GetPositionZ()))
+            return SPELL_FAILED_NOPATH;
 
         return SPELL_CAST_OK;
     }
