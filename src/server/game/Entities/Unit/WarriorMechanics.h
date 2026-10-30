@@ -39,14 +39,16 @@ namespace Warrior
     // exists for "the block-value subtraction just happened", hence this core-side check.
     void ApplyBlockDamageReduction(Unit* defender, uint32& damage);
 
-    // ---- W0a: the dampened, haste-neutral rage model (docs/reworks/warrior-shared-rework.md "Rage generation") ----
+    // ---- W0a: the dampened rage model (docs/reworks/warrior-shared-rework.md "Rage generation"), W0b spell haste ----
     // Every player rage user (warriors, Bear and Dire Bear Form); creatures and pets keep the stock formula. No hook
     // sees rage, so Unit.cpp calls these at three places (// Custom: warrior-rework W0a).
 
     // The weapon-speed factor Unit::RewardRage's dealt formula takes, for a white swing by `attacker`. Non-players:
-    // the stock Unit::GetRageWeaponSpeedHitFactor value. Players: the hasted swing time (not GetAttackTime, so haste
-    // is rage-neutral per second) * RAGE_MH_SPEED_FACTOR * m (main hand) or RAGE_OH_SPEED_FACTOR (off hand), in
-    // hundredths (RAGE_SPEED_FIXED_POINT) so m's decimals survive. The caller's crit doubling stays linear.
+    // the stock Unit::GetRageWeaponSpeedHitFactor value. Players: the hasted swing time (not GetAttackTime) *
+    // max(1, 1 / UNIT_MOD_CAST_SPEED) (W0b D21: spell haste keeps the speed part per swing, so it raises rage per
+    // second; attack speed alone shrinks it per swing; a net slow never lowers it) * RAGE_MH_SPEED_FACTOR * m (main
+    // hand) or RAGE_OH_SPEED_FACTOR (off hand), in hundredths (RAGE_SPEED_FIXED_POINT) so m's decimals survive. The
+    // caller's crit doubling stays linear.
     uint32 RageSpeedFactor(Unit const* attacker, WeaponAttackType attType);
 
     // First line of Unit::RewardRage. Returns false (the stock body runs) unless `unit` is a player and `attacker`
@@ -66,6 +68,13 @@ namespace Warrior
 
     // D13: one table keyed on level; the level-60 bracket applies at every level until 70/80 open.
     RageConstants GetRageConstants(uint8 level);
+
+    // ---- W0b: Charge in combat (D4, user 2026-10-29) ----
+    // Rage an in-combat Charge grants, in power units (tenths of a rage point, the unit spell base points use):
+    // 10 * (5 + 5 * t), t = clamp((distanceYd - CHARGE_COMBAT_MIN_YD) / (CHARGE_COMBAT_MAX_YD - CHARGE_COMBAT_MIN_YD),
+    // 0, 1), rounded. Flat at every level: 50 at 8 yd, 75 at 16.5 yd, 100 at 25 yd. Out-of-combat Charge keeps stock's
+    // level curve (spell effect 1).
+    int32 ChargeCombatRage(float distanceYd);
 }
 
 #endif
