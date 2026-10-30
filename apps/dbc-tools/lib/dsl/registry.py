@@ -2204,6 +2204,7 @@ def load_classes_dir(
     existing_group_ids: set[int] | None = None, shapeshift_index: dict | None = None,
     existing_creature_rows: dict[int, dict] | None = None, creature_columns: tuple[str, ...] | None = None,
     creature_defaults: dict[str, object] | None = None, live_data: dict | None = None,
+    only: str | None = None,
 ) -> dict[str, list[dict]]:
     """Merge every `source/classes/*` entry's registered spells/talents/
     tabs/skill_line_abilities/trainer_spells into one dict, in sorted-name
@@ -2228,7 +2229,10 @@ def load_classes_dir(
     `ids_cfg`/`trainer_index`/`existing_group_ids`/`shapeshift_index`/
     `existing_creature_rows`/`creature_columns`/`creature_defaults` are passed
     straight through to every `load_class_file`/`load_class_package`
-    call - see their docstrings."""
+    call - see their docstrings.
+
+    `only` loads just the entry with that name (`"warrior"` for `warrior.py` or the `warrior/` package) and nothing
+    else, for `generate.py --check --class`; the cross-class duplicate-id checks below then see one class only."""
     merged: dict[str, list[dict]] = {key: [] for key in MERGE_KEYS}
     # P2b: {id: var_name}, merged across every class - see _collect_var_names(). Not part of
     # MERGE_KEYS (dicts, not lists); ids are already unique by construction (DuplicateIdError
@@ -2240,6 +2244,8 @@ def load_classes_dir(
     seen: dict[str, dict[object, str]] = {key: {} for key in MERGE_KEYS}
     entries = [p for p in dir_path.iterdir() if not p.name.startswith("_")]
     entries = [p for p in entries if p.is_dir() or p.suffix == ".py"]
+    if only is not None:
+        entries = [p for p in entries if p.stem == only]
     for path in sorted(entries, key=lambda p: p.name):
         kwargs = dict(
             ids_cfg=ids_cfg, trainer_index=trainer_index,

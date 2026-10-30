@@ -22,10 +22,13 @@ doesn't recognize.
 
 from __future__ import annotations
 
+import functools
+import itertools
 import re
 from pathlib import Path
 from typing import Callable
 
+from . import sqlcorpus
 from .dbcfmt import DbcTable
 
 # `REPLACE INTO` is read exactly like `INSERT INTO`: MySQL deletes any row with the same key and then
@@ -135,8 +138,52 @@ def _skip_ws_and_comments(text: str, i: int) -> int:
 _ON_DUPLICATE_RE = re.compile(r"ON\s+DUPLICATE\s+KEY\s+UPDATE", re.IGNORECASE)
 
 
+# Fast path for `_read_tuples`: a tuple made only of plain literals (no `@var`, no comment inside, no hex) is delimited
+# by one regex and its values pulled out by a second, instead of one Python call per value (the spell snapshots are
+# 37 million values). Anything else - and any tuple the regex cannot fully account for - goes to the character-level
+# parser below, which stays the definition of what a tuple means; the two are held to the same answer by
+# lib/test_sql_dump_fast.py and by the harness.
+_STRING = r"'(?:[^'\\]++|\\[\s\S]|'')*+'"
+_NUMBER_INT = r"-?\d+"
+_NUMBER_FLOAT = r"-?\d+(?:\.\d+(?:[eE][-+]?\d+)?|[eE][-+]?\d+)"
+_VALUE = rf"(?:{_STRING}|NULL|{_NUMBER_FLOAT}|{_NUMBER_INT})"
+_BLANK = r"[ \t\r\n]*"  # exactly what _skip_ws_and_comments skips (no comments: those take the slow path)
+_TUPLE_RE = re.compile(rf"\({_BLANK}{_VALUE}(?:{_BLANK},{_BLANK}{_VALUE})*{_BLANK}\)")
+# Splits a tuple `_TUPLE_RE` already validated into its tokens: a quoted string, or anything up to the next separator.
+_TOKEN_RE = re.compile(r"'(?:[^'\\]++|\\[\s\S]|'')*+'|[^,()\s]++")
+_ESCAPE_RE = re.compile(r"\\([\s\S])|''")
+
+
+def _unescape_match(m: re.Match) -> str:
+    escaped = m.group(1)
+    if escaped is None:
+        return "'"
+    if escaped in "%_":  # MySQL keeps the backslash for these two (LIKE wildcards)
+        return "\\" + escaped
+    return _MYSQL_ESCAPES.get(escaped, escaped)
+
+
+class _TokenValues(dict):
+    """token text -> the value `_read_value` gives it. A snapshot is mostly the same few tokens (`0`, `NULL`, `1`),
+    so after the first sighting a value costs one dict lookup, done by `map` without a Python-level loop."""
+
+    def __missing__(self, token: str):
+        first = token[0]
+        if first == "'":
+            body = token[1:-1]
+            value = _ESCAPE_RE.sub(_unescape_match, body) if "\\" in body or "''" in body else body
+        elif token == "NULL":
+            value = None
+        elif "." in token or "e" in token or "E" in token:
+            value = float(token)
+        else:
+            value = int(token)
+        self[token] = value
+        return value
+
+
 def _read_tuples(
-    text: str, start: int, variables: dict[str, int] | None = None
+    text: str, start: int, variables: dict[str, int] | None = None, *, fast: bool = True
 ) -> tuple[list[list], int]:
     """Parse a comma-separated list of parenthesized value-tuples starting at
     `text[start]` (which must be '('), stopping at the terminating ';' - or,
@@ -145,8 +192,10 @@ def _read_tuples(
     in which case the whole clause is skipped to the statement's real
     terminating ';' via `_skip_statement` - safe because this repo's upsert
     shape never has an embedded ';' inside that clause. Returns (tuples,
-    index_just_past_the_semicolon)."""
+    index_just_past_the_semicolon). `fast=False` forces the character-level parser for every tuple (the reference the
+    fast path is tested against)."""
     tuples = []
+    token_values = _TokenValues()
     i = start
     n = len(text)
     while i < n:
@@ -155,19 +204,24 @@ def _read_tuples(
             return tuples, i + 1
         if text[i] != "(":
             raise ValueError(f"expected '(' or ';' at offset {i}, found {text[i]!r}")
-        i += 1
-        values = []
-        while True:
-            i = _skip_ws_and_comments(text, i)
-            value, i = _read_value(text, i, variables=variables)
-            values.append(value)
-            i = _skip_ws_and_comments(text, i)
-            if text[i] == ",":
-                i += 1
-                continue
-            if text[i] == ")":
-                i += 1
-                break
+        plain = _TUPLE_RE.match(text, i) if fast else None
+        if plain is not None:
+            values = list(map(token_values.__getitem__, _TOKEN_RE.findall(text, i + 1, plain.end() - 1)))
+            i = plain.end()
+        else:
+            i += 1
+            values = []
+            while True:
+                i = _skip_ws_and_comments(text, i)
+                value, i = _read_value(text, i, variables=variables)
+                values.append(value)
+                i = _skip_ws_and_comments(text, i)
+                if text[i] == ",":
+                    i += 1
+                    continue
+                if text[i] == ")":
+                    i += 1
+                    break
         tuples.append(values)
         i = _skip_ws_and_comments(text, i)
         if text[i] == ",":
@@ -251,7 +305,21 @@ def _is_string_column(table: DbcTable, col: str) -> bool:
     return table.fmt[table.columns.index(col)] == "s" or col in table.read_as_string
 
 
-def _fill_defaults(row: dict, table: DbcTable) -> None:
+@functools.lru_cache(maxsize=64)
+def _string_columns(table: DbcTable) -> frozenset:
+    """Every column `_is_string_column` is true for - computed once per table (the per-column `columns.index` lookup it
+    replaces was O(columns) for each NULL in each of a snapshot's tens of thousands of rows)."""
+    return frozenset(
+        col for ch, col in zip(table.fmt, table.columns) if ch == "s" or col in table.read_as_string
+    )
+
+
+@functools.lru_cache(maxsize=64)
+def _column_set(table: DbcTable) -> frozenset:
+    return frozenset(table.columns)
+
+
+def _fill_defaults(row: dict, table: DbcTable, string_columns: frozenset | None = None) -> None:
     """Fill in a per-type default for any column that's missing entirely (an
     explicit column list narrower than `table.columns`) or explicitly NULL.
 
@@ -263,24 +331,30 @@ def _fill_defaults(row: dict, table: DbcTable) -> None:
     ID that `generate.py` itself wrote out verbatim (no real change) reads
     back different from what `build_one()` would produce for it - exactly
     the phantom-diff bug `state.py`'s db_world overlay exists to avoid."""
+    if string_columns is None:
+        string_columns = _string_columns(table)
+    if row.keys() == _column_set(table):
+        # Every column present (the usual full-width row): only the NULLs need a default, and there is no need to
+        # probe 234 columns for them one by one.
+        for col in [c for c, v in row.items() if v is None]:
+            row[col] = "" if col in string_columns else 0
+        return
     for col in table.columns:
         if row.get(col) is None:
-            row[col] = "" if _is_string_column(table, col) else 0
+            row[col] = "" if col in string_columns else 0
 
 
 def read_table_dump(path: Path, table: DbcTable) -> dict[int, dict]:
     """Read every INSERT INTO statement for table.sql_table in a
     mysqldump-style .sql file, keyed by the table's index column."""
-    text = Path(path).read_text(encoding="utf-8")
+    text = sqlcorpus.read_text(path)
     rows: dict[int, dict] = {}
     pos = 0
+    string_columns = _string_columns(table)
     while True:
-        m = _INSERT_HEAD_RE.search(text, pos)
+        m = _next_match(_INSERT_HEAD_RE, text, pos, table.sql_table)
         if not m:
             break
-        if m.group("table") != table.sql_table:
-            pos = m.end()
-            continue
         explicit_cols = (
             [c.strip().strip("`") for c in m.group("cols").split(",")] if m.group("cols") else None
         )
@@ -293,7 +367,7 @@ def read_table_dump(path: Path, table: DbcTable) -> dict[int, dict]:
                     f"({columns[:3]}...)"
                 )
             row = dict(zip(columns, values))
-            _fill_defaults(row, table)
+            _fill_defaults(row, table, string_columns)
             rows[row[table.index_column]] = row
     return rows
 
@@ -306,7 +380,7 @@ def _create_table_body(path: Path, table_name: str) -> str:
     """The text strictly between a `CREATE TABLE \\`table_name\\` (` and its matching closing `)`
     - shared by `parse_create_table_columns` and `parse_create_table_defaults`, which both need to
     walk the same column-definition lines but extract a different piece of each one."""
-    text = Path(path).read_text(encoding="utf-8")
+    text = sqlcorpus.read_text(path)
     m = re.search(_CREATE_TABLE_RE_TEMPLATE.format(table=re.escape(table_name)), text, re.IGNORECASE)
     if not m:
         raise ValueError(f"{path}: no CREATE TABLE `{table_name}` found")
@@ -417,19 +491,16 @@ def read_table_rows(path: Path, table_name: str, columns: tuple[str, ...]) -> li
     key (a composite key, or none at all) — every row is returned as-is in a
     plain list rather than being collapsed into a dict keyed by one column,
     which would silently drop rows that share whatever column got picked."""
-    text = Path(path).read_text(encoding="utf-8")
+    text = sqlcorpus.read_text(path)
     # Every integer `SET @name := n;` in the file, resolved up front (not in statement order -
     # good enough for the "assigned once at the top" shape these files use).
-    variables = {m.group("name"): int(m.group("value")) for m in _SET_VAR_RE.finditer(text)}
+    variables = _file_variables(text)
     out: list[dict] = []
     pos = 0
     while True:
-        m = _INSERT_HEAD_RE.search(text, pos)
+        m = _next_match(_INSERT_HEAD_RE, text, pos, table_name)
         if not m:
             break
-        if m.group("table") != table_name:
-            pos = m.end()
-            continue
         explicit_cols = (
             [c.strip().strip("`") for c in m.group("cols").split(",")] if m.group("cols") else None
         )
@@ -567,8 +638,8 @@ def read_table_statements(path: Path, table_name: str, columns: tuple[str, ...])
     stays as-is: it is the right answer for "what is live" across the base
     dump plus every hand-written migration, where DELETE shapes are far more
     varied than the ones `sql_out.py` emits."""
-    text = Path(path).read_text(encoding="utf-8")
-    variables = {m.group("name"): int(m.group("value")) for m in _SET_VAR_RE.finditer(text)}
+    text = sqlcorpus.read_text(path)
+    variables = _file_variables(text)
     pos = 0
     while pos < len(text):
         ins = _next_match(_INSERT_HEAD_RE, text, pos, table_name)
@@ -625,9 +696,32 @@ def _skip_statement(text: str, pos: int) -> int:
     return idx + 1 if idx != -1 else len(text)
 
 
+def _file_variables(text: str) -> dict[str, int]:
+    """Every integer `SET @name := n;` in the file (an `@`-free file has none, which is most of them)."""
+    if "@" not in text:
+        return {}
+    return {m.group("name"): int(m.group("value")) for m in _SET_VAR_RE.finditer(text)}
+
+
+def _head_index(text: str, pos: int):
+    """The text's `sqlcorpus.HeadIndex` when it came from an active corpus and can answer a search from `pos`
+    exactly like the regex would, else None (plain `str`, or a head-like string inside a skipped statement)."""
+    if not isinstance(text, sqlcorpus.SqlText):
+        return None
+    index = text.head_index
+    return None if index.overlaps(pos) else index
+
+
 def _next_match(pattern: re.Pattern, text: str, pos: int, table_name: str) -> re.Match | None:
     """Like `pattern.search(text, pos)`, but skips over matches for a
-    different table's statements instead of returning them."""
+    different table's statements instead of returning them. On a corpus text the precomputed head index answers
+    instead of a regex scan (`pattern` is always one of the two single-kind head patterns)."""
+    index = _head_index(text, pos)
+    if index is not None:
+        if pattern is _INSERT_HEAD_RE:
+            return index.first(pos, table_name, "I")
+        if pattern is _DELETE_HEAD_RE:
+            return index.first(pos, table_name, "D")
     while True:
         m = pattern.search(text, pos)
         if m is None or m.group("table") == table_name:
@@ -645,19 +739,17 @@ def _next_match(pattern: re.Pattern, text: str, pos: int, table_name: str) -> re
 # dominant cost of a `generate.py` run (regex `.search()` alone: 148s of a 210s call, most of it
 # these three independent per-iteration scans re-walking past hundreds of other tables' statements
 # in the same large migration file) - see docs/bugs-and-fixes.md's "generate.py looks hung" entry.
-_STATEMENT_HEAD_RE = re.compile(
-    r"(?:INSERT|REPLACE)\s+INTO\s+`(?P<ins_table>\w+)`\s*(?:\((?P<cols>[^)]*)\))?\s*VALUES\s*"
-    r"|DELETE\s+FROM\s+`(?P<del_table>\w+)`\s*"
-    r"|UPDATE\s+`(?P<upd_table>\w+)`\s+SET\s+"
-    r"|SET\s+(?P<set_name>@\w+)\s*:?=\s*(?P<set_value>-?\d+)\s*;",
-    re.IGNORECASE,
-)
+_STATEMENT_HEAD_RE = sqlcorpus.STATEMENT_HEAD_RE
 
 
 def _next_statement(text: str, pos: int, table_name: str) -> re.Match | None:
     """`_next_match`'s counterpart for `_STATEMENT_HEAD_RE`: one combined scan per position
     instead of one per statement kind. A `SET` session-variable match (no `*_table` group) is
-    never table-filtered, matching `apply_statements`'s original `_SET_VAR_RE.search` behavior."""
+    never table-filtered, matching `apply_statements`'s original `_SET_VAR_RE.search` behavior. On a corpus text the
+    head index answers (one scan per file, shared by every table's replay)."""
+    index = _head_index(text, pos)
+    if index is not None:
+        return index.first(pos, table_name, "IDUS")
     while True:
         m = _STATEMENT_HEAD_RE.search(text, pos)
         if m is None:
@@ -677,11 +769,12 @@ def _apply_insert(
     )
     columns = explicit_cols or list(table.columns)
     tuples, pos = _read_tuples(text, m.end(), variables)
+    string_columns = _string_columns(table)
     for values in tuples:
         if len(values) != len(columns):
             continue  # not a shape we recognize for this table - skip, don't crash the replay
         row = dict(zip(columns, values))
-        _fill_defaults(row, table)
+        _fill_defaults(row, table, string_columns)
         rows[row[table.index_column]] = row
     return pos
 
@@ -887,8 +980,10 @@ def parse_where_predicate(where_text: str, lenient: bool = False):
     deletes, `BETWEEN` ranges, the OR-of-AND form) instead of silently ignoring them."""
     text = _BETWEEN_RE.sub(lambda m: f"BETWEEN {m.group(1)}|{m.group(2)}", where_text.strip())
     disjuncts = []
+    pins = []  # per disjunct: {column: the finite set of values it admits} for the `=` / `IN` conditions
     for or_part in _split_top_level(_strip_outer_parens(text), "OR"):
         conds = []
+        pinned: dict[str, frozenset] = {}
         for and_part in _split_top_level(_strip_outer_parens(or_part), "AND"):
             m = _COND_RE.match(_strip_outer_parens(and_part))
             if not m:
@@ -897,16 +992,22 @@ def parse_where_predicate(where_text: str, lenient: bool = False):
             if m.group("eq") is not None:
                 value = int(m.group("eq"))
                 conds.append((col, lambda v, value=value: v == value))
+                admitted = frozenset((value,))
             elif m.group("in") is not None:
                 try:
                     values = {int(x) for x in m.group("in").split(",") if x.strip()}
                 except ValueError:
                     return None
                 conds.append((col, lambda v, values=values: v in values))
+                admitted = frozenset(values)
             else:
                 lo, hi = int(m.group("lo")), int(m.group("hi"))
                 conds.append((col, lambda v, lo=lo, hi=hi: v is not None and lo <= v <= hi))
+                continue
+            # Two conditions on one column both have to hold: the intersection.
+            pinned[col] = pinned[col] & admitted if col in pinned else admitted
         disjuncts.append(conds)
+        pins.append(pinned)
 
     def predicate(row: dict) -> bool:
         return any(
@@ -914,6 +1015,7 @@ def parse_where_predicate(where_text: str, lenient: bool = False):
             for conds in disjuncts
         )
 
+    predicate.pins = pins  # lets a replay look candidate rows up by key instead of testing every row
     return predicate
 
 
@@ -943,10 +1045,10 @@ def _apply_composite_delete(
             if report:
                 report(text[start:start + 120])
             return end  # a column we don't key on - can't tell what it removes
-        for values in tuples:
-            wanted = tuple(values)
-            for key in [k for k in rows if tuple(k[i] for i in idx) == wanted]:
-                rows.pop(key, None)
+        # One pass for every listed value (was one pass per value): the same keys go either way.
+        wanted_all = {tuple(values) for values in tuples}
+        for key in [k for k in rows if tuple(k[i] for i in idx) in wanted_all]:
+            rows.pop(key, None)
         return end
     for pattern in (_WHERE_IN_RE, _WHERE_EQ_RE):
         m = pattern.match(text, pos)
@@ -975,9 +1077,99 @@ def _apply_composite_delete(
     return _skip_statement(text, pos)
 
 
+_MISSING = object()
+
+
+class _KeyIndex:
+    """Rows of a composite-key replay looked up by what they *contain* in the key columns.
+
+    The dict a replay builds is keyed by the key tuple taken at INSERT time, but `UPDATE .. SET <key column> = ..`
+    rewrites a row's content without re-keying it, and a later `WHERE` is judged against the content. So the lookup
+    here is by content, not by dict key, and is rebuilt (lazily, O(rows)) after anything that could have changed
+    which row holds which key: an INSERT, a DELETE, or an assignment to a key column. Between those (the long runs
+    of point `UPDATE`s in the promoted history, 1,203 of them in one upstream merge) it is one dict lookup each
+    instead of a scan of every row."""
+
+    def __init__(self, rows: dict[tuple, dict], key_columns: tuple[str, ...]):
+        self.rows = rows
+        self.key_columns = key_columns
+        self._map: dict[tuple, list[dict]] | None = None
+
+    def invalidate(self) -> None:
+        self._map = None
+
+    def replaced(self, old: dict | None, new: dict) -> None:
+        """An INSERT stored `new` under a dict key, dropping `old` if that key held a row: keep the map current instead
+        of rebuilding it (a migration that INSERTs a creature and then UPDATEs it would otherwise rebuild per pair)."""
+        if self._map is None or _MISSING in self._map:
+            return
+        if old is not None:
+            bucket = self._map.get(tuple(old.get(c, _MISSING) for c in self.key_columns))
+            if bucket is not None:
+                for i, row in enumerate(bucket):
+                    if row is old:
+                        del bucket[i]
+                        break
+        content = tuple(new.get(c, _MISSING) for c in self.key_columns)
+        if _MISSING in content:
+            self._map = {_MISSING: []}
+        else:
+            self._map.setdefault(content, []).append(new)
+
+    def lookup(self, content_key: tuple) -> list[dict] | None:
+        """The rows holding exactly `content_key` in the key columns; None when some row lacks a key column (the
+        replay's own rows never do, but a caller may hand in any dict), where the caller must scan instead - a
+        missing column counts as satisfied there."""
+        if self._map is None:
+            mapping: dict[tuple, list[dict]] = {}
+            for row in self.rows.values():
+                content = tuple(row.get(c, _MISSING) for c in self.key_columns)
+                if _MISSING in content:
+                    mapping = {_MISSING: []}
+                    break
+                mapping.setdefault(content, []).append(row)
+            self._map = mapping
+        if _MISSING in self._map:
+            return None
+        return self._map.get(content_key, [])
+
+    # Most the candidate lookup will enumerate before giving up and letting the caller scan.
+    MAX_PINNED_KEYS = 20000
+
+    def pinned_rows(self, pins: list[dict[str, frozenset]]) -> list[dict] | None:
+        """Every row that could satisfy a WHERE whose OR-ed branches each pin the key columns (`pins`, from
+        `parse_where_predicate`): the rows holding one of the pinned key combinations, each once. None when some
+        branch leaves a key column free, or the combinations are too many, or `lookup` cannot answer: scan instead.
+        A superset of the matches - the caller still applies the predicate to each."""
+        keys: set[tuple] = set()
+        total = 0
+        for pinned in pins:
+            if not all(c in pinned for c in self.key_columns):
+                return None
+            size = 1
+            for c in self.key_columns:
+                size *= len(pinned[c])
+            total += size
+            if total > self.MAX_PINNED_KEYS:
+                return None
+            keys.update(itertools.product(*(pinned[c] for c in self.key_columns)))
+        found: list[dict] = []
+        seen: set[int] = set()
+        for key in keys:
+            rows = self.lookup(key)
+            if rows is None:
+                return None
+            for row in rows:
+                if id(row) not in seen:
+                    seen.add(id(row))
+                    found.append(row)
+        return found
+
+
 def _apply_composite_update(
     rows: dict[tuple, dict], key_columns: tuple[str, ...], text: str, pos: int,
     variables: dict[str, int] | None = None, report: Callable[[str], None] | None = None,
+    index: _KeyIndex | None = None,
 ) -> int:
     """One composite-key UPDATE. Every condition is honoured, key or not, the way MySQL would: a
     row is touched only if all of them hold. A condition on a column the stored row does not hold
@@ -993,9 +1185,20 @@ def _apply_composite_update(
     end = m.end()
     conditions = parse_and_equality_conditions(m.group("conds"))
     if conditions is not None and any(c in key_columns for c, _ in conditions):
-        for row in rows.values():
+        pinned = dict(conditions)
+        if index is not None and len(pinned) == len(conditions) and all(c in pinned for c in key_columns):
+            # Every key column is pinned by an equality (and none twice): only rows holding exactly that key can
+            # match, so test those instead of every row. The full condition list is still checked on each.
+            candidates = index.lookup(tuple(pinned[c] for c in key_columns))
+            if candidates is None:
+                candidates = rows.values()
+        else:
+            candidates = rows.values()
+        for row in candidates:
             if all(c not in row or row[c] == v for c, v in conditions):
                 _assign(row, assignments)
+        if index is not None and any(c in key_columns for c in assignments):
+            index.invalidate()
         return end
     # Not an AND of equalities naming a key column: IN / BETWEEN / OR, or a filter on non-key columns.
     predicate = (
@@ -1006,9 +1209,12 @@ def _apply_composite_update(
         if report:
             report("UPDATE ... SET " + text[start:start + 100])
         return end
-    for row in rows.values():
+    candidates = index.pinned_rows(predicate.pins) if index is not None else None
+    for row in rows.values() if candidates is None else candidates:
         if predicate(row):
             _assign(row, assignments)
+    if index is not None and any(c in key_columns for c in assignments):
+        index.invalidate()
     return end
 
 
@@ -1053,6 +1259,7 @@ def apply_composite_key_statements(
         for t in re.finditer(rf"\bTRUNCATE\s+(?:TABLE\s+)?`?{re.escape(table_name)}`?\b", sql_text, re.IGNORECASE):
             if not _in_line_comment(sql_text, t.start()):
                 on_skip(sql_text[t.start():t.start() + 60])
+    index = _KeyIndex(rows, key_columns)
     while True:
         m = _next_statement(sql_text, pos, table_name)
         if m is None:
@@ -1080,11 +1287,14 @@ def apply_composite_key_statements(
                         if on_skip:
                             on_skip("INSERT row " + repr(values)[:100])
                         continue
+                    previous = rows.get(key)
                     rows[key] = row
+                    index.replaced(previous, row)
             elif m.group("del_table") is not None:
+                index.invalidate()
                 pos = _apply_composite_delete(rows, key_columns, sql_text, m.end(), on_skip)
             else:
-                pos = _apply_composite_update(rows, key_columns, sql_text, m.end(), variables, on_skip)
+                pos = _apply_composite_update(rows, key_columns, sql_text, m.end(), variables, on_skip, index)
         except Exception:
             if on_skip:
                 on_skip(sql_text[m.start():m.start() + 120])

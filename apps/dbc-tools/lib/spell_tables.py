@@ -30,7 +30,7 @@ from dataclasses import dataclass, field
 
 from pathlib import Path
 
-from . import dbcfmt, sql_dump, sql_out, trainer_state
+from . import dbcfmt, sql_dump, sql_out, sqlcorpus, trainer_state
 
 # Column tuples mirror each table's CREATE TABLE in data/sql/base/db_world/,
 # minus the synthetic "id" the registry adds for duplicate-declaration
@@ -127,8 +127,11 @@ def _is_generated(path: Path) -> bool:
     2026-09-23: confirmed against every real file in
     `data/sql/updates/db_world/`, which all start with `-- DB update`)."""
     try:
-        with path.open(encoding="utf-8") as fh:
-            first_two = (fh.readline(), fh.readline())
+        if sqlcorpus.active() is not None:  # the text is already in memory; the first two lines of it
+            first_two = sqlcorpus.read_text(path).split("\n", 2)[:2]
+        else:
+            with path.open(encoding="utf-8") as fh:
+                first_two = (fh.readline(), fh.readline())
         return any(line.startswith(GENERATED_MARKER) for line in first_two)
     except OSError:  # pragma: no cover - defensive
         return False
@@ -159,10 +162,11 @@ def load_generated_table_rows(table_name: str, key_columns: tuple[str, ...]) -> 
     if base_path.is_file():
         fallback_columns = sql_dump.parse_create_table_columns(base_path, table_name)
 
-    live: dict[tuple, dict] = {}
-    for path in trainer_state._migration_files_mentioning(table_name):
-        if not _is_generated(path):
-            continue
+    def step(state: list, path: Path) -> list:
+        """`state` is `[live rows, gave_up]`; once a DELETE shape is not understood nothing more is read, as before."""
+        live, gave_up = state
+        if gave_up or not _is_generated(path):
+            return state
         try:
             for kind, payload in sql_dump.read_table_statements(path, table_name, fallback_columns):
                 if kind == "insert":
@@ -180,10 +184,19 @@ def load_generated_table_rows(table_name: str, key_columns: tuple[str, ...]) -> 
                         f"warning: spell_tables.py: {path} has a DELETE on {table_name} in a shape "
                         f"this replay doesn't understand; skipping prune for {table_name}"
                     )
-                    return []
+                    state[1] = True
+                    return state
         except Exception as exc:  # pragma: no cover - defensive, cf. load_table_rows
             print(f"warning: spell_tables.py: skipping {path} for {table_name}: {exc}")
-    return list(live.values())
+        return state
+
+    stable, volatile = trainer_state._split_stable(trainer_state._migration_files_mentioning(table_name))
+    state = sqlcorpus.checkpointed(
+        "generated_rows", (table_name, tuple(key_columns), fallback_columns), stable, lambda: [{}, False], step,
+    )
+    for path in volatile:
+        step(state, path)
+    return [] if state[1] else list(state[0].values())
 
 
 def _row_key(row: dict, key_columns: tuple[str, ...]) -> tuple | None:
@@ -213,15 +226,37 @@ def _matching_keys(
     return [k for k in live if tuple(k[i] for i in idx) == wanted]
 
 
-def load_base_table_rows(table_name: str) -> list[dict]:
+_base_rows_cache: dict[tuple, list[dict]] = {}
+sqlcorpus.register_reset(_base_rows_cache.clear)
+
+
+def load_base_table_rows(table_name: str, project: tuple[str, ...] | None = None) -> list[dict]:
     """Stock rows only, straight from the base dump - used to refuse to prune
     a key a past run *overrode* rather than introduced (safety rule 1 of
-    `.agents/plans/dbc-tools-prune-pass/dbc-tools-prune-pass.PLAN.md`)."""
+    `.agents/plans/dbc-tools-prune-pass/dbc-tools-prune-pass.PLAN.md`).
+
+    `project` keeps only those columns of each row: the prune pass only reads the key columns, and
+    `item_template`'s 46k rows are 140 columns wide. While a `sqlcorpus` is active the result is built once per run
+    (and cached on disk); that shared list must not be modified."""
     base_path = trainer_state.BASE_SQL_DIR / f"{table_name}.sql"
     if not base_path.is_file():
         return []
-    columns = sql_dump.parse_create_table_columns(base_path, table_name)
-    return sql_dump.read_table_rows(base_path, table_name, columns)
+    key = (table_name, project)
+    if sqlcorpus.active() is not None and key in _base_rows_cache:
+        return _base_rows_cache[key]
+
+    def step(rows: list[dict], path: Path) -> list[dict]:
+        columns = sql_dump.parse_create_table_columns(path, table_name)
+        more = sql_dump.read_table_rows(path, table_name, columns)
+        if project is not None:
+            more = [{c: row[c] for c in project if c in row} for row in more]
+        rows.extend(more)
+        return rows
+
+    rows = sqlcorpus.checkpointed("base_rows", key, [base_path], list, step)
+    if sqlcorpus.active() is not None:
+        _base_rows_cache[key] = rows
+    return rows
 
 
 @dataclass(frozen=True)
@@ -527,7 +562,7 @@ def load_spell_table_index() -> SpellTableIndex:
     return SpellTableIndex(
         {spec.name: trainer_state.load_table_rows(spec.name) for spec in SPELL_TABLES},
         emitted={spec.name: load_generated_table_rows(spec.name, spec.key_columns) for spec in SPELL_TABLES},
-        base={spec.name: load_base_table_rows(spec.name) for spec in SPELL_TABLES},
+        base={spec.name: load_base_table_rows(spec.name, spec.key_columns) for spec in SPELL_TABLES},
     )
 
 
@@ -602,7 +637,7 @@ def load_creature_table_index() -> SpellTableIndex:
             for spec in CREATURE_TABLES
         },
         emitted={spec.name: load_generated_table_rows(spec.name, spec.key_columns) for spec in CREATURE_TABLES},
-        base={spec.name: load_base_table_rows(spec.name) for spec in CREATURE_TABLES},
+        base={spec.name: load_base_table_rows(spec.name, spec.key_columns) for spec in CREATURE_TABLES},
         tables=CREATURE_TABLES,
     )
 
@@ -689,7 +724,31 @@ def load_live_item_template_rows() -> dict[int, dict]:
         sys.path.append(item_tools)
     from item_lib import overlay  # noqa: PLC0415
 
-    return overlay.get_rows()
+    if sqlcorpus.active() is None:
+        return overlay.get_rows()
+
+    # Same replay as `overlay.resolve_current_rows()` (base dump, then every merged and pending file in file-name
+    # order), split so the merged history can be cached and the pending files replayed on top.
+    files = overlay._contributing_files()
+    merged = 0
+    while merged < len(files) and files[merged].is_relative_to(overlay.MERGED_DIR):
+        merged += 1
+
+    def step(rows: dict[int, dict], path: Path) -> dict[int, dict]:
+        if path == overlay.BASE_FILE:
+            columns = overlay.parse_create_table_columns(path, "item_template")
+            rows.update(overlay.read_table_dump(path, "item_template", columns, "entry"))
+            return rows
+        text = sqlcorpus.read_text(path)
+        if "item_template" in text:
+            overlay._apply_updates(text, rows, str(path))
+            overlay._apply_inserts(text, rows, str(path))
+        return rows
+
+    rows = sqlcorpus.checkpointed("item_overlay", None, [overlay.BASE_FILE, *files[:merged]], dict, step)
+    for path in files[merged:]:
+        step(rows, path)
+    return rows
 
 
 _GENERATED_ITEM_UPDATE_RE = re.compile(
@@ -701,13 +760,18 @@ def load_generated_item_entries() -> list[dict]:
     """`{"entry": n}` for every item a generated migration still on disk edits - the item counterpart of
     `load_generated_table_rows` (that one replays INSERT/DELETE; `item_template` is emitted as an UPDATE,
     which `sql_dump` does not parse). Feeds `render_item_retirement_report` only."""
-    entries: dict[int, dict] = {}
-    for path in trainer_state._migration_files_mentioning("item_template"):
+    def step(entries: dict[int, dict], path: Path) -> dict[int, dict]:
         if not _is_generated(path):
-            continue
-        for match in _GENERATED_ITEM_UPDATE_RE.finditer(path.read_text(encoding="utf-8")):
+            return entries
+        for match in _GENERATED_ITEM_UPDATE_RE.finditer(sqlcorpus.read_text(path)):
             for token in match.group(1).split(","):
                 entries[int(token)] = {"entry": int(token)}
+        return entries
+
+    stable, volatile = trainer_state._split_stable(trainer_state._migration_files_mentioning("item_template"))
+    entries = sqlcorpus.checkpointed("generated_item_entries", None, stable, dict, step)
+    for path in volatile:
+        step(entries, path)
     return list(entries.values())
 
 
@@ -757,7 +821,7 @@ def load_item_table_index(live_rows: dict[int, dict] | None = None) -> SpellTabl
     return SpellTableIndex(
         {"item_template": list(live_rows.values())},
         emitted={spec.name: load_generated_item_entries() for spec in ITEM_TABLES},
-        base={spec.name: load_base_table_rows(spec.name) for spec in ITEM_TABLES},
+        base={spec.name: load_base_table_rows(spec.name, spec.key_columns) for spec in ITEM_TABLES},
         tables=ITEM_TABLES,
     )
 
@@ -908,10 +972,12 @@ def load_removed_keys(table_name: str, key_columns: tuple[str, ...]) -> set[tupl
     empty) rather than guess - symmetric with `load_generated_table_rows`'s own "shrink, never
     guess" posture: fewer keys read as "already removed" only means a future run re-emits a
     harmless, idempotent DELETE, never that a real removal silently never happens."""
-    removed: set[tuple] = set()
-    for path in trainer_state._migration_files_mentioning(table_name):
-        if not _is_generated(path):
-            continue
+
+    def step(state: list, path: Path) -> list:
+        """`state` is `[removed keys, gave_up]` (see `load_generated_table_rows`)."""
+        removed, gave_up = state
+        if gave_up or not _is_generated(path):
+            return state
         try:
             for kind, payload in sql_dump.read_table_statements(path, table_name, ()):
                 if kind == "insert":
@@ -930,10 +996,19 @@ def load_removed_keys(table_name: str, key_columns: tuple[str, ...]) -> set[tupl
                         f"warning: spell_tables.py: {path} has a DELETE on {table_name} in a shape "
                         f"load_removed_keys doesn't understand; treating nothing in it as removed"
                     )
-                    return set()
+                    state[1] = True
+                    return state
         except Exception as exc:  # pragma: no cover - defensive, cf. load_generated_table_rows
             print(f"warning: spell_tables.py: skipping {path} for {table_name} removals: {exc}")
-    return removed
+        return state
+
+    stable, volatile = trainer_state._split_stable(trainer_state._migration_files_mentioning(table_name))
+    state = sqlcorpus.checkpointed(
+        "removed_keys", (table_name, tuple(key_columns)), stable, lambda: [set(), False], step,
+    )
+    for path in volatile:
+        step(state, path)
+    return set() if state[1] else state[0]
 
 
 def _keys_of(rows: list[dict], key_columns: tuple[str, ...]) -> set[tuple]:
