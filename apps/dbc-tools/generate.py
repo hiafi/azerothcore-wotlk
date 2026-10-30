@@ -49,7 +49,7 @@ from lib import sqlcorpus, trainer_pricing, trainer_state  # noqa: E402
 from bootstrap import load_spell_ranks_chains  # noqa: E402
 from lib.dsl import registry as dsl_registry  # noqa: E402
 
-KNOWN_FLAGS = {"--no-prune", "--check", "--no-cache", "--rebuild-cache", "--cache"}
+KNOWN_FLAGS = {"--no-prune", "--check", "--no-cache", "--rebuild-cache"}
 
 # PLAN P2b step 4: adopted class by class, inside each class's own pass - not a side effect of
 # every generate.py run. Extend this tuple when a pass is ready to start generating/relying on its
@@ -441,7 +441,7 @@ def main() -> int:
         return 2
 
     corpus = sqlcorpus.activate(
-        None if "--no-cache" in args or "--cache" not in args else CACHE_DIR, cache_code_version(), rebuild="--rebuild-cache" in args,
+        None if "--no-cache" in args else CACHE_DIR, cache_code_version(), rebuild="--rebuild-cache" in args,
     )
     try:
         return _run(corpus)
