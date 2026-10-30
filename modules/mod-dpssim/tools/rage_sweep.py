@@ -9,21 +9,35 @@ what the user needs to pick the level-60 constants:
   1. a SOURCE table per profile (white hits, crits, mean damage, measured swing speed against the weapon's base
      speed, i.e. the haste the gear gave),
   2. the RAW rage-per-second tables for the k and m given by --k / --m (default: the constants in
-     src/server/game/Entities/Unit/Generated/WarriorData.h when that file is found, else 0.43 and 1.8),
-  3. D15's suggested solve for k and m (a SUGGESTION only: the user picks k and m),
+     src/server/game/Entities/Unit/Generated/WarriorData.h when that file is found, else 0.43 and 1.35),
+  3. D15's suggested solve for k and m (a SUGGESTION only: the user picks k and m; the W0a solve, kept as is),
   4. the dual-wield advantage, stock against the new formula (the doc says "about halved"),
-  5. the 15% haste check (haste-neutral speed part),
+  5. the 15% haste check (W0b D23): two rows per profile, +15% SPELL haste (rage per second x1.15) and +15% ATTACK
+     SPEED only (about x1.03: only the damage term moves with the swing rate),
   6. D16's Arms budget table (white-swing income plus Anger Management 3 against the Arms rotation's spend).
 
-The formula (D12, mirrored in src/server/game/Entities/Unit/WarriorMechanics.cpp):
+The formula (D12 + W0b D21, mirrored in src/server/game/Entities/Unit/WarriorMechanics.cpp):
     c(L)      = 0.0091107836 L^2 + 3.225598133 L + 4.2652911          (+13.27 per level above 70)
     stock     : f = int(unhasted swing * 3.5)  main hand, int(unhasted swing * 1.75) off hand
                 dealt = (7.5 d / c + f) / 2, capped at 2 * 7.5 d / c, x rate
-    new       : speed = lround(hasted swing * 3.5 * m * 100) main hand, lround(hasted swing * 0.875 * 100) off hand
-                (hundredths); both are doubled on a crit, like the stock factor
+    new       : speed = lround(hasted swing * max(1, 1 / UNIT_MOD_CAST_SPEED) * 3.5 * m * 100) main hand,
+                lround(hasted swing * max(1, 1 / UNIT_MOD_CAST_SPEED) * 0.875 * 100) off hand
+                (hundredths); both are doubled on a crit, like the stock factor.
+                1 / UNIT_MOD_CAST_SPEED is the spell-haste factor: a spell haste of h (0.15 = +15%) is 1 + h. The
+                hasted swing is already shortened by attack speed, so a haste that is BOTH spell and attack speed
+                (haste rating, Bloodlust) cancels in the swing: rage per swing is the unhasted figure and rage per
+                second scales 1:1 with the haste; attack speed alone shortens the swing and only the damage term
+                moves. A net slow (cast speed above 1) never lowers rage: the factor floors at 1.
                 dealt = (k * 7.5 d / c + speed / 100) / 2, capped at the STOCK cap 15 d / c, then x 1.10 in Battle
                 Stance (aura 213), then x rate
 A new hit's damage d is the report's "damage" (the dummy has no absorb, so damage + absorbed is the same number).
+The profiles' gear haste comes only from haste rating, which fans out to melee, ranged AND spell haste, so it is taken
+as SPELL haste too: the profile's HasteRating (conf/profiles/<Name>.conf) / 10 percent at level 60 (gtCombatRatings
+CR_HASTE_MELEE / CR_HASTE_SPELL level 60 = 10 rating per 1%; warrior class scalar 1), overridable with --haste. The true
+hasted swing is then weapon speed / (1 + h): the report's own swing gaps are multiples of the 100 ms sim step (the
+W0a reports read 3.600 s on a 3.6 s weapon at 2.2% haste), so they are not used for the speed term when the haste is
+known. NOTE: the existing W0a reports were produced by the pre-W0b build (hasted swing, no spell factor); this
+reference is the W0b formula, so their reference rows differ from the old output by the haste term.
 
 WHAT THE REPORT CAN AND CANNOT TELL US (find: SimReport.h / EventRecorder.h):
   - A white swing is a "hits" row with spellId 0 (EventRecorder::MELEE_SPELL_ID), isPet false, sourceEntry 0:
@@ -38,25 +52,41 @@ WHAT THE REPORT CAN AND CANNOT TELL US (find: SimReport.h / EventRecorder.h):
     cluster the off hand. It warns when the clusters are not clearly apart or when the counts do not match the swing
     speeds. A hand tag in the report would remove this guess (C++ change, not done: out of this tool's scope).
   - Swing speed: the mean gap between one hand's consecutive hits in the run (the hasted swing time the new formula
-    uses, exact on average even when Flurry-style haste comes and goes). The UNHASTED weapon speed the stock formula
-    uses is not in the report either: it is a per-profile default below (the reference weapons of the four
-    profiles), overridable with --speed.
+    uses when no gear haste is known, exact on average even when Flurry-style haste comes and goes). The UNHASTED
+    weapon speed the stock formula uses is not in the report either: it is a per-profile default below (the
+    reference weapons of the profiles), overridable with --speed.
+  - Gear haste: not in the report. It is the profile conf's HasteRating at 10 rating per 1% (level 60 only), or
+    --haste KEY=PCT. The measured gaps are multiples of the sim step (100 ms), so a 2.2% haste on a 3.6 s weapon still
+    reads 3.6 s; the speed term therefore uses weapon speed / (1 + haste), not the measured gap, when the haste is
+    known.
+  - powerSamples (--measured): the actor's rage every 500 ms (modules/mod-dpssim/README.md "Power and rune samples"),
+    rage divided by ten, powerType 1. A window that also spends rage nets the spend against the swing's gain, so the
+    sum of positive steps is only a LOWER BOUND of income there; --measured says so and prints the reference only.
 
 Usage:
     python3 -I tools/rage_sweep.py [--2h-start SRC] [--2h-end SRC] [--dw-start SRC] [--dw-end SRC]
-                                   [--k 0.43] [--m 1.8] [--rate 1.0] [--level 60] [--crit-mult 2.0]
-                                   [--header PATH] [--speed KEY=MH[/OH]] [--stance KEY=battle|berserker]
-                                   [--aggregate-only] [--reports-dir DIR]
+                                   [--2h-start-haste SRC] [--k 0.43] [--m 1.35] [--rate 1.0] [--level 60]
+                                   [--crit-mult 2.0] [--header PATH] [--speed KEY=MH[/OH]]
+                                   [--stance KEY=battle|berserker] [--haste KEY=PCT] [--aggregate-only]
+                                   [--reports-dir DIR]
+    python3 -I tools/rage_sweep.py --measured [same options]
     python3 -I tools/rage_sweep.py --self-test
 
 SRC (a profile whose SRC is omitted is looked up in the reports dir: the newest <Profile>.<stamp>.report.json):
     a *.report.json aggregate (its sibling *.iterN.report.json are used when present), a stamp prefix such as
     reports/WarriorRage2HStartSim.20261030-120000, or a glob. Any subset of the four profiles works; the solve
     needs 2h-start and 2h-end, the dual-wield advantage needs all four, the Arms budget needs a 2h profile.
-KEY is 2h-start, 2h-end, dw-start or dw-end.
+KEY is 2h-start, 2h-end, dw-start, dw-end or 2h-start-haste (WarriorRage2HStartHasteSim, W0b: the 2h-start profile
+plus a haste top-up; optional, the tables and --measured use it when its report exists).
+
+--measured (W0b D23): sources table, then per profile the rage income per second read from the report's powerSamples
+(sum of positive steps over the series, all iterations) next to the white-swing REFERENCE this script computes, and the
+hasted / unhasted ratio (2h-start-haste over 2h-start) of both. Acceptance: the measured ratio within 5% of the
+reference ratio. If a profile's samples cannot show its income (a spend, a rage-cap sample, no rage series), the tool
+says why and prints the reference only for it, with no ratio verdict.
 
 Exit status: 0 ok, 1 usage / missing data, 2 the D15 solve is not usable (k <= 0 or m <= 0, or a singular system:
-REPORT AND STOP, nothing is suggested), 3 self-test failure.
+REPORT AND STOP, nothing is suggested), 3 self-test failure, 4 --measured ratio outside 5% of the reference.
 
 Stdlib only; run with `python3 -I`.
 """
@@ -78,7 +108,7 @@ from pathlib import Path
 # ----------------------------------------------------------------------------------------------------------------
 
 DEFAULT_K = 0.43
-DEFAULT_M = 1.8
+DEFAULT_M = 1.35               # WarriorData::RAGE_M_60 (user pick 2026-10-29)
 MH_SPEED_FACTOR = 3.5          # WarriorData::RAGE_MH_SPEED_FACTOR
 OH_SPEED_FACTOR = 0.875        # WarriorData::RAGE_OH_SPEED_FACTOR
 SPEED_FIXED_POINT = 100        # WarriorData::RAGE_SPEED_FIXED_POINT
@@ -87,8 +117,11 @@ STOCK_OH_FACTOR = 1.75         # ... off hand
 BATTLE_STANCE_PCT = 10.0       # aura 213 (MOD_RAGE_FROM_DAMAGE_DEALT) on Battle Stance 2457
 LEVEL = 60
 CRIT_MULT = 2.0                # physical crit damage multiplier, used only to normalise damage for the hand split
-HASTE_CHECK = 0.15             # D15: "15% haste"
-GROWTH_TARGET = 1.25           # D15 (b): the doc's "about 25% more rage per second than at its start"
+HASTE_CHECK = 0.15             # D15/D23: the "+15%" of the haste check
+GROWTH_TARGET = 1.25           # D15 (b), the W0a solve's bracket-growth target (the doc now measures about 8%)
+RATING_PER_HASTE_PCT_60 = 10.0  # gtCombatRatings CR_HASTE_MELEE (id 1759) / CR_HASTE_SPELL (id 1959) at level 60 = 10
+MEASURED_TOLERANCE = 0.05      # D23: measured hasted/unhasted ratio within 5% of the reference ratio
+RAGE_POWER_TYPE = 1            # Powers::POWER_RAGE
 
 HEADER_NAMES = {
     "RAGE_K_60": "k",
@@ -98,11 +131,16 @@ HEADER_NAMES = {
     "RAGE_SPEED_FIXED_POINT": "fp",
 }
 
+# Profiles that need not have a report (no "(no report found ...)" line when missing).
+OPTIONAL_PROFILES = {"2h-start-haste"}
+
 # The four sweep profiles: key -> (profile name, hands, default stance, default unhasted weapon speeds MH / OH).
 # Speeds are the reference weapons of the profiles (see each conf's header).
 PROFILES = {
     "2h-start": ("WarriorRage2HStartSim", 1, "battle", 3.6, None),     # Seeping Willow 12969
     "2h-end": ("WarriorRage2HEndSim", 1, "battle", 3.7, None),         # Barb of the Sand Reaver 21635
+    # 2h-start + a HasteRating top-up (W0b D23), same Seeping Willow 12969
+    "2h-start-haste": ("WarriorRage2HStartHasteSim", 1, "battle", 3.6, None),
     # Willey's Back Scratcher 22404 + Skullforge Reaver 13361
     "dw-start": ("WarriorRageDwStartSim", 2, "berserker", 2.6, 2.5),
     # Sand Polished Hammer 21715 + Ancient Qiraji Ripper 21650
@@ -143,9 +181,13 @@ def lround(x: float) -> int:
     return int(math.floor(x + 0.5)) if x >= 0 else -int(math.floor(-x + 0.5))
 
 
-def new_speed_fixed(swing_s: float, off_hand: bool, m: float, crit: bool) -> int:
-    """Warrior::RageSpeedFactor for a player (hundredths), then the caller's crit doubling."""
-    factor = lround(swing_s * (OH_SPEED_FACTOR if off_hand else MH_SPEED_FACTOR * m) * SPEED_FIXED_POINT)
+def new_speed_fixed(swing_s: float, off_hand: bool, m: float, crit: bool, spell_factor: float = 1.0) -> int:
+    """Warrior::RageSpeedFactor for a player (hundredths), then the caller's crit doubling.
+
+    swing_s is the HASTED swing; spell_factor is 1 / UNIT_MOD_CAST_SPEED (a spell haste of h is 1 + h). A net slow
+    (spell_factor < 1) never lowers rage: the factor floors at 1 (W0b D21, the rogue energy rule)."""
+    factor = lround(swing_s * max(1.0, spell_factor) * (OH_SPEED_FACTOR if off_hand else MH_SPEED_FACTOR * m)
+                    * SPEED_FIXED_POINT)
     return factor * 2 if crit else factor
 
 
@@ -189,6 +231,13 @@ class Hit:
 
 
 @dataclass
+class PowerRun:
+    """One report file's powerSamples: (timestampMs, power, maxPower, powerType) in report order."""
+    samples: list[tuple[int, float, float, int]]
+    duration_s: float = 0.0
+
+
+@dataclass
 class ProfileData:
     key: str
     name: str
@@ -200,10 +249,22 @@ class ProfileData:
     files: list[str] = field(default_factory=list)
     hits: list[Hit] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    haste: float = 0.0                 # the profile's gear haste as a fraction (0.15 = +15%), spell AND attack speed
+    haste_known: bool = False          # True when `haste` comes from the conf's HasteRating or --haste
+    power_runs: list[PowerRun] = field(default_factory=list)
 
     @property
     def battle(self) -> bool:
         return self.stance == "battle"
+
+    def swing_terms(self, h: Hit) -> tuple[float, float]:
+        """(true hasted swing seconds, spell-haste factor) for one hit, as the C++ sees them. With a known gear haste
+        the swing is weapon speed / (1 + haste) (the report's gaps are quantised to the sim step); without one it is
+        the measured gap and the spell factor is 1."""
+        base = self.base_oh if h.off_hand else self.base_mh
+        if self.haste_known and base:
+            return base / (1.0 + self.haste), 1.0 + self.haste
+        return h.swing_s, 1.0 + self.haste
 
 
 def mean_gap_seconds(timestamps_ms: list[int]) -> float | None:
@@ -282,6 +343,11 @@ def add_report(pd: ProfileData, report: dict, path: str, crit_mult: float) -> No
         for r in hand_rows:
             pd.hits.append(Hit(float(r["damage"]), bool(r.get("crit")), off_hand, swing))
     pd.duration_s += duration_ms / 1000.0
+    power = report.get("powerSamples")
+    if power:
+        pd.power_runs.append(PowerRun([
+            (int(p["timestampMs"]), float(p["power"]), float(p.get("maxPower", 0)), int(p.get("powerType", -1)))
+            for p in power], duration_ms / 1000.0))
 
 
 def resolve_sources(spec: str | None, profile_name: str, reports_dir: Path, aggregate_only: bool) -> list[Path]:
@@ -312,12 +378,27 @@ def resolve_sources(spec: str | None, profile_name: str, reports_dir: Path, aggr
     return [agg] if agg.is_file() else []
 
 
+def conf_haste_pct(profile_name: str, level: int, conf_dir: Path) -> float | None:
+    """The profile conf's HasteRating as percent haste at level 60 (10 rating per 1%), or None when the conf is
+    missing, has no HasteRating, or the level is not 60 (the rating table differs per level)."""
+    path = conf_dir / f"{profile_name}.conf"
+    if level != 60 or not path.is_file():
+        return None
+    for line in path.read_text(encoding="utf-8").splitlines():
+        m = re.match(r"\s*HasteRating\s*=\s*([0-9.]+)\s*(?:#.*)?$", line)
+        if m:
+            return float(m.group(1)) / RATING_PER_HASTE_PCT_60
+    return None
+
+
 def load_profile(key: str, files: list[Path], stance: str | None, speeds: tuple[float, float | None] | None,
-                 crit_mult: float) -> ProfileData:
+                 crit_mult: float, haste_pct: float | None = None) -> ProfileData:
     name, hands, def_stance, base_mh, base_oh = PROFILES[key]
     if speeds:
         base_mh, base_oh = speeds[0], speeds[1] if speeds[1] is not None else base_oh
     pd = ProfileData(key, name, hands, stance or def_stance, base_mh, base_oh)
+    if haste_pct is not None:
+        pd.haste, pd.haste_known = haste_pct / 100.0, True
     for f in files:
         pd.files.append(str(f))
         add_report(pd, json.loads(f.read_text(encoding="utf-8")), str(f), crit_mult)
@@ -355,15 +436,19 @@ class Rates:
         return self.mh + self.oh
 
 
-def new_rates(pd: ProfileData, k: float, m: float, level: int, rate: float, scale: float = 1.0) -> Rates:
-    """Rage per second under the new formula. `scale` > 1 models extra haste: more swings per second, a shorter
-    hasted swing time per swing (damage per swing unchanged)."""
+def new_rates(pd: ProfileData, k: float, m: float, level: int, rate: float, scale: float = 1.0,
+              spell_scale: float = 1.0) -> Rates:
+    """Rage per second under the new formula. `scale` > 1 models extra ATTACK SPEED: more swings per second, a
+    shorter hasted swing time per swing (damage per swing unchanged). `spell_scale` > 1 models extra SPELL haste on
+    top of the profile's own: it multiplies the speed part per swing (W0b D21). Haste rating is both, so +15% haste
+    is scale = spell_scale = 1.15; Bloodlust likewise; Slice and Dice is `scale` alone."""
     r = Rates()
     if pd.duration_s <= 0:
         return r
     c = rage_conversion(level)
     for h in pd.hits:
-        speed = new_speed_fixed(h.swing_s / scale, h.off_hand, m, h.crit)
+        swing, spell = pd.swing_terms(h)
+        speed = new_speed_fixed(swing / scale, h.off_hand, m, h.crit, spell * spell_scale)
         gain = new_rage_dealt(h.damage, speed, k, level, pd.battle, rate)
         if (k * 7.5 * h.damage / c + speed / SPEED_FIXED_POINT) / 2.0 > 2.0 * 7.5 * h.damage / c:  # cap bound
             r.capped += 1
@@ -393,19 +478,24 @@ def stock_rates(pd: ProfileData, level: int, rate: float, scale: float = 1.0) ->
     return r
 
 
-def linear_terms(pd: ProfileData, level: int, rate: float) -> tuple[float, float, float, float]:
+def linear_terms(pd: ProfileData, level: int, rate: float, scale: float = 1.0,
+                 spell_scale: float = 1.0) -> tuple[float, float, float, float]:
     """(A, X, S_mh, S_oh) so that the uncapped new rage per second is A * (k * X + m * S_mh + S_oh), with
-    A = stance multiplier * rate / (2 T), X = sum 7.5 d / c, S_mh = sum swing * 3.5 (x2 on a crit) per main-hand hit,
-    S_oh = sum swing * 0.875 (x2 on a crit) per off-hand hit."""
+    A = stance multiplier * rate / (2 T), X = sum 7.5 d / c, S_mh = sum swing * spell factor * 3.5 (x2 on a crit) per
+    main-hand hit, S_oh = sum swing * spell factor * 0.875 (x2 on a crit) per off-hand hit. `scale` / `spell_scale`
+    as in new_rates: the hit counts per second grow with `scale`, the swing shrinks with it, the spell factor
+    multiplies the speed part."""
     c = rage_conversion(level)
     x = s_mh = s_oh = 0.0
     for h in pd.hits:
-        x += 7.5 * h.damage / c
+        swing, spell = pd.swing_terms(h)
+        x += 7.5 * h.damage / c * scale
         crit = 2.0 if h.crit else 1.0
+        eff = swing * max(1.0, spell * spell_scale)         # (swing / scale) x (scale x more swings) cancels
         if h.off_hand:
-            s_oh += h.swing_s * OH_SPEED_FACTOR * crit
+            s_oh += eff * OH_SPEED_FACTOR * crit
         else:
-            s_mh += h.swing_s * MH_SPEED_FACTOR * crit
+            s_mh += eff * MH_SPEED_FACTOR * crit
     a = (1.0 + (BATTLE_STANCE_PCT / 100.0 if pd.battle else 0.0)) * rate / (2.0 * pd.duration_s)
     return a, x, s_mh, s_oh
 
@@ -438,8 +528,8 @@ def fmt(x: float, nd: int = 2) -> str:
 
 def print_sources(profiles: dict[str, ProfileData]) -> None:
     print("== SOURCES (white swings: spellId 0, not pet) ==")
-    print(f"{'profile':<22} {'files':>5} {'sec':>6} {'stance':<9} {'hand':<4} {'hits':>5} {'crit%':>6} "
-          f"{'avg d':>7} {'avg d(nc)':>9} {'swing s':>8} {'base s':>7} {'haste%':>7}")
+    print(f"{'profile':<26} {'files':>5} {'sec':>6} {'stance':<9} {'hand':<4} {'hits':>5} {'crit%':>6} "
+          f"{'avg d':>7} {'avg d(nc)':>9} {'swing s':>8} {'base s':>7} {'meas.h%':>7} {'gear h%':>7}")
     for pd in profiles.values():
         for off, label in ((False, "MH"), (True, "OH")):
             hs = [h for h in pd.hits if h.off_hand == off]
@@ -450,14 +540,16 @@ def print_sources(profiles: dict[str, ProfileData]) -> None:
             swing = statistics.mean(h.swing_s for h in hs)
             base = pd.base_oh if off else pd.base_mh
             haste = (base / swing - 1.0) * 100.0 if base and swing else float("nan")
-            print(f"{pd.name:<22} {len(pd.files):>5} {fmt(pd.duration_s, 0):>6} {pd.stance:<9} {label:<4} {len(hs):>5} "
+            gear = fmt(100.0 * pd.haste, 1) if pd.haste_known else "-"
+            print(f"{pd.name:<26} {len(pd.files):>5} {fmt(pd.duration_s, 0):>6} {pd.stance:<9} {label:<4} {len(hs):>5} "
                   f"{fmt(100.0 * len(crits) / len(hs), 1):>6} {fmt(statistics.mean(h.damage for h in hs), 1):>7} "
                   f"{fmt(statistics.mean(noncrit), 1) if noncrit else '-':>9} {fmt(swing, 3):>8} "
-                  f"{fmt(base, 2) if base else '-':>7} {fmt(haste, 1):>7}")
+                  f"{fmt(base, 2) if base else '-':>7} {fmt(haste, 1):>7} {gear:>7}")
         for note in pd.notes:
             print(f"  {pd.name}: {note}")
-    print("  (haste% = unhasted weapon speed / measured swing - 1; the unhasted speed is the profile's reference "
-          "weapon, override with --speed)")
+    print("  (meas.h% = unhasted weapon speed / measured swing - 1, quantised by the 100 ms sim step; gear h% = the "
+          "profile's HasteRating at 10 rating per 1%, taken as spell AND attack-speed haste, override with --haste; "
+          "the unhasted speed is the profile's reference weapon, override with --speed)")
     print()
 
 
@@ -480,7 +572,8 @@ def print_raw_table(profiles: dict[str, ProfileData], k: float, m: float, level:
             st_s, nw_s = rows[s_key]
             st_e, nw_e = rows[e_key]
             print(f"  {hands} bracket growth (end / start): stock x{fmt(st_e.total / st_s.total, 3)}, "
-                  f"new x{fmt(nw_e.total / nw_s.total, 3)} (the doc: stock about +58%, new about +25%)")
+                  f"new x{fmt(nw_e.total / nw_s.total, 3)} (the doc: stock about +58%; its measured "
+                  f"growth for the new formula is about +8%)")
     print()
 
 
@@ -511,26 +604,141 @@ def print_dw_advantage(profiles: dict[str, ProfileData], k: float, m: float, lev
     print()
 
 
+def haste_check_rows(pd: ProfileData, k: float, m: float, level: int, rate: float) -> dict[str, float]:
+    """The numbers of one profile's +15% haste check (W0b D23)."""
+    s = 1.0 + HASTE_CHECK
+    n0 = new_rates(pd, k, m, level, rate).total
+    spell = new_rates(pd, k, m, level, rate, s, s).total       # haste rating / Bloodlust: attack speed AND spell haste
+    atk = new_rates(pd, k, m, level, rate, s).total            # Slice and Dice / Icy Talons: attack speed only
+    a, x, s_mh, s_oh = linear_terms(pd, level, rate)
+    dmg_part, spd_part = a * k * x, a * (m * s_mh + s_oh)
+    # expected from the formula: the damage part follows the swing rate, the speed part only the spell factor
+    # (the swing shortens by attack speed, the spell factor lengthens it back), so attack speed alone leaves it alone
+    exp_atk = (dmg_part * s + spd_part) / (dmg_part + spd_part) if dmg_part + spd_part else float("nan")
+    return {"n0": n0, "spell": spell, "atk": atk, "exp_spell": s, "exp_atk": exp_atk,
+            "dmg": dmg_part, "spd": spd_part}
+
+
 def print_haste_check(profiles: dict[str, ProfileData], k: float, m: float, level: int, rate: float,
                       title: str) -> None:
-    print(f"== HASTE CHECK ({title}, k={k:g} m={m:g}): +{int(HASTE_CHECK * 100)}% haste on top of each profile's own "
-          f"==")
-    print(f"{'profile':<22} {'stock rage/s':>13} {'stock +15%':>11} {'x':>6}   {'new rage/s':>11} {'new +15%':>9} "
-          f"{'x':>6}   {'damage part':>11} {'speed part':>10}  speed part +15%")
+    print(f"== HASTE CHECK ({title}, k={k:g} m={m:g}): +{int(HASTE_CHECK * 100)}% on top of each profile's own ==")
+    print(f"{'profile':<26} {'stock':>6} {'new rage/s':>10} | {'+15% SPELL haste':^25} | "
+          f"{'+15% ATTACK SPEED only':^25} | {'damage':>7} {'speed':>7}")
+    print(f"{'':<26} {'x':>6} {'':>10} | {'rage/s':>8} {'x':>7} {'expect':>8} | {'rage/s':>8} {'x':>7} {'expect':>8} "
+          f"| {'part':>7} {'part':>7}")
     s = 1.0 + HASTE_CHECK
     for pd in profiles.values():
         st0, st1 = stock_rates(pd, level, rate).total, stock_rates(pd, level, rate, s).total
-        n0, n1 = new_rates(pd, k, m, level, rate).total, new_rates(pd, k, m, level, rate, s).total
-        a, x, s_mh, s_oh = linear_terms(pd, level, rate)
-        dmg_part = a * k * x
-        spd_part = a * (m * s_mh + s_oh)
-        # measured, not assumed: the same hits with k = 0 (speed part only), at +15% haste
-        spd_part_h = new_rates(pd, 0.0, m, level, rate, s).total
-        print(f"{pd.name:<22} {fmt(st0):>13} {fmt(st1):>11} {fmt(st1 / st0, 3):>6}   {fmt(n0):>11} {fmt(n1):>9} "
-              f"{fmt(n1 / n0, 3):>6}   {fmt(dmg_part):>11} {fmt(spd_part):>10}  {fmt(spd_part_h)}")
-    print("  (new: only the damage part grows with haste, the speed part per second is haste-neutral; stock: the "
-          "factor uses the unhasted swing, so the speed part grows with haste too)")
+        r = haste_check_rows(pd, k, m, level, rate)
+        print(f"{pd.name:<26} {fmt(st1 / st0, 3):>6} {fmt(r['n0']):>10} | {fmt(r['spell']):>8} "
+              f"{fmt(r['spell'] / r['n0'], 3):>7} {fmt(r['exp_spell'], 3):>8} | {fmt(r['atk']):>8} "
+              f"{fmt(r['atk'] / r['n0'], 3):>7} {fmt(r['exp_atk'], 3):>8} | {fmt(r['dmg']):>7} {fmt(r['spd']):>7}")
+    print("  (new: rage scales 1:1 with SPELL haste; attack speed alone only speeds the swings, so only the damage "
+          "part per second moves and the speed part is flat. 'expect' is computed from the uncapped formula; the "
+          "x column is the rounded per-hit sum. Stock: the factor uses the unhasted swing, so any attack speed "
+          "scales everything.)")
     print()
+
+
+@dataclass
+class Measured:
+    """Rage income read off one profile's powerSamples."""
+    ok: bool = False                  # False: the samples cannot show the income, `reason` says why
+    reason: str = ""
+    per_second: float = 0.0           # sum of positive steps / run seconds, all iterations (a lower bound unless ok)
+    interval_ms: float = 0.0          # median spacing of the samples
+    windows: int = 0
+    spend_windows: int = 0            # windows where the power went DOWN (a spend or decay nets against a gain there)
+    cap_windows: int = 0              # samples sitting at the rage cap (overflow is lost)
+
+
+def measured_income(pd: ProfileData) -> Measured:
+    """Rage per second from the report's powerSamples: the sum of the positive steps between consecutive samples."""
+    out = Measured()
+    if not pd.power_runs:
+        out.reason = "no powerSamples in the report (the playerbot DPS run writes them; older reports do not)"
+        return out
+    if len(pd.power_runs) != len(pd.files):
+        out.reason = f"powerSamples missing in {len(pd.files) - len(pd.power_runs)} of {len(pd.files)} report file(s)"
+        return out
+    gaps: list[int] = []
+    total_pos = seconds = 0.0
+    for run in pd.power_runs:
+        if any(t != RAGE_POWER_TYPE for _, _, _, t in run.samples):
+            out.reason = "the powerSamples are not rage (powerType != 1)"
+            return out
+        if len(run.samples) < 2:
+            out.reason = "fewer than two powerSamples in a run"
+            return out
+        for (t0, p0, _, _), (t1, p1, mx1, _) in zip(run.samples, run.samples[1:]):
+            gaps.append(t1 - t0)
+            out.windows += 1
+            if p1 > p0:
+                total_pos += p1 - p0
+            elif p1 < p0:
+                out.spend_windows += 1
+            if mx1 > 0 and p1 >= mx1 - 1e-9:
+                out.cap_windows += 1
+        seconds += run.duration_s
+    out.interval_ms = statistics.median(gaps) if gaps else 0.0
+    out.per_second = total_pos / seconds if seconds > 0 else 0.0
+    problems = []
+    if out.spend_windows:
+        problems.append(f"{out.spend_windows} of {out.windows} {out.interval_ms:g} ms windows lose rage (a spend or "
+                        f"decay nets against the gain in the same window)")
+    if out.cap_windows:
+        problems.append(f"{out.cap_windows} sample(s) at the rage cap (overflow is lost)")
+    if problems:
+        out.reason = "income hidden: " + "; ".join(problems)
+        return out
+    out.ok = True
+    return out
+
+
+def print_measured(profiles: dict[str, ProfileData], k: float, m: float, level: int, rate: float) -> int:
+    """W0b D23's --measured table; returns the exit status contribution (0, or 4 when the ratio check fails)."""
+    print(f"== MEASURED RAGE INCOME (report powerSamples, k={k:g} m={m:g}, level {level}) ==")
+    print(f"{'profile':<26} {'runs':>4} {'ms':>5} {'windows':>8} {'spend':>6} {'capped':>6} {'measured/s':>11} "
+          f"{'reference/s':>12} {'meas/ref':>9}")
+    ref: dict[str, float] = {}
+    got: dict[str, Measured] = {}
+    for key, pd in profiles.items():
+        ref[key] = new_rates(pd, k, m, level, rate).total
+        mi = got[key] = measured_income(pd)
+        if mi.ok:
+            print(f"{pd.name:<26} {len(pd.power_runs):>4} {mi.interval_ms:>5g} {mi.windows:>8} {mi.spend_windows:>6} "
+                  f"{mi.cap_windows:>6} {fmt(mi.per_second, 3):>11} {fmt(ref[key], 3):>12} "
+                  f"{fmt(mi.per_second / ref[key], 3) if ref[key] else '-':>9}")
+        else:
+            print(f"{pd.name:<26} {len(pd.power_runs):>4} {mi.interval_ms:>5g} {mi.windows:>8} {mi.spend_windows:>6} "
+                  f"{mi.cap_windows:>6} {'hidden':>11} {fmt(ref[key], 3):>12} {'-':>9}")
+            print(f"  {pd.name}: {mi.reason}; reference only (the positive-step sum, a lower bound, is "
+                  f"{fmt(mi.per_second, 3)} rage/s)" if mi.windows else f"  {pd.name}: {mi.reason}; reference only")
+    status = 0
+    base, hasted = profiles.get("2h-start"), profiles.get("2h-start-haste")
+    print()
+    if not base or not hasted:
+        print("  hasted / unhasted ratio: needs both a WarriorRage2HStartSim and a WarriorRage2HStartHasteSim report")
+        print()
+        return status
+    ref_ratio = ref["2h-start-haste"] / ref["2h-start"] if ref["2h-start"] else float("nan")
+    # what the haste step is worth by the formula alone: the spell-haste ratio of the two gear hastes
+    ideal = (1.0 + hasted.haste) / (1.0 + base.haste)
+    print(f"  hasted / unhasted reference ratio {fmt(ref_ratio, 3)} (gear haste {fmt(100 * base.haste, 1)}% -> "
+          f"{fmt(100 * hasted.haste, 1)}%: spell haste alone would give x{fmt(ideal, 3)})")
+    if got["2h-start"].ok and got["2h-start-haste"].ok:
+        meas_ratio = got["2h-start-haste"].per_second / got["2h-start"].per_second
+        dev = meas_ratio / ref_ratio - 1.0
+        verdict = "PASS" if abs(dev) <= MEASURED_TOLERANCE else "FAIL"
+        print(f"  measured ratio {fmt(meas_ratio, 3)} vs reference {fmt(ref_ratio, 3)}: {100 * dev:+.1f}% "
+              f"(tolerance {100 * MEASURED_TOLERANCE:g}%): {verdict}")
+        if verdict == "FAIL":
+            status = 4
+    else:
+        hidden = [profiles[key].name for key in ("2h-start", "2h-start-haste") if not got[key].ok]
+        print(f"  measured ratio: not available, income hidden in {', '.join(hidden)}; reference only")
+    print()
+    return status
 
 
 def print_arms_budget(profiles: dict[str, ProfileData], k: float, m: float, level: int, rate: float,
@@ -581,33 +789,52 @@ def self_test() -> int:
         if not ok:
             failures.append(label)
 
-    print("rage_sweep self-test: the W0a worked example (level 60, k 0.43, m 1.8)")
+    print("rage_sweep self-test: the W0b worked example (D22: level 60, k 0.43, m 1.35, 3.6 s two-hander, Battle "
+          "Stance)")
     print(f"  c(60) = {rage_conversion(60):.4f} (doc: 230.60)")
-    k, m = 0.43, 1.8
+    k, m = 0.43, 1.35
     # 3.6 s two-hander, non-crit white hit 450, Battle Stance
     sp = new_speed_fixed(3.6, False, m, False)
-    truth("speed factor 3.6 s x 3.5 x 1.8 = 22.68 in hundredths", sp == 2268, str(sp))
-    check("main hand 3.6 s, hit 450, Battle Stance", new_rage_dealt(450, sp, k, 60, True), 15.94)
+    truth("speed factor 3.6 s x 3.5 x 1.35 = 17.01 in hundredths", sp == 1701, str(sp))
+    check("damage term k x 7.5 x 450 / c", k * 7.5 * 450 / rage_conversion(60), 6.29)
+    check("main hand 3.6 s, hit 450, Battle Stance", new_rage_dealt(450, sp, k, 60, True), 12.82)
     # crit 900: the caller doubles the factor
-    check("crit 900 (factor doubled)", new_rage_dealt(900, new_speed_fixed(3.6, False, m, True), k, 60, True), 31.87)
-    # 30% haste: swing 2.77 s
-    sp_h = new_speed_fixed(2.77, False, m, False)
-    truth("speed factor 2.77 s x 3.5 x 1.8 = 17.45", sp_h == 1745, str(sp_h))
-    check("30% haste (2.77 s swing) per swing", new_rage_dealt(450, sp_h, k, 60, True), 13.06)
-    # off hand 2.6 s, hit 200 (no stance bonus in the doc's example)
+    check("crit 900 (factor doubled)", new_rage_dealt(900, new_speed_fixed(3.6, False, m, True), k, 60, True), 25.63)
+
+    # Bloodlust: 30% attack speed AND 30% spell haste. Swing 2.77 s, spell factor 1.30: per swing the unhasted figure
+    sp_bl = new_speed_fixed(2.77, False, m, False, 1.30)
+    truth("Bloodlust speed factor 2.77 s x 1.30 x 3.5 x 1.35 = 17.01", sp_bl == 1701, str(sp_bl))
+    per_swing_bl = new_rage_dealt(450, sp_bl, k, 60, True)
+    check("Bloodlust (30% melee and spell, swing 2.77 s) per swing", per_swing_bl, 12.82)
+    per_sec_unhasted = new_rage_dealt(450, sp, k, 60, True) / 3.6
+    check("Bloodlust rage per second over unhasted", (per_swing_bl / 2.77) / per_sec_unhasted, 1.30)
+    # attack speed alone (30%): swing 2.77 s, spell factor 1
+    sp_as = new_speed_fixed(2.77, False, m, False)
+    truth("attack-speed-only speed factor 2.77 s x 3.5 x 1.35 = 13.09", sp_as == 1309, str(sp_as))
+    per_swing_as = new_rage_dealt(450, sp_as, k, 60, True)
+    check("attack speed only 30% (swing 2.77 s) per swing", per_swing_as, 10.66)
+    check("attack speed only 30% rage per second over unhasted", (per_swing_as / 2.77) / per_sec_unhasted, 1.08)
+    # a net slow never lowers rage: cast speed 1.25 -> factor 0.8 floors at 1; a cast speed 0 or less is not a factor
+    truth("a net slow (spell factor 0.8) floors at 1: same speed factor as unhasted",
+          new_speed_fixed(3.6, False, m, False, 0.8) == sp and new_speed_fixed(3.6, False, m, False, 1 / 1.25) == sp)
+    truth("a spell haste factor of exactly 1 is the unhasted factor", new_speed_fixed(3.6, False, m, False, 1.0) == sp)
+    truth("a bigger slow does not go below it either (factor 0.5)", new_speed_fixed(3.6, False, m, False, 0.5) == sp)
+    truth("an extra +15% spell haste on top of Bloodlust multiplies the speed factor by 1.15 (factor 1.495)",
+          new_speed_fixed(2.77, False, m, False, 1.15 * 1.30) == lround(2.77 * 1.495 * 3.5 * 1.35 * 100))
+    # off hand 2.6 s, hit 200, no stance bonus and no spell haste
     check("off hand 2.6 s, hit 200", new_rage_dealt(200, new_speed_fixed(2.6, True, m, False), k, 60, False), 2.54)
     # stock
     check("stock main hand, hit 450", stock_rage_dealt(450, stock_factor(3.6, False, False)), 13.32)
     truth("stock off-hand factor int(2.6 x 1.75) = int(4.55) = 4", stock_factor(2.6, True, False) == 4)
     check("stock off hand 2.6 s, hit 200", stock_rage_dealt(200, stock_factor(2.6, True, False)), 5.25)
-    # Bear Form 2.5 s: speed part 15.75
-    truth("Bear Form 2.5 s speed part 15.75", new_speed_fixed(2.5, False, m, False) == 1575)
+    # Bear Form 2.5 s: speed part 3.5 x 1.35 x 2.5 = 11.81
+    truth("Bear Form 2.5 s speed part 11.81", new_speed_fixed(2.5, False, m, False) == 1181)
     # the stock cap binds on tiny hits
     tiny = new_rage_dealt(10, new_speed_fixed(3.6, False, m, False), k, 60, False)
     truth("the stock cap 15 d / c binds on a 10-damage hit", abs(tiny - 15 * 10 / rage_conversion(60)) < 1e-9,
           f"{tiny:.4f}")
 
-    print("pipeline: synthetic reports (hand split, rates, haste neutrality, D15 solve)")
+    print("pipeline: synthetic reports (hand split, rates, spell-haste and attack-speed checks, measured, D15 solve)")
     _self_test_pipeline(truth, check)
     if failures:
         print(f"SELF-TEST FAILED ({len(failures)}): " + ", ".join(failures))
@@ -666,14 +893,47 @@ def _self_test_pipeline(truth, check) -> None:
           f"{nstart:.4f} vs {st.total:.4f}")
     truth("(b) new end rage/s = 1.25 x new start", abs(nend / nstart - GROWTH_TARGET) < 0.01, f"x{nend / nstart:.4f}")
 
-    # haste neutrality of the new speed part; the damage part grows with swings
-    a, x, s_mh, s_oh = linear_terms(s_pd, level, rate)
-    n0 = new_rates(s_pd, 0.0, 1.8, level, rate).total      # k = 0: speed part only
-    n1 = new_rates(s_pd, 0.0, 1.8, level, rate, 1.15).total
-    truth("speed part per second is haste-neutral (k = 0)", abs(n1 / n0 - 1.0) < 0.01, f"x{n1 / n0:.4f}")
+    # attack speed alone: the speed part per second is flat (a shorter swing, more of them), the damage part grows
+    n0 = new_rates(s_pd, 0.0, 1.35, level, rate).total      # k = 0: speed part only
+    n1 = new_rates(s_pd, 0.0, 1.35, level, rate, 1.15).total
+    truth("attack speed alone leaves the speed part per second flat (k = 0, +15% attack speed)",
+          abs(n1 / n0 - 1.0) < 0.01, f"x{n1 / n0:.4f}")
+    # spell haste (haste rating / Bloodlust: attack speed AND spell haste): the speed part follows 1:1
+    n1s = new_rates(s_pd, 0.0, 1.35, level, rate, 1.15, 1.15).total
+    truth("+15% spell haste lifts the speed part per second x1.15 (k = 0)", abs(n1s / n0 - 1.15) < 0.01,
+          f"x{n1s / n0:.4f}")
+    n_slow = new_rates(s_pd, 0.0, 1.35, level, rate, 1.0, 0.8).total
+    truth("a net slow (spell factor 0.8, cast speed 1.25) never lowers rage", abs(n_slow / n0 - 1.0) < 1e-9,
+          f"x{n_slow / n0:.4f}")
     d0 = new_rates(s_pd, 1.0, 0.0, level, rate).total       # m = 0: damage term + the rounded-to-0 speed part
     d1 = new_rates(s_pd, 1.0, 0.0, level, rate, 1.15).total
-    truth("damage part per second grows with haste (m = 0)", abs(d1 / d0 - 1.15) < 0.01, f"x{d1 / d0:.4f}")
+    truth("damage part per second grows with the swing rate (m = 0)", abs(d1 / d0 - 1.15) < 0.01, f"x{d1 / d0:.4f}")
+    # the haste check rows, both the whole-formula figure and the expectation computed from the uncapped formula
+    row = haste_check_rows(s_pd, 0.43, 1.35, level, rate)
+    truth("haste check: +15% spell haste gives rage/s x1.15", abs(row["spell"] / row["n0"] - 1.15) < 0.01,
+          f"x{row['spell'] / row['n0']:.4f}")
+    truth("haste check: +15% attack speed only gives about x1.03 (expected from the formula)",
+          1.02 < row["exp_atk"] < 1.04 and abs(row["atk"] / row["n0"] - row["exp_atk"]) < 0.01,
+          f"sim x{row['atk'] / row['n0']:.4f}, expected x{row['exp_atk']:.4f}")
+    # a known gear haste (haste rating is spell AND attack speed): the speed part per swing is the unhasted figure
+    g_pd = ProfileData("2h-start", "synthetic-haste", 1, "battle", 3.6, None, haste=0.15, haste_known=True)
+    g_hit = Hit(450.0, False, False, 3.1)
+    g_swing, g_spell = g_pd.swing_terms(g_hit)
+    truth("gear haste 15%: true swing 3.6 / 1.15, spell factor 1.15, speed factor = the unhasted 1701",
+          abs(g_swing - 3.6 / 1.15) < 1e-9 and new_speed_fixed(g_swing, False, 1.35, False, g_spell) == 1701,
+          f"swing {g_swing:.4f} spell {g_spell:.2f}")
+    # the profile conf's HasteRating at 10 rating per 1% (level 60)
+    conf_dir = Path(__file__).resolve().parent.parent / "conf" / "profiles"
+    truth("WarriorRage2HStartSim HasteRating 22 -> 2.2% haste",
+          conf_haste_pct("WarriorRage2HStartSim", 60, conf_dir) == 2.2)
+    if (conf_dir / "WarriorRage2HStartHasteSim.conf").is_file():
+        hp = conf_haste_pct("WarriorRage2HStartHasteSim", 60, conf_dir)
+        truth("WarriorRage2HStartHasteSim is about +15% over WarriorRage2HStartSim", hp is not None and
+              abs((1 + hp / 100) / 1.022 - 1.15) < 0.01, f"{hp}%")
+    truth("no conf haste at another level (the rating table differs)",
+          conf_haste_pct("WarriorRage2HStartSim", 70, conf_dir) is None)
+
+    _self_test_measured(truth)
 
     # dual wield hand split
     dw = ProfileData("dw-start", "synthetic-dw-start", 2, "berserker", 2.6, 2.5)
@@ -692,6 +952,75 @@ def _self_test_pipeline(truth, check) -> None:
     # a lone singular system is reported, not solved
     _, _, problem = solve_km(s_pd, s_pd, level, rate)
     truth("a singular system is refused", problem is not None, str(problem))
+
+
+def _rage_series_report(duration_ms: int, swing_s: float, dmg: float, base: float, haste: float, scale: float = 1.0,
+                       spend_at_ms: int | None = None, phase_ms: int = 1000, samples: bool = True) -> dict:
+    """A synthetic WarriorRage report whose powerSamples are the rage the C++ formula would grant (k 0.43, m 1.35,
+    Battle Stance, true swing base / (1 + haste), spell factor 1 + haste), quantised to 0.1 like the report.
+    `scale` multiplies the granted rage (a broken C++ would be scale != 1); `spend_at_ms` drops 15 rage there."""
+    report = _synthetic_report(duration_ms, (dmg, swing_s), None, crit_every=1000)
+    report["hits"] = [h for h in report["hits"] if h["spellId"] == 0 and h["timestampMs"] >= phase_ms]
+    gains = []
+    for h in report["hits"]:
+        factor = new_speed_fixed(base / (1.0 + haste), False, 1.35, h["crit"], 1.0 + haste)
+        gains.append((h["timestampMs"], math.floor(new_rage_dealt(h["damage"], factor, 0.43, 60, True) * scale * 10)
+                      / 10.0))
+    if samples:
+        series, power = [], 0.0
+        for t in range(100, duration_ms + 1, 500):
+            power += sum(g for ts, g in gains if t - 500 < ts <= t) if t > 100 else sum(g for ts, g in gains if ts <= t)
+            if spend_at_ms is not None and t - 500 < spend_at_ms <= t:
+                power = max(0.0, power - 15.0)
+            series.append({"timestampMs": t, "powerType": 1, "power": round(power, 1), "maxPower": 100})
+        report["powerSamples"] = series
+    return report
+
+
+def _self_test_measured(truth) -> None:
+    """--measured: positive-step income, the hidden-income cases and the 5% ratio check, on synthetic fixtures."""
+    def build(key: str, name: str, haste: float, swing: float, **kw) -> ProfileData:
+        pd = ProfileData(key, name, 1, "battle", 3.6, None, haste=haste, haste_known=True)
+        for i in range(5):
+            pd.files.append(f"synthetic-{name}-{i}")
+            add_report(pd, _rage_series_report(20000, swing, 300, 3.6, haste, phase_ms=1000 + 300 * i, **kw),
+                       pd.files[-1], CRIT_MULT)
+        return pd
+
+    # the sim quantises swings to its 100 ms step: 3.6 / 1.022 = 3.52 s shows as 3.6, 3.6 / 1.172 = 3.07 s as 3.1
+    base_pd = build("2h-start", "synthetic-start", 0.022, 3.6)
+    fast_pd = build("2h-start-haste", "synthetic-haste", 0.172, 3.1)
+    mi = measured_income(base_pd)
+    ref = new_rates(base_pd, 0.43, 1.35, 60, 1.0).total
+    truth("measured income: clean series, 500 ms windows, no spend",
+          mi.ok and mi.interval_ms == 500 and mi.spend_windows == 0, mi.reason or f"{mi.per_second:.3f} rage/s")
+    truth("measured income matches the reference within 3% (the 0.1 rage quantisation)",
+          mi.ok and abs(mi.per_second / ref - 1.0) < 0.03, f"{mi.per_second:.3f} vs {ref:.3f}")
+    profiles = {"2h-start": base_pd, "2h-start-haste": fast_pd}
+    print("  -- print_measured on the clean fixtures --")
+    status = print_measured(profiles, 0.43, 1.35, 60, 1.0)
+    truth("hasted / unhasted measured ratio within 5% of the reference ratio (exit 0)", status == 0, f"status {status}")
+
+    # negative fixture: the hasted run grants 15% too little rage (a broken C++ line) -> outside 5% -> exit 4
+    weak_pd = build("2h-start-haste", "synthetic-haste-weak", 0.172, 3.1, scale=0.85)
+    print("  -- print_measured with a hasted run 15% short (must fail) --")
+    status = print_measured({"2h-start": base_pd, "2h-start-haste": weak_pd}, 0.43, 1.35, 60, 1.0)
+    truth("a hasted run 15% short of the reference ratio fails the 5% check (exit 4)", status == 4, f"status {status}")
+
+    # hidden income: a spend inside the series
+    spend_pd = build("2h-start-haste", "synthetic-haste-spend", 0.172, 3.1, spend_at_ms=10250)
+    mi = measured_income(spend_pd)
+    truth("a spend in the series is reported as hidden income", not mi.ok and "lose rage" in mi.reason, mi.reason)
+    print("  -- print_measured with a spender in the hasted run (reference only) --")
+    status = print_measured({"2h-start": base_pd, "2h-start-haste": spend_pd}, 0.43, 1.35, 60, 1.0)
+    truth("hidden income prints the reference only and does not fail", status == 0, f"status {status}")
+
+    # no samples at all (an older report)
+    bare = ProfileData("2h-start", "synthetic-bare", 1, "battle", 3.6, None)
+    bare.files.append("synthetic-bare")
+    add_report(bare, _rage_series_report(20000, 3.6, 300, 3.6, 0.0, samples=False), "synthetic-bare", CRIT_MULT)
+    mi = measured_income(bare)
+    truth("a report without powerSamples is reported as such", not mi.ok and "no powerSamples" in mi.reason, mi.reason)
 
 
 # ----------------------------------------------------------------------------------------------------------------
@@ -713,11 +1042,12 @@ def parse_kv(items: list[str], what: str) -> dict[str, str]:
 def main(argv: list[str]) -> int:
     here = Path(__file__).resolve().parent
     repo = here.parents[2]
-    ap = argparse.ArgumentParser(description="Warrior rage sweep (W0a): stock vs dampened rage per second, D15 solve.")
+    ap = argparse.ArgumentParser(description="Warrior rage sweep (W0a/W0b): stock vs dampened rage per second, "
+                                             "spell-haste check, measured income.")
     for key in PROFILES:
         ap.add_argument(f"--{key}", metavar="SRC", help=f"{PROFILES[key][0]} report(s)")
     ap.add_argument("--k", type=float, help="k for the raw tables (default: WarriorData.h, else 0.43)")
-    ap.add_argument("--m", type=float, help="m for the raw tables (default: WarriorData.h, else 1.8)")
+    ap.add_argument("--m", type=float, help="m for the raw tables (default: WarriorData.h, else 1.35)")
     ap.add_argument("--rate", type=float, default=1.0, help="Rate.Rage.Income (default 1)")
     ap.add_argument("--level", type=int, default=LEVEL, help="character level of the reports (default 60)")
     ap.add_argument("--crit-mult", type=float, default=CRIT_MULT, help="crit damage multiplier for the hand split")
@@ -727,6 +1057,14 @@ def main(argv: list[str]) -> int:
                     help="unhasted weapon speeds in seconds for a profile, e.g. dw-end=2.6/2.8")
     ap.add_argument("--stance", action="append", metavar="KEY=battle|berserker",
                     help="the stance the bot held in a profile (default: battle for 2h, berserker for dw)")
+    ap.add_argument("--haste", action="append", metavar="KEY=PCT",
+                    help="gear haste in percent for a profile, taken as spell AND attack-speed haste (default: the "
+                         "profile conf's HasteRating / 10 at level 60)")
+    ap.add_argument("--conf-dir", type=Path, default=here.parent / "conf" / "profiles",
+                    help="where the WarriorRage*Sim.conf profiles are read for their HasteRating")
+    ap.add_argument("--measured", action="store_true",
+                    help="rage income per second from the reports' powerSamples beside the reference, and the "
+                         "hasted / unhasted ratio check (W0b D23); skips the other tables")
     ap.add_argument("--aggregate-only", action="store_true", help="use the aggregate's representative run only")
     ap.add_argument("--reports-dir", type=Path, default=here.parent / "reports")
     ap.add_argument("--self-test", action="store_true", help="reproduce the worked example and the pipeline checks")
@@ -761,14 +1099,20 @@ def main(argv: list[str]) -> int:
         parts = value.split("/")
         speeds[key] = (float(parts[0]), float(parts[1]) if len(parts) > 1 else None)
 
+    hastes: dict[str, float] = {}
+    for key, value in parse_kv(args.haste, "haste").items():
+        hastes[key] = float(value)
+
     profiles: dict[str, ProfileData] = {}
     for key, (name, _hands, _stance, _mh, _oh) in PROFILES.items():
         files = resolve_sources(getattr(args, key.replace("-", "_")), name, args.reports_dir, args.aggregate_only)
         if not files:
-            print(f"(no report found for {name} in {args.reports_dir}; skipped)")
+            if key not in OPTIONAL_PROFILES:
+                print(f"(no report found for {name} in {args.reports_dir}; skipped)")
             continue
+        haste_pct = hastes.get(key, conf_haste_pct(name, args.level, args.conf_dir))
         try:
-            profiles[key] = load_profile(key, files, stances.get(key), speeds.get(key), args.crit_mult)
+            profiles[key] = load_profile(key, files, stances.get(key), speeds.get(key), args.crit_mult, haste_pct)
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             print(f"error reading {name}: {exc}", file=sys.stderr)
             return 1
@@ -778,6 +1122,8 @@ def main(argv: list[str]) -> int:
     print()
 
     print_sources(profiles)
+    if args.measured:
+        return print_measured(profiles, k_flag, m_flag, args.level, args.rate)
     print_raw_table(profiles, k_flag, m_flag, args.level, args.rate, "RAW RAGE TABLE at the flag constants")
     print_dw_advantage(profiles, k_flag, m_flag, args.level, args.rate, "flag constants")
     print_haste_check(profiles, k_flag, m_flag, args.level, args.rate, "flag constants")
