@@ -35,44 +35,54 @@ file rather than applying (or discarding) the whole thing.
 
 ## generate.py speed: the SQL corpus, the disk cache, `--check --class`, the equivalence harness
 
-Stage notes for `.agents/plans/dbc-tools-generate-speed/` (a full run was ~515 s, `--check` ~220 s).
+Plan and review notes: `.agents/plans/dbc-tools-generate-speed/` (local).
 
 - **Where the time went.** Not the DSL (1.4 s): replaying ~1,300 SQL files (`db_world` 229 MB, pending 56 MB, the base
-  dumps) in pure Python, once per table per loader. The fixes keep every loader's answer and printed warnings exactly.
+  dumps) in pure Python, once per table per loader. The fixes keep every loader's answer and printed warnings exactly
+  (full run ~515 s -> ~125 s cold, ~20-30 s warm; `--check` ~220 s -> ~10 s warm; `--check --class X` ~6 s).
 - **`lib/sqlcorpus.py`** owns the files for a run. `generate.py` activates it; with no corpus active (tests, the other
   tools) `read_text`/`mentions`/`checkpointed` are plain reads and plain replays. It gives each file once: its text
-  (`SqlText`, a `str`), its statement-head index (`INSERT`/`DELETE`/`UPDATE .. SET`/`SET @v`, scanned once and shared by
-  every table's replay through `sql_dump._next_statement`/`_next_match`), and whether it mentions a table.
+  (`SqlText`, a `str`), its statement-head index (`INSERT`/`DELETE`/`UPDATE .. SET`/`SET @v`, scanned once and shared
+  by every table's replay through `sql_dump._next_statement`/`_next_match`; a search that starts inside a head-looking
+  string of a skipped statement goes back to the regex), and whether it mentions a table.
 - **`sql_dump` fast paths**, each with its reference kept: a plain-literal tuple is read by a regex and `_TokenValues`
-  (`_read_tuples(fast=False)` is the character parser it is tested against); `_KeyIndex` finds the rows a composite-key
-  `UPDATE ... WHERE` can touch by key instead of testing all 30k `creature_template` rows per statement (an assignment to
-  a key column, a `DELETE` or an unpinned `WHERE` falls back to the scan); `_fill_defaults` no longer probes 234 columns
-  per row. `lib/test_sql_dump_fast.py` runs every pair on random and edge inputs.
+  (`_read_tuples(fast=False)` is the character parser it is tested against); `_KeyIndex` finds the rows a
+  composite-key `UPDATE ... WHERE` can touch by key instead of testing all 30k `creature_template` rows per statement
+  (an assignment to a key column, a `DELETE` or an unpinned `WHERE` falls back to the scan); `_fill_defaults` no
+  longer probes 234 columns per row. `lib/test_sql_dump_fast.py` runs every pair on random and edge inputs.
+  `lib/dbcfile.py` reads and packs with one `struct.Struct` per table (`lib/test_dbcfile_fast.py` keeps the old code).
 - **The disk cache** (`Corpus.checkpointed`): a loader's replay of the base dump plus the promoted `db_world` files is
-  pickled to `var/dbc-tools-cache/snap-*.bin` with the ordered `(path, content hash)` list it was built from, the loader
-  code version and the parameters. It is used only when that list is a prefix of today's: files appended since extend it,
-  anything else (edited, removed, inserted-before-the-end file, new code, a truncated or garbled snapshot) rebuilds from
-  scratch. It never decides anything itself: `pending_db_world` and module SQL change every run and are replayed on top
-  each time, and whatever a replay printed (the "cannot replay this statement" warnings) is stored and printed again. Files
-  are compared by content hash (sha256), not mtime. Code version = `generate.CACHE_CODE_FILES` plus `item_lib/*.py`; edit
-  a loader or parser and the next run is cold. `--rebuild-cache` ignores the cache and rewrites it, `--no-cache` skips the
-  disk (the in-process memo stays). Tests: `lib/test_sqlcorpus_cache.py`.
-- **A new kind of cached loader** = a `step(state, path)` function plus `sqlcorpus.checkpointed(kind, params, stable, init,
-  step)`, then replay `volatile` files on the returned state yourself. `params` must name everything the replay depends on
-  besides the files (columns, key columns, flags). A projection (`load_table_rows(project=...)`) keeps a 150k-row dump out
-  of the snapshot.
-- **`--check --class NAME`** (`generate._run_scoped_check`) loads `source/classes/NAME` only and runs the same lint block
-  (`_check_report`) over it, with the live state the DSL helpers need behind `lib/lazy.py`. It leaves out what is not one
-  class's: the CSV/YAML sources, `source/npcs`, `source/world`, cross-class duplicate ids, the shared holding-tab check,
-  other families' GCD-haste verdicts and the potency sheets. `--class` with anything but `--check`, a missing, unknown or
-  repeated name, all exit 2 before loading. When you add a lint to `_check_report` that scans stock rows the class did not
-  declare, scope it (see `undeclared_scan_class_set`) or the scoped run will report other classes' stock spells.
-- **Equivalence harness** `apps/dbc-tools/bench/equivalence.py` (read its docstring): runs `generate.py` from two code refs
-  in throwaway sandboxes (copy of the code, symlinked frozen inputs, copied pending dir, no `local_config.py`, so nothing is
-  deployed and nothing is written outside `var/dbc-tools-equiv/`) and diffs the pending SQL, headers, potency sheets, every
-  loose `.dbc`, the files inside the MPQ (smpq stamps times, so archive bytes always differ) and stdout. Scenarios: `check`,
-  `full`, `full2`, `mutate-full` (edits a pending file), `promote-full` (moves the newest rev into `db_world`),
-  `check-injected` + `check-class-X` (`scoped` subcommand). Run it before and after any change to a loader.
+  pickled to `var/dbc-tools-cache/<code version>/snap-*.bin` with the ordered `(path, content hash)` list it was built
+  from, the loader code version and the parameters. It is used only when that list is a prefix of today's: files
+  appended since extend it, anything else (edited, removed, inserted-before-the-end file, new code, a truncated or
+  garbled snapshot) rebuilds from scratch. `pending_db_world` and module SQL change every run and are replayed on top
+  each time; whatever a replay printed (stdout, stderr) is stored and printed again. Files are compared by content
+  hash (sha256), not mtime. Code version = `generate.CACHE_CODE_FILES` plus `item_lib/*.py`: edit a loader or parser
+  and the next run is cold (the previous version's directory is kept, older ones are deleted). `--rebuild-cache`
+  ignores the cache and rewrites it, `--no-cache` skips the disk (the in-process memo stays). Tests:
+  `lib/test_sqlcorpus_cache.py`.
+- **A new cached loader** = a `step(state, path)` function plus `sqlcorpus.checkpointed(kind, params, stable, init,
+  step)`, then replay the volatile (pending, module) files on the returned state yourself. `params` must name
+  everything the replay depends on besides the files (columns, key columns, flags). A projection
+  (`load_table_rows(project=...)`) keeps a 150k-row dump out of the snapshot. `load_live_item_template_rows`
+  re-implements item-tools' replay loop on its private helpers: change `item_lib/overlay.py` and re-run the harness.
+- **`--check --class NAME`** (`generate._run_scoped_check`) loads `source/classes/NAME` only and runs the same lint
+  block (`_check_report`) over it, with the live state the DSL helpers need behind `lib/lazy.py`. It leaves out what
+  is not one class's: the CSV/YAML sources (except their ids, so a CSV-declared stock spell is not called undeclared),
+  `source/npcs`, `source/world`, cross-class duplicate ids, the shared holding-tab check, the potency sheets, and the
+  GCD-haste messages that do not start with the class's family name (the `EXCLUDE[..]`/policy ones are
+  `source/gcd_haste.py`'s, not the class's). `--class` with anything but `--check`, a missing, unknown or repeated
+  name, all exit 2 before loading (`lib/test_generate_class_flag.py`). When you add a lint to `_check_report` that
+  scans stock rows the class did not declare, scope it (see `undeclared_scan_class_set`) or the scoped run will report
+  other classes' stock spells.
+- **Equivalence harness** `apps/dbc-tools/bench/equivalence.py` (read its docstring): runs `generate.py` from two code
+  refs in throwaway sandboxes (copy of the code, symlinked frozen inputs, copied pending dir, hardlinked `db_world`,
+  no `local_config.py`, so nothing is deployed and nothing is written outside `var/dbc-tools-equiv/`) and diffs the
+  pending SQL, headers, potency sheets, every loose `.dbc`, the files inside the MPQ (smpq stamps times, so archive
+  bytes always differ) and stdout. Scenarios: `check`, `full`, `full2`, `mutate-full` (edits a pending file),
+  `promote-full` (adds the newest rev to `db_world`), `check-injected` + `check-class-X` (`scoped` subcommand). Run it
+  before and after any change to a loader.
+
 ## Watch out: never delete an earlier generated `pending_db_world/rev_*.sql`
 
 `generate.py` emits **delta** rows for `trainer_spell`, `spell_script_names`, `spell_bonus_data`

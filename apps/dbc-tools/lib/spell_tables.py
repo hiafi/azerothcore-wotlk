@@ -192,7 +192,7 @@ def load_generated_table_rows(table_name: str, key_columns: tuple[str, ...]) -> 
 
     stable, volatile = trainer_state._split_stable(trainer_state._migration_files_mentioning(table_name))
     state = sqlcorpus.checkpointed(
-        "generated_rows", (table_name, tuple(key_columns)), stable, lambda: [{}, False], step,
+        "generated_rows", (table_name, tuple(key_columns), fallback_columns), stable, lambda: [{}, False], step,
     )
     for path in volatile:
         step(state, path)

@@ -198,6 +198,78 @@ class CheckpointTest(unittest.TestCase):
         self.assertEqual([r["n"] for r in result], [1, 2])
 
 
+class CacheHardeningTest(CheckpointTest):
+    def test_stderr_of_the_replay_is_replayed_on_a_hit(self):
+        def noisy(state_, path):
+            print(f"warn {path.name}", file=sys.stderr)
+            return state_
+
+        for expect_cached in (False, True):
+            corpus = sqlcorpus.Corpus(self.cache, self.version)
+            err = io.StringIO()
+            from contextlib import redirect_stderr
+
+            with redirect_stdout(io.StringIO()), redirect_stderr(err):
+                corpus.checkpointed("noisy", None, self.files(), list, noisy)
+            self.assertEqual(err.getvalue(), "warn a.sql\nwarn b.sql\n")
+            self.assertEqual(corpus.stats["hit"], int(expect_cached))
+
+    def test_snapshot_is_labelled_with_the_hash_of_the_text_the_replay_read(self):
+        # A file rewritten after the corpus first hashed it but before the replay read it must not be stored under the
+        # old hash: the next run would then take a snapshot of the new text for the old file.
+        corpus = sqlcorpus.Corpus(self.cache, self.version)
+        files = self.files()
+        stale = corpus.digest(files[1])
+        self.write("b.sql", "INSERT INTO `t` VALUES (7);")
+        replay = _Replay()
+        with redirect_stdout(io.StringIO()):
+            result, _printed = corpus.checkpointed("t", None, files, replay.init, replay.step)
+        self.assertEqual([r["n"] for r in result], [1, 7])
+        snapshot = next(self.cache.glob("snap-*.bin"))
+        stored = dict(sqlcorpus._unpack(snapshot.read_bytes(), {})["files"])
+        self.assertNotEqual(stored[str(files[1])], stale)
+        _result, _printed, replay2, corpus2 = self.run_once()
+        self.assertEqual(replay2.steps, [])  # the new text is what the snapshot holds, and it matches the file
+
+    def test_old_code_versions_are_pruned_but_one_is_kept(self):
+        base = self.root / "versions"
+        for name in ("v1", "v2", "v3"):
+            (base / name).mkdir(parents=True)
+            (base / name / "snap-x.bin").write_bytes(b"x")
+            os.utime(base / name, (int(name[1]) * 1000, int(name[1]) * 1000))
+        try:
+            sqlcorpus.activate(base, "v4")
+            self.assertEqual(sorted(p.name for p in base.iterdir()), ["v3"])
+            self.assertEqual(sqlcorpus.active().cache_dir, base / "v4")
+        finally:
+            sqlcorpus.deactivate()
+
+    def test_a_head_like_string_inside_a_skipped_statement_does_not_hide_the_next_head(self):
+        from lib import sql_dump
+
+        # The UPDATE is parsed and skipped; the unbalanced `INSERT INTO `t` (` inside its string, matched by the one-pass
+        # head scan, would run on through the real INSERT's column list and hide it from the index.
+        sql = (
+            "UPDATE `t` SET `v` = 'INSERT INTO `t` (' WHERE `a` = 1;\n"
+            "INSERT INTO `t` (`a`, `v`) VALUES (2, 5);\n"
+        )
+        path = self.sql / "tricky.sql"
+        path.write_text(sql, encoding="utf-8")
+
+        def replay():
+            rows: dict = {}
+            sql_dump.apply_composite_key_statements(rows, ("a", "v"), ("a",), "t", sqlcorpus.read_text(path))
+            return rows
+
+        plain = replay()
+        self.assertEqual(plain, {(2,): {"a": 2, "v": 5}})
+        sqlcorpus.activate(None, "test")
+        try:
+            self.assertEqual(replay(), plain)
+        finally:
+            sqlcorpus.deactivate()
+
+
 class FileIndexTest(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()

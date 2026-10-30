@@ -13,10 +13,11 @@ sandbox/`:
   - `apps/dbc-tools` and `apps/item-tools`: a COPY of the code under test (`--code-ref <git ref>`, or `worktree` for the
     current working tree including uncommitted files). Copied, not linked: Python resolves `__file__` through symlinks
     and would walk back out of the sandbox.
-  - `data/sql/base`, `data/sql/updates/db_world`, `var/extractors/dbc`, `modules`, `env/dist/etc`: symlinks to the
-    frozen inputs (read-only by construction - generate.py never writes there).
-  - `data/sql/updates/pending_db_world`, `src/.../Generated`, `docs/`, `var/dbc-patch`: real directories (copies of
-    the frozen state), because a full run writes into them.
+  - `data/sql/base`, `var/extractors/dbc`, `modules`, `env/dist/etc`: symlinks to the frozen inputs (read-only by
+    construction - generate.py never writes there). `data/sql/updates/db_world` is a directory of hardlinks to the
+    frozen files, so a scenario can add a promoted file; it never opens an existing one for writing.
+  - `data/sql/updates/pending_db_world`, `src/.../Generated`: copies of the frozen state, `docs/` and `var/dbc-patch`:
+    created empty, because a full run writes into them.
   - no `lib/local_config.py`, no `env/dist/data/dbc`: nothing is deployed anywhere. `assert_no_deploy` checks it.
 
 No database is read or written (generate.py reads static files only).
@@ -210,9 +211,18 @@ def promote_newest(sandbox: Path, generated: dict[str, str]) -> str:
     `-- DB update` header line CI prepends (apps/ci/ci-pending-sql.sh)."""
     pending = sandbox / "data" / "sql" / "updates" / "pending_db_world"
     newest = sorted(p for p in pending.glob("rev_*.sql") if p.name in generated)[-1]
-    target = sandbox / "data" / "sql" / "updates" / "db_world" / "2026_10_30_00.sql"
-    header = "-- DB update 2026_10_29_00 -> 2026_10_30_00\n"
-    target.write_text(header + newest.read_text(encoding="utf-8"), encoding="utf-8")
+    db_world = sandbox / "data" / "sql" / "updates" / "db_world"
+    # db_world is a hardlink copy of the frozen tree: never open an existing file for writing (that would write through
+    # to the tracked original). The new file is named after the last existing one so it sorts after it (an append).
+    last = max(p.stem for p in db_world.glob("*.sql") if re.fullmatch(r"\d{4}_\d{2}_\d{2}_\d{2}", p.stem))
+    number = int(last.rsplit("_", 1)[1]) + 1
+    target = db_world / f"{last.rsplit('_', 1)[0]}_{number:02d}.sql"
+    if target.exists() or target.is_symlink():
+        raise SystemExit(f"refusing to overwrite {target}")
+    header = f"-- DB update {last} -> {target.stem}\n"
+    temp = target.with_name(target.name + ".tmp")
+    temp.write_text(header + newest.read_text(encoding="utf-8"), encoding="utf-8")
+    os.replace(temp, target)
     newest.unlink()
     return newest.name
 
@@ -302,6 +312,8 @@ def run_scenario(
 
 
 def cmd_run(args: argparse.Namespace) -> int:
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*", args.label):
+        raise SystemExit(f"--label must be a plain name, got {args.label!r}")
     run_dir = RUNS_DIR / args.label
     sandbox = run_dir / "sandbox"
     run_dir.mkdir(parents=True, exist_ok=True)

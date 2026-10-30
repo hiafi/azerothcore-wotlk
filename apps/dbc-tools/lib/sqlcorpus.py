@@ -19,8 +19,9 @@ and re-parsing identical base dumps. This module is the one place that owns the 
 keep their old behaviour, and a loader has exactly one implementation (the cache is a wrapper around it, never a
 second code path). `generate.py` activates it; it never changes what a loader returns or prints.
 
-**Staleness.** Memoised texts assume the files do not change while the run is active. `generate.py` calls
-`deactivate()` before it writes its own pending SQL.
+**Staleness.** Memoised texts assume the files do not change while the run is active. `generate.py` reads every SQL
+file before it writes its own pending SQL (the last step that touches that directory) and calls `deactivate()` when
+the run ends.
 """
 
 from __future__ import annotations
@@ -33,6 +34,7 @@ import json
 import os
 import pickle
 import re
+import shutil
 import sys
 from pathlib import Path
 from typing import Callable
@@ -107,8 +109,9 @@ def scan_heads(text: str) -> list[tuple]:
 
     Running the case-insensitive alternation at every character is slow (about 7 MB/s). Every head starts with one of
     five keywords, so a plain lowercase search for those finds the only places a head can start, and the full pattern
-    is tried just there (6x faster, identical result). It needs `lower()` to keep every offset, which it does unless the
-    text holds a character whose lowercase is longer; such a file takes the plain scan."""
+    is tried just there (6x faster, same result for any head spelled in ASCII). It needs `lower()` to keep every offset,
+    which it does unless the text holds a character whose lowercase is longer; such a file takes the plain scan. (A
+    keyword spelled with a letter that only case-folds to ASCII, such as a dotless i or a long s, would be missed.)"""
     low = text.lower()
     if len(low) != len(text):
         return [_head_entry(m) for m in STATEMENT_HEAD_RE.finditer(text)]
@@ -134,7 +137,15 @@ class HeadIndex:
 
     def __init__(self, heads: list[tuple]):
         self.heads = heads
+        self._starts = [h[0] for h in heads]
         self._filtered: dict[tuple, tuple[list[int], list[tuple]]] = {}
+
+    def overlaps(self, pos: int) -> bool:
+        """Whether a head found by the one-pass scan starts before `pos` and runs past it. That only happens when the
+        scan matched head-looking text inside a string or comment of a statement the replay then skipped; a regex
+        search from `pos` would not have been blocked by it, so the caller must search the text instead."""
+        j = bisect.bisect_left(self._starts, pos) - 1
+        return j >= 0 and self.heads[j][1] > pos
 
     def first(self, pos: int, table: str, kinds: str) -> HeadMatch | None:
         key = (table, kinds)
@@ -216,9 +227,9 @@ def _write_atomic(path: Path, blob: bytes) -> None:
 
 
 def code_version(roots: list[Path], extra: str = "") -> str:
-    """Hash of every loader source file the cached values are a function of: all of `lib/*.py` except the tests,
-    `bootstrap.py`, `apps/item-tools/item_lib/*.py` (the item overlay's parser), and the Python version (pickle
-    layouts and `re` behaviour). A change to any of them makes every snapshot a miss."""
+    """Hash of every non-test `*.py` under `roots`, `extra` and the Python version (pickle layouts and `re`
+    behaviour). `generate.cache_code_version` passes the item overlay's package here and adds the loader modules
+    itself; a change to any of them makes every snapshot a miss."""
     h = hashlib.sha256()
     h.update(sys.version.encode())
     h.update(extra.encode())
@@ -337,7 +348,8 @@ class Corpus:
 
         Returns `(state, printed)`: `printed` is what the replay wrote to stdout (the loaders warn about statements
         they cannot apply), captured so a cache hit can print the identical text; the caller writes it to stdout
-        right away, as the uncached replay would have printed it live.
+        right away, as the uncached replay would have printed it live. What it wrote to stderr is captured the same
+        way and written to stderr here.
 
         The snapshot is keyed by `(kind, params, code version)` and stores the ordered `(path, content hash)` list it
         was built from. It is used when that list is a prefix of the current `stable` list (the files appended since,
@@ -364,25 +376,35 @@ class Corpus:
                 cached, done = None, 0
         if cached is not None and done == len(files):
             self.stats["hit"] += 1
+            sys.stderr.write(cached.get("err", ""))
             return cached["state"], cached["out"]
-        buf = io.StringIO()
+        # Label each file the replay is about to read with the hash of the very text it will read (the memoised copy
+        # `step` gets), not of an earlier read of the same path: a file rewritten in between must not be stored under
+        # the old hash. (A binary input, the extracted .dbc, is hashed once and read once by its own reader.)
+        for i in range(done, len(stable)):
+            if stable[i].suffix == ".sql":
+                files[i] = (str(stable[i]), self.read_text(stable[i]).digest)
+        buf, err_buf = io.StringIO(), io.StringIO()
         try:
-            with contextlib.redirect_stdout(buf):
+            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(err_buf):
                 if cached is None:
                     state = init()
-                    out_before = ""
+                    out_before = err_before = ""
                 else:
-                    state, out_before = cached["state"], cached["out"]
+                    state, out_before, err_before = cached["state"], cached["out"], cached.get("err", "")
                 for p in stable[done:]:
                     state = step(state, p)
         except BaseException:
             sys.stdout.write((cached["out"] if cached is not None else "") + buf.getvalue())
+            sys.stderr.write((cached.get("err", "") if cached is not None else "") + err_buf.getvalue())
             raise
         self.stats["extend" if cached is not None else "miss"] += 1
         out = out_before + buf.getvalue()
+        err = err_before + err_buf.getvalue()
+        sys.stderr.write(err)
         if path is not None:
             try:
-                _write_atomic(path, _pack({"files": files, "state": state, "out": out}, header))
+                _write_atomic(path, _pack({"files": files, "state": state, "out": out, "err": err}, header))
             except OSError as exc:  # a read-only or full cache dir must not fail the run
                 print(f"warning: dbc-tools cache: could not write {path.name}: {exc}", file=sys.stderr)
         # The caller mutates `state` (it replays pending files on top); the blob on disk stays as written above.
@@ -423,8 +445,26 @@ def activate(cache_dir: Path | None, version: str, rebuild: bool = False) -> Cor
     global _ACTIVE
     for fn in _RESETS:
         fn()
+    if cache_dir is not None:
+        _prune_other_versions(cache_dir, version)
+        cache_dir = cache_dir / version
     _ACTIVE = Corpus(cache_dir, version, rebuild)
     return _ACTIVE
+
+
+def _prune_other_versions(base: Path, version: str, keep_others: int = 1) -> None:
+    """Each code version caches in its own directory under `base`. Drop all but the `keep_others` most recently used
+    of the other versions (a second checkout or branch on other code still gets one warm directory; the rest would
+    only be dead weight, ~180 MB each)."""
+    try:
+        others = sorted(
+            (p for p in base.iterdir() if p.is_dir() and p.name != version),
+            key=lambda p: p.stat().st_mtime, reverse=True,
+        )
+        for stale in others[keep_others:]:
+            shutil.rmtree(stale, ignore_errors=True)
+    except OSError:
+        pass
 
 
 def deactivate() -> None:

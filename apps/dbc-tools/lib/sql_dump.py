@@ -703,16 +703,20 @@ def _file_variables(text: str) -> dict[str, int]:
     return {m.group("name"): int(m.group("value")) for m in _SET_VAR_RE.finditer(text)}
 
 
-def _head_index(text: str):
-    """The text's `sqlcorpus.HeadIndex` when it came from an active corpus, else None (plain `str`)."""
-    return text.head_index if isinstance(text, sqlcorpus.SqlText) else None
+def _head_index(text: str, pos: int):
+    """The text's `sqlcorpus.HeadIndex` when it came from an active corpus and can answer a search from `pos`
+    exactly like the regex would, else None (plain `str`, or a head-like string inside a skipped statement)."""
+    if not isinstance(text, sqlcorpus.SqlText):
+        return None
+    index = text.head_index
+    return None if index.overlaps(pos) else index
 
 
 def _next_match(pattern: re.Pattern, text: str, pos: int, table_name: str) -> re.Match | None:
     """Like `pattern.search(text, pos)`, but skips over matches for a
     different table's statements instead of returning them. On a corpus text the precomputed head index answers
     instead of a regex scan (`pattern` is always one of the two single-kind head patterns)."""
-    index = _head_index(text)
+    index = _head_index(text, pos)
     if index is not None:
         if pattern is _INSERT_HEAD_RE:
             return index.first(pos, table_name, "I")
@@ -743,7 +747,7 @@ def _next_statement(text: str, pos: int, table_name: str) -> re.Match | None:
     instead of one per statement kind. A `SET` session-variable match (no `*_table` group) is
     never table-filtered, matching `apply_statements`'s original `_SET_VAR_RE.search` behavior. On a corpus text the
     head index answers (one scan per file, shared by every table's replay)."""
-    index = _head_index(text)
+    index = _head_index(text, pos)
     if index is not None:
         return index.first(pos, table_name, "IDUS")
     while True:

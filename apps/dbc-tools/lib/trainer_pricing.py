@@ -146,8 +146,12 @@ def replay_trainer_spells() -> dict[Key, dict]:
         return _replay_trainer_spells()
     if _replay_memo is None:
         buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            rows = _replay_trainer_spells()
+        try:
+            with contextlib.redirect_stdout(buf):
+                rows = _replay_trainer_spells()
+        except BaseException:
+            sys.stdout.write(buf.getvalue())  # what the replay printed before it failed
+            raise
         _replay_memo = (rows, buf.getvalue())
     rows, printed = _replay_memo
     sys.stdout.write(printed)
