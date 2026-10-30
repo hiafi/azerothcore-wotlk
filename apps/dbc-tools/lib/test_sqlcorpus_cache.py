@@ -247,8 +247,8 @@ class CacheHardeningTest(CheckpointTest):
     def test_a_head_like_string_inside_a_skipped_statement_does_not_hide_the_next_head(self):
         from lib import sql_dump
 
-        # The UPDATE is parsed and skipped; the unbalanced `INSERT INTO `t` (` inside its string, matched by the one-pass
-        # head scan, would run on through the real INSERT's column list and hide it from the index.
+        # The UPDATE is parsed and skipped; the unbalanced `INSERT INTO `t` (` inside its string, matched by the
+        # one-pass head scan, would run on through the real INSERT's column list and hide it from the index.
         sql = (
             "UPDATE `t` SET `v` = 'INSERT INTO `t` (' WHERE `a` = 1;\n"
             "INSERT INTO `t` (`a`, `v`) VALUES (2, 5);\n"
